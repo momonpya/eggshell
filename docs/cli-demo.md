@@ -2,7 +2,7 @@
 
 [Project home](../README.md) · [Try it yourself](try-it.md) · [Measurement record](benchmarks/cli-demo.json)
 
-https://github.com/user-attachments/assets/939eca34-4897-4bcf-9dbc-a6326bc9ba3a
+https://github.com/user-attachments/assets/6a0ec687-618d-497c-af23-fb7b17b682b7
 
 This 29-second demo uses actual Codex CLI recordings with **Luna xhigh** and
 **independent ephemeral chats**. One chat investigates Clang’s toolchain selection.
