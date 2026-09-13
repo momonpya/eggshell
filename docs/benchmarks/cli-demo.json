@@ -1,0 +1,73 @@
+{
+  "description": "One recorded Clang follow-up comparison in independent ephemeral Codex chats.",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "xhigh",
+  "ephemeral": true,
+  "llvm_commit": "6dfe1677ab8dffbc6ec13d53a1e0215d75147689",
+  "source_tree": "1dbf5dbe50ba286d5e9e008bbd230e47d4de0dbd",
+  "initial_prompt_sha256": "ac3c77019e4a2c83c7b0c8253a391fb1275cc7d01b0d063c5d42b3b910c1b31f",
+  "followup_prompt_sha256": "8a6ee07fec059fbea973da71398ffd6ba60c9f78c0765fce6fe5b9d57eae4acf",
+  "prior_egg_sha256": "f087d3548e83de69f8dc9029578203886a51857d304239ed215bb5c83c3b0591",
+  "runtime_sha256": "d9d687ce1cb4cc994ebfa99d9bed7b4a6784841b7a83c53f09ed7592d19813f0",
+  "shared_initial_investigation": true,
+  "token_definition": "Input plus output, including cached input. Reasoning output is already included in output.",
+  "runs": {
+    "initial": {
+      "input_tokens": 828632,
+      "output_tokens": 6673,
+      "cached_input_tokens": 725504,
+      "total_tokens": 835305
+    },
+    "fresh": {
+      "input_tokens": 1066830,
+      "output_tokens": 7667,
+      "cached_input_tokens": 939520,
+      "total_tokens": 1074497
+    },
+    "eggshell": {
+      "input_tokens": 188254,
+      "output_tokens": 7114,
+      "cached_input_tokens": 149760,
+      "total_tokens": 195368
+    }
+  },
+  "totals": {
+    "fresh_plus_fresh": 1909802,
+    "fresh_plus_eggshell": 1030673,
+    "followup_reduction": 0.8181772494478812,
+    "overall_reduction": 0.4603246828728842
+  },
+  "quality": {
+    "method": "Single-reviewer, non-blinded comparison with the fixed source snapshot and native execution records. No runtime tests were requested or run; this is not a general equivalence claim.",
+    "criteria": [
+      "Direct target and architecture options can affect the triple before initial host toolchain lookup.",
+      "Architecture-scoped wrapper expansion happens later and does not retroactively choose the already selected host toolchain.",
+      "The answer covers architecture/offload matching and the parser or NoXarchOption restrictions.",
+      "The answer names a relevant existing test and source locations.",
+      "The answer distinguishes static source evidence from runtime behavior that was not tested."
+    ],
+    "fresh": {
+      "result": "usable",
+      "criteria_satisfied": 5,
+      "answer_sha256": "25bdcdfb449d725d7d0aa7ddd48aa015fe92edf096b781d16a55e759f00820e6"
+    },
+    "eggshell": {
+      "result": "usable",
+      "criteria_satisfied": 5,
+      "answer_sha256": "d894cb324e92f1619c97a12c26f2204fcc489c8790a439b6447511e20ca77954"
+    }
+  },
+  "video": {
+    "url": "https://github.com/user-attachments/assets/939eca34-4897-4bcf-9dbc-a6326bc9ba3a",
+    "duration_seconds": 29,
+    "sha256": "736434e89b1393b2c0949530613bd47295f14481e22e34b77fe01896ee174261",
+    "editing": "Elapsed time compressed, with pauses and editorial annotations at handoff delivery and explicit reuse. Native output text and measurements unchanged."
+  },
+  "limitations": [
+    "One recorded pair; results vary by task.",
+    "Shared initial investigation is charged to both routes, not two independent initial runs.",
+    "Static source review by one non-blinded reviewer; no Clang runtime tests.",
+    "Token reduction is not a dollar-cost estimate.",
+    "Raw private transcripts are not published; hashes identify local evidence and do not replace access to it."
+  ]
+}
