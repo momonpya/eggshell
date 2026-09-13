@@ -41,7 +41,7 @@ prior work; see [Evidence](#evidence) for the comparison and its limits.
 
 **Watch Eggshell carry work into a new chat — 29 seconds.**
 
-https://github.com/user-attachments/assets/939eca34-4897-4bcf-9dbc-a6326bc9ba3a
+https://github.com/user-attachments/assets/6a0ec687-618d-497c-af23-fb7b17b682b7
 
 Actual Codex CLI, Luna xhigh, independent ephemeral chats. In this recorded pair,
 Eggshell used **81.8% fewer input + output tokens in the second chat**; both
