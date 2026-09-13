@@ -21,7 +21,7 @@
   <a href="https://chatgpt.com/plugins/plugins_6aa482a5d9048191a727260b5f898078">Get the plugin</a> ·
   <a href="#install">Install</a> ·
   <a href="docs/try-it.md">Try it yourself</a> ·
-  <a href="docs/cli-demo.md">29-second demo</a> ·
+  <a href="docs/cli-demo.md">Watch the demo</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#evidence">Evidence</a> ·
   <a href="#control-and-inspection">Controls</a> ·
@@ -39,14 +39,14 @@ Memory is built and organized locally, **without LLM calls or additional billed
 tokens for memory management**. These results cover one task with existing
 prior work; see [Evidence](#evidence) for the comparison and its limits.
 
-**Watch Eggshell carry work into a new chat — 29 seconds.**
+**Same task. Two new chats. Compare token use — 30 seconds.**
 
-https://github.com/user-attachments/assets/6a0ec687-618d-497c-af23-fb7b17b682b7
+[![Looping Codex CLI demo: the same follow-up task in two new chats, without memory and with Eggshell. The recorded Eggshell follow-up used 81.8% fewer tokens.](docs/assets/demo/cli-demo-loop.gif)](docs/cli-demo.md)
 
 Actual Codex CLI, Luna xhigh, independent ephemeral chats. In this recorded pair,
 Eggshell used **81.8% fewer input + output tokens in the second chat**; both
 answers passed static source review. One pair, with time edited for clarity.
-[Demo and measurement details](docs/cli-demo.md) ·
+[Full-resolution video and measurement details](docs/cli-demo.md) ·
 [Try it in two chats](docs/try-it.md).
 
 Use the published **Codex plugin**, or the separate, experimental
