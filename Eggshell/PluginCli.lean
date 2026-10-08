@@ -94,11 +94,7 @@ def renderFind (composite : Persistence.Composite) (query : String) : String :=
   if found.isEmpty then "no matching Atom" else "\n".intercalate found
 
 def unionKey (edge : UnionEdge) : String :=
-  let left := valueEncoding edge.left
-  let right := valueEncoding edge.right
-  let ordered := if left ≤ right then [left.toUTF8, right.toUTF8]
-    else [right.toUTF8, left.toUTF8]
-  "u" ++ Blake3.hex (Blake3.digest "eggshell.union.ui".toUTF8 ordered)
+  Persistence.Store.unionDisplayKey edge.left edge.right
 
 def renderClass (composite : Persistence.Composite) (value : Value) : IO String := do
   match QuotientBuilder.build? (allNodes composite) composite.unions [] with
@@ -127,29 +123,33 @@ def renderRoots (roots : List Value) : String :=
 
 def persistUnion (target : System.FilePath) (left right : Value) : IO UnionEdge := do
   if safe : Value.sameExactFootprint left right then
-    let (_, edge) ← Persistence.update target fun graph =>
-      let edge : UnionEdge := {
+    let snapshot ← DB.PageMap.pin target
+    let edge : UnionEdge := {
         left
         right
-        scope := .workspace graph.authority
+        scope := .workspace (← Persistence.Store.authority snapshot)
         exactAuthority := Value.sameExactFootprint_sound safe
       }
-      let transaction := Transaction.stageUnionIfNew graph (Transaction.begin graph)
-        left right (Value.sameExactFootprint_sound safe)
-      pure (transaction, edge)
+    if left == right then return edge
+    let _ ← DB.PageMap.withWriter snapshot fun writer => do
+      let intern : Persistence.Store.Intern := ⟨writer, ← IO.mkRef {}⟩
+      let leftId ← intern.value left
+      let rightId ← intern.value right
+      if (← writer.get (Persistence.Store.unionPairKey leftId rightId)).isSome then return
+      Persistence.Store.addUnions intern [edge]
+      Persistence.Store.writeChange writer ⟨[], [], true⟩
     pure edge
   else throw (IO.userError "Union would change Exact authority")
 
 def splitPersistentUnion (target : System.FilePath) (key : String) : IO UnionEdge :=
   Persistence.withLock target do
-    let graph ← Persistence.load target
-    match graph.unions.filter (unionKey ·.edge == key) with
-    | [persistent] =>
-        let updated := graph.removeUnionPair persistent.edge.left persistent.edge.right
-        Persistence.saveAtomic target updated
-        pure persistent.edge
-    | [] => throw (IO.userError s!"Union {key} is not owned by {target}")
-    | _ => throw (IO.userError s!"ambiguous Union key {key}")
+    let snapshot ← DB.PageMap.pin target
+    let some entry ← Persistence.Store.locateUnion? snapshot key |
+      throw (IO.userError s!"Union {key} is not owned by {target}")
+    let _ ← DB.PageMap.withWriter snapshot fun writer => do
+      Persistence.Store.removeUnion writer entry
+      Persistence.Store.writeChange writer ⟨[], [], true⟩
+    pure entry.edge
 
 def control (arguments : List String) : IO String := do
   let session ← controlSession
@@ -215,6 +215,9 @@ def control (arguments : List String) : IO String := do
         let requested := arguments.drop 1 |>.head?
         let target ← chooseTarget config pending requested
         let promotion ← promote pending target
+        -- The foreground command publishes; its indexing runs in the same
+        -- durable background lane as native terminal observations.
+        queueCheckpoint files { pending with write := some target.toString }
         state := addDeliveredGraphs state
           (promotion.outcomeRelations.map nativeHistoryKey)
         writeJson files.state state
@@ -227,11 +230,7 @@ def control (arguments : List String) : IO String := do
         pure <| if !state.enabled then "egg off; no graph selection has run"
           else if state.lastReason = "" then "no graph selection has run" else state.lastReason
     | "graph" :: roots =>
-        let composite ← graphForSelection selection
-        let values ← roots.mapM fun key =>
-          match resolveKey composite key with
-          | .ok value => pure value
-          | .error message => throw (IO.userError message)
+        let values ← readSelection selection roots
         pure (renderRoots values)
     | "find" :: query =>
         let composite ← graphForSelection selection
@@ -248,13 +247,8 @@ def control (arguments : List String) : IO String := do
         let target ← match selection.write with
           | some egg => pure egg.path
           | none => throw (IO.userError "current profile is read-only")
-        let composite ← graphForSelection selection
-        let left ← match resolveKey composite leftKey with
-          | .ok value => pure value
-          | .error message => throw (IO.userError message)
-        let right ← match resolveKey composite rightKey with
-          | .ok value => pure value
-          | .error message => throw (IO.userError message)
+        let values ← readSelection selection [leftKey, rightKey]
+        let [left, right] := values | throw (IO.userError "selected Union endpoint arity changed")
         let edge ← persistUnion target left right
         pure s!"egg union {unionKey edge} {leftKey} = {rightKey} → {target}"
     | ["split", key] =>
@@ -269,10 +263,11 @@ def control (arguments : List String) : IO String := do
         let reads := ", ".intercalate (selection.read.map fun egg =>
           s!"{egg.name}={egg.path}")
         let heads ← selection.read.mapM fun egg => do
-          match ← Persistence.loadExisting? egg.path with
+          match ← DB.PageMap.open? egg.path with
           | none => pure s!"{egg.name}:missing"
-          | some graph => pure (s!"{egg.name}:revision={graph.revision}," ++
-              s!"values={graph.values.length},unions={graph.unions.length}")
+          | some snapshot => pure (s!"{egg.name}:revision={snapshot.head.revision}," ++
+              s!"values={(← Persistence.Store.rootIds snapshot).length}," ++
+              s!"unions={(← Persistence.Store.unionPairs snapshot).length}")
         pure (statusLine selection state pending ++ s!"\nread=[{reads}]\n" ++
           "heads=[" ++ "; ".intercalate heads ++ s!"]\nconfig={config.source}")
     | ["diff"] | ["diff", _] =>
@@ -280,8 +275,9 @@ def control (arguments : List String) : IO String := do
           throw (IO.userError "no staged turn")
         let requested := arguments.drop 1 |>.head?
         let target ← chooseTarget config pending requested
-        let graph := (← Persistence.loadExisting? target).getD
-          (Graph.empty (Persistence.authorityForPath target))
+        let graph ← match ← DB.PageMap.open? target with
+          | some snapshot => Persistence.Store.header snapshot
+          | none => pure (Graph.empty (← Persistence.freshAuthority))
         let compiled ← match compile graph pending target.toString with
           | .ok compiled => pure compiled
           | .error message => throw (IO.userError message)

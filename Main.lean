@@ -11,6 +11,14 @@ def usage : String :=
 
 def main (arguments : List String) : IO UInt32 := do
   match arguments with
+  | ["import-graph", source, destination] =>
+      Eggshell.Install.runCommand do
+        Eggshell.Persistence.importGraphFile (.mk source) (.mk destination)
+        pure "Imported graph into the page DB."
+  | ["inspect-graph", source] =>
+      Eggshell.Install.runCommand do
+        let graph ← Eggshell.Persistence.load (.mk source)
+        IO.ofExcept (Eggshell.Persistence.encode graph)
   | "search-provider" :: options => Eggshell.SearchProvider.run options
   | "setup" :: options => Eggshell.Setup.command options
   | ["codex-hook"] => Eggshell.Plugin.Daemon.hookClient

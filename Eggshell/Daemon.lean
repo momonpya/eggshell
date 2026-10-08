@@ -200,8 +200,10 @@ where
   let mut clients : List (Task (Except IO.Error Unit)) := []
   let mut lastActivity ← IO.monoMsNow
   let mut saves : List (Task (Except IO.Error Unit)) := []
+  let mut indexes : List (Task (Except IO.Error Unit)) := []
   let saveCursor ← IO.mkRef ("", ([] : List String))
   let mut nextSave : Nat := 0
+  let mut nextIndex : Nat := 0
   try
     while !(← stopping.get) do
       match ← server.tryAccept with
@@ -212,11 +214,15 @@ where
             clients := (← IO.asTask (serveClient session secret stopping client) .dedicated) :: clients
       clients ← retainRunning clients
       saves ← retainRunning saves
+      indexes ← retainRunning indexes
       let now ← IO.monoMsNow
       if saves.isEmpty && now ≥ nextSave then
         saves := [← IO.asTask (flushDeferred session (now + 60000) (some saveCursor)) .dedicated]
         nextSave := now + 1000
-      if saves.isEmpty && now > lastActivity + 300000 then stopping.set true
+      if indexes.isEmpty && now ≥ nextIndex then
+        indexes := [← IO.asTask (flushIndexes session (now + 60000)) .dedicated]
+        nextIndex := now + 1000
+      if saves.isEmpty && indexes.isEmpty && now > lastActivity + 300000 then stopping.set true
     Worker.shutdown
     removeEndpointIfOwned endpoint
     pure 0
@@ -334,6 +340,58 @@ def boundedRpc (kind : String) (input : Json) (deadline : Nat) : IO (Option Stri
     let _ ← child.wait
     throw error
 
+def validHookOutput (text : String) : Bool :=
+  match Json.parse text with
+  | .ok (.obj _) => true
+  | _ => false
+
+/-- Only a decoded JSON object may be forwarded as a completed hook response. -/
+structure HookOutput where
+  text : String
+  valid : validHookOutput text = true
+
+inductive HookReply where
+  | completed (output : HookOutput)
+  | incomplete
+
+def decodeHookReply (reply : Option Json) : HookReply :=
+  match reply.bind (optionalString · "output") with
+  | none => .incomplete
+  | some text =>
+      if valid : validHookOutput text = true then .completed ⟨text, valid⟩
+      else .incomplete
+
+def incompleteHook (event : String) : String :=
+  if ["UserPromptSubmit", "PreToolUse", "PostToolUse"].contains event then
+    hookContext event pendingSearch.text
+  else
+    systemMessage "Eggshell hook did not complete. Memory delivery and this hook's processing are unconfirmed."
+
+def HookReply.output (event : String) : HookReply → String
+  | .completed output => output.text
+  | .incomplete => incompleteHook event
+
+def HookReply.isComplete : HookReply → Bool
+  | .completed _ => true
+  | .incomplete => false
+
+theorem valid_hook_reply_is_preserved (reply : Option Json) (event text : String)
+    (field : reply.bind (optionalString · "output") = some text)
+    (valid : validHookOutput text = true) :
+    (decodeHookReply reply).output event = text := by
+  simp [decodeHookReply, field, valid, HookReply.output]
+
+theorem absent_hook_reply_is_incomplete (event : String) :
+    (decodeHookReply none).output event = incompleteHook event ∧
+      (decodeHookReply none).isComplete = false := by
+  exact ⟨rfl, rfl⟩
+
+theorem invalid_hook_reply_is_incomplete (reply : Option Json) (text : String)
+    (field : reply.bind (optionalString · "output") = some text)
+    (invalid : validHookOutput text = false) :
+    decodeHookReply reply = .incomplete := by
+  simp [decodeHookReply, field, invalid]
+
 def hookClient : IO UInt32 := do
   let inputText ← (← IO.getStdin).readToEnd
   try
@@ -348,15 +406,15 @@ def hookClient : IO UInt32 := do
     let input := (input.setObjVal! "_eggshell_deadline" (toJson (deadline - 250)))
       |>.setObjVal! "_eggshell_receipt" receipt
     let result ← boundedRpc "hook" input (deadline - 150)
-    let reply := result.bind (Json.parse · |>.toOption)
-    if let some error := reply.bind (optionalString · "error") then
+    let json := result.bind (Json.parse · |>.toOption)
+    if let some error := json.bind (optionalString · "error") then
       IO.eprintln s!"Eggshell hook failed open: {error}"
-    let output := (reply.bind (optionalString · "output")).filter
-      (fun text => (Json.parse text).isOk) |>.getD emptyHook
+    let reply := decodeHookReply json
+    let output := reply.output event
     let stdout ← IO.getStdout
     stdout.putStr (output.trimAscii.toString ++ "\n")
     stdout.flush
-    if result.isSome && output != emptyHook then
+    if reply.isComplete && output != emptyHook then
       let ack := Json.mkObj [("session_id", (optionalString input "session_id").getD ""),
         ("receipt", receipt)]
       try
@@ -365,8 +423,21 @@ def hookClient : IO UInt32 := do
     pure 0
   catch error =>
     IO.eprintln s!"Eggshell hook failed open: {error}"
-    IO.println emptyHook
+    let event := (Json.parse inputText).toOption.bind (optionalString · "hook_event_name")
+      |>.getD ""
+    IO.println (incompleteHook event)
     pure 0
+
+def awaitStopped (endpoint : Endpoint) : IO Unit := do
+  let deadline := (← IO.monoMsNow) + 3000
+  repeat
+    let status ← IO.Process.output {
+      cmd := "/bin/kill", args := #["-0", toString endpoint.pid]
+      stdin := .null }
+    if status.exitCode != 0 then return
+    if (← IO.monoMsNow) ≥ deadline then
+      throw (IO.userError "eggshelld acknowledged shutdown but has not exited")
+    IO.sleep 5
 
 def shutdown : IO Unit := do
   let root ← dataRoot
@@ -375,9 +446,12 @@ def shutdown : IO Unit := do
       (← directory.readDir).toList.mapM fun entry => pure (entry.path / "daemon.json")
     else pure []
   for path in root / "daemon.json" :: paths do
-    try
-      if let some endpoint ← (readJson? path endpointJsonDefaults : IO (Option Endpoint)) then
+    if let some endpoint ← (readJson? path endpointJsonDefaults : IO (Option Endpoint)) then
+      try
         let _ ← exchange endpoint "shutdown" (budget := 500)
-    catch _ => pure ()
+      catch _ => pure ()
+      -- Receipt of the RPC reply is not proof that its workers have exited.
+      -- Do not report successful teardown until the manager really exits.
+      awaitStopped endpoint
 
 end Eggshell.Plugin.Daemon

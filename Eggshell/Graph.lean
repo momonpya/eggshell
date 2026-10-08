@@ -66,6 +66,24 @@ theorem removeUnionPair_values (graph : Graph) (left right : Value) :
 theorem removeUnionPair_revision (graph : Graph) (left right : Value) :
     (graph.removeUnionPair left right).revision = graph.revision + 1 := rfl
 
+theorem removeUnionPair_membership (graph : Graph) (left right : Value)
+    (persistent : PersistentUnion graph.authority) :
+    persistent ∈ (graph.removeUnionPair left right).unions ↔
+      persistent ∈ graph.unions ∧ persistent.edge.samePair left right = false := by
+  change persistent ∈ graph.unions.filter (fun stored =>
+    !stored.edge.samePair left right) ↔ _
+  rw [List.mem_filter]
+  simp
+
+theorem removeUnionPair_retired (graph : Graph) (left right : Value)
+    (persistent : PersistentUnion graph.authority)
+    (same : persistent.edge.samePair left right = true) :
+    persistent ∉ (graph.removeUnionPair left right).unions := by
+  intro present
+  have notSame := (removeUnionPair_membership graph left right persistent).mp present
+  rw [same] at notSame
+  cases notSame.2
+
 end Graph
 
 /-- A private, uncommitted append-only suffix over one exact graph revision. -/

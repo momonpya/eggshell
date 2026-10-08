@@ -17,6 +17,7 @@ structure UnionEdge where
   right : Value
   scope : UnionScope
   exactAuthority : Value.SameExactFootprint left right
+  deriving DecidableEq
 
 namespace UnionEdge
 
@@ -91,6 +92,23 @@ theorem Equivalent.exactAuthority {edges left right}
     (fun _ tail exact => by
       simp only [Value.refsExactFootprint, List.mem_cons, List.mem_append]
       exact or_congr Iff.rfl (tail exact))
+    equivalent
+
+/-- With no generating edges, congruence cannot identify distinct Values.
+This includes nested Semantic applications and every Exact position. -/
+theorem Equivalent.without_edges {left right : Value}
+    (equivalent : Equivalent [] left right) : left = right :=
+  Equivalent.rec
+    (motive_1 := fun left right _ => left = right)
+    (motive_2 := fun left right _ => left = right)
+    (fun _ => rfl)
+    (fun _ member => False.elim (List.not_mem_nil member))
+    (fun _ equal => equal.symm)
+    (fun _ _ first second => first.trans second)
+    (fun operator _ equal => congrArg (Value.apply operator) equal)
+    rfl
+    (fun _ _ head tail => by cases head; cases tail; rfl)
+    (fun _ tail => by cases tail; rfl)
     equivalent
 
 end Eggshell

@@ -85,9 +85,9 @@ def hooksManifest : String := r#"{
       {"matcher": "^(startup|resume|clear)$", "hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-start", "timeout": 30}]},
       {"matcher": "^compact$", "hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "timeout": 30}]}
     ],
-    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "additionalContextLimit": 48000, "timeout": 30}]}],
-    "PreToolUse": [{"hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "additionalContextLimit": 48000, "timeout": 30}]}],
-    "PostToolUse": [{"hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "additionalContextLimit": 48000, "timeout": 30}]}],
+    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "additionalContextLimit": 128000, "timeout": 30}]}],
+    "PreToolUse": [{"hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "additionalContextLimit": 128000, "timeout": 30}]}],
+    "PostToolUse": [{"hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "additionalContextLimit": 128000, "timeout": 30}]}],
     "PostCompact": [{"hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "timeout": 3}]}],
     "Interrupt": [{"hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "timeout": 3}]}],
     "Stop": [{"hooks": [{"type": "command", "command": "\"${PLUGIN_ROOT}/bin/egg\" codex-hook", "timeout": 3}]}],

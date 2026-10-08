@@ -1,6 +1,7 @@
 module
 
 public import Eggshell.Paths
+public import Eggshell.Persistence
 
 @[expose] public section
 
@@ -11,6 +12,7 @@ def model : String :=
 
 def runtimeVersion : String := "fastembed-0.8.0"
 
+/-- Model loading is lazy; cached-vector scoring does not initialize MiniLM. -/
 def embeddingSource : String := include_str "../runtime/embedding.py"
 
 structure Layout where
@@ -87,7 +89,15 @@ def install (root : System.FilePath) : IO Unit := do
           throw error
   let ready := paths.support / s!"{runtimeVersion}.model-ready"
   if !(← ready.pathExists) then
-    process python.toString #["-c", embeddingSource, model, paths.models.toString, "4", "--preload"]
+    let resources := (← Paths.home) / ".cache" / "eggshell" / "resources"
+    Persistence.rejectSymlinkAncestors resources
+    Persistence.privateDirectory resources
+    let lease := resources / "model-index.guard"
+    Persistence.rejectSymlinkAncestors lease
+    let _ ← IO.FS.Handle.mk lease .append
+    Persistence.privateFile lease
+    process python.toString #["-c", embeddingSource, model, paths.models.toString, "4",
+      lease.toString, "index", "--preload"]
     IO.FS.writeFile ready model
 
 def command (root pluginData : System.FilePath) : IO (Option (List String)) := do

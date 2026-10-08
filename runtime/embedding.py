@@ -4,19 +4,34 @@ Selection, identity, windows, persistence, ranking, and protocol supervision are
 """
 import json
 import sys
-import numpy as np
-from fastembed import TextEmbedding
+import fcntl
 
-encoder = TextEmbedding(model_name=sys.argv[1], cache_dir=sys.argv[2], threads=int(sys.argv[3]))
-if sys.argv[4:] == ["--preload"]:
-    next(encoder.embed(["eggshell"], batch_size=1))
+import numpy as np
+
+encoder = None
+lease = None
+
+def model():
+    global encoder, lease
+    if encoder is None:
+        # Cache-only scoring needs no encoder. A real encoder owns this lease
+        # throughout its lifetime; the caller's process-group deadline also
+        # stops its own waiting child without cancelling the current holder.
+        lease = open(sys.argv[4], "a")
+        fcntl.flock(lease.fileno(), fcntl.LOCK_EX)
+        from fastembed import TextEmbedding
+        encoder = TextEmbedding(model_name=sys.argv[1], cache_dir=sys.argv[2], threads=int(sys.argv[3]))
+    return encoder
+
+if sys.argv[6:] == ["--preload"]:
+    next(model().embed(["eggshell"], batch_size=1))
     raise SystemExit(0)
 for line in sys.stdin:
     try:
         request = json.loads(line)
         if "texts" in request:
             vectors = []
-            for vector in encoder.embed(request["texts"], batch_size=32):
+            for vector in model().embed(request["texts"], batch_size=32):
                 vector = np.asarray(vector, dtype=np.float32)
                 norm = np.linalg.norm(vector)
                 vectors.append((vector if norm == 0 else vector / norm).tolist())
