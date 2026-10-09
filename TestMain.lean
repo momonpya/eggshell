@@ -914,6 +914,9 @@ def testFlexibleContextAllocation : IO Unit := do
   let some dense := prepareContextualOwnerPart [] denseWindows owner "original relation" [] slice 512 |
     throw (IO.userError "dense cluster displaced its highest-ranked original cue")
   let some denseContext := dense.context | throw (IO.userError "dense cluster lost typed original data")
+  check ((denseContext.fragments.zip (denseContext.fragments.drop 1)).all
+      (fun pair => pair.1.first ≤ pair.2.first))
+    "meaning rank leaked into presentation and reversed the original observation order"
   check (denseContext.fragments.any fun fragment => fragment.first ≤ highest.span.start &&
     highest.span.stop ≤ fragment.first + fragment.original.length)
     "a source-ordered split displaced the best meaning cue within a dense cluster"
@@ -1388,6 +1391,13 @@ def testSemanticEvidenceDelivery : IO Unit := do
   let some queryNeighbor := originalGraph.outcomes.find? (fun owner =>
       owner.work == .text (canonicalToolWork queryNeighborTool)) |
     throw (IO.userError "query-hit neighbor lost its original graph owner")
+  let focusEntries := [queryNeighbor]
+  let primaryFocus := entrySourceFocus focusEntries originalGraph.all [] []
+  let distinctFocus := focusSourceDomain focusEntries originalGraph.all [] []
+    (primaryFocus ++ primaryFocus)
+  check (distinctFocus.length == 1 &&
+      distinctFocus.head?.map (·.owner.relation) == some queryNeighbor.relation)
+    "the same original entry gained extra numerical votes through repeated source routes"
   check (handoff.text.contains (canonicalJson queryNeighborTool.response) &&
       handoff.text.contains ("SUPPORT OUTCOME " ++ displayKey queryNeighbor.relation) &&
       !handoff.text.contains ("COVERED OUTCOME " ++ displayKey queryNeighbor.relation))
@@ -1646,6 +1656,11 @@ def testSemanticEvidenceDelivery : IO Unit := do
       {contextual with handoffChars := 120000, handoffBytes := some Config.nativeHandoffBytes}
       "target" [] false |
     throw (IO.userError "UTF-8 transport fitting discarded all owned contexts")
+  for part in byteLimited.packet.toList.flatMap (·.parts) do
+    if let some context := part.context then
+      check ((context.fragments.zip (context.fragments.drop 1)).all
+          (fun pair => pair.1.first ≤ pair.2.first))
+        "the actual graph handoff shuffled original code/prose observations after selection"
   check (byteLimited.text.utf8ByteSize ≤ Config.nativeHandoffBytes &&
       byteLimited.text.contains (canonicalToolWork largeTool) &&
       byteLimited.text.contains "ORIGINAL CHARS" &&
@@ -2849,29 +2864,52 @@ def testDeliveryReconciliation : IO Unit := do
   let changedPart : DeliveryPart := {keys := changed.keys, text := changed.render, context := some changed}
   check ((changedPart.remaining planned.keys).isSome)
     "an old presentation plan suppressed a separately observed new outcome"
-  let firstKey := contextPlanKey "owner" "result" "question" [3, 13]
-  let nextKey := contextPlanKey "owner" "result" "question" [3, 27]
-  check (firstKey == contextPlanKey "owner" "result" "question" [13, 3, 13])
-    "reordering the same requested source positions falsely created new demand"
+  let firstKey := contextPlanKey "owner" "result" "question"
+  let nextKey := contextPlanKey "owner" "result" "new human question"
   let firstCue := {planned with planKey := firstKey}
-  let nextCue := {planned with planKey := nextKey}
+  let rerankedCue := {firstCue with cues := [(45, 60)], fragments := [{first := 45, original := "independent"}]}
+  let rerankedPart := {plannedPart with keys := rerankedCue.keys, text := rerankedCue.render, context := some rerankedCue}
+  let nextCue := {rerankedCue with planKey := nextKey}
   let firstCuePart := {plannedPart with keys := firstCue.keys, text := firstCue.render, context := some firstCue}
   let nextCuePart := {plannedPart with keys := nextCue.keys, text := nextCue.render, context := some nextCue}
   check (firstKey != nextKey &&
       (firstCuePart.remaining [firstKey]).isNone &&
+      (rerankedPart.remaining [firstKey]).isNone &&
       (nextCuePart.remaining [firstKey]).isSome)
-    "a plan receipt confused a new requested cue with optional refill of the old plan"
+    "index reranking reopened an accepted observation or a new human question lost its evidence"
+  let updatedCue := {rerankedCue with outcome := "updated original observation", planKey := contextPlanKey "owner" "updated original observation" "question"}
+  let updatedPart := {plannedPart with keys := updatedCue.keys, text := updatedCue.render, context := some updatedCue}
+  check ((updatedPart.remaining [firstKey]).isSome)
+    "a question plan suppressed the data of a separately recorded source update"
+  check (contextPlanQuestion "human scope" "first lookup" true false == "human scope" &&
+      contextPlanQuestion "human scope" "different lookup" true false == "human scope" &&
+      contextPlanQuestion "human scope" "first lookup" false true == "human scope" &&
+      contextPlanQuestion "human scope" "completed lookup" true true == "completed lookup")
+    "a native proposal changed advisory scope or advice suppressed a concrete grounded demand"
+  let compacted := compactState {state with deliveredGraphs := firstCue.keys}
+  check ((firstCuePart.remaining compacted.deliveredGraphs).isSome)
+    "compaction retained an advisory plan after native context forgot its evidence"
   check (surroundingEvidenceQuery "list unrelated candidates" (some "question") ==
       surroundingEvidenceQuery "read a different branch" (some "question") &&
       surroundingEvidenceQuery "read a different branch" (some "question") == "question" &&
       surroundingEvidenceQuery "native request" none == "native request")
     "tool changes reopened surrounding history outside the human question"
   check (sourcePositionQuery "read a particular missing record" (some "original question") true ==
-      "read a particular missing record" &&
+      "original question" &&
       sourcePositionQuery "read a particular missing record" (some "original question") false == "original question" &&
+      sourcePositionQuery "read unrelated configuration" (some "original question") true ==
+        sourcePositionQuery "read a particular missing record" (some "original question") true &&
+      sourcePositionQuery "native request without a question" none true == "native request without a question" &&
       refineSourcePositions [3, 13] [27, 3] == [27, 3, 13] &&
       refineSourcePositions [3, 13] [] == [3, 13])
-    "a lookup lost its original positions, its missing-data locator or the initial question"
+    "a tool changed advisory question/positions or removed an original observation"
+  let evidenceOwner := Value.text "original observation"
+  let otherEvidence := Value.text "connected observation"
+  check (prioritizedEvidence [(evidenceOwner, [3, 13])]
+      [(evidenceOwner, [27, 3]), (otherEvidence, [5])] ==
+      [(evidenceOwner, [27, 3, 13]), (otherEvidence, [5])] &&
+      prioritizedEvidence [(evidenceOwner, [3, 13])] [] == [(evidenceOwner, [3, 13])])
+    "question-focused evidence lost its original cues, order or connected source"
   check (!lookupContextAllowed true true false none &&
       lookupContextAllowed true true false (some []) &&
       lookupContextAllowed true true false (some [27, 3]) &&
@@ -5531,6 +5569,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
     testGroundedOutcomeTransport
     testOperationBoundaryLookup
     testWholeSliceBudget
+    testFlexibleContextAllocation
     testConcurrentPromotion
     testUnionSuppression
     testUnionDeltaIO

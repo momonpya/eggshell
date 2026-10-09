@@ -1419,6 +1419,43 @@ theorem entry_source_focus_original_domain (entries : List OutcomeEdge)
   subst item
   exact row.property
 
+/-- The entry and neighborhood lanes can name the very same original owner.
+Score it once: a second graph route is not a second observation or a second
+vote in numerical/lexical ranking. Distinct original owners remain admitted. -/
+def focusSourceDomain (entries : List OutcomeEdge) (all : List AllEdge) (unions : List UnionEdge)
+    (provenance : List (Value × List SourceEvidence.Record))
+    (support : List (SourceSupport (entries.map OutcomeEdge.work) all unions)) :
+    List (SourceSupport (entries.map OutcomeEdge.work) all unions) :=
+  entrySourceFocus entries all unions provenance ++
+    support.filter (fun item => !entries.any (fun entry => entry.relation == item.owner.relation))
+
+theorem focus_domain_keeps_entry (entries : List OutcomeEdge)
+    (all : List AllEdge) (unions : List UnionEdge)
+    (provenance : List (Value × List SourceEvidence.Record))
+    (support : List (SourceSupport (entries.map OutcomeEdge.work) all unions))
+    (owner : OutcomeEdge) (present : owner ∈ entries) :
+    ∃ item ∈ focusSourceDomain entries all unions provenance support, item.owner = owner := by
+  obtain ⟨item, member, same⟩ := entry_source_focus_includes_entry entries all unions provenance owner present
+  exact ⟨item, List.mem_append_left _ member, same⟩
+
+theorem focus_domain_keeps_distinct_support (entries : List OutcomeEdge)
+    (all : List AllEdge) (unions : List UnionEdge)
+    (provenance : List (Value × List SourceEvidence.Record))
+    (support : List (SourceSupport (entries.map OutcomeEdge.work) all unions))
+    (item : SourceSupport (entries.map OutcomeEdge.work) all unions)
+    (present : item ∈ support)
+    (distinct : entries.any (fun entry => entry.relation == item.owner.relation) = false) :
+    item ∈ focusSourceDomain entries all unions provenance support := by
+  exact List.mem_append_right _ (List.mem_filter.mpr ⟨present, by simp [distinct]⟩)
+
+theorem focus_domain_extra_row_is_distinct (entries : List OutcomeEdge)
+    (support : List (SourceSupport (entries.map OutcomeEdge.work) all unions))
+    (item : SourceSupport (entries.map OutcomeEdge.work) all unions)
+    (present : item ∈ support.filter (fun item =>
+      !entries.any (fun entry => entry.relation == item.owner.relation))) :
+    entries.any (fun entry => entry.relation == item.owner.relation) = false := by
+  simpa using (List.mem_filter.mp present).2
+
 /-- Traverse metadata once per distinct Work. Outcome bodies are not part of
 this graph walk. Every executable queue entry carries its actual source path. -/
 def sourceNeighborhood (roots : List Value) (all : List AllEdge) (unions : List UnionEdge) :
@@ -1901,7 +1938,7 @@ MiniLM vectors, without an LLM call or a new
 whole-database scan. The complete checked order prioritizes non-hit data;
 a low score does not prove that a graph prerequisite may be discarded. -/
 def focusNeighborhood (command : List String) (current : String)
-    (support : List (SourceSupport roots all unions)) (selectedOnly : Bool := false) :
+    (support : List (SourceSupport roots all unions)) :
     IO (Option (FocusedNeighborhood support)) := do
   if support.isEmpty then return some ⟨[]⟩
   -- Paths and labels still contribute to lexical ranking. Only numerical
@@ -1920,43 +1957,47 @@ def focusNeighborhood (command : List String) (current : String)
     pure text
   let some result ← SemanticMatcher.nominateIndexed command current documents
       (corpus.rank current) (corpus.rank current true) read | return none
-  -- Initial packets rank every connected prerequisite. A proposed lookup
-  -- only refines nominated source positions inside the admitted graph; it
-  -- does not reopen the old question's remaining undispatched positions.
-  let candidates := if selectedOnly then result.related else result.ranking
-  let rows := candidates.filterMap fun row =>
+  -- Advisory evidence has one complete question-focused order. A proposed
+  -- command cannot switch it to another subset of the original graph.
+  let rows := result.ranking.filterMap fun row =>
     match original : support[row.document.owner]? with
     | none => none
     | some item => some ((⟨item, List.mem_of_getElem? original⟩ :
         {item : SourceSupport roots all unions // item ∈ support}), row.indices)
   pure (some ⟨rows⟩)
 
-/-- A later observation may refine non-hit graph support. It cannot
-replace a primary meaning nomination's original positions merely because
-that owner happened to travel through the supporting-data lane. -/
-def prioritizedEvidence (nominated : List Value) (original : List (Value × List Nat)) :
-    List (Value × List Nat) → List (Value × List Nat)
-  | [] => original
-  | row :: rest =>
-      if nominated.contains row.1 then prioritizedEvidence nominated original rest
-      else row :: prioritizedEvidence nominated original rest
+/-- Newly located positions refine an original nomination rather than
+replacing it. Exact original coordinates, not tool spelling, define novelty. -/
+def refineSourcePositions (original located : List Nat) : List Nat :=
+  (located ++ original).eraseDups
 
-theorem primary_evidence_positions_preserved (nominated : List Value)
-    (original focused : List (Value × List Nat)) (relation : Value)
-    (entry : nominated.contains relation = true) :
-    (prioritizedEvidence nominated original focused).find? (fun row => row.1 == relation) =
-      original.find? (fun row => row.1 == relation) := by
-  induction focused with
-  | nil => rfl
-  | cons row rest ih =>
-      by_cases same : row.1 = relation
-      · simp only [prioritizedEvidence, same, entry, ↓reduceIte]
-        exact ih
-      · have different : (row.1 == relation) = false := beq_eq_false_iff_ne.mpr same
-        simp only [prioritizedEvidence]
-        split
-        · exact ih
-        · simp only [List.find?, different, ih]
+/-- Refine every admitted source with the question-focused body order,
+including primary search entries. Retain the initial cues as additional
+candidates; an entry's old command must not freeze its body-position order.
+No match, source identity or completion authority is changed here. -/
+def prioritizedEvidence (original focused : List (Value × List Nat)) : List (Value × List Nat) :=
+  original.map (fun row => match focused.find? (fun item => item.1 == row.1) with
+    | none => row
+    | some refined => (row.1, refineSourcePositions row.2 refined.2)) ++
+  focused.filter (fun row => !original.any (fun item => item.1 == row.1))
+
+theorem primary_evidence_positions_preserved (original focused : List (Value × List Nat))
+    (relation : Value) (positions : List Nat) (entry : (relation, positions) ∈ original)
+    (position : Nat) (present : position ∈ positions) :
+    ∃ retained, (relation, retained) ∈ prioritizedEvidence original focused ∧ position ∈ retained := by
+  unfold prioritizedEvidence
+  cases equation : focused.find? (fun item => item.1 == relation) with
+  | none =>
+      refine ⟨positions, List.mem_append_left _ ?_, present⟩
+      exact List.mem_map.mpr ⟨(relation, positions), entry, by simp [equation]⟩
+  | some refined =>
+      refine ⟨(refined.2 ++ positions).eraseDups, List.mem_append_left _ ?_, ?_⟩
+      · exact List.mem_map.mpr ⟨(relation, positions), entry, by simp [equation, refineSourcePositions]⟩
+      · exact List.mem_eraseDups.mpr (List.mem_append_right _ present)
+
+theorem unfocused_evidence_positions_unchanged (original : List (Value × List Nat)) :
+    prioritizedEvidence original [] = original := by
+  simp [prioritizedEvidence]
 
 /-- Lack of a focused position is not permission to ship the whole old body.
 An explicitly nominated whole result remains valid without offsets. Native
@@ -2639,6 +2680,19 @@ def structureContextRanges (source : String) (workChars : Nat) (windows : List N
       some (group.priority, ⟨start, stop, valid.1, valid.2, by omega⟩)
     else none
 
+/-- A clipped prefix of a huge single record is not a complete section
+header. Only a complete original starting record may reserve prerequisite
+space; ordinary surrounding context remains eligible separately. -/
+def completeStructureContexts (records : List (ContextSpan source))
+    (heads : List (Nat × EvidenceRange source)) : List (Nat × EvidenceRange source) :=
+  heads.filter fun head => records.any fun record =>
+    record.start == head.2.start && record.stop ≤ head.2.stop
+
+theorem complete_structure_was_original (records : List (ContextSpan source))
+    (heads : List (Nat × EvidenceRange source)) (head : Nat × EvidenceRange source)
+    (present : head ∈ completeStructureContexts records heads) : head ∈ heads :=
+  (List.mem_filter.mp present).1
+
 /-- A nearby recorded paragraph/function start is part of the observation,
 not optional peripheral data. This keeps a result with its invocation or
 precondition, using only bounded original positions from the same section. -/
@@ -2785,6 +2839,21 @@ def EvidenceView.fromRange (decoded : Option (DecodedToolText source))
   | some evidence => .decoded evidence
   | none => .original range
 
+/-- Meaning rank chooses what to send; original source order explains how
+those observations fit together. Sort only after selection/acknowledgement
+subtraction, without changing data, provenance, positions or allocation. -/
+def sourceOrderedEvidence (views : List (EvidenceView source)) : List (EvidenceView source) :=
+  views.mergeSort (fun left right => left.range.start ≤ right.range.start)
+
+theorem source_order_keeps_original_views (views : List (EvidenceView source)) :
+    (sourceOrderedEvidence views).Perm views :=
+  List.mergeSort_perm _ _
+
+theorem source_order_cost_unchanged (views : List (EvidenceView source))
+    (cost : EvidenceView source → Nat) :
+    ((sourceOrderedEvidence views).map cost).sum = (views.map cost).sum := by
+  exact ((source_order_keeps_original_views views).map cost).sum_nat
+
 def evidenceRangeKey (owner : OutcomeEdge) (range : EvidenceRange source) : String :=
   "e:" ++ relationKey owner.relation ++ ":" ++ relationKey owner.outcome ++
     s!":{range.start}:{range.stop}"
@@ -2854,6 +2923,50 @@ theorem prepared_context_views_bounded
     (ranges : List (EvidenceRange source))
     (view : EvidenceView source) (_present : view ∈ prepareContextViews records heads decoded ranges) :
     view.range.stop - view.range.start ≤ 2048 := view.range.bounded
+
+/-- Reserve a ranked observation and its section's original prerequisites
+before optional surrounding text. One expanded observation must not consume
+the space needed by its own function entry, paragraph scope or invocation.
+This is an order on immutable ranges; it neither admits a new source nor
+changes an observation. -/
+def prerequisiteCueRanges (source : String) (workChars : Nat) (windows : List Nat)
+    (heads : List (Nat × EvidenceRange source)) : List (EvidenceRange source) :=
+  let ranked := windows.zipIdx.flatMap fun (index, priority) =>
+    ((meaningContext? source workChars index priority).map (·.span.ranges)).getD [] ++
+      (heads.filter (·.1 == priority)).map Prod.snd
+  ranked ++ heads.map Prod.snd
+
+theorem prerequisite_cues_keep_ranked (source : String) (workChars : Nat)
+    (windows : List Nat) (heads : List (Nat × EvidenceRange source))
+    (range : EvidenceRange source) (ranked : range ∈ rankedContextRanges source workChars windows) :
+    range ∈ prerequisiteCueRanges source workChars windows heads := by
+  simp only [rankedContextRanges, List.mem_flatMap, List.mem_filterMap] at ranked
+  obtain ⟨cue, ⟨row, member, equation⟩, present⟩ := ranked
+  apply List.mem_append_left
+  apply List.mem_flatMap.mpr
+  refine ⟨row, member, List.mem_append_left _ ?_⟩
+  simp only [equation, Option.map_some, Option.getD_some]
+  exact present
+
+theorem prerequisite_cues_keep_heads (source : String) (workChars : Nat)
+    (windows : List Nat) (heads : List (Nat × EvidenceRange source))
+    (range : EvidenceRange source) (present : range ∈ heads.map Prod.snd) :
+    range ∈ prerequisiteCueRanges source workChars windows heads :=
+  List.mem_append_right _ present
+
+def prepareCueViews (records : List (ContextSpan source))
+    (heads : List (Nat × Option Nat))
+    (decoded : Option (DecodedLayout source)) (ranges : List (EvidenceRange source)) :
+    List (EvidenceView source) :=
+  ranges.filterMap fun range =>
+    -- A section entry is itself the scope boundary. It cannot borrow the
+    -- previous paragraph as if that paragraph were its prerequisite.
+    let isEntry := heads.any fun head => head.2 == some range.start
+    let complete := if isEntry then recordContextRange records range
+      else prerequisiteContextRange records heads range
+    match decoded with
+    | none => some (.original complete)
+    | some layout => (decodedEvidenceUsing? layout complete).map EvidenceView.decoded
 
 /-- Overlap removal occurs after budget admission, preserving the smaller
 alternative when the complete local context does not fit. Every residual is
@@ -3090,8 +3203,10 @@ def ownerContextDemand (owner : OutcomeEdge) (windows : List Nat) : Nat :=
       if windows.isEmpty then source.length else
         let core := coherentContextRanges source (rankedContextRanges source (work.length + 1) windows)
         let central := core.head?.map (fun range => range.stop - range.start) |>.getD 0
-        let headers := structureContextRanges source (work.length + 1) windows
-          (contextStructureHeads source ((decodedToolText? source).map DecodedLayout.make))
+        let layout := (decodedToolText? source).map DecodedLayout.make
+        let headers := completeStructureContexts (contextRecordSpans source layout)
+          (structureContextRanges source (work.length + 1) windows
+            (contextStructureHeads source layout))
         -- Structural prerequisites consume original source positions too.
         -- Count their union with the ranked cues; duplicate/overlapping
         -- headers cannot inflate demand or steal reserved cue coverage.
@@ -3237,12 +3352,16 @@ def prepareContextualOwnerPart (delivered : List String) (windows : List Nat)
           let decoded := (decodedToolText? source).map DecodedLayout.make
           let records := contextRecordSpans source decoded
           let heads := contextStructureHeads source decoded
-          let structural := structureContextRanges source (work.length + 1) windows
-            heads
+          let structural := completeStructureContexts records
+            (structureContextRanges source (work.length + 1) windows heads)
           let coherent := (rankedContextRanges source (work.length + 1) windows).map
             (coherentRecordContext records heads)
-          let fixed := prepareContextViews records heads decoded
-            (contextRangesWithStructurePrepared source (work.length + 1) windows 0 structural coherent)
+          let required := prepareCueViews records heads decoded
+            (prerequisiteCueRanges source (work.length + 1) windows structural)
+          let fixed := required ++ prepareContextViews records heads decoded
+            -- Section entries were reserved above. Re-expanding a header
+            -- here would cross its own paragraph/function boundary.
+            (contextRangesWithStructurePrepared source (work.length + 1) windows 0 [] coherent)
           let previous := deliveredEvidenceRanges owner source delivered
           let cues := ((coreContextRanges source (work.length + 1) windows).map
             (recordContextRange records)).filterMap fun range => match decoded with
@@ -3272,7 +3391,8 @@ def prepareContextualOwnerPart (delivered : List String) (windows : List Nat)
                       (ContextSelection.empty : ContextSelection source contextBudget))
                   -- Plan before subtracting acknowledgements: receipt subtraction
                   -- must not repeatedly refill the budget from omitted text.
-                  let ranges := (remainingEvidence selected decoded previous).map (·.view)
+                  let ranges := sourceOrderedEvidence
+                    ((remainingEvidence selected decoded previous).map (·.view))
                   let keys := ranges.map fun view => evidenceRangeKey owner view.range
                   -- A missing cue elsewhere in the owner cannot justify sending
                   -- only optional context from this fitted plan.
@@ -3516,12 +3636,36 @@ def referencePlanningClaims (meaningSelected : Bool) (delivered : List String) :
 theorem meaning_plan_independent_of_receipts (first second : List String) :
     referencePlanningClaims true first = referencePlanningClaims true second := rfl
 
-/-- The receipt names the provider's original plan, independently of fitting
-or acknowledgements. A different requested cue in the same immutable owner
-can be delivered; unused old text cannot refill an unchanged plan. -/
-def contextPlanKey (owner outcome question : String) (windows : List Nat) : String :=
-  "p:" ++ (Json.arr #[toJson owner, toJson outcome, toJson question,
-    toJson (windows.eraseDups.mergeSort (· ≤ ·))]).compress
+/-- A fitted advisory plan belongs to an immutable observation and a human
+question. Numerical positions can change when the index population changes;
+that is not a new request. A different question, a new observation, or a new
+context epoch may deliver data again. Native completion has separate keys. -/
+def contextPlanKey (owner outcome question : String) : String :=
+  "p:" ++ (Json.arr #[toJson owner, toJson outcome, toJson question]).compress
+
+/-- Advisory context keeps the human scope. A grounded native connection
+has its own concrete demand: accepting advice must not hide data required to
+serve a different completed operation. This choice grants no authority. -/
+def contextPlanQuestion (question operation : String) (native grounded : Bool) : String :=
+  if native && grounded then operation else question
+
+theorem advisory_plan_question_ignores_operations (question first second : String) (native : Bool) :
+    contextPlanQuestion question first native false =
+      contextPlanQuestion question second native false := by
+  simp [contextPlanQuestion]
+
+theorem grounded_native_plan_keeps_operation (question operation : String) :
+    contextPlanQuestion question operation true true = operation := rfl
+
+/-- Index updates cannot turn unused positions of an accepted original
+observation into a new advisory plan for the same human question. -/
+theorem accepted_observation_plan_cannot_refill (part : DeliveryPart)
+    (context : ContextDelivery) (owner outcome question : String)
+    (same : part.context = some {context with planKey := contextPlanKey owner outcome question}) :
+    part.remaining [contextPlanKey owner outcome question] = none := by
+  apply accepted_plan_cannot_resend part _ _ same
+  · simp [contextPlanKey]
+  · simp
 
 /-- A proposed tool operation cannot redefine the relevance of surrounding
 history. The human question remains the evidence query; native completion is
@@ -3536,22 +3680,22 @@ theorem surrounding_evidence_query_does_not_follow_tools (first second question 
 theorem surrounding_evidence_query_without_question (current : String) :
     surroundingEvidenceQuery current none = current := rfl
 
-/-- The question admits and orders the source graph. A proposed lookup is a
-locator for additional original positions within that graph, not a new task.
-Keeping the locator separate prevents both question drift and starvation. -/
-def sourcePositionQuery (current : String) (question : Option String) (native : Bool) : String :=
-  if native then current else surroundingEvidenceQuery current question
+/-- Advisory positions belong to the human question, including before tools.
+Changing a proposed command is not new evidence demand. Native completion
+still uses the command independently in the matcher. -/
+def sourcePositionQuery (current : String) (question : Option String) (_native : Bool) : String :=
+  surroundingEvidenceQuery current question
 
-theorem native_source_positions_keep_locator (current : String) (question : Option String) :
-    sourcePositionQuery current question true = current := rfl
+theorem native_source_positions_keep_question (current question : String) :
+    sourcePositionQuery current (some question) true = question := rfl
+
+theorem source_positions_independent_of_operation (first second question : String)
+    (native : Bool) :
+    sourcePositionQuery first (some question) native =
+      sourcePositionQuery second (some question) native := rfl
 
 theorem initial_source_positions_keep_question (current question : String) :
     sourcePositionQuery current (some question) false = question := rfl
-
-/-- Newly located positions refine an original nomination rather than
-replacing it. Exact original coordinates, not tool spelling, define novelty. -/
-def refineSourcePositions (original located : List Nat) : List Nat :=
-  (located ++ original).eraseDups
 
 theorem refined_source_positions_keep_original (original located : List Nat) (position : Nat)
     (nominated : position ∈ original) : position ∈ refineSourcePositions original located := by
@@ -3801,9 +3945,9 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
     let fittedSlices := fittedSlices.map fun slice => match slice.context with
       | none => slice
       | some context =>
-          let windows := (semanticEvidence.find? fun row => relationKey row.1 == context.owner).map
-            Prod.snd |>.getD []
-          let planKey := contextPlanKey context.owner context.outcome (requestQuestion.getD current) windows
+          let question := contextPlanQuestion (requestQuestion.getD current) current enforce
+            (slice.members.any (·.blocks))
+          let planKey := contextPlanKey context.owner context.outcome question
           let context := {context with planKey}
           {slice with keys := context.keys, context := some context}
     let fittedKeys := fittedSlices.flatMap (·.keys) |>.eraseDups
@@ -4731,7 +4875,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   trace "source hydration"
   let mut focusedWindows : List (Value × List Nat) := []
   let mut focusedRows : List (Value × List Nat) := []
-  let focusDomain := entrySourceFocus entries sourceAll persistent provenance ++ support
+  let focusDomain := focusSourceDomain entries sourceAll persistent provenance support
   if evidence.isNone && !focusDomain.isEmpty then
     if let some command := selection.semanticMatcher then
       if let some root := evidenceRoots.head? then
@@ -4740,7 +4884,10 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
             | some id => pure ((semanticOwners.durableWindows.find? (·.1 == id)).map Prod.snd |>.getD [])
             | none => pure ((semanticOwners.stagedWindows.find? (·.1 == owner.relation)).map Prod.snd |>.getD [])
           if (sourceFocus? owner windows).isSome || native then
-            let some neighborhood ← focusNeighborhood command neighborhoodQuery focusDomain native | return some pendingSearch
+            -- Use the same original question/complete order as the initial
+            -- packet. A native operation cannot create a different advisory
+            -- plan and refill it with undispatched old positions.
+            let some neighborhood ← focusNeighborhood command neighborhoodQuery focusDomain | return some pendingSearch
             focusedRanking := neighborhood.ranking
             focusedWindows := neighborhood.windows
             focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
@@ -4768,22 +4915,14 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   let semanticEvidence := semanticOwners.durableWindows.filterMap fun (id, windows) =>
     rankedOwners[id]?.map fun relation => (relation, windows)
   let originalEvidence := semanticEvidence ++ semanticOwners.stagedWindows
-  -- The source-only rank is the delivery rank for entries too. Preserving
-  -- the original nomination means retaining its positions, not freezing its
-  -- command-biased order ahead of the current question's observed data.
-  let locatedEvidence := originalEvidence.map fun (owner, windows) =>
-      (owner, refineSourcePositions windows
-        ((focusedRows.find? (·.1 == owner)).map Prod.snd |>.getD []))
   let rendered := renderAutomatic staged selection.handoffChars current delivered enforce stagedVisible discovery
     (provenance := provenance) (refreshSources := refreshSources)
     (nominated := nominated.map (·.relation) ++ semanticOwners.staged)
-    (semanticEvidence := prioritizedEvidence (nominatedOwners.map (·.relation))
-      locatedEvidence focusedWindows)
+    (semanticEvidence := prioritizedEvidence originalEvidence focusedWindows)
     (meaningSelected := evidence.isNone && selection.semanticMatcher.isSome)
     (sourceAll := sourceAll) (sourceUnions := persistent) (entryWorks := entryWorks) (support := support)
     (byteBudget := selection.handoffBytes)
-    (evidenceRanking := (if native then evidenceRanking ++ focusedRanking
-      else focusedRanking ++ evidenceRanking).eraseDups)
+    (evidenceRanking := (focusedRanking ++ evidenceRanking).eraseDups)
     (requestQuestion := meaningQuery) (nativeObserved := evidence.isSome)
   trace s!"render complete chars={(rendered.map (·.text.length)).getD 0}"
   pure rendered
