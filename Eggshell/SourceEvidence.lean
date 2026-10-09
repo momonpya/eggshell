@@ -61,7 +61,23 @@ structure Record where
   files : List File
   uris : List String := []
   complete : Bool
-  deriving Repr, DecidableEq, ToJson, FromJson
+  /-- File observations may be complete while a directory search or another
+      operation has an open dependency domain. Such a record never completes Work. -/
+  closed : Bool := false
+  deriving Repr, DecidableEq, ToJson
+
+/-- Absence of a closed-domain witness never asserts complete operation
+coverage. It also does not discard the independently recorded file data. -/
+instance : FromJson Record where
+  fromJson? json := do
+    let workspace ← json.getObjValAs? String "workspace"
+    let files ← json.getObjValAs? (List File) "files"
+    let uris ← json.getObjValAs? (List String) "uris"
+    let complete ← json.getObjValAs? Bool "complete"
+    let closed ← match json.getObjVal? "closed" with
+      | .error _ => pure false
+      | .ok value => fromJson? value
+    pure ⟨workspace, files, uris, complete, closed⟩
 
 instance : BEq Record := ⟨fun left right => decide (left = right)⟩
 instance : LawfulBEq Record where
@@ -225,7 +241,7 @@ def verify (workspace : System.FilePath) (record : Record) (deadline : Nat) : IO
   pure ((check? record current).isSome)
 
 def unknown (workspace : System.FilePath) (uris : List String := []) : Capture :=
-  ⟨⟨workspace.fileName.getD workspace.toString, [], uris, false⟩, []⟩
+  ⟨⟨workspace.fileName.getD workspace.toString, [], uris, false, false⟩, []⟩
 
 /-- Only explicitly named local files are captured. Unrecognized shell syntax,
 directory searches and remote providers remain historical evidence. -/
@@ -438,6 +454,20 @@ def readPlan? (command : String) : Option ReadPlan := do
 def commandFiles? (command : String) : Option (List String) :=
   (readPlan? command).map (·.sources.val)
 
+/-- Preserve each independently recognized read in a mixed batch. Failure to
+describe the entire command does not erase observations of explicitly named
+files. This list gives observation targets only, never completion authority. -/
+def observedCommandFiles (command : String) : List String :=
+  ((sequenceSegments? command).getD []).filterMap pipelineReadPlan? |>.flatMap (·.sources.val) |>.eraseDups
+
+theorem observed_command_file_from_read (command : String) (file : String)
+    (present : file ∈ observedCommandFiles command) :
+    ∃ segment ∈ (sequenceSegments? command).getD [],
+      ∃ plan, pipelineReadPlan? segment = some plan ∧ file ∈ plan.sources.val := by
+  simp only [observedCommandFiles, List.mem_eraseDups, List.mem_flatMap, List.mem_filterMap] at present
+  obtain ⟨plan, ⟨segment, member, parsed⟩, filePresent⟩ := present
+  exact ⟨segment, member, plan, parsed, filePresent⟩
+
 theorem accepted_read_plan_dependencies (command : String) (plan : ReadPlan)
     (accepted : readPlan? command = some plan) :
     commandFiles? command = some plan.sources.val := by
@@ -474,6 +504,12 @@ def inputPaths (input : Json) : List String :=
     (((input.getObjValAs? String "cmd").toOption.orElse
       (fun _ => (input.getObjValAs? String "command").toOption)).bind commandFiles?).getD []).eraseDups
 
+def observedInputPaths (input : Json) : List String :=
+  let direct := pathsFromInput input ++ ((input.getObjValAs? (List String) "paths").toOption.getD [])
+  (if !direct.isEmpty then direct else
+    (((input.getObjValAs? String "cmd").toOption.orElse
+      (fun _ => (input.getObjValAs? String "command").toOption)).map observedCommandFiles).getD []).eraseDups
+
 def inputDirectory? (workspace : System.FilePath) (input : Json) : Option System.FilePath := do
   let mut directory := workspace
   let mut specified := false
@@ -487,17 +523,23 @@ def inputDirectory? (workspace : System.FilePath) (input : Json) : Option System
   pure directory
 
 def capture (workspace : System.FilePath) (input : Json) (deadline : Nat) : IO Capture := do
-  let paths := inputPaths input
+  let paths := observedInputPaths input
   let uris := (urisFromInput input ++ paths.filter isURI).eraseDups
   if paths.isEmpty || !uris.isEmpty then return unknown workspace uris
   let some directory := inputDirectory? workspace input | return unknown workspace
   let mut probes := []
+  let mut closed := paths == inputPaths input && !paths.isEmpty
   for path in paths do
     let some relative := relative? workspace directory path | return unknown workspace
+    -- A named directory is an open search domain, not a failed file read.
+    -- Retain the other sealed file observations; do not traverse the directory.
+    if ← (directory / path).isDir then
+      closed := false
+      continue
     let some observed ← probe workspace relative deadline | return unknown workspace
     probes := observed :: probes
   let completed := probes.reverse
-  let record : Record := ⟨workspace.fileName.getD workspace.toString, completed.map (·.file), [], true⟩
+  let record : Record := ⟨workspace.fileName.getD workspace.toString, completed.map (·.file), [], true, closed⟩
   if !record.valid then return unknown workspace
   pure ⟨record, completed⟩
 
@@ -567,7 +609,7 @@ theorem receipt_other_owner_rejected (session turn tag owner other : Value) (rec
     Value.applyList, Refs.ofList, Refs.toList, Ref.exact, different]
 
 /-- Unknown is a real provenance state, not a successful check with no files. -/
-def unverified : Record := ⟨"", [], [], false⟩
+def unverified : Record := ⟨"", [], [], false, false⟩
 
 abbrev Ledger := Std.HashMap String (Option File)
 

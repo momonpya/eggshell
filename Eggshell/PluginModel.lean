@@ -42,6 +42,20 @@ structure ThreadState where
   offers : List DeliveryOffer := []
   deriving Repr, ToJson, FromJson
 
+/-- Temporary claims expire; only client acknowledgements persist delivery. -/
+def ThreadState.deliveryClaims (state : ThreadState) (turn : String) (now : Nat) : List String :=
+  (state.deliveredGraphs ++ (state.offers.filter (fun offer =>
+    offer.stamp.accepts turn state.epoch now)).flatMap (·.graphs)).eraseDups
+
+theorem expired_offer_is_not_a_claim (state : ThreadState) (turn : String) (now : Nat)
+    (expired : ∀ offer ∈ state.offers, offer.stamp.accepts turn state.epoch now = false) :
+    state.deliveryClaims turn now = state.deliveredGraphs.eraseDups := by
+  have empty : state.offers.filter (fun offer => offer.stamp.accepts turn state.epoch now) = [] := by
+    apply List.filter_eq_nil_iff.mpr
+    intro offer present
+    simp [expired offer present]
+  simp [ThreadState.deliveryClaims, empty]
+
 structure ToolEvent where
   name : String
   useId : String
@@ -599,7 +613,12 @@ def turnSources (pending : PendingTurn) : SourceEvidence.Record :=
   { workspace := (System.FilePath.mk pending.cwd).fileName.getD pending.cwd
     files := records.flatMap (·.files) |>.eraseDups
     uris := records.flatMap (·.uris) |>.eraseDups
-    complete := !records.isEmpty && records.all (·.complete) }
+    -- A listing or provider with no file observations does not erase the
+    -- independently sealed file state. The answer still has an open domain
+    -- and therefore cannot complete a later native operation.
+    complete := records.any (fun record => !record.files.isEmpty) &&
+      (records.filter (fun record => !record.files.isEmpty)).all (·.complete)
+    closed := !records.isEmpty && records.all (fun record => record.complete && record.closed) }
 
 structure CompiledTurn (source : Graph) where
   transaction : Transaction

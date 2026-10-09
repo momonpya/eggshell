@@ -28,7 +28,7 @@ def targets (workspace : System.FilePath) (name : String) (input : Json) : List 
     else if ["Write", "Edit", "Read", "read_file"].contains name then pathsFromInput input
     else if ["Bash", "bash", "shell", "exec_command", "functions.exec_command"].contains name then
       (((input.getObjValAs? String "cmd").toOption.orElse fun _ =>
-        (input.getObjValAs? String "command").toOption).bind commandFiles?).getD []
+        (input.getObjValAs? String "command").toOption).map observedCommandFiles).getD []
     else []
   let some directory := inputDirectory? workspace input | return []
   return paths.filterMap fun path =>
@@ -217,7 +217,7 @@ def finish (workspace : System.FilePath) (before : Option File) (snapshot : Snap
   let probe : Probe := ⟨snapshot.file, snapshot.stamp⟩
   if (← checkedProbeFile workspace (some probe) deadline).isNone then return .pending
   if before == some snapshot.file then return .complete snapshot none
-  let record : Record := ⟨workspace.fileName.getD workspace.toString, [snapshot.file], [], true⟩
+  let record : Record := ⟨workspace.fileName.getD workspace.toString, [snapshot.file], [], true, true⟩
   let capture : SourceEvidence.Capture := ⟨record, [probe]⟩
   if verified : record.valid = true then
     return .complete snapshot (some ⟨before, capture, verified, rfl, window, changed⟩)

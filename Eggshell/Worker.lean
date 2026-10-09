@@ -38,31 +38,32 @@ def cancelSlot (slot : Slot) : IO Unit := do
   slot.child.atomically do
     if let some child ← get then killGroup child
 
-/-- Two independent pipes permit overlapping reads without sharing a reply or
+/-- Independent pipes permit overlapping reads without sharing a reply or
 request cancellation. This is a per-manager concurrency bound, not a limit on
-chats, users, or stored memory. -/
-abbrev ReadLane := Fin 2
+chats, users, or stored memory. Numerical model lifetime remains device-wide. -/
+def readLaneCount : Nat := 4
 
-def readLanes : List ReadLane := [⟨0, by decide⟩, ⟨1, by decide⟩]
+abbrev ReadLane := Fin readLaneCount
 
-def readLaneKey (lane : ReadLane) : String := "search-" ++ toString lane.val
+def readLanes (count : Nat := readLaneCount) : List (Fin count) := List.finRange count
 
-structure ReadPool where
-  left : Slot
-  right : Slot
+def readLaneKey (lane : Fin count) : String := "search-" ++ toString lane.val
 
-def ReadPool.slot (pool : ReadPool) (lane : ReadLane) : Slot :=
-  if lane.val = 0 then pool.left else pool.right
+structure ReadPool (count : Nat := readLaneCount) where
+  pipes : Vector Slot count
+
+def ReadPool.slot (pool : ReadPool count) (lane : Fin count) : Slot :=
+  pool.pipes[lane]
 
 def readPoolFor (session : String) : IO ReadPool := do
-  let left ← slotFor session (readLaneKey ⟨0, by decide⟩)
-  let right ← slotFor session (readLaneKey ⟨1, by decide⟩)
-  pure { left, right }
+  let pipes ← (Vector.ofFn (fun lane : ReadLane => lane)).mapM fun lane =>
+    slotFor session (readLaneKey lane)
+  pure {pipes}
 
 def cancel (session role : String) : IO Unit := do
   if role == "search" then
     let pool ← readPoolFor session
-    for lane in readLanes do cancelSlot (pool.slot lane)
+    for lane in readLanes readLaneCount do cancelSlot (pool.slot lane)
   else cancelSlot (← slotFor session role)
 
 def retire (slot : Slot) (child : Child) : IO Unit := slot.child.atomically do
@@ -135,21 +136,21 @@ partial def withGateWithin (gate : Std.Mutex Unit) (deadline : Nat)
 
 /-- The admission records exactly which pipe owns execution and a fresh clock
 sample after acquiring that pipe's gate. An expired waiter owns no pipe. -/
-structure ReadAdmission (deadline : Nat) where
-  lane : ReadLane
+structure ReadAdmission (deadline : Nat) (count : Nat := readLaneCount) where
+  lane : Fin count
   window : OpenWindow deadline
 
-theorem read_admission_is_live (admission : ReadAdmission deadline) :
+theorem read_admission_is_live (admission : ReadAdmission deadline count) :
     admission.window.now < deadline := admission.window.before
 
-theorem read_admission_is_bounded (admission : ReadAdmission deadline) :
-    admission.lane.val < 2 := admission.lane.isLt
+theorem read_admission_is_bounded (admission : ReadAdmission deadline count) :
+    admission.lane.val < count := admission.lane.isLt
 
 /-- Probe all pipes before sleeping. A completed `none` is still a completion;
 only a busy gate retries. No action is left queued after the caller expires. -/
-def probeReadPool (pool : ReadPool) (deadline : Nat)
-    (action : ReadAdmission deadline → IO α) : IO (Option (Option α)) := do
-  for lane in readLanes do
+def probeReadPool (pool : ReadPool count) (deadline : Nat)
+    (action : ReadAdmission deadline count → IO α) : IO (Option (Option α)) := do
+  for lane in readLanes count do
     let probe ← (pool.slot lane).gate.tryAtomically do
       match OpenWindow.check deadline (← IO.monoMsNow) with
       | none => pure none
@@ -157,8 +158,8 @@ def probeReadPool (pool : ReadPool) (deadline : Nat)
     if probe.isSome then return probe
   pure none
 
-partial def withReadPoolWithin (pool : ReadPool) (deadline : Nat)
-    (action : ReadAdmission deadline → IO α) : IO (Option α) := do
+partial def withReadPoolWithin (pool : ReadPool count) (deadline : Nat)
+    (action : ReadAdmission deadline count → IO α) : IO (Option α) := do
   let now ← IO.monoMsNow
   if now ≥ deadline then return none
   match gateDecision deadline now (← probeReadPool pool deadline action) with
@@ -373,7 +374,8 @@ def search (request : Search) : IO (Option Handoff) := do
         let snapshot := pending.filter (·.turnId == request.pending.turnId)
         staged := staged ++ (← IO.ofExcept (stagedGraphValues (snapshot.getD request.pending)))
       staged := staged.eraseDups
-      automaticHandoff selection request.work current.state.deliveredGraphs
+      automaticHandoff selection request.work
+        (current.state.deliveryClaims pending.turnId (← IO.monoMsNow))
         request.enforce request.evidence staged (!current.state.afterCompaction)
         request.pending.localUnion
         (some {

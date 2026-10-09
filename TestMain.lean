@@ -609,7 +609,8 @@ def testNaturalLanguageSessionTransport : IO Unit := do
       first.text.contains priorResult)
     "natural-language input and outcome were not transported as advisory graph"
   check (first.text.contains evidenceGapGuidance &&
-      first.text.contains "uncovered requirement of the current request" &&
+      first.text.contains "Check only a fact needed to answer the current request" &&
+      first.text.contains "Missing graph content and unresolved prior Work do not create requirements" &&
       first.text.contains "mark the conclusion UNRESOLVED, and stop" &&
       first.text.contains "Failed or unavailable checks are not passing checks")
     "advisory handoff omitted honest evidence-exhaustion and resumption conditions"
@@ -787,10 +788,10 @@ def testOperationBoundaryLookup : IO Unit := do
   IO.println "PASS run-local fragments reuse one persistent native Work"
 
 def testFlexibleContextAllocation : IO Unit := do
-  -- The hook client has already reserved RPC/teardown time. A 25-second
-  -- upstream deadline must not be shortened to the former local 20 seconds.
+  -- The hook client has already reserved RPC/teardown time. Its remaining
+  -- deadline must not be shortened by a second 20/26-second local ceiling.
   let now ← IO.monoMsNow
-  let supplied := now + 25000
+  let supplied := now + 27700
   let actual ← hookDeadline (Lean.Json.mkObj [("_eggshell_deadline", Lean.toJson supplied)])
   check (actual == supplied) "search shortened the native hook's remaining deadline"
   let short ← hookDeadline (Lean.Json.mkObj [("_eggshell_deadline", Lean.toJson (now + 800))])
@@ -893,6 +894,104 @@ def testFlexibleContextAllocation : IO Unit := do
         check (left.stop ≤ right.start || right.stop ≤ left.start)
           "overlapping expansions duplicated original source positions"
   let slice : TransportSlice := {members := [], visibleKeys := [], keys := [], text := source}
+  check ((entrySourceFocus [owner] [] [] []).map (·.owner) == [owner])
+    "source-only delivery scoring excluded the primary search entry when no peripheral support existed"
+  -- The best cue lies at the end of one dense overlapping cluster. Budget
+  -- selection must follow meaning rank, not the cluster's source order.
+  let denseWindows := [30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20]
+  let reserved := minimumContextCost source (work.length + 1) denseWindows
+  let fundedAllowances := ownerContextAllowances owner denseWindows 9000 16000
+  check (fundedAllowances.head? == some reserved &&
+      fundedAllowances.all (reserved ≤ ·) && 0 < reserved && reserved ≤ 2048 &&
+      reserved == minimumContextCost source (work.length + 1) [30] &&
+      reserved == minimumContextCost source (work.length + 1) (30 :: List.range 100))
+    "lower-ranked positions enlarged the minimum or displaced the best complete observation"
+  let some highest := meaningContext? source (work.length + 1) 30 0 |
+    throw (IO.userError "dense cue fixture has no highest ranked window")
+  check ((coreContextRanges source (work.length + 1) denseWindows).head?.any
+    (fun range => range.stop ≤ highest.span.start))
+    "dense cue regression fixture did not put the winner behind the first source segment"
+  let some dense := prepareContextualOwnerPart [] denseWindows owner "original relation" [] slice 512 |
+    throw (IO.userError "dense cluster displaced its highest-ranked original cue")
+  let some denseContext := dense.context | throw (IO.userError "dense cluster lost typed original data")
+  check (denseContext.fragments.any fun fragment => fragment.first ≤ highest.span.start &&
+    highest.span.stop ≤ fragment.first + fragment.original.length)
+    "a source-ordered split displaced the best meaning cue within a dense cluster"
+  -- A prose observation needs its recorded precondition, even when the
+  -- precondition is outside the nominated 512-character search window.
+  -- This is also the shape of input/expectation pairs in tool output.
+  let preamble := String.ofList (List.replicate 4000 'a') ++ "\n"
+  let condition := "Recorded input: staging, revision blue, authentication available.\n"
+  let context := "\n".intercalate (List.replicate 8
+    "Related context: the same service and request, with no changed input or external lookup.") ++ "\n"
+  let observation := "Observed result: the request succeeded and returned the blue revision.\n"
+  let document := preamble ++ condition ++ context ++ observation ++
+    "\n".intercalate (List.replicate 40 "Remaining notes concern other observations in this original record.")
+  let proseOwner := OutcomeEdge.make (.text work) (.text document) [] (by simp) (by simp)
+  let cue := (work.length + 1 + preamble.length + condition.length + context.length) / 384
+  let originalCue := coreContextRanges document (work.length + 1) [cue]
+  check (!(originalCue.any (fun range => range.text.contains "Recorded input:")))
+    "precondition regression fixture accidentally put the condition inside the numerical cue"
+  let allowance := (ownerContextAllowances proseOwner [cue] 6000 6000).head?.getD 0
+  let proseSlice : TransportSlice := {members := [], visibleKeys := [], keys := [], text := document}
+  let inputCue := (work.length + 1 + preamble.length + condition.length / 2) / 384
+  check (!(coreContextRanges document (work.length + 1) [inputCue]).any
+      (fun range => range.text.contains observation.trimAscii.toString))
+    "following-result fixture accidentally placed the result in the input window"
+  let inputBudget := minimumContextCost document (work.length + 1) [inputCue]
+  let some inputPair := prepareContextualOwnerPart [] [inputCue] proseOwner "original relation" []
+      proseSlice inputBudget | throw (IO.userError "recorded input had no usable result context")
+  check (inputPair.text.contains condition.trimAscii.toString &&
+      inputPair.text.contains observation.trimAscii.toString && !inputPair.text.contains document)
+    "lower-ranked excerpts displaced the following result of the best input observation"
+  let pairedDocument := preamble ++ "\n" ++ condition ++ "\n" ++ observation ++ "\n" ++ context
+  let pairedOwner := OutcomeEdge.make (.text work) (.text pairedDocument) [] (by simp) (by simp)
+  let pairedWindow := (work.length + 1 + preamble.length + 1 + condition.length + 1) / 384
+  let pairedSlice : TransportSlice := {members := [], visibleKeys := [], keys := [], text := pairedDocument}
+  let pairedBudget := minimumContextCost pairedDocument (work.length + 1) [pairedWindow]
+  let some paired := prepareContextualOwnerPart [] [pairedWindow] pairedOwner "original relation" []
+      pairedSlice pairedBudget | throw (IO.userError "split-paragraph evidence was omitted")
+  check (paired.text.contains condition.trimAscii.toString &&
+      paired.text.contains observation.trimAscii.toString)
+    "a blank record separated a delivered result from its recorded input"
+  let irrelevantWindow := (work.length + 1 + 1024) / 384
+  let refinedWindows := refineSourcePositions [irrelevantWindow] [pairedWindow]
+  let refinedBudget := minimumContextCost pairedDocument (work.length + 1) refinedWindows
+  let some refined := prepareContextualOwnerPart [] refinedWindows pairedOwner "original relation" []
+      pairedSlice refinedBudget | throw (IO.userError "current-question evidence refinement was omitted")
+  check (refined.text.contains condition.trimAscii.toString &&
+      refined.text.contains observation.trimAscii.toString &&
+      refinedWindows.contains irrelevantWindow && refinedWindows.head? == some pairedWindow)
+    "retaining an old nomination froze irrelevant text ahead of the current question's observation"
+  let some prose := prepareContextualOwnerPart [] [cue] proseOwner "original relation" [] proseSlice allowance |
+    throw (IO.userError "coherent context refused a recorded prose observation")
+  check (prose.text.contains condition.trimAscii.toString && prose.text.contains observation.trimAscii.toString &&
+      !prose.text.contains document && (prose.remaining prose.keys).isNone)
+    "condition/result pairing was lost, expanded to a whole body, or repeated accepted evidence"
+  let some proseContext := prose.context | throw (IO.userError "missing typed original prose context")
+  for part in proseContext.fragments do
+    check (part.original.length ≤ 2048 && part.first + part.original.length ≤ document.length &&
+      part.original == String.ofList ((document.toList.drop part.first).take part.original.length))
+      "coherent context changed original evidence or exceeded source/fragment bounds"
+  -- Nearby numbered source records from another file cannot be mistaken
+  -- for a prerequisite of the selected file after a line-number reset.
+  let old := preamble ++ "   1\tFOREIGN FILE RECORD\n   2\tOld unrelated evidence\n"
+  let reset := old ++ "  80\tCurrent input and condition\n" ++
+    "\n".intercalate ((List.range 18).map fun i => s!"  {81 + i}\tCurrent record {i}: original local context")
+  let some decodedReset := decodedToolText? ((Lean.Json.str reset).compress) |
+    throw (IO.userError "numbered context fixture failed to decode")
+  let resetSource := (Lean.Json.str reset).compress
+  let resetLayout := DecodedLayout.make decodedReset
+  let newFile := (encodedTextBody old).length + 1
+  if valid : newFile + 400 < newFile + 650 ∧ newFile + 650 ≤ resetSource.length then
+    let originalRange : EvidenceRange resetSource := ⟨newFile + 400, newFile + 650,
+      valid.1, valid.2, by omega⟩
+    let paired := coherentRecordContext (contextRecordSpans resetSource (some resetLayout))
+      (contextStructureHeads resetSource (some resetLayout)) originalRange
+    check (paired.start ≥ newFile && paired.start ≤ originalRange.start &&
+        originalRange.stop ≤ paired.stop && paired.text.length ≤ 2048)
+      "coherent context crossed a recorded file discontinuity or lost its original cue"
+  else throw (IO.userError "numbered context fixture has insufficient current-file data")
   let some (keys, text) := contextualOwnerData [] windows owner "  ORIGINAL ALL LINK" [] slice 4096 |
     throw (IO.userError "flexible production renderer omitted the original owner")
   check (keys.length > 3 && text.contains work && text.contains "ORIGINAL ALL LINK" && !text.contains source)
@@ -931,8 +1030,7 @@ def testFlexibleContextAllocation : IO Unit := do
       (ContextSelection.empty : ContextSelection source budget)
     check (selected.used ≤ budget) "actual accepted contexts exceed their flexible budget"
   let allowances := ownerContextAllowances owner windows 9000 16000
-  let central := (meaningContextGroups source (work.length + 1) windows).head?.map
-    (fun group => group.span.stop - group.span.start) |>.getD source.length
+  let central := minimumContextCost source (work.length + 1) windows
   check (allowances.head? == some central && allowances.getLast? == some 16000 &&
       allowances.contains 9000 && allowances.any (· > 6144) &&
       allowances == allowances.mergeSort (· ≤ ·))
@@ -950,6 +1048,10 @@ def testFlexibleContextAllocation : IO Unit := do
   let entryData := [String.ofList (List.replicate 3500 'e')]
   let bestSupport := String.ofList (List.replicate 2500 's')
   let baseline := coherentEntryPacketBudget (120000, 128000) entryCost entryData [bestSupport]
+  check (baseline == (25000, 27000) &&
+      coherentPacketDemand (600, 800) (1300, 1700) == (1300, 1700) &&
+      coherentPacketDemand (0, 0) (0, 0) == (0, 0))
+    "small evidence demand was inflated by a fixed packet floor"
   for count in [0, 1, 10, 100, 1000] do
     let peripheral := (List.range count).map fun i => s!"unrelated earlier topic {i}: " ++
       String.ofList (List.replicate (i % 200 + 100) 'λ')
@@ -1212,7 +1314,9 @@ def testSemanticEvidenceDelivery : IO Unit := do
   check (nativeAdvice.text.contains "forwardArguments(configuration)" &&
       nativeAdvice.text.contains "RELATED SOURCE GRAPH" && !nativeAdvice.blocksCurrent &&
       nativeAdvice.completed == 0 && nativeAdvice.coveredFragments.isEmpty &&
-      nativeAdvice.sourceCheckpoints.isEmpty && nativeAdvice.localUnions == 0)
+      nativeAdvice.sourceCheckpoints.isEmpty && nativeAdvice.localUnions == 0 &&
+      !nativeAdvice.text.contains "OPEN HANDOFF" && !nativeAdvice.text.contains "\nOPEN WORK\n" &&
+      !nativeAdvice.text.contains "mark it OPEN")
     "native semantic advice lost original evidence or gained native completion authority"
   let repeatedAdvice ← automaticHandoff selection (canonicalToolWork proposed)
     nativeAdvice.deliveredGraphs true
@@ -1338,10 +1442,13 @@ def testSemanticEvidenceDelivery : IO Unit := do
       (rankEvidenceChoices [entry, other, neighbor] choices
         [(entry, 0), (neighbor, 0), (other, 1)]).map Prod.fst == [entry, neighbor, other])
     "an original task's tool evidence lost its family priority or numerical order, or an unrelated owner acquired that priority"
+  let framingFile : SourceEvidence.File := {relative := "source", content := none}
+  let framingRecord : SourceEvidence.Record := {workspace := "test", files := [framingFile], complete := true}
   let framing : Handoff := {pendingSearch with
-    sourceUses := [{owner := String.ofList (List.replicate 80 '源'), references := [], completed := false},
-      {owner := "v1", references := [], completed := false}]}
-  let status := renderOwnerSourceStatus framing {} 1024 360
+    sourceRecords := [framingRecord]
+    sourceUses := [{owner := String.ofList (List.replicate 80 '源'), references := [0], completed := false},
+      {owner := "v1", references := [0], completed := false}]}
+  let status := renderOwnerSourceStatus framing (({} : SourceEvidence.Ledger).insert "source" (some framingFile)) 1024 360
   check (status.text.utf8ByteSize ≤ 360 && status.text.length ≤ 1024 &&
       status.text.contains "GRAPH v1" && !status.text.contains (String.ofList (List.replicate 80 '源')) &&
       (sourceFrame? 32 16 "SOURCE\n日本").any (fun frame => frame.text == "SOURCE\n日本") &&
@@ -1358,7 +1465,10 @@ def testSemanticEvidenceDelivery : IO Unit := do
       !(renderSelectionTree association [selectedFirst.matched.projectedEdge.relation] true).contains "OPEN target" &&
       handoff.text.contains "Graph Work/All nodes describe associations, not extra requirements" &&
       handoff.text.contains "do not investigate additional examples unless requested" &&
-      handoff.text.contains "Unverified does not mean changed" &&
+      !handoff.text.contains "Unverified" &&
+      handoff.text.contains "A separate explanation cannot revoke a verified file observation" &&
+      handoff.text.contains "Never repeat freshness checks or reread delivered file ranges for confirmation, including updated observations" &&
+      handoff.text.contains "Follow each observation's newest source status; superseded contents remain history" &&
       handoff.text.contains "an evidence gap to report, not a reason to retry")
     "a memory association was presented as another required investigation"
   let ab : UnionEdge := ⟨.text "entry-a", .text "alias-b", .run (.text "request"), by intro _; rfl⟩
@@ -1644,7 +1754,7 @@ def testWholeSliceBudget : IO Unit := do
     handoffChars := 120000
   } question [valueKey (.text seed.prompt)]
   check (manual.any fun handoff => handoff.text.contains evidenceGapGuidance &&
-    handoff.text.contains "OPEN means unresolved, not an instruction to retry unavailable evidence" &&
+    handoff.text.contains "Memory is optional evidence, not a checklist" &&
     handoff.text.contains "recorded source without line numbers when they are unavailable" &&
     handoff.completed == 0 && !handoff.blocksCurrent)
     "manual handoff omitted the stopping rule or treated selected data as completed evidence"
@@ -2671,7 +2781,153 @@ def testDaemonConcurrency : IO Unit := do
     "concurrent daemon turn was not promoted atomically"
   IO.println "PASS concurrent daemon clients preserve one staged turn"
 
+def testDeliveryReconciliation : IO Unit := do
+  let original := "first observation 日本語🐣; second observation is independent; optional old context"
+  let context : ContextDelivery := {
+    owner := "owner", outcome := "result", sourceChars := original.length
+    cues := [(0, 35)]
+    leading := "recorded evidence\n", trailing := "\nend evidence"
+    fragments := [{first := 0, original}] }
+  let part : DeliveryPart := {keys := context.keys, text := context.render, context := some context}
+  let packet : DeliveryPacket := {header := "reference data", footer := "\nend reference", parts := [part]}
+  let handoff : Handoff := {
+    text := packet.render, packet := some packet, reason := "advisory"
+    deliveredGraphs := part.keys, completed := 0, advisory := 1
+    localUnions := 0, coveredFragments := [], blocksCurrent := false }
+  let receipt := "e:owner:result:0:20"
+  let some pending := handoff.reconcileDelivery [receipt] 10000 10000 |
+    throw (IO.userError "a parallel receipt discarded the genuinely new part of a cue")
+  let some rest := pending.handoff.packet.bind (·.parts.head?) | throw (IO.userError "missing reconciled part")
+  let some remaining := rest.context | throw (IO.userError "missing bounded original context")
+  check (remaining.fragments.map (·.first) == [20] &&
+      remaining.fragments.map (·.original) == [(original.drop 20).copy] &&
+      !pending.handoff.blocksCurrent && pending.handoff.sourceCheckpoints.isEmpty &&
+      pending.handoff.deliveredGraphs == [s!"e:owner:result:20:{original.length}"])
+    "late reconciliation repeated old data, changed original Unicode or invented completion"
+  check ((handoff.reconcileDelivery ["e:owner:result:0:35"] 10000 10000).isNone)
+    "an exhausted meaning cue unlocked optional peripheral context"
+  check ((handoff.reconcileDelivery (receipt :: pending.handoff.deliveredGraphs) 10000 10000).isNone)
+    "parallel publication still repeated the same evidence"
+  check ((handoff.reconcileDelivery ["e:other:result:0:35", "e:owner:old-result:0:35",
+      "e:owner:result:0:999999"] 10000 10000).any fun result => result.handoff.text == handoff.text)
+    "foreign, old-version or invalid receipts hid current data"
+  let next := {context with cues := [(45, 60)]}
+  let nextPart : DeliveryPart := {keys := next.keys, text := next.render, context := some next}
+  let nextPacket := {packet with parts := [nextPart]}
+  check (({handoff with packet := some nextPacket, text := nextPacket.render}.reconcileDelivery
+      ["e:owner:result:0:35"] 10000 10000).isSome)
+    "a genuinely new meaning-selected cue was suppressed"
+  check ((handoff.reconcileDelivery [] 5 5).isNone &&
+      ({handoff with text := "inconsistent envelope"}.reconcileDelivery [] 10000 10000).isNone)
+    "publication bypassed byte bounds or accepted inconsistent original data"
+  let stamp : RequestStamp := {turn := "question", epoch := 9, deadline := 100}
+  let offer : DeliveryOffer := {id := "parallel", stamp, graphs := context.keys, text := context.render, reason := "advice"}
+  let state : ThreadState := {profile := "work", epoch := 9, offers := [offer]}
+  check ((handoff.reconcileDelivery (state.deliveryClaims "question" 50) 10000 10000).isNone &&
+      (handoff.reconcileDelivery (state.deliveryClaims "question" 101) 10000 10000).isSome &&
+      state.deliveredGraphs.isEmpty && (compactState state).offers.isEmpty)
+    "live offers duplicated evidence or expired/unacknowledged offers consumed it permanently"
+  let planned := {context with planKey := "p:owner:result:question"}
+  let plannedPart : DeliveryPart := {keys := planned.keys, text := planned.render, context := some planned}
+  check ((plannedPart.remaining [planned.planKey]).isNone &&
+      (plannedPart.remaining []).isSome && !(planned.keys.any (·.startsWith "g:")))
+    "an advisory plan iterated old unselected candidates or falsely claimed whole-Outcome delivery"
+  -- Fit a deliberately overcrowded original pool before applying receipts.
+  -- The old implementation removed the first owner before fitting and thus
+  -- promoted the next old owner on each operation under the same question.
+  let low := {planned with owner := "old-periphery", planKey := "p:old-periphery:result:question"}
+  let lowPart : DeliveryPart := {keys := low.keys, text := low.render, context := some low}
+  let fit := fun history => fitWholeSlices plannedPart.text.length (fun p : DeliveryPart => p.text)
+    ([plannedPart, lowPart].filter fun p =>
+      p.keys.any (!(referencePlanningClaims true history).contains ·))
+  let firstPlan := fit []
+  let laterPlan := fit planned.keys
+  check (firstPlan.map (fun p => (p.keys, p.text)) == laterPlan.map (fun p => (p.keys, p.text)) && laterPlan.length == 1 &&
+      (laterPlan.filterMap (·.remaining planned.keys)).isEmpty)
+    "receipt subtraction refilled an unchanged query from lower-ranked old owners"
+  let changed := {planned with outcome := "new-observation", planKey := "p:owner:new-observation:question"}
+  let changedPart : DeliveryPart := {keys := changed.keys, text := changed.render, context := some changed}
+  check ((changedPart.remaining planned.keys).isSome)
+    "an old presentation plan suppressed a separately observed new outcome"
+  let firstKey := contextPlanKey "owner" "result" "question" [3, 13]
+  let nextKey := contextPlanKey "owner" "result" "question" [3, 27]
+  check (firstKey == contextPlanKey "owner" "result" "question" [13, 3, 13])
+    "reordering the same requested source positions falsely created new demand"
+  let firstCue := {planned with planKey := firstKey}
+  let nextCue := {planned with planKey := nextKey}
+  let firstCuePart := {plannedPart with keys := firstCue.keys, text := firstCue.render, context := some firstCue}
+  let nextCuePart := {plannedPart with keys := nextCue.keys, text := nextCue.render, context := some nextCue}
+  check (firstKey != nextKey &&
+      (firstCuePart.remaining [firstKey]).isNone &&
+      (nextCuePart.remaining [firstKey]).isSome)
+    "a plan receipt confused a new requested cue with optional refill of the old plan"
+  check (surroundingEvidenceQuery "list unrelated candidates" (some "question") ==
+      surroundingEvidenceQuery "read a different branch" (some "question") &&
+      surroundingEvidenceQuery "read a different branch" (some "question") == "question" &&
+      surroundingEvidenceQuery "native request" none == "native request")
+    "tool changes reopened surrounding history outside the human question"
+  check (sourcePositionQuery "read a particular missing record" (some "original question") true ==
+      "read a particular missing record" &&
+      sourcePositionQuery "read a particular missing record" (some "original question") false == "original question" &&
+      refineSourcePositions [3, 13] [27, 3] == [27, 3, 13] &&
+      refineSourcePositions [3, 13] [] == [3, 13])
+    "a lookup lost its original positions, its missing-data locator or the initial question"
+  check (!lookupContextAllowed true true false none &&
+      lookupContextAllowed true true false (some []) &&
+      lookupContextAllowed true true false (some [27, 3]) &&
+      lookupContextAllowed false true false none &&
+      lookupContextAllowed true true true none)
+    "native lookup reopened old question positions or lost focused graph data / grounded completion"
+  let briefPolicy := "Use the recorded evidence."
+  let extendedPolicy := String.ofList (List.replicate 1950 'x')
+  let price := fun policy => policyPacketCost policy
+    (27000 + policy.length, 28000 + policy.utf8ByteSize)
+  check (price briefPolicy == price extendedPolicy && (price briefPolicy).2 ≥ 28000)
+    "longer handoff guidance silently reduced the evidence envelope"
+  let encoded := encodedTextBody "original line\n日本語🐣"
+  let fragment : DeliveryFragment := {first := 101, original := encoded, decoded := true}
+  let shifted := fragment.remaining [⟨101, 109, by decide⟩]
+  check (shifted.all (fun item => item.first ≥ 109) &&
+      shifted.all (fun item => item.original.length ≤ 2048) &&
+      fragment.render.contains "日本語🐣")
+    "late subtraction altered encoded original text or exceeded the bounded fragment"
+  let freshContext : ContextDelivery := {
+    context with
+    envelopeKey := "f:outcome:owner:result"
+    leading := "full original Work and provenance\n"
+    sourceNoticeKey := "f:source:owner:unchanged"
+    sourceNotice := "recorded file dependencies unchanged\n"}
+  let update := freshContext.remainingEnvelope [freshContext.envelopeKey, freshContext.sourceNoticeKey]
+  check (Lean.toJson update.fragments == Lean.toJson freshContext.fragments &&
+      !update.render.contains "full original Work" && !update.render.contains "dependencies unchanged" &&
+      update.render.contains original && update.render.contains "Additional original excerpts")
+    "additional evidence repeated an accepted envelope or discarded original data"
+  let changedNotice := {freshContext with sourceNoticeKey := "f:source:owner:changed", sourceNotice := "changed dependency\n"}
+  check ((changedNotice.remainingEnvelope [freshContext.envelopeKey, freshContext.sourceNoticeKey]).render.contains "changed dependency")
+    "an acknowledged old status suppressed a new source change"
+  let receiptPacket : DeliveryPacket := {packet with frames := [
+    {key := "f:policy", text := "prior policy\n"},
+    {key := "f:links:owner", text := "original owner relationships\n", owners := ["owner"]},
+    {key := "f:links:removed", text := "unrelated removed owner\n", owners := ["removed"]}]}
+  check ((receiptPacket.remainingFrames [part] ["f:policy"]).map (·.key) == ["f:links:owner"] &&
+      (receiptPacket.remainingFrames [] ["f:policy"]).isEmpty)
+    "late receipt reconciliation repeated policy or retained relationships for removed evidence"
+  let command := String.ofList (List.replicate 1400 'w')
+  let data := "a natural-language observation, not a source-code symbol" ++
+    String.ofList (List.replicate 1500 'd')
+  let focusOwner := OutcomeEdge.make (.text command) (.text data) [] (by simp) (by simp)
+  let originalWindows := SearchRank.windows (Persistence.Store.searchText focusOwner)
+  let focusedWindows := evidenceSearchWindows focusOwner
+  check (focusedWindows.length == originalWindows.length &&
+      (focusedWindows.take 3).all String.isEmpty &&
+      focusedWindows[4]? == originalWindows[4]? &&
+      focusedWindows.any (·.contains "natural-language observation") &&
+      !(focusedWindows.any (·.contains (String.ofList (List.replicate 10 'w')))))
+    "a previous command contaminated graph-evidence scoring or moved original result coordinates"
+  IO.println "PASS late publication: no duplicate ranges, no peripheral refill, new cue retention, receipt expiry and byte bounds"
+
 def testLifecycle : IO Unit := do
+  testDeliveryReconciliation
   let session := "lifecycle-fencing"
   let files ← sessionFiles session
   let pending := { seed with sessionId := session, turnId := "current", finalMessage := none }
@@ -3092,9 +3348,10 @@ def testSemanticResourceLanes : IO Unit := do
   IO.println "PASS model lifetime leases, independent cached scoring, waiting inference and killed-owner recovery"
 
 def testParallelSearchAdmission : IO Unit := do
-  let pool : Worker.ReadPool := {
-    left := { gate := ← Std.Mutex.new (), child := ← Std.Mutex.new none }
-    right := { gate := ← Std.Mutex.new (), child := ← Std.Mutex.new none } }
+  let left : Worker.Slot := { gate := ← Std.Mutex.new (), child := ← Std.Mutex.new none }
+  let right : Worker.Slot := { gate := ← Std.Mutex.new (), child := ← Std.Mutex.new none }
+  let pool : Worker.ReadPool 2 := {pipes := Vector.ofFn fun lane =>
+    if lane.val == 0 then left else right}
   let active ← Std.Mutex.new ([] : List Nat)
   let releaseLeft ← IO.Promise.new (α := Unit)
   let releaseRight ← IO.Promise.new (α := Unit)
@@ -3234,17 +3491,24 @@ def testParallelSearchPipes : IO Unit := IO.FS.withTempDir fun root => do
   let started ← IO.monoMsNow
   let first ← IO.asTask (Worker.exchange session "search" (query leftText) (started + 1500)) .dedicated
   let second ← IO.asTask (Worker.exchange session "search" (query rightText) (started + 5000)) .dedicated
+  let extraTexts := ["third parallel evidence request", "fourth parallel evidence request"]
+  let extras ← extraTexts.mapM fun text =>
+    IO.asTask (Worker.exchange session "search" (query text) (started + 5000)) .dedicated
   try
-    while !(← (path leftText ".pid").pathExists) || !(← (path rightText ".pid").pathExists) do
+    while !(← (path leftText ".pid").pathExists) || !(← (path rightText ".pid").pathExists) ||
+        !(← extraTexts.allM fun text => (path text ".pid").pathExists) do
       if (← IO.monoMsNow) ≥ started + 1400 then
-        throw (IO.userError "two production search pipes did not enter their providers concurrently")
+        throw (IO.userError "four production search pipes did not enter their providers concurrently")
       IO.sleep 5
     let leftPid := (← IO.FS.readFile (path leftText ".pid")).trimAscii.copy
     let rightPid := (← IO.FS.readFile (path rightText ".pid")).trimAscii.copy
-    check (leftPid != rightPid) "two searches used the same provider process"
-    let expired ← Worker.exchange session "search" (query "queued third request")
+    let extraPids ← extraTexts.mapM fun text =>
+      (·.trimAscii.copy) <$> IO.FS.readFile (path text ".pid")
+    check ((leftPid :: rightPid :: extraPids).eraseDups.length == 4)
+      "overlapping searches used the same provider process"
+    let expired ← Worker.exchange session "search" (query "queued fifth request")
       ((← IO.monoMsNow) + 50)
-    check (expired.isNone && !(← (path "queued third request" ".pid").pathExists))
+    check (expired.isNone && !(← (path "queued fifth request" ".pid").pathExists))
       "an expired queued request wrote to another search's pipe"
     let leftAlive ← IO.Process.output { cmd := "/bin/kill", args := #["-0", leftPid] }
     let rightAlive ← IO.Process.output { cmd := "/bin/kill", args := #["-0", rightPid] }
@@ -3266,11 +3530,20 @@ def testParallelSearchPipes : IO Unit := IO.FS.withTempDir fun root => do
       "the surviving search received a wrong or incomplete handoff"
     let rightGone ← IO.Process.output { cmd := "/bin/kill", args := #["-0", rightPid] }
     check (rightGone.exitCode != 0) "finished read retained its provider child"
-    IO.println s!"PASS overlapping production search pipes, queued expiry, isolated {((← IO.monoMsNow) - started)}ms timeout and surviving handoff"
+    for (text, task) in extraTexts.zip extras do
+      check (!(← IO.hasFinished task)) "one reader's cancellation interrupted another reader"
+      IO.FS.writeFile (path text ".release") "continue"
+      let some json ← IO.ofExcept (← IO.wait task) |
+        throw (IO.userError "additional concurrent read lost its response")
+      let handoff ← IO.ofExcept (Lean.fromJson? json : Except String (Option Handoff))
+      check (handoff.any fun result => result.reason != "search-incomplete" && result.text.contains text)
+        "additional concurrent reader received another request's response"
+    IO.println s!"PASS four overlapping production search pipes, queued expiry, isolated {((← IO.monoMsNow) - started)}ms timeout and surviving handoffs"
   finally
     Worker.cancel session "search"
     let _ ← IO.wait first
     let _ ← IO.wait second
+    for task in extras do let _ ← IO.wait task
     pure ()
 
 def testSearchAdmission : IO Unit := do
@@ -3335,7 +3608,55 @@ def testSearchAdmission : IO Unit := do
     release.resolve ()
   IO.println "PASS bounded search admission, four contended requests, response ownership and independent waiter expiry"
 
+def testNativeRpcDeadline : IO Unit := do
+  -- Exercise the real RPC subprocess and loopback framing beyond the former
+  -- hidden 24-second receive limit, inside the caller's absolute deadline.
+  let session := "rpc-shared-deadline"
+  let server ← Std.Async.TCP.Socket.Server.mk
+  server.bind (Plugin.Daemon.loopback 0)
+  server.listen 2
+  let address ← server.getSockName
+  let endpoint : Plugin.Daemon.Endpoint := {
+    session, pid := (← IO.Process.getPID).toNat, port := address.port.toNat
+    secret := Blake3.hex (← IO.getRandomBytes 32)
+    generation := ← Plugin.Daemon.desiredGeneration }
+  let path ← Plugin.Daemon.endpointPath session
+  let files ← sessionFiles session
+  IO.FS.createDirAll files.directory
+  writeJson path endpoint
+  let task ← IO.asTask (do
+    for delay in [0, 24600] do
+      let mut accepted := none
+      while accepted.isNone do
+        accepted ← server.tryAccept
+        if accepted.isNone then IO.sleep 1
+      let some client := accepted | throw (IO.userError "missing RPC test client")
+      let _ ← Plugin.Daemon.receiveFrameBefore client ((← IO.monoMsNow) + 29000)
+      IO.sleep delay.toUInt32
+      Plugin.Daemon.sendFrame client (Plugin.Daemon.response (.ok "observed-before-deadline")).compress.toUTF8
+    ) .dedicated
+  try
+    let started ← IO.monoMsNow
+    let result ← Plugin.Daemon.boundedRpc "hook"
+      (Lean.Json.mkObj [("session_id", Lean.toJson session)]) (started + 29000)
+    let reply := result.bind (Lean.Json.parse · |>.toOption)
+    let elapsed := (← IO.monoMsNow) - started
+    check (reply.bind (optionalString · "output") == some "observed-before-deadline" &&
+        elapsed ≥ 24600 && elapsed < 29000)
+      s!"RPC failed before the caller deadline: elapsed={elapsed} reply={reply}"
+    match ← IO.wait task with
+    | .ok _ => pure ()
+    | .error error => throw error
+  finally
+    removeIfExists path
+  IO.println "PASS native RPC completes beyond 24 seconds using the caller's absolute deadline"
+
 def testIncompleteSearchDelivery : IO Unit := do
+  check (Plugin.Daemon.rpcDeadline 1000 (some 29850) == 29850 &&
+      Plugin.Daemon.rpcDeadline 29800 (some 29850) == 29850 &&
+      Plugin.Daemon.rpcDeadline 30000 (some 29850) == 29850)
+    "RPC restarted or shortened the hook's absolute transport deadline"
+  testNativeRpcDeadline
   let stamp : RequestStamp := { turn := "active", epoch := 3, deadline := 100 }
   let absent := Worker.SearchDelivery.ofReply stamp "active" 3 99 24000 none
   let empty := Worker.SearchDelivery.ofReply stamp "active" 3 99 24000 (some Lean.Json.null)
@@ -5299,6 +5620,12 @@ def main (arguments : List String) : IO UInt32 :=
   | ["semantic-lane-holder", "index", ready, release] =>
       semanticLaneHolder .index (.mk ready) (.mk release)
   | ["semantic-transport-tests"] => runTests true
+  | ["delivery-reconciliation-tests"] => do
+      testDeliveryReconciliation
+      pure 0
+  | ["rpc-deadline-tests"] => do
+      testNativeRpcDeadline
+      pure 0
   | ["handoff-delivery-tests"] => do
       clean
       testSemanticEvidenceDelivery

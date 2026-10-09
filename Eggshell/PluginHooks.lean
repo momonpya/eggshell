@@ -95,8 +95,8 @@ theorem hook_deadline_never_extends_upstream (now budget deadline : Nat) :
 
 /-- The native client reserves teardown/RPC time inside the 30-second hook.
 Search consumes that shared deadline rather than imposing a second 20-second
-cutoff. Direct callers retain the client's ordinary 26-second ceiling. -/
-def hookDeadline (input : Json) (budget : Nat := 26000) : IO Nat := do
+cutoff. Direct callers retain the client's ordinary 29-second ceiling. -/
+def hookDeadline (input : Json) (budget : Nat := 29000) : IO Nat := do
   let now ← IO.monoMsNow
   pure <| boundedHookDeadline now budget
     (input.getObjValAs? Nat "_eggshell_deadline").toOption
@@ -285,15 +285,13 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
     | .obsolete | .empty _ => return none
     | .incomplete _ _ => return some pendingSearch
     | .found _ handoff _ _ => do
-        -- Reserve only newly grounded evidence, rechecking under the state lock
-        -- in case another hook used it during this search. Context delivery itself
-        -- still requires the client's receipt.
-        let checkpoints := handoff.deliveredGraphs.filter (·.startsWith "d:")
-        let blocks := handoff.blocksCurrent &&
-          checkpoints.any (!state.deliveredGraphs.contains ·)
-        let handoff := { handoff with
-          blocksCurrent := blocks
-          reason := handoff.reason.replace "blocks-current=true" s!"blocks-current={blocks}" }
+        -- Linearize only publication, never the search or semantic matcher.
+        -- Concurrent offers subtract the same original ranges under this short lock.
+        let some reconciled := handoff.reconcileDelivery
+            (state.deliveryClaims current.turnId now) pending.handoffChars Config.nativeHandoffBytes |
+          return none
+        let handoff := reconciled.handoff
+        let checkpoints := handoff.sourceCheckpoints.map (·.key)
         let id := (optionalString input "_eggshell_receipt").getD "direct"
         let offer : DeliveryOffer := {
           id, stamp, graphs := handoff.deliveredGraphs, text := handoff.text, reason := handoff.reason }
@@ -364,7 +362,7 @@ def nativeSourceInput? (tool : ToolEvent) : Option Json := do
   let input ← (Json.parse tool.input).toOption
   let command ← ((input.getObjValAs? String "cmd").toOption).orElse
     (fun _ => (input.getObjValAs? String "command").toOption)
-  let _ ← SourceEvidence.commandFiles? command
+  if (SourceEvidence.observedCommandFiles command).isEmpty then return ← none
   let directories := ["workdir", "cwd"].filterMap fun key =>
     (input.getObjVal? key).toOption.map (fun value => (key, value))
   pure (Json.mkObj (("command", toJson command) :: directories))

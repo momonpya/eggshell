@@ -94,13 +94,15 @@ partial def receiveExactly (client : Socket.Client) (remaining : Nat)
     throw (IO.userError "eggshelld returned an empty frame")
   receiveExactly client (remaining - chunk.size) deadline (received.append chunk)
 
-def receiveFrame (client : Socket.Client) (budget : Nat := 24000) : IO ByteArray := do
-  let deadline := (← IO.monoMsNow) + budget
+def receiveFrameBefore (client : Socket.Client) (deadline : Nat) : IO ByteArray := do
   let header ← receiveExactly client 4 deadline
   let length := decodeLength header
   if length > maxFrameBytes then
     throw (IO.userError "eggshelld frame exceeds the transport bound")
   receiveExactly client length deadline
+
+def receiveFrame (client : Socket.Client) (budget : Nat := 24000) : IO ByteArray := do
+  receiveFrameBefore client ((← IO.monoMsNow) + budget)
 
 def sendFrame (client : Socket.Client) (payload : ByteArray) : IO Unit := do
   if payload.size > maxFrameBytes then
@@ -238,11 +240,11 @@ def connect (endpoint : Endpoint) : IO Socket.Client := do
   (client.connect (loopback endpoint.port.toUInt16)).block
   pure client
 
-def exchange (endpoint : Endpoint) (kind : String)
-    (payload : Json := Json.null) (budget : Nat := 24000) : IO String := do
+def exchangeBefore (endpoint : Endpoint) (kind : String)
+    (payload : Json) (deadline : Nat) : IO String := do
   let client ← connect endpoint
   sendFrame client (request endpoint.secret kind payload |>.compress |>.toUTF8)
-  let bytes ← receiveFrame client budget
+  let bytes ← receiveFrameBefore client deadline
   let text ← match String.fromUTF8? bytes with
     | some text => pure text
     | none => throw (IO.userError "daemon response is not UTF-8")
@@ -252,6 +254,10 @@ def exchange (endpoint : Endpoint) (kind : String)
   if json.getObjValD "ok" == true then
     pure ((optionalString json "output").getD "")
   else throw (IO.userError ((optionalString json "error").getD "daemon failure"))
+
+def exchange (endpoint : Endpoint) (kind : String)
+    (payload : Json := Json.null) (budget : Nat := 24000) : IO String := do
+  exchangeBefore endpoint kind payload ((← IO.monoMsNow) + budget)
 
 def loadEndpoint (session : String) : IO Endpoint := do
   let path ← endpointPath session
@@ -308,12 +314,20 @@ def attachClientConfig (input : Json) (config : Option String) : Json :=
   | none => input
 
 /-- The RPC subprocess owns every potentially blocking transport operation. -/
+def rpcDeadline (now : Nat) (supplied : Option Nat) : Nat :=
+  supplied.getD (now + 24000)
+
+theorem rpc_preserves_supplied_deadline (now deadline : Nat) :
+    rpcDeadline now (some deadline) = deadline := rfl
+
 def rpcClient (kind : String) : IO UInt32 := do
   let result ← try
     let input ← IO.ofExcept (Json.parse (← (← IO.getStdin).getLine))
     let session ← IO.ofExcept (requiredString input "session_id")
     let endpoint ← ensure session
-    let output ← exchange endpoint kind input
+    let deadline := rpcDeadline (← IO.monoMsNow)
+      (input.getObjValAs? Nat "_eggshell_rpc_deadline").toOption
+    let output ← exchangeBefore endpoint kind input deadline
     pure (Json.mkObj [("output", output)])
     catch error => pure (Json.mkObj [("error", error.toString)])
   IO.println result.compress
@@ -325,7 +339,7 @@ def boundedRpc (kind : String) (input : Json) (deadline : Nat) : IO (Option Stri
     cmd := (← IO.appPath).toString, args := #["codex-rpc", kind]
     stdin := .piped, stdout := .piped, stderr := .null, setsid := true }
   let task ← IO.asTask (do
-    child.stdin.putStr (input.compress ++ "\n")
+    child.stdin.putStr ((input.setObjVal! "_eggshell_rpc_deadline" (toJson deadline)).compress ++ "\n")
     child.stdin.flush
     -- RPC stdin is one JSON line; it must not wait for EOF from its parent.
     child.stdout.readToEnd) .dedicated
@@ -401,7 +415,7 @@ def hookClient : IO UInt32 := do
     let event := (optionalString input "hook_event_name").getD ""
     let fast := ["Stop", "Interrupt", "PostCompact", "SessionEnd"].contains event ||
       (event == "SessionStart" && optionalString input "source" == some "compact")
-    let deadline := (← IO.monoMsNow) + (if fast then 2000 else 26000)
+    let deadline := (← IO.monoMsNow) + (if fast then 2000 else 29000)
     let receipt := Blake3.hex (← IO.getRandomBytes 16)
     let input := (input.setObjVal! "_eggshell_deadline" (toJson (deadline - 250)))
       |>.setObjVal! "_eggshell_receipt" receipt

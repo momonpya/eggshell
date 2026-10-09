@@ -13,6 +13,9 @@ def require (ok : Bool) (message : String) : IO Unit :=
 def deadline : IO Nat := return (← IO.monoMsNow) + 5000
 
 def testReadBatches : IO Unit := do
+  require (SourceEvidence.observedCommandFiles
+      "nl -ba src/product.cc | sed -n '1,20p'; rg --files src | rg 'product|other'" == ["src/product.cc"])
+    "a directory inventory erased an independently recognized file read"
   require (SourceEvidence.commandFiles? "cat src/product.cc; cat src/second.cc" ==
       some ["src/product.cc", "src/second.cc"]) "compound read omitted a dependency"
   require (SourceEvidence.commandFiles?
@@ -95,6 +98,62 @@ def testScopedRefresh (workspace : System.FilePath) (record : SourceEvidence.Rec
   require (unnamedRefresh.text.isEmpty && statusKeys unnamedRefresh == [])
     "a small refresh budget emitted a verdict without its named source"
 
+def testMixedReadCapture (workspace : System.FilePath) (body : String) (tool : ToolEvent) : IO Unit := do
+  let mixedInput := Json.mkObj [("command", toJson
+    "nl -ba src/product.cc | sed -n '1,20p'; rg -n 'product' src | head -80")]
+  let mixedCapture ← SourceEvidence.capture workspace mixedInput (← deadline)
+  require (mixedCapture.record.valid && !mixedCapture.record.closed &&
+      mixedCapture.record.files.map (·.relative) == ["src/product.cc"] &&
+      (← SourceEvidence.sealCapture workspace mixedCapture (← deadline)).valid)
+    "a mixed read/search lost the sealed file state or certified the open search domain"
+  let mixedWork : ToolEvent := {tool with input := mixedInput.compress}
+  require ((nativeSourceInput? mixedWork).isSome &&
+      !sourceApplicable {
+        workspace := workspace, deadline := 0, native := true, targets := some ["src/product.cc"]} [mixedCapture.record])
+    "a mixed file observation was discarded or acquired native completion authority"
+  IO.FS.writeFile (workspace / "src/product.cc") (body ++ " changed")
+  require (!(← SourceEvidence.sealCapture workspace mixedCapture (← deadline)).valid)
+    "a changed mixed-batch file acquired a sealed observation"
+  IO.FS.writeFile (workspace / "src/product.cc") body
+
+def testIndependentObservations (workspace : System.FilePath) (body : String) : IO Unit := do
+  let input := Json.mkObj [("command", toJson "cat src/product.cc")]
+  let earlier ← SourceEvidence.capture workspace input (← deadline)
+  IO.FS.writeFile (workspace / "src/product.cc") (body ++ " new observation")
+  let current ← SourceEvidence.capture workspace input (← deadline)
+  require ((← SourceEvidence.sealCapture workspace current (← deadline)).valid)
+    "new independent observation did not seal"
+  IO.FS.writeFile (workspace / "src/independent.cc") "independent dependency"
+  let independent ← SourceEvidence.capture workspace
+    (Json.mkObj [("command", toJson "cat src/independent.cc")]) (← deadline)
+  let table := [SourceEvidence.unverified, earlier.record,
+    {current.record with closed := false}, current.record, independent.record]
+  let use : SourceUse := {owner := "immutable-result", references := [0, 1, 2, 3], completed := true}
+  let ledger ← SourceEvidence.observeRecords workspace table (← deadline)
+  let some checked := checkSourceUse? table use ledger |
+    throw (IO.userError "older receipts revoked the same result's current observation")
+  require (checked.records == [{current.record with closed := false}] &&
+      (checkedOwnerSources? table [use] ledger).isSome)
+    "a current observation was not independently reusable as evidence"
+  let some native := checkApplicableSourceUse? table use {
+      workspace, deadline := 0, native := true, targets := some ["src/product.cc"]} ledger |
+    throw (IO.userError "a fresh open-domain receipt hid a later applicable receipt")
+  require (native.checked.records == [current.record])
+    "native completion did not choose its own closed applicable observation"
+  require ((checkSourceUse? table {use with references := [0, 1]} ledger).isNone &&
+      (checkSourceUse? table {use with references := [0, 999, 3]} ledger).isNone)
+    "an expired receipt or an invalid owner reference acquired freshness"
+  let wider := {use with references := [3, 4]}
+  require ((checkApplicableSourceUse? table wider {
+      workspace, deadline := 0, native := true,
+      targets := some ["src/product.cc", "src/independent.cc"]} ledger).isNone)
+    "separate observations were combined to invent complete operation coverage"
+  IO.FS.removeFile (workspace / "src/product.cc")
+  let deleted ← SourceEvidence.observeRecords workspace table (← deadline)
+  require ((checkSourceUse? table use deleted).isNone)
+    "an independent observation ignored deletion of its dependency"
+  IO.FS.writeFile (workspace / "src/product.cc") body
+
 def run : IO Unit := do
   let root ← PageMap.absolute ".lake/portable-source-tests"
   if ← root.pathExists then IO.FS.removeDirAll root
@@ -108,6 +167,12 @@ def run : IO Unit := do
   require (capture.record.valid && capture.record.files.length == 1) "explicit related file was not captured"
   require (SourceEvidence.decode? (SourceEvidence.encode capture.record) == some capture.record)
     "source codec changed dependencies"
+  let fileOnly := Json.mkObj [("workspace", toJson capture.record.workspace),
+    ("files", toJson capture.record.files), ("uris", toJson capture.record.uris),
+    ("complete", toJson capture.record.complete)]
+  require ((fromJson? fileOnly : Except String SourceEvidence.Record).toOption ==
+      some {capture.record with closed := false})
+    "a file observation without operation coverage was discarded or granted closed-domain authority"
   require (← SourceEvidence.verify moved capture.record (← deadline)) "relocated same relative source failed"
   IO.FS.writeFile (moved / "src/unrelated.cc") "unrelated update"
   require (← SourceEvidence.verify moved capture.record (← deadline)) "unrelated file invalidated the certificate"
@@ -154,6 +219,8 @@ def run : IO Unit := do
     name := "Bash", useId := "related-one", input := input.compress
     response := (Json.mkObj [("output", toJson "product version A evidence")]).compress }
   let current ← SourceEvidence.capture first input (← deadline)
+  testMixedReadCapture first body tool
+  testIndependentObservations first body
   -- Each result owns its dependencies. Unknown or superseded results must
   -- not poison an unrelated, verified completion in the same handoff.
   IO.FS.writeFile (first / "src/second.cc") "independent source B"
@@ -190,9 +257,9 @@ def run : IO Unit := do
     "source filtering erased original evidence or left unverified control instructions"
   require (checkedMixed.text.contains "GRAPH result-A: recorded file dependencies unchanged" &&
       checkedMixed.text.contains "GRAPH result-B: recorded file dependencies unchanged" &&
-      checkedMixed.text.contains "GRAPH unknown: historical/unverified" &&
-      checkedMixed.text.contains "GRAPH invalid-index: historical/unverified")
-    "mixed source display does not identify the authority of each original owner"
+      !checkedMixed.text.contains "GRAPH unknown:" &&
+      !checkedMixed.text.contains "GRAPH invalid-index:")
+    "mixed source display lost confirmed observations or invented an unchecked-source verdict"
   let ledger ← SourceEvidence.observeRecords first mixedHandoff.sourceRecords (← deadline)
   let conflicting := {mixedHandoff with sourceUses := uses ++
     [{owner := "result-A", references := [2], completed := false}]}
@@ -214,7 +281,7 @@ def run : IO Unit := do
     checkedEdit.deliveredGraphs.contains "d:result-B" && checkedEdit.text.contains originalBody &&
     !checkedEdit.text.contains "GRAPH result-A\n" && checkedEdit.text.contains "GRAPH result-B\n")
     "editing one result's source revoked a different result or retained stale control"
-  require (checkedEdit.text.contains "GRAPH result-A: historical/unverified" &&
+  require (checkedEdit.text.contains "GRAPH result-A: recorded file dependencies changed" &&
       checkedEdit.text.contains "GRAPH result-B: recorded file dependencies unchanged")
     "one changed source mislabeled an unchanged result"
   IO.FS.writeFile (first / "src/product.cc") body
