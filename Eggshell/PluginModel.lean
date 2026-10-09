@@ -4,6 +4,7 @@ public import Eggshell.Config
 public import Eggshell.Blake3
 public import Eggshell.Lifecycle
 public import Eggshell.SourceEvidence
+public import Eggshell.SourceObservation
 public import Lean.Data.Json.FromToJson
 
 @[expose] public section
@@ -67,6 +68,9 @@ structure PendingTurn where
   -/
   inFlight : List ToolEvent := []
   tools : List ToolEvent := []
+  /-- Related dependency descriptors, queued for the independent observer.
+  These are locators/previous fingerprints, never evidence of new contents. -/
+  sources : List SourceEvidence.File := []
   finalMessage : Option String := none
   closed : Bool := false
   deriving Repr, ToJson, FromJson
@@ -287,11 +291,8 @@ def recordTool (files : SessionFiles) (turn : String) (tool : ToolEvent) : IO Un
       throw (IO.userError "source certificate belongs to another native result")
     let certificate : SourceCertificate := ⟨version.stamp, version.bytes, source⟩
     let certificatePath := sourceCertificatePath files turn tool.useId
-    let equal ← try
-      pure ((← (readJson? certificatePath : IO (Option SourceCertificate))).any
-        (fun old => toJson old == toJson certificate))
-      catch _ => pure false
-    unless equal do writeJson certificatePath certificate
+    if let some parent := certificatePath.parent then FileSystem.durableDirectory parent
+    FileSystem.immutableBytes certificatePath (toJson certificate |>.compress |>.toUTF8)
 
 def recordedTool? (files : SessionFiles) (turn : String) (tool : ToolEvent) : IO (Option ToolEvent) := do
   let some (previous, version) ← readNativeTool? (toolReceiptPath files turn tool.useId) | return none
@@ -322,6 +323,49 @@ def queueCheckpoint (files : SessionFiles) (pending : PendingTurn) : IO Unit := 
   let key := Blake3.hex (Blake3.digest "eggshell.checkpoint".toUTF8
     [(toJson pending).compress.toUTF8])
   writeJson (files.directory / "checkpoints" / (key ++ ".json")) pending
+
+/-- Independent observations have their own immutable identity. No native
+result or earlier source certificate is refreshed or attributed a later state. -/
+def observationTool (observation : SourceObservation.Observation limit) : ToolEvent :=
+  let response := (SourceObservation.observationJson observation).compress
+  let input := (Json.mkObj [("files", toJson (observation.capture.record.files.map (·.relative)))]).compress
+  { name := "eggshell.observe_file"
+    useId := "eggshell-observation:" ++ Blake3.hex (Blake3.digest "eggshell.observation.record".toUTF8
+      [input.toUTF8, response.toUTF8])
+    input, response, source := some observation.capture }
+
+theorem observation_binds_new_record (observation : SourceObservation.Observation limit) :
+    (observationTool observation).source = some observation.capture ∧
+      (observationTool observation).response = (SourceObservation.observationJson observation).compress :=
+  ⟨rfl, rfl⟩
+
+/-- This save-worker operation observes registered related files regardless of
+which command, program, editor or local provider changed them. The hook never
+calls it. Pending scans retain their queue entry and resume at a page cursor. -/
+def observeRelatedFiles (files : SessionFiles) (pending : PendingTurn) (deadline : Nat) : IO Bool := do
+  let workspace := System.FilePath.mk pending.cwd
+  let dependencies := (pending.tools.flatMap
+    (fun tool => tool.source.map (·.record.files) |>.getD []) ++ pending.sources).eraseDups
+  for file in dependencies do SourceObservation.register files.directory workspace file
+  let mut finished := true
+  for path in ← SourceObservation.entries files.directory workspace do
+    if (← IO.monoMsNow) ≥ deadline then return false
+    let observed ← try SourceObservation.step path workspace (128 * 1024) 256 deadline
+      catch error =>
+        IO.eprintln s!"Eggshell retained source history; observation unavailable: {error}"
+        pure .unverified
+    match observed with
+    | .pending => finished := false
+    | .unverified => pure ()
+    | .complete snapshot observation =>
+        if let some observation := observation then
+          let tool := observationTool observation
+          -- This durable queue contains the actual data and its certificate.
+          -- It is not a native tool receipt: the running model has not seen
+          -- this independent observation and it cannot bind its final answer.
+          queueCheckpoint files {pending with tools := [tool], sources := [], inFlight := [], finalMessage := none, closed := false}
+        SourceObservation.acknowledge path snapshot
+  pure finished
 
 def pendingSelection (pending : PendingTurn) : Config.Selection := {
   label := pending.profile

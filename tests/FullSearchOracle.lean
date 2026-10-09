@@ -357,7 +357,7 @@ def computeGeneralAutomaticHandoff (selection : Config.Selection)
           (semanticEvidence := semanticEvidence)
           (sourceAll := sourceAll) (sourceUnions := composite.unions)
           (entryWorks := entryWorks) (support := support) (byteBudget := selection.handoffBytes)
-          (evidenceRanking := evidenceRanking) (evidenceRoots := evidenceRoots))
+          (evidenceRanking := evidenceRanking))
 
 
 /- Frozen cold-federation controller, independent of the new canonical-child

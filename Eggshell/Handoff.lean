@@ -558,65 +558,87 @@ structure SourceContext where
   delivered : List String := []
   handoffChars : Nat := 160000
   handoffBytes : Option Nat := none
+  /-- Queue locators only; observation and indexing belong to the save worker. -/
+  onDependencies : List SourceEvidence.File → IO Unit := fun _ => pure ()
 
 def sourceApplicable (context : SourceContext) (records : List SourceEvidence.Record) : Bool :=
   context.targets.map (fun targets => SourceEvidence.targetAgreement targets records)
     |>.getD (!context.native)
 
 structure CheckedSourceUse (table : List SourceEvidence.Record) (use : SourceUse)
-    (context : SourceContext) (ledger : SourceEvidence.Ledger) where
+    (ledger : SourceEvidence.Ledger) where
   records : List SourceEvidence.Record
   restored : resolveSourceReferences? table use.references = some records
   authorization : SourceEvidence.Authorization records
   observed : authorization.ledger = ledger
-  applicable : sourceApplicable context records = true
 
 def checkSourceUse? (table : List SourceEvidence.Record) (use : SourceUse)
-    (context : SourceContext) (ledger : SourceEvidence.Ledger) :
-    Option (CheckedSourceUse table use context ledger) :=
+    (ledger : SourceEvidence.Ledger) :
+    Option (CheckedSourceUse table use ledger) :=
   match restored : resolveSourceReferences? table use.references with
   | none => none
   | some records =>
-      if applicable : sourceApplicable context records = true then
-        match accepted : SourceEvidence.authorize? records ledger with
-        | none => none
-        | some authorization => some {
-            records
-            restored
-            authorization
-            observed := SourceEvidence.authorization_uses_observed_ledger _ _ _ accepted
-            applicable }
-      else none
+      match accepted : SourceEvidence.authorize? records ledger with
+      | none => none
+      | some authorization => some {
+          records
+          restored
+          authorization
+          observed := SourceEvidence.authorization_uses_observed_ledger _ _ _ accepted }
+
+/-- Current observations may be reused as data across different requests.
+Erasing a native operation additionally requires its own target coverage. -/
+structure ApplicableSourceUse (table : List SourceEvidence.Record) (use : SourceUse)
+    (context : SourceContext) (ledger : SourceEvidence.Ledger) where
+  checked : CheckedSourceUse table use ledger
+  applicable : sourceApplicable context checked.records = true
+
+def checkApplicableSourceUse? (table : List SourceEvidence.Record) (use : SourceUse)
+    (context : SourceContext) (ledger : SourceEvidence.Ledger) :
+    Option (ApplicableSourceUse table use context ledger) := do
+  let checked ← checkSourceUse? table use ledger
+  if applicable : sourceApplicable context checked.records = true then
+    some ⟨checked, applicable⟩ else none
 
 theorem checked_source_use_has_current_dependencies
-    (checked : CheckedSourceUse table use context ledger)
+    (checked : CheckedSourceUse table use ledger)
     (record : SourceEvidence.Record) (present : record ∈ checked.records) :
     ∃ current, SourceEvidence.currentFiles? ledger record.files = some current ∧
       record.valid = true ∧ current = record.files := by
   have current := SourceEvidence.authorization_has_current_dependencies checked.authorization record present
   simpa [checked.observed] using current
 
+/-- The stronger control witness retains both live dependencies and the
+current operation's scope; a freshness label alone cannot supply it. -/
+theorem applicable_source_use_has_current_dependencies
+    (checked : ApplicableSourceUse table use context ledger)
+    (record : SourceEvidence.Record) (present : record ∈ checked.checked.records) :
+    (∃ current, SourceEvidence.currentFiles? ledger record.files = some current ∧
+      record.valid = true ∧ current = record.files) ∧
+      sourceApplicable context checked.checked.records = true :=
+  ⟨checked_source_use_has_current_dependencies checked.checked record present, checked.applicable⟩
+
 /-- A positive owner label requires every recorded use of that owner to pass
-the existing file/scope authorization. One checked sibling cannot certify an
+the observed file authorization. One checked sibling cannot certify an
 unchecked result, and an empty dependency set cannot acquire this label. -/
 structure CheckedOwnerSources (table : List SourceEvidence.Record) (uses : List SourceUse)
-    (context : SourceContext) (ledger : SourceEvidence.Ledger) : Type where
+    (ledger : SourceEvidence.Ledger) : Type where
   nonempty : uses ≠ []
-  checked : ∀ use ∈ uses, (checkSourceUse? table use context ledger).isSome = true
+  checked : ∀ use ∈ uses, (checkSourceUse? table use ledger).isSome = true
 
 def checkedOwnerSources? (table : List SourceEvidence.Record) (uses : List SourceUse)
-    (context : SourceContext) (ledger : SourceEvidence.Ledger) :
-    Option (CheckedOwnerSources table uses context ledger) :=
+    (ledger : SourceEvidence.Ledger) :
+    Option (CheckedOwnerSources table uses ledger) :=
   if nonempty : uses ≠ [] then
-    if checked : uses.all (fun use => (checkSourceUse? table use context ledger).isSome) = true then
+    if checked : uses.all (fun use => (checkSourceUse? table use ledger).isSome) = true then
       some ⟨nonempty, List.all_eq_true.mp checked⟩ else none
   else none
 
 theorem checked_owner_requires_every_dependency
-    (owner : CheckedOwnerSources table uses context ledger) (use : SourceUse)
+    (owner : CheckedOwnerSources table uses ledger) (use : SourceUse)
     (present : use ∈ uses) :
-    ∃ checked : CheckedSourceUse table use context ledger,
-      checkSourceUse? table use context ledger = some checked :=
+    ∃ checked : CheckedSourceUse table use ledger,
+      checkSourceUse? table use ledger = some checked :=
   Option.isSome_iff_exists.mp (owner.checked use present)
 
 def ownerSourceUses (handoff : Handoff) (owner : String) : List SourceUse :=
@@ -647,7 +669,7 @@ structure BoundedOwnerStatus (allowance bytes : Nat) where
   bounded : text.length ≤ allowance
   bytesBounded : text.utf8ByteSize ≤ bytes
 
-def renderOwnerSourceStatus (handoff : Handoff) (context : SourceContext)
+def renderOwnerSourceStatus (handoff : Handoff)
     (ledger : SourceEvidence.Ledger) (allowance : Nat) (bytes : Nat := allowance * 4) :
     BoundedOwnerStatus allowance bytes :=
   let header := ownerStatusHeader
@@ -656,7 +678,7 @@ def renderOwnerSourceStatus (handoff : Handoff) (context : SourceContext)
     then ⟨"", by simp, by simp⟩ else
     let describe := fun owner : String =>
       ownerStatusDescription owner
-        (checkedOwnerSources? handoff.sourceRecords (ownerSourceUses handoff owner) context ledger).isSome
+        (checkedOwnerSources? handoff.sourceRecords (ownerSourceUses handoff owner) ledger).isSome
     let owners := handoff.sourceUses.map (·.owner) |>.eraseDups
     let rows := (boundedDualSlices (allowance - header.length - footer.length)
       (bytes - header.utf8ByteSize - footer.utf8ByteSize)
@@ -666,15 +688,15 @@ def renderOwnerSourceStatus (handoff : Handoff) (context : SourceContext)
     if bounded : text.length ≤ allowance ∧ text.utf8ByteSize ≤ bytes
       then ⟨text, bounded.1, bounded.2⟩ else ⟨"", by simp, by simp⟩
 
-theorem owner_source_status_within_budget (handoff : Handoff) (context : SourceContext)
+theorem owner_source_status_within_budget (handoff : Handoff)
     (ledger : SourceEvidence.Ledger) (allowance : Nat) :
-    (renderOwnerSourceStatus handoff context ledger allowance).text.length ≤ allowance :=
-  (renderOwnerSourceStatus handoff context ledger allowance).bounded
+    (renderOwnerSourceStatus handoff ledger allowance).text.length ≤ allowance :=
+  (renderOwnerSourceStatus handoff ledger allowance).bounded
 
-theorem owner_source_status_within_byte_budget (handoff : Handoff) (context : SourceContext)
+theorem owner_source_status_within_byte_budget (handoff : Handoff)
     (ledger : SourceEvidence.Ledger) (allowance bytes : Nat) :
-    (renderOwnerSourceStatus handoff context ledger allowance bytes).text.utf8ByteSize ≤ bytes :=
-  (renderOwnerSourceStatus handoff context ledger allowance bytes).bytesBounded
+    (renderOwnerSourceStatus handoff ledger allowance bytes).text.utf8ByteSize ≤ bytes :=
+  (renderOwnerSourceStatus handoff ledger allowance bytes).bytesBounded
 
 structure SourceFrame (chars bytes : Nat) where
   text : String
@@ -712,13 +734,13 @@ def Handoff.checkedCheckpoints (handoff : Handoff) (context : SourceContext)
   if handoff.blocksCurrent && handoff.controlSuffixValid then
     handoff.sourceCheckpoints.filter fun checkpoint => checkpoint.use.completed &&
       handoff.deliveredGraphs.contains checkpoint.key &&
-      (checkSourceUse? handoff.sourceRecords checkpoint.use context ledger).isSome
+      (checkApplicableSourceUse? handoff.sourceRecords checkpoint.use context ledger).isSome
   else []
 
 def Handoff.withCheckedSources (handoff : Handoff) (context : SourceContext)
     (ledger : SourceEvidence.Ledger) : Handoff :=
   let uses := handoff.sourceUses.filter fun use =>
-    (checkSourceUse? handoff.sourceRecords use context ledger).isSome
+    (checkApplicableSourceUse? handoff.sourceRecords use context ledger).isSome
   let controls := handoff.checkedCheckpoints context ledger
   let completed := min handoff.completed (uses.countP (·.completed))
   let keys := controls.map (·.key)
@@ -740,8 +762,8 @@ theorem checked_source_control_requires_live_dependencies
     (handoff : Handoff) (context : SourceContext) (ledger : SourceEvidence.Ledger)
     (checkpoint : SourceCheckpoint)
     (present : checkpoint ∈ handoff.checkedCheckpoints context ledger) :
-    ∃ checked : CheckedSourceUse handoff.sourceRecords checkpoint.use context ledger,
-      checkSourceUse? handoff.sourceRecords checkpoint.use context ledger = some checked := by
+    ∃ checked : ApplicableSourceUse handoff.sourceRecords checkpoint.use context ledger,
+      checkApplicableSourceUse? handoff.sourceRecords checkpoint.use context ledger = some checked := by
   unfold Handoff.checkedCheckpoints at present
   split at present
   · have valid := (List.mem_filter.mp present).2
@@ -813,8 +835,8 @@ theorem checked_source_blocks_require_a_checkpoint (handoff : Handoff)
     (context : SourceContext) (ledger : SourceEvidence.Ledger)
     (blocks : (handoff.withCheckedSources context ledger).blocksCurrent = true) :
     ∃ checkpoint ∈ handoff.checkedCheckpoints context ledger,
-      ∃ checked : CheckedSourceUse handoff.sourceRecords checkpoint.use context ledger,
-        checkSourceUse? handoff.sourceRecords checkpoint.use context ledger = some checked := by
+      ∃ checked : ApplicableSourceUse handoff.sourceRecords checkpoint.use context ledger,
+        checkApplicableSourceUse? handoff.sourceRecords checkpoint.use context ledger = some checked := by
   have nonempty : (handoff.checkedCheckpoints context ledger).isEmpty = false := by
     simpa [Handoff.withCheckedSources] using blocks
   cases controls : handoff.checkedCheckpoints context ledger with
@@ -837,19 +859,47 @@ theorem source_notice_fits (matched : Bool) (text : String) (budget : Nat)
   have bounded := source_status_bounded matched
   omega
 
+/-- A refresh describes named dependencies, never a general warning about
+the current tool output. Unknown provenance cannot assert a source change. -/
+def sourceRefreshText (newStatus : Bool) (files : List SourceEvidence.File)
+    (details : String) : String :=
+  if newStatus && !files.isEmpty && !details.isEmpty then
+    "EGGSHELL SOURCE STATUS\nStatuses apply only to the named recorded files. " ++
+    "Unverified does not mean changed.\n" ++ details ++ "END EGGSHELL SOURCE STATUS\n\n"
+  else ""
+
+theorem unknown_source_refresh_is_silent (newStatus : Bool) (details : String) :
+    sourceRefreshText newStatus [] details = "" := by
+  simp [sourceRefreshText]
+
+theorem repeated_source_refresh_is_silent (files : List SourceEvidence.File)
+    (details : String) : sourceRefreshText false files details = "" := by
+  simp [sourceRefreshText]
+
+theorem unnamed_source_refresh_is_silent (newStatus : Bool) (files : List SourceEvidence.File) :
+    sourceRefreshText newStatus files "" = "" := by
+  simp [sourceRefreshText]
+
+set_option maxRecDepth 8192 in
+theorem source_refresh_overhead_bounded :
+    ("EGGSHELL SOURCE STATUS\nStatuses apply only to the named recorded files. " ++
+      "Unverified does not mean changed.\n" ++ "END EGGSHELL SOURCE STATUS\n\n").length ≤
+      sourceStatusReserve := by decide
+
 def Handoff.checkSources (handoff : Handoff) (context : SourceContext) : IO Handoff := do
   if !handoff.controlSuffixValid then return pendingSearch
   let ledger ← SourceEvidence.observeRecords context.workspace handoff.sourceRecords context.deadline
-  let authorization := if sourceApplicable context handoff.sourceRecords then
-    SourceEvidence.authorize? handoff.sourceRecords ledger else none
+  try context.onDependencies (handoff.sourceRecords.filter (·.valid) |>.flatMap (·.files) |>.eraseDups)
+  catch error => IO.eprintln s!"Eggshell retained source history; observation scheduling unavailable: {error}"
+  let authorization := SourceEvidence.authorize? handoff.sourceRecords ledger
   let checked := handoff.withCheckedSources context ledger
   let mixed := !authorization.isSome && handoff.sourceUses.any fun use =>
-    (checkSourceUse? handoff.sourceRecords use context ledger).isSome
+    (checkSourceUse? handoff.sourceRecords use ledger).isSome
   let notice := if mixed then mixedSourceStatusText else sourceStatusText authorization.isSome
   let observed := handoff.sourceRecords.flatMap (·.files) |>.eraseDups |>.map fun file =>
     (file.relative, (ledger[file.relative]?).join)
   let scope := Blake3.hex (Blake3.digest "eggshell.source.delivery.scope".toUTF8 [
-    (toJson handoff.sourceRecords).compress.toUTF8, (toJson context.targets).compress.toUTF8,
+    (toJson handoff.sourceRecords).compress.toUTF8,
     context.workspace.normalize.toString.toUTF8])
   let status := Blake3.hex (Blake3.digest "eggshell.source.delivery.status".toUTF8 [
     (toJson observed).compress.toUTF8, (toJson (authorization.isSome, mixed)).compress.toUTF8])
@@ -872,16 +922,17 @@ def Handoff.checkSources (handoff : Handoff) (context : SourceContext) : IO Hand
     ((boundedDualSlices (context.handoffChars - notice.length) (bytes - notice.utf8ByteSize)
       (fun file => ((describe file).length, (describe file).utf8ByteSize))
       (files.map fun file => (file, file))).val.map describe) else ""
-  let owners := if refresh then "" else (renderOwnerSourceStatus handoff context ledger
+  let owners := if refresh then "" else (renderOwnerSourceStatus handoff ledger
     (context.handoffChars - notice.length - checked.text.length)
     (bytes - notice.utf8ByteSize - checked.text.utf8ByteSize)).text
-  let text := if refresh && !newStatus then "" else
-    if !refresh && checked.text.isEmpty then "" else notice ++ owners ++ checked.text ++ details
+  let text := if refresh then sourceRefreshText newStatus files details else
+    if checked.text.isEmpty then "" else notice ++ owners ++ checked.text
   let some frame := sourceFrame? context.handoffChars bytes text |
     return {checked.withSourceAuthority none with text := "", deliveredGraphs := [], controlDeltaChars := 0}
   pure {checked with
     text := frame.text
-    deliveredGraphs := checked.deliveredGraphs ++ (if newStatus then [key] else [])
+    deliveredGraphs := checked.deliveredGraphs ++
+      (if newStatus && (!refresh || !text.isEmpty) then [key] else [])
     -- A delta with no previous body now follows the notice's final blank
     -- line. Its frame length includes that separator, exactly as in render.
     controlDeltaChars := checked.controlDeltaChars +
@@ -1495,11 +1546,12 @@ theorem FocusedNeighborhood.original_owner (ordered : FocusedNeighborhood suppor
   obtain ⟨row, _, same⟩ := List.mem_map.mp ranked
   exact ⟨row.1.val, row.1.property, same⟩
 
-/-- Score the finite original graph neighborhood against its selected
-source evidence. Reuse indexed MiniLM vectors, without an LLM call or a new
+/-- Score the finite original graph neighborhood against the current request.
+An earlier answer must not redefine the scope of a new task. Reuse indexed
+MiniLM vectors, without an LLM call or a new
 whole-database scan. The complete checked order prioritizes non-hit data;
 a low score does not prove that a graph prerequisite may be discarded. -/
-def focusNeighborhood (command : List String) (focus : String)
+def focusNeighborhood (command : List String) (current : String)
     (support : List (SourceSupport roots all unions)) :
     IO (Option (FocusedNeighborhood support)) := do
   if support.isEmpty then return some ⟨[]⟩
@@ -1514,8 +1566,8 @@ def focusNeighborhood (command : List String) (focus : String)
     let some parts := windows[document.owner]? | throw (IO.userError "foreign focused source owner")
     let some text := parts[index.val]? | throw (IO.userError "foreign focused source position")
     pure text
-  let some result ← SemanticMatcher.nominateIndexed command focus documents
-      (corpus.rank focus) (corpus.rank focus true) read | return none
+  let some result ← SemanticMatcher.nominateIndexed command current documents
+      (corpus.rank current) (corpus.rank current true) read | return none
   let rows := result.ranking.filterMap fun row =>
     match original : support[row.document.owner]? with
     | none => none
@@ -1995,25 +2047,33 @@ def decodedEvidenceUsing? (layout : DecodedLayout source) (requested : EvidenceR
   let mut position := 1
   let mut first := none
   let mut last := 0
+  let mut rawStart := 0
+  let mut rawStop := 0
   for (index, width) in layout.widths do
+    if position ≥ requested.stop then break
     let next := position + width
     if requested.start ≤ position && next ≤ requested.stop then
-      if first.isNone then first := some index
+      if first.isNone then
+        first := some index
+        rawStart := position
       last := index + 1
+      rawStop := next
     position := next
   let start ← first
   if bounds : start < last ∧ last ≤ decoded.text.length ∧ last - start ≤ 2048 then
     let content : EvidenceRange decoded.text := ⟨start, last, bounds.1, bounds.2.1, bounds.2.2⟩
-    let rawStart := 1 + (encodedTextBody (String.ofList (chars.take start))).length
-    let rawStop := 1 + (encodedTextBody (String.ofList (chars.take last))).length
+    -- Accumulated positions nominate coordinates only. The existing bounded
+    -- reencoding and prefix certificate still validate the exact occurrence;
+    -- no full prefix at the end of every range needs to be serialized again.
     if rawBounds : rawStart < rawStop ∧ rawStop ≤ source.length ∧ rawStop - rawStart ≤ 2048 ∧
         requested.start ≤ rawStart ∧ rawStop ≤ requested.stop then
       let original : EvidenceRange source := ⟨rawStart, rawStop, rawBounds.1,
         rawBounds.2.1, rawBounds.2.2.1⟩
       if reencoded : encodedTextBody content.text = original.text then
         if prefixExact : (source.take original.start).copy = "\"" ++
-            encodedTextBody (String.ofList (decoded.text.toList.take content.start)) then
-          some ⟨decoded, content, original, reencoded, prefixExact⟩
+            encodedTextBody (String.ofList (chars.take content.start)) then
+          some ⟨decoded, content, original, reencoded,
+            by simpa only [chars, decoded, layout.charsExact] using prefixExact⟩
         else none
       else none
     else none
@@ -2280,6 +2340,27 @@ theorem adaptive_packet_budget_follows_demand (ceiling demand : Nat × Nat)
     (fits : demand.1 ≤ ceiling.1 ∧ demand.2 ≤ ceiling.2) :
     adaptivePacketBudget ceiling demand = demand := by
   simp [adaptivePacketBudget, Nat.min_eq_right fits.1, Nat.min_eq_right fits.2]
+
+/-- Fund the selected entry contexts and the best original graph support.
+Other ranked leaves remain eligible inside this allowance; their count and
+size cannot enlarge it. `cost` includes the actual graph and provenance frame. -/
+def coherentEntryPacketBudget {α : Type} (ceiling : Nat × Nat)
+    (cost : List α → Nat × Nat) (entries support : List α) : Nat × Nat :=
+  adaptivePacketBudget ceiling
+    (coherentPacketDemand (cost entries) (cost (entries ++ support.take 1)))
+
+theorem coherent_entry_packet_budget_bounded {α : Type} (ceiling : Nat × Nat)
+    (cost : List α → Nat × Nat) (entries support : List α) :
+    (coherentEntryPacketBudget ceiling cost entries support).1 ≤ ceiling.1 ∧
+      (coherentEntryPacketBudget ceiling cost entries support).2 ≤ ceiling.2 :=
+  adaptive_packet_budget_bounded _ _
+
+theorem coherent_entry_packet_budget_tail_independent {α : Type}
+    (ceiling : Nat × Nat) (cost : List α → Nat × Nat)
+    (entries : List α) (first : α) (rest extra : List α) :
+    coherentEntryPacketBudget ceiling cost entries (first :: (rest ++ extra)) =
+      coherentEntryPacketBudget ceiling cost entries (first :: rest) := by
+  rfl
 
 /-- The ceiling does not create demand for more source data. Once the
 requested cue neighborhood has been delivered, larger allocation variants
@@ -2608,8 +2689,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
     (meaningSelected : Bool := false) (sourceAll : List AllEdge := [])
     (sourceUnions : List UnionEdge := []) (entryWorks : List Value := [])
     (support : List (SourceSupport entryWorks sourceAll sourceUnions) := [])
-    (byteBudget : Option Nat := none) (evidenceRanking : List Value := [])
-    (evidenceRoots : List Value := []) : Option Handoff :=
+    (byteBudget : Option Nat := none) (evidenceRanking : List Value := []) : Option Handoff :=
   let extraction := prepared.val
   let attach := fun selected : Selected => {
     selected with
@@ -2691,10 +2771,11 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       let plan ← contextSlicePlan (levels.filterMap render)
       pure (source.owner.relation, plan)
     let choices := entries ++ neighbors
-    let families := (selectedAll.map (·.matched.edge) ++ surrounding.map (·.owner)).map fun owner =>
-      (owner.relation, sourceFamilyPriority evidenceRoots sourceAll owner.work)
     let choices := if meaningSelected && !enforce && !evidenceRanking.isEmpty then
-      rankEvidenceChoices evidenceRanking choices families else choices
+      -- Current-request rank orders the admitted neighborhood. A past task
+      -- family is a provenance association, not permission to outrank a
+      -- better current-request context from another family.
+      rankEvidenceChoices evidenceRanking choices else choices
     let centralPlans := choices.filterMap fun choice =>
       if meaningPacketEntry nominated choice.1 choice.2.1 then some choice.2 else none
     let centralEntries := centralPlans.map Prod.fst
@@ -2739,55 +2820,41 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
     let reservedBytes := fixedHeader.utf8ByteSize + maximalTree.utf8ByteSize +
       maximalSource.utf8ByteSize + footer.utf8ByteSize + statusReserve.2
     let fittedSlices := if meaningSelected && !enforce then
-      -- Admit coherent contexts by original family, then entry/support rank.
-      -- Enrichment cannot displace these owners;
-      -- numerical source-family order is retained in the rendered packet.
+      -- Cover the current meaning entries across all original families before
+      -- enriching any one of them. Provenance is retained by packetCost and
+      -- rendering; it must not turn the first past answer into a scope gate.
       let isEntry := fun (slice : TransportSlice) => centralEntries.any (·.text == slice.text)
-      let familyOf := fun (slice : TransportSlice) =>
-        ((choices.find? (fun choice => choice.2.1.text == slice.text)).bind fun choice =>
-          (families.find? (fun family => family.1 == choice.1)).map Prod.snd).getD evidenceRoots.length
-      let priority := fun (slice : TransportSlice) => evidenceAdmissionPriority (familyOf slice) (isEntry slice)
+      let priority := fun (slice : TransportSlice) => evidenceAdmissionPriority 0 (isEntry slice)
       -- Meaning-selected roots determine demand. A ranked supporting graph
       -- receives a comparable allowance, rather than every reachable leaf
       -- inflating the packet until it fills the configured ceiling.
-      let firstEntryFamily := (centralEntries.map familyOf).foldl min evidenceRoots.length
-      -- Capacity demand belongs to the best-ranked original task. Search
-      -- hits in other tasks remain eligible for spare capacity, but cannot
-      -- enlarge a packet whose useful graph already belongs to this task.
-      let demandedEntries := centralEntries.filter (fun slice => familyOf slice == firstEntryFamily)
-      let rootCost := packetCost demandedEntries
+      let demandedEntries := centralEntries
       -- Price the highest-ranked original supporting context too. Without
       -- this marginal graph cost, fully funding the direct entries leaves
       -- exactly zero space for a useful result that was not a search hit.
       -- This is capacity planning, not a count limit on admitted neighbors.
-      let firstSupport := (choices.find? fun choice =>
-        familyOf choice.2.1 == firstEntryFamily &&
+      let rankedSupport := (choices.filter fun choice =>
           !(meaningPacketEntry nominated choice.1 choice.2.1)).map (fun choice => choice.2.1)
-      let coherentCost := packetCost (demandedEntries ++ firstSupport.toList)
-      -- Price original graph coverage ahead of a later family's search hit.
-      -- Minimum coherent contexts establish required coverage. Richer views
-      -- compete within that demand; pricing every richest alternative here
-      -- would recursively turn an expansion ceiling into a filling quota.
-      let lastEntryFamily := (centralEntries.map familyOf).foldl max 0
-      let leadingSupport := choices.filterMap fun choice =>
-        if !meaningPacketEntry nominated choice.1 choice.2.1 &&
-            familyOf choice.2.1 == firstEntryFamily && firstEntryFamily < lastEntryFamily then
-          some choice.2.1
-        else none
-      let expandedCost := packetCost (demandedEntries ++ leadingSupport)
-      let available := adaptivePacketBudget (budget, byteBudget.getD (budget * 4))
-        (coherentPacketDemand rootCost
-          (max coherentCost.1 expandedCost.1, max coherentCost.2 expandedCost.2))
+      -- Additional reachable leaves compete within the same coherent
+      -- allowance. Their number and aggregate size do not create demand.
+      let available := coherentEntryPacketBudget (budget, byteBudget.getD (budget * 4))
+        packetCost demandedEntries rankedSupport
+      -- Admit the priced supporting context with the entries, before any
+      -- enrichment. It must not become hypothetical capacity that an old
+      -- explanation consumes before the underlying tool data can enter.
+      let isPricedSupport := fun (slice : TransportSlice) =>
+        rankedSupport.head?.any (·.text == slice.text)
+      let coherence := fun slice => if isEntry slice || isPricedSupport slice then 0 else 1
       -- Reserve useful entry coverage from the actual envelope before adding
       -- more neighbors. Reachable leaf count cannot reduce this reservation.
-      -- Capacity was priced for this source family. Divide its entry share
-      -- by the same demanded family, not by unrelated older search hits.
-      let entryShare := (available.1 / max 1 demandedEntries.length,
-        available.2 / max 1 demandedEntries.length)
+      -- Share the demand envelope among its entries, independently of the
+      -- number of peripheral graph leaves.
+      let coreCount := demandedEntries.length + min 1 rankedSupport.length
+      let entryShare := (available.1 / max 1 coreCount, available.2 / max 1 coreCount)
       let preference := fun (slice : TransportSlice) =>
         (choices.find? (fun choice => choice.2.1.text == slice.text)).map
             (fun choice => preferredContextLevel choice.2 entryShare) |>.getD 0
-      match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference priority with
+      match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference coherence with
       | some fitted => fitted.val
       | none => []
       else if reserved > budget || byteBudget.any (reservedBytes > ·) then [] else
@@ -3691,9 +3758,9 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
             route := same ▸ row.route
             provenance := if records.isEmpty then [SourceEvidence.unverified] else records}]
         else throw (IO.userError "surrounding source path disagrees with original Work")
-  -- Rank the original neighborhood against the selected source data as
-  -- well as against the human request. Generic shared task wording must not
-  -- crowd out a particular answer's supporting observations. This keeps the
+  -- Rank the original neighborhood against the current request. Choosing
+  -- an entry does not authorize its old topic to control this refinement.
+  -- Original entry positions remain protected separately. This keeps the
   -- complete source domain; numerical scores never certify irrelevance.
   let mut focusedRanking : List Value := []
   let mut focusedWindows : List (Value × List Nat) := []
@@ -3705,8 +3772,8 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
           let windows ← match ← source.liveOwner owner.relation with
             | some id => pure ((semanticOwners.durableWindows.find? (·.1 == id)).map Prod.snd |>.getD [])
             | none => pure ((semanticOwners.stagedWindows.find? (·.1 == owner.relation)).map Prod.snd |>.getD [])
-          if let some focus := sourceFocus? owner windows then
-            let some neighborhood ← focusNeighborhood command focus support | return some pendingSearch
+          if (sourceFocus? owner windows).isSome then
+            let some neighborhood ← focusNeighborhood command current support | return some pendingSearch
             focusedRanking := neighborhood.ranking
             focusedWindows := neighborhood.windows
             focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
@@ -3739,8 +3806,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
       (semanticEvidence ++ semanticOwners.stagedWindows) focusedWindows)
     (meaningSelected := !native && selection.semanticMatcher.isSome)
     (sourceAll := sourceAll) (sourceUnions := persistent) (entryWorks := entryWorks) (support := support)
-    (byteBudget := selection.handoffBytes) (evidenceRanking := (focusedRanking ++ evidenceRanking).eraseDups)
-    (evidenceRoots := evidenceRoots))
+    (byteBudget := selection.handoffBytes) (evidenceRanking := (focusedRanking ++ evidenceRanking).eraseDups))
 
 def indexedDiscovery (selection : Config.Selection)
     (snapshots : List (Option Persistence.Store.Snapshot)) (current : String)

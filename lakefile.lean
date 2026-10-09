@@ -21,7 +21,8 @@ lean_lib Eggshell where
   extraDepTargets := #[`embeddingSource]
 
 lean_lib PageDBTestSupport where
-  roots := #[`tests.PageDBTests, `tests.FullSearchOracle, `tests.SearchMemo, `tests.CorpusCache, `tests.SourceEvidenceTests]
+  roots := #[`tests.PageDBTests, `tests.FullSearchOracle, `tests.SearchMemo, `tests.CorpusCache,
+    `tests.SourceEvidenceTests, `tests.SourceObservationTests]
 
 @[default_target]
 lean_exe eggshell where

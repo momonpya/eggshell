@@ -5,6 +5,7 @@ public import Eggshell.SearchProvider
 import Eggshell.ContractAudit
 public import tests.PageDBTests
 public import tests.SourceEvidenceTests
+public import tests.SourceObservationTests
 
 @[expose] public section
 
@@ -786,6 +787,14 @@ def testOperationBoundaryLookup : IO Unit := do
   IO.println "PASS run-local fragments reuse one persistent native Work"
 
 def testFlexibleContextAllocation : IO Unit := do
+  -- The hook client has already reserved RPC/teardown time. A 25-second
+  -- upstream deadline must not be shortened to the former local 20 seconds.
+  let now ← IO.monoMsNow
+  let supplied := now + 25000
+  let actual ← hookDeadline (Lean.Json.mkObj [("_eggshell_deadline", Lean.toJson supplied)])
+  check (actual == supplied) "search shortened the native hook's remaining deadline"
+  let short ← hookDeadline (Lean.Json.mkObj [("_eggshell_deadline", Lean.toJson (now + 800))])
+  check (short == now + 800) "search extended a shorter upstream deadline"
   let source := String.ofList ((List.range 16000).map fun i => Char.ofNat (97 + i % 26))
   let work := String.ofList (List.replicate 233 'w')
   let owner := OutcomeEdge.make (.text work) (.text source) [] (by simp) (by simp)
@@ -936,6 +945,19 @@ def testFlexibleContextAllocation : IO Unit := do
     "packet demand was pinned to 48000 bytes, filled its ceiling for a small query or ignored a real ceiling"
   let packetCost := fun (items : List String) =>
     (2 + (items.map String.length).sum, 2 + (items.map String.utf8ByteSize).sum)
+  let entryCost := fun (items : List String) =>
+    (9000 + (items.map String.length).sum, 10000 + (items.map String.utf8ByteSize).sum)
+  let entryData := [String.ofList (List.replicate 3500 'e')]
+  let bestSupport := String.ofList (List.replicate 2500 's')
+  let baseline := coherentEntryPacketBudget (120000, 128000) entryCost entryData [bestSupport]
+  for count in [0, 1, 10, 100, 1000] do
+    let peripheral := (List.range count).map fun i => s!"unrelated earlier topic {i}: " ++
+      String.ofList (List.replicate (i % 200 + 100) 'λ')
+    check (coherentEntryPacketBudget (120000, 128000) entryCost entryData
+        (bestSupport :: peripheral) == baseline)
+      "lower-ranked graph growth enlarged the actual coherent packet allowance"
+  check (coherentEntryPacketBudget (5000, 7000) entryCost entryData [bestSupport] == (5000, 7000))
+    "coherent source demand bypassed the caller's character or UTF-8 ceiling"
   let plans := [("a", ["aaa", "aaaaaa"]), ("b", ["bbb", "bbbbbb"]),
     ("c", ["λλc", "cccccc"])]
   let some packet := boundedFlexiblePacketSlices 11 12 packetCost plans (fun _ => 0) (fun _ => 2) |
@@ -966,6 +988,14 @@ def testFlexibleContextAllocation : IO Unit := do
     throw (IO.userError "funded graph-support packet refused its empty shell")
   check (withSupport.val == ["aaaaaa", "bbbbbb", "nnn"])
     "a useful non-hit graph context was lost after coherent entry admission"
+  let acrossFamilies := [("old", ["old explanation that fills the whole packet"]),
+    ("new", ["new context"]), ("data", ["tool data"]), ("peripheral", [])]
+  let some coveredFamilies := boundedFlexiblePacketSlices 15 15 packetCost acrossFamilies
+      (fun text => evidenceAdmissionPriority 0 (text == "old" || text == "new"))
+      (fun _ => 1) (fun text => if text == "peripheral" then 1 else 0) |
+    throw (IO.userError "cross-family evidence packet refused its empty shell")
+  check (coveredFamilies.val == ["old", "new", "data"])
+    "one old explanation displaced another family's meaning entry or its priced non-hit tool context"
   let familyPlans := [("old-hit", []), ("current-hit", []), ("current-support", [])]
   let some familyPacket := boundedFlexiblePacketSlices 28 28 packetCost familyPlans
       (fun text => evidenceAdmissionPriority (if text == "old-hit" then 1 else 0)
@@ -1151,6 +1181,9 @@ def testSemanticEvidenceDelivery : IO Unit := do
   -- source-focus response changes. A packet memo must see both observations.
   IO.FS.withTempDir fun root => do
     IO.FS.writeFile (root / "primary-query") prior.prompt
+    let full ← Persistence.load path
+    IO.FS.writeFile (root / "primary-document-count")
+      (toString (WorkGraph.fromValues full.values).outcomes.length)
     let focused := {selection with semanticMatcher := some [executable.toString,
       "observed-focus-provider", root.toString]}
     let some first ← automaticHandoff focused prior.prompt [] false |
@@ -1162,8 +1195,8 @@ def testSemanticEvidenceDelivery : IO Unit := do
       throw (IO.userError "unchanged source focus could not reuse its handoff")
     check (first.text != second.text && second.text == third.text)
       "packet reuse ignored a changed independent source-focus observation"
-    check ((← IO.FS.readFile (root / "focus-query")) == prior.finalMessage.get!)
-      "graph focus used generic request wording instead of the original selected answer"
+    check ((← IO.FS.readFile (root / "focus-query")) == prior.prompt)
+      "an old answer replaced the current request when ranking graph support"
     check ((← IO.FS.readFile (root / "focus-calls")) == "3")
       "packet reuse skipped a fresh focus observation or repeated provider work"
     for result in [first, second, third] do
@@ -1266,7 +1299,7 @@ def testSemanticEvidenceDelivery : IO Unit := do
   let framing : Handoff := {pendingSearch with
     sourceUses := [{owner := String.ofList (List.replicate 80 '源'), references := [], completed := false},
       {owner := "v1", references := [], completed := false}]}
-  let status := renderOwnerSourceStatus framing {workspace := testRoot, deadline := 0} {} 1024 360
+  let status := renderOwnerSourceStatus framing {} 1024 360
   check (status.text.utf8ByteSize ≤ 360 && status.text.length ≤ 1024 &&
       status.text.contains "GRAPH v1" && !status.text.contains (String.ofList (List.replicate 80 '源')) &&
       (sourceFrame? 32 16 "SOURCE\n日本").any (fun frame => frame.text == "SOURCE\n日本") &&
@@ -2895,9 +2928,14 @@ def testSaveWhileIndexBusy : IO Unit := IO.FS.withTempDir fun attempt => do
       ("paths", Lean.toJson [firstTicket.path.toString])])
       ((← IO.monoMsNow) + 3000)) .dedicated
     let slot ← Worker.slotFor session "index"
-    while (← slot.gate.tryAtomically (pure ())).isSome do
+    -- Do not acquire the admission gate while waiting for the other task to
+    -- enter: the observer itself could win its one-shot admission probe.
+    -- Child publication happens after admission, under a separate mutex.
+    while (← slot.child.atomically get).isNone do
       if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "index task did not enter its lane")
       IO.sleep 5
+    check ((← slot.gate.tryAtomically (pure ())).isNone)
+      "published index pipe did not retain its execution gate"
     let secondMs ← save (pendingFor 1)
     check (firstMs < 2000 && secondMs < 2000 && !(← IO.hasFinished indexing))
       "an occupied index lane delayed the independent writer"
@@ -3068,7 +3106,12 @@ def observedFocusProvider (root : System.FilePath) : IO UInt32 := do
   let request ← IO.ofExcept (Lean.Json.parse (← input.getLine))
   let query ← IO.ofExcept ((request.getObjValD "query").getObjValAs? String "text")
   let documents ← IO.ofExcept (request.getObjValAs? (Array Lean.Json) "documents")
-  let primary := query == (← IO.FS.readFile (root / "primary-query"))
+  -- Both observations must use the current request. Distinguish their
+  -- independently recorded domains, never their query text.
+  let primaryCount ← IO.FS.readFile (root / "primary-document-count")
+  let primary := documents.size == primaryCount.toNat?.getD 0
+  if query != (← IO.FS.readFile (root / "primary-query")) then
+    throw (IO.userError "a graph-support provider received an old task's answer as its query")
   unless primary do
     IO.FS.writeFile (root / "focus-query") query
     let count ← if ← (root / "focus-calls").pathExists then do
@@ -5091,6 +5134,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
       return 0
     testStreamingNormalizer
     Eggshell.SourceEvidenceTests.run
+    Eggshell.SourceObservationTests.run
     testRootReachTraversal
     testStreamingSourceParts
     testDemandFrequencies
@@ -5147,6 +5191,9 @@ def main (arguments : List String) : IO UInt32 :=
   match arguments with
   | ["source-evidence-tests"] => do
       Eggshell.SourceEvidenceTests.run
+      pure 0
+  | ["source-observation-tests"] => do
+      Eggshell.SourceObservationTests.run
       pure 0
   | ["normalizer-tests"] => do
       testStreamingNormalizer

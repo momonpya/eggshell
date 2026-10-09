@@ -12,6 +12,89 @@ def require (ok : Bool) (message : String) : IO Unit :=
 
 def deadline : IO Nat := return (← IO.monoMsNow) + 5000
 
+def testReadBatches : IO Unit := do
+  require (SourceEvidence.commandFiles? "cat src/product.cc; cat src/second.cc" ==
+      some ["src/product.cc", "src/second.cc"]) "compound read omitted a dependency"
+  require (SourceEvidence.commandFiles?
+      "nl -ba src/product.cc | sed -n '1,20p;30,40p'; rg -n -- '-x|mode' src/second.cc | head -80" ==
+      some ["src/product.cc", "src/second.cc"]) "quoted separators or explicit rg pattern lost a batched source"
+  require (SourceEvidence.commandFiles?
+      "cat src/product.cc && nl -ba src/second.cc | tail -n 5; cat src/product.cc;" ==
+      some ["src/product.cc", "src/second.cc"]) "conditional literal read or source deduplication failed"
+  require (SourceEvidence.commandFiles? "cat src/product.cc\ncat src/second.cc" ==
+      some ["src/product.cc", "src/second.cc"]) "newline read batch lost a dependency"
+  require (SourceEvidence.commandFiles?
+      "rg -n \"getToolChain\\(|a\\\";b\" src/product.cc && cat src/second.cc" ==
+      some ["src/product.cc", "src/second.cc"]) "double-quoted regex or escaped quote changed source operands"
+
+def testBatchCapture (first moved : System.FilePath) (body : String) : IO Unit := do
+  IO.FS.writeFile (moved / "src/product.cc") body
+  IO.FS.writeFile (moved / "src/second.cc") "independent source B"
+  let input := Json.mkObj [("command", toJson
+    "nl -ba src/product.cc | sed -n '1,20p;30,40p'; rg -n -- 'source|product' src/second.cc | head -80")]
+  let capture ← SourceEvidence.capture first input (← deadline)
+  require (capture.record.valid && capture.record.files.map (·.relative) ==
+      ["src/product.cc", "src/second.cc"]) "real batched source capture omitted a source"
+  require (← SourceEvidence.verify moved capture.record (← deadline))
+    "relocated batched sources lost freshness"
+  IO.FS.writeFile (moved / "src/second.cc") "changed second dependency"
+  require (!(← SourceEvidence.verify moved capture.record (← deadline)))
+    "editing the second subcommand source retained freshness"
+  IO.FS.removeFile (moved / "src/second.cc")
+  require (!(← SourceEvidence.verify moved capture.record (← deadline)))
+    "deleting the second subcommand source retained freshness"
+  IO.FS.writeFile (first / "src/second.cc") "changed during batch execution"
+  require (!(← SourceEvidence.sealCapture first capture (← deadline)).complete)
+    "batch source changed during the command retained freshness"
+  IO.FS.writeFile (first / "src/second.cc") "independent source B"
+
+def testNativeBatchCapture (workspace : System.FilePath) (session turn : String)
+    (files : SessionFiles) (result : Json) : IO Unit := do
+  IO.FS.writeFile (workspace / "src/batch-second.cc") "second native dependency"
+  let input := Json.mkObj [("command", toJson
+    "nl -ba src/product.cc | sed -n '1,20p;30,40p'; rg -n -- 'second' src/batch-second.cc | head -80")]
+  let event := fun name => Json.mkObj [
+    ("hook_event_name", toJson name), ("session_id", toJson session),
+    ("turn_id", toJson turn), ("tool_name", toJson "Bash"),
+    ("tool_use_id", toJson "native-batch"), ("tool_input", input), ("tool_response", result)]
+  let _ ← preToolUse (event "PreToolUse")
+  captureTerminal (event "PostToolUse")
+  let tool : ToolEvent := {
+    name := "Bash", useId := "native-batch", input := input.compress, response := result.compress }
+  let some recorded ← recordedTool? files turn tool |
+    throw (IO.userError "native batch result was not durable")
+  let some capture := recorded.source |
+    throw (IO.userError "native batch omitted its source certificate")
+  require (capture.record.valid && capture.record.files.map (·.relative) ==
+      ["src/product.cc", "src/batch-second.cc"])
+    "actual native batch did not seal every subcommand's dependency"
+  require (← SourceEvidence.verify workspace capture.record (← deadline))
+    "actual native batch was not reusable"
+  IO.FS.writeFile (workspace / "src/batch-second.cc") "changed native dependency"
+  require (!(← SourceEvidence.verify workspace capture.record (← deadline)))
+    "actual native batch ignored a changed later subcommand"
+
+def testScopedRefresh (workspace : System.FilePath) (record : SourceEvidence.Record) : IO Unit := do
+  let statusKeys := fun (handoff : Handoff) => handoff.deliveredGraphs.filter (·.startsWith "s:")
+  -- Unsupported glob/search results have no named file observations. A
+  -- background index update must not turn their refresh into a global warning.
+  for records in [[], [SourceEvidence.unverified]] do
+    let unknownRefresh ← (sourceRefresh records).checkSources {
+      workspace, deadline := ← deadline}
+    require (unknownRefresh.text.isEmpty && statusKeys unknownRefresh == [] &&
+        !unknownRefresh.blocksCurrent && unknownRefresh.completed == 0)
+      "unknown-only refresh emitted an unscoped stale-source warning or authority"
+  let mixedRefresh ← (sourceRefresh [record, SourceEvidence.unverified]).checkSources {
+    workspace, deadline := ← deadline}
+  require (mixedRefresh.text.contains "src/product.cc: unchanged" &&
+      !mixedRefresh.text.contains "HISTORICAL/UNVERIFIED" &&
+      !mixedRefresh.blocksCurrent && mixedRefresh.completed == 0)
+    "unknown provenance globally mislabeled separately unchanged source files"
+  let unnamedRefresh ← (sourceRefresh [record, SourceEvidence.unverified]).checkSources {
+    workspace, deadline := ← deadline, handoffChars := sourceStatusReserve}
+  require (unnamedRefresh.text.isEmpty && statusKeys unnamedRefresh == [])
+    "a small refresh budget emitted a verdict without its named source"
+
 def run : IO Unit := do
   let root ← PageMap.absolute ".lake/portable-source-tests"
   if ← root.pathExists then IO.FS.removeDirAll root
@@ -48,7 +131,7 @@ def run : IO Unit := do
   require (!(← SourceEvidence.sealCapture first capture (← deadline)).complete) "changed during tool was authorized"
   IO.FS.writeFile (first / "src/product.cc") body
   require ((SourceEvidence.relative? first first "../other/src/product.cc").isNone) "source escaped its workspace"
-  require ((SourceEvidence.commandFiles? "cat src/product.cc; cat elsewhere.cc").isNone) "compound command was complete"
+  testReadBatches
   require (SourceEvidence.commandFiles? "nl -ba src/product.cc | sed -n '1,20p;30,40p'" ==
       some ["src/product.cc"]) "literal line-number/read pipeline lost its actual source"
   require (SourceEvidence.commandFiles? "rg -n 'a|b' src/product.cc | head -80" ==
@@ -57,7 +140,9 @@ def run : IO Unit := do
       "cat src/product.cc | sed -n '1p' src/unrelated.cc",
       "cat src/product.cc | head -80 src/unrelated.cc",
       "cat src/product.cc | sh", "cat $(whoami)", "cat src/product.cc > /tmp/other",
-      "cat src/product.cc || cat src/unrelated.cc"] do
+      "cat src/product.cc || cat src/unrelated.cc", "cat src/product.cc; touch src/product.cc",
+      "cat src/product.cc &&", "cat src/product.cc &", "cat src/product.cc &&& cat src/unrelated.cc",
+      "cat src/product.cc;; cat src/unrelated.cc", "cat src/product.cc; rg -n pattern src/*"] do
     require ((SourceEvidence.commandFiles? command).isNone)
       "unsupported filter/foreign read/substitution acquired complete dependencies"
   require (SourceEvidence.workTargets? first ("shell\n" ++ input.compress) == some ["src/product.cc"])
@@ -72,6 +157,7 @@ def run : IO Unit := do
   -- Each result owns its dependencies. Unknown or superseded results must
   -- not poison an unrelated, verified completion in the same handoff.
   IO.FS.writeFile (first / "src/second.cc") "independent source B"
+  testBatchCapture first moved body
   let secondSource ← SourceEvidence.capture first
     (Json.mkObj [("command", toJson "cat src/second.cc")]) (← deadline)
   let uses : List SourceUse := [
@@ -111,11 +197,11 @@ def run : IO Unit := do
   let conflicting := {mixedHandoff with sourceUses := uses ++
     [{owner := "result-A", references := [2], completed := false}]}
   require ((checkedOwnerSources? conflicting.sourceRecords (ownerSourceUses conflicting "result-A")
-      {workspace := first, deadline := 0} ledger).isNone &&
-      (checkedOwnerSources? mixedHandoff.sourceRecords [] {workspace := first, deadline := 0} ledger).isNone)
+      ledger).isNone &&
+      (checkedOwnerSources? mixedHandoff.sourceRecords [] ledger).isNone)
     "a verified sibling or empty owner acquired an unconditional current-source label"
   for budget in [0, 16, 160, 512, 24000] do
-    let table := renderOwnerSourceStatus mixedHandoff {workspace := first, deadline := 0} ledger budget
+    let table := renderOwnerSourceStatus mixedHandoff ledger budget
     require (table.text.length ≤ budget) "owner status exceeded the remaining handoff budget"
   let frameOnly ← ({mixedHandoff with text := delta, controlDeltaChars := delta.length}).checkSources
     {workspace := first, deadline := ← deadline}
@@ -136,6 +222,27 @@ def run : IO Unit := do
     workspace := first, deadline := ← deadline, native := true, targets := some ["src/product.cc"]}
   require (namedA.coveredFragments == ["result-A"] && !namedA.deliveredGraphs.contains "d:result-B")
     "a different relative path supplied authority for the named source"
+  require (namedA.text.contains "GRAPH result-A: recorded file dependencies unchanged" &&
+      namedA.text.contains "GRAPH result-B: recorded file dependencies unchanged")
+    "native target coverage was incorrectly presented as source freshness"
+  let wider ← mixedHandoff.checkSources {
+    workspace := first, deadline := ← deadline, native := true,
+    targets := some ["src/product.cc", "src/second.cc"]}
+  require (!wider.blocksCurrent && wider.coveredFragments.isEmpty && wider.completed == 0 &&
+      wider.text.contains "GRAPH result-A: recorded file dependencies unchanged" &&
+      wider.text.contains "GRAPH result-B: recorded file dependencies unchanged")
+    "broader operation lost fresh evidence or was erased by only partially applicable results"
+  let unknownTargets ← mixedHandoff.checkSources {
+    workspace := first, deadline := ← deadline, native := true}
+  require (!unknownTargets.blocksCurrent && unknownTargets.coveredFragments.isEmpty &&
+      unknownTargets.completed == 0 &&
+      unknownTargets.text.contains "GRAPH result-A: recorded file dependencies unchanged" &&
+      unknownTargets.text.contains "GRAPH result-B: recorded file dependencies unchanged")
+    "unknown native operation scope lost fresh evidence or acquired completion authority"
+  let statusKeys := fun (handoff : Handoff) => handoff.deliveredGraphs.filter (·.startsWith "s:")
+  require (statusKeys namedA == statusKeys wider && statusKeys wider == statusKeys unknownTargets)
+    "different operation targets repeatedly recreated the same source status"
+  testScopedRefresh first current.record
   let malformed ← ({mixedHandoff with text := mixedHandoff.text ++ "corrupt suffix"}).checkSources
     {workspace := first, deadline := ← deadline}
   require (malformed.reason == "search-incomplete" && !malformed.blocksCurrent && malformed.completed == 0)
@@ -186,6 +293,13 @@ def run : IO Unit := do
   let some historical ← ask context | throw (IO.userError "source fixture did not match native work")
   require (historical.reason.endsWith "sources=historical" && historical.completed == 0)
     "missing certificate authorized completion"
+  let some unknownReplay ← automaticHandoff selection (canonicalToolWork tool)
+      historical.deliveredGraphs false none [] true true
+      (some {context with deadline := ← deadline}) |
+    throw (IO.userError "already delivered unknown work lost source refresh metadata")
+  require (unknownReplay.text.isEmpty && statusKeys unknownReplay == [] &&
+      !unknownReplay.blocksCurrent && unknownReplay.completed == 0)
+    "already delivered unknown work repeated an unscoped source warning"
   let (receiptId, _, _) ← PageMap.withWriter (← PageMap.pin (root / "authority")) fun writer => do
     let intern : Store.Intern := ⟨writer, ← IO.mkRef {}⟩
     let id ← intern.root receipt
@@ -323,6 +437,7 @@ def run : IO Unit := do
   require ((← recordedTool? hookFiles pending.turnId pipelineTool).any fun t =>
       t.source.any fun s => s.record.complete && s.record.files.map (·.relative) == ["src/product.cc"])
     "actual Bash read pipeline did not preserve its owner-bound native source certificate"
+  testNativeBatchCapture moved hookSession pending.turnId hookFiles result
   IO.FS.writeFile (moved / "src/driver.cc") (String.ofList (List.replicate (340 * 1024) 'a'))
   let driverInput := Json.mkObj [("command", toJson "nl -ba src/driver.cc | sed -n '1,20p'")]
   let driverEvent := fun name => Json.mkObj [
@@ -371,6 +486,6 @@ def run : IO Unit := do
     "real terminal capture lost work or authorized a changed source"
   IO.println ((Json.mkObj [("source_certificate_read_bytes", toJson sourceBytes),
     ("referenced_result_bytes", toJson (1024 * 1024 : Nat))]).compress)
-  IO.println "PASS portable sources: streamed fingerprints, relocation, edit/delete/absence, unknown URI, exact owner, immutable native receipt, late indexed certificate, demand-memo freshness and retraction"
+  IO.println "PASS portable sources: streamed fingerprints, relocation, edit/delete/absence, unknown URI, exact owner, immutable native receipt, late indexed certificate, demand-memo freshness and retraction, query-independent freshness with scoped native controls"
 
 end Eggshell.SourceEvidenceTests

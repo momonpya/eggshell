@@ -81,10 +81,25 @@ theorem compaction_preserves_checkpoint (state : ThreadState) (key : String)
     key ∈ (compactState state).deliveredGraphs := by
   simp [compactState, present, checkpoint]
 
-def hookDeadline (input : Json) (budget : Nat := 20000) : IO Nat := do
+def boundedHookDeadline (now budget : Nat) (upstream : Option Nat) : Nat :=
+  min (now + budget) (upstream.getD (now + budget))
+
+theorem hook_deadline_preserves_upstream (now budget deadline : Nat)
+    (within : deadline ≤ now + budget) :
+    boundedHookDeadline now budget (some deadline) = deadline := by
+  simp [boundedHookDeadline, Nat.min_eq_right within]
+
+theorem hook_deadline_never_extends_upstream (now budget deadline : Nat) :
+    boundedHookDeadline now budget (some deadline) ≤ deadline := by
+  exact Nat.min_le_right _ _
+
+/-- The native client reserves teardown/RPC time inside the 30-second hook.
+Search consumes that shared deadline rather than imposing a second 20-second
+cutoff. Direct callers retain the client's ordinary 26-second ceiling. -/
+def hookDeadline (input : Json) (budget : Nat := 26000) : IO Nat := do
   let now ← IO.monoMsNow
-  pure <| min (now + budget)
-    ((input.getObjValAs? Nat "_eggshell_deadline").toOption.getD (now + budget))
+  pure <| boundedHookDeadline now budget
+    (input.getObjValAs? Nat "_eggshell_deadline").toOption
 
 /-- Closing with no message cannot erase a final answer already received. -/
 def sealPending (pending : PendingTurn) (message : Option String) : PendingTurn :=
@@ -131,9 +146,11 @@ def reconcileToolReceipts (session : String) (files : SessionFiles)
     for entry in ← directory.readDir do
       if !entry.fileName.endsWith ".json" || seen.contains entry.fileName then continue
       try
-        if let some tool ← (readJson? entry.path : IO (Option ToolEvent)) then
-          queueCheckpoint files {
-            pending with tools := [tool], inFlight := [], finalMessage := none, closed := false }
+        if let some (native, version) ← readNativeTool? entry.path then
+          let tool ← attachCertificate files pending.turnId native version
+          let paths := (Json.parse tool.input).toOption.map
+            (SourceObservation.targets (System.FilePath.mk pending.cwd) tool.name) |>.getD []
+          queueCheckpoint files {pending with tools := [tool], sources := paths.map (fun relative => ⟨relative, none⟩), inFlight := [], finalMessage := none, closed := false}
           seen := entry.fileName :: seen
           cursor.set (pending.turnId, seen)
       catch error => IO.eprintln s!"Eggshell retained an unqueued tool receipt: {error}"
@@ -434,6 +451,24 @@ def preToolUse (input : Json) : IO String := do
               writeJson files.pending (cancelTool current tool.useId)
         throw error
 
+/-- Retain the original read's certificate in both active and archived turns.
+An existing companion is immutable; a new companion is sealed against the
+pre-tool capture, never inferred from the command's output or a later hash. -/
+def sealRecordedRead (pending : PendingTurn) (tool : ToolEvent) : IO ToolEvent := do
+  if tool.source.isSome then return tool
+  let previous := pending.inFlight.find? fun previous =>
+    previous.useId == tool.useId && previous.name == tool.name &&
+      canonicalJson previous.input == canonicalJson tool.input
+  let source ← (previous.bind (·.source)).mapM fun capture => do
+    let record ← SourceEvidence.sealCapture (System.FilePath.mk pending.cwd) capture ((← IO.monoMsNow) + 250)
+    pure {capture with record}
+  pure {tool with source}
+
+theorem existing_read_certificate_retained (pending : PendingTurn) (tool : ToolEvent)
+    (capture : SourceEvidence.Capture) (hasCertificate : tool.source = some capture) :
+    sealRecordedRead pending tool = pure tool := by
+  simp [sealRecordedRead, hasCertificate]
+
 /-- Journal native results before contacting the manager or doing any search. -/
 def captureTerminal (input : Json) : IO Unit := do
   if optionalString input "hook_event_name" != some "PostToolUse" then return
@@ -449,23 +484,21 @@ def captureTerminal (input : Json) : IO Unit := do
   recordTool files turn tool
   if let some pending ← (readJson? files.pending pendingJsonDefaults : IO (Option PendingTurn)) then
     if pending.turnId == turn && !pending.closed && pending.finalMessage.isNone then
-      let previous := pending.inFlight.find? fun previous =>
-        previous.useId == tool.useId && previous.name == tool.name &&
-          canonicalJson previous.input == canonicalJson tool.input
-      let source ← if tool.source.isSome then pure tool.source else
-        (previous.bind (·.source)).mapM fun capture => do
-          let record ← SourceEvidence.sealCapture (System.FilePath.mk pending.cwd) capture ((← IO.monoMsNow) + 250)
-          pure {capture with record}
-      let tool := {tool with source}
+      let tool ← sealRecordedRead pending tool
       -- The native result was already durable before provenance validation.
       -- A crash here can lose only the optional source certificate, not work.
       recordTool files turn tool
-      queueCheckpoint files { pending with tools := [tool], inFlight := [] }
+      let paths := (Json.parse tool.input).toOption.map
+        (SourceObservation.targets (System.FilePath.mk pending.cwd) tool.name) |>.getD []
+      queueCheckpoint files {pending with tools := [tool], inFlight := [], sources := paths.map (fun relative => ⟨relative, none⟩)}
       return
   if let some pending ← readClosedTurn? files turn then
     unless pending.sessionId == session do throw (IO.userError "closed receipt belongs to another chat")
-    queueCheckpoint files {
-      pending with tools := [tool], inFlight := [], finalMessage := none, closed := false }
+    let tool ← sealRecordedRead pending tool
+    recordTool files turn tool
+    let paths := (Json.parse tool.input).toOption.map
+      (SourceObservation.targets (System.FilePath.mk pending.cwd) tool.name) |>.getD []
+    queueCheckpoint files {pending with tools := [tool], inFlight := [], sources := paths.map (fun relative => ⟨relative, none⟩), finalMessage := none, closed := false}
 
 def postToolUse (input : Json) : IO String := do
   let session ← IO.ofExcept (requiredString input "session_id")

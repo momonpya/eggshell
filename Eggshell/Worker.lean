@@ -380,7 +380,9 @@ def search (request : Search) : IO (Option Handoff) := do
           workspace := System.FilePath.mk request.pending.cwd
           deadline := request.deadline
           targets := SourceEvidence.workTargets? (System.FilePath.mk request.pending.cwd) request.work
-          native := request.enforce || request.evidence.isSome })
+          native := request.enforce || request.evidence.isSome
+          onDependencies := fun sources =>
+            queueCheckpoint files {request.pending with tools := [], sources := sources, inFlight := [], finalMessage := none, closed := false} })
 
 /-- Batch compatible metadata tickets on one read snapshot. Index failure
     retains every ticket; indexing never republishes or locks the graph writer. -/
@@ -436,8 +438,8 @@ def run (role : String) : IO UInt32 := do
               queueIndex files target command promotion
             pure (promotion.outcomeRelations.map nativeHistoryKey)
           else pure []
-        removeIfExists path
-
+        let finished ← observeRelatedFiles files pending ((← IO.monoMsNow) + 5000)
+        if finished then removeIfExists path
         pure (toJson keys)
       else if role == "index" then
         let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")

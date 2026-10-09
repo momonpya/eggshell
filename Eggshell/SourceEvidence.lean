@@ -93,6 +93,26 @@ def check? (record : Record) (current : List File) : Option (Checked record curr
 theorem checked_dependencies_exact (checked : Checked record current) :
     current = record.files := checked.exact
 
+/-- A valid historical observation becomes usable again exactly when its
+actual dependencies match; a later observation cannot refresh its hashes. -/
+theorem checked_iff_valid_dependencies (record : Record) (current : List File) :
+    (check? record current).isSome = true ↔ record.valid = true ∧ current = record.files := by
+  unfold check?
+  split
+  · rename_i accepted
+    constructor
+    · intro _
+      exact ⟨(Bool.and_eq_true_iff.mp accepted).1,
+        of_decide_eq_true (Bool.and_eq_true_iff.mp accepted).2⟩
+    · intro _
+      rfl
+  · rename_i rejected
+    constructor
+    · intro impossible
+      simp at impossible
+    · rintro ⟨valid, equal⟩
+      exact False.elim (rejected (by simp [agrees, valid, equal]))
+
 theorem changed_dependency_rejected (record : Record) (current : List File)
     (changed : current ≠ record.files) : check? record current = none := by
   simp [check?, agrees, changed]
@@ -218,20 +238,27 @@ def urisFromInput (input : Json) : List String :=
 
 def isURI (path : String) : Bool := (path.splitOn "://").length > 1
 
-/-- A deliberately literal single-command grammar. Expansion, redirection,
-subcommands and pipelines cannot be guessed into a complete dependency list. -/
+/-- Literal shell words. Expansion, redirection and substitution do not
+establish a closed local read. Quoted patterns are separate from operands. -/
 def literalWords? (text : String) : Option (List String) := do
   if text.contains '\x00' then return ← none
   let mut words := []
   let mut word := ""
   let mut quote := (0 : Nat)
   let mut started := false
+  let mut escaped := false
   for c in text.toList do
     if quote == 1 then
       if c == '\'' then quote := 0 else word := word.push c
     else if quote == 2 then
-      if c == '"' then quote := 0
-      else if c == '$' || c == '`' || c == '\\' then return ← none
+      if escaped then
+        if c == '\n' || c == '\r' then return ← none
+        if !['$', '`', '"', '\\'].contains c then word := word.push '\\'
+        word := word.push c
+        escaped := false
+      else if c == '\\' then escaped := true
+      else if c == '"' then quote := 0
+      else if c == '$' || c == '`' then return ← none
       else word := word.push c
     else if c == '\'' then
       quote := 1
@@ -249,7 +276,7 @@ def literalWords? (text : String) : Option (List String) := do
     else
       word := word.push c
       started := true
-  if quote != 0 then return ← none
+  if quote != 0 || escaped then return ← none
   if started then words := word :: words
   pure words.reverse
 
@@ -264,6 +291,7 @@ plan. The external command/OS observation remains outside this pure contract. -/
 inductive StreamFilter where
   | print (program : String) (literal : printProgram program = true)
   | prefix (lines : Nat)
+  | suffix (lines : Nat)
 
 def streamFilter? (words : List String) : Option StreamFilter := do
   match words with
@@ -273,17 +301,27 @@ def streamFilter? (words : List String) : Option StreamFilter := do
   | ["head", count] =>
       if count.startsWith "-" then
         ((count.drop 1).copy.toNat?).map StreamFilter.prefix else none
+  | ["tail", "-n", count] => count.toNat? |>.map StreamFilter.suffix
+  | ["tail", count] =>
+      if count.startsWith "-" then
+        ((count.drop 1).copy.toNat?).map StreamFilter.suffix else none
   | _ => none
 
-/-- Split only unquoted pipes. Each segment is subsequently accepted by the
-same literal-word parser; substitutions, redirects, sequences and unknown
-filters are rejected rather than guessed into complete dependencies. -/
+/-- Split only unquoted pipes; every filter must consume its input stream
+without introducing another source. -/
 def pipelineSegments? (command : String) : Option (List String) := do
   let mut parts := []
   let mut part := ""
   let mut quote := (0 : Nat)
+  let mut escaped := false
   for c in command.toList do
-    if quote == 0 && c == '|' then
+    if escaped then
+      part := part.push c
+      escaped := false
+    else if quote == 2 && c == '\\' then
+      part := part.push c
+      escaped := true
+    else if quote == 0 && c == '|' then
       parts := part :: parts
       part := ""
     else
@@ -294,8 +332,52 @@ def pipelineSegments? (command : String) : Option (List String) := do
         if c == '"' then quote := 0
       else if c == '\'' then quote := 1
       else if c == '"' then quote := 2
-  if quote != 0 then return ← none
+  if quote != 0 || escaped then return ← none
   pure ((part :: parts).reverse)
+
+/-- Split a literal list of read pipelines. Both sides of `&&` are included:
+an unexecuted right side can only make the dependency set conservative.
+Quotes retain separators in regexes and sed programs. Unsupported operators,
+expansion and commands are rejected by the subsequent pipeline parser. -/
+def sequenceSegments? (command : String) : Option (List String) := do
+  let mut parts := []
+  let mut part := ""
+  let mut quote := (0 : Nat)
+  let mut ampersand := false
+  let mut afterAnd := false
+  let mut escaped := false
+  for c in command.toList do
+    if escaped then
+      part := part.push c
+      escaped := false
+    else if quote == 2 && c == '\\' then
+      part := part.push c
+      escaped := true
+    else if ampersand then
+      if c != '&' then return ← none
+      if part.trimAscii.isEmpty then return ← none
+      parts := part :: parts
+      part := ""
+      ampersand := false
+      afterAnd := true
+    else if quote == 0 && c == '&' then
+      ampersand := true
+    else if quote == 0 && (c == ';' || c == '\n') then
+      if part.trimAscii.isEmpty then return ← none
+      parts := part :: parts
+      part := ""
+    else
+      part := part.push c
+      if !c.isWhitespace then afterAnd := false
+      if quote == 1 then
+        if c == '\'' then quote := 0
+      else if quote == 2 then
+        if c == '"' then quote := 0
+      else if c == '\'' then quote := 1
+      else if c == '"' then quote := 2
+  if quote != 0 || escaped || ampersand || afterAnd then return ← none
+  if !part.trimAscii.isEmpty then parts := part :: parts
+  pure parts.reverse
 
 def readerFiles? (words : List String) : Option (List String) := do
   let executable ← words.head?
@@ -315,11 +397,11 @@ def readerFiles? (words : List String) : Option (List String) := do
       let arguments := arguments.dropWhile (fun word =>
         ["-n", "-l", "-i", "-S", "-F", "-w", "-s", "--fixed-strings", "--line-number",
           "--ignore-case", "--word-regexp"].contains word)
-      match arguments with
-      | pattern :: files =>
-          if !pattern.startsWith "-" && !files.isEmpty &&
-              !files.any (fun file => file.startsWith "-") then some files else none
-      | _ => none
+      let files ← match arguments with
+        | "--" :: _pattern :: files => some files
+        | pattern :: files => if pattern.startsWith "-" then none else some files
+        | _ => none
+      if !files.isEmpty && !files.any (fun file => file.startsWith "-") then some files else none
   | "nl" =>
       match arguments with
       | [file] | ["-ba", file] => if file.startsWith "-" then none else some [file]
@@ -330,13 +412,28 @@ structure ReadPlan where
   sources : {files : List String // files ≠ []}
   filters : List StreamFilter
 
-def readPlan? (command : String) : Option ReadPlan := do
+def pipelineReadPlan? (command : String) : Option ReadPlan := do
   let segments ← pipelineSegments? command
   let words ← segments.mapM literalWords?
   let first ← words.head?
   let files ← readerFiles? first
   let filters ← words.tail.mapM streamFilter?
   if nonempty : files ≠ [] then some ⟨⟨files, nonempty⟩, filters⟩ else none
+
+def combinedFiles (plans : List ReadPlan) : List String :=
+  (plans.flatMap (·.sources.val)).eraseDups
+
+/-- No accepted pipeline is omitted. A batch can never authorize just its
+recognizable prefix; parsing all pipelines succeeds before this is called. -/
+def joinReadPlans? (plans : List ReadPlan) : Option ReadPlan :=
+  if nonempty : combinedFiles plans ≠ [] then
+    some ⟨⟨combinedFiles plans, nonempty⟩, plans.flatMap (·.filters)⟩
+  else none
+
+def readPlan? (command : String) : Option ReadPlan := do
+  let segments ← sequenceSegments? command
+  let plans ← segments.mapM pipelineReadPlan?
+  joinReadPlans? plans
 
 def commandFiles? (command : String) : Option (List String) :=
   (readPlan? command).map (·.sources.val)
@@ -351,6 +448,25 @@ theorem read_plan_dependencies_nonempty (plan : ReadPlan) : plan.sources.val ≠
 
 theorem stream_filters_preserve_dependencies (plan : ReadPlan) (filters : List StreamFilter) :
     ({plan with filters} : ReadPlan).sources = plan.sources := rfl
+
+theorem combined_files_exact (plans : List ReadPlan) (file : String) :
+    file ∈ combinedFiles plans ↔ ∃ plan ∈ plans, file ∈ plan.sources.val := by
+  simp [combinedFiles, List.mem_flatMap]
+
+theorem joined_read_plan_dependencies (plans : List ReadPlan) (plan : ReadPlan)
+    (accepted : joinReadPlans? plans = some plan) :
+    plan.sources.val = combinedFiles plans := by
+  unfold joinReadPlans? at accepted
+  split at accepted
+  · cases accepted
+    rfl
+  · contradiction
+
+theorem joined_read_plan_preserves_every_source (plans : List ReadPlan) (plan : ReadPlan)
+    (accepted : joinReadPlans? plans = some plan) (file : String) :
+    file ∈ plan.sources.val ↔ ∃ pipeline ∈ plans, file ∈ pipeline.sources.val := by
+  rw [joined_read_plan_dependencies plans plan accepted]
+  exact combined_files_exact plans file
 
 def inputPaths (input : Json) : List String :=
   let direct := pathsFromInput input ++ ((input.getObjValAs? (List String) "paths").toOption.getD [])

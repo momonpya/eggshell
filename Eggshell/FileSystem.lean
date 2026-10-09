@@ -1,6 +1,7 @@
 module
 
 public import Std
+public import Lean.Data.Json.FromToJson
 
 @[expose] public section
 namespace Eggshell.FileSystem
@@ -49,7 +50,7 @@ namespace Eggshell.FileSystem
 structure ReadVersion where
   stamp : String
   bytes : Nat
-  deriving Repr, DecidableEq, BEq
+  deriving Repr, DecidableEq, BEq, Lean.ToJson, Lean.FromJson
 
 /-- A regular, no-symlink file descriptor. The OS adapter owns its lifetime;
 reads use explicit offsets and share neither a cursor nor a global lock. -/
