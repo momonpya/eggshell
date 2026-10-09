@@ -1134,7 +1134,34 @@ def testFlexibleContextAllocation : IO Unit := do
     check ((overlapSelected.views.any fun view => decide (view.range.covers point)) ==
         (overlapPlan.any fun range => decide (range.covers point)))
       "accepted context subtraction discarded an overlapping range's new original tail"
-  IO.println "PASS flexible context allocation: original coverage, priority, dense splitting, scattered clues, budgets, graph binding and non-repetition"
+  -- A loose paragraph header used to consume space before the next ranked
+  -- observation. Exercise the actual production context renderer on prose,
+  -- independently of code syntax, source file names or matching keywords.
+  let prose := String.ofList (List.replicate 6000 'p')
+  have proseLength : prose.length = 6000 := by
+    change (String.ofList (List.replicate 6000 'p')).length = 6000
+    rw [String.length_ofList, List.length_replicate]
+  let proseOwner := OutcomeEdge.make (.text "") (.text prose) [] (by simp) (by simp)
+  let firstHeader : EvidenceRange prose := ⟨0, 512, by omega, by omega, by omega⟩
+  let windows := [1, 9]
+  let offered := contextRangesWithStructure prose 1 windows 1024 [(0, firstHeader)]
+  let selected := offered.foldl (fun state range => state.offer proseOwner [] (.original range))
+    (ContextSelection.empty : ContextSelection prose 1024)
+  let cues := coreContextRanges prose 1 windows
+  check (selected.used == 1024 && cues.length == 2 &&
+      cues.all fun cue => selected.views.any fun view =>
+        view.range.start == cue.start && view.range.stop == cue.stop)
+    "an optional paragraph header displaced a later meaning-ranked observation"
+  let record := "Condition 日本語🐣: " ++ String.ofList (List.replicate 900 'q') ++
+    " complete expected result; literal \\n retained.\n"
+  let recorded := (Lean.Json.str ("".intercalate (List.replicate 12 record))).compress
+  let recordOwner := OutcomeEdge.make (.text "read notes") (.text recorded) [] (by simp) (by simp)
+  let recordSlice : TransportSlice := {members := [], visibleKeys := [], keys := [], text := recorded}
+  let some (_, recordText) := contextualOwnerData [] [1] recordOwner "original relation" [] recordSlice 1800 |
+    throw (IO.userError "number-free natural-language record lost its original context")
+  check (recordText.contains record && !recordText.contains ("".intercalate (List.replicate 12 record)))
+    "a meaning window cut off the end of an expected result or expanded the whole observed body"
+  IO.println "PASS flexible context allocation: original coverage, cue-before-header priority, dense splitting, scattered clues, budgets, graph binding and non-repetition"
 
 def testSemanticEvidenceDelivery : IO Unit := do
   let path := testRoot / "semantic-body.egg"
@@ -1177,6 +1204,21 @@ def testSemanticEvidenceDelivery : IO Unit := do
     handoff.completed == 0 && !handoff.blocksCurrent && handoff.coveredFragments.isEmpty &&
     handoff.sourceCheckpoints.isEmpty && handoff.localUnions == 0)
     s!"semantic evidence invalid: full={handoff.text.contains (canonicalJson tool.response)} content={handoff.text.contains "forwardArguments(configuration)"} blocks={handoff.blocksCurrent} completed={handoff.completed} unions={handoff.localUnions} reason={handoff.reason}"
+  -- The proposed operation has no native surface match. Meaning search must
+  -- still deliver original tool data, without certifying that operation.
+  let proposed : ToolEvent := {tool with input := r#"{"command":"inspect another-source"}"#}
+  let some nativeAdvice ← automaticHandoff selection (canonicalToolWork proposed) [] true |
+    throw (IO.userError "PreToolUse bypassed semantic evidence without a native Work match")
+  check (nativeAdvice.text.contains "forwardArguments(configuration)" &&
+      nativeAdvice.text.contains "RELATED SOURCE GRAPH" && !nativeAdvice.blocksCurrent &&
+      nativeAdvice.completed == 0 && nativeAdvice.coveredFragments.isEmpty &&
+      nativeAdvice.sourceCheckpoints.isEmpty && nativeAdvice.localUnions == 0)
+    "native semantic advice lost original evidence or gained native completion authority"
+  let repeatedAdvice ← automaticHandoff selection (canonicalToolWork proposed)
+    nativeAdvice.deliveredGraphs true
+  check (repeatedAdvice.all fun reply => !reply.text.contains "forwardArguments(configuration)" &&
+      !reply.blocksCurrent && reply.sourceCheckpoints.isEmpty)
+    "PreToolUse semantic advice resent acknowledged original data or acquired control"
   -- The primary response stays identical while an independently observed
   -- source-focus response changes. A packet memo must see both observations.
   IO.FS.withTempDir fun root => do

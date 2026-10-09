@@ -379,6 +379,7 @@ def search (request : Search) : IO (Option Handoff) := do
         (some {
           workspace := System.FilePath.mk request.pending.cwd
           deadline := request.deadline
+          question := request.pending.prompt
           targets := SourceEvidence.workTargets? (System.FilePath.mk request.pending.cwd) request.work
           native := request.enforce || request.evidence.isSome
           onDependencies := fun sources =>

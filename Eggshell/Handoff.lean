@@ -553,6 +553,8 @@ theorem source_table_contains (selected : List Selected) (owner : Selected)
 structure SourceContext where
   workspace : System.FilePath
   deadline : Nat
+  /-- The user's scope ranks advisory data independently of native control. -/
+  question : String := ""
   targets : Option (List String) := none
   native : Bool := false
   delivered : List String := []
@@ -1618,15 +1620,46 @@ theorem ranked_evidence_choice_is_original (ranking : List Value)
     choice ∈ rankEvidenceChoices ranking choices families ↔ choice ∈ choices := by
   simp [rankEvidenceChoices]
 
-/-- Surrounding graph evidence is prompt data. A native-tool control request
-cannot admit it into the control renderer. -/
-def admittedSourceSupport (meaning enforce : Bool)
+/-- SourceSupport has no Match/control members. It remains advisory even when
+delivered just before a native operation. -/
+def admittedSourceSupport (meaning _enforce : Bool)
     (support : List (SourceSupport roots all unions)) : List (SourceSupport roots all unions) :=
-  if meaning && !enforce then support else []
+  if meaning then support else []
 
-theorem admittedSourceSupport_native_empty (meaning : Bool)
+theorem admitted_source_support_preserves_no_control (meaning enforce : Bool)
+    (support : List (SourceSupport roots all unions)) (item : SourceSupport roots all unions)
+    (_present : item ∈ admittedSourceSupport meaning enforce support) :
+    (renderSourceSupport item).members = [] ∧ (renderSourceSupport item).visibleKeys = [] :=
+  source_support_has_no_control item
+
+/-- Native completion connections retain their exact projections. Other
+native fragments must compete as original meaning-ranked advisory evidence,
+rather than repeatedly sending a generic command's incidental result line. -/
+def nativeTransportSelection (meaning enforce : Bool) (nominated : List Value)
+    (selected : List Selected) : List Selected :=
+  if meaning && enforce && !nominated.isEmpty then selected.filter (·.blocks) else selected
+
+theorem native_transport_preserves_control (meaning enforce : Bool) (nominated : List Value)
+    (selected : List Selected) (item : Selected) (present : item ∈ selected)
+    (controls : item.blocks = true) :
+    item ∈ nativeTransportSelection meaning enforce nominated selected := by
+  simp only [nativeTransportSelection]
+  split
+  · exact List.mem_filter.mpr ⟨present, controls⟩
+  · exact present
+
+theorem native_transport_is_original (meaning enforce : Bool) (nominated : List Value)
+    (selected : List Selected) (item : Selected)
+    (present : item ∈ nativeTransportSelection meaning enforce nominated selected) :
+    item ∈ selected := by
+  unfold nativeTransportSelection at present
+  split at present
+  · exact (List.mem_filter.mp present).1
+  · exact present
+
+theorem admittedSourceSupport_disabled_empty (enforce : Bool)
     (support : List (SourceSupport roots all unions)) :
-    admittedSourceSupport meaning true support = [] := by
+    admittedSourceSupport false enforce support = [] := by
   simp [admittedSourceSupport]
 
 /-- Certified contiguous original characters around a meaning-ranked window.
@@ -2040,6 +2073,50 @@ theorem DecodedLayout.is_canonical (layout : DecodedLayout source) :
     subst widths
     rfl
 
+/-- Recorded line boundaries in the original scalar, including JSON escape
+widths. These are presentation spans, not file identity or relevance gates. -/
+def contextRecordSpans (source : String) (layout : Option (DecodedLayout source)) :
+    List (ContextSpan source) := Id.run do
+  let units := match layout with
+    | some value => value.chars.zip (value.widths.map Prod.snd)
+    | none => source.toList.map fun char => (char, 1)
+  let mut position := if layout.isSome then 1 else 0
+  let mut first := position
+  let mut spans := []
+  for (char, width) in units do
+    position := position + width
+    if char == '\n' then
+      if valid : first < position ∧ position ≤ source.length then
+        spans := (⟨first, position, valid.1, valid.2⟩ : ContextSpan source) :: spans
+      first := position
+  if valid : first < position ∧ position ≤ source.length then
+    spans := (⟨first, position, valid.1, valid.2⟩ : ContextSpan source) :: spans
+  return spans.reverse
+
+/-- Prefer complete adjacent records when they fit one bounded range. A very
+long single record retains the explicitly partial original representation. -/
+def recordContextRange (records : List (ContextSpan source)) (range : EvidenceRange source) :
+    EvidenceRange source :=
+  let start := ((records.find? fun record =>
+    record.start ≤ range.start && range.start < record.stop).map (·.start)).getD range.start
+  let stop := ((records.find? fun record =>
+    record.start < range.stop && range.stop ≤ record.stop).map (·.stop)).getD range.stop
+  if valid : start ≤ range.start ∧ range.stop ≤ stop ∧ start < stop ∧
+      stop ≤ source.length ∧ stop - start ≤ 2048 then
+    ⟨start, stop, valid.2.2.1, valid.2.2.2.1, valid.2.2.2.2⟩
+  else range
+
+theorem record_context_retains_original (records : List (ContextSpan source))
+    (range : EvidenceRange source) (position : Nat) (covered : range.covers position) :
+    (recordContextRange records range).covers position := by
+  unfold recordContextRange
+  dsimp only
+  split
+  · rename_i bounds
+    simp only [EvidenceRange.covers] at *
+    exact ⟨Nat.le_trans bounds.1 covered.1, Nat.lt_of_lt_of_le covered.2 bounds.2.1⟩
+  · exact covered
+
 def decodedEvidenceUsing? (layout : DecodedLayout source) (requested : EvidenceRange source) :
     Option (DecodedEvidence source) := do
   let decoded := layout.decoded
@@ -2148,27 +2225,34 @@ def structureContextRanges (source : String) (workChars : Nat) (windows : List N
 
 def contextRangesWithStructure (source : String) (workChars : Nat) (windows : List Nat)
     (budget : Nat) (heads : List (Nat × EvidenceRange source)) : List (EvidenceRange source) :=
-  -- Keep each meaning-ranked context and its original enclosing hint
-  -- together. All cues remain offered, but a later cue cannot jump ahead
-  -- of the first cue's recorded scope/entry conditions. This works for
-  -- prose paragraphs and MCP records as well as numbered source reads.
-  let initial := (meaningContextGroups source workChars windows).flatMap fun group =>
-    group.span.ranges ++ (heads.filter (fun head => head.1 == group.priority)).map Prod.snd
-  initial ++ contextRanges source workChars windows budget
+  -- Cover meaning-ranked data before optional headings or expanded context.
+  -- A first cue's large enclosing header must not evict the next useful cue.
+  coreContextRanges source workChars windows ++ heads.map Prod.snd ++
+    (expandedContextRanges source workChars windows budget).flatMap
+      (·.subtractAll (coreContextRanges source workChars windows))
+
+theorem structured_context_core_prefix (source : String) (workChars : Nat)
+    (windows : List Nat) (budget : Nat) (heads : List (Nat × EvidenceRange source)) :
+    (coreContextRanges source workChars windows).IsPrefix
+      (contextRangesWithStructure source workChars windows budget heads) := by
+  exact ⟨heads.map Prod.snd ++ (expandedContextRanges source workChars windows budget).flatMap
+    (·.subtractAll (coreContextRanges source workChars windows)),
+    by simp [contextRangesWithStructure, List.append_assoc]⟩
 
 theorem structured_context_keeps_core_ranges (source : String) (workChars : Nat)
     (windows : List Nat) (budget : Nat) (heads : List (Nat × EvidenceRange source))
     (range : EvidenceRange source) (original : range ∈ coreContextRanges source workChars windows) :
     range ∈ contextRangesWithStructure source workChars windows budget heads := by
-  apply List.mem_append.mpr
-  exact Or.inr (List.mem_append.mpr (Or.inl original))
+  exact List.mem_append_left _ (List.mem_append_left _ original)
 
 theorem structure_context_keeps_planned_positions (source : String) (workChars : Nat)
     (windows : List Nat) (budget position : Nat) (heads : List (Nat × EvidenceRange source))
     (planned : ∃ range ∈ contextRanges source workChars windows budget, range.covers position) :
     ∃ range ∈ contextRangesWithStructure source workChars windows budget heads, range.covers position := by
   obtain ⟨range, member, covers⟩ := planned
-  exact ⟨range, List.mem_append.mpr (Or.inr member), covers⟩
+  rcases List.mem_append.mp member with core | expanded
+  · exact ⟨range, structured_context_keeps_core_ranges _ _ _ _ _ _ core, covers⟩
+  · exact ⟨range, List.mem_append_right _ expanded, covers⟩
 
 inductive EvidenceView (source : String) where
   | original (range : EvidenceRange source)
@@ -2449,11 +2533,13 @@ def prepareContextualOwnerData (delivered : List String) (windows : List Nat)
         | none => fun _ => none
         | some work =>
           let decoded := (decodedToolText? source).map DecodedLayout.make
+          let records := contextRecordSpans source decoded
           let structural := structureContextRanges source (work.length + 1) windows
             (contextStructureHeads source decoded)
           let previous := deliveredEvidenceRanges owner source delivered
           fun contextBudget => do
-              let offered := contextRangesWithStructure source (work.length + 1) windows contextBudget structural
+              let offered := (contextRangesWithStructure source (work.length + 1) windows contextBudget structural).map
+                (recordContextRange records)
               -- Canonical scalar data must contain complete encoded characters.
               -- A residual JSON quote or half of an escape is not new tool data.
               let selected := offered.foldl (fun selected range =>
@@ -2698,6 +2784,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
   let selectedAll := transportSelection (meaningSelected && !enforce) nominated
     (supportFirst ((selectedMatches discovery extraction).map attach)) sourceAll sourceUnions
   let selectedAll := sourceEntrySelection meaningSelected enforce nominated selectedAll
+  let selectedAll := nativeTransportSelection meaningSelected enforce nominated selectedAll
   let boundary := (boundaryMatches discovery extraction).map attach
   /-
   Extract supplies admitted graph relations. Meaning nominations are roots,
@@ -2771,7 +2858,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       let plan ← contextSlicePlan (levels.filterMap render)
       pure (source.owner.relation, plan)
     let choices := entries ++ neighbors
-    let choices := if meaningSelected && !enforce && !evidenceRanking.isEmpty then
+    let choices := if meaningSelected && !evidenceRanking.isEmpty then
       -- Current-request rank orders the admitted neighborhood. A past task
       -- family is a provenance association, not permission to outrank a
       -- better current-request context from another family.
@@ -2809,7 +2896,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
     -/
     let allRelations := selectedAll.map (·.matched.projectedEdge.relation) |>.eraseDups
     let maximalTree := renderSelectionTree extraction.selection allRelations (meaningSelected && !enforce)
-    let maximalSource := if meaningSelected && !enforce then
+    let maximalSource := if meaningSelected then
       renderSourceNeighborhood sourceAll sourceUnions nominated
         (selectedAll.map (·.matched.edge) ++ surrounding.map (·.owner))
         (surrounding.flatMap (·.route.works)) else ""
@@ -2819,7 +2906,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
     let reserved := fixedHeader.length + maximalTree.length + maximalSource.length + footer.length + statusReserve.1
     let reservedBytes := fixedHeader.utf8ByteSize + maximalTree.utf8ByteSize +
       maximalSource.utf8ByteSize + footer.utf8ByteSize + statusReserve.2
-    let fittedSlices := if meaningSelected && !enforce then
+    let fittedSlices := if meaningSelected then
       -- Cover the current meaning entries across all original families before
       -- enriching any one of them. Provenance is retained by packetCost and
       -- rendering; it must not turn the first past answer into a scope gate.
@@ -2872,7 +2959,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
     let visibleSupport := supportFor fittedSlices
     let visibleRelations := visible.map (·.matched.projectedEdge.relation) |>.eraseDups
     let tree := renderSelectionTree extraction.selection visibleRelations (meaningSelected && !enforce)
-    let sourceTree := if meaningSelected && !enforce then
+    let sourceTree := if meaningSelected then
       renderSourceNeighborhood sourceAll sourceUnions nominated
         (visible.map (·.matched.edge) ++ visibleSupport.map (·.owner))
         (visibleSupport.flatMap (·.route.works)) else ""
@@ -2934,7 +3021,7 @@ theorem renderAutomatic_no_hits (staged : List Value) (budget : Nat) (current : 
     (delivered : List String) (enforce stagedVisible : Bool) (discovery : Matcher.Discovery)
     (empty : discovery.hits = []) :
     renderAutomatic staged budget current delivered enforce stagedVisible discovery = none := by
-  simp [renderAutomatic, selectedMatches, boundaryMatches, supportFirst, transportSelection, admittedSourceSupport, sourceEntrySelection,
+  simp [renderAutomatic, selectedMatches, boundaryMatches, supportFirst, transportSelection, admittedSourceSupport, sourceEntrySelection, nativeTransportSelection,
     empty]
 
 theorem renderAutomatic_empty_terminal (staged : List Value) (budget : Nat) (text : String)
@@ -3193,6 +3280,15 @@ structure IndexedSemanticNominations where
   /-- Ordered original owner/window observations from focused graph ranking.
   These are observed before packet reuse, never inferred from an old packet. -/
   focused : List Nat := []
+
+/-- Numerical nominations are reference data, never native completion input. -/
+def discoveryNominations (native : Bool) (owners : IndexedSemanticNominations) :
+    IndexedSemanticNominations := if native then {} else owners
+
+theorem native_discovery_nominations_empty (owners : IndexedSemanticNominations) :
+    (discoveryNominations true owners).durable = [] ∧
+      (discoveryNominations true owners).staged = [] := by
+  constructor <;> rfl
 
 def IndexedSemanticNominations.hasSourcePositions (nominations : IndexedSemanticNominations) : Bool :=
   nominations.durableWindows.any (fun row => !row.2.isEmpty) ||
@@ -3502,7 +3598,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     (staged : List Value := []) (stagedVisible : Bool := true)
     (savedSaturation : SaturationMemo.Saved := [])
     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
-    (reuseSemantic : SemanticReuse := fun _ => pure none) :
+    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none) :
     IO (Option Handoff) := do
   let outcomeCount := source.outcomeCount
   let newStaged ← staged.filterM fun value => do
@@ -3522,10 +3618,11 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     let present ← source.semanticPresent value
     unless present do semanticBound := semanticBound + 1
   let native := enforce || evidence.isSome
-  let semanticOwners ← if !native then
+  let referenceQuery := meaningQuery.getD current
+  let semanticOwners ← if evidence.isNone then
       match selection.semanticMatcher with
       | some command =>
-          let some owners ← source.semantic all command current stagedCandidates |
+          let some owners ← source.semantic all command referenceQuery stagedCandidates |
             return some pendingSearch
           if !owners.hasSourcePositions then
             if let some reused ← reuseSemantic owners then return reused
@@ -3533,7 +3630,9 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
       | none => pure ({} : IndexedSemanticNominations)
     else pure ({} : IndexedSemanticNominations)
   let semanticIds := semanticOwners.durable
-  let semanticOrdinals ← semanticIds.mapM fun id => do
+  let matchedNominations := discoveryNominations native semanticOwners
+  let matchingIds := matchedNominations.durable
+  let semanticOrdinals ← matchingIds.mapM fun id => do
     source.ordinal id
   let retainedRanks ← IO.mkRef ([] : Matcher.RankMemo.Saved)
   let selectionReader ← rankReader.mapM (fun reader =>
@@ -3612,7 +3711,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
         knownRanks.set ranks
         pure (!(work.alignments (Matcher.GeometryMemo.provider coverage)
           view.quotient corpus task query.pattern query.workPatterns false taskNative).isEmpty)
-      for id in (ids ++ if task == currentValue then semanticIds else []).eraseDups do
+      for id in (ids ++ if task == currentValue then matchingIds else []).eraseDups do
         state ← IndexedOwners.loadWork source.ordinal source.readWork source.readOwner state id admit
       if let some membership := membership then
         let mut subworks := state.subworks
@@ -3630,7 +3729,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
       let candidates := state.candidates
       let semantic : Matcher.SemanticNominations := {
         related := if task == currentValue then state.owners.filterMap (fun row =>
-          if semanticOrdinals.contains row.ordinal then some row.candidate.edge.relation else none) ++ semanticOwners.staged else [] }
+          if semanticOrdinals.contains row.ordinal then some row.candidate.edge.relation else none) ++ matchedNominations.staged else [] }
       -- All Work comparisons, including decoded native clauses, precede
       -- context grounding. Result words do not expand this read domain.
       let units := Matcher.Corpus.workTerms (candidates ++ stagedCandidates) query
@@ -3719,7 +3818,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     | .inr relation => some relation
   let evidenceRoots := (rankEvidenceChoices nominationRanking
     (entries.map fun owner => (owner.relation, owner.work))).map Prod.snd
-  let neighborhood ← if !native && selection.semanticMatcher.isSome then do
+  let neighborhood ← if evidence.isNone && selection.semanticMatcher.isSome then do
       let requested := (topologyDemand
         (entries.map (·.work) ++ selected.map (·.matched.edge.work)) stagedGraph.all).works
       match source.neighborhood with
@@ -3730,13 +3829,14 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   let entryWorks := entries.map (·.work)
   let reached := sourceNeighborhood entryWorks sourceAll persistent
   let mut support : List (SourceSupport entryWorks sourceAll persistent) := []
-  if !native && selection.semanticMatcher.isSome then
+  if evidence.isNone && selection.semanticMatcher.isSome then
     if let some read := source.supportOwners then
       -- Extract can prefer an All's grounded children over its parent answer.
       -- A nominated parent absent from the selected renderer still carries
       -- useful source data. Do not suppress it from both transport lanes.
-      let excluded := (sourceEntrySelection true false
-        (nominatedOwners.map (·.relation)) selected).map (·.matched.edge.relation)
+      let represented := if native then selected.filter (·.blocks) else
+        sourceEntrySelection true false (nominatedOwners.map (·.relation)) selected
+      let excluded := represented.map (·.matched.edge.relation)
       for owner in ← read (reached.map (·.work)) excluded
           -- Reading original candidates and transmitting selected contexts
           -- are different budgets. A raw body can be larger than its needed
@@ -3765,7 +3865,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   let mut focusedRanking : List Value := []
   let mut focusedWindows : List (Value × List Nat) := []
   let mut focusedRows : List (Value × List Nat) := []
-  if !native && !support.isEmpty then
+  if evidence.isNone && !support.isEmpty then
     if let some command := selection.semanticMatcher then
       if let some root := evidenceRoots.head? then
         if let some owner := entries.find? (fun owner => owner.work == root) then
@@ -3773,7 +3873,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
             | some id => pure ((semanticOwners.durableWindows.find? (·.1 == id)).map Prod.snd |>.getD [])
             | none => pure ((semanticOwners.stagedWindows.find? (·.1 == owner.relation)).map Prod.snd |>.getD [])
           if (sourceFocus? owner windows).isSome then
-            let some neighborhood ← focusNeighborhood command current support | return some pendingSearch
+            let some neighborhood ← focusNeighborhood command referenceQuery support | return some pendingSearch
             focusedRanking := neighborhood.ranking
             focusedWindows := neighborhood.windows
             focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
@@ -3804,7 +3904,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     (nominated := nominated.map (·.relation) ++ semanticOwners.staged)
     (semanticEvidence := prioritizedEvidence (nominatedOwners.map (·.relation))
       (semanticEvidence ++ semanticOwners.stagedWindows) focusedWindows)
-    (meaningSelected := !native && selection.semanticMatcher.isSome)
+    (meaningSelected := evidence.isNone && selection.semanticMatcher.isSome)
     (sourceAll := sourceAll) (sourceUnions := persistent) (entryWorks := entryWorks) (support := support)
     (byteBudget := selection.handoffBytes) (evidenceRanking := (focusedRanking ++ evidenceRanking).eraseDups))
 
@@ -3815,7 +3915,7 @@ def indexedDiscovery (selection : Config.Selection)
     (staged : List Value := []) (stagedVisible : Bool := true)
     (savedSaturation : SaturationMemo.Saved := [])
     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
-    (reuseSemantic : SemanticReuse := fun _ => pure none) :
+    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none) :
     IO (Option (Option Handoff)) := do
   let some single := SingleSource.find? snapshots | return none
   let snapshot := single.snapshot
@@ -3823,8 +3923,9 @@ def indexedDiscovery (selection : Config.Selection)
   -- A completed request can reuse its result before any All/Union descendant
   -- is restored. The provider still observes the current corpus. A miss
   -- consumes this same observation once, then follows the complete kernel.
-  let preparedSemantic ← if staged.isEmpty && !enforce && evidence.isNone then
-      selection.semanticMatcher.mapM (fun command => headerSemanticNominations snapshot command current)
+  let referenceQuery := meaningQuery.getD current
+  let preparedSemantic ← if staged.isEmpty && evidence.isNone then
+      selection.semanticMatcher.mapM (fun command => headerSemanticNominations snapshot command referenceQuery)
     else pure none
   match preparedSemantic with
   | some none => return some (some pendingSearch)
@@ -3857,7 +3958,7 @@ def indexedDiscovery (selection : Config.Selection)
           (Persistence.Store.key "semanticUses" id)) > 0))
       | none => pure false
     semantic := fun all command query candidates => do
-      if command == selection.semanticMatcher.getD [] && query == current && candidates.isEmpty then
+      if command == selection.semanticMatcher.getD [] && query == referenceQuery && candidates.isEmpty then
         if let some nominated := preparedSemantic.join then return some nominated
       indexedSemanticNominations snapshot all command query candidates
     ordinal := fun id => do
@@ -3872,7 +3973,7 @@ def indexedDiscovery (selection : Config.Selection)
     liveOwner := fun value => (·.map Prod.snd) <$> Persistence.Store.liveRoot? snapshot value }
   let alreadyObserved := preparedSemantic.join.any (fun owners => !owners.hasSourcePositions)
   let reuseRemaining := if alreadyObserved then (fun _ => pure none) else reuseSemantic
-  some <$> indexedDiscoveryUsing source selection current delivered enforce evidence enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseRemaining
+  some <$> indexedDiscoveryUsing source selection current delivered enforce evidence enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseRemaining meaningQuery
 
 inductive FederatedSemanticSource (sources : Array Persistence.Store.Snapshot) where
   | stored (document : Persistence.Store.Federated.Document sources)
@@ -3967,7 +4068,7 @@ def federatedDiscovery (selection : Config.Selection)
     (staged : List Value := []) (stagedVisible : Bool := true)
     (savedSaturation : SaturationMemo.Saved := [])
     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
-    (reuseSemantic : SemanticReuse := fun _ => pure none) :
+    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none) :
     IO (Option Handoff) := do
   let sources := (snapshots.filterMap id).toArray
   let catalogue ← Persistence.Store.Federated.prepare sources
@@ -4032,7 +4133,7 @@ def federatedDiscovery (selection : Config.Selection)
             throw (IO.userError "projected federated owner is not an Outcome")
           return some canonical
       pure none }
-  indexedDiscoveryUsing source selection current delivered enforce evidence enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic
+  indexedDiscoveryUsing source selection current delivered enforce evidence enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery
 
 def computeAutomaticHandoff (selection : Config.Selection)
     (snapshots : List (Option Persistence.Store.Snapshot)) (current : String)
@@ -4042,18 +4143,19 @@ def computeAutomaticHandoff (selection : Config.Selection)
     (enableLocalUnion : Bool := true) (savedRanks : Matcher.RankMemo.Saved := [])
     (savedSaturation : SaturationMemo.Saved := [])
     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
-    (reuseSemantic : SemanticReuse := fun _ => pure none) : IO (Option Handoff) := do
+    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none) : IO (Option Handoff) := do
   if selection.read.isEmpty then return none
   unless selection.read.length == snapshots.length do
     throw (IO.userError "source snapshot arity mismatch")
   try
-    if staged.isEmpty && (enforce || evidenceText.isSome) then
+    if staged.isEmpty && (enforce || evidenceText.isSome) &&
+        (selection.semanticMatcher.isNone || evidenceText.isSome) then
       if let some result ← indexedTerminalRoot selection snapshots current deliveredGraphs
           enforce evidenceText enableLocalUnion refreshSources then return result
     if let some result ← indexedDiscovery selection snapshots current deliveredGraphs
-        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic then return result
+        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery then return result
     return ← federatedDiscovery selection snapshots current deliveredGraphs
-      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic
+      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery
   catch error =>
     IO.eprintln s!"eggshell: indexed search unavailable: {error}"
     return some pendingSearch
@@ -4061,12 +4163,12 @@ def computeAutomaticHandoff (selection : Config.Selection)
 def demandRequest (engine : FileSystem.ReadVersion) (selection : Config.Selection)
     (current : String) (deliveredGraphs : List String) (enforce : Bool)
     (evidenceText : Option String) (staged : List Value) (stagedVisible enableLocalUnion : Bool)
-    (refreshSources : Bool := false) : String :=
+    (refreshSources : Bool := false) (meaningQuery : Option String := none) : String :=
   (Lean.Json.arr #[toJson engine.stamp, toJson engine.bytes, toJson current,
     toJson deliveredGraphs, toJson enforce, toJson evidenceText,
     .arr (staged.map Persistence.valueToJson).toArray, toJson stagedVisible,
     toJson enableLocalUnion, toJson selection.handoffChars, toJson selection.handoffBytes,
-    toJson selection.semanticMatcher, toJson refreshSources]).compress
+    toJson selection.semanticMatcher, toJson refreshSources, toJson meaningQuery]).compress
 
 /-- Run-local evidence is never written to a shared, persistent demand memo. -/
 def demandCacheable (staged : List Value) : Bool := staged.isEmpty
@@ -4118,7 +4220,10 @@ def automaticHandoff (selection : Config.Selection) (current : String)
   let paths := selection.read.map (·.path)
   let snapshots ← paths.mapM DB.PageMap.open?
   let cacheable := demandCacheable staged
-  let externalSemantic := !enforce && evidenceText.isNone && selection.semanticMatcher.isSome
+  let externalSemantic := evidenceText.isNone && selection.semanticMatcher.isSome
+  let meaningQuery := sourceContext.bind fun context =>
+    if enforce && !context.question.isEmpty then
+      some (context.question ++ "\nPROPOSED OPERATION\n" ++ current) else none
   let writable ← match selection.write with
     | none => pure none
     | some writable => do
@@ -4129,7 +4234,7 @@ def automaticHandoff (selection : Config.Selection) (current : String)
     try
       let engine ← FileSystem.readVersion (← FileSystem.openRead (← IO.appPath).toString)
       pure (some (demandRequest engine selection current deliveredGraphs enforce evidenceText
-        staged stagedVisible enableLocalUnion sourceContext.isSome))
+        staged stagedVisible enableLocalUnion sourceContext.isSome meaningQuery))
     catch _ => pure none
     else pure none
   let lookup := fun (nominations : Option (List Nat)) => do
@@ -4164,7 +4269,7 @@ def automaticHandoff (selection : Config.Selection) (current : String)
   if request.isSome then
     for snapshot in snapshots.filterMap id do snapshot.trace.set (some {})
   let result ← computeAutomaticHandoff selection snapshots current deliveredGraphs enforce
-    evidenceText staged stagedVisible enableLocalUnion [] savedSaturation rankReader sourceContext.isSome reuseSemantic
+    evidenceText staged stagedVisible enableLocalUnion [] savedSaturation rankReader sourceContext.isSome reuseSemantic meaningQuery
   -- Only a genuinely overflowing complete rendering needs a reduced graph
   -- budget. Both passes retain the same immutable source capabilities; the
   -- dependency trace conservatively includes every read from either pass.
@@ -4173,7 +4278,7 @@ def automaticHandoff (selection : Config.Selection) (current : String)
       handoffChars := selection.handoffChars - sourceStatusReserve
       handoffBytes := selection.handoffBytes.map (· - sourceStatusByteReserve)}
       snapshots current deliveredGraphs enforce evidenceText staged stagedVisible enableLocalUnion
-      [] savedSaturation rankReader sourceContext.isSome reuseSemantic
+      [] savedSaturation rankReader sourceContext.isSome reuseSemantic meaningQuery
   if let some request := request then
     if let some writable := writable then
       if !(← reused.get) && (← publishable.get) &&
