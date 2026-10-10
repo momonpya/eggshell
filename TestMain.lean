@@ -902,10 +902,10 @@ def testFlexibleContextAllocation : IO Unit := do
   let reserved := minimumContextCost source (work.length + 1) denseWindows
   let fundedAllowances := ownerContextAllowances owner denseWindows 9000 16000
   check (fundedAllowances.head? == some reserved &&
-      fundedAllowances.all (reserved ≤ ·) && 0 < reserved && reserved ≤ 2048 &&
-      reserved == minimumContextCost source (work.length + 1) [30] &&
-      reserved == minimumContextCost source (work.length + 1) (30 :: List.range 100))
-    "lower-ranked positions enlarged the minimum or displaced the best complete observation"
+      fundedAllowances.all (reserved ≤ ·) && 0 < reserved && reserved ≤ 4096 &&
+      minimumContextCost source (work.length + 1) [30] ≤ reserved &&
+      reserved == minimumContextCost source (work.length + 1) (denseWindows ++ List.range 100))
+    "independent source coverage lost the best observation, grew without bound, or changed after its supporting region was funded"
   let some highest := meaningContext? source (work.length + 1) 30 0 |
     throw (IO.userError "dense cue fixture has no highest ranked window")
   check ((coreContextRanges source (work.length + 1) denseWindows).head?.any
@@ -1251,6 +1251,16 @@ def testFlexibleContextAllocation : IO Unit := do
   check (((gapHeads.takeWhile (fun row => row.1 ≤ gapOffset)).getLast?).any (fun row => row.2.isNone) &&
       (structureContextRanges gapSource (work.length + 1) [8] gapHeads).isEmpty)
     "a numbered gap borrowed an unrelated earlier source header"
+  let mixedRead := entry ++ "102:  independently recorded grep result\n105:  another sparse hit\n"
+  let mixedSource := (Lean.Json.str mixedRead).compress
+  let some mixedDecoded := decodedToolText? mixedSource |
+    throw (IO.userError "mixed numbered read did not decode")
+  let mixedHeads := contextStructureHeads mixedSource (some (DecodedLayout.make mixedDecoded))
+  let mixedOffset := (Lean.Json.str entry).compress.length - 1
+  check (mixedHeads.any (fun row => row.1 == mixedOffset && row.2.isNone) &&
+      ((mixedHeads.takeWhile (fun row => row.1 ≤ mixedSource.length - 2)).getLast?).any
+        (fun row => row.2.isNone))
+    "tab-numbered file context crossed into colon-numbered or sparse grep observations"
   -- The same production path must preserve ordinary MCP prose, without a
   -- function, Markdown heading, numbered lines, path suffix or query word.
   let proseStart := "別案件にのみ適用する記録。\n\n" ++
@@ -1317,6 +1327,51 @@ def testFlexibleContextAllocation : IO Unit := do
     throw (IO.userError "number-free natural-language record lost its original context")
   check (recordText.contains record && !recordText.contains ("".intercalate (List.replicate 12 record)))
     "a meaning window cut off the end of an expected result or expanded the whole observed body"
+  -- Two independent facts from one result need their own conditions before
+  -- the first fact is enlarged. This is ordinary prose, not a language-
+  -- specific branch rule or an identifier that the provider must match.
+  let lines := fun count => "".intercalate (List.replicate count
+    ("Recorded surrounding detail " ++ String.ofList (List.replicate 48 'p') ++ ".\n"))
+  let firstPrefix := lines 12
+  let firstCondition := "This observation applies only to account A under the recorded settings.\n"
+  let firstFact := "The first operation produced one invoice.\n"
+  let boundaryCondition := "This condition stays with its recorded result: " ++
+    String.ofList (List.replicate 140 'b') ++ ".\n"
+  let boundaryPrefix := lines 3 ++ boundaryCondition ++ lines 3
+  let boundarySource := boundaryPrefix ++ firstFact ++ lines 20
+  let boundaryFirst := boundaryPrefix.length
+  let boundaryStop := boundaryFirst + 512
+  let boundaryCue ← if valid : boundaryFirst < boundaryStop ∧ boundaryStop ≤ boundarySource.length ∧
+      boundaryStop - boundaryFirst ≤ 2048 then
+      pure (⟨boundaryFirst, boundaryStop, valid.1, valid.2.1, valid.2.2⟩ : EvidenceRange boundarySource)
+    else throw (IO.userError "record boundary cue was out of bounds")
+  let boundaryContext := coherentRecordContext (contextRecordSpans boundarySource none) [] boundaryCue 1024
+  check (boundaryContext.text.contains boundaryCondition && boundaryContext.text.contains firstFact &&
+      boundaryContext.stop - boundaryContext.start ≤ 1024)
+    "rounding a context boundary dropped its complete condition record or enlarged the allowance"
+  let secondPrefix := firstPrefix ++ firstCondition ++ firstFact ++ lines 35
+  let secondCondition := "This observation applies only to account B after changing its settings.\n"
+  let secondFact := "The second operation produced no invoice.\n"
+  let paired := secondPrefix ++ secondCondition ++ secondFact ++ lines 25
+  let cue := fun first =>
+    let stop := first + 512
+    if valid : first < stop ∧ stop ≤ paired.length ∧ stop - first ≤ 2048 then
+      some (⟨first, stop, valid.1, valid.2.1, valid.2.2⟩ : EvidenceRange paired)
+    else none
+  let some firstCue := cue (firstPrefix.length + firstCondition.length) |
+    throw (IO.userError "first independent prose cue was out of bounds")
+  let some secondCue := cue (secondPrefix.length + secondCondition.length) |
+    throw (IO.userError "second independent prose cue was out of bounds")
+  let pairedOwner := OutcomeEdge.make (.text "recorded operations") (.text paired) [] (by simp) (by simp)
+  let pairedRecords := contextRecordSpans paired none
+  let pairedViews := prepareCueViews pairedRecords [] none [firstCue, secondCue]
+  let pairedSelection := pairedViews.foldl
+    (fun selected view => offerContextView selected pairedOwner none view)
+    (ContextSelection.empty : ContextSelection paired 2048)
+  let pairedText := "".intercalate (pairedSelection.views.map (·.render))
+  check (pairedText.contains firstCondition && pairedText.contains firstFact &&
+      pairedText.contains secondCondition && pairedText.contains secondFact && pairedSelection.used ≤ 2048)
+    "one enlarged observation displaced another fact or separated it from its original conditions"
   IO.println "PASS flexible context allocation: original coverage, cue-before-header priority, dense splitting, scattered clues, budgets, graph binding and non-repetition"
 
 def testSemanticEvidenceDelivery : IO Unit := do

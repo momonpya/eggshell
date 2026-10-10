@@ -2697,6 +2697,7 @@ def contextStructureHeads (source : String) (layout : Option (DecodedLayout sour
     position := position + width
   if !line.isEmpty then rows := (first, String.ofList line.reverse) :: rows
   let mut previous : Option Nat := none
+  let mut previousDelimiter : Option Char := none
   let mut heads : List (Nat × Option Nat) := []
   let ordered := rows.reverse
   let mut paragraph : Bool := ordered.length > 1
@@ -2704,10 +2705,15 @@ def contextStructureHeads (source : String) (layout : Option (DecodedLayout sour
     let trimmed := text.toList.dropWhile (· == ' ')
     let digits := trimmed.takeWhile Char.isDigit
     let rest := trimmed.drop digits.length
-    let numbered := !digits.isEmpty && rest.head? == some '\t'
+    -- `nl` uses a tab and `rg -n` uses a colon. Both carry original line
+    -- numbers; sparse hits and a change of representation break adjacency.
+    -- Otherwise a following file's grep result can borrow the preceding
+    -- file's function header and consume its whole context allowance.
+    let delimiter := rest.head?.filter (fun char => char == '\t' || char == ':')
+    let numbered := !digits.isEmpty && delimiter.isSome
     let number := if numbered then (String.ofList digits).toNat? else none
     let body := if numbered then String.ofList (rest.drop 1) else text
-    if number.isSome && number != previous.map (· + 1) then
+    if number.isSome && (number != previous.map (· + 1) || delimiter != previousDelimiter) then
       heads := (offset, none) :: heads
       paragraph := true
     let blank := (body.toList.dropWhile (fun char => char == ' ' || char == '\t')).isEmpty
@@ -2721,6 +2727,7 @@ def contextStructureHeads (source : String) (layout : Option (DecodedLayout sour
       heads := (offset, some offset) :: heads
     paragraph := blank
     previous := number
+    previousDelimiter := if numbered then delimiter else none
   return heads.reverse
 
 def structureContextRanges (source : String) (workChars : Nat) (windows : List Nat)
@@ -2785,18 +2792,25 @@ theorem prerequisite_context_keeps_cue (records : List (ContextSpan source))
 2048-character range bound remains. Numbered discontinuities bound the local
 neighborhood; adjacent files cannot supply its prerequisites. -/
 def coherentRecordContext (records : List (ContextSpan source))
-    (heads : List (Nat × Option Nat)) (range : EvidenceRange source) : EvidenceRange source :=
+    (heads : List (Nat × Option Nat)) (range : EvidenceRange source)
+    (allowance : Nat := 2048) : EvidenceRange source :=
   let lower := ((heads.filter fun row => row.2.isNone && row.1 ≤ range.start).getLast?).map
     Prod.fst |>.getD 0
   let upper := ((heads.find? fun row => row.2.isNone && range.stop ≤ row.1).map Prod.fst).getD source.length
-  let spare := 2048 - (range.stop - range.start)
-  let initialBefore := min (min 1024 spare) (range.start - lower)
+  let width := max (range.stop - range.start) (min allowance 2048)
+  let spare := width - (range.stop - range.start)
+  let initialBefore := min (2 * spare / 3) (range.start - lower)
   let after := min (spare - initialBefore) (upper - range.stop)
   let before := min (spare - after) (range.start - lower)
   let first := max lower (range.start - before)
-  let last := min upper (range.stop + after)
-  let start := ((records.find? fun record => first ≤ record.start && record.start ≤ range.start).map
-    (·.start)).getD range.start
+  let containing := (records.find? fun record => lower ≤ record.start &&
+    record.start ≤ first && first < record.stop && range.stop - record.start ≤ width).map (·.start)
+  -- Align to the complete record containing the requested start. Rounding
+  -- forward can silently lose its condition line. Shift the other boundary
+  -- within the same allowance instead of increasing the delivery budget.
+  let start := containing.getD (((records.find? fun record => first ≤ record.start && record.start ≤ range.start).map
+    (·.start)).getD range.start)
+  let last := min upper (start + width)
   let stop := ((records.filter fun record => range.stop ≤ record.stop && record.stop ≤ last).getLast?).map
     (·.stop) |>.getD range.stop
   if valid : start ≤ range.start ∧ range.stop ≤ stop ∧ start < stop ∧
@@ -2806,8 +2820,8 @@ def coherentRecordContext (records : List (ContextSpan source))
 
 theorem coherent_record_context_keeps_cue (records : List (ContextSpan source))
     (heads : List (Nat × Option Nat)) (range : EvidenceRange source) (position : Nat)
-    (covered : range.covers position) :
-    (coherentRecordContext records heads range).covers position := by
+    (covered : range.covers position) (allowance : Nat := 2048) :
+    (coherentRecordContext records heads range allowance).covers position := by
   unfold coherentRecordContext
   dsimp only
   split
@@ -3055,15 +3069,23 @@ def prepareCueViews (records : List (ContextSpan source))
     let complete := if isEntry then recordContextRange records range
       else prerequisiteContextRange records heads range
     let coherent := preferredCueContext records heads range
-    (complete, coherent)
+    -- Every admitted cue retains nearby original conditions and results.
+    -- Enlarging only the first cue used to spend the entire owner share on
+    -- one declaration, leaving later branch conclusions without conditions.
+    let required := if isEntry then complete else coherentRecordContext records heads complete 1024
+    (complete, required, coherent)
   -- Cover the ranked statements and their prerequisites before enlarging
   -- any one neighborhood. Optional local consequences use only remaining
   -- space and cannot evict an already admitted original cue.
-  let coverage := candidates.map Prod.fst
-  let context := candidates.filterMap fun (complete, coherent) =>
-    if coherent.start == complete.start && coherent.stop == complete.stop then none else some coherent
-  let leading := candidates.head?.map Prod.snd |>.toList
-  (leading ++ coverage ++ context).filterMap fun candidate => match decoded with
+  let coverage := candidates.map (fun (_, required, _) => required)
+  -- A compact neighborhood can still exceed the remaining space. Retain
+  -- its smaller original cue/entry as an alternative, rather than dropping
+  -- a required scope boundary merely because its optional context cannot fit.
+  let fallback := candidates.filterMap fun (complete, required, _) =>
+    if required.start == complete.start && required.stop == complete.stop then none else some complete
+  let context := candidates.filterMap fun (_, required, coherent) =>
+    if coherent.start == required.start && coherent.stop == required.stop then none else some coherent
+  (coverage ++ fallback ++ context).filterMap fun candidate => match decoded with
     | none => some (.original candidate)
     | some layout => (decodedEvidenceUsing? layout candidate).map EvidenceView.decoded
 
@@ -3228,30 +3250,49 @@ def growContextAllowance (current limit : Nat) : List Nat :=
 termination_by limit - current
 decreasing_by omega
 
-/-- Reserve one complete, highest-ranked observation and its local conditions.
-The other nominated positions remain eligible for enrichment; they are not
-requirements and cannot inflate the packet's minimum allocation. -/
+/-- Reserve the strongest observation and its strongest independent region.
+Overlapping windows of one declaration are one demand, not separate facts.
+Further positions remain eligible; their count cannot inflate this reserve. -/
 def minimumContextCostFor (records : List (ContextSpan source))
     (heads : List (Nat × Option Nat)) (ranked : List (EvidenceRange source)) : Nat :=
   match ranked.head? with
   | none => 0
   | some cue =>
       let context := preferredCueContext records heads cue
-      context.stop - context.start
+      let independent := ranked.find? fun other =>
+        other.stop ≤ cue.start || cue.stop ≤ other.start
+      let supporting := independent.map (preferredCueContext records heads) |>.map
+        (fun range => range.stop - range.start) |>.getD 0
+      context.stop - context.start + supporting
 
 theorem minimum_context_cost_for_bounded (records : List (ContextSpan source))
     (heads : List (Nat × Option Nat)) (ranked : List (EvidenceRange source)) :
-    minimumContextCostFor records heads ranked ≤ 2048 := by
+    minimumContextCostFor records heads ranked ≤ 4096 := by
   unfold minimumContextCostFor
   split
   · exact Nat.zero_le _
-  · exact (preferredCueContext records heads _).bounded
+  · rename_i cue equation
+    have first := (preferredCueContext records heads cue).bounded
+    cases found : ranked.find? (fun other => other.stop ≤ cue.start || cue.stop ≤ other.start) with
+    | none => simp only [Option.map_none, Option.getD_none]; omega
+    | some other =>
+        simp only [Option.map_some, Option.getD_some]
+        have second := (preferredCueContext records heads other).bounded
+        omega
 
 theorem minimum_context_cost_tail_independent (records : List (ContextSpan source))
     (heads : List (Nat × Option Nat)) (first : EvidenceRange source)
-    (rest extra : List (EvidenceRange source)) :
+    (rest extra : List (EvidenceRange source))
+    (supporting : (rest.find? fun other => other.stop ≤ first.start || first.stop ≤ other.start).isSome = true) :
     minimumContextCostFor records heads (first :: (rest ++ extra)) =
-      minimumContextCostFor records heads (first :: rest) := rfl
+      minimumContextCostFor records heads (first :: rest) := by
+  have notSelf : (first.stop ≤ first.start || first.stop ≤ first.start) = false := by
+    have := first.ordered
+    simp only [Bool.or_self, decide_eq_false_iff_not]
+    omega
+  cases found : rest.find? (fun other => other.stop ≤ first.start || first.stop ≤ other.start) with
+  | none => simp [found] at supporting
+  | some other => simp [minimumContextCostFor, List.find?_cons, List.find?_append, found]
 
 def minimumContextCost (source : String) (workChars : Nat) (windows : List Nat) : Nat :=
   let layout := (decodedToolText? source).map DecodedLayout.make
@@ -3260,7 +3301,7 @@ def minimumContextCost (source : String) (workChars : Nat) (windows : List Nat) 
   minimumContextCostFor records heads (rankedContextRanges source workChars windows)
 
 theorem minimum_context_cost_bounded (source : String) (workChars : Nat) (windows : List Nat) :
-    minimumContextCost source workChars windows ≤ 2048 :=
+    minimumContextCost source workChars windows ≤ 4096 :=
   minimum_context_cost_for_bounded _ _ _
 
 theorem empty_context_has_no_demand (source : String) (workChars : Nat) :
