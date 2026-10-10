@@ -52,8 +52,7 @@ answer when it stops. `!egg keep` explicitly flushes a finished turn before this
 exercise moves to a separate chat. `!egg inspect` should identify the sample's
 `.eggs/work.egg`, rather than a different project's memory database.
 
-For the current source build, confirm a committed database head exists from
-the sample's terminal:
+Confirm a committed database head exists from the sample's terminal:
 
 ```sh
 test -s .eggs/work.egg/head && echo 'saved work found' || echo 'no saved work yet'
