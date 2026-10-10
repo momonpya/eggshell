@@ -787,7 +787,130 @@ def testOperationBoundaryLookup : IO Unit := do
     "an orderless equivalent Work failed to saturate without controlling a completed call"
   IO.println "PASS run-local fragments reuse one persistent native Work"
 
+def testRetainedContextExtension : IO Unit := do
+  let makeOwner := fun work result =>
+    OutcomeEdge.make (.text work) (.text result) [] (by simp) (by decide)
+  let nearby := makeOwner "background work" "nearby explanation"
+  let chosen := makeOwner "current relevant work" "current interpretation"
+  let observation := makeOwner "read actual data" "original observation"
+  let sourceEdge ← if distinct : chosen.work ∉ [observation.work] then
+      pure (AllEdge.make chosen.work [observation.work] (by simp) distinct)
+    else throw (IO.userError "primary interpretation fixture has equal parent and child")
+  let nominated := [observation.relation, chosen.relation]
+  let some primary := primaryInterpretation [nearby, observation, chosen] nominated [sourceEdge] |
+    throw (IO.userError "meaning-nominated primary explanation was lost")
+  check (primary.val.relation == chosen.relation)
+    "a neighboring explanation or a tool observation replaced the nominated primary"
+  check ((primaryInterpretation [nearby] nominated []).isNone &&
+      (primaryInterpretation [chosen] [] []).isNone)
+    "context refinement promoted an explanation outside current meaning nominations"
+  -- The diagnosed failure was a missing middle/end of a saved prose
+  -- explanation. Enrich it without evicting another raw tool observation.
+  let prosePrefix := "Prerequisite λ.\n"
+  let fact := "Current fact 日本語.\n"
+  let prose := prosePrefix ++ fact ++ "Conclusion and bounded rollout."
+  let proseBase : ContextDelivery := {
+    owner := "saved-prose", outcome := "original-result", sourceChars := prose.length
+    cues := [(prosePrefix.length, prosePrefix.length + fact.length)]
+    leading := "Original observation\n", trailing := "\nEnd observation"
+    envelopeKey := "envelope", sourceNoticeKey := "checked-source"
+    sourceNotice := "Dependencies unchanged\n"
+    fragments := [{first := prosePrefix.length, original := fact}] }
+  let complete : ContextDelivery := {proseBase with
+    cues := [(0, prose.length), (prosePrefix.length, prosePrefix.length + fact.length)]
+    fragments := [{first := 0, original := prose}] }
+  check (complete.cueCoverage == prose.length &&
+      (checkedContextExtension proseBase complete).isSome)
+    "prose refinement lost the exact original middle or counted overlapping cue coverage twice"
+  let missing : ContextDelivery := {complete with
+    fragments := [{first := 0, original := prosePrefix ++ "Replacement fact.\n" ++ "Conclusion and bounded rollout."}] }
+  check ((checkedContextExtension proseBase missing).isNone &&
+      (checkedContextExtension proseBase {complete with owner := "other"}).isNone &&
+      (checkedContextExtension proseBase {complete with sourceNotice := "Historical"}).isNone &&
+      (checkedContextExtension proseBase {complete with fragments := [{first := 0, original := prose, decoded := true}]}).isNone)
+    "a same-name altered observation, owner, freshness frame or encoding replaced immutable evidence"
+  let proseSlice := fun context : ContextDelivery => ({
+    keys := context.keys, text := context.render, context := some context
+    members := [], visibleKeys := [] } : TransportSlice)
+  let rawBefore : TransportSlice := {
+    keys := ["first-tool"], text := "Observed tool result before"
+    members := [], visibleKeys := []}
+  let rawAfter : TransportSlice := {
+    keys := ["last-tool"], text := "Observed tool result after"
+    members := [], visibleKeys := []}
+  let originalPacket := [rawBefore, proseSlice proseBase, rawAfter]
+  let originalCost := fun items : List TransportSlice =>
+    (20 + (items.map (·.text.length)).sum, 20 + (items.map (·.text.utf8ByteSize)).sum)
+  let admitted? : Option {items : List TransportSlice //
+      (originalCost items).1 ≤ 2048 ∧ (originalCost items).2 ≤ 4096} := if fits : (originalCost originalPacket).1 ≤ 2048 ∧
+      (originalCost originalPacket).2 ≤ 4096 then some ⟨originalPacket, fits⟩ else none
+  let some admitted := admitted? |
+    throw (IO.userError "prose refinement fixture exceeds its original packet budget")
+  let refinedPacket := extendPacketContext 2048 4096 originalCost admitted proseBase.owner
+    [proseSlice missing, proseSlice complete]
+  check (refinedPacket.val.length == 3 &&
+      refinedPacket.val[0]?.map (·.text) == some rawBefore.text &&
+      refinedPacket.val[2]?.map (·.text) == some rawAfter.text &&
+      (refinedPacket.val[1]?.bind (·.context)).any (fun context =>
+        context.cueCoverage == prose.length &&
+        context.fragments.any (fun f => f.first == prosePrefix.length && f.original == fact) &&
+        context.fragments.any (fun f => f.first == 0 && f.original == prosePrefix) &&
+        context.fragments.any (fun f => f.original == "Conclusion and bounded rollout.")) &&
+      refinedPacket.val.map (·.visibleKeys) == originalPacket.map (·.visibleKeys))
+    "middle/end restoration evicted raw tool observations or altered native completion authority"
+  let duplicate : ContextDelivery := {proseBase with cues := proseBase.cues ++ proseBase.cues}
+  let duplicatePacket := extendPacketContext 2048 4096 originalCost admitted proseBase.owner [proseSlice duplicate]
+  check (duplicatePacket.val.map (·.text) == originalPacket.map (·.text))
+    "duplicate meaning nominations created additional packet demand"
+  let compactPacket := originalPacket.map (·.compactContext)
+  let compact? : Option {items : List TransportSlice //
+      (originalCost items).1 ≤ 2048 ∧ (originalCost items).2 ≤ 4096} :=
+    if fits : (originalCost compactPacket).1 ≤ 2048 ∧ (originalCost compactPacket).2 ≤ 4096 then
+      some ⟨compactPacket, fits⟩ else none
+  let some compact := compact? |
+    throw (IO.userError "compact caption fixture exceeded the original allowance")
+  let noGain := preferContextGain 2048 4096 originalCost proseBase.owner admitted compact
+  check (noGain.val.map (·.text) == originalPacket.map (·.text) &&
+      !(noGain.val[1]?.bind (·.context)).any (·.compactCaptions))
+    "a formatting-only proposal changed a packet with no additional meaning coverage"
+  let gained := preferContextGain 2048 4096 originalCost proseBase.owner admitted refinedPacket
+  check (gained.val.map (·.text) == refinedPacket.val.map (·.text))
+    "a verified original-context gain was discarded"
+  let scattered : ContextDelivery := {proseBase with
+    cues := [(0, 4)] ++ proseBase.cues
+    fragments := {first := 0, original := "Prer"} :: proseBase.fragments}
+  let scatteredPacket := extendPacketContext 2048 4096 originalCost admitted proseBase.owner [proseSlice scattered]
+  check (complete.coherentSpan && proseBase.coherentSpan && !scattered.coherentSpan &&
+      packetContextCoverage proseBase.owner admitted.val < packetContextCoverage proseBase.owner scatteredPacket.val)
+    "an interior gap was hidden by cue coverage or required the whole source instead of its selected span"
+  let incomplete := preferContextGain 2048 4096 originalCost proseBase.owner admitted scatteredPacket
+  check (incomplete.val.map (·.text) == originalPacket.map (·.text))
+    "scattered extra facts changed the original packet before an explanatory span was complete"
+  let some compactSlice := compactPacket[1]? |
+    throw (IO.userError "original context disappeared from compact proposal")
+  let compactPart : DeliveryPart := {
+    keys := compactSlice.keys, text := compactSlice.text
+    context := compactSlice.context }
+  check ((compactPart.remaining []).any (fun part => part.text == compactPart.text) &&
+      (compactPart.remaining compactPart.keys).isNone)
+    "receipt reconciliation lost selected caption presentation or resent accepted original data"
+  -- A proposal's body estimate is insufficient when relation framing changes.
+  -- The exact complete packet cost must still reject that proposal.
+  let framedCost := fun items : List TransportSlice =>
+    let extra := if items.any (fun item => item.context.any (·.cues.length > 1)) then 10000 else 0
+    let body := originalCost items
+    (body.1 + extra, body.2 + extra)
+  let framed? : Option {items : List TransportSlice //
+      (framedCost items).1 ≤ 2048 ∧ (framedCost items).2 ≤ 4096} := if fits : (framedCost originalPacket).1 ≤ 2048 ∧
+      (framedCost originalPacket).2 ≤ 4096 then some ⟨originalPacket, fits⟩ else none
+  let some framed := framed? |
+    throw (IO.userError "framed refinement fixture exceeds its original packet budget")
+  let rejected := extendPacketContext 2048 4096 framedCost framed proseBase.owner [proseSlice complete]
+  check (rejected.val.map (·.text) == originalPacket.map (·.text))
+    "body-only admission bypassed the final exact topology/UTF-8 cost certificate"
+
 def testFlexibleContextAllocation : IO Unit := do
+  testRetainedContextExtension
   -- The hook client has already reserved RPC/teardown time. Its remaining
   -- deadline must not be shortened by a second 20/26-second local ceiling.
   let now ← IO.monoMsNow

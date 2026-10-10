@@ -90,6 +90,9 @@ structure ContextDelivery where
   sourceNotice : String := ""
   sourceNoticeKey : String := ""
   fragments : List DeliveryFragment
+  /-- A packet may spend redundant caption space on missing meaning context.
+      Retain the chosen presentation through receipt reconciliation. -/
+  compactCaptions : Bool := false
   deriving ToJson, FromJson
 
 structure DeliveryPart where
@@ -209,14 +212,33 @@ def ContextDelivery.novelCue (context : ContextDelivery) (delivered : List Strin
       !(DeliveryInterval.subtractAll ⟨start, stop, ordered⟩ (context.previous delivered)).isEmpty
     else false
 
-def DeliveryFragment.render (fragment : DeliveryFragment) : String :=
-  let body := if fragment.decoded then
+def DeliveryFragment.presentation (fragment : DeliveryFragment) : String × Bool :=
+  if fragment.decoded then
       match (Json.parse ("\"" ++ fragment.original ++ "\"")).toOption.bind
           (fun value => value.getStr?.toOption) with
-      | some text => "  DECODED JSON STRING DATA\n" ++ text
-      | none => fragment.original
-    else fragment.original
-  s!"  ORIGINAL CHARS [{fragment.first},{fragment.first + fragment.original.length})\n" ++ body
+      | some text => (text, true)
+      | none => (fragment.original, false)
+    else (fragment.original, false)
+
+/-- Coordinates and encoding share one label. Repeating their explanation
+for every excerpt consumes space without adding original evidence. -/
+def DeliveryFragment.render (fragment : DeliveryFragment) (compact : Bool := false) : String :=
+  let body := fragment.presentation
+  let label := if compact then
+      s!"  CHARS [{fragment.first},{fragment.first + fragment.original.length})" ++
+        (if body.2 then " decoded\n" else "\n")
+    else s!"  ORIGINAL CHARS [{fragment.first},{fragment.first + fragment.original.length})\n" ++
+      (if body.2 then "  DECODED JSON STRING DATA\n" else "")
+  label ++ body.1
+
+theorem fragment_render_preserves_presented_data (fragment : DeliveryFragment) :
+    ∃ label, fragment.render = label ++ fragment.presentation.1 := by
+  exact ⟨_, rfl⟩
+
+theorem raw_fragment_presentation_is_original (fragment : DeliveryFragment)
+    (raw : fragment.decoded = false) :
+    fragment.presentation = (fragment.original, false) := by
+  simp [DeliveryFragment.presentation, raw]
 
 def ContextDelivery.keys (context : ContextDelivery) : List String :=
   (if context.planKey.isEmpty then [] else [context.planKey]) ++
@@ -228,7 +250,8 @@ def ContextDelivery.keys (context : ContextDelivery) : List String :=
 
 def ContextDelivery.render (context : ContextDelivery) : String :=
   context.leading ++ context.sourceNotice ++
-    "\n".intercalate (context.fragments.map (·.render)) ++ context.trailing
+    "\n".intercalate (context.fragments.map fun fragment =>
+      fragment.render context.compactCaptions) ++ context.trailing
 
 structure Handoff where
   text : String
@@ -405,11 +428,13 @@ def fitPacketFrom (chars bytes : Nat) (cost : List α → Nat × Nat)
   | [] => accepted
   | (preferred, fallback) :: rest =>
       let next := accepted.val ++ [preferred]
-      if fits : (cost next).1 ≤ chars ∧ (cost next).2 ≤ bytes then
+      let measured := cost next
+      if fits : measured.1 ≤ chars ∧ measured.2 ≤ bytes then
         fitPacketFrom chars bytes cost ⟨next, fits⟩ rest
       else
         let next := accepted.val ++ [fallback]
-        if fits : (cost next).1 ≤ chars ∧ (cost next).2 ≤ bytes then
+        let measured := cost next
+        if fits : measured.1 ≤ chars ∧ measured.2 ≤ bytes then
           fitPacketFrom chars bytes cost ⟨next, fits⟩ rest
         else fitPacketFrom chars bytes cost accepted rest
 
@@ -445,7 +470,8 @@ def enrichPacketFrom (chars bytes : Nat) (cost : List (α × Nat) → Nat × Nat
   | [] => accepted
   | (index, level) :: rest =>
       let next := markPacketLevel accepted.val index level
-      if fits : (cost next).1 ≤ chars ∧ (cost next).2 ≤ bytes then
+      let measured := cost next
+      if fits : measured.1 ≤ chars ∧ measured.2 ≤ bytes then
         enrichPacketFrom chars bytes cost ⟨next, fits⟩ rest
       else enrichPacketFrom chars bytes cost accepted rest
 
@@ -2161,6 +2187,18 @@ theorem grounded_native_context_retained (native meaning : Bool) (positions : Op
     lookupContextAllowed native meaning true positions = true := by
   simp [lookupContextAllowed]
 
+/-- Prepare immutable identifiers once; packet alternatives only test them. -/
+def selectPreparedKeys (prepared : List (α × β)) (keep : β → Bool) : List α :=
+  prepared.filterMap fun (item, keys) => if keep keys then some item else none
+
+theorem prepared_key_selection_is_exact (items : List α) (prepare : α → β) (keep : β → Bool) :
+    selectPreparedKeys (items.map fun item => (item, prepare item)) keep =
+      items.filter (fun item => keep (prepare item)) := by
+  induction items with
+  | nil => rfl
+  | cons first rest ih =>
+      cases outcome : keep (prepare first) <;> simp_all [selectPreparedKeys]
+
 /-- The selected task's original observations precede a different task's
 observations. Numerical meaning rank still orders evidence within a family.
 This changes only presentation, never eligibility or source authority. -/
@@ -3522,6 +3560,198 @@ def preferredContextLevel (plan : TransportSlice × List TransportSlice)
     let slice := if level == 0 then plan.1 else plan.2[level - 1]?.getD plan.1
     slice.text.length ≤ allowance.1 && slice.text.utf8ByteSize ≤ allowance.2).getD 0
 
+/-- Compare only overlapping original coordinates. The retained packet is
+never rewritten; an alternative may add previously omitted ranges. -/
+def DeliveryFragment.agrees (next prior : DeliveryFragment) : Prop :=
+  let first := max next.first prior.first
+  let last := min (next.first + next.original.length) (prior.first + prior.original.length)
+  first < last → next.decoded = prior.decoded ∧
+    ((next.original.drop (first - next.first)).take (last - first)).copy =
+      ((prior.original.drop (first - prior.first)).take (last - first)).copy
+
+instance (next prior : DeliveryFragment) : Decidable (next.agrees prior) := by
+  unfold DeliveryFragment.agrees
+  infer_instance
+
+def ContextDelivery.sameEnvelope (next prior : ContextDelivery) : Prop :=
+  next.owner = prior.owner ∧ next.outcome = prior.outcome ∧
+  next.sourceChars = prior.sourceChars ∧ next.leading = prior.leading ∧
+  next.trailing = prior.trailing ∧ next.sourceNotice = prior.sourceNotice ∧
+  next.envelopeKey = prior.envelopeKey ∧ next.sourceNoticeKey = prior.sourceNoticeKey
+
+instance (next prior : ContextDelivery) : Decidable (next.sameEnvelope prior) := by
+  unfold ContextDelivery.sameEnvelope
+  infer_instance
+
+/-- Existing fragments stay intact. Only original prepared ranges absent
+from them are added; a different chunk layout cannot prevent enrichment.
+Overlapping bytes and source envelopes must agree before any addition. -/
+def checkedContextExtension (prior offered : ContextDelivery) : Option
+    {result : ContextDelivery // result.sameEnvelope prior ∧
+      ∀ fragment ∈ prior.fragments, fragment ∈ result.fragments} :=
+  if offered.sameEnvelope prior && prior.fragments.all (fun fragment =>
+      offered.fragments.all (fun next => decide (next.agrees fragment))) then
+    let covered := prior.fragments.filterMap fun fragment =>
+      if ordered : 0 < fragment.original.length then
+        some (⟨fragment.first, fragment.first + fragment.original.length, by omega⟩ : DeliveryInterval)
+      else none
+    let additional := offered.fragments.flatMap (·.remaining covered)
+    let result := {prior with
+      planKey := offered.planKey
+      cues := prior.cues ++ offered.cues
+      fragments := (prior.fragments ++ additional).mergeSort (fun a b => a.first ≤ b.first)}
+    some ⟨result, by simp [result, ContextDelivery.sameEnvelope], by
+      intro fragment present
+      simpa only [result, List.mem_mergeSort, List.mem_append] using Or.inl present⟩
+  else none
+
+/-- Count the union of selected meaning-cue positions. Repeated overlapping
+cues add no utility; graph headers and optional neighboring text add none. -/
+def ContextDelivery.cueCoverage (context : ContextDelivery) : Nat :=
+  let intervals := context.cues.filterMap fun (first, last) =>
+    if ordered : first < last then some (⟨first, last, ordered⟩ : DeliveryInterval) else none
+  let distinct := intervals.foldl (fun kept interval =>
+    kept ++ interval.subtractAll kept) []
+  (distinct.map fun interval => interval.stop - interval.start).sum
+
+/-- Formatting cannot add owners, source ranges, relations or completion
+authority. This proposal is considered only after original admission. -/
+def TransportSlice.compactContext (slice : TransportSlice) : TransportSlice :=
+  match slice.context with
+  | none => slice
+  | some prior =>
+      let context := {prior with compactCaptions := true}
+      {slice with text := context.render, context := some context}
+
+theorem compact_context_preserves_authority (slice : TransportSlice) :
+    slice.compactContext.keys = slice.keys ∧
+      slice.compactContext.members = slice.members ∧
+      slice.compactContext.visibleKeys = slice.visibleKeys := by
+  unfold TransportSlice.compactContext
+  split <;> exact ⟨rfl, rfl, rfl⟩
+
+theorem compact_context_preserves_observations (slice : TransportSlice) :
+    slice.compactContext.context.map (·.fragments) = slice.context.map (·.fragments) ∧
+      slice.compactContext.context.map (·.cues) = slice.context.map (·.cues) ∧
+      slice.compactContext.context.map (fun context =>
+        (context.owner, context.outcome, context.sourceChars, context.sourceNotice)) =
+      slice.context.map (fun context =>
+        (context.owner, context.outcome, context.sourceChars, context.sourceNotice)) := by
+  cases context : slice.context <;> simp [TransportSlice.compactContext, context]
+
+def packetContextCoverage (owner : String) (items : List TransportSlice) : Nat :=
+  ((items.find? (fun item => item.context.any (·.owner == owner))) >>= (·.context)).map
+      (·.cueCoverage) |>.getD 0
+
+/-- Refine an explanatory span only when its interior is actually present.
+Scattered extra facts do not justify changing the surrounding presentation.
+The beginning/end of the whole source need not be included; this checks only
+the selected span and never requests a full raw tool result. -/
+def ContextDelivery.coherentSpan (context : ContextDelivery) : Bool :=
+  let ranges := context.fragments.filterMap fun fragment =>
+    if positive : 0 < fragment.original.length then
+      some (⟨fragment.first, fragment.first + fragment.original.length, by omega⟩ : DeliveryInterval)
+    else none
+  match ranges.head? with
+  | none => false
+  | some first =>
+      let start := ranges.foldl (fun n range => min n range.start) first.start
+      let stop := ranges.foldl (fun n range => max n range.stop) first.stop
+      if ordered : start < stop then
+        ((⟨start, stop, ordered⟩ : DeliveryInterval).subtractAll ranges).isEmpty
+      else false
+
+def packetContextCoherent (owner : String) (items : List TransportSlice) : Bool :=
+  ((items.find? (fun item => item.context.any (·.owner == owner))) >>= (·.context)).any
+    (·.coherentSpan)
+
+/-- A formatting-only change is not an improvement. If no new selected
+meaning is transported, return the original packet exactly, including its
+display. Both branches carry the actual complete-packet budget certificate. -/
+def preferContextGain (chars bytes : Nat) (cost : List TransportSlice → Nat × Nat)
+    (owner : String)
+    (original refined : {items : List TransportSlice //
+      (cost items).1 ≤ chars ∧ (cost items).2 ≤ bytes}) :
+    {items : List TransportSlice // (cost items).1 ≤ chars ∧ (cost items).2 ≤ bytes} :=
+  if packetContextCoverage owner original.val < packetContextCoverage owner refined.val &&
+      packetContextCoherent owner refined.val then
+    refined else original
+
+theorem no_context_gain_keeps_original (chars bytes : Nat)
+    (cost : List TransportSlice → Nat × Nat) (owner : String)
+    (original refined : {items : List TransportSlice //
+      (cost items).1 ≤ chars ∧ (cost items).2 ≤ bytes})
+    (noGain : packetContextCoverage owner refined.val ≤ packetContextCoverage owner original.val) :
+    preferContextGain chars bytes cost owner original refined = original := by
+  simp [preferContextGain, Nat.not_lt.mpr noGain]
+
+theorem incoherent_context_keeps_original (chars bytes : Nat)
+    (cost : List TransportSlice → Nat × Nat) (owner : String)
+    (original refined : {items : List TransportSlice //
+      (cost items).1 ≤ chars ∧ (cost items).2 ≤ bytes})
+    (incomplete : packetContextCoherent owner refined.val = false) :
+    preferContextGain chars bytes cost owner original refined = original := by
+  simp [preferContextGain, incomplete]
+
+/-- Refine one already admitted explanation within the actual shared packet.
+Every other slice stays intact. Only prepared original alternatives are
+offered. Extra capacity is used for additional meaning coverage, never for
+optional text or a repeated relation label. Equal coverage prefers fewer bytes.
+This does not re-admit or enlarge the surrounding neighborhood. -/
+def extendPacketContext (chars bytes : Nat) (cost : List TransportSlice → Nat × Nat)
+    (accepted : {items : List TransportSlice //
+      (cost items).1 ≤ chars ∧ (cost items).2 ≤ bytes})
+    (owner : String) (alternatives : List TransportSlice) :
+    {items : List TransportSlice // (cost items).1 ≤ chars ∧ (cost items).2 ≤ bytes} :=
+  let position := accepted.val.findIdx (fun item => item.context.any (·.owner == owner))
+  match accepted.val[position]? with
+  | none => accepted
+  | some prior => match prior.context with
+    | none => accepted
+    | some original =>
+      let fixed := cost accepted.val
+      let shell := (fixed.1 - prior.text.length, fixed.2 - prior.text.utf8ByteSize)
+      let best := alternatives.foldl (fun (best : Option
+          {result : ContextDelivery // result.sameEnvelope original ∧
+            ∀ fragment ∈ original.fragments, fragment ∈ result.fragments}) candidate =>
+        match candidate.context with
+        | none => best
+        | some offered => match checkedContextExtension original offered with
+          | none => best
+          | some checked =>
+            let current := best.map (·.val) |>.getD original
+            let coverage := checked.val.cueCoverage
+            let oldCoverage := current.cueCoverage
+            let text := checked.val.render
+            if shell.1 + text.length ≤ chars && shell.2 + text.utf8ByteSize ≤ bytes &&
+                (oldCoverage < coverage ||
+                  (oldCoverage == coverage && text.utf8ByteSize < current.render.utf8ByteSize)) then
+              some checked else best) none
+      match best with
+      | none => accepted
+      | some checked =>
+          let replacement : TransportSlice := { prior with
+            keys := checked.val.keys
+            text := checked.val.render
+            context := some checked.val }
+          let next := accepted.val.modify position (fun _ => replacement)
+          -- The estimate above only chooses a proposal. The exact complete
+          -- render, topology and source-status reserve certify admission.
+          let measured := cost next
+          if fits : measured.1 ≤ chars ∧ measured.2 ≤ bytes then
+            ⟨next, fits⟩ else accepted
+
+/-- The result certificate of the production validator binds preserved
+observations and provenance to the actual returned context. -/
+theorem checked_context_extension_preserves_observations (prior offered : ContextDelivery)
+    (checked : {result : ContextDelivery // result.sameEnvelope prior ∧
+      ∀ fragment ∈ prior.fragments, fragment ∈ result.fragments})
+    (accepted : checkedContextExtension prior offered = some checked) :
+    ∃ result, checkedContextExtension prior offered = some result ∧
+      result.val.sameEnvelope prior ∧
+      ∀ fragment ∈ prior.fragments, fragment ∈ result.val.fragments :=
+  ⟨checked, accepted, checked.property⟩
+
 theorem preferred_context_level_is_existing (plan : TransportSlice × List TransportSlice)
     (allowance : Nat × Nat) : preferredContextLevel plan allowance ≤ plan.2.length := by
   let levels := (List.range (plan.2.length + 1)).reverse
@@ -3980,6 +4210,40 @@ theorem policy_packet_cost_wording_independent (policy : String) (base : Nat × 
       (base.1 + 2048, base.2 + 2048) := by
   apply Prod.ext <;> simp only [policyPacketCost] <;> omega
 
+/-- The primary explanation is an original meaning-nominated owner, not an
+explanation merely encountered while walking its neighboring graph. The
+certificate travels with the actual choice used by fitting and refinement. -/
+def primaryInterpretation (ranked : List OutcomeEdge) (nominated : List Value)
+    (all : List AllEdge) : Option {owner : OutcomeEdge //
+      owner ∈ ranked ∧ nominated.contains owner.relation = true ∧
+      (all.any fun edge => edge.children.contains owner.work) = false} :=
+  match found : ranked.attach.find? (fun owner =>
+      nominated.contains owner.val.relation &&
+        !(all.any fun edge => edge.children.contains owner.val.work)) with
+  | none => none
+  | some owner =>
+      have selected := List.find?_some found
+      have eligible : nominated.contains owner.val.relation = true ∧
+          (all.any fun edge => edge.children.contains owner.val.work) = false := by
+        obtain ⟨root, noChild⟩ := Bool.and_eq_true_iff.mp selected
+        refine ⟨root, ?_⟩
+        cases children : (all.any fun edge => edge.children.contains owner.val.work) with
+        | false => rfl
+        | true =>
+            rw [children] at noChild
+            contradiction
+      some ⟨owner.val, owner.property, eligible⟩
+
+theorem primary_interpretation_is_nominated (ranked : List OutcomeEdge)
+    (nominated : List Value) (all : List AllEdge)
+    (chosen : {owner : OutcomeEdge // owner ∈ ranked ∧
+      nominated.contains owner.relation = true ∧
+      (all.any fun edge => edge.children.contains owner.work) = false})
+    (accepted : primaryInterpretation ranked nominated all = some chosen) :
+    ∃ returned, primaryInterpretation ranked nominated all = some returned ∧
+      nominated.contains returned.val.relation = true :=
+  ⟨chosen, accepted, chosen.property.2.1⟩
+
 def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
     (deliveredGraphs : List String) (enforce : Bool)
     (stagedVisible : Bool)
@@ -4110,12 +4374,22 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       visibleWithoutTransport selected ||
         (fitted.flatMap (·.visibleKeys)).contains
           ("g:" ++ relationKey selected.matched.edge.relation ++ ":" ++ relationKey selected.handoffOutcome)
-    let visibleFor := fun fitted => selectedAll.filter (graphVisibleFor fitted)
+    -- Value identifiers may include large original observations. Hash them
+    -- once, rather than for every proposal tested by the bounded fitter.
+    let visibility := selectedAll.map fun selected =>
+      (selected, visibleWithoutTransport selected,
+        "g:" ++ relationKey selected.matched.edge.relation ++ ":" ++ relationKey selected.handoffOutcome)
+    let sourceKeys := surrounding.map fun source =>
+      let owner := relationKey source.owner.relation
+      let outcome := relationKey source.owner.outcome
+      (source, "g:" ++ owner ++ ":" ++ outcome, "e:" ++ owner ++ ":" ++ outcome ++ ":")
+    let visibleFor := fun (fitted : List TransportSlice) =>
+      let keys := fitted.flatMap (·.visibleKeys)
+      selectPreparedKeys visibility fun (known, key) => known || keys.contains key
     let supportFor := fun (fitted : List TransportSlice) =>
       let keys := fitted.flatMap (·.keys) |>.eraseDups
-      surrounding.filter fun item =>
-        keys.contains ("g:" ++ relationKey item.owner.relation ++ ":" ++ relationKey item.owner.outcome) ||
-        keys.any (·.startsWith ("e:" ++ relationKey item.owner.relation ++ ":" ++ relationKey item.owner.outcome ++ ":"))
+      selectPreparedKeys sourceKeys fun (whole, prefixKey) =>
+        keys.contains whole || keys.any (·.startsWith prefixKey)
     let framesFor := fun (fitted : List TransportSlice) =>
       let visible := visibleFor fitted
       let support := supportFor fitted
@@ -4169,9 +4443,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       -- records conclusions and unavailable validation conditions that raw
       -- excerpts alone cannot convey. The subtype binds it to this admitted
       -- graph; other old explanations cannot crowd out original evidence.
-      let interpretation := rankedOriginals.attach.find? fun owner =>
-        nominated.contains owner.val.relation &&
-          !(sourceAll.any fun edge => edge.children.contains owner.val.work)
+      let interpretation := primaryInterpretation rankedOriginals nominated sourceAll
       let priority := fun (slice : TransportSlice) =>
         match choices.find? (fun choice => choice.2.1.text == slice.text) >>= fun choice =>
             originals.find? (fun owner => owner.relation == choice.1) with
@@ -4213,7 +4485,24 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
         (choices.find? (fun choice => choice.2.1.text == slice.text)).map
             (fun choice => preferredContextLevel choice.2 entryShare) |>.getD 0
       match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference with
-      | some fitted => fitted.val
+      | some fitted =>
+          -- The existing meaning nomination and its source-graph certificate
+          -- choose the primary interpretation. Do not promote an explanation
+          -- found only in its surrounding graph. Its raw observations remain
+          -- admitted exactly as before; no extra text creates completion authority.
+          match interpretation.map (·.val) with
+          | none => fitted.val
+          | some owner =>
+              let alternatives := (choices.find? (·.1 == owner.relation)).map
+                (fun choice => choice.2.1 :: choice.2.2) |>.getD []
+              let compact := fitted.val.map (·.compactContext)
+              let compactCost := packetCost compact
+              if fits : compactCost.1 ≤ available.1 ∧ compactCost.2 ≤ available.2 then
+                let refined := extendPacketContext available.1 available.2 packetCost
+                  ⟨compact, fits⟩ (relationKey owner.relation) alternatives
+                (preferContextGain available.1 available.2 packetCost
+                  (relationKey owner.relation) ⟨fitted.val, fitted.property.1⟩ refined).val
+              else fitted.val
       | none => []
       else if reserved > budget || byteBudget.any (reservedBytes > ·) then [] else
       -- Assembly adds one separator per slice, including the first. Charge
