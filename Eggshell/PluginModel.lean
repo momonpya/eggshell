@@ -3,6 +3,8 @@ module
 public import Eggshell.Config
 public import Eggshell.Blake3
 public import Eggshell.Lifecycle
+public import Eggshell.SourceEvidence
+public import Eggshell.SourceObservation
 public import Lean.Data.Json.FromToJson
 
 @[expose] public section
@@ -40,11 +42,26 @@ structure ThreadState where
   offers : List DeliveryOffer := []
   deriving Repr, ToJson, FromJson
 
+/-- Temporary claims expire; only client acknowledgements persist delivery. -/
+def ThreadState.deliveryClaims (state : ThreadState) (turn : String) (now : Nat) : List String :=
+  (state.deliveredGraphs ++ (state.offers.filter (fun offer =>
+    offer.stamp.accepts turn state.epoch now)).flatMap (·.graphs)).eraseDups
+
+theorem expired_offer_is_not_a_claim (state : ThreadState) (turn : String) (now : Nat)
+    (expired : ∀ offer ∈ state.offers, offer.stamp.accepts turn state.epoch now = false) :
+    state.deliveryClaims turn now = state.deliveredGraphs.eraseDups := by
+  have empty : state.offers.filter (fun offer => offer.stamp.accepts turn state.epoch now) = [] := by
+    apply List.filter_eq_nil_iff.mpr
+    intro offer present
+    simp [expired offer present]
+  simp [ThreadState.deliveryClaims, empty]
+
 structure ToolEvent where
   name : String
   useId : String
   input : String
   response : String
+  source : Option SourceEvidence.Capture := none
   deriving Repr, ToJson, FromJson
 
 structure PendingTurn where
@@ -65,12 +82,52 @@ structure PendingTurn where
   -/
   inFlight : List ToolEvent := []
   tools : List ToolEvent := []
+  /-- Related dependency descriptors, queued for the independent observer.
+  These are locators/previous fingerprints, never evidence of new contents. -/
+  sources : List SourceEvidence.File := []
   finalMessage : Option String := none
   closed : Bool := false
   deriving Repr, ToJson, FromJson
 
 structure Promotion where
   outcomeRelations : List Value
+
+/-- The indexer receives the bounded owner view returned after DB publication,
+    never from a merely compiled or staged turn. It is not a whole DB image. -/
+structure CommittedPromotion where
+  snapshot : Graph
+  outcomeRelations : List Value
+  owners_in_snapshot : ∀ owner ∈ outcomeRelations, owner ∈ snapshot.values
+
+def committedPromotion? (snapshot : Graph) (promotion : Promotion) :
+    Option CommittedPromotion :=
+  if members : promotion.outcomeRelations ⊆ snapshot.values then
+    some {
+      snapshot := snapshot
+      outcomeRelations := promotion.outcomeRelations
+      owners_in_snapshot := members }
+  else none
+
+theorem committedPromotion?_identity {snapshot : Graph} {promotion : Promotion}
+    {committed : CommittedPromotion}
+    (accepted : committedPromotion? snapshot promotion = some committed) :
+    committed.snapshot = snapshot ∧
+      committed.outcomeRelations = promotion.outcomeRelations := by
+  unfold committedPromotion? at accepted
+  split at accepted
+  · cases accepted
+    exact ⟨rfl, rfl⟩
+  · cases accepted
+
+theorem committed_index_owner_present (promotion : CommittedPromotion)
+    (owner : Value) (present : owner ∈ promotion.outcomeRelations) :
+    owner ∈ promotion.snapshot.values := promotion.owners_in_snapshot owner present
+
+def prepareCommitted (snapshot : Graph)
+    (promotion : Promotion) : IO CommittedPromotion := do
+  let some committed := committedPromotion? snapshot promotion |
+    throw (IO.userError "published snapshot is missing a promoted outcome")
+  pure committed
 
 structure SessionFiles where
   directory : System.FilePath
@@ -130,14 +187,11 @@ def readJson? [FromJson α] (path : System.FilePath)
     | .error message => throw (IO.userError s!"{path}: {message}")
 
 def writeJson [ToJson α] (path : System.FilePath) (value : α) : IO Unit := do
+  let path := ((← IO.currentDir) / path).normalize
   if let some parent := path.parent then Persistence.privateDirectory parent
-  let temporary := System.FilePath.mk
-    (path.toString ++ ".tmp-" ++ toString (← IO.Process.getPID) ++ "-" ++
-      toString (← IO.monoNanosNow))
-  IO.FS.writeFile temporary (toJson value |>.compress)
-  Persistence.privateFile temporary
-  IO.FS.rename temporary path
-  Persistence.privateFile path
+  -- The receipt must survive a client or manager exit before its queued work
+  -- is consumed. Publish only after the temporary bytes have been synced.
+  FileSystem.atomicBytes path (toJson value |>.compress |>.toUTF8)
 
 def removeIfExists (path : System.FilePath) : IO Unit := do
   if ← path.pathExists then IO.FS.removeFile path
@@ -173,9 +227,91 @@ def readPendingBase? (files : SessionFiles) : IO (Option PendingTurn) := do
 def toolDirectory (files : SessionFiles) (turn : String) : System.FilePath :=
   files.directory / "tools" / (Blake3.hex (Blake3.digest "eggshell.turn".toUTF8 [turn.toUTF8]))
 
-def recordTool (files : SessionFiles) (turn : String) (tool : ToolEvent) : IO Unit :=
-  writeJson (toolDirectory files turn /
-    (Blake3.hex (Blake3.digest "eggshell.tool".toUTF8 [tool.useId.toUTF8]) ++ ".json")) tool
+/-- Point-addressed lifecycle metadata, retained after a save job is consumed.
+A late Stop/result must still have its original turn's destination and scope;
+it must never borrow the currently active turn's metadata. -/
+def closedTurnPath (files : SessionFiles) (turn : String) : System.FilePath :=
+  files.directory / "closed" /
+    ((Blake3.hex (Blake3.digest "eggshell.closed-turn".toUTF8 [turn.toUTF8])) ++ ".json")
+
+def readClosedTurn? (files : SessionFiles) (turn : String) : IO (Option PendingTurn) := do
+  let record ← (readJson? (closedTurnPath files turn) pendingJsonDefaults : IO (Option PendingTurn))
+  pure (record.filter (fun pending => pending.turnId == turn && pending.closed))
+
+def toolReceiptPath (files : SessionFiles) (turn useId : String) : System.FilePath :=
+  toolDirectory files turn /
+    (Blake3.hex (Blake3.digest "eggshell.tool".toUTF8 [useId.toUTF8]) ++ ".json")
+
+def ToolEvent.native (tool : ToolEvent) : ToolEvent := {tool with source := none}
+
+theorem native_receipt_ignores_source (tool : ToolEvent) (source : Option SourceEvidence.Capture) :
+    ({tool with source}.native) = tool.native := rfl
+
+structure SourceCertificate where
+  stamp : String
+  bytes : Nat
+  source : SourceEvidence.Capture
+  deriving ToJson, FromJson
+
+def sourceCertificatePath (files : SessionFiles) (turn useId : String) : System.FilePath :=
+  files.directory / "sources" / (toolDirectory files turn).fileName.getD "" /
+    (toolReceiptPath files turn useId).fileName.getD ""
+
+/-- Parse bytes and observe their version through the same held descriptor.
+A replaced or concurrently edited native receipt cannot authorize a companion. -/
+def readNativeTool? (path : System.FilePath) : IO (Option (ToolEvent × FileSystem.ReadVersion)) := do
+  if (← FileSystem.regularMetadata? path).isNone then return none
+  let handle ← FileSystem.openRead path.toString
+  let before ← FileSystem.readVersion handle
+  let mut bytes := ByteArray.empty
+  while bytes.size < before.bytes do
+    let count := min 4096 (before.bytes - bytes.size)
+    let page ← FileSystem.readPage handle bytes.size.toUInt64 ⟨count, Nat.min_le_left _ _⟩
+    if page.size != count then throw (IO.userError "short native receipt read")
+    bytes := bytes ++ page
+  let after ← FileSystem.readVersion handle
+  let current ← FileSystem.readVersion (← FileSystem.openRead path.toString)
+  unless FileSystem.stableRead before after current bytes.size do
+    throw (IO.userError "native receipt changed during read")
+  let some text := String.fromUTF8? bytes | throw (IO.userError "native receipt is not UTF-8")
+  let tool ← IO.ofExcept (Json.parse text >>= fromJson? (α := ToolEvent))
+  pure (some (tool.native, before))
+
+def attachCertificate (files : SessionFiles) (turn : String)
+    (tool : ToolEvent) (version : FileSystem.ReadVersion) : IO ToolEvent := do
+  try
+    if let some certificate ← (readJson? (sourceCertificatePath files turn tool.useId) :
+        IO (Option SourceCertificate)) then
+      if certificate.stamp == version.stamp && certificate.bytes == version.bytes then
+        return {tool with source := some certificate.source}
+  catch _ => pure () -- Optional provenance never discards the native result.
+  pure tool.native
+
+/-- Journal the immutable body first; provenance is a small, version-bound
+companion. An identical replay performs no body publication. Reusing a native
+ID for different bytes is an error, never replacement of an earlier result. -/
+def recordTool (files : SessionFiles) (turn : String) (tool : ToolEvent) : IO Unit := do
+  let path := toolReceiptPath files turn tool.useId
+  if let some (previous, _) ← readNativeTool? path then
+    unless toJson previous == toJson tool.native do
+      throw (IO.userError "conflicting native tool receipt ID")
+  else
+    if let some parent := path.parent then FileSystem.durableDirectory parent
+    FileSystem.immutableBytes path (toJson tool.native |>.compress |>.toUTF8)
+  if let some source := tool.source then
+    let some (previous, version) ← readNativeTool? path |
+      throw (IO.userError "native receipt disappeared before source publication")
+    unless toJson previous == toJson tool.native do
+      throw (IO.userError "source certificate belongs to another native result")
+    let certificate : SourceCertificate := ⟨version.stamp, version.bytes, source⟩
+    let certificatePath := sourceCertificatePath files turn tool.useId
+    if let some parent := certificatePath.parent then FileSystem.durableDirectory parent
+    FileSystem.immutableBytes certificatePath (toJson certificate |>.compress |>.toUTF8)
+
+def recordedTool? (files : SessionFiles) (turn : String) (tool : ToolEvent) : IO (Option ToolEvent) := do
+  let some (previous, version) ← readNativeTool? (toolReceiptPath files turn tool.useId) | return none
+  unless toJson previous == toJson tool.native do return none
+  some <$> attachCertificate files turn previous version
 
 /-- Tool bodies are separate immutable receipts, not a growing JSON rewrite per hook. -/
 def loadToolReceipts (files : SessionFiles) (pending : PendingTurn) : IO PendingTurn := do
@@ -186,7 +322,8 @@ def loadToolReceipts (files : SessionFiles) (pending : PendingTurn) : IO Pending
     for entry in entries do
       if entry.fileName.endsWith ".json" then
         try
-          if let some tool ← (readJson? entry.path : IO (Option ToolEvent)) then
+          if let some (native, version) ← readNativeTool? entry.path then
+            let tool ← attachCertificate files pending.turnId native version
             tools := tools.filter (·.useId != tool.useId) ++ [tool]
         catch error =>
           IO.eprintln s!"Eggshell retained an unreadable tool receipt: {error}"
@@ -201,6 +338,49 @@ def queueCheckpoint (files : SessionFiles) (pending : PendingTurn) : IO Unit := 
     [(toJson pending).compress.toUTF8])
   writeJson (files.directory / "checkpoints" / (key ++ ".json")) pending
 
+/-- Independent observations have their own immutable identity. No native
+result or earlier source certificate is refreshed or attributed a later state. -/
+def observationTool (observation : SourceObservation.Observation limit) : ToolEvent :=
+  let response := (SourceObservation.observationJson observation).compress
+  let input := (Json.mkObj [("files", toJson (observation.capture.record.files.map (·.relative)))]).compress
+  { name := "eggshell.observe_file"
+    useId := "eggshell-observation:" ++ Blake3.hex (Blake3.digest "eggshell.observation.record".toUTF8
+      [input.toUTF8, response.toUTF8])
+    input, response, source := some observation.capture }
+
+theorem observation_binds_new_record (observation : SourceObservation.Observation limit) :
+    (observationTool observation).source = some observation.capture ∧
+      (observationTool observation).response = (SourceObservation.observationJson observation).compress :=
+  ⟨rfl, rfl⟩
+
+/-- This save-worker operation observes registered related files regardless of
+which command, program, editor or local provider changed them. The hook never
+calls it. Pending scans retain their queue entry and resume at a page cursor. -/
+def observeRelatedFiles (files : SessionFiles) (pending : PendingTurn) (deadline : Nat) : IO Bool := do
+  let workspace := System.FilePath.mk pending.cwd
+  let dependencies := (pending.tools.flatMap
+    (fun tool => tool.source.map (·.record.files) |>.getD []) ++ pending.sources).eraseDups
+  for file in dependencies do SourceObservation.register files.directory workspace file
+  let mut finished := true
+  for path in ← SourceObservation.entries files.directory workspace do
+    if (← IO.monoMsNow) ≥ deadline then return false
+    let observed ← try SourceObservation.step path workspace (128 * 1024) 256 deadline
+      catch error =>
+        IO.eprintln s!"Eggshell retained source history; observation unavailable: {error}"
+        pure .unverified
+    match observed with
+    | .pending => finished := false
+    | .unverified => pure ()
+    | .complete snapshot observation =>
+        if let some observation := observation then
+          let tool := observationTool observation
+          -- This durable queue contains the actual data and its certificate.
+          -- It is not a native tool receipt: the running model has not seen
+          -- this independent observation and it cannot bind its final answer.
+          queueCheckpoint files {pending with tools := [tool], sources := [], inFlight := [], finalMessage := none, closed := false}
+        SourceObservation.acknowledge path snapshot
+  pure finished
+
 def pendingSelection (pending : PendingTurn) : Config.Selection := {
   label := pending.profile
   semanticMatcher := pending.semanticMatcher
@@ -213,8 +393,59 @@ def pendingSelection (pending : PendingTurn) : Config.Selection := {
 def valueEncoding (value : Value) : String :=
   Persistence.valueToJson value |>.compress
 
+def indexOwnerKey (owner : Value) : String :=
+  "owner:" ++ toString (hash owner)
+
+/-- A small durable indexing ticket references published owners, not another
+    copy of their bodies. Digests locate candidates; the index worker verifies
+    unique owners in the authoritative graph before using them. -/
+structure IndexTicket where
+  target : String
+  command : List String
+  authority : String
+  roots : List String
+  deriving ToJson, FromJson, BEq
+
+def indexTicket (target : String) (command : List String)
+    (promotion : CommittedPromotion) : IndexTicket := {
+  target, command
+  authority := valueEncoding promotion.snapshot.authority
+  roots := promotion.outcomeRelations.map indexOwnerKey |>.eraseDups
+}
+
+theorem index_ticket_root_is_published (target : String) (command : List String)
+    (promotion : CommittedPromotion) (key : String)
+    (present : key ∈ (indexTicket target command promotion).roots) :
+    ∃ owner ∈ promotion.snapshot.values, indexOwnerKey owner = key := by
+  simp only [indexTicket, List.mem_eraseDups, List.mem_map] at present
+  obtain ⟨owner, member, equal⟩ := present
+  exact ⟨owner, promotion.owners_in_snapshot owner member, equal⟩
+
+def queueIndex (files : SessionFiles) (target : String) (command : List String)
+    (promotion : CommittedPromotion) : IO Unit := do
+  let ticket := indexTicket target command promotion
+  let key := Blake3.hex (Blake3.digest "eggshell.index-ticket".toUTF8
+    [(toJson ticket).compress.toUTF8])
+  let path := files.directory / "indexes" / (key ++ ".json")
+  -- Exact comparison, rather than a hash alone, decides duplicate identity.
+  if let some previous ← (readJson? path : IO (Option IndexTicket)) then
+    if previous == ticket then return
+    throw (IO.userError "conflicting index ticket digest")
+  writeJson path ticket
+
+def resolveIndexTicket (snapshot : Graph) (ticket : IndexTicket) : IO CommittedPromotion := do
+  if valueEncoding snapshot.authority != ticket.authority then
+    throw (IO.userError "index ticket belongs to a different authority")
+  let candidates := snapshot.values.map fun owner => (indexOwnerKey owner, owner)
+  let owners ← ticket.roots.mapM fun key => do
+    match candidates.filter (fun candidate => candidate.1 == key) with
+    | [(_, owner)] => pure owner
+    | [] => throw (IO.userError "published index owner is missing")
+    | _ => throw (IO.userError "ambiguous index owner digest")
+  prepareCommitted snapshot { outcomeRelations := owners }
+
 def valueKey (value : Value) : String :=
-  "v" ++ toString (hash (Persistence.valueToJson value))
+  Persistence.selectionKey value
 
 def allNodes (composite : Persistence.Composite) : List Value :=
   composite.values.flatMap Value.nodes |>.eraseDups
@@ -348,6 +579,17 @@ def compileOperationGraph (pending : PendingTurn) : Except String (List Value ×
     (.semantic (.text pending.prompt) :: (operationChildren pending).map Ref.semantic)
   pure (facts.map (·.2), all)
 
+def operationSourceReceipts (pending : PendingTurn) : List Value :=
+  pending.tools.filterMap fun tool => tool.source.map fun capture =>
+    let owner := (compileOperationOutcomes (.text pending.sessionId) (.text pending.turnId) tool).2
+    SourceEvidence.receipt (.text pending.sessionId) (.text pending.turnId)
+      (.text tool.useId) owner capture.record
+
+theorem operation_owner_ignores_source (session turn : Value) (tool : ToolEvent)
+    (source : Option SourceEvidence.Capture) :
+    compileOperationOutcomes session turn {tool with source} =
+      compileOperationOutcomes session turn tool := rfl
+
 /--
 An unresolved native occurrence and a missing final message cannot affect the
 observed operation graph.  Recovery may therefore retain exactly the terminal
@@ -363,7 +605,20 @@ theorem compileOperationGraph_ignores_unobserved (pending : PendingTurn)
 /-- The active turn joins the same positive graph shape later promoted to `.egg`. -/
 def stagedGraphValues (pending : PendingTurn) : Except String (List Value) := do
   let (outcomes, all) ← compileOperationGraph pending
-  pure (outcomes ++ [all])
+  pure (outcomes ++ [all] ++ operationSourceReceipts pending)
+
+def turnSources (pending : PendingTurn) : SourceEvidence.Record :=
+  let records := pending.tools.map fun tool =>
+    tool.source.map (·.record) |>.getD SourceEvidence.unverified
+  { workspace := (System.FilePath.mk pending.cwd).fileName.getD pending.cwd
+    files := records.flatMap (·.files) |>.eraseDups
+    uris := records.flatMap (·.uris) |>.eraseDups
+    -- A listing or provider with no file observations does not erase the
+    -- independently sealed file state. The answer still has an open domain
+    -- and therefore cannot complete a later native operation.
+    complete := records.any (fun record => !record.files.isEmpty) &&
+      (records.filter (fun record => !record.files.isEmpty)).all (·.complete)
+    closed := !records.isEmpty && records.all (fun record => record.complete && record.closed) }
 
 structure CompiledTurn (source : Graph) where
   transaction : Transaction
@@ -389,8 +644,10 @@ def compile (graph : Graph) (pending : PendingTurn) (target : String) :
         let receipt ← relation? .receipt [
           .exact session, .exact turn, .exact task, .exact result,
           .exact parentOutcome, .exact all, .exact targetValue]
+        let sourceReceipts := if pending.tools.any (·.source.isSome) then
+          [SourceEvidence.receipt session turn (.text "parent") parentOutcome (turnSources pending)] else []
         pure
-          ((outcomeRelations ++ [all, parentOutcome, receipt]).eraseDups,
+          ((outcomeRelations ++ [all, parentOutcome, receipt] ++ sourceReceipts ++ operationSourceReceipts pending).eraseDups,
             outcomeRelations ++ [parentOutcome])
     | none =>
         if pending.tools.isEmpty then
@@ -398,7 +655,7 @@ def compile (graph : Graph) (pending : PendingTurn) (target : String) :
         let receipt ← relation? .receipt [
           .exact session, .exact turn, .exact task, .exact cwd,
           .exact all, .exact targetValue, .exact (.text "interrupted before final response")]
-        pure ((outcomeRelations ++ [all, receipt]).eraseDups, outcomeRelations)
+        pure ((outcomeRelations ++ [all, receipt] ++ operationSourceReceipts pending).eraseDups, outcomeRelations)
   /-
   Only authoritative relation roots are stored. Their structural Values contain
   every Atom and occurrence, so duplicating that closure as top-level records
@@ -429,11 +686,11 @@ theorem compiled_values_are_well_formed {graph : Graph}
       Relation.wellFormed value :=
   compiled.transaction.stagedValues_wellFormed
 
-def promote (pending : PendingTurn) (target : System.FilePath) : IO Promotion := do
-  let (_, promotion) ← Persistence.update target fun graph => do
+def promote (pending : PendingTurn) (target : System.FilePath) : IO CommittedPromotion := do
+  let (snapshot, promotion) ← Persistence.appendPrepared target fun graph => do
     let compiled ← compile graph pending target.toString
     pure (compiled.transaction, compiled.promotion)
-  pure promotion
+  prepareCommitted snapshot promotion
 
 /-- Outcome roots in a live checkpoint come only from observed native operations. -/
 def observedRoots (pending : PendingTurn) : List Value :=
@@ -451,14 +708,14 @@ theorem checkpoint_has_only_observed_roots (pending : PendingTurn) (root : Value
       (compileOperationOutcomes (.text pending.sessionId) (.text pending.turnId) tool).2 = root := by
   simpa [observedRoots] using present
 
-def promoteObservations (pending : PendingTurn) (target : System.FilePath) : IO Promotion := do
+def promoteObservations (pending : PendingTurn) (target : System.FilePath) : IO CommittedPromotion := do
   -- Persist precisely the existing staged graph, including its open All edge.
   -- This makes operations reusable children without completing the parent.
   let roots ← IO.ofExcept (stagedGraphValues pending)
-  let _ ← Persistence.update target fun graph => do
+  let (snapshot, _) ← Persistence.appendPrepared target fun graph => do
     let some transaction := (Transaction.begin graph).stageValues? (roots.filter (!graph.values.contains ·)) |
       throw "observation compiler produced an invalid Value"
     pure (transaction, ())
-  pure { outcomeRelations := observedRoots pending }
+  prepareCommitted snapshot { outcomeRelations := observedRoots pending }
 
 end Eggshell.Plugin

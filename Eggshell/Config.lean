@@ -7,6 +7,10 @@ public import Eggshell.Paths
 
 namespace Eggshell.Config
 
+/-- Configured native transport ceiling. The source-driven packet target may
+be smaller; this is not a quota or an immutable platform restriction. -/
+def nativeHandoffBytes : Nat := 128000
+
 structure Egg where
   name : String
   path : System.FilePath
@@ -39,6 +43,8 @@ structure Selection where
   read : List Egg
   write : Option Egg
   handoffChars : Nat
+  /-- Set by the harness independently of the user profile's character budget. -/
+  handoffBytes : Option Nat := none
   localUnion : Bool := true
   deriving Repr, DecidableEq
 

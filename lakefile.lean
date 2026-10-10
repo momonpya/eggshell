@@ -5,7 +5,24 @@ open Lake DSL
 package eggshell where
   leanOptions := #[⟨`warningAsError, true⟩]
 
-lean_lib Eggshell
+target storageSyncObject pkg : System.FilePath := do
+  let src ← inputFile (pkg.dir / "Eggshell" / "Storage" / "sync.c") true
+  buildO (pkg.buildDir / "storage-sync.o") src #[] #["-fPIC", "-I", (← getLeanIncludeDir).toString] "cc"
+
+extern_lib storage_sync pkg := do
+  buildStaticLib (pkg.staticLibDir / nameToStaticLib "storage_sync") #[← storageSyncObject.fetch]
+
+-- Lean embeds this boundary in MiniLM. Track its bytes so a normal incremental
+-- build cannot silently keep an older numerical implementation.
+target embeddingSource pkg : System.FilePath :=
+  inputFile (pkg.dir / "runtime" / "embedding.py") true
+
+lean_lib Eggshell where
+  extraDepTargets := #[`embeddingSource]
+
+lean_lib PageDBTestSupport where
+  roots := #[`tests.PageDBTests, `tests.FullSearchOracle, `tests.SearchMemo, `tests.CorpusCache,
+    `tests.SourceEvidenceTests, `tests.SourceObservationTests]
 
 @[default_target]
 lean_exe eggshell where

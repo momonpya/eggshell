@@ -39,6 +39,7 @@ end Equality
 structure WorkGraph where
   all : List AllEdge := []
   outcomes : List OutcomeEdge := []
+  deriving DecidableEq
 
 namespace WorkGraph
 
@@ -85,11 +86,21 @@ remainder itself becomes the external Demand.
 -/
 namespace HandoffRemainder
 
+def identityPrefix : String :=
+  "Use the selected prior WORK→OUTCOME graph as completed or advisory history. "
+
 def marker : String :=
-  "Use the selected prior WORK→OUTCOME graph as completed or advisory history. " ++
-  "Do not repeat prior native work merely to verify it; recheck only after changed " ++
-  "inputs, missing required evidence, or a concrete contradiction. Perform every " ++
-  "uncovered action needed to answer: "
+  identityPrefix ++ "Do not repeat prior work merely to verify it or because evidence is missing. " ++
+  "Do not reread evidence for line numbers or citation formatting; cite the " ++
+  "recorded source without line numbers when they are unavailable. " ++
+  "Missing from this graph is not unavailable evidence. Inspect the smallest " ++
+  "accessible source for an unsupported requirement; distinguish unknown " ++
+  "external state from rules that available code or documentation can establish. " ++
+  "Do not declare exhaustion solely from a missing excerpt or runtime test. " ++
+  "Use the smallest useful check for uncovered work. If relevant local and available " ++
+  "MCP sources are exhausted, report supported facts and missing evidence, mark the " ++
+  "conclusion UNRESOLVED, and stop. Resume only after new evidence, changed inputs " ++
+  "or access, or a concrete contradiction. Current uncovered request: "
 
 def text (work : String) : String := marker ++ work
 
@@ -98,7 +109,7 @@ def value (work : String) : Value := .text (text work)
 def isValue : Value → Bool
   | .atom bytes =>
       match String.fromUTF8? bytes with
-      | some content => content.startsWith marker
+      | some content => content.startsWith identityPrefix
       | none => false
   | .apply _ _ => false
 
@@ -334,6 +345,37 @@ def structurallyValidChildren (graph : WorkGraph) (equality : Equality) :
 
 end
 
+mutual
+
+theorem structurallyValidAt_same_topology (selection : Selection)
+    (left right : WorkGraph) (equality : Equality) (work : Value) :
+    selection.structurallyValidAt left equality work =
+      selection.structurallyValidAt right equality work := by
+  cases selection with
+  | residual _ _ | outcomes _ _ _ => rfl
+  | handoff _ prior =>
+      simp only [structurallyValidAt,
+        structurallyValidAt_same_topology prior left right equality work]
+  | decomposed _ edge _ _ children =>
+      simp only [structurallyValidAt, WorkGraph.childrenFor,
+        structurallyValidChildren_same_topology children left right equality]
+
+theorem structurallyValidChildren_same_topology (children : List Selection)
+    (left right : WorkGraph) (equality : Equality) (works : List Value) :
+    structurallyValidChildren left equality works children =
+      structurallyValidChildren right equality works children := by
+  cases children with
+  | nil => cases works <;> rfl
+  | cons child tail =>
+      cases works with
+      | nil => rfl
+      | cons work rest =>
+          simp only [structurallyValidChildren,
+            structurallyValidAt_same_topology child left right equality work,
+            structurallyValidChildren_same_topology tail left right equality rest]
+
+end
+
 def validFor (graph : WorkGraph) (equality : Equality)
     (policy : OutcomePolicy) (work : Value) (selection : Selection) : Bool :=
   (selection.structurallyValidAt graph equality work &&
@@ -344,6 +386,136 @@ def validFor (graph : WorkGraph) (equality : Equality)
     (selection.advisoryUses.all fun use =>
       containsOutcome graph use.2 && equality.same use.2.work use.1 &&
         decide (policy.classify use.1 use.2 = .advisory))
+
+/-- Exact graph membership of every selected edge, including all descendants.
+This is independent of the policy and the executable rejection gate. -/
+structure Provenance (graph : WorkGraph) (selection : Selection) : Prop where
+  decompositions : ∀ edge ∈ selection.decompositionEdges, edge ∈ graph.all
+  outcomes : ∀ use ∈ selection.outcomeUses, use.2.2 ∈ graph.outcomes
+
+theorem Provenance.residual (graph : WorkGraph) (work : Value) (advisory : List OutcomeEdge)
+    (present : ∀ edge ∈ advisory, edge ∈ graph.outcomes) :
+    Provenance graph (.residual work advisory) := by
+  constructor
+  · simp [decompositionEdges]
+  · intro use member
+    simp only [outcomeUses, List.mem_map] at member
+    obtain ⟨edge, member, rfl⟩ := member
+    exact present edge member
+
+theorem Provenance.completed (graph : WorkGraph) (work : Value)
+    (completed advisory : List OutcomeEdge)
+    (first : ∀ edge ∈ completed, edge ∈ graph.outcomes)
+    (second : ∀ edge ∈ advisory, edge ∈ graph.outcomes) :
+    Provenance graph (.outcomes work completed advisory) := by
+  constructor
+  · simp [decompositionEdges]
+  · intro use member
+    simp only [outcomeUses, List.mem_append, List.mem_map] at member
+    rcases member with ⟨edge, member, rfl⟩ | ⟨edge, member, rfl⟩
+    · exact first edge member
+    · exact second edge member
+
+theorem Provenance.decomposed (graph : WorkGraph) (work : Value) (edge : AllEdge)
+    (completed advisory : List OutcomeEdge) (children : List Selection)
+    (parent : edge ∈ graph.all)
+    (first : ∀ owner ∈ completed, owner ∈ graph.outcomes)
+    (second : ∀ owner ∈ advisory, owner ∈ graph.outcomes)
+    (descendants : ∀ child ∈ children, Provenance graph child) :
+    Provenance graph (.decomposed work edge completed advisory children) := by
+  constructor
+  · intro chosen member
+    simp only [decompositionEdges, List.mem_cons, List.mem_flatMap] at member
+    rcases member with rfl | ⟨child, member, used⟩
+    · exact parent
+    · exact (descendants child member).decompositions chosen used
+  · intro use member
+    simp only [outcomeUses, List.mem_append, List.mem_map, List.mem_flatMap] at member
+    rcases member with (⟨owner, member, rfl⟩ | ⟨owner, member, rfl⟩) | ⟨child, member, used⟩
+    · exact first owner member
+    · exact second owner member
+    · exact (descendants child member).outcomes use used
+
+theorem Provenance.used_owner (known : Provenance graph selection)
+    (delivery : Applicability) (use : Value × OutcomeEdge)
+    (member : use ∈ selection.usesFor delivery) : use.2 ∈ graph.outcomes := by
+  simp only [usesFor, List.mem_filterMap] at member
+  obtain ⟨entry, member, chosen⟩ := member
+  split at chosen
+  · simp only [Option.some.injEq] at chosen
+    subst use
+    exact known.outcomes entry member
+  · contradiction
+
+/-- The real final provenance checker agrees after demand pruning, not just
+the recursive solver. Both graphs must contain the actually selected edges;
+policy and structural checks are retained verbatim. -/
+theorem validFor_provenance_congr (selected : Selection) (left right : WorkGraph)
+    (equality : Equality) (policy : OutcomePolicy) (root : Value)
+    (first : Provenance left selected) (second : Provenance right selected) :
+    selected.validFor left equality policy root = selected.validFor right equality policy root := by
+  have allPresent (graph : WorkGraph) (known : Provenance graph selected) :
+      selected.decompositionEdges.all (containsAll graph) = true := by
+    apply List.all_eq_true.mpr
+    intro edge member
+    apply List.any_eq_true.mpr
+    exact ⟨edge, known.decompositions edge member, by simp⟩
+  have uses (delivery : Applicability) :
+      (selected.usesFor delivery).all (fun use =>
+        containsOutcome left use.2 && equality.same use.2.work use.1 &&
+          decide (policy.classify use.1 use.2 = delivery)) =
+      (selected.usesFor delivery).all (fun use =>
+        containsOutcome right use.2 && equality.same use.2.work use.1 &&
+          decide (policy.classify use.1 use.2 = delivery)) := by
+    apply Bool.eq_iff_iff.mpr
+    simp only [List.all_eq_true]
+    apply forall_congr'
+    intro use
+    apply forall_congr'
+    intro member
+    have present (graph : WorkGraph) (known : Provenance graph selected) :
+        containsOutcome graph use.2 = true :=
+      List.any_eq_true.mpr ⟨use.2, known.used_owner delivery use member, by simp⟩
+    rw [present left first, present right second]
+  simp only [validFor, completedUses, advisoryUses, allPresent left first,
+    allPresent right second, uses, structurallyValidAt_same_topology selected left right equality root]
+
+/-- Keeping every relation which can be admitted preserves the real
+provenance checker, not merely the solver's list of selected ids. The keep
+predicate is over the entire relation, including Exact evidence positions. -/
+theorem validFor_selected (graph : WorkGraph) (keep : Value → Bool)
+    (policy : OutcomePolicy) (equality : Equality) (root : Value) (selected : Selection)
+    (complete : ∀ work edge, policy.classify work edge ≠ .irrelevant →
+      keep edge.relation = true) :
+    selected.validFor { graph with outcomes := graph.outcomes.filter (fun edge => keep edge.relation) }
+      equality policy root = selected.validFor graph equality policy root := by
+  let smaller : WorkGraph := { graph with outcomes := graph.outcomes.filter (fun edge => keep edge.relation) }
+  have contained (edge : OutcomeEdge) (kept : keep edge.relation = true) :
+      containsOutcome smaller edge = containsOutcome graph edge := by
+    simp only [containsOutcome, smaller, List.any_filter]
+    apply List.any_congr rfl
+    intro stored
+    cases same : stored.relation == edge.relation with
+    | false => simp
+    | true =>
+        have equal := beq_iff_eq.mp same
+        simp [equal, kept]
+  have uses (items : List (Value × OutcomeEdge)) (delivery : Applicability)
+      (visible : delivery ≠ .irrelevant) :
+      (items.all fun use => containsOutcome smaller use.2 &&
+        equality.same use.2.work use.1 && decide (policy.classify use.1 use.2 = delivery)) =
+      (items.all fun use => containsOutcome graph use.2 &&
+        equality.same use.2.work use.1 && decide (policy.classify use.1 use.2 = delivery)) := by
+    apply congrArg (fun predicate => items.all predicate)
+    funext use
+    by_cases classified : policy.classify use.1 use.2 = delivery
+    · rw [contained use.2 (complete use.1 use.2 (by simpa [classified] using visible))]
+    · simp [classified]
+  change selected.validFor smaller equality policy root = _
+  simp only [validFor, structurallyValidAt_same_topology selected smaller graph equality root,
+    uses selected.completedUses .completed (by decide),
+    uses selected.advisoryUses .advisory (by decide)]
+  rfl
 
 theorem completedUse_sound {graph equality policy work selection demand edge}
     (valid : validFor graph equality policy work selection)
@@ -548,6 +720,27 @@ theorem chooseBest_eq_none_iff (solutions : List Solution) :
       simp only [chooseBest]
       cases chooseBest tail <;> simp
 
+theorem chooseBest_mem {solutions : List Solution} {best : Solution}
+    (found : chooseBest solutions = some best) : best ∈ solutions := by
+  induction solutions generalizing best with
+  | nil => simp [chooseBest] at found
+  | cons head tail ih =>
+      simp only [chooseBest] at found
+      cases chosen : chooseBest tail with
+      | none =>
+          rw [chosen] at found
+          injection found with equal
+          subst best
+          exact List.mem_cons_self
+      | some later =>
+          rw [chosen] at found
+          injection found with equal
+          subst best
+          unfold chooseBetter
+          split
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem head (ih chosen)
+
 /-- The chosen explanation is minimum among the supplied candidate derivations. -/
 theorem chooseBest_minimal {solutions : List Solution} {best candidate : Solution}
     (found : chooseBest solutions = some best)
@@ -591,26 +784,359 @@ def solve (graph : WorkGraph) (equality : Equality) (policy : OutcomePolicy) :
         let completed := outcomes.filter fun edge => policy.classify work edge == .completed
         let advisory := outcomes.filter fun edge => policy.classify work edge == .advisory
         let candidates := (graph.decompositionsFor equality work).filterMap fun edge =>
-          match (graph.childrenFor equality edge).mapM
-              (solve graph equality policy fuel (work :: active)) with
-          | some children => some (Solution.combine work edge completed advisory children)
-          | none => none
+          ((graph.childrenFor equality edge).mapM
+            (solve graph equality policy fuel (work :: active))).map
+            (Solution.combine work edge completed advisory)
         match chooseBest candidates with
         | some best => some best
         | none =>
             if completed.isEmpty then some (Solution.residual work advisory)
             else some (Solution.outcomes work completed advisory)
 
-def runWithPolicy (graph : WorkGraph) (equality : Equality)
-    (policy : OutcomePolicy) (root : Value) : Extraction :=
-  let fuel := graph.all.length + graph.outcomes.length + 1
+private theorem mapM_provenance (items : List α) (f : α → Option β) (results : List β)
+    (found : items.mapM f = some results) (property : β → Prop)
+    (produced : ∀ item ∈ items, ∀ result, f item = some result → property result) :
+    ∀ result ∈ results, property result := by
+  induction items generalizing results with
+  | nil =>
+      change (some [] : Option (List β)) = some results at found
+      injection found with equal
+      subst results
+      simp
+  | cons head tail ih =>
+      cases first : f head with
+      | none => simp [List.mapM_cons, first] at found
+      | some value =>
+          cases later : tail.mapM f with
+          | none => simp [List.mapM_cons, first, later] at found
+          | some rest =>
+              simp [List.mapM_cons, first, later] at found
+              subst results
+              intro result member
+              rcases List.mem_cons.mp member with equal | member
+              · subst result
+                exact produced head List.mem_cons_self value first
+              · exact ih rest later
+                  (fun item member => produced item (List.mem_cons_of_mem head member)) result member
+
+/-- Every edge returned by the real recursive solver belongs to its input
+graph. This includes all descendants of the chosen ordered alternative;
+neither the later checker nor a storage-loader assertion is a premise. -/
+theorem solve_provenance (graph : WorkGraph) (equality : Equality) (policy : OutcomePolicy)
+    (fuel : Nat) (active : List Value) (work : Value) (solution : Solution)
+    (found : solve graph equality policy fuel active work = some solution) :
+    Selection.Provenance graph solution.selection := by
+  induction fuel generalizing active work solution with
+  | zero =>
+      simp only [solve, Option.some.injEq] at found
+      subst solution
+      exact Selection.Provenance.residual graph work [] (by simp)
+  | succ fuel ih =>
+      simp only [solve] at found
+      split at found
+      · contradiction
+      · let completed := (graph.outcomesFor equality work).filter
+          (fun edge => policy.classify work edge == .completed)
+        let advisory := (graph.outcomesFor equality work).filter
+          (fun edge => policy.classify work edge == .advisory)
+        let candidates := (graph.decompositionsFor equality work).filterMap fun edge =>
+          ((graph.childrenFor equality edge).mapM
+            (solve graph equality policy fuel (work :: active))).map
+            (Solution.combine work edge completed advisory)
+        have owners (delivery : Applicability) :
+            ∀ edge ∈ (graph.outcomesFor equality work).filter
+              (fun edge => policy.classify work edge == delivery), edge ∈ graph.outcomes := by
+          intro edge member
+          exact (List.mem_filter.mp (List.mem_filter.mp member).1).1
+        change (match chooseBest candidates with
+          | some best => some best
+          | none => if completed.isEmpty then some (Solution.residual work advisory)
+              else some (Solution.outcomes work completed advisory)) = some solution at found
+        cases chosen : chooseBest candidates with
+        | none =>
+            rw [chosen] at found
+            change (if completed.isEmpty then some (Solution.residual work advisory)
+              else some (Solution.outcomes work completed advisory)) = some solution at found
+            split at found
+            · injection found with equal
+              subst solution
+              exact Selection.Provenance.residual graph work advisory (owners .advisory)
+            · injection found with equal
+              subst solution
+              exact Selection.Provenance.completed graph work completed advisory
+                (owners .completed) (owners .advisory)
+        | some best =>
+            rw [chosen] at found
+            injection found with equal
+            subst solution
+            have member := chooseBest_mem chosen
+            simp only [candidates, List.mem_filterMap] at member
+            obtain ⟨edge, parent, produced⟩ := member
+            cases childrenFound : (graph.childrenFor equality edge).mapM
+                (solve graph equality policy fuel (work :: active)) with
+            | none => simp [childrenFound] at produced
+            | some children =>
+                simp only [childrenFound, Option.map_some, Option.some.injEq] at produced
+                subst best
+                apply Selection.Provenance.decomposed graph work edge completed advisory
+                  (children.map (·.selection)) (List.mem_filter.mp parent).1
+                  (owners .completed) (owners .advisory)
+                intro child member
+                obtain ⟨result, resultMember, rfl⟩ := List.mem_map.mp member
+                exact mapM_provenance _ _ children childrenFound
+                  (fun result => Selection.Provenance graph result.selection)
+                  (fun next _ result recorded => ih (work :: active) next result recorded) result resultMember
+
+private theorem filterMap_on_domain (items : List α) (first second : α → Option β)
+    (same : ∀ item ∈ items, first item = second item) :
+    items.filterMap first = items.filterMap second := by
+  induction items with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.filterMap_cons, same head (by simp)]
+      rw [ih (fun item member => same item (by simp [member]))]
+
+private theorem mapM_on_domain (items : List α) (first second : α → Option β)
+    (same : ∀ item ∈ items, first item = second item) :
+    items.mapM first = items.mapM second := by
+  induction items with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.mapM_cons, same head (by simp),
+        ih (fun item member => same item (by simp [member]))]
+
+/-- Demand pruning preserves the actual recursive solver, including ordered
+alternatives, cycles and open work. The domain must include every child of
+every reachable alternative; retaining only previously selected evidence is
+not sufficient. This is independent of how the storage index finds edges. -/
+theorem solve_demand_exact (left right : WorkGraph) (equality : Equality)
+    (policy : OutcomePolicy) (domain : Value → Prop)
+    (owners : ∀ work, domain work →
+      left.outcomesFor equality work = right.outcomesFor equality work)
+    (parents : ∀ work, domain work →
+      left.decompositionsFor equality work = right.decompositionsFor equality work)
+    (closed : ∀ work, domain work → ∀ edge ∈ left.decompositionsFor equality work,
+      ∀ child ∈ left.childrenFor equality edge, domain child)
+    (fuel : Nat) (active : List Value) (work : Value) (member : domain work) :
+    solve left equality policy fuel active work = solve right equality policy fuel active work := by
+  induction fuel generalizing active work with
+  | zero => rfl
+  | succ fuel ih =>
+      simp only [solve]
+      by_cases cycle : active.contains work = true
+      · simp only [cycle, ↓reduceIte]
+      · simp only [cycle, Bool.false_eq_true, ↓reduceIte, owners work member, parents work member]
+        have candidates :
+            (right.decompositionsFor equality work).filterMap (fun edge =>
+              ((left.childrenFor equality edge).mapM (solve left equality policy fuel (work :: active))).map
+                (Solution.combine work edge
+                  ((right.outcomesFor equality work).filter (fun edge => policy.classify work edge == .completed))
+                  ((right.outcomesFor equality work).filter (fun edge => policy.classify work edge == .advisory)))) =
+            (right.decompositionsFor equality work).filterMap (fun edge =>
+              ((right.childrenFor equality edge).mapM (solve right equality policy fuel (work :: active))).map
+                (Solution.combine work edge
+                  ((right.outcomesFor equality work).filter (fun edge => policy.classify work edge == .completed))
+                  ((right.outcomesFor equality work).filter (fun edge => policy.classify work edge == .advisory)))) := by
+          apply filterMap_on_domain
+          intro edge edgeMember
+          have before : edge ∈ left.decompositionsFor equality work := by
+            rw [parents work member]
+            exact edgeMember
+          have sameChildren : left.childrenFor equality edge = right.childrenFor equality edge := rfl
+          rw [sameChildren]
+          apply congrArg (Option.map _)
+          apply mapM_on_domain
+          intro child childMember
+          apply ih (work :: active) child
+          exact closed work member edge before child childMember
+        rw [candidates]
+
+def runWithPolicyFuel (graph : WorkGraph) (equality : Equality)
+    (policy : OutcomePolicy) (fuel : Nat) (root : Value) : Extraction :=
   let solution := (solve graph equality policy fuel [] root).getD (Solution.residual root)
   let checked := if solution.selection.validFor graph equality policy root then
     solution.selection else .residual root []
   .fromSelection root checked
 
+/-- Complete extraction, including the final rejection gate and all evidence
+projections, is equal under the same demand-domain observations. The explicit
+reference fuel must be retained when pruning source topology or bodies. -/
+theorem runWithPolicyFuel_demand_exact (left right : WorkGraph) (equality : Equality)
+    (policy : OutcomePolicy) (domain : Value → Prop)
+    (owners : ∀ work, domain work →
+      left.outcomesFor equality work = right.outcomesFor equality work)
+    (parents : ∀ work, domain work →
+      left.decompositionsFor equality work = right.decompositionsFor equality work)
+    (closed : ∀ work, domain work → ∀ edge ∈ left.decompositionsFor equality work,
+      ∀ child ∈ left.childrenFor equality edge, domain child)
+    (fuel : Nat) (root : Value) (member : domain root) :
+    runWithPolicyFuel left equality policy fuel root = runWithPolicyFuel right equality policy fuel root := by
+  have same := solve_demand_exact left right equality policy domain owners parents closed fuel [] root member
+  have provenance (graph : WorkGraph) :
+      Selection.Provenance graph
+        ((solve graph equality policy fuel [] root).getD (Solution.residual root)).selection := by
+    cases recorded : solve graph equality policy fuel [] root with
+    | none => exact Selection.Provenance.residual graph root [] (by simp)
+    | some solution => exact solve_provenance graph equality policy fuel [] root solution recorded
+  have other : Selection.Provenance right
+      ((solve left equality policy fuel [] root).getD (Solution.residual root)).selection := by
+    rw [same]; exact provenance right
+  have gate := Selection.validFor_provenance_congr _ left right equality policy root
+    (provenance left) other
+  unfold runWithPolicyFuel
+  rw [← same]
+  dsimp only
+  rw [gate]
+
+def runWithPolicy (graph : WorkGraph) (equality : Equality)
+    (policy : OutcomePolicy) (root : Value) : Extraction :=
+  runWithPolicyFuel graph equality policy (graph.all.length + graph.outcomes.length + 1) root
+
 def run (graph : WorkGraph) (equality : Equality) (root : Value) : Extraction :=
   runWithPolicy graph equality .allCompleted root
+
+/-- Before any admission, unrelated Outcome owners cannot create another
+Demand. If the complete topology has no decomposition for this root, the
+full extraction is exactly one unresolved root, regardless of body count. -/
+theorem runWithPolicy_unadmitted_root (graph : WorkGraph) (equality : Equality)
+    (root : Value) (noChoice : graph.decompositionsFor equality root = []) :
+    runWithPolicy graph equality (.admitted []) root =
+      Extraction.fromSelection root (.residual root []) := by
+  have drop (edges : List OutcomeEdge) : edges.filter (fun _ => false) = [] :=
+    List.filter_eq_nil_iff.mpr (by intro edge member; simp)
+  simp [runWithPolicy, runWithPolicyFuel, solve, noChoice, OutcomePolicy.admitted,
+    show (Applicability.irrelevant == Applicability.completed) = false from rfl,
+    show (Applicability.irrelevant == Applicability.advisory) = false from rfl,
+    chooseBest, drop, Solution.residual]
+
+/-- At a root with no decomposition, recursion depth and irrelevant owners
+cannot affect extraction. The selected completion/advice lists and their
+validation against the original graph completely determine the result. -/
+theorem runWithPolicy_terminal_exact (left right : WorkGraph) (equality : Equality)
+    (policy : OutcomePolicy) (root : Value)
+    (leftChoice : left.decompositionsFor equality root = [])
+    (rightChoice : right.decompositionsFor equality root = [])
+    (completed : (left.outcomesFor equality root).filter
+        (fun edge => policy.classify root edge == .completed) =
+      (right.outcomesFor equality root).filter
+        (fun edge => policy.classify root edge == .completed))
+    (advisory : (left.outcomesFor equality root).filter
+        (fun edge => policy.classify root edge == .advisory) =
+      (right.outcomesFor equality root).filter
+        (fun edge => policy.classify root edge == .advisory))
+    (validation : ∀ selected : Selection,
+      selected.validFor left equality policy root =
+        selected.validFor right equality policy root) :
+    runWithPolicy left equality policy root = runWithPolicy right equality policy root := by
+  simp only [runWithPolicy, runWithPolicyFuel, solve,
+    List.contains_nil, Bool.false_eq_true, ↓reduceIte,
+    leftChoice, rightChoice, List.filterMap_nil, chooseBest, completed, advisory]
+  simp only [validation]
+
+/-- A terminal root's extraction has no decomposition node. Removing All
+edges elsewhere therefore preserves the complete checked Selection, not
+only the Outcome lists or the amount of rendered evidence. -/
+theorem runWithPolicy_terminal_all_irrelevant (graph : WorkGraph) (equality : Equality)
+    (policy : OutcomePolicy) (root : Value)
+    (noChoice : graph.decompositionsFor equality root = []) :
+    runWithPolicy {graph with all := []} equality policy root =
+      runWithPolicy graph equality policy root := by
+  have emptyChoice : ({graph with all := []} : WorkGraph).decompositionsFor equality root = [] := rfl
+  simp only [runWithPolicy, runWithPolicyFuel, solve, List.contains_nil,
+    Bool.false_eq_true, ↓reduceIte, noChoice, emptyChoice,
+    List.filterMap_nil, chooseBest, WorkGraph.outcomesFor]
+  by_cases missing : ((graph.outcomes.filter fun edge => equality.same edge.work root).filter
+    (fun edge => policy.classify root edge == .completed)).isEmpty = true
+  all_goals
+    simp only [missing, ↓reduceIte, Option.getD_some]
+    simp [Solution.residual, Solution.outcomes, Selection.validFor,
+      Selection.structurallyValidAt, Selection.decompositionEdges,
+      Selection.completedUses, Selection.advisoryUses, Selection.usesFor,
+      Selection.outcomeUses, Selection.containsOutcome]
+
+/-- A selected owner projection preserves the classified list in its original
+order, including duplicate evidence. This is independent of topology. -/
+theorem classified_selected (graph : WorkGraph) (keep : Value → Bool)
+    (policy : OutcomePolicy) (equality : Equality) (root : Value)
+    (delivery : Applicability) (notIrrelevant : delivery ≠ .irrelevant)
+    (complete : ∀ work edge, policy.classify work edge ≠ .irrelevant →
+      keep edge.relation = true) :
+    (WorkGraph.outcomesFor
+        { graph with outcomes := graph.outcomes.filter (fun edge => keep edge.relation) }
+        equality root).filter (fun edge => policy.classify root edge == delivery) =
+      (graph.outcomesFor equality root).filter (fun edge => policy.classify root edge == delivery) := by
+    simp only [WorkGraph.outcomesFor, List.filter_filter]
+    apply List.filter_congr
+    intro edge member
+    cases delivery with
+    | irrelevant => contradiction
+    | completed =>
+        cases classified : policy.classify root edge with
+        | irrelevant =>
+            simp only [show (Applicability.irrelevant == Applicability.completed) = false from rfl,
+              Bool.false_and]
+        | advisory =>
+            simp only [show (Applicability.advisory == Applicability.completed) = false from rfl,
+              Bool.false_and]
+        | completed => simp [complete root edge (by simp [classified])]
+    | advisory =>
+        cases classified : policy.classify root edge with
+        | irrelevant =>
+            simp only [show (Applicability.irrelevant == Applicability.advisory) = false from rfl,
+              Bool.false_and]
+        | completed =>
+            simp only [show (Applicability.completed == Applicability.advisory) = false from rfl,
+              Bool.false_and]
+        | advisory => simp [complete root edge (by simp [classified])]
+/-- The real recursive solver is insensitive to policy-irrelevant bodies at
+the SAME depth. Keeping the depth explicit is necessary for cyclic graphs:
+the number of hydrated owners must never shorten the reference traversal. -/
+theorem solve_selected (graph : WorkGraph) (keep : Value → Bool)
+    (policy : OutcomePolicy) (equality : Equality)
+    (complete : ∀ work edge, policy.classify work edge ≠ .irrelevant →
+      keep edge.relation = true) (fuel : Nat) (active : List Value) (root : Value) :
+    solve { graph with outcomes := graph.outcomes.filter (fun edge => keep edge.relation) }
+      equality policy fuel active root = solve graph equality policy fuel active root := by
+  induction fuel generalizing active root with
+  | zero => rfl
+  | succ fuel ih =>
+      simp only [solve]
+      by_cases cycle : active.contains root = true
+      · simp only [cycle, ↓reduceIte]
+      · simp only [cycle,
+          classified_selected graph keep policy equality root .completed (by decide) complete,
+          classified_selected graph keep policy equality root .advisory (by decide) complete]
+        have visit : solve
+            { graph with outcomes := graph.outcomes.filter (fun edge => keep edge.relation) }
+            equality policy fuel (root :: active) = solve graph equality policy fuel (root :: active) :=
+          funext (ih (root :: active))
+        simp only [WorkGraph.decompositionsFor, WorkGraph.childrenFor, visit]
+
+/-- Complete ordered extraction and provenance validation for arbitrary
+All/Union topology, including cycles, at the authoritative traversal depth. -/
+theorem runWithPolicyFuel_selected (graph : WorkGraph) (keep : Value → Bool)
+    (policy : OutcomePolicy) (equality : Equality) (fuel : Nat) (root : Value)
+    (complete : ∀ work edge, policy.classify work edge ≠ .irrelevant →
+      keep edge.relation = true) :
+    runWithPolicyFuel
+      { graph with outcomes := graph.outcomes.filter (fun edge => keep edge.relation) }
+      equality policy fuel root = runWithPolicyFuel graph equality policy fuel root := by
+  simp only [runWithPolicyFuel, solve_selected graph keep policy equality complete,
+    Selection.validFor_selected graph keep policy equality root _ complete]
+
+/-- Removing policy-irrelevant Outcome bodies preserves complete ordered
+terminal extraction, including its provenance validation. -/
+theorem runWithPolicy_terminal_selected (graph : WorkGraph) (keep : Value → Bool)
+    (policy : OutcomePolicy) (equality : Equality) (root : Value)
+    (noChoice : graph.decompositionsFor equality root = [])
+    (complete : ∀ work edge, policy.classify work edge ≠ .irrelevant →
+      keep edge.relation = true) :
+    runWithPolicy { graph with outcomes := graph.outcomes.filter (fun edge => keep edge.relation) }
+      equality policy root = runWithPolicy graph equality policy root := by
+  exact runWithPolicy_terminal_exact _ graph equality policy root noChoice noChoice
+    (classified_selected graph keep policy equality root .completed (by decide) complete)
+    (classified_selected graph keep policy equality root .advisory (by decide) complete)
+    (fun selection => Selection.validFor_selected graph keep policy equality root selection complete)
 
 theorem run_always_hands_off (graph equality root) :
     (run graph equality root).residual.length = 1 :=
@@ -621,14 +1147,19 @@ theorem run_never_finishes_the_inquiry (graph equality root) :
   Extraction.residual_nonempty _
 
 /-- Every edge returned by Extract has passed the general graph/policy checker. -/
-theorem runWithPolicy_sound (graph equality policy root) :
-    (runWithPolicy graph equality policy root).selection.validFor
+theorem runWithPolicyFuel_sound (graph equality policy fuel root) :
+    (runWithPolicyFuel graph equality policy fuel root).selection.validFor
       graph equality policy root := by
-  simp only [runWithPolicy]
+  simp only [runWithPolicyFuel]
   split
   · exact Extraction.fromSelection_valid (by assumption)
   · apply Extraction.fromSelection_valid
     exact Selection.residual_valid graph equality policy root
+
+theorem runWithPolicy_sound (graph equality policy root) :
+    (runWithPolicy graph equality policy root).selection.validFor
+      graph equality policy root :=
+  runWithPolicyFuel_sound graph equality policy _ root
 
 end Extract
 

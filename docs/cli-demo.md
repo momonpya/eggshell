@@ -31,8 +31,9 @@ Both final answers passed five static-source review criteria covering selection
 order, wrapper restrictions, relevant source/tests, and accurate reporting of
 what was not run. This was one recorded pair and a single non-blinded reviewer,
 without Clang runtime tests. It does not establish general savings or equivalent
-answer quality across tasks. The README’s [ten-trial study](../README.md#evidence)
-and its [earlier walkthrough](demo.md) are a separate experiment.
+answer quality across tasks. This recording uses an earlier build; the README’s
+[current three-topic study](../README.md#evidence) measures the indexed source
+build separately. The [earlier walkthrough](demo.md) is also a separate recording.
 
 ## The follow-up question
 

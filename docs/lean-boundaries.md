@@ -18,10 +18,14 @@ Adapter code stays in its separate Lake package. The engine does not import it.
 | `Eggshell/Setup.lean`: `action` | Existing configuration and check-only mode never select initialization. |
 | `Eggshell/SearchRank.lean`: `select` | Every result was ranked, refers to an existing candidate, is unique, and fits the requested count limit. |
 | `Eggshell/SearchProvider.lean`: `cacheMatches` | Reusing an embedding requires exact model and source text identity; changing either rejects the record. |
+| `Eggshell/GraphStore.lean`: indexed evidence directories | Ranked supporting windows retain their original owner and window coordinates; numerical presentation cannot manufacture an observation. |
+| `Eggshell/Handoff.lean`: `indexed_saturation_memo_exact` | A saved saturation hint gives the same discovery execution as the reference view provider over the admitted domain. This does not prove that semantic retrieval admits every useful fact. |
+| `Eggshell/DB/PageMap.lean`: append and recovery contracts | Appending or recovering beyond the committed extent preserves the bytes of existing immutable body references. |
+| `Eggshell/Handoff.lean`: delivery contracts | Accepted original ranges cannot be resent as new evidence; fitted packets retain original positions and respect the configured byte bound. |
 
 These are the functions invoked by production code, not a separate test-only
-model. Builds reject `sorry`; the two `ContractAudit.lean` modules enumerate 29
-contracts and reject any dependency outside `propext`, `Quot.sound`, and
+model. Builds reject `sorry`; the `ContractAudit.lean` modules enumerate
+production contracts and reject any dependency outside `propext`, `Quot.sound`, and
 `Classical.choice`, Lean's standard logical basis. They supplement the existing
 graph, lifecycle and persistence proofs.
 
@@ -55,7 +59,10 @@ trusted boundaries. The pure theorems do not prove disk survival through power
 loss, eventual OS scheduling, correctness of arbitrary model answers, or that a
 host actually consumed a successfully written response. Filesystem/transport
 failures are reported; they are not represented as successful persistence or
-model use. Atomic-file tests exercise process interruption, not power failure.
+model use. Publication and recovery tests exercise process interruption, not
+power failure. The source-build LLVM comparison also checks actual hook
+publication and persisted answers; its latency and answer review are empirical
+results, not consequences of the pure theorems.
 
 The remaining non-Lean product code is deliberately limited to the numerical
 bridge, OpenCode's JavaScript host callbacks, and a shell bootstrap that must

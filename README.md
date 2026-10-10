@@ -33,17 +33,17 @@ It saves work from one chat and makes relevant results available to a separate
 chat: repository searches, commands, documentation findings, and conclusions.
 It is useful when you return to related work in the same project.
 
-In our LLVM follow-up experiment, Eggshell used **about 80% fewer tokens than
-starting fresh**, with **9 of 10 answers needing no substantive correction**.
 Memory is built and organized locally, **without LLM calls or additional billed
-tokens for memory management**. These results cover one task with existing
-prior work; see [Evidence](#evidence) for the comparison and its limits.
+tokens for memory management**. Relevant original tool results travel with their
+source, conditions, and graph relationships; the next chat can use the evidence
+instead of repeating the investigation. [Evidence](#evidence) reports the current
+source build's LLVM comparison, token costs, answer review, and limits.
 
 **Same task. Two new chats. Compare token use — 30 seconds.**
 
 [![Looping Codex CLI demo: the same follow-up task in two new chats, without memory and with Eggshell. The recorded Eggshell follow-up used 81.8% fewer tokens.](docs/assets/demo/cli-demo-loop.gif)](docs/cli-demo.md)
 
-Actual Codex CLI, Luna xhigh, independent ephemeral chats. In this recorded pair,
+Actual Codex CLI, Luna xhigh, independent ephemeral chats on an earlier build. In this recorded pair,
 Eggshell used **81.8% fewer input + output tokens in the second chat**; both
 answers passed static source review. One pair, with time edited for clarity.
 [Full-resolution video and measurement details](docs/cli-demo.md) ·
@@ -59,7 +59,9 @@ savings have not yet been evaluated for those four clients.
 
 For **Claude Code, Gemini CLI, Cursor, or OpenCode**, follow the
 [adapter installation guide](adapters/README.md#install). The steps below install
-the **Codex plugin**.
+the **Codex plugin**. The [current benchmark](#evidence) identifies the measured
+source commit. Release packages record their build commit in `runtime.json`;
+publishing a release is separate from marketplace approval.
 
 You need macOS or Linux on Apple Silicon/ARM64 or x86-64, Python 3, and the Codex
 CLI available as `codex`. Your Codex client must support plugins and command
@@ -97,9 +99,10 @@ configuration if needed. In Codex, review and enable Eggshell's hooks through
 
 </details>
 
-`egg init` creates `.eggshell.toml` and configures `.eggs/work.egg`, a local file
-of saved work and outcomes. The `.eggs` directory is ignored by Git. The work
-file appears when the first turn is saved.
+`egg init` creates `.eggshell.toml` and configures `.eggs/work.egg`, the project's
+local memory database. The current source build stores it as a directory with
+an append-only page file and a committed head. The `.eggs` directory is ignored
+by Git. The database appears when the first turn is saved.
 
 ### Try it in two chats
 
@@ -128,26 +131,40 @@ final answer is saved when the turn stops. Interrupted writes remain queued and
 retry automatically. `!egg keep` can explicitly save a finished turn; `!egg drop`
 clears the active turn without removing saved observations or queued commits.
 
-For shared work files, custom install locations, and troubleshooting, see the
+For reading multiple memory databases, custom install locations, and troubleshooting, see the
 [Plugin guide](docs/codex-plugin.md).
 
 ## How it works
 
-1. **Record work and outcomes.** The integration observes the current request,
-   supported tool inputs and results, and the final answer. A timeout or empty
-   result can be useful evidence too.
-2. **Select relevant history.** Local text matching and MiniLM embeddings find
-   related work in the files you allow Eggshell to read. The graph connects
-   requests to outcomes and their supporting operations.
-3. **Continue the task.** Eggshell sends selected prior work as a **handoff**:
-   context for the new chat. The agent is asked to reuse supported findings, check
-   open or changed facts, and report what it reused, checked, or left unverified.
-4. **Save progress.** Each observed tool result is saved independently. The final
-   answer adds the parent task result; unfinished work remains open.
+1. **Save original observations.** Hooks journal tool results during the turn.
+   An independent writer adds immutable work and outcomes to the local page
+   database, with chunked bodies, source records, and search indexes.
+2. **Search the index, follow the graph.** Local MiniLM and text rankings find
+   related work. Eggshell ranks the original evidence in its supporting graph
+   before spending the body-read budget. It loads selected context rather than
+   rebuilding the entire saved graph for every hook.
+3. **Reuse checked calculations.** Persisted dependencies cover positive hits,
+   missing keys, ranges, and original body references. Rankings and graph
+   calculations can be reused when those dependencies agree; a new matching
+   record or changed source can invalidate the relevant cached result.
+4. **Deliver useful evidence.** The handoff includes selected original text,
+   its provenance, necessary relationships, and a related prior explanation.
+   Context competes for a bounded packet; adding more history does not entitle
+   every neighboring record to more space. Conditions and exceptions must
+   qualify earlier explanations. Similarity supplies context, not proof that
+   the current task is complete.
 
-Past results remain historical evidence. A changed source file or condition may
-require a new check; an old success is not proof that today's task is complete.
-Eggshell preserves the earlier outcome so the agent can explain what changed.
+Eggshell checks the recorded local file dependencies before reuse. Changed or
+deleted files do not rewrite the original observation: its earlier contents
+remain history, and confirmed new contents become separate observations.
+Workspace-relative paths and content fingerprints support moving memory between
+checkouts. A matching file name alone cannot certify an external or MCP result.
+
+The agent is told to reuse delivered, checked evidence without reconfirming
+it, obtain only missing facts needed for the current request, and report an
+unavailable test as a limit. An unfinished past task does not create new work.
+The final answer is saved alongside the earlier tool observations; it does not
+replace them.
 
 Search and graph processing run locally. Eggshell does not ask an LLM to write
 summaries, classify memories, or maintain the graph. Selected memory and the
@@ -178,63 +195,89 @@ Run these inside the relevant Codex chat:
 !egg next off         disable memory for the next turn
 ```
 
-Profiles specify which work files can be read and where new work is saved.
-The default `work` profile reads and writes the project's work file. `private`
+Profiles specify which memory databases can be read and where new work is saved.
+The default `work` profile reads and writes the project's memory. `private`
 is read-only; it still sends relevant saved work to Codex. `off` disables both
 recording and handoffs. [More controls and configuration](docs/codex-plugin.md).
 
 ## Evidence
 
-### One LLVM follow-up task, ten completed trials
+### Three LLVM topics, with and without recorded work
 
-Using Codex, we repeated one investigation of Clang target and language options
-that affect toolchain selection or forwarded arguments. Each trial started in an independent
-chat with the same question, source snapshot, model, and prior `.egg`. These
-trials used the **current default handoff prompt**.
-It directs the agent to reuse supported results, check unresolved or changed
-facts, and report what was reused, checked, or left unverified.
+On **2026-10-10**, we compared three related Clang Driver investigations using
+native macOS Codex CLI, **GPT-6 Luna, xhigh, independent ephemeral chats**:
 
-Tokens are model input plus output; reasoning tokens are already included in
-output. The figures below measure follow-up work using previously saved work.
+1. A target/language edge case and its test boundary.
+2. Public APIs, configuration, downstream effects, and a minimal additional test.
+3. The interaction of `--target`, `-x`, and `-fsyntax-only` through job construction.
 
-| Measurement | Tokens per completed trial | Reduction vs. fresh reference |
-| --- | ---: | ---: |
-| Fresh reference: one run, no prior memory | 5,355,282 | — |
-| Eggshell: arithmetic mean of 10 completed trials | **683,362** | **87.2%** |
-| Eggshell: all 12 attempts, divided by 10 completions | **962,207** | **82.0%** |
+The source build is commit **`5aad6d9`**, against LLVM commit
+`6dfe1677ab8dffbc6ec13d53a1e0215d75147689`. Production code, prompts, model, and
+LLVM source stayed fixed throughout the post-commit comparison. Each fresh chat
+had no Eggshell memory. The memory-assisted chats started with **an existing
+seed and all three topics already recorded**. This measures reuse of known work,
+not a new-seed or first-use experiment.
 
-The ten completed trials used 6,833,615 tokens in total, ranging from 140,781 to
-1,803,931 per trial. Two additional attempts failed because a hook output was
-missing; they consumed 2,788,458 tokens. Including those attempts gives a total
-of **9,622,073 tokens** to obtain ten completed trials. Means are rounded to the
-nearest token; percentages use the unrounded values.
+The first reuse lap used the same frozen binary before committing it. After the
+commit, we ran fresh topics 1–3, then another reuse lap 1–3. Memory continued
+saving after every topic and between laps; fresh answers were not added to it.
+Both reduction columns below use the **new corresponding fresh reference**.
 
-**Quality:** a review of the answers against the fixed source and execution
-records found six usable answers, three needing minor corrections, and one
-needing a substantive correction to its cause and reproduction explanation.
-Thus **9 of 10 needed no substantive correction**. This was a single-reviewer,
-non-blinded assessment, not a 90% accuracy estimate. Clang Driver runtime tests
-were unavailable, so the review assessed static evidence and reporting rather
-than dynamically verified behavior.
+| Topic | Fresh tokens | First reuse lap | Reduction | Second reuse lap | Reduction |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1,284,909 | 37,157 | 97.1% | 33,542 | 97.4% |
+| 2 | 799,753 | 43,256 | 94.6% | 131,552 | 83.6% |
+| 3 | 2,302,471 | 44,116 | 98.1% | 41,171 | 98.2% |
+| **Total** | **4,387,133** | **124,529** | **97.2%** | **206,265** | **95.3%** |
 
-This is one task repeated ten times, compared with a single fresh reference.
-It does not establish a general reduction rate, quality equivalence to fresh,
-or superiority over other memory methods.
+Tokens are **input + output, including cached input**. Reasoning is already
+included in output. These are follow-up costs; creating the existing history is
+separate. There was one new fresh reference per topic and two reuse laps, with
+no control over model randomness. The first lap originally compared against
+older fresh references totaling 3,025,111 tokens, giving 95.9% reduction; the
+table recomputes that lap against the new references.
+
+**Question-level answer review:** the memory-assisted answers addressed the
+requested source investigations, preserved the normal target/input/phase/job
+boundaries, and reported that LLVM runtime tests were not run. Different
+history-driven examples are not treated as quality loss. One wording
+clarification is needed in second-lap topic 1: `bindings.c` checks binding and
+no output; literal cc1 arguments are supported by implementation evidence,
+not that test's FileCheck assertion. This was a single-reviewer, non-blinded
+source audit, not a statistical accuracy or fresh-quality-equivalence estimate.
+
+Second-lap topic 2 used two additional source reads to establish configuration
+precedence, accounting for its lower savings. None of the reuse runs repeatedly
+investigated an unavailable build or falsely reported a passing lit test.
+The fixed snapshot had no configured LLVM build, so dynamic behavior remains
+outside this study.
+
+**Hook and persistence checks:** no timeout or incomplete initial handoff
+occurred. The second lap's slowest hook was **16.4 seconds**; the first lap's
+was **22.5 seconds**, within the 30-second hook deadline. Every final answer
+was saved, earlier answers remained intact, and persistence/index queues were
+empty before the next topic. These measurements do not establish a latency
+bound for every workload; peak memory was not measured in this study.
 
 <details>
-<summary><strong>Workload, prior-work cost, and measurement record</strong></summary>
+<summary><strong>All runs, development cost, and verification record</strong></summary>
 
-- Investigation: Clang toolchain selection and argument forwarding, answered in
-  Japanese.
-- LLVM source commit: `6dfe1677ab8dffbc6ec13d53a1e0215d75147689`.
-- Model: `gpt-5.6-luna`, reasoning effort `xhigh`; trials ran serially.
-- Prior work: the same 840,048-byte `.egg` from the preceding investigation, restored
-  before each trial. It fixes the prior work, not the model's randomness.
-- The preceding investigation used **6,552,155 tokens**, recorded separately and
-  excluded from the follow-up figures above. The percentages describe reuse of
-  existing work, not the cost of starting a new investigation from scratch.
-- Per-trial counts, answer and receipt hashes, prompt text, and review outcomes
-  are in the [measurement record](docs/benchmarks/llvm-follow-up.json).
+Four diagnostic calls before the frozen implementation used **346,375 tokens**:
+218,401 in one earlier source-selection trial, followed by 37,625, 46,691,
+and 43,658 in an intermediate three-topic trial. These are excluded from
+final-code ratios and retained in the development ledger. Together with the
+nine runs in the table, all 13 benchmark calls recorded for this fix used
+**5,064,302 tokens**. The six post-commit calls all completed; no failed or
+incomplete attempt was excluded. This is not a complete accounting of earlier
+history creation.
+
+The [measurement record](docs/benchmarks/llvm-three-topics.json) contains exact
+prompts, all token counts, elapsed times, delivered packet sizes, persistence
+checks, original answer and receipt hashes, answer text, and source-review notes.
+Original hook payloads and logs remain local; the public record does not include
+the complete prior memory database. The frozen implementation also passed
+**57 core process/regression checks**. Lean contracts and their limits are
+listed in [verified boundaries](docs/lean-boundaries.md).
 
 </details>
 

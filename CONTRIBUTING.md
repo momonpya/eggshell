@@ -45,8 +45,10 @@ runtime checksums, ZIP readability, and deterministic packaging.
 The manually dispatched **Plugin package** workflow builds and tests all four
 platform runtimes, then runs the Lean `eggshell_package` executable. It publishes a small
 `eggshell-codex-plugin.zip` and runtime archives whose names include their content
-hashes on the release matching the plugin version. Existing standalone release
-archives and the release tag are preserved. The ZIP pins the exact runtime
+hashes on the release matching the plugin version. The same tested archives also
+replace the standalone downloads and their SHA-256 files; `runtime.json` records
+the source commit and archive checksums. The version and release tag stay unchanged.
+The ZIP pins the exact runtime
 URLs and SHA-256 values; hooks never download dependencies.
 
 A package build is separate from OpenAI directory submission and approval.

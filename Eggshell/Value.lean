@@ -180,6 +180,100 @@ def refsNodes : Refs → List Value
 
 end
 
+mutual
+
+/-- Preorder structural traversal without an intermediate flattened node
+list. The accumulator may retain only unique nodes or numerical metadata. -/
+def foldNodes (step : α → Value → α) (initial : α) : Value → α
+  | value@(.atom _) => step initial value
+  | value@(.apply _ arguments) => foldRefsNodes step (step initial value) arguments
+
+def foldRefsNodes (step : α → Value → α) (initial : α) : Refs → α
+  | .nil => initial
+  | .semantic value tail | .exact value tail =>
+      foldRefsNodes step (foldNodes step initial value) tail
+
+end
+
+mutual
+
+theorem foldNodes_exact (step : α → Value → α) (initial : α) (value : Value) :
+    foldNodes step initial value = value.nodes.foldl step initial := by
+  cases value with
+  | atom => rfl
+  | apply => simp only [foldNodes, nodes, List.foldl_cons, foldRefsNodes_exact]
+
+theorem foldRefsNodes_exact (step : α → Value → α) (initial : α) (refs : Refs) :
+    foldRefsNodes step initial refs = (refsNodes refs).foldl step initial := by
+  cases refs with
+  | nil => rfl
+  | semantic value tail | exact value tail =>
+      simp only [foldRefsNodes, refsNodes, List.foldl_append,
+        foldNodes_exact, foldRefsNodes_exact]
+
+end
+
+mutual
+
+/-- Follow only Semantic references, preserving the same root-first order.
+An Exact-only subtree never acquires semantic membership through traversal. -/
+def foldSemanticNodes (step : α → Value → α) (initial : α) : Value → α
+  | value@(.atom _) => step initial value
+  | value@(.apply _ arguments) => foldRefsSemanticNodes step (step initial value) arguments
+
+def foldRefsSemanticNodes (step : α → Value → α) (initial : α) : Refs → α
+  | .nil => initial
+  | .semantic value tail =>
+      foldRefsSemanticNodes step (foldSemanticNodes step initial value) tail
+  | .exact _ tail => foldRefsSemanticNodes step initial tail
+
+end
+
+mutual
+
+theorem foldSemanticNodes_exact (step : α → Value → α) (initial : α) (value : Value) :
+    foldSemanticNodes step initial value = value.semanticNodes.foldl step initial := by
+  cases value with
+  | atom => rfl
+  | apply => simp only [foldSemanticNodes, semanticNodes, List.foldl_cons,
+      foldRefsSemanticNodes_exact]
+
+theorem foldRefsSemanticNodes_exact (step : α → Value → α) (initial : α) (refs : Refs) :
+    foldRefsSemanticNodes step initial refs = (refsSemanticNodes refs).foldl step initial := by
+  cases refs with
+  | nil => rfl
+  | semantic value tail =>
+      simp only [foldRefsSemanticNodes, refsSemanticNodes, List.foldl_append,
+        foldSemanticNodes_exact, foldRefsSemanticNodes_exact]
+  | exact value tail =>
+      simp only [foldRefsSemanticNodes, refsSemanticNodes, foldRefsSemanticNodes_exact]
+
+end
+
+mutual
+
+theorem semanticNodes_subset_nodes (root : Value) : root.semanticNodes ⊆ root.nodes := by
+  cases root with
+  | atom bytes => exact List.Subset.refl _
+  | apply operator refs =>
+      intro value member
+      simp only [semanticNodes, nodes, List.mem_cons] at member ⊢
+      exact member.elim Or.inl (fun member => Or.inr (refsSemanticNodes_subset_refsNodes refs member))
+
+theorem refsSemanticNodes_subset_refsNodes (refs : Refs) : refsSemanticNodes refs ⊆ refsNodes refs := by
+  cases refs with
+  | nil => exact List.Subset.refl _
+  | semantic value tail =>
+      intro node member
+      simp only [refsSemanticNodes, refsNodes, List.mem_append] at member ⊢
+      exact member.elim (fun member => Or.inl (semanticNodes_subset_nodes value member))
+        (fun member => Or.inr (refsSemanticNodes_subset_refsNodes tail member))
+  | exact value tail =>
+      intro node member
+      exact List.mem_append_right _ (refsSemanticNodes_subset_refsNodes tail member)
+
+end
+
 def SameExactFootprint (left right : Value) : Prop :=
   ∀ exact, exact ∈ left.exactFootprint ↔ exact ∈ right.exactFootprint
 

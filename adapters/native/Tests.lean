@@ -70,10 +70,14 @@ def Fixture.hook (f : Fixture) (host : Host) (event : Event) (session := "chat")
      else [("session_id", .str session)] ++ if host == .opencode then [("turn_id", .str turn)] else [])
   f.run #["hook", host.name] (some (Json.mkObj (base ++ fields)))
 
+def Fixture.egg (f : Fixture) : IO String := do
+  match ← Persistence.loadExisting? (f.root / "work.egg") with
+  | none => pure ""
+  | some graph => IO.ofExcept (Persistence.encode graph)
+
 def Fixture.waitFor (f : Fixture) (marker : String) : IO Unit := do
   for _ in [0:320] do
-    if ← (f.root / "work.egg").pathExists then
-      if ((← IO.FS.readFile (f.root / "work.egg")).splitOn marker).length > 1 then return
+    if ((← f.egg).splitOn marker).length > 1 then return
     IO.sleep 25
   throw (IO.userError ("missing saved outcome: " ++ marker))
 
@@ -106,7 +110,7 @@ def moreLifecycleTests (f : Fixture) : IO Unit := do
       check (!(← f.answerDrafts session)) "unwritable turn stored an answer candidate"
     let _ ← f.hook .cursor .stop session "turn" [("status", .str (if session == "aborted" then "aborted" else "completed"))]
     if session == "completed" then f.waitFor marker
-    else check (((← IO.FS.readFile (f.root / "work.egg")).splitOn marker).length == 1) "incomplete/private final answer was saved"
+    else check (((← f.egg).splitOn marker).length == 1) "incomplete/private final answer was saved"
   let session := "late-origin"
   let _ ← f.hook .claude .prompt session "turn" [("prompt", .str "Original task")]
   let fields := [("tool_name", .str "shell"), ("tool_use_id", .str "late"),
@@ -139,7 +143,7 @@ def moreLifecycleTests (f : Fixture) : IO Unit := do
   let some entry := saved[0]? | throw (IO.userError "missing ambiguous receipt")
   let receipt ← IO.ofExcept (Json.parse (← IO.FS.readFile entry.path))
   check (!(receipt.getObjVal? "turn_id").isOk) "ambiguous result was assigned a parent"
-  check (((← IO.FS.readFile (f.root / "work.egg")).splitOn "AMBIGUOUS_RECEIPT").length == 1)
+  check (((← f.egg).splitOn "AMBIGUOUS_RECEIPT").length == 1)
     "ambiguous result promoted into the graph"
   IO.println "Native lifecycle: aborted/private/off answers, late origin, parallel and ambiguous results passed"
 
@@ -172,11 +176,10 @@ def integrationTests (binary : System.FilePath) : IO Unit := do
         [(if host == .cursor then "tool_output" else "tool_response", .str marker)])
       f.waitFor marker
       let reader := host.name ++ "-reader"
-      let _ ← f.hook host .prompt reader "turn" [("prompt", .str "Inspect the clock")]
+      let initial ← f.hook host .prompt reader "turn" [("prompt", .str "Inspect the clock")]
       let reply ← f.hook host .before reader "turn" fields
       let output := if host == .opencode then reply.getObjValD "output" else reply
-      check (output.getObjValD "permission" == .str "deny" || output.getObjValD "decision" == .str "deny" ||
-        (output.getObjValD "hookSpecificOutput").getObjValD "permissionDecision" == .str "deny") "new chat did not reuse saved work"
+      check ((initial.compress ++ output.compress).contains marker) "new chat did not reuse saved work"
       if host == .opencode then
         check ((← f.state host reader).getObjValD "lastHandoff" == .str "") "delivery acknowledged before JS insertion"
         let _ ← f.hook host .compact reader

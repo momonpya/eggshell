@@ -10,14 +10,14 @@ def maxOutcomeObservations : Nat := 1024
 
 namespace Relation
 
-def semanticValues : List Ref → Option (List Value)
+def semanticValues {α : Type} : List (Authority × α) → Option (List α)
   | [] => some []
   | (.semantic, value) :: tail => (value :: ·) <$> semanticValues tail
   | (.exact, _) :: _ => none
 
-theorem semanticValues_sound {references values}
+theorem semanticValues_sound {α : Type} {references : List (Authority × α)} {values : List α}
     (decoded : semanticValues references = some values) :
-    references = values.map Ref.semantic := by
+    references = values.map (Authority.semantic, ·) := by
   induction references generalizing values with
   | nil => simp [semanticValues] at decoded; simp [decoded]
   | cons head tail induction =>
@@ -31,16 +31,16 @@ theorem semanticValues_sound {references values}
           | some tailValues =>
               simp [decodedTail] at decoded
               subst values
-              simp [induction decodedTail, Ref.semantic]
+              simp [induction decodedTail]
 
-def exactValues : List Ref → Option (List Value)
+def exactValues {α : Type} : List (Authority × α) → Option (List α)
   | [] => some []
   | (.exact, value) :: tail => (value :: ·) <$> exactValues tail
   | (.semantic, _) :: _ => none
 
-theorem exactValues_sound {references values}
+theorem exactValues_sound {α : Type} {references : List (Authority × α)} {values : List α}
     (decoded : exactValues references = some values) :
-    references = values.map Ref.exact := by
+    references = values.map (Authority.exact, ·) := by
   induction references generalizing values with
   | nil => simp [exactValues] at decoded; simp [decoded]
   | cons head tail induction =>
@@ -54,9 +54,9 @@ theorem exactValues_sound {references values}
           | some tailValues =>
               simp [decodedTail] at decoded
               subst values
-              simp [induction decodedTail, Ref.exact]
+              simp [induction decodedTail]
 
-def splitOccurrence : List Ref → Option (List Value × List Value)
+def splitOccurrence {α : Type} : List (Authority × α) → Option (List α × List α)
   | [] => none
   | references =>
       let semantic := references.takeWhile (fun reference => reference.1 == .semantic)
@@ -65,6 +65,63 @@ def splitOccurrence : List Ref → Option (List Value × List Value)
       | some [], _ => none
       | some meanings, some occurrences => some (meanings, occurrences)
       | _, _ => none
+
+theorem semanticValues_map {α β : Type} (f : α → β) (references : List (Authority × α)) :
+    semanticValues (references.map fun ref => (ref.1, f ref.2)) =
+      (semanticValues references).map (List.map f) := by
+  induction references with
+  | nil => rfl
+  | cons head tail ih =>
+      rcases head with ⟨authority, value⟩
+      cases authority <;> simp [semanticValues, ih, Option.map_map, Function.comp_def]
+
+theorem exactValues_map {α β : Type} (f : α → β) (references : List (Authority × α)) :
+    exactValues (references.map fun ref => (ref.1, f ref.2)) =
+      (exactValues references).map (List.map f) := by
+  induction references with
+  | nil => rfl
+  | cons head tail ih =>
+      rcases head with ⟨authority, value⟩
+      cases authority <;> simp [exactValues, ih, Option.map_map, Function.comp_def]
+
+/-- Reading payload values cannot change observation orientation or authority
+positions. The same parser is used on persisted ids and resolved Values. -/
+theorem splitOccurrence_map {α β : Type} (f : α → β) (references : List (Authority × α)) :
+    splitOccurrence (references.map fun ref => (ref.1, f ref.2)) =
+      (splitOccurrence references).map (fun pair => (pair.1.map f, pair.2.map f)) := by
+  cases references with
+  | nil => rfl
+  | cons head tail =>
+      simp only [List.map_cons, splitOccurrence]
+      have leading :
+          ((head.1, f head.2) :: tail.map (fun ref => (ref.1, f ref.2))).takeWhile
+            (fun ref => ref.1 == .semantic) =
+          ((head :: tail).takeWhile (fun ref => ref.1 == .semantic)).map
+            (fun ref => (ref.1, f ref.2)) := by
+        change ((head :: tail).map (fun ref => (ref.1, f ref.2))).takeWhile _ = _
+        exact List.takeWhile_map
+      have suffix (count : Nat) :
+          ((head.1, f head.2) :: tail.map (fun ref => (ref.1, f ref.2))).drop count =
+          ((head :: tail).drop count).map (fun ref => (ref.1, f ref.2)) := by
+        simpa only [List.map_cons] using
+          (List.map_drop (f := fun ref : Authority × α => (ref.1, f ref.2))
+            (l := head :: tail) (i := count)).symm
+      rw [leading, List.length_map, suffix, semanticValues_map, exactValues_map]
+      cases sem : semanticValues ((head :: tail).takeWhile (fun ref => ref.1 == .semantic)) with
+      | none => simp
+      | some meanings =>
+          cases meanings with
+          | nil => simp
+          | cons first rest =>
+              cases exact : exactValues ((head :: tail).drop
+                ((head :: tail).takeWhile (fun ref => ref.1 == .semantic)).length) <;> simp
+
+def observesOutcomeWork (outcome work : Value) : Value → Bool
+  | .apply .occurrence arguments =>
+      match splitOccurrence arguments.toList with
+      | some ([observed, invoked], _) => observed == outcome && invoked == work
+      | _ => false
+  | _ => false
 
 def validArguments : Operator → List Ref → Bool
   | .all, (.semantic, parent) :: children =>
@@ -140,6 +197,8 @@ structure OutcomeEdge where
   relation_eq : relation = .applyList .outcome
     ((.semantic, work) :: (.semantic, outcome) :: observations.map Ref.exact)
 
+deriving instance DecidableEq for AllEdge, OutcomeEdge
+
 namespace AllEdge
 
 def make (parent : Value) (children : List Value)
@@ -181,6 +240,7 @@ def fromValue? : Value → Option AllEdge
                       rw [argumentList]
                       simp only [Refs.ofList]
                       rw [Relation.semanticValues_sound decoded]
+                      rfl
                   }
                 else none
               else none
@@ -225,6 +285,7 @@ def fromValue? : Value → Option OutcomeEdge
                       rw [argumentList]
                       simp only [Refs.ofList]
                       rw [Relation.exactValues_sound decoded]
+                      rfl
                   }
                 else none
               else none
