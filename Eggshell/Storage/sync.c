@@ -352,6 +352,8 @@ LEAN_EXPORT lean_obj_res eggshell_publish_directory(b_lean_obj_arg source,
     if (!error && !S_ISDIR(info.st_mode)) error = EINVAL;
 #if defined(__APPLE__)
     if (!error && renameatx_np(source_parent, source_name, target_parent, target_name, RENAME_EXCL) < 0) error = errno;
+#elif defined(__linux__)
+    if (!error && renameat2(source_parent, source_name, target_parent, target_name, RENAME_NOREPLACE) < 0) error = errno;
 #else
     if (!error) error = ENOTSUP;
 #endif

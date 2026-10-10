@@ -21,14 +21,20 @@ jobs:
           - os: macos-15-intel
             target: macos-x86_64
     runs-on: ${{ matrix.os }}
+    env:
+      EGGSHELL_PREFIX: ${{ github.workspace }}/.lake/ci-runtime
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
       - uses: leanprover/lean-action@v1
         with:
           auto-config: false
       - name: Build and test
         run: |
           lake build eggshell eggshell_tests lifecycle_tests eggshell_package setup_package_tests
+          .lake/build/bin/eggshell install runtime
           EGGSHELL_DATA_ROOT="$PWD/.lake/eggshell-tests-data" .lake/build/bin/eggshell_tests
           .lake/build/bin/lifecycle_tests
           .lake/build/bin/setup_package_tests

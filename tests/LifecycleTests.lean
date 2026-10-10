@@ -43,9 +43,9 @@ def Fixture.hook (f : Fixture) (event : String) (session := "chat") (extra : Lis
   require (result.exitCode == 0) result.stderr
   IO.ofExcept (Json.parse result.stdout)
 
-def Fixture.start (f : Fixture) (session := "chat") : IO Unit := do
+def Fixture.start (f : Fixture) (session := "chat") : IO Json := do
   let _ ← f.hook "SessionStart" session
-  let _ ← f.hook "UserPromptSubmit" session [("prompt", .str "Inspect the clock implementation")]
+  f.hook "UserPromptSubmit" session [("prompt", .str "Inspect the clock implementation")]
 
 def Fixture.post (f : Fixture) (marker : String) (session := "chat") (id := "probe") : IO Unit := do
   let _ ← f.hook "PostToolUse" session [("tool_name", .str "shell"), ("tool_use_id", .str id),
@@ -53,7 +53,11 @@ def Fixture.post (f : Fixture) (marker : String) (session := "chat") (id := "pro
     ("tool_response", Json.mkObj [("output", .str marker)])]
 
 def Fixture.egg (f : Fixture) : IO String := do
-  if ← (f.root / "work.egg").pathExists then IO.FS.readFile (f.root / "work.egg") else pure ""
+  -- Inspect the committed DB through the same decoder as the engine. Raw page
+  -- bytes also contain abandoned/unpublished data and cannot prove a saved result.
+  match ← Persistence.loadExisting? (f.root / "work.egg") with
+  | none => pure ""
+  | some graph => IO.ofExcept (Persistence.encode graph)
 
 def Fixture.contains (f : Fixture) (marker : String) : IO Bool := do
   pure (((← f.egg).splitOn marker).length > 1)
@@ -85,15 +89,15 @@ def killPid (pid : Nat) : IO Unit := do
   let _ ← IO.Process.output { cmd := "/bin/kill", args := #["-KILL", toString pid] }
 
 def firstTests (f : Fixture) : IO Unit := do
-  f.start
+  let _ ← f.start
   f.post "EARLY_RESULT"
   f.saved "EARLY_RESULT"
   let pending ← readObject (f.files / "pending.json")
   require (pending.getObjValD "finalMessage" == .null) "partial work became a final answer"
-  f.start "reader"
+  let initial ← f.start "reader"
   let reply ← f.hook "PreToolUse" "reader" [("tool_name", .str "shell"), ("tool_use_id", .str "reuse"),
     ("tool_input", Json.mkObj [("command", .str "cat clock.c")])]
-  require ((reply.compress.splitOn "permissionDecision").length > 1) "partial work not reusable"
+  require ((initial.compress ++ reply.compress).contains "EARLY_RESULT") "partial work not reusable"
   let before ← f.egg
   f.post "EARLY_RESULT"
   awaitCondition ((·.isEmpty) <$> f.queue) "duplicate queue drain"
@@ -108,7 +112,7 @@ def firstTests (f : Fixture) : IO Unit := do
   IO.println "Core lifecycle: partial save, cross-chat reuse, replay and abandoned writes passed"
 
 def contentionTests (f : Fixture) : IO Unit := do
-  f.start
+  let _ ← f.start
   locked (f.root / "work.egg.guard") do
     f.post "AFTER_AUTHORITY_LOCK"
     awaitCondition ((!·.isEmpty) <$> f.queue) "checkpoint while authority locked"
@@ -119,7 +123,7 @@ def contentionTests (f : Fixture) : IO Unit := do
     require (!(← f.queue).isEmpty && !(← f.contains "AFTER_AUTHORITY_LOCK")) "busy-authority receipt lost"
   f.saved "AFTER_AUTHORITY_LOCK"
   awaitCondition ((·.isEmpty) <$> f.queue) "authority queue drain"
-  f.start "journal"
+  let _ ← f.start "journal"
   locked (f.files "journal" / "save.guard") do
     f.post "RECOVERED_JOURNAL" "journal"
     for path in ← f.queue "journal" do IO.FS.removeFile path
@@ -128,7 +132,7 @@ def contentionTests (f : Fixture) : IO Unit := do
   IO.println "Core lifecycle: authority contention and journal recovery passed"
 
 def crashTests (f : Fixture) : IO Unit := do
-  f.start
+  let _ ← f.start
   let marker := f.root / "lock-held"
   let owner ← IO.Process.spawn {
     cmd := f.helper.toString
@@ -143,7 +147,7 @@ def crashTests (f : Fixture) : IO Unit := do
     try owner.kill catch _ => pure ()
     let _ ← owner.wait
     pure ()
-  f.start "restart"
+  let _ ← f.start "restart"
   locked (f.root / "work.egg.guard") do
     f.post "AFTER_MANAGER_CRASH" "restart"
     let before ← f.endpoint "restart"
@@ -151,7 +155,7 @@ def crashTests (f : Fixture) : IO Unit := do
     let _ ← f.hook "SessionStart" "restart"
     require ((← f.endpoint "restart").secret != before.secret) "manager was not replaced"
   f.saved "AFTER_MANAGER_CRASH"
-  f.start "writer"
+  let _ ← f.start "writer"
   locked (f.root / "work.egg.guard") do
     f.post "AFTER_WRITER_CRASH" "writer"
     let manager := (← f.endpoint "writer").pid
@@ -171,7 +175,7 @@ def crashTests (f : Fixture) : IO Unit := do
 def isolationTests (f : Fixture) : IO Unit := do
   let tasks ← (List.range 4).mapM fun _ => IO.asTask (f.hook "SessionStart") .dedicated
   for task in tasks do let _ ← IO.ofExcept (← IO.wait task); pure ()
-  f.start "second"
+  let _ ← f.start "second"
   let first ← f.endpoint
   let second ← f.endpoint "second"
   require (first.port != second.port && first.secret != second.secret) "chats share manager identity"
@@ -195,15 +199,15 @@ def isolationTests (f : Fixture) : IO Unit := do
   IO.println "Core lifecycle: manager isolation, duplicate lease and corrupt-state control passed"
 
 def deliveryTests (f : Fixture) : IO Unit := do
-  f.start "seed"
+  let _ ← f.start "seed"
   f.post "FIRST_CLOCK_OBSERVATION" "seed"
   f.saved "FIRST_CLOCK_OBSERVATION"
-  f.start "reader"
+  let initial ← f.start "reader"
   let fields := [("tool_name", .str "shell"), ("tool_use_id", .str "first"),
     ("tool_input", Json.mkObj [("command", .str "cat clock.c")])]
   let first ← f.hook "PreToolUse" "reader" fields
-  require ((first.getObjValD "hookSpecificOutput").getObjValD "permissionDecision" == .str "deny") "first outcome not reused"
-  f.start "second-seed"
+  require ((initial.compress ++ first.compress).contains "FIRST_CLOCK_OBSERVATION") "first outcome not reused"
+  let _ ← f.start "second-seed"
   f.post "SECOND_CLOCK_OBSERVATION" "second-seed"
   f.saved "SECOND_CLOCK_OBSERVATION"
   let fields := fields.map fun (k,v) => (k, if k == "tool_use_id" then .str "second" else v)
@@ -212,7 +216,7 @@ def deliveryTests (f : Fixture) : IO Unit := do
   let again ← f.hook "PreToolUse" "reader" (fields.map fun (k,v) => (k, if k == "tool_use_id" then .str "third" else v))
   require (!((again.getObjValD "hookSpecificOutput").getObjVal? "permissionDecision").isOk)
     "unchanged evidence caused repeated denial"
-  f.start "lost-receipt"
+  let _ ← f.start "lost-receipt"
   let _ ← f.hook "PostCompact" "lost-receipt"
   let endpoint ← f.endpoint "lost-receipt"
   let _ ← Daemon.exchange endpoint "hook" (f.input "PreToolUse" "lost-receipt" (fields ++ [("_eggshell_receipt", .str "lost")]))
@@ -227,7 +231,7 @@ def deliveryTests (f : Fixture) : IO Unit := do
   IO.println "Core lifecycle: changed evidence, unchanged denial suppression and lost/stale receipts passed"
 
 def deadlineTest (f : Fixture) : IO Unit := do
-  f.start "seed"
+  let _ ← f.start "seed"
   f.post "DEADLINE_SEED" "seed"
   let _ ← f.hook "Stop" "seed" [("last_assistant_message", .str "Clock result for retrieval")]
   f.saved "Clock result for retrieval"
@@ -245,7 +249,8 @@ def deadlineTest (f : Fixture) : IO Unit := do
     ("_eggshell_deadline", toJson (peer + 800)), ("_eggshell_receipt", .str "expired")])
   require ((← IO.monoMsNow) - start < 2000) "expired search exceeded its transport deadline"
   require (← marker.pathExists) "deadline fixture never started"
-  require ((← IO.ofExcept (Json.parse output)) == Json.mkObj []) "expired search published context"
+  require (output == hookContext "UserPromptSubmit" pendingSearch.text)
+    "expired search published evidence instead of the incomplete-search notice"
   f.post "SAVED_AFTER_DEADLINE" "deadline"
   f.saved "SAVED_AFTER_DEADLINE"
   let pids ← IO.ofExcept (fromJson? (← readObject marker) : Except String (List Nat))
@@ -255,7 +260,7 @@ def deadlineTest (f : Fixture) : IO Unit := do
   IO.println "Core lifecycle: expired search was reaped and subsequent work saved"
 
 def hungSearchTest (f : Fixture) : IO Unit := do
-  f.start "seed"
+  let _ ← f.start "seed"
   f.post "SEARCH_SEED" "seed"
   let _ ← f.hook "Stop" "seed" [("last_assistant_message", .str "Clock investigation completed")]
   f.saved "Clock investigation completed"
@@ -275,7 +280,7 @@ def hungSearchTest (f : Fixture) : IO Unit := do
     f.post "SAVED_DURING_HUNG_SEARCH" "slow"
     f.saved "SAVED_DURING_HUNG_SEARCH"
     let start ← IO.monoMsNow
-    f.start "independent"
+    let _ ← f.start "independent"
     require ((← IO.monoMsNow) - start < 3000) "search blocked another chat"
     let start ← IO.monoMsNow
     let _ ← f.hook "Stop" "slow"
