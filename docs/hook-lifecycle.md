@@ -7,9 +7,8 @@ work during a turn so losing a final hook does not force another investigation.
 
 Each chat owns one manager, one persistent search worker, and one persistent
 writer. Kernel file locks protect the manager lease, short state transitions,
-and shared `.egg` commits. An exited process cannot leave an owned directory
-lock behind. All writers of a shared file must use the updated runtime; old
-versions use a different lock protocol.
+and memory-database commits. An exited process cannot leave an owned directory
+lock behind.
 
 `PostToolUse` journals the native result before contacting the manager. It also
 creates an immutable checkpoint when the turn's metadata is available. The
@@ -28,9 +27,11 @@ native hook exits between the receipt write and queue registration, the receipt
 is saved without waiting for another hook. Its in-memory scan cursor advances
 only after registration; restart replays receipts through the same idempotent
 transaction. Receipt identity is the native tool-use ID within its turn.
-Each authority write uses its own temporary sibling and publishes by atomic
-rename. A killed writer's incomplete temporary file cannot block the next save
-and is never read as committed evidence.
+The current page database appends changed pages and body chunks, then publishes
+the committed head. Readers pin the committed extent. An interrupted append
+cannot become visible through an unchanged head, and recovery must preserve
+all previously committed references. A normal update does not rewrite the
+entire saved graph.
 
 Intermediate saves contain actual native Work/Outcome relations, Exact
 occurrence identity, and the existing staged graph's open All edge. That edge

@@ -50,15 +50,16 @@ After the answer finishes, run these controls inside that same Codex chat:
 Eggshell normally saves observed tool results as the task runs and the final
 answer when it stops. `!egg keep` explicitly flushes a finished turn before this
 exercise moves to a separate chat. `!egg inspect` should identify the sample's
-`.eggs/work.egg`, rather than a different project's work file.
+`.eggs/work.egg`, rather than a different project's memory database.
 
-Confirm the file exists and is nonempty from the sample's terminal:
+For the current source build, confirm a committed database head exists from
+the sample's terminal:
 
 ```sh
-test -s .eggs/work.egg && echo 'saved work found' || echo 'no saved work yet'
+test -s .eggs/work.egg/head && echo 'saved work found' || echo 'no saved work yet'
 ```
 
-The file's presence confirms persistence. Its size does not establish relevance
+The head's presence confirms a published database. Its size does not establish relevance
 or token savings.
 
 ## Chat 2: continue with a related change
