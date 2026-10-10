@@ -1179,6 +1179,16 @@ def testFlexibleContextAllocation : IO Unit := do
       SearchProvider.presentationRanking "semantic" 40 semanticOrder lexicalOrder == semanticOrder &&
       SearchProvider.presentationRanking "hybrid" 2 [99, 0, 0, 8, 1] [9, 1] == [1, 0])
     "hybrid graph presentation discarded lexical evidence or invented/duplicated owners"
+  let observedWindows := (List.range 16).map fun index =>
+    if index == 10 then "Retry policy: stop at exhaustion; report the missing evidence."
+    else s!"Observed context {index}: ordinary results remain reusable."
+  let refined := focusedEvidenceWindows "retry policy exhaustion missing evidence"
+    observedWindows (List.range 16)
+  check (refined.head? == some 10 && refined.length == 16 &&
+      refined.eraseDups == refined && refined.all (· < observedWindows.length) &&
+      focusedEvidenceWindows "absentword" observedWindows (List.range 16) == List.range 16 &&
+      (focusedEvidenceWindows "retry policy" observedWindows [99, 10, 10, 0]).all (· < 16))
+    "within-owner excerpts reverted to meaning-only order, lost nonliteral evidence or changed original coordinates"
   -- A ranked branch needs its enclosing entry context even when the saved
   -- source is much longer than the packet. Prefix serialization is an
   -- independent oracle for offsets (including tabs, escapes and Unicode).

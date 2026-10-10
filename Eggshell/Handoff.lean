@@ -1920,6 +1920,27 @@ theorem evidence_search_window_is_original_suffix (owner : OutcomeEdge) (index :
       some ((window.drop (((Matcher.atomText? owner.work).getD "").length + 1 - index * 384)).copy) := by
   simp [evidenceSearchWindows, List.getElem?_zipIdx, original]
 
+/-- Both meaning and the current question order the original evidence windows.
+Owner-level hybrid retrieval must not revert to meaning-only excerpts within
+that owner. This changes neither graph admission nor the number of cues. -/
+def focusedEvidenceWindows (question : String) (windows : List String)
+    (semantic : List Nat) : List Nat :=
+  SearchRank.select windows.length semantic.length []
+    (SearchRank.fused [semantic, SearchRank.lexical question windows])
+
+theorem focused_evidence_window_is_original (question : String) (windows : List String)
+    (semantic : List Nat) (index : Nat)
+    (present : index ∈ focusedEvidenceWindows question windows semantic) : index < windows.length :=
+  SearchRank.selected_is_existing _ _ _ _ _ present
+
+theorem focused_evidence_windows_bounded (question : String) (windows : List String)
+    (semantic : List Nat) : (focusedEvidenceWindows question windows semantic).length ≤ semantic.length :=
+  SearchRank.selected_within_budget _ _ _ _
+
+theorem focused_evidence_windows_distinct (question : String) (windows : List String)
+    (semantic : List Nat) : (focusedEvidenceWindows question windows semantic).Nodup :=
+  SearchRank.selected_no_duplicates _ _ _ _
+
 /-- Common carrier paragraphs are not new evidence demand. Keep primary
 nomination and the actual human prompt intact; only refine the admitted graph
 using the literal task suffix, when different recorded requests share that
@@ -1992,8 +2013,11 @@ def focusNeighborhood (command : List String) (current : String)
   let rows := result.ranking.filterMap fun row =>
     match original : support[row.document.owner]? with
     | none => none
-    | some item => some ((⟨item, List.mem_of_getElem? original⟩ :
-        {item : SourceSupport roots all unions // item ∈ support}), row.indices)
+    | some item =>
+        let positions := focusedEvidenceWindows current
+          (windows[row.document.owner]?.getD []) row.indices
+        some ((⟨item, List.mem_of_getElem? original⟩ :
+          {item : SourceSupport roots all unions // item ∈ support}), positions)
   pure (some ⟨rows⟩)
 
 /-- Newly located positions refine an original nomination rather than
