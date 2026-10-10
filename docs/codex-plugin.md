@@ -25,7 +25,7 @@ Run `egg init` in each project that should have its own memory. It creates:
 - an `off` profile with no memory access;
 - a Git ignore entry for `.eggs`.
 
-The current source build creates the `.egg` database directory on the first save.
+Eggshell creates the `.egg` database directory on the first save.
 Its page file and committed head preserve original observations. Initialization refuses to overwrite
 an existing configuration. Ordinary prompts require no special format.
 

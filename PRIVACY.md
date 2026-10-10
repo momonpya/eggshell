@@ -44,7 +44,7 @@ command, to disable both recording and handoff delivery for that session.
 
 - Project `.egg` memory paths are restricted to non-symlinked paths
   below that project. Shared paths may be named only by user-owned global or
-  explicit configuration. The current source build uses a database directory
+  explicit configuration. Each database is a directory
   containing page data and a committed head. Missing read paths are not created.
 - Staged turns, recovery state, and daemon coordination live under
   `EGGSHELL_DATA_ROOT`, which defaults to

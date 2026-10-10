@@ -109,7 +109,7 @@ jobs:
           set -euo pipefail
           gh release upload "$GITHUB_REF_NAME" \
             dist/runtimes/*.tar.gz dist/runtimes/*.sha256 \
-            dist/publish/*.tar.gz dist/publish/eggshell-codex-plugin.zip \
+            dist/publish/*.tar.gz dist/publish/eggshell-codex-plugin.zip dist/publish/runtime.json \
             --clobber --repo "$GITHUB_REPOSITORY"
           gh release edit "$GITHUB_REF_NAME" --draft=false --repo "$GITHUB_REPOSITORY"
       - uses: actions/upload-artifact@v4

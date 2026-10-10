@@ -22,6 +22,9 @@ Adapter code stays in its separate Lake package. The engine does not import it.
 | `Eggshell/Handoff.lean`: `indexed_saturation_memo_exact` | A saved saturation hint gives the same discovery execution as the reference view provider over the admitted domain. This does not prove that semantic retrieval admits every useful fact. |
 | `Eggshell/DB/PageMap.lean`: append and recovery contracts | Appending or recovering beyond the committed extent preserves the bytes of existing immutable body references. |
 | `Eggshell/Handoff.lean`: delivery contracts | Accepted original ranges cannot be resent as new evidence; fitted packets retain original positions and respect the configured byte bound. |
+| `checkedContextExtension` | An accepted extension retains every original fragment and the same owner, source notice, and observation envelope; overlapping original coordinates agree. |
+| `primaryInterpretation`, `preferContextGain` | Refinement uses an original meaning-nominated explanation. Without added cue coverage or a contiguous selected explanation span, the original packet is returned unchanged. Both choices carry the complete packet's character and byte bounds. |
+| `selectPreparedKeys` | Preparing graph identifiers once gives exactly the same selection as preparing them during each filter operation. |
 
 These are the functions invoked by production code, not a separate test-only
 model. Builds reject `sorry`; the `ContractAudit.lean` modules enumerate
@@ -34,22 +37,20 @@ graph, lifecycle and persistence proofs.
 `runtime/embedding.py` calls the pinned FastEmbed model and NumPy's existing
 float32 normalization and dot-product kernels. It accepts text/vector batches
 and returns vectors/scores. It performs no retrieval selection, state management,
-ranking, or graph work. Keeping these numerical kernels avoids silently replacing
-their floating-point implementation during the language migration.
+ranking, or graph work. Numerical inference is outside Lean's proof boundary.
 
 Window splitting, Unicode case folding, lexical ranking, reciprocal-rank fusion,
 cache identity checks and candidate selection run in Lean. Unicode 16.0 mappings
-are frozen as Lean data to match the prior provider's environment. The new cache
-checks both model and source text, rather than treating a hash as evidence of
-identity. Prior caches can be rebuilt; saved `.egg` work is not rewritten.
+are frozen as Lean data. Embedding cache entries require matching model and
+source text; a hash alone does not establish identity. Cached vectors can be
+rebuilt without changing saved `.egg` observations.
 
-The legacy-provider fixture covers 24 selections across lexical, semantic and
+The numerical regression fixture covers 24 selections across lexical, semantic and
 hybrid modes, including long records, exact identifiers, Unicode and changed
 text under reused caller IDs. This comparison passed with the local pinned
-model. It is a regression test, not a universal equivalence theorem. In
-particular, the old Python lexical score summed an unordered set; Lean uses
-the query's stable term order. Last-bit floating-point ties can therefore differ.
-No new model-task token-reduction rate is claimed by this migration.
+model. It is a regression test, not a universal equivalence theorem. Numerical
+rounding can affect ranking ties; selection contracts do not prove that the
+model finds every useful observation or that a task uses fewer tokens.
 
 ## Trusted external operations
 

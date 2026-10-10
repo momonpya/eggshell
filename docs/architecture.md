@@ -2,9 +2,9 @@
 
 [Project home](../README.md) · [User guide](codex-plugin.md)
 
-This describes the current indexed source build. The measurements in the
-[README](../README.md#evidence) identify their implementation commit; packaged
-releases and the older recorded walkthrough are separate artifacts.
+Eggshell combines semantic retrieval with a graph of original evidence,
+indexed local storage, and dependency-aware calculation reuse. This reference
+describes how those parts work together and where their guarantees stop.
 
 ## Original evidence is the durable source
 
@@ -73,6 +73,16 @@ benchmark record.
    visible-context boundary so needed evidence can be restored. Associations and
    unfinished past work do not add requirements to the current task.
 
+The fitted packet is preserved before refining its main, meaning-nominated
+explanation. Refinement can replace repeated coordinate captions with a compact
+form to fit missing original context, while retaining every admitted observation
+and its source envelope. It is accepted only if it adds cue coverage and fills
+the interior of the selected explanation span; otherwise the original packet is
+returned unchanged. This does not require a full source body or alter semantic
+eligibility. The complete rendered packet must still fit both byte and character
+bounds. Preparing graph identifiers once avoids repeating the same work for
+each fitting alternative, with a checked equivalence to the original filter.
+
 The handoff asks the agent to cite checked evidence directly, preserve material
 conditions and exceptions, obtain only necessary missing facts, and finish with
 a bounded answer when validation is unavailable. A general prior explanation
@@ -129,7 +139,7 @@ context; local checks do not prove a remote service's current state. The engine
 does not hash the entire repository for each handoff.
 
 Multiple selected authorities can be read through a federated local view with
-source and snapshot ownership. This checkout provides a local engine, not a
+source and snapshot ownership. Eggshell provides a local engine, not a
 hosted organizational authentication, billing, or synchronization service.
 
 ## Hook ownership and proof boundaries

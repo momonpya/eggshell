@@ -30,15 +30,32 @@
 </p>
 
 Eggshell is **local memory that helps AI agents use fewer tokens**.
-It saves work from one chat and makes relevant results available to a separate
-chat: repository searches, commands, documentation findings, and conclusions.
-It is useful when you return to related work in the same project.
+It turns work from one chat into reusable evidence for the next: repository
+searches, commands, documentation findings, and conclusions. Carry useful work
+into a new chat and avoid repeating an investigation you have already done.
 
 Memory is built and organized locally, **without LLM calls or additional billed
-tokens for memory management**. Relevant original tool results travel with their
-source, conditions, and graph relationships; the next chat can use the evidence
-instead of repeating the investigation. [Evidence](#evidence) reports the current
-source build's LLVM comparison, token costs, answer review, and limits.
+tokens for memory management**. Your agent still consumes normal task and
+handoff tokens. See the [measured token savings and their scope](#evidence).
+
+### Why a graph of evidence?
+
+A useful memory needs more than a previous answer. It needs the observations
+that support that answer, the conditions under which it holds, and a way to
+find the relevant parts when the next question is different.
+
+Eggshell keeps those connections in a **graph of original work and evidence**.
+Local semantic search finds related work; graph traversal brings in its
+supporting tool results, source locations, and necessary context. The handoff
+preserves selected original passages and their relationships without additional
+LLM calls to summarize or organize memory.
+Code, natural language, documents, and command output use the same structure.
+
+The combination is the core of Eggshell: **semantic retrieval, connected
+evidence, immutable history, and reusable graph calculations**, implemented
+with Lean contracts. Saved work stays inspectable, while indexed, bounded
+reads let the engine retrieve context without reconstructing the entire memory
+for each search. [How it works](#how-it-works) explains the design.
 
 **Same task. Two new chats. Compare token use — 30 seconds.**
 
@@ -60,9 +77,7 @@ savings have not yet been evaluated for those four clients.
 
 For **Claude Code, Gemini CLI, Cursor, or OpenCode**, follow the
 [adapter installation guide](adapters/README.md#install). The steps below install
-the **Codex plugin**. The [current benchmark](#evidence) identifies the measured
-source commit. Release packages record their build commit in `runtime.json`;
-publishing a release is separate from marketplace approval.
+the **Codex plugin**.
 
 You need macOS or Linux on Apple Silicon/ARM64 or x86-64, Python 3, and the Codex
 CLI available as `codex`. Your Codex client must support plugins and command
@@ -101,7 +116,7 @@ configuration if needed. In Codex, review and enable Eggshell's hooks through
 </details>
 
 `egg init` creates `.eggshell.toml` and configures `.eggs/work.egg`, the project's
-local memory database. The current source build stores it as a directory with
+local memory database. It is stored as a directory with
 an append-only page file and a committed head. The `.eggs` directory is ignored
 by Git. The database appears when the first turn is saved.
 
@@ -148,12 +163,10 @@ For reading multiple memory databases, custom install locations, and troubleshoo
    missing keys, ranges, and original body references. Rankings and graph
    calculations can be reused when those dependencies agree; a new matching
    record or changed source can invalidate the relevant cached result.
-4. **Deliver useful evidence.** The handoff includes selected original text,
-   its provenance, necessary relationships, and a related prior explanation.
-   Context competes for a bounded packet; adding more history does not entitle
-   every neighboring record to more space. Conditions and exceptions must
-   qualify earlier explanations. Similarity supplies context, not proof that
-   the current task is complete.
+4. **Deliver useful evidence.** Eggshell selects original passages and supporting
+   graph context for the current question within a bounded handoff. It keeps
+   source locations, conditions, and exceptions with the relevant explanation,
+   and avoids resending passages already delivered in the visible chat context.
 
 Eggshell checks the recorded local file dependencies before reuse. Changed or
 deleted files do not rewrite the original observation: its earlier contents
@@ -161,11 +174,15 @@ remain history, and confirmed new contents become separate observations.
 Workspace-relative paths and content fingerprints support moving memory between
 checkouts. A matching file name alone cannot certify an external or MCP result.
 
-The agent is told to reuse delivered, checked evidence without reconfirming
-it, obtain only missing facts needed for the current request, and report an
-unavailable test as a limit. An unfinished past task does not create new work.
-The final answer is saved alongside the earlier tool observations; it does not
-replace them.
+The design follows three principles:
+
+- **Preserve evidence.** Original observations remain unchanged. New contents
+  and corrections are separate records, with their own source and conditions.
+- **Reuse only applicable work.** Similarity finds useful context; recorded
+  dependencies determine whether local evidence still applies. The agent uses
+  checked evidence and investigates only facts missing from the current request.
+- **Keep users in control.** Memory stays local, recording can be disabled, and
+  the exact delivered context and its selection can be inspected.
 
 Search and graph processing run locally. Eggshell does not ask an LLM to write
 summaries, classify memories, or maintain the graph. Selected memory and the
@@ -203,7 +220,7 @@ recording and handoffs. [More controls and configuration](docs/codex-plugin.md).
 
 ## Evidence
 
-### Three LLVM topics, with and without recorded work
+### From a new seed to three investigations, then reuse
 
 On **2026-10-10**, we compared three related Clang Driver investigations using
 native macOS Codex CLI, **GPT-6 Luna, xhigh, independent ephemeral chats**:
@@ -212,75 +229,54 @@ native macOS Codex CLI, **GPT-6 Luna, xhigh, independent ephemeral chats**:
 2. Public APIs, configuration, downstream effects, and a minimal additional test.
 3. The interaction of `--target`, `-x`, and `-fsyntax-only` through job construction.
 
-The source build is commit **`5aad6d9`**, against LLVM commit
-`6dfe1677ab8dffbc6ec13d53a1e0215d75147689`. Production code, prompts, model, and
-LLVM source stayed fixed throughout the post-commit comparison. Each fresh chat
-had no Eggshell memory. The memory-assisted chats started with **an existing
-seed and all three topics already recorded**. This measures reuse of known work,
-not a new-seed or first-use experiment.
+The memory-assisted sequence started **empty**, recorded a **new seed
+investigation**, then ran topics **1 → 2 → 3**. Each topic's tool results and
+answer were saved and indexed before the next chat. The second lap repeated
+**1 → 2 → 3 using that accumulated memory**, continuing to save throughout.
+Fresh answers were never imported into memory.
 
-The first reuse lap used the same frozen binary before committing it. After the
-commit, we ran fresh topics 1–3, then another reuse lap 1–3. Memory continued
-saving after every topic and between laps; fresh answers were not added to it.
-Both reduction columns below use the **new corresponding fresh reference**.
+Each fresh reference was an independent chat without Eggshell memory, recorded
+earlier on the same day with the same question, LLVM snapshot, native CLI,
+model, and reasoning setting. There is **one fresh reference per topic**, reused
+for both reduction columns.
 
-| Topic | Fresh tokens | First reuse lap | Reduction | Second reuse lap | Reduction |
+| Topic | Fresh tokens | First lap | Reduction | With accumulated memory | Reduction |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 1 | 1,284,909 | 37,157 | 97.1% | 33,542 | 97.4% |
-| 2 | 799,753 | 43,256 | 94.6% | 131,552 | 83.6% |
-| 3 | 2,302,471 | 44,116 | 98.1% | 41,171 | 98.2% |
-| **Total** | **4,387,133** | **124,529** | **97.2%** | **206,265** | **95.3%** |
+| 1 | 1,284,909 | 224,815 | 82.5% | 52,029 | 96.0% |
+| 2 | 799,753 | 170,441 | 78.7% | 52,007 | 93.5% |
+| 3 | 2,302,471 | 657,499 | 71.4% | 52,189 | 97.7% |
+| **Total** | **4,387,133** | **1,052,755** | **76.0%** | **156,225** | **96.4%** |
 
-Tokens are **input + output, including cached input**. Reasoning is already
-included in output. These are follow-up costs; creating the existing history is
-separate. There was one new fresh reference per topic and two reuse laps, with
-no control over model randomness. The first lap originally compared against
-older fresh references totaling 3,025,111 tokens, giving 95.9% reduction; the
-table recomputes that lap against the new references.
+Tokens are **input + output, including cached input**; reasoning is included
+in output. Each reduction uses the corresponding fresh reference. All seven
+new memory-side chats completed; there were no failed attempts to exclude.
+The new seed cost **766,235 tokens**, separate from the follow-up table.
+Seed plus both assisted laps consumed **1,975,215 tokens**. Memory organization
+itself used no LLM calls. This is one initial sequence and one retained-memory
+sequence, without control over model randomness; it is not a general savings
+guarantee or a statistical comparison.
 
-**Question-level answer review:** the memory-assisted answers addressed the
-requested source investigations, preserved the normal target/input/phase/job
-boundaries, and reported that LLVM runtime tests were not run. Different
-history-driven examples are not treated as quality loss. One wording
-clarification is needed in second-lap topic 1: `bindings.c` checks binding and
-no output; literal cc1 arguments are supported by implementation evidence,
-not that test's FileCheck assertion. This was a single-reviewer, non-blinded
-source audit, not a statistical accuracy or fresh-quality-equivalence estimate.
+**Answer review:** a static source audit found that the assisted answers
+addressed the questions and preserved the target, input, phase, and job
+construction boundaries. Minor corrections to a proposed test fixture and
+source links are documented alongside the unedited answers in the measurement
+record. The review was performed by one reviewer without blinding. The snapshot
+had no verified LLVM build, so runtime tests and statistical quality equivalence
+were not established.
 
-Second-lap topic 2 used two additional source reads to establish configuration
-precedence, accounting for its lower savings. None of the reuse runs repeatedly
-investigated an unavailable build or falsely reported a passing lit test.
-The fixed snapshot had no configured LLVM build, so dynamic behavior remains
-outside this study.
+**Hook performance:** the slowest hooks were **17.3 seconds** in the first lap
+and **23.6 seconds** in the second, within the 30-second deadline. No timeout or
+incomplete initial handoff occurred. Each answer was persisted and indexing
+completed before the next topic, and all earlier observations remained intact.
+The retained-memory lap required **zero additional tool executions** across all
+three topics. Peak memory was not measured.
 
-**Hook and persistence checks:** no timeout or incomplete initial handoff
-occurred. The second lap's slowest hook was **16.4 seconds**; the first lap's
-was **22.5 seconds**, within the 30-second hook deadline. Every final answer
-was saved, earlier answers remained intact, and persistence/index queues were
-empty before the next topic. These measurements do not establish a latency
-bound for every workload; peak memory was not measured in this study.
-
-<details>
-<summary><strong>All runs, development cost, and verification record</strong></summary>
-
-Four diagnostic calls before the frozen implementation used **346,375 tokens**:
-218,401 in one earlier source-selection trial, followed by 37,625, 46,691,
-and 43,658 in an intermediate three-topic trial. These are excluded from
-final-code ratios and retained in the development ledger. Together with the
-nine runs in the table, all 13 benchmark calls recorded for this fix used
-**5,064,302 tokens**. The six post-commit calls all completed; no failed or
-incomplete attempt was excluded. This is not a complete accounting of earlier
-history creation.
-
-The [measurement record](docs/benchmarks/llvm-three-topics.json) contains exact
-prompts, all token counts, elapsed times, delivered packet sizes, persistence
-checks, original answer and receipt hashes, answer text, and source-review notes.
-Original hook payloads and logs remain local; the public record does not include
-the complete prior memory database. The frozen implementation also passed
-**57 core process/regression checks**. Lean contracts and their limits are
-listed in [verified boundaries](docs/lean-boundaries.md).
-
-</details>
+The [measurement record](docs/benchmarks/llvm-three-topics.json) includes exact
+prompts, token counts, timings, delivered packets, persistence checks,
+answers, and source-review notes. It identifies Eggshell commit **`237058c`**
+and LLVM commit `6dfe1677ab8dffbc6ec13d53a1e0215d75147689`.
+See [verified contracts and their boundaries](docs/lean-boundaries.md) for what
+Lean proves independently of these measurements.
 
 ## Privacy
 
