@@ -22,6 +22,7 @@
 #include <libproc.h>
 #elif defined(__linux__)
 #include <link.h>
+#include <sys/syscall.h>
 #endif
 
 typedef struct { int fd; } egg_read_handle;
@@ -353,7 +354,10 @@ LEAN_EXPORT lean_obj_res eggshell_publish_directory(b_lean_obj_arg source,
 #if defined(__APPLE__)
     if (!error && renameatx_np(source_parent, source_name, target_parent, target_name, RENAME_EXCL) < 0) error = errno;
 #elif defined(__linux__)
-    if (!error && renameat2(source_parent, source_name, target_parent, target_name, RENAME_NOREPLACE) < 0) error = errno;
+    /* Lean's bundled libc has no renameat2 symbol. The kernel operation keeps
+       the same atomic no-replace contract without relying on that libc export. */
+    if (!error && syscall(SYS_renameat2, source_parent, source_name,
+            target_parent, target_name, RENAME_NOREPLACE) < 0) error = errno;
 #else
     if (!error) error = ENOTSUP;
 #endif
