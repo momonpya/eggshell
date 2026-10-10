@@ -1,9 +1,10 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/eggshell-primary-horizontal-white.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/brand/eggshell-primary-horizontal.svg">
+  <a href="docs/assets/brand/eggshell-primary-horizontal-white.svg#gh-dark-mode-only">
+    <img src="docs/assets/brand/eggshell-primary-horizontal-white.svg" alt="Eggshell" width="420">
+  </a>
+  <a href="docs/assets/brand/eggshell-primary-horizontal.svg#gh-light-mode-only">
     <img src="docs/assets/brand/eggshell-primary-horizontal.svg" alt="Eggshell" width="420">
-  </picture>
+  </a>
 </p>
 
 <p align="center">
