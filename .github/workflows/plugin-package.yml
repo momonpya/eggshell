@@ -33,13 +33,23 @@ jobs:
           .lake/build/bin/lifecycle_tests
           .lake/build/bin/setup_package_tests
       - name: Package runtime
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist
-          tar -czf "dist/eggshell-${{ matrix.target }}.tar.gz" -C .lake/build/bin eggshell
+          archive="dist/eggshell-${{ matrix.target }}.tar.gz"
+          tar -czf "$archive" -C .lake/build/bin eggshell
+          if command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 "$archive" | awk '{print $1}' > "$archive.sha256"
+          else
+            sha256sum "$archive" | awk '{print $1}' > "$archive.sha256"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: runtime-${{ matrix.target }}
-          path: dist/*.tar.gz
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
           retention-days: 7
   bundle:
     needs: runtime
@@ -61,13 +71,17 @@ jobs:
           lake build eggshell_package
           version="$(.lake/build/bin/eggshell_package --version)"
           .lake/build/bin/eggshell_package --runtime-dir dist/runtimes --output dist/publish --release "v$version"
-      - name: Publish pinned runtime assets and plugin ZIP
+      - name: Publish tested runtimes, checksums and plugin together
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           version="$(.lake/build/bin/eggshell_package --version)"
           gh release view "v$version" --repo "$GITHUB_REPOSITORY"
-          gh release upload "v$version" dist/publish/*.tar.gz dist/publish/eggshell-codex-plugin.zip --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "v$version" \
+            dist/runtimes/*.tar.gz dist/runtimes/*.sha256 \
+            dist/publish/*.tar.gz dist/publish/eggshell-codex-plugin.zip dist/publish/runtime.json \
+            --clobber --repo "$GITHUB_REPOSITORY"
       - uses: actions/upload-artifact@v4
         with:
           name: eggshell-directory-package

@@ -59,9 +59,9 @@ savings have not yet been evaluated for those four clients.
 
 For **Claude Code, Gemini CLI, Cursor, or OpenCode**, follow the
 [adapter installation guide](adapters/README.md#install). The steps below install
-the **Codex plugin**. The [current benchmark](#evidence) identifies a source
-commit; it does not describe an updated marketplace package or release binary.
-Use the [source-build instructions](#development) to run that implementation.
+the **Codex plugin**. The [current benchmark](#evidence) identifies the measured
+source commit. Release packages record their build commit in `runtime.json`;
+publishing a release is separate from marketplace approval.
 
 You need macOS or Linux on Apple Silicon/ARM64 or x86-64, Python 3, and the Codex
 CLI available as `codex`. Your Codex client must support plugins and command
