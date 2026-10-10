@@ -1685,6 +1685,20 @@ def supportDocuments (snapshot : Snapshot) (works : List Nat) : IO (List SearchD
       rows := (ordinal, ⟨id, checked.header.work, []⟩) :: rows
   pure ((rows.mergeSort fun a b => a.1 ≤ b.1).map Prod.snd)
 
+/-- Source ranking reads bounded locator directories, not neighboring
+Outcome bodies. Each document still belongs to the same pinned Work index. -/
+def supportWindowDocuments (snapshot : Snapshot) (works : List Value) :
+    IO (List SearchDocument) := do
+  let ids ← (hashDistinct works).filterMapM fun work => findNode? snapshot work
+  (← supportDocuments snapshot ids).mapM fun document => do
+    let encoded ← readChunks snapshot snapshot.get "searchWindows" document.owner
+    let (windows, tail) ← IO.ofExcept (windowCodec.decode encoded.toList)
+    unless tail.isEmpty && !windows.isEmpty &&
+        windows.all (fun value => value.length == 64 && value.toList.all (fun c =>
+          ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f'))) do
+      throw (IO.userError "invalid neighboring source window directory")
+    pure {document with windows}
+
 /-- Meaning rank orders hydration. Original family is a stable tie-break,
 not permission for an earlier investigation to consume another source's
 budget before its more relevant evidence can be considered. -/

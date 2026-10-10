@@ -1124,8 +1124,8 @@ def testFlexibleContextAllocation : IO Unit := do
     else throw (IO.userError "coverage fixture has identical parent/child Work")
   let sourceTopology := [sourceEdge]
   check (evidenceOwnerPriority [interpretation] sourceTopology repeatedInterpretation true == 2 &&
-      evidenceOwnerPriority [observation] sourceTopology nextObservation false == 1 &&
-      evidenceOwnerPriority [] sourceTopology interpretation true == 0)
+      evidenceOwnerPriority [observation] sourceTopology nextObservation false == 0 &&
+      evidenceOwnerPriority [] sourceTopology interpretation true == 1)
     "redundant parent interpretations displaced original observations or distinct source data was demoted"
   let twoSources := [("answer", ["answer interpretation fills the whole allowance"]),
     ("source1", ["source1 expanded"]), ("source2", ["source2 expanded"])]
@@ -1589,7 +1589,10 @@ def testSemanticEvidenceDelivery : IO Unit := do
       (renderSelectionTree association [selectedFirst.matched.projectedEdge.relation] true).contains "RELATED WORK target" &&
       !(renderSelectionTree association [selectedFirst.matched.projectedEdge.relation] true).contains "OPEN target" &&
       handoff.text.contains "Graph Work/All nodes describe associations, not extra requirements" &&
-      handoff.text.contains "do not investigate additional examples unless requested" &&
+      handoff.text.contains "do not investigate additional undelivered examples unless requested" &&
+      handoff.text.contains "retain material conditions, exceptions and contrasting results relevant to the current request" &&
+      handoff.text.contains "A simpler recorded example does not make a delivered exception irrelevant" &&
+      handoff.text.contains "Do not turn conditional observations into unconditional rules" &&
       !handoff.text.contains "Unverified" &&
       handoff.text.contains "A separate explanation cannot revoke a verified file observation" &&
       handoff.text.contains "Never repeat freshness checks or reread delivered file ranges for confirmation, including updated observations" &&
@@ -3280,12 +3283,19 @@ def semanticProviderFixture (index : Nat := 0)
     else
       -- The real provider persists its acceleration cache across processes.
       -- This fixture tests nomination authority, independently of that cache.
-      let evidence : List SemanticMatcher.WindowChoice :=
-        if contextWindows.isEmpty then [] else [⟨index, contextWindows⟩]
-      let related := entries.getD (if !nominate then [] else if contextWindows.isEmpty then [index] else [0, index])
       let documents ← IO.ofExcept (match json.getObjValAs? (Array Lean.Json) "documents" with
         | .ok documents => .ok documents
         | .error _ => json.getObjValAs? (Array Lean.Json) "candidates")
+      -- Source-only requests retain authoritative owner order, while primary
+      -- discovery groups parents before children. Locate this large-output
+      -- fixture by its original window directory, not its incidental slot.
+      let index := if contextWindows.isEmpty then index else
+        (documents.toList.findIdx? fun document =>
+          (document.getObjValAs? (List String) "windows").toOption.any fun windows =>
+            contextWindows.all (· < windows.length)).getD index
+      let evidence : List SemanticMatcher.WindowChoice :=
+        if contextWindows.isEmpty then [] else [⟨index, contextWindows⟩]
+      let related := entries.getD (if !nominate then [] else if contextWindows.isEmpty then [index] else [0, index])
       output.putStr ((Lean.Json.mkObj [("related", Lean.toJson related),
         ("ranked", Lean.toJson (List.range documents.size)),
         ("evidence", Lean.toJson evidence)]).compress ++ "\n")
@@ -3347,6 +3357,90 @@ def testIndependentProviderBoundary : IO Unit := do
       check (response.isNone && (← reads.get) == (if mode == "repeat" then [0, 33] else []))
         "invalid pull touched source bytes or repeated a previously supplied window"
   IO.println "PASS independent indexed provider, typed bounded pulls and rejection before source reads"
+
+def indexedEvidenceProviderFixture : IO UInt32 := do
+  let input ← IO.getStdin
+  let output ← IO.getStdout
+  let request ← IO.ofExcept (Lean.Json.parse (← input.getLine))
+  let documents ← IO.ofExcept (request.getObjValAs? (List Lean.Json) "documents")
+  check (documents.length == 2 && !(request.getObjVal? "candidates").isOk)
+    "source focus hydrated Outcome bodies before ranking"
+  let ids ← IO.ofExcept (documents.mapM (·.getObjValAs? Nat "id"))
+  check (ids == [901, 902]) "source focus renumbered original owners"
+  let need := (Lean.Json.mkObj [("need_windows", Lean.Json.mkObj [
+    ("document", Lean.toJson (1 : Nat)), ("indices", Lean.toJson ([0, 4] : List Nat))])]).compress
+  output.putStrLn need
+  output.flush
+  let response ← IO.ofExcept (Lean.Json.parse (← input.getLine))
+  let windows ← IO.ofExcept (response.getObjValAs? (List String) "windows")
+  check (windows == ["", "Independent condition and observed result 日本語🐣."])
+    "source focus changed an original position or passed the old command as evidence"
+  output.putStrLn "{\"related\":[1],\"ranked\":[1,0],\"evidence\":[{\"document\":1,\"indices\":[4]},{\"document\":0,\"indices\":[3]}]}"
+  output.flush
+  pure 0
+
+def testIndexedEvidenceFocus : IO Unit := do
+  let executable ← IO.appPath
+  let body := "Independent condition and observed result 日本語🐣."
+  let windows := ["old command", "old command and some observed data", "context", "scope", body]
+  let documents := ([901, 902] : List Nat).map fun owner =>
+    ({owner, work := owner + 1, windows := windows.map Persistence.Store.windowKey} :
+      Persistence.Store.SearchDocument)
+  let reads ← IO.mkRef ([] : List (Nat × Nat))
+  let some (ranking, positions) ← focusIndexedEvidence
+      [executable.toString, "indexed-evidence-provider-fixture"]
+      "Explain the independent observation under its recorded conditions" documents
+      (fun _ => pure (String.ofList (List.replicate 700 'w')))
+      (fun document index => do
+        reads.modify (· ++ [(document.owner, index.val)])
+        pure windows[index.val]!) | throw (IO.userError "complete source-only ranking was unavailable")
+  check (ranking == [902, 901] && positions == [(902, [4]), (901, [3])] &&
+      (← reads.get) == [(901, 0), (901, 1), (902, 0), (902, 1), (902, 0), (902, 4)])
+    "bounded source focus changed owner/position ordering or read every original window"
+  for workChars in [0, 100, 512, 900] do
+    for index in [:5] do
+      let whole := String.ofList (List.replicate workChars 'w') ++ "\n" ++ body
+      let original := String.ofList ((whole.toList.drop (index * 384)).take 512)
+      let expected := String.ofList (((whole.toList.drop (index * 384)).take 512).drop
+        (workChars + 1 - index * 384))
+      check (evidenceWindowText workChars index original == expected)
+        "source-only numerical prefix view changed original Unicode or source coordinates"
+  IO.println "PASS source focus before body admission: indexed-only requests, bounded prefix reads, Unicode and original owner/window coordinates"
+
+def refocusProviderFixture : IO UInt32 := do
+  let input ← IO.getStdin
+  let request ← IO.ofExcept (Lean.Json.parse (← input.getLine))
+  let lexical ← IO.ofExcept (request.getObjValAs? (List Nat) "lexical")
+  let output ← IO.getStdout
+  output.putStrLn (Lean.Json.mkObj [
+    ("related", Lean.toJson ([1] : List Nat)),
+    ("ranked", Lean.toJson (SearchProvider.presentationRanking "hybrid" 2 [1, 0] lexical)),
+    ("evidence", Lean.toJson ([⟨0, [0]⟩, ⟨1, [0]⟩] : List SemanticMatcher.WindowChoice))]).compress
+  output.flush
+  pure 0
+
+def testObservedRefocus : IO Unit := do
+  let left := OutcomeEdge.make (.text "read first record")
+    (.text "Alpha condition and original observed result 日本語🐣.") [] (by simp) (by simp)
+  let right := OutcomeEdge.make (.text "read second record")
+    (.text "Beta condition and an independently observed result 日本語🐣.") [] (by simp) (by simp)
+  let roots := [left.work, right.work]
+  let support : List (SourceSupport roots [] []) := [
+    {owner := left, route := .root left.work (by simp [roots]), provenance := []},
+    {owner := right, route := .root right.work (by simp [roots]), provenance := []}]
+  let positions := [(left.relation, [0]), (right.relation, [0])]
+  let executable ← IO.appPath
+  for question in ["Alpha condition", "Beta original observed result 日本語🐣.", ""] do
+    let some reused := refocusObservedNeighborhood question support [right.relation, left.relation] positions |
+      throw (IO.userError "complete original numerical observation could not be reused")
+    let some reference ← focusNeighborhood [executable.toString, "refocus-provider-fixture"] question support |
+      throw (IO.userError "independent source-focus reference failed")
+    check (reused.ranking == reference.ranking && reused.windows == reference.windows)
+      "reused numerical observation changed question-focused source order or original positions"
+  check ((refocusObservedNeighborhood "new fact" support [left.relation]
+      [(left.relation, [0])]).isNone)
+    "an unobserved staged source gained an invented numerical rank"
+  IO.println "PASS numerical focus reuse equals independent hybrid focus: changed questions, original positions, Unicode and unobserved-source rejection"
 
 def semanticLaneHolder (lane : SemanticMatcher.Lane)
     (ready release : System.FilePath) : IO UInt32 := do
@@ -5666,6 +5760,8 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
     clean
     if semanticOnly then
       testIndependentProviderBoundary
+      testIndexedEvidenceFocus
+      testObservedRefocus
       testSemanticProviderTransport
       testSemanticResourceLanes
       testSearchAdmission
@@ -5696,6 +5792,8 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
     testLexicalFrequencyDelta
     testIndexedNumericalWindows
     testIndependentProviderBoundary
+    testIndexedEvidenceFocus
+    testObservedRefocus
     testRankingDelta
     testPersistenceDag
     testPrivateStorage
@@ -5783,6 +5881,12 @@ def main (arguments : List String) : IO UInt32 :=
   | "search-provider" :: args => SearchProvider.run args
   | "independent-search-provider" :: args => SearchProvider.run args
   | ["indexed-pull-provider-fixture", mode] => indexedPullProviderFixture mode
+  | ["indexed-evidence-provider-fixture"] => indexedEvidenceProviderFixture
+  | ["indexed-evidence-focus-tests"] => do
+      testIndexedEvidenceFocus
+      testObservedRefocus
+      pure 0
+  | ["refocus-provider-fixture"] => refocusProviderFixture
   | ["codex-worker", role] => Worker.run role
   | ["codex-daemon", session] => Plugin.Daemon.run session
   | ["codex-rpc", kind] =>

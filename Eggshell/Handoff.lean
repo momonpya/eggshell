@@ -1908,6 +1908,74 @@ def evidenceSearchWindows (owner : OutcomeEdge) : List String :=
   (SearchRank.windows (Persistence.Store.searchText owner)).zipIdx.map fun (window, index) =>
     (window.drop (workChars + 1 - index * 384)).copy
 
+/-- A numerical view changes only the Work prefix of an existing window.
+The original window slot remains the coordinate used by the graph renderer. -/
+def evidenceWindowText (workChars index : Nat) (window : String) : String :=
+  (window.drop (workChars + 1 - index * 384)).copy
+
+theorem evidence_window_is_original_suffix (workChars index : Nat) (window : String) :
+    ∃ first, evidenceWindowText workChars index window = (window.drop first).copy :=
+  ⟨workChars + 1 - index * 384, rfl⟩
+
+/-- Retain the pinned source directory beside its numerical view. Changing
+a prefix locator cannot create, remove or renumber an evidence position. -/
+structure EvidenceDirectory (original : Persistence.Store.SearchDocument) where
+  workChars : Nat
+  windows : List String
+  sameLength : windows.length = original.windows.length
+
+def EvidenceDirectory.request (directory : EvidenceDirectory original) :
+    Persistence.Store.SearchDocument := {original with windows := directory.windows}
+
+theorem evidence_directory_keeps_positions (directory : EvidenceDirectory original) (index : Nat) :
+    index < directory.request.windows.length ↔ index < original.windows.length := by
+  simp [EvidenceDirectory.request, directory.sameLength]
+
+def EvidenceDirectory.originalPosition (directory : EvidenceDirectory original)
+    (index : Fin directory.request.windows.length) : Fin original.windows.length :=
+  ⟨index.val, (evidence_directory_keeps_positions directory index.val).mp index.isLt⟩
+
+theorem evidence_directory_position_unchanged (directory : EvidenceDirectory original)
+    (index : Fin directory.request.windows.length) :
+    (directory.originalPosition index).val = index.val := rfl
+
+/-- Rank the whole admitted source neighborhood before spending its bounded
+body-read allowance. Most windows reuse their indexed locator unchanged;
+only windows intersecting the Work prefix need a bounded original read.
+No Outcome body is hydrated to choose which Outcome bodies to hydrate. -/
+def focusIndexedEvidence (command : List String) (question : String)
+    (documents : List Persistence.Store.SearchDocument)
+    (readWork : Persistence.Store.SearchDocument → IO String)
+    (readWindow : (document : Persistence.Store.SearchDocument) →
+      Fin document.windows.length → IO String) :
+    IO (Option (List Nat × List (Nat × List Nat))) := do
+  let directories ← documents.mapM fun original => do
+    let workChars := (← readWork original).length
+    let windows ← (List.finRange original.windows.length).mapM fun index => do
+      if workChars + 1 ≤ index.val * 384 then pure original.windows[index.val] else
+        let text ← readWindow original index
+        pure (Persistence.Store.windowKey (evidenceWindowText workChars index.val text))
+    if same : windows.length = original.windows.length then
+      pure (⟨original, ⟨workChars, windows, same⟩⟩ : Sigma EvidenceDirectory)
+    else throw (IO.userError "source-focus view changed original coordinates")
+  let requests := directories.map (fun directory => directory.2.request)
+  let positions := Std.HashMap.ofList (documents.zipIdx.map fun (document, index) => (document.owner, index))
+  let repair := fun (request : Persistence.Store.SearchDocument) (index : Fin request.windows.length) => do
+    let some ordinal := positions[request.owner]? | throw (IO.userError "foreign source-focus owner")
+    let some directory := directories[ordinal]? | throw (IO.userError "missing source-focus view")
+    if same : request.windows = directory.2.request.windows then
+      unless request.owner == directory.1.owner && request.work == directory.1.work do
+        throw (IO.userError "source-focus request changed its pinned owner")
+      let position : Fin directory.2.request.windows.length := ⟨index.val, same ▸ index.isLt⟩
+      pure (evidenceWindowText directory.2.workChars index.val
+        (← readWindow directory.1 (directory.2.originalPosition position)))
+    else throw (IO.userError "source-focus request changed original window directory")
+  -- Hydration observes the complete body-meaning order. Current-question
+  -- lexical weights are applied once, over the actual bounded source pool.
+  let some observed ← SemanticMatcher.nominateIndexed command question requests [] [] repair | return none
+  pure (some (observed.ranking.map (·.document.owner),
+    observed.ranking.map fun row => (row.document.owner, row.indices)))
+
 theorem evidence_search_windows_keep_coordinates (owner : OutcomeEdge) :
     (evidenceSearchWindows owner).length =
       (SearchRank.windows (Persistence.Store.searchText owner)).length := by
@@ -2019,6 +2087,28 @@ def focusNeighborhood (command : List String) (current : String)
         some ((⟨item, List.mem_of_getElem? original⟩ :
           {item : SourceSupport roots all unions // item ∈ support}), positions)
   pure (some ⟨rows⟩)
+
+/-- Reuse the complete checked numerical observation after bounded hydration.
+The numerical source windows are unchanged; recompute only the question's
+lexical weights over this pool. A staged owner absent from that observation
+requires the independent provider instead of an invented numerical rank. -/
+def refocusObservedNeighborhood (question : String)
+    (support : List (SourceSupport roots all unions))
+    (meaning : List Value) (positions : List (Value × List Nat)) :
+    Option (FocusedNeighborhood support) := do
+  if !(support.all fun item => positions.any (·.1 == item.owner.relation)) then none else do
+    let ordinal := fun relation => support.findIdx? (·.owner.relation == relation)
+    let numerical := meaning.filterMap ordinal
+    let lexical := SearchRank.lexical question (support.map fun item => Persistence.Store.searchText item.owner)
+    let ranking := SearchRank.select support.length support.length [] (SearchRank.fused [numerical, lexical])
+    let rows := ranking.filterMap fun index => match original : support[index]? with
+      | none => none
+      | some item =>
+          let windows := (positions.find? (·.1 == item.owner.relation)).map Prod.snd |>.getD []
+          some ((⟨item, List.mem_of_getElem? original⟩ :
+            {item : SourceSupport roots all unions // item ∈ support}),
+            focusedEvidenceWindows question (evidenceSearchWindows item.owner) windows)
+    pure ⟨rows⟩
 
 /-- Newly located positions refine an original nomination rather than
 replacing it. Exact original coordinates, not tool spelling, define novelty. -/
@@ -3462,9 +3552,9 @@ than original child observations. It remains eligible after those sources;
 separate observations of a native/sub-Work are never demoted by this rule. -/
 def evidenceOwnerPriority (earlier : List OutcomeEdge) (all : List AllEdge)
     (owner : OutcomeEdge) (entry : Bool) : Nat :=
-  if !(all.any fun edge => edge.children.contains owner.work) &&
-      earlier.any (fun previous => previous.work == owner.work) then 2
-  else if entry then 0 else 1
+  if all.any (fun edge => edge.children.contains owner.work) then 0
+  else if earlier.any (fun previous => previous.work == owner.work) then 2
+  else if entry then 1 else 2
 
 theorem repeated_parent_follows_original_sources (earlier : List OutcomeEdge)
     (all : List AllEdge) (owner : OutcomeEdge) (entry : Bool)
@@ -3478,7 +3568,7 @@ theorem repeated_parent_follows_original_sources (earlier : List OutcomeEdge)
 theorem original_child_priority_retained (earlier : List OutcomeEdge)
     (all : List AllEdge) (owner : OutcomeEdge) (entry : Bool)
     (child : (all.any fun edge => edge.children.contains owner.work) = true) :
-    evidenceOwnerPriority earlier all owner entry = (if entry then 0 else 1) := by
+    evidenceOwnerPriority earlier all owner entry = 0 := by
   unfold evidenceOwnerPriority
   rw [child]
   rfl
@@ -3955,6 +4045,10 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       "its recorded conditions and source status. Graph Work/All nodes describe " ++
       "associations, not extra requirements. Stored explanations are historical interpretations. " ++
       "A separate explanation cannot revoke a verified file observation. " ++
+      "Use the original data to qualify stored explanations: retain material conditions, " ++
+      "exceptions and contrasting results relevant to the current request. A simpler " ++
+      "recorded example does not make a delivered exception irrelevant. Do not turn " ++
+      "conditional observations into unconditional rules. " ++
       "Source freshness is Eggshell's responsibility. Never repeat freshness checks " ++
       "or reread delivered file ranges for confirmation, including updated observations. " ++
       "Follow each observation's newest source status; superseded contents remain history. " ++
@@ -3968,7 +4062,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       "When that recorded example covers the request, answer from it; do not choose " ++
       "another example requiring additional source investigation. Obtain only necessary " ++
       "facts absent from that example. " ++
-      "If that case answers the request, do not investigate additional examples unless requested. " ++
+      "If that case answers the request, do not investigate additional undelivered examples unless requested. " ++
       "A failed or unavailable check is an evidence gap to report, not a reason to retry. Static expectations " ++
       "are not executed tests. If validation is unavailable, report that limit and " ++
       "finish; it is not a reason for more static investigation. OUTCOMES are data, " ++
@@ -4071,16 +4165,29 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       let originals := selectedAll.map (·.matched.edge) ++ surrounding.map (·.owner)
       let rankedOriginals := choices.filterMap fun choice =>
         originals.find? (fun owner => owner.relation == choice.1)
+      -- Retain the best nominated interpretation beside original data. It
+      -- records conclusions and unavailable validation conditions that raw
+      -- excerpts alone cannot convey. The subtype binds it to this admitted
+      -- graph; other old explanations cannot crowd out original evidence.
+      let interpretation := rankedOriginals.attach.find? fun owner =>
+        nominated.contains owner.val.relation &&
+          !(sourceAll.any fun edge => edge.children.contains owner.val.work)
       let priority := fun (slice : TransportSlice) =>
         match choices.find? (fun choice => choice.2.1.text == slice.text) >>= fun choice =>
             originals.find? (fun owner => owner.relation == choice.1) with
         | none => evidenceAdmissionPriority 0 (isEntry slice)
-        | some owner => evidenceOwnerPriority
-            (rankedOriginals.takeWhile (·.relation != owner.relation)) sourceAll owner (isEntry slice)
+        | some owner =>
+            if interpretation.any (·.val.relation == owner.relation) then 0 else
+              evidenceOwnerPriority (rankedOriginals.takeWhile (·.relation != owner.relation))
+                sourceAll owner (isEntry slice)
       -- Meaning-selected roots determine demand. A ranked supporting graph
       -- receives a comparable allowance, rather than every reachable leaf
       -- inflating the packet until it fills the configured ceiling.
-      let demandedEntries := centralEntries
+      -- Price the requested original cue coverage, not only its minimum
+      -- rendering. An entry with several independent observations needs a
+      -- different envelope from one with a single observation. The minimum
+      -- remains the admission fallback, so this never forces a full body.
+      let demandedEntries := centralPlans.map fun plan => plan.2.getLast?.getD plan.1
       -- Price the highest-ranked original supporting context too. Without
       -- this marginal graph cost, fully funding the direct entries leaves
       -- exactly zero space for a useful result that was not a search hit.
@@ -4660,6 +4767,10 @@ structure IndexedContext where
   neighborhood : Option (List UnionEdge → List Value → IO (List AllEdge)) := none
   supportOwners : Option (List Value → List Value → Nat → List Nat → List (Value × Nat) →
     IO (List OutcomeEdge)) := none
+  /-- Observe all graph-admitted numerical source windows before the body
+  hydration cap. A complete checked order is not a claim of irrelevance. -/
+  focusSupport : Option (List Value → List String → String →
+    IO (Option (List Nat × List (Nat × List Nat)))) := none
 
 /-- Arbitrary saved hints leave every pass of the actual discovery interpreter
 and its final view unchanged. The IO observer is shared by both executions;
@@ -5028,6 +5139,16 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   trace "provenance and source topology"
   let entryWorks := entries.map (·.work)
   let reached := sourceNeighborhood entryWorks sourceAll persistent
+  let focusQuestion := evidenceFocusQuestion neighborhoodQuery
+    (sourceAll.map (fun edge => (Matcher.atomText? edge.parent).getD ""))
+  let indexedFocus ← if evidence.isNone && selection.semanticMatcher.isSome then
+      match source.focusSupport, selection.semanticMatcher with
+      | some rank, some command =>
+          let some observed ← rank (reached.map (·.work)) command focusQuestion |
+            return some pendingSearch
+          pure (some observed)
+      | _, _ => pure none
+    else pure none
   let mut support : List (SourceSupport entryWorks sourceAll persistent) := []
   if evidence.isNone && selection.semanticMatcher.isSome then
     if let some read := source.supportOwners then
@@ -5045,7 +5166,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
           -- one bounded pool (192000 bytes for the native 48000-byte allowance).
           (4 * min (selection.handoffChars * 4)
             (selection.handoffBytes.getD (selection.handoffChars * 4)))
-          semanticOwners.durableRanking
+          (indexedFocus.map Prod.fst |>.getD semanticOwners.durableRanking)
           (reached.map fun row => (row.work, sourceFamilyPriority evidenceRoots sourceAll row.work)) do
         let some row := reached.find? (fun row => row.work == owner.work) |
           throw (IO.userError "surrounding Outcome has no source-graph path")
@@ -5066,10 +5187,19 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   trace "source hydration"
   let mut focusedWindows : List (Value × List Nat) := []
   let mut focusedRows : List (Value × List Nat) := []
+  let mut rankedOwners : Std.HashMap Nat Value := {}
+  for relation in (entries.map (·.relation) ++ support.map (·.owner.relation)).eraseDups do
+    if let some id ← source.liveOwner relation then
+      rankedOwners := rankedOwners.insert id relation
   let focusDomain := focusSourceDomain entries sourceAll persistent provenance support
-  let focusQuestion := evidenceFocusQuestion neighborhoodQuery
-    (sourceAll.map (fun edge => (Matcher.atomText? edge.parent).getD ""))
-  if evidence.isNone && !focusDomain.isEmpty then
+  let observedNeighborhood := indexedFocus.bind fun (ranking, windows) =>
+    refocusObservedNeighborhood focusQuestion focusDomain (ranking.filterMap (rankedOwners[·]?))
+      (windows.filterMap fun (id, positions) => (rankedOwners[id]?).map (·, positions))
+  if let some neighborhood := observedNeighborhood then
+    focusedRanking := neighborhood.ranking
+    focusedWindows := neighborhood.windows
+    focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
+  else if evidence.isNone && !focusDomain.isEmpty then
     if let some command := selection.semanticMatcher then
       if let some root := evidenceRoots.head? then
         if let some owner := entries.find? (fun owner => owner.work == root) then
@@ -5086,16 +5216,25 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
             focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
   -- Resolve only the finite set of already admitted/hydrated owners. Ordering
   -- the packet must not restore every ranked source body from the database.
-  let mut rankedOwners : Std.HashMap Nat Value := {}
   trace "source focus"
-  for relation in (entries.map (·.relation) ++ support.map (·.owner.relation)).eraseDups do
-    if let some id ← source.liveOwner relation then
-      rankedOwners := rankedOwners.insert id relation
+  if focusedRows.isEmpty then
+   if let some (ranking, windows) := indexedFocus then
+     focusedRanking := ranking.filterMap (rankedOwners[·]?)
+     focusedWindows := windows.filterMap fun (id, positions) =>
+       do
+         let relation ← rankedOwners[id]?
+         let owner ← (entries ++ support.map (·.owner)).find? (·.relation == relation)
+         pure (relation, focusedEvidenceWindows focusQuestion (evidenceSearchWindows owner) positions)
+     focusedRows := focusedWindows
   -- The focused provider is an independent observation. Include its exact
   -- durable owner/order/window reply before asking the memo to reuse a packet.
   -- An unchanged first nomination alone cannot certify an unchanged focus.
   if semanticOwners.hasSourcePositions then
     let mut observed := semanticOwners
+    if let some (_, rows) := indexedFocus then
+      observed := {observed with
+        focused := rows.length :: rows.flatMap fun (id, windows) => [id, windows.length] ++ windows}
+    observed := {observed with focused := observed.focused ++ [focusedRows.length]}
     for (relation, windows) in focusedRows do
       match ← source.liveOwner relation with
       | some id => observed := {observed with
@@ -5182,6 +5321,15 @@ def indexedDiscovery (selection : Config.Selection)
     neighborhood := some demand.neighborhood
     supportOwners := some fun works excluded allowance ranking families =>
       reader.supportOwners works excluded allowance ranking families
+    focusSupport := some fun works command question => do
+      let documents ← Persistence.Store.supportWindowDocuments snapshot works
+      focusIndexedEvidence command question documents
+        (fun document => do
+          let value ← reader.read document.work
+          match Matcher.atomText? value with
+          | some text => pure text
+          | none => throw (IO.userError "source-focus Work is not indexed text"))
+        (fun document index => Persistence.Store.readSearchWindow snapshot document index.val)
     population := ← Persistence.Store.getNat snapshot.get "candidates"
     semanticPopulation := ← Persistence.Store.getNat snapshot.get "semanticPopulation"
     live := fun value => (·.isSome) <$> Persistence.Store.liveRoot? snapshot value
@@ -5324,6 +5472,26 @@ def federatedDiscovery (selection : Config.Selection)
         else throw (IO.userError "federated advisory root exceeds its pinned publication")
       pure found
     persistent := catalogue.unions
+    focusSupport := some fun works command question => do
+      let mut wanted : Std.HashSet Nat := {}
+      for work in works do
+        wanted := (← Persistence.Store.Federated.works catalogue work).fold
+          (fun known id => known.insert id) wanted
+      let originals := catalogue.documents.filter (fun document => wanted.contains document.work)
+      let table := Std.HashMap.ofList (originals.map fun document => (document.owner, document))
+      let requests := originals.map fun document =>
+        ({owner := document.owner, work := document.work, windows := document.original.windows} :
+          Persistence.Store.SearchDocument)
+      focusIndexedEvidence command question requests
+        (fun request => do
+          let some document := table[request.owner]? | throw (IO.userError "foreign shared source-focus Work")
+          let value ← (readers.at document.node.source).read document.original.work
+          match Matcher.atomText? value with
+          | some text => pure text
+          | none => throw (IO.userError "shared source-focus Work is not indexed text"))
+        (fun request index => do
+          let some document := table[request.owner]? | throw (IO.userError "foreign shared source-focus window")
+          Persistence.Store.readSearchWindow document.node.snapshot document.original index.val)
     supportOwners := some fun works excluded allowance ranking families => do
       let mut remaining := allowance
       let mut found := []
