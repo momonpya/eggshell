@@ -995,6 +995,18 @@ def testFlexibleContextAllocation : IO Unit := do
         originalRange.stop ≤ paired.stop && paired.text.length ≤ 2048)
       "coherent context crossed a recorded file discontinuity or lost its original cue"
   else throw (IO.userError "numbered context fixture has insufficient current-file data")
+  let boundarySource := "Recorded condition: the current source and invocation.\n" ++
+    "".intercalate (List.replicate 22 "Local context from the same observation, under the recorded conditions.\n") ++
+    "Necessary consequence: the operation returned the selected configuration.\n" ++
+    "".intercalate (List.replicate 40 "Additional notes from this original observation.\n")
+  if valid : 80 ≤ boundarySource.length then
+    let boundaryCue : EvidenceRange boundarySource := ⟨0, 80, by decide, valid, by decide⟩
+    let nearby := coherentRecordContext (contextRecordSpans boundarySource none)
+      (contextStructureHeads boundarySource none) boundaryCue
+    check (nearby.text.contains "Necessary consequence:" && nearby.text.length ≤ 2048 &&
+        !nearby.text.contains boundarySource)
+      "unusable context before the source start displaced a necessary local consequence"
+  else throw (IO.userError "near-boundary source fixture is unexpectedly short")
   let some (keys, text) := contextualOwnerData [] windows owner "  ORIGINAL ALL LINK" [] slice 4096 |
     throw (IO.userError "flexible production renderer omitted the original owner")
   check (keys.length > 3 && text.contains work && text.contains "ORIGINAL ALL LINK" && !text.contains source)
@@ -1101,6 +1113,27 @@ def testFlexibleContextAllocation : IO Unit := do
     throw (IO.userError "cross-family evidence packet refused its empty shell")
   check (coveredFamilies.val == ["old", "new", "data"])
     "one old explanation displaced another family's meaning entry or its priced non-hit tool context"
+  let makeCoverageOwner := fun work data =>
+    OutcomeEdge.make (.text work) (.text data) [] (by simp) (by decide)
+  let interpretation := makeCoverageOwner "investigation" "first interpretation"
+  let repeatedInterpretation := makeCoverageOwner "investigation" "another interpretation"
+  let observation := makeCoverageOwner "read observation" "observed evidence"
+  let nextObservation := makeCoverageOwner "read observation" "another actual observation"
+  let sourceEdge ← if distinct : interpretation.work ∉ [observation.work] then
+      pure (AllEdge.make interpretation.work [observation.work] (by simp) distinct)
+    else throw (IO.userError "coverage fixture has identical parent/child Work")
+  let sourceTopology := [sourceEdge]
+  check (evidenceOwnerPriority [interpretation] sourceTopology repeatedInterpretation true == 2 &&
+      evidenceOwnerPriority [observation] sourceTopology nextObservation false == 1 &&
+      evidenceOwnerPriority [] sourceTopology interpretation true == 0)
+    "redundant parent interpretations displaced original observations or distinct source data was demoted"
+  let twoSources := [("answer", ["answer interpretation fills the whole allowance"]),
+    ("source1", ["source1 expanded"]), ("source2", ["source2 expanded"])]
+  let some observationCoverage := boundedFlexiblePacketSlices 22 22 packetCost twoSources
+      (fun text => if text == "answer" then 0 else 1) (fun _ => 1) |
+    throw (IO.userError "ranked observation coverage refused its empty shell")
+  check (observationCoverage.val == ["answer", "source1", "source2"])
+    "enlarging a historical explanation hid a second ranked original observation"
   let familyPlans := [("old-hit", []), ("current-hit", []), ("current-support", [])]
   let some familyPacket := boundedFlexiblePacketSlices 28 28 packetCost familyPlans
       (fun text => evidenceAdmissionPriority (if text == "old-hit" then 1 else 0)
@@ -1138,6 +1171,14 @@ def testFlexibleContextAllocation : IO Unit := do
   check (meaningPacketEntry [owner.relation] owner.relation slice &&
       !meaningPacketEntry [] owner.relation slice)
     "an advisory source owner lost its meaning-entry reservation or an unselected neighbor gained one"
+  let semanticOrder := List.range 40
+  let lexicalOrder := [30, 0, 1, 2, 3, 4, 5] ++ (List.range 40).filter (· > 5)
+  let hybridOrder := SearchProvider.presentationRanking "hybrid" 40 semanticOrder lexicalOrder
+  check (hybridOrder.take 2 == [0, 1] && hybridOrder.idxOf 30 < semanticOrder.idxOf 30 &&
+      (List.range 40).all hybridOrder.contains && hybridOrder.length == 40 &&
+      SearchProvider.presentationRanking "semantic" 40 semanticOrder lexicalOrder == semanticOrder &&
+      SearchProvider.presentationRanking "hybrid" 2 [99, 0, 0, 8, 1] [9, 1] == [1, 0])
+    "hybrid graph presentation discarded lexical evidence or invented/duplicated owners"
   -- A ranked branch needs its enclosing entry context even when the saved
   -- source is much longer than the packet. Prefix serialization is an
   -- independent oracle for offsets (including tabs, escapes and Unicode).
@@ -1391,6 +1432,15 @@ def testSemanticEvidenceDelivery : IO Unit := do
   let some queryNeighbor := originalGraph.outcomes.find? (fun owner =>
       owner.work == .text (canonicalToolWork queryNeighborTool)) |
     throw (IO.userError "query-hit neighbor lost its original graph owner")
+  let common := String.ofList (List.replicate 160 'a') ++ "\n\n" ++
+    "Use only recorded evidence. 日本語の条件も保持します。\n\n"
+  let oldTask := common ++ "Investigate the previous independent question in this source snapshot."
+  let newTask := common ++ "Explain the public interface and configuration precedence in this source snapshot."
+  check (evidenceFocusQuestion newTask [oldTask, newTask] ==
+      "Explain the public interface and configuration precedence in this source snapshot." &&
+      evidenceFocusQuestion "Short same-domain question" ["Short previous-domain question"] == "Short same-domain question" &&
+      evidenceFocusQuestion newTask [newTask] == newTask)
+    "shared carrier paragraphs displaced actual evidence facets or the human question was rewritten"
   let focusEntries := [queryNeighbor]
   let primaryFocus := entrySourceFocus focusEntries originalGraph.all [] []
   let distinctFocus := focusSourceDomain focusEntries originalGraph.all [] []
@@ -1635,6 +1685,12 @@ def testSemanticEvidenceDelivery : IO Unit := do
       "a missing, foreign, repeated or oversized ranking acquired corpus ownership"
   check ((Persistence.Store.rankSupportDocuments directory [5, 3, 4]).map (·.owner) == [5, 3, 4])
     "neighbor bodies were read in save order instead of the current evidence order"
+  let mixedDirectory := [document, {document with owner := 4, work := 40},
+    {document with owner := 5, work := 50}]
+  let invertedFamilies := Std.HashMap.ofList [(document.work, 0), (40, 1), (50, 2)]
+  check ((Persistence.Store.rankSupportDocuments mixedDirectory [5, 3, 4] invertedFamilies).map
+      (·.owner) == [5, 3, 4])
+    "an old source family consumed hydration before a more relevant original observation"
   let prior : IndexedSemanticNominations := {durable := [3], durableRanking := [3, 4, 5]}
   check (prior.memoIdentity != {prior with durableRanking := [3, 5, 4]}.memoIdentity)
     "changed peripheral ranking reused an old handoff dependency identity"
@@ -2864,6 +2920,31 @@ def testDeliveryReconciliation : IO Unit := do
   let changedPart : DeliveryPart := {keys := changed.keys, text := changed.render, context := some changed}
   check ((changedPart.remaining planned.keys).isSome)
     "an old presentation plan suppressed a separately observed new outcome"
+  let frontier : AdvisoryFrontier := {identity := "db:original", nextRoot := 10}
+  let later : AdvisoryFrontier := {frontier with nextRoot := 12}
+  let receipts := [advisoryFrontierKey "human:question" frontier]
+  let withFrontier := {handoff with deliveredGraphs := handoff.deliveredGraphs ++ receipts}
+  let some frontierPacket := withFrontier.reconcileDelivery [] 10000 10000 |
+    throw (IO.userError "accepted packet lost its advisory publication frontier")
+  let accepted := addDeliveredGraphs {profile := "work"} frontierPacket.handoff.deliveredGraphs
+  check (accepted.deliveredGraphs.contains receipts.head! &&
+      !(compactState accepted).deliveredGraphs.contains receipts.head!)
+    "late reconciliation lost the frontier or compaction kept a forgotten advisory epoch"
+  let oldPosition : AdvisoryPosition := ⟨later, 9, by decide⟩
+  let newPosition : AdvisoryPosition := ⟨later, 10, by decide⟩
+  let foreignPosition : AdvisoryPosition := ⟨{later with identity := "db:other"}, 9, by decide⟩
+  check (acceptedAdvisoryFrontier "human:question" frontier.identity receipts == some 10 &&
+      !advisoryOwnerAllowed "human:question" receipts [oldPosition] &&
+      advisoryOwnerAllowed "human:question" receipts [newPosition] &&
+      advisoryOwnerAllowed "new human question" receipts [oldPosition] &&
+      advisoryOwnerAllowed "human:question" receipts [foreignPosition] &&
+      advisoryOwnerAllowed "human:question" receipts [oldPosition, foreignPosition] &&
+      advisoryOwnerAllowed "human:question" [] [oldPosition] &&
+      acceptedAdvisoryFrontier "human:question" frontier.identity ["a:corrupt"] == none)
+    "question frontier admitted reranked old observations or lost new/source/epoch data"
+  check (!advisoryTransportAllowed false [.text "old owner"] (.text "old owner") &&
+      advisoryTransportAllowed true [.text "old owner"] (.text "old owner"))
+    "advisory frontier suppressed independently grounded native work"
   let firstKey := contextPlanKey "owner" "result" "question"
   let nextKey := contextPlanKey "owner" "result" "new human question"
   let firstCue := {planned with planKey := firstKey}

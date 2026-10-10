@@ -1988,8 +1988,8 @@ def supportWorkIndex : IO Unit := do
     "sparse Work owners changed stable meaning/family ranking"
   let reader ← Store.NodeReader.new first
   require ((← reader.supportOwners [workB, workA] [] 48000 ranking [(workB, 0), (workA, 1)]).map (·.relation) ==
-      [b.relation, a2.relation, a.relation])
-    "production surrounding-graph delivery lost its original tool result or priority"
+      [a2.relation, a.relation, b.relation])
+    "production surrounding-graph hydration let family order override current meaning rank"
   let mut samples : List Json := []
   for trial in [:3] do
     let sparse ← PageMap.pin root

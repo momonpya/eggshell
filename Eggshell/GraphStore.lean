@@ -1685,17 +1685,24 @@ def supportDocuments (snapshot : Snapshot) (works : List Nat) : IO (List SearchD
       rows := (ordinal, ⟨id, checked.header.work, []⟩) :: rows
   pure ((rows.mergeSort fun a b => a.1 ≤ b.1).map Prod.snd)
 
-/-- Follow original Work identities, independently of query words and model
-scores. Check body sizes before hydration and spend one aggregate byte budget;
-an oversized neighbor cannot cause an archive-sized body allocation. -/
+/-- Meaning rank orders hydration. Original family is a stable tie-break,
+not permission for an earlier investigation to consume another source's
+budget before its more relevant evidence can be considered. -/
+def supportRankBefore (leftRank rightRank leftFamily rightFamily : Nat) : Bool :=
+  if leftRank == rightRank then decide (leftFamily ≤ rightFamily)
+  else decide (leftRank < rightRank)
+
+theorem source_rank_precedes_family (leftRank rightRank leftFamily rightFamily : Nat)
+    (better : leftRank < rightRank) :
+    supportRankBefore leftRank rightRank leftFamily rightFamily = true := by
+  simp [supportRankBefore, Nat.ne_of_lt better, better]
+
 def rankSupportDocuments (documents : List SearchDocument) (ranking : List Nat)
     (families : Std.HashMap Nat Nat := {}) : List SearchDocument :=
   let priorities : Std.HashMap Nat Nat := Std.HashMap.ofList (ranking.zipIdx)
-  documents.mergeSort fun left right =>
-    let l := families.getD left.work families.size
-    let r := families.getD right.work families.size
-    if l == r then priorities.getD left.owner ranking.length ≤ priorities.getD right.owner ranking.length
-    else l < r
+  documents.mergeSort fun left right => supportRankBefore
+    (priorities.getD left.owner ranking.length) (priorities.getD right.owner ranking.length)
+    (families.getD left.work families.size) (families.getD right.work families.size)
 
 theorem ranked_support_is_original (documents : List SearchDocument) (ranking : List Nat)
     (document : SearchDocument) (families : Std.HashMap Nat Nat := {}) :

@@ -1,6 +1,7 @@
 module
 
 public import Eggshell.PluginModel
+public import Eggshell.AdvisoryFrontier
 public import Eggshell.SemanticMatcher
 public import Eggshell.GeometryMemo
 public import Eggshell.SaturationMemo
@@ -1919,6 +1920,35 @@ theorem evidence_search_window_is_original_suffix (owner : OutcomeEdge) (index :
       some ((window.drop (((Matcher.atomText? owner.work).getD "").length + 1 - index * 384)).copy) := by
   simp [evidenceSearchWindows, List.getElem?_zipIdx, original]
 
+/-- Common carrier paragraphs are not new evidence demand. Keep primary
+nomination and the actual human prompt intact; only refine the admitted graph
+using the literal task suffix, when different recorded requests share that
+complete prefix. No keywords, rewriting or generative summary are used. -/
+def evidenceFocusOffset (question : String) (requests : List String) : Nat := Id.run do
+  let shared := (requests.filter (· != question)).foldl (fun best request =>
+    max best ((question.toList.zip request.toList).takeWhile
+      (fun pair => pair.1 == pair.2)).length) 0
+  let mut first := 0
+  for paragraph in (question.splitOn "\n\n").dropLast do
+    let next := first + paragraph.length + 2
+    if next > shared || question.length - next < 32 then break
+    first := next
+  return first
+
+def evidenceFocusQuestion (question : String) (requests : List String) : String :=
+  let first := evidenceFocusOffset question requests
+  if first < 128 then question else (question.drop first).copy
+
+theorem evidence_focus_is_original_suffix (question : String) (requests : List String) :
+    ∃ first, evidenceFocusQuestion question requests = (question.drop first).copy := by
+  unfold evidenceFocusQuestion
+  dsimp only
+  split
+  · refine ⟨0, ?_⟩
+    apply String.ext
+    simp
+  · exact ⟨_, rfl⟩
+
 def FocusedNeighborhood.ranking (ordered : FocusedNeighborhood support) : List Value :=
   ordered.rows.map (fun row => row.1.val.owner.relation)
 
@@ -2736,9 +2766,11 @@ def coherentRecordContext (records : List (ContextSpan source))
     Prod.fst |>.getD 0
   let upper := ((heads.find? fun row => row.2.isNone && range.stop ≤ row.1).map Prod.fst).getD source.length
   let spare := 2048 - (range.stop - range.start)
-  let before := min 1024 spare
+  let initialBefore := min (min 1024 spare) (range.start - lower)
+  let after := min (spare - initialBefore) (upper - range.stop)
+  let before := min (spare - after) (range.start - lower)
   let first := max lower (range.start - before)
-  let last := min upper (range.stop + (spare - before))
+  let last := min upper (range.stop + after)
   let start := ((records.find? fun record => first ≤ record.start && record.start ≤ range.start).map
     (·.start)).getD range.start
   let stop := ((records.filter fun record => range.stop ≤ record.stop && record.stop ≤ last).getLast?).map
@@ -2954,19 +2986,62 @@ theorem prerequisite_cues_keep_heads (source : String) (workChars : Nat)
     range ∈ prerequisiteCueRanges source workChars windows heads :=
   List.mem_append_right _ present
 
+/-- A selected section entry may include its following explanation, but
+cannot borrow the preceding section or cross a recorded read discontinuity. -/
+def followingRecordContext (records : List (ContextSpan source))
+    (heads : List (Nat × Option Nat)) (range : EvidenceRange source) : EvidenceRange source :=
+  let upper := ((heads.find? fun row => row.2.isNone && range.stop ≤ row.1).map Prod.fst).getD source.length
+  let last := min upper (range.start + 2048)
+  let stop := ((records.filter fun record => range.stop ≤ record.stop && record.stop ≤ last).getLast?).map
+    (·.stop) |>.getD range.stop
+  if valid : range.stop ≤ stop ∧ range.start < stop ∧ stop ≤ source.length ∧ stop - range.start ≤ 2048 then
+    ⟨range.start, stop, valid.2.1, valid.2.2.1, valid.2.2.2⟩
+  else range
+
+theorem following_context_keeps_cue (records : List (ContextSpan source))
+    (heads : List (Nat × Option Nat)) (range : EvidenceRange source) (position : Nat)
+    (covered : range.covers position) : (followingRecordContext records heads range).covers position := by
+  unfold followingRecordContext
+  dsimp only
+  split
+  · rename_i valid
+    simp only [EvidenceRange.covers] at *
+    exact ⟨covered.1, Nat.lt_of_lt_of_le covered.2 valid.1⟩
+  · exact covered
+
+/-- The strongest cue has one local observation context. The estimator and
+renderer use this same immutable range, including the following consequence
+when the cue starts a section. -/
+def preferredCueContext (records : List (ContextSpan source))
+    (heads : List (Nat × Option Nat)) (range : EvidenceRange source) : EvidenceRange source :=
+  let isEntry := heads.any fun head => head.2 == some range.start
+  let complete := if isEntry then recordContextRange records range
+    else prerequisiteContextRange records heads range
+  if isEntry then followingRecordContext records heads complete
+  else coherentRecordContext records heads complete
+
 def prepareCueViews (records : List (ContextSpan source))
     (heads : List (Nat × Option Nat))
     (decoded : Option (DecodedLayout source)) (ranges : List (EvidenceRange source)) :
     List (EvidenceView source) :=
-  ranges.filterMap fun range =>
+  let candidates := ranges.map fun range =>
     -- A section entry is itself the scope boundary. It cannot borrow the
-    -- previous paragraph as if that paragraph were its prerequisite.
+    -- preceding section as if it were a prerequisite.
     let isEntry := heads.any fun head => head.2 == some range.start
     let complete := if isEntry then recordContextRange records range
       else prerequisiteContextRange records heads range
-    match decoded with
-    | none => some (.original complete)
-    | some layout => (decodedEvidenceUsing? layout complete).map EvidenceView.decoded
+    let coherent := preferredCueContext records heads range
+    (complete, coherent)
+  -- Cover the ranked statements and their prerequisites before enlarging
+  -- any one neighborhood. Optional local consequences use only remaining
+  -- space and cannot evict an already admitted original cue.
+  let coverage := candidates.map Prod.fst
+  let context := candidates.filterMap fun (complete, coherent) =>
+    if coherent.start == complete.start && coherent.stop == complete.stop then none else some coherent
+  let leading := candidates.head?.map Prod.snd |>.toList
+  (leading ++ coverage ++ context).filterMap fun candidate => match decoded with
+    | none => some (.original candidate)
+    | some layout => (decodedEvidenceUsing? layout candidate).map EvidenceView.decoded
 
 /-- Overlap removal occurs after budget admission, preserving the smaller
 alternative when the complete local context does not fit. Every residual is
@@ -3106,7 +3181,7 @@ def Handoff.reconcileDelivery (handoff : Handoff) (delivered : List String)
     let text := if delta.isEmpty then body else if body.isEmpty then delta else body ++ "\n\n" ++ delta
     let frame ← sourceFrame? chars bytes text
     let keys := (packet.map fun packet => packet.parts.flatMap (·.keys) ++ packet.frames.map (·.key)).getD [] ++ controls.map (·.key) ++
-      handoff.deliveredGraphs.filter (·.startsWith "s:")
+      handoff.deliveredGraphs.filter (fun key => key.startsWith "s:" || key.startsWith "a:")
     let visibleOwners := (packet.map fun packet => packet.parts.flatMap (·.owners)).getD [] ++
       controls.map (·.use.owner)
     pure ⟨{handoff with
@@ -3137,7 +3212,7 @@ def minimumContextCostFor (records : List (ContextSpan source))
   match ranked.head? with
   | none => 0
   | some cue =>
-      let context := coherentRecordContext records heads (prerequisiteContextRange records heads cue)
+      let context := preferredCueContext records heads cue
       context.stop - context.start
 
 theorem minimum_context_cost_for_bounded (records : List (ContextSpan source))
@@ -3146,8 +3221,7 @@ theorem minimum_context_cost_for_bounded (records : List (ContextSpan source))
   unfold minimumContextCostFor
   split
   · exact Nat.zero_le _
-  · exact (coherentRecordContext records heads
-      (prerequisiteContextRange records heads _)).bounded
+  · exact (preferredCueContext records heads _).bounded
 
 theorem minimum_context_cost_tail_independent (records : List (ContextSpan source))
     (heads : List (Nat × Option Nat)) (first : EvidenceRange source)
@@ -3317,6 +3391,32 @@ theorem nominated_support_remains_packet_entry (nominated : List Value) (relatio
     (slice : TransportSlice) (present : relation ∈ nominated) :
     meaningPacketEntry nominated relation slice = true := by
   simp [meaningPacketEntry, present]
+
+/-- An additional interpretation of the same parent Work adds less coverage
+than original child observations. It remains eligible after those sources;
+separate observations of a native/sub-Work are never demoted by this rule. -/
+def evidenceOwnerPriority (earlier : List OutcomeEdge) (all : List AllEdge)
+    (owner : OutcomeEdge) (entry : Bool) : Nat :=
+  if !(all.any fun edge => edge.children.contains owner.work) &&
+      earlier.any (fun previous => previous.work == owner.work) then 2
+  else if entry then 0 else 1
+
+theorem repeated_parent_follows_original_sources (earlier : List OutcomeEdge)
+    (all : List AllEdge) (owner : OutcomeEdge) (entry : Bool)
+    (parent : (all.any fun edge => edge.children.contains owner.work) = false)
+    (repeated : (earlier.any fun previous => previous.work == owner.work) = true) :
+    evidenceOwnerPriority earlier all owner entry = 2 := by
+  unfold evidenceOwnerPriority
+  rw [parent, repeated]
+  rfl
+
+theorem original_child_priority_retained (earlier : List OutcomeEdge)
+    (all : List AllEdge) (owner : OutcomeEdge) (entry : Bool)
+    (child : (all.any fun edge => edge.children.contains owner.work) = true) :
+    evidenceOwnerPriority earlier all owner entry = (if entry then 0 else 1) := by
+  unfold evidenceOwnerPriority
+  rw [child]
+  rfl
 
 /-- Original source-family rank precedes the distinction between a search
 entry and its graph support. A later family's hit cannot consume capacity
@@ -3738,7 +3838,8 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
     (sourceUnions : List UnionEdge := []) (entryWorks : List Value := [])
     (support : List (SourceSupport entryWorks sourceAll sourceUnions) := [])
     (byteBudget : Option Nat := none) (evidenceRanking : List Value := [])
-    (requestQuestion : Option String := none) (nativeObserved : Bool := false) : Option Handoff :=
+    (requestQuestion : Option String := none) (nativeObserved : Bool := false)
+    (advisoryExcluded : List Value := []) : Option Handoff :=
   let extraction := prepared.val
   let attach := fun selected : Selected => {
     selected with
@@ -3749,6 +3850,8 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
   let selectedAll := sourceEntrySelection meaningSelected enforce nominated selectedAll
   let selectedAll := nativeTransportSelection meaningSelected enforce nominated selectedAll
   let selectedAll := observedTransportSelection nativeObserved selectedAll
+  let selectedAll := selectedAll.filter fun selected => advisoryTransportAllowed
+    (enforce && selected.blocks) advisoryExcluded selected.matched.edge.relation
   let boundary := (boundaryMatches discovery extraction).map attach
   /-
   Extract supplies admitted graph relations. Meaning nominations are roots,
@@ -3771,7 +3874,8 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
   let checkpointed := if enforce then boundary.filter fun selected =>
     selected.checkpoints deliveredGraphs
     else []
-  let usableSupport := admittedSourceSupport meaningSelected enforce support
+  let usableSupport := (admittedSourceSupport meaningSelected enforce support).filter fun item =>
+    advisoryTransportAllowed false advisoryExcluded item.owner.relation
   let surrounding := usableSupport.filter fun item =>
     !deliveredGraphs.contains (nativeHistoryKey item.owner.relation) &&
     !planningReceipts.contains ("g:" ++ relationKey item.owner.relation ++ ":" ++ relationKey item.owner.outcome) &&
@@ -3899,7 +4003,15 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       -- enriching any one of them. Provenance is retained by packetCost and
       -- rendering; it must not turn the first past answer into a scope gate.
       let isEntry := fun (slice : TransportSlice) => centralEntries.any (·.text == slice.text)
-      let priority := fun (slice : TransportSlice) => evidenceAdmissionPriority 0 (isEntry slice)
+      let originals := selectedAll.map (·.matched.edge) ++ surrounding.map (·.owner)
+      let rankedOriginals := choices.filterMap fun choice =>
+        originals.find? (fun owner => owner.relation == choice.1)
+      let priority := fun (slice : TransportSlice) =>
+        match choices.find? (fun choice => choice.2.1.text == slice.text) >>= fun choice =>
+            originals.find? (fun owner => owner.relation == choice.1) with
+        | none => evidenceAdmissionPriority 0 (isEntry slice)
+        | some owner => evidenceOwnerPriority
+            (rankedOriginals.takeWhile (·.relation != owner.relation)) sourceAll owner (isEntry slice)
       -- Meaning-selected roots determine demand. A ranked supporting graph
       -- receives a comparable allowance, rather than every reachable leaf
       -- inflating the packet until it fills the configured ceiling.
@@ -3915,12 +4027,10 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       -- allowance. Their number and aggregate size do not create demand.
       let available := coherentEntryPacketBudget (budget, byteBudget.getD (budget * 4))
         packetCost demandedEntries rankedSupport
-      -- Admit the priced supporting context with the entries, before any
-      -- enrichment. It must not become hypothetical capacity that an old
-      -- explanation consumes before the underlying tool data can enter.
-      let isPricedSupport := fun (slice : TransportSlice) =>
-        rankedSupport.head?.any (·.text == slice.text)
-      let coherence := fun slice => if isEntry slice || isPricedSupport slice then 0 else 1
+      -- All current-question-ranked, graph-admitted minimum observations
+      -- compete before any old explanation is enlarged. Being outside the
+      -- initial nomination is not evidence that a source is peripheral.
+      -- The entry-derived envelope stays independent of neighborhood size.
       -- Reserve useful entry coverage from the actual envelope before adding
       -- more neighbors. Reachable leaf count cannot reduce this reservation.
       -- Share the demand envelope among its entries, independently of the
@@ -3930,7 +4040,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       let preference := fun (slice : TransportSlice) =>
         (choices.find? (fun choice => choice.2.1.text == slice.text)).map
             (fun choice => preferredContextLevel choice.2 entryShare) |>.getD 0
-      match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference coherence with
+      match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference with
       | some fitted => fitted.val
       | none => []
       else if reserved > budget || byteBudget.any (reservedBytes > ·) then [] else
@@ -4313,6 +4423,19 @@ theorem IndexedSemanticNominations.focused_identity_injective
 may reuse graph computation, never the provider's external state. -/
 abbrev SemanticReuse := IndexedSemanticNominations → IO (Option (Option Handoff))
 
+/-- Cached discovery has the same publication boundary as a fresh search.
+After acknowledgement, rerun concrete demand rather than reviving an old
+advisory packet from a different ranking/cache entry. -/
+def fenceAdvisoryReuse (frontiers : List AdvisoryFrontier) (question : String)
+    (delivered : List String) (reuse : SemanticReuse) : SemanticReuse := fun owners => do
+  if frontiers.any (fun frontier =>
+      (acceptedAdvisoryFrontier question frontier.identity delivered).isSome) then return none
+  pure ((← reuse owners).map fun result => result.map fun handoff =>
+    if handoff.packet.isSome then
+      {handoff with deliveredGraphs := (handoff.deliveredGraphs ++
+        frontiers.map (advisoryFrontierKey question)).eraseDups}
+    else handoff)
+
 /-- Unpublished owners participate in the same ordered provider corpus, but
 are not persisted as shared evidence or mistaken for a DB owner. Request
 ordinals resolve through this closed source table, including bounded repairs. -/
@@ -4464,6 +4587,8 @@ structure IndexedContext where
   surfaces : List String → IO (List Nat)
   frequencies : List String → IO (Std.HashMap String Nat)
   liveOwner : Value → IO (Option Nat)
+  advisoryFrontiers : List AdvisoryFrontier := []
+  advisoryPositions : Value → IO (List AdvisoryPosition) := fun _ => pure []
   allCount : Option Nat := none
   prepareTopology : Option (List UnionEdge → List Value → IO (List AllEdge)) := none
   childMembership : Option (RunView → IO (Value → IO Bool)) := none
@@ -4624,6 +4749,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     unless present do semanticBound := semanticBound + 1
   let native := enforce || evidence.isSome
   let referenceQuery := surroundingEvidenceQuery current meaningQuery
+  let reuseSemantic := fenceAdvisoryReuse source.advisoryFrontiers referenceQuery delivered reuseSemantic
   let neighborhoodQuery := sourcePositionQuery current meaningQuery native
   let semanticOwners ← if evidence.isNone then
       match selection.semanticMatcher with
@@ -4876,6 +5002,8 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   let mut focusedWindows : List (Value × List Nat) := []
   let mut focusedRows : List (Value × List Nat) := []
   let focusDomain := focusSourceDomain entries sourceAll persistent provenance support
+  let focusQuestion := evidenceFocusQuestion neighborhoodQuery
+    (sourceAll.map (fun edge => (Matcher.atomText? edge.parent).getD ""))
   if evidence.isNone && !focusDomain.isEmpty then
     if let some command := selection.semanticMatcher then
       if let some root := evidenceRoots.head? then
@@ -4887,7 +5015,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
             -- Use the same original question/complete order as the initial
             -- packet. A native operation cannot create a different advisory
             -- plan and refill it with undispatched old positions.
-            let some neighborhood ← focusNeighborhood command neighborhoodQuery focusDomain | return some pendingSearch
+            let some neighborhood ← focusNeighborhood command focusQuestion focusDomain | return some pendingSearch
             focusedRanking := neighborhood.ranking
             focusedWindows := neighborhood.windows
             focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
@@ -4915,6 +5043,11 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   let semanticEvidence := semanticOwners.durableWindows.filterMap fun (id, windows) =>
     rankedOwners[id]?.map fun relation => (relation, windows)
   let originalEvidence := semanticEvidence ++ semanticOwners.stagedWindows
+  let advisoryExcluded ← if evidence.isNone && selection.semanticMatcher.isSome then
+      (entries.map (·.relation) ++ selected.map (·.matched.edge.relation) ++
+        support.map (·.owner.relation)).eraseDups.filterM fun owner => do
+        pure (!advisoryOwnerAllowed referenceQuery delivered (← source.advisoryPositions owner))
+    else pure []
   let rendered := renderAutomatic staged selection.handoffChars current delivered enforce stagedVisible discovery
     (provenance := provenance) (refreshSources := refreshSources)
     (nominated := nominated.map (·.relation) ++ semanticOwners.staged)
@@ -4924,6 +5057,14 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     (byteBudget := selection.handoffBytes)
     (evidenceRanking := (focusedRanking ++ evidenceRanking).eraseDups)
     (requestQuestion := meaningQuery) (nativeObserved := evidence.isSome)
+    (advisoryExcluded := advisoryExcluded)
+  let rendered := rendered.map fun handoff =>
+    if evidence.isNone && selection.semanticMatcher.isSome && handoff.packet.isSome then
+      {handoff with deliveredGraphs := (handoff.deliveredGraphs ++
+        (source.advisoryFrontiers.filter fun frontier =>
+          (acceptedAdvisoryFrontier referenceQuery frontier.identity delivered).isNone).map
+          (advisoryFrontierKey referenceQuery)).eraseDups}
+    else handoff
   trace s!"render complete chars={(rendered.map (·.text.length)).getD 0}"
   pure rendered
 
@@ -4939,6 +5080,9 @@ def indexedDiscovery (selection : Config.Selection)
   let some single := SingleSource.find? snapshots | return none
   let snapshot := single.snapshot
   let reader ← Persistence.Store.NodeReader.new snapshot
+  let frontier : AdvisoryFrontier :=
+    {identity := snapshot.head.identity, nextRoot := ← Persistence.Store.getNat snapshot.get "roots"}
+  let reuseSemantic := fenceAdvisoryReuse [frontier] (meaningQuery.getD current) delivered reuseSemantic
   -- A completed request can reuse its result before any All/Union descendant
   -- is restored. The provider still observes the current corpus. A miss
   -- consumes this same observation once, then follows the complete kernel.
@@ -4962,6 +5106,11 @@ def indexedDiscovery (selection : Config.Selection)
   let unions ← reader.unions (← Persistence.Store.authority snapshot)
   let source : IndexedContext := {
     all := [], persistent := unions.map (·.edge), outcomeCount
+    advisoryFrontiers := [frontier]
+    advisoryPositions := fun owner => do
+      let some (ordinal, _) ← Persistence.Store.liveRoot? snapshot owner | return []
+      if published : ordinal < frontier.nextRoot then return [⟨frontier, ordinal, published⟩]
+      else throw (IO.userError "advisory root position exceeds its pinned publication")
     allCount
     prepareTopology := some demand.read
     childMembership := some demand.childLookup
@@ -5092,8 +5241,23 @@ def federatedDiscovery (selection : Config.Selection)
   let sources := (snapshots.filterMap id).toArray
   let catalogue ← Persistence.Store.Federated.prepare sources
   let readers := catalogue.readers
+  let frontiers ← sources.toList.mapM fun snapshot => do
+    let nextRoot ← Persistence.Store.getNat snapshot.get "roots"
+    pure ({identity := snapshot.head.identity, nextRoot} : AdvisoryFrontier)
   let source : IndexedContext := {
     all := catalogue.all
+    advisoryFrontiers := frontiers
+    advisoryPositions := fun owner => do
+      let mut found := []
+      for index in List.finRange sources.size do
+        let snapshot := sources[index]
+        let some (ordinal, _) ← Persistence.Store.liveRoot? snapshot owner | continue
+        let some frontier := frontiers[index.val]? |
+          throw (IO.userError "missing pinned source frontier")
+        if published : ordinal < frontier.nextRoot then
+          found := found ++ [⟨frontier, ordinal, published⟩]
+        else throw (IO.userError "federated advisory root exceeds its pinned publication")
+      pure found
     persistent := catalogue.unions
     supportOwners := some fun works excluded allowance ranking families => do
       let mut remaining := allowance

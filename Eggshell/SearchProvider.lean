@@ -286,6 +286,33 @@ theorem WindowBatch.existing (batch : WindowBatch source) (window : String)
   rw [← batch.complete]
   exact List.mem_append_left _ present
 
+/-- Presentation keeps the configured retrieval policy throughout the
+admitted graph, instead of reverting to a purely numerical order after hybrid
+retrieval. Admission anchors do not override the current-question fusion.
+No owner is excluded by this order; nominations are computed separately. -/
+def presentationRanking (mode : String) (count : Nat) (semantic lexical : List Nat) : List Nat :=
+  let combined := if mode == "lexical" then lexical
+    else if mode == "semantic" then semantic
+    else SearchRank.fused [semantic, lexical]
+  (combined ++ semantic ++ lexical ++ List.range count).eraseDups.filter (· < count)
+
+theorem presentation_ranking_original (mode : String) (count : Nat)
+    (semantic lexical : List Nat) (index : Nat)
+    (present : index ∈ presentationRanking mode count semantic lexical) : index < count := by
+  exact of_decide_eq_true (List.mem_filter.mp present).2
+
+theorem presentation_ranking_complete (mode : String) (count : Nat)
+    (semantic lexical : List Nat) (index : Nat) (valid : index < count) :
+    index ∈ presentationRanking mode count semantic lexical := by
+  apply List.mem_filter.mpr
+  refine ⟨List.mem_eraseDups.mpr ?_, by simpa using valid⟩
+  exact List.mem_append_right _ (List.mem_range.mpr valid)
+
+theorem presentation_ranking_no_duplicates (mode : String) (count : Nat)
+    (semantic lexical : List Nat) :
+    (presentationRanking mode count semantic lexical).Nodup :=
+  List.filter_sublist.nodup (SearchRank.deduplicated_nodup _)
+
 /-- Candidate payloads never cross this protocol. Numerical scoring uses
 bounded batches of pre-indexed vectors and the identical selection kernel.
 Missing vectors fail explicitly; the search cannot silently omit a candidate. -/
@@ -326,8 +353,8 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
   let related ← IO.ofExcept (selected.getObjValAs? (List Nat) "related")
   -- All cached similarities were already computed. Keep their complete order
   -- for graph-neighbor budgeting; this does not change relatedness admission.
-  let ranked := ((scored.reverse.mergeSort SearchRank.scoreOrder).map (·.2) ++
-    lexical ++ List.range candidates.size).eraseDups
+  let ranked := presentationRanking options.mode candidates.size
+    ((scored.reverse.mergeSort SearchRank.scoreOrder).map (·.2)) lexical
   let windows := ranked.filterMap fun index =>
     (evidence.find? (·.1 == index)).map fun row =>
       (⟨row.1, row.2⟩ : SemanticMatcher.WindowChoice)
@@ -364,8 +391,8 @@ def handle (options : Options) (child : Option Encoder)
     scored ← IO.ofExcept (scores.toList.zipIdx.mapM fun (value, index) => do pure (← number value, index))
   let selected ← selection options candidates lexical anchors scored
   let related ← IO.ofExcept (selected.getObjValAs? (List Nat) "related")
-  let ranked := ((scored.mergeSort SearchRank.scoreOrder).map (·.2) ++
-    lexical ++ List.range candidates.size).eraseDups
+  let ranked := presentationRanking options.mode candidates.size
+    ((scored.mergeSort SearchRank.scoreOrder).map (·.2)) lexical
   pure (some (Json.mkObj [("related", toJson related), ("ranked", toJson ranked)]))
 
 def run (args : List String) : IO UInt32 := do
