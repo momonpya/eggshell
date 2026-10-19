@@ -19,7 +19,8 @@ run_meta do
       ``Eggshell.Extract.solve_provenance,
       ``Eggshell.Selection.validFor_provenance_congr,
       ``Eggshell.Extract.runWithPolicyFuel_demand_exact,
-      ``Eggshell.QuotientBuilder.AtomQuotient.Index.subwork_exact] do
+      ``Eggshell.QuotientBuilder.AtomQuotient.Index.subwork_exact,
+      ``Eggshell.Persistence.Store.ChildObservation.child_before] do
     let axioms ← Lean.collectAxioms theoremName
     for axiomName in axioms do
       unless #[``propext, ``Classical.choice, ``Quot.sound].contains axiomName do
@@ -120,9 +121,11 @@ run_meta do
         #[``Eggshell.SelectionDependency.completedBranches, ``Eggshell.SelectionAudit.Premise.encode],
         #[``Eggshell.EqualityDependency.DirectIndex.make]),
       (``Eggshell.Plugin.indexedTerminalRoot,
-        #[``Eggshell.Plugin.auditRenderedSelection], #[]),
+        #[``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.SelectionAudit.Admission.observe],
+        #[``Eggshell.SelectionAudit.analyzeAdmission]),
       (``Eggshell.Plugin.indexedDiscoveryUsing,
-        #[``Eggshell.Plugin.auditRenderedSelection], #[]),
+        #[``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.SelectionAudit.Admission.observe],
+        #[``Eggshell.SelectionAudit.analyzeAdmission]),
       (``Eggshell.Plugin.Daemon.hookClient,
         #[``Eggshell.Plugin.Worker.awaitUntil, ``Eggshell.Plugin.Worker.killGroup,
           ``Eggshell.Plugin.Daemon.decodeHookReply], #[``IO.getStdin, ``Eggshell.Plugin.captureTerminal]),
@@ -667,6 +670,17 @@ run_meta do
     if childBody.getUsedConstants.contains forbidden then
       throwError "Completion restores the whole All graph: {forbidden}"
   logInfo "Audited general structured child-role lookup without All hydration"
+  let some childPosting := environment.find? ``Eggshell.Persistence.Store.literalAllChildren |
+    throwError "Missing original child posting boundary"
+  let some childPostingBody := childPosting.value? | throwError "Missing original child posting body"
+  for required in #[``Eggshell.Persistence.Store.ChildObservation.mk,
+      ``Eggshell.Persistence.Store.AllHeader.fromFrame?] do
+    unless childPostingBody.getUsedConstants.contains required do
+      throwError "Child diagnostics bypass the original checked frame: {required}"
+  for forbidden in #[``Eggshell.Persistence.Store.NodeReader.read,
+      ``Eggshell.Persistence.Store.NodeReader.topology] do
+    if childPostingBody.getUsedConstants.contains forbidden then
+      throwError "Child diagnostics hydrate unrelated source bodies: {forbidden}"
   let mut queue := [``Eggshell.Plugin.headerSemanticNominations]
   let mut seen : Std.HashSet Name := {}
   while let name :: remaining := queue do

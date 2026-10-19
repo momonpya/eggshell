@@ -3,6 +3,8 @@ module
 public import Eggshell.SelectionDependency
 public import Eggshell.GraphCodec
 public import Eggshell.Receipt
+public import Eggshell.Matcher
+public import Eggshell.GraphStore
 
 @[expose] public section
 
@@ -75,6 +77,72 @@ structure CompletedBranch where
   premises : List Nat
   deriving ToJson, FromJson
 
+/-- Observed beside the actual matcher call, before saturation adds more
+generators. Values and source frames remain shared until completed owners
+are known; only those owners are serialized. -/
+structure Admission where
+  matched : Matcher.Match
+  runLocal : List UnionEdge
+  child : Json
+
+def Admission.observe (view : RunView) (corpus : Matcher.Corpus)
+    (children : Std.HashMap Value Persistence.Store.ChildObservation)
+    (matched : Matcher.Match) : Admission := Id.run do
+  let mut child := Json.null
+  if let some original := corpus.subworks.find? (view.quotient.toEquality.same matched.edge.work) then
+    if let some parent := corpus.parents.find? (fun edge => edge.children.contains original) then
+      child := Json.mkObj [("kind", toJson "topology"),
+        ("requested", Persistence.valueToJson original), ("original", Persistence.valueToJson original),
+        ("relation", Persistence.valueToJson parent.relation)]
+    else if let some observed := children[original]? then
+      child := observed.encode
+  return ⟨matched, view.localUnions, child⟩
+
+structure AdmissionSnapshot where
+  owner : String
+  branches : List Nat
+  localCount : Nat
+  demand : Json
+  work : Json
+  currentFragment : Json
+  pastFragment : Json
+  wholeIdentity : Bool
+  fragmentIdentity : Bool
+  subwork : Bool
+  priorComplete : Bool
+  demandComplete : Bool
+  pastWhole : Bool
+  groundedFragment : Bool
+  retrieved : Bool
+  child : Json
+  deriving ToJson, FromJson
+
+def Admission.snapshot? (runLocal : List UnionEdge) (branches : List CompletedBranch)
+    (admission : Admission) (owner : String) : Option AdmissionSnapshot := do
+  let before := admission.runLocal.map Generator.encode |>.map toJson
+  unless before == (runLocal.take before.length).map (fun edge => toJson (Generator.encode edge)) do none
+  let matched := admission.matched
+  unless matched.automatic && matched.judgment.delivery == .completed do none
+  let projected := Persistence.valueToJson matched.projectedEdge.relation
+  let positions := branches.zipIdx.filterMap fun (branch, index) =>
+    if branch.owner == owner && branch.projectedOutcome == projected &&
+        branch.demand == Persistence.valueToJson matched.projectionWork then some index else none
+  if positions.isEmpty then none else some {
+    owner, branches := positions, localCount := before.length
+    demand := Persistence.valueToJson matched.demand
+    work := Persistence.valueToJson matched.edge.work
+    currentFragment := Persistence.valueToJson matched.work.currentFragment
+    pastFragment := Persistence.valueToJson matched.work.pastFragment
+    wholeIdentity := matched.work.wholeWorkIdentity
+    fragmentIdentity := matched.work.fragmentIdentity
+    subwork := matched.work.subwork
+    priorComplete := matched.work.priorInDemand.complete
+    demandComplete := matched.work.demandInPrior.complete
+    pastWhole := matched.work.pastWholeWork
+    groundedFragment := matched.groundedOutcomeFragment
+    retrieved := matched.retrieved
+    child := admission.child }
+
 structure Snapshot where
   current : Json
   persistent : List Generator
@@ -82,6 +150,7 @@ structure Snapshot where
   premises : List Premise
   owners : List String
   completedBranches : List CompletedBranch := []
+  admissions : List AdmissionSnapshot := []
   deriving ToJson, FromJson
 
 /-- No second quotient build occurs in the hook. Only premises from a checked
@@ -90,21 +159,25 @@ def Snapshot.ofReport (persistent runLocal : List UnionEdge)
     {graph : WorkGraph} {equality : Equality} {policy : OutcomePolicy}
     {current : Value} {selection : Selection}
     (report : SelectionDependency.Report graph equality policy current selection)
-    (owners : List String) (bindings : List (Value × String) := []) : Snapshot := Id.run do
+    (owners : List String) (bindings : List (Value × String) := [])
+    (admissions : List (Admission × String) := []) : Snapshot := Id.run do
   let positions : Std.HashMap SelectionDependency.Comparison Nat :=
     report.premises.zipIdx.foldl (fun positions (premise, index) => positions.insert premise index) {}
+  let completedBranches : List CompletedBranch := (SelectionDependency.completedBranches equality current selection).flatMap
+    fun branch => (bindings.filterMap fun (projected, owner) =>
+      if projected == branch.edge.relation then some owner else none).eraseDups.map fun owner => {
+        owner, demand := Persistence.valueToJson branch.demand
+        projectedOutcome := Persistence.valueToJson branch.edge.relation
+        premises := branch.premises.map (fun premise => positions.getD premise report.premises.length) }
   return {
   current := Persistence.valueToJson current
   persistent := persistent.map Generator.encode
   runLocal := runLocal.map Generator.encode
   premises := report.premises.map Premise.encode
   owners := owners.eraseDups
-  completedBranches := (SelectionDependency.completedBranches equality current selection).flatMap
-    fun branch => (bindings.filterMap fun (projected, owner) =>
-      if projected == branch.edge.relation then some owner else none).eraseDups.map fun owner => {
-        owner, demand := Persistence.valueToJson branch.demand
-        projectedOutcome := Persistence.valueToJson branch.edge.relation
-        premises := branch.premises.map (fun premise => positions.getD premise report.premises.length) } }
+  completedBranches
+  admissions := admissions.filterMap fun (admission, owner) =>
+    admission.snapshot? runLocal completedBranches owner }
 
 def capture (receipt : Option String) (snapshot : Snapshot)
     (visible controls : List String) : IO (Option Reference) := do
@@ -124,6 +197,76 @@ def kindName : EqualityDependency.Kind → String
   | .persistentUnion => "persistentUnion"
   | .localUnion => "localUnion"
   | .congruence => "congruence"
+
+def admissionChild (data : Json) : Except String (Option (Value × Value)) := do
+  if data == Json.null then return none
+  let requested ← Persistence.valueFromJson 4096 (data.getObjValD "requested")
+  let original ← Persistence.valueFromJson 4096 (data.getObjValD "original")
+  match ← data.getObjValAs? String "kind" with
+  | "topology" =>
+      let value ← Persistence.valueFromJson 4096 (data.getObjValD "relation")
+      let some edge := AllEdge.fromValue? value | throw "source child does not name an All"
+      unless original == requested && edge.children.contains original do
+        throw "source child is absent from its original All"
+  | "indexed" =>
+      let directory ← data.getObjValAs? String "directory"
+      unless (System.FilePath.mk directory).isAbsolute do throw "relative child source directory"
+      let _ ← (fromJson? (data.getObjValD "head") : Except String DB.PageMap.Head)
+      let owner ← data.getObjValAs? Nat "owner"
+      let child ← data.getObjValAs? Nat "child"
+      let frame ← Persistence.Store.NodeFrame.fromJson (data.getObjValD "frame")
+      let some checked := frame.check owner | throw "source child frame has forward references"
+      let some header := Persistence.Store.AllHeader.fromFrame? checked |
+        throw "source child frame is not an original All"
+      unless header.children.contains child do throw "source child posting lost its position"
+  | _ => throw "unknown source child evidence"
+  pure (some (requested, original))
+
+/-- Replay the exact generator prefix observed at Match construction. Future
+local Unions cannot retroactively justify an admission comparison. Source IO
+bindings remain an explicit boundary; this checks their retained frame, not
+the current filesystem or semantic truth of the observation. -/
+def analyzeAdmission (persistent runLocal : List UnionEdge) (branches : List CompletedBranch)
+    (admission : AdmissionSnapshot) : Except String Json := do
+  unless admission.localCount ≤ runLocal.length && !admission.branches.isEmpty do
+    throw "invalid admission generator prefix or empty branch binding"
+  let demand ← Persistence.valueFromJson 4096 admission.demand
+  let work ← Persistence.valueFromJson 4096 admission.work
+  let current ← Persistence.valueFromJson 4096 admission.currentFragment
+  let past ← Persistence.valueFromJson 4096 admission.pastFragment
+  unless !admission.retrieved && admission.subwork && admission.fragmentIdentity &&
+      ((admission.pastWhole && admission.priorComplete) ||
+        (admission.groundedFragment && (admission.priorComplete || admission.demandComplete))) do
+    throw "recorded Match did not pass the completed admission gate"
+  for position in admission.branches do
+    let some branch := branches[position]? | throw "admission branch is outside the selection"
+    unless branch.owner == admission.owner do throw "admission crossed source owners"
+    let value ← Persistence.valueFromJson 4096 branch.projectedOutcome
+    let some edge := OutcomeEdge.fromValue? value | throw "admission branch is not an Outcome"
+    unless edge.work == current && branch.demand == admission.currentFragment do
+      throw "admission changed the projected Work fragment or admitted demand"
+  let child ← admissionChild admission.child
+  let pairs := [("wholeWorkIdentity", demand, work, admission.wholeIdentity),
+    ("fragmentIdentity", current, past, admission.fragmentIdentity)] ++
+    (child.toList.flatMap fun (requested, original) =>
+      [("subworkAlias", work, requested, true), ("originalChildAlias", requested, original, true)])
+  let active := runLocal.take admission.localCount
+  let roots := pairs.flatMap fun (_, left, right, _) => [left, right]
+  let some quotient := QuotientBuilder.build? roots persistent active |
+    throw "admission snapshot does not generate a valid quotient"
+  let stored := EqualityDependency.DirectIndex.make persistent
+  let all := EqualityDependency.DirectIndex.make (persistent ++ active)
+  let comparisons ← pairs.mapM fun (role, left, right, accepted) => do
+    let kind := EqualityDependency.classify quotient.toEquality stored all left right
+    unless (kind != .notEquivalent) == accepted do
+      throw "admission comparison changed under its original generator prefix"
+    pure (Json.mkObj [("role", toJson role), ("accepted", toJson accepted),
+      ("kind", toJson (kindName kind)), ("left", Persistence.valueToJson left),
+      ("right", Persistence.valueToJson right)])
+  pure (Json.mkObj [("owner", toJson admission.owner), ("branches", toJson admission.branches),
+    ("localCount", toJson admission.localCount), ("status", toJson "replayed"),
+    ("sourceChild", toJson (if child.isSome then "recorded-source-boundary" else "untracked")),
+    ("childEvidence", admission.child), ("comparisons", toJson comparisons)])
 
 /-- Explicit-only folds and congruence replay run outside the hook deadline.
 The result concerns selected comparisons, never whole-delivery ancestry. -/
@@ -146,7 +289,7 @@ def analyze (snapshot : Snapshot) : Except String Json := do
     if kind == .notEquivalent then throw "selected positive comparison failed equality replay"
     pure (Json.mkObj [("role", toJson role), ("kind", toJson (kindName kind)),
       ("left", Persistence.valueToJson left), ("right", Persistence.valueToJson right)])
-  let branches ← snapshot.completedBranches.mapM fun branch => do
+  let branches ← snapshot.completedBranches.zipIdx.mapM fun (branch, index) => do
     unless snapshot.owners.contains branch.owner do
       throw "completed branch is not part of the checked selection"
     let premises ← branch.premises.mapM fun position =>
@@ -164,8 +307,9 @@ def analyze (snapshot : Snapshot) : Except String Json := do
       match rows[position]? with
       | some row => pure row
       | none => throw "completed branch comparison was not replayed"
-    pure (Json.mkObj [("owner", toJson branch.owner), ("demand", branch.demand),
+    pure (Json.mkObj [("selectionBranch", toJson index), ("owner", toJson branch.owner), ("demand", branch.demand),
       ("projectedOutcome", branch.projectedOutcome), ("comparisons", toJson comparisons)])
+  let admissions ← snapshot.admissions.mapM (analyzeAdmission persistent runLocal snapshot.completedBranches)
   pure (Json.mkObj [
     ("status", toJson "partial"), ("component", toJson "selected-extraction"),
     ("scope", toJson "whole-selected-extraction-before-source-and-transport-pruning"),
@@ -173,7 +317,9 @@ def analyze (snapshot : Snapshot) : Except String Json := do
     ("localUnionAncestry", toJson "untracked"),
     ("completedBranchScope", toJson "selected-root-to-outcome-positive-comparisons"),
     ("finalLeafSlice", toJson "untracked"),
-    ("matchAdmission", toJson "untracked"), ("sourceChildWitness", toJson "untracked"),
+    ("matchAdmission", toJson (if admissions.isEmpty then "untracked" else "partial")),
+    ("sourceChildWitness", toJson "per-admission-source-boundary"),
+    ("matchAdmissions", toJson admissions),
     ("continuationAncestry", toJson "untracked"),
     ("completedBranches", toJson branches),
     ("comparisons", toJson rows)])
@@ -211,8 +357,21 @@ def inspect (reference : Reference) : IO Json := do
     else none
   let recorded := snapshot.completedBranches.map (·.owner)
   let unknown := (reference.visible ++ reference.controls).eraseDups.filter (!recorded.contains ·)
-  pure (((result.setObjVal! "retained" (toJson reference)).setObjVal!
-    "completedBranches" (toJson retained)).setObjVal! "untrackedCompletedOwners" (toJson unknown))
+  let positions := retained.filterMap fun branch => (branch.getObjValAs? Nat "selectionBranch").toOption
+  let admissions ← IO.ofExcept (result.getObjValAs? (List Json) "matchAdmissions")
+  let admissions := admissions.filterMap fun admission =>
+    let used := ((admission.getObjValAs? (List Nat) "branches").toOption.getD []).filter positions.contains
+    if used.isEmpty then none else some (admission.setObjVal! "branches" (toJson used))
+  let admitted := admissions.flatMap fun admission =>
+    (admission.getObjValAs? (List Nat) "branches").toOption.getD []
+  let sourced := (admissions.filter (fun admission =>
+    admission.getObjValD "sourceChild" != toJson "untracked")).flatMap fun admission =>
+      (admission.getObjValAs? (List Nat) "branches").toOption.getD []
+  pure ((((((result.setObjVal! "retained" (toJson reference)).setObjVal!
+    "completedBranches" (toJson retained)).setObjVal! "untrackedCompletedOwners" (toJson unknown)).setObjVal!
+    "matchAdmissions" (toJson admissions)).setObjVal!
+    "untrackedAdmissionBranches" (toJson (positions.filter (!admitted.contains ·)))).setObjVal!
+    "untrackedSourceChildBranches" (toJson (positions.filter (!sourced.contains ·))))
 
 def readStage (receipt stage : String) : IO Json := do
   unless Receipt.validId receipt && ["search", "published", "ack"].contains stage do

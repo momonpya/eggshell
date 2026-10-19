@@ -1330,7 +1330,7 @@ its owner lists. Missing or failed capture never supplies a classification. -/
 def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdge)
     (discovery : Matcher.Discovery)
     (prepared : { extraction : Extraction // extraction = Matcher.extraction discovery })
-    (result : Option Handoff) : IO (Option Handoff) := do
+    (result : Option Handoff) (observed : List SelectionAudit.Admission := []) : IO (Option Handoff) := do
   if receipt.isNone then return result
   let some handoff := result | return none
   if handoff.completed == 0 && !handoff.blocksCurrent then return result
@@ -1343,8 +1343,11 @@ def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdg
   let owners := completed.map (fun selected => relationKey selected.matched.edge.relation)
   let bindings := completed.map fun selected =>
     (selected.matched.projectedEdge.relation, relationKey selected.matched.edge.relation)
+  let admissions := completed.filterMap fun selected =>
+    (observed.find? (fun admission => Matcher.sameMatch admission.matched selected.matched)).map
+      (fun admission => (admission, relationKey selected.matched.edge.relation))
   let reference ← SelectionAudit.capture receipt
-    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners bindings)
+    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners bindings admissions)
     ((handoff.sourceUses.filter (·.completed)).map (·.owner))
     (handoff.sourceCheckpoints.map (·.use.owner))
   pure (some {handoff with equalitySelection := reference})
@@ -4715,8 +4718,10 @@ def indexedTerminalRoot (selection : Config.Selection)
   -- aliases with different text, and fragment-derived owners need discovery.
   for entry in located do
     unless (← reader.work entry.2) == currentValue do return none
+  let observations ← IO.mkRef ({} : Std.HashMap Value Persistence.Store.ChildObservation)
   let subworks ← if sparse then do
       let children ← Persistence.Store.literalAllChildren snapshot currentValue
+        (receipt.map fun _ observed => observations.modify (·.insert currentValue observed))
       pure (if children.isEmpty then [] else [currentValue])
     else pure topology.subworks
   let owners ← located.mapM fun entry => reader.outcome entry.2
@@ -4746,7 +4751,10 @@ def indexedTerminalRoot (selection : Config.Selection)
     ⟨Matcher.extraction terminal.discovery, rfl⟩
   let rendered := renderAutomatic [] selection.handoffChars current delivered enforce true terminal.discovery prepared
     (provenance := provenance) (refreshSources := refreshSources) (byteBudget := selection.handoffBytes)
-  pure (some (← auditRenderedSelection receipt persistent terminal.discovery prepared rendered))
+  let children ← observations.get
+  let observed := if receipt.isSome then hits.reverse.map
+    (SelectionAudit.Admission.observe view corpus children) else []
+  pure (some (← auditRenderedSelection receipt persistent terminal.discovery prepared rendered observed))
 
 /-- A loaded row carries the production compiler certificate with its owner.
 There is no second map which can omit or substitute the row's candidate. -/
@@ -5143,7 +5151,8 @@ structure IndexedContext where
   advisoryPositions : Value → IO (List AdvisoryPosition) := fun _ => pure []
   allCount : Option Nat := none
   prepareTopology : Option (List UnionEdge → List Value → IO (List AllEdge)) := none
-  childMembership : Option (RunView → IO (Value → IO Bool)) := none
+  childMembership : Option (RunView → Option (Persistence.Store.ChildObservation → IO Unit) →
+    IO (Value → IO Bool)) := none
   neighborhood : Option (List UnionEdge → List Value → IO (List AllEdge)) := none
   supportOwners : Option (List Value → List Value → Nat → List Nat → List (Value × Nat) →
     IO (List OutcomeEdge)) := none
@@ -5341,6 +5350,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     selection.write.mapM (fun writable => DiscoveryMemo.Publisher.new writable.path)
     else pure none
   let retainedSaturation ← IO.mkRef (none : Option SaturationMemo.Saved)
+  let admissionAudit ← source.receipt.mapM fun _ => IO.mkRef ([] : List SelectionAudit.Admission)
   let saveBoundary := do
     if let some checkpoint := checkpoint then
       checkpoint.checkpoint {
@@ -5372,7 +5382,10 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   let evaluate := fun (state : IndexedOwners) (view : RunView) (tasks : List Value) => do
     let mut state := state
     let mut hits := []
-    let membership ← source.childMembership.mapM (fun prepare => prepare view)
+    let children ← IO.mkRef ({} : Std.HashMap Value Persistence.Store.ChildObservation)
+    let observe := admissionAudit.map fun _ observation =>
+      children.modify (·.insert observation.requested observation)
+    let membership ← source.childMembership.mapM (fun prepare => prepare view observe)
     for task in tasks do
       let some text := Matcher.atomText? task | continue
       let taskNative := task == currentValue && native
@@ -5469,6 +5482,11 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
           change read.table.getD unit 0 + _ = contextRead.table.getD unit 0 + _
           rw [contextRead.preserves unit (read.complete unit member)]⟩
       hits := hits ++ found.val
+      if let some audit := admissionAudit then
+        let children ← children.get
+        audit.modify fun previous => found.val.foldl (fun previous matched =>
+          let matched := if enableLocalUnion then matched else {matched with retrieved := true}
+          SelectionAudit.Admission.observe view groundedCorpus children matched :: previous) previous
       retainedRanks.set state.ranks.saved
       saveBoundary
     for matched in hits do
@@ -5660,7 +5678,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     else handoff
   trace s!"render complete chars={(rendered.map (·.text.length)).getD 0}"
   auditRenderedSelection source.receipt persistent discovery
-    ⟨extraction, rfl⟩ rendered
+    ⟨extraction, rfl⟩ rendered ((← admissionAudit.mapM (·.get)).getD [])
 
 /-- An empty body can still carry source-refresh metadata. Retain any known
 result before asking for keyword advice; only `none` means no such result. -/
@@ -5724,7 +5742,7 @@ def indexedDiscovery (selection : Config.Selection)
       else throw (IO.userError "advisory root position exceeds its pinned publication")
     allCount
     prepareTopology := some demand.read
-    childMembership := some demand.childLookup
+    childMembership := some (fun view observe => demand.childLookup view observe)
     neighborhood := some demand.neighborhood
     supportOwners := some fun works excluded allowance ranking families =>
       reader.supportOwners works excluded allowance ranking families

@@ -965,7 +965,9 @@ def quotientChildRole : IO Unit := do
     let measured ← PageMap.pin path
     let demand ← Store.DemandTopology.new (← Store.NodeReader.new measured)
     let start ← IO.monoNanosNow
-    let lookup ← demand.childLookup view
+    let childEvidence ← IO.mkRef ({} : Std.HashMap Value Store.ChildObservation)
+    let lookup ← demand.childLookup view (some fun observed =>
+      childEvidence.modify (·.insert observed.requested observed))
     let cases := [actualChild, aliasChild, exactForeign, direct, absent, alpha,
       .text "requested_parent", .text "foreign_parent"]
     let mut samples : List Json := []
@@ -980,6 +982,19 @@ def quotientChildRole : IO Unit := do
       samples := samples ++ [Json.mkObj [("work", Persistence.valueToJson work),
         ("child", toJson actual), ("read_bytes", toJson (after - before))]]
     let elapsed := (← IO.monoNanosNow) - start
+    let evidence ← childEvidence.get
+    let some aliasEvidence := evidence[aliasChild]? |
+      throw (IO.userError "congruent source child lost its original frame evidence")
+    require (aliasEvidence.original == actualChild && aliasEvidence.head == measured.head &&
+        aliasEvidence.header.children.contains aliasEvidence.child &&
+        !(evidence.contains absent) && !(evidence.contains exactForeign))
+      "child evidence lost its pinned original alias, position or Exact barrier"
+    let replay ← IO.ofExcept (SelectionAudit.admissionChild aliasEvidence.encode)
+    require (replay.any (fun (requested, original) => requested == aliasChild && original == actualChild))
+      "offline child replay lost its congruent source alias"
+    require ((SelectionAudit.admissionChild
+      (aliasEvidence.encode.setObjVal! "child" (toJson aliasEvidence.owner))).toOption.isNone)
+      "offline child replay accepted a position absent from its original All frame"
     let readBytes ← measured.readBytes.get
     require (readBytes < 192 * 1024 && elapsed < 3000000000)
       "structured child authority restored an unrelated body or missed its deadline"

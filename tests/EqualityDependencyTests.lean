@@ -145,7 +145,9 @@ def nativeDiscovery : IO Unit := do
   require (Lean.toJson unchanged == Lean.toJson rendered)
     "disabled receipt capture changed the rendered handoff"
   let id ← Receipt.fresh
-  let some audited ← Plugin.auditRenderedSelection (some id) [] discovery ⟨extraction, rfl⟩ rendered |
+  let corpus := Matcher.Corpus.build LogicalText.logicalNormalizer graph
+  let observed := discovery.hits.reverse.map (SelectionAudit.Admission.observe discovery.view corpus {})
+  let some audited ← Plugin.auditRenderedSelection (some id) [] discovery ⟨extraction, rfl⟩ rendered observed |
     throw (IO.userError "native selection disappeared while recording its premises")
   let some reference := audited.equalitySelection |
     throw (IO.userError "native selected extraction has no immutable receipt locator")
@@ -158,6 +160,41 @@ def nativeDiscovery : IO Unit := do
       branch.getObjValD "ownerControls" == Lean.toJson true) &&
       replay.getObjValD "untrackedCompletedOwners" == Lean.toJson ([] : List String))
     "native completed control lost its selected root-to-Outcome path"
+  let admissions ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "matchAdmissions")
+  require (!admissions.isEmpty &&
+      replay.getObjValD "untrackedAdmissionBranches" == Lean.toJson ([] : List Nat) &&
+      replay.getObjValD "untrackedSourceChildBranches" == Lean.toJson ([] : List Nat))
+    "native completed Match lost its admission comparisons or original All child"
+  let snapshot ← SelectionAudit.read reference
+  let some admission := snapshot.admissions.head? | throw (IO.userError "missing admission fixture")
+  let extended := Value.text (text ++ "\nthen perform additional work")
+  let future ← union extended work
+  let future := {future with scope := .run (.text "admission-fixture")}
+  let earlyAdmission := {admission with
+    demand := Persistence.valueToJson extended
+    wholeIdentity := false
+    localCount := 0}
+  let early := {snapshot with runLocal := [SelectionAudit.Generator.encode future], admissions := [earlyAdmission]}
+  let earlyReplay ← IO.ofExcept (SelectionAudit.analyze early)
+  let earlyRows ← IO.ofExcept (earlyReplay.getObjValAs? (List Lean.Json) "matchAdmissions")
+  let some first := earlyRows.head? | throw (IO.userError "early admission disappeared")
+  let comparisons ← IO.ofExcept (first.getObjValAs? (List Lean.Json) "comparisons")
+  require (comparisons.any (fun comparison =>
+      comparison.getObjValD "role" == Lean.toJson "wholeWorkIdentity" &&
+      comparison.getObjValD "accepted" == Lean.toJson false &&
+      comparison.getObjValD "kind" == Lean.toJson "notEquivalent"))
+    "a future local Union rewrote an earlier negative Match comparison"
+  let retroactive := {early with admissions := [{earlyAdmission with localCount := 1}]}
+  require ((SelectionAudit.analyze retroactive).toOption.isNone)
+    "an admission was replayed against a later equality state"
+  let unknownChild := {early with admissions := [{earlyAdmission with child := Lean.Json.null}]}
+  let unknownReplay ← IO.ofExcept (SelectionAudit.analyze unknownChild)
+  let unknownRows ← IO.ofExcept (unknownReplay.getObjValAs? (List Lean.Json) "matchAdmissions")
+  require (unknownRows.all (fun row => row.getObjValD "sourceChild" == Lean.toJson "untracked"))
+    "a missing source-child witness was classified as a complete admission"
+  let missingPrefix := {early with admissions := [{earlyAdmission with localCount := 2}]}
+  require ((SelectionAudit.analyze missingPrefix).toOption.isNone)
+    "an admission used a nonexistent generator prefix"
   let decoded ← IO.ofExcept (Lean.fromJson? (Lean.toJson audited) : Except String Plugin.Handoff)
   require (Lean.toJson decoded.equalitySelection == Lean.toJson audited.equalitySelection)
     "demand-memo serialization lost the selected equality locator"
@@ -179,6 +216,9 @@ def nativeDiscovery : IO Unit := do
   let stripped := reference.restrict [] []
   require (stripped.visible.isEmpty && stripped.controls.isEmpty)
     "discarded completion owners survived diagnostic restriction"
+  let strippedReplay ← SelectionAudit.inspect stripped
+  require (strippedReplay.getObjValD "matchAdmissions" == Lean.toJson ([] : List Lean.Json))
+    "an acknowledged completed owner retained a Match admission"
 
 /-- The right completed Outcome must not inherit congruence from the left
 subtree merely because both were selected in one extraction. -/
@@ -229,8 +269,12 @@ def completedBranchIsolation : IO Unit := do
       branch.getObjValD "ownerControls" == Lean.toJson false) &&
       retained.getObjValD "deliveryAncestry" == Lean.toJson "untracked")
     "final source/transport pruning retained another branch or certified complete ancestry"
+  let untrackedAdmissions ← IO.ofExcept (retained.getObjValAs? (List Nat) "untrackedAdmissionBranches")
+  require (untrackedAdmissions.length == 1)
+    "a branch without a recorded Match was counted as a complete admission"
   let empty ← SelectionAudit.inspect (reference.restrict [] [])
-  require (empty.getObjValD "completedBranches" == Lean.toJson ([] : List Lean.Json))
+  require (empty.getObjValD "completedBranches" == Lean.toJson ([] : List Lean.Json) &&
+      empty.getObjValD "matchAdmissions" == Lean.toJson ([] : List Lean.Json))
     "a fully acknowledged delivery retained completed branches"
   let unbound := {snapshot with completedBranches := []}
   let some unboundReference ← SelectionAudit.capture (some id) unbound ["left"] [] |
@@ -249,12 +293,90 @@ def completedBranchIsolation : IO Unit := do
   require ((SelectionAudit.analyze foreign).toOption.isNone)
     "a completed branch acquired an unselected source owner"
 
+/-- All selected extraction comparisons are literal here. Congruence is
+needed solely to establish that the original owner occupies an All-child role. -/
+def nativeCongruentChild : IO Unit := do
+  let text := "Bash\ncat congruent.c"
+  let work := Value.text text
+  let child := Value.text "stored child alias"
+  let a := Value.text "child a"
+  let b := Value.text "child b"
+  let ab ← union a b
+  let xa ← union work (application a)
+  let yb ← union child (application b)
+  let persistent := [ab, xa, yb]
+  let result := Value.text "congruent.c contains the implementation"
+  let occurrence := Value.applyList .occurrence [Ref.semantic result, Ref.semantic work]
+  let owner := OutcomeEdge.make work result [occurrence] (by simp) (by simp [maxOutcomeObservations])
+  let frame := AllEdge.make (.applyList .inquiry []) [child] (by simp) (by
+    simp [child, Value.text, Value.applyList])
+  let graph : WorkGraph := {all := [frame], outcomes := [owner]}
+  let corpus := Matcher.Corpus.build LogicalText.logicalNormalizer graph
+  let some discovery := Matcher.discoverIn? LogicalText.logicalNormalizer work
+      [frame.relation, owner.relation] persistent graph corpus text none {} true true |
+    throw (IO.userError "congruent-child native discovery did not converge")
+  let extraction := Matcher.extraction discovery
+  let some report := Plugin.discoverySelectionReport discovery |
+    throw (IO.userError "congruent-child extraction has no checked report")
+  let selected := (Plugin.selectedMatches discovery extraction).filter (·.blocks)
+  require (!selected.isEmpty) "congruence did not establish the native owner's original child role"
+  let bindings := selected.map fun item => (item.matched.projectedEdge.relation, "congruent-owner")
+  let observed := discovery.hits.reverse.map fun matched =>
+    (SelectionAudit.Admission.observe discovery.view corpus {} matched, "congruent-owner")
+  let snapshot := SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions
+    report ["congruent-owner"] bindings observed
+  let replay ← IO.ofExcept (SelectionAudit.analyze snapshot)
+  let extractionRows ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "comparisons")
+  let admissions ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "matchAdmissions")
+  require (extractionRows.all (fun row => row.getObjValD "kind" == Lean.toJson "literal") &&
+      admissions.any (fun admission =>
+        ((admission.getObjValAs? (List Lean.Json) "comparisons").toOption.getD []).any fun row =>
+          row.getObjValD "role" == Lean.toJson "subworkAlias" &&
+          row.getObjValD "kind" == Lean.toJson "congruence"))
+    "congruence in the original child-role witness disappeared behind literal extraction comparisons"
+
+def indexedAdmission : IO Unit := do
+  let id ← Receipt.fresh
+  let path := (← Paths.dataRoot) / ("admission-" ++ id ++ ".egg")
+  let text := "Bash\ncat indexed-admission.c"
+  let work := Value.text text
+  let result := Value.text "indexed-admission.c contains the implementation"
+  let occurrence := Value.applyList .occurrence [Ref.semantic result, Ref.semantic work]
+  let owner := OutcomeEdge.make work result [occurrence] (by simp) (by simp [maxOutcomeObservations])
+  let frame := AllEdge.make (.applyList .inquiry []) [work] (by simp) (by
+    simp [work, Value.text, Value.applyList])
+  let initial ← DB.PageMap.create path (Persistence.valueToJson (.text "admission-fixture")).compress
+  let (_, _, _) ← DB.PageMap.withWriter initial fun writer => do
+    let intern : Persistence.Store.Intern := ⟨writer, ← IO.mkRef {}⟩
+    let ids ← [owner.relation, frame.relation].mapM intern.root
+    Persistence.Store.writeChange writer ⟨ids, [], false⟩
+  let snapshot ← DB.PageMap.pin path
+  let selection : Config.Selection := {
+    label := "admission", read := [⟨"source", path⟩], write := none,
+    semanticMatcher := none, handoffChars := 24000 }
+  let some (some audited) ← Plugin.indexedDiscovery selection [some snapshot] text [] true none true
+      (receipt := some id) |
+    throw (IO.userError "indexed production discovery lost the native admission fixture")
+  let some reference := audited.equalitySelection |
+    throw (IO.userError "indexed production discovery omitted its admission locator")
+  let replay ← SelectionAudit.inspect reference
+  let admissions ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "matchAdmissions")
+  require (!admissions.isEmpty && admissions.any (fun admission =>
+      (admission.getObjValD "childEvidence").getObjValD "kind" == Lean.toJson "indexed") &&
+      replay.getObjValD "untrackedAdmissionBranches" == Lean.toJson ([] : List Nat) &&
+      replay.getObjValD "untrackedSourceChildBranches" == Lean.toJson ([] : List Nat))
+    "indexed discovery omitted admission-time equality or its sparse original child frame"
+  require (snapshot.head == (← DB.PageMap.pin path).head)
+    "admission diagnostics changed the read-only source graph"
+
 def run : IO Unit := do
   explicitAndCongruence
   mixedAtomsAndLocalOrigins
   selectedDeduplication
   completedBranchIsolation
   nativeDiscovery
+  nativeCongruentChild
+  indexedAdmission
   IO.println "PASS equality dependency: direct closure, congruence, Exact, retraction, local ancestry, child deduplication, isolated completed branches and native extraction"
 
 end Eggshell.EqualityDependencyTests

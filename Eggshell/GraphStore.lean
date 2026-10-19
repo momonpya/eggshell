@@ -1883,10 +1883,33 @@ def literalAllParents (snapshot : Snapshot) (query : Value) : IO (List Nat) := d
     found := id :: found
   pure found.reverse
 
+/-- The source IO boundary has checked the live directories, the literal
+node binding and the original All frame. No sibling payload is hydrated. -/
+structure ChildObservation where
+  requested : Value
+  original : Value
+  directory : String
+  head : PageMap.Head
+  child : Nat
+  owner : Nat
+  header : AllHeader owner
+  position : child ∈ header.children
+
+theorem ChildObservation.child_before (observation : ChildObservation) :
+    observation.child < observation.owner :=
+  observation.header.child_before observation.child observation.position
+
+def ChildObservation.encode (observation : ChildObservation) : Json := Json.mkObj [
+  ("kind", toJson "indexed"), ("requested", valueToJson observation.requested),
+  ("original", valueToJson observation.original), ("directory", toJson observation.directory),
+  ("head", toJson observation.head), ("child", toJson observation.child),
+  ("owner", toJson observation.owner), ("frame", observation.header.checked.frame.toJson)]
+
 /-- Read only All reference frames in which the literal Work occupies a
 child position. Even a structured sibling is never hydrated by this lookup.
 Retired references and frames from another publication are rejected. -/
-def literalAllChildren (snapshot : Snapshot) (query : Value) : IO (List Nat) := do
+def literalAllChildren (snapshot : Snapshot) (query : Value)
+    (observe : Option (ChildObservation → IO Unit) := none) : IO (List Nat) := do
   let population ← getNat snapshot.get "alls"
   unless (← getNat snapshot.get "indexedAllReferences") == population do
     throw (IO.userError "All reference index is incomplete")
@@ -1904,8 +1927,13 @@ def literalAllChildren (snapshot : Snapshot) (query : Value) : IO (List Nat) := 
       throw (IO.userError "All child posting disagrees with its pinned live directories")
     let some header := AllHeader.fromFrame? (← readFrame snapshot snapshot.get id) |
       throw (IO.userError "invalid indexed All child frame")
-    unless header.children.contains child do
-      throw (IO.userError "All child posting disagrees with its checked frame")
+    if position : child ∈ header.children then
+      if found.isEmpty then
+        if let some observe := observe then
+          try observe ⟨query, query, snapshot.directory.toString, snapshot.head,
+            child, id, header, position⟩
+          catch error => IO.eprintln s!"Eggshell could not record original All-child evidence: {error}"
+    else throw (IO.userError "All child posting disagrees with its checked frame")
     found := id :: found
   pure found.reverse
 
@@ -2075,7 +2103,8 @@ parents the current demand happens to traverse. Build one certified inverse
 quotient per pass, then read just the original child postings of its aliases.
 The pinned source and quotient are captured together by the returned reader;
 positive and negative answers cannot survive into a later discovery pass. -/
-def DemandTopology.childLookup (_demand : DemandTopology snapshot) (view : RunView) :
+def DemandTopology.childLookup (_demand : DemandTopology snapshot) (view : RunView)
+    (observe : Option (ChildObservation → IO Unit) := none) :
     IO (Value → IO Bool) := do
   let index := Quotient.AliasIndex.prepare view.quotient
   let known ← IO.mkRef ({} : Std.HashMap Value Bool)
@@ -2083,7 +2112,9 @@ def DemandTopology.childLookup (_demand : DemandTopology snapshot) (view : RunVi
     if let some found := (← known.get)[work]? then return found
     let mut found := false
     for alias in index.aliases work do
-      unless (← literalAllChildren snapshot alias).isEmpty do
+      let owners ← literalAllChildren snapshot alias (observe.map fun observe observation =>
+        observe {observation with requested := work})
+      unless owners.isEmpty do
         found := true
         break
     known.modify (·.insert work found)

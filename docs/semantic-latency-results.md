@@ -426,3 +426,53 @@ beside the original dataset. Frozen source, executables, protocol and check
 logs are at `/Users/ovm/.codex/experiments/eggshell/cache-reclaim-20261020/implementation-1/`.
 The candidate remains separate from public main and release. Inclusive-token
 and quality adoption, the pilot, full equality ancestry and the paper are unfinished.
+
+## Admission observations included, 2026-10-20
+
+The next isolated candidate records completed Match construction epochs and
+original All-child evidence. The unchanged fixed 48-hook protocol still passed:
+all original discovery windows hit/scored, configured semantic completion,
+original DB body, exact stdout/publication and accepted ACK, each below 5 s.
+Both read-only layouts use the same `packed-fixtures-2` saved graphs and caches;
+there was no new source seeding or generation-model call.
+
+| Sources | Source vectors | Question cache | Semantic / body | Latencies, ms |
+| --- | --- | --- | --- | --- |
+| 2 | database | fresh | 3/3 / 3/3 | 1220, 1213, 1211 |
+| 2 | database | cached | 3/3 / 3/3 | 255, 256, 261 |
+| 2 | private-overlay | fresh | 3/3 / 3/3 | 1221, 1211, 1208 |
+| 2 | private-overlay | cached | 3/3 / 3/3 | 256, 255, 258 |
+| 32 | database | fresh | 3/3 / 3/3 | 1340, 1334, 1342 |
+| 32 | database | cached | 3/3 / 3/3 | 319, 315, 322 |
+| 32 | private-overlay | fresh | 3/3 / 3/3 | 1344, 1322, 1330 |
+| 32 | private-overlay | cached | 3/3 / 3/3 | 315, 318, 315 |
+| 256 | database | fresh | 3/3 / 3/3 | 1813, 1805, 1785 |
+| 256 | database | cached | 3/3 / 3/3 | 733, 735, 727 |
+| 256 | private-overlay | fresh | 3/3 / 3/3 | 1802, 1801, 1799 |
+| 256 | private-overlay | cached | 3/3 / 3/3 | 755, 751, 788 |
+| 1024 | database | fresh | 3/3 / 3/3 | 3943, 3833, 3926 |
+| 1024 | database | cached | 3/3 / 3/3 | 2654, 2678, 2731 |
+| 1024 | private-overlay | fresh | 3/3 / 3/3 | 3789, 3806, 3799 |
+| 1024 | private-overlay | cached | 3/3 / 3/3 | 2722, 2806, 2812 |
+
+The 48-hook repeat took 87.52 s, aggregate peak 1,161,360 KiB, under the
+3,500,000 KiB guard. All 14 frozen source, protocol and executable hashes
+matched after the run. Independent publication/SHA/ACK checks verified all 48.
+The standard full-suite command passed in 88.68 s, peak 2,806,448 KiB; a separate
+daemon drained its three remaining tickets without changing graph heads.
+
+The admission-specific native and original-child regressions passed. The
+additional `work-first-tests` path remains failed with the same first mismatch
+on the frozen parent; it is not part of the standard full-suite command and
+is not counted as passing. Its records and the corrected native witness-shape
+assertion are described in [selection-audit.md](selection-audit.md).
+
+This remains a four-size, three-repetition diagnostic, with no general latency
+guarantee or public-main token/quality adoption result. These latency fixtures
+exercise advisory delivery; large completed-snapshot capture cost is not proved
+by this dataset. Local/continuation causal ancestry and final fragment slicing
+remain unfinished.
+
+Raw output, receipts and independent publication audit: `admission-audit-1/`.
+Frozen sources, executables, failed checks and manifests:
+`/Users/ovm/.codex/experiments/eggshell/admission-audit-20261020/implementation-2/`.

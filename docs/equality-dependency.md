@@ -72,29 +72,41 @@ removes branches of discarded owners, and missing bindings stay explicitly
 untracked. Owner retention does not yet resolve which final fragments of a
 multiply used owner survived.
 
+Admission observations now retain each selected completed Match's construction
+epoch and original child-role evidence. Whole-Work and fragment comparisons
+are replayed using that epoch's local-generator prefix, including negative
+answers. Sparse child evidence comes from the already checked original All
+frame and pinned Head; loaded topology evidence keeps its original relation.
+An additional native fixture has only literal extraction comparisons but needs
+congruence for its original child role. The admission component exposes that
+dependency. Source Value-to-node binding and freshness remain IO boundaries;
+the inspector does not claim an independent complete DB proof.
+
 ## Validation and remaining work
 
 The focused executable runs the real kernel and native matcher selector. It
 covers transitive explicit paths, Semantic congruence, Exact barriers, removed
 generators, corrected saved plans, mixed Atom/Apply generators, unresolved
 local ancestry, selected child deduplication, isolated completed branches,
-rejected invalid owner selections and a native completion selection. These are deterministic regression fixtures,
+admission epochs, original-child congruence, rejected invalid owner selections
+and a native completion selection. These are deterministic regression fixtures,
 not paper benchmarks. New proof code uses no `native_decide` or admitted axiom.
 The focused groups run in the standard full suite as well. Retained-work
 warnings are separate from equality classification.
 
 The selection report is one required component. It does **not** establish:
 
-- the equality decisions that admitted a Match or generated a local Union;
-- the original saved All-child witness behind a sparse IO membership result;
+- the admission decisions that originally generated each local Union;
+- independent verification of the source IO's complete Value-to-node binding;
 - the causal ancestry of generated All continuations and local Unions;
 - which final completed leaf retains a comparison after source checks and
   transport-budget reconciliation;
 - source freshness, final publication or model receipt.
 
 Consequently `localUnion` must remain unknown in a delivery-wide tally. Even
-all-literal selection comparisons cannot certify a congruence-free delivery
-until the matcher and source-role components are present. No overall fraction
+all-literal selection comparisons cannot certify a congruence-free delivery.
+Admission and child coverage gaps are listed per selected branch; local causal
+ancestry, continuations and final fragment slicing remain incomplete. No overall fraction
 is reported, no Phase 0 completion is claimed, and no token adoption gate has
 been passed. Native receipts also retain semantic status, actual cache probes
 and stage durations; Phase 0 still needs the missing ancestry components and
