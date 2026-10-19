@@ -222,14 +222,15 @@ def deliveryTests (f : Fixture) : IO Unit := do
   let _ ← f.start "lost-receipt"
   let _ ← f.hook "PostCompact" "lost-receipt"
   let endpoint ← f.endpoint "lost-receipt"
-  let _ ← Daemon.exchange endpoint "hook" (f.input "PreToolUse" "lost-receipt" (fields ++ [("_eggshell_receipt", .str "lost")]))
+  let lost := String.ofList (List.replicate 64 'b')
+  let _ ← Daemon.exchange endpoint "hook" (f.input "PreToolUse" "lost-receipt" (fields ++ [("_eggshell_receipt", .str lost)]))
   let delivered := do
     let state ← readObject (f.files "lost-receipt" / "state.json")
     let graphs ← IO.ofExcept (state.getObjValAs? (List String) "deliveredGraphs")
     pure (graphs.any (·.startsWith "g:"))
   require (!(← delivered)) "lost receipt marked graph delivered"
   let _ ← f.hook "PostCompact" "lost-receipt"
-  let _ ← Daemon.exchange endpoint "ack" (Json.mkObj [("receipt", .str "lost")])
+  let _ ← Daemon.exchange endpoint "ack" (Json.mkObj [("receipt", .str lost)])
   require (!(← delivered)) "old-context receipt was accepted"
   IO.println "Core lifecycle: changed evidence, unchanged denial suppression and lost/stale receipts passed"
 
@@ -249,11 +250,16 @@ def deadlineTest (f : Fixture) : IO Unit := do
   let start ← IO.monoMsNow
   let output ← Daemon.exchange endpoint "hook" (f.input "UserPromptSubmit" "deadline" [
     ("prompt", .str "Recall the clock result"), ("_eggshell_config", .str config.toString),
-    ("_eggshell_deadline", toJson (peer + 800)), ("_eggshell_receipt", .str "expired")])
+    ("_eggshell_deadline", toJson (peer + 800)),
+    ("_eggshell_receipt", .str (String.ofList (List.replicate 64 'a')))])
   require ((← IO.monoMsNow) - start < 2000) "expired search exceeded its transport deadline"
   require (← marker.pathExists) "deadline fixture never started"
-  require (output == hookContext "UserPromptSubmit" pendingSearch.text)
-    "expired search published evidence instead of the incomplete-search notice"
+  let parsed ← IO.ofExcept (Json.parse output)
+  let context := parsed.getObjValD "hookSpecificOutput" |>.getObjValD "additionalContext"
+  require (context.compress.contains "Clock result for retrieval" &&
+      (parsed.getObjValD "systemMessage").compress.contains "timed out" &&
+      !((parsed.getObjValD "hookSpecificOutput").getObjVal? "permissionDecision").isOk)
+    "semantic expiry failed to deliver the original DB body and unfinished status as advisory context"
   f.post "SAVED_AFTER_DEADLINE" "deadline"
   f.saved "SAVED_AFTER_DEADLINE"
   let pids ← IO.ofExcept (fromJson? (← readObject marker) : Except String (List Nat))

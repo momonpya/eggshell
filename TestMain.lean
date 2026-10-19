@@ -25,7 +25,7 @@ def runHookFixture (input : Lean.Json) : IO String := do
   captureTerminal input
   let output ← dispatchHook input
   if let some session := optionalString input "session_id" then
-    acknowledge session "direct"
+    let _ ← acknowledge session "direct"
     flushDeferred session ((← IO.monoMsNow) + 3000)
     flushIndexes session ((← IO.monoMsNow) + 3000)
   pure output
@@ -3261,7 +3261,7 @@ def testLifecycle : IO Unit := do
   withSession session fun files => do
     writeJson files.pending pending
     writeJson files.state { initial with offers := [offer] }
-  acknowledge session "missing"
+  check (!(← acknowledge session "missing")) "missing offer was acknowledged as accepted"
   let some noReceipt ← readState? files | throw (IO.userError "missing state")
   check (noReceipt.deliveredGraphs == initial.deliveredGraphs)
     "an unacknowledged result was treated as delivered"
@@ -3271,12 +3271,12 @@ def testLifecycle : IO Unit := do
       { offer.stamp with deadline := now }] do
     withSession session fun files =>
       writeJson files.state { initial with offers := [{ offer with stamp }] }
-    acknowledge session "receipt"
+    check (!(← acknowledge session "receipt")) "expired or stale offer was acknowledged as accepted"
     let some rejected ← readState? files | throw (IO.userError "missing state")
     check (rejected.deliveredGraphs == initial.deliveredGraphs && rejected.lastHandoff == "")
       "a stale or expired receipt published evidence"
   withSession session fun files => writeJson files.state { initial with offers := [offer] }
-  acknowledge session "receipt"
+  check (← acknowledge session "receipt") "valid offer acknowledgement did not report acceptance"
   let some accepted ← readState? files | throw (IO.userError "missing state")
   check (accepted.deliveredGraphs.contains "g:new" && accepted.lastHandoff == "evidence")
     "a current acknowledged result was not published"
@@ -6214,9 +6214,9 @@ def main (arguments : List String) : IO UInt32 :=
       else Plugin.Daemon.rpcClient kind
   | ["codex-hook"] => Plugin.Daemon.hookClient
   | ["codex-hook", "fast"] => Plugin.Daemon.hookClient true
-  | ["codex-hook-child", deadline] => do
+  | ["codex-hook-child", deadline, receipt] => do
       let some deadline := deadline.toNat? | return 1
-      Plugin.Daemon.hookProcess deadline
+      Plugin.Daemon.hookProcess deadline receipt
   | ["semantic-provider-fixture", "retrieval"] => semanticProviderFixture
   | ["semantic-provider-fixture", "empty"] => semanticProviderFixture 0 none none [] false
   | ["semantic-provider-fixture", "child"] => semanticProviderFixture 1

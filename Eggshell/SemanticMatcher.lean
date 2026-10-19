@@ -433,7 +433,8 @@ selects a second protocol nor permits full source reconstruction. -/
 def nominateIndexed (command : List String) (queryText : String)
     (documents : List Persistence.Store.SearchDocument) (lexical anchors : List Nat)
     (readWindow : (document : Persistence.Store.SearchDocument) →
-      Fin document.windows.length → IO String) (allowDurableRepair : Bool := false) :
+      Fin document.windows.length → IO String) (allowDurableRepair : Bool := false)
+    (receipt : Option String := none) (purpose : String := "discovery") :
     IO (Option (IndexedSearch documents)) := do
   if documents.isEmpty then
     let some order := IndexedOrder.check? documents [] |
@@ -445,7 +446,8 @@ def nominateIndexed (command : List String) (queryText : String)
         ("documents", toJson (documents.map fun document => Json.mkObj [
           ("id", toJson document.owner), ("windows", toJson document.windows),
           ("cache", toJson document.cache)])),
-        ("lexical", toJson lexical), ("anchors", toJson anchors)]
+        ("lexical", toJson lexical), ("anchors", toJson anchors), ("receipt", toJson receipt),
+        ("purpose", toJson purpose)]
       running.child.stdin.putStrLn request.compress
       running.child.stdin.flush
       let mut json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))

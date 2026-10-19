@@ -3,6 +3,7 @@ module
 public import Eggshell.Config
 public import Eggshell.Blake3
 public import Eggshell.Lifecycle
+public import Eggshell.Receipt
 public import Eggshell.SourceEvidence
 public import Eggshell.SourceObservation
 public import Lean.Data.Json.FromToJson

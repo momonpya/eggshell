@@ -46,6 +46,25 @@ def environment (runtime : System.FilePath) : Array (String × Option String) :=
   #[("EGGSHELL_DATA_ROOT", some runtime.toString), ("PLUGIN_ROOT", none),
     ("CODEX_THREAD_ID", none), ("HF_HUB_OFFLINE", some "1")]
 
+def nativeReceipt (runtime : System.FilePath) (session : String) : IO Json := do
+  let mut found : Option Json := none
+  for entry in ← (runtime / "receipts").readDir do
+    let request ← try pure (some (← readBoundedJson (entry.path / "request.json") 1048576 : Json))
+      catch _ => pure none
+    if !request.any (fun record => (record.getObjValD "data").getObjValD "session" == toJson session) then continue
+    check found.isNone "one native invocation retained multiple receipt identities"
+    let mut stages := []
+    let mut numerical := []
+    for stage in ← entry.path.readDir do
+      if !stage.fileName.endsWith ".json" then continue
+      let value ← (readBoundedJson stage.path (8 * 1024 * 1024) : IO Json)
+      stages := stages ++ [(stage.fileName, value)]
+      if stage.fileName.startsWith "numerical-" then numerical := numerical ++ [value.getObjValD "data"]
+    found := some (Json.mkObj [("receipt", toJson entry.fileName),
+      ("stages", Json.mkObj stages), ("numerical", toJson numerical)])
+  let some receipt := found | throw (IO.userError "native hook lost its per-run receipt")
+  pure receipt
+
 def nativeHook (binary root runtime records config : System.FilePath) (session : String) : IO (Json × SearchTrace × Nat) := do
   let started ← IO.monoMsNow
   let input := Json.mkObj [("hook_event_name", toJson "UserPromptSubmit"),
@@ -60,6 +79,16 @@ def nativeHook (binary root runtime records config : System.FilePath) (session :
     ("input", input), ("output", output), ("stderr", toJson result.stderr),
     ("elapsed_ms", toJson elapsed), ("test_budget_ms", toJson (4300 : Nat))])
   check (result.exitCode == 0 && elapsed < 4300) "native hook exceeded the practical delivery test budget"
+  let receipt ← nativeReceipt runtime session
+  let published := receipt.getObjValD "stages" |>.getObjValD "published.json" |>.getObjValD "data"
+  check (published.getObjValD "output" == toJson result.stdout &&
+      published.getObjValD "sha256" == toJson (Sha256.hex result.stdout.toUTF8) &&
+      published.getObjValD "bytes" == toJson result.stdout.utf8ByteSize &&
+      published.getObjValD "replyComplete" == toJson true)
+    "native publication receipt changed or inferred the actual stdout body"
+  check ((receipt.getObjValD "stages" |>.getObjValD "ack.json" |>.getObjValD "data" |>.getObjValD "offerAccepted") == toJson true)
+    "stdout flush did not retain the actual delivery-offer acknowledgement"
+  writeJson (records / (session ++ "-receipt.json")) receipt
   let state ← (readBoundedJson (runtime / "sessions" / session / "state.json") 1048576 : IO ThreadState)
   let some trace := state.lastSearch | throw (IO.userError s!"native hook has no acknowledged search trace: {output.compress}")
   writeJson (records / (session ++ "-trace.json")) trace
@@ -177,6 +206,11 @@ def scenario (temporary : System.FilePath) : IO Unit := do
           cold.compress.contains "LEXICAL_ORIGINAL_BODY_53726" &&
           (← Warm.inspect snapshot settings).coverage.valid == 0)
         "a cold hook embedded its durable DB or supplied only an unfinished notice"
+      let numerical ← IO.ofExcept ((← nativeReceipt runtime "semantic-cold").getObjValAs? (List Json) "numerical")
+      check (numerical.any fun row => row.getObjValD "status" != toJson "completed" &&
+          (row.getObjValD "corpus").getObjValD "windowReferences" == toJson (2 : Nat) &&
+          ((row.getObjValD "counters").getObjValD "source").getObjValD "absent" == toJson (1 : Nat))
+        "cold cache observations were lost or inferred for the unvisited DB tail"
       shutdown binary runtime
       IO.FS.removeDirAll (runtime / "sessions" / "semantic-cold")
     finally FileSystem.unlockRead guard
@@ -227,6 +261,36 @@ def scenario (temporary : System.FilePath) : IO Unit := do
       "a fresh chat could not use the warmed DB within its semantic window"
     check (!(← Warm.required {owner, command := numerical} (← DB.PageMap.pin database)))
       "ordinary semantic query memo writes scheduled another full DB warm"
+    for (session, expectedQueryHit) in [("semantic-hot-next-chat", false), ("semantic-hot-repeated", true)] do
+      if expectedQueryHit then
+        let _ ← nativeHook binary root runtime records config session
+      let numerical ← IO.ofExcept ((← nativeReceipt runtime session).getObjValAs? (List Json) "numerical")
+      check (numerical.any fun row =>
+          row.getObjValD "status" == toJson "completed" &&
+          (row.getObjValD "corpus").getObjValD "purpose" == toJson "discovery" &&
+          (row.getObjValD "corpus").getObjValD "durableDocuments" == toJson (2 : Nat) &&
+          ((row.getObjValD "counters").getObjValD "source").getObjValD "hit" == toJson (2 : Nat) &&
+          ((row.getObjValD "counters").getObjValD "query").getObjValD "hit" == toJson (if expectedQueryHit then 1 else 0 : Nat))
+        "actual source/query cache hits were not retained with their native run"
+    let documents ← Persistence.Store.searchDocuments (← DB.PageMap.pin database)
+    let some first := documents.head? | throw (IO.userError "corruption fixture has no durable document")
+    let some window := first.windows.head? | throw (IO.userError "corruption fixture has no durable window")
+    let path := settings.cache / "vectors" / (SearchProvider.windowCacheKey settings.model window ++ ".json")
+    let original ← IO.FS.readBinFile path
+    let guard ← FileSystem.openRead guardPath.toString
+    check (← FileSystem.tryReadLock guard true) "corruption fixture could not pause background repair"
+    try
+      IO.FS.writeFile path "damaged numerical cache record"
+      let (corrupt, trace, _) ← nativeHook binary root runtime records config "semantic-corrupt"
+      check (trace.route == .lexical && corrupt.compress.contains "LEXICAL_ORIGINAL_BODY_53726")
+        "an unusable numerical cache lost the DB body fallback"
+      let rows ← IO.ofExcept ((← nativeReceipt runtime "semantic-corrupt").getObjValAs? (List Json) "numerical")
+      check (rows.any fun row =>
+          ((row.getObjValD "counters").getObjValD "source").getObjValD "unusable" == toJson (1 : Nat))
+        "an unusable source cache was counted as a hit or absent file"
+    finally
+      FileSystem.atomicExistingBytes path original
+      FileSystem.unlockRead guard
     IO.println s!"PASS native semantic-first delivery: preferred body, {timeoutMs}ms timeout with actual lexical body, provider reaping, zero durable repair, bounded focus, cold-to-warm recovery and fresh-chat semantic reuse"
   finally shutdown binary runtime
 

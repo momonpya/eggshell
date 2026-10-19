@@ -759,6 +759,7 @@ structure SourceContext where
   deadline : Nat
   /-- The user's scope ranks advisory data independently of native control. -/
   question : String := ""
+  receipt : Option String := none
   targets : Option (List String) := none
   native : Bool := false
   delivered : List String := []
@@ -1985,7 +1986,7 @@ def focusIndexedEvidence (command : List String) (question : String)
     (documents : List Persistence.Store.SearchDocument)
     (readWork : Persistence.Store.SearchDocument → IO String)
     (readWindow : (document : Persistence.Store.SearchDocument) →
-      Fin document.windows.length → IO String) :
+      Fin document.windows.length → IO String) (receipt : Option String := none) :
     IO (Option (List Nat × List (Nat × List Nat))) := do
   let directories ← documents.mapM fun original => do
     let workChars := (← readWork original).length
@@ -2010,7 +2011,7 @@ def focusIndexedEvidence (command : List String) (question : String)
     else throw (IO.userError "source-focus request changed original window directory")
   -- Hydration observes the complete body-meaning order. Current-question
   -- lexical weights are applied once, over the actual bounded source pool.
-  let some observed ← SemanticMatcher.nominateIndexed command question requests [] [] repair true | return none
+  let some observed ← SemanticMatcher.nominateIndexed command question requests [] [] repair true receipt "focus" | return none
   pure (some (observed.ranking.map (·.document.owner),
     observed.ranking.map fun row => (row.document.owner, row.indices)))
 
@@ -2095,7 +2096,7 @@ MiniLM vectors, without an LLM call or a new
 whole-database scan. The complete checked order prioritizes non-hit data;
 a low score does not prove that a graph prerequisite may be discarded. -/
 def focusNeighborhood (command : List String) (current : String)
-    (support : List (SourceSupport roots all unions)) :
+    (support : List (SourceSupport roots all unions)) (receipt : Option String := none) :
     IO (Option (FocusedNeighborhood support)) := do
   if support.isEmpty then return some ⟨[]⟩
   -- Paths and labels still contribute to lexical ranking. Only numerical
@@ -2113,7 +2114,7 @@ def focusNeighborhood (command : List String) (current : String)
     let some text := parts[index.val]? | throw (IO.userError "foreign focused source position")
     pure text
   let some result ← SemanticMatcher.nominateIndexed command current documents
-      (corpus.rank current) (corpus.rank current true) read | return none
+      (corpus.rank current) (corpus.rank current true) read false receipt "focus" | return none
   -- Advisory evidence has one complete question-focused order. A proposed
   -- command cannot switch it to another subset of the original graph.
   let rows := result.ranking.filterMap fun row =>
@@ -4951,7 +4952,7 @@ ordinals resolve through this closed source table, including bounded repairs. -/
 def indexedSemanticNominationsUsing (snapshot : Persistence.Store.Snapshot)
     (documents : List Persistence.Store.SearchDocument) (childIds : Std.HashSet Nat)
     (stagedChildren : Std.HashSet Value) (command : List String) (current : String)
-    (staged : List Matcher.Candidate := []) :
+    (staged : List Matcher.Candidate := []) (receipt : Option String := none) :
     IO (Option IndexedSemanticNominations) := do
   let stagedSources := staged.map fun candidate =>
     let text := SemanticMatcher.candidateText candidate
@@ -4995,7 +4996,7 @@ def indexedSemanticNominationsUsing (snapshot : Persistence.Store.Snapshot)
     | .staged _ windows _ =>
         let some text := windows[index.val]? | throw (IO.userError "foreign staged semantic window")
         pure text
-  let some indices ← SemanticMatcher.nominateIndexed command current requestDocuments lexical anchors readWindow |
+  let some indices ← SemanticMatcher.nominateIndexed command current requestDocuments lexical anchors readWindow false receipt |
     return none
   let mut found : IndexedSemanticNominations := {}
   for nomination in indices.related do
@@ -5044,7 +5045,8 @@ def savedSemanticChildren (snapshot : Persistence.Store.Snapshot)
   pure (semanticChildIds workIds links)
 
 def indexedSemanticNominations (snapshot : Persistence.Store.Snapshot) (all : List AllEdge)
-    (command : List String) (current : String) (staged : List Matcher.Candidate := []) :
+    (command : List String) (current : String) (staged : List Matcher.Candidate := [])
+    (receipt : Option String := none) :
     IO (Option IndexedSemanticNominations) := do
   let documents ← Persistence.Store.searchDocuments snapshot
   let mut workIds := Std.HashSet.ofList (documents.map (·.work))
@@ -5064,17 +5066,17 @@ def indexedSemanticNominations (snapshot : Persistence.Store.Snapshot) (all : Li
         stagedChildren := stagedChildren.insert child
         if let some id ← Persistence.Store.findNode? snapshot child then
           childIds := childIds.insert id
-  indexedSemanticNominationsUsing snapshot documents childIds stagedChildren command current staged
+  indexedSemanticNominationsUsing snapshot documents childIds stagedChildren command current staged receipt
 
 /-- The same complete stored corpus is ordered from the pinned All references.
 Both paths use the same provider and bounded source-window reader; no All
 descendant is restored merely to order the numerical request. -/
 def headerSemanticNominations (snapshot : Persistence.Store.Snapshot)
-    (command : List String) (current : String) : IO (Option IndexedSemanticNominations) := do
+    (command : List String) (current : String) (receipt : Option String := none) : IO (Option IndexedSemanticNominations) := do
   let documents ← Persistence.Store.searchDocuments snapshot
   let workIds := Std.HashSet.ofList (documents.map (·.work))
   let childIds ← savedSemanticChildren snapshot workIds
-  indexedSemanticNominationsUsing snapshot documents childIds {} command current
+  indexedSemanticNominationsUsing snapshot documents childIds {} command current [] receipt
 
 def indexedSemanticOwners (snapshot : Persistence.Store.Snapshot) (all : List AllEdge)
     (command : List String) (current : String) : IO (Option (List Nat)) := do
@@ -5083,6 +5085,7 @@ def indexedSemanticOwners (snapshot : Persistence.Store.Snapshot) (all : List Al
 /-- Adapters supply only pinned source readers and exact global statistics.
 One discovery controller is shared by single and overlapping source sets. -/
 structure IndexedContext where
+  receipt : Option String := none
   all : List AllEdge
   persistent : List UnionEdge
   outcomeCount : Nat
@@ -5558,7 +5561,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
             -- Use the same original question/complete order as the initial
             -- packet. A native operation cannot create a different advisory
             -- plan and refill it with undispatched old positions.
-            let some neighborhood ← focusNeighborhood command focusQuestion focusDomain | return some pendingSearch
+            let some neighborhood ← focusNeighborhood command focusQuestion focusDomain source.receipt | return some pendingSearch
             focusedRanking := neighborhood.ranking
             focusedWindows := neighborhood.windows
             focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
@@ -5641,7 +5644,8 @@ def indexedDiscovery (selection : Config.Selection)
     (staged : List Value := []) (stagedVisible : Bool := true)
     (savedSaturation : SaturationMemo.Saved := [])
     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
-    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none) :
+    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none)
+    (receipt : Option String := none) :
     IO (Option (Option Handoff)) := do
   let some single := SingleSource.find? snapshots | return none
   let snapshot := single.snapshot
@@ -5654,7 +5658,7 @@ def indexedDiscovery (selection : Config.Selection)
   -- consumes this same observation once, then follows the complete kernel.
   let referenceQuery := meaningQuery.getD current
   let preparedSemantic ← if staged.isEmpty && evidence.isNone then
-      selection.semanticMatcher.mapM (fun command => headerSemanticNominations snapshot command referenceQuery)
+      selection.semanticMatcher.mapM (fun command => headerSemanticNominations snapshot command referenceQuery receipt)
     else pure none
   match preparedSemantic with
   | some none => return some (some pendingSearch)
@@ -5672,6 +5676,7 @@ def indexedDiscovery (selection : Config.Selection)
   let allCount := some (← Persistence.Store.getNat snapshot.get "alls")
   let unions ← reader.unions (← Persistence.Store.authority snapshot)
   let source : IndexedContext := {
+    receipt
     all := [], persistent := unions.map (·.edge), outcomeCount
     advisoryFrontiers := [frontier]
     advisoryPositions := fun owner => do
@@ -5692,7 +5697,7 @@ def indexedDiscovery (selection : Config.Selection)
           match Matcher.atomText? value with
           | some text => pure text
           | none => throw (IO.userError "source-focus Work is not indexed text"))
-        (fun document index => Persistence.Store.readSearchWindow snapshot document index.val)
+        (fun document index => Persistence.Store.readSearchWindow snapshot document index.val) receipt
     population
     semanticPopulation := ← Persistence.Store.getNat snapshot.get "semanticPopulation"
     live := fun value => (·.isSome) <$> Persistence.Store.liveRoot? snapshot value
@@ -5704,7 +5709,7 @@ def indexedDiscovery (selection : Config.Selection)
     semantic := fun all command query candidates => do
       if command == selection.semanticMatcher.getD [] && query == referenceQuery && candidates.isEmpty then
         if let some nominated := preparedSemantic.join then return some nominated
-      indexedSemanticNominations snapshot all command query candidates
+      indexedSemanticNominations snapshot all command query candidates receipt
     lexical := lexicalNominations population (Persistence.Store.searchPosting snapshot)
       (fun id => Persistence.Store.getNat snapshot.get (Persistence.Store.key "member" id))
     ordinal := fun id => do
@@ -5730,7 +5735,8 @@ inductive FederatedSemanticSource (sources : Array Persistence.Store.Snapshot) w
 
 def federatedSemanticNominations
     (catalogue : Persistence.Store.Federated.Catalogue sources) (all : List AllEdge)
-    (command : List String) (current : String) (staged : List Matcher.Candidate) :
+    (command : List String) (current : String) (staged : List Matcher.Candidate)
+    (receipt : Option String := none) :
     IO (Option IndexedSemanticNominations) := do
   let workIds := Std.HashSet.ofList (catalogue.documents.map (·.work))
   let stagedWorks := Std.HashSet.ofList (staged.map (·.edge.work))
@@ -5785,7 +5791,7 @@ def federatedSemanticNominations
     | .staged _ windows _ =>
         let some text := windows[index.val]? | throw (IO.userError "foreign federated staged window")
         pure text
-  let some nominated ← SemanticMatcher.nominateIndexed command current requests lexical anchors readWindow |
+  let some nominated ← SemanticMatcher.nominateIndexed command current requests lexical anchors readWindow false receipt |
     return none
   let mut found : IndexedSemanticNominations := {}
   for nomination in nominated.related do
@@ -5820,7 +5826,8 @@ def federatedDiscovery (selection : Config.Selection)
     (staged : List Value := []) (stagedVisible : Bool := true)
     (savedSaturation : SaturationMemo.Saved := [])
     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
-    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none) :
+    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none)
+    (receipt : Option String := none) :
     IO (Option Handoff) := do
   let sources := (snapshots.filterMap id).toArray
   let catalogue ← Persistence.Store.Federated.prepare sources
@@ -5829,6 +5836,7 @@ def federatedDiscovery (selection : Config.Selection)
     let nextRoot ← Persistence.Store.getNat snapshot.get "roots"
     pure ({identity := snapshot.head.identity, nextRoot} : AdvisoryFrontier)
   let source : IndexedContext := {
+    receipt
     all := catalogue.all
     advisoryFrontiers := frontiers
     advisoryPositions := fun owner => do
@@ -5863,7 +5871,7 @@ def federatedDiscovery (selection : Config.Selection)
           | none => throw (IO.userError "shared source-focus Work is not indexed text"))
         (fun request index => do
           let some document := table[request.owner]? | throw (IO.userError "foreign shared source-focus window")
-          Persistence.Store.readSearchWindow document.node.snapshot document.original index.val)
+          Persistence.Store.readSearchWindow document.node.snapshot document.original index.val) receipt
     supportOwners := some fun works excluded allowance ranking families => do
       let mut remaining := allowance
       let mut found := []
@@ -5886,7 +5894,7 @@ def federatedDiscovery (selection : Config.Selection)
     semanticPopulation := catalogue.semanticPopulation
     live := Persistence.Store.Federated.live? sources
     semanticPresent := Persistence.Store.Federated.semanticPresent sources
-    semantic := federatedSemanticNominations catalogue
+    semantic := fun all command query staged => federatedSemanticNominations catalogue all command query staged receipt
     lexical := lexicalNominations catalogue.documents.length
       (fun unit => do
         let owners ← Persistence.Store.Federated.postings catalogue unit true
@@ -5941,7 +5949,8 @@ def computeAutomaticHandoff (selection : Config.Selection)
     (enableLocalUnion : Bool := true) (savedRanks : Matcher.RankMemo.Saved := [])
     (savedSaturation : SaturationMemo.Saved := [])
     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
-    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none) : IO (Option Handoff) := do
+    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none)
+    (receipt : Option String := none) : IO (Option Handoff) := do
   if selection.read.isEmpty then return none
   unless selection.read.length == snapshots.length do
     throw (IO.userError "source snapshot arity mismatch")
@@ -5951,9 +5960,9 @@ def computeAutomaticHandoff (selection : Config.Selection)
       if let some result ← indexedTerminalRoot selection snapshots current deliveredGraphs
           enforce evidenceText enableLocalUnion refreshSources then return result
     if let some result ← indexedDiscovery selection snapshots current deliveredGraphs
-        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery then return result
+        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt then return result
     return ← federatedDiscovery selection snapshots current deliveredGraphs
-      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery
+      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt
   catch error =>
     IO.eprintln s!"eggshell: indexed search unavailable: {error}"
     return some pendingSearch
@@ -6083,6 +6092,7 @@ def automaticHandoff (selection : Config.Selection) (current : String)
     for snapshot in snapshots.filterMap id do snapshot.trace.set (some {})
   let result ← computeAutomaticHandoff selection snapshots current deliveredGraphs enforce
     evidenceText staged stagedVisible enableLocalUnion [] savedSaturation rankReader sourceContext.isSome reuseSemantic meaningQuery
+    (sourceContext.bind (·.receipt))
   -- Only a genuinely overflowing complete rendering needs a reduced graph
   -- budget. Both passes retain the same immutable source capabilities; the
   -- dependency trace conservatively includes every read from either pass.
@@ -6091,7 +6101,7 @@ def automaticHandoff (selection : Config.Selection) (current : String)
       handoffChars := selection.handoffChars - sourceStatusReserve
       handoffBytes := selection.handoffBytes.map (· - sourceStatusByteReserve)}
       snapshots current deliveredGraphs enforce evidenceText staged stagedVisible enableLocalUnion
-      [] savedSaturation rankReader sourceContext.isSome reuseSemantic meaningQuery
+      [] savedSaturation rankReader sourceContext.isSome reuseSemantic meaningQuery (sourceContext.bind (·.receipt))
   if let some request := request then
     if let some writable := writable then
       if !(← reused.get) && (← publishable.get) &&

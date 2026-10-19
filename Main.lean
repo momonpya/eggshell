@@ -23,9 +23,9 @@ def main (arguments : List String) : IO UInt32 := do
   | "setup" :: options => Eggshell.Setup.command options
   | ["codex-hook"] => Eggshell.Plugin.Daemon.hookClient
   | ["codex-hook", "fast"] => Eggshell.Plugin.Daemon.hookClient true
-  | ["codex-hook-child", deadline] => do
+  | ["codex-hook-child", deadline, receipt] => do
       let some deadline := deadline.toNat? | return 1
-      Eggshell.Plugin.Daemon.hookProcess deadline
+      Eggshell.Plugin.Daemon.hookProcess deadline receipt
   | ["codex-daemon", "shutdown"] => do
       Eggshell.Plugin.Daemon.shutdown
       pure 0

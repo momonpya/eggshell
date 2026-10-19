@@ -126,13 +126,19 @@ def serveRequest (session secret : String) (json : Json) : IO (Json × Bool) := 
         let input := json.getObjValD "payload"
         if optionalString input "session_id" != some session then
           return (response (.error "wrong chat manager"), false)
-        try pure (response (.ok (← dispatchHook input)), false)
-        catch error => pure (response (.error error.toString), false)
+        let started ← IO.monoMsNow
+        let dispatched ← try pure (.ok (← dispatchHook input))
+          catch error => pure (.error error.toString)
+        Receipt.observe (optionalString input "_eggshell_receipt") "dispatch" (Json.mkObj [
+          ("elapsedMs", toJson ((← IO.monoMsNow) - started)),
+          ("completed", toJson dispatched.isOk),
+          ("error", match dispatched with | .error error => toJson error | .ok _ => Json.null)])
+        pure (response dispatched, false)
     | some "ack" =>
         try
           let id ← IO.ofExcept (requiredString (json.getObjValD "payload") "receipt")
-          acknowledge session id
-          pure (response (.ok ""), false)
+          let accepted ← acknowledge session id
+          pure (response (.ok (toJson accepted).compress), false)
         catch error => pure (response (.error error.toString), false)
     | some "ping" => pure (response (.ok (toString (← IO.monoMsNow))), false)
     | some "shutdown" => pure (response (.ok ""), true)
@@ -323,12 +329,28 @@ theorem rpc_preserves_supplied_deadline (now deadline : Nat) :
 def rpcClient (kind : String) : IO UInt32 := do
   let result ← try
     let input ← IO.ofExcept (Json.parse (← (← IO.getStdin).getLine))
-    let session ← IO.ofExcept (requiredString input "session_id")
-    let endpoint ← ensure session
-    let deadline := rpcDeadline (← IO.monoMsNow)
-      (input.getObjValAs? Nat "_eggshell_rpc_deadline").toOption
-    let output ← exchangeBefore endpoint kind input deadline
-    pure (Json.mkObj [("output", output)])
+    if kind == "receipt" then
+      let id ← IO.ofExcept (requiredString input "receipt")
+      Receipt.write id "published" (input.getObjValD "publication")
+      let ack := input.getObjValD "ack"
+      if ack != Json.null then
+        let acknowledged ← try
+          let session ← IO.ofExcept (requiredString ack "session_id")
+          let endpoint ← ensure session
+          let deadline ← IO.ofExcept (input.getObjValAs? Nat "_eggshell_rpc_deadline")
+          let accepted ← exchangeBefore endpoint "ack" ack deadline
+          pure (Json.mkObj [("rpcCompleted", toJson true),
+            ("offerAccepted", (Json.parse accepted).toOption.getD Json.null)])
+          catch error => pure (Json.mkObj [("rpcCompleted", toJson false), ("error", toJson error.toString)])
+        Receipt.write id "ack" acknowledged
+      pure (Json.mkObj [("output", toJson "")])
+    else do
+      let session ← IO.ofExcept (requiredString input "session_id")
+      let endpoint ← ensure session
+      let deadline := rpcDeadline (← IO.monoMsNow)
+        (input.getObjValAs? Nat "_eggshell_rpc_deadline").toOption
+      let output ← exchangeBefore endpoint kind input deadline
+      pure (Json.mkObj [("output", output)])
     catch error => pure (Json.mkObj [("error", error.toString)])
   IO.println result.compress
   pure 0
@@ -406,34 +428,50 @@ theorem invalid_hook_reply_is_incomplete (reply : Option Json) (text : String)
     decodeHookReply reply = .incomplete := by
   simp [decodeHookReply, field, invalid]
 
-def hookRequest (input : Json) (deadline : Nat) : IO Json := do
+def hookRequest (input : Json) (deadline : Nat) (receipt : String) : IO Json := do
   let event := (optionalString input "hook_event_name").getD ""
   try
     let input := attachClientConfig input (← IO.getEnv "EGGSHELL_CONFIG")
+    let captureStarted ← IO.monoMsNow
     captureTerminal input
-    let receipt := Blake3.hex (← IO.getRandomBytes 16)
+    let captureMs := (← IO.monoMsNow) - captureStarted
     let input := (input.setObjVal! "_eggshell_deadline" (toJson (deadline - 250)))
       |>.setObjVal! "_eggshell_receipt" receipt
     let session ← IO.ofExcept (requiredString input "session_id")
+    let ensureStarted ← IO.monoMsNow
     let endpoint ← ensure session
+    let ready ← IO.monoMsNow
     let output ← exchangeBefore endpoint "hook" input (deadline - 250)
+    Receipt.observe (some receipt) "transport" (Json.mkObj [
+      ("captureMs", toJson captureMs), ("managerMs", toJson (ready - ensureStarted)),
+      ("rpcMs", toJson ((← IO.monoMsNow) - ready))])
     let json := some (Json.mkObj [("output", output)])
     let reply := decodeHookReply json
     let ack := if reply.isComplete && output != emptyHook then
       Json.mkObj [("session_id", session), ("receipt", receipt)] else Json.null
     pure (Json.mkObj [("output", reply.output event), ("ack", ack)])
   catch error =>
+    Receipt.observe (some receipt) "failure" (Json.mkObj [("stage", toJson "request"), ("error", toJson error.toString)])
     IO.eprintln s!"Eggshell hook failed open: {error}"
     pure (Json.mkObj [("output", incompleteHook event)])
 
 /-- All ingress, journaling and transport IO belongs to this supervised child.
 The parent alone forwards the hook response and acknowledges that write. -/
-def hookProcess (deadline : Nat) : IO UInt32 := do
+def hookProcess (deadline : Nat) (receipt : String) : IO UInt32 := do
+  let started ← IO.monoMsNow
+  Receipt.observe (some receipt) "ingress" (Json.mkObj [("deadlineMs", toJson deadline)])
   let response ← try
     let inputText ← (← IO.getStdin).readToEnd
     let input ← IO.ofExcept (Json.parse inputText)
-    hookRequest input deadline
+    Receipt.observe (some receipt) "request" (Json.mkObj [
+      ("inputMs", toJson ((← IO.monoMsNow) - started)),
+      ("inputBytes", toJson inputText.utf8ByteSize),
+      ("event", toJson (optionalString input "hook_event_name")),
+      ("session", toJson (optionalString input "session_id")),
+      ("turn", toJson (optionalString input "turn_id"))])
+    hookRequest input deadline receipt
     catch error =>
+      Receipt.observe (some receipt) "failure" (Json.mkObj [("stage", toJson "ingress"), ("error", toJson error.toString)])
       IO.eprintln s!"Eggshell hook failed open: {error}"
       pure (Json.mkObj [("output", incompleteHook "")])
   IO.println response.compress
@@ -442,10 +480,12 @@ def hookProcess (deadline : Nat) : IO UInt32 := do
 /-- The registered handler selects its budget before stdin can block. The child
 inherits stdin, so a timed-out reader cannot keep a parent IO task alive. -/
 def hookClient (fast : Bool := false) : IO UInt32 := do
-  let deadline := (← IO.monoMsNow) + (if fast then 2000 else 29000)
+  let started ← IO.monoMsNow
+  let deadline := started + (if fast then 2000 else 29000)
+  let receipt ← Receipt.fresh
   try
     let child ← IO.Process.spawn {
-      cmd := (← IO.appPath).toString, args := #["codex-hook-child", toString deadline]
+      cmd := (← IO.appPath).toString, args := #["codex-hook-child", toString deadline, receipt]
       stdin := .inherit, stdout := .piped, stderr := .inherit, setsid := true }
     let task ← IO.asTask child.stdout.readToEnd .dedicated
     let result ← try
@@ -458,14 +498,22 @@ def hookClient (fast : Bool := false) : IO UInt32 := do
     let json := result.bind (Json.parse · |>.toOption)
     let reply := decodeHookReply json
     let stdout ← IO.getStdout
-    stdout.putStr ((reply.output "").trimAscii.toString ++ "\n")
+    let output := (reply.output "").trimAscii.toString ++ "\n"
+    stdout.putStr output
     stdout.flush
-    if reply.isComplete then
-      if let some ack := json.bind (fun json => (json.getObjVal? "ack").toOption) then
-        if ack != Json.null then
-          try
-            let _ ← boundedRpc "ack" ack deadline
-          catch error => IO.eprintln s!"Eggshell receipt was not acknowledged: {error}"
+    let flushed ← IO.monoMsNow
+    let publication := Json.mkObj [("output", toJson output),
+      ("bytes", toJson output.utf8ByteSize), ("sha256", toJson (Sha256.hex output.toUTF8)),
+      ("replyComplete", toJson reply.isComplete), ("startedMs", toJson started),
+      ("flushedMs", toJson flushed), ("deadlineMs", toJson deadline)]
+    let payload := Json.mkObj [("receipt", toJson receipt), ("publication", publication),
+      ("ack", if reply.isComplete then json.map (·.getObjValD "ack") |>.getD Json.null else Json.null)]
+    let recorded ← try boundedRpc "receipt" payload deadline
+      catch error => do
+        IO.eprintln s!"Eggshell publication receipt failed: {error}"
+        pure none
+    unless recorded.bind (Json.parse · |>.toOption) |>.bind (optionalString · "output") |>.isSome do
+      IO.eprintln s!"Eggshell publication receipt was not confirmed: {receipt}"
     pure 0
   catch error =>
     IO.eprintln s!"Eggshell hook failed open: {error}"

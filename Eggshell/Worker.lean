@@ -314,6 +314,7 @@ structure Search where
   staged : Bool := false
   deadline : Nat := 0
   route : SearchRoute := .configured
+  receipt : Option String := none
   deriving ToJson, FromJson
 
 /-- A waiting search must refresh acknowledged deliveries in its own live
@@ -389,6 +390,7 @@ def search (request : Search) : IO (Option Handoff) := do
           question := request.pending.prompt
           targets := SourceEvidence.workTargets? (System.FilePath.mk request.pending.cwd) request.work
           native := request.enforce || request.evidence.isSome
+          receipt := request.receipt
           onDependencies := fun sources =>
             queueCheckpoint files {request.pending with tools := [], sources := sources, inFlight := [], finalMessage := none, closed := false} })
         (request.route != .lexical)

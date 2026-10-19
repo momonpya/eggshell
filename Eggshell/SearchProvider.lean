@@ -5,12 +5,40 @@ public import Eggshell.MiniLM
 public import Eggshell.Sha256
 public import Eggshell.Persistence
 public import Eggshell.SemanticMatcher
+public import Eggshell.Receipt
 public import Lean.Data.Json.FromToJson
 
 @[expose] public section
 
 namespace Eggshell.SearchProvider
 open Lean
+
+structure CacheProbes where
+  hit : Nat := 0
+  absent : Nat := 0
+  unusable : Nat := 0
+  deriving ToJson
+
+structure IndexedMetrics where
+  source : CacheProbes := {}
+  query : CacheProbes := {}
+  cacheMs : Nat := 0
+  queryMs : Nat := 0
+  scoreMs : Nat := 0
+  scoredWindows : Nat := 0
+  deriving ToJson
+
+structure MetricsSink where
+  receipt : Option String
+  stage : String
+  started : Nat
+  corpus : Json
+  state : IO.Ref IndexedMetrics
+
+def MetricsSink.flush (sink : MetricsSink) (status : String) : IO Unit := do
+  Receipt.observe sink.receipt sink.stage (Json.mkObj [
+    ("status", toJson status), ("elapsedMs", toJson ((← IO.monoMsNow) - sink.started)),
+    ("corpus", sink.corpus), ("counters", toJson (← sink.state.get))])
 
 structure Options where
   cache : System.FilePath
@@ -23,6 +51,7 @@ structure Options where
   threshold : Float := 0.38
   trace : Option System.FilePath := none
   lane : SemanticMatcher.Lane := .search
+  metrics : Option MetricsSink := none
 
 def number (json : Json) : Except String Float := do
   match json with
@@ -139,6 +168,25 @@ def windowCacheKey (model window : String) : String :=
 def cacheKey (model text : String) : String :=
   windowCacheKey model (Persistence.Store.windowKey text)
 
+/-- Count the actual initial availability probes, including repeated window
+references. These are not DB coverage or an inferred whole-corpus hit rate. -/
+def observeProbe (options : Options) (query hit : Bool) (path : System.FilePath)
+    (elapsed : Nat) : IO Unit := do
+  let some sink := options.metrics | return
+  let absent ← if hit then pure false else
+    try pure (← FileSystem.symlinkMetadata? path).isNone catch _ => pure false
+  sink.state.modify fun state =>
+    let before := if query then state.query else state.source
+    let after : CacheProbes := {
+      hit := before.hit + if hit then 1 else 0
+      absent := before.absent + if !hit && absent then 1 else 0
+      unusable := before.unusable + if !hit && !absent then 1 else 0 }
+    if query then {state with query := after, cacheMs := state.cacheMs + elapsed}
+    else {state with source := after, cacheMs := state.cacheMs + elapsed}
+  let state ← sink.state.get
+  let count := state.source.hit + state.source.absent + state.source.unusable
+  if query || count == 1 || count % 32 == 0 then sink.flush "running"
+
 /-- Cache records are bounded numerical windows, never arbitrary-size source
 bodies. Read through one secure descriptor so replacement cannot grow a
 checked record between stat and allocation. Damage is a miss/pending search. -/
@@ -173,20 +221,27 @@ def saveVector (options : Options) (text : String) (vector : Json) : IO Unit := 
     Persistence.privateDirectory root
     FileSystem.atomicBytes path encoded.toUTF8
 
-def storeWindows (options : Options) (child : Encoder) (windows : List String) : IO Unit := do
+def storeWindows (options : Options) (child : Encoder) (windows : List String)
+    (queryProbe : Bool := false) : IO Unit := do
   let parts := windows.eraseDups
   let mut missing := []
   for part in parts do
     unless part.length ≤ 512 do throw (IO.userError "index window exceeds the original-window contract")
-    if (← readVector options part).isNone then missing := missing ++ [part]
+    let started ← IO.monoMsNow
+    let available ← readVector options part
+    if queryProbe then
+      observeProbe options true available.isSome
+        (options.cache / "vectors" / (cacheKey options.model part ++ ".json")) ((← IO.monoMsNow) - started)
+    if available.isNone then missing := missing ++ [part]
   if missing.isEmpty then return
   let response ← exchange child (Json.mkObj [("texts", toJson missing)])
   let vectors ← IO.ofExcept (response.getObjValAs? (Array Json) "vectors")
   if vectors.size != missing.length then throw (IO.userError "embedding count mismatch")
   for (text, vector) in missing.zip vectors.toList do saveVector options text vector
 
-def store (options : Options) (child : Encoder) (texts : List String) : IO Unit :=
-  storeWindows options child (texts.flatMap SearchRank.windows)
+def store (options : Options) (child : Encoder) (texts : List String)
+    (queryProbe : Bool := false) : IO Unit :=
+  storeWindows options child (texts.flatMap SearchRank.windows) queryProbe
 
 def vectors (options : Options) (text : String) : IO Json := do
   let values ← (SearchRank.windows text).mapM fun part => do
@@ -221,7 +276,10 @@ def repairBatch (options : Options) (child : Encoder) (document offset : Nat)
   let mut missing : List (Nat × String) := []
   let mut retained : Array (Option Json) := #[]
   for (window, index) in windows.zipIdx do
+    let started ← IO.monoMsNow
     let available ← try some <$> indexedVectors options [window] catch _ => pure none
+    observeProbe options false available.isSome
+      (options.cache / "vectors" / (windowCacheKey options.model window ++ ".json")) ((← IO.monoMsNow) - started)
     retained := retained.push available
     if available.isNone then missing := (offset + index, window) :: missing
   missing := missing.reverse
@@ -333,7 +391,7 @@ theorem presentation_ranking_no_duplicates (mode : String) (count : Nat)
 /-- Candidate payloads never cross this protocol. Numerical scoring uses
 bounded batches of pre-indexed vectors and the identical selection kernel.
 Missing vectors fail explicitly; the search cannot silently omit a candidate. -/
-def handleIndexed (options : Options) (child : Option Encoder) (query : String)
+def handleIndexedUsing (options : Options) (child : Option Encoder) (query : String)
     (request : Json) (repair : RepairWindows := unavailableRepair) : IO Json := do
   let candidates ← IO.ofExcept (request.getObjValAs? (Array Json) "documents")
   let lexical ← IO.ofExcept (request.getObjValAs? (List Nat) "lexical")
@@ -370,11 +428,21 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
         let queries ← match ← queryVectors.get with
           | some queries => pure queries
           | none => do
-              store queryOptions child [query]
+              let started ← IO.monoMsNow
+              store queryOptions child [query] true
               let queries ← vectors queryOptions query
+              if let some sink := options.metrics then
+                let elapsed := (← IO.monoMsNow) - started
+                sink.state.modify fun state => {state with queryMs := state.queryMs + elapsed}
               queryVectors.set (some queries)
               pure queries
+        let scoringStarted ← IO.monoMsNow
         let response ← exchange child (Json.mkObj [("queries", queries), ("candidates", .arr candidateVectors)])
+        if let some sink := options.metrics then
+          let elapsed := (← IO.monoMsNow) - scoringStarted
+          sink.state.modify fun state => {state with
+            scoreMs := state.scoreMs + elapsed
+            scoredWindows := state.scoredWindows + candidateVectors.size}
         let scores ← IO.ofExcept (response.getObjValAs? (Array Json) "scores")
         unless scores.size == batch.front.length do throw (IO.userError "indexed similarity count mismatch")
         for (value, localIndex) in scores.toList.zipIdx do
@@ -397,6 +465,31 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
       (⟨row.1, row.2⟩ : SemanticMatcher.WindowChoice)
   trace options (Json.mkObj [("evidence_windows", toJson windows)])
   pure (Json.mkObj [("related", toJson related), ("ranked", toJson ranked), ("evidence", toJson windows)])
+
+def handleIndexed (options : Options) (child : Option Encoder) (query : String)
+    (request : Json) (repair : RepairWindows := unavailableRepair) : IO Json := do
+  let receipt := (request.getObjValAs? String "receipt").toOption.filter Receipt.validId
+  if receipt.isNone then return ← handleIndexedUsing options child query request repair
+  let documents ← IO.ofExcept (request.getObjValAs? (Array Json) "documents")
+  let windows ← documents.toList.mapM fun document =>
+    IO.ofExcept (document.getObjValAs? (List String) "windows")
+  let sink : MetricsSink := {
+    receipt, stage := s!"numerical-{← IO.Process.getPID}-{← IO.monoNanosNow}"
+    started := ← IO.monoMsNow, state := ← IO.mkRef {}
+    corpus := Json.mkObj [("documents", toJson documents.size),
+      ("purpose", (request.getObjValAs? String "purpose").toOption.map toJson |>.getD Json.null),
+      ("numerical", toJson child.isSome),
+      ("windowReferences", toJson (windows.map List.length).sum),
+      ("durableDocuments", toJson (documents.filter (fun document =>
+        document.getObjValD "cache" != Json.null)).size)] }
+  sink.flush "running"
+  try
+    let result ← handleIndexedUsing {options with metrics := some sink} child query request repair
+    sink.flush "completed"
+    pure result
+  catch error =>
+    sink.flush "failed"
+    throw error
 
 def handle (options : Options) (child : Option Encoder)
     (previous : IO.Ref (Option RetainedCorpus)) (request : Json)

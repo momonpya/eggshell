@@ -40,11 +40,15 @@ def probe(options, event, mode, repeat):
         state.write_text(json.dumps(dict(profile="work", enabled=False, nextProfile=None, nextProjection=None,
                                         deliveredGraphs=[], afterCompaction=False, lastHandoff="",
                                         lastReason="", epoch=0, offers=[])))
+    elif mode == "blocked-receipts":
+        (data / "receipts").write_text("not a receipt directory")
     value = dict(hook_event_name=event, session_id="probe", turn_id="turn",
                  cwd=str(options.input_cwd), tool_name="shell", tool_use_id="native-result",
                  tool_input=dict(command="printf probe"),
                  tool_response=dict(output="NATIVE_RESULT_PROBE"))
     payload = (json.dumps(value, separators=(",", ":")) + "\n").encode()
+    if mode == "invalid-input":
+        payload = b"invalid hook JSON\n"
     (root / "input.json").write_bytes(payload)
     manifest = json.loads(options.manifest.read_text())
     handler = manifest["hooks"][event][0]["hooks"][0]
@@ -129,16 +133,47 @@ def probe(options, event, mode, repeat):
                 or json.loads(saved["input"]) != value["tool_input"]
                 or json.loads(saved["response"]) != value["tool_response"]):
             errors.append("native observation body changed")
-    if not expected_missing and mode in ("normal", "disabled") and output != {}:
+    if not expected_missing and mode in ("normal", "disabled", "blocked-receipts") and output != {}:
         errors.append("ordinary or disabled hook unexpectedly injected context")
-    needs_notice = mode in ("blocked-state", "held-stdin") or (mode == "bad-state" and event == "PostToolUse")
+    needs_notice = mode in ("blocked-state", "held-stdin", "invalid-input") or (mode == "bad-state" and event == "PostToolUse")
     if not expected_missing and needs_notice:
         if valid and not any(word in stdout.decode().lower() for word in ("incomplete", "unconfirmed", "not complete")):
             errors.append("failed work was not explicitly reported as unconfirmed")
+    publications = list(data.glob("receipts/*/published.json"))
+    if not options.expect_public_failures:
+        if mode == "blocked-receipts":
+            if publications or b"publication receipt was not confirmed" not in stderr:
+                errors.append("receipt failure was hidden or altered the normal hook output")
+        elif len(publications) != 1:
+            errors.append("hook did not retain exactly one publication receipt")
+        else:
+            record = json.loads(publications[0].read_text())
+            published = record["data"]
+            if (published["output"].encode() != stdout or published["bytes"] != len(stdout)
+                    or published["sha256"] != hashlib.sha256(stdout).hexdigest()):
+                errors.append("publication receipt differs from actual stdout bytes")
+            if (published["flushedMs"] > published["deadlineMs"]
+                    or published["flushedMs"] < published["startedMs"]):
+                errors.append("publication receipt has an invalid absolute deadline")
+            if not (publications[0].parent / "ingress.json").exists():
+                errors.append("publication has no supervised ingress record")
+            request = publications[0].parent / "request.json"
+            if mode in ("held-stdin", "invalid-input"):
+                if request.exists() or (mode == "held-stdin" and published["replyComplete"]):
+                    errors.append("held stdin was recorded as a completed request")
+                if mode == "invalid-input" and not (publications[0].parent / "failure.json").exists():
+                    errors.append("invalid JSON lost its ingress failure record")
+            elif (not request.exists()
+                    or json.loads(request.read_text())["data"]["event"] != event):
+                errors.append("publication lost the actual hook event")
+            for path in publications[0].parent.glob("*.json"):
+                if path.stat().st_mode & 0o077:
+                    errors.append("hook receipt is accessible to another user")
     result = dict(event=event, mode=mode, repeat=repeat, input_sha256=sha(root / "input.json"),
                   registered_args=args, host_limit_seconds=limit, elapsed_seconds=elapsed,
                   host_killed=host_killed, exit_code=child.returncode, stdout_bytes=len(stdout),
-                  valid_json_object=valid, native_receipts=len(native), cleanup_pids=cleaned, errors=errors)
+                  valid_json_object=valid, native_receipts=len(native), publication_receipts=len(publications),
+                  cleanup_pids=cleaned, errors=errors)
     (root / "receipt.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result), flush=True)
     return result
@@ -164,6 +199,8 @@ def main():
         for mode in ("normal", "disabled", "bad-state", "blocked-state"):
             schedule.extend((event, mode, repeat) for event in events)
         schedule.append(("Interrupt", "held-stdin", repeat))
+        if not options.expect_public_failures:
+            schedule.extend(("Interrupt", mode, repeat) for mode in ("invalid-input", "blocked-receipts"))
     (options.output / "manifest.json").write_text(json.dumps(dict(
         binary_sha256=sha(options.binary), hooks_sha256=sha(options.manifest), harness_sha256=sha(Path(__file__)),
         schedule=schedule, model_calls=0, input_cwd=str(options.input_cwd),

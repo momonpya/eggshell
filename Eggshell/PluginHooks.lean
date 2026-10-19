@@ -194,7 +194,7 @@ def flushDeferred (session : String) (deadline : Nat)
       let payload := Json.mkObj [("session", session), ("path", entry.path.toString)]
       let some result ← Worker.exchange session "save" payload deadline | return
       let .ok keys := (fromJson? result : Except String (List String)) |
-        IO.eprintln s!"Eggshell retained uncommitted work: {result.compress}"
+        IO.eprintln s!"Eggshell retained uncommitted work in {session} from {entry.path}: {result.compress}"
         continue
       -- A save can finish after compaction. Its graph remains valid on disk,
       -- but is not thereby evidence that the new native context contains it.
@@ -308,13 +308,14 @@ theorem disabled_memory_rejects_delivery (state : ThreadState) (turn : String)
     acceptOffer state turn now offer = state := by
   simp [acceptOffer, disabled]
 
-def acknowledge (session id : String) : IO Unit := withSession session fun files => do
-  let some state ← readState? files | return
-  let some pending ← readPendingBase? files | return
+def acknowledge (session id : String) : IO Bool := withSession session fun files => do
+  let some state ← readState? files | return false
+  let some pending ← readPendingBase? files | return false
   let now ← IO.monoMsNow
-  let some offer := state.offers.find? (·.id == id) | return
+  let some offer := state.offers.find? (·.id == id) | return false
   let state := { state with offers := state.offers.filter (·.id != id) }
   writeJson files.state (acceptOffer state pending.turnId now offer)
+  pure (state.enabled && offer.stamp.accepts pending.turnId state.epoch now)
 
 /-- Semantic discovery gets the first window; DB delivery retains the rest. -/
 def semanticSearchDeadline (now deadline : Nat) : Nat :=
@@ -368,7 +369,8 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
   if pending.projection == .none || pending.read.isEmpty then return none
   let stamp : RequestStamp := { turn := pending.turnId, epoch := initial.epoch, deadline }
   let query : Worker.Search := {
-    pending, state := initial, work, enforce, evidence := evidenceText, staged, deadline }
+    pending, state := initial, work, enforce, evidence := evidenceText, staged, deadline
+    receipt := optionalString input "_eggshell_receipt" }
   let semantic := pending.projection == .automatic && pending.semanticMatcher.isSome && evidenceText.isNone
   let started ← IO.monoMsNow
   let firstDeadline := if semantic then semanticSearchDeadline started deadline else deadline
@@ -391,24 +393,25 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
         semanticMs := if semantic then observed - started else 0
         lexicalMs := if semantic then 0 else observed - started }
       pure (first, trace)
-  withSession session fun files => do
-    let some state ← readState? files | return none
-    let some current ← readPendingBase? files | return none
+  let (handoff, disposition) ← withSession session fun files => do
+    let some state ← readState? files | return (none, "missing-state")
+    let some current ← readPendingBase? files | return (none, "missing-turn")
     let now ← IO.monoMsNow
-    if !state.enabled || (current.closed || current.finalMessage.isSome) then return none
+    if !state.enabled then return (none, "disabled")
+    if current.closed || current.finalMessage.isSome then return (none, "closed-turn")
     match Worker.SearchDelivery.ofReply stamp current.turnId state.epoch now
         pending.handoffChars result with
-    | .obsolete => return none
+    | .obsolete => return (none, "obsolete")
     | .empty _ =>
-        if trace.route == .lexical then return some {pendingSearch with search := some trace}
-        return none
-    | .incomplete _ _ => return some {pendingSearch with search := some trace}
+        if trace.route == .lexical then return (some {pendingSearch with search := some trace}, "empty")
+        return (none, "empty")
+    | .incomplete _ _ => return (some {pendingSearch with search := some trace}, "incomplete")
     | .found _ handoff _ _ => do
         -- Linearize only publication, never the search or semantic matcher.
         -- Concurrent offers subtract the same original ranges under this short lock.
         let some reconciled := handoff.reconcileDelivery
             (state.deliveryClaims current.turnId now) pending.handoffChars Config.nativeHandoffBytes |
-          return none
+          return (none, "reconciled-empty")
         let handoff := {reconciled.handoff with search := some trace}
         let checkpoints := handoff.sourceCheckpoints.map (·.key)
         let id := (optionalString input "_eggshell_receipt").getD "direct"
@@ -419,7 +422,16 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
           (addDeliveredGraphs state checkpoints) with
           offers := offer :: (state.offers.filter fun (offer : DeliveryOffer) =>
             offer.id != id && offer.stamp.accepts current.turnId state.epoch now).take 15 }
-        pure (some handoff)
+        pure (some handoff, "offered")
+  Receipt.observe (optionalString input "_eggshell_receipt") "search" (Json.mkObj [
+    ("turn", toJson pending.turnId), ("epoch", toJson initial.epoch),
+    ("deadlineMs", toJson deadline), ("trace", toJson trace), ("disposition", toJson disposition),
+    ("reason", toJson (handoff.map (·.reason))),
+    ("completed", toJson (handoff.map (·.completed))),
+    ("localUnions", toJson (handoff.map (·.localUnions))),
+    ("equalityOrigin", if handoff.any (fun h => h.completed > 0) then
+      Json.mkObj [("status", toJson "untracked")] else Json.null)])
+  pure handoff
 
 def userPromptSubmit (input : Json) : IO String := do
   let session ← IO.ofExcept (requiredString input "session_id")

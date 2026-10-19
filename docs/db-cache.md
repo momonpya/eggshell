@@ -119,8 +119,10 @@ only metadata. Recovery remains possible after deleting the originating chat.
 
 Acknowledged offers retain semantic status, configured/keyword route, semantic
 and keyword duration, metadata-queue duration (`warmMs`) and warm-target count.
-These are partial diagnostics: coverage is not per-run cache-hit telemetry,
-and retaining the last acknowledged trace is not a receipt for every run.
-DB-size scaling, all-run measurements, actual app ingestion, inclusive model
-token comparisons and the paper's complete proof/experiment requirements remain
-unfinished. No quality or language-model token claim follows from these changes.
+Native hooks also retain [per-invocation receipts](hook-receipts.md), including
+empty/incomplete outputs and actual numerical cache probes. Coverage and probe
+hit rates are separate quantities; a killed provider's counters describe only
+the observed prefix. Runtime equality ancestry, DB-size scaling, actual app
+ingestion, and the paper's complete proof/experiment requirements remain
+unfinished. With warmed DBs and the same delivered body, cache/warm changes do
+not establish an LLM-token reduction. No quality or token claim follows here.
