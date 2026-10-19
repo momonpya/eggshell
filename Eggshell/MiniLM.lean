@@ -20,19 +20,17 @@ structure Layout where
   runtime : System.FilePath
   provider : System.FilePath
   models : System.FilePath
-  trace : System.FilePath
 
 def supportRoot (root : System.FilePath) : System.FilePath :=
   root / "share" / "eggshell" / "minilm"
 
-def layout (root pluginData : System.FilePath) : Layout :=
+def layout (root : System.FilePath) : Layout :=
   let support := supportRoot root
   {
     support
     runtime := support / runtimeVersion
     provider := support / "embedding.py"
     models := support / "models"
-    trace := pluginData / "semantic" / "matcher-trace.jsonl"
   }
 
 def unixPython (layout : Layout) : System.FilePath :=
@@ -67,8 +65,7 @@ def systemPython : IO String := do
     "Python 3 is required once to install the default CPU MiniLM provider")
 
 def install (root : System.FilePath) : IO Unit := do
-  let support := supportRoot root
-  let paths := layout root (support / "preload")
+  let paths := layout root
   IO.FS.createDirAll paths.support
   IO.FS.writeFile paths.provider embeddingSource
   let python ← match ← runtimePython? paths with
@@ -98,14 +95,14 @@ def install (root : System.FilePath) : IO Unit := do
       lease.toString, "index", "--preload"]
     IO.FS.writeFile ready model
 
-def command (root pluginData : System.FilePath) : IO (Option (List String)) := do
-  let paths := layout root pluginData
+def command (root : System.FilePath) : IO (Option (List String)) := do
+  let paths := layout root
   let some _ ← runtimePython? paths | pure none
   pure (some [(← IO.appPath).toString, "search-provider",
     "--model-cache", paths.models.toString,
     "--model", model,
     "--top-k", "8",
     "--threshold", "0.38",
-    "--trace", paths.trace.toString])
+    "--trace", ((← Paths.dataRoot) / "semantic" / "matcher-trace.jsonl").toString])
 
 end Eggshell.MiniLM

@@ -189,7 +189,7 @@ def exchange (session role : String) (payload : Json) (deadline : Nat) : IO (Opt
         child.stdin.flush
         let line ← child.stdout.getLine
         IO.ofExcept (Json.parse line)) .dedicated
-      let result ← if role == "save" || role == "index" then do
+      let result ← if role == "save" then do
         match ← IO.wait task with
         | .ok json => pure (some json)
         | .error error => throw error
@@ -389,26 +389,46 @@ def search (request : Search) : IO (Option Handoff) := do
 
 /-- Batch compatible metadata tickets on one read snapshot. Index failure
     retains every ticket; indexing never republishes or locks the graph writer. -/
-def indexQueued (paths : List System.FilePath) : IO Nat := do
-  let mut tickets : List (System.FilePath × IndexTicket) := []
-  for path in paths do
+def indexQueued (target : IndexTarget) (paths : List System.FilePath) : IO Nat := do
+  let pinned ← target.owner.pin
+  let sidecar ← DB.Sidecar.prepare target.owner
+  let directory := target.indexes pinned
+  let guardPath := sidecar.directory / "index.guard"
+  FileSystem.immutableExistingBytes guardPath ByteArray.empty
+  let guard ← FileSystem.openRead guardPath.toString
+  unless ← FileSystem.tryReadLock guard true do throw (IO.userError "DB indexer is busy")
+  try indexOwned pinned directory
+  finally FileSystem.unlockRead guard
+where
+ indexOwned (pinned : DB.PageMap.Snapshot) (directory : System.FilePath) : IO Nat := do
+  let mut tickets : List System.FilePath := []
+  let mut items : List SemanticMatcher.Item := []
+  for path in paths.eraseDups do
+    let path ← DB.PageMap.absolute path
+    if path.parent != some directory then
+      IO.eprintln "Eggshell refused an index ticket outside its DB lane"
+      continue
     try
-      if let some ticket ← (readJson? path : IO (Option IndexTicket)) then
-        tickets := tickets ++ [(path, ticket)]
-    catch error => IO.eprintln s!"Eggshell retained unreadable index ticket: {error}"
-  let some (_, first) := tickets.head? | return 0
-  let batch := tickets.filter fun (_, ticket) =>
-    ticket.target == first.target && ticket.authority == first.authority &&
-      ticket.command == first.command
-  let merged := { first with roots := (batch.flatMap (·.2.roots)).eraseDups }
-  let pinned ← DB.PageMap.pin (.mk first.target)
-  let snapshot ← Persistence.Store.owners pinned merged.roots
-  let committed ← resolveIndexTicket snapshot merged
-  let _receipt ← SemanticMatcher.indexWorks first.command
-    (SemanticMatcher.outcomeWorkItems committed.outcomeRelations)
-    (some (DB.Sidecar.ofSnapshot pinned).semantic)
-  for (path, _) in batch do removeIfExists path
-  pure batch.length
+      if !(← path.pathExists) then continue
+      let ticket ← (readBoundedJson path 1048576 : IO IndexTicket)
+      unless ticket.database == pinned.head.identity &&
+          ticket.provider == indexProviderKey target.command && ticket.authority == pinned.head.authority do
+        throw (IO.userError "index ticket belongs to another DB or provider")
+      let snapshot ← Persistence.Store.owners pinned ticket.roots
+      let committed ← resolveIndexTicket snapshot ticket
+      items := items ++ SemanticMatcher.outcomeWorkItems committed.outcomeRelations
+      tickets := tickets ++ [path]
+    catch error =>
+      -- Retain the bytes outside the active suffix so a damaged first batch
+      -- cannot permanently starve later valid publications.
+      quarantine path
+      IO.eprintln s!"Eggshell quarantined an invalid index ticket: {error}"
+  if tickets.isEmpty then return 0
+  let _receipt ← SemanticMatcher.indexWorks target.command
+    items.eraseDups
+    (some target.owner)
+  for path in tickets do removeIfExists path
+  pure tickets.length
 
 def run (role : String) : IO UInt32 := do
   let input ← IO.getStdin
@@ -439,15 +459,16 @@ def run (role : String) : IO UInt32 := do
             if let some command := pending.semanticMatcher then
               -- Persist the ticket before consuming the replayable save job.
               -- The writer never waits for model initialization or encoding.
-              queueIndex files target command promotion
+              queueIndex target command promotion
             pure (promotion.outcomeRelations.map nativeHistoryKey)
           else pure []
         let finished ← observeRelatedFiles files pending ((← IO.monoMsNow) + 5000)
         if finished then removeIfExists path
         pure (toJson keys)
       else if role == "index" then
+        let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := IndexTarget))
         let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")
-        pure (toJson (← indexQueued (paths.map System.FilePath.mk)))
+        pure (toJson (← indexQueued target (paths.map System.FilePath.mk)))
       else throw (IO.userError "unknown worker role")
       catch error => pure (Json.mkObj [("error", error.toString)])
     output.putStr (result.compress ++ "\n")

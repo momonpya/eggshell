@@ -1606,7 +1606,7 @@ structure SearchDocument where
   work : Nat
   windows : List String
   /-- Numerical hints for this pinned DB; unpublished documents use scratch. -/
-  cache : Option System.FilePath := none
+  cache : Option DB.Sidecar.Owner := none
 
 /-- Repair an optional numerical hint by fetching its original bounded byte
 range from the requesting snapshot. No current head is reopened, and no
@@ -1667,7 +1667,7 @@ def searchDocuments (snapshot : Snapshot) : IO (List SearchDocument) := do
         windows.all (fun value => value.length == 64 && value.toList.all (fun c =>
           ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f'))) do
       throw (IO.userError "invalid search window directory")
-    pure ⟨id, located.header.work, windows, some (DB.Sidecar.ofSnapshot snapshot).semantic⟩
+    pure ⟨id, located.header.work, windows, some (DB.Sidecar.Owner.ofSnapshot snapshot)⟩
 
 /-- No search-window directory or source body belongs to this read domain.
 Original root order is restored before stable family/meaning ranking, so
@@ -1685,7 +1685,7 @@ def supportDocuments (snapshot : Snapshot) (works : List Nat) : IO (List SearchD
           (← getNat snapshot.get (key "candidate" id)) == 1 &&
           (← getNat snapshot.get (key "searchCandidate" ordinal)) == id do
         throw (IO.userError "Work owner directory disagrees with live candidate order")
-      rows := (ordinal, ⟨id, checked.header.work, [], some (DB.Sidecar.ofSnapshot snapshot).semantic⟩) :: rows
+      rows := (ordinal, ⟨id, checked.header.work, [], some (DB.Sidecar.Owner.ofSnapshot snapshot)⟩) :: rows
   pure ((rows.mergeSort fun a b => a.1 ≤ b.1).map Prod.snd)
 
 /-- Source ranking reads bounded locator directories, not neighboring

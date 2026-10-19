@@ -23,7 +23,7 @@ structure Request where
 
 structure IndexRequest where
   index : List Item
-  cache : Option String := none
+  cache : Option DB.Sidecar.Owner := none
   deriving ToJson
 
 structure IndexResponse where
@@ -255,18 +255,18 @@ theorem nomination_has_corpus_owner {corpus : Matcher.Corpus}
   obtain ⟨candidate, eligible, equal⟩ := relations_subset_candidate_owners member
   exact ⟨candidate, ((eligible_iff_readable_owner corpus candidate).mp eligible).1, equal⟩
 
-/-- Run only after durable publication, in the independent writer. Completion
-    requires the provider's acknowledgement of this exact batch. There is no
-    search deadline here: hook responses do not wait for this writer. -/
+/-- Run after durable publication in the independent index worker. Completion
+    requires acknowledgement of this exact batch. The owning worker controls
+    cancellation; hook responses do not wait for this index operation. -/
 def indexWorks (command : List String) (items : List Item)
-    (cache : Option System.FilePath := none) : IO (IndexReceipt items) := do
+    (cache : Option DB.Sidecar.Owner := none) : IO (IndexReceipt items) := do
   if items.isEmpty then return ⟨items.map (·.id), rfl⟩
   let command := match command with
     | executable :: "search-provider" :: arguments =>
         executable :: "search-provider" :: (arguments ++ ["--lane", "index"])
     | command => command
   let some receipt ← withLane .index <| withProvider command fun running => do
-      let request : IndexRequest := { index := items, cache := cache.map (·.toString) }
+      let request : IndexRequest := { index := items, cache }
       running.child.stdin.putStr ((toJson request).compress ++ "\n")
       running.child.stdin.flush
       let json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
@@ -433,7 +433,7 @@ def nominateIndexed (command : List String) (queryText : String)
       let request := Json.mkObj [("query", toJson (item (.text queryText) queryText)),
         ("documents", toJson (documents.map fun document => Json.mkObj [
           ("id", toJson document.owner), ("windows", toJson document.windows),
-          ("cache", toJson (document.cache.map (·.toString)))])),
+          ("cache", toJson document.cache)])),
         ("lexical", toJson lexical), ("anchors", toJson anchors)]
       running.child.stdin.putStrLn request.compress
       running.child.stdin.flush

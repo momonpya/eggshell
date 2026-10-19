@@ -10,7 +10,7 @@ def main : IO UInt32 := do
   let root ← IO.FS.createTempDir
   let cases := (← IO.FS.readFile "tests/fixtures/search-golden.jsonl").splitOn "\n" |>.filter (!·.isEmpty)
   let binary ← IO.FS.realPath ".lake/build/bin/eggshell"
-  let models := (MiniLM.layout (← Paths.installRoot) root).models
+  let models := (MiniLM.layout (← Paths.installRoot)).models
   try
     for mode in ["lexical", "semantic", "hybrid"] do
       let selected ← cases.filterMapM fun line => do

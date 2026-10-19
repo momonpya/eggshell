@@ -193,6 +193,11 @@ def writeJson [ToJson α] (path : System.FilePath) (value : α) : IO Unit := do
   -- is consumed. Publish only after the temporary bytes have been synced.
   FileSystem.atomicBytes path (toJson value |>.compress |>.toUTF8)
 
+def readBoundedJson [FromJson α] (path : System.FilePath) (limit : Nat) : IO α := do
+  let bytes ← FileSystem.boundedBytes path limit
+  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid JSON text encoding")
+  IO.ofExcept (Json.parse text >>= fromJson?)
+
 def removeIfExists (path : System.FilePath) : IO Unit := do
   if ← path.pathExists then IO.FS.removeFile path
 
@@ -396,42 +401,98 @@ def valueEncoding (value : Value) : String :=
 def indexOwnerKey (owner : Value) : String :=
   "owner:" ++ toString (hash owner)
 
-/-- A small durable indexing ticket references published owners, not another
-    copy of their bodies. Digests locate candidates; the index worker verifies
-    unique owners in the authoritative graph before using them. -/
-structure IndexTicket where
-  target : String
+def indexProviderKey (command : List String) : String :=
+  Blake3.hex (Blake3.digest "eggshell.index-provider".toUTF8 [(toJson command).compress.toUTF8])
+
+/-- Executables belong to private installation configuration, never an imported DB. -/
+structure IndexTarget where
+  owner : DB.Sidecar.Owner
   command : List String
+  deriving Repr, BEq, ToJson, FromJson
+
+def IndexTarget.key (target : IndexTarget) : String :=
+  Blake3.hex (Blake3.digest "eggshell.index-target".toUTF8 [(toJson target).compress.toUTF8])
+
+def IndexTarget.indexes (target : IndexTarget) (snapshot : DB.PageMap.Snapshot) : System.FilePath :=
+  (DB.Sidecar.ofSnapshot snapshot).indexes / indexProviderKey target.command
+
+def indexRegistry : IO System.FilePath := do pure ((← dataRoot) / "index-targets")
+
+def registerIndexTarget (snapshot : DB.PageMap.Snapshot) (command : List String) : IO IndexTarget := do
+  if command.isEmpty then throw (IO.userError "index provider must name an executable")
+  let target : IndexTarget := {owner := DB.Sidecar.Owner.ofSnapshot snapshot, command}
+  let directory ← indexRegistry
+  Persistence.rejectSymlinkAncestors directory
+  Persistence.privateDirectory directory
+  let path := directory / (target.key ++ ".json")
+  let bytes := (toJson target).compress.toUTF8
+  unless bytes.size ≤ 65536 do throw (IO.userError "index target exceeds metadata bound")
+  if ← path.pathExists then
+    let previous ← FileSystem.boundedBytes path 65536
+    if previous == bytes then return target
+    let parsed : Except String IndexTarget := match String.fromUTF8? previous with
+      | none => .error "invalid index target encoding"
+      | some text => Json.parse text >>= fromJson?
+    match parsed with
+    | .ok _ => throw (IO.userError "conflicting index target digest")
+    | .error error =>
+        IO.eprintln s!"Eggshell repairing a damaged index target: {error}"
+        quarantine path
+  FileSystem.immutableBytes path bytes
+  pure target
+
+def registeredIndexTargets : IO (List (System.FilePath × IndexTarget)) := do
+  let directory ← indexRegistry
+  if !(← directory.pathExists) then return []
+  let mut targets := []
+  for entry in ((← directory.readDir).toList.mergeSort (fun a b => a.fileName ≤ b.fileName)) do
+    if !entry.fileName.endsWith ".json" then continue
+    try
+      let target ← (readBoundedJson entry.path 65536 : IO IndexTarget)
+      unless entry.fileName == target.key ++ ".json" && !target.command.isEmpty do
+        throw (IO.userError "index registry entry disagrees with its identity")
+      targets := targets ++ [(entry.path, target)]
+    catch error => IO.eprintln s!"Eggshell retained unreadable index target: {error}"
+  pure targets
+
+/-- Portable, data-only work. Provider hashes select locally registered lanes;
+no executable or absolute destination is imported with a DB. -/
+structure IndexTicket where
+  database : String
+  provider : String
   authority : String
   roots : List String
   deriving ToJson, FromJson, BEq
 
-def indexTicket (target : String) (command : List String)
+def indexTicket (database provider : String)
     (promotion : CommittedPromotion) : IndexTicket := {
-  target, command
+  database, provider
   authority := valueEncoding promotion.snapshot.authority
   roots := promotion.outcomeRelations.map indexOwnerKey |>.eraseDups
 }
 
-theorem index_ticket_root_is_published (target : String) (command : List String)
+theorem index_ticket_root_is_published (database provider : String)
     (promotion : CommittedPromotion) (key : String)
-    (present : key ∈ (indexTicket target command promotion).roots) :
+    (present : key ∈ (indexTicket database provider promotion).roots) :
     ∃ owner ∈ promotion.snapshot.values, indexOwnerKey owner = key := by
   simp only [indexTicket, List.mem_eraseDups, List.mem_map] at present
   obtain ⟨owner, member, equal⟩ := present
   exact ⟨owner, promotion.owners_in_snapshot owner member, equal⟩
 
-def queueIndex (files : SessionFiles) (target : String) (command : List String)
+def queueIndex (target : String) (command : List String)
     (promotion : CommittedPromotion) : IO Unit := do
-  let ticket := indexTicket target command promotion
+  let snapshot ← DB.PageMap.pin (.mk target)
+  unless snapshot.head.authority == valueEncoding promotion.snapshot.authority do
+    throw (IO.userError "index publication belongs to another authority")
+  let target ← registerIndexTarget snapshot command
+  let sidecar ← DB.Sidecar.prepare target.owner
+  let directory ← DB.Sidecar.childDirectory sidecar.indexes (indexProviderKey command)
+  let ticket := indexTicket snapshot.head.identity (indexProviderKey command) promotion
+  let bytes := (toJson ticket).compress.toUTF8
+  unless bytes.size ≤ 1048576 do throw (IO.userError "index ticket exceeds metadata bound")
   let key := Blake3.hex (Blake3.digest "eggshell.index-ticket".toUTF8
     [(toJson ticket).compress.toUTF8])
-  let path := files.directory / "indexes" / (key ++ ".json")
-  -- Exact comparison, rather than a hash alone, decides duplicate identity.
-  if let some previous ← (readJson? path : IO (Option IndexTicket)) then
-    if previous == ticket then return
-    throw (IO.userError "conflicting index ticket digest")
-  writeJson path ticket
+  FileSystem.immutableExistingBytes (directory / (key ++ ".json")) bytes
 
 def resolveIndexTicket (snapshot : Graph) (ticket : IndexTicket) : IO CommittedPromotion := do
   if valueEncoding snapshot.authority != ticket.authority then

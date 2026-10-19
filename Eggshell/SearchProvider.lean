@@ -14,6 +14,7 @@ open Lean
 
 structure Options where
   cache : System.FilePath
+  owner : Option DB.Sidecar.Owner := none
   models : System.FilePath
   model : String := MiniLM.model
   mode : String := "hybrid"
@@ -53,14 +54,13 @@ def parse (defaults : Options) : List String → Except String Options
 
 /-- A requesting pinned document/index batch supplies its DB-owned cache.
 Requests without a durable owner retain only the process's temporary hints. -/
-def cacheOptions (options : Options) (request : Json) : Except String Options := do
+def cacheOptions (options : Options) (request : Json) : IO Options := do
   match (request.getObjVal? "cache").toOption with
   | none | some .null => pure options
-  | some (.str path) =>
-      let path := System.FilePath.mk path
-      unless path.isAbsolute do throw "DB vector cache must be an absolute path"
-      pure {options with cache := path}
-  | _ => throw "invalid DB vector cache locator"
+  | some value =>
+      let owner ← IO.ofExcept (fromJson? value : Except String DB.Sidecar.Owner)
+      let sidecar ← DB.Sidecar.prepare owner
+      pure {options with cache := sidecar.semantic, owner := some owner}
 
 abbrev Encoder := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .inherit }
 
@@ -73,7 +73,7 @@ def spawnEncoder (options : Options) (python lease : System.FilePath)
     stdin := .piped, stdout := .piped, stderr := .inherit }
 
 def encoder (options : Options) : IO Encoder := do
-  let layout := MiniLM.layout (← Paths.installRoot) options.cache
+  let layout := MiniLM.layout (← Paths.installRoot)
   let some python ← MiniLM.runtimePython? layout | throw (IO.userError "MiniLM runtime is not installed")
   let reservation ← SemanticMatcher.lanePath options.lane
   let lease := reservation.withFileName ("model-" ++ reservation.fileName.getD "lane.guard")
@@ -165,10 +165,13 @@ def saveVector (options : Options) (text : String) (vector : Json) : IO Unit := 
   let encoded := (toJson cached).compress
   unless encoded.utf8ByteSize ≤ 1048576 do throw (IO.userError "oversized numerical window for indexing")
   let root := options.cache / "vectors"
-  Persistence.rejectSymlinkAncestors root
-  Persistence.privateDirectory root
   let path := root / (cacheKey options.model text ++ ".json")
-  FileSystem.atomicBytes path encoded.toUTF8
+  if options.owner.isSome then
+    FileSystem.atomicExistingBytes path encoded.toUTF8
+  else
+    Persistence.rejectSymlinkAncestors root
+    Persistence.privateDirectory root
+    FileSystem.atomicBytes path encoded.toUTF8
 
 def store (options : Options) (child : Encoder) (texts : List String) : IO Unit := do
   let parts := (texts.flatMap SearchRank.windows).eraseDups
@@ -335,13 +338,20 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
   if let some child := child then
     -- One query vector serves the complete federated ranking. Keep it with
     -- the first durable source instead of a chat-specific vector directory.
+    let prepared ← IO.mkRef ({} : Std.HashMap String Options)
+    let resolve := fun candidate => do
+      let key := candidate.getObjValD "cache" |>.compress
+      if let some known := (← prepared.get)[key]? then return known
+      let known ← cacheOptions options candidate
+      prepared.modify (·.insert key known)
+      pure known
     let queryCache := candidates.toList.find? fun candidate =>
-      (candidate.getObjValAs? String "cache").isOk
-    let queryOptions ← IO.ofExcept (cacheOptions options (queryCache.getD Json.null))
+      candidate.getObjValD "cache" != Json.null
+    let queryOptions ← resolve (queryCache.getD Json.null)
     store queryOptions child [query]
     let queries ← vectors queryOptions query
     for (candidate, index) in candidates.toList.zipIdx do
-      let documentOptions ← IO.ofExcept (cacheOptions options candidate)
+      let documentOptions ← resolve candidate
       let windows ← IO.ofExcept (candidate.getObjValAs? (List String) "windows")
       if windows.isEmpty then throw (IO.userError "empty indexed window directory")
       let mut remaining := windows
@@ -381,7 +391,7 @@ def handle (options : Options) (child : Option Encoder)
     (repair : RepairWindows := unavailableRepair) : IO (Option Json) := do
   if let .ok index := request.getObjValAs? (Array Json) "index" then
     if let some child := child then
-      let options ← IO.ofExcept (cacheOptions options request)
+      let options ← cacheOptions options request
       let texts ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "text"))
       store options child texts
     let ids ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "id"))
@@ -413,7 +423,7 @@ def handle (options : Options) (child : Option Encoder)
 
 def run (args : List String) : IO UInt32 := IO.FS.withTempDir fun scratch => do
   let scratch ← IO.FS.realPath scratch
-  let layout := MiniLM.layout (← Paths.installRoot) (← Paths.dataRoot)
+  let layout := MiniLM.layout (← Paths.installRoot)
   let options ← IO.ofExcept (parse { cache := scratch, models := layout.models } args)
   let child ← if options.mode == "lexical" then pure none else some <$> encoder options
   let previous ← IO.mkRef (none : Option RetainedCorpus)

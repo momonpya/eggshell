@@ -238,10 +238,8 @@ private def Publication.agree (publication : Publication path bytes .installed) 
   unless publicationAgreement before after current existing bytes do
     throw (IO.userError "immutable object collision or concurrent replacement")
 
-private def publishBytes (kind : PublicationKind) (path : System.FilePath)
+private def publishExistingBytes (kind : PublicationKind) (path : System.FilePath)
     (bytes : ByteArray) (observe : PublicationBoundary → IO Unit) : IO Unit := do
-  let parent := path.parent.getD "."
-  durableDirectory parent
   let temporary := publicationTemporary kind s!"{← IO.Process.getPID}-{← IO.monoNanosNow}"
   let initial : Publication path bytes .opened := ⟨← openPublication path.toString temporary⟩
   try
@@ -256,6 +254,22 @@ private def publishBytes (kind : PublicationKind) (path : System.FilePath)
     observe .durable
     pure ()
   finally closePublication initial.handle
+
+private def publishBytes (kind : PublicationKind) (path : System.FilePath)
+    (bytes : ByteArray) (observe : PublicationBoundary → IO Unit) : IO Unit := do
+  durableDirectory (path.parent.getD ".")
+  publishExistingBytes kind path bytes observe
+
+/-- Never recreate an owner which was removed during background work. -/
+opaque atomicExistingBytesWith (path : System.FilePath) (bytes : ByteArray)
+    (observe : PublicationBoundary → IO Unit) : IO Unit :=
+  publishExistingBytes .replace path bytes observe
+
+def atomicExistingBytes (path : System.FilePath) (bytes : ByteArray) : IO Unit :=
+  atomicExistingBytesWith path bytes (fun _ => pure ())
+
+opaque immutableExistingBytes (path : System.FilePath) (bytes : ByteArray) : IO Unit :=
+  publishExistingBytes .immutable path bytes (fun _ => pure ())
 
 opaque atomicBytesWith (path : System.FilePath) (bytes : ByteArray)
     (observe : PublicationBoundary → IO Unit) : IO Unit :=

@@ -32,8 +32,7 @@ def configFromHook (input : Json) (cwd : System.FilePath) : IO (Option Config.Co
     if config.semanticMatcherWasSet then pure config
     else
       pure { config with
-        semanticMatcher := ← MiniLM.command (← Paths.installRoot)
-          (← sessionFiles ((optionalString input "session_id").getD "cli")).directory }
+        semanticMatcher := ← MiniLM.command (← Paths.installRoot) }
 
 def replaceSourceStatus (keys : List String) (key : String) : List String :=
   match SourceEvidence.deliveryScope? key with
@@ -184,21 +183,59 @@ def flushDeferred (session : String) (deadline : Nat)
             writeJson files.state (addDeliveredGraphs state keys)
   catch error => IO.eprintln s!"Eggshell retained queued work: {error}"
 
-/-- The independent indexer consumes small publication tickets. A slow model
-    or its failed acknowledgement cannot stall the durable observation writer. -/
-def flushIndexes (session : String) (deadline : Nat) : IO Unit := do
+def drainIndexTarget (session : String) (deadline : Nat)
+    (reference : System.FilePath) (target : IndexTarget) : IO Unit := do
+  let snapshot ← DB.PageMap.open? (.mk target.owner.directory)
+  let some snapshot := snapshot | do
+    removeIfExists reference
+    return
+  if snapshot.head.identity != target.owner.database then
+    removeIfExists reference
+    return
+  let directory := target.indexes snapshot
+  if !(← directory.pathExists) then return
+  let entries := ((← directory.readDir).toList.filter (·.fileName.endsWith ".json"))
+    |>.mergeSort (fun a b => a.fileName ≤ b.fileName)
+  if entries.isEmpty then return
+  let payload := Json.mkObj [("target", toJson target),
+    ("paths", toJson (entries.take 8 |>.map (·.path.toString)))]
+  if let some result ← Worker.exchange session "index" payload deadline then
+    if !(fromJson? result : Except String Nat).isOk then
+      IO.eprintln s!"Eggshell retained unindexed published work: {result.compress}"
+
+def drainRegisteredIndexes (session : String) (deadline : Nat) : IO Unit := do
+  for (reference, target) in ← registeredIndexTargets do
+    if (← IO.monoMsNow) ≥ deadline then return
+    try drainIndexTarget session deadline reference target
+    catch error => IO.eprintln s!"Eggshell retained DB index work: {error}"
+
+def flushIndexWork (session : String) (deadline : Nat) : IO Unit := do
+  -- Current configuration discovers portable work at a new DB location.
+  -- This optional discovery cannot prevent draining already registered DBs.
   let files ← sessionFiles session
-  try Persistence.withLockWithin (files.directory / "index") 0 do
-    let state ← withSession session fun files => readState? files
-    if state.any (! ·.enabled) then return
-    let directory := files.directory / "indexes"
-    if !(← directory.pathExists) then return
-    let entries := (← directory.readDir).toList.filter (·.fileName.endsWith ".json")
-    if entries.isEmpty || (← IO.monoMsNow) ≥ deadline then return
-    let payload := Json.mkObj [("paths", toJson (entries.take 8 |>.map (·.path.toString)))]
-    if let some result ← Worker.exchange session "index" payload deadline then
-      if !(fromJson? result : Except String Nat).isOk then
-        IO.eprintln s!"Eggshell retained unindexed published work: {result.compress}"
+  try
+    if let some pending ← (readJson? files.pending pendingJsonDefaults : IO (Option PendingTurn)) then
+      if let some command := pending.semanticMatcher then
+        for path in (pending.read ++ pending.write.toList).eraseDups do
+          if let some snapshot ← DB.PageMap.open? (.mk path) then
+            let _ ← registerIndexTarget snapshot command
+            pure ()
+  catch error => IO.eprintln s!"Eggshell retained undiscovered DB work: {error}"
+  let root ← dataRoot
+  Persistence.rejectSymlinkAncestors root
+  Persistence.privateDirectory root
+  let guardPath := root / "index-drain.guard"
+  Persistence.rejectSymlinkAncestors guardPath
+  let guard ← IO.FS.Handle.mk guardPath .append
+  Persistence.privateFile guardPath
+  if !(← guard.tryLock) then return
+  try drainRegisteredIndexes session deadline
+  finally guard.unlock
+
+/-- Installation-wide discovery survives chats. The single drain admission and
+per-DB worker claim never acquire the graph writer or a session state lock. -/
+def flushIndexes (session : String) (deadline : Nat) : IO Unit := do
+  try flushIndexWork session deadline
   catch error => IO.eprintln s!"Eggshell retained index tickets: {error}"
 
 def sessionStart (input : Json) : IO String := do

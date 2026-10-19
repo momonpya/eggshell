@@ -7,6 +7,7 @@ public import tests.PageDBTests
 public import tests.SourceEvidenceTests
 public import tests.SourceObservationTests
 public import tests.EqualityDependencyTests
+public import tests.DatabaseIndexTests
 
 @[expose] public section
 
@@ -2310,19 +2311,19 @@ read = ["project"]
 
 def testMiniLMDefault : IO Unit := do
   let home := testRoot / "minilm-home"
-  let pluginData := testRoot / "minilm-plugin-data"
-  let paths := MiniLM.layout home pluginData
+  let paths := MiniLM.layout home
   let python := MiniLM.unixPython paths
   if let some parent := python.parent then IO.FS.createDirAll parent
   IO.FS.writeFile python ""
-  let some command ← MiniLM.command home pluginData |
+  let some command ← MiniLM.command home |
     throw (IO.userError "installed MiniLM runtime was not selected by default")
   check (command.head? = some (← IO.appPath).toString &&
       command.contains "search-provider" &&
       !command.contains "--cache" &&
-      command.contains MiniLM.model)
+      command.contains MiniLM.model &&
+      command.contains ((← Paths.dataRoot) / "semantic" / "matcher-trace.jsonl").toString)
     "default MiniLM command escaped its runtime or retained a chat-owned vector cache"
-  let absent ← MiniLM.command (testRoot / "absent-home") pluginData
+  let absent ← MiniLM.command (testRoot / "absent-home")
   check absent.isNone "missing MiniLM runtime fabricated a provider command"
   IO.println "PASS installed MiniLM is the zero-config semantic default"
 
@@ -3341,7 +3342,9 @@ def testBackgroundIndexRecovery : IO Unit := do
     "indexing failure prevented durable publication"
   check (!(← queued.path.pathExists) && !(← marker.pathExists))
     "writer waited for or started the semantic indexer"
-  let tickets ← (files.directory / "indexes").readDir
+  let registered ← registerIndexTarget (← DB.PageMap.pin target) (pending.semanticMatcher.getD [])
+  let ticketDirectory := registered.indexes (← DB.PageMap.pin target)
+  let tickets ← ticketDirectory.readDir
   check (tickets.size == 1) "publication did not retain one index ticket"
   let some ticketEntry := tickets[0]? | throw (IO.userError "missing index ticket")
   let ticketPath := ticketEntry.path
@@ -3350,7 +3353,8 @@ def testBackgroundIndexRecovery : IO Unit := do
     throw (IO.userError "missing ticket fixture")
   check (ticketText.length < 1024 && !ticketText.contains "index_unique_observation")
     "index queue copied the observed body instead of referencing it"
-  let indexPayload := Lean.Json.mkObj [("paths", Lean.toJson [ticketPath.toString])]
+  let indexPayload := Lean.Json.mkObj [("target", Lean.toJson registered),
+    ("paths", Lean.toJson [ticketPath.toString])]
   let first ← Worker.exchange session "index" indexPayload ((← IO.monoMsNow) + 3000)
   check (first.any fun json => (json.getObjValAs? String "error").isOk)
     "an invalid index acknowledgement was accepted"
@@ -3373,10 +3377,12 @@ def testBackgroundIndexRecovery : IO Unit := do
   let invalid := { ticket with roots := [indexOwnerKey (.text "invented owner")] }
   writeJson ticketPath invalid
   let rejected ← Worker.exchange session "index" indexPayload ((← IO.monoMsNow) + 3000)
-  check (rejected.any fun json => (json.getObjValAs? String "error").isOk)
+  check (rejected.any fun json => (Lean.fromJson? json : Except String Nat).toOption == some 0)
     "index worker warmed an owner absent from its authority"
-  check (← ticketPath.pathExists) "unresolved index owner consumed its ticket"
-  removeIfExists ticketPath
+  let retained := (← ticketDirectory.readDir).toList.filter
+    (·.fileName.startsWith (ticketEntry.fileName ++ ".corrupt-"))
+  check (!(← ticketPath.pathExists) && retained.length == 1)
+    "unresolved index owner lost its retained metadata or remained ahead of valid work"
   IO.println "PASS independent index failure retains tickets and never republishes the graph"
 
 def semanticProviderFixture (index : Nat := 0)
@@ -3620,11 +3626,14 @@ def testSaveWhileIndexBusy : IO Unit := IO.FS.withTempDir fun attempt => do
       if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "index holder did not start")
       IO.sleep 5
     let firstMs ← save (pendingFor 0)
-    let firstTickets ← (files.directory / "indexes").readDir
+    let registered ← registerIndexTarget (← DB.PageMap.pin target) command
+    let ticketDirectory := registered.indexes (← DB.PageMap.pin target)
+    let firstTickets ← ticketDirectory.readDir
     check (firstTickets.size == 1 && !(← batchLog.pathExists))
       "saving started the unavailable indexer"
     let some firstTicket := firstTickets[0]? | throw (IO.userError "missing first index ticket")
     let indexing ← IO.asTask (Worker.exchange session "index" (Lean.Json.mkObj [
+      ("target", Lean.toJson registered),
       ("paths", Lean.toJson [firstTicket.path.toString])])
       ((← IO.monoMsNow) + 3000)) .dedicated
     let slot ← Worker.slotFor session "index"
@@ -3642,7 +3651,7 @@ def testSaveWhileIndexBusy : IO Unit := IO.FS.withTempDir fun attempt => do
     let graph ← Persistence.load target
     check ((observedRoots (pendingFor 0) ++ observedRoots (pendingFor 1)).all graph.values.contains)
       "a slow indexer prevented subsequent tool progress from being saved"
-    check ((← (files.directory / "indexes").readDir).size == 2)
+    check ((← ticketDirectory.readDir).size == 2)
       "unfinished index batch consumed publication tickets"
     IO.FS.writeFile release "continue"
     let _ ← holder.wait
@@ -3652,17 +3661,18 @@ def testSaveWhileIndexBusy : IO Unit := IO.FS.withTempDir fun attempt => do
       "released indexer did not acknowledge its original batch"
     for index in List.range 7 do
       let _ ← save (pendingFor (index + 2))
-    let entries ← (files.directory / "indexes").readDir
+    let entries ← ticketDirectory.readDir
     check (entries.size == 8) "independent publications lost an indexing ticket"
     let before ← IO.FS.readFile (target / "head")
     let result ← Worker.exchange session "index" (Lean.Json.mkObj [
+      ("target", Lean.toJson registered),
       ("paths", Lean.toJson (entries.toList.map (·.path.toString)))])
       ((← IO.monoMsNow) + 3000)
     check (result.any fun json => (Lean.fromJson? json : Except String Nat).toOption == some 8)
       "compatible tickets were not indexed as one acknowledged batch"
     check ((← IO.FS.readFile batchLog).trimAscii.toString == "1\n8" &&
         (← IO.FS.readFile (target / "head")) == before &&
-        (← (files.directory / "indexes").readDir).isEmpty)
+        (← ticketDirectory.readDir).isEmpty)
       "index batching republished the graph, repeated a model batch, or left acknowledged tickets"
     IO.println s!"PASS blocked indexer leaves saving independent ({firstMs}ms/{secondMs}ms), batches eight tickets without graph writes"
   finally
@@ -3709,7 +3719,7 @@ def testSemanticResourceLanes : IO Unit := do
   check (released == some true)
     "a killed lane owner left a stale logical lock"
   -- Exercise the real numerical boundary before any heavy model import.
-  let layout := MiniLM.layout (← Paths.installRoot) (← Paths.dataRoot)
+  let layout := MiniLM.layout (← Paths.installRoot)
   let some python ← MiniLM.runtimePython? layout |
     throw (IO.userError "numerical lane regression requires the installed MiniLM runtime")
   let reservation ← SemanticMatcher.lanePath .search
@@ -4863,6 +4873,8 @@ def testDatabaseVectorCaches : IO Unit := IO.FS.withTempDir fun root => do
   let right ← DB.PageMap.create rightPath authority
   let leftCache := DB.Sidecar.ofSnapshot left
   let rightCache := DB.Sidecar.ofSnapshot right
+  let leftOwner := DB.Sidecar.Owner.ofSnapshot left
+  let rightOwner := DB.Sidecar.Owner.ofSnapshot right
   check (leftCache.database != rightCache.database && leftCache.semantic != rightCache.semantic)
     "different DB incarnations shared a numerical cache"
   let priorFor := fun (path : System.FilePath) (prompt : String) => {seed with
@@ -4877,15 +4889,17 @@ def testDatabaseVectorCaches : IO Unit := IO.FS.withTempDir fun root => do
   let leftDocs ← Persistence.Store.searchDocuments updated
   let rightDocs ← Persistence.Store.searchDocuments (← DB.PageMap.pin rightPath)
   check (!leftDocs.isEmpty && !rightDocs.isEmpty &&
-      leftDocs.all (·.cache == some leftCache.semantic) &&
-      rightDocs.all (·.cache == some rightCache.semantic))
+      leftDocs.all (·.cache == some leftOwner) &&
+      rightDocs.all (·.cache == some rightOwner))
     "pinned search documents lost their DB cache owner"
   let optionsFor : System.FilePath → SearchProvider.Options := fun cache => {
     cache := cache
     models := root / "unused-models"
     model := "synthetic-db-cache-test-only" }
-  let leftOptions := optionsFor leftCache.semantic
-  let rightOptions := optionsFor rightCache.semantic
+  let leftOptions ← SearchProvider.cacheOptions (optionsFor leftCache.semantic)
+    (Lean.Json.mkObj [("cache", Lean.toJson leftOwner)])
+  let rightOptions ← SearchProvider.cacheOptions (optionsFor rightCache.semantic)
+    (Lean.Json.mkObj [("cache", Lean.toJson rightOwner)])
   let reference := optionsFor (root / "reference")
   let scratch := optionsFor (root / "scratch")
   let query := "needle"
@@ -4904,7 +4918,7 @@ def testDatabaseVectorCaches : IO Unit := IO.FS.withTempDir fun root => do
     ("id", Lean.toJson index),
     ("windows", Lean.toJson ((SearchRank.windows text).map Persistence.Store.windowKey))]
   let owned := documents.zipIdx.map fun (document, index) => document.setObjVal! "cache"
-    (Lean.toJson (if index == 0 then leftCache.semantic.toString else rightCache.semantic.toString))
+    (Lean.toJson (if index == 0 then leftOwner else rightOwner))
   let request := Lean.Json.mkObj [("documents", Lean.toJson documents),
     ("lexical", Lean.toJson (SearchRank.referenceLexical query texts)),
     ("anchors", Lean.toJson (SearchRank.referenceLexical query texts true))]
@@ -4938,8 +4952,7 @@ def testDatabaseVectorCaches : IO Unit := IO.FS.withTempDir fun root => do
     throw (IO.userError "DB-owned provider request failed")
   let observed ← IO.ofExcept (Lean.Json.parse (← IO.FS.readFile (provider / "request.json")))
   let sent ← IO.ofExcept (observed.getObjValAs? (List Lean.Json) "documents")
-  check ((sent.map fun row => (row.getObjValAs? String "cache").toOption) ==
-      docs.map (fun document => document.cache.map (·.toString)))
+  check ((sent.map fun row => row.getObjValD "cache") == docs.map (Lean.toJson ∘ (·.cache)))
     "provider transport replaced or dropped one DB's cache owner"
   writeJson (provider / "response.json") (Lean.Json.mkObj [
     ("related", Lean.toJson ([] : List Nat)), ("ranked", Lean.toJson (List.range leftDocs.length)),
@@ -4961,7 +4974,7 @@ def testDatabaseVectorCaches : IO Unit := IO.FS.withTempDir fun root => do
     let observed ← IO.ofExcept (Lean.Json.parse (← IO.FS.readFile (provider / "request.json")))
     let sent ← IO.ofExcept (observed.getObjValAs? (List Lean.Json) "documents")
     check (!sent.isEmpty && sent.all (fun row =>
-        (row.getObjValAs? String "cache").toOption == some leftCache.semantic.toString))
+        row.getObjValD "cache" == Lean.toJson leftOwner))
       "a new chat selected a different vector-cache owner for the same DB"
   let moved := root / "moved.egg"
   IO.FS.rename leftPath moved
@@ -4984,6 +4997,23 @@ def testDatabaseVectorCaches : IO Unit := IO.FS.withTempDir fun root => do
     "deleting one DB left its cache behind or removed another DB's cache"
   check ((← SearchProvider.readVector {rightOptions with model := "different-model"} texts[1]!).isNone)
     "a changed model reused another model's vectors"
+  let rejected ← try
+      let _ ← SearchProvider.cacheOptions leftOptions (Lean.Json.mkObj [("cache", Lean.toJson leftOwner)])
+      pure false
+    catch _ => pure true
+  check (rejected && !(← leftPath.pathExists)) "a stale cache owner recreated its moved DB"
+  let rejected ← try
+      FileSystem.atomicExistingBytesWith (copiedCache.semantic / "vectors" / "delete-race.json") "data".toUTF8
+        (fun phase => match phase with
+          | .synced => IO.FS.removeDirAll copied
+          | _ => pure ())
+      pure false
+    catch _ => pure true
+  check (rejected && !(← copied.pathExists)) "cache publication resurrected a concurrently deleted DB"
+  IO.FS.removeDirAll rightPath
+  let rejected ← try SearchProvider.saveVector rightOptions "late write" (← vectorFor query); pure false
+    catch _ => pure true
+  check (rejected && !(← rightPath.pathExists)) "a late vector write recreated its removed DB"
   IO.println "PASS DB-owned numerical caches: publication/session stability, isolation, complete federated ranks, provider wire, move/copy/delete and model identity"
 
 /-- Read-only phase timing for a recorded source. This does not run an LLM
@@ -4991,7 +5021,7 @@ or stand in for the actual hook/token acceptance experiment. -/
 def indexedQueryTiming (path cache input : System.FilePath) : IO Unit := do
   let event ← IO.ofExcept (Lean.Json.parse (← IO.FS.readFile input))
   let query ← IO.ofExcept (event.getObjValAs? String "prompt")
-  let layout := MiniLM.layout (← Paths.installRoot) cache
+  let layout := MiniLM.layout (← Paths.installRoot)
   let command := [(← IO.appPath).toString, "search-provider", "--cache", cache.toString,
     "--model-cache", layout.models.toString, "--mode", "hybrid", "--top-k", "8", "--threshold", "0.38"]
   let selection : Config.Selection := {
@@ -6065,6 +6095,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
     testParallelSearchPipes
     testIncompleteSearchDelivery
     testBackgroundIndexRecovery
+    Eggshell.DatabaseIndexTests.run
     testSaveWhileIndexBusy
     testSaveWhileIndexBusy
     testNaturalLanguageSessionTransport
@@ -6106,6 +6137,11 @@ def main (arguments : List String) : IO UInt32 :=
       testDatabaseVectorCaches
       Worker.shutdown
       pure 0
+  | ["database-index-tests"] => do
+      Eggshell.DatabaseIndexTests.run
+      Worker.shutdown
+      pure 0
+  | ["database-index-provider", root] => Eggshell.DatabaseIndexTests.provider (.mk root)
   | ["normalizer-timing", mode] => normalizerTiming mode
   | ["root-reach-tests"] => do
       testRootReachTraversal

@@ -439,7 +439,8 @@ def open? (directory : System.FilePath) : IO (Option Snapshot) := do
       unless (← FileSystem.readVersion handle).bytes ≥ head.bytes &&
           (← FileSystem.readPage handle 0 signature) == magic do
         throw (IO.userError "truncated or foreign DB pages")
-      FileSystem.privateDirectory directory
+      IO.setAccessRights directory {
+        user := {read := true, write := true, execution := true}, group := {}, other := {} }
       pure (some ⟨directory, head, handle, ← IO.mkRef 0, ← IO.mkRef 0, ← IO.mkRef {}, ← IO.mkRef none⟩)
 
 def pin (directory : System.FilePath) : IO Snapshot := do
