@@ -476,6 +476,40 @@ theorem presentation_ranking_no_duplicates (mode : String) (count : Nat)
     (presentationRanking mode count semantic lexical).Nodup :=
   List.filter_sublist.nodup (SearchRank.deduplicated_nodup _)
 
+structure WindowScore where
+  best : Option Float := none
+  positions : List (Float × Nat) := []
+
+def WindowScore.add (state : WindowScore) (score : Float) (position : Nat) : WindowScore := {
+  best := some (state.best.map (fun previous => if score > previous then score else previous) |>.getD score)
+  positions := ((score, position) :: state.positions).mergeSort SearchRank.scoreOrder |>.take 16 }
+
+structure ScoringWindow where
+  document : Nat
+  position : Nat
+  vector : Json
+
+/-- One bounded transport batch may cross owner boundaries. Every window
+keeps its original document/position; no source or ranking domain is pruned. -/
+def scoreWindows (options : Options) (child : Encoder) (queries : Json)
+    (batch : Array ScoringWindow) (totals : Array WindowScore) : IO (Array WindowScore) := do
+  unless !batch.isEmpty && batch.size ≤ 32 do throw (IO.userError "invalid numerical scoring batch")
+  let started ← IO.monoMsNow
+  let response ← measuredExchange options child (Json.mkObj [
+    ("queries", queries), ("candidates", .arr (batch.map (·.vector)))]) "score"
+  let scores ← IO.ofExcept (response.getObjValAs? (Array Json) "scores")
+  unless scores.size == batch.size do throw (IO.userError "indexed similarity count mismatch")
+  if let some sink := options.metrics then
+    let elapsed := (← IO.monoMsNow) - started
+    sink.state.modify fun state => {state with
+      scoreMs := state.scoreMs + elapsed, scoredWindows := state.scoredWindows + batch.size}
+  let mut totals := totals
+  for (value, window) in scores.toList.zip batch.toList do
+    let score ← IO.ofExcept (number value)
+    unless window.document < totals.size do throw (IO.userError "numerical score names a foreign document")
+    totals := totals.modify window.document (·.add score window.position)
+  pure totals
+
 /-- Candidate payloads never cross this protocol. Numerical scoring uses
 bounded batches of pre-indexed vectors and the identical selection kernel.
 Missing vectors fail explicitly; the search cannot silently omit a candidate. -/
@@ -497,49 +531,41 @@ def handleIndexedUsing (options : Options) (child : Option Encoder) (query : Str
       pure known
     let queryOptions ← queryOptions options
     let queryVectors ← IO.mkRef (none : Option Json)
+    let queries := do
+      match ← queryVectors.get with
+      | some queries => pure queries
+      | none => do
+          let started ← IO.monoMsNow
+          store queryOptions child [query] true
+          let queries ← vectors queryOptions query
+          if let some sink := options.metrics then
+            let elapsed := (← IO.monoMsNow) - started
+            sink.state.modify fun state => {state with queryMs := state.queryMs + elapsed}
+          queryVectors.set (some queries)
+          pure queries
+    let mut totals := Array.replicate candidates.size ({} : WindowScore)
+    let mut pending : Array ScoringWindow := #[]
     for (candidate, index) in candidates.toList.zipIdx do
       let documentOptions ← resolve candidate
       let windows ← IO.ofExcept (candidate.getObjValAs? (List String) "windows")
       if windows.isEmpty then throw (IO.userError "empty indexed window directory")
       let mut remaining := windows
-      let mut best : Option Float := none
-      let mut positions : List (Float × Nat) := []
       while !remaining.isEmpty do
         let offset := windows.length - remaining.length
         let batch := WindowBatch.make remaining
         remaining := batch.rest
         let candidateVectors ← repairBatch documentOptions child index offset batch.front repair
-        -- A cold durable source is rejected before query inference starts.
-        let queries ← match ← queryVectors.get with
-          | some queries => pure queries
-          | none => do
-              let started ← IO.monoMsNow
-              store queryOptions child [query] true
-              let queries ← vectors queryOptions query
-              if let some sink := options.metrics then
-                let elapsed := (← IO.monoMsNow) - started
-                sink.state.modify fun state => {state with queryMs := state.queryMs + elapsed}
-              queryVectors.set (some queries)
-              pure queries
-        let scoringStarted ← IO.monoMsNow
-        let response ← measuredExchange options child
-          (Json.mkObj [("queries", queries), ("candidates", .arr candidateVectors)]) "score"
-        if let some sink := options.metrics then
-          let elapsed := (← IO.monoMsNow) - scoringStarted
-          sink.state.modify fun state => {state with
-            scoreMs := state.scoreMs + elapsed
-            scoredWindows := state.scoredWindows + candidateVectors.size}
-        let scores ← IO.ofExcept (response.getObjValAs? (Array Json) "scores")
-        unless scores.size == batch.front.length do throw (IO.userError "indexed similarity count mismatch")
-        for (value, localIndex) in scores.toList.zipIdx do
-          let score ← IO.ofExcept (number value)
-          -- Bounded ranked positions are transport hints. The document's
-          -- maximum score and the existing relatedness selection stay exact.
-          positions := ((score, offset + localIndex) :: positions).mergeSort SearchRank.scoreOrder |>.take 16
-          best := some (best.map (fun previous => if score > previous then score else previous) |>.getD score)
-      let some score := best | throw (IO.userError "indexed candidate has no numerical score")
+        for (vector, localIndex) in candidateVectors.toList.zipIdx do
+          pending := pending.push ⟨index, offset + localIndex, vector⟩
+          if pending.size == 32 then
+            -- A cold source is rejected before this batch starts inference.
+            totals ← scoreWindows options child (← queries) pending totals
+            pending := #[]
+    if !pending.isEmpty then totals ← scoreWindows options child (← queries) pending totals
+    for (result, index) in totals.toList.zipIdx do
+      let some score := result.best | throw (IO.userError "indexed candidate has no numerical score")
       scored := (score, index) :: scored
-      evidence := (index, positions.map Prod.snd) :: evidence
+      evidence := (index, result.positions.map Prod.snd) :: evidence
   let selected ← selection options candidates lexical anchors scored.reverse
   let related ← IO.ofExcept (selected.getObjValAs? (List Nat) "related")
   -- All cached similarities were already computed. Keep their complete order

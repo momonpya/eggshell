@@ -156,3 +156,118 @@ general rate. A full repeat of this last correction has not started.
 Next investigate repeated validation of one owner's Work postings across grams,
 then fix and preregister the next candidate before repeating the same 48 cells.
 No token/quality adoption, pilot or release is established by these diagnostics.
+
+## Complete-window batching and reader isolation
+
+`bounded-scoring-1` kept the 3,500 ms allocation and repeated all 48 hooks
+against the original snapshots. It validates a repeated Work-posting owner
+once per pinned nomination (and rejects conflicting bindings), and batches
+up to 32 numerical windows across document boundaries. Every original source
+and position remains in scoring. All 48 stdout bodies and accepted
+acknowledgements were independently rechecked against their published SHA-256.
+Semantic completion remained 36/48; every 1,024-source cell still failed.
+
+| Sources | Source vectors | Question cache | Semantic complete | Body | Latencies, ms |
+| --- | --- | --- | --- | --- | --- |
+| 2 | database | fresh | 3/3 | 3/3 | 1150, 1150, 1147 |
+| 2 | database | cached | 3/3 | 3/3 | 242, 242, 240 |
+| 2 | private-overlay | fresh | 3/3 | 3/3 | 1157, 1165, 1149 |
+| 2 | private-overlay | cached | 3/3 | 3/3 | 243, 248, 247 |
+| 32 | database | fresh | 3/3 | 3/3 | 1276, 1271, 1272 |
+| 32 | database | cached | 3/3 | 3/3 | 312, 303, 302 |
+| 32 | private-overlay | fresh | 3/3 | 3/3 | 1261, 1279, 1277 |
+| 32 | private-overlay | cached | 3/3 | 3/3 | 304, 306, 310 |
+| 256 | database | fresh | 3/3 | 3/3 | 1987, 1986, 1989 |
+| 256 | database | cached | 3/3 | 3/3 | 1005, 998, 999 |
+| 256 | private-overlay | fresh | 3/3 | 3/3 | 1962, 1958, 2053 |
+| 256 | private-overlay | cached | 3/3 | 3/3 | 1011, 1030, 1020 |
+| 1024 | database | fresh | 0/3 | 3/3 | 6076, 6072, 6067 |
+| 1024 | database | cached | 0/3 | 3/3 | 6084, 6092, 6053 |
+| 1024 | private-overlay | fresh | 0/3 | 3/3 | 6081, 6189, 6178 |
+| 1024 | private-overlay | cached | 0/3 | 3/3 | 6274, 6179, 6136 |
+
+The size run took 123.20 seconds with peak descendant RSS 1,119,744 KiB.
+Full regression before it passed in 88.40 seconds, peak 2,973,760 KiB;
+a separate daemon drained remaining tickets without changing graph heads.
+Its synthetic numerical comparison covers more than 32 owners, more than
+32 windows within one owner, exact original tied positions and a late cache
+miss after previous batches scored. Complete Work-surface comparisons also
+reject conflicting gram/ordinal bindings in either order.
+
+A standalone cached-question inspection then completed the full numerical
+request in 1,005 ms, yet spent 4,627 ms in kernel discovery. A CPU sample
+found persistent table copying and multi-thread marking during checked
+Work reads. The provider response task captured a source reader even when
+durable foreground repair was forbidden. Dropping that unused capability
+before task creation avoids sharing the controller's page cache. Permitted
+source pulls instead get an empty private page cache on the same pinned
+image; read accounting/observations remain shared. This also covers staged
+and federated readers. Original body checks and selection rules remain.
+
+After that correction, separate unbounded configured diagnostics took
+4,049 ms with fresh query/focus vectors and 3,378 ms with reused query/focus
+vectors. Kernel discovery was 1,449 and 1,476 ms, respectively. These are
+phase inspections, not native delivery samples; sampling overhead and source
+focus cache state are retained in their records. A native diagnostic with
+the old 3,500 ms cap still timed out and delivered lexical body in about
+6 seconds. The next fixed 48-hook run therefore uses the preregistered
+4,500 ms cap and the original half-remaining-deadline reservation. The
+five-second practical gate is unchanged. Failure-injection regression keeps
+its prior 800 ms allowance above the semantic cap (now 5,300 ms); that test
+allowance is separate from the practical gate.
+
+Raw records and frozen implementations are in `bounded-scoring-1/`,
+`scoring-standalone-1/`, `scoring-profile-1/`,
+`reader-ownership-profile-1/`, `reader-ownership-fresh-1/` and
+`profile-native-9/`/`profile-native-10/` beside the original dataset.
+No LLM-token saving or quality adoption is established by this diagnostic.
+
+## Reader-isolation fixed repeat
+
+`reader-isolation-1` repeated the same 48 conditions with the frozen reader
+isolation candidate and 4,500 ms semantic cap. Semantic completion was 47/48,
+body publication and accepted acknowledgement 48/48. The strict practical
+gate **still fails**: fresh private-overlay repetition 1 at 1,024 sources
+timed out and needed 7,373.50 ms including lexical body delivery. That attempt
+is retained and has not been replaced by a rerun.
+
+| Sources | Source vectors | Question cache | Semantic complete | Body | Latencies, ms |
+| --- | --- | --- | --- | --- | --- |
+| 2 | database | fresh | 3/3 | 3/3 | 2003, 2051, 1523 |
+| 2 | database | cached | 3/3 | 3/3 | 423, 346, 263 |
+| 2 | private-overlay | fresh | 3/3 | 3/3 | 1296, 1308, 1331 |
+| 2 | private-overlay | cached | 3/3 | 3/3 | 275, 260, 280 |
+| 32 | database | fresh | 3/3 | 3/3 | 1419, 1428, 1417 |
+| 32 | database | cached | 3/3 | 3/3 | 339, 341, 407 |
+| 32 | private-overlay | fresh | 3/3 | 3/3 | 1636, 1622, 1466 |
+| 32 | private-overlay | cached | 3/3 | 3/3 | 362, 339, 354 |
+| 256 | database | fresh | 3/3 | 3/3 | 2020, 1897, 1897 |
+| 256 | database | cached | 3/3 | 3/3 | 905, 872, 856 |
+| 256 | private-overlay | fresh | 3/3 | 3/3 | 1873, 1867, 1884 |
+| 256 | private-overlay | cached | 3/3 | 3/3 | 879, 880, 876 |
+| 1024 | database | fresh | 3/3 | 3/3 | 4167, 4164, 4170 |
+| 1024 | database | cached | 3/3 | 3/3 | 3136, 3121, 3126 |
+| 1024 | private-overlay | fresh | 2/3 | 3/3 | 4339, 7374, 4550 |
+| 1024 | private-overlay | cached | 3/3 | 3/3 | 3972, 4012, 3773 |
+
+The failed attempt completed numerical discovery for all 1,024 original
+windows in 2,511 ms: 1,119 ms cache processing, 825 ms query work and 358 ms
+scoring/IPC (nested measurements). Encoder import/constructor was 757.589 ms,
+query embedding 18.384 ms and NumPy scoring 11.975 ms. No focus receipt was
+observed before cancellation; its cost is unknown. Semantic timeout was
+4,508 ms, then lexical delivery took 2,766 ms. All source vectors hit; this
+was not a cold-source repair. Larger allocation alone has insufficient
+headroom in this observed cell. Do not widen it again without removing cost.
+
+The full repeat took 104.08 seconds, peak descendant RSS 1,138,496 KiB.
+Full regression passed in 92.11 seconds, peak 2,848,400 KiB, including isolated
+async pull cache/accounting and old-publication checks. A separate daemon
+drained 3 remaining tickets to 0 with all graph heads unchanged. The core,
+native executable, helper, tests and ContractAudit built. The frozen sources,
+binaries and generated C are at `reader-isolation-implementation-1/`; the
+48 outputs/receipts, immutable fixture hashes and independent
+`publication-audit.json` are at `reader-isolation-1/`.
+
+The development branch remains an unadopted candidate. No token/quality
+adoption, pilot, main merge or release is established. Continue with the
+remaining checked topology/cache costs before another fixed full repeat.

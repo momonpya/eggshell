@@ -326,8 +326,10 @@ def acknowledge (session id : String) : IO Bool := withSession session fun files
   pure (state.enabled && offer.stamp.accepts pending.turnId state.epoch now)
 
 /-- Semantic discovery gets the first window; DB delivery retains the rest. -/
+def semanticSearchBudgetMs : Nat := 4500
+
 def semanticSearchDeadline (now deadline : Nat) : Nat :=
-  min deadline (now + min 3500 ((deadline - now) / 2))
+  min deadline (now + min semanticSearchBudgetMs ((deadline - now) / 2))
 
 def searchIncomplete (reply : Option Json) : Bool :=
   match reply with

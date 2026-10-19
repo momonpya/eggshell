@@ -434,16 +434,26 @@ theorem documentOwners_owned {documents : List Persistence.Store.SearchDocument}
 
 /-- All providers use the same indexed boundary. Executable identity neither
 selects a second protocol nor permits full source reconstruction. -/
+abbrev WindowReader := (document : Persistence.Store.SearchDocument) →
+  Fin document.windows.length → IO String
+
+/-- Drop a forbidden capability before constructing the response task. In
+particular, an unused reader must not mark its captured DB cache as shared.
+Keep this decision outside the async closure, including after inlining. -/
+@[noinline] def windowRepairReader (needed : Bool) (reader : WindowReader) : Option WindowReader :=
+  if needed then some reader else none
+
 def nominateIndexed (command : List String) (queryText : String)
     (documents : List Persistence.Store.SearchDocument) (lexical anchors : List Nat)
-    (readWindow : (document : Persistence.Store.SearchDocument) →
-      Fin document.windows.length → IO String) (allowDurableRepair : Bool := false)
+    (readWindow : WindowReader) (allowDurableRepair : Bool := false)
     (receipt : Option String := none) (purpose : String := "discovery") :
     IO (Option (IndexedSearch documents)) := do
   if documents.isEmpty then
     let some order := IndexedOrder.check? documents [] |
       throw (IO.userError "empty semantic corpus has a nonempty directory")
     return some ⟨[], [], order⟩
+  let reader := windowRepairReader
+    (allowDurableRepair || documents.any (·.cache.isNone)) readWindow
   try
     withProvider command fun running => withResponseDeadline do
       let request := Json.mkObj [("query", toJson (item (.text queryText) queryText)),
@@ -473,6 +483,8 @@ def nominateIndexed (command : List String) (queryText : String)
           unless !repaired.contains (documentIndex, index) do
             throw (IO.userError "numerical repair repeated an already supplied window")
           repaired := repaired.insert (documentIndex, index)
+        let some readWindow := reader |
+          throw (IO.userError "durable numerical windows are pending background warm")
         let texts ← pull.handles.mapM (readWindow document)
         running.child.stdin.putStrLn (Json.mkObj [("windows", toJson texts)]).compress
         running.child.stdin.flush

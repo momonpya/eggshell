@@ -1808,6 +1808,13 @@ def workSurfaceCandidates (snapshot : Snapshot) (surfaces : List String) : IO (L
   for surface in surfaces do
     if let some term ← findTerm? snapshot snapshot.get surface then
       for (ordinal, id) in (← directory snapshot (key "workSurface" term.id)) do
+        -- One owner can occur in many demanded gram postings. Its live
+        -- membership is immutable in this pinned publication: validate the
+        -- complete pair once, and reject any conflicting later nomination.
+        if let some checked := found[ordinal]? then
+          unless checked == id do
+            throw (IO.userError "Work postings disagree on their live root owner")
+          continue
         let live ← IO.ofExcept (payloadSize (← snapshot.get (key "member" id)))
         let member ← IO.ofExcept (payloadSize (← snapshot.get (key "root" ordinal)))
         let candidate ← IO.ofExcept (payloadSize (← snapshot.get (key "candidate" id)))

@@ -84,3 +84,25 @@ every insert. Preserve both candidates' generated C and all results. Its one-hoo
 diagnostic still failed the gate; it is not a 48-hook result. Investigate repeated
 Work-posting validation before fixing the next full candidate. The same saved
 fixtures, questions, 48 conditions and five-second gate remain required.
+
+The next full repeat keeps the 3,500 ms cap. It additionally validates each
+distinct Work-posting owner pair once per pinned nomination and sends numerical
+windows in batches of at most 32 across document boundaries. All original
+document/window positions and complete nomination/ranking remain required.
+Synthetic complete-reference checks include more than 32 documents, a document
+with more than 32 windows, stable tied window positions, and a late missing
+window after earlier batches have scored. This next run is fixed at the same
+48 hooks and uses the original saved fixtures through `--fixtures`.
+
+The `bounded-scoring-1` repeat still failed every 1,024-source cell. A CPU
+profile then found that even an unused source reader captured by the provider
+response task marks the controller's page cache as shared. The next candidate
+drops forbidden readers before creating that task and gives permitted pulls
+their own cache on the same pinned image, including mixed/federated sources.
+Standalone configured inspection (outside the measured hook set) then took
+4,049 ms with a fresh question and 3,378 ms with a reused question/focus cache.
+The next 48 hooks therefore use a 4,500 ms semantic cap, still limited to half
+the remaining deadline. The same original fixtures, 48 conditions and strict
+five-second complete-semantic/body gate remain unchanged. Failure-injection
+regression allows the semantic allocation plus the original 800 ms transport
+and lexical fallback allowance; that is separate from the scientific gate.

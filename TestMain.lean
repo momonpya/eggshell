@@ -4754,7 +4754,10 @@ def testIndexedNumericalWindows : IO Unit := do
   Persistence.privateDirectory root
   let query := "needle /path/42"
   let texts := ["", (String.ofList (List.replicate 40000 'a')) ++ " needle",
-    "opposite", "needle /path/42", "unrelated"]
+    "opposite", "needle /path/42", "unrelated"] ++ (List.range 35).map fun index =>
+      if index % 3 == 0 then s!"needle additional source {index}"
+      else if index % 3 == 1 then s!"opposite additional source {index}"
+      else s!"neutral additional source {index}"
   let parts := ((texts ++ [query]).flatMap SearchRank.windows).eraseDups
   let base : SearchProvider.Options := {
     cache := root, models := root / "unused-models", model := "synthetic-cache-test-only" }
@@ -4805,6 +4808,11 @@ def testIndexedNumericalWindows : IO Unit := do
         check (choice.indices.length ≤ 16 && choice.indices.eraseDups == choice.indices &&
             choice.indices.all (fun index => index < (SearchRank.windows text).length))
           "ranked evidence hints were unbounded, repeated or foreign to the original document"
+        let expectedPositions := ((SearchRank.windows text).zipIdx.map fun (part, index) =>
+          ((if part.contains "needle" then 1.0 else if part.contains "opposite" then -1.0 else 0.0 : Float), index))
+          |>.mergeSort SearchRank.scoreOrder |>.take 16 |>.map Prod.snd
+        check (choice.indices == expectedPositions)
+          "cross-document scoring changed original positions or stable per-window ties"
       if mode != "lexical" then
         let source := (SearchRank.windows texts[1]!).getLast!
         let path := options.cache / "vectors" / (SearchProvider.cacheKey options.model source ++ ".json")
@@ -4840,6 +4848,18 @@ def testIndexedNumericalWindows : IO Unit := do
             pure false
           catch _ => pure true
         check rejected "a missing indexed vector was omitted instead of failing explicitly"
+        let late := (SearchRank.windows texts.getLast!).getLast!
+        removeIfExists (options.cache / "vectors" / (SearchProvider.cacheKey options.model late ++ ".json"))
+        let rejected ← try
+            let _ ← SearchProvider.handleIndexed options child query indexedRequest
+            pure false
+          catch _ => pure true
+        check rejected "a late missing vector returned an already-scored subset as complete"
+        let restored ← IO.ofExcept (Lean.Json.parse
+          (if late.contains "needle" then "[1,0]" else if late.contains "opposite" then "[-1,0]" else "[0,1]"))
+        SearchProvider.saveVector options late restored
+        check ((← SearchProvider.handleIndexed options child query indexedRequest) == actual)
+          "a failed partial batch leaked scores or window coordinates into the next request"
     finally
       if let some child := child then
         child.kill

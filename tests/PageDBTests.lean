@@ -431,6 +431,17 @@ def rows : IO Unit := do
   let first ← PageMap.pin root
   require (first.head == head) "published root differs from disk"
   for i in [:3000] do require ((← first.get s!"key-{10000 + i}") == some payload) "bulk index lost a row"
+  let pulling ← first.forkReader
+  let emptyCache ← pulling.cache.get
+  let controllerCache ← first.cache.get
+  require (pulling.head == first.head && emptyCache.recent.size == 0 &&
+    emptyCache.previous.size == 0 && controllerCache.recent.size > 0)
+    "source pull reused the controller's mutable page cache or changed its publication"
+  let beforePull ← first.reads.get
+  let task ← IO.asTask (pulling.get "key-12999") .dedicated
+  let pulled ← IO.ofExcept (← IO.wait task)
+  require (pulled == some payload && (← first.reads.get) > beforePull)
+    "isolated source pull lost original bytes or its shared read accounting"
   let ranged ← PageMap.pin root
   let interval : PageMap.KeyRange := ⟨"key-11495", "key-11505"⟩
   let found ← ranged.foldRange interval (fun rows row => pure (row :: rows)) []
@@ -457,6 +468,9 @@ def rows : IO Unit := do
   require ((← first.get "key-10017") == some payload &&
     (← first.get "key-12998") == some payload && (← first.get "key-14000").isNone)
     "pinned read snapshot mixed a newer publication"
+  require ((← pulling.get "key-10017") == some payload &&
+    (← pulling.get "key-12998") == some payload && (← pulling.get "key-14000").isNone)
+    "isolated source pull mixed a newer publication"
   let allRange : PageMap.KeyRange := ⟨"key-10000", "key-15000"⟩
   let oldRows ← first.foldRange allRange (fun rows row =>
     pure (if row.2.isSome then row :: rows else rows)) []
@@ -1368,7 +1382,41 @@ def demandTopology : IO Unit := do
     ("staged_samples", toJson stagedSamples), ("homogeneous_samples", toJson homogeneousSamples)]).compress)
   IO.println "PASS demand-driven All closure including pending turns, nested decomposition, global child authority, new Union after negative lookup, continuation, original order and pinned retirement"
 
+def workSurfaceConflicts : IO Unit := do
+  let path ← PageMap.absolute ".lake/page-db-work-posting-conflicts"
+  if ← path.pathExists then IO.FS.removeDirAll path
+  let first ← PageMap.create path (Persistence.valueToJson (.text "posting-conflicts")).compress
+  let owner := OutcomeEdge.make (.text "alpha beta gamma delta") (.text "first result") [] (by simp) (by simp)
+  let other := OutcomeEdge.make (.text "alpha beta gamma omega") (.text "second result") [] (by simp) (by simp)
+  let (ids, _, _) ← PageMap.withWriter first fun writer => do
+    let intern : Store.Intern := ⟨writer, ← IO.mkRef {}⟩
+    let ids ← [owner, other].mapM fun edge => intern.root edge.relation
+    Store.writeChange writer ⟨ids, [], false⟩
+    pure ids
+  let snapshot ← PageMap.pin path
+  let mut postings : List (String × Nat × Nat) := []
+  for surface in LogicalText.surfaceNames "alpha beta gamma" do
+    if let some term ← Store.findTerm? snapshot snapshot.get surface then
+      if let some (ordinal, _) := (← Store.directory snapshot (Store.key "workSurface" term.id)).find?
+          (fun row => row.2 == ids[0]!) then
+        postings := postings ++ [(surface, term.id, ordinal)]
+  let some first := postings[0]? | throw (IO.userError "missing first overlapping gram")
+  let some second := postings[1]? | throw (IO.userError "missing second overlapping gram")
+  let surfaces := [first.1, second.1]
+  let expected ← Store.workSurfaceCandidates snapshot surfaces
+  require (expected == ids && (← Store.workSurfaceCandidates snapshot (surfaces ++ surfaces)) == ids)
+    "overlapping Work postings changed the complete ordered owner set"
+  let _ ← PageMap.withWriter snapshot fun writer =>
+    Store.putNat writer (Store.key (Store.key "workSurface" second.2.1) second.2.2) ids[1]!
+  let damaged ← PageMap.pin path
+  for query in [surfaces, surfaces.reverse, [first.1, first.1, second.1]] do
+    let rejected ← try let _ ← Store.workSurfaceCandidates damaged query; pure false catch _ => pure true
+    require rejected "a conflicting gram reused a previously verified owner's membership"
+  require ((← Store.workSurfaceCandidates snapshot surfaces) == expected)
+    "a later corrupt posting changed an earlier pinned publication"
+
 def workSurfaces : IO Unit := do
+  workSurfaceConflicts
   let path ← PageMap.absolute ".lake/page-db-work-surfaces-20261006"
   if ← path.pathExists then IO.FS.removeDirAll path
   let first ← PageMap.create path (Persistence.valueToJson (.text "surface-fixture")).compress

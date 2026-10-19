@@ -5020,12 +5020,13 @@ def indexedSemanticNominationsUsing (snapshot : Persistence.Store.Snapshot)
   let frequency := fun unit => frequencies.getD unit 0
   let lexical := SearchRank.rankRows current sources contains frequency false
   let anchors := SearchRank.rankRows current sources contains frequency true
+  let pulling ← snapshot.forkReader
   let readWindow := fun (document : Persistence.Store.SearchDocument)
       (index : Fin document.windows.length) => do
     let some source := sourceTable[document.owner]? |
       throw (IO.userError "foreign staged semantic source")
     match source with
-    | .stored original => Persistence.Store.readSearchWindow snapshot original index.val
+    | .stored original => Persistence.Store.readSearchWindow pulling original index.val
     | .staged _ windows _ =>
         let some text := windows[index.val]? | throw (IO.userError "foreign staged semantic window")
         pure text
@@ -5727,13 +5728,14 @@ def indexedDiscovery (selection : Config.Selection)
       reader.supportOwners works excluded allowance ranking families
     focusSupport := some fun works command question => do
       let documents ← Persistence.Store.supportWindowDocuments snapshot works
+      let pulling ← snapshot.forkReader
       focusIndexedEvidence command question documents
         (fun document => do
           let value ← reader.read document.work
           match Matcher.atomText? value with
           | some text => pure text
           | none => throw (IO.userError "source-focus Work is not indexed text"))
-        (fun document index => Persistence.Store.readSearchWindow snapshot document index.val) receipt
+        (fun document index => Persistence.Store.readSearchWindow pulling document index.val) receipt
     population
     semanticPopulation := ← Persistence.Store.getNat snapshot.get "semanticPopulation"
     live := fun value => (·.isSome) <$> Persistence.Store.liveRoot? snapshot value
@@ -5818,12 +5820,15 @@ def federatedSemanticNominations
   let frequency := fun unit => frequencies.getD unit 0
   let lexical := SearchRank.rankRows current entries contains frequency false
   let anchors := SearchRank.rankRows current entries contains frequency true
+  let pulling ← sources.mapM DB.PageMap.Snapshot.forkReader
   let readWindow := fun (request : Persistence.Store.SearchDocument)
       (index : Fin request.windows.length) => do
     let some entry := table[request.owner]? | throw (IO.userError "foreign federated semantic source")
     match entry with
     | .stored document =>
-        Persistence.Store.readSearchWindow document.node.snapshot document.original index.val
+        let some source := pulling[document.node.source.val]? |
+          throw (IO.userError "foreign federated source reader")
+        Persistence.Store.readSearchWindow source document.original index.val
     | .staged _ windows _ =>
         let some text := windows[index.val]? | throw (IO.userError "foreign federated staged window")
         pure text
@@ -5898,6 +5903,7 @@ def federatedDiscovery (selection : Config.Selection)
         ({owner := document.owner, work := document.work, windows := document.original.windows,
           cache := document.original.cache} :
           Persistence.Store.SearchDocument)
+      let pulling ← sources.mapM DB.PageMap.Snapshot.forkReader
       focusIndexedEvidence command question requests
         (fun request => do
           let some document := table[request.owner]? | throw (IO.userError "foreign shared source-focus Work")
@@ -5907,7 +5913,9 @@ def federatedDiscovery (selection : Config.Selection)
           | none => throw (IO.userError "shared source-focus Work is not indexed text"))
         (fun request index => do
           let some document := table[request.owner]? | throw (IO.userError "foreign shared source-focus window")
-          Persistence.Store.readSearchWindow document.node.snapshot document.original index.val) receipt
+          let some source := pulling[document.node.source.val]? |
+            throw (IO.userError "foreign shared source-focus reader")
+          Persistence.Store.readSearchWindow source document.original index.val) receipt
     supportOwners := some fun works excluded allowance ranking families => do
       let mut remaining := allowance
       let mut found := []

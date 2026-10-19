@@ -443,6 +443,11 @@ structure Snapshot where
 def Snapshot.observe (snapshot : Snapshot) (operation : ReadObservation) : IO Unit :=
   snapshot.trace.modify (·.map (·.add operation))
 
+/-- A bounded asynchronous source pull shares the same immutable image and
+read observations, but cannot mark the controller's page cache as shared. -/
+def Snapshot.forkReader (snapshot : Snapshot) : IO Snapshot := do
+  pure {snapshot with cache := ← IO.mkRef {}}
+
 def absolute (path : System.FilePath) : IO System.FilePath := do
   let cwd ← IO.currentDir
   pure ((if path.isAbsolute then path else cwd / path).normalize)

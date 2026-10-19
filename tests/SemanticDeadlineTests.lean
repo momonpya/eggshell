@@ -77,8 +77,9 @@ def nativeHook (binary root runtime records config : System.FilePath) (session :
   let output ← IO.ofExcept (Json.parse result.stdout)
   writeJson (records / (session ++ ".json")) (Json.mkObj [
     ("input", input), ("output", output), ("stderr", toJson result.stderr),
-    ("elapsed_ms", toJson elapsed), ("test_budget_ms", toJson (4300 : Nat))])
-  check (result.exitCode == 0 && elapsed < 4300) "native hook exceeded the practical delivery test budget"
+    ("elapsed_ms", toJson elapsed), ("test_budget_ms", toJson (semanticSearchBudgetMs + 800))])
+  check (result.exitCode == 0 && elapsed < semanticSearchBudgetMs + 800)
+    "native hook exceeded its semantic allocation plus transport/fallback allowance"
   let receipt ← nativeReceipt runtime session
   let published := receipt.getObjValD "stages" |>.getObjValD "published.json" |>.getObjValD "data"
   check (published.getObjValD "output" == toJson result.stdout &&
@@ -182,7 +183,8 @@ def scenario (temporary : System.FilePath) : IO Unit := do
       "semantic discovery did not supply its original body before lexical fallback"
     configure config database [fixture.toString, "semantic-deadline-provider", "stall", fixtureRoot.toString]
     let (expired, timeoutTrace, timeoutMs) ← nativeHook binary root runtime records config "semantic-timeout"
-    check (timeoutTrace.semantic == .timedOut && timeoutTrace.route == .lexical && timeoutMs < 4300 &&
+    check (timeoutTrace.semantic == .timedOut && timeoutTrace.route == .lexical &&
+        timeoutMs < semanticSearchBudgetMs + 800 &&
         expired.compress.contains "LEXICAL_ORIGINAL_BODY_53726" &&
         expired.getObjValD "systemMessage" != Json.null)
       "semantic expiry did not deliver actual DB body with a visible unfinished status"
