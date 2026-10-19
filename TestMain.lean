@@ -7,6 +7,7 @@ public import tests.PageDBTests
 public import tests.SourceEvidenceTests
 public import tests.SourceObservationTests
 public import tests.EqualityDependencyTests
+public import tests.ReadOnlyCacheTests
 public import tests.DatabaseIndexTests
 public import tests.WarmTests
 public import tests.SemanticDeadlineTests
@@ -218,8 +219,8 @@ def testPrivateStorage : IO Unit := do
     other := { read := true }
   }
   let _ ← Persistence.load egg
-  check ((← accessMode egg) = "700")
-    "existing .egg authority was not hardened on load"
+  check ((← accessMode egg) = "744")
+    "reading an existing .egg changed its configured access mode"
   let stateDirectory := testRoot / "private-state"
   let state := stateDirectory / "state.json"
   let pending := stateDirectory / "pending.json"
@@ -3353,7 +3354,7 @@ def testBackgroundIndexRecovery : IO Unit := do
   check (!(← queued.path.pathExists) && !(← marker.pathExists))
     "writer waited for or started the semantic indexer"
   let registered ← registerIndexTarget (← DB.PageMap.pin target) (pending.semanticMatcher.getD [])
-  let ticketDirectory := registered.indexes (← DB.PageMap.pin target)
+  let ticketDirectory ← registered.indexes (← DB.PageMap.pin target)
   let tickets ← ticketDirectory.readDir
   check (tickets.size == 1) "publication did not retain one index ticket"
   let some ticketEntry := tickets[0]? | throw (IO.userError "missing index ticket")
@@ -3637,7 +3638,7 @@ def testSaveWhileIndexBusy : IO Unit := IO.FS.withTempDir fun attempt => do
       IO.sleep 5
     let firstMs ← save (pendingFor 0)
     let registered ← registerIndexTarget (← DB.PageMap.pin target) command
-    let ticketDirectory := registered.indexes (← DB.PageMap.pin target)
+    let ticketDirectory ← registered.indexes (← DB.PageMap.pin target)
     let firstTickets ← ticketDirectory.readDir
     check (firstTickets.size == 1 && !(← batchLog.pathExists))
       "saving started the unavailable indexer"
@@ -4763,6 +4764,8 @@ def testIndexedNumericalWindows : IO Unit := do
     let vector : Lean.Json ← IO.ofExcept (Lean.Json.parse
       (if part.contains "needle" then "[1,0]" else if part.contains "opposite" then "[-1,0]" else "[0,1]"))
     SearchProvider.saveVector base part vector
+    if (SearchRank.windows query).contains part then
+      SearchProvider.saveVector (← SearchProvider.queryOptions base) part vector
   check ((SearchRank.windows texts[1]!).length > 32)
     "numerical fixture did not cross a window batch boundary"
   for mode in ["semantic", "hybrid", "lexical"] do
@@ -4850,7 +4853,8 @@ def testIndexedNumericalWindows : IO Unit := do
     catch _ => pure true
   check rejected "an oversized optional numerical cache record was allocated/decoded without a bound"
   let bad := root / "nonfinite-vector.json"
-  IO.FS.writeFile bad "{\"model\":\"synthetic-cache-test-only\",\"text\":\"needle\",\"vector\":[1e999]}"
+  IO.FS.writeFile bad ("{\"model\":\"synthetic-cache-test-only\",\"window\":\"" ++
+    Persistence.Store.windowKey "needle" ++ "\",\"vector\":[1e999]}")
   let rejected ← try
       let _ ← SearchProvider.loadVector bad
       pure false
@@ -4865,12 +4869,13 @@ def testIndexedNumericalWindows : IO Unit := do
   let dimension := root / "full-dimension-vector.json"
   let vector ← IO.ofExcept (Lean.Json.parse
     ("[" ++ String.intercalate "," (List.replicate 384 "0.12345678901234567") ++ "]"))
-  let cached : SearchProvider.CachedVector := {model := base.model, text := "needle", vector}
+  let cached : SearchProvider.CachedVector := {
+    model := base.model, window := Persistence.Store.windowKey "needle", vector}
   let encoded := (Lean.toJson cached).compress
   check (encoded.utf8ByteSize > 4096) "384-dimensional vector did not exceed one page"
   IO.FS.writeFile dimension encoded
   let observed ← SearchProvider.loadVector dimension
-  check (observed.vector == vector && observed.text == cached.text)
+  check (observed.vector == vector && observed.window == cached.window)
     "a valid multi-page numerical cache record was rejected or truncated"
   IO.println "PASS bounded numerical window batches preserve complete semantic/hybrid/lexical ranks and reject missing indexed vectors"
 
@@ -4907,16 +4912,16 @@ def testDatabaseVectorCaches : IO Unit := IO.FS.withTempDir fun root => do
     models := root / "unused-models"
     model := "synthetic-db-cache-test-only" }
   let leftOptions ← SearchProvider.cacheOptions (optionsFor leftCache.semantic)
-    (Lean.Json.mkObj [("cache", Lean.toJson leftOwner)])
+    (Lean.Json.mkObj [("cache", Lean.toJson leftOwner)]) (some .database)
   let rightOptions ← SearchProvider.cacheOptions (optionsFor rightCache.semantic)
-    (Lean.Json.mkObj [("cache", Lean.toJson rightOwner)])
+    (Lean.Json.mkObj [("cache", Lean.toJson rightOwner)]) (some .database)
   let reference := optionsFor (root / "reference")
   let scratch := optionsFor (root / "scratch")
   let query := "needle"
   let texts := ["needle left source", "opposite right source", "neutral right source", "other needle"]
   let vectorFor := fun (text : String) => IO.ofExcept (Lean.Json.parse
     (if text.contains "needle" then "[1,0]" else if text.contains "opposite" then "[-1,0]" else "[0,1]"))
-  SearchProvider.saveVector leftOptions query (← vectorFor query)
+  SearchProvider.saveVector (← SearchProvider.queryOptions leftOptions) query (← vectorFor query)
   for (text, index) in texts.zipIdx do
     let options := if index == 0 then leftOptions else rightOptions
     SearchProvider.saveVector options text (← vectorFor text)
@@ -6107,6 +6112,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
     testBackgroundIndexRecovery
     Eggshell.DatabaseIndexTests.run
     Eggshell.WarmTests.run
+    Eggshell.ReadOnlyCacheTests.run
     Eggshell.SemanticDeadlineTests.run
     testSaveWhileIndexBusy
     testSaveWhileIndexBusy
@@ -6136,6 +6142,10 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
 
 def main (arguments : List String) : IO UInt32 :=
   match arguments with
+  | ["readonly-cache-tests"] => do
+      Eggshell.ReadOnlyCacheTests.run
+      Worker.shutdown
+      pure 0
   | ["source-evidence-tests"] => do
       Eggshell.SourceEvidenceTests.run
       pure 0

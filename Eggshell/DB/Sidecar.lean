@@ -1,10 +1,16 @@
 module
 
 public import Eggshell.DB.PageMap
+public import Eggshell.Paths
 
 @[expose] public section
 
 namespace Eggshell.DB
+
+inductive Sidecar.Storage where
+  | database
+  | user
+  deriving Repr, BEq, Lean.ToJson, Lean.FromJson
 
 structure Sidecar.Owner where
   directory : String
@@ -35,13 +41,20 @@ def Sidecar.ofSnapshot (snapshot : PageMap.Snapshot) : Sidecar :=
   { database := snapshot.head.identity, directory,
     semantic := directory / "semantic", indexes := directory / "indexes" }
 
+def Sidecar.locate (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Sidecar := do
+  if storage == .database then return Sidecar.ofSnapshot snapshot
+  let directory := (← Paths.dataRoot) / "read-cache" / snapshot.head.identity
+  pure {
+    database := snapshot.head.identity, directory
+    semantic := directory / "semantic", indexes := directory / "indexes"}
+
 /-- Create one child, never missing ancestors or the DB itself. -/
 def Sidecar.childDirectory (parent : System.FilePath) (name : String) : IO System.FilePath := do
   let path := parent / name
   FileSystem.rejectSymlinkAncestors path
   let created ← try IO.FS.createDir path; pure true
     catch error => do
-      let metadata ← path.symlinkMetadata
+      let metadata ← try path.symlinkMetadata catch _ => throw error
       unless metadata.type == .dir do throw error
       pure false
   if created then
@@ -51,19 +64,43 @@ def Sidecar.childDirectory (parent : System.FilePath) (name : String) : IO Syste
     FileSystem.syncPath parent.toString true
   pure path
 
-def Sidecar.prepare (owner : Sidecar.Owner) : IO Sidecar := do
+def Sidecar.prepare (owner : Sidecar.Owner) (storage : Sidecar.Storage := .database) : IO Sidecar := do
   let snapshot ← owner.pin
-  let derived ← Sidecar.childDirectory snapshot.directory "derived"
-  let directory ← Sidecar.childDirectory derived snapshot.head.identity
+  let directory ← if storage == .database then do
+      let derived ← Sidecar.childDirectory snapshot.directory "derived"
+      Sidecar.childDirectory derived snapshot.head.identity
+    else do
+      let root := (← Paths.dataRoot) / "read-cache"
+      FileSystem.rejectSymlinkAncestors root
+      FileSystem.privateDirectory root
+      Sidecar.childDirectory root snapshot.head.identity
   let semantic ← Sidecar.childDirectory directory "semantic"
   let _ ← Sidecar.childDirectory semantic "vectors"
   let indexes ← Sidecar.childDirectory directory "indexes"
   pure {database := snapshot.head.identity, directory, semantic, indexes}
 
+/-- A profile grants DB writes explicitly. A filesystem refusal redirects
+only rebuildable maintenance to the user's DB-identity-scoped overlay. -/
+def Sidecar.destination (owner : Sidecar.Owner) (writable : Bool) :
+    IO (Sidecar.Storage × Sidecar) := do
+  let _ ← owner.pin
+  if !writable then return (.user, ← Sidecar.prepare owner .user)
+  try
+    let sidecar ← Sidecar.prepare owner
+    let probe := sidecar.semantic / "vectors" / (".write-" ++ Blake3.hex (← IO.getRandomBytes 16))
+    let handle ← IO.FS.Handle.mk probe .write
+    handle.flush
+    IO.FS.removeFile probe
+    pure (.database, sidecar)
+  catch error => match error with
+    | .permissionDenied _ _ _ => pure (.user, ← Sidecar.prepare owner .user)
+    | _ => throw error
+
 /-- Index and explicit warm share a non-waiting claim; neither takes the DB
 writer. An exited owner releases the descriptor lock automatically. -/
-def Sidecar.withIndexClaim (owner : Sidecar.Owner) (action : Sidecar → IO α) : IO α := do
-  let sidecar ← Sidecar.prepare owner
+def Sidecar.withIndexClaim (owner : Sidecar.Owner) (action : Sidecar → IO α)
+    (storage : Sidecar.Storage := .database) : IO α := do
+  let sidecar ← Sidecar.prepare owner storage
   let path := sidecar.directory / "index.guard"
   FileSystem.immutableExistingBytes path ByteArray.empty
   let guard ← FileSystem.openRead path.toString

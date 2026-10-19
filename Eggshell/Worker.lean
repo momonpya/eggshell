@@ -399,8 +399,8 @@ def search (request : Search) : IO (Option Handoff) := do
     retains every ticket; indexing never republishes or locks the graph writer. -/
 def indexQueued (target : IndexTarget) (paths : List System.FilePath) : IO Nat := do
   let pinned ← target.owner.pin
-  let directory := target.indexes pinned
-  DB.Sidecar.withIndexClaim target.owner fun _ => indexOwned pinned directory
+  let directory ← target.indexes pinned
+  DB.Sidecar.withIndexClaim target.owner (fun _ => indexOwned pinned directory) target.storage
 where
  indexOwned (pinned : DB.PageMap.Snapshot) (directory : System.FilePath) : IO Nat := do
   let mut tickets : List System.FilePath := []
@@ -428,7 +428,7 @@ where
   if tickets.isEmpty then return 0
   let _receipt ← SemanticMatcher.indexWorks target.command
     items.eraseDups
-    (some target.owner)
+    (some target.owner) target.storage
   for path in tickets do removeIfExists path
   pure tickets.length
 
@@ -472,7 +472,7 @@ def run (role : String) : IO UInt32 := do
         let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")
         let count ← indexQueued target (paths.map System.FilePath.mk)
         if (json.getObjValAs? Bool "warm").toOption.getD false then
-          let _ ← Warm.run (← target.owner.pin) target.command
+          let _ ← Warm.runTarget (← target.owner.pin) target
           pure ()
         pure (toJson count)
       else throw (IO.userError "unknown worker role")

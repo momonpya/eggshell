@@ -429,19 +429,23 @@ def indexProviderKey (command : List String) : String :=
 structure IndexTarget where
   owner : DB.Sidecar.Owner
   command : List String
+  storage : DB.Sidecar.Storage := .database
   deriving Repr, BEq, ToJson, FromJson
 
 def IndexTarget.key (target : IndexTarget) : String :=
   Blake3.hex (Blake3.digest "eggshell.index-target".toUTF8 [(toJson target).compress.toUTF8])
 
-def IndexTarget.indexes (target : IndexTarget) (snapshot : DB.PageMap.Snapshot) : System.FilePath :=
-  (DB.Sidecar.ofSnapshot snapshot).indexes / indexProviderKey target.command
+def IndexTarget.indexes (target : IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO System.FilePath := do
+  pure ((← DB.Sidecar.locate snapshot target.storage).indexes / indexProviderKey target.command)
 
 def indexRegistry : IO System.FilePath := do pure ((← dataRoot) / "index-targets")
 
-def registerIndexTarget (snapshot : DB.PageMap.Snapshot) (command : List String) : IO IndexTarget := do
+def registerIndexTarget (snapshot : DB.PageMap.Snapshot) (command : List String)
+    (writable : Bool := true) : IO IndexTarget := do
   if command.isEmpty then throw (IO.userError "index provider must name an executable")
-  let target : IndexTarget := {owner := DB.Sidecar.Owner.ofSnapshot snapshot, command}
+  let owner := DB.Sidecar.Owner.ofSnapshot snapshot
+  let (storage, _) ← DB.Sidecar.destination owner writable
+  let target : IndexTarget := {owner, command, storage}
   let directory ← indexRegistry
   Persistence.rejectSymlinkAncestors directory
   Persistence.privateDirectory directory
@@ -506,7 +510,7 @@ def queueIndex (target : String) (command : List String)
   unless snapshot.head.authority == valueEncoding promotion.snapshot.authority do
     throw (IO.userError "index publication belongs to another authority")
   let target ← registerIndexTarget snapshot command
-  let sidecar ← DB.Sidecar.prepare target.owner
+  let sidecar ← DB.Sidecar.prepare target.owner target.storage
   let directory ← DB.Sidecar.childDirectory sidecar.indexes (indexProviderKey command)
   let ticket := indexTicket snapshot.head.identity (indexProviderKey command) promotion
   let bytes := (toJson ticket).compress.toUTF8

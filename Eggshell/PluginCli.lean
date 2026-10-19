@@ -64,13 +64,14 @@ imported without a project config. It does not need or mutate chat state. -/
 def warm (requested : Option String) : IO String := do
   let config ← (← Config.load (← IO.currentDir)).mapM withDefaultMatcher
   let state ← diagnosticState
+  let selected ← config.mapM fun config =>
+    IO.ofExcept (Config.resolve config (state.map (·.profile) |>.getD config.defaultProfile))
   let eggs ← match requested with
     | some raw =>
         let named := config.bind (fun config => config.eggs.find? (·.name == raw))
         pure [named.getD {name := raw, path := .mk raw}]
     | none =>
-        let some config := config | throw (IO.userError "specify a DB path: egg warm PATH")
-        let selection ← IO.ofExcept (Config.resolve config (state.map (·.profile) |>.getD config.defaultProfile))
+        let some selection := selected | throw (IO.userError "specify a DB path: egg warm PATH")
         pure selection.read
   let command ← match config with
     | some config => pure config.semanticMatcher
@@ -78,7 +79,9 @@ def warm (requested : Option String) : IO String := do
   let some command := command |
     throw (IO.userError "numerical provider is disabled or not installed")
   let results ← eggs.mapM fun egg => do
-    Warm.run (← DB.PageMap.pin egg.path) command
+    let writable := selected.all fun selection =>
+      selection.write.any (fun target => target.path.normalize == egg.path.normalize)
+    Warm.run (← DB.PageMap.pin egg.path) command writable
   pure (Json.mkObj [("databases", toJson results)]).compress
 
 def controlSession : IO String := do

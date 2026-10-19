@@ -42,6 +42,8 @@ def MetricsSink.flush (sink : MetricsSink) (status : String) : IO Unit := do
 
 structure Options where
   cache : System.FilePath
+  fallback : Option System.FilePath := none
+  privateWrite : Option System.FilePath := none
   owner : Option DB.Sidecar.Owner := none
   models : System.FilePath
   model : String := MiniLM.model
@@ -83,13 +85,31 @@ def parse (defaults : Options) : List String → Except String Options
 
 /-- A requesting pinned document/index batch supplies its DB-owned cache.
 Requests without a durable owner retain only the process's temporary hints. -/
-def cacheOptions (options : Options) (request : Json) : IO Options := do
+def cacheOptions (options : Options) (request : Json)
+    (write : Option DB.Sidecar.Storage := none) : IO Options := do
   match (request.getObjVal? "cache").toOption with
   | none | some .null => pure options
   | some value =>
       let owner ← IO.ofExcept (fromJson? value : Except String DB.Sidecar.Owner)
-      let sidecar ← DB.Sidecar.prepare owner
-      pure {options with cache := sidecar.semantic, owner := some owner}
+      let snapshot ← owner.pin
+      let primary := DB.Sidecar.ofSnapshot snapshot
+      let overlay ← DB.Sidecar.locate snapshot .user
+      match write with
+      | some storage =>
+          let sidecar ← DB.Sidecar.prepare owner storage
+          pure {options with
+            cache := sidecar.semantic, owner := some owner
+            fallback := some (if storage == .database then overlay.semantic else primary.semantic)
+            privateWrite := none}
+      | none =>
+          pure {options with
+            cache := primary.semantic, fallback := some overlay.semantic
+            privateWrite := some overlay.semantic, owner := some owner}
+
+def queryOptions (options : Options) : IO Options := do
+  pure {options with
+    cache := (← Paths.dataRoot) / "queries"
+    owner := none, fallback := none, privateWrite := none}
 
 abbrev Encoder := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .inherit }
 
@@ -121,25 +141,25 @@ def exchange (child : Encoder) (input : Json) : IO Json := do
   if let .ok error := result.getObjValAs? String "error" then throw (IO.userError error)
   pure result
 
-/-- Persisted vectors carry the exact model and source bytes. The hash is only
-    a locator; a collision or damaged record cannot authorize different text. -/
+/-- Numerical hints retain only model/window digests and bounded vectors.
+    They never establish source identity or completion authority. -/
 structure CachedVector where
   model : String
-  text : String
+  window : String
   vector : Json
   deriving ToJson, FromJson
 
 structure CheckedVector (cached : CachedVector) where
   values : Array Json
   exact : cached.vector = .arr values
-  window : cached.text.length ≤ 512
+  digest : Receipt.validId cached.window = true
   dimensions : 0 < values.size ∧ values.size ≤ 4096
   finite : values.all (fun value => (number value).isOk) = true
 
 def CheckedVector.make? (cached : CachedVector) : Option (CheckedVector cached) :=
   match shape : cached.vector with
   | .arr values =>
-      if valid : cached.text.length ≤ 512 ∧ 0 < values.size ∧ values.size ≤ 4096 ∧
+      if valid : Receipt.validId cached.window = true ∧ 0 < values.size ∧ values.size ≤ 4096 ∧
           values.all (fun value => (number value).isOk) = true then
         some ⟨values, shape, valid.1, ⟨valid.2.1, valid.2.2.1⟩, valid.2.2.2⟩ else none
   | _ => none
@@ -148,14 +168,15 @@ theorem CheckedVector.source_shape (checked : CheckedVector cached) :
     cached.vector = .arr checked.values := checked.exact
 
 def cacheMatches (model text : String) (cached : CachedVector) : Bool :=
-  decide (cached.model = model ∧ cached.text = text)
+  decide (cached.model = model ∧ cached.window = Persistence.Store.windowKey text)
 
 theorem accepted_cache_identity (model text : String) (cached : CachedVector)
-    (h : cacheMatches model text cached = true) : cached.model = model ∧ cached.text = text := by
+    (h : cacheMatches model text cached = true) :
+    cached.model = model ∧ cached.window = Persistence.Store.windowKey text := by
   exact of_decide_eq_true h
 
-theorem changed_cache_text_rejected (model text : String) (cached : CachedVector)
-    (h : cached.text ≠ text) : cacheMatches model text cached = false := by
+theorem changed_cache_window_rejected (model text : String) (cached : CachedVector)
+    (h : cached.window ≠ Persistence.Store.windowKey text) : cacheMatches model text cached = false := by
   simp [cacheMatches, h]
 
 theorem changed_cache_model_rejected (model text : String) (cached : CachedVector)
@@ -168,13 +189,19 @@ def windowCacheKey (model window : String) : String :=
 def cacheKey (model text : String) : String :=
   windowCacheKey model (Persistence.Store.windowKey text)
 
+def vectorPaths (options : Options) (key : String) : List System.FilePath :=
+  (options.cache :: options.fallback.toList).map (· / "vectors" / (key ++ ".json"))
+
 /-- Count the actual initial availability probes, including repeated window
 references. These are not DB coverage or an inferred whole-corpus hit rate. -/
 def observeProbe (options : Options) (query hit : Bool) (path : System.FilePath)
     (elapsed : Nat) : IO Unit := do
   let some sink := options.metrics | return
   let absent ← if hit then pure false else
-    try pure (← FileSystem.symlinkMetadata? path).isNone catch _ => pure false
+    try
+      let paths := path :: options.fallback.toList.map (· / "vectors" / path.fileName.getD "")
+      pure (← paths.allM fun path => return (← FileSystem.symlinkMetadata? path).isNone)
+    catch _ => pure false
   sink.state.modify fun state =>
     let before := if query then state.query else state.source
     let after : CacheProbes := {
@@ -199,25 +226,32 @@ def loadVector (path : System.FilePath) : IO CachedVector := do
   pure cached
 
 def readVector (options : Options) (text : String) : IO (Option Json) := do
-  let path := options.cache / "vectors" / (cacheKey options.model text ++ ".json")
-  if !(← path.pathExists) then return none
-  try
-    let cached ← loadVector path
-    if cacheMatches options.model text cached then return some cached.vector
-    throw (IO.userError "embedding cache identity mismatch")
-  catch _ => return none
+  for path in vectorPaths options (cacheKey options.model text) do
+    try
+      let cached ← loadVector path
+      if cacheMatches options.model text cached then return some cached.vector
+    catch _ => pure ()
+  pure none
 
 def saveVector (options : Options) (text : String) (vector : Json) : IO Unit := do
-  let cached : CachedVector := {model := options.model, text, vector}
+  unless text.length ≤ 512 do throw (IO.userError "index window exceeds source contract")
+  let cached : CachedVector := {model := options.model, window := Persistence.Store.windowKey text, vector}
   let some _ := CheckedVector.make? cached | throw (IO.userError "invalid numerical window for indexing")
   let encoded := (toJson cached).compress
   unless encoded.utf8ByteSize ≤ 1048576 do throw (IO.userError "oversized numerical window for indexing")
-  let root := options.cache / "vectors"
+  let root := options.privateWrite.getD options.cache / "vectors"
   let path := root / (cacheKey options.model text ++ ".json")
-  if options.owner.isSome then
+  if let some owner := options.owner then
+    let _ ← owner.pin
+    pure ()
+  if options.owner.isSome && options.privateWrite.isNone then
     FileSystem.atomicExistingBytes path encoded.toUTF8
   else
+    if let some owner := options.owner then
+      let _ ← DB.Sidecar.prepare owner .user
+      pure ()
     Persistence.rejectSymlinkAncestors root
+    Persistence.privateDirectory (options.privateWrite.getD options.cache)
     Persistence.privateDirectory root
     FileSystem.atomicBytes path encoded.toUTF8
 
@@ -257,11 +291,15 @@ def indexedVectors (options : Options) (windows : List String) : IO Json := do
     unless window.length == 64 && window.toList.all (fun c =>
         ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f')) do
       throw (IO.userError "invalid indexed vector locator")
-    let path := options.cache / "vectors" / (windowCacheKey options.model window ++ ".json")
-    let cached ← loadVector path
-    unless cached.model == options.model && Persistence.Store.windowKey cached.text == window do
-      throw (IO.userError "indexed embedding locator mismatch")
-    pure cached.vector
+    let mut found := none
+    for path in vectorPaths options (windowCacheKey options.model window) do
+      try
+        let cached ← loadVector path
+        if cached.model == options.model && cached.window == window then found := some cached.vector
+      catch _ => pure ()
+      if found.isSome then break
+    let some vector := found | throw (IO.userError "missing or unusable indexed embedding")
+    pure vector
   pure (.arr values.toArray)
 
 abbrev RepairWindows := Nat → List (Nat × String) → IO (List String)
@@ -399,8 +437,7 @@ def handleIndexedUsing (options : Options) (child : Option Encoder) (query : Str
   let mut scored : List (Float × Nat) := []
   let mut evidence : List (Nat × List Nat) := []
   if let some child := child then
-    -- One query vector serves the complete federated ranking. Keep it with
-    -- the first durable source instead of a chat-specific vector directory.
+    -- Questions belong to the user, independently of every shared source DB.
     let prepared ← IO.mkRef ({} : Std.HashMap String Options)
     let resolve := fun candidate => do
       let key := candidate.getObjValD "cache" |>.compress
@@ -408,9 +445,7 @@ def handleIndexedUsing (options : Options) (child : Option Encoder) (query : Str
       let known ← cacheOptions options candidate
       prepared.modify (·.insert key known)
       pure known
-    let queryCache := candidates.toList.find? fun candidate =>
-      candidate.getObjValD "cache" != Json.null
-    let queryOptions ← resolve (queryCache.getD Json.null)
+    let queryOptions ← queryOptions options
     let queryVectors ← IO.mkRef (none : Option Json)
     for (candidate, index) in candidates.toList.zipIdx do
       let documentOptions ← resolve candidate
@@ -497,6 +532,7 @@ def handle (options : Options) (child : Option Encoder)
   if let .ok index := request.getObjValAs? (Array Json) "index_windows" then
     if let some child := child then
       let options ← cacheOptions options request
+        (some ((request.getObjValAs? DB.Sidecar.Storage "cache_storage").toOption.getD .database))
       let texts ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "text"))
       storeWindows options child texts
     let ids ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "id"))
@@ -504,6 +540,7 @@ def handle (options : Options) (child : Option Encoder)
   if let .ok index := request.getObjValAs? (Array Json) "index" then
     if let some child := child then
       let options ← cacheOptions options request
+        (some ((request.getObjValAs? DB.Sidecar.Storage "cache_storage").toOption.getD .database))
       let texts ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "text"))
       store options child texts
     let ids ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "id"))
@@ -521,8 +558,10 @@ def handle (options : Options) (child : Option Encoder)
   let anchors := corpus.rank query true
   let mut scored : List (Float × Nat) := []
   if let some child := child then
-    store options child (texts ++ [query])
-    let response ← exchange child (Json.mkObj [("queries", ← vectors options query),
+    let queryOptions ← queryOptions options
+    store options child texts
+    store queryOptions child [query]
+    let response ← exchange child (Json.mkObj [("queries", ← vectors queryOptions query),
       ("candidates", .arr (← texts.toArray.mapM (vectors options)))])
     let scores ← IO.ofExcept (response.getObjValAs? (Array Json) "scores")
     if scores.size != candidates.size then throw (IO.userError "similarity count mismatch")

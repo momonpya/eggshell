@@ -24,6 +24,7 @@ structure Request where
 structure IndexRequest where
   index : List Item
   cache : Option DB.Sidecar.Owner := none
+  cache_storage : DB.Sidecar.Storage := .database
   deriving ToJson
 
 structure IndexResponse where
@@ -277,16 +278,19 @@ def indexReply (running : Running) (items : List Item) (request : Json) : IO (In
   pure receipt
 
 def indexWorks (command : List String) (items : List Item)
-    (cache : Option DB.Sidecar.Owner := none) : IO (IndexReceipt items) := do
+    (cache : Option DB.Sidecar.Owner := none)
+    (storage : DB.Sidecar.Storage := .database) : IO (IndexReceipt items) := do
   if items.isEmpty then return ⟨items.map (·.id), rfl⟩
   withIndexProvider command fun running =>
-    indexReply running items (toJson ({index := items, cache} : IndexRequest))
+    indexReply running items (toJson ({index := items, cache, cache_storage := storage} : IndexRequest))
 
 /-- Already bounded original windows must not be split into overlapping windows
 again. This request acknowledges exactly the missing window keys. -/
-def indexWindows (running : Running) (items : List Item) (owner : DB.Sidecar.Owner) :
+def indexWindows (running : Running) (items : List Item) (owner : DB.Sidecar.Owner)
+    (storage : DB.Sidecar.Storage := .database) :
     IO (IndexReceipt items) :=
-  indexReply running items (Json.mkObj [("index_windows", toJson items), ("cache", toJson owner)])
+  indexReply running items (Json.mkObj [("index_windows", toJson items), ("cache", toJson owner),
+    ("cache_storage", toJson storage)])
 
 /-- Independent providers can read and score cached vectors concurrently.
 The numerical child acquires the model resource lease only when inference is

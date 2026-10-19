@@ -4,7 +4,7 @@ Unadopted candidate. The implementation order is in [GOAL.md](../GOAL.md).
 
 A page DB already has a random `head.identity` that survives ordinary
 publications. Its revision and page-root reference change independently.
-Rebuildable numerical data lives inside the owning DB:
+Writable source DBs keep rebuildable numerical data inside the owning DB:
 
 ```
 project.egg/
@@ -18,7 +18,7 @@ project.egg/
 ```
 
 There is no chat ID in this location. Moving or copying the whole DB carries
-the cache; deleting the DB deletes its cache. Two independently created DBs
+this cache; deleting the DB deletes this cache. Two independently created DBs
 remain distinct even when they use the same graph authority. A copy retains
 its DB identity and cached bytes, at its new directory.
 
@@ -27,12 +27,15 @@ federated and focused indexed requests. One numerical provider still scores
 the complete requested corpus and ranks it globally. It does not compute
 independent top-k results per DB. The original bounded repair callback retains
 control of source windows; a cache locator supplies no equality or completion
-authority. Records still validate the exact model and original window bytes.
+authority. Records validate the model and the original window SHA-256. They
+contain no source or question plaintext. A digest is a numerical-hint locator,
+not a proof of source identity or completion.
 
 The independent index worker sends the owning DB's cache in its index request.
 The default provider command no longer selects a chat-owned vector directory.
-Queries use the first durable document's cache; documents without a durable
-DB owner use process scratch. Model weights and the numerical runtime remain
+Questions always use private `EGGSHELL_DATA_ROOT/queries/` storage, independently
+of the source DBs. Documents without a durable DB owner use process scratch.
+Model weights and the numerical runtime remain
 shared installation resources. The default command's trace also lives in
 installation data, so its provider identity does not change with the chat.
 
@@ -40,6 +43,21 @@ Vector publication uses an existing parent directory and secure atomic-file
 publication. Preparing its sidecar pins the DB incarnation and creates one
 child at a time. An in-flight write cannot recreate deleted DB ancestors.
 Cached vectors remain optional hints, not graph facts.
+
+Search opens shared source sidecars for reading without creating them or
+changing DB permissions. Bounded foreground focus repairs use only the user's
+`EGGSHELL_DATA_ROOT/read-cache/<head.identity>/` overlay. A read-only profile's
+warm/index target uses that same private overlay even if the source directory
+is writable. Explicit maintenance for a writable profile first tries DB-owned
+storage; a filesystem permission refusal selects the private overlay. Other
+errors remain errors. Search and coverage can use valid source windows from
+either location. Questions never select either source cache as their destination.
+
+The private overlay is local to the user and is not transported with a copied
+DB. Rewarming reconstructs it from the DB's original windows. Its lifecycle is
+separate from automatic deletion of DB-contained sidecars; orphan-overlay
+reclamation remains a follow-up boundary. Model changes invalidate numerical
+records, and old plaintext vector records are invalid under the current codec.
 
 Index tickets contain only DB identity, provider identity, graph authority and
 published owner keys. The original observation body stays in the graph.
@@ -57,6 +75,12 @@ batch acknowledgement consumes them. Invalid metadata is renamed with a
 `.corrupt-` suffix and retained outside active draining, so later valid work
 can proceed. Missing or replaced DBs retire discovery
 records. Their sidecars remain owned by the DB directory.
+
+An active chat can drain DB-contained targets only for its configured write
+DB. An older registry entry cannot grant that chat writes to a shared read
+source. Such sources use private-overlay maintenance. An idle recovery daemon
+can finish previously authorized portable DB tickets after the originating
+chat disappears. Merely reading a DB never changes its access mode.
 
 The isolated candidate adds explicit warming and read-only coverage:
 
@@ -111,7 +135,7 @@ the complete ranked corpus rather than silently scoring only cached documents.
 
 Daemons discover configured DBs through the private installation registry.
 Missing or invalid warm checkpoints schedule explicit missing-window warm in
-the independent index worker. The DB-owned checkpoint records database/provider
+the independent index worker. The target's checkpoint records database/provider
 identity, insertion frontier and live candidate count; a publication revision is
 diagnostic. Query memo writes alone do not reschedule a full warm. An incomplete
 foreground request registers its DBs and invalidates their checkpoints using

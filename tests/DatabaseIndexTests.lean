@@ -25,7 +25,7 @@ def provider (root : System.FilePath) : IO UInt32 := do
 
 def tickets (target : IndexTarget) : IO (List System.FilePath) := do
   let snapshot ← target.owner.pin
-  let directory := target.indexes snapshot
+  let directory ← target.indexes snapshot
   if !(← directory.pathExists) then return []
   pure (((← directory.readDir).toList.filter (·.fileName.endsWith ".json")).map (·.path))
 
@@ -116,6 +116,16 @@ def scenario (temporary : System.FilePath) : IO String := do
     read := [moved.toString, copied.toString], write := none }
   let movedTarget : IndexTarget := {target with owner := DB.Sidecar.Owner.ofSnapshot (← DB.PageMap.pin moved)}
   let copiedTarget : IndexTarget := {target with owner := DB.Sidecar.Owner.ofSnapshot (← DB.PageMap.pin copied)}
+  let beforeReader := (← calls root).length
+  flushIndexes reader ((← IO.monoMsNow) + 3000)
+  check ((← tickets movedTarget).length == 1 && (← tickets copiedTarget).length == 1 &&
+      (← calls root).length == beforeReader)
+    "a read-only next chat consumed shared-DB tickets using an older writer grant"
+  -- Portable source tickets remain available to explicitly registered
+  -- maintenance after the originating chat has disappeared.
+  let _ ← registerIndexTarget (← DB.PageMap.pin moved) command
+  let _ ← registerIndexTarget (← DB.PageMap.pin copied) command
+  removeIfExists nextFiles.pending
   -- Retain the native child handle so exit can be reaped, rather than treating
   -- kill(0) on an exited, unreaped child as a live manager.
   let manager ← IO.Process.spawn {

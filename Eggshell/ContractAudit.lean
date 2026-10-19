@@ -108,6 +108,9 @@ This checks declaration reachability, separately from the kernel contracts. -/
 run_meta do
   let environment ← getEnv
   for (root, required, forbidden) in #[
+      (``Eggshell.DB.PageMap.open?,
+        #[``Eggshell.FileSystem.openRead, ``Eggshell.FileSystem.boundedBytes],
+        #[``IO.setAccessRights, ``Eggshell.FileSystem.privateDirectory, ``IO.FS.createDir]),
       (``Eggshell.Plugin.discoverySelectionReport,
         #[``Eggshell.SelectionDependency.report?, ``Eggshell.Matcher.extraction], #[]),
       (``Eggshell.Plugin.auditRenderedSelection,
@@ -1382,7 +1385,7 @@ run_meta do
     ``Eggshell.SearchProvider.presentation_ranking_original,
     ``Eggshell.SearchProvider.presentation_ranking_complete,
     ``Eggshell.SearchProvider.presentation_ranking_no_duplicates,
-    ``Eggshell.SearchProvider.changed_cache_text_rejected,
+    ``Eggshell.SearchProvider.changed_cache_window_rejected,
     ``Eggshell.SearchProvider.changed_cache_model_rejected]
   for contract in contracts do
     let axioms ← Lean.collectAxioms contract

@@ -26,26 +26,26 @@ def Checkpoint.sameSources (previous current : Checkpoint) : Bool :=
   previous.database == current.database && previous.provider == current.provider &&
     previous.roots == current.roots && previous.candidates == current.candidates
 
-def checkpointPath (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : System.FilePath :=
-  target.indexes snapshot / "warm"
+def checkpointPath (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO System.FilePath := do
+  pure ((← target.indexes snapshot) / "warm")
 
 /-- A rebuildable scheduling hint only. Every numerical search still validates
 its actual cache records; a cold search invalidates this hint. -/
 def required (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Bool := do
   let _ :: "search-provider" :: _ := target.command | return false
   try
-    let previous ← (Plugin.readBoundedJson (checkpointPath target snapshot) 65536 : IO Checkpoint)
+    let previous ← (Plugin.readBoundedJson (← checkpointPath target snapshot) 65536 : IO Checkpoint)
     pure (!(previous.sameSources (← checkpoint target snapshot)))
   catch _ => pure true
 
 def invalidate (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Unit := do
-  let path := checkpointPath target snapshot
+  let path ← checkpointPath target snapshot
   if ← path.pathExists then
     IO.FS.removeFile path
     FileSystem.syncPath (path.parent.getD snapshot.directory).toString true
 
 def mark (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Unit := do
-  let sidecar ← DB.Sidecar.prepare target.owner
+  let sidecar ← DB.Sidecar.prepare target.owner target.storage
   let directory ← DB.Sidecar.childDirectory sidecar.indexes (Plugin.indexProviderKey target.command)
   let path := directory / "warm"
   let value ← checkpoint target snapshot
@@ -75,15 +75,19 @@ structure Inspection where
 
 /-- Read the configured numerical cache format without starting the provider.
 The DB owner overrides a command's process scratch path, as at indexed search. -/
-def options (snapshot : DB.PageMap.Snapshot) (command : List String) : IO SearchProvider.Options := do
+def options (snapshot : DB.PageMap.Snapshot) (command : List String)
+    (storage : DB.Sidecar.Storage := .database) : IO SearchProvider.Options := do
   let _ :: "search-provider" :: arguments := command |
     throw (IO.userError "cache inspection requires the Eggshell numerical provider")
-  let sidecar := DB.Sidecar.ofSnapshot snapshot
+  let sidecar ← DB.Sidecar.locate snapshot storage
+  let other ← DB.Sidecar.locate snapshot (if storage == .database then .user else .database)
   let parsed ← IO.ofExcept (SearchProvider.parse {
     cache := sidecar.semantic, models := (MiniLM.layout (← Paths.installRoot)).models } arguments)
   if parsed.mode == "lexical" then
     throw (IO.userError "lexical-only providers do not maintain numerical window caches")
-  pure {parsed with cache := sidecar.semantic, owner := some (DB.Sidecar.Owner.ofSnapshot snapshot)}
+  pure {parsed with
+    cache := sidecar.semantic, fallback := some other.semantic
+    owner := some (DB.Sidecar.Owner.ofSnapshot snapshot)}
 
 /-- Each live window key is counted once per owning DB. Stale cache records
 and query vectors do not enter the denominator. No source body is read. -/
@@ -97,9 +101,8 @@ def inspect (snapshot : DB.PageMap.Snapshot) (options : SearchProvider.Options) 
     for (key, index) in document.windows.zipIdx do
       if seen.contains key then continue
       seen := seen.insert key
-      let path := options.cache / "vectors" /
-        (SearchProvider.windowCacheKey options.model key ++ ".json")
-      if (← FileSystem.symlinkMetadata? path).isNone then
+      let paths := SearchProvider.vectorPaths options (SearchProvider.windowCacheKey options.model key)
+      if ← paths.allM (fun path => return (← FileSystem.symlinkMetadata? path).isNone) then
         missing := missing + 1
         needed := ⟨document, index, key⟩ :: needed
       else
@@ -128,19 +131,18 @@ structure Result where
 /-- Explicit CLI work, never called by a cold search hook. Hydrate only the
 missing original windows, in bounded batches, and require exact ACKs. A failed
 batch leaves its completed cache writes available to a subsequent invocation. -/
-def run (snapshot : DB.PageMap.Snapshot) (command : List String) : IO Result := do
+def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : IO Result := do
   let started ← IO.monoMsNow
-  let settings ← options snapshot command
-  let target ← Plugin.registerIndexTarget snapshot command
+  let settings ← options snapshot target.command target.storage
   let before ← inspect snapshot settings
   if before.needed.isEmpty then
     mark target snapshot
     return ⟨before.coverage, before.coverage, 0, 0, (← IO.monoMsNow) - started⟩
-  DB.Sidecar.withIndexClaim (DB.Sidecar.Owner.ofSnapshot snapshot) fun _ => do
+  DB.Sidecar.withIndexClaim (DB.Sidecar.Owner.ofSnapshot snapshot) (fun _ => do
     -- Another indexer may have filled the difference before this claim.
     let current ← inspect snapshot settings
     let batches ← if current.needed.isEmpty then pure 0 else
-      SemanticMatcher.withIndexProvider command fun running => do
+      SemanticMatcher.withIndexProvider target.command fun running => do
         let mut remaining := current.needed
         let mut batches := 0
         while !remaining.isEmpty do
@@ -149,12 +151,16 @@ def run (snapshot : DB.PageMap.Snapshot) (command : List String) : IO Result := 
           let items ← batch.mapM fun window => do
             let text ← Persistence.Store.readSearchWindow snapshot window.document window.index
             pure ({id := window.key, text} : SemanticMatcher.Item)
-          let _ ← SemanticMatcher.indexWindows running items (DB.Sidecar.Owner.ofSnapshot snapshot)
+          let _ ← SemanticMatcher.indexWindows running items (DB.Sidecar.Owner.ofSnapshot snapshot) target.storage
           batches := batches + 1
         pure batches
     let after ← inspect snapshot settings
     unless after.needed.isEmpty do throw (IO.userError "provider acknowledged windows without valid DB cache records")
     mark target snapshot
-    pure ⟨before.coverage, after.coverage, current.needed.length, batches, (← IO.monoMsNow) - started⟩
+    pure ⟨before.coverage, after.coverage, current.needed.length, batches, (← IO.monoMsNow) - started⟩) target.storage
+
+def run (snapshot : DB.PageMap.Snapshot) (command : List String) (writable : Bool := true) : IO Result := do
+  let target ← Plugin.registerIndexTarget snapshot command writable
+  runTarget snapshot target
 
 end Eggshell.Warm

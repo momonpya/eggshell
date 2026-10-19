@@ -213,7 +213,15 @@ def drainIndexTarget (session : String) (deadline : Nat)
   if snapshot.head.identity != target.owner.database then
     removeIfExists reference
     return
-  let directory := target.indexes snapshot
+  -- A remembered writer grant cannot make a reader chat mutate shared DBs.
+  -- Standalone recovery without a current turn can still finish prior work.
+  if target.storage == .database then
+    let files ← sessionFiles session
+    if let some pending ← readPendingBase? files then
+      unless pending.write.any (fun path =>
+          (System.FilePath.mk path).normalize == (System.FilePath.mk target.owner.directory).normalize) do
+        return
+  let directory ← target.indexes snapshot
   let entries ← if ← directory.pathExists then directory.readDir else pure #[]
   let entries := (entries.toList.filter (·.fileName.endsWith ".json"))
     |>.mergeSort (fun a b => a.fileName ≤ b.fileName)
@@ -240,7 +248,7 @@ def flushIndexWork (session : String) (deadline : Nat) : IO Unit := do
       if let some command := pending.semanticMatcher then
         for path in (pending.read ++ pending.write.toList).eraseDups do
           if let some snapshot ← DB.PageMap.open? (.mk path) then
-            let _ ← registerIndexTarget snapshot command
+            let _ ← registerIndexTarget snapshot command (pending.write == some path)
             pure ()
   catch error => IO.eprintln s!"Eggshell retained undiscovered DB work: {error}"
   let root ← dataRoot
@@ -347,7 +355,7 @@ def requestBackgroundWarm (pending : PendingTurn) (deadline : Nat) : IO Nat := d
     if (← IO.monoMsNow) ≥ deadline then break
     try
       if let some snapshot ← DB.PageMap.open? (.mk path) then
-        let target ← registerIndexTarget snapshot command
+        let target ← registerIndexTarget snapshot command (pending.write == some path)
         Warm.invalidate target snapshot
         count := count + 1
     catch error => IO.eprintln s!"Eggshell retained an unavailable warm target: {error}"
