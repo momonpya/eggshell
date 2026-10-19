@@ -1348,7 +1348,8 @@ def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdg
     (observed.find? (fun admission => Matcher.sameMatch admission.matched selected.matched)).map
       (fun admission => (admission, relationKey selected.matched.edge.relation))
   let reference ← SelectionAudit.capture receipt
-    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners bindings admissions observed trail)
+    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners bindings admissions observed trail
+      discovery.runAll (some discovery.passes))
     ((handoff.sourceUses.filter (·.completed)).map (·.owner))
     (handoff.sourceCheckpoints.map (·.use.owner))
   pure (some {handoff with equalitySelection := reference})

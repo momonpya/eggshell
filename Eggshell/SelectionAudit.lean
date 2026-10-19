@@ -59,6 +59,8 @@ structure CompletedBranch where
   /-- Positions in the shared checked comparison pool; Value payloads are
   serialized once, including comparisons shared by many completed branches. -/
   premises : List Nat
+  /-- Shared structural All positions along this branch, excluding siblings. -/
+  decompositions : List Nat := []
   deriving ToJson, FromJson
 
 /-- Observed beside the actual matcher call, before saturation adds more
@@ -207,6 +209,8 @@ structure Snapshot where
   localOrigins : List UnionOrigin := []
   schedules : List DiscoveryAudit.ScheduleSnapshot := []
   continuations : List DiscoveryAudit.ContinuationSnapshot := []
+  decompositions : List DiscoveryAudit.AllUse := []
+  finalPass : Option Nat := none
   deriving ToJson, FromJson
 
 /-- No second quotient build occurs in the hook. Only premises from a checked
@@ -217,15 +221,21 @@ def Snapshot.ofReport (persistent runLocal : List UnionEdge)
     (report : SelectionDependency.Report graph equality policy current selection)
     (owners : List String) (bindings : List (Value × String) := [])
     (admissions : List (Admission × String) := []) (history : List Admission := [])
-    (trail : DiscoveryAudit.Trail := {}) : Snapshot := Id.run do
+    (trail : DiscoveryAudit.Trail := {}) (runAll : List AllEdge := [])
+    (finalPass : Option Nat := none) : Snapshot := Id.run do
   let positions : Std.HashMap SelectionDependency.Comparison Nat :=
     report.premises.zipIdx.foldl (fun positions (premise, index) => positions.insert premise index) {}
+  let decompositions := hashDistinct (selection.decompositionEdges.map (·.relation))
+  let allPositions : Std.HashMap Value Nat := decompositions.zipIdx.foldl
+    (fun positions (relation, index) => positions.insert relation index) {}
   let completedBranches : List CompletedBranch := (SelectionDependency.completedBranches equality current selection).flatMap
     fun branch => (bindings.filterMap fun (projected, owner) =>
       if projected == branch.edge.relation then some owner else none).eraseDups.map fun owner => {
         owner, demand := Persistence.valueToJson branch.demand
         projectedOutcome := Persistence.valueToJson branch.edge.relation
-        premises := branch.premises.map (fun premise => positions.getD premise report.premises.length) }
+        premises := branch.premises.map (fun premise => positions.getD premise report.premises.length)
+        decompositions := branch.decompositions.map fun edge =>
+          allPositions.getD edge.relation decompositions.length }
   return {
   current := Persistence.valueToJson current
   persistent := persistent.map Generator.encode
@@ -237,7 +247,10 @@ def Snapshot.ofReport (persistent runLocal : List UnionEdge)
     admission.snapshot? runLocal completedBranches owner
   localOrigins := unionOrigins runLocal history
   schedules := trail.schedules.reverse.filterMap (·.snapshot? runLocal)
-  continuations := trail.continuations.reverse.filterMap (·.snapshot? runLocal) }
+  continuations := trail.continuations.reverse.filterMap (·.snapshot? runLocal)
+  decompositions := decompositions.map fun relation =>
+    {relation := Persistence.valueToJson relation, generated := runAll.any (·.relation == relation)}
+  finalPass }
 
 def capture (receipt : Option String) (snapshot : Snapshot)
     (visible controls : List String) : IO (Option Reference) := do
@@ -408,6 +421,10 @@ def analyzeContinuation (persistent runLocal : List UnionEdge)
     (schedules : List DiscoveryAudit.ScheduleSnapshot)
     (event : DiscoveryAudit.ContinuationSnapshot) : Except String Json := do
   unless event.localCount ≤ runLocal.length do throw "continuation equality epoch is outside the run"
+  let creation := schedules.find? (·.pass == event.pass)
+  if let some schedule := creation then
+    unless schedule.localCount == event.localCount && schedule.current == event.current do
+      throw "continuation changed the scheduling step which created it"
   let current ← Persistence.valueFromJson 4096 event.current
   let edge ← decodeAll event.relation
   let remainder := HandoffRemainder.value event.text
@@ -443,8 +460,30 @@ def analyzeContinuation (persistent runLocal : List UnionEdge)
     if child != remainder && !positions.contains index then some index else none
   pure (Json.mkObj [("pass", toJson event.pass), ("localCount", toJson event.localCount),
     ("relation", event.relation), ("status", toJson "captured-production-continuation"),
+    ("creationScheduling", toJson (if creation.isSome then "recorded-step" else "untracked")),
     ("support", toJson support), ("untrackedChildren", toJson unknown),
     ("dependencySlice", toJson "untracked")])
+
+/-- Join a selected structural All to an actual generation event. The source
+flag comes from the controller's runAll, never absence of a telemetry record. -/
+def analyzeAllUse (events : List DiscoveryAudit.ContinuationSnapshot)
+    (bound : Option (Nat × Nat)) (strict : Bool) (use : DiscoveryAudit.AllUse) : Except String Json := do
+  let _ ← decodeAll use.relation
+  let generators := events.zipIdx.filter (fun (event, _) => event.relation == use.relation)
+  let producer ← if !use.generated then pure none else do
+    let some (pass, count) := bound | pure none
+    let eligible := generators.find? fun (event, _) => event.localCount ≤ count &&
+      (if strict then event.pass < pass else event.pass ≤ pass)
+    if eligible.isNone && !generators.isEmpty then
+      throw "selected All used a future continuation generation"
+    pure eligible
+  pure (Json.mkObj [("relation", use.relation), ("generated", toJson use.generated),
+    ("origin", toJson (if !use.generated then "source-selection-boundary"
+      else if producer.isSome then "recorded-generation" else "untracked")),
+    ("continuation", toJson (producer.map (·.2))),
+    ("generationPass", toJson (producer.map (·.1.pass))),
+    ("generationLocalCount", toJson (producer.map (·.1.localCount))),
+    ("causalAncestry", toJson "untracked")])
 
 /-- Explicit-only folds and congruence replay run outside the hook deadline.
 The result concerns selected comparisons, never whole-delivery ancestry. -/
@@ -467,6 +506,12 @@ def analyze (snapshot : Snapshot) : Except String Json := do
     if kind == .notEquivalent then throw "selected positive comparison failed equality replay"
     pure (Json.mkObj [("role", toJson role), ("kind", toJson (kindName kind)),
       ("left", Persistence.valueToJson left), ("right", Persistence.valueToJson right)])
+  let continuationPasses := snapshot.continuations.map (·.pass)
+  unless continuationPasses.eraseDups.length == continuationPasses.length do
+    throw "duplicate continuation generation step"
+  let continuations ← snapshot.continuations.mapM (analyzeContinuation persistent runLocal snapshot.schedules)
+  let allUses ← snapshot.decompositions.mapM (analyzeAllUse snapshot.continuations
+    (snapshot.finalPass.map (fun pass => (pass, runLocal.length))) false)
   let branches ← snapshot.completedBranches.zipIdx.mapM fun (branch, index) => do
     unless snapshot.owners.contains branch.owner do
       throw "completed branch is not part of the checked selection"
@@ -485,8 +530,25 @@ def analyze (snapshot : Snapshot) : Except String Json := do
       match rows[position]? with
       | some row => pure row
       | none => throw "completed branch comparison was not replayed"
+    let decompositions ← branch.decompositions.mapM fun position => do
+      let some use := snapshot.decompositions[position]? |
+        throw "completed branch All is outside the structural pool"
+      let edge ← decodeAll use.relation
+      unless premises.any (fun premise => premise.role == "decomposition" &&
+          premise.left == Persistence.valueToJson edge.parent) do
+        throw "completed branch All lost its selected parent comparison"
+      let some row := allUses[position]? | throw "completed branch All was not replayed"
+      pure (row.setObjVal! "allUse" (toJson position))
+    let unknownDecompositions := branch.premises.filter fun position =>
+      match snapshot.premises[position]? with
+      | none => false
+      | some premise => premise.role == "decomposition" && !branch.decompositions.any (fun index =>
+          ((snapshot.decompositions[index]?).bind (fun use => (decodeAll use.relation).toOption)).any
+            (fun edge => premise.left == Persistence.valueToJson edge.parent))
     pure (Json.mkObj [("selectionBranch", toJson index), ("owner", toJson branch.owner), ("demand", branch.demand),
-      ("projectedOutcome", branch.projectedOutcome), ("comparisons", toJson comparisons)])
+      ("projectedOutcome", branch.projectedOutcome), ("comparisons", toJson comparisons),
+      ("decompositions", toJson decompositions), ("structuralAncestry", toJson "untracked"),
+      ("untrackedDecompositionComparisons", toJson unknownDecompositions)])
   let admissions ← snapshot.admissions.mapM (analyzeAdmission persistent runLocal snapshot.completedBranches)
   let originIndices := snapshot.localOrigins.map (·.generator)
   unless originIndices.eraseDups.length == originIndices.length do
@@ -494,14 +556,17 @@ def analyze (snapshot : Snapshot) : Except String Json := do
   let origins ← snapshot.localOrigins.mapM (analyzeUnionOrigin persistent runLocal)
   let passes := snapshot.schedules.map (·.pass)
   unless passes.eraseDups.length == passes.length do throw "duplicate scheduling observation"
-  let schedules ← snapshot.schedules.mapM (analyzeSchedule persistent runLocal)
+  let schedules ← snapshot.schedules.mapM fun schedule => do
+    let row ← analyzeSchedule persistent runLocal schedule
+    let uses ← schedule.uses.mapM (analyzeAllUse snapshot.continuations
+      (some (schedule.pass, schedule.localCount)) true)
+    pure (row.setObjVal! "generationUses" (toJson uses))
   let admissions ← (snapshot.admissions.zip admissions).mapM fun (record, row) => do
     let known ← scheduleBinding snapshot.schedules record.schedule record.localCount record.demand
     pure (row.setObjVal! "schedulingAncestry" (toJson (if known then "recorded-step" else "untracked")))
   let origins ← (snapshot.localOrigins.zip origins).mapM fun (record, row) => do
     let known ← scheduleBinding snapshot.schedules record.schedule record.localCount record.demand
     pure (row.setObjVal! "schedulingAncestry" (toJson (if known then "recorded-step" else "untracked")))
-  let continuations ← snapshot.continuations.mapM (analyzeContinuation persistent runLocal snapshot.schedules)
   pure (Json.mkObj [
     ("status", toJson "partial"), ("component", toJson "selected-extraction"),
     ("scope", toJson "whole-selected-extraction-before-source-and-transport-pruning"),
@@ -518,6 +583,7 @@ def analyze (snapshot : Snapshot) : Except String Json := do
     ("continuationAncestry", toJson "untracked"),
     ("schedulingAncestry", toJson (if schedules.isEmpty then "untracked" else "partial")),
     ("schedulingRecords", toJson schedules), ("continuationRecords", toJson continuations),
+    ("selectedAllUses", toJson allUses),
     ("completedBranches", toJson branches),
     ("comparisons", toJson rows)])
 

@@ -149,9 +149,10 @@ structure CompletedBranch where
   demand : Value
   edge : OutcomeEdge
   premises : List Comparison
+  decompositions : List AllEdge := []
 
 def ownBranches (work : Value) (edges : List OutcomeEdge) : List CompletedBranch :=
-  edges.map fun edge => ⟨work, edge, [⟨.completedOutcome, edge.work, work⟩]⟩
+  edges.map fun edge => {demand := work, edge, premises := [⟨.completedOutcome, edge.work, work⟩]}
 
 mutual
 
@@ -163,12 +164,63 @@ def completedBranches (equality : Equality) (work : Value) : Selection → List 
       let dropped := dedup equality edge.children
       let ancestors := ⟨.decomposition, edge.parent, work⟩ :: dropped.2
       (ownBranches work completed ++ completedChildren equality dropped.1 children).map
-        fun branch => {branch with premises := ancestors ++ branch.premises}
+        fun branch => {branch with
+          premises := ancestors ++ branch.premises
+          decompositions := edge :: branch.decompositions}
 
 def completedChildren (equality : Equality) : List Value → List Selection → List CompletedBranch
   | work :: works, child :: children =>
       completedBranches equality work child ++ completedChildren equality works children
   | _, _ => []
+
+end
+
+mutual
+
+theorem completedBranches_decomposition (equality : Equality) (work : Value)
+    (selection : Selection) (branch : CompletedBranch)
+    (member : branch ∈ completedBranches equality work selection)
+    (edge : AllEdge) (used : edge ∈ branch.decompositions) :
+    edge ∈ selection.decompositionEdges := by
+  cases selection with
+  | residual _ _ => simp [completedBranches] at member
+  | outcomes _ completed _ =>
+      obtain ⟨_, _, rfl⟩ := List.mem_map.mp member
+      simp at used
+  | handoff _ prior =>
+      simpa only [Selection.decompositionEdges] using
+        completedBranches_decomposition equality work prior branch member edge used
+  | decomposed selected parent completed advisory children =>
+      simp only [Selection.decompositionEdges]
+      obtain ⟨before, present, rfl⟩ := List.mem_map.mp member
+      simp only [List.mem_cons] at used
+      rcases used with same | deeper
+      · subst edge
+        exact List.mem_cons_self
+      · rcases List.mem_append.mp present with own | nested
+        · obtain ⟨_, _, rfl⟩ := List.mem_map.mp own
+          simp at deeper
+        · obtain ⟨child, contains, selected⟩ := completedChildren_decomposition
+            equality _ children before nested edge deeper
+          exact List.mem_cons_of_mem _ (List.mem_flatMap.mpr ⟨child, contains, selected⟩)
+
+theorem completedChildren_decomposition (equality : Equality)
+    (works : List Value) (children : List Selection) (branch : CompletedBranch)
+    (member : branch ∈ completedChildren equality works children)
+    (edge : AllEdge) (used : edge ∈ branch.decompositions) :
+    ∃ child ∈ children, edge ∈ child.decompositionEdges := by
+  cases works with
+  | nil => simp [completedChildren] at member
+  | cons work works =>
+      cases children with
+      | nil => simp [completedChildren] at member
+      | cons child children =>
+          rcases List.mem_append.mp member with first | later
+          · exact ⟨child, List.mem_cons_self,
+              completedBranches_decomposition equality work child branch first edge used⟩
+          · obtain ⟨selected, contains, used⟩ := completedChildren_decomposition
+              equality works children branch later edge used
+            exact ⟨selected, List.mem_cons_of_mem _ contains, used⟩
 
 end
 

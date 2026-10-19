@@ -2913,6 +2913,8 @@ structure Discovery where
   hits : List Match
   current : Value
   passes : Nat
+  /-- The controller's actual generated All set, before source concatenation. -/
+  runAll : List AllEdge := []
   /-- Sparse IO must retain the complete graph's traversal depth. -/
   extractionFuel : Option Nat := none
 
@@ -3258,6 +3260,7 @@ def discoverUsingM? {m : Type → Type} [Monad m] {σ : Type}
               hits := accumulated
               current
               passes
+              runAll := finalRunAll
               extractionFuel := depth state finalGraph
             })
   saturate views iterations 0 initial [] [] []

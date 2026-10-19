@@ -255,6 +255,13 @@ def completedBranchIsolation : IO Unit := do
     throw (IO.userError "right completed branch is missing")
   let leftRows ← IO.ofExcept (leftBranch.getObjValAs? (List Lean.Json) "comparisons")
   let rightRows ← IO.ofExcept (rightBranch.getObjValAs? (List Lean.Json) "comparisons")
+  let leftAll ← IO.ofExcept (leftBranch.getObjValAs? (List Lean.Json) "decompositions")
+  let rightAll ← IO.ofExcept (rightBranch.getObjValAs? (List Lean.Json) "decompositions")
+  require (snapshot.decompositions.length == 2 && leftAll.length == 2 && rightAll.length == 1 &&
+      rightAll.all (fun row => row.getObjValD "generated" == Lean.toJson false) &&
+      branches.all (fun branch => branch.getObjValD "untrackedDecompositionComparisons" ==
+        Lean.toJson ([] : List Nat)))
+    "structural All references duplicated shared ancestors or crossed a sibling branch"
   require (leftRows.any (fun row => row.getObjValD "kind" == Lean.toJson "congruence") &&
       rightRows.all (fun row => row.getObjValD "kind" == Lean.toJson "literal"))
     "a sibling subtree's congruence contaminated the literal completed branch"
@@ -292,6 +299,15 @@ def completedBranchIsolation : IO Unit := do
   let foreign := {snapshot with completedBranches := [{first with owner := "foreign"}]}
   require ((SelectionAudit.analyze foreign).toOption.isNone)
     "a completed branch acquired an unselected source owner"
+  let invalidAll := {snapshot with completedBranches := [{first with decompositions := [snapshot.decompositions.length]}]}
+  require ((SelectionAudit.analyze invalidAll).toOption.isNone)
+    "an out-of-bounds structural All reference was accepted"
+  let unknownAll ← IO.ofExcept (SelectionAudit.analyze
+    {snapshot with completedBranches := [{first with decompositions := []}]})
+  let unknownBranches ← IO.ofExcept (unknownAll.getObjValAs? (List Lean.Json) "completedBranches")
+  require (unknownBranches.any (fun branch =>
+    branch.getObjValD "untrackedDecompositionComparisons" != Lean.toJson ([] : List Nat)))
+    "missing structural All references were counted as traced branches"
 
 /-- All selected extraction comparisons are literal here. Congruence is
 needed solely to establish that the original owner occupies an All-child role. -/
@@ -431,12 +447,38 @@ def indexedAdmission (withLocal : Bool := false) (withContinuation : Bool := fal
   if withContinuation then
     require (!saved.continuations.isEmpty) "partial native completion did not record its generated continuation"
     let continuations ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "continuationRecords")
+    let allUses ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "selectedAllUses")
+    let branches ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "completedBranches")
+    require (allUses.any (fun use => use.getObjValD "generated" == Lean.toJson true &&
+        use.getObjValD "origin" == Lean.toJson "recorded-generation") &&
+      branches.any (fun branch =>
+        ((branch.getObjValAs? (List Lean.Json) "decompositions").toOption.getD []).any fun use =>
+          use.getObjValD "origin" == Lean.toJson "recorded-generation"))
+      "a selected completed branch lost its actual generated continuation"
+    let missingGeneration ← IO.ofExcept (SelectionAudit.analyze {saved with continuations := []})
+    let unknownUses ← IO.ofExcept (missingGeneration.getObjValAs? (List Lean.Json) "selectedAllUses")
+    require (unknownUses.any (fun use => use.getObjValD "generated" == Lean.toJson true &&
+        use.getObjValD "origin" == Lean.toJson "untracked" &&
+        use.getObjValD "continuation" == Lean.Json.null))
+      "missing generation telemetry reclassified a generated All as original source data"
     require (continuations.all (fun event =>
       event.getObjValD "untrackedChildren" == Lean.toJson ([] : List Nat)))
       "a generated continuation child lost its actual root Match"
     require (saved.schedules.any (fun schedule => schedule.uses.any (·.generated)))
       "a later scheduling selection lost its generated All provenance"
     let some continuation := saved.continuations.head? | throw (IO.userError "missing continuation fixture")
+    let use : DiscoveryAudit.AllUse := {relation := continuation.relation, generated := true}
+    require ((SelectionAudit.analyzeAllUse saved.continuations
+        (some (continuation.pass, continuation.localCount)) true use).toOption.isNone)
+      "a scheduling selection used a continuation generated later in the same pass"
+    let _ ← IO.ofExcept (SelectionAudit.analyzeAllUse saved.continuations
+      (some (continuation.pass, continuation.localCount)) false use)
+    let unknownEpoch ← IO.ofExcept (SelectionAudit.analyzeAllUse saved.continuations none false use)
+    require (unknownEpoch.getObjValD "origin" == Lean.toJson "untracked")
+      "a missing final selection epoch acquired a generation link"
+    let futureCreation := {continuation with pass := saved.finalPass.getD 0 + 1}
+    require ((SelectionAudit.analyze {saved with continuations := [futureCreation]}).toOption.isNone)
+      "a final completed branch used a future continuation creation"
     let brokenRoot := {continuation with current := foreignTask}
     require ((SelectionAudit.analyze {saved with continuations := [brokenRoot]}).toOption.isNone)
       "a continuation changed the external root while keeping its child witnesses"

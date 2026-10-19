@@ -24,6 +24,7 @@ run_meta do
       ``Eggshell.Matcher.newLocalUnions_origin,
       ``Eggshell.Matcher.ScheduleObservation.task_origin,
       ``Eggshell.Matcher.rootContinuation_child_origin,
+      ``Eggshell.SelectionDependency.completedBranches_decomposition,
       ``Eggshell.Matcher.discoverUsingM_views_exact] do
     let axioms ← Lean.collectAxioms theoremName
     for axiomName in axioms do

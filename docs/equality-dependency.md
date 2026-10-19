@@ -103,6 +103,16 @@ authority. These are whole-step facts, not minimal causal slices, and the
 automatic gate and child role of continuation support are not independently
 reconstructed. See [the receipt scope](selection-audit.md).
 
+Completed branches also retain their actual structural All path through a
+shared pool. `completedBranches_decomposition` proves that those edges belong
+to the executed selection, without introducing sibling edges. Discovery's
+actual generated-All set and final pass classify those uses; missing telemetry
+never reclassifies generated structure as an original source. Offline event
+links enforce an earlier generation pass for scheduling and permit the same
+last pass only for final extraction. They connect selected branches to captured
+root Matches, but their pattern choices, automatic gates and original child
+roles still prevent a complete causal-ancestry classification.
+
 ## Validation and remaining work
 
 The focused executable runs the real kernel and native matcher selector. It

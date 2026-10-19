@@ -584,3 +584,62 @@ DB-size performance. No public-main token/quality adoption claim is made.
 Raw records and independent audits: discovery-trace-1/. Frozen sources,
 executables, all failed and successful guard/probe records and verification:
 /Users/ovm/.codex/experiments/eggshell/discovery-trace-20261020/implementation-1/.
+
+
+## Selected All generation links included, 2026-10-20
+
+The candidate retains discovery's actual generated-All set and final pass,
+shares selected All relations across completed branches, and links generated
+uses to the original continuation and root Match observations. A missing event
+leaves a generated use untracked. No extra extraction or quotient build is
+introduced in the hook. The unchanged fixed 48-hook warm protocol passed with
+complete original discovery-window scoring, semantic completion, original DB
+body, exact stdout/publication and accepted ACK, every hook below 5 s. Both
+layouts remain read-only profiles; the private overlay also protects the graph
+against OS writes. Saved graphs, questions, MiniLM model, the 4,500 ms semantic
+cap and harness are unchanged. Generation-model calls were zero.
+
+| Sources | Source vectors | Question cache | Semantic / body | Latencies, ms |
+| --- | --- | --- | --- | --- |
+| 2 | database | fresh | 3/3 / 3/3 | 1225, 1213, 1208 |
+| 2 | database | cached | 3/3 / 3/3 | 252, 255, 270 |
+| 2 | private-overlay | fresh | 3/3 / 3/3 | 1220, 1212, 1210 |
+| 2 | private-overlay | cached | 3/3 / 3/3 | 259, 261, 257 |
+| 32 | database | fresh | 3/3 / 3/3 | 1316, 1328, 1324 |
+| 32 | database | cached | 3/3 / 3/3 | 311, 327, 320 |
+| 32 | private-overlay | fresh | 3/3 / 3/3 | 1326, 1325, 1325 |
+| 32 | private-overlay | cached | 3/3 / 3/3 | 312, 312, 322 |
+| 256 | database | fresh | 3/3 / 3/3 | 1774, 1787, 1772 |
+| 256 | database | cached | 3/3 / 3/3 | 734, 734, 724 |
+| 256 | private-overlay | fresh | 3/3 / 3/3 | 1801, 1773, 1797 |
+| 256 | private-overlay | cached | 3/3 / 3/3 | 740, 754, 763 |
+| 1024 | database | fresh | 3/3 / 3/3 | 4055, 3936, 3970 |
+| 1024 | database | cached | 3/3 / 3/3 | 2684, 2687, 2699 |
+| 1024 | private-overlay | fresh | 3/3 / 3/3 | 3855, 3844, 3834 |
+| 1024 | private-overlay | cached | 3/3 / 3/3 | 2752, 2746, 2782 |
+
+The run took 87.77 s, aggregate descendant peak 1,093,168 KiB under the
+3,500,000 KiB guard. Maximum hook latency was 4,055.051 ms. Independent
+publication/SHA/ACK verification passed all 48, and all 17 frozen source,
+protocol and executable hashes were unchanged. These are the observed values;
+no causal latency improvement is inferred from differences between repeats.
+The standard full suite passed in 90.06 s, peak 2,887,920 KiB. Another daemon
+drained three remaining tickets with graph heads unchanged.
+
+The final completed-control native fixture passed 14 calls. A separate
+partial-native diagnostic passed ten calls plus direct Lean replay: its one
+generated All links the selected completed-owner branch and a later scheduling
+step to continuation 0 created in pass 1 and the original root Match. The
+actual published body/SHA and accepted ACK agree. Final reconciliation still
+records completed=0 and no equality locator; this is a captured-stage/context
+diagnostic, not whole final-completion ancestry. Focused regressions reject
+future generation uses and invalid structural references and preserve explicit
+unknowns when records disappear. See [selection-audit.md](selection-audit.md).
+
+The known extra work-first-tests mismatch remains unresolved and was not
+rerun or counted as passing. Pattern/admission ancestry, original child roles,
+final leaf slicing and large completed-snapshot cost remain open. These advisory
+fixtures establish neither general DB-size performance nor public-main
+token/quality adoption. Raw cells and independent audit: continuation-links-1/.
+Frozen sources/executables, failed initial builds, all guard/native records:
+/Users/ovm/.codex/experiments/eggshell/continuation-links-20261020/implementation-1/.
