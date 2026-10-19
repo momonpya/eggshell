@@ -80,6 +80,8 @@ model/tokenizer/code digests and the numerical class name; binding the actual
 pooling/runtime implementation remains part of integration. A changed contract
 must make old one-vector windows cold; their existence cannot certify complete
 input coverage. The production cache/doctor/receipt integration is **pending**.
+The subsequent [isolated native candidate](context-native.md) connects those
+components under a pinned model/runtime contract without production adoption.
 An eventual record must distinguish original DB windows, segment vectors,
 token-offset coverage and model-normalization omissions, and must retain no
 question plaintext in shared storage.
