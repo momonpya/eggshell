@@ -772,6 +772,7 @@ def workFirst : IO Unit := do
     Store.writeChange writer ⟨ids, [], false⟩
     pure ids
   let some ownerId := ids.head? | throw (IO.userError "missing work-first owner")
+  let some ordinaryId := ids[1]? | throw (IO.userError "missing ordinary work-first owner")
   let snapshot ← PageMap.pin path
   let owners := [owner, ordinary]
   let graph : WorkGraph := {all := [topology], outcomes := owners}
@@ -801,6 +802,11 @@ def workFirst : IO Unit := do
     semantic := fun _ _ _ _ => do
       let enabled ← semanticEnabled.get
       pure (some {durable := if enabled then [alias, ownerId] else []})
+    -- This fixture measures Work hydration, not numerical ranking. Give the
+    -- focus boundary an explicit empty-position observation for each original
+    -- owner instead of executing the placeholder nomination command.
+    focusSupport := some fun _ _ _ =>
+      pure (some ([ownerId, ordinaryId], [(ownerId, []), (ordinaryId, [])]))
     lexical := fun _ _ => pure {}
     ordinal := fun id => ordinal (resolve id)
     readWork := fun id => do
@@ -835,7 +841,20 @@ def workFirst : IO Unit := do
           let full := Matcher.discoverIn? LogicalText.logicalNormalizer (.text text)
             [owner.relation, ordinary.relation, topology.relation] [] graph corpus text
             none nominations localUnion native
-          let expected := full.bind (renderAutomatic [] 24000 text [] native true)
+          -- Compare the complete corpus under the same presentation contract.
+          -- The alias is intentionally a second nomination of the same owner.
+          -- This Work-loader fixture has no surrounding-source reader.
+          let nominatedOwners := if semantic then [owner, owner] else []
+          let expected := full.bind fun discovery =>
+            let selected := selectedMatches discovery (Matcher.extraction discovery)
+            renderAutomatic [] 24000 text [] native true discovery
+              (nominated := nominatedOwners.map (·.relation)) (meaningSelected := semantic)
+              (sourceAll := if semantic then [topology] else [])
+              (entryWorks := (sourceEntryOwners nominatedOwners selected).map (·.work))
+          if text == "command" && semantic && !native then
+            require (expected.isNone &&
+                (full.bind (renderAutomatic [] 24000 text [] native true)).isSome)
+              "the nomination fixture stopped distinguishing scoped delivery from bare intrinsic rendering"
           require ((toJson actual).compress == (toJson expected).compress)
             s!"Work-first complete handoff differs: {text} semantic={semantic} native={native} union={localUnion}"
           if text == "command" && !semantic then
@@ -853,6 +872,49 @@ def workFirst : IO Unit := do
             ("native", toJson native), ("local_union", toJson localUnion), ("elapsed_ns", toJson elapsed),
             ("frequency_terms_requested", toJson (hashDistinct (← frequencyQueries.get)).length),
             ("large_owner_hydrated", toJson ((← ownerReads.get).contains ownerId))]]
+  semanticEnabled.set false
+  let emptySelection := {selection with semanticMatcher := some ["test-nominations"]}
+  let emptyActual ← indexedDiscoveryUsing source emptySelection "command" [] false none false
+  let emptyFull := Matcher.discoverIn? LogicalText.logicalNormalizer (.text "command")
+    [owner.relation, ordinary.relation, topology.relation] [] graph corpus "command" none {} false false
+  let emptyExpected := emptyFull.bind (fun discovery =>
+    renderAutomatic [] 24000 "command" [] false true discovery (meaningSelected := true)
+      (sourceAll := [topology])
+      (entryWorks := (selectedMatches discovery (Matcher.extraction discovery)).map (·.matched.edge.work)))
+  require (emptyActual.isSome && (toJson emptyActual).compress == (toJson emptyExpected).compress)
+    "empty semantic nominations vetoed the intrinsic ordinary owner"
+  comparisons := comparisons + 1
+  -- Surrounding original data remains available even when the nominated
+  -- unfocused body is larger than the packet's 24,000-character allowance.
+  semanticEnabled.set true
+  let withSourceData : IndexedContext := {source with
+    supportOwners := some fun works excluded _ _ _ => pure (owners.filter fun edge =>
+      works.contains edge.work && !excluded.contains edge.relation)}
+  let some sourceData ← indexedDiscoveryUsing withSourceData emptySelection "command" [] false none false |
+    throw (IO.userError "independent nomination lost its available original source body")
+  require (sourceData.text.contains "command ordinary evidence" &&
+      sourceData.completed == 0 && !sourceData.blocksCurrent &&
+      sourceData.sourceUses.any (fun use => use.owner == relationKey ordinary.relation && !use.completed))
+    ("source-data availability was confused with native Work identity or completion authority: " ++
+      (Json.mkObj [("body", toJson (sourceData.text.contains "payload_unrelated_value")),
+        ("completed", toJson sourceData.completed), ("blocks", toJson sourceData.blocksCurrent),
+        ("owners", toJson sourceData.sourceUses), ("expected_owner", toJson (relationKey owner.relation)),
+        ("reason", toJson sourceData.reason)]).compress)
+  -- The independently nominated native false positive also remains deliverable
+  -- when its provider names a real original data window that fits that budget.
+  require ((evidenceSearchWindows owner)[1]?.isSome) "source-data fixture has no original window 1"
+  let focusedSource : IndexedContext := {withSourceData with
+    semantic := fun _ _ _ _ => pure (some {
+      durable := [alias, ownerId], durableWindows := [(ownerId, [1])] })
+    focusSupport := some fun _ _ _ =>
+      pure (some ([ownerId, ordinaryId], [(ownerId, [1]), (ordinaryId, [0])]))}
+  let some focusedData ← indexedDiscoveryUsing focusedSource emptySelection "command" [] false none true |
+    throw (IO.userError "original nominated data window was not delivered")
+  require (focusedData.text.contains "payload_unrelated_value" &&
+      focusedData.completed == 0 && !focusedData.blocksCurrent && focusedData.localUnions == 0 &&
+      focusedData.sourceUses.any (fun use => use.owner == relationKey owner.relation && !use.completed))
+    "an independent original data window was lost or promoted to equality/completion authority"
+  semanticEnabled.set false
   -- Evidence-present grounding retains the full reverse query domain.
   -- Normal forward grounding above must not ask for these result-only words.
   for text in ["zircon_detector", "command", "payload_unrelated_value"] do
@@ -907,7 +969,8 @@ def workFirst : IO Unit := do
       (toJson resumed).compress != (toJson (some pendingSearch)).compress)
     "restoring original evidence did not recover the production handoff"
   IO.println ((Json.mkObj [("kind", .str "work_first"), ("result_bytes", toJson result.structuralSize),
-    ("complete_handoffs", toJson comparisons), ("samples", toJson samples),
+    ("output_comparisons", toJson comparisons), ("source_delivery_cases", toJson (2 : Nat)),
+    ("damage_checks", toJson (3 : Nat)), ("samples", toJson samples),
     ("generative_calls", toJson (0 : Nat))]).compress)
   IO.println "PASS shallow Work-first complete handoff: rejected Outcome not read, unrelated corrupt body ignored, demanded corruption rejected and restored, later positive demand, semantic/ordinal duplicates, original grounding, local Union and full statistics"
 

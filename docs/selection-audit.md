@@ -1,5 +1,9 @@
 # Selected equality receipts
 
+The additional Work-first mismatch described in the historical validation
+sections is now resolved by correcting its fixture inputs and running it in
+the default suite. See [the resolution](#work-first-fixture-contract-resolution-2026-10-20).
+
 The development candidate pins the actual selected extraction behind a completed
 handoff. A `selection-*.json` stage contains its current persistent and local
 Union generators, Work comparisons and completed source-owner identities. It
@@ -399,3 +403,44 @@ native fixtures are under
 The known additional `work-first-tests` mismatch is retained and was not rerun
 or counted as passing. Whole causal ancestry, final leaf slices and large
 completed-snapshot cost remain open; no public-main token adoption is claimed.
+
+## Work-first fixture contract resolution (2026-10-20)
+
+The current development head reproduced the original first mismatch before
+any edit: `command semantic=true native=false union=false`. The indexed
+controller received independent owner nominations and meaning-selected
+presentation, while the reference renderer received neither. Bare rendering
+included the ordinary owner; the scoped nomination renderer did not. The
+fixture now holds those presentation inputs equal while still matching
+against the complete materialized corpus. It explicitly asserts that the old
+bare expectation remains nonempty and the scoped result empty in this case.
+
+The next previously unreachable native case exposed a second fixture gap:
+its placeholder semantic command had no focus implementation. The Work-loader
+fixture now supplies an explicit empty-position observation for both original
+owners. It tests no numerical ranking. An empty-nomination regression also
+requires intrinsic ordinary evidence to survive, preventing the correction
+from merely accepting an empty response in every case.
+
+Two source-data cases cover available DB body delivery. With no positions,
+the large unfocused owner does not survive the 24,000-character allowance but
+the original small surrounding owner does. With a real original window of
+the nominated large owner, its body is delivered under the same allowance.
+Local Unions are enabled in this second case, yet the delivered source data
+still grants no Union, completion or native control. The initial oversized,
+unfocused-body assertion failure and its structured diagnosis remain archived.
+
+All 47 complete-output comparisons, two source-delivery cases and three
+damage/recovery cases passed. Work-first is now called by the standard full
+suite, which passed in 91.51 s with aggregate descendant peak 2,810,368 KiB
+under the 3,500,000 KiB guard. Another daemon drained three remaining tickets
+with all graph heads unchanged. Intentional corrupt-body diagnostics are part
+of the damage cases, not failures.
+
+Production source and the native `eggshell` binary are unchanged; 15 prior
+runtime/protocol/executable hashes were independently checked. The three
+changed test artifacts were frozen for the full run. No latency repeat or
+generation-model comparison was needed. Failed baseline/intermediate runs,
+successful focused/full logs, frozen sources and verification remain under
+`/Users/ovm/.codex/experiments/eggshell/work-first-contract-20261020/implementation-1/`.
+This resolves the known check, not the remaining whole causal-ancestry gaps.

@@ -6113,6 +6113,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
     testRootReachTraversal
     testStreamingSourceParts
     testDemandFrequencies
+    Eggshell.PageDBTests.workFirst
     testContextQueryReuse
     testContextUnitIndex
     testNativeWorkUnits

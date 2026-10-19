@@ -643,3 +643,24 @@ fixtures establish neither general DB-size performance nor public-main
 token/quality adoption. Raw cells and independent audit: continuation-links-1/.
 Frozen sources/executables, failed initial builds, all guard/native records:
 /Users/ovm/.codex/experiments/eggshell/continuation-links-20261020/implementation-1/.
+
+## Work-first fixture correction, no runtime repeat (2026-10-20)
+
+The historical extra `work-first-tests` failure is resolved. Its reference
+renderer omitted the production nomination/presentation inputs, and its
+native focus boundary had no implementation for the placeholder provider.
+Both are fixture corrections. The full materialized matcher comparison stays
+in place, with an explicit old-bare/scoped difference, empty nominations,
+available original source bodies and no false completion/Union authority.
+The case now runs in the standard suite: 47 complete-output comparisons, two
+source-delivery cases and three damage/recovery checks passed.
+
+The standard suite passed in 91.51 s, peak 2,810,368 KiB, and its remaining
+three tickets were drained with graph heads unchanged. Fifteen prior runtime,
+protocol and executable hashes, including the native `eggshell` binary, are
+unchanged. The three changed test artifacts were frozen for this verification.
+Consequently the fixed 48-hook diagnostic and generation-model comparisons
+were not rerun for this test-only correction. Earlier latency observations
+retain their original scope; no new token or latency effect is claimed.
+
+See [the fixture resolution](selection-audit.md#work-first-fixture-contract-resolution-2026-10-20).
