@@ -281,6 +281,7 @@ structure Handoff where
   packet : Option DeliveryPacket := none
   /-- Length of the separately framed control suffix, not another body copy. -/
   controlDeltaChars : Nat := 0
+  search : Option SearchTrace := none
   deriving Lean.ToJson, Lean.FromJson
 
 /-- A search status carries no authority to certify or suppress work. -/
@@ -2009,7 +2010,7 @@ def focusIndexedEvidence (command : List String) (question : String)
     else throw (IO.userError "source-focus request changed original window directory")
   -- Hydration observes the complete body-meaning order. Current-question
   -- lexical weights are applied once, over the actual bounded source pool.
-  let some observed ← SemanticMatcher.nominateIndexed command question requests [] [] repair | return none
+  let some observed ← SemanticMatcher.nominateIndexed command question requests [] [] repair true | return none
   pure (some (observed.ranking.map (·.document.owner),
     observed.ranking.map fun row => (row.document.owner, row.indices)))
 
@@ -4861,6 +4862,42 @@ structure IndexedSemanticNominations where
   These are observed before packet reuse, never inferred from an old packet. -/
   focused : List Nat := []
 
+/-- Complete query postings nominate advisory owners without reading Outcome
+bodies or numerical windows. Nonmatching rows are omitted from scoring, while
+weights retain the complete population. Only the top eight owners are hydrated. -/
+def lexicalNominations (population : Nat) (posting : String → IO (List Nat × Nat))
+    (ordinal : Nat → IO Nat) (current : String) (staged : List Matcher.Candidate) :
+    IO IndexedSemanticNominations := do
+  let wanted := SearchRank.terms current
+  let added := staged.map fun candidate =>
+    (candidate, Std.HashSet.ofList (SearchRank.terms (SemanticMatcher.candidateText candidate)))
+  let mut postings : Std.HashMap String (Std.HashSet Nat) := {}
+  let mut frequencies : Std.HashMap String Nat := {}
+  let mut matched : Std.HashSet Nat := {}
+  for unit in wanted do
+    let (owners, count) ← posting unit
+    postings := postings.insert unit (Std.HashSet.ofList owners)
+    frequencies := frequencies.insert unit (count + (added.filter (·.2.contains unit)).length)
+    for owner in owners do matched := matched.insert owner
+  let ordered ← matched.toList.mapM fun id => do pure (← ordinal id, id)
+  let durable := (ordered.mergeSort (fun a b => a.1 ≤ b.1)).map Prod.snd
+  let rows : List (Sum Nat (Matcher.Candidate × Std.HashSet String)) :=
+    durable.map .inl ++ (added.filter (fun row => wanted.any row.2.contains)).map .inr
+  let contains := fun row unit => match row with
+    | .inl id => (postings.getD unit {}).contains id
+    | .inr (_, terms) => terms.contains unit
+  let ranked := SearchRank.rankRows current rows contains (frequencies.getD · 0) false
+    (population + staged.length)
+  let ordered := ranked.filterMap (rows[·]?)
+  let nominated := ordered.take 8
+  pure {
+    durable := nominated.filterMap (fun row => match row with | .inl id => some id | _ => none)
+    staged := nominated.filterMap (fun row => match row with | .inr (candidate, _) => some candidate.edge.relation | _ => none)
+    durableRanking := ordered.filterMap (fun row => match row with | .inl id => some id | _ => none)
+    stagedRanking := ordered.filterMap (fun row => match row with | .inr (candidate, _) => some candidate.edge.relation | _ => none)
+    presentationOrder := ordered.map (fun row => match row with
+      | .inl id => .inl id | .inr (candidate, _) => .inr candidate.edge.relation) }
+
 /-- Numerical nominations are reference data, never native completion input. -/
 def discoveryNominations (native : Bool) (owners : IndexedSemanticNominations) :
     IndexedSemanticNominations := if native then {} else owners
@@ -5055,6 +5092,7 @@ structure IndexedContext where
   semanticPresent : Value → IO Bool
   semantic : List AllEdge → List String → String → List Matcher.Candidate →
     IO (Option IndexedSemanticNominations)
+  lexical : String → List Matcher.Candidate → IO IndexedSemanticNominations
   ordinal : Nat → IO Nat
   readWork : Nat → IO Persistence.Store.WorkOrigin
   readOwner : Nat → IO OutcomeEdge
@@ -5200,7 +5238,8 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     (staged : List Value := []) (stagedVisible : Bool := true)
     (savedSaturation : SaturationMemo.Saved := [])
     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
-    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none) :
+    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none)
+    (recommendLexical : Bool := false) :
     IO (Option Handoff) := do
   let tracePath ← IO.getEnv "EGGSHELL_HANDOFF_TRACE"
   let traceStart ← IO.monoMsNow
@@ -5238,8 +5277,14 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
           if !owners.hasSourcePositions then
             if let some reused ← reuseSemantic owners then return reused
           pure owners
-      | none => pure ({} : IndexedSemanticNominations)
+      | none =>
+          -- A proposed native probe alone is not a new advisory question.
+          -- Exact operation matching below still runs without a question.
+          if !recommendLexical || (native && meaningQuery.isNone) then pure {}
+          else source.lexical referenceQuery stagedCandidates
     else pure ({} : IndexedSemanticNominations)
+  let recommendation := evidence.isNone && (selection.semanticMatcher.isSome ||
+    !semanticOwners.durable.isEmpty || !semanticOwners.staged.isEmpty)
   let semanticIds := semanticOwners.durable
   trace "semantic nominations"
   let matchedNominations := discoveryNominations native semanticOwners
@@ -5550,7 +5595,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   let semanticEvidence := semanticOwners.durableWindows.filterMap fun (id, windows) =>
     rankedOwners[id]?.map fun relation => (relation, windows)
   let originalEvidence := semanticEvidence ++ semanticOwners.stagedWindows
-  let advisoryExcluded ← if evidence.isNone && selection.semanticMatcher.isSome then
+  let advisoryExcluded ← if recommendation then
       (entries.map (·.relation) ++ selected.map (·.matched.edge.relation) ++
         support.map (·.owner.relation)).eraseDups.filterM fun owner => do
         pure (!advisoryOwnerAllowed referenceQuery delivered (← source.advisoryPositions owner))
@@ -5559,14 +5604,14 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     (provenance := provenance) (refreshSources := refreshSources)
     (nominated := nominated.map (·.relation) ++ semanticOwners.staged)
     (semanticEvidence := prioritizedEvidence originalEvidence focusedWindows)
-    (meaningSelected := evidence.isNone && selection.semanticMatcher.isSome)
+    (meaningSelected := recommendation)
     (sourceAll := sourceAll) (sourceUnions := persistent) (entryWorks := entryWorks) (support := support)
     (byteBudget := selection.handoffBytes)
     (evidenceRanking := (focusedRanking ++ evidenceRanking).eraseDups)
     (requestQuestion := meaningQuery) (nativeObserved := evidence.isSome)
     (advisoryExcluded := advisoryExcluded)
   let rendered := rendered.map fun handoff =>
-    if evidence.isNone && selection.semanticMatcher.isSome && handoff.packet.isSome then
+    if recommendation && handoff.packet.isSome then
       {handoff with deliveredGraphs := (handoff.deliveredGraphs ++
         (source.advisoryFrontiers.filter fun frontier =>
           (acceptedAdvisoryFrontier referenceQuery frontier.identity delivered).isNone).map
@@ -5574,6 +5619,20 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     else handoff
   trace s!"render complete chars={(rendered.map (·.text.length)).getD 0}"
   pure rendered
+
+/-- An empty body can still carry source-refresh metadata. Retain any known
+result before asking for keyword advice; only `none` means no such result. -/
+def knownThenLexical (allow : Bool) (search : Bool → IO (Option Handoff)) : IO (Option Handoff) := do
+  let known ← search false
+  if known.isNone && allow then search true else pure known
+
+/-- Canonical `tool\nJSON` is an invocation, not a new advisory question.
+An explicitly supplied human question can still use that literal text. -/
+def lexicalInquiryAllowed (current : String) (native : Bool) (question : Option String) : Bool :=
+  question.isSome || (!native && match current.splitOn "\n" with
+    | tool :: input => tool.isEmpty || tool.toList.any Char.isWhitespace ||
+        input.isEmpty || !(Json.parse ("\n".intercalate input)).isOk
+    | [] => true)
 
 def indexedDiscovery (selection : Config.Selection)
     (snapshots : List (Option Persistence.Store.Snapshot)) (current : String)
@@ -5604,6 +5663,7 @@ def indexedDiscovery (selection : Config.Selection)
         if let some reused ← reuseSemantic nominated then return some reused
   | none => pure ()
   let outcomeCount ← Persistence.Store.getNat snapshot.get "liveOutcomes"
+  let population ← Persistence.Store.getNat snapshot.get "candidates"
   -- Nontextual Work is rejected by Corpus.compileCandidate itself. Its
   -- presence cannot require decoding every other owner's Outcome body.
   let demand ← Persistence.Store.DemandTopology.new reader
@@ -5633,7 +5693,7 @@ def indexedDiscovery (selection : Config.Selection)
           | some text => pure text
           | none => throw (IO.userError "source-focus Work is not indexed text"))
         (fun document index => Persistence.Store.readSearchWindow snapshot document index.val)
-    population := ← Persistence.Store.getNat snapshot.get "candidates"
+    population
     semanticPopulation := ← Persistence.Store.getNat snapshot.get "semanticPopulation"
     live := fun value => (·.isSome) <$> Persistence.Store.liveRoot? snapshot value
     semanticPresent := fun value => do
@@ -5645,6 +5705,8 @@ def indexedDiscovery (selection : Config.Selection)
       if command == selection.semanticMatcher.getD [] && query == referenceQuery && candidates.isEmpty then
         if let some nominated := preparedSemantic.join then return some nominated
       indexedSemanticNominations snapshot all command query candidates
+    lexical := lexicalNominations population (Persistence.Store.searchPosting snapshot)
+      (fun id => Persistence.Store.getNat snapshot.get (Persistence.Store.key "member" id))
     ordinal := fun id => do
       IO.ofExcept (Persistence.Store.payloadSize (← snapshot.get (Persistence.Store.key "member" id)))
     readWork := fun id => do
@@ -5657,7 +5719,10 @@ def indexedDiscovery (selection : Config.Selection)
     liveOwner := fun value => (·.map Prod.snd) <$> Persistence.Store.liveRoot? snapshot value }
   let alreadyObserved := preparedSemantic.join.any (fun owners => !owners.hasSourcePositions)
   let reuseRemaining := if alreadyObserved then (fun _ => pure none) else reuseSemantic
-  some <$> indexedDiscoveryUsing source selection current delivered enforce evidence enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseRemaining meaningQuery
+  some <$> knownThenLexical
+    (selection.semanticMatcher.isNone && evidence.isNone && lexicalInquiryAllowed current enforce meaningQuery)
+    (fun lexical => indexedDiscoveryUsing source selection current delivered enforce evidence enableLocalUnion
+      savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseRemaining meaningQuery lexical)
 
 inductive FederatedSemanticSource (sources : Array Persistence.Store.Snapshot) where
   | stored (document : Persistence.Store.Federated.Document sources)
@@ -5822,6 +5887,13 @@ def federatedDiscovery (selection : Config.Selection)
     live := Persistence.Store.Federated.live? sources
     semanticPresent := Persistence.Store.Federated.semanticPresent sources
     semantic := federatedSemanticNominations catalogue
+    lexical := lexicalNominations catalogue.documents.length
+      (fun unit => do
+        let owners ← Persistence.Store.Federated.postings catalogue unit true
+        pure (owners.toList, owners.size))
+      (fun id => do
+        let some order := catalogue.orders[id]? | throw (IO.userError "foreign federated lexical owner")
+        pure order)
     ordinal := fun id => do
       let some order := catalogue.orders[id]? | throw (IO.userError "foreign federated owner order")
       pure order
@@ -5856,7 +5928,10 @@ def federatedDiscovery (selection : Config.Selection)
             throw (IO.userError "projected federated owner is not an Outcome")
           return some canonical
       pure none }
-  indexedDiscoveryUsing source selection current delivered enforce evidence enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery
+  knownThenLexical
+    (selection.semanticMatcher.isNone && evidence.isNone && lexicalInquiryAllowed current enforce meaningQuery)
+    (fun lexical => indexedDiscoveryUsing source selection current delivered enforce evidence enableLocalUnion
+      savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery lexical)
 
 def computeAutomaticHandoff (selection : Config.Selection)
     (snapshots : List (Option Persistence.Store.Snapshot)) (current : String)
@@ -5935,7 +6010,8 @@ def automaticHandoff (selection : Config.Selection) (current : String)
     (evidenceText : Option String := none)
     (staged : List Value := []) (stagedVisible : Bool := true)
     (enableLocalUnion : Bool := true)
-    (sourceContext : Option SourceContext := none) : IO (Option Handoff) := do
+    (sourceContext : Option SourceContext := none)
+    (publishMemo : Bool := true) : IO (Option Handoff) := do
   -- First retain the original complete graph selection. Its conservative
   -- tree reserve can exceed the final rendered shell: subtracting a notice
   -- up front would discard owners even when the actual complete text fits.
@@ -5956,7 +6032,9 @@ def automaticHandoff (selection : Config.Selection) (current : String)
   -- The human request defines advisory relevance. A proposed probe is not a
   -- new task that may keep widening the old graph. Native Work matching still
   -- uses `current` independently, including its completion certificates.
-  let meaningQuery := if enforce || evidenceText.isSome then requestMeaningQuery sourceContext else none
+  let usesHumanQuestion := enforce || evidenceText.isSome ||
+    sourceContext.any (fun context => context.question == current)
+  let meaningQuery := if usesHumanQuestion then requestMeaningQuery sourceContext else none
   let writable ← match selection.write with
     | none => pure none
     | some writable => do
@@ -5981,7 +6059,9 @@ def automaticHandoff (selection : Config.Selection) (current : String)
         | some context => handoff.checkSources context
         | none => pure handoff
   let observed ← IO.mkRef (none : Option (List Nat))
-  let publishable ← IO.mkRef true
+  -- A deadline fallback may reuse a valid memo, but must not publish a new
+  -- derived DB revision after cancelling the configured search.
+  let publishable ← IO.mkRef publishMemo
   let reused ← IO.mkRef false
   let reuseSemantic : SemanticReuse := fun nominations => do
     -- Run-local nominations cannot be shared. This is also checked at the

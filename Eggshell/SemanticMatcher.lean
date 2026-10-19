@@ -433,7 +433,7 @@ selects a second protocol nor permits full source reconstruction. -/
 def nominateIndexed (command : List String) (queryText : String)
     (documents : List Persistence.Store.SearchDocument) (lexical anchors : List Nat)
     (readWindow : (document : Persistence.Store.SearchDocument) →
-      Fin document.windows.length → IO String) :
+      Fin document.windows.length → IO String) (allowDurableRepair : Bool := false) :
     IO (Option (IndexedSearch documents)) := do
   if documents.isEmpty then
     let some order := IndexedOrder.check? documents [] |
@@ -457,8 +457,12 @@ def nominateIndexed (command : List String) (queryText : String)
         let indices ← IO.ofExcept (need.getObjValAs? (List Nat) "indices")
         let some document := documents[documentIndex]? |
           throw (IO.userError "numerical repair names a foreign document")
+        if document.cache.isSome && !allowDurableRepair then
+          throw (IO.userError "durable numerical windows are pending background warm")
         let some pull := WindowPull.check? document indices |
           throw (IO.userError "invalid numerical window repair batch")
+        unless repaired.size + pull.indices.length ≤ 32 do
+          throw (IO.userError "bounded foreground numerical repair is pending")
         for index in pull.indices do
           unless !repaired.contains (documentIndex, index) do
             throw (IO.userError "numerical repair repeated an already supplied window")

@@ -787,6 +787,7 @@ def workFirst : IO Unit := do
     semantic := fun _ _ _ _ => do
       let enabled ← semanticEnabled.get
       pure (some {durable := if enabled then [alias, ownerId] else []})
+    lexical := fun _ _ => pure {}
     ordinal := fun id => ordinal (resolve id)
     readWork := fun id => do
       Store.readLocatedWorkOrigin snapshot (← Store.locateOutcome snapshot (resolve id))
@@ -4110,6 +4111,7 @@ def discoveryCheckpoint : IO Unit := do
       | none => pure false
       | some id => pure (decide ((← Store.getNat sourceSnapshot.get (Store.key "semanticUses" id)) > 0))
     semantic := fun _ _ _ _ => pure (some {})
+    lexical := fun _ _ => pure {}
     ordinal := fun id => Store.getNat sourceSnapshot.get (Store.key "member" id)
     readWork := fun id => do reader.workOrigin (← Store.locateOutcome sourceSnapshot id)
     readOwner := fun id => do reader.outcome (← Store.locateOutcome sourceSnapshot id)

@@ -81,6 +81,12 @@ def scenario (temporary : System.FilePath) : IO Unit := do
       (← records options).length == total && (← IO.FS.readFile (database / "head")) == head)
     "cold warm skipped a live key, generated extra overlapping windows or changed graph facts"
   let originalRecords ← records options
+  let checkpointTarget : IndexTarget := {owner := DB.Sidecar.Owner.ofSnapshot snapshot, command}
+  let _ ← DB.PageMap.withWriter (← DB.PageMap.pin database) fun writer =>
+    writer.put "warm-test-memo" (some "derived-only".toUTF8)
+  let memoOnly ← DB.PageMap.pin database
+  check (memoOnly.head.revision > snapshot.head.revision && !(← Warm.required checkpointTarget memoOnly))
+    "a query memo publication invalidated the source-window warm checkpoint"
   let unavailable := "/missing-numerical-provider" :: command.drop 1
   configure config database unavailable
   let repeated ← firstDatabase (← cli binary root config ["warm"])
@@ -93,7 +99,8 @@ def scenario (temporary : System.FilePath) : IO Unit := do
     finalMessage := some "new observed monotonic timer result"} database
   let updated ← DB.PageMap.pin database
   let delta ← Warm.inspect updated options
-  check (delta.coverage.valid == total && delta.coverage.missing > 0)
+  check (delta.coverage.valid == total && delta.coverage.missing > 0 &&
+      (← Warm.required checkpointTarget updated))
     "an appended window invalidated existing cached source windows"
   let added ← firstDatabase (← cli binary root config ["warm"])
   let appendedRecords ← records options
@@ -128,9 +135,10 @@ def scenario (temporary : System.FilePath) : IO Unit := do
   let some removed := (documents.mergeSort (fun a b => a.windows.length ≥ b.windows.length)).head? |
     throw (IO.userError "missing root-removal fixture")
   let _ ← DB.PageMap.withWriter updated fun writer => Persistence.Store.removeRoot writer removed.owner
-  let reduced ← Warm.inspect (← DB.PageMap.pin database) options
+  let reducedSnapshot ← DB.PageMap.pin database
+  let reduced ← Warm.inspect reducedSnapshot options
   check (reduced.coverage.windows < delta.coverage.windows && reduced.needed.isEmpty &&
-      (← records options).length > reduced.coverage.windows)
+      (← records options).length > reduced.coverage.windows && (← Warm.required checkpointTarget reducedSnapshot))
     "retired source windows remained in doctor's live coverage denominator"
   IO.println s!"PASS native warm/doctor: {total} exact windows, bounded batches, no-provider repeat, append-only difference, corruption/model checks, DB-only rank/evidence reproduction and retired-window coverage"
 

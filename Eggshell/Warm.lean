@@ -8,6 +8,52 @@ public import Eggshell.SearchProvider
 namespace Eggshell.Warm
 open Lean
 
+structure Checkpoint where
+  database : String
+  provider : String
+  revision : Nat
+  roots : Nat
+  candidates : Nat
+  deriving BEq, ToJson, FromJson
+
+def checkpoint (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Checkpoint := do
+  pure ⟨snapshot.head.identity, Plugin.indexProviderKey target.command, snapshot.head.revision,
+    ← Persistence.Store.getNat snapshot.get "roots", ← Persistence.Store.getNat snapshot.get "candidates"⟩
+
+/-- Root ordinals grow on insertion; the live candidate count also detects
+deletion. Derived query/matcher memo writes do not change these source counters. -/
+def Checkpoint.sameSources (previous current : Checkpoint) : Bool :=
+  previous.database == current.database && previous.provider == current.provider &&
+    previous.roots == current.roots && previous.candidates == current.candidates
+
+def checkpointPath (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : System.FilePath :=
+  target.indexes snapshot / "warm"
+
+/-- A rebuildable scheduling hint only. Every numerical search still validates
+its actual cache records; a cold search invalidates this hint. -/
+def required (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Bool := do
+  let _ :: "search-provider" :: _ := target.command | return false
+  try
+    let previous ← (Plugin.readBoundedJson (checkpointPath target snapshot) 65536 : IO Checkpoint)
+    pure (!(previous.sameSources (← checkpoint target snapshot)))
+  catch _ => pure true
+
+def invalidate (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Unit := do
+  let path := checkpointPath target snapshot
+  if ← path.pathExists then
+    IO.FS.removeFile path
+    FileSystem.syncPath (path.parent.getD snapshot.directory).toString true
+
+def mark (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Unit := do
+  let sidecar ← DB.Sidecar.prepare target.owner
+  let directory ← DB.Sidecar.childDirectory sidecar.indexes (Plugin.indexProviderKey target.command)
+  let path := directory / "warm"
+  let value ← checkpoint target snapshot
+  let previous ← try some <$> (Plugin.readBoundedJson path 65536 : IO Checkpoint) catch _ => pure none
+  if previous.any (fun old => old.sameSources value ||
+      (old.database == value.database && old.provider == value.provider && old.revision > value.revision)) then return
+  FileSystem.atomicExistingBytes path (toJson value).compress.toUTF8
+
 structure Window where
   document : Persistence.Store.SearchDocument
   index : Nat
@@ -85,8 +131,10 @@ batch leaves its completed cache writes available to a subsequent invocation. -/
 def run (snapshot : DB.PageMap.Snapshot) (command : List String) : IO Result := do
   let started ← IO.monoMsNow
   let settings ← options snapshot command
+  let target ← Plugin.registerIndexTarget snapshot command
   let before ← inspect snapshot settings
   if before.needed.isEmpty then
+    mark target snapshot
     return ⟨before.coverage, before.coverage, 0, 0, (← IO.monoMsNow) - started⟩
   DB.Sidecar.withIndexClaim (DB.Sidecar.Owner.ofSnapshot snapshot) fun _ => do
     -- Another indexer may have filled the difference before this claim.
@@ -106,6 +154,7 @@ def run (snapshot : DB.PageMap.Snapshot) (command : List String) : IO Result := 
         pure batches
     let after ← inspect snapshot settings
     unless after.needed.isEmpty do throw (IO.userError "provider acknowledged windows without valid DB cache records")
+    mark target snapshot
     pure ⟨before.coverage, after.coverage, current.needed.length, batches, (← IO.monoMsNow) - started⟩
 
 end Eggshell.Warm

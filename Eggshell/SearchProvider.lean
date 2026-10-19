@@ -231,7 +231,7 @@ def repairBatch (options : Options) (child : Encoder) (document offset : Nat)
     for (text, (_, digest)) in texts.zip missing do
       unless text.length ≤ 512 && Persistence.Store.windowKey text == digest do
         throw (IO.userError "numerical window repair source mismatch")
-    store options child texts
+    storeWindows options child texts
   -- Each valid numerical window is already checked and read. Hold only this
   -- bounded batch; reread repaired misses, never all successful cache hits.
   windows.zipIdx.toArray.mapM fun (window, index) =>
@@ -353,8 +353,7 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
     let queryCache := candidates.toList.find? fun candidate =>
       candidate.getObjValD "cache" != Json.null
     let queryOptions ← resolve (queryCache.getD Json.null)
-    store queryOptions child [query]
-    let queries ← vectors queryOptions query
+    let queryVectors ← IO.mkRef (none : Option Json)
     for (candidate, index) in candidates.toList.zipIdx do
       let documentOptions ← resolve candidate
       let windows ← IO.ofExcept (candidate.getObjValAs? (List String) "windows")
@@ -366,8 +365,16 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
         let offset := windows.length - remaining.length
         let batch := WindowBatch.make remaining
         remaining := batch.rest
-        let vectors ← repairBatch documentOptions child index offset batch.front repair
-        let response ← exchange child (Json.mkObj [("queries", queries), ("candidates", .arr vectors)])
+        let candidateVectors ← repairBatch documentOptions child index offset batch.front repair
+        -- A cold durable source is rejected before query inference starts.
+        let queries ← match ← queryVectors.get with
+          | some queries => pure queries
+          | none => do
+              store queryOptions child [query]
+              let queries ← vectors queryOptions query
+              queryVectors.set (some queries)
+              pure queries
+        let response ← exchange child (Json.mkObj [("queries", queries), ("candidates", .arr candidateVectors)])
         let scores ← IO.ofExcept (response.getObjValAs? (Array Json) "scores")
         unless scores.size == batch.front.length do throw (IO.userError "indexed similarity count mismatch")
         for (value, localIndex) in scores.toList.zipIdx do

@@ -23,6 +23,27 @@ def emptyHook : String := "{}"
 def systemMessage (message : String) : String :=
   Json.mkObj [("systemMessage", message)] |>.compress
 
+def withSearchNotice (handoff : Option Handoff) (output : String) : String :=
+  match handoff.bind (·.search) with
+  | some trace =>
+      if trace.route == .lexical && trace.semantic != .notRequested then
+        let status := match trace.semantic with
+          | .timedOut => "timed out"
+          | .pending => "is pending"
+          | .failed => "is unavailable"
+          | .completed => "completed"
+          | .notRequested => "was not requested"
+        let delivery := if handoff.any (fun result =>
+            result.reason != "search-incomplete" && !result.text.isEmpty) then
+          "keyword search supplied saved-memory evidence."
+          else "no new saved-memory body was delivered."
+        match Json.parse output with
+        | .ok json => (json.setObjVal! "systemMessage" (toJson
+            s!"Eggshell semantic search {status}; {delivery}")).compress
+        | .error _ => output
+      else output
+  | none => output
+
 def defaultState (config : Config.Config) : ThreadState :=
   { profile := config.defaultProfile }
 
@@ -193,11 +214,12 @@ def drainIndexTarget (session : String) (deadline : Nat)
     removeIfExists reference
     return
   let directory := target.indexes snapshot
-  if !(← directory.pathExists) then return
-  let entries := ((← directory.readDir).toList.filter (·.fileName.endsWith ".json"))
+  let entries ← if ← directory.pathExists then directory.readDir else pure #[]
+  let entries := (entries.toList.filter (·.fileName.endsWith ".json"))
     |>.mergeSort (fun a b => a.fileName ≤ b.fileName)
-  if entries.isEmpty then return
-  let payload := Json.mkObj [("target", toJson target),
+  let warm ← Warm.required target snapshot
+  if entries.isEmpty && !warm then return
+  let payload := Json.mkObj [("target", toJson target), ("warm", toJson warm),
     ("paths", toJson (entries.take 8 |>.map (·.path.toString)))]
   if let some result ← Worker.exchange session "index" payload deadline then
     if !(fromJson? result : Except String Nat).isOk then
@@ -272,7 +294,7 @@ def acceptOffer (state : ThreadState) (turn : String) (now : Nat)
     (offer : DeliveryOffer) : ThreadState :=
   if state.enabled && offer.stamp.accepts turn state.epoch now then
     { (addDeliveredGraphs state offer.graphs) with
-      lastHandoff := offer.text, lastReason := offer.reason }
+      lastHandoff := offer.text, lastReason := offer.reason, lastSearch := offer.search }
   else state
 
 theorem rejected_offer_changes_nothing (state : ThreadState) (turn : String)
@@ -294,6 +316,42 @@ def acknowledge (session id : String) : IO Unit := withSession session fun files
   let state := { state with offers := state.offers.filter (·.id != id) }
   writeJson files.state (acceptOffer state pending.turnId now offer)
 
+/-- Semantic discovery gets the first window; DB delivery retains the rest. -/
+def semanticSearchDeadline (now deadline : Nat) : Nat :=
+  min deadline (now + min 1500 ((deadline - now) / 2))
+
+def searchIncomplete (reply : Option Json) : Bool :=
+  match reply with
+  | none => true
+  | some json => match (fromJson? json : Except String (Option Handoff)) with
+    | .error _ => true
+    | .ok none => false
+    | .ok (some handoff) => handoff.reason == "search-incomplete"
+
+def incompleteSemanticStatus (reply : Option Json) (now deadline : Nat) : SemanticSearchStatus :=
+  if now ≥ deadline then .timedOut else
+    match reply with
+    | none => .failed
+    | some json => match (fromJson? json : Except String (Option Handoff)) with
+      | .ok (some handoff) => if handoff.reason == "search-incomplete" then .pending else .failed
+      | _ => .failed
+
+/-- Constant metadata per DB, never a scan or embedding job in the hook.
+The installation registry and invalidated DB checkpoint persist the warm debt. -/
+def requestBackgroundWarm (pending : PendingTurn) (deadline : Nat) : IO Nat := do
+  let some command := pending.semanticMatcher | return 0
+  let _ :: "search-provider" :: _ := command | return 0
+  let mut count := 0
+  for path in pending.read.eraseDups do
+    if (← IO.monoMsNow) ≥ deadline then break
+    try
+      if let some snapshot ← DB.PageMap.open? (.mk path) then
+        let target ← registerIndexTarget snapshot command
+        Warm.invalidate target snapshot
+        count := count + 1
+    catch error => IO.eprintln s!"Eggshell retained an unavailable warm target: {error}"
+  pure count
+
 /-- Search results become offers only after checking the current turn and epoch. -/
 def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
     (enforce : Bool) (evidenceText : Option String := none) (staged : Bool := false) :
@@ -311,7 +369,28 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
   let stamp : RequestStamp := { turn := pending.turnId, epoch := initial.epoch, deadline }
   let query : Worker.Search := {
     pending, state := initial, work, enforce, evidence := evidenceText, staged, deadline }
-  let result ← Worker.exchange session "search" (toJson query) deadline
+  let semantic := pending.projection == .automatic && pending.semanticMatcher.isSome && evidenceText.isNone
+  let started ← IO.monoMsNow
+  let firstDeadline := if semantic then semanticSearchDeadline started deadline else deadline
+  let first ← Worker.exchange session "search" (toJson {query with deadline := firstDeadline}) firstDeadline
+  let observed ← IO.monoMsNow
+  let (result, trace) ← if semantic && searchIncomplete first then do
+      let warmRequests ← requestBackgroundWarm pending
+        (min deadline (observed + (deadline - observed) / 4))
+      let lexical := {query with route := .lexical}
+      let lexicalStarted ← IO.monoMsNow
+      let result ← Worker.exchange session "search" (toJson lexical) deadline
+      let trace : SearchTrace := {
+        semantic := incompleteSemanticStatus first observed firstDeadline, route := .lexical
+        semanticMs := observed - started, lexicalMs := (← IO.monoMsNow) - lexicalStarted
+        warmMs := lexicalStarted - observed, warmRequests }
+      pure (result, trace)
+    else do
+      let trace : SearchTrace := {
+        semantic := if semantic then .completed else .notRequested, route := .configured
+        semanticMs := if semantic then observed - started else 0
+        lexicalMs := if semantic then 0 else observed - started }
+      pure (first, trace)
   withSession session fun files => do
     let some state ← readState? files | return none
     let some current ← readPendingBase? files | return none
@@ -319,19 +398,23 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
     if !state.enabled || (current.closed || current.finalMessage.isSome) then return none
     match Worker.SearchDelivery.ofReply stamp current.turnId state.epoch now
         pending.handoffChars result with
-    | .obsolete | .empty _ => return none
-    | .incomplete _ _ => return some pendingSearch
+    | .obsolete => return none
+    | .empty _ =>
+        if trace.route == .lexical then return some {pendingSearch with search := some trace}
+        return none
+    | .incomplete _ _ => return some {pendingSearch with search := some trace}
     | .found _ handoff _ _ => do
         -- Linearize only publication, never the search or semantic matcher.
         -- Concurrent offers subtract the same original ranges under this short lock.
         let some reconciled := handoff.reconcileDelivery
             (state.deliveryClaims current.turnId now) pending.handoffChars Config.nativeHandoffBytes |
           return none
-        let handoff := reconciled.handoff
+        let handoff := {reconciled.handoff with search := some trace}
         let checkpoints := handoff.sourceCheckpoints.map (·.key)
         let id := (optionalString input "_eggshell_receipt").getD "direct"
         let offer : DeliveryOffer := {
-          id, stamp, graphs := handoff.deliveredGraphs, text := handoff.text, reason := handoff.reason }
+          id, stamp, graphs := handoff.deliveredGraphs, text := handoff.text
+          reason := handoff.reason, search := handoff.search }
         writeJson files.state {
           (addDeliveredGraphs state checkpoints) with
           offers := offer :: (state.offers.filter fun (offer : DeliveryOffer) =>
@@ -369,7 +452,7 @@ def userPromptSubmit (input : Json) : IO String := do
   Worker.cancel session "search"
   let handoff ← deliverForWork input pending prompt false
   let context := handoff.map (·.text) |>.getD ""
-  pure <| if context == "" then emptyHook else hookContext "UserPromptSubmit" context
+  pure <| withSearchNotice handoff (if context == "" then emptyHook else hookContext "UserPromptSubmit" context)
 
 def toolFromHook (input : Json) (withResponse : Bool) : Except String ToolEvent := do
   pure {
@@ -472,13 +555,13 @@ def preToolUse (input : Json) : IO String := do
             "the call to omit only the covered Work and issue any genuinely uncovered " ++
             "remainder. Do not repeat covered Work merely to verify, cite, narrow, " ++
             "reformat, or reconstruct it.\n\n" ++ evidenceGapGuidance
-          pure <| hookDeny (instruction ++ matched ++ "\n\n" ++
+          pure <| withSearchNotice handoff (hookDeny (instruction ++ matched ++ "\n\n" ++
             (if text = "" then
               "The Outcome is already present in this native context; Eggshell did not resend it."
-            else "Newly connected prior graph:\n\n" ++ text))
+            else "Newly connected prior graph:\n\n" ++ text)))
         else
           let text := handoff.map (·.text) |>.getD ""
-          pure <| if text = "" then emptyHook else hookContext "PreToolUse" text
+          pure <| withSearchNotice handoff (if text = "" then emptyHook else hookContext "PreToolUse" text)
       catch error =>
         withSession session fun files => do
           if let some current ← readPendingBase? files then
@@ -574,7 +657,7 @@ def postToolUse (input : Json) : IO String := do
           (canonicalToolWork tool) false
           (if tool.response.trimAscii.isEmpty then none else some (canonicalJson tool.response))
         let text := handoff.map (·.text) |>.getD ""
-        pure <| if text = "" then emptyHook else hookContext "PostToolUse" text
+        pure <| withSearchNotice handoff (if text = "" then emptyHook else hookContext "PostToolUse" text)
       catch error =>
         IO.eprintln s!"Eggshell recorded the native result but omitted its handoff: {error}"
         pure (hookContext "PostToolUse" pendingSearch.text)

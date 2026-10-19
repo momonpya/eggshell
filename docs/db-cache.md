@@ -86,7 +86,41 @@ share a DB claim. Valid records survive partial failure. A fully warm repeat
 does not start the provider or rewrite records. Output identifies the pinned DB
 revision, before/after coverage, requested count, batch count and elapsed time.
 
-Semantic-first hook deadlines, lexical body delivery on expiry, automatic
-background warming of cold search debt, and complete per-run receipts remain
-unfinished. Coverage is not per-run cache-hit telemetry. No quality or
-language-model token claim follows from these numerical and ownership changes.
+The isolated candidate gives semantic discovery the first search window:
+at most 1,500 ms and at most half the remaining caller deadline. On an incomplete
+reply, the requesting worker is retired before a DB request uses the remaining
+deadline. Turn/epoch, source checks, delivery claims and packet limits still
+apply. The fallback may read an existing validated demand memo, but does not
+publish a new memo or derived DB revision after cancelling the configured search.
+Semantic completion and the route used for body delivery are separate
+observations. A status notice never counts as an original source body.
+
+The DB request first preserves any ordinary Work result, including an empty
+body carrying source-refresh metadata. If there is no such result, keyword
+postings nominate the highest eight positive owners as advisory evidence.
+Weights use the complete population and document frequencies; nonmatching
+rows are omitted from scoring without changing their contribution to those
+counts. Keyword nominations cannot authorize native operation reuse. A native
+probe alone does not create a new advisory question.
+
+Ordinary durable-source repair pulls are rejected before original-window reads.
+A cold first batch is detected before query inference. Unpublished windows and
+derived source-focus views have a cumulative budget of 32 repaired window
+positions per provider request; already bounded windows are never split again. This preserves
+the complete ranked corpus rather than silently scoring only cached documents.
+
+Daemons discover configured DBs through the private installation registry.
+Missing or invalid warm checkpoints schedule explicit missing-window warm in
+the independent index worker. The DB-owned checkpoint records database/provider
+identity, insertion frontier and live candidate count; a publication revision is
+diagnostic. Query memo writes alone do not reschedule a full warm. An incomplete
+foreground request registers its DBs and invalidates their checkpoints using
+only metadata. Recovery remains possible after deleting the originating chat.
+
+Acknowledged offers retain semantic status, configured/keyword route, semantic
+and keyword duration, metadata-queue duration (`warmMs`) and warm-target count.
+These are partial diagnostics: coverage is not per-run cache-hit telemetry,
+and retaining the last acknowledged trace is not a receipt for every run.
+DB-size scaling, all-run measurements, actual app ingestion, inclusive model
+token comparisons and the paper's complete proof/experiment requirements remain
+unfinished. No quality or language-model token claim follows from these changes.

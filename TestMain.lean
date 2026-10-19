@@ -9,6 +9,7 @@ public import tests.SourceObservationTests
 public import tests.EqualityDependencyTests
 public import tests.DatabaseIndexTests
 public import tests.WarmTests
+public import tests.SemanticDeadlineTests
 
 @[expose] public section
 
@@ -501,9 +502,6 @@ def testSemanticProviderTransport : IO Unit := do
     handoffChars := 120000
   }
   let current := "利用者空間から現在時刻を高速取得する仕組みを調査"
-  let surface ← automaticHandoff base current [] false
-  check surface.isNone
-    "surface-only matching unexpectedly bridged disjoint languages"
   let executable ← IO.appPath
   let persisted ← Persistence.load semanticEgg
   let indexed := SemanticMatcher.outcomeWorkItems persisted.values
@@ -512,6 +510,17 @@ def testSemanticProviderTransport : IO Unit := do
       indexed.any (·.text == canonicalToolWork priorTool ++ "\n" ++
         canonicalJson priorTool.response))
     "a completed parent must retain summary priority and searchable child evidence"
+  let disjoint := "Comment obtenir rapidement l'heure courante depuis un logiciel applicatif"
+  let indexedTerms := indexed.flatMap (SearchRank.terms ·.text)
+  check ((SearchRank.terms disjoint).all (!indexedTerms.contains ·))
+    "cross-language fixture accidentally shares indexed keyword terms"
+  let surface ← automaticHandoff base disjoint [] false
+  check surface.isNone
+    "keyword-only search unexpectedly bridged disjoint source languages"
+  let lexical ← automaticHandoff base current [] false
+  check (lexical.any fun handoff => handoff.completed == 0 && handoff.localUnions == 0 &&
+      !handoff.blocksCurrent && handoff.text.contains "時刻保持層から利用者APIへ接続した")
+    "keywords in original Outcome text were hidden or promoted to completed Work"
   let corpus := Matcher.Corpus.build LogicalText.logicalNormalizer
     (WorkGraph.fromValues persisted.values)
   let eligible := SemanticMatcher.eligibleCandidates corpus
@@ -6098,6 +6107,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
     testBackgroundIndexRecovery
     Eggshell.DatabaseIndexTests.run
     Eggshell.WarmTests.run
+    Eggshell.SemanticDeadlineTests.run
     testSaveWhileIndexBusy
     testSaveWhileIndexBusy
     testNaturalLanguageSessionTransport
@@ -6146,6 +6156,12 @@ def main (arguments : List String) : IO UInt32 :=
   | ["warm-tests"] => do
       Eggshell.WarmTests.run
       pure 0
+  | ["semantic-deadline-tests"] => do
+      Eggshell.SemanticDeadlineTests.run
+      Worker.shutdown
+      pure 0
+  | ["semantic-deadline-provider", mode, root] =>
+      Eggshell.SemanticDeadlineTests.provider mode (.mk root)
   | ["database-index-provider", root] => Eggshell.DatabaseIndexTests.provider (.mk root)
   | ["normalizer-timing", mode] => normalizerTiming mode
   | ["root-reach-tests"] => do

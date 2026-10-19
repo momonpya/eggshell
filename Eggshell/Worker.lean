@@ -1,6 +1,7 @@
 module
 
 public import Eggshell.Handoff
+public import Eggshell.Warm
 public import Std.Sync.Mutex
 
 @[expose] public section
@@ -312,6 +313,7 @@ structure Search where
   evidence : Option String := none
   staged : Bool := false
   deadline : Nat := 0
+  route : SearchRoute := .configured
   deriving ToJson, FromJson
 
 /-- A waiting search must refresh acknowledged deliveries in its own live
@@ -348,7 +350,10 @@ def search (request : Search) : IO (Option Handoff) := do
   let some pending ← (readJson? files.pending pendingJsonDefaults : IO (Option PendingTurn)) |
     throw (IO.userError "search turn disappeared")
   let some current := currentSearch? request state pending | return none
-  let selection := {pendingSelection request.pending with handoffBytes := some Config.nativeHandoffBytes}
+  let configured := pendingSelection request.pending
+  let selection := {configured with
+    handoffBytes := some Config.nativeHandoffBytes
+    semanticMatcher := if request.route == .lexical then none else configured.semanticMatcher}
   match request.pending.projection with
   | .none => pure none
   | .roots keys => manualHandoff selection request.work keys
@@ -386,6 +391,7 @@ def search (request : Search) : IO (Option Handoff) := do
           native := request.enforce || request.evidence.isSome
           onDependencies := fun sources =>
             queueCheckpoint files {request.pending with tools := [], sources := sources, inFlight := [], finalMessage := none, closed := false} })
+        (request.route != .lexical)
 
 /-- Batch compatible metadata tickets on one read snapshot. Index failure
     retains every ticket; indexing never republishes or locks the graph writer. -/
@@ -462,7 +468,11 @@ def run (role : String) : IO UInt32 := do
       else if role == "index" then
         let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := IndexTarget))
         let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")
-        pure (toJson (← indexQueued target (paths.map System.FilePath.mk)))
+        let count ← indexQueued target (paths.map System.FilePath.mk)
+        if (json.getObjValAs? Bool "warm").toOption.getD false then
+          let _ ← Warm.run (← target.owner.pin) target.command
+          pure ()
+        pure (toJson count)
       else throw (IO.userError "unknown worker role")
       catch error => pure (Json.mkObj [("error", error.toString)])
     output.putStr (result.compress ++ "\n")

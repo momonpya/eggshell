@@ -54,13 +54,13 @@ def scoreOrder (a b : Float × Nat) : Bool :=
   a.1 > b.1 || (a.1 == b.1 && a.2 ≤ b.2)
 
 def rankRows (query : String) (rows : List α) (contains : α → String → Bool)
-    (frequency : String → Nat) (anchors : Bool) : List Nat :=
+    (frequency : String → Nat) (anchors : Bool) (population : Nat := rows.length) : List Nat :=
   let wanted := (terms query).filter fun term => !anchors || anchor term
   let scores := rows.zipIdx.filterMap fun (row, index) =>
     let score := wanted.foldl (fun total term =>
       if contains row term then
         let count := frequency term
-        total + log1p (rows.length.toFloat / count.toFloat)
+        total + log1p (population.toFloat / count.toFloat)
       else total) (0 : Float)
     if score > 0 then some (score, index) else none
   (scores.mergeSort scoreOrder).map (·.2)

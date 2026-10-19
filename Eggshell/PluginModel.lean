@@ -19,12 +19,31 @@ inductive Projection where
   | roots (values : List String)
   deriving Repr, DecidableEq, ToJson, FromJson
 
+inductive SemanticSearchStatus where
+  | notRequested | completed | pending | timedOut | failed
+  deriving Repr, DecidableEq, ToJson, FromJson
+
+inductive SearchRoute where
+  | configured | lexical
+  deriving Repr, DecidableEq, ToJson, FromJson
+
+/-- Runtime observations do not authorize equality or completion. -/
+structure SearchTrace where
+  semantic : SemanticSearchStatus
+  route : SearchRoute
+  semanticMs : Nat
+  lexicalMs : Nat
+  warmMs : Nat := 0
+  warmRequests : Nat := 0
+  deriving Repr, ToJson, FromJson
+
 structure DeliveryOffer where
   id : String
   stamp : RequestStamp
   graphs : List String
   text : String
   reason : String
+  search : Option SearchTrace := none
   deriving Repr, ToJson, FromJson
 
 structure ThreadState where
@@ -38,6 +57,7 @@ structure ThreadState where
   afterCompaction : Bool := false
   lastHandoff : String := ""
   lastReason : String := ""
+  lastSearch : Option SearchTrace := none
   epoch : Nat := 0
   offers : List DeliveryOffer := []
   deriving Repr, ToJson, FromJson

@@ -23,7 +23,7 @@ lean_lib Eggshell where
 lean_lib PageDBTestSupport where
   roots := #[`tests.PageDBTests, `tests.FullSearchOracle, `tests.SearchMemo, `tests.CorpusCache,
     `tests.SourceEvidenceTests, `tests.SourceObservationTests, `tests.EqualityDependencyTests,
-    `tests.DatabaseIndexTests, `tests.WarmTests]
+    `tests.DatabaseIndexTests, `tests.WarmTests, `tests.SemanticDeadlineTests]
 
 @[default_target]
 lean_exe eggshell where
