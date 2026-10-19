@@ -15,6 +15,7 @@ class ScriptedProvider:
         self.program = program
         self.requests = []
         self.condition = None
+        self.final_only = False
         self.error = None
         owner = self
 
@@ -34,13 +35,13 @@ class ScriptedProvider:
                     if body["model"] != "gpt-5.6-sol" or not body["stream"] or owner.condition is None:
                         raise ValueError("Unexpected fixture request")
                     phase = sum(row["condition"] == owner.condition for row in owner.requests)
-                    if phase >= 2:
+                    if phase >= (1 if owner.final_only else 2):
                         raise ValueError("Fixture received an unplanned extra request")
-                    record = dict(condition=owner.condition, body=body)
+                    record = dict(condition=owner.condition, final_only=owner.final_only, body=body)
                     owner.requests.append(record)
                     index = len(owner.requests)
                     (owner.output / f"request-{index}.json").write_text(json.dumps(record, indent=2) + "\n")
-                    if phase == 0:
+                    if phase == 0 and not owner.final_only:
                         item = dict(type="custom_tool_call", id=f"ct_fixture_{index}",
                                     call_id=f"call_fixture_{index}", name="exec", input=owner.program)
                     else:
@@ -75,10 +76,11 @@ class ScriptedProvider:
     def url(self):
         return f"http://127.0.0.1:{self.http.server_port}/v1"
 
-    def begin(self, condition):
+    def begin(self, condition, final_only=False):
         if any(row["condition"] == condition for row in self.requests):
             raise ValueError("Fixture condition already ran")
         self.condition = condition
+        self.final_only = final_only
 
     def __enter__(self):
         self.thread.start()

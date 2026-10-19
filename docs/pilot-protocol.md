@@ -42,7 +42,9 @@ Local evidence is under
 `/Users/ovm/.codex/experiments/eggshell/recommendation-certification-pilot-20261020/`:
 `subject-manifest.json`, `preflight-audit.json`, `baseline.xml`, the full test
 log, locked test requirements, environment freeze and process guard report.
-An Eggshell seed DB and its warm/index receipts have not yet been created.
+A model-acquired study seed and its warm/index receipts have not yet been created.
+The separate [scripted memory fixture](pilot-memory-probe.md) now checks native
+save/warm/body transport; its observations cannot serve as that study seed.
 
 ## Design to freeze before model trials
 
@@ -126,17 +128,24 @@ fresh-condition App Server: empty hook/skill/MCP discovery, workspace operations
 private/oracle read rejection, command network denial, correct source import,
 and the original 297 tests with exact test identities and 50 unchanged hashes.
 This qualifies those configuration and command boundaries on the observed host.
-Native model instructions/tools, memory-condition plugin/warm delivery and the
-complete six-condition runner are still open gates.
+This does not qualify unexercised native tool surfaces or the complete
+six-condition runner.
 The [scripted native-hook probe](pilot-hook-probe.md) now drives two fixed turns
 through real command/edit tools and an isolated installed Eggshell plugin using
 only a local response fixture. Fresh and Eggshell have identical native catalogs,
 no exposed agent namespace, matching source-read results and enforced canary
 boundaries. Startup/prompt/tool/stop callbacks and their native stdout receipts
 are checked. The prior DB is absent; one semantic timeout is explicitly retained.
-This is not a warm-DB delivery or model outcome, and the fixture data cannot serve
-as the study seed. Common seed acquisition, warm saved-body delivery and the
-other four conditions remain open.
+This empty-DB probe is not a warm-DB delivery or model outcome, and its data
+cannot serve as the study seed.
+The subsequent [scripted saved-observation probe](pilot-memory-probe.md) commits
+an actual native read, warms all five windows, and delivers its original body to
+independent semantic/lexical consumers. It checks both an existing DB cache and
+a private cache for the same graph with no derived files. Both shared DBs reject
+writes at the OS boundary and remain unchanged; fresh receives no saved body.
+This qualifies that connection with fixed responses. Actual common study-seed
+acquisition and its warm receipts, initial/history definitions, and the other
+four conditions remain open.
 
 The observed public Eggshell `main` was
 `51873167c11c447a0af67e73430b5ab6635b2a65` during readiness. Refresh and freeze
