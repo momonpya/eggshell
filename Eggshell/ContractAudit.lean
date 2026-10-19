@@ -108,6 +108,8 @@ This checks declaration reachability, separately from the kernel contracts. -/
 run_meta do
   let environment ← getEnv
   for (root, required, forbidden) in #[
+      (``Eggshell.Plugin.discoverySelectionReport,
+        #[``Eggshell.SelectionDependency.report?, ``Eggshell.Matcher.extraction], #[]),
       (``Eggshell.Plugin.Daemon.hookClient,
         #[``Eggshell.Plugin.Worker.awaitUntil, ``Eggshell.Plugin.Worker.killGroup,
           ``Eggshell.Plugin.Daemon.decodeHookReply], #[``IO.getStdin, ``Eggshell.Plugin.captureTerminal]),
@@ -709,6 +711,14 @@ run_meta do
    Reject admissions and any new axiom outside Lean's standard logical basis. -/
 run_meta do
   let contracts := #[
+    ``Eggshell.EqualityDependency.DirectIndex.same_iff,
+    ``Eggshell.EqualityDependency.DirectIndex.generated,
+    ``Eggshell.EqualityDependency.persistent_has_union_path,
+    ``Eggshell.EqualityDependency.local_has_current_union_path,
+    ``Eggshell.EqualityDependency.congruence_is_necessary,
+    ``Eggshell.SelectionDependency.dedup_output,
+    ``Eggshell.SelectionDependency.comparisons_positive,
+    ``Eggshell.Plugin.discovery_selection_report_exists,
     ``Eggshell.Matcher.Match.retrieved_projection_keeps_owner,
     ``Eggshell.Matcher.retrieved_is_advisory,
     ``Eggshell.Matcher.retrieved_never_unions,

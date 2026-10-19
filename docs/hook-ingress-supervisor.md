@@ -72,8 +72,10 @@ those independently of session lifetime remains Phase 1 work.
 
 Phase 0 still needs semantic success/pending/timeout receipts, vector cache
 statistics, stage durations, and full equality-dependency attribution including
-inherited local unions and structural selection dependencies. This candidate
-does not restore or claim those features.
+inherited local unions and structural selection dependencies. The
+[equality diagnostic foundation](equality-dependency.md) now certifies the chosen
+selection's comparisons; native receipt integration and the other required
+dependency components remain unfinished.
 
 No initial/history × topics 1/2/3 language-model token comparison has been run.
 The repository adoption gate therefore remains unsatisfied, even though the

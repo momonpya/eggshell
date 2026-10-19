@@ -6,6 +6,7 @@ import Eggshell.ContractAudit
 public import tests.PageDBTests
 public import tests.SourceEvidenceTests
 public import tests.SourceObservationTests
+public import tests.EqualityDependencyTests
 
 @[expose] public section
 
@@ -5899,6 +5900,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
       Worker.shutdown
       return 0
     testStreamingNormalizer
+    Eggshell.EqualityDependencyTests.run
     Eggshell.SourceEvidenceTests.run
     Eggshell.SourceObservationTests.run
     testRootReachTraversal

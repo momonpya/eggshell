@@ -22,7 +22,7 @@ lean_lib Eggshell where
 
 lean_lib PageDBTestSupport where
   roots := #[`tests.PageDBTests, `tests.FullSearchOracle, `tests.SearchMemo, `tests.CorpusCache,
-    `tests.SourceEvidenceTests, `tests.SourceObservationTests]
+    `tests.SourceEvidenceTests, `tests.SourceObservationTests, `tests.EqualityDependencyTests]
 
 @[default_target]
 lean_exe eggshell where
@@ -42,6 +42,9 @@ lean_exe setup_package_tests where
 
 lean_exe lifecycle_tests where
   root := `tests.LifecycleTests
+
+lean_exe equality_dependency_tests where
+  root := `tests.EqualityDependencyMain
 
 lean_exe eggshell_render where
   root := `tools.Render

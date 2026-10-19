@@ -8,11 +8,22 @@ public import Eggshell.SaturationMemo
 public import Eggshell.DiscoveryMemo
 public import Eggshell.DemandMemo
 public import Eggshell.FederatedSearch
+public import Eggshell.SelectionDependency
 
 @[expose] public section
 
 namespace Eggshell.Plugin
 open Lean
+
+/-- Diagnostic component for the actual chosen extraction. This does not
+certify matcher admission, sparse child-role provenance or local-Union ancestry. -/
+def discoverySelectionReport (discovery : Matcher.Discovery) :=
+  SelectionDependency.report? discovery.view.graph discovery.view.quotient.toEquality
+    discovery.policy discovery.current (Matcher.extraction discovery).selection
+
+theorem discovery_selection_report_exists (discovery : Matcher.Discovery) :
+    (discoverySelectionReport discovery).isSome = true := by
+  simp [discoverySelectionReport, SelectionDependency.report?, Matcher.extraction_sound]
 
 /-- Dependencies are references into one shared source table, never copies of
 the source fingerprints for every projected Match. -/

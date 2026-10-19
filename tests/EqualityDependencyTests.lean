@@ -1,0 +1,138 @@
+module
+
+public import Eggshell.Handoff
+
+@[expose] public section
+
+namespace Eggshell.EqualityDependencyTests
+
+open EqualityDependency
+
+def require (accepted : Bool) (message : String) : IO Unit :=
+  unless accepted do throw (IO.userError message)
+
+def union (left right : Value) : IO UnionEdge := do
+  if safe : Value.sameExactFootprint left right then
+    pure {
+      left
+      right
+      scope := .workspace (.text "dependency-fixture")
+      exactAuthority := Value.sameExactFootprint_sound safe
+    }
+  else throw (IO.userError "fixture tried to replace Exact authority")
+
+def full (roots : List Value) (persistent : List UnionEdge) (runLocal : List UnionEdge := []) : IO Quotient := do
+  let some quotient := QuotientBuilder.build? roots persistent runLocal |
+    throw (IO.userError "fixture quotient did not certify")
+  pure quotient
+
+def application (value : Value) : Value :=
+  .applyList .inquiry [Ref.semantic value]
+
+def explicitAndCongruence : IO Unit := do
+  let a := Value.text "a"
+  let b := Value.text "b"
+  let c := Value.text "c"
+  let ab ← union a b
+  let bc ← union b c
+  let edges := [ab, bc]
+  let stored := DirectIndex.make edges
+  let current := DirectIndex.make (edges ++ [])
+  let fa := application a
+  let fc := application c
+  let quotient ← full [fa, fc] edges
+  require (classify quotient.toEquality stored current a c == .persistentUnion)
+    "transitive stored Union was not direct"
+  require (classify quotient.toEquality stored current fa fc == .congruence)
+    "Semantic Apply congruence was not attributed"
+  require (classify quotient.toEquality stored current fa fa == .literal)
+    "literal identity depended on the root catalogue"
+  let exactA := Value.applyList .inquiry [Ref.exact a]
+  let exactC := Value.applyList .inquiry [Ref.exact c]
+  let exactQuotient ← full [exactA, exactC] edges
+  require (classify exactQuotient.toEquality stored current exactA exactC == .notEquivalent)
+    "the dependency classifier crossed Exact authority"
+  let without ← full [fa, fc] [ab]
+  require (classify without.toEquality (DirectIndex.make [ab]) (DirectIndex.make ([ab] ++ [])) fa fc == .notEquivalent)
+    "a removed generator survived in dependency attribution"
+  let planned := QuotientBuilder.plannedBuild? [fa, fc] edges [] none
+  let corrected := QuotientBuilder.plannedBuild? [fa, fc] [ab] [] planned.plan
+  let some corrected := corrected.quotient | throw (IO.userError "planned correction failed")
+  require (classify corrected.toEquality (DirectIndex.make [ab]) (DirectIndex.make ([ab] ++ [])) fa fc == .notEquivalent)
+    "a saved congruence plan imported a removed dependency"
+
+def mixedAtomsAndLocalOrigins : IO Unit := do
+  let a := Value.text "a"
+  let b := Value.text "b"
+  let x := Value.text "x"
+  let y := Value.text "y"
+  let ab ← union a b
+  let xf ← union x (application a)
+  let yf ← union y (application b)
+  let edges := [ab, xf, yf]
+  let quotient ← full [x, y] edges
+  require (classify quotient.toEquality (DirectIndex.make edges) (DirectIndex.make (edges ++ [])) x y == .congruence)
+    "atomic Work was falsely classified as direct despite mixed generators"
+  let xy ← union x y
+  let runLocal := [xy]
+  let localQuotient ← full [x, y] [ab] runLocal
+  require (classify localQuotient.toEquality (DirectIndex.make [ab]) (DirectIndex.make ([ab] ++ runLocal)) x y == .localUnion)
+    "unresolved local-Union ancestry was counted as a persistent direct explanation"
+
+def selectedDeduplication : IO Unit := do
+  let a := Value.text "a"
+  let b := Value.text "b"
+  let root := Value.text "root"
+  let fa := application a
+  let fb := application b
+  let edge := AllEdge.make root [fa, fb] (by simp) (by
+    simp [root, fa, fb, application, Value.text, Value.applyList])
+  let owner := OutcomeEdge.make fa (.text "observed") [] (by simp) (by simp [maxOutcomeObservations])
+  let graph : WorkGraph := { all := [edge], outcomes := [owner] }
+  let ab ← union a b
+  let quotient ← full [edge.relation, owner.relation] [ab]
+  let extraction := Extract.runWithPolicy graph quotient.toEquality .allCompleted root
+  require (extraction.priorOutcomes.contains (.text "observed") &&
+      extraction.selection.decompositionEdges.length == 1)
+    "fixture did not execute a completed decomposition"
+  let some report := SelectionDependency.report? graph quotient.toEquality .allCompleted root extraction.selection |
+    throw (IO.userError "actual extraction did not validate for dependency recording")
+  let stored := DirectIndex.make [ab]
+  let current := DirectIndex.make ([ab] ++ [])
+  require (report.premises.any fun premise =>
+    premise.role == .deduplicatedChild &&
+      classify quotient.toEquality stored current premise.left premise.right == .congruence)
+    "congruence needed to omit a duplicate child disappeared behind literal root identity"
+  let invalid := Selection.outcomes root [owner] []
+  require ((SelectionDependency.report? graph quotient.toEquality .allCompleted root invalid).isNone)
+    "an unsupported completed owner obtained a dependency report"
+
+def nativeDiscovery : IO Unit := do
+  let text := "Bash\ncat clock.c"
+  let work := Value.text text
+  let result := Value.text "clock.c contains the clock implementation"
+  let occurrence := Value.applyList .occurrence [Ref.semantic result, Ref.semantic work]
+  let owner := OutcomeEdge.make work result [occurrence] (by simp) (by simp [maxOutcomeObservations])
+  let frame := AllEdge.make (.applyList .inquiry []) [work] (by simp) (by
+    simp [work, Value.text, Value.applyList])
+  let values := [frame.relation, owner.relation]
+  let graph := WorkGraph.fromValues values
+  let some discovery := Matcher.discoverIn? LogicalText.logicalNormalizer work values [] graph
+      (Matcher.Corpus.build LogicalText.logicalNormalizer graph) text none {} true true |
+    throw (IO.userError "native discovery did not converge")
+  let extraction := Matcher.extraction discovery
+  require ((Plugin.boundaryMatches discovery extraction).any (·.blocks))
+    "native fixture did not reach the production control selector"
+  let some report := Plugin.discoverySelectionReport discovery |
+    throw (IO.userError "production extraction bypassed its diagnostic component")
+  require (report.premises.any (fun premise => premise.role == .completedOutcome))
+    "the production component omitted its completed Outcome equality"
+
+def run : IO Unit := do
+  explicitAndCongruence
+  mixedAtomsAndLocalOrigins
+  selectedDeduplication
+  nativeDiscovery
+  IO.println "PASS equality dependency: direct closure, congruence, Exact, retraction, local ancestry, child deduplication and native extraction"
+
+end Eggshell.EqualityDependencyTests
