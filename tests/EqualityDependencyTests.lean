@@ -146,7 +146,7 @@ def nativeDiscovery : IO Unit := do
     "disabled receipt capture changed the rendered handoff"
   let id ← Receipt.fresh
   let corpus := Matcher.Corpus.build LogicalText.logicalNormalizer graph
-  let observed := discovery.hits.reverse.map (SelectionAudit.Admission.observe discovery.view corpus {})
+  let observed := discovery.hits.reverse.map (SelectionAudit.Admission.observe discovery.view work corpus {})
   let some audited ← Plugin.auditRenderedSelection (some id) [] discovery ⟨extraction, rfl⟩ rendered observed |
     throw (IO.userError "native selection disappeared while recording its premises")
   let some reference := audited.equalitySelection |
@@ -322,7 +322,7 @@ def nativeCongruentChild : IO Unit := do
   require (!selected.isEmpty) "congruence did not establish the native owner's original child role"
   let bindings := selected.map fun item => (item.matched.projectedEdge.relation, "congruent-owner")
   let observed := discovery.hits.reverse.map fun matched =>
-    (SelectionAudit.Admission.observe discovery.view corpus {} matched, "congruent-owner")
+    (SelectionAudit.Admission.observe discovery.view work corpus {} matched, "congruent-owner")
   let snapshot := SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions
     report ["congruent-owner"] bindings observed
   let replay ← IO.ofExcept (SelectionAudit.analyze snapshot)
@@ -335,10 +335,11 @@ def nativeCongruentChild : IO Unit := do
           row.getObjValD "kind" == Lean.toJson "congruence"))
     "congruence in the original child-role witness disappeared behind literal extraction comparisons"
 
-def indexedAdmission : IO Unit := do
+def indexedAdmission (withLocal : Bool := false) : IO Unit := do
   let id ← Receipt.fresh
   let path := (← Paths.dataRoot) / ("admission-" ++ id ++ ".egg")
   let text := "Bash\ncat indexed-admission.c"
+  let query := if withLocal then "Bash\ncat INDEXED-ADMISSION.c" else text
   let work := Value.text text
   let result := Value.text "indexed-admission.c contains the implementation"
   let occurrence := Value.applyList .occurrence [Ref.semantic result, Ref.semantic work]
@@ -354,7 +355,7 @@ def indexedAdmission : IO Unit := do
   let selection : Config.Selection := {
     label := "admission", read := [⟨"source", path⟩], write := none,
     semanticMatcher := none, handoffChars := 24000 }
-  let some (some audited) ← Plugin.indexedDiscovery selection [some snapshot] text [] true none true
+  let some (some audited) ← Plugin.indexedDiscovery selection [some snapshot] query [] true none true
       (receipt := some id) |
     throw (IO.userError "indexed production discovery lost the native admission fixture")
   let some reference := audited.equalitySelection |
@@ -368,6 +369,44 @@ def indexedAdmission : IO Unit := do
     "indexed discovery omitted admission-time equality or its sparse original child frame"
   require (snapshot.head == (← DB.PageMap.pin path).head)
     "admission diagnostics changed the read-only source graph"
+  if withLocal then
+    let saved ← SelectionAudit.read reference
+    require (!saved.runLocal.isEmpty && saved.localOrigins.length == saved.runLocal.length &&
+        replay.getObjValD "untrackedLocalOrigins" == Lean.toJson ([] : List Nat))
+      "production local Unions lost their actual proposing Match"
+    require (admissions.any (fun admission =>
+      ((admission.getObjValAs? (List Lean.Json) "comparisons").toOption.getD []).any fun row =>
+        row.getObjValD "role" == Lean.toJson "fragmentIdentity" &&
+        row.getObjValD "kind" == Lean.toJson "localUnion"))
+      "the completed fixture did not actually depend on its new local Union"
+    let origins ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "localUnionOrigins")
+    require (origins.any (fun origin =>
+        ((origin.getObjValAs? (List Lean.Json) "comparisons").toOption.getD []).any fun row =>
+          row.getObjValD "role" == Lean.toJson "fragmentIdentity" &&
+          row.getObjValD "kind" == Lean.toJson "notEquivalent") &&
+        replay.getObjValD "localUnionAncestry" == Lean.toJson "untracked")
+      "the proposing comparison was retroactively justified or complete causal ancestry was claimed"
+    let some first := saved.localOrigins.head? | throw (IO.userError "missing local origin fixture")
+    let cyclic := {saved with localOrigins := [{first with localCount := first.generator + 1}]}
+    require ((SelectionAudit.analyze cyclic).toOption.isNone)
+      "a local generator used itself or its future as nomination authority"
+    let retrieved := {saved with localOrigins := [{first with retrieved := true}]}
+    require ((SelectionAudit.analyze retrieved).toOption.isNone)
+      "retrieval relatedness acquired a local-Union origin"
+    let empty := {first with
+      priorComplete := false, demandComplete := false, priorWeight := 0, demandWeight := 0}
+    require ((SelectionAudit.analyze {saved with localOrigins := [empty]}).toOption.isNone)
+      "zero-weight unaligned fragments acquired a local-Union origin"
+    let foreign := {saved with localOrigins := [{first with inquiry := Persistence.valueToJson (.text "foreign")}]}
+    require ((SelectionAudit.analyze foreign).toOption.isNone)
+      "local nomination crossed its recorded Inquiry scope"
+    let duplicate := {saved with localOrigins := [first, first]}
+    require ((SelectionAudit.analyze duplicate).toOption.isNone)
+      "a generator acquired duplicate origin records"
+    let missing ← IO.ofExcept (SelectionAudit.analyze {saved with localOrigins := []})
+    let unknown ← IO.ofExcept (missing.getObjValAs? (List Nat) "untrackedLocalOrigins")
+    require (unknown.length == saved.runLocal.length)
+      "missing local generator origins were counted as congruence-free"
 
 def run : IO Unit := do
   explicitAndCongruence
@@ -377,6 +416,7 @@ def run : IO Unit := do
   nativeDiscovery
   nativeCongruentChild
   indexedAdmission
+  indexedAdmission true
   IO.println "PASS equality dependency: direct closure, congruence, Exact, retraction, local ancestry, child deduplication, isolated completed branches and native extraction"
 
 end Eggshell.EqualityDependencyTests

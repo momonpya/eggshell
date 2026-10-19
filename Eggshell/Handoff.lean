@@ -1347,7 +1347,7 @@ def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdg
     (observed.find? (fun admission => Matcher.sameMatch admission.matched selected.matched)).map
       (fun admission => (admission, relationKey selected.matched.edge.relation))
   let reference ← SelectionAudit.capture receipt
-    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners bindings admissions)
+    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners bindings admissions observed)
     ((handoff.sourceUses.filter (·.completed)).map (·.owner))
     (handoff.sourceCheckpoints.map (·.use.owner))
   pure (some {handoff with equalitySelection := reference})
@@ -4753,7 +4753,7 @@ def indexedTerminalRoot (selection : Config.Selection)
     (provenance := provenance) (refreshSources := refreshSources) (byteBudget := selection.handoffBytes)
   let children ← observations.get
   let observed := if receipt.isSome then hits.reverse.map
-    (SelectionAudit.Admission.observe view corpus children) else []
+    (SelectionAudit.Admission.observe view currentValue corpus children) else []
   pure (some (← auditRenderedSelection receipt persistent terminal.discovery prepared rendered observed))
 
 /-- A loaded row carries the production compiler certificate with its owner.
@@ -5486,7 +5486,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
         let children ← children.get
         audit.modify fun previous => found.val.foldl (fun previous matched =>
           let matched := if enableLocalUnion then matched else {matched with retrieved := true}
-          SelectionAudit.Admission.observe view groundedCorpus children matched :: previous) previous
+          SelectionAudit.Admission.observe view currentValue groundedCorpus children matched :: previous) previous
       retainedRanks.set state.ranks.saved
       saveBoundary
     for matched in hits do

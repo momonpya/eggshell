@@ -84,8 +84,10 @@ structure Admission where
   matched : Matcher.Match
   runLocal : List UnionEdge
   child : Json
+  inquiry : Value
+  nomination : Option UnionEdge
 
-def Admission.observe (view : RunView) (corpus : Matcher.Corpus)
+def Admission.observe (view : RunView) (inquiry : Value) (corpus : Matcher.Corpus)
     (children : Std.HashMap Value Persistence.Store.ChildObservation)
     (matched : Matcher.Match) : Admission := Id.run do
   let mut child := Json.null
@@ -96,7 +98,71 @@ def Admission.observe (view : RunView) (corpus : Matcher.Corpus)
         ("relation", Persistence.valueToJson parent.relation)]
     else if let some observed := children[original]? then
       child := observed.encode
-  return ⟨matched, view.localUnions, child⟩
+  return ⟨matched, view.localUnions, child, inquiry, Matcher.localUnion? view.quotient inquiry matched⟩
+
+/-- The Match which proposed one actual local generator. Unlike completed
+admission, nomination needs no completed subwork or Outcome context. -/
+structure UnionOrigin where
+  generator : Nat
+  localCount : Nat
+  inquiry : Json
+  demand : Json
+  work : Json
+  currentFragment : Json
+  pastFragment : Json
+  wholeIdentity : Bool
+  fragmentIdentity : Bool
+  priorComplete : Bool
+  demandComplete : Bool
+  priorWeight : Nat
+  demandWeight : Nat
+  retrieved : Bool
+  deriving ToJson, FromJson
+
+/-- Full structural keys disambiguate collision buckets; no display digest
+or serialized Value is used as generator identity. -/
+structure GeneratorKey where
+  left : Value
+  right : Value
+  run : Bool
+  authority : Value
+  deriving BEq, Hashable
+
+def GeneratorKey.ofEdge (edge : UnionEdge) : GeneratorKey := {
+  left := edge.left, right := edge.right
+  run := match edge.scope with | .run _ => true | .workspace _ => false
+  authority := match edge.scope with | .run value | .workspace value => value }
+
+def Admission.atPrefix (runLocal : List UnionEdge) (admission : Admission) : Bool :=
+  admission.runLocal.map GeneratorKey.ofEdge ==
+    (runLocal.take admission.runLocal.length).map GeneratorKey.ofEdge
+
+def unionOrigins (runLocal : List UnionEdge) (history : List Admission) : List UnionOrigin := Id.run do
+  if runLocal.isEmpty then return []
+  let mut nominated : Std.HashMap GeneratorKey Admission := {}
+  for admission in history.reverse do
+    if let some edge := admission.nomination then
+      let key := GeneratorKey.ofEdge edge
+      unless nominated.contains key do
+        if admission.atPrefix runLocal then nominated := nominated.insert key admission
+  return runLocal.zipIdx.filterMap fun (edge, index) => do
+    let admission ← nominated[GeneratorKey.ofEdge edge]?
+    unless admission.runLocal.length ≤ index do none
+    let matched := admission.matched
+    pure {
+      generator := index, localCount := admission.runLocal.length
+      inquiry := Persistence.valueToJson admission.inquiry
+      demand := Persistence.valueToJson matched.demand
+      work := Persistence.valueToJson matched.edge.work
+      currentFragment := Persistence.valueToJson matched.work.currentFragment
+      pastFragment := Persistence.valueToJson matched.work.pastFragment
+      wholeIdentity := matched.work.wholeWorkIdentity
+      fragmentIdentity := matched.work.fragmentIdentity
+      priorComplete := matched.work.priorInDemand.complete
+      demandComplete := matched.work.demandInPrior.complete
+      priorWeight := matched.work.priorInDemand.coveredWeight
+      demandWeight := matched.work.demandInPrior.coveredWeight
+      retrieved := matched.retrieved }
 
 structure AdmissionSnapshot where
   owner : String
@@ -119,8 +185,7 @@ structure AdmissionSnapshot where
 
 def Admission.snapshot? (runLocal : List UnionEdge) (branches : List CompletedBranch)
     (admission : Admission) (owner : String) : Option AdmissionSnapshot := do
-  let before := admission.runLocal.map Generator.encode |>.map toJson
-  unless before == (runLocal.take before.length).map (fun edge => toJson (Generator.encode edge)) do none
+  unless admission.atPrefix runLocal do none
   let matched := admission.matched
   unless matched.automatic && matched.judgment.delivery == .completed do none
   let projected := Persistence.valueToJson matched.projectedEdge.relation
@@ -128,7 +193,7 @@ def Admission.snapshot? (runLocal : List UnionEdge) (branches : List CompletedBr
     if branch.owner == owner && branch.projectedOutcome == projected &&
         branch.demand == Persistence.valueToJson matched.projectionWork then some index else none
   if positions.isEmpty then none else some {
-    owner, branches := positions, localCount := before.length
+    owner, branches := positions, localCount := admission.runLocal.length
     demand := Persistence.valueToJson matched.demand
     work := Persistence.valueToJson matched.edge.work
     currentFragment := Persistence.valueToJson matched.work.currentFragment
@@ -151,6 +216,7 @@ structure Snapshot where
   owners : List String
   completedBranches : List CompletedBranch := []
   admissions : List AdmissionSnapshot := []
+  localOrigins : List UnionOrigin := []
   deriving ToJson, FromJson
 
 /-- No second quotient build occurs in the hook. Only premises from a checked
@@ -160,7 +226,7 @@ def Snapshot.ofReport (persistent runLocal : List UnionEdge)
     {current : Value} {selection : Selection}
     (report : SelectionDependency.Report graph equality policy current selection)
     (owners : List String) (bindings : List (Value × String) := [])
-    (admissions : List (Admission × String) := []) : Snapshot := Id.run do
+    (admissions : List (Admission × String) := []) (history : List Admission := []) : Snapshot := Id.run do
   let positions : Std.HashMap SelectionDependency.Comparison Nat :=
     report.premises.zipIdx.foldl (fun positions (premise, index) => positions.insert premise index) {}
   let completedBranches : List CompletedBranch := (SelectionDependency.completedBranches equality current selection).flatMap
@@ -177,7 +243,8 @@ def Snapshot.ofReport (persistent runLocal : List UnionEdge)
   owners := owners.eraseDups
   completedBranches
   admissions := admissions.filterMap fun (admission, owner) =>
-    admission.snapshot? runLocal completedBranches owner }
+    admission.snapshot? runLocal completedBranches owner
+  localOrigins := unionOrigins runLocal history }
 
 def capture (receipt : Option String) (snapshot : Snapshot)
     (visible controls : List String) : IO (Option Reference) := do
@@ -222,6 +289,47 @@ def admissionChild (data : Json) : Except String (Option (Value × Value)) := do
   | _ => throw "unknown source child evidence"
   pure (some (requested, original))
 
+/-- Compare only against the generator prefix available at an observation. -/
+def replayComparisons (persistent runLocal : List UnionEdge) (localCount : Nat)
+    (pairs : List (String × Value × Value × Bool)) : Except String (List Json) := do
+  unless localCount ≤ runLocal.length do throw "comparison prefix is outside the recorded run"
+  let active := runLocal.take localCount
+  let roots := pairs.flatMap fun (_, left, right, _) => [left, right]
+  let some quotient := QuotientBuilder.build? roots persistent active |
+    throw "observation snapshot does not generate a valid quotient"
+  let stored := EqualityDependency.DirectIndex.make persistent
+  let all := EqualityDependency.DirectIndex.make (persistent ++ active)
+  pairs.mapM fun (role, left, right, accepted) => do
+    let kind := EqualityDependency.classify quotient.toEquality stored all left right
+    unless (kind != .notEquivalent) == accepted do
+      throw "comparison changed under its original generator prefix"
+    pure (Json.mkObj [("role", toJson role), ("accepted", toJson accepted),
+      ("kind", toJson (kindName kind)), ("left", Persistence.valueToJson left),
+      ("right", Persistence.valueToJson right)])
+
+def analyzeUnionOrigin (persistent runLocal : List UnionEdge) (origin : UnionOrigin) : Except String Json := do
+  let some edge := runLocal[origin.generator]? | throw "local origin names a missing generator"
+  unless origin.localCount ≤ origin.generator do
+    throw "a local generator depends on itself or a future generator"
+  let inquiry ← Persistence.valueFromJson 4096 origin.inquiry
+  let demand ← Persistence.valueFromJson 4096 origin.demand
+  let work ← Persistence.valueFromJson 4096 origin.work
+  let current ← Persistence.valueFromJson 4096 origin.currentFragment
+  let past ← Persistence.valueFromJson 4096 origin.pastFragment
+  unless edge.scope == .run inquiry && edge.left == current && edge.right == past do
+    throw "local generator changed its nomination endpoints or Inquiry scope"
+  unless !origin.retrieved && !origin.fragmentIdentity &&
+      (origin.priorComplete || origin.demandComplete ||
+        origin.priorWeight != 0 || origin.demandWeight != 0) do
+    throw "recorded Match did not pass the local-Union nomination gate"
+  let comparisons ← replayComparisons persistent runLocal origin.localCount [
+    ("wholeWorkIdentity", demand, work, origin.wholeIdentity),
+    ("fragmentIdentity", current, past, origin.fragmentIdentity)]
+  pure (Json.mkObj [("generator", toJson origin.generator), ("localCount", toJson origin.localCount),
+    ("status", toJson "nomination-replayed"), ("inquiry", origin.inquiry),
+    ("comparisons", toJson comparisons), ("schedulingAncestry", toJson "untracked"),
+    ("patternSelectionAncestry", toJson "untracked")])
+
 /-- Replay the exact generator prefix observed at Match construction. Future
 local Unions cannot retroactively justify an admission comparison. Source IO
 bindings remain an explicit boundary; this checks their retained frame, not
@@ -250,19 +358,7 @@ def analyzeAdmission (persistent runLocal : List UnionEdge) (branches : List Com
     ("fragmentIdentity", current, past, admission.fragmentIdentity)] ++
     (child.toList.flatMap fun (requested, original) =>
       [("subworkAlias", work, requested, true), ("originalChildAlias", requested, original, true)])
-  let active := runLocal.take admission.localCount
-  let roots := pairs.flatMap fun (_, left, right, _) => [left, right]
-  let some quotient := QuotientBuilder.build? roots persistent active |
-    throw "admission snapshot does not generate a valid quotient"
-  let stored := EqualityDependency.DirectIndex.make persistent
-  let all := EqualityDependency.DirectIndex.make (persistent ++ active)
-  let comparisons ← pairs.mapM fun (role, left, right, accepted) => do
-    let kind := EqualityDependency.classify quotient.toEquality stored all left right
-    unless (kind != .notEquivalent) == accepted do
-      throw "admission comparison changed under its original generator prefix"
-    pure (Json.mkObj [("role", toJson role), ("accepted", toJson accepted),
-      ("kind", toJson (kindName kind)), ("left", Persistence.valueToJson left),
-      ("right", Persistence.valueToJson right)])
+  let comparisons ← replayComparisons persistent runLocal admission.localCount pairs
   pure (Json.mkObj [("owner", toJson admission.owner), ("branches", toJson admission.branches),
     ("localCount", toJson admission.localCount), ("status", toJson "replayed"),
     ("sourceChild", toJson (if child.isSome then "recorded-source-boundary" else "untracked")),
@@ -310,11 +406,18 @@ def analyze (snapshot : Snapshot) : Except String Json := do
     pure (Json.mkObj [("selectionBranch", toJson index), ("owner", toJson branch.owner), ("demand", branch.demand),
       ("projectedOutcome", branch.projectedOutcome), ("comparisons", toJson comparisons)])
   let admissions ← snapshot.admissions.mapM (analyzeAdmission persistent runLocal snapshot.completedBranches)
+  let originIndices := snapshot.localOrigins.map (·.generator)
+  unless originIndices.eraseDups.length == originIndices.length do
+    throw "local generator has duplicate origin records"
+  let origins ← snapshot.localOrigins.mapM (analyzeUnionOrigin persistent runLocal)
   pure (Json.mkObj [
     ("status", toJson "partial"), ("component", toJson "selected-extraction"),
     ("scope", toJson "whole-selected-extraction-before-source-and-transport-pruning"),
     ("deliveryAncestry", toJson "untracked"),
     ("localUnionAncestry", toJson "untracked"),
+    ("localUnionOrigins", toJson origins),
+    ("localOriginScope", toJson "recorded-run-before-source-and-transport-pruning"),
+    ("untrackedLocalOrigins", toJson ((List.range runLocal.length).filter (!originIndices.contains ·))),
     ("completedBranchScope", toJson "selected-root-to-outcome-positive-comparisons"),
     ("finalLeafSlice", toJson "untracked"),
     ("matchAdmission", toJson (if admissions.isEmpty then "untracked" else "partial")),

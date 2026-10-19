@@ -2815,6 +2815,29 @@ def distinctLocalUnions (edges : List UnionEdge) : List UnionEdge :=
     if UnionEdge.newPair accepted edge.left edge.right then accepted ++ [edge]
     else accepted) []
 
+theorem distinctLocalUnions_mem {edges : List UnionEdge} {edge : UnionEdge}
+    (present : edge ∈ distinctLocalUnions edges) : edge ∈ edges := by
+  let step := fun (accepted : List UnionEdge) (next : UnionEdge) =>
+    if UnionEdge.newPair accepted next.left next.right then accepted ++ [next] else accepted
+  have loop (pending accepted : List UnionEdge) (member : edge ∈ pending.foldl step accepted) :
+      edge ∈ accepted ∨ edge ∈ pending := by
+    induction pending generalizing accepted with
+    | nil => exact Or.inl member
+    | cons next pending ih =>
+        simp only [List.foldl_cons, step] at member
+        split at member
+        · rcases ih _ member with kept | later
+          · rcases List.mem_append.mp kept with before | last
+            · exact Or.inl before
+            · exact Or.inr (List.mem_cons.mpr (Or.inl (by simpa using last)))
+          · exact Or.inr (List.mem_cons_of_mem _ later)
+        · rcases ih _ member with kept | later
+          · exact Or.inl kept
+          · exact Or.inr (List.mem_cons_of_mem _ later)
+  rcases loop edges [] present with impossible | original
+  · simp at impossible
+  · exact original
+
 def Match.continuationWork (matched : Match) : Value :=
   matched.projectionWork
 
@@ -2960,6 +2983,13 @@ theorem continuation_child_is_not_fresh {current child : Value}
 def newLocalUnions (view : RunView) (inquiry : Value)
     (hits : List Match) : List UnionEdge :=
   distinctLocalUnions <| hits.filterMap (localUnion? view.quotient inquiry)
+
+theorem newLocalUnions_origin {view : RunView} {inquiry : Value} {hits : List Match}
+    {edge : UnionEdge} (present : edge ∈ newLocalUnions view inquiry hits) :
+    ∃ matched ∈ hits, localUnion? view.quotient inquiry matched = some edge ∧
+      edge.scope = .run inquiry := by
+  obtain ⟨matched, member, generated⟩ := List.mem_filterMap.mp (distinctLocalUnions_mem present)
+  exact ⟨matched, member, generated, localUnion_is_run_scoped generated⟩
 
 def rootContinuation? (graph : WorkGraph) (equality : Equality)
     (current : Value) (currentText : String) (hits : List Match) : Option AllEdge := do

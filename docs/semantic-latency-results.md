@@ -476,3 +476,53 @@ remain unfinished.
 Raw output, receipts and independent publication audit: `admission-audit-1/`.
 Frozen sources, executables, failed checks and manifests:
 `/Users/ovm/.codex/experiments/eggshell/admission-audit-20261020/implementation-2/`.
+
+## Local generator proposer observations included, 2026-10-20
+
+The candidate also retains actual local-Union proposals made beside Match
+construction. No second quotient is built in the hook. The unchanged fixed
+48-hook protocol passed after this observation was enabled: complete original
+window scoring, configured semantic completion, original DB body, exact
+stdout/publication and accepted ACK, every hook below 5 s. The source graphs
+and caches were copied from `packed-fixtures-2`; generation-model calls were 0.
+
+| Sources | Source vectors | Question cache | Semantic / body | Latencies, ms |
+| --- | --- | --- | --- | --- |
+| 2 | database | fresh | 3/3 / 3/3 | 1241, 1226, 1255 |
+| 2 | database | cached | 3/3 / 3/3 | 251, 261, 255 |
+| 2 | private-overlay | fresh | 3/3 / 3/3 | 1226, 1243, 1234 |
+| 2 | private-overlay | cached | 3/3 / 3/3 | 252, 265, 257 |
+| 32 | database | fresh | 3/3 / 3/3 | 1382, 1367, 1360 |
+| 32 | database | cached | 3/3 / 3/3 | 323, 321, 321 |
+| 32 | private-overlay | fresh | 3/3 / 3/3 | 1358, 1382, 1380 |
+| 32 | private-overlay | cached | 3/3 / 3/3 | 312, 318, 316 |
+| 256 | database | fresh | 3/3 / 3/3 | 1784, 1823, 1786 |
+| 256 | database | cached | 3/3 / 3/3 | 743, 736, 731 |
+| 256 | private-overlay | fresh | 3/3 / 3/3 | 1770, 1815, 1820 |
+| 256 | private-overlay | cached | 3/3 / 3/3 | 752, 762, 756 |
+| 1024 | database | fresh | 3/3 / 3/3 | 3937, 3845, 3889 |
+| 1024 | database | cached | 3/3 / 3/3 | 2641, 2657, 2665 |
+| 1024 | private-overlay | fresh | 3/3 / 3/3 | 3794, 3784, 3806 |
+| 1024 | private-overlay | cached | 3/3 / 3/3 | 2712, 2699, 2739 |
+
+The run took 87.76 s, aggregate descendant peak 1,181,056 KiB, under the
+3,500,000 KiB guard. Independent publication/SHA/ACK verification passed all
+48, and all 15 frozen source/protocol/executable hashes remained unchanged.
+The standard full-suite command passed in 90.81 s, peak 2,850,368 KiB. Another
+daemon drained the remaining three tickets without changing graph heads.
+
+A separate 14-call native fixture creates two local generators for a read
+whose spacing and relative-path spelling differ. Both proposals replay at
+prefix 0; completed admission uses local equality, and changing the source
+file invalidates control. Self/future references and invalid proposal gates
+are rejected. See [selection-audit.md](selection-audit.md).
+
+The additional known `work-first-tests` mismatch was not rerun or counted as
+passing. Demand/pattern-selection ancestry, continuations and final fragment
+slicing remain unfinished. These advisory latency fixtures do not establish
+large completed-snapshot cost or general DB-size bounds. No public-main
+token/quality adoption result is claimed.
+
+Raw records and independent audits: `local-origin-1/`. Frozen code, executables,
+failed initial build and all guard/native records:
+`/Users/ovm/.codex/experiments/eggshell/local-origin-20261020/implementation-1/`.

@@ -82,6 +82,13 @@ congruence for its original child role. The admission component exposes that
 dependency. Source Value-to-node binding and freshness remain IO boundaries;
 the inspector does not claim an independent complete DB proof.
 
+Local generator records now retain the actual proposing Match and its earlier
+generator prefix. Offline replay checks the proposal gate without using the
+generator itself or later siblings. `newLocalUnions_origin` proves that
+production deduplication retains only input Match proposals, with the original
+Inquiry scope. These are immediate proposer facts; Demand scheduling and
+Work-pattern selection remain untracked, so local causal ancestry is not closed.
+
 ## Validation and remaining work
 
 The focused executable runs the real kernel and native matcher selector. It
@@ -96,7 +103,8 @@ warnings are separate from equality classification.
 
 The selection report is one required component. It does **not** establish:
 
-- the admission decisions that originally generated each local Union;
+- the Demand scheduling and Work-pattern choices that exposed each local
+  Union proposer;
 - independent verification of the source IO's complete Value-to-node binding;
 - the causal ancestry of generated All continuations and local Unions;
 - which final completed leaf retains a comparison after source checks and

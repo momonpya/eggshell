@@ -20,7 +20,8 @@ run_meta do
       ``Eggshell.Selection.validFor_provenance_congr,
       ``Eggshell.Extract.runWithPolicyFuel_demand_exact,
       ``Eggshell.QuotientBuilder.AtomQuotient.Index.subwork_exact,
-      ``Eggshell.Persistence.Store.ChildObservation.child_before] do
+      ``Eggshell.Persistence.Store.ChildObservation.child_before,
+      ``Eggshell.Matcher.newLocalUnions_origin] do
     let axioms ← Lean.collectAxioms theoremName
     for axiomName in axioms do
       unless #[``propext, ``Classical.choice, ``Quot.sound].contains axiomName do
@@ -118,8 +119,12 @@ run_meta do
         #[``Eggshell.SelectionDependency.Report.ofValid, ``Eggshell.SelectionAudit.capture],
         #[``Eggshell.EqualityDependency.DirectIndex.make, ``Eggshell.SelectionAudit.analyze]),
       (``Eggshell.SelectionAudit.Snapshot.ofReport,
-        #[``Eggshell.SelectionDependency.completedBranches, ``Eggshell.SelectionAudit.Premise.encode],
+        #[``Eggshell.SelectionDependency.completedBranches, ``Eggshell.SelectionAudit.Premise.encode,
+          ``Eggshell.SelectionAudit.unionOrigins],
         #[``Eggshell.EqualityDependency.DirectIndex.make]),
+      (``Eggshell.SelectionAudit.Admission.observe,
+        #[``Eggshell.Matcher.localUnion?],
+        #[``Eggshell.EqualityDependency.DirectIndex.make, ``Eggshell.QuotientBuilder.build?]),
       (``Eggshell.Plugin.indexedTerminalRoot,
         #[``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.SelectionAudit.Admission.observe],
         #[``Eggshell.SelectionAudit.analyzeAdmission]),

@@ -49,8 +49,9 @@ owners are rejected.
 
 The terminal native path and the indexed discovery controller observe the
 actual returned Matches. They retain the original local-generator prefix and
-the source-child witness selected by the corpus membership predicate. Only
-records corresponding to completed selected Matches are serialized. A later
+the source-child witness selected by the corpus membership predicate. Selected
+completed admissions and proposers of actual local generators are serialized;
+other observed Matches are not. A later
 Match with the same production identity replaces the earlier one in discovery;
 the inspector uses its latest observed construction, rather than an earlier
 comparison with the same owner.
@@ -86,6 +87,43 @@ their selection-branch positions, including when no admission was captured.
 Neither an absent record nor a literal extraction erases an unknown. In the
 regression fixture, all extraction comparisons are literal, while the original
 child-role comparison requires congruence.
+
+## Local generator proposers
+
+At Match observation, the collector also calls the production `localUnion?`
+function with that immutable view and the actual Inquiry. It retains the
+proposal, rather than inventing an origin from the final quotient. At capture,
+one full structural key (both endpoints, scope kind and authority) locates the
+earliest proposing Match for each actual local generator. Hash collisions do
+not identify generators, and unselected proposals are not serialized. The
+collector does not rebuild equality or inspect additional source bodies.
+
+`Matcher.newLocalUnions_origin` proves that every generator kept by production
+deduplication came from an input Match and is scoped to that Inquiry. The proof
+uses the production `distinctLocalUnions` fold, including duplicate/reversed
+pair handling. `ContractAudit` checks its axioms and that the collector calls
+the production nomination function without another quotient build.
+
+`localUnionOrigins` replays the recorded proposal gate: no retrieval-only hit,
+a positive Work alignment or complete side, original fragment non-identity,
+unchanged endpoints and Inquiry scope, and the generator's Exact footprint.
+Unlike completed admission, nomination requires neither completed subwork nor
+Outcome context. Whole-Work identity is an observed Match comparison; only the
+fragment identity test is directly used by the proposal gate. These records
+do not assert minimal causal dependencies.
+
+Generator `i` may use only a prefix of length at most `i`. Self/future references,
+duplicate origins, endpoint/scope changes and invalid gates are errors. Two
+generators proposed in the same pass can share the same shorter prefix: they
+must not be replayed as if the second used the first. Missing proposers remain
+listed in `untrackedLocalOrigins`, including when no history was recorded.
+
+This component covers the entire captured run before source/transport pruning,
+so it does not claim that every available generator was used by a retained
+owner. Demand scheduling and Work-pattern selection ancestry remain untracked,
+as do continuation and final-fragment ancestry. Consequently
+`localUnionAncestry` and whole-delivery ancestry remain `untracked` even when
+every immediate proposer was recovered. No Phase 3 fraction is derived.
 
 The snapshot covers the **whole selected extraction before source and transport
 pruning**, alongside the owner lists that survived. It is not yet a dependency
@@ -165,3 +203,33 @@ frozen sources/executables and hash checks are under
 public-main token/quality adoption comparison were made. Large completed
 snapshots, complete local/continuation ancestry and final fragment slicing
 remain open.
+
+## Local proposer validation (2026-10-20)
+
+The real-DB regression now creates nonliteral local equality, verifies its
+original negative fragment comparison, and checks that completed admission
+actually uses that local Union. It rejects self/future prefixes, retrieval-only
+proposals, absent alignment, foreign Inquiry scopes and duplicate origins.
+Removing the proposer records leaves every generator explicitly unknown.
+
+The real native fixture reads `probe.txt`, then requests `cat   ./probe.txt`.
+Its completed control uses two local generators proposed together at prefix 0;
+both original proposer records replay. Across 14 native/inspection calls, exact
+stdout/SHA-256, accepted ACK, admission/child coverage and source-change
+invalidation passed. Native hook maximum was 1,639 ms in this small fixture.
+
+The standard full-suite command passed in 90.81 s, aggregate descendant peak
+2,850,368 KiB. Its three remaining tickets were drained by another daemon with
+all graph heads unchanged. The unchanged fixed 48-hook warm diagnostic also
+passed, including all original discovery windows and stdout/publication/ACK,
+under the 5 s gate. Source/executable hashes were frozen for measurement.
+The known additional `work-first-tests` mismatch from the preceding milestone
+was not rerun or counted as passing here.
+
+Frozen code, executables, failed initial build, all guard logs and native
+receipts are under
+`/Users/ovm/.codex/experiments/eggshell/local-origin-20261020/`;
+the fixed latency run is `semantic-latency-20261019-isolated/local-origin-1/`.
+These checks made zero generation-model calls and do not establish public-main
+token/quality adoption, large completed-snapshot cost or complete delivery
+causal ancestry. The full goal remains active.
