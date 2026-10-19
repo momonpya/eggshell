@@ -1,7 +1,8 @@
 # Equality dependency diagnostics
 
-Status: unadopted diagnostic foundation in the isolated candidate. This is not
-yet a complete delivery receipt or the Phase 3 measurement.
+Status: unadopted diagnostics in the isolated candidate. Native receipts can
+pin and replay the chosen extraction component. Whole-delivery ancestry and
+the Phase 3 measurement remain incomplete.
 
 ## Explicit closure and congruence
 
@@ -49,8 +50,12 @@ positive under the active equality (`comparisons_positive`).
 `Plugin.discoverySelectionReport` reads the actual `Matcher.extraction` result.
 It does not construct another solver or substitute an arbitrary sampled plan.
 `ContractAudit` checks this dependency and the new theorems' axiom dependencies.
-The accessor is currently diagnostic; native receipt persistence does not yet
-invoke or serialize it.
+Native receipt persistence uses the same comparisons with the production
+extraction's existing validity proof, without rerunning the validity checker.
+It pins current generators for offline classification rather than building
+another explicit closure in the hook. Source checks and final reconciliation
+restrict the surviving owner lists. A demand-memo hit retains the original
+snapshot locator. See [selected equality receipts](selection-audit.md).
 
 A literal root equality does not imply a congruence-free extraction. The
 regression fixture with children `F(a), F(b)` and generator `a ~ b` completes
@@ -83,5 +88,6 @@ Consequently `localUnion` must remain unknown in a delivery-wide tally. Even
 all-literal selection comparisons cannot certify a congruence-free delivery
 until the matcher and source-role components are present. No overall fraction
 is reported, no Phase 0 completion is claimed, and no token adoption gate has
-been passed. The receipt integration must also add semantic status, cache rates
-and stage durations before Phase 0 can be considered complete.
+been passed. Native receipts also retain semantic status, actual cache probes
+and stage durations; Phase 0 still needs the missing ancestry components and
+the remaining measurements in `GOAL.md`.

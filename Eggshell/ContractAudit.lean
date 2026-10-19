@@ -110,6 +110,13 @@ run_meta do
   for (root, required, forbidden) in #[
       (``Eggshell.Plugin.discoverySelectionReport,
         #[``Eggshell.SelectionDependency.report?, ``Eggshell.Matcher.extraction], #[]),
+      (``Eggshell.Plugin.auditRenderedSelection,
+        #[``Eggshell.SelectionDependency.Report.ofValid, ``Eggshell.SelectionAudit.capture],
+        #[``Eggshell.EqualityDependency.DirectIndex.make, ``Eggshell.SelectionAudit.analyze]),
+      (``Eggshell.Plugin.indexedTerminalRoot,
+        #[``Eggshell.Plugin.auditRenderedSelection], #[]),
+      (``Eggshell.Plugin.indexedDiscoveryUsing,
+        #[``Eggshell.Plugin.auditRenderedSelection], #[]),
       (``Eggshell.Plugin.Daemon.hookClient,
         #[``Eggshell.Plugin.Worker.awaitUntil, ``Eggshell.Plugin.Worker.killGroup,
           ``Eggshell.Plugin.Daemon.decodeHookReply], #[``IO.getStdin, ``Eggshell.Plugin.captureTerminal]),

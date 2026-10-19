@@ -8,7 +8,7 @@ public import Eggshell.SaturationMemo
 public import Eggshell.DiscoveryMemo
 public import Eggshell.DemandMemo
 public import Eggshell.FederatedSearch
-public import Eggshell.SelectionDependency
+public import Eggshell.SelectionAudit
 
 @[expose] public section
 
@@ -282,6 +282,7 @@ structure Handoff where
   /-- Length of the separately framed control suffix, not another body copy. -/
   controlDeltaChars : Nat := 0
   search : Option SearchTrace := none
+  equalitySelection : Option SelectionAudit.Reference := none
   deriving Lean.ToJson, Lean.FromJson
 
 /-- A search status carries no authority to certify or suppress work. -/
@@ -1070,6 +1071,8 @@ def Handoff.withCheckedSources (handoff : Handoff) (context : SourceContext)
     localUnions := if uses.length == handoff.sourceUses.length && !uses.isEmpty then handoff.localUnions else 0
     blocksCurrent := !controls.isEmpty
     sourceCheckpoints := controls
+    equalitySelection := handoff.equalitySelection.map (fun reference => reference.restrict
+      ((uses.filter (·.completed)).map (·.owner)) (controls.map (·.use.owner)))
     coveredFragments := (controls.filterMap (·.fragment)).eraseDups
     deliveredGraphs := handoff.deliveredGraphs.filter (fun key => !key.startsWith "d:" || keys.contains key)
     controlDeltaChars := if delta.isEmpty then 0 else delta.length + (if body.isEmpty then 0 else 2)}
@@ -1106,6 +1109,7 @@ def Handoff.withSourceAuthority (handoff : Handoff)
       localUnions := 0
       coveredFragments := []
       blocksCurrent := false
+      equalitySelection := handoff.equalitySelection.map (fun reference => reference.restrict [] [])
       deliveredGraphs := handoff.deliveredGraphs.filter (fun key => !key.startsWith "d:")}
 
 theorem unverified_source_never_blocks (handoff : Handoff) :
@@ -1319,6 +1323,29 @@ theorem boundaryMatch_demands_current {discovery : Matcher.Discovery}
     (present : selected ∈ boundaryMatches discovery extraction) :
     selected.matched.demand = discovery.current := by
   exact beq_iff_eq.mp (List.mem_filter.mp present).2
+
+/-- Pin the actual chosen selection without rebuilding explicit closure in
+the hook. A memo carries the locator; final source/transport checks restrict
+its owner lists. Missing or failed capture never supplies a classification. -/
+def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdge)
+    (discovery : Matcher.Discovery)
+    (prepared : { extraction : Extraction // extraction = Matcher.extraction discovery })
+    (result : Option Handoff) : IO (Option Handoff) := do
+  if receipt.isNone then return result
+  let some handoff := result | return none
+  if handoff.completed == 0 && !handoff.blocksCurrent then return result
+  let valid : prepared.val.selection.validFor discovery.view.graph
+      discovery.view.quotient.toEquality discovery.policy discovery.current = true := by
+    simpa only [prepared.property] using Matcher.extraction_sound discovery
+  let report := SelectionDependency.Report.ofValid valid
+  let owners := (selectedMatches discovery prepared.val).filter
+    (fun selected => selected.applicability == .completed) |>.map
+      (fun selected => relationKey selected.matched.edge.relation)
+  let reference ← SelectionAudit.capture receipt
+    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners)
+    ((handoff.sourceUses.filter (·.completed)).map (·.owner))
+    (handoff.sourceCheckpoints.map (·.use.owner))
+  pure (some {handoff with equalitySelection := reference})
 
 /-- Completed leaf evidence precedes fallible synthesis in the transported tree. -/
 def supportFirst (selected : List Selected) : List Selected :=
@@ -3376,6 +3403,8 @@ def Handoff.reconcileDelivery (handoff : Handoff) (delivered : List String)
       reason := handoff.reason.replace "blocks-current=true" s!"blocks-current={!controls.isEmpty}",
       sourceCheckpoints := controls, coveredFragments := (controls.filterMap (·.fragment)).eraseDups,
       sourceUses := handoff.sourceUses.filter (fun use => visibleOwners.contains use.owner),
+      equalitySelection := handoff.equalitySelection.map (fun reference =>
+        reference.restrict visibleOwners (controls.map (·.use.owner))),
       blocksCurrent := !controls.isEmpty,
       controlDeltaChars := if delta.isEmpty then 0 else delta.length + (if body.isEmpty then 0 else 2)},
       frame.charsFit, frame.bytesFit⟩
@@ -4650,7 +4679,8 @@ answer. The outer Option distinguishes that case from a completed miss. -/
 def indexedTerminalRoot (selection : Config.Selection)
     (snapshots : List (Option Persistence.Store.Snapshot)) (current : String)
     (delivered : List String) (enforce : Bool) (evidence : Option String)
-    (enableLocalUnion : Bool) (refreshSources : Bool := false) : IO (Option (Option Handoff)) := do
+    (enableLocalUnion : Bool) (refreshSources : Bool := false)
+    (receipt : Option String := none) : IO (Option (Option Handoff)) := do
   let some source := SingleSource.find? snapshots | return none
   let snapshot := source.snapshot
   let reader ← Persistence.Store.NodeReader.new snapshot
@@ -4710,8 +4740,11 @@ def indexedTerminalRoot (selection : Config.Selection)
     let owner ← reader.outcome entry.2
     let records ← try reader.sources entry.1 catch _ => pure [SourceEvidence.unverified]
     pure (owner.relation, if records.isEmpty then [SourceEvidence.unverified] else records)
-  pure (some (renderAutomatic [] selection.handoffChars current delivered enforce true terminal.discovery
-    (provenance := provenance) (refreshSources := refreshSources) (byteBudget := selection.handoffBytes)))
+  let prepared : { extraction : Extraction // extraction = Matcher.extraction terminal.discovery } :=
+    ⟨Matcher.extraction terminal.discovery, rfl⟩
+  let rendered := renderAutomatic [] selection.handoffChars current delivered enforce true terminal.discovery prepared
+    (provenance := provenance) (refreshSources := refreshSources) (byteBudget := selection.handoffBytes)
+  pure (some (← auditRenderedSelection receipt persistent terminal.discovery prepared rendered))
 
 /-- A loaded row carries the production compiler certificate with its owner.
 There is no second map which can omit or substitute the row's candidate. -/
@@ -5456,10 +5489,11 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
         saveBoundary)
     sourceAll prepare
   let some discovery := result | return some pendingSearch
+  let extraction := Matcher.extraction discovery
   trace "discovery"
   let mut provenance := []
-  for selected in selectedMatches discovery (Matcher.extraction discovery) ++
-      boundaryMatches discovery (Matcher.extraction discovery) do
+  for selected in selectedMatches discovery extraction ++
+      boundaryMatches discovery extraction do
     let owner := selected.matched.edge.relation
     if provenance.any (fun row => row.1 == owner) then continue
     let stagedSources := staged.filterMap (SourceEvidence.receiptRecord? owner)
@@ -5469,7 +5503,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     let records := (stagedSources ++ stored).eraseDups
     provenance := provenance ++ [(owner, if records.isEmpty then [SourceEvidence.unverified] else records)]
   let nominated ← semanticIds.mapM source.readOwner
-  let selected := selectedMatches discovery (Matcher.extraction discovery)
+  let selected := selectedMatches discovery extraction
   let nominatedOwners := nominated ++
     (stagedGraph.outcomes.filter (fun owner => semanticOwners.staged.contains owner.relation))
   let entries := sourceEntryOwners nominatedOwners selected
@@ -5604,6 +5638,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
         pure (!advisoryOwnerAllowed referenceQuery delivered (← source.advisoryPositions owner))
     else pure []
   let rendered := renderAutomatic staged selection.handoffChars current delivered enforce stagedVisible discovery
+    ⟨extraction, rfl⟩
     (provenance := provenance) (refreshSources := refreshSources)
     (nominated := nominated.map (·.relation) ++ semanticOwners.staged)
     (semanticEvidence := prioritizedEvidence originalEvidence focusedWindows)
@@ -5621,7 +5656,8 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
           (advisoryFrontierKey referenceQuery)).eraseDups}
     else handoff
   trace s!"render complete chars={(rendered.map (·.text.length)).getD 0}"
-  pure rendered
+  auditRenderedSelection source.receipt persistent discovery
+    ⟨extraction, rfl⟩ rendered
 
 /-- An empty body can still carry source-refresh metadata. Retain any known
 result before asking for keyword advice; only `none` means no such result. -/
@@ -5958,7 +5994,7 @@ def computeAutomaticHandoff (selection : Config.Selection)
     if staged.isEmpty && (enforce || evidenceText.isSome) &&
         (selection.semanticMatcher.isNone || evidenceText.isSome) then
       if let some result ← indexedTerminalRoot selection snapshots current deliveredGraphs
-          enforce evidenceText enableLocalUnion refreshSources then return result
+          enforce evidenceText enableLocalUnion refreshSources receipt then return result
     if let some result ← indexedDiscovery selection snapshots current deliveredGraphs
         enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt then return result
     return ← federatedDiscovery selection snapshots current deliveredGraphs

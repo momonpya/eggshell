@@ -169,11 +169,17 @@ structure Report (graph : WorkGraph) (equality : Equality) (policy : OutcomePoli
   exact : premises = comparisons equality work selection
   positive : ∀ premise ∈ premises, premise.holds equality = true
 
+def Report.ofValid {graph : WorkGraph} {equality : Equality} {policy : OutcomePolicy}
+    {work : Value} {selection : Selection}
+    (valid : selection.validFor graph equality policy work = true) :
+    Report graph equality policy work selection :=
+  ⟨valid, comparisons equality work selection, rfl,
+    comparisons_positive graph equality policy work selection valid⟩
+
 def report? (graph : WorkGraph) (equality : Equality) (policy : OutcomePolicy)
     (work : Value) (selection : Selection) : Option (Report graph equality policy work selection) :=
   if valid : selection.validFor graph equality policy work = true then
-    some ⟨valid, comparisons equality work selection, rfl,
-      comparisons_positive graph equality policy work selection valid⟩
+    some (Report.ofValid valid)
   else none
 
 end Eggshell.SelectionDependency

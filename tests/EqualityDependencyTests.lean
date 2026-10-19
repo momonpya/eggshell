@@ -103,6 +103,18 @@ def selectedDeduplication : IO Unit := do
     premise.role == .deduplicatedChild &&
       classify quotient.toEquality stored current premise.left premise.right == .congruence)
     "congruence needed to omit a duplicate child disappeared behind literal root identity"
+  let snapshot := SelectionAudit.Snapshot.ofReport [ab] [] report ["chosen-owner"]
+  let replay ← IO.ofExcept (SelectionAudit.analyze snapshot)
+  let rows ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "comparisons")
+  require (rows.any (fun row => row.getObjValD "role" == Lean.toJson "deduplicatedChild" &&
+      row.getObjValD "kind" == Lean.toJson "congruence") &&
+      replay.getObjValD "deliveryAncestry" == Lean.toJson "untracked")
+    "offline replay lost a nonliteral structural dependency or certified the entire delivery"
+  let invalidSnapshot := {snapshot with premises := [{
+    role := "completedOutcome", left := Persistence.valueToJson fa,
+    right := Persistence.valueToJson (.text "unrelated")}]}
+  require ((SelectionAudit.analyze invalidSnapshot).toOption.isNone)
+    "a false positive comparison became a valid equality receipt"
   let invalid := Selection.outcomes root [owner] []
   require ((SelectionDependency.report? graph quotient.toEquality .allCompleted root invalid).isNone)
     "an unsupported completed owner obtained a dependency report"
@@ -127,6 +139,41 @@ def nativeDiscovery : IO Unit := do
     throw (IO.userError "production extraction bypassed its diagnostic component")
   require (report.premises.any (fun premise => premise.role == .completedOutcome))
     "the production component omitted its completed Outcome equality"
+  let rendered := Plugin.renderAutomatic [] 24000 text [] true true discovery
+  require rendered.isSome "native selection did not render"
+  let unchanged ← Plugin.auditRenderedSelection none [] discovery ⟨extraction, rfl⟩ rendered
+  require (Lean.toJson unchanged == Lean.toJson rendered)
+    "disabled receipt capture changed the rendered handoff"
+  let id ← Receipt.fresh
+  let some audited ← Plugin.auditRenderedSelection (some id) [] discovery ⟨extraction, rfl⟩ rendered |
+    throw (IO.userError "native selection disappeared while recording its premises")
+  let some reference := audited.equalitySelection |
+    throw (IO.userError "native selected extraction has no immutable receipt locator")
+  let replay ← SelectionAudit.inspect reference
+  require (replay.getObjValD "status" == Lean.toJson "partial" &&
+      !reference.controls.isEmpty && audited.text == (rendered.map (·.text)).getD "")
+    "native audit changed the body or missed a completed control owner"
+  let decoded ← IO.ofExcept (Lean.fromJson? (Lean.toJson audited) : Except String Plugin.Handoff)
+  require (Lean.toJson decoded.equalitySelection == Lean.toJson audited.equalitySelection)
+    "demand-memo serialization lost the selected equality locator"
+  let controlKeys := audited.sourceCheckpoints.map (·.key)
+  if let some reconciled := audited.reconcileDelivery controlKeys 24000 96000 then
+    require (reconciled.handoff.equalitySelection.all (·.controls.isEmpty))
+      "already acknowledged control survived final equality attribution"
+  let invalidOwner := {reference with visible := ["not-selected"]}
+  let rejected ← try let _ ← SelectionAudit.inspect invalidOwner; pure false catch _ => pure true
+  require rejected "an unselected owner was attributed to a valid extraction"
+  let path := (← Paths.dataRoot) / "receipts" / id / (reference.stage ++ ".json")
+  let bytes ← IO.FS.readBinFile path
+  try
+    IO.FS.writeFile path "{}"
+    let rejected ← try let _ ← SelectionAudit.inspect reference; pure false catch _ => pure true
+    require rejected "a replaced equality snapshot retained its original attribution"
+  finally IO.FS.writeBinFile path bytes
+  let _ ← SelectionAudit.inspect reference
+  let stripped := reference.restrict [] []
+  require (stripped.visible.isEmpty && stripped.controls.isEmpty)
+    "discarded completion owners survived diagnostic restriction"
 
 def run : IO Unit := do
   explicitAndCongruence

@@ -154,6 +154,39 @@ def testIndependentObservations (workspace : System.FilePath) (body : String) : 
     "an independent observation ignored deletion of its dependency"
   IO.FS.writeFile (workspace / "src/product.cc") body
 
+def testSelectedMemo (path : System.FilePath) (tool : ToolEvent)
+    (record : SourceEvidence.Record) (context : SourceContext) : IO Unit := do
+  let work := Value.text (canonicalToolWork tool)
+  let result := Value.text (canonicalJson tool.response)
+  let occurrence := Value.applyList .occurrence [Ref.semantic result, Ref.semantic work]
+  let owner := OutcomeEdge.make work result [occurrence] (by simp) (by simp [maxOutcomeObservations])
+  let parent := Value.text "selected-memo-fixture-root"
+  let frame ← if distinct : parent ≠ work then
+      pure (AllEdge.make parent [work] (by simp) (by simpa using distinct))
+    else throw (IO.userError "memo fixture parent coincides with its operation")
+  let receipt := SourceEvidence.receipt (.text "audit-chat") (.text "audit-turn")
+    (.text tool.useId) owner.relation record
+  let snapshot ← PageMap.create path (Persistence.valueToJson (.text "audit-memo")).compress
+  let _ ← PageMap.withWriter snapshot fun writer => do
+    let intern : Store.Intern := ⟨writer, ← IO.mkRef {}⟩
+    let ids ← [frame.relation, owner.relation, receipt].mapM intern.root
+    Store.writeChange writer ⟨ids, [], false⟩
+  let selection : Config.Selection := {
+    label := "audit", semanticMatcher := none, handoffChars := 24000
+    read := [{name := "audit", path}], write := some {name := "audit", path} }
+  let ask := fun context => automaticHandoff selection (canonicalToolWork tool) [] true
+    none [] true true (some context)
+  let context := {context with receipt := some (← Receipt.fresh)}
+  let some matching ← ask context | throw (IO.userError "memo fixture did not complete its native work")
+  require (matching.completed > 0 || matching.blocksCurrent) "memo fixture produced no completion"
+  let some reference := matching.equalitySelection |
+    throw (IO.userError "source-checked completion lost its selected equality locator")
+  let _ ← SelectionAudit.inspect reference
+  let some reused ← ask {context with deadline := ← deadline, receipt := some (← Receipt.fresh)} |
+    throw (IO.userError "receipt-bearing demand memo lost its handoff")
+  require (toJson reused.equalitySelection == toJson matching.equalitySelection)
+    "demand-memo reuse attributed an old extraction to a new computation"
+
 def run : IO Unit := do
   let root ← PageMap.absolute ".lake/portable-source-tests"
   if ← root.pathExists then IO.FS.removeDirAll root
@@ -243,7 +276,10 @@ def run : IO Unit := do
     completed := 4, advisory := 0, localUnions := 4
     coveredFragments := uses.map (·.owner), blocksCurrent := true
     sourceRecords := [current.record, secondSource.record, SourceEvidence.unverified]
-    sourceUses := uses, sourceCheckpoints := checkpoints, controlDeltaChars := delta.length + 2 }
+    sourceUses := uses, sourceCheckpoints := checkpoints, controlDeltaChars := delta.length + 2
+    equalitySelection := some {
+      receipt := "fixture", stage := "fixture", sha256 := "fixture"
+      visible := uses.map (·.owner), controls := uses.map (·.owner)} }
   require mixedHandoff.controlSuffixValid "source control fixture has no valid framed suffix"
   let checkedMixed ← mixedHandoff.checkSources {workspace := first, deadline := ← deadline}
   require (checkedMixed.controlSuffixValid && checkedMixed.reason.endsWith "sources=mixed" && checkedMixed.completed == 2 &&
@@ -252,6 +288,9 @@ def run : IO Unit := do
     checkedMixed.deliveredGraphs.contains "d:result-A" && checkedMixed.deliveredGraphs.contains "d:result-B" &&
     !checkedMixed.deliveredGraphs.contains "d:unknown" && !checkedMixed.deliveredGraphs.contains "d:invalid-index")
     "unverified results poisoned verified controls or acquired a checkpoint"
+  require (checkedMixed.equalitySelection.any fun reference =>
+      reference.visible == ["result-A", "result-B"] && reference.controls == ["result-A", "result-B"])
+    "stale or unverified owners survived selected-equality attribution"
   require (checkedMixed.text.contains originalBody && !checkedMixed.text.contains "GRAPH unknown\n" &&
     !checkedMixed.text.contains "GRAPH invalid-index\n" && checkedMixed.text.length ≤ 24000)
     "source filtering erased original evidence or left unverified control instructions"
@@ -284,6 +323,9 @@ def run : IO Unit := do
   require (checkedEdit.text.contains "GRAPH result-A: recorded file dependencies changed" &&
       checkedEdit.text.contains "GRAPH result-B: recorded file dependencies unchanged")
     "one changed source mislabeled an unchanged result"
+  require (checkedEdit.equalitySelection.any fun reference =>
+      reference.visible == ["result-B"] && reference.controls == ["result-B"])
+    "a changed source remained a completed equality dependency"
   IO.FS.writeFile (first / "src/product.cc") body
   let namedA ← mixedHandoff.checkSources {
     workspace := first, deadline := ← deadline, native := true, targets := some ["src/product.cc"]}
@@ -399,6 +441,7 @@ def run : IO Unit := do
   let some memo ← DemandMemo.read cachedSnapshot request | throw (IO.userError "freshness fixture has no durable demand memo")
   require (← DemandMemo.dependenciesAgree memo [root / "authority"] [some cachedSnapshot])
     "freshness fixture does not exercise a reusable memo"
+  testSelectedMemo (root / "selection-memo") tool current.record {context with deadline := ← deadline}
   let some unchanged ← automaticHandoff selection (canonicalToolWork tool) matching.deliveredGraphs false
       none [] true true (some {context with deadline := ← deadline}) |
     throw (IO.userError "delivered source did not retain refresh metadata")

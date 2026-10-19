@@ -14,7 +14,8 @@ there is no shared log lock. Files use mode 0600 and directories use 0700.
 | `ingress.json` | The supervised child started, with the absolute deadline. |
 | `request.json` | Parsed event/session/turn, input byte count and input-read time. |
 | `failure.json` | A caught ingress/request error, when available. |
-| `search.json` | Semantic state, selected route, stage durations, returned completion counts and explicitly untracked equality origin. |
+| `search.json` | Semantic state, selected route, stage durations, returned completion counts and the final selected-equality locator when available. |
+| `selection-*.json` | Checked chosen-extraction comparisons and current Union generators for offline replay; whole-delivery causal ancestry remains untracked. |
 | `numerical-*.json` | Actual cache-availability probes, scoring counts/times and the observation's completion state. |
 | `dispatch.json` | Manager handler duration and success/error. |
 | `transport.json` | Terminal-capture, manager-start and RPC durations. |
@@ -55,9 +56,12 @@ not be added as disjoint durations. Query time includes preparation and cache IO
 
 ## Remaining requirements
 
-This is a per-invocation audit trail, not a complete Phase 0 result. Runtime
-equality ancestry and selected-role dependencies remain untracked. The existing
-selection diagnostic has not been promoted into a delivery-wide classifier.
+This is a per-invocation audit trail, not a complete Phase 0 result. Selected
+extraction premises can now be pinned and replayed outside the hook, with the
+final visible/control owner lists retained through source and transport checks.
+See [selected equality receipts](selection-audit.md). Matcher admission,
+source-role witnesses and local causal ancestry remain untracked; there is no
+delivery-wide classifier or Phase 3 fraction yet.
 The original `hook output missing` incident is deferred at the user's request
 on 2026-10-19 and excluded from current investigation. It may concern the Claude
 environment, but neither that environment nor the cause is confirmed. It is not

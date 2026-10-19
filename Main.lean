@@ -11,6 +11,9 @@ def usage : String :=
 
 def main (arguments : List String) : IO UInt32 := do
   match arguments with
+  | ["inspect-equality", receipt] =>
+      Eggshell.Install.runCommand do
+        pure ((← Eggshell.SelectionAudit.inspectHook receipt).compress)
   | ["import-graph", source, destination] =>
       Eggshell.Install.runCommand do
         Eggshell.Persistence.importGraphFile (.mk source) (.mk destination)

@@ -429,8 +429,11 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
     ("reason", toJson (handoff.map (·.reason))),
     ("completed", toJson (handoff.map (·.completed))),
     ("localUnions", toJson (handoff.map (·.localUnions))),
-    ("equalityOrigin", if handoff.any (fun h => h.completed > 0) then
-      Json.mkObj [("status", toJson "untracked")] else Json.null)])
+    ("equalityOrigin", if handoff.any (fun h => h.completed > 0 || h.blocksCurrent) then
+      Json.mkObj [("status", toJson (if handoff.any (·.equalitySelection.isSome) then "partial" else "untracked")),
+        ("selection", toJson (handoff.bind (·.equalitySelection))),
+        ("deliveryAncestry", toJson "untracked")]
+      else Json.null)])
   pure handoff
 
 def userPromptSubmit (input : Json) : IO String := do
