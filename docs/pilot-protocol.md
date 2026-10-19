@@ -121,6 +121,13 @@ the upstream preflight nor the reference task solutions satisfy them.
 The offline usage auditor is prepared, while live capture, configuration
 isolation and complete billed-attempt accounting still need implementation
 and validation. No App Server model turn has been started for this preparation.
+The [command-environment preflight](pilot-isolation.md) now checks a real
+fresh-condition App Server: empty hook/skill/MCP discovery, workspace operations,
+private/oracle read rejection, command network denial, correct source import,
+and the original 297 tests with exact test identities and 50 unchanged hashes.
+This qualifies those configuration and command boundaries on the observed host.
+Native model instructions/tools, memory-condition plugin/warm delivery and the
+complete six-condition runner are still open gates.
 
 The observed public Eggshell `main` was
 `51873167c11c447a0af67e73430b5ab6635b2a65` during readiness. Refresh and freeze
