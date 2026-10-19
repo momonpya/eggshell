@@ -391,14 +391,8 @@ def search (request : Search) : IO (Option Handoff) := do
     retains every ticket; indexing never republishes or locks the graph writer. -/
 def indexQueued (target : IndexTarget) (paths : List System.FilePath) : IO Nat := do
   let pinned ← target.owner.pin
-  let sidecar ← DB.Sidecar.prepare target.owner
   let directory := target.indexes pinned
-  let guardPath := sidecar.directory / "index.guard"
-  FileSystem.immutableExistingBytes guardPath ByteArray.empty
-  let guard ← FileSystem.openRead guardPath.toString
-  unless ← FileSystem.tryReadLock guard true do throw (IO.userError "DB indexer is busy")
-  try indexOwned pinned directory
-  finally FileSystem.unlockRead guard
+  DB.Sidecar.withIndexClaim target.owner fun _ => indexOwned pinned directory
 where
  indexOwned (pinned : DB.PageMap.Snapshot) (directory : System.FilePath) : IO Nat := do
   let mut tickets : List System.FilePath := []

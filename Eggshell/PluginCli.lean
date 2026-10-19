@@ -1,26 +1,43 @@
 module
 
 public import Eggshell.PluginHooks
+public import Eggshell.Warm
 
 @[expose] public section
 
 namespace Eggshell.Plugin
+open Lean
 
 def controlUsage : String :=
   "usage: egg [init|on|off|use P|next P|next graph auto|none|VALUES|keep [EGG]|drop|" ++
   "graph [VALUES]|why|find TEXT|class VALUE|union LEFT RIGHT|split UNION|" ++
-  "diff [EGG]|inspect|doctor]"
+  "diff [EGG]|inspect|doctor|warm [EGG|PATH]]"
+
+def diagnosticState : IO (Option ThreadState) := do
+  match ← IO.getEnv "CODEX_THREAD_ID" with
+  | none => pure none
+  | some id => readJson? (← sessionFiles id).state stateJsonDefaults
+
+def databaseCacheStatus (egg : Config.Egg) (command : Option (List String)) : IO Json := do
+  let fields := [("name", toJson egg.name), ("path", toJson egg.path.toString)]
+  try
+    let some snapshot ← DB.PageMap.open? egg.path |
+      return Json.mkObj (fields ++ [("state", toJson "absent")])
+    let some command := command |
+      return Json.mkObj (fields ++ [("state", toJson "provider-unavailable")])
+    let options ← Warm.options snapshot command
+    let inspected ← Warm.inspect snapshot options
+    let state := if inspected.coverage.invalid > 0 then "invalid"
+      else if inspected.coverage.missing > 0 then "cold" else "warm"
+    pure (Json.mkObj (fields ++ [("state", toJson state), ("coverage", toJson inspected.coverage)]))
+  catch error => pure (Json.mkObj (fields ++ [("state", toJson "error"), ("reason", toJson error.toString)]))
 
 /-- Inspect configuration without creating session state, writing memory, or
-    starting search. Installed/configured is not proof that native hooks ran. -/
+    starting search or model inference. Cache coverage counts live DB windows.
+    Installed/configured is not proof that native hooks ran. -/
 def doctor : IO String := do
-  let config ← Config.load (← IO.currentDir)
-  let session ← IO.getEnv "CODEX_THREAD_ID"
-  let state : Option ThreadState ← match session with
-    | none => pure none
-    | some id => do
-        let files ← sessionFiles id
-        readJson? files.state stateJsonDefaults
+  let config ← (← Config.load (← IO.currentDir)).mapM withDefaultMatcher
+  let state ← diagnosticState
   let mut fields := [("runtime", Lean.toJson "installed"),
     ("hook_trust", Lean.toJson "review /hooks in Codex"),
     ("session_state_present", Lean.toJson state.isSome),
@@ -37,9 +54,32 @@ def doctor : IO String := do
       fields := fields ++ [("configuration", Lean.toJson "ready"),
         ("config", Lean.toJson config.source.toString),
         ("profile", Lean.toJson profile), ("memory", Lean.toJson mode),
+        ("databases", toJson (← selection.read.mapM (databaseCacheStatus · selection.semanticMatcher))),
         ("next_step", Lean.toJson
           "Review /hooks and start a new chat. Verify saving and delivery with the two-chat example.")]
   pure (Lean.Json.mkObj fields |>.compress)
+
+/-- Explicit warming is available from an ordinary terminal, including a DB
+imported without a project config. It does not need or mutate chat state. -/
+def warm (requested : Option String) : IO String := do
+  let config ← (← Config.load (← IO.currentDir)).mapM withDefaultMatcher
+  let state ← diagnosticState
+  let eggs ← match requested with
+    | some raw =>
+        let named := config.bind (fun config => config.eggs.find? (·.name == raw))
+        pure [named.getD {name := raw, path := .mk raw}]
+    | none =>
+        let some config := config | throw (IO.userError "specify a DB path: egg warm PATH")
+        let selection ← IO.ofExcept (Config.resolve config (state.map (·.profile) |>.getD config.defaultProfile))
+        pure selection.read
+  let command ← match config with
+    | some config => pure config.semanticMatcher
+    | none => MiniLM.command (← Paths.installRoot)
+  let some command := command |
+    throw (IO.userError "numerical provider is disabled or not installed")
+  let results ← eggs.mapM fun egg => do
+    Warm.run (← DB.PageMap.pin egg.path) command
+  pure (Json.mkObj [("databases", toJson results)]).compress
 
 def controlSession : IO String := do
   match ← IO.getEnv "CODEX_THREAD_ID" with
@@ -289,7 +329,12 @@ def eggControl (arguments : List String) : IO UInt32 := do
     IO.println controlUsage
     return 0
   try
-    IO.println (← if arguments == ["doctor"] then doctor else control arguments)
+    let output ← match arguments with
+      | ["doctor"] => doctor
+      | ["warm"] => warm none
+      | ["warm", requested] => warm (some requested)
+      | _ => control arguments
+    IO.println output
     pure 0
   catch error =>
     IO.eprintln s!"egg: {error}"

@@ -58,7 +58,35 @@ batch acknowledgement consumes them. Invalid metadata is renamed with a
 can proceed. Missing or replaced DBs retire discovery
 records. Their sidecars remain owned by the DB directory.
 
-`egg warm`, coverage in `doctor`,
-semantic-first deadlines, lexical delivery, and complete per-run receipts
-remain unfinished. No quality or language-model token claim follows from this
-layout change or its numerical regression tests.
+The isolated candidate adds explicit warming and read-only coverage:
+
+```
+egg doctor
+egg warm
+egg warm work
+egg warm /absolute/path/imported.egg
+```
+
+`warm` uses the configured profile's DBs, a configured DB name, or a DB path.
+A path also works without a project config when the default numerical runtime
+is installed. `EGGSHELL_CONFIG` selects an explicit configuration as for the
+other CLI commands. Warming does not need a chat ID or modify chat state.
+
+The live DB window-key set is compared with records valid for the exact model
+and window digest. Query vectors and retired windows are excluded from coverage.
+Doctor reports valid, missing and invalid counts without reading DB source
+bodies, creating sidecars or starting inference. Unsupported custom provider
+formats and unavailable providers are reported explicitly.
+
+Warm pins the source publication, reads only missing original windows and sends
+at most 32 in each exact-window request. A single provider serves all batches;
+windows are not split into overlapping windows again. Every batch requires an
+exact acknowledgement, followed by actual cache validation. Index and warm
+share a DB claim. Valid records survive partial failure. A fully warm repeat
+does not start the provider or rewrite records. Output identifies the pinned DB
+revision, before/after coverage, requested count, batch count and elapsed time.
+
+Semantic-first hook deadlines, lexical body delivery on expiry, automatic
+background warming of cold search debt, and complete per-run receipts remain
+unfinished. Coverage is not per-run cache-hit telemetry. No quality or
+language-model token claim follows from these numerical and ownership changes.

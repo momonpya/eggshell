@@ -258,24 +258,35 @@ theorem nomination_has_corpus_owner {corpus : Matcher.Corpus}
 /-- Run after durable publication in the independent index worker. Completion
     requires acknowledgement of this exact batch. The owning worker controls
     cancellation; hook responses do not wait for this index operation. -/
-def indexWorks (command : List String) (items : List Item)
-    (cache : Option DB.Sidecar.Owner := none) : IO (IndexReceipt items) := do
-  if items.isEmpty then return ⟨items.map (·.id), rfl⟩
+def withIndexProvider (command : List String) (action : Running → IO α) : IO α := do
   let command := match command with
     | executable :: "search-provider" :: arguments =>
         executable :: "search-provider" :: (arguments ++ ["--lane", "index"])
     | command => command
-  let some receipt ← withLane .index <| withProvider command fun running => do
-      let request : IndexRequest := { index := items, cache }
-      running.child.stdin.putStr ((toJson request).compress ++ "\n")
-      running.child.stdin.flush
-      let json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
-      let response ← IO.ofExcept (fromJson? json : Except String IndexResponse)
-      let some receipt := indexReceipt? items response |
-        throw (IO.userError "semantic index acknowledged a different batch")
-      pure receipt
+  let some result ← withLane .index (withProvider command action)
     | throw (IO.userError "index lane did not produce an acknowledgement")
+  pure result
+
+def indexReply (running : Running) (items : List Item) (request : Json) : IO (IndexReceipt items) := do
+  running.child.stdin.putStrLn request.compress
+  running.child.stdin.flush
+  let json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
+  let response ← IO.ofExcept (fromJson? json : Except String IndexResponse)
+  let some receipt := indexReceipt? items response |
+    throw (IO.userError "semantic index acknowledged a different batch")
   pure receipt
+
+def indexWorks (command : List String) (items : List Item)
+    (cache : Option DB.Sidecar.Owner := none) : IO (IndexReceipt items) := do
+  if items.isEmpty then return ⟨items.map (·.id), rfl⟩
+  withIndexProvider command fun running =>
+    indexReply running items (toJson ({index := items, cache} : IndexRequest))
+
+/-- Already bounded original windows must not be split into overlapping windows
+again. This request acknowledges exactly the missing window keys. -/
+def indexWindows (running : Running) (items : List Item) (owner : DB.Sidecar.Owner) :
+    IO (IndexReceipt items) :=
+  indexReply running items (Json.mkObj [("index_windows", toJson items), ("cache", toJson owner)])
 
 /-- Independent providers can read and score cached vectors concurrently.
 The numerical child acquires the model resource lease only when inference is

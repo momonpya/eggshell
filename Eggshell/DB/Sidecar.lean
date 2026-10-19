@@ -60,4 +60,15 @@ def Sidecar.prepare (owner : Sidecar.Owner) : IO Sidecar := do
   let indexes ← Sidecar.childDirectory directory "indexes"
   pure {database := snapshot.head.identity, directory, semantic, indexes}
 
+/-- Index and explicit warm share a non-waiting claim; neither takes the DB
+writer. An exited owner releases the descriptor lock automatically. -/
+def Sidecar.withIndexClaim (owner : Sidecar.Owner) (action : Sidecar → IO α) : IO α := do
+  let sidecar ← Sidecar.prepare owner
+  let path := sidecar.directory / "index.guard"
+  FileSystem.immutableExistingBytes path ByteArray.empty
+  let guard ← FileSystem.openRead path.toString
+  unless ← FileSystem.tryReadLock guard true do throw (IO.userError "DB indexer is busy")
+  try action sidecar
+  finally FileSystem.unlockRead guard
+
 end Eggshell.DB

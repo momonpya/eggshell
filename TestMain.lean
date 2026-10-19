@@ -8,6 +8,7 @@ public import tests.SourceEvidenceTests
 public import tests.SourceObservationTests
 public import tests.EqualityDependencyTests
 public import tests.DatabaseIndexTests
+public import tests.WarmTests
 
 @[expose] public section
 
@@ -6096,6 +6097,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
     testIncompleteSearchDelivery
     testBackgroundIndexRecovery
     Eggshell.DatabaseIndexTests.run
+    Eggshell.WarmTests.run
     testSaveWhileIndexBusy
     testSaveWhileIndexBusy
     testNaturalLanguageSessionTransport
@@ -6140,6 +6142,9 @@ def main (arguments : List String) : IO UInt32 :=
   | ["database-index-tests"] => do
       Eggshell.DatabaseIndexTests.run
       Worker.shutdown
+      pure 0
+  | ["warm-tests"] => do
+      Eggshell.WarmTests.run
       pure 0
   | ["database-index-provider", root] => Eggshell.DatabaseIndexTests.provider (.mk root)
   | ["normalizer-timing", mode] => normalizerTiming mode

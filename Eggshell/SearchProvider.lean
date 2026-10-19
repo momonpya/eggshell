@@ -173,15 +173,20 @@ def saveVector (options : Options) (text : String) (vector : Json) : IO Unit := 
     Persistence.privateDirectory root
     FileSystem.atomicBytes path encoded.toUTF8
 
-def store (options : Options) (child : Encoder) (texts : List String) : IO Unit := do
-  let parts := (texts.flatMap SearchRank.windows).eraseDups
+def storeWindows (options : Options) (child : Encoder) (windows : List String) : IO Unit := do
+  let parts := windows.eraseDups
   let mut missing := []
-  for part in parts do if (← readVector options part).isNone then missing := missing ++ [part]
+  for part in parts do
+    unless part.length ≤ 512 do throw (IO.userError "index window exceeds the original-window contract")
+    if (← readVector options part).isNone then missing := missing ++ [part]
   if missing.isEmpty then return
   let response ← exchange child (Json.mkObj [("texts", toJson missing)])
   let vectors ← IO.ofExcept (response.getObjValAs? (Array Json) "vectors")
   if vectors.size != missing.length then throw (IO.userError "embedding count mismatch")
   for (text, vector) in missing.zip vectors.toList do saveVector options text vector
+
+def store (options : Options) (child : Encoder) (texts : List String) : IO Unit :=
+  storeWindows options child (texts.flatMap SearchRank.windows)
 
 def vectors (options : Options) (text : String) : IO Json := do
   let values ← (SearchRank.windows text).mapM fun part => do
@@ -389,6 +394,13 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
 def handle (options : Options) (child : Option Encoder)
     (previous : IO.Ref (Option RetainedCorpus)) (request : Json)
     (repair : RepairWindows := unavailableRepair) : IO (Option Json) := do
+  if let .ok index := request.getObjValAs? (Array Json) "index_windows" then
+    if let some child := child then
+      let options ← cacheOptions options request
+      let texts ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "text"))
+      storeWindows options child texts
+    let ids ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "id"))
+    return some (Json.mkObj [("indexed", toJson ids)])
   if let .ok index := request.getObjValAs? (Array Json) "index" then
     if let some child := child then
       let options ← cacheOptions options request

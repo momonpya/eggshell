@@ -26,13 +26,13 @@ def systemMessage (message : String) : String :=
 def defaultState (config : Config.Config) : ThreadState :=
   { profile := config.defaultProfile }
 
+def withDefaultMatcher (config : Config.Config) : IO Config.Config := do
+  if config.semanticMatcherWasSet then pure config
+  else pure {config with semanticMatcher := ← MiniLM.command (← Paths.installRoot)}
+
 def configFromHook (input : Json) (cwd : System.FilePath) : IO (Option Config.Config) := do
   let config? ← Config.loadWith cwd (optionalString input "_eggshell_config")
-  config?.mapM fun config => do
-    if config.semanticMatcherWasSet then pure config
-    else
-      pure { config with
-        semanticMatcher := ← MiniLM.command (← Paths.installRoot) }
+  config?.mapM withDefaultMatcher
 
 def replaceSourceStatus (keys : List String) (key : String) : List String :=
   match SourceEvidence.deliveryScope? key with
