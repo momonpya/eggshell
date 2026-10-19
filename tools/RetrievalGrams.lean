@@ -1,11 +1,21 @@
 module
 
-public import Eggshell.SearchRank
+public import Eggshell.SearchUnicode
+public import Eggshell.Frequency
+public import Lean.Data.Json.FromToJson
 public import tools.RetrievalCategories
 
 @[expose] public section
 
 namespace Eggshell.RetrievalResearch
+
+@[extern "log1p"] opaque log1p (x : Float) : Float
+
+def asciiTerm (c : Char) : Bool :=
+  ('a' ≤ c && c ≤ 'z') || ('0' ≤ c && c ≤ '9') || "_./:-".contains c
+
+def anchor (term : String) : Bool :=
+  term.toList.any fun c => "_/:.".contains c || SearchUnicode.isDigit c
 
 /-- Every overlapping pair, rather than disjoint two-character blocks. -/
 def pairs : List Char → List String
@@ -41,12 +51,13 @@ structure Terms where
   auxiliary : List String := []
   deriving Repr, Lean.ToJson
 
-def Terms.prependRun (state : Terms) (characters : List Char) (isScript : Bool) : Terms :=
-  if characters.isEmpty then state else
-  if isScript then {
-    primary := (pairs characters).reverse ++ state.primary
-    auxiliary := (characters.map String.singleton).reverse ++ state.auxiliary }
-  else {state with primary := String.ofList characters :: state.primary}
+structure StableTerms where
+  entries : Array String := #[]
+  seen : Std.HashSet String := {}
+
+def StableTerms.add (state : StableTerms) (term : String) : StableTerms :=
+  if state.seen.contains term then state
+  else {entries := state.entries.push term, seen := state.seen.insert term}
 
 /-- Pure retrieval experiment. Words/paths retain their ordinary boundaries;
 Kana/Han/Hangul runs supply overlapping pairs with single-scalar auxiliaries.
@@ -55,22 +66,52 @@ limited to ASCII/Kana. Identity matching never calls this function; accents
 are preserved instead of being unconditionally deleted.
 -/
 def terms (text : String) : Terms := Id.run do
-  let mut result : Terms := {}
-  let mut run : Array Char := #[]
-  let mut isScript := false
-  for c in (Unicode.widthFold text).toList.flatMap (SearchUnicode.fold · |>.toList) do
-    if Unicode.letterNumber c || SearchRank.asciiTerm c || (!run.isEmpty && Unicode.mark c) then
-      let next := script c || (!run.isEmpty && Unicode.mark c && isScript)
-      if !run.isEmpty && next != isScript then
-        result := result.prependRun run.toList isScript
-        run := #[]
-      run := run.push c
-      isScript := next
-    else
-      result := result.prependRun run.toList isScript
-      run := #[]
-  result := result.prependRun run.toList isScript
-  return {primary := result.primary.reverse.eraseDups, auxiliary := result.auxiliary.reverse.eraseDups}
+  let mut primary : StableTerms := {}
+  let mut auxiliary : StableTerms := {}
+  let mut word : Array Char := #[]
+  let mut previous : Option Char := none
+  for wide in Unicode.widthFold text do
+    for c in SearchUnicode.fold wide do
+      let attached := (!word.isEmpty || previous.isSome) && Unicode.mark c
+      if Unicode.letterNumber c || asciiTerm c || attached then
+        if script c || (attached && previous.isSome) then
+          if !word.isEmpty then
+            primary := primary.add (String.ofList word.toList)
+            word := #[]
+          if let some before := previous then
+            for pair in pairs [before, c] do primary := primary.add pair
+          auxiliary := auxiliary.add (String.singleton c)
+          previous := some c
+        else
+          previous := none
+          word := word.push c
+      else
+        if !word.isEmpty then
+          primary := primary.add (String.ofList word.toList)
+          word := #[]
+        previous := none
+  if !word.isEmpty then primary := primary.add (String.ofList word.toList)
+  return {primary := primary.entries.toList, auxiliary := auxiliary.entries.toList}
+
+/-- Lane tags contain no punctuation/digits, so anchor detection still sees
+only the original term. Different lanes cannot collide. -/
+def tokens (text : String) : List String :=
+  let parsed := terms text
+  parsed.primary.map ("P" ++ ·) ++ parsed.auxiliary.map ("A" ++ ·)
+
+def rankRows (query : String) (rows : List α) (contains : α → String → Bool)
+    (frequency : String → Nat) (anchors : Bool) (population : Nat := rows.length) : List Nat :=
+  let wanted := (tokens query).filter fun term => !anchors || anchor term
+  let scored := rows.zipIdx.filterMap fun (row, index) =>
+    let scores := wanted.foldl (fun (scores : Float × Float) term =>
+      if contains row term then
+        let value := log1p (population.toFloat / (frequency term).toFloat)
+        if term.startsWith "P" then (scores.1 + value, scores.2)
+        else (scores.1, scores.2 + value)
+      else scores) (0.0, 0.0)
+    if scores.1 > 0 || scores.2 > 0 then some (scores.1, scores.2, index) else none
+  ((scored.mergeSort fun a b => a.1 > b.1 ||
+    (a.1 == b.1 && (a.2.1 > b.2.1 || (a.2.1 == b.2.1 && a.2.2 ≤ b.2.2)))).map (·.2.2))
 
 /-- Primary matches dominate; single-character evidence only breaks a tie.
 For a single-character question the primary score is zero for every row.
@@ -84,7 +125,7 @@ def rank (query : Terms) (documents : List Terms) : List Nat := Id.run do
     wanted.foldl (fun total term =>
       if (read row).contains term then
         let frequency := counts.getD term 0
-        total + SearchRank.log1p (documents.length.toFloat / frequency.toFloat)
+        total + log1p (documents.length.toFloat / frequency.toFloat)
       else total) (0 : Float)
   let rows := documents.zipIdx.filterMap fun (doc, index) =>
     let primary := score query.primary (·.primary) primaryCounts doc

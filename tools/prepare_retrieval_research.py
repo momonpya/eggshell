@@ -8,16 +8,20 @@ from pathlib import Path
 import shutil
 import subprocess
 
-HELPERS = ['RetrievalCategories.lean', 'RetrievalGrams.lean', 'RetrievalGramsTests.lean', 'RetrievalTerms.lean']
+HELPERS = ['RetrievalCategories.lean', 'RetrievalGrams.lean', 'RetrievalGramsTests.lean', 'RetrievalTerms.lean',
+           'RetrievalIndex.lean', 'RetrievalIndexTests.lean']
 TARGETS = '''
 lean_lib RetrievalResearch where
-  roots := #[`tools.RetrievalGrams, `tools.RetrievalCategories]
+  roots := #[`tools.RetrievalGrams, `tools.RetrievalCategories, `tools.RetrievalIndex]
 
 lean_exe retrieval_terms where
   root := `tools.RetrievalTerms
 
 lean_exe retrieval_grams_tests where
   root := `tools.RetrievalGramsTests
+
+lean_exe retrieval_index_tests where
+  root := `tools.RetrievalIndexTests
 '''
 
 
@@ -58,11 +62,12 @@ def main():
         raise ValueError('Research outputs alias the production cache')
     write(output/'manifest.json',dict(sourceHashes=frozen, productionBinarySha256=original,
         productionAdoption=False, generationModelCalls=0, helpers=HELPERS))
-    for label, command in [('build',['lake','--no-cache','build','retrieval_terms','retrieval_grams_tests']),
-                            ('tests',[str(checkout/'.lake/build/bin/retrieval_grams_tests')])]:
+    for label, command in [('build',['lake','--no-cache','build','retrieval_terms','retrieval_grams_tests','retrieval_index_tests']),
+                            ('tests',[str(checkout/'.lake/build/bin/retrieval_grams_tests')]),
+                            ('index-tests',[str(checkout/'.lake/build/bin/retrieval_index_tests')])]:
         with (output/(label+'.log')).open('w') as log:
             completed = subprocess.run(command,cwd=checkout,stdout=log,stderr=subprocess.STDOUT,timeout=300,
-                env=dict(os.environ, LEAN_NUM_THREADS='1'))
+                env=dict(os.environ, LEAN_NUM_THREADS='1',EGGSHELL_DATA_ROOT=str(output/'test-data')))
         write(output/(label+'.json'),dict(command=command,exitCode=completed.returncode))
         completed.check_returncode()
     if sha(binary)!=original or any(sha(source/name)!=value for name,value in frozen.items()):

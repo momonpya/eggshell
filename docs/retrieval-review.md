@@ -116,8 +116,10 @@ candidate to those postings without rebuilding would turn valid matches into
 false negatives. The index contract must therefore be content-derived and
 checked before use. Read-only shared DBs need a user-owned derived index, not
 a graph rewrite. Both indexed and fallback scoring must use the same terms.
-This index integration and a native end-to-end retrieval comparison are
-**pending**; the standalone grammar is not a replacement provider yet.
+The subsequent [isolated native index candidate](lexical-index-native.md)
+connects the policy to complete derived postings, warm/doctor, both storage
+layouts, original-body fallback and DB-owned lexical maintenance. The ordinary
+runtime is unchanged; matched answer-quality/token evaluation is still pending.
 
 ## Expanded gate and remaining order
 

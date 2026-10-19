@@ -94,7 +94,10 @@ matching process. That failed command is retained. Pre-drain head hashes were
 not persisted before the wrapper's exception, so this particular three-ticket
 cleanup does **not** prove head immutability. The full regression's separate
 native index-recovery immutability checks did pass. Ordinary probe hooks all
-shut down successfully. This cleanup edge remains a recorded limitation.
+shut down successfully. The subsequent [owned-process counterfactual](lexical-index-native.md#owned-daemon-test-lifecycle)
+reproduces and repairs the test parent's reaping order without changing the
+runtime daemon. The missing pre-drain head hash remains a limitation of this
+earlier run.
 
 Evidence roots:
 

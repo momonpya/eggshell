@@ -20,6 +20,7 @@ from pilot_preflight import configuration
 from pilot_scripted_provider import ScriptedProvider
 from pilot_server import Server
 from pilot_tasks import copy_files, digest, load_suite, write_json
+from owned_daemon import shutdown_owned
 
 
 QUESTION = "Explain how Serializer.load_payload decodes payload bytes and wraps deserialization failures as BadPayload."
@@ -218,6 +219,7 @@ def drain_indexes(binary, info, workspace, database):
         return 0
     before = len(tickets())
     head = digest(database / "head")
+    write_json(info["case"] / "before-index-drain.json", dict(head_sha256=head, tickets=before))
     with (info["case"] / "index-drain.log").open("w") as log:
         process = subprocess.Popen([str(binary), "codex-daemon", "pilot-index-recovery"],
                                    env=info["env"], cwd=workspace, stdout=log, stderr=subprocess.STDOUT)
@@ -228,9 +230,8 @@ def drain_indexes(binary, info, workspace, database):
                     raise RuntimeError("Index recovery exited or timed out")
                 time.sleep(0.05)
         finally:
-            execute([binary, "codex-daemon", "shutdown"], info["env"], workspace,
-                    info["case"] / "index-drain-shutdown.json", timeout=15)
-            process.wait(timeout=3)
+            shutdown_owned(process, binary, info["env"], workspace,
+                           info["case"] / "index-drain-shutdown.json")
     if process.returncode or digest(database / "head") != head:
         raise ValueError("Index recovery failed or changed the graph head")
     return before
@@ -262,7 +263,7 @@ def run(qualification, suite, source, output, runtime_roots):
     if any(output.is_relative_to(path) or suite.is_relative_to(path) or not path.is_dir() for path in runtime_roots):
         raise ValueError("Invalid runtime read root")
     for name in ["pilot_memory_probe.py", "pilot_hook_probe.py", "pilot_preflight.py",
-                 "pilot_scripted_provider.py", "pilot_server.py", "pilot_tasks.py"]:
+                 "pilot_scripted_provider.py", "pilot_server.py", "pilot_tasks.py", "owned_daemon.py"]:
         shutil.copy2(Path(__file__).with_name(name), output / name)
     write_json(output / "manifest.json", dict(candidate_sha256=digest(binary), suite_sha256=digest(suite / "suite.json"),
         source_hashes=task["start_hashes"], runtime_prefix=str(prefix),

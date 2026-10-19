@@ -6,6 +6,32 @@ open Eggshell RetrievalResearch
 private def require (ok : Bool) (message : String) : IO Unit :=
   unless ok do throw (IO.userError message)
 
+/-- The list/run oracle from commit 8114a17, independent of the streaming
+emitter and its incremental seen sets. Used only on bounded test inputs. -/
+private def referenceTerms (text : String) : Terms := Id.run do
+  let addRun := fun (state : Terms) (characters : List Char) (isScript : Bool) =>
+    if characters.isEmpty then state else
+    if isScript then {
+      primary := (pairs characters).reverse ++ state.primary
+      auxiliary := (characters.map String.singleton).reverse ++ state.auxiliary }
+    else {state with primary := String.ofList characters :: state.primary}
+  let mut result : Terms := {}
+  let mut run : Array Char := #[]
+  let mut isScript := false
+  for c in (Unicode.widthFold text).toList.flatMap (SearchUnicode.fold · |>.toList) do
+    if Unicode.letterNumber c || asciiTerm c || (!run.isEmpty && Unicode.mark c) then
+      let next := script c || (!run.isEmpty && Unicode.mark c && isScript)
+      if !run.isEmpty && next != isScript then
+        result := addRun result run.toList isScript
+        run := #[]
+      run := run.push c
+      isScript := next
+    else
+      result := addRun result run.toList isScript
+      run := #[]
+  result := addRun result run.toList isScript
+  return {primary := result.primary.reverse.eraseDups, auxiliary := result.auxiliary.reverse.eraseDups}
+
 def main : IO Unit := do
   require ((terms "保存した本文").primary == ["保存", "存し", "した", "た本", "本文"])
     "Japanese pairs must overlap"
@@ -39,6 +65,25 @@ def main : IO Unit := do
     "Accents must not be silently removed"
   for text in ["한국어", "Поиск", "café", "ＡＢＣ１２３"] do
     require (!(terms text).primary.isEmpty) "A multilingual word disappeared"
+  let alphabet := "aZ0_./:- 保存木。한국어é́ПоискｶﾞＡ１ \n".toList.toArray
+  let mut differential := 0
+  for seed in [:32] do
+    for length in [0, 1, 2, 7, 31, 128, 512] do
+      let mut random := seed + 1
+      let mut input : Array Char := #[]
+      for _ in [:length] do
+        random := (random * 1103515245 + 12345) % 2147483648
+        input := input.push alphabet[random % alphabet.size]!
+      let text := String.ofList input.toList
+      let actual := terms text
+      let expected := referenceTerms text
+      require (actual.primary == expected.primary && actual.auxiliary == expected.auxiliary)
+        "Streaming tokenization differs from the previous normalized-run oracle"
+      differential := differential + 1
+  let large := String.ofList ((List.range 200000).map fun i => Char.ofNat (0x4e00 + i % 20000))
+  let parsed := terms large
+  require (parsed.primary.length == 20000 && parsed.auxiliary.length == 20000)
+    "A large script run lost unique pairs/scalars or retained duplicate occurrences"
   let mut boundaries := 0
   for ranges in [Unicode.lettersNumbers, Unicode.marks] do
     for (lo, hi) in ranges do
@@ -48,4 +93,4 @@ def main : IO Unit := do
         require (Unicode.contains ranges c == expected)
           "Binary category lookup differs at an interval boundary"
         boundaries := boundaries + 1
-  IO.println s!"retrieval grammar: 15 checks, 4 multilingual probes, {boundaries} category boundaries passed"
+  IO.println s!"retrieval grammar: 15 checks, 4 multilingual probes, {differential} streaming/oracle comparisons, 200000 scalars and {boundaries} category boundaries passed"
