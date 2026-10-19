@@ -106,3 +106,28 @@ the remaining deadline. The same original fixtures, 48 conditions and strict
 five-second complete-semantic/body gate remain unchanged. Failure-injection
 regression allows the semantic allocation plus the original 800 ms transport
 and lexical fallback allowance; that is separate from the scientific gate.
+
+The `reader-isolation-1` repeat completed 47/48 semantics and failed the
+fresh private-overlay repetition 1 at 1,024 sources. Retain that result.
+Cache-only phase diagnostics then measured about 0.22 seconds JSON decoding
+and 0.27 seconds finite-number conversion per 1,024 original windows. The next
+candidate stores the identical binary64 values as little-endian hexadecimal
+strings in the same model/window JSON envelope and passes those strings to
+NumPy's original binary32 dot-product kernel. Finiteness is checked from the
+IEEE exponent, without decimal conversion on every cache read.
+
+Before the next fixed 48 hooks, copy the original four saved DB seeds and
+transform only their numerical cache representations using the candidate's
+native packer. Preserve the original snapshots, source files, questions,
+MiniLM model and full scoring domain. Check all 1,314 original windows for
+bit-identical binary32 values, plus decimal rounding edge cases; record every
+conversion and unchanged graph hash. This is cache preparation, with zero
+generation-model calls, not new saved sources. The runtime has no legacy array
+cache reader; explicit warm rebuilds old representations. The comparison
+harness may recognize either representation solely to check the question-cache
+precondition for either executable. Freeze both source and harness hashes.
+
+Keep the 4,500 ms cap, half-remaining reservation, all 48 conditions, equal
+three repetitions per cell and strict five-second semantic/body gate. The
+cached condition continues to include any focus-window reuse produced by its
+fresh predecessor. No token/quality adoption follows from this diagnostic.

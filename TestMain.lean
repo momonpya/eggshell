@@ -3744,7 +3744,7 @@ def testSemanticResourceLanes : IO Unit := do
         "4", lease.toString, "search"]
       stdin := .piped, stdout := .piped, stderr := .inherit }
     try
-      child.stdin.putStrLn "{\"queries\":[[1.0]],\"candidates\":[[[1.0]]]}"
+      child.stdin.putStrLn "{\"queries\":[\"000000000000f03f\"],\"candidates\":[[\"000000000000f03f\"]]}"
       child.stdin.flush
       let scored ← IO.asTask child.stdout.getLine .dedicated
       let some output ← Worker.awaitUntil scored ((← IO.monoMsNow) + 3000) |
@@ -4874,7 +4874,7 @@ def testIndexedNumericalWindows : IO Unit := do
   check rejected "an oversized optional numerical cache record was allocated/decoded without a bound"
   let bad := root / "nonfinite-vector.json"
   IO.FS.writeFile bad ("{\"model\":\"synthetic-cache-test-only\",\"window\":\"" ++
-    Persistence.Store.windowKey "needle" ++ "\",\"vector\":[1e999]}")
+    Persistence.Store.windowKey "needle" ++ "\",\"vector\":\"000000000000f07f\"}")
   let rejected ← try
       let _ ← SearchProvider.loadVector bad
       pure false
@@ -4889,14 +4889,24 @@ def testIndexedNumericalWindows : IO Unit := do
   let dimension := root / "full-dimension-vector.json"
   let vector ← IO.ofExcept (Lean.Json.parse
     ("[" ++ String.intercalate "," (List.replicate 384 "0.12345678901234567") ++ "]"))
+  let packed ← IO.ofExcept (SearchProvider.packVector vector)
   let cached : SearchProvider.CachedVector := {
-    model := base.model, window := Persistence.Store.windowKey "needle", vector}
+    model := base.model, window := Persistence.Store.windowKey "needle", vector := .str packed}
   let encoded := (Lean.toJson cached).compress
   check (encoded.utf8ByteSize > 4096) "384-dimensional vector did not exceed one page"
   IO.FS.writeFile dimension encoded
   let observed ← SearchProvider.loadVector dimension
-  check (observed.vector == vector && observed.window == cached.window)
+  check (observed.vector == .str packed && observed.window == cached.window)
     "a valid multi-page numerical cache record was rejected or truncated"
+  for high in [:65536] do
+    let bits := high.toUInt64 <<< 48
+    let mut bytes := ByteArray.empty
+    for index in [:8] do bytes := bytes.push ((bits >>> (index * 8).toUInt64).toUInt8)
+    check (SearchProvider.packedFinite (Blake3.hex bytes) == (Float.ofBits bits).isFinite)
+      "packed finite check disagrees with IEEE sign/exponent/mantissa classification"
+  for invalid in ["", "0", "000000000000f03", "000000000000f03g", "000000000000F03F",
+      "000000000000f07f", "010000000000f07f", "000000000000f0ff", "000000000000f87f"] do
+    check (!SearchProvider.packedFinite invalid) "malformed or nonfinite packed vector was accepted"
   IO.println "PASS bounded numerical window batches preserve complete semantic/hybrid/lexical ranks and reject missing indexed vectors"
 
 def testDatabaseVectorCaches : IO Unit := IO.FS.withTempDir fun root => do

@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import shutil
 import statistics
+import struct
 import subprocess
 import sys
 import time
@@ -71,9 +72,19 @@ def question_valid(path, model, window):
     if not path.exists():
         return False
     record = json.loads(path.read_text())
-    return (record.get("model") == model and record.get("window") == window
-            and "text" not in record and isinstance(record.get("vector"), list)
-            and len(record["vector"]) == 384 and all(math.isfinite(x) for x in record["vector"]))
+    if record.get("model") != model or record.get("window") != window or "text" in record:
+        return False
+    vector = record.get("vector")
+    # The comparison harness can check either revision's precondition. The
+    # candidate runtime accepts only packed vectors; it has no legacy reader.
+    if isinstance(vector, list):
+        return len(vector) == 384 and all(math.isfinite(x) for x in vector)
+    if not isinstance(vector, str) or len(vector) != 384 * 16:
+        return False
+    try:
+        return all(math.isfinite(x) for x in struct.unpack("<384d", bytes.fromhex(vector)))
+    except (ValueError, struct.error):
+        return False
 
 
 def hook(binary, cell, env, event, session, directory, question=None):

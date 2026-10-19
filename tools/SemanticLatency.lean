@@ -86,22 +86,94 @@ def inspect (database : System.FilePath) (question : String) : IO Json := do
   pure (Json.mkObj [("receipt", toJson receipt), ("elapsedMs", toJson ((← IO.monoMsNow) - started)),
     ("purpose", toJson "standalone-phase-inspection"), ("handoff", toJson result)])
 
+structure CacheCost where
+  attempts : Nat := 0
+  hits : Nat := 0
+  bytes : Nat := 0
+  openUs : Nat := 0
+  readUs : Nat := 0
+  decodeUs : Nat := 0
+  checkUs : Nat := 0
+  deriving ToJson
+
+/-- Split the existing bounded cache read without starting an encoder. This
+phase diagnostic is separate from the fixed native delivery measurements. -/
+def cacheCost (database : System.FilePath) : IO Json := do
+  let snapshot ← DB.PageMap.pin database
+  let documents ← Persistence.Store.searchDocuments snapshot
+  let options ← Warm.options snapshot (← command)
+  let mut samples := []
+  for repetition in [:3] do
+    let mut cost : CacheCost := {}
+    for window in documents.flatMap (·.windows) do
+      let mut hit := false
+      for path in SearchProvider.vectorPaths options (SearchProvider.windowCacheKey options.model window) do
+        cost := {cost with attempts := cost.attempts + 1}
+        let started ← IO.monoNanosNow
+        let handle ← try some <$> FileSystem.openRead path.toString catch _ => pure none
+        cost := {cost with openUs := cost.openUs + ((← IO.monoNanosNow) - started) / 1000}
+        let some handle := handle | continue
+        let started ← IO.monoNanosNow
+        let before ← FileSystem.readVersion handle
+        unless before.bytes ≤ 1048576 do throw (IO.userError "cache diagnostic exceeded byte budget")
+        let mut bytes := ByteArray.empty
+        while bytes.size < before.bytes do
+          let count := min 4096 (before.bytes - bytes.size)
+          let part ← FileSystem.readPage handle bytes.size.toUInt64 ⟨count, Nat.min_le_left _ _⟩
+          unless part.size == count do throw (IO.userError "truncated cache diagnostic object")
+          bytes := bytes ++ part
+        unless (← FileSystem.readVersion handle) == before do
+          throw (IO.userError "cache diagnostic object mutated during read")
+        cost := {cost with
+          readUs := cost.readUs + ((← IO.monoNanosNow) - started) / 1000
+          bytes := cost.bytes + bytes.size}
+        let started ← IO.monoNanosNow
+        let some text := String.fromUTF8? bytes | throw (IO.userError "invalid cache diagnostic UTF-8")
+        let cached ← IO.ofExcept
+          (fromJson? (← IO.ofExcept (Json.parse text)) : Except String SearchProvider.CachedVector)
+        cost := {cost with decodeUs := cost.decodeUs + ((← IO.monoNanosNow) - started) / 1000}
+        let started ← IO.monoNanosNow
+        let some _ := SearchProvider.CheckedVector.make? cached |
+          throw (IO.userError "unusable cache diagnostic vector")
+        unless cached.model == options.model && cached.window == window do
+          throw (IO.userError "cache diagnostic locator changed")
+        cost := {cost with
+          checkUs := cost.checkUs + ((← IO.monoNanosNow) - started) / 1000
+          hits := cost.hits + 1}
+        hit := true
+        break
+      unless hit do throw (IO.userError "cache diagnostic needs every original window warm")
+    samples := samples ++ [Json.mkObj [("repetition", toJson repetition), ("cost", toJson cost)]]
+  pure (Json.mkObj [("purpose", toJson "standalone-cache-cost"),
+    ("database", toJson snapshot.head.identity), ("samples", toJson samples)])
+
 end Eggshell.SemanticLatency
 
 def main (arguments : List String) : IO UInt32 := do
   try
+    if arguments == ["pack-vectors"] then
+      let input ← IO.getStdin
+      let mut line ← input.getLine
+      while !line.isEmpty do
+        let vector ← IO.ofExcept (Lean.Json.parse line)
+        let encoded ← IO.ofExcept (Eggshell.SearchProvider.packVector vector)
+        IO.println (Lean.toJson encoded).compress
+        (← IO.getStdout).flush
+        line ← input.getLine
+      return 0
     let result ← match arguments with
       | ["prepare", directory, count] => do
           let some count := count.toNat? | throw (IO.userError "invalid source count")
           Eggshell.SemanticLatency.prepare (.mk directory) count
       | ["prime", database, question] => Eggshell.SemanticLatency.prime (.mk database) question
       | ["inspect", database, question] => Eggshell.SemanticLatency.inspect (.mk database) question
+      | ["cache-cost", database] => Eggshell.SemanticLatency.cacheCost (.mk database)
       | ["counts", database] => do
           let snapshot ← Eggshell.DB.PageMap.pin (.mk database)
           let rows ← ["alls", "indexedAllReferences", "liveOutcomes", "nodes"].mapM fun key => do
             pure (key, Lean.toJson (← Eggshell.Persistence.Store.getNat snapshot.get key))
           pure (Lean.Json.mkObj rows)
-      | _ => throw (IO.userError "usage: semantic_latency prepare DIRECTORY COUNT | prime DB QUESTION | inspect DB QUESTION | counts DB")
+      | _ => throw (IO.userError "usage: semantic_latency prepare DIRECTORY COUNT | prime DB QUESTION | inspect DB QUESTION | cache-cost DB | pack-vectors | counts DB")
     IO.println result.compress
     pure 0
   catch error =>

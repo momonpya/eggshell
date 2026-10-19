@@ -48,6 +48,18 @@ def model():
             timing["initializeUs"] = elapsed_us(started)
     return encoder
 
+
+def packed_vector(encoded):
+    if not isinstance(encoded, str) or not 0 < len(encoded) <= 4096 * 16 or len(encoded) % 16:
+        raise ValueError("invalid packed vector dimension")
+    raw = bytes.fromhex(encoded)
+    if len(raw) * 2 != len(encoded):
+        raise ValueError("noncanonical packed vector")
+    vector = np.frombuffer(raw, dtype="<f8")
+    if not np.isfinite(vector).all():
+        raise ValueError("nonfinite packed vector")
+    return np.asarray(vector, dtype=np.float32)
+
 if sys.argv[6:] == ["--preload"]:
     next(model().embed(["eggshell"], batch_size=1))
     raise SystemExit(0)
@@ -70,8 +82,8 @@ for line in sys.stdin:
             result = {"vectors": vectors}
         else:
             started = time.perf_counter_ns()
-            queries = [np.asarray(v, dtype=np.float32) for v in request["queries"]]
-            result = {"scores": [max(float(np.dot(q, np.asarray(v, dtype=np.float32)))
+            queries = [packed_vector(v) for v in request["queries"]]
+            result = {"scores": [max(float(np.dot(q, packed_vector(v)))
                 for q in queries for v in windows) for windows in request["candidates"]]}
             timing["scoreUs"] = elapsed_us(started)
         reply(result, requested)

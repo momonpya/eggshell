@@ -198,23 +198,51 @@ structure CachedVector where
   vector : Json
   deriving ToJson, FromJson
 
+/-- Canonical little-endian IEEE binary64, two lowercase hexadecimal digits
+per byte. JSON transports a string rather than reparsing decimal coefficients.
+The exponent occupies the last byte's low seven bits and its neighbor's high
+nibble; all-ones rejects both infinities and every NaN payload. -/
+def packedFinite (encoded : String) : Bool := Id.run do
+  let bytes := encoded.toUTF8
+  if bytes.size == 0 || bytes.size > 4096 * 16 || bytes.size % 16 != 0 then return false
+  for index in [:bytes.size] do
+    let byte := bytes[index]!
+    unless (48 ≤ byte && byte ≤ 57) || (97 ≤ byte && byte ≤ 102) do return false
+  for word in [:bytes.size / 16] do
+    let last := bytes[word * 16 + 14]!
+    if (last == 55 || last == 102) && bytes[word * 16 + 15]! == 102 &&
+        bytes[word * 16 + 12]! == 102 then return false
+  return true
+
+def packVector (vector : Json) : Except String String := do
+  let .arr values := vector | throw "expected numerical vector array"
+  unless 0 < values.size && values.size ≤ 4096 do throw "invalid numerical vector dimension"
+  let mut bytes := ByteArray.empty
+  for value in values do
+    let bits := (← number value).toBits
+    for index in [:8] do bytes := bytes.push ((bits >>> (index * 8).toUInt64).toUInt8)
+  pure (Blake3.hex bytes)
+
 structure CheckedVector (cached : CachedVector) where
-  values : Array Json
-  exact : cached.vector = .arr values
+  encoding : String
+  exact : cached.vector = .str encoding
   digest : Receipt.validId cached.window = true
-  dimensions : 0 < values.size ∧ values.size ≤ 4096
-  finite : values.all (fun value => (number value).isOk) = true
+  dimensions : 0 < encoding.utf8ByteSize / 16 ∧ encoding.utf8ByteSize / 16 ≤ 4096
+  aligned : encoding.utf8ByteSize % 16 = 0
+  finite : packedFinite encoding = true
 
 def CheckedVector.make? (cached : CachedVector) : Option (CheckedVector cached) :=
   match shape : cached.vector with
-  | .arr values =>
-      if valid : Receipt.validId cached.window = true ∧ 0 < values.size ∧ values.size ≤ 4096 ∧
-          values.all (fun value => (number value).isOk) = true then
-        some ⟨values, shape, valid.1, ⟨valid.2.1, valid.2.2.1⟩, valid.2.2.2⟩ else none
+  | .str encoding =>
+      if valid : Receipt.validId cached.window = true ∧ 0 < encoding.utf8ByteSize / 16 ∧
+          encoding.utf8ByteSize / 16 ≤ 4096 ∧ encoding.utf8ByteSize % 16 = 0 ∧
+          packedFinite encoding = true then
+        some ⟨encoding, shape, valid.1, ⟨valid.2.1, valid.2.2.1⟩,
+          valid.2.2.2.1, valid.2.2.2.2⟩ else none
   | _ => none
 
 theorem CheckedVector.source_shape (checked : CheckedVector cached) :
-    cached.vector = .arr checked.values := checked.exact
+    cached.vector = .str checked.encoding := checked.exact
 
 def cacheMatches (model text : String) (cached : CachedVector) : Bool :=
   decide (cached.model = model ∧ cached.window = Persistence.Store.windowKey text)
@@ -284,7 +312,9 @@ def readVector (options : Options) (text : String) : IO (Option Json) := do
 
 def saveVector (options : Options) (text : String) (vector : Json) : IO Unit := do
   unless text.length ≤ 512 do throw (IO.userError "index window exceeds source contract")
-  let cached : CachedVector := {model := options.model, window := Persistence.Store.windowKey text, vector}
+  let encoding ← IO.ofExcept (packVector vector)
+  let cached : CachedVector := {
+    model := options.model, window := Persistence.Store.windowKey text, vector := .str encoding}
   let some _ := CheckedVector.make? cached | throw (IO.userError "invalid numerical window for indexing")
   let encoded := (toJson cached).compress
   unless encoded.utf8ByteSize ≤ 1048576 do throw (IO.userError "oversized numerical window for indexing")
