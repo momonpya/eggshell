@@ -78,8 +78,9 @@ latency distribution, quality result, token-savings result or adoption decision.
 Its missing/synthetic usage cannot enter study accounting.
 
 Together with the [saved-DB probe](pilot-memory-probe.md), five planned context
-paths have scripted transport evidence. The similarity-equality control, full
-task runner, common acquired seed/history, repeated-history restoration,
+paths have scripted transport evidence. The [similarity-equality control](pilot-similarity-control.md)
+has a separate built implementation; its installed warm-DB path remains open.
+The full task runner, common acquired seed/history, repeated-history restoration,
 model/reasoning settings, repetitions/order, perturbations/limits, incorrect-reuse
 adjudication and complete billed-attempt accounting remain open in the
 [pilot protocol](pilot-protocol.md). The original deferred `hook output missing`

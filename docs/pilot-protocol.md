@@ -148,8 +148,10 @@ The [native-history probe](pilot-history-probe.md) now checks fresh, a pasted
 recorded final answer and same-chat continuation against actual request bodies.
 Only continuation retains the original native question/tool observation; the
 pasted case has the recorded answer alone in a new user input. This qualifies
-five planned context paths with scripted responses. The isolated similarity
-control and complete task runner remain open, along with actual common
+five planned context paths with scripted responses. The [isolated similarity
+control](pilot-similarity-control.md) now builds separately and its fixture
+creates an actual run-local union/completed child from a semantic nomination.
+Its real warm-DB plugin/receipt path and the complete task runner remain open, along with actual common
 study-seed acquisition/warm receipts, initial/history definitions and restoring
 the same frozen native history for repetitions. No model comparison is implied.
 
