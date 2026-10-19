@@ -271,3 +271,18 @@ binaries and generated C are at `reader-isolation-implementation-1/`; the
 The development branch remains an unadopted candidate. No token/quality
 adoption, pilot, main merge or release is established. Continue with the
 remaining checked topology/cache costs before another fixed full repeat.
+
+A subsequent Atom-byte reuse prototype kept the canonical structural traversal
+and passed focused collision, authority/position and noncanonical-child alias
+checks. Its single fresh private-overlay diagnostic took 4,457.18 ms, with
+1,422 ms in kernel discovery. This did not establish sufficient extra deadline
+headroom. The prototype was removed; source and executables were restored to
+the pushed candidate. Its source/diff, executable, failed initial builds,
+corrected build, focused tests and native output remain at
+`atom-reuse-prototype-1/` and `atom-reuse-native-1/`. It is not a replacement
+for the failed fixed-run cell or a completed 48-hook comparison.
+
+Next decompose the failed hook's 1,119 ms cache observation into secure file
+reads, JSON parsing and finite-vector validation before choosing another
+candidate. All 1,024 original windows were hits. The practical gate remains
+unmet; the prototype's removal does not change the 47/48 result.
