@@ -58,7 +58,10 @@ not be added as disjoint durations. Query time includes preparation and cache IO
 This is a per-invocation audit trail, not a complete Phase 0 result. Runtime
 equality ancestry and selected-role dependencies remain untracked. The existing
 selection diagnostic has not been promoted into a delivery-wide classifier.
-The original host-app `hook output missing` incident is still unidentified;
-ingress fault fixtures establish only their own mechanisms. DB-size-independent
-latency, host ingestion, the pilot, proofs/rules, full experiments and paper are
-still required by `GOAL.md`.
+The original `hook output missing` incident is deferred at the user's request
+on 2026-10-19 and excluded from current investigation. It may concern the Claude
+environment, but neither that environment nor the cause is confirmed. It is not
+resolved and does not block the remaining measurement work. Ingress fault
+fixtures establish only their own mechanisms. DB-size-independent latency,
+host ingestion, the pilot, proofs/rules, full experiments and paper are still
+required by `GOAL.md`.
