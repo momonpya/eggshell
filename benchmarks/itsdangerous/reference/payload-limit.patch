@@ -1,0 +1,60 @@
+--- a/src/itsdangerous/serializer.py
++++ b/src/itsdangerous/serializer.py
+@@ -35,6 +35,12 @@
+ ) -> te.TypeGuard[_PDataSerializer[str]]:
+     """Checks whether a serializer generates text or binary."""
+     return isinstance(serializer.dumps({}), str)
++
++
++def _validate_payload_limit(limit: int | None) -> int | None:
++    if limit is not None and (isinstance(limit, bool) or not isinstance(limit, int) or limit < 0):
++        raise ValueError("max_payload_bytes must be a nonnegative integer or None")
++    return limit
+ 
+ 
+ class Serializer(t.Generic[_TSerialized]):
+@@ -241,7 +247,8 @@
+         return self.secret_keys[-1]
+ 
+     def load_payload(
+-        self, payload: bytes, serializer: _PDataSerializer[t.Any] | None = None
++        self, payload: bytes, serializer: _PDataSerializer[t.Any] | None = None,
++        *, max_payload_bytes: int | None = None,
+     ) -> t.Any:
+         """Loads the encoded object. This function raises
+         :class:`.BadPayload` if the payload is not valid. The
+@@ -249,6 +256,9 @@
+         stored on the class. The encoded ``payload`` should always be
+         bytes.
+         """
++        limit = _validate_payload_limit(max_payload_bytes)
++        if limit is not None and len(payload) > limit:
++            raise BadPayload("Payload exceeds max_payload_bytes")
+         if serializer is None:
+             use_serializer = self.serializer
+             is_text = self.is_text_serializer
+@@ -326,17 +336,22 @@
+         f.write(self.dumps(obj, salt))
+ 
+     def loads(
+-        self, s: str | bytes, salt: str | bytes | None = None, **kwargs: t.Any
++        self, s: str | bytes, salt: str | bytes | None = None,
++        *, max_payload_bytes: int | None = None, **kwargs: t.Any,
+     ) -> t.Any:
+         """Reverse of :meth:`dumps`. Raises :exc:`.BadSignature` if the
+         signature validation fails.
+         """
++        limit = _validate_payload_limit(max_payload_bytes)
+         s = want_bytes(s)
+         last_exception = None
+ 
+         for signer in self.iter_unsigners(salt):
+             try:
+-                return self.load_payload(signer.unsign(s))
++                payload = signer.unsign(s)
++                if limit is None:
++                    return self.load_payload(payload)
++                return self.load_payload(payload, max_payload_bytes=limit)
+             except BadSignature as err:
+                 last_exception = err
+ 

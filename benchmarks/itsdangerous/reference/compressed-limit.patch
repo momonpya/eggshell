@@ -1,0 +1,44 @@
+--- a/src/itsdangerous/url_safe.py
++++ b/src/itsdangerous/url_safe.py
+@@ -1,5 +1,6 @@
+ from __future__ import annotations
+ 
++import sys
+ import typing as t
+ import zlib
+ 
+@@ -9,6 +10,7 @@
+ from .exc import BadPayload
+ from .serializer import _PDataSerializer
+ from .serializer import Serializer
++from .serializer import _validate_payload_limit
+ from .timed import TimedSerializer
+ 
+ 
+@@ -27,6 +29,7 @@
+         serializer: t.Any | None = None,
+         **kwargs: t.Any,
+     ) -> t.Any:
++        limit = _validate_payload_limit(kwargs.get("max_payload_bytes"))
+         decompress = False
+ 
+         if payload.startswith(b"."):
+@@ -43,7 +46,17 @@
+ 
+         if decompress:
+             try:
+-                json = zlib.decompress(json)
++                if limit is None:
++                    json = zlib.decompress(json)
++                else:
++                    decoder = zlib.decompressobj()
++                    json = decoder.decompress(json, min(limit + 1, sys.maxsize))
++                    if len(json) > limit:
++                        raise BadPayload("Payload exceeds max_payload_bytes")
++                    if not decoder.eof:
++                        raise BadPayload("Incomplete compressed payload")
++            except BadPayload:
++                raise
+             except Exception as e:
+                 raise BadPayload(
+                     "Could not zlib decompress the payload before decoding the payload",

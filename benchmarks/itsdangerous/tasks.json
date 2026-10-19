@@ -1,0 +1,9 @@
+{
+  "subject_commit": "672971d66a2ef9f85151e53283113f33d642dabd",
+  "allowed_source_prefix": "src/itsdangerous/",
+  "tasks": [
+    {"id": "payload-limit", "prompt": "prompts/payload-limit.md", "patch": "reference/payload-limit.patch", "checks": ["test_payload_limit.py"]},
+    {"id": "compressed-limit", "prompt": "prompts/compressed-limit.md", "patch": "reference/compressed-limit.patch", "checks": ["test_payload_limit.py", "test_compressed_limit.py"]},
+    {"id": "timed-unsafe-limit", "prompt": "prompts/timed-unsafe-limit.md", "patch": "reference/timed-unsafe-limit.patch", "checks": ["test_payload_limit.py", "test_compressed_limit.py", "test_timed_unsafe_limit.py"]}
+  ]
+}

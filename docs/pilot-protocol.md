@@ -1,7 +1,8 @@
 # Small pilot protocol draft
 
-Status on 2026-10-20: the subject is pinned and its upstream tests run. No model
-trial or seed-memory acquisition has been performed. This is preparation for
+Status on 2026-10-20: the subject is pinned, its upstream tests run, and three
+chained task prompts/acceptance oracles are reference-checked. No model trial
+or seed-memory acquisition has been performed. This is preparation for
 stage 5 of [GOAL.md](../GOAL.md), not a frozen preregistration or a paper result.
 
 ## Verified subject readiness
@@ -45,14 +46,16 @@ An Eggshell seed DB and its warm/index receipts have not yet been created.
 
 ## Design to freeze before model trials
 
-The pilot uses one repository and a related sequence of three or four tasks.
-Candidate source areas are key rotation/signature validation (`signer.py`),
-timestamp/expiry handling (`timed.py`), and compressed/base64 payload handling
-(`url_safe.py` and `serializer.py`). These are source areas, not final task
-prompts. Each task needs a fixed starting snapshot, acceptance tests that
-distinguish the requested behavior, and a checked reference result before
-model outcomes are collected. Passing the unmodified upstream suite alone
-cannot certify an unspecified task.
+The pilot uses one repository and a related sequence of three maintenance
+tasks: serialized-byte limits, bounded URL-safe inflation, and propagation
+through timed/file/unsafe loading paths. The [fixed task material](pilot-tasks.md)
+contains the prompts, chained starting snapshots, cumulative checks and
+reference patches. The starts fail 13/2/75 new checks; references pass all
+313/324/407 cumulative tests, including the original 297 at each stage. Fifteen
+grader controls reject missing behavior, unbounded accumulation and grading
+integrity failures. These are oracle-validation outcomes, not model results.
+Any material change requires a new frozen suite and revalidation before
+collecting model outcomes; old outputs remain immutable.
 
 Keep the six conditions from the goal:
 
@@ -103,11 +106,13 @@ commands and actual test results must be retained for audit.
 
 ## Remaining execution gates
 
-Before the first model run, seal the task prompts and grading checks, runner
+The task material is reference-checked. Before the first model run, seal the runner
 and condition implementations, model/reasoning settings, repetitions/order,
 perturbations, token/time limits, seed snapshot and completed warm receipts.
-Check the shared read-only configuration on that seed. These gates are still
-open; the 297-test preflight does not satisfy them.
+Check the shared read-only configuration on that seed and fix the incorrect-reuse
+event/denominator and receipt/trajectory adjudication. Acceptance tests alone
+cannot identify incorrect memory reuse. These gates are still open; neither
+the upstream preflight nor the reference task solutions satisfy them.
 
 The observed public Eggshell `main` was
 `51873167c11c447a0af67e73430b5ab6635b2a65` during readiness. Refresh and freeze
