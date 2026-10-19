@@ -35,11 +35,14 @@ def Fixture.input (f : Fixture) (event : String) (session := "chat") (extra : Li
     ("turn_id", .str "turn"), ("cwd", .str f.root.toString)] ++ extra)
 
 def Fixture.hook (f : Fixture) (event : String) (session := "chat") (extra : List (String × Json) := []) : IO Json := do
+  let input := f.input event session extra
+  let fast := ["Stop", "Interrupt", "PostCompact", "SessionEnd"].contains event ||
+    (event == "SessionStart" && input.getObjValD "source" == .str "compact")
   let result ← IO.Process.output {
     cmd := f.binary.toString
-    args := #["codex-hook"]
+    args := if fast then #["codex-hook", "fast"] else #["codex-hook"]
     cwd := some f.root
-    env := f.env } (some (f.input event session extra).compress)
+    env := f.env } (some input.compress)
   require (result.exitCode == 0) result.stderr
   IO.ofExcept (Json.parse result.stdout)
 

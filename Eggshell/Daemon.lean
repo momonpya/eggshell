@@ -406,40 +406,70 @@ theorem invalid_hook_reply_is_incomplete (reply : Option Json) (text : String)
     decodeHookReply reply = .incomplete := by
   simp [decodeHookReply, field, invalid]
 
-def hookClient : IO UInt32 := do
-  let inputText ← (← IO.getStdin).readToEnd
+def hookRequest (input : Json) (deadline : Nat) : IO Json := do
+  let event := (optionalString input "hook_event_name").getD ""
   try
-    let input ← IO.ofExcept (Json.parse inputText)
     let input := attachClientConfig input (← IO.getEnv "EGGSHELL_CONFIG")
     captureTerminal input
-    let event := (optionalString input "hook_event_name").getD ""
-    let fast := ["Stop", "Interrupt", "PostCompact", "SessionEnd"].contains event ||
-      (event == "SessionStart" && optionalString input "source" == some "compact")
-    let deadline := (← IO.monoMsNow) + (if fast then 2000 else 29000)
     let receipt := Blake3.hex (← IO.getRandomBytes 16)
     let input := (input.setObjVal! "_eggshell_deadline" (toJson (deadline - 250)))
       |>.setObjVal! "_eggshell_receipt" receipt
-    let result ← boundedRpc "hook" input (deadline - 150)
-    let json := result.bind (Json.parse · |>.toOption)
-    if let some error := json.bind (optionalString · "error") then
-      IO.eprintln s!"Eggshell hook failed open: {error}"
+    let session ← IO.ofExcept (requiredString input "session_id")
+    let endpoint ← ensure session
+    let output ← exchangeBefore endpoint "hook" input (deadline - 250)
+    let json := some (Json.mkObj [("output", output)])
     let reply := decodeHookReply json
-    let output := reply.output event
+    let ack := if reply.isComplete && output != emptyHook then
+      Json.mkObj [("session_id", session), ("receipt", receipt)] else Json.null
+    pure (Json.mkObj [("output", reply.output event), ("ack", ack)])
+  catch error =>
+    IO.eprintln s!"Eggshell hook failed open: {error}"
+    pure (Json.mkObj [("output", incompleteHook event)])
+
+/-- All ingress, journaling and transport IO belongs to this supervised child.
+The parent alone forwards the hook response and acknowledges that write. -/
+def hookProcess (deadline : Nat) : IO UInt32 := do
+  let response ← try
+    let inputText ← (← IO.getStdin).readToEnd
+    let input ← IO.ofExcept (Json.parse inputText)
+    hookRequest input deadline
+    catch error =>
+      IO.eprintln s!"Eggshell hook failed open: {error}"
+      pure (Json.mkObj [("output", incompleteHook "")])
+  IO.println response.compress
+  pure 0
+
+/-- The registered handler selects its budget before stdin can block. The child
+inherits stdin, so a timed-out reader cannot keep a parent IO task alive. -/
+def hookClient (fast : Bool := false) : IO UInt32 := do
+  let deadline := (← IO.monoMsNow) + (if fast then 2000 else 29000)
+  try
+    let child ← IO.Process.spawn {
+      cmd := (← IO.appPath).toString, args := #["codex-hook-child", toString deadline]
+      stdin := .inherit, stdout := .piped, stderr := .inherit, setsid := true }
+    let task ← IO.asTask child.stdout.readToEnd .dedicated
+    let result ← try
+      Worker.awaitUntil task (deadline - 150)
+      finally
+        Worker.killGroup child
+        let _ ← child.wait
+        let _ ← IO.wait task
+        pure ()
+    let json := result.bind (Json.parse · |>.toOption)
+    let reply := decodeHookReply json
     let stdout ← IO.getStdout
-    stdout.putStr (output.trimAscii.toString ++ "\n")
+    stdout.putStr ((reply.output "").trimAscii.toString ++ "\n")
     stdout.flush
-    if reply.isComplete && output != emptyHook then
-      let ack := Json.mkObj [("session_id", (optionalString input "session_id").getD ""),
-        ("receipt", receipt)]
-      try
-        let _ ← boundedRpc "ack" ack deadline
-      catch error => IO.eprintln s!"Eggshell receipt was not acknowledged: {error}"
+    if reply.isComplete then
+      if let some ack := json.bind (fun json => (json.getObjVal? "ack").toOption) then
+        if ack != Json.null then
+          try
+            let _ ← boundedRpc "ack" ack deadline
+          catch error => IO.eprintln s!"Eggshell receipt was not acknowledged: {error}"
     pure 0
   catch error =>
     IO.eprintln s!"Eggshell hook failed open: {error}"
-    let event := (Json.parse inputText).toOption.bind (optionalString · "hook_event_name")
-      |>.getD ""
-    IO.println (incompleteHook event)
+    IO.println (incompleteHook "")
     pure 0
 
 def awaitStopped (endpoint : Endpoint) : IO Unit := do

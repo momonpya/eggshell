@@ -474,9 +474,14 @@ def captureTerminal (input : Json) : IO Unit := do
   let turn ← IO.ofExcept (requiredString input "turn_id")
   let tool ← IO.ofExcept (toolFromHook input true)
   let files ← sessionFiles session
-  -- These reads observe atomic metadata snapshots; no parser repair is done
-  -- outside the state lock. Failure leaves the native receipt available.
-  if let some state ← (readJson? files.state stateJsonDefaults : IO (Option ThreadState)) then
+  -- Explicitly disabled memory retains no new observation. Invalid control
+  -- metadata must preserve the native result before reporting unconfirmed work.
+  let state ← try
+    (readJson? files.state stateJsonDefaults : IO (Option ThreadState))
+    catch error =>
+      recordTool files turn tool
+      throw error
+  if let some state := state then
     if !state.enabled then return
   let tool := (← recordedTool? files turn tool).getD tool
   recordTool files turn tool

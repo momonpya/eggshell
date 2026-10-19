@@ -24,8 +24,8 @@ def slotFor (session role : String) : IO Slot := slots.atomically do
   modify ((key, slot) :: ·)
   pure slot
 
-/-- Only children created by this module with setsid are process-group leaders. -/
-def killGroup (child : Child) : IO Unit := do
+/-- Call only for a child spawned with `setsid := true`. -/
+def killGroup {cfg : IO.Process.StdioConfig} (child : IO.Process.Child cfg) : IO Unit := do
   let killer ← IO.Process.spawn {
     cmd := "/bin/kill", args := #["-KILL", "--", "-" ++ toString child.pid]
     stdin := .null, stdout := .null, stderr := .null }

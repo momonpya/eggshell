@@ -6017,6 +6017,10 @@ def main (arguments : List String) : IO UInt32 :=
         stalledPipePeer (.mk (kind.drop "stalled-rpc:".length).copy)
       else Plugin.Daemon.rpcClient kind
   | ["codex-hook"] => Plugin.Daemon.hookClient
+  | ["codex-hook", "fast"] => Plugin.Daemon.hookClient true
+  | ["codex-hook-child", deadline] => do
+      let some deadline := deadline.toNat? | return 1
+      Plugin.Daemon.hookProcess deadline
   | ["semantic-provider-fixture", "retrieval"] => semanticProviderFixture
   | ["semantic-provider-fixture", "empty"] => semanticProviderFixture 0 none none [] false
   | ["semantic-provider-fixture", "child"] => semanticProviderFixture 1

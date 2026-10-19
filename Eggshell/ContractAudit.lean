@@ -108,6 +108,14 @@ This checks declaration reachability, separately from the kernel contracts. -/
 run_meta do
   let environment ← getEnv
   for (root, required, forbidden) in #[
+      (``Eggshell.Plugin.Daemon.hookClient,
+        #[``Eggshell.Plugin.Worker.awaitUntil, ``Eggshell.Plugin.Worker.killGroup,
+          ``Eggshell.Plugin.Daemon.decodeHookReply], #[``IO.getStdin, ``Eggshell.Plugin.captureTerminal]),
+      (``Eggshell.Plugin.Daemon.hookProcess,
+        #[``Eggshell.Plugin.Daemon.hookRequest], #[]),
+      (``Eggshell.Plugin.Daemon.hookRequest,
+        #[``Eggshell.Plugin.captureTerminal, ``Eggshell.Plugin.Daemon.exchangeBefore],
+        #[``Eggshell.Plugin.Daemon.boundedRpc]),
       (``Eggshell.Plugin.recordTool,
         #[``Eggshell.FileSystem.immutableBytes, ``Eggshell.Plugin.readNativeTool?],
         #[]),

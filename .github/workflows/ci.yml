@@ -34,6 +34,8 @@ jobs:
         run: EGGSHELL_DATA_ROOT="$PWD/.lake/eggshell-tests-data" .lake/build/bin/eggshell_tests
       - name: Hook lifecycle regressions
         run: .lake/build/bin/lifecycle_tests
+      - name: Hook ingress fault regressions
+        run: python3 tests/hook_ingress.py --output .lake/hook-ingress-ci
       - name: Check plugin package
         run: .lake/build/bin/setup_package_tests
       - name: Check installer syntax
