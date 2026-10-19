@@ -2319,9 +2319,9 @@ def testMiniLMDefault : IO Unit := do
     throw (IO.userError "installed MiniLM runtime was not selected by default")
   check (command.head? = some (← IO.appPath).toString &&
       command.contains "search-provider" &&
-      command.contains paths.vectors.toString &&
+      !command.contains "--cache" &&
       command.contains MiniLM.model)
-    "default MiniLM command escaped its private runtime or Plugin cache"
+    "default MiniLM command escaped its runtime or retained a chat-owned vector cache"
   let absent ← MiniLM.command (testRoot / "absent-home") pluginData
   check absent.isNone "missing MiniLM runtime fabricated a provider command"
   IO.println "PASS installed MiniLM is the zero-config semantic default"
@@ -4854,6 +4854,138 @@ def testIndexedNumericalWindows : IO Unit := do
     "a valid multi-page numerical cache record was rejected or truncated"
   IO.println "PASS bounded numerical window batches preserve complete semantic/hybrid/lexical ranks and reject missing indexed vectors"
 
+def testDatabaseVectorCaches : IO Unit := IO.FS.withTempDir fun root => do
+  let root ← IO.FS.realPath root
+  let leftPath := root / "left.egg"
+  let rightPath := root / "right.egg"
+  let authority := (Persistence.valueToJson (.text "same authority, distinct databases")).compress
+  let left ← DB.PageMap.create leftPath authority
+  let right ← DB.PageMap.create rightPath authority
+  let leftCache := DB.Sidecar.ofSnapshot left
+  let rightCache := DB.Sidecar.ofSnapshot right
+  check (leftCache.database != rightCache.database && leftCache.semantic != rightCache.semantic)
+    "different DB incarnations shared a numerical cache"
+  let priorFor := fun (path : System.FilePath) (prompt : String) => {seed with
+    cwd := root.toString, prompt, tools := [], finalMessage := some "observed answer"
+    read := [path.toString], write := some path.toString}
+  let _ ← promote (priorFor leftPath "left source") leftPath
+  let _ ← promote (priorFor rightPath "right source") rightPath
+  let updated ← DB.PageMap.pin leftPath
+  check (updated.head.revision > left.head.revision &&
+      (DB.Sidecar.ofSnapshot updated).semantic == leftCache.semantic)
+    "a new publication discarded the DB's stable cache identity"
+  let leftDocs ← Persistence.Store.searchDocuments updated
+  let rightDocs ← Persistence.Store.searchDocuments (← DB.PageMap.pin rightPath)
+  check (!leftDocs.isEmpty && !rightDocs.isEmpty &&
+      leftDocs.all (·.cache == some leftCache.semantic) &&
+      rightDocs.all (·.cache == some rightCache.semantic))
+    "pinned search documents lost their DB cache owner"
+  let optionsFor : System.FilePath → SearchProvider.Options := fun cache => {
+    cache := cache
+    models := root / "unused-models"
+    model := "synthetic-db-cache-test-only" }
+  let leftOptions := optionsFor leftCache.semantic
+  let rightOptions := optionsFor rightCache.semantic
+  let reference := optionsFor (root / "reference")
+  let scratch := optionsFor (root / "scratch")
+  let query := "needle"
+  let texts := ["needle left source", "opposite right source", "neutral right source", "other needle"]
+  let vectorFor := fun (text : String) => IO.ofExcept (Lean.Json.parse
+    (if text.contains "needle" then "[1,0]" else if text.contains "opposite" then "[-1,0]" else "[0,1]"))
+  SearchProvider.saveVector leftOptions query (← vectorFor query)
+  for (text, index) in texts.zipIdx do
+    let options := if index == 0 then leftOptions else rightOptions
+    SearchProvider.saveVector options text (← vectorFor text)
+  check ((← SearchProvider.readVector leftOptions texts[0]!).isSome &&
+      (← SearchProvider.readVector rightOptions texts[0]!).isNone)
+    "a vector leaked into another DB's cache"
+  for text in query :: texts do SearchProvider.saveVector reference text (← vectorFor text)
+  let documents := texts.zipIdx.map fun (text, index) => Lean.Json.mkObj [
+    ("id", Lean.toJson index),
+    ("windows", Lean.toJson ((SearchRank.windows text).map Persistence.Store.windowKey))]
+  let owned := documents.zipIdx.map fun (document, index) => document.setObjVal! "cache"
+    (Lean.toJson (if index == 0 then leftCache.semantic.toString else rightCache.semantic.toString))
+  let request := Lean.Json.mkObj [("documents", Lean.toJson documents),
+    ("lexical", Lean.toJson (SearchRank.referenceLexical query texts)),
+    ("anchors", Lean.toJson (SearchRank.referenceLexical query texts true))]
+  for mode in ["semantic", "hybrid", "lexical"] do
+    let options := {scratch with mode}
+    let child ← if mode == "lexical" then pure none else some <$> SearchProvider.encoder options
+    try
+      let expected ← SearchProvider.handleIndexed {reference with mode} child query request
+      let actual ← SearchProvider.handleIndexed options child query
+        (request.setObjVal! "documents" (Lean.toJson owned))
+      check (actual == expected)
+        s!"DB-scoped caches changed the complete {mode} order, nominations or evidence"
+    finally
+      if let some child := child then
+        child.kill
+        let _ ← child.wait
+        pure ()
+  check (!(← scratch.cache.pathExists))
+    "persisted DB scoring wrote a process/chat-owned vector cache"
+  -- Exercise the real indexed provider wire, not just the cache reader.
+  let provider := root / "provider"
+  Persistence.privateDirectory provider
+  let docs := (leftDocs ++ rightDocs).zipIdx.map fun (document, index) =>
+    {document with owner := index, work := index}
+  writeJson (provider / "response.json") (Lean.Json.mkObj [
+    ("related", Lean.toJson ([] : List Nat)), ("ranked", Lean.toJson (List.range docs.length)),
+    ("evidence", Lean.toJson ([] : List SemanticMatcher.WindowChoice))])
+  let some _ ← SemanticMatcher.nominateIndexed
+      [(← IO.appPath).toString, "observed-search-provider", provider.toString] query docs [] []
+      (fun _ _ => throw (IO.userError "fixture unexpectedly requested a body")) |
+    throw (IO.userError "DB-owned provider request failed")
+  let observed ← IO.ofExcept (Lean.Json.parse (← IO.FS.readFile (provider / "request.json")))
+  let sent ← IO.ofExcept (observed.getObjValAs? (List Lean.Json) "documents")
+  check ((sent.map fun row => (row.getObjValAs? String "cache").toOption) ==
+      docs.map (fun document => document.cache.map (·.toString)))
+    "provider transport replaced or dropped one DB's cache owner"
+  writeJson (provider / "response.json") (Lean.Json.mkObj [
+    ("related", Lean.toJson ([] : List Nat)), ("ranked", Lean.toJson (List.range leftDocs.length)),
+    ("evidence", Lean.toJson ([] : List SemanticMatcher.WindowChoice))])
+  for session in ["db-cache-chat-one", "db-cache-chat-two"] do
+    let files ← sessionFiles session
+    let state : ThreadState := {profile := "work"}
+    let pending : PendingTurn := {seed with
+      sessionId := session, turnId := "cache-probe", cwd := root.toString
+      prompt := "nonmatchingxyzquery", read := [leftPath.toString], write := none
+      tools := [], finalMessage := none, inFlight := [], closed := false
+      semanticMatcher := some [(← IO.appPath).toString, "observed-search-provider", provider.toString] }
+    writeJson files.state state
+    writeJson files.pending pending
+    let deadline := (← IO.monoMsNow) + 3000
+    let result ← Worker.exchange session "search"
+      (Lean.toJson ({pending, state, work := pending.prompt, enforce := false, deadline} : Worker.Search)) deadline
+    check result.isSome "a different chat could not execute the same DB search"
+    let observed ← IO.ofExcept (Lean.Json.parse (← IO.FS.readFile (provider / "request.json")))
+    let sent ← IO.ofExcept (observed.getObjValAs? (List Lean.Json) "documents")
+    check (!sent.isEmpty && sent.all (fun row =>
+        (row.getObjValAs? String "cache").toOption == some leftCache.semantic.toString))
+      "a new chat selected a different vector-cache owner for the same DB"
+  let moved := root / "moved.egg"
+  IO.FS.rename leftPath moved
+  let movedSource ← DB.PageMap.pin moved
+  let movedCache := DB.Sidecar.ofSnapshot movedSource
+  check (movedCache.database == leftCache.database &&
+      (← SearchProvider.readVector (optionsFor movedCache.semantic) texts[0]!).isSome)
+    "moving a DB lost its cache identity or stored windows"
+  let copied := root / "copied.egg"
+  let copy ← IO.Process.output {cmd := "cp", args := #["-R", moved.toString, copied.toString]}
+  check (copy.exitCode == 0) "DB cache fixture copy failed"
+  let copiedCache := DB.Sidecar.ofSnapshot (← DB.PageMap.pin copied)
+  check (copiedCache.database == leftCache.database &&
+      (← SearchProvider.readVector (optionsFor copiedCache.semantic) texts[0]!).isSome)
+    "copying a DB detached its numerical sidecar"
+  IO.FS.removeDirAll moved
+  check (!(← movedCache.semantic.pathExists) &&
+      (← SearchProvider.readVector rightOptions texts[1]!).isSome &&
+      (← SearchProvider.readVector (optionsFor copiedCache.semantic) texts[0]!).isSome)
+    "deleting one DB left its cache behind or removed another DB's cache"
+  check ((← SearchProvider.readVector {rightOptions with model := "different-model"} texts[1]!).isNone)
+    "a changed model reused another model's vectors"
+  IO.println "PASS DB-owned numerical caches: publication/session stability, isolation, complete federated ranks, provider wire, move/copy/delete and model identity"
+
 /-- Read-only phase timing for a recorded source. This does not run an LLM
 or stand in for the actual hook/token acceptance experiment. -/
 def indexedQueryTiming (path cache input : System.FilePath) : IO Unit := do
@@ -5916,6 +6048,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
     testFrequencyDelta
     testLexicalFrequencyDelta
     testIndexedNumericalWindows
+    testDatabaseVectorCaches
     testIndependentProviderBoundary
     testIndexedEvidenceFocus
     testObservedRefocus
@@ -5968,6 +6101,10 @@ def main (arguments : List String) : IO UInt32 :=
       pure 0
   | ["normalizer-tests"] => do
       testStreamingNormalizer
+      pure 0
+  | ["database-cache-tests"] => do
+      testDatabaseVectorCaches
+      Worker.shutdown
       pure 0
   | ["normalizer-timing", mode] => normalizerTiming mode
   | ["root-reach-tests"] => do

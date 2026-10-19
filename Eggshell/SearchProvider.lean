@@ -51,6 +51,17 @@ def parse (defaults : Options) : List String → Except String Options
   | "--lane" :: "search" :: rest => parse { defaults with lane := .search } rest
   | _ => .error "invalid search-provider arguments"
 
+/-- A requesting pinned document/index batch supplies its DB-owned cache.
+Requests without a durable owner retain only the process's temporary hints. -/
+def cacheOptions (options : Options) (request : Json) : Except String Options := do
+  match (request.getObjVal? "cache").toOption with
+  | none | some .null => pure options
+  | some (.str path) =>
+      let path := System.FilePath.mk path
+      unless path.isAbsolute do throw "DB vector cache must be an absolute path"
+      pure {options with cache := path}
+  | _ => throw "invalid DB vector cache locator"
+
 abbrev Encoder := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .inherit }
 
 def spawnEncoder (options : Options) (python lease : System.FilePath)
@@ -154,12 +165,10 @@ def saveVector (options : Options) (text : String) (vector : Json) : IO Unit := 
   let encoded := (toJson cached).compress
   unless encoded.utf8ByteSize ≤ 1048576 do throw (IO.userError "oversized numerical window for indexing")
   let root := options.cache / "vectors"
+  Persistence.rejectSymlinkAncestors root
   Persistence.privateDirectory root
   let path := root / (cacheKey options.model text ++ ".json")
-  let temp := System.FilePath.mk (path.toString ++ ".tmp-" ++ toString (← IO.Process.getPID))
-  IO.FS.writeFile temp encoded
-  Persistence.privateFile temp
-  IO.FS.rename temp path
+  FileSystem.atomicBytes path encoded.toUTF8
 
 def store (options : Options) (child : Encoder) (texts : List String) : IO Unit := do
   let parts := (texts.flatMap SearchRank.windows).eraseDups
@@ -324,9 +333,15 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
   let mut scored : List (Float × Nat) := []
   let mut evidence : List (Nat × List Nat) := []
   if let some child := child then
-    store options child [query]
-    let queries ← vectors options query
+    -- One query vector serves the complete federated ranking. Keep it with
+    -- the first durable source instead of a chat-specific vector directory.
+    let queryCache := candidates.toList.find? fun candidate =>
+      (candidate.getObjValAs? String "cache").isOk
+    let queryOptions ← IO.ofExcept (cacheOptions options (queryCache.getD Json.null))
+    store queryOptions child [query]
+    let queries ← vectors queryOptions query
     for (candidate, index) in candidates.toList.zipIdx do
+      let documentOptions ← IO.ofExcept (cacheOptions options candidate)
       let windows ← IO.ofExcept (candidate.getObjValAs? (List String) "windows")
       if windows.isEmpty then throw (IO.userError "empty indexed window directory")
       let mut remaining := windows
@@ -336,7 +351,7 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
         let offset := windows.length - remaining.length
         let batch := WindowBatch.make remaining
         remaining := batch.rest
-        let vectors ← repairBatch options child index offset batch.front repair
+        let vectors ← repairBatch documentOptions child index offset batch.front repair
         let response ← exchange child (Json.mkObj [("queries", queries), ("candidates", .arr vectors)])
         let scores ← IO.ofExcept (response.getObjValAs? (Array Json) "scores")
         unless scores.size == batch.front.length do throw (IO.userError "indexed similarity count mismatch")
@@ -366,6 +381,7 @@ def handle (options : Options) (child : Option Encoder)
     (repair : RepairWindows := unavailableRepair) : IO (Option Json) := do
   if let .ok index := request.getObjValAs? (Array Json) "index" then
     if let some child := child then
+      let options ← IO.ofExcept (cacheOptions options request)
       let texts ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "text"))
       store options child texts
     let ids ← IO.ofExcept (index.toList.mapM (·.getObjValAs? String "id"))
@@ -395,9 +411,10 @@ def handle (options : Options) (child : Option Encoder)
     ((scored.mergeSort SearchRank.scoreOrder).map (·.2)) lexical
   pure (some (Json.mkObj [("related", toJson related), ("ranked", toJson ranked)]))
 
-def run (args : List String) : IO UInt32 := do
+def run (args : List String) : IO UInt32 := IO.FS.withTempDir fun scratch => do
+  let scratch ← IO.FS.realPath scratch
   let layout := MiniLM.layout (← Paths.installRoot) (← Paths.dataRoot)
-  let options ← IO.ofExcept (parse { cache := layout.vectors, models := layout.models } args)
+  let options ← IO.ofExcept (parse { cache := scratch, models := layout.models } args)
   let child ← if options.mode == "lexical" then pure none else some <$> encoder options
   let previous ← IO.mkRef (none : Option RetainedCorpus)
   try

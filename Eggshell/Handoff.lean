@@ -4929,7 +4929,10 @@ def indexedSemanticNominationsUsing (snapshot : Persistence.Store.Snapshot)
     let windows := match source with
       | .stored document => document.windows
       | .staged _ windows _ => windows.toList.map Persistence.Store.windowKey
-    ({owner := index, work := index, windows} : Persistence.Store.SearchDocument)
+    let cache := match source with
+      | .stored document => document.cache
+      | .staged .. => none
+    ({owner := index, work := index, windows, cache} : Persistence.Store.SearchDocument)
   let sourceTable := sources.toArray
   let mut postings : Std.HashMap String (Std.HashSet Nat) := {}
   let mut frequencies : Std.HashMap String Nat := {}
@@ -5688,7 +5691,10 @@ def federatedSemanticNominations
     let windows := match entry with
       | .stored document => document.original.windows
       | .staged _ windows _ => windows.toList.map Persistence.Store.windowKey
-    ({owner := index, work := index, windows} : Persistence.Store.SearchDocument)
+    let cache := match entry with
+      | .stored document => document.original.cache
+      | .staged .. => none
+    ({owner := index, work := index, windows, cache} : Persistence.Store.SearchDocument)
   let table := entries.toArray
   let mut postings : Std.HashMap String Persistence.Store.Federated.PostingSet := {}
   let mut frequencies : Std.HashMap String Nat := {}
@@ -5780,7 +5786,8 @@ def federatedDiscovery (selection : Config.Selection)
       let originals := catalogue.documents.filter (fun document => wanted.contains document.work)
       let table := Std.HashMap.ofList (originals.map fun document => (document.owner, document))
       let requests := originals.map fun document =>
-        ({owner := document.owner, work := document.work, windows := document.original.windows} :
+        ({owner := document.owner, work := document.work, windows := document.original.windows,
+          cache := document.original.cache} :
           Persistence.Store.SearchDocument)
       focusIndexedEvidence command question requests
         (fun request => do

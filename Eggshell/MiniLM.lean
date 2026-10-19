@@ -20,7 +20,6 @@ structure Layout where
   runtime : System.FilePath
   provider : System.FilePath
   models : System.FilePath
-  vectors : System.FilePath
   trace : System.FilePath
 
 def supportRoot (root : System.FilePath) : System.FilePath :=
@@ -33,7 +32,6 @@ def layout (root pluginData : System.FilePath) : Layout :=
     runtime := support / runtimeVersion
     provider := support / "embedding.py"
     models := support / "models"
-    vectors := pluginData / "semantic" / "minilm"
     trace := pluginData / "semantic" / "matcher-trace.jsonl"
   }
 
@@ -104,7 +102,6 @@ def command (root pluginData : System.FilePath) : IO (Option (List String)) := d
   let paths := layout root pluginData
   let some _ ← runtimePython? paths | pure none
   pure (some [(← IO.appPath).toString, "search-provider",
-    "--cache", paths.vectors.toString,
     "--model-cache", paths.models.toString,
     "--model", model,
     "--top-k", "8",

@@ -406,6 +406,7 @@ def indexQueued (paths : List System.FilePath) : IO Nat := do
   let committed ← resolveIndexTicket snapshot merged
   let _receipt ← SemanticMatcher.indexWorks first.command
     (SemanticMatcher.outcomeWorkItems committed.outcomeRelations)
+    (some (DB.Sidecar.ofSnapshot pinned).semantic)
   for (path, _) in batch do removeIfExists path
   pure batch.length
 
