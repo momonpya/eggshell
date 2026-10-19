@@ -22,6 +22,9 @@ REDACT = {"config/read", "configRequirements/read"}
 class Server:
     """One sequential RPC client. Metadata inspection never authorizes generation."""
 
+    allowed_methods = frozenset(METHODS)
+    allow_turn_events = False
+
     def __init__(self, command, cwd, env, output, timeout=45):
         self.output = Path(output)
         self.output.mkdir(parents=True, exist_ok=False)
@@ -34,6 +37,7 @@ class Server:
         self.closed = False
         self.stop = threading.Event()
         self.generation_events = []
+        self.notifications = []
         self.log = (self.output / "exchange.jsonl").open("w")
         self.errors = (self.output / "stderr.log").open("w")
         self.process = subprocess.Popen(command, cwd=cwd, env=env, stdin=subprocess.PIPE,
@@ -89,7 +93,7 @@ class Server:
                 pass
 
     def request(self, method, params):
-        if method not in METHODS:
+        if method not in self.allowed_methods:
             raise ValueError(f"Preflight cannot invoke {method}")
         if self.closed:
             raise RuntimeError("App Server client is closed")
@@ -112,8 +116,7 @@ class Server:
             if isinstance(response, Exception):
                 raise response
             if "id" not in response:
-                if response.get("method") in {"turn/started", "thread/tokenUsage/updated"}:
-                    raise RuntimeError("Unexpected generation event during preflight")
+                self._notification(response)
                 continue
             if "method" in response:
                 raise RuntimeError("Unexpected server-initiated request during preflight")
@@ -122,6 +125,30 @@ class Server:
             if "error" in response:
                 raise RuntimeError(f"App Server {method} failed: {response['error']}")
             return response["result"]
+
+    def _notification(self, message):
+        if not self.allow_turn_events and message.get("method") in {"turn/started", "thread/tokenUsage/updated"}:
+            raise RuntimeError("Unexpected generation event during preflight")
+        self.notifications.append(message)
+
+    def wait_notification(self, method, predicate):
+        deadline = time.monotonic() + self.timeout
+        while True:
+            for message in self.notifications:
+                if message.get("method") == method and predicate(message.get("params", {})):
+                    return message["params"]
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"App Server {method} notification timed out")
+            try:
+                message = self.messages.get(timeout=remaining)
+            except queue.Empty:
+                raise TimeoutError(f"App Server {method} notification timed out") from None
+            if isinstance(message, Exception):
+                raise message
+            if "id" in message:
+                raise RuntimeError("Unexpected request/response while waiting for notification")
+            self._notification(message)
 
     def _write(self, message):
         pending = memoryview((json.dumps(message) + "\n").encode())

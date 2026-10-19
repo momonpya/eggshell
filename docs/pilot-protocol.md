@@ -120,7 +120,7 @@ cannot identify incorrect memory reuse. These gates are still open; neither
 the upstream preflight nor the reference task solutions satisfy them.
 The offline usage auditor is prepared, while live capture, configuration
 isolation and complete billed-attempt accounting still need implementation
-and validation. No App Server model turn has been started for this preparation.
+and validation. No generative-model trial has been started for this preparation.
 The [command-environment preflight](pilot-isolation.md) now checks a real
 fresh-condition App Server: empty hook/skill/MCP discovery, workspace operations,
 private/oracle read rejection, command network denial, correct source import,
@@ -128,6 +128,15 @@ and the original 297 tests with exact test identities and 50 unchanged hashes.
 This qualifies those configuration and command boundaries on the observed host.
 Native model instructions/tools, memory-condition plugin/warm delivery and the
 complete six-condition runner are still open gates.
+The [scripted native-hook probe](pilot-hook-probe.md) now drives two fixed turns
+through real command/edit tools and an isolated installed Eggshell plugin using
+only a local response fixture. Fresh and Eggshell have identical native catalogs,
+no exposed agent namespace, matching source-read results and enforced canary
+boundaries. Startup/prompt/tool/stop callbacks and their native stdout receipts
+are checked. The prior DB is absent; one semantic timeout is explicitly retained.
+This is not a warm-DB delivery or model outcome, and the fixture data cannot serve
+as the study seed. Common seed acquisition, warm saved-body delivery and the
+other four conditions remain open.
 
 The observed public Eggshell `main` was
 `51873167c11c447a0af67e73430b5ab6635b2a65` during readiness. Refresh and freeze

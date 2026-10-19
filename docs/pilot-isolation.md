@@ -35,8 +35,11 @@ The tool creates a new private output directory, copies the first fixed task
 start, and starts `codex-cli 0.145.0` with `--strict-config`. A task-specific
 configuration root is selected through the child process's `CODEX_HOME`;
 the parent environment is untouched. No user authentication file is copied.
-Native memory generation/injection, plugins, hooks, skills, extra agents,
-browser/computer capabilities and web search are disabled. Nonempty foreign
+Native memory generation/injection, plugins, hooks, skills, browser/computer
+capabilities and web search are disabled. Agent tools are disabled explicitly
+with `[agents] enabled = false`; feature flags alone did not remove their
+namespace from actual requests in the [scripted native probe](pilot-hook-probe.md).
+Nonempty foreign
 configuration layers and legacy sandbox overrides fail qualification.
 
 The command profile makes the workspace writable, its runtime dependencies
@@ -61,9 +64,10 @@ The preflight checks all of the following with actual commands:
 It rejects `thread/start`, `turn/start`, resume, review and login methods before
 sending them. It records unexpected generation events, bounds messages and
 transcripts, applies read/write deadlines, and closes its process group and
-reader. Eleven synthetic transport controls exercise fragmentation, EOF,
+reader. Fifteen synthetic transport/evidence controls exercise fragmentation, EOF,
 malformed/oversized messages, response mismatch, server requests, unexpected
-generation, stalled input/output, redaction and immutable evidence.
+generation, stalled input/output, notification retention, output-versus-program
+evidence, redaction and immutable evidence.
 
 The output retains the configuration, source/tool/schema identifiers,
 effective-policy projection, command results, JUnit, source hashes, exchange
@@ -88,8 +92,9 @@ final successful qualification; they are not model outcomes.
 The verified boundary covers the fresh-condition configuration and sandboxed
 commands on this host. A model runner still needs to validate its actual
 instruction sources, native file/tool access and denied escalation behavior.
-The three memory conditions also need an explicitly isolated Eggshell plugin,
-the same saved DB, completed warm/index receipts and actual hook delivery.
+The isolated Eggshell plugin now executes callbacks in the scripted probe.
+The three memory conditions still need the same saved DB, completed warm/index
+receipts and actual saved-body delivery.
 Native continuation, previous-answer replay, similarity-equality control,
 perturbations and reuse adjudication remain unfinished. Live usage semantics
 and complete failed-request billing are also unverified. No experimental

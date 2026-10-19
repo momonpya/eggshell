@@ -11,6 +11,7 @@ import tempfile
 import unittest
 
 from pilot_server import Server
+from pilot_hook_probe import native_read_result
 
 
 class TransportControls(unittest.TestCase):
@@ -87,6 +88,42 @@ sys.stdin.read()
             with self.assertRaisesRegex(TimeoutError, "stdin timed out"):
                 server.request("config/read", dict(cwd="x" * 800000))
         self.stopped(server)
+
+    def test_notification_before_rpc_response_is_retained(self):
+        code = '''import sys,json
+r=json.loads(sys.stdin.readline())
+print(json.dumps(dict(method='hook/completed',params=dict(id='early'))),flush=True)
+print(json.dumps(dict(id=r['id'],result={})),flush=True)
+sys.stdin.read()
+'''
+        with self.server(code) as server:
+            server.request("hooks/list", {})
+            self.assertEqual(server.wait_notification("hook/completed", lambda p:p["id"] == "early"), dict(id="early"))
+        self.stopped(server)
+
+    def test_waiting_for_missing_notification_times_out(self):
+        code = "import sys,json;r=json.loads(sys.stdin.readline());print(json.dumps(dict(id=r['id'],result={})),flush=True);sys.stdin.read()"
+        with self.server(code, timeout=0.05) as server:
+            server.request("hooks/list", {})
+            with self.assertRaises(TimeoutError):
+                server.wait_notification("hook/completed", lambda _:True)
+        self.stopped(server)
+
+    def test_probe_program_is_not_terminal_output_evidence(self):
+        body = dict(input=[dict(type="custom_tool_call", input="PILOT_NATIVE_READ:abc\nPILOT_OUTSIDE_READ_DENIED\n")])
+        with self.assertRaises(ValueError):
+            native_read_result(body, "abc")
+
+    def test_probe_uses_only_structured_terminal_output(self):
+        expected = "PILOT_NATIVE_READ:abc\nPILOT_OUTSIDE_READ_DENIED\n"
+        body = dict(input=[dict(type="custom_tool_call", input="PILOT_OUTSIDE_READ_ALLOWED"),
+                           dict(type="custom_tool_call_output", output=[dict(type="input_text",
+                                text=json.dumps(dict(exit_code=0, output=expected)))])])
+        self.assertEqual(native_read_result(body, "abc"), expected)
+        for code, text in ((1, expected), (0, expected.replace("DENIED", "ALLOWED")), (0, expected.replace("abc", "wrong"))):
+            body["input"][1]["output"][0]["text"] = json.dumps(dict(exit_code=code, output=text))
+            with self.assertRaises(ValueError):
+                native_read_result(body, "abc")
 
     def test_eof_and_malformed_messages_fail(self):
         for wire in ("", "{", "[]\n", "broken\n"):

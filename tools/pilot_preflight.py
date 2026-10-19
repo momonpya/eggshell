@@ -29,6 +29,7 @@ def configuration(workspace, runtime_roots):
              'web_search = "disabled"', 'cli_auth_credentials_store = "file"',
              'project_doc_max_bytes = 0', 'notify = []', '[features]',
              *[f'{key} = false' for key in DISABLED],
+             '[agents]', 'enabled = false',
              '[memories]', 'generate_memories = false', 'use_memories = false', 'dedicated_tools = false',
              '[skills]', 'include_instructions = false', '[skills.bundled]', 'enabled = false',
              '[plugins._default]', 'enabled = false',
@@ -56,6 +57,8 @@ def check_policy(result, private_config):
             raise ValueError(f"Unexpected effective {key}")
     if any(config.get("features", {}).get(key) is not False for key in DISABLED):
         raise ValueError("An excluded feature is enabled or unreported")
+    if config.get("agents", {}).get("enabled") is not False:
+        raise ValueError("Agent tools are not disabled")
     if any(config.get(key) for key in ("sandbox_mode", "sandbox_workspace_write", "mcp_servers",
                                       "instructions", "developer_instructions", "model_instructions_file",
                                       "model_providers", "experimental_compact_prompt_file")):
