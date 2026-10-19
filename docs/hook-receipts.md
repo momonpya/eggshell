@@ -54,6 +54,21 @@ hit rate to the requested corpus or treat a missing/custom-provider record as
 zero misses. `cacheMs`, `queryMs` and `scoreMs` are nested measurements and must
 not be added as disjoint durations. Query time includes preparation and cache IO.
 
+`encoder` is null until an encoder reply is observed. Its microsecond counters
+separate startup imports, model-lease wait, FastEmbed import/constructor,
+query/source embedding and NumPy scoring; `modelLoaded` records whether that
+process initialized the encoder. Lazy initialization during embedding stays in
+embedding time. These observations are nested inside provider timings. A killed
+request can leave a running prefix or no encoder reply; neither means zero cost.
+`phase` identifies the most recently observed provider boundary. The first
+encoder reply and each embedding request/reply publish checkpoints as well.
+
+See the [fixed size protocol](semantic-latency-protocol.md) and
+[48-hook results](semantic-latency-results.md). Another chat with the same
+question can reuse both its private question vector and the derived focus
+windows produced by the first chat. The fresh/cached contrast alone does not
+isolate the question vector's causal effect.
+
 ## Remaining requirements
 
 This is a per-invocation audit trail, not a complete Phase 0 result. Selected

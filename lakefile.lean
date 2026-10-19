@@ -49,3 +49,6 @@ lean_exe equality_dependency_tests where
 
 lean_exe eggshell_render where
   root := `tools.Render
+
+lean_exe semantic_latency where
+  root := `tools.SemanticLatency

@@ -19,6 +19,28 @@ structure CacheProbes where
   unusable : Nat := 0
   deriving ToJson
 
+structure EncoderSample where
+  startupUs : Nat
+  leaseUs : Nat
+  initializeUs : Nat
+  encodeUs : Nat
+  scoreUs : Nat
+  requestUs : Nat
+  modelLoaded : Bool
+  deriving FromJson
+
+structure EncoderTiming where
+  replies : Nat := 0
+  startupUs : Nat := 0
+  leaseUs : Nat := 0
+  initializeUs : Nat := 0
+  queryEncodeUs : Nat := 0
+  sourceEncodeUs : Nat := 0
+  scoreUs : Nat := 0
+  requestUs : Nat := 0
+  modelLoaded : Bool := false
+  deriving ToJson
+
 structure IndexedMetrics where
   source : CacheProbes := {}
   query : CacheProbes := {}
@@ -26,6 +48,8 @@ structure IndexedMetrics where
   queryMs : Nat := 0
   scoreMs : Nat := 0
   scoredWindows : Nat := 0
+  encoder : Option EncoderTiming := none
+  phase : String := "source-cache"
   deriving ToJson
 
 structure MetricsSink where
@@ -134,12 +158,37 @@ def encoder (options : Options) : IO Encoder := do
   let lane : String := match options.lane with | .index => "index" | .search => "search"
   spawnEncoder options python lease lane
 
-def exchange (child : Encoder) (input : Json) : IO Json := do
+def exchange (child : Encoder) (input : Json)
+    (observe : Json → IO Unit := fun _ => pure ()) : IO Json := do
   child.stdin.putStrLn input.compress
   child.stdin.flush
   let result ← IO.ofExcept (Json.parse (← child.stdout.getLine))
+  observe result
   if let .ok error := result.getObjValAs? String "error" then throw (IO.userError error)
   pure result
+
+def measuredExchange (options : Options) (child : Encoder) (input : Json)
+    (phase : String) : IO Json := do
+  if let some sink := options.metrics then
+    sink.state.modify fun state => {state with phase}
+    if phase != "score" || (← sink.state.get).encoder.isNone then sink.flush "running"
+  exchange child input fun result => do
+    let some sink := options.metrics | return
+    let .ok sample := result.getObjValAs? EncoderSample "timing" | return
+    let previous ← sink.state.get
+    let before := previous.encoder.getD {}
+    let after : EncoderTiming := {
+      replies := before.replies + 1
+      startupUs := before.startupUs + sample.startupUs
+      leaseUs := before.leaseUs + sample.leaseUs
+      initializeUs := before.initializeUs + sample.initializeUs
+      queryEncodeUs := before.queryEncodeUs + if phase == "query-embedding" then sample.encodeUs else 0
+      sourceEncodeUs := before.sourceEncodeUs + if phase == "source-embedding" then sample.encodeUs else 0
+      scoreUs := before.scoreUs + sample.scoreUs
+      requestUs := before.requestUs + sample.requestUs
+      modelLoaded := before.modelLoaded || sample.modelLoaded }
+    sink.state.modify fun state => {state with encoder := some after, phase := "encoder-reply"}
+    if before.replies == 0 || phase != "score" then sink.flush "running"
 
 /-- Numerical hints retain only model/window digests and bounded vectors.
     They never establish source identity or completion authority. -/
@@ -268,7 +317,8 @@ def storeWindows (options : Options) (child : Encoder) (windows : List String)
         (options.cache / "vectors" / (cacheKey options.model part ++ ".json")) ((← IO.monoMsNow) - started)
     if available.isNone then missing := missing ++ [part]
   if missing.isEmpty then return
-  let response ← exchange child (Json.mkObj [("texts", toJson missing)])
+  let response ← measuredExchange options child (Json.mkObj [("texts", toJson missing)])
+    (if queryProbe then "query-embedding" else "source-embedding")
   let vectors ← IO.ofExcept (response.getObjValAs? (Array Json) "vectors")
   if vectors.size != missing.length then throw (IO.userError "embedding count mismatch")
   for (text, vector) in missing.zip vectors.toList do saveVector options text vector
@@ -472,7 +522,8 @@ def handleIndexedUsing (options : Options) (child : Option Encoder) (query : Str
               queryVectors.set (some queries)
               pure queries
         let scoringStarted ← IO.monoMsNow
-        let response ← exchange child (Json.mkObj [("queries", queries), ("candidates", .arr candidateVectors)])
+        let response ← measuredExchange options child
+          (Json.mkObj [("queries", queries), ("candidates", .arr candidateVectors)]) "score"
         if let some sink := options.metrics then
           let elapsed := (← IO.monoMsNow) - scoringStarted
           sink.state.modify fun state => {state with
