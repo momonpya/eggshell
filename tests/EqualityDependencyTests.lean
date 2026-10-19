@@ -153,6 +153,11 @@ def nativeDiscovery : IO Unit := do
   require (replay.getObjValD "status" == Lean.toJson "partial" &&
       !reference.controls.isEmpty && audited.text == (rendered.map (·.text)).getD "")
     "native audit changed the body or missed a completed control owner"
+  let branches ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "completedBranches")
+  require (!branches.isEmpty && branches.any (fun branch =>
+      branch.getObjValD "ownerControls" == Lean.toJson true) &&
+      replay.getObjValD "untrackedCompletedOwners" == Lean.toJson ([] : List String))
+    "native completed control lost its selected root-to-Outcome path"
   let decoded ← IO.ofExcept (Lean.fromJson? (Lean.toJson audited) : Except String Plugin.Handoff)
   require (Lean.toJson decoded.equalitySelection == Lean.toJson audited.equalitySelection)
     "demand-memo serialization lost the selected equality locator"
@@ -175,11 +180,81 @@ def nativeDiscovery : IO Unit := do
   require (stripped.visible.isEmpty && stripped.controls.isEmpty)
     "discarded completion owners survived diagnostic restriction"
 
+/-- The right completed Outcome must not inherit congruence from the left
+subtree merely because both were selected in one extraction. -/
+def completedBranchIsolation : IO Unit := do
+  let root := Value.applyList .inquiry []
+  let left := Value.text "left branch"
+  let right := Value.text "right branch"
+  let a := Value.text "branch a"
+  let b := Value.text "branch b"
+  let fa := application a
+  let fb := application b
+  let top := AllEdge.make root [left, right] (by simp) (by
+    simp [root, left, right, Value.text, Value.applyList])
+  let bottom := AllEdge.make left [fa, fb] (by simp) (by
+    simp [left, fa, fb, application, Value.text, Value.applyList])
+  let leftOwner := OutcomeEdge.make fa (.text "left observed") [] (by simp)
+    (by simp [maxOutcomeObservations])
+  let rightOwner := OutcomeEdge.make right (.text "right observed") [] (by simp)
+    (by simp [maxOutcomeObservations])
+  let graph : WorkGraph := {all := [top, bottom], outcomes := [leftOwner, rightOwner]}
+  let ab ← union a b
+  let quotient ← full [top.relation, bottom.relation, leftOwner.relation, rightOwner.relation] [ab]
+  let extraction := Extract.runWithPolicy graph quotient.toEquality .allCompleted root
+  let some report := SelectionDependency.report? graph quotient.toEquality .allCompleted root extraction.selection |
+    throw (IO.userError "branch fixture did not select a checked extraction")
+  let snapshot := SelectionAudit.Snapshot.ofReport [ab] [] report ["left", "right"]
+    [(leftOwner.relation, "left"), (rightOwner.relation, "right")]
+  let replay ← IO.ofExcept (SelectionAudit.analyze snapshot)
+  let branches ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "completedBranches")
+  require (branches.length == 2) "completed branch accounting lost or duplicated an Outcome"
+  let some leftBranch := branches.find? (fun branch => branch.getObjValD "owner" == Lean.toJson "left") |
+    throw (IO.userError "left completed branch is missing")
+  let some rightBranch := branches.find? (fun branch => branch.getObjValD "owner" == Lean.toJson "right") |
+    throw (IO.userError "right completed branch is missing")
+  let leftRows ← IO.ofExcept (leftBranch.getObjValAs? (List Lean.Json) "comparisons")
+  let rightRows ← IO.ofExcept (rightBranch.getObjValAs? (List Lean.Json) "comparisons")
+  require (leftRows.any (fun row => row.getObjValD "kind" == Lean.toJson "congruence") &&
+      rightRows.all (fun row => row.getObjValD "kind" == Lean.toJson "literal"))
+    "a sibling subtree's congruence contaminated the literal completed branch"
+  let id ← Receipt.fresh
+  let some reference ← SelectionAudit.capture (some id) snapshot ["left", "right"] ["left"] |
+    throw (IO.userError "branch fixture failed to record its immutable selection")
+  let retained ← SelectionAudit.inspect (reference.restrict ["right"] [])
+  let retainedBranches ← IO.ofExcept (retained.getObjValAs? (List Lean.Json) "completedBranches")
+  require (retainedBranches.length == 1 && retainedBranches.all (fun branch =>
+      branch.getObjValD "owner" == Lean.toJson "right" &&
+      branch.getObjValD "ownerVisible" == Lean.toJson true &&
+      branch.getObjValD "ownerControls" == Lean.toJson false) &&
+      retained.getObjValD "deliveryAncestry" == Lean.toJson "untracked")
+    "final source/transport pruning retained another branch or certified complete ancestry"
+  let empty ← SelectionAudit.inspect (reference.restrict [] [])
+  require (empty.getObjValD "completedBranches" == Lean.toJson ([] : List Lean.Json))
+    "a fully acknowledged delivery retained completed branches"
+  let unbound := {snapshot with completedBranches := []}
+  let some unboundReference ← SelectionAudit.capture (some id) unbound ["left"] [] |
+    throw (IO.userError "unbound branch fixture failed to record")
+  let unknown ← SelectionAudit.inspect unboundReference
+  require (unknown.getObjValD "untrackedCompletedOwners" == Lean.toJson ["left"])
+    "a missing branch was counted as congruence-free"
+  let some first := snapshot.completedBranches.head? | throw (IO.userError "no branch fixture")
+  let malformed := {snapshot with completedBranches := [{first with premises := []}]}
+  require ((SelectionAudit.analyze malformed).toOption.isNone)
+    "a branch without its completed Outcome premise was accepted"
+  let outOfBounds := {snapshot with completedBranches := [{first with premises := [snapshot.premises.length]}]}
+  require ((SelectionAudit.analyze outOfBounds).toOption.isNone)
+    "an out-of-bounds branch comparison was accepted"
+  let foreign := {snapshot with completedBranches := [{first with owner := "foreign"}]}
+  require ((SelectionAudit.analyze foreign).toOption.isNone)
+    "a completed branch acquired an unselected source owner"
+
 def run : IO Unit := do
   explicitAndCongruence
   mixedAtomsAndLocalOrigins
   selectedDeduplication
+  completedBranchIsolation
   nativeDiscovery
-  IO.println "PASS equality dependency: direct closure, congruence, Exact, retraction, local ancestry, child deduplication and native extraction"
+  IO.println "PASS equality dependency: direct closure, congruence, Exact, retraction, local ancestry, child deduplication, isolated completed branches and native extraction"
 
 end Eggshell.EqualityDependencyTests

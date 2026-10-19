@@ -11,12 +11,13 @@ inductive Role where
   | deduplicatedChild
   | completedOutcome
   | advisoryOutcome
-  deriving BEq, DecidableEq, Repr
+  deriving BEq, Hashable, DecidableEq, Repr
 
 structure Comparison where
   role : Role
   left : Value
   right : Value
+  deriving BEq, Hashable
 
 def Comparison.holds (equality : Equality) (comparison : Comparison) : Bool :=
   equality.same comparison.left comparison.right
@@ -139,6 +140,37 @@ def comparisons (equality : Equality) (work : Value) (selection : Selection) : L
   structural equality work selection ++
     outcomeComparisons .completedOutcome selection.completedUses ++
     outcomeComparisons .advisoryOutcome selection.advisoryUses
+
+/-- Positive comparisons on one selected root-to-completed-Outcome path.
+These describe the executed selection, not a minimal counterfactual proof.
+Sibling subtrees contribute no premises; deduplication at a shared ancestor
+does, since it determined that ancestor's retained child list. -/
+structure CompletedBranch where
+  demand : Value
+  edge : OutcomeEdge
+  premises : List Comparison
+
+def ownBranches (work : Value) (edges : List OutcomeEdge) : List CompletedBranch :=
+  edges.map fun edge => ⟨work, edge, [⟨.completedOutcome, edge.work, work⟩]⟩
+
+mutual
+
+def completedBranches (equality : Equality) (work : Value) : Selection → List CompletedBranch
+  | .residual _ _ => []
+  | .outcomes _ completed _ => ownBranches work completed
+  | .handoff _ prior => completedBranches equality work prior
+  | .decomposed _ edge completed _ children =>
+      let dropped := dedup equality edge.children
+      let ancestors := ⟨.decomposition, edge.parent, work⟩ :: dropped.2
+      (ownBranches work completed ++ completedChildren equality dropped.1 children).map
+        fun branch => {branch with premises := ancestors ++ branch.premises}
+
+def completedChildren (equality : Equality) : List Value → List Selection → List CompletedBranch
+  | work :: works, child :: children =>
+      completedBranches equality work child ++ completedChildren equality works children
+  | _, _ => []
+
+end
 
 theorem comparisons_positive (graph : WorkGraph) (equality : Equality) (policy : OutcomePolicy)
     (work : Value) (selection : Selection) (valid : selection.validFor graph equality policy work = true)

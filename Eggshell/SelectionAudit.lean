@@ -59,6 +59,20 @@ structure Premise where
   role : String
   left : Json
   right : Json
+  deriving BEq, ToJson, FromJson
+
+def Premise.encode (comparison : SelectionDependency.Comparison) : Premise := {
+  role := roleName comparison.role
+  left := Persistence.valueToJson comparison.left
+  right := Persistence.valueToJson comparison.right }
+
+structure CompletedBranch where
+  owner : String
+  demand : Json
+  projectedOutcome : Json
+  /-- Positions in the shared checked comparison pool; Value payloads are
+  serialized once, including comparisons shared by many completed branches. -/
+  premises : List Nat
   deriving ToJson, FromJson
 
 structure Snapshot where
@@ -67,6 +81,7 @@ structure Snapshot where
   runLocal : List Generator
   premises : List Premise
   owners : List String
+  completedBranches : List CompletedBranch := []
   deriving ToJson, FromJson
 
 /-- No second quotient build occurs in the hook. Only premises from a checked
@@ -75,15 +90,21 @@ def Snapshot.ofReport (persistent runLocal : List UnionEdge)
     {graph : WorkGraph} {equality : Equality} {policy : OutcomePolicy}
     {current : Value} {selection : Selection}
     (report : SelectionDependency.Report graph equality policy current selection)
-    (owners : List String) : Snapshot := {
+    (owners : List String) (bindings : List (Value × String) := []) : Snapshot := Id.run do
+  let positions : Std.HashMap SelectionDependency.Comparison Nat :=
+    report.premises.zipIdx.foldl (fun positions (premise, index) => positions.insert premise index) {}
+  return {
   current := Persistence.valueToJson current
   persistent := persistent.map Generator.encode
   runLocal := runLocal.map Generator.encode
-  premises := report.premises.map fun premise => {
-    role := roleName premise.role
-    left := Persistence.valueToJson premise.left
-    right := Persistence.valueToJson premise.right }
-  owners := owners.eraseDups }
+  premises := report.premises.map Premise.encode
+  owners := owners.eraseDups
+  completedBranches := (SelectionDependency.completedBranches equality current selection).flatMap
+    fun branch => (bindings.filterMap fun (projected, owner) =>
+      if projected == branch.edge.relation then some owner else none).eraseDups.map fun owner => {
+        owner, demand := Persistence.valueToJson branch.demand
+        projectedOutcome := Persistence.valueToJson branch.edge.relation
+        premises := branch.premises.map (fun premise => positions.getD premise report.premises.length) } }
 
 def capture (receipt : Option String) (snapshot : Snapshot)
     (visible controls : List String) : IO (Option Reference) := do
@@ -125,11 +146,36 @@ def analyze (snapshot : Snapshot) : Except String Json := do
     if kind == .notEquivalent then throw "selected positive comparison failed equality replay"
     pure (Json.mkObj [("role", toJson role), ("kind", toJson (kindName kind)),
       ("left", Persistence.valueToJson left), ("right", Persistence.valueToJson right)])
+  let branches ← snapshot.completedBranches.mapM fun branch => do
+    unless snapshot.owners.contains branch.owner do
+      throw "completed branch is not part of the checked selection"
+    let premises ← branch.premises.mapM fun position =>
+      match snapshot.premises[position]? with
+      | some premise => pure premise
+      | none => throw "completed branch comparison is outside the checked selection"
+    let demand ← Persistence.valueFromJson 4096 branch.demand
+    let projected ← Persistence.valueFromJson 4096 branch.projectedOutcome
+    let [edge] := (WorkGraph.fromValues [projected]).outcomes |
+      throw "completed branch does not name an Outcome"
+    unless premises.getLast? == some (Premise.encode
+        ⟨.completedOutcome, edge.work, demand⟩) do
+      throw "completed branch lost its terminal Outcome comparison"
+    let comparisons ← branch.premises.mapM fun position =>
+      match rows[position]? with
+      | some row => pure row
+      | none => throw "completed branch comparison was not replayed"
+    pure (Json.mkObj [("owner", toJson branch.owner), ("demand", branch.demand),
+      ("projectedOutcome", branch.projectedOutcome), ("comparisons", toJson comparisons)])
   pure (Json.mkObj [
     ("status", toJson "partial"), ("component", toJson "selected-extraction"),
     ("scope", toJson "whole-selected-extraction-before-source-and-transport-pruning"),
     ("deliveryAncestry", toJson "untracked"),
     ("localUnionAncestry", toJson "untracked"),
+    ("completedBranchScope", toJson "selected-root-to-outcome-positive-comparisons"),
+    ("finalLeafSlice", toJson "untracked"),
+    ("matchAdmission", toJson "untracked"), ("sourceChildWitness", toJson "untracked"),
+    ("continuationAncestry", toJson "untracked"),
+    ("completedBranches", toJson branches),
     ("comparisons", toJson rows)])
 
 def read (reference : Reference) : IO Snapshot := do
@@ -155,7 +201,18 @@ def read (reference : Reference) : IO Snapshot := do
 def inspect (reference : Reference) : IO Json := do
   let snapshot ← read reference
   let result ← IO.ofExcept (analyze snapshot)
-  pure (result.setObjVal! "retained" (toJson reference))
+  let branches ← IO.ofExcept (result.getObjValAs? (List Json) "completedBranches")
+  let retained := branches.filterMap fun branch =>
+    let owner := (branch.getObjValAs? String "owner").toOption.getD ""
+    let visible := reference.visible.contains owner
+    let control := reference.controls.contains owner
+    if visible || control then some
+      ((branch.setObjVal! "ownerVisible" (toJson visible)).setObjVal! "ownerControls" (toJson control))
+    else none
+  let recorded := snapshot.completedBranches.map (·.owner)
+  let unknown := (reference.visible ++ reference.controls).eraseDups.filter (!recorded.contains ·)
+  pure (((result.setObjVal! "retained" (toJson reference)).setObjVal!
+    "completedBranches" (toJson retained)).setObjVal! "untrackedCompletedOwners" (toJson unknown))
 
 def readStage (receipt stage : String) : IO Json := do
   unless Receipt.validId receipt && ["search", "published", "ack"].contains stage do

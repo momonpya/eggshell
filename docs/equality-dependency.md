@@ -64,16 +64,24 @@ the selected decomposition while visiting one child. The recorded
 child, even though the root identity is literal. A different valid plan might
 have different dependencies; this report describes the selected plan.
 
+Completed source owners now bind to selected root-to-Outcome paths. Shared
+ancestors refer to one comparison pool; sibling subtrees remain separate. A
+two-branch fixture needs congruence to deduplicate children only on the left,
+while the right branch remains entirely literal. Source/transport reconciliation
+removes branches of discarded owners, and missing bindings stay explicitly
+untracked. Owner retention does not yet resolve which final fragments of a
+multiply used owner survived.
+
 ## Validation and remaining work
 
 The focused executable runs the real kernel and native matcher selector. It
 covers transitive explicit paths, Semantic congruence, Exact barriers, removed
 generators, corrected saved plans, mixed Atom/Apply generators, unresolved
-local ancestry, selected child deduplication, rejected invalid owner selections,
-and a native completion selection. These are deterministic regression fixtures,
+local ancestry, selected child deduplication, isolated completed branches,
+rejected invalid owner selections and a native completion selection. These are deterministic regression fixtures,
 not paper benchmarks. New proof code uses no `native_decide` or admitted axiom.
-The focused four groups contain 13 runtime checks and run in the standard full
-suite as well. The full suite passes; its two retained-work warnings remain.
+The focused groups run in the standard full suite as well. Retained-work
+warnings are separate from equality classification.
 
 The selection report is one required component. It does **not** establish:
 

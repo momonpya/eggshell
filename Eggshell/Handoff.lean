@@ -1338,11 +1338,13 @@ def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdg
       discovery.view.quotient.toEquality discovery.policy discovery.current = true := by
     simpa only [prepared.property] using Matcher.extraction_sound discovery
   let report := SelectionDependency.Report.ofValid valid
-  let owners := (selectedMatches discovery prepared.val).filter
-    (fun selected => selected.applicability == .completed) |>.map
-      (fun selected => relationKey selected.matched.edge.relation)
+  let completed := (selectedMatches discovery prepared.val).filter
+    (fun selected => selected.applicability == .completed)
+  let owners := completed.map (fun selected => relationKey selected.matched.edge.relation)
+  let bindings := completed.map fun selected =>
+    (selected.matched.projectedEdge.relation, relationKey selected.matched.edge.relation)
   let reference ← SelectionAudit.capture receipt
-    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners)
+    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners bindings)
     ((handoff.sourceUses.filter (·.completed)).map (·.owner))
     (handoff.sourceCheckpoints.map (·.use.owner))
   pure (some {handoff with equalitySelection := reference})
