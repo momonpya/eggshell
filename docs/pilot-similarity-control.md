@@ -83,10 +83,12 @@ build. The complete qualification took 31.42 s, aggregate sampled peak
 not a model outcome, token result or latency distribution.
 
 Five context paths have [scripted native transport evidence](pilot-history-probe.md).
-This sixth path now has an isolated implementation and a built executable, but
-its installed plugin, real warm-DB semantic nominations, native receipt ancestry
-and body/omission behavior still need qualification. A synthetic nomination
-cannot substitute for that check. The complete task runner, common study seed
+The [native warm-DB probe](pilot-similarity-native.md) now connects this sixth
+path to its installed plugin and real semantic nominations. Two recorded
+nomination pairs become actual run-local generators and one owner is delivered
+as completed, while the ordinary and lexical fixture cases remain advisory.
+The first new-installation timeout remains recorded; full ancestry and actual
+model-chosen omission remain unverified. The complete task runner, common study seed
 and repeatable native history, model/settings/order/limits, incorrect-reuse
 adjudication and billed-attempt reconciliation remain open. No actual model
 trial or study-seed acquisition has started. The original deferred

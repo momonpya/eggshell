@@ -151,7 +151,12 @@ pasted case has the recorded answer alone in a new user input. This qualifies
 five planned context paths with scripted responses. The [isolated similarity
 control](pilot-similarity-control.md) now builds separately and its fixture
 creates an actual run-local union/completed child from a semantic nomination.
-Its real warm-DB plugin/receipt path and the complete task runner remain open, along with actual common
+The [native control probe](pilot-similarity-native.md) now uses the same protected
+saved DB and source/question for ordinary, similarity and lexical consumers.
+It checks the installed plugin, full warm discovery, actual experimental union
+pairs, completed classification and first-request body/ACK. The initial
+new-installation semantic timeout is retained; ancestry remains partial. All
+six context paths have scripted connection evidence. The complete task runner remains open, along with actual common
 study-seed acquisition/warm receipts, initial/history definitions and restoring
 the same frozen native history for repetitions. No model comparison is implied.
 

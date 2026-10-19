@@ -79,7 +79,7 @@ Its missing/synthetic usage cannot enter study accounting.
 
 Together with the [saved-DB probe](pilot-memory-probe.md), five planned context
 paths have scripted transport evidence. The [similarity-equality control](pilot-similarity-control.md)
-has a separate built implementation; its installed warm-DB path remains open.
+has a separate built implementation and [native warm-DB connection evidence](pilot-similarity-native.md).
 The full task runner, common acquired seed/history, repeated-history restoration,
 model/reasoning settings, repetitions/order, perturbations/limits, incorrect-reuse
 adjudication and complete billed-attempt accounting remain open in the
