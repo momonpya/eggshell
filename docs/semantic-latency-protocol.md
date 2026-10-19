@@ -131,3 +131,12 @@ Keep the 4,500 ms cap, half-remaining reservation, all 48 conditions, equal
 three repetitions per cell and strict five-second semantic/body gate. The
 cached condition continues to include any focus-window reuse produced by its
 fresh predecessor. No token/quality adoption follows from this diagnostic.
+
+`packed-vector-1` passed all 48 cells. The next repeat adds private-overlay
+ownership registration and background reclamation to that same candidate.
+Observe all currently used DB copies before retirement; unreadable ownership
+cannot authorize deletion. The same source/model/window values and NumPy
+kernel remain in place. Use the already prepared `packed-fixtures-2` copies,
+with unchanged graph hashes and packed values, all 48 conditions, the 4,500 ms
+cap and five-second gate. This checks the actual additional metadata/daemon
+work, with no generation-model calls or token-saving claim.

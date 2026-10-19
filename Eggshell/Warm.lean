@@ -79,6 +79,7 @@ def options (snapshot : DB.PageMap.Snapshot) (command : List String)
     (storage : DB.Sidecar.Storage := .database) : IO SearchProvider.Options := do
   let _ :: "search-provider" :: arguments := command |
     throw (IO.userError "cache inspection requires the Eggshell numerical provider")
+  DB.Sidecar.observe snapshot
   let sidecar ← DB.Sidecar.locate snapshot storage
   let other ← DB.Sidecar.locate snapshot (if storage == .database then .user else .database)
   let parsed ← IO.ofExcept (SearchProvider.parse {

@@ -92,6 +92,18 @@ resolution and fsync use held descriptors at the native boundary. -/
 @[extern "eggshell_publish_directory"] opaque publishDirectory
     (source target : @& String) : IO Unit
 
+structure PruneSize where
+  entries : Nat
+  bounded : 0 < entries ∧ entries ≤ 128
+
+@[extern "eggshell_prune_directory"] private opaque pruneDirectoryRaw
+    (path : @& String) (entries : USize) : IO Bool
+
+/-- One bounded, descriptor-relative step over an already retired derived
+directory. Leaf symlinks are unlinked; directory links are never followed. -/
+opaque pruneDirectory (path : String) (count : PruneSize) : IO Bool :=
+  pruneDirectoryRaw path count.entries.toUSize
+
 /-- Shrink to the caller's committed boundary iff the descriptor still has the
 expected EOF, then fsync. The caller must hold exclusive writer ownership. -/
 @[extern "eggshell_append_truncate"] opaque truncateAppend (handle : @& AppendHandle)

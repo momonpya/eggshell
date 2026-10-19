@@ -366,3 +366,63 @@ The helper and harness source hashes were checked unchanged after all 48 hooks.
 The latency gate is now satisfied for the fixed protocol. Inclusive-token and
 quality adoption against latest public main, the pilot, complete equality
 ancestry, private-overlay orphan reclamation and the full paper remain unfinished.
+
+## Ownership/reclamation repeat
+
+`cache-reclaim-1` repeats the frozen packed candidate with overlay owner
+registration and actual background reclamation. The same packed source
+fixtures, complete window domain, questions, MiniLM model, NumPy kernel,
+4,500 ms cap, half-remaining reservation and strict five-second gate were kept.
+All 48 semantic searches and body deliveries passed the gate. Independent
+inspection matched literal stdout, SHA-256/publication and accepted ACK for
+every invocation, and verified complete scoring of every original window.
+
+| Sources | Source vectors | Question cache | Semantic complete | Body | Latencies, ms |
+| --- | --- | --- | --- | --- | --- |
+| 2 | database | fresh | 3/3 | 3/3 | 1292, 1268, 1260 |
+| 2 | database | cached | 3/3 | 3/3 | 261, 258, 250 |
+| 2 | private-overlay | fresh | 3/3 | 3/3 | 1256, 1266, 1253 |
+| 2 | private-overlay | cached | 3/3 | 3/3 | 251, 255, 269 |
+| 32 | database | fresh | 3/3 | 3/3 | 1394, 1372, 1392 |
+| 32 | database | cached | 3/3 | 3/3 | 316, 321, 321 |
+| 32 | private-overlay | fresh | 3/3 | 3/3 | 1374, 1364, 1390 |
+| 32 | private-overlay | cached | 3/3 | 3/3 | 312, 317, 314 |
+| 256 | database | fresh | 3/3 | 3/3 | 1841, 1807, 1813 |
+| 256 | database | cached | 3/3 | 3/3 | 738, 731, 753 |
+| 256 | private-overlay | fresh | 3/3 | 3/3 | 1800, 1765, 1769 |
+| 256 | private-overlay | cached | 3/3 | 3/3 | 739, 743, 742 |
+| 1024 | database | fresh | 3/3 | 3/3 | 3920, 3761, 3737 |
+| 1024 | database | cached | 3/3 | 3/3 | 2530, 2494, 2535 |
+| 1024 | private-overlay | fresh | 3/3 | 3/3 | 3592, 3494, 3619 |
+| 1024 | private-overlay | cached | 3/3 | 3/3 | 2498, 2510, 2515 |
+
+The additional registration/maintenance is included in these native times.
+This gate result is scoped to the fixed saved sources and four sizes; it does
+not establish a general population completion rate or a token/quality gain.
+
+The lifecycle implementation and boundaries are in [cache-lifecycle.md](cache-lifecycle.md).
+Focused native/lifecycle checks passed after testing read-only copy retention,
+replacement identities, unreadable heads/owner records, index/registration
+claims, 160 expired location records, resumed 128-entry pruning, a one-entry
+native deletion bound, symlinks, publication during retirement and late
+private writes. An independent production daemon reclaimed a deleted DB's
+private cache without a pending turn or index-provider registration.
+
+All DB-owned vector writes now use the existing-parent atomic publisher,
+including private overlays. This closes a race in which recursive directory
+creation after retirement could otherwise recreate ownerless private data.
+Unregistered or unreadable ownership remains retained; explicit warm/lookup
+against a known source records its current location. Source DBs, including
+read-only profiles and read-only filesystems, are not changed by registration.
+
+Full regression passed in 87.13 seconds, peak descendant RSS 2,822,736 KiB.
+The remaining 3 tickets were drained to 0 by another daemon with graph heads
+unchanged. The 48-hook repeat took 85.84 seconds, peak 1,175,456 KiB, under
+the 3,500,000 KiB guard. All frozen source and executable hashes matched after
+measurement. Initial failed compilation attempts and all raw logs are kept.
+
+Runtime output, receipts and independent audits are at `cache-reclaim-1/`
+beside the original dataset. Frozen source, executables, protocol and check
+logs are at `/Users/ovm/.codex/experiments/eggshell/cache-reclaim-20261020/implementation-1/`.
+The candidate remains separate from public main and release. Inclusive-token
+and quality adoption, the pilot, full equality ancestry and the paper are unfinished.

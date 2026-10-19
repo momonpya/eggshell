@@ -407,6 +407,78 @@ LEAN_EXPORT lean_obj_res eggshell_append_sync(b_lean_obj_arg object, lean_obj_ar
     return lean_io_result_mk_ok(lean_box(0));
 }
 
+/* Bound both native work and directory depth. Every descendant is resolved
+   through held descriptors; a symlink is only an unlinkable leaf. */
+static int egg_prune_at(int parent, const char *name, size_t *budget,
+        unsigned depth, int *removed) {
+    *removed = 0;
+    if (!*budget) return 0;
+    if (depth > 64) return ELOOP;
+    int fd = openat(parent, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
+    if (fd < 0) {
+        if (errno == ENOENT) { *removed = 1; return 0; }
+        return errno;
+    }
+    struct stat held;
+    if (fstat(fd, &held) < 0) { int error = errno; close(fd); return error; }
+    DIR *directory = fdopendir(fd);
+    if (!directory) { int error = errno; close(fd); return error; }
+    int error = 0, complete = 0;
+    while (*budget && !error) {
+        errno = 0;
+        struct dirent *entry = readdir(directory);
+        if (!entry) { error = errno; complete = !error; break; }
+        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
+        --*budget;
+        struct stat info;
+        if (fstatat(fd, entry->d_name, &info, AT_SYMLINK_NOFOLLOW) < 0) {
+            if (errno == ENOENT) continue;
+            error = errno; break;
+        }
+        if (S_ISDIR(info.st_mode)) {
+            int child_removed = 0;
+            error = egg_prune_at(fd, entry->d_name, budget, depth + 1, &child_removed);
+            if (!child_removed) break;
+        } else if (unlinkat(fd, entry->d_name, 0) < 0 && errno != ENOENT) error = errno;
+    }
+    if (!error && fsync(fd) < 0) error = errno;
+    if (!error && complete && *budget) {
+        struct stat named;
+        if (fstatat(parent, name, &named, AT_SYMLINK_NOFOLLOW) < 0) {
+            if (errno == ENOENT) *removed = 1;
+            else error = errno;
+        } else if (!S_ISDIR(named.st_mode) || named.st_dev != held.st_dev || named.st_ino != held.st_ino) {
+            error = ESTALE;
+        } else if (unlinkat(parent, name, AT_REMOVEDIR) < 0) {
+            if (errno == ENOENT) *removed = 1;
+            else error = errno;
+        } else {
+            --*budget;
+            *removed = 1;
+            if (fsync(parent) < 0) error = errno;
+        }
+    }
+    closedir(directory);
+    return error;
+}
+
+LEAN_EXPORT lean_obj_res eggshell_prune_directory(b_lean_obj_arg path,
+        size_t budget, lean_obj_arg world) {
+    (void)world;
+    if (!budget || budget > 128) return egg_read_error(EINVAL);
+    int error = 0, removed = 0;
+    char *name = NULL;
+    int parent = egg_link_parent(path, &name, &error);
+    if (parent < 0) {
+        if (error == ENOENT) return lean_io_result_mk_ok(lean_box(1));
+        return egg_read_error(error);
+    }
+    error = egg_prune_at(parent, name, &budget, 0, &removed);
+    free(name); close(parent);
+    if (error) return egg_read_error(error);
+    return lean_io_result_mk_ok(lean_box(removed));
+}
+
 /* Only the chat's exclusive writer invokes this, after reading its durable
    manifest. Lean supplies the committed boundary; C checks the observed EOF
    and forbids extending a file. A failure is not acknowledged as recovery. */

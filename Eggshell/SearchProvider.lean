@@ -116,6 +116,7 @@ def cacheOptions (options : Options) (request : Json)
   | some value =>
       let owner ← IO.ofExcept (fromJson? value : Except String DB.Sidecar.Owner)
       let snapshot ← owner.pin
+      DB.Sidecar.observe snapshot
       let primary := DB.Sidecar.ofSnapshot snapshot
       let overlay ← DB.Sidecar.locate snapshot .user
       match write with
@@ -322,13 +323,11 @@ def saveVector (options : Options) (text : String) (vector : Json) : IO Unit := 
   let path := root / (cacheKey options.model text ++ ".json")
   if let some owner := options.owner then
     let _ ← owner.pin
-    pure ()
-  if options.owner.isSome && options.privateWrite.isNone then
-    FileSystem.atomicExistingBytes path encoded.toUTF8
-  else
-    if let some owner := options.owner then
+    if options.privateWrite.isSome then
       let _ ← DB.Sidecar.prepare owner .user
       pure ()
+    FileSystem.atomicExistingBytes path encoded.toUTF8
+  else
     Persistence.rejectSymlinkAncestors root
     Persistence.privateDirectory (options.privateWrite.getD options.cache)
     Persistence.privateDirectory root

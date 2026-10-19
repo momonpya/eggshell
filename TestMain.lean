@@ -6353,6 +6353,9 @@ def main (arguments : List String) : IO UInt32 :=
   | ["indexed-numerical-tests"] => do
       testIndexedNumericalWindows
       pure 0
+  | ["cache-reclaim-tests"] => do
+      Eggshell.ReadOnlyCacheTests.reclaimTests
+      pure 0
   | ["independent-provider-tests"] => do
       testIndependentProviderBoundary
       Eggshell.PageDBTests.semanticCatalogue

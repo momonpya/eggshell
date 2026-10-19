@@ -1,5 +1,7 @@
 module
 
+public import Eggshell.DB.CacheReclaim
+
 public import Eggshell.Worker
 public import Eggshell.MiniLM
 
@@ -213,6 +215,7 @@ def drainIndexTarget (session : String) (deadline : Nat)
   if snapshot.head.identity != target.owner.database then
     removeIfExists reference
     return
+  DB.Sidecar.observe snapshot
   -- A remembered writer grant cannot make a reader chat mutate shared DBs.
   -- Standalone recovery without a current turn can still finish prior work.
   if target.storage == .database then
@@ -259,7 +262,12 @@ def flushIndexWork (session : String) (deadline : Nat) : IO Unit := do
   let guard ← IO.FS.Handle.mk guardPath .append
   Persistence.privateFile guardPath
   if !(← guard.tryLock) then return
-  try drainRegisteredIndexes session deadline
+  try
+    try
+      let _ ← DB.Sidecar.collect (min deadline ((← IO.monoMsNow) + 50))
+      pure ()
+    catch error => IO.eprintln s!"Eggshell retained private caches: {error}"
+    drainRegisteredIndexes session deadline
   finally guard.unlock
 
 /-- Installation-wide discovery survives chats. The single drain admission and

@@ -173,12 +173,191 @@ def scenario (temporary : System.FilePath) : IO Unit := do
   assertNoText ((← Paths.dataRoot) / "queries" / "vectors")
   IO.println "PASS read-only numerical caches: profile and filesystem isolation, cold private warm, warm shared reads, complete semantic nomination and no plaintext vector records"
 
-def run : IO Unit := do
+def isolated : IO Unit := do
   let some data ← IO.getEnv "EGGSHELL_DATA_ROOT" |
     throw (IO.userError "read-only cache tests require isolated EGGSHELL_DATA_ROOT")
   require ((System.FilePath.mk data).isAbsolute &&
     (System.FilePath.mk data).normalize != (← Paths.installRoot) / "share" / "eggshell" / "plugin")
     "read-only cache tests refuse installation state"
+
+def reclaimScenario (temporary : System.FilePath) : IO Unit := do
+  let root ← IO.FS.realPath temporary
+  let original := root / "original.egg"
+  let source ← DB.PageMap.create original "cache-reclaim-fixture"
+  let owner := DB.Sidecar.Owner.ofSnapshot source
+  let cache ← DB.Sidecar.prepare owner .user
+  for index in [:300] do IO.FS.writeFile (cache.semantic / "vectors" / s!"{index}.json") "derived"
+  let outside := root / "outside"
+  IO.FS.createDir outside
+  IO.FS.writeFile (outside / "keep") "ORIGINAL_OUTSIDE_BYTES"
+  let linked ← IO.Process.output {cmd := "/bin/ln", args := #["-s", outside.toString,
+    (cache.semantic / "vectors" / "link").toString]}
+  require (linked.exitCode == 0) "could not create no-follow cache fixture"
+  let copied := root / "copy.egg"
+  let copy ← IO.Process.output {cmd := "/bin/cp", args := #["-R", original.toString, copied.toString]}
+  require (copy.exitCode == 0) "could not copy DB ownership fixture"
+  let duplicate ← DB.PageMap.pin copied
+  readOnly copied do
+    let before ← manifest copied
+    DB.Sidecar.observe duplicate
+    require ((← manifest copied) == before) "observing a cache copy changed the read-only DB"
+  IO.FS.removeDirAll original
+  let _ ← DB.Sidecar.collect ((← IO.monoMsNow) + 1000)
+  require (← cache.directory.pathExists) "deleting one DB copy reclaimed another live copy's cache"
+  let head ← IO.FS.readBinFile (copied / "head")
+  IO.FS.writeFile (copied / "head") "unreadable source head"
+  let _ ← DB.Sidecar.collect ((← IO.monoMsNow) + 1000)
+  require (← cache.directory.pathExists) "an unreadable source was mistaken for a deleted DB"
+  FileSystem.atomicBytes (copied / "head") head
+  IO.FS.removeDirAll copied
+  let replacement ← DB.PageMap.create copied source.head.authority
+  let current ← DB.Sidecar.prepare (DB.Sidecar.Owner.ofSnapshot replacement) .user
+  require (replacement.head.identity != source.head.identity) "replacement reused a deleted DB identity"
+  IO.FS.writeFile (current.semantic / "vectors" / "keep.json") "CURRENT_CACHE"
+  let route := cache.directory / "owners" / ((DB.Sidecar.Owner.ofSnapshot duplicate).routeKey ++ ".json")
+  let routeBytes ← IO.FS.readBinFile route
+  IO.FS.writeFile route "broken ownership"
+  let _ ← DB.Sidecar.collect ((← IO.monoMsNow) + 1000)
+  require (← cache.directory.pathExists) "damaged ownership authorized cache deletion"
+  FileSystem.atomicBytes route routeBytes
+  FileSystem.immutableExistingBytes (cache.directory / "index.guard") ByteArray.empty
+  let lease ← FileSystem.openRead (cache.directory / "index.guard").toString
+  require (← FileSystem.tryReadLock lease true) "could not hold index claim fixture"
+  try
+    let _ ← DB.Sidecar.collect ((← IO.monoMsNow) + 1000)
+    require (← cache.directory.pathExists) "cache retirement cancelled an active index claim"
+  finally FileSystem.unlockRead lease
+  let held ← DB.Sidecar.withCacheClaim false do
+    let _ ← DB.Sidecar.collect ((← IO.monoMsNow) + 1000)
+    require (← cache.directory.pathExists) "retirement ignored an active owner registration"
+  require held.isSome "could not hold owner registration fixture"
+  let held ← DB.Sidecar.withCacheClaim true do
+    let started ← IO.monoMsNow
+    let refused ← try DB.Sidecar.observe replacement; pure false catch _ => pure true
+    require (refused && (← IO.monoMsNow) - started < 200)
+      "a registering reader waited indefinitely for cache retirement"
+  require held.isSome "could not hold exclusive cache retirement fixture"
+  DB.Sidecar.observe replacement
+  let added ← DB.Sidecar.withCacheClaim false do
+    for index in [:160] do
+      DB.Sidecar.recordOwner cache.directory {
+        database := source.head.identity, directory := (root / s!"old-copy-{index}.egg").toString}
+  require added.isSome "could not populate expired copy registrations"
+  for _ in [:8] do
+    if !(← cache.directory.pathExists) then break
+    let before := (← DB.Sidecar.cacheOwners cache.directory).length
+    let _ ← DB.Sidecar.collect ((← IO.monoMsNow) + 1000)
+    if ← cache.directory.pathExists then
+      let after := (← DB.Sidecar.cacheOwners cache.directory).length
+      require (after < before && before - after ≤ 64)
+        "expired copy routes did not make bounded progress across maintenance turns"
+  let privateRoot := cache.directory.parent.getD cache.directory
+  let retired := fun entry : IO.FS.DirEntry => entry.fileName.startsWith (".retired-" ++ source.head.identity ++ "-")
+  require (!(← cache.directory.pathExists) && (← privateRoot.readDir).toList.any retired)
+    "orphan retirement was not atomic or ignored its bounded deletion step"
+  for _ in [:20] do
+    let _ ← DB.Sidecar.collect ((← IO.monoMsNow) + 1000)
+    pure ()
+  require (!(← privateRoot.readDir).toList.any retired &&
+      (← IO.FS.readFile (outside / "keep")) == "ORIGINAL_OUTSIDE_BYTES" &&
+      (← IO.FS.readFile (current.semantic / "vectors" / "keep.json")) == "CURRENT_CACHE")
+    "resumed pruning escaped a symlink or reclaimed the replacement DB"
+  let bounded := root / "bounded"
+  IO.FS.createDir bounded
+  for index in [:3] do IO.FS.writeFile (bounded / s!"{index}") "bounded"
+  for expected in [2, 1, 0] do
+    require (!(← FileSystem.pruneDirectory bounded.toString ⟨1, by decide⟩) &&
+        (← bounded.readDir).size == expected) "native prune exceeded one entry or failed to progress"
+  require (← FileSystem.pruneDirectory bounded.toString ⟨1, by decide⟩)
+    "bounded pruning did not finish its empty root"
+  let symbolic := privateRoot / String.ofList (List.replicate 64 'd')
+  let linked ← IO.Process.output {cmd := "/bin/ln", args := #["-s", outside.toString, symbolic.toString]}
+  require (linked.exitCode == 0) "could not create a symbolic cache root"
+  let rejected ← try let _ ← FileSystem.pruneDirectory symbolic.toString ⟨128, by decide⟩; pure false
+    catch _ => pure true
+  require (rejected && (← IO.FS.readFile (outside / "keep")) == "ORIGINAL_OUTSIDE_BYTES")
+    "a symbolic root reached descriptor-relative deletion"
+  IO.FS.removeFile symbolic
+  let options : SearchProvider.Options := {
+    cache := current.semantic, privateWrite := some current.semantic
+    owner := some (DB.Sidecar.Owner.ofSnapshot replacement), models := root / "unused-models" }
+  SearchProvider.saveVector options "owned private window" (.arr #[toJson (1 : Nat)])
+  let rejected ← try
+      FileSystem.atomicExistingBytesWith (current.semantic / "vectors" / "race.json") "derived".toUTF8
+        (fun phase => match phase with
+          | .synced => do
+              IO.FS.removeDirAll replacement.directory
+              let _ ← DB.Sidecar.collect ((← IO.monoMsNow) + 1000)
+              pure ()
+          | _ => pure ())
+      pure false
+    catch _ => pure true
+  require (rejected && !(← current.directory.pathExists))
+    "a concurrently retired private cache acknowledged publication or recreated its owner"
+  let rejected ← try
+      SearchProvider.saveVector options "late private window" (.arr #[toJson (1 : Nat)])
+      pure false
+    catch _ => pure true
+  require (rejected && !(← current.directory.pathExists)) "a late private write recreated retired cache"
+  -- Recovery is installation-wide and needs neither a pending turn nor an
+  -- index-provider registration for this DB.
+  let native ← DB.PageMap.create (root / "native.egg") "native-cache-reclaim"
+  let abandoned ← DB.Sidecar.prepare (DB.Sidecar.Owner.ofSnapshot native) .user
+  IO.FS.writeFile (abandoned.semantic / "vectors" / "pending.json") "derived"
+  let nativeData := (← Paths.dataRoot) / "native-reclaim" / Blake3.hex (← IO.getRandomBytes 16)
+  FileSystem.privateDirectory (nativeData / "read-cache")
+  let nativeCache := nativeData / "read-cache" / native.head.identity
+  FileSystem.publishDirectory abandoned.directory.toString nativeCache.toString
+  IO.FS.removeDirAll native.directory
+  let session := "native-cache-reclaim"
+  let binary := (← IO.appPath).withFileName "eggshell"
+  let manager ← IO.Process.spawn {
+    cmd := binary.toString, args := #["codex-daemon", session]
+    stdin := .null, stdout := .null, stderr := .inherit, setsid := true,
+    env := #[("EGGSHELL_DATA_ROOT", some nativeData.toString), ("PLUGIN_ROOT", none)]}
+  let endpoint ← do
+    let limit := (← IO.monoMsNow) + 3000
+    let mut found : Option Daemon.Endpoint := none
+    while found.isNone do
+      found ← try
+          some <$> (readBoundedJson (nativeData / "sessions" / session / "daemon.json") 65536)
+        catch _ => pure none
+      if found.isSome then break
+      if (← IO.monoMsNow) ≥ limit then
+        manager.kill
+        let _ ← manager.wait
+        throw (IO.userError "cache-reclaim daemon did not publish an endpoint")
+      IO.sleep 5
+    let some endpoint := found | throw (IO.userError "missing cache-reclaim endpoint")
+    require (endpoint.pid == manager.pid.toNat) "cache-reclaim endpoint belongs to another process"
+    pure endpoint
+  try
+    let limit := (← IO.monoMsNow) + 6000
+    while ← nativeCache.pathExists do
+      if (← IO.monoMsNow) ≥ limit then throw (IO.userError "native daemon did not reclaim private cache")
+      IO.sleep 10
+  finally
+    try let _ ← Daemon.exchange endpoint "shutdown" (budget := 500); pure () catch _ => pure ()
+    let exiting ← IO.asTask manager.wait .dedicated
+    if (← Worker.awaitUntil exiting ((← IO.monoMsNow) + 3000)).isNone then
+      manager.kill
+      let _ ← manager.wait
+      throw (IO.userError "cache-reclaim daemon did not stop")
+    Daemon.awaitStopped endpoint
+  IO.println "PASS private cache reclamation: read-only live copies, unreadable/changed owners, index/registration claims, bounded resumed no-follow deletion and native daemon recovery"
+
+def reclaimTests : IO Unit := do
+  isolated
+  IO.FS.withTempDir reclaimScenario
+
+def run : IO Unit := do
+  isolated
   IO.FS.withTempDir scenario
+  let privateData := (← Paths.dataRoot) / "reclaim-tests" / Blake3.hex (← IO.getRandomBytes 16)
+  let checked ← IO.Process.output {
+    cmd := (← IO.appPath).toString, args := #["cache-reclaim-tests"]
+    env := #[("EGGSHELL_DATA_ROOT", some privateData.toString), ("PLUGIN_ROOT", none)] }
+  require (checked.exitCode == 0) s!"isolated cache reclamation failed: {checked.stderr}\n{checked.stdout}"
+  IO.print checked.stdout
 
 end Eggshell.ReadOnlyCacheTests

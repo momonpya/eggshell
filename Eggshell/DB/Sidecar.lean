@@ -64,16 +64,73 @@ def Sidecar.childDirectory (parent : System.FilePath) (name : String) : IO Syste
     FileSystem.syncPath parent.toString true
   pure path
 
+def Sidecar.Owner.routeKey (owner : Sidecar.Owner) : String :=
+  Blake3.hex (Blake3.digest "eggshell.cache-owner".toUTF8 [(Lean.toJson owner).compress.toUTF8])
+
+/-- Registration shares this short claim; retirement takes it exclusively.
+The stable installation guard lives outside every reclaimable DB directory. -/
+def Sidecar.withCacheClaim (exclusive : Bool) (action : IO α) : IO (Option α) := do
+  let root ← Paths.dataRoot
+  FileSystem.rejectSymlinkAncestors root
+  FileSystem.privateDirectory root
+  let path := root / "cache-owners.guard"
+  let guard ← try FileSystem.openRead path.toString catch _ => do
+    FileSystem.immutableExistingBytes path ByteArray.empty
+    FileSystem.openRead path.toString
+  let mut claimed ← FileSystem.tryReadLock guard exclusive
+  let admissionDeadline := (← IO.monoMsNow) + 25
+  while !claimed && !exclusive && (← IO.monoMsNow) < admissionDeadline do
+    IO.sleep 1
+    claimed ← FileSystem.tryReadLock guard false
+  unless claimed do return none
+  try some <$> action
+  finally FileSystem.unlockRead guard
+
+def Sidecar.recordOwner (directory : System.FilePath) (owner : Sidecar.Owner) : IO Unit := do
+  let routes ← Sidecar.childDirectory directory "owners"
+  let path := routes / (owner.routeKey ++ ".json")
+  let bytes := (Lean.toJson owner).compress.toUTF8
+  unless bytes.size ≤ 65536 do throw (IO.userError "cache owner exceeds metadata bound")
+  if let some _ ← FileSystem.symlinkMetadata? path then
+    let previous ← FileSystem.boundedBytes path 65536
+    if previous == bytes then return
+    let parsed : Except String Sidecar.Owner := do
+      let some text := String.fromUTF8? previous | throw "invalid cache owner UTF-8"
+      Lean.Json.parse text >>= Lean.fromJson?
+    if let .ok previous := parsed then
+      if previous.database == owner.database && previous.routeKey == owner.routeKey then
+        throw (IO.userError "conflicting cache owner digest")
+    FileSystem.atomicExistingBytes path bytes
+  else FileSystem.immutableExistingBytes path bytes
+
+/-- Reading a shared private overlay registers the currently observed copy.
+Only private metadata is written; the shared DB remains read-only. -/
+def Sidecar.observe (snapshot : PageMap.Snapshot) : IO Unit := do
+  let sidecar ← Sidecar.locate snapshot .user
+  if (← FileSystem.symlinkMetadata? sidecar.directory).isNone then return
+  let owner := Sidecar.Owner.ofSnapshot snapshot
+  let recorded ← Sidecar.withCacheClaim false do
+    let _ ← owner.pin
+    Sidecar.recordOwner sidecar.directory owner
+  unless recorded.isSome do throw (IO.userError "private cache retirement is busy")
+  pure ()
+
 def Sidecar.prepare (owner : Sidecar.Owner) (storage : Sidecar.Storage := .database) : IO Sidecar := do
   let snapshot ← owner.pin
   let directory ← if storage == .database then do
       let derived ← Sidecar.childDirectory snapshot.directory "derived"
       Sidecar.childDirectory derived snapshot.head.identity
     else do
-      let root := (← Paths.dataRoot) / "read-cache"
-      FileSystem.rejectSymlinkAncestors root
-      FileSystem.privateDirectory root
-      Sidecar.childDirectory root snapshot.head.identity
+      let prepared ← Sidecar.withCacheClaim false do
+        let _ ← owner.pin
+        let root := (← Paths.dataRoot) / "read-cache"
+        FileSystem.rejectSymlinkAncestors root
+        FileSystem.privateDirectory root
+        let directory ← Sidecar.childDirectory root snapshot.head.identity
+        Sidecar.recordOwner directory owner
+        pure directory
+      let some directory := prepared | throw (IO.userError "private cache retirement is busy")
+      pure directory
   let semantic ← Sidecar.childDirectory directory "semantic"
   let _ ← Sidecar.childDirectory semantic "vectors"
   let indexes ← Sidecar.childDirectory directory "indexes"
