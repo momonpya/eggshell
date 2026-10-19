@@ -182,7 +182,7 @@ def scenario (temporary : System.FilePath) : IO Unit := do
       "semantic discovery did not supply its original body before lexical fallback"
     configure config database [fixture.toString, "semantic-deadline-provider", "stall", fixtureRoot.toString]
     let (expired, timeoutTrace, timeoutMs) ← nativeHook binary root runtime records config "semantic-timeout"
-    check (timeoutTrace.semantic == .timedOut && timeoutTrace.route == .lexical && timeoutMs < 3500 &&
+    check (timeoutTrace.semantic == .timedOut && timeoutTrace.route == .lexical && timeoutMs < 4300 &&
         expired.compress.contains "LEXICAL_ORIGINAL_BODY_53726" &&
         expired.getObjValD "systemMessage" != Json.null)
       "semantic expiry did not deliver actual DB body with a visible unfinished status"

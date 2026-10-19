@@ -3,7 +3,11 @@
 Fixed before collecting results. This is a latency diagnostic of the isolated
 development candidate, not a token/quality benchmark or an adoption comparison.
 No generation-model calls are needed. The MiniLM model, ranking settings,
-semantic-first policy and 1,500 ms semantic budget remain unchanged for this run.
+semantic-first policy and 1,500 ms semantic budget remain unchanged for the
+original run archived as `baseline-1`; its protocol is immutable there.
+Subsequent runs declare their compiled semantic cap with `--semantic-budget-ms`
+and record it in the manifest. This argument records the implementation setting;
+it does not configure the native binary.
 
 Prepare one saved fixture for each source count: **2, 32, 256, 1,024**. Record its
 actual document/window counts, graph files, head digest, source text construction
@@ -52,3 +56,31 @@ cell to complete semantic discovery and retain body delivery within five
 seconds. Otherwise inspect the measured bottleneck, change the implementation
 or allocation, and repeat against these same saved fixtures. This gate does not
 replace the pilot's quality, safety or inclusive-token requirements.
+
+## Follow-up fixed before its 48 measured hooks
+
+Use `--fixtures` with the original dataset, fresh cell data roots and the same
+48 conditions. The next candidate uses a 3,500 ms semantic cap, still limited
+to half the remaining native deadline. The complete numerical request for the
+1,024-source cached question took 1,221 ms outside the original cap; fresh
+questions and derived focus additionally initialize an encoder. Merely giving
+these nested stages 1,500 ms cannot accommodate their observed costs plus the
+matching kernel. The candidate also replaces repeated page-list scans with
+bounded generational hash lookup and retains verified owner metadata within
+one pinned request. Full-reference identity and existing admission/selection
+rules remain in place. An additional node-lookup shortcut showed no diagnostic
+improvement and was removed before this run.
+
+The completion/body/five-second gate and three repetitions per cell do not
+change. This is a combined candidate diagnostic, not isolation of the budget's
+causal contribution. The cached condition also reuses derived focus windows
+when the fresh request produced them; interpret each purpose's telemetry.
+
+The `allocation-1` run is retained in full: 256 sources completed, while every
+1,024-source cell still failed the gate. Before another full repeat, a diagnostic
+changed only the page-cache update's ownership behavior: check capacity/membership
+before inserting, so the rotation branch does not retain the old table across
+every insert. Preserve both candidates' generated C and all results. Its one-hook
+diagnostic still failed the gate; it is not a 48-hook result. Investigate repeated
+Work-posting validation before fixing the next full candidate. The same saved
+fixtures, questions, 48 conditions and five-second gate remain required.

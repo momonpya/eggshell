@@ -555,20 +555,44 @@ def resolve (snapshot : Snapshot) (read : String → IO (Option ByteArray))
 def readNode (snapshot : Snapshot) (read : String → IO (Option ByteArray)) (index : Nat) : IO Value := do
   resolve snapshot read (← IO.mkRef {}) index
 
+structure WorkOrigin where
+  work : Value
+  native : Bool
+
+private structure NodeMemo where
+  values : IO.Ref (Std.HashMap Nat Value)
+  owners : IO.Ref (Std.HashMap Nat (Sigma LocatedOutcome))
+  origins : IO.Ref (Std.HashMap Nat WorkOrigin)
+
+private def NodeMemo.new : IO NodeMemo :=
+  return ⟨← IO.mkRef {}, ← IO.mkRef {}, ← IO.mkRef {}⟩
+
 /-- A request-local DAG reader belongs to one complete immutable snapshot.
-Its constructor and mutable table are private: callers cannot seed it with a
+Its constructor and mutable tables are private: callers cannot seed it with a
 foreign Value, change the publication or reuse it with a writer snapshot.
 Decoded nodes share their original children and Atom buffers across owners. -/
 structure NodeReader (snapshot : Snapshot) where
   private mk ::
-  private known : IO.Ref (Std.HashMap Nat Value)
+  private memo : NodeMemo
 
 @[no_expose] def NodeReader.new (snapshot : Snapshot) : IO (NodeReader snapshot) :=
-  return NodeReader.mk (← IO.mkRef {})
+  return NodeReader.mk (← NodeMemo.new)
 
 @[no_expose] def NodeReader.read (reader : NodeReader snapshot) (index : Nat) : IO Value :=
   resolveUsing snapshot snapshot.get (fun tag index => snapshot.readPayload (key tag index))
-    (NodeReader.known reader) index
+    (NodeReader.memo reader).values index
+
+/-- Live membership and the complete positional frame are validated once per
+immutable request. The private table cannot be seeded by a nomination or
+shared with another source/publication. -/
+@[no_expose] def NodeReader.locateOutcome (reader : NodeReader snapshot) (index : Nat) :
+    IO (LocatedOutcome index) := do
+  let memo := NodeReader.memo reader
+  if let some cached := (← memo.owners.get)[index]? then
+    if same : cached.1 = index then return same ▸ cached.2
+  let entry ← Eggshell.Persistence.Store.locateOutcome snapshot index
+  memo.owners.modify (·.insert index ⟨index, entry⟩)
+  pure entry
 
 /-- A source certificate nominates exactly this Outcome id. Exact authority
 and positional binding are checked before reading any certificate payload;
@@ -632,11 +656,11 @@ equal local node numbers. Lookup is constant time and the dependent result
 cannot be passed to a different source's node interpreter. -/
 structure NodeReaders (snapshots : Array Snapshot) where
   private mk ::
-  private tables : Array (IO.Ref (Std.HashMap Nat Value))
+  private tables : Array NodeMemo
   private complete : tables.size = snapshots.size
 
 @[no_expose] def NodeReaders.new (snapshots : Array Snapshot) : IO (NodeReaders snapshots) := do
-  let tables ← snapshots.mapM fun _ => IO.mkRef ({} : Std.HashMap Nat Value)
+  let tables ← snapshots.mapM fun _ => NodeMemo.new
   if complete : tables.size = snapshots.size then pure (NodeReaders.mk tables complete)
   else throw (IO.userError "source reader table is incomplete")
 
@@ -668,7 +692,7 @@ semantic and Exact positions before returning it as an Outcome. -/
 def NodeReader.outcome (reader : NodeReader snapshot) (entry : LocatedOutcome index) : IO OutcomeEdge := do
   let some checked := entry.atHead? snapshot.head
     | throw (IO.userError "Outcome nomination belongs to another pinned publication")
-  let observed ← readOutcomeHeader snapshot index
+  let observed := (← reader.locateOutcome index).header
   unless observed.checked.frame == checked.val.header.checked.frame do
     throw (IO.userError "Outcome nomination disagrees with its published frame")
   let value ← reader.read index
@@ -685,7 +709,7 @@ just as for owner hydration; this never follows the Outcome reference. -/
 def NodeReader.work (reader : NodeReader snapshot) (entry : LocatedOutcome index) : IO Value := do
   let some checked := entry.atHead? snapshot.head
     | throw (IO.userError "Work nomination belongs to another pinned publication")
-  let observed ← readOutcomeHeader snapshot index
+  let observed := (← reader.locateOutcome index).header
   unless observed.checked.frame == checked.val.header.checked.frame do
     throw (IO.userError "Work nomination disagrees with its published frame")
   reader.read observed.work
@@ -938,29 +962,34 @@ theorem NodeFrame.nativeResolved_exact (frame : NodeFrame) (resolve : Nat → Va
               | cons invoked tail =>
                   cases tail <;> simp
 
-structure WorkOrigin where
-  work : Value
-  native : Bool
-
 /-- Work and native occurrence orientation from one live pinned owner.
 This is nomination metadata, never a substitute Outcome or evidence payload.
 Distinct but equal endpoint ids use bounded structural comparison. -/
-def NodeReader.workOrigin (reader : NodeReader snapshot) (entry : LocatedOutcome index) : IO WorkOrigin := do
+@[no_expose] def NodeReader.workOrigin (reader : NodeReader snapshot) (entry : LocatedOutcome index) : IO WorkOrigin := do
   let some checked := entry.atHead? snapshot.head |
     throw (IO.userError "Work origin belongs to another pinned publication")
-  let header ← readOutcomeHeader snapshot index
+  let header := (← reader.locateOutcome index).header
   unless header.checked.frame == checked.val.header.checked.frame do
     throw (IO.userError "Work origin disagrees with its published frame")
+  let memo := reader.memo
+  if let some origin := (← memo.origins.get)[index]? then return origin
   let work ← reader.read header.work
   let mut native := false
   for observation in header.observations do
     let frame ← readFrame snapshot snapshot.get observation
     if let some (observed, invoked) := frame.frame.nativeEndpoints? then
-      if (← nodesEqual snapshot observed snapshot header.outcome) &&
-          (← nodesEqual snapshot invoked snapshot header.work) then
+      -- Equal ids in this same checked frame name the same original node.
+      -- Distinct aliases still require the complete structural interpreter.
+      let sameOutcome ← if observed == header.outcome then pure true
+        else nodesEqual snapshot observed snapshot header.outcome
+      let sameWork ← if invoked == header.work then pure true
+        else nodesEqual snapshot invoked snapshot header.work
+      if sameOutcome && sameWork then
         native := true
         break
-  pure {work, native}
+  let origin : WorkOrigin := {work, native}
+  memo.origins.modify (·.insert index origin)
+  pure origin
 
 def readLocatedWorkOrigin (snapshot : Snapshot) (entry : LocatedOutcome index) : IO WorkOrigin := do
   (← NodeReader.new snapshot).workOrigin entry
@@ -1748,7 +1777,7 @@ def NodeReader.supportOwners (reader : NodeReader snapshot) (works : List Value)
     let some outcomeBytes := outcomeBytes | continue
     let size := workBytes + outcomeBytes
     if size > remaining then continue
-    let owner ← reader.outcome (← locateOutcome snapshot document.owner)
+    let owner ← reader.outcome (← reader.locateOutcome document.owner)
     unless owner.work ∈ works do throw (IO.userError "neighbor Work identity disagrees with its source node")
     let some work := text? owner.work | throw (IO.userError "neighbor Work is not indexed text")
     let some body := text? owner.outcome | throw (IO.userError "neighbor Outcome is not indexed text")

@@ -111,7 +111,7 @@ does not start the provider or rewrite records. Output identifies the pinned DB
 revision, before/after coverage, requested count, batch count and elapsed time.
 
 The isolated candidate gives semantic discovery the first search window:
-at most 1,500 ms and at most half the remaining caller deadline. On an incomplete
+at most 3,500 ms and at most half the remaining caller deadline. On an incomplete
 reply, the requesting worker is retired before a DB request uses the remaining
 deadline. Turn/epoch, source checks, delivery claims and packet limits still
 apply. The fallback may read an existing validated demand memo, but does not

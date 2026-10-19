@@ -68,6 +68,24 @@ def prime (database : System.FilePath) (question : String) : IO Json := do
   pure (Json.mkObj [("receipt", toJson receipt), ("order", toJson result.order.indices),
     ("documents", toJson documents.length), ("purpose", toJson "unmeasured-question-cache-setup")])
 
+/-- Complete the same read-only matching path outside the hook's semantic
+allocation, to locate censored phases. Never count this as a delivery sample. -/
+def inspect (database : System.FilePath) (question : String) : IO Json := do
+  let receipt ← Receipt.fresh
+  let started ← IO.monoMsNow
+  let selection : Config.Selection := {
+    label := "latency-inspection", read := [⟨"source", database⟩], write := none
+    semanticMatcher := some (← command), handoffChars := 120000
+    handoffBytes := some Config.nativeHandoffBytes }
+  let context : SourceContext := {
+    workspace := (← IO.currentDir)
+    deadline := started + 29000
+    question
+    receipt := some receipt }
+  let result ← automaticHandoff selection question [] false (sourceContext := some context)
+  pure (Json.mkObj [("receipt", toJson receipt), ("elapsedMs", toJson ((← IO.monoMsNow) - started)),
+    ("purpose", toJson "standalone-phase-inspection"), ("handoff", toJson result)])
+
 end Eggshell.SemanticLatency
 
 def main (arguments : List String) : IO UInt32 := do
@@ -77,7 +95,13 @@ def main (arguments : List String) : IO UInt32 := do
           let some count := count.toNat? | throw (IO.userError "invalid source count")
           Eggshell.SemanticLatency.prepare (.mk directory) count
       | ["prime", database, question] => Eggshell.SemanticLatency.prime (.mk database) question
-      | _ => throw (IO.userError "usage: semantic_latency prepare DIRECTORY COUNT | prime DB QUESTION")
+      | ["inspect", database, question] => Eggshell.SemanticLatency.inspect (.mk database) question
+      | ["counts", database] => do
+          let snapshot ← Eggshell.DB.PageMap.pin (.mk database)
+          let rows ← ["alls", "indexedAllReferences", "liveOutcomes", "nodes"].mapM fun key => do
+            pure (key, Lean.toJson (← Eggshell.Persistence.Store.getNat snapshot.get key))
+          pure (Lean.Json.mkObj rows)
+      | _ => throw (IO.userError "usage: semantic_latency prepare DIRECTORY COUNT | prime DB QUESTION | inspect DB QUESTION | counts DB")
     IO.println result.compress
     pure 0
   catch error =>

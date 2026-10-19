@@ -145,22 +145,52 @@ structure CachedPage where
   ref : Ref
   loaded : Loaded ref
 
-/-- Fixed-size LRU of certified pages from this pinned reader. A frequently
-used directory must not be evicted merely because its first read was old. -/
+/-- Two bounded generations of certified pages from this pinned reader.
+Offset lookup avoids scanning and rebuilding a recency list on every tree
+level; complete reference equality still decides whether a page can be used. -/
 structure PageCache where
-  pages : List CachedPage := []
-  bounded : pages.length ≤ 64 := by decide
+  recent : Std.HashMap Nat CachedPage := {}
+  previous : Std.HashMap Nat CachedPage := {}
+  recentBounded : recent.size ≤ 2048 := by simp
+  previousBounded : previous.size ≤ 2048 := by simp
+
+def PageCache.lookup (cache : PageCache) (offset : Nat) : Option CachedPage :=
+  cache.recent[offset]?.orElse fun _ => cache.previous[offset]?
+
+def PageCache.find (cache : PageCache) (ref : Ref) : Option (Loaded ref) := do
+  let cached ← cache.lookup ref.offset
+  if same : cached.ref = ref then some (same ▸ cached.loaded) else none
 
 def PageCache.touch (cache : PageCache) (page : CachedPage) : PageCache :=
-  let pages := (page :: cache.pages.filter (fun old => old.ref != page.ref)).take 64
-  ⟨pages, by dsimp only [pages]; simp only [List.length_take]; omega⟩
+  -- Decide before insertion: retaining the old table for a possible rotation
+  -- would force copy-on-write of its bucket array on every cache hit.
+  if fits : cache.recent.size < 2048 ∨ page.ref.offset ∈ cache.recent then
+    ⟨cache.recent.insert page.ref.offset page, cache.previous, by
+      by_cases present : page.ref.offset ∈ cache.recent
+      · simpa only [Std.HashMap.size_insert, if_pos present] using cache.recentBounded
+      · have room := fits.resolve_right present
+        simp only [Std.HashMap.size_insert, if_neg present]
+        omega,
+      cache.previousBounded⟩
+  else
+    ⟨({} : Std.HashMap Nat CachedPage).insert page.ref.offset page, cache.recent,
+      by simp [Std.HashMap.size_insert], cache.recentBounded⟩
 
 theorem PageCache.touch_bounded (cache : PageCache) (page : CachedPage) :
-    (cache.touch page).pages.length ≤ 64 := (cache.touch page).bounded
+    (cache.touch page).recent.size + (cache.touch page).previous.size ≤ 4096 := by
+  have := (cache.touch page).recentBounded
+  have := (cache.touch page).previousBounded
+  omega
 
 theorem PageCache.touch_recent (cache : PageCache) (page : CachedPage) :
-    (cache.touch page).pages.head? = some page := by
-  simp [touch, List.take_succ_cons]
+    (cache.touch page).lookup page.ref.offset = some page := by
+  by_cases fits : cache.recent.size < 2048 ∨ page.ref.offset ∈ cache.recent
+  <;> simp [touch, fits, lookup]
+
+theorem PageCache.find_rejects (cache : PageCache) (ref : Ref) (cached : CachedPage)
+    (located : cache.lookup ref.offset = some cached) (different : cached.ref ≠ ref) :
+    cache.find ref = none := by
+  simp [find, located, different]
 
 def validIdentity (identity : String) : Bool :=
   identity.length == 64 && identity.toList.all (fun c =>
@@ -451,10 +481,9 @@ def Snapshot.load (snapshot : Snapshot) (ref : Ref) : IO (Loaded ref) := do
   unless 0 < ref.bytes && ref.bytes ≤ 65536 && magic.size ≤ ref.offset &&
       ref.offset + ref.bytes ≤ snapshot.head.bytes do
     throw (IO.userError "index page is outside its pinned committed extent")
-  for cached in (← snapshot.cache.get).pages do
-    if same : cached.ref = ref then
-      snapshot.cache.modify (·.touch cached)
-      return same ▸ cached.loaded
+  if let some loaded := (← snapshot.cache.get).find ref then
+    snapshot.cache.modify (·.touch ⟨ref, loaded⟩)
+    return loaded
   let mut bytes := ByteArray.empty
   while bytes.size < ref.bytes do
     let count := min 4096 (ref.bytes - bytes.size)

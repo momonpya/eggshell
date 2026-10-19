@@ -1149,6 +1149,7 @@ run_meta do
     ``Eggshell.DB.PageMap.page_codec_roundtrip,
     ``Eggshell.DB.PageMap.PageCache.touch_bounded,
     ``Eggshell.DB.PageMap.PageCache.touch_recent,
+    ``Eggshell.DB.PageMap.PageCache.find_rejects,
     ``Eggshell.DB.PageMap.head_codec_roundtrip,
     ``Eggshell.DB.PageMap.blob_codec_roundtrip,
     ``Eggshell.DB.PageMap.blob_bytes_preserved_by_append,

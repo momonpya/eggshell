@@ -327,7 +327,7 @@ def acknowledge (session id : String) : IO Bool := withSession session fun files
 
 /-- Semantic discovery gets the first window; DB delivery retains the rest. -/
 def semanticSearchDeadline (now deadline : Nat) : Nat :=
-  min deadline (now + min 1500 ((deadline - now) / 2))
+  min deadline (now + min 3500 ((deadline - now) / 2))
 
 def searchIncomplete (reply : Option Json) : Bool :=
   match reply with

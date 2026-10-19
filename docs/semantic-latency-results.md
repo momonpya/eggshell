@@ -1,6 +1,6 @@
 # Warm DB latency diagnostic, 2026-10-19
 
-The isolated development candidate fails the [preregistered practical
+The original measured development candidate failed the [preregistered practical
 gate](semantic-latency-protocol.md). All 48 hooks delivered original DB body,
 with exact stdout/SHA-256/publication and accepted acknowledgement verified.
 Only the 2- and 32-source cells completed semantic search. Each source has one
@@ -96,3 +96,63 @@ four-hook smoke run in 3.71 seconds; it is outside the 48-hook dataset.
 Run a revised candidate with `tools/semantic_latency.py --fixtures` pointing to
 this dataset, a fresh output directory and the guarded runner. Do not regenerate
 independent seeds and attribute their differences to the implementation.
+
+## Follow-up on 2026-10-20
+
+`allocation-1` repeats all 48 hooks against the original saved fixtures. The
+semantic cap is 3,500 ms with half the remaining deadline reserved for lexical
+delivery. It also uses pinned owner metadata and bounded generational page
+lookup. All 48 published bodies and acknowledgements are retained; 36 searches
+completed semantics. The practical gate still fails at 1,024 sources.
+
+| Sources | Source vectors | Question cache | Semantic complete | Body | Latencies, ms |
+| --- | --- | --- | --- | --- | --- |
+| 2 | database | fresh | 3/3 | 3/3 | 1232, 1250, 1261 |
+| 2 | database | cached | 3/3 | 3/3 | 264, 261, 249 |
+| 2 | private-overlay | fresh | 3/3 | 3/3 | 1179, 1194, 1189 |
+| 2 | private-overlay | cached | 3/3 | 3/3 | 247, 250, 253 |
+| 32 | database | fresh | 3/3 | 3/3 | 1351, 1354, 1374 |
+| 32 | database | cached | 3/3 | 3/3 | 366, 356, 365 |
+| 32 | private-overlay | fresh | 3/3 | 3/3 | 1338, 1347, 1347 |
+| 32 | private-overlay | cached | 3/3 | 3/3 | 362, 369, 363 |
+| 256 | database | fresh | 3/3 | 3/3 | 2415, 2375, 2366 |
+| 256 | database | cached | 3/3 | 3/3 | 1398, 1436, 1383 |
+| 256 | private-overlay | fresh | 3/3 | 3/3 | 2368, 2369, 2505 |
+| 256 | private-overlay | cached | 3/3 | 3/3 | 1401, 1430, 1444 |
+| 1024 | database | fresh | 0/3 | 3/3 | 11985, 11938, 12018 |
+| 1024 | database | cached | 0/3 | 3/3 | 11915, 11914, 11991 |
+| 1024 | private-overlay | fresh | 0/3 | 3/3 | 11958, 12204, 11857 |
+| 1024 | private-overlay | cached | 0/3 | 3/3 | 12012, 11751, 11862 |
+
+Raw evidence is beside the original dataset at `allocation-1/`, including the
+manifest, exact native output, receipts, frozen implementation/binaries, generated
+C and full regression logs. Its size run took 199.07 seconds with observed peak
+RSS 1,123,680 KiB. The same snapshot was copied, not regenerated.
+
+An additional node-lookup shortcut did not establish a diagnostic benefit
+and was removed. No empty-topology shortcut was taken: the 1,024-source fixture
+actually contains 1,024 All relations and 8,195 nodes.
+
+The first regression after changing the semantic cap failed an old requirement
+that total delivery stay below 3,500 ms. Its real timeout delivery took 3,638 ms,
+with DB body, explicit unfinished status and accepted acknowledgement. The
+assertion now uses the suite's existing common 4,300 ms delivery bound. The
+preregistered size gate remains five seconds. The corrected full regression
+passed in 90.32 seconds, peak 2,816,400 KiB. The failed run and raw receipt remain
+available; it is not counted as a success.
+
+Inspection of generated C then showed that inserting before checking capacity
+retained the old hash table across every update, forcing copy-on-write. The
+update now checks room/membership first. Its generated C no longer adds that
+extra reference on the insert path. Page-reference equality, original payload
+checks, admission/ranking and the 4,096-page bound remain in place.
+
+This ownership correction passed full regression in 87.07 seconds, observed
+peak 2,796,480 KiB, and separate daemon draining preserved graph heads. A single
+1,024-source native diagnostic took 6,964 ms and still timed out semantically.
+That diagnostic is not a replacement for 48 measurements or evidence of a
+general rate. A full repeat of this last correction has not started.
+
+Next investigate repeated validation of one owner's Work postings across grams,
+then fix and preregister the next candidate before repeating the same 48 cells.
+No token/quality adoption, pilot or release is established by these diagnostics.

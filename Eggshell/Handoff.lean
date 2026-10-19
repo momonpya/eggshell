@@ -5751,9 +5751,9 @@ def indexedDiscovery (selection : Config.Selection)
     ordinal := fun id => do
       IO.ofExcept (Persistence.Store.payloadSize (← snapshot.get (Persistence.Store.key "member" id)))
     readWork := fun id => do
-      reader.workOrigin (← Persistence.Store.locateOutcome snapshot id)
+      reader.workOrigin (← reader.locateOutcome id)
     readOwner := fun id => do
-      reader.outcome (← Persistence.Store.locateOutcome snapshot id)
+      reader.outcome (← reader.locateOutcome id)
     readSources := reader.sources
     surfaces := Persistence.Store.workSurfaceCandidates snapshot
     frequencies := Persistence.Store.frequencies snapshot

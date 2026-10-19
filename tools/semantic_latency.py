@@ -155,6 +155,8 @@ def main():
     parser.add_argument("--smoke", action="store_true", help="Validate the harness; not part of the 48-run dataset")
     parser.add_argument("--resume", action="store_true", help="Continue unmeasured pairs from the same saved fixtures")
     parser.add_argument("--fixtures", type=Path, help="Reuse the exact saved seeds from an earlier diagnostic root")
+    parser.add_argument("--semantic-budget-ms", type=int, default=1500,
+                        help="Declare the compiled implementation's semantic cap for this fixed run")
     options = parser.parse_args()
     binary, helper, root = options.binary.resolve(), options.helper.resolve(), options.output.resolve()
     if options.resume:
@@ -163,6 +165,8 @@ def main():
             raise RuntimeError("resume requires the exact same native implementation and protocol")
         if options.fixtures and previous.get("fixtures") != str(options.fixtures.resolve()):
             raise RuntimeError("resume cannot change the saved fixture source")
+        if previous.get("semanticBudgetMs", 1500) != options.semantic_budget_ms:
+            raise RuntimeError("resume cannot change the declared semantic allocation")
         serial = len(list(root.glob("resume-*.json"))) + 1
         shutil.copy2(Path(__file__), root / f"runner-resume-{serial}.py")
         save(root / f"resume-{serial}.json", dict(binarySha256=previous["binarySha256"],
@@ -178,6 +182,7 @@ def main():
              repetitions=len(repetitions), plannedHooks=len(counts)*len(repetitions)*4,
              binarySha256=digest(binary.read_bytes()), helperSha256=digest(helper.read_bytes()),
              modelGenerationCalls=0, protocolSha256=digest(protocol.read_bytes()),
+             semanticBudgetMs=options.semantic_budget_ms,
              fixtures=str(options.fixtures.resolve()) if options.fixtures else None))
     results = json.loads((root / "results.json").read_text()) if options.resume else []
     for count in counts:
