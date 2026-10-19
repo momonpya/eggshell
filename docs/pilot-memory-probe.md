@@ -104,4 +104,5 @@ must not enter study outcomes or seed costs. The original user-deferred
 `hook output missing` investigation remains deferred.
 The [history probe](pilot-history-probe.md) separately qualifies fresh,
 pasted-answer and live same-chat context transport with fixed responses;
-repeated-history restoration remains open.
+the [seed checkpoint probe](pilot-seed.md) now checks repeated restoration of
+that scripted history. Actual study-seed acquisition/accounting remain open.

@@ -158,7 +158,13 @@ pairs, completed classification and first-request body/ACK. The initial
 new-installation semantic timeout is retained; ancestry remains partial. All
 six context paths have scripted connection evidence. The complete task runner remains open, along with actual common
 study-seed acquisition/warm receipts, initial/history definitions and restoring
-the same frozen native history for repetitions. No model comparison is implied.
+the study's frozen native history with correct usage accounting. The
+[scripted seed checkpoint](pilot-seed.md) now bundles the saved graph/cache,
+native history and recorded answer, pins their hashes, and restores independent
+continuations without carrying another repetition's response. Both relocated
+DB checks report all five windows warm. This qualifies scripted restoration;
+task execution/grading across the full six-condition runner and real study-seed
+acquisition/usage accounting remain open. No model comparison is implied.
 
 The observed public Eggshell `main` was
 `51873167c11c447a0af67e73430b5ab6635b2a65` during readiness. Refresh and freeze

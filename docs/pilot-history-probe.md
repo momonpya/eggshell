@@ -55,8 +55,9 @@ in the fixture's answer or current question.
 
 The active continuation uses the original native thread with two turns. Fresh
 and pasted-answer consumers have distinct IDs and one turn each. This qualifies
-continuation in a live App Server. Restoring or forking the same frozen history
-for repeated study cells remains a separate runner requirement.
+continuation in a live App Server. The [seed checkpoint probe](pilot-seed.md)
+now restores the same frozen scripted history into independent repetitions.
+Actual study-seed provenance and forked-usage accounting remain open.
 
 Twelve counterfactual controls cover lost/changed observations, pasted history
 masquerading as continuation, forged assistant roles, prior context in fresh,
