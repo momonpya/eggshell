@@ -97,6 +97,11 @@ input and failed billed attempts. Do not add reasoning tokens twice. Record
 seed acquisition separately and report its amortized cost. Character count,
 packet size and this subject's readiness timings are not token-savings results.
 Report each topic/history cell and every repetition, not only an overall sum.
+The [offline usage auditor](pilot-usage.md) checks cumulative App Server usage
+boundaries and separates seed/trial reported totals. It preserves failed and
+unknown attempts, but cannot establish billing coverage for upstream failures.
+Provider usage reconciliation is an open gate before the inclusive metric or
+an adoption comparison can be reported.
 
 Fix source changes, function renames, same-name/different-meaning cases and
 injection-bearing observations before trials. The evaluator must run the
@@ -113,6 +118,9 @@ Check the shared read-only configuration on that seed and fix the incorrect-reus
 event/denominator and receipt/trajectory adjudication. Acceptance tests alone
 cannot identify incorrect memory reuse. These gates are still open; neither
 the upstream preflight nor the reference task solutions satisfy them.
+The offline usage auditor is prepared, while live capture, configuration
+isolation and complete billed-attempt accounting still need implementation
+and validation. No App Server model turn has been started for this preparation.
 
 The observed public Eggshell `main` was
 `51873167c11c447a0af67e73430b5ab6635b2a65` during readiness. Refresh and freeze
