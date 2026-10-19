@@ -97,8 +97,11 @@ quality assessment, token-savings result or adoption decision is included.
 
 This closes the scripted saved-body transport check. The [pilot protocol](pilot-protocol.md)
 still needs the actual common seed/history definition, its acquisition and warm
-receipts, the other conditions and complete runner, model/reasoning settings,
+receipts, the similarity control and complete runner, model/reasoning settings,
 balanced repetitions, perturbations and limits, incorrect-reuse adjudication,
 and complete billed-attempt accounting. Synthetic observations and requests
 must not enter study outcomes or seed costs. The original user-deferred
 `hook output missing` investigation remains deferred.
+The [history probe](pilot-history-probe.md) separately qualifies fresh,
+pasted-answer and live same-chat context transport with fixed responses;
+repeated-history restoration remains open.

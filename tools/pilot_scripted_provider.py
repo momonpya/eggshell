@@ -16,6 +16,7 @@ class ScriptedProvider:
         self.requests = []
         self.condition = None
         self.final_only = False
+        self.final_text = "SCRIPTED HOOK PROBE COMPLETE"
         self.error = None
         owner = self
 
@@ -47,7 +48,7 @@ class ScriptedProvider:
                     else:
                         item = dict(type="message", id=f"msg_fixture_{index}", role="assistant",
                                     status="completed", phase="final_answer", content=[dict(
-                                        type="output_text", text="SCRIPTED HOOK PROBE COMPLETE", annotations=[])])
+                                        type="output_text", text=owner.final_text, annotations=[])])
                     response = dict(id=f"resp_fixture_{index}", object="response", created_at=int(time.time()),
                                     status="in_progress", model=body["model"], output=[],
                                     error=None, incomplete_details=None, usage=None)
@@ -76,11 +77,12 @@ class ScriptedProvider:
     def url(self):
         return f"http://127.0.0.1:{self.http.server_port}/v1"
 
-    def begin(self, condition, final_only=False):
+    def begin(self, condition, final_only=False, final_text="SCRIPTED HOOK PROBE COMPLETE"):
         if any(row["condition"] == condition for row in self.requests):
             raise ValueError("Fixture condition already ran")
         self.condition = condition
         self.final_only = final_only
+        self.final_text = final_text
 
     def __enter__(self):
         self.thread.start()

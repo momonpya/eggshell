@@ -95,9 +95,10 @@ original 297-test set still passes, with all 50 source hashes unchanged.
 
 The [subsequent memory fixture](pilot-memory-probe.md) now checks scripted native
 save/warm/body delivery, including OS-protected shared DBs and private caches.
-Its observations are separate from the study seed. The four other study
-conditions, common model-acquired seed/history definitions and that seed's
-completed warm/index receipts still need implementation and sealing. Native image/file surfaces
+Its observations are separate from the study seed. The [history probe](pilot-history-probe.md)
+also checks pasted-answer and live native continuation. The similarity control,
+complete task runner, common model-acquired seed/history definitions and that
+seed's completed warm/index receipts still need implementation and sealing. Native image/file surfaces
 beyond the exercised command/edit paths have not been qualified. Real model
 choice, repetitions, perturbations, token/time limits, wrong-reuse adjudication,
 live usage semantics and failed-request billing remain open. Scripted requests,

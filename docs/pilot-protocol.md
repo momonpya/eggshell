@@ -143,9 +143,15 @@ an actual native read, warms all five windows, and delivers its original body to
 independent semantic/lexical consumers. It checks both an existing DB cache and
 a private cache for the same graph with no derived files. Both shared DBs reject
 writes at the OS boundary and remain unchanged; fresh receives no saved body.
-This qualifies that connection with fixed responses. Actual common study-seed
-acquisition and its warm receipts, initial/history definitions, and the other
-four conditions remain open.
+This qualifies that connection with fixed responses.
+The [native-history probe](pilot-history-probe.md) now checks fresh, a pasted
+recorded final answer and same-chat continuation against actual request bodies.
+Only continuation retains the original native question/tool observation; the
+pasted case has the recorded answer alone in a new user input. This qualifies
+five planned context paths with scripted responses. The isolated similarity
+control and complete task runner remain open, along with actual common
+study-seed acquisition/warm receipts, initial/history definitions and restoring
+the same frozen native history for repetitions. No model comparison is implied.
 
 The observed public Eggshell `main` was
 `51873167c11c447a0af67e73430b5ab6635b2a65` during readiness. Refresh and freeze
