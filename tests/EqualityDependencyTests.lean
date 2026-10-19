@@ -335,11 +335,12 @@ def nativeCongruentChild : IO Unit := do
           row.getObjValD "kind" == Lean.toJson "congruence"))
     "congruence in the original child-role witness disappeared behind literal extraction comparisons"
 
-def indexedAdmission (withLocal : Bool := false) : IO Unit := do
+def indexedAdmission (withLocal : Bool := false) (withContinuation : Bool := false) : IO Unit := do
   let id ← Receipt.fresh
   let path := (← Paths.dataRoot) / ("admission-" ++ id ++ ".egg")
   let text := "Bash\ncat indexed-admission.c"
-  let query := if withLocal then "Bash\ncat INDEXED-ADMISSION.c" else text
+  let query := if withContinuation then text ++ "; cat extra.c"
+    else if withLocal then "Bash\ncat INDEXED-ADMISSION.c" else text
   let work := Value.text text
   let result := Value.text "indexed-admission.c contains the implementation"
   let occurrence := Value.applyList .occurrence [Ref.semantic result, Ref.semantic work]
@@ -367,10 +368,22 @@ def indexedAdmission (withLocal : Bool := false) : IO Unit := do
       replay.getObjValD "untrackedAdmissionBranches" == Lean.toJson ([] : List Nat) &&
       replay.getObjValD "untrackedSourceChildBranches" == Lean.toJson ([] : List Nat))
     "indexed discovery omitted admission-time equality or its sparse original child frame"
+  require (admissions.all (fun admission =>
+      admission.getObjValD "schedulingAncestry" == Lean.toJson "recorded-step"))
+    "a production Match lost the actual scheduling observation preceding its construction"
+  let saved ← SelectionAudit.read reference
+  require (!saved.schedules.isEmpty) "production scheduling observations were not serialized"
+  let some firstSchedule := saved.schedules.head? | throw (IO.userError "missing scheduling fixture")
+  let foreignTask := Persistence.valueToJson (.text "foreign scheduled task")
+  let alteredTasks := {firstSchedule with tasks := firstSchedule.tasks ++ [foreignTask]}
+  require ((SelectionAudit.analyze {saved with schedules := [alteredTasks]}).toOption.isNone)
+    "a task absent from actual discovery acquired a scheduling record"
+  let disconnected := {firstSchedule with discovery := [foreignTask], tasks := [foreignTask]}
+  require ((SelectionAudit.analyze {saved with schedules := [disconnected]}).toOption.isNone)
+    "a Match changed its original scheduled Demand"
   require (snapshot.head == (← DB.PageMap.pin path).head)
     "admission diagnostics changed the read-only source graph"
   if withLocal then
-    let saved ← SelectionAudit.read reference
     require (!saved.runLocal.isEmpty && saved.localOrigins.length == saved.runLocal.length &&
         replay.getObjValD "untrackedLocalOrigins" == Lean.toJson ([] : List Nat))
       "production local Unions lost their actual proposing Match"
@@ -380,6 +393,14 @@ def indexedAdmission (withLocal : Bool := false) : IO Unit := do
         row.getObjValD "kind" == Lean.toJson "localUnion"))
       "the completed fixture did not actually depend on its new local Union"
     let origins ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "localUnionOrigins")
+    require (origins.all (fun origin =>
+      origin.getObjValD "schedulingAncestry" == Lean.toJson "recorded-step"))
+      "a local proposer lost the scheduling epoch which exposed its Demand"
+    let missingSchedules ← IO.ofExcept (SelectionAudit.analyze {saved with schedules := []})
+    let untrackedSchedules ← IO.ofExcept (missingSchedules.getObjValAs? (List Lean.Json) "localUnionOrigins")
+    require (untrackedSchedules.all (fun origin =>
+      origin.getObjValD "schedulingAncestry" == Lean.toJson "untracked"))
+      "a missing scheduling observation became a traced local proposal"
     require (origins.any (fun origin =>
         ((origin.getObjValAs? (List Lean.Json) "comparisons").toOption.getD []).any fun row =>
           row.getObjValD "role" == Lean.toJson "fragmentIdentity" &&
@@ -407,6 +428,90 @@ def indexedAdmission (withLocal : Bool := false) : IO Unit := do
     let unknown ← IO.ofExcept (missing.getObjValAs? (List Nat) "untrackedLocalOrigins")
     require (unknown.length == saved.runLocal.length)
       "missing local generator origins were counted as congruence-free"
+  if withContinuation then
+    require (!saved.continuations.isEmpty) "partial native completion did not record its generated continuation"
+    let continuations ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "continuationRecords")
+    require (continuations.all (fun event =>
+      event.getObjValD "untrackedChildren" == Lean.toJson ([] : List Nat)))
+      "a generated continuation child lost its actual root Match"
+    require (saved.schedules.any (fun schedule => schedule.uses.any (·.generated)))
+      "a later scheduling selection lost its generated All provenance"
+    let some continuation := saved.continuations.head? | throw (IO.userError "missing continuation fixture")
+    let brokenRoot := {continuation with current := foreignTask}
+    require ((SelectionAudit.analyze {saved with continuations := [brokenRoot]}).toOption.isNone)
+      "a continuation changed the external root while keeping its child witnesses"
+    let some support := continuation.support.head? | throw (IO.userError "missing continuation support")
+    let future := {support with localCount := some (saved.runLocal.length + 1)}
+    require ((SelectionAudit.analyze {saved with continuations := [{continuation with support := [future]}]}).toOption.isNone)
+      "a generated continuation depended on a future Match observation"
+    let inactive := {support with automatic := false}
+    require ((SelectionAudit.analyze {saved with continuations := [{continuation with support := [inactive]}]}).toOption.isNone)
+      "a nonautomatic Match acquired a generated continuation child"
+    let missing ← IO.ofExcept (SelectionAudit.analyze {saved with continuations := [{continuation with support := []}]})
+    let records ← IO.ofExcept (missing.getObjValAs? (List Lean.Json) "continuationRecords")
+    require (records.any (fun event =>
+      !((event.getObjValAs? (List Nat) "untrackedChildren").toOption.getD []).isEmpty))
+      "missing continuation support was counted as a traced child"
+  if !withLocal && !withContinuation then
+    let terminalId ← Receipt.fresh
+    let some (some fast) ← Plugin.indexedTerminalRoot selection [some snapshot] text [] true none true
+        (receipt := some terminalId) | throw (IO.userError "terminal native fixture missed its certified path")
+    let some fastReference := fast.equalitySelection | throw (IO.userError "terminal fixture omitted equality capture")
+    let fastReplay ← SelectionAudit.inspect fastReference
+    let schedules ← IO.ofExcept (fastReplay.getObjValAs? (List Lean.Json) "schedulingRecords")
+    require (schedules.any (fun schedule => schedule.getObjValD "kind" == Lean.toJson "terminal"))
+      "terminal native capture reran or omitted its certified root scheduling case"
+
+def syntheticDemandFilter : IO Unit := do
+  let root := Value.applyList .inquiry []
+  let child := Value.text "synthetic child"
+  let text := "synthetic remainder"
+  let remainder := HandoffRemainder.value text
+  let edge := AllEdge.make root [child, remainder] (by simp) (by
+    simp [root, child, remainder, HandoffRemainder.value, Value.text, Value.applyList])
+  let schedule : DiscoveryAudit.ScheduleSnapshot := {
+    pass := 0, kind := "discovery", localCount := 0, current := Persistence.valueToJson root
+    discovery := [Persistence.valueToJson child, Persistence.valueToJson remainder]
+    tasks := [], runAll := [Persistence.valueToJson edge.relation], premises := [], uses := [] }
+  let _ ← IO.ofExcept (SelectionAudit.analyzeSchedule [] [] schedule)
+  let rematched := {schedule with tasks := [Persistence.valueToJson child]}
+  require ((SelectionAudit.analyzeSchedule [] [] rematched).toOption.isNone)
+    "a generated continuation child was rematched as a fresh source Demand"
+  let remainderTask := {schedule with tasks := [Persistence.valueToJson remainder]}
+  require ((SelectionAudit.analyzeSchedule [] [] remainderTask).toOption.isNone)
+    "a synthetic remainder was treated as an independently matchable Demand"
+
+def advisoryContinuation : IO Unit := do
+  let original := "Bash\ncat advisory.c"
+  let text := original ++ "; cat other.c"
+  let work := Value.text original
+  let current := Value.text text
+  let result := Value.text "advisory.c contains the original observed source"
+  let occurrence := Value.applyList .occurrence [Ref.semantic result, Ref.semantic work]
+  let owner := OutcomeEdge.make work result [occurrence] (by simp) (by simp [maxOutcomeObservations])
+  let frame := AllEdge.make (.applyList .inquiry []) [work] (by simp) (by
+    simp [work, Value.text, Value.applyList])
+  let graph : WorkGraph := {all := [frame], outcomes := [owner]}
+  let corpus := Matcher.Corpus.build LogicalText.logicalNormalizer graph
+  let trail ← IO.mkRef ({} : DiscoveryAudit.Trail)
+  let some discovery ← Matcher.discoverUsingM? () graph.all (fun _ => graph.outcomes)
+      (fun _ => [frame.relation, owner.relation]) (fun _ _ => none)
+      (fun state view tasks => pure (state, Matcher.demandedMatches LogicalText.logicalNormalizer
+        corpus view current none {} true tasks)) current [] text 32 false
+      (recordTrace := fun event => trail.modify (fun value => value.observe event (fun _ => none))) |
+    throw (IO.userError "advisory continuation trace did not converge")
+  require ((Matcher.extraction discovery).selection.completedUses.isEmpty && discovery.view.localUnions.isEmpty)
+    "retrieval-only continuation acquired equality or completed Work"
+  let trail ← trail.get
+  let some continuation := trail.continuations.head? |
+    throw (IO.userError "retrieval-only matching did not exercise generated continuation support")
+  let some snapshot := continuation.snapshot? [] | throw (IO.userError "advisory continuation changed its epoch")
+  let schedules := trail.schedules.reverse.filterMap (·.snapshot? [])
+  let replay ← IO.ofExcept (SelectionAudit.analyzeContinuation [] [] schedules snapshot)
+  let support ← IO.ofExcept (replay.getObjValAs? (List Lean.Json) "support")
+  require (support.any (fun row => row.getObjValD "retrieved" == Lean.toJson true &&
+      row.getObjValD "comparisons" == Lean.Json.null))
+    "advisory continuation support was rejected or a missing Match observation was counted as literal"
 
 def run : IO Unit := do
   explicitAndCongruence
@@ -417,6 +522,9 @@ def run : IO Unit := do
   nativeCongruentChild
   indexedAdmission
   indexedAdmission true
+  indexedAdmission false true
+  syntheticDemandFilter
+  advisoryContinuation
   IO.println "PASS equality dependency: direct closure, congruence, Exact, retraction, local ancestry, child deduplication, isolated completed branches and native extraction"
 
 end Eggshell.EqualityDependencyTests

@@ -1330,7 +1330,8 @@ its owner lists. Missing or failed capture never supplies a classification. -/
 def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdge)
     (discovery : Matcher.Discovery)
     (prepared : { extraction : Extraction // extraction = Matcher.extraction discovery })
-    (result : Option Handoff) (observed : List SelectionAudit.Admission := []) : IO (Option Handoff) := do
+    (result : Option Handoff) (observed : List SelectionAudit.Admission := [])
+    (trail : DiscoveryAudit.Trail := {}) : IO (Option Handoff) := do
   if receipt.isNone then return result
   let some handoff := result | return none
   if handoff.completed == 0 && !handoff.blocksCurrent then return result
@@ -1347,7 +1348,7 @@ def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdg
     (observed.find? (fun admission => Matcher.sameMatch admission.matched selected.matched)).map
       (fun admission => (admission, relationKey selected.matched.edge.relation))
   let reference ← SelectionAudit.capture receipt
-    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners bindings admissions observed)
+    (SelectionAudit.Snapshot.ofReport persistent discovery.view.localUnions report owners bindings admissions observed trail)
     ((handoff.sourceUses.filter (·.completed)).map (·.owner))
     (handoff.sourceCheckpoints.map (·.use.owner))
   pure (some {handoff with equalitySelection := reference})
@@ -4752,9 +4753,10 @@ def indexedTerminalRoot (selection : Config.Selection)
   let rendered := renderAutomatic [] selection.handoffChars current delivered enforce true terminal.discovery prepared
     (provenance := provenance) (refreshSources := refreshSources) (byteBudget := selection.handoffBytes)
   let children ← observations.get
-  let observed := if receipt.isSome then hits.reverse.map
-    (SelectionAudit.Admission.observe view currentValue corpus children) else []
-  pure (some (← auditRenderedSelection receipt persistent terminal.discovery prepared rendered observed))
+  let observed := if receipt.isSome then hits.reverse.map (fun matched =>
+    {(SelectionAudit.Admission.observe view currentValue corpus children matched) with schedule := some 0}) else []
+  let trail : DiscoveryAudit.Trail := {current := some 0, schedules := [DiscoveryAudit.Schedule.terminal terminal]}
+  pure (some (← auditRenderedSelection receipt persistent terminal.discovery prepared rendered observed trail))
 
 /-- A loaded row carries the production compiler certificate with its owner.
 There is no second map which can omit or substitute the row's candidate. -/
@@ -5171,13 +5173,14 @@ theorem indexed_saturation_memo_exact {σ : Type}
     (evaluate : σ → RunView → List Value → IO (σ × List Matcher.Match))
     (inquiry : Value) (persistent : List UnionEdge) (current : String)
     (iterations : Nat) (enableLocalUnion : Bool)
-    (record : List Value → RunView → IO Unit) :
+    (record : List Value → RunView → IO Unit)
+    (recordTrace : Matcher.DiscoveryTrace → IO Unit := fun _ => pure ()) :
     Matcher.discoverUsingM? initial all sourceOwners roots depth evaluate inquiry persistent
-      current iterations enableLocalUnion (SaturationMemo.viewProvider saved) record =
+      current iterations enableLocalUnion (SaturationMemo.viewProvider saved) record (recordTrace := recordTrace) =
     Matcher.discoverUsingM? initial all sourceOwners roots depth evaluate inquiry persistent
-      current iterations enableLocalUnion IncrementalQuotient.ViewProvider.reference record :=
+      current iterations enableLocalUnion IncrementalQuotient.ViewProvider.reference record (recordTrace := recordTrace) :=
   Matcher.discoverUsingM_views_exact initial all sourceOwners roots depth evaluate inquiry
-    persistent current iterations enableLocalUnion (SaturationMemo.viewProvider saved) record
+    persistent current iterations enableLocalUnion (SaturationMemo.viewProvider saved) record (recordTrace := recordTrace)
 
 /-- Extend a pinned request's frequency table only at previously unread
 keys. A context read cannot change the weights that produced its Work. -/
@@ -5351,6 +5354,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
     else pure none
   let retainedSaturation ← IO.mkRef (none : Option SaturationMemo.Saved)
   let admissionAudit ← source.receipt.mapM fun _ => IO.mkRef ([] : List SelectionAudit.Admission)
+  let traceAudit ← source.receipt.mapM fun _ => IO.mkRef ({} : DiscoveryAudit.Trail)
   let saveBoundary := do
     if let some checkpoint := checkpoint then
       checkpoint.checkpoint {
@@ -5484,9 +5488,10 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
       hits := hits ++ found.val
       if let some audit := admissionAudit then
         let children ← children.get
+        let schedule := ((← traceAudit.mapM (·.get)).getD {}).current
         audit.modify fun previous => found.val.foldl (fun previous matched =>
           let matched := if enableLocalUnion then matched else {matched with retrieved := true}
-          SelectionAudit.Admission.observe view currentValue groundedCorpus children matched :: previous) previous
+          {(SelectionAudit.Admission.observe view currentValue groundedCorpus children matched) with schedule} :: previous) previous
       retainedRanks.set state.ranks.saved
       saveBoundary
     for matched in hits do
@@ -5508,7 +5513,12 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
           (persistent ++ view.localUnions) plan
         retainedSaturation.set packet.saturation
         saveBoundary)
-    sourceAll prepare
+    sourceAll prepare (fun event => do
+      if let some audit := traceAudit then
+        let history := (← admissionAudit.mapM (·.get)).getD []
+        let locate := fun matched => (history.find? fun frame =>
+          Matcher.sameMatch frame.matched matched).map fun frame => (frame.runLocal.length, frame.schedule)
+        audit.modify (fun trail => trail.observe event locate))
   let some discovery := result | return some pendingSearch
   let extraction := Matcher.extraction discovery
   trace "discovery"
@@ -5679,6 +5689,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
   trace s!"render complete chars={(rendered.map (·.text.length)).getD 0}"
   auditRenderedSelection source.receipt persistent discovery
     ⟨extraction, rfl⟩ rendered ((← admissionAudit.mapM (·.get)).getD [])
+    ((← traceAudit.mapM (·.get)).getD {})
 
 /-- An empty body can still carry source-refresh metadata. Retain any known
 result before asking for keyword advice; only `none` means no such result. -/

@@ -5,6 +5,7 @@ public import Eggshell.GraphCodec
 public import Eggshell.Receipt
 public import Eggshell.Matcher
 public import Eggshell.GraphStore
+public import Eggshell.DiscoveryAudit
 
 @[expose] public section
 
@@ -51,23 +52,6 @@ def Generator.decode (row : Generator) : Except String UnionEdge := do
     pure ⟨left, right, scope, Value.sameExactFootprint_sound safe⟩
   else throw "equality generator crosses Exact authority"
 
-def roleName : SelectionDependency.Role → String
-  | .decomposition => "decomposition"
-  | .deduplicatedChild => "deduplicatedChild"
-  | .completedOutcome => "completedOutcome"
-  | .advisoryOutcome => "advisoryOutcome"
-
-structure Premise where
-  role : String
-  left : Json
-  right : Json
-  deriving BEq, ToJson, FromJson
-
-def Premise.encode (comparison : SelectionDependency.Comparison) : Premise := {
-  role := roleName comparison.role
-  left := Persistence.valueToJson comparison.left
-  right := Persistence.valueToJson comparison.right }
-
 structure CompletedBranch where
   owner : String
   demand : Json
@@ -86,6 +70,7 @@ structure Admission where
   child : Json
   inquiry : Value
   nomination : Option UnionEdge
+  schedule : Option Nat := none
 
 def Admission.observe (view : RunView) (inquiry : Value) (corpus : Matcher.Corpus)
     (children : Std.HashMap Value Persistence.Store.ChildObservation)
@@ -98,7 +83,9 @@ def Admission.observe (view : RunView) (inquiry : Value) (corpus : Matcher.Corpu
         ("relation", Persistence.valueToJson parent.relation)]
     else if let some observed := children[original]? then
       child := observed.encode
-  return ⟨matched, view.localUnions, child, inquiry, Matcher.localUnion? view.quotient inquiry matched⟩
+  return {
+    matched, runLocal := view.localUnions, child, inquiry
+    nomination := Matcher.localUnion? view.quotient inquiry matched }
 
 /-- The Match which proposed one actual local generator. Unlike completed
 admission, nomination needs no completed subwork or Outcome context. -/
@@ -117,6 +104,7 @@ structure UnionOrigin where
   priorWeight : Nat
   demandWeight : Nat
   retrieved : Bool
+  schedule : Option Nat := none
   deriving ToJson, FromJson
 
 /-- Full structural keys disambiguate collision buckets; no display digest
@@ -134,8 +122,7 @@ def GeneratorKey.ofEdge (edge : UnionEdge) : GeneratorKey := {
   authority := match edge.scope with | .run value | .workspace value => value }
 
 def Admission.atPrefix (runLocal : List UnionEdge) (admission : Admission) : Bool :=
-  admission.runLocal.map GeneratorKey.ofEdge ==
-    (runLocal.take admission.runLocal.length).map GeneratorKey.ofEdge
+  DiscoveryAudit.atPrefix admission.runLocal runLocal
 
 def unionOrigins (runLocal : List UnionEdge) (history : List Admission) : List UnionOrigin := Id.run do
   if runLocal.isEmpty then return []
@@ -162,7 +149,7 @@ def unionOrigins (runLocal : List UnionEdge) (history : List Admission) : List U
       demandComplete := matched.work.demandInPrior.complete
       priorWeight := matched.work.priorInDemand.coveredWeight
       demandWeight := matched.work.demandInPrior.coveredWeight
-      retrieved := matched.retrieved }
+      retrieved := matched.retrieved, schedule := admission.schedule }
 
 structure AdmissionSnapshot where
   owner : String
@@ -181,6 +168,7 @@ structure AdmissionSnapshot where
   groundedFragment : Bool
   retrieved : Bool
   child : Json
+  schedule : Option Nat := none
   deriving ToJson, FromJson
 
 def Admission.snapshot? (runLocal : List UnionEdge) (branches : List CompletedBranch)
@@ -206,17 +194,19 @@ def Admission.snapshot? (runLocal : List UnionEdge) (branches : List CompletedBr
     pastWhole := matched.work.pastWholeWork
     groundedFragment := matched.groundedOutcomeFragment
     retrieved := matched.retrieved
-    child := admission.child }
+    child := admission.child, schedule := admission.schedule }
 
 structure Snapshot where
   current : Json
   persistent : List Generator
   runLocal : List Generator
-  premises : List Premise
+  premises : List DiscoveryAudit.ComparisonRow
   owners : List String
   completedBranches : List CompletedBranch := []
   admissions : List AdmissionSnapshot := []
   localOrigins : List UnionOrigin := []
+  schedules : List DiscoveryAudit.ScheduleSnapshot := []
+  continuations : List DiscoveryAudit.ContinuationSnapshot := []
   deriving ToJson, FromJson
 
 /-- No second quotient build occurs in the hook. Only premises from a checked
@@ -226,7 +216,8 @@ def Snapshot.ofReport (persistent runLocal : List UnionEdge)
     {current : Value} {selection : Selection}
     (report : SelectionDependency.Report graph equality policy current selection)
     (owners : List String) (bindings : List (Value × String) := [])
-    (admissions : List (Admission × String) := []) (history : List Admission := []) : Snapshot := Id.run do
+    (admissions : List (Admission × String) := []) (history : List Admission := [])
+    (trail : DiscoveryAudit.Trail := {}) : Snapshot := Id.run do
   let positions : Std.HashMap SelectionDependency.Comparison Nat :=
     report.premises.zipIdx.foldl (fun positions (premise, index) => positions.insert premise index) {}
   let completedBranches : List CompletedBranch := (SelectionDependency.completedBranches equality current selection).flatMap
@@ -239,12 +230,14 @@ def Snapshot.ofReport (persistent runLocal : List UnionEdge)
   current := Persistence.valueToJson current
   persistent := persistent.map Generator.encode
   runLocal := runLocal.map Generator.encode
-  premises := report.premises.map Premise.encode
+  premises := report.premises.map DiscoveryAudit.ComparisonRow.encode
   owners := owners.eraseDups
   completedBranches
   admissions := admissions.filterMap fun (admission, owner) =>
     admission.snapshot? runLocal completedBranches owner
-  localOrigins := unionOrigins runLocal history }
+  localOrigins := unionOrigins runLocal history
+  schedules := trail.schedules.reverse.filterMap (·.snapshot? runLocal)
+  continuations := trail.continuations.reverse.filterMap (·.snapshot? runLocal) }
 
 def capture (receipt : Option String) (snapshot : Snapshot)
     (visible controls : List String) : IO (Option Reference) := do
@@ -328,7 +321,7 @@ def analyzeUnionOrigin (persistent runLocal : List UnionEdge) (origin : UnionOri
   pure (Json.mkObj [("generator", toJson origin.generator), ("localCount", toJson origin.localCount),
     ("status", toJson "nomination-replayed"), ("inquiry", origin.inquiry),
     ("comparisons", toJson comparisons), ("schedulingAncestry", toJson "untracked"),
-    ("patternSelectionAncestry", toJson "untracked")])
+    ("patternSelectionAncestry", toJson "untracked"), ("schedule", toJson origin.schedule)])
 
 /-- Replay the exact generator prefix observed at Match construction. Future
 local Unions cannot retroactively justify an admission comparison. Source IO
@@ -362,7 +355,96 @@ def analyzeAdmission (persistent runLocal : List UnionEdge) (branches : List Com
   pure (Json.mkObj [("owner", toJson admission.owner), ("branches", toJson admission.branches),
     ("localCount", toJson admission.localCount), ("status", toJson "replayed"),
     ("sourceChild", toJson (if child.isSome then "recorded-source-boundary" else "untracked")),
-    ("childEvidence", admission.child), ("comparisons", toJson comparisons)])
+    ("childEvidence", admission.child), ("comparisons", toJson comparisons),
+    ("schedule", toJson admission.schedule)])
+
+def decodeAll (data : Json) : Except String AllEdge := do
+  let value ← Persistence.valueFromJson 4096 data
+  let some edge := AllEdge.fromValue? value | throw "discovery trace does not name an All relation"
+  pure edge
+
+def analyzeSchedule (persistent runLocal : List UnionEdge)
+    (schedule : DiscoveryAudit.ScheduleSnapshot) : Except String Json := do
+  unless ["discovery", "terminal"].contains schedule.kind do throw "unknown scheduling observation"
+  let current ← Persistence.valueFromJson 4096 schedule.current
+  let discovery ← schedule.discovery.mapM (Persistence.valueFromJson 4096)
+  let tasks ← schedule.tasks.mapM (Persistence.valueFromJson 4096)
+  let prior ← schedule.runAll.mapM decodeAll
+  let expected := discovery.filter fun task =>
+    !HandoffRemainder.isValue task && Matcher.freshDemand current prior task
+  unless tasks == expected do throw "scheduled tasks differ from the actual discovery filter"
+  if schedule.kind == "terminal" then
+    unless discovery == [current] && tasks == [current] && prior.isEmpty &&
+        schedule.premises.isEmpty && schedule.uses.isEmpty do
+      throw "terminal scheduling changed its certified unadmitted root"
+  let pairs ← schedule.premises.mapM fun premise => do
+    unless ["decomposition", "deduplicatedChild", "completedOutcome", "advisoryOutcome"].contains premise.role do
+      throw "unknown scheduling comparison role"
+    pure (premise.role, ← Persistence.valueFromJson 4096 premise.left,
+      ← Persistence.valueFromJson 4096 premise.right, true)
+  let comparisons ← replayComparisons persistent runLocal schedule.localCount pairs
+  for use in schedule.uses do
+    let edge ← decodeAll use.relation
+    unless use.generated == prior.any (fun before => before.relation == edge.relation) do
+      throw "scheduling confused an original All with a generated continuation"
+    unless schedule.premises.any (fun premise => premise.role == "decomposition" &&
+        premise.left == Persistence.valueToJson edge.parent) do
+      throw "scheduling lost a selected All-parent comparison"
+  pure (Json.mkObj [("pass", toJson schedule.pass), ("kind", toJson schedule.kind),
+    ("localCount", toJson schedule.localCount), ("discovery", toJson schedule.discovery),
+    ("tasks", toJson schedule.tasks), ("comparisons", toJson comparisons),
+    ("uses", toJson schedule.uses), ("scope", toJson "whole-scheduling-selection"),
+    ("dependencySlice", toJson "untracked"), ("admissionAncestry", toJson "untracked")])
+
+def scheduleBinding (schedules : List DiscoveryAudit.ScheduleSnapshot)
+    (pass : Option Nat) (localCount : Nat) (demand : Json) : Except String Bool := do
+  let some pass := pass | return false
+  let some schedule := schedules.find? (·.pass == pass) | return false
+  unless schedule.localCount == localCount && schedule.tasks.contains demand do
+    throw "Match observation changed its scheduled Demand or equality epoch"
+  pure true
+
+def analyzeContinuation (persistent runLocal : List UnionEdge)
+    (schedules : List DiscoveryAudit.ScheduleSnapshot)
+    (event : DiscoveryAudit.ContinuationSnapshot) : Except String Json := do
+  unless event.localCount ≤ runLocal.length do throw "continuation equality epoch is outside the run"
+  let current ← Persistence.valueFromJson 4096 event.current
+  let edge ← decodeAll event.relation
+  let remainder := HandoffRemainder.value event.text
+  unless current == Value.text event.text && edge.parent == current &&
+      edge.children.getLast? == some remainder do
+    throw "continuation changed its external root or mandatory open remainder"
+  let positions := event.support.map (·.child)
+  unless positions.eraseDups.length == positions.length do throw "duplicate continuation child support"
+  let support ← event.support.mapM fun row => do
+    let some child := edge.children[row.child]? | throw "continuation support names a missing child"
+    let demand ← Persistence.valueFromJson 4096 row.demand
+    let work ← Persistence.valueFromJson 4096 row.work
+    let fragment ← Persistence.valueFromJson 4096 row.currentFragment
+    let past ← Persistence.valueFromJson 4096 row.pastFragment
+    unless child != remainder && demand == current && row.automatic && row.subwork && fragment == child do
+      throw "continuation child lost its actual automatic root Match"
+    let comparisons ← row.localCount.mapM fun before => do
+      unless before ≤ event.localCount do throw "continuation used a future Match observation"
+      replayComparisons persistent runLocal before [
+        ("wholeWorkIdentity", demand, work, row.wholeIdentity),
+        ("fragmentIdentity", fragment, past, row.fragmentIdentity)]
+    let scheduled ← match row.localCount with
+      | none => pure false
+      | some before => scheduleBinding schedules row.schedule before row.demand
+    if let some pass := row.schedule then
+      unless pass ≤ event.pass do throw "continuation used a future scheduled Match"
+    pure (Json.mkObj [("child", toJson row.child), ("schedule", toJson row.schedule),
+      ("localCount", toJson row.localCount), ("comparisons", toJson comparisons),
+      ("scheduling", toJson (if scheduled then "recorded-step" else "untracked")),
+      ("automaticGate", toJson "captured-production-result"),
+      ("childRoleAncestry", toJson "untracked"), ("retrieved", toJson row.retrieved)])
+  let unknown := edge.children.zipIdx.filterMap fun (child, index) =>
+    if child != remainder && !positions.contains index then some index else none
+  pure (Json.mkObj [("pass", toJson event.pass), ("localCount", toJson event.localCount),
+    ("relation", event.relation), ("status", toJson "captured-production-continuation"),
+    ("support", toJson support), ("untrackedChildren", toJson unknown),
+    ("dependencySlice", toJson "untracked")])
 
 /-- Explicit-only folds and congruence replay run outside the hook deadline.
 The result concerns selected comparisons, never whole-delivery ancestry. -/
@@ -396,7 +478,7 @@ def analyze (snapshot : Snapshot) : Except String Json := do
     let projected ← Persistence.valueFromJson 4096 branch.projectedOutcome
     let [edge] := (WorkGraph.fromValues [projected]).outcomes |
       throw "completed branch does not name an Outcome"
-    unless premises.getLast? == some (Premise.encode
+    unless premises.getLast? == some (DiscoveryAudit.ComparisonRow.encode
         ⟨.completedOutcome, edge.work, demand⟩) do
       throw "completed branch lost its terminal Outcome comparison"
     let comparisons ← branch.premises.mapM fun position =>
@@ -410,6 +492,16 @@ def analyze (snapshot : Snapshot) : Except String Json := do
   unless originIndices.eraseDups.length == originIndices.length do
     throw "local generator has duplicate origin records"
   let origins ← snapshot.localOrigins.mapM (analyzeUnionOrigin persistent runLocal)
+  let passes := snapshot.schedules.map (·.pass)
+  unless passes.eraseDups.length == passes.length do throw "duplicate scheduling observation"
+  let schedules ← snapshot.schedules.mapM (analyzeSchedule persistent runLocal)
+  let admissions ← (snapshot.admissions.zip admissions).mapM fun (record, row) => do
+    let known ← scheduleBinding snapshot.schedules record.schedule record.localCount record.demand
+    pure (row.setObjVal! "schedulingAncestry" (toJson (if known then "recorded-step" else "untracked")))
+  let origins ← (snapshot.localOrigins.zip origins).mapM fun (record, row) => do
+    let known ← scheduleBinding snapshot.schedules record.schedule record.localCount record.demand
+    pure (row.setObjVal! "schedulingAncestry" (toJson (if known then "recorded-step" else "untracked")))
+  let continuations ← snapshot.continuations.mapM (analyzeContinuation persistent runLocal snapshot.schedules)
   pure (Json.mkObj [
     ("status", toJson "partial"), ("component", toJson "selected-extraction"),
     ("scope", toJson "whole-selected-extraction-before-source-and-transport-pruning"),
@@ -424,6 +516,8 @@ def analyze (snapshot : Snapshot) : Except String Json := do
     ("sourceChildWitness", toJson "per-admission-source-boundary"),
     ("matchAdmissions", toJson admissions),
     ("continuationAncestry", toJson "untracked"),
+    ("schedulingAncestry", toJson (if schedules.isEmpty then "untracked" else "partial")),
+    ("schedulingRecords", toJson schedules), ("continuationRecords", toJson continuations),
     ("completedBranches", toJson branches),
     ("comparisons", toJson rows)])
 

@@ -526,3 +526,61 @@ token/quality adoption result is claimed.
 Raw records and independent audits: `local-origin-1/`. Frozen code, executables,
 failed initial build and all guard/native records:
 `/Users/ovm/.codex/experiments/eggshell/local-origin-20261020/implementation-1/`.
+
+
+## Actual scheduling and continuation observations included, 2026-10-20
+
+The candidate observes the already computed scheduling extraction and actual
+generated continuations. It records whole-step facts and source Match epochs
+without another extraction or quotient build. The unchanged fixed 48-hook warm
+protocol passed: every original discovery window scored, semantic completion,
+original DB body, exact publication/stdout and accepted ACK, all below 5 s.
+Both layouts still use read-only profiles; the private overlay also uses an
+OS write-protected graph. The same saved graphs, questions, MiniLM model,
+semantic cap of 4,500 ms and harness were used, with zero generation-model calls.
+
+| Sources | Source vectors | Question cache | Semantic / body | Latencies, ms |
+| --- | --- | --- | --- | --- |
+| 2 | database | fresh | 3/3 / 3/3 | 1616, 1227, 1206 |
+| 2 | database | cached | 3/3 / 3/3 | 264, 261, 260 |
+| 2 | private-overlay | fresh | 3/3 / 3/3 | 1215, 1230, 1208 |
+| 2 | private-overlay | cached | 3/3 / 3/3 | 252, 259, 251 |
+| 32 | database | fresh | 3/3 / 3/3 | 1351, 1324, 1342 |
+| 32 | database | cached | 3/3 / 3/3 | 311, 319, 323 |
+| 32 | private-overlay | fresh | 3/3 / 3/3 | 1344, 1347, 1349 |
+| 32 | private-overlay | cached | 3/3 / 3/3 | 316, 317, 313 |
+| 256 | database | fresh | 3/3 / 3/3 | 1786, 1798, 1785 |
+| 256 | database | cached | 3/3 / 3/3 | 725, 731, 743 |
+| 256 | private-overlay | fresh | 3/3 / 3/3 | 1781, 1810, 1783 |
+| 256 | private-overlay | cached | 3/3 / 3/3 | 750, 753, 757 |
+| 1024 | database | fresh | 3/3 / 3/3 | 3927, 3855, 3864 |
+| 1024 | database | cached | 3/3 / 3/3 | 2652, 2637, 2664 |
+| 1024 | private-overlay | fresh | 3/3 / 3/3 | 3774, 3791, 3792 |
+| 1024 | private-overlay | cached | 3/3 / 3/3 | 2704, 2710, 2731 |
+
+The run took 87.69 s, aggregate descendant peak 1,170,080 KiB under the
+3,500,000 KiB guard. Maximum hook latency was 3,926.995 ms. Independent
+publication/SHA/ACK verification passed all 48. All 16 frozen implementation,
+protocol and executable hashes remained unchanged. The standard full suite
+passed in 90.83 s, peak 2,783,136 KiB, and a separate daemon drained three
+remaining tickets without changing graph heads.
+
+The original 14-call native completed-control fixture passed. A partial-native
+probe did deliver the original body and record a generated continuation, but
+final reconciliation recorded completed=0 and no equality locator. Its
+inspect-equality call failed and is not counted as a final-completion pass.
+Direct offline replay of its captured production stage verified three
+scheduling steps, one continuation, two local proposers, original Match
+bindings and a later generated All use. Failed probes and an initial wrong
+stage-file invocation remain archived. See [selection-audit.md](selection-audit.md).
+
+The additional known work-first-tests mismatch remains unresolved and was not
+rerun or counted as passing. Whole-step records do not establish per-owner
+minimal scheduling dependencies, Work-pattern ancestry, independent continuation
+support gates or final leaf slices. Overall delivery ancestry remains untracked.
+These advisory fixtures do not bound large completed-snapshot cost or general
+DB-size performance. No public-main token/quality adoption claim is made.
+
+Raw records and independent audits: discovery-trace-1/. Frozen sources,
+executables, all failed and successful guard/probe records and verification:
+/Users/ovm/.codex/experiments/eggshell/discovery-trace-20261020/implementation-1/.

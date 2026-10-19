@@ -120,10 +120,53 @@ listed in `untrackedLocalOrigins`, including when no history was recorded.
 
 This component covers the entire captured run before source/transport pruning,
 so it does not claim that every available generator was used by a retained
-owner. Demand scheduling and Work-pattern selection ancestry remain untracked,
-as do continuation and final-fragment ancestry. Consequently
+owner. Scheduling now has the whole-step observations described below;
+Work-pattern selection and minimal scheduling dependencies remain untracked,
+as do complete continuation and final-fragment ancestry. Consequently
 `localUnionAncestry` and whole-delivery ancestry remain `untracked` even when
 every immediate proposer was recovered. No Phase 3 fraction is derived.
+
+## Actual scheduling and continuation observations
+
+The discovery controller emits a typed observation immediately after its
+existing extraction and before evaluating its tasks. It includes that actual
+selection's validity witness, the already generated All edges, and the exact
+ordered task filter. `ScheduleObservation.task_origin` proves that each task
+came from the extraction, is not the synthetic remainder, and passes the
+production freshness filter. The certified terminal fast path records its
+unadmitted root without another extraction.
+
+`schedulingRecords` retain whole-step positive selection comparisons and
+selected All uses. A generated use means exact structural membership in that
+step's prior continuations. Offline replay checks the task filter and equality
+comparisons using the original local-generator prefix. An admission or local
+proposer binds to its actual pass, task and prefix; a contradictory binding is
+an error, while a missing observation remains `untracked`.
+`schedulingAncestry: recorded-step` describes this binding. It does not certify
+the admission policy, Work-pattern selection or a minimal dependency slice.
+
+When production `rootContinuation?` creates an All, another typed observation
+retains that actual result and the root Matches supporting its non-remainder
+children. `rootContinuation_child_origin` proves that each such child came
+from an automatic root Match with subwork. The collector immediately joins
+its original admission prefix and scheduling pass, before later observations
+can replace that Match. Only Value references and selected facts survive the
+callback; it does not retain a quotient or reader cache.
+
+`continuationRecords` replay those original whole/fragment identity answers,
+check the root and mandatory open remainder, and reject future prefixes,
+duplicate child support or nonautomatic support. Missing support appears in
+`untrackedChildren`; missing Match epochs remain null. Retrieval-only support
+is permitted to generate open Work but supplies no Union or completion
+authority. Its automatic gate is a captured production result, not a separate
+proof of the pattern choice or original child role.
+
+These observations cover the captured run before final owner pruning. They
+do not resolve which scheduling premise or continuation was necessary for a
+surviving completed leaf. `dependencySlice`, `localUnionAncestry`,
+`continuationAncestry` and `deliveryAncestry` remain `untracked`. The existing
+optimized/reference discovery theorem also accepts the same observer on both
+sides; the new proofs pass the axiom audit without `native_decide`.
 
 The snapshot covers the **whole selected extraction before source and transport
 pruning**, alongside the owner lists that survived. It is not yet a dependency
@@ -233,3 +276,49 @@ the fixed latency run is `semantic-latency-20261019-isolated/local-origin-1/`.
 These checks made zero generation-model calls and do not establish public-main
 token/quality adoption, large completed-snapshot cost or complete delivery
 causal ancestry. The full goal remains active.
+
+## Scheduling and continuation validation (2026-10-20)
+
+The focused executable passed with real-DB production-controller cases for
+literal completion, local generators and a generated continuation used by a
+later selection. It rejects tasks absent from discovery, changed Demand/epoch
+bindings, rematching synthetic children or the remainder, changed continuation
+roots, future Match prefixes and nonautomatic child support. Removed schedules
+or child support remain explicitly unknown. A retrieval-only case records an
+open continuation without any local Union or completed use; absent Match
+epochs remain null. These cases also run in the standard full-suite command.
+
+That suite passed in 90.83 s, aggregate descendant peak 2,783,136 KiB under the
+3,500,000 KiB guard. Another daemon drained three remaining tickets to zero
+without changing any graph head. The separate original native fixture passed
+14 calls, with a maximum native hook of 1,880 ms, final completed control,
+stdout/SHA-256/ACK, recorded scheduling bindings and stale-source invalidation.
+It generated no continuation, so it is not evidence for that component.
+
+Additional partial-native probes requested an uncovered second command. The
+first two wrongly expected the whole call to be denied; one had already
+reconciled away the body, while the other delivered it as context. A third
+probe confirmed body delivery but its `inspect-equality` call failed because
+final reconciliation recorded `completed=0` and no equality locator. None of
+these probes is counted as a passing final-completion fixture; no runtime
+policy was changed for them. Direct offline replay of the third probe's
+captured production stage passed: three scheduling steps, one continuation,
+two local proposers, all supporting Match bindings and a subsequent generated
+All use. Published bytes/SHA-256 and accepted ACK agree with the actual stdout.
+This validates the captured stage before reconciliation, not final completed
+delivery ancestry.
+
+The unchanged fixed 48-hook warm protocol passed with every original discovery
+window scored, semantic completion, original DB body, independent publication
+bytes/SHA-256 and accepted ACK. Maximum hook latency was 3,927 ms, below the
+unchanged 5 s gate. All 16 frozen hashes remained unchanged; the read-only
+profile and protected-DB private-overlay conditions are included. These are
+advisory fixtures, so they do not bound large completed-snapshot cost. Full
+cell results are in [the latency record](semantic-latency-results.md).
+
+Sources and executables were frozen before the final checks. All failed
+probes, corrected raw-stage replay, guard logs and native records remain under
+`/Users/ovm/.codex/experiments/eggshell/discovery-trace-20261020/`.
+The additional known `work-first-tests` mismatch remains unresolved and was
+not rerun or counted as passing. No generation-model calls, token adoption
+comparison or complete causal-ancestry result is claimed.

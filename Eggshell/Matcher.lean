@@ -2886,6 +2886,28 @@ theorem continuation_parent {current : Value} {currentText : String}
     subst edge
     rfl
 
+theorem continuation_child_origin {current child : Value} {text : String}
+    {hits : List Match} {edge : AllEdge}
+    (created : continuation? current text hits = some edge)
+    (member : child ∈ edge.children) (different : child ≠ HandoffRemainder.value text) :
+    ∃ matched ∈ hits, matched.work.subwork = true ∧ matched.continuationWork = child := by
+  simp only [continuation?] at created
+  split at created <;> try contradiction
+  split at created <;> try contradiction
+  split at created <;> try contradiction
+  next nonempty excludes =>
+    have same := Option.some.inj created
+    subst edge
+    rcases List.mem_append.mp member with original | remainder
+    · have original := (List.mem_filter.mp original).1
+      have original := (HashDistinct.mem child _).mp original
+      obtain ⟨matched, present, emitted⟩ := List.mem_filterMap.mp original
+      split at emitted
+      · rename_i accepted
+        exact ⟨matched, present, (Bool.and_eq_true_iff.mp accepted).2, Option.some.inj emitted⟩
+      · contradiction
+    · exact False.elim (different (List.mem_singleton.mp remainder))
+
 structure Discovery where
   view : RunView
   hits : List Match
@@ -3006,6 +3028,19 @@ theorem rootContinuation_parent {graph : WorkGraph} {equality : Equality}
   split at created <;> try contradiction
   next => exact continuation_parent created
 
+theorem rootContinuation_child_origin {graph : WorkGraph} {equality : Equality}
+    {current child : Value} {text : String} {hits : List Match} {edge : AllEdge}
+    (created : rootContinuation? graph equality current text hits = some edge)
+    (member : child ∈ edge.children) (different : child ≠ HandoffRemainder.value text) :
+    ∃ matched ∈ hits, matched.demand = current ∧ matched.automatic = true ∧
+      matched.work.subwork = true ∧ matched.continuationWork = child := by
+  unfold rootContinuation? at created
+  split at created <;> try contradiction
+  obtain ⟨matched, present, subwork, same⟩ := continuation_child_origin created member different
+  have filtered := List.mem_filter.mp present
+  have accepted := Bool.and_eq_true_iff.mp filtered.2
+  exact ⟨matched, filtered.1, beq_iff_eq.mp accepted.1, accepted.2, subwork, same⟩
+
 def addContinuations (previous proposed : List AllEdge) : List AllEdge :=
   proposed.foldl (fun accepted edge =>
     if accepted.any (fun existing => existing.relation == edge.relation) then accepted
@@ -3081,6 +3116,52 @@ def extractAt (view : RunView) (policy : OutcomePolicy) (current : Value)
   | none => view.extractWith policy current
   | some fuel => Extract.runWithPolicyFuel view.graph view.quotient.toEquality policy fuel current
 
+theorem extractAt_sound (view : RunView) (policy : OutcomePolicy) (current : Value)
+    (fuel : Option Nat) :
+    (extractAt view policy current fuel).selection.validFor view.graph
+      view.quotient.toEquality policy current = true := by
+  cases fuel with
+  | none => exact Extract.runWithPolicy_sound _ _ _ _
+  | some fuel => exact Extract.runWithPolicyFuel_sound _ _ _ _ _
+
+/-- Already computed scheduling state. Observers cannot substitute another
+selection or a second solver result for the tasks passed to the matcher. -/
+structure ScheduleObservation where
+  pass : Nat
+  view : RunView
+  current : Value
+  policy : OutcomePolicy
+  extraction : Extraction
+  valid : extraction.selection.validFor view.graph view.quotient.toEquality policy current = true
+  runAll : List AllEdge
+  tasks : List Value
+  exactTasks : tasks = extraction.discovery.filter (fun task =>
+    !HandoffRemainder.isValue task && freshDemand current runAll task)
+
+theorem ScheduleObservation.task_origin (event : ScheduleObservation) {task : Value}
+    (present : task ∈ event.tasks) :
+    task ∈ event.extraction.discovery ∧ HandoffRemainder.isValue task = false ∧
+      freshDemand event.current event.runAll task = true := by
+  rw [event.exactTasks] at present
+  have filtered := List.mem_filter.mp present
+  have accepted := Bool.and_eq_true_iff.mp filtered.2
+  exact ⟨filtered.1, by simpa using accepted.1, accepted.2⟩
+
+structure ContinuationObservation where
+  pass : Nat
+  graph : WorkGraph
+  quotient : Quotient
+  localUnions : List UnionEdge
+  current : Value
+  text : String
+  hits : List Match
+  edge : AllEdge
+  created : rootContinuation? graph quotient.toEquality current text hits = some edge
+
+inductive DiscoveryTrace where
+  | scheduled (observation : ScheduleObservation)
+  | continued (observation : ContinuationObservation)
+
 /-- One discovery controller owns both the reference calculation and lazy IO.
 The loader may extend the original-owner projection only at a demanded match
 boundary. It cannot replace the Union, continuation or extraction rules. -/
@@ -3096,7 +3177,8 @@ def discoverUsingM? {m : Type → Type} [Monad m] {σ : Type}
     (recordPlan : List Value → RunView → Option QuotientBuilder.CongruenceMemo.Entry → m _root_.Unit :=
       fun _ _ _ => pure ())
     (sourceAll : σ → List AllEdge := fun _ => all)
-    (prepare : σ → List UnionEdge → List AllEdge → m σ := fun state _ _ => pure state) :
+    (prepare : σ → List UnionEdge → List AllEdge → m σ := fun state _ _ => pure state)
+    (recordTrace : DiscoveryTrace → m _root_.Unit := fun _ => pure ()) :
     m (Option Discovery) := do
   let sourceGraph := fun state : σ => ({ all := sourceAll state, outcomes := sourceOwners state } : WorkGraph)
   let current := Value.text currentText
@@ -3118,9 +3200,14 @@ def discoverUsingM? {m : Type → Type} [Monad m] {σ : Type}
         recordPlan currentRoots view produced.plan
         recordView currentRoots view
         let policy := OutcomePolicy.admitted (admissions accumulated)
-        let demanded := (extractAt view policy current (depth state graph)).discovery
+        let extraction := extractAt view policy current (depth state graph)
+        let demanded := extraction.discovery
         let matchable := demanded.filter fun task =>
           !HandoffRemainder.isValue task && freshDemand current runAll task
+        recordTrace (.scheduled {
+          pass := passes, view, current, policy, extraction
+          valid := extractAt_sound view policy current (depth state graph)
+          runAll, tasks := matchable, exactTasks := rfl })
         let (state, passHits) ← evaluate state view matchable
         /-
         Retrieval-only mode keeps the identical candidate and graph projection
@@ -3137,10 +3224,14 @@ def discoverUsingM? {m : Type → Type} [Monad m] {σ : Type}
             simpa only [List.append_assoc] using previous.append? proposed
           saturate nextViews fuel (passes + 1) state (localUnions ++ proposed) runAll accumulated nextIndex
         else
-          let proposedAll := match rootContinuation? graph view.quotient.toEquality
+          let proposedAll ← match created : rootContinuation? graph view.quotient.toEquality
               current currentText accumulated with
-            | some edge => [edge]
-            | none => []
+            | some edge => do
+                recordTrace (.continued {
+                  pass := passes, graph, quotient := view.quotient, localUnions
+                  current, text := currentText, hits := accumulated, edge, created })
+                pure [edge]
+            | none => pure []
           /-
           Only an All that connects another Work subtree can expose new Demand.
           The remainder-only frame is installed in the final view without
@@ -3182,12 +3273,13 @@ theorem discoverUsingM_views_exact {m : Type → Type} [Monad m] {σ : Type}
     (iterations : Nat) (enableLocalUnion : Bool) (views : IncrementalQuotient.ViewProvider)
     (recordView : List Value → RunView → m _root_.Unit := fun _ _ => pure ())
     (sourceAll : σ → List AllEdge := fun _ => all)
-    (prepare : σ → List UnionEdge → List AllEdge → m σ := fun state _ _ => pure state) :
+    (prepare : σ → List UnionEdge → List AllEdge → m σ := fun state _ _ => pure state)
+    (recordTrace : DiscoveryTrace → m _root_.Unit := fun _ => pure ()) :
     discoverUsingM? initial all sourceOwners storedValues depth evaluate inquiry persistent
-      currentText iterations enableLocalUnion views recordView (fun _ _ _ => pure ()) sourceAll prepare =
+      currentText iterations enableLocalUnion views recordView (fun _ _ _ => pure ()) sourceAll prepare recordTrace =
     discoverUsingM? initial all sourceOwners storedValues depth evaluate inquiry persistent
       currentText iterations enableLocalUnion IncrementalQuotient.ViewProvider.reference recordView
-        (fun _ _ _ => pure ()) sourceAll prepare := by
+        (fun _ _ _ => pure ()) sourceAll prepare recordTrace := by
   unfold discoverUsingM?
   let sourceGraph := fun state : σ => ({all := sourceAll state, outcomes := sourceOwners state} : WorkGraph)
   let current := Value.text currentText
@@ -3198,10 +3290,10 @@ theorem discoverUsingM_views_exact {m : Type → Type} [Monad m] {σ : Type}
       (runAll : List AllEdge) (accumulated : List Match)
       (index : Option (QuotientBuilder.AtomQuotient.Index (persistent ++ localUnions))) :
       discoverUsingM?.saturate depth evaluate inquiry persistent currentText enableLocalUnion
-        recordView (fun _ _ _ => pure ()) prepare
+        recordView (fun _ _ _ => pure ()) prepare recordTrace
         sourceGraph current roots views fuel passes state localUnions runAll accumulated index =
       discoverUsingM?.saturate depth evaluate inquiry persistent currentText enableLocalUnion
-        recordView (fun _ _ _ => pure ()) prepare sourceGraph current roots
+        recordView (fun _ _ _ => pure ()) prepare recordTrace sourceGraph current roots
         IncrementalQuotient.ViewProvider.reference fuel passes state localUnions runAll accumulated index := by
     induction fuel generalizing views passes state localUnions runAll accumulated index with
     | zero => rfl
@@ -3273,8 +3365,14 @@ theorem TerminalRoot.discovery_exact (normalize : Normalizer)
     initial, admissions, RunView.extractWith, root, one,
     Extraction.fromSelection, Extraction.finalize, Selection.openWork,
     freshDemand, terminal.fresh, matchedExact, terminal.unionsUnchanged,
-    terminal.ownersUnchanged, terminal.continuationUnchanged,
+    terminal.ownersUnchanged,
     addContinuations, TerminalRoot.discovery]
+  split
+  · rename_i edge created
+    simp [projectEmpty, root, Extraction.fromSelection, Extraction.finalize,
+      Selection.openWork, one, terminal.fresh, matchedExact,
+      terminal.continuationUnchanged] at created
+  · rfl
 
 theorem discoverInUsing_exact (normalize : Normalizer) (demands : DemandProvider normalize)
     (demandExact : demands = CompiledDemand.make normalize) (cover : CoverageProvider)

@@ -86,8 +86,22 @@ Local generator records now retain the actual proposing Match and its earlier
 generator prefix. Offline replay checks the proposal gate without using the
 generator itself or later siblings. `newLocalUnions_origin` proves that
 production deduplication retains only input Match proposals, with the original
-Inquiry scope. These are immediate proposer facts; Demand scheduling and
-Work-pattern selection remain untracked, so local causal ancestry is not closed.
+Inquiry scope. These are immediate proposer facts. Whole-step scheduling
+observations now bind the actual pass, Demand and equality prefix to each
+captured proposer; Work-pattern selection and minimal scheduling dependencies
+remain untracked, so local causal ancestry is not closed.
+
+The controller observes its already computed scheduling selection and actual
+generated continuations, rather than reconstructing them from the final
+extraction. `ScheduleObservation.task_origin` proves the production task
+filter's origin. `rootContinuation_child_origin` proves that a generated
+non-remainder child comes from an automatic root Match with subwork. Offline
+records preserve the Match's earlier comparison epoch and scheduling pass;
+future or contradictory bindings are rejected, and missing facts stay unknown.
+Retrieval-only continuations remain open Work without equality or completion
+authority. These are whole-step facts, not minimal causal slices, and the
+automatic gate and child role of continuation support are not independently
+reconstructed. See [the receipt scope](selection-audit.md).
 
 ## Validation and remaining work
 
@@ -95,16 +109,17 @@ The focused executable runs the real kernel and native matcher selector. It
 covers transitive explicit paths, Semantic congruence, Exact barriers, removed
 generators, corrected saved plans, mixed Atom/Apply generators, unresolved
 local ancestry, selected child deduplication, isolated completed branches,
-admission epochs, original-child congruence, rejected invalid owner selections
-and a native completion selection. These are deterministic regression fixtures,
+admission epochs, original-child congruence, rejected invalid owner selections,
+actual scheduling bindings, generated continuation support, synthetic task
+filtering, and a native completion selection. These are deterministic regression fixtures,
 not paper benchmarks. New proof code uses no `native_decide` or admitted axiom.
 The focused groups run in the standard full suite as well. Retained-work
 warnings are separate from equality classification.
 
 The selection report is one required component. It does **not** establish:
 
-- the Demand scheduling and Work-pattern choices that exposed each local
-  Union proposer;
+- a minimal scheduling dependency slice, its admission policy, and the
+  Work-pattern choices that exposed each local Union proposer;
 - independent verification of the source IO's complete Value-to-node binding;
 - the causal ancestry of generated All continuations and local Unions;
 - which final completed leaf retains a comparison after source checks and
