@@ -920,6 +920,29 @@ the unchanged frozen driver resumes only the remaining six calls, in the
 original order. `interim-r0.json` retains the provisional result; the full three
 repetitions, other adoption cells and the public delivery discrepancy stay open.
 
+All nine fixed calls have now completed, with no model turn resubmitted:
+
+| Repetition | Fresh tokens | Parent tokens | Readiness tokens | Parent saving vs fresh | Readiness saving vs fresh | Readiness increase vs parent |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 4,661,871 | 1,746,693 | 1,976,254 | 62.5% | 57.6% | 13.1% |
+| 1 | 3,345,848 | 1,679,536 | 2,189,581 | 49.8% | 34.6% | 30.4% |
+| 2 | 3,566,951 | 1,056,259 | 1,377,704 | 70.4% | 61.4% | 30.4% |
+
+The readiness wait candidate is rejected: inclusive tokens increase in all
+three repetitions. All nine final usages are known, totalling 21,600,697 tokens;
+there are no API errors or model reroutes, no new seed acquisition, and all hooks
+finish within 30 seconds. The resumed six-call guard peaks at 2,486,256 KiB.
+`analysis-current.json` retains every row and its raw-record hashes. Answer
+quality remains unaccepted. This topic-3 first-lap diagnostic compares isolated
+modern candidates; it does not compare public-main tokens or establish recovery.
+
+Generation is closed. The next priority is the existing warmed public-main
+delivery comparison, using the same saved graph, question and delivery state.
+Initial packets already differ on all three topics, and the controlled native
+continuation demand above also differs. A new question/native routing experiment
+is held aside; neither its build nor native checks authorizes another token
+cohort or production adoption before the public delivery discrepancy is resolved.
+
 `tools/readme_benchmark.py` prepares private native environments and captures
 one real turn. `tools/readme_sequence.py --stage N` runs one of the six frozen
 stages and prepares its common next checkpoint. It validates matching input
