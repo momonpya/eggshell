@@ -550,6 +550,75 @@ experiment root. Restore it before resuming those fixtures. This is offline
 storage recovery, not a production compaction change or a 50,000-window gate.
 README model inputs are unaffected.
 
+## Public-equivalent initial-delivery control on topic 3
+
+The first-segment diagnostic uses the existing modern DB cache, warm, deadlines
+and native harness. It is isolated and never proposed as a production repair.
+Warm and repeat from independent private roots confirm all 2,456 windows valid,
+with zero requested encodes and unchanged authoritative publication. Its native
+initial preflight reproduces the warmed public text in 11,155 ms. The fixed
+three-call cohort restores the same prepared after-topic-2 graph before each
+call, with the same question, source and Luna/xhigh settings. The three fresh
+references are reused. No candidate output enters the common history.
+
+| Repetition | Fresh total | Diagnostic total | Reduction vs fresh | Maximum hook |
+| --- | ---: | ---: | ---: | ---: |
+| 0 | 4,309,908 | 1,368,379 | 68.3% | 7,149 ms |
+| 1 | 2,306,333 | 2,255,083 | 2.2% | 6,786 ms |
+| 2 | 5,945,537 | 2,324,915 | 60.9% | 7,096 ms |
+
+All three actual initial bodies equal warmed public SHA-256
+`8c38292d58d776a23d9763a20c96cecb95ecb7d913126852404f1da33f94ac74`.
+This does not prove that subsequent hook bodies match public. It also does not
+establish recovered savings: matching the initial public packet is insufficient
+in this cohort, and returning to first-segment scoring is not an adopted repair.
+The other initial public/candidate differences remain real. Do not pool this
+diagnostic with centroid results to describe a single implementation's lap.
+
+The cohort reports exactly 5,948,377 new inclusive tokens, with cached input
+included, no errors, reroutes, failures or resubmissions and no new seed cost.
+All hooks finish within 30 seconds; maximum aggregate RSS is 2,335,328 KiB,
+without a guard trigger. The repaired capture transport and runner hashes are
+frozen for all three calls. Earlier fresh/treatment records have different
+capture hashes; this is a qualified diagnosis, not an adoption comparison under
+an identical harness. These real traces have maximum response size 123,565
+bytes and do not themselves exercise the new large-response limit.
+
+The same static source criteria were frozen before these three calls. The
+third answer incorrectly says later `-S` or `-c` overrides `-fsyntax-only`;
+`getFinalPhase` selects Compile before Backend/Assemble independently of their
+relative argument order. The second answer also puts config processing before
+ordinary argument parsing, contrary to `BuildCompilation`. Other positional
+`-x` and HLSL-scope qualifications remain. No independent or executable LLVM
+quality acceptance is recorded. The control remains unadopted.
+
+Continuation audit observes 11/19/19 executed commands, 2/7/5 pre-tool incomplete
+notices and 5/9/7 numerical failures with missing durable windows. Thus a warm
+58-document initial publication does not establish readiness for every later
+publication. The next diagnostic uses retained publication parent heads and
+receipts to compare continuation selection/readiness with public behavior,
+without adding another retrieval policy or more model calls first. Exact
+continuation parity is still unverified.
+
+A separate no-model packet audit classifies explicit stored Work prefixes.
+Public and centroid each deliver one investigation answer and 22 Bash
+observations. The answer occupies 8.6% versus 6.7% of rendered result-part bytes;
+these include captions and provenance and are **not token savings** or a
+content-only ratio. This topic does not support the hypothesis that historical
+answers crowded out observations. Owners and original excerpts change instead.
+The complete-window-order packet also contains a stored `update_plan` operation.
+Full graphs without excerpt contexts are counted separately from fragment
+characters. Both initial parser assumptions that failed are retained with the
+corrected diagnostic.
+
+Records are under
+`/Users/ovm/.codex/experiments/eggshell/readme-public-equivalent-20261021/`:
+`results/topic3-diagnostic.json`, `topic3-cohort-accounting.json`,
+`source-review.json`, `all-three-native-audit.json`, `summary.json`, and
+`packet-composition/result.json`. The protocol has generation disabled and an
+empty schedule. Topic 3 diagnosis, retained use, overall quality and the full
+practicality/paper goal remain open.
+
 ## Execution
 
 `tools/readme_benchmark.py` prepares private native environments and captures
