@@ -142,6 +142,21 @@ def run(args):
             rendered = discovery_work_candidate.handoff(rendered)
             components.append(dict(kind='exact-work-and-child-projections',
                 sourceSha256=sha(Path(discovery_work_candidate.__file__))))
+        if args.match_candidate:
+            import discovery_match_candidate
+            matcher = checkout / 'Eggshell/Matcher.lean'
+            matcher.write_text(discovery_match_candidate.matcher(matcher.read_text()))
+            helpers = {}
+            for name in discovery_match_candidate.HELPERS:
+                helper_source = Path(__file__).with_name(name)
+                shutil.copy2(helper_source, checkout / 'tools' / name)
+                helpers['tools/' + name] = sha(helper_source)
+            lakefile = checkout / 'lakefile.lean'
+            lakefile.write_text(lakefile.read_text() + discovery_match_candidate.TARGETS)
+            components.append(dict(kind='exact-latest-match-override',
+                sourceSha256=sha(Path(discovery_match_candidate.__file__)),
+                baselineMatcherSha256=sha(original / 'Eggshell/Matcher.lean'),
+                matcherSha256=sha(matcher), helpers=helpers))
         if components:
             candidate = dict(components=components, handoffSha256=hashlib.sha256(rendered.encode()).hexdigest())
         handoff.write_text(instrument(rendered))
@@ -160,10 +175,13 @@ def run(args):
         config = output / 'empty.toml'
         config.write_text('default = "empty"\nsemantic_matcher = false\n[profiles.empty]\nread = []\n')
         env = environment(output / 'data', config, args.prefix.resolve())
-        targets = ['lexical_scale_profile'] + (['discovery_owner_tests'] if args.owner_candidate else [])
+        targets = (['lexical_scale_profile'] + (['discovery_owner_tests'] if args.owner_candidate else [])
+                   + (['keyed_override_tests'] if args.match_candidate else []))
         execute(['lake', '--no-cache', 'build'] + targets, output / 'build', env, checkout, timeout=600)
         if args.owner_candidate:
             execute([checkout / '.lake/build/bin/discovery_owner_tests'], output / 'owner-tests', env, checkout)
+        if args.match_candidate:
+            execute([checkout / '.lake/build/bin/keyed_override_tests'], output / 'match-tests', env, checkout)
         fixture = next(row for row in manifest['fixtures'] if row['label'] == '10000')
         database = scale / 'prepared/10000/source.egg'
         before = json.loads((database.parent / 'prepared.json').read_text())['files']
@@ -186,10 +204,14 @@ def run(args):
             raise ValueError('Both known-first and lexical discovery measurements are required')
         if any(sha(original / name) != digest for name, digest in manifest['overlays'].items()):
             raise ValueError('Instrumentation changed a qualified source overlay')
+        if args.match_candidate and (sha(original / 'Eggshell/Matcher.lean') != components[-1]['baselineMatcherSha256']
+                or sha(checkout / 'Eggshell/Matcher.lean') != components[-1]['matcherSha256']
+                or any(sha(checkout / name) != digest for name, digest in components[-1]['helpers'].items())):
+            raise ValueError('The exact Match implementation or baseline changed during inspection')
         save(output / 'result.json', dict(passed=True, exactHandoff=True, profile=stages,
             elapsedMs=result['elapsedMs'], timing=timing, productionAdoption=False,
             generationModelCalls=0, newNativeHooks=0, instrumentationOverheadIncluded=True,
-            candidate=candidate))
+            candidate=candidate, compiledHelperSha256=sha(checkout / '.lake/build/bin/lexical_scale_profile')))
         print(json.dumps(dict(passed=True, elapsedMs=result['elapsedMs'], profile=stages)), flush=True)
 
 
@@ -203,6 +225,8 @@ def main():
         help='Inspect the isolated ordinal-tree owner table and its native boundary checks')
     parser.add_argument('--work-candidate', action='store_true',
         help='Inspect exact child-demand deduplication and topology-only Work projection')
+    parser.add_argument('--match-candidate', action='store_true',
+        help='Inspect the proved latest-Match override compiler rewrite')
     args = parser.parse_args()
     try:
         run(args)

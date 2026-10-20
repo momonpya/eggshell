@@ -138,6 +138,19 @@ Work/子demandの重複走査を除き、射影の完全一致定理を保った
 既存addMatchesの全件filter反復を、正確なkey・最新Match・順序・既存重複の意味を保って
 整理する。その後、意味検索の全順位処理とfocusのwarm対象を直して固定ゲートへ戻る。
 詳細はdocs/discovery-native.md。通常版・採用条件・元の固定60件は変更しない。
+Matchの重複keyを維持した汎用overrideを隔離し、任意の既存列/追加列で元foldと完全一致する
+定理を証明した。最新のMatch本体・順序・更新されない既存重複を保ち、単一探索のhash集合と
+末尾再帰で処理する。通常/全衝突keyの14,322比較と2万更新がnativeで成功した。
+元のaddMatches定義はkernelに保ち、証明済みcsimpで実行を置換する。実際のCにあるdiscovery
+saturationの高速版呼出しを確認し、新3定理にsorry/native_decide由来の公理追加はない。
+同じ1万窓の全Handoff一致は19.427秒。計測を外した全回帰97.304秒・ContractAudit buildが成功し、
+索引3ticket回収、事前head不変・両終了exit 0を確認した。資格確認は最大3,210,208 KiB、guard作動なし。
+さらに共通warm済み1万窓を2配置/質問fresh・cachedの4実hookで確認した。全件が元本文、
+未完了状態表示、stdout/hash/期限内flush/offer受領/ACKを保持し、24.903〜25.548秒だった。
+この代表4件では通知だけの配送を解消したが、意味検索は全件4.5秒で時間切れ、5秒ゲート0/4。
+観測された採点prefixを全件完了とは扱わない。元の固定60件は失敗のまま保持する。
+詳細はdocs/match-override-native.md。入力準備/数値cache/全順位、Work照合とfocus warmを続けて
+改善し、全ゲートを再計測してから品質/総トークンの採用比較へ進む。本体には未採用。
 profileは106.919秒・最大2,931,008 KiB、候補build/診断は74.956秒・最大2,965,280 KiBで、
 guard作動なし。観測によるoverheadを含み、固定hookの追加測定や採用比較とは数えない。
 24.2秒は完了時間ではなく打切り値であり、窓数比例の根拠としない。

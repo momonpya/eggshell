@@ -17,6 +17,7 @@ MODULES = {
     'exact-depth-relation-membership': 'discovery_depth_candidate',
     'publication-ordinal-owner-tree': 'discovery_owner_candidate',
     'exact-work-and-child-projections': 'discovery_work_candidate',
+    'exact-latest-match-override': 'discovery_match_candidate',
 }
 
 
@@ -76,12 +77,26 @@ def run(args):
             or any(sha(original / name) != digest for name, digest in baseline['overlays'].items())):
         raise ValueError('The exact profile or qualified input changed')
     rendered = (original / 'Eggshell/Handoff.lean').read_text()
+    matcher_rendered = None
+    match_module = None
     components = manifest['candidate']['components']
     for component in components:
         module = importlib.import_module(MODULES[component['kind']])
         if sha(Path(module.__file__)) != component['sourceSha256']:
             raise ValueError('A candidate source changed after its profile')
-        rendered = module.handoff(rendered)
+        if component['kind'] == 'exact-latest-match-override':
+            if sha(original / 'Eggshell/Matcher.lean') != component['baselineMatcherSha256']:
+                raise ValueError('The reference semantic kernel changed')
+            matcher_rendered = module.matcher((original / 'Eggshell/Matcher.lean').read_text())
+            import hashlib
+            if hashlib.sha256(matcher_rendered.encode()).hexdigest() != component['matcherSha256']:
+                raise ValueError('The semantic kernel overlay cannot be reconstructed exactly')
+            for name, digest in component['helpers'].items():
+                if sha(source / name) != digest:
+                    raise ValueError('A proof/check source changed after inspection')
+            match_module = module
+        else:
+            rendered = module.handoff(rendered)
     import hashlib
     if hashlib.sha256(rendered.encode()).hexdigest() != manifest['candidate']['handoffSha256']:
         raise ValueError('The uninstrumented candidate cannot be reconstructed exactly')
@@ -98,6 +113,11 @@ def run(args):
     lakefile = checkout / 'lakefile.lean'
     lakefile.write_text(lakefile.read_text() +
         '\nlean_exe discovery_owner_tests where\n  root := `tools.DiscoveryOwnerTests\n')
+    if matcher_rendered is not None:
+        (checkout / 'Eggshell/Matcher.lean').write_text(matcher_rendered)
+        for name in match_module.HELPERS:
+            shutil.copy2(source / 'tools' / name, checkout / 'tools' / name)
+        lakefile.write_text(lakefile.read_text() + match_module.TARGETS)
     frozen = sources(checkout)
     cache_record = None
     if args.build_cache is not None:
@@ -122,10 +142,17 @@ def run(args):
     config = output / 'empty.toml'
     config.write_text('default = "empty"\nsemantic_matcher = false\n[profiles.empty]\nread = []\n')
     data = output / 'data'; env = environment(data, config, args.prefix.resolve())
-    execute(['lake', '--no-cache', 'build', 'eggshell', 'eggshell_tests', 'discovery_owner_tests',
-             'Eggshell.ContractAudit'], output / 'build', env, checkout, timeout=600)
+    targets = ['eggshell', 'eggshell_tests', 'discovery_owner_tests', 'Eggshell.ContractAudit']
+    if match_module is not None:
+        targets.append('keyed_override_tests')
+    execute(['lake', '--no-cache', 'build'] + targets, output / 'build', env, checkout, timeout=600)
     owner_raw, owner_timing = execute([checkout / '.lake/build/bin/discovery_owner_tests'],
                                     output / 'owner-tests', env, checkout)
+    match_checks = None
+    if match_module is not None:
+        raw, timing = execute([checkout / '.lake/build/bin/keyed_override_tests'],
+                             output / 'match-tests', env, checkout)
+        match_checks = dict(result=json.loads(raw), timing=timing)
     # The daemon deliberately attaches an explicit environment config over the
     # hook payload. Each native fixture supplies its own config in that payload.
     regression_env = dict(env)
@@ -139,6 +166,7 @@ def run(args):
     save(output / 'result.json', dict(passed=True, instrumentation=False,
         candidateSha256=sha(checkout / '.lake/build/bin/eggshell'),
         ownerChecks=json.loads(owner_raw), ownerTiming=owner_timing, regression=regression,
+        matchChecks=match_checks,
         indexRecovery=recovery, sourcesUnchanged=True, ordinaryRuntimeUnchanged=True,
         generationModelCalls=0, productionAdoption=False))
     print(json.dumps(dict(passed=True, checkout=str(checkout), regressionMs=regression['elapsedMs'],
