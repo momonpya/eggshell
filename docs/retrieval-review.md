@@ -120,6 +120,8 @@ The subsequent [isolated native index candidate](lexical-index-native.md)
 connects the policy to complete derived postings, warm/doctor, both storage
 layouts, original-body fallback and DB-owned lexical maintenance. The ordinary
 runtime is unchanged; matched answer-quality/token evaluation is still pending.
+The [combined native candidate](retrieval-combined-native.md) now validates both
+paths together and records the subsequent segment-count/length/control review.
 
 ## Expanded gate and remaining order
 

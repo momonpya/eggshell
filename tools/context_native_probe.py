@@ -97,12 +97,28 @@ def run(args):
     original_prefix=args.prefix.resolve()
     config_file=output/'seed.toml';seed_data=output/'seed-data'
     env=environment(seed_data,config_file,original_prefix)
-    raw,_=execute([helper,'prepare',output/'seed'],output/'prepare',env,output)
-    seed=json.loads(raw);database=Path(seed['database']);original_graph=graph_files(database)
+    prior_fixture=args.fixture.resolve() if args.fixture else None
+    fixture_tree=None
+    if prior_fixture:
+        original_db=prior_fixture/'seed/source.egg'
+        fixture_tree=tree(original_db)
+        seed=json.loads((prior_fixture/'prepare/stdout').read_bytes())
+        (output/'seed').mkdir()
+        database=output/'seed/source.egg'
+        subprocess.run(['/bin/cp','-cpR',str(original_db),str(database)],check=True,timeout=30)
+        if tree(database)!=fixture_tree:
+            raise ValueError('The reused legacy fixture changed while copying')
+        seed['database']=str(database)
+        save(output/'reused-fixture.json',dict(source=str(prior_fixture),files=fixture_tree,seed=seed))
+    else:
+        raw,_=execute([helper,'prepare',output/'seed'],output/'prepare',env,output)
+        seed=json.loads(raw);database=Path(seed['database'])
+    original_graph=graph_files(database)
     config(config_file,ordinary,database,True)
     raw,_=execute([ordinary,'egg','warm','source'],output/'legacy-warm',env,output)
     legacy=json.loads(raw)['databases'][0]
-    if legacy['after']['valid']!=seed['windows'] or legacy['requested']!=seed['windows']:
+    expected_requests=0 if prior_fixture else seed['windows']
+    if legacy['after']['valid']!=seed['windows'] or legacy['requested']!=expected_requests:
         raise ValueError('The common source snapshot was not fully warm under the ordinary provider')
     if graph_files(database)!=original_graph:
         raise ValueError('Legacy warming changed the saved graph')
@@ -120,6 +136,8 @@ def run(args):
         old=doctor(raw)
         if old['state']!='cold' or old['coverage']['missing']!=seed['windows']:
             raise ValueError('Legacy single-vector files falsely certified complete context coverage')
+        if args.indexed_lexical and old['lexical']['ready']:
+            raise ValueError('Legacy retrieval postings falsely certified the new grammar')
         if layout=='private-overlay':
             protection=protected_databases([copied])
         else:
@@ -130,14 +148,20 @@ def run(args):
             warmed=json.loads(raw)['databases'][0]
             if warmed['requested']!=seed['windows'] or warmed['after']['input']['vectors']<=seed['windows']:
                 raise ValueError('Candidate warming did not rebuild every complete original window')
+            if args.indexed_lexical and warmed['lexical']['added']!=seed['documents']:
+                raise ValueError('Combined warm omitted original lexical owners')
             raw,_=execute([binary,'egg','warm','source'],cell/'warm-again',env,cell)
             repeated=json.loads(raw)['databases'][0]
             if repeated['requested'] or repeated['batches']:
                 raise ValueError('A warm repeated candidate started indexing again')
+            if args.indexed_lexical and (repeated['lexical']['added'] or repeated['lexical']['hydrated']):
+                raise ValueError('Combined repeated warm rebuilt the lexical corpus')
             raw,_=execute([binary,'egg','doctor'],cell/'doctor-warm',env,cell)
             inspected=doctor(raw)
             if inspected['state']!='warm' or inspected['coverage']['valid']!=seed['windows']:
                 raise ValueError('Doctor did not report complete candidate coverage')
+            if args.indexed_lexical and not inspected['lexical']['ready']:
+                raise ValueError('Combined doctor certified warm without complete lexical postings')
             config(config_file,binary,copied,False)
             # Both healthy deliveries are read-only; primary writes finish
             # before protection, while the overlay warms the protected DB.
@@ -190,6 +214,8 @@ def run(args):
         raise ValueError('No private complete-context question records were observed')
     if tree(database)!=graph_saved or any(sha(Path(p))!=v for p,v in frozen.items()):
         raise ValueError('Trials changed their common source or executable')
+    if prior_fixture and tree(prior_fixture/'seed/source.egg')!=fixture_tree:
+        raise ValueError('The original legacy fixture was modified')
     save(output/'result.json',dict(passed=True,layouts=results,sourceGraph=original_graph,
         sourceSnapshotUnchanged=True,privateQueryRecords=query_records,
         generationModelCalls=0,productionAdoption=False))
@@ -200,6 +226,8 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ['source','build','prefix','output']:
         parser.add_argument('--'+name,type=Path,required=True)
+    parser.add_argument('--fixture',type=Path,help='Reuse the exact saved legacy seed of an earlier probe')
+    parser.add_argument('--indexed-lexical',action='store_true',help='Require complete dictionary-free lexical preparation too')
     args=parser.parse_args()
     try:
         run(args)

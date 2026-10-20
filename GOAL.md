@@ -65,8 +65,25 @@ DB ticketが残り、保存チャット削除後の別daemonが回収し、事�
 準備wrapperを使わず、既存の一致・順位・拒否・所有権assertionを維持した。
 回帰後の残り3ticketは修正した親process回収順のハーネスを通して別daemonで0件となり、
 事前記録したhead hashの不変と、終了CLI/daemon両方のexit 0を確認した。
-数値/字句両候補の結合、1万/5万窓の固定ゲート、最新公開mainとの総トークン/品質採用比較と
-productionへの接続は未完了。
+数値/字句両候補を同じ隔離native版へ結合した。以前と同じ旧保存DBを再利用し、両索引の
+cold検出・warm・再実行0件・OS書込禁止下の意味検索/元本文/stdout/hash/ACKを確認した。
+2配置の初回2,004.762/2,011.161ms、別チャットの質問再利用308.859/298.101ms。
+pooling変更時もpendingと字句本文を718.982msで配送。16件の字句経路も結合版で成功し、
+全回帰は101.55秒・最大2,932,256 KiBで成功。残り3ticketは別daemonで回収し、事前保存した
+head hash不変・終了CLI/daemon両方のexit 0を確認した。詳細はdocs/retrieval-combined-native.md。
+追加レビューの最大値バイアスを固定した無関係文1,536組で計測した。同じquery vectorと
+source bundleの先頭vectorを基準に364組で上昇、最大+0.098872。0.38を超えた較正側1件を
+保持し、質問topicを分けた検証側768組は現行/候補とも0件。較正側だけのQ99=0.325190は
+検証側1件を通す。正例/再現率のlabelはなく、一般的な誤推薦率・閾値採用の証拠とはしない。
+閾値0.38と全文字入力を維持する。類似度対照は既存fixtureで実unionが通常1/対照3、
+completedが0/1である一方、実課題の効果・完全な配送由来は未確認。Exactを外す変更は加えない。
+文書長・primary/auxiliary語数・全文順位をquery cacheに触れず記録するoffline helperを追加した。
+NFC/NFD Latinの制限は継続。索引とExact/ファイル同一性の正規化は分離する。
+docs/semantic-scale-protocol.mdで2/1,024/1万/5万窓と実DBの固定ゲートを事前宣言し、旧保存文法の
+native producerで共通source snapshotを作成中。複数窓所有者と1窓所有者を混ぜ、窓参照数と
+unique keyが一致することを確認する。保存完了はwarm完了・48hook成功とは別に扱う。
+1万/5万窓・実DBの固定ゲート、label付き閾値評価、最新公開mainとの総トークン/品質採用比較と
+productionへの接続は未完了。元goalの証明・実験・論文要件も維持する。
 
 以下はこれまでの実装と検証の履歴であり、過去の「次」は上の直近順序で読み替える。
 段階1のベクトルと索引チケットの DB 所有を隔離候補に接続した。
