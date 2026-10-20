@@ -121,12 +121,29 @@ def run(args):
         handoff = checkout / 'Eggshell/Handoff.lean'
         candidate = None
         rendered = handoff.read_text()
+        components = []
         if args.depth_candidate:
             import discovery_depth_candidate
             rendered = discovery_depth_candidate.handoff(rendered)
-            candidate = dict(kind='exact-depth-relation-membership',
-                sourceSha256=sha(Path(discovery_depth_candidate.__file__)),
-                handoffSha256=hashlib.sha256(rendered.encode()).hexdigest())
+            components.append(dict(kind='exact-depth-relation-membership',
+                sourceSha256=sha(Path(discovery_depth_candidate.__file__))))
+        if args.owner_candidate:
+            import discovery_owner_candidate
+            rendered = discovery_owner_candidate.handoff(rendered)
+            components.append(dict(kind='publication-ordinal-owner-tree',
+                sourceSha256=sha(Path(discovery_owner_candidate.__file__))))
+            owner_checks = Path(__file__).with_name('DiscoveryOwnerTests.lean')
+            shutil.copy2(owner_checks, checkout / 'tools/DiscoveryOwnerTests.lean')
+            lakefile = checkout / 'lakefile.lean'
+            lakefile.write_text(lakefile.read_text() +
+                '\nlean_exe discovery_owner_tests where\n  root := `tools.DiscoveryOwnerTests\n')
+        if args.work_candidate:
+            import discovery_work_candidate
+            rendered = discovery_work_candidate.handoff(rendered)
+            components.append(dict(kind='exact-work-and-child-projections',
+                sourceSha256=sha(Path(discovery_work_candidate.__file__))))
+        if components:
+            candidate = dict(components=components, handoffSha256=hashlib.sha256(rendered.encode()).hexdigest())
         handoff.write_text(instrument(rendered))
         compiled_helper = checkout / 'tools/LexicalScaleProfile.lean'
         compiled_helper.write_text(once(compiled_helper.read_text(), '  let receipt ← Receipt.fresh',
@@ -135,6 +152,7 @@ def run(args):
             runnerSha256=sha(Path(__file__)), originalHandoffSha256=sha(original / 'Eggshell/Handoff.lean'),
             instrumentedHandoffSha256=sha(handoff), helperSourceSha256=sha(helper),
             compiledHelperSha256=sha(compiled_helper), referenceReceipt=receipt,
+            ownerTestsSourceSha256=sha(owner_checks) if args.owner_candidate else None,
             referenceWorkspace=str(original),
             qualifiedRuntime=manifest['qualifiedRuntime'], fullFallbackTimeoutSeconds=120,
             fixture='10000', questionIndex=0, productionAdoption=False, newNativeHooks=0,
@@ -142,7 +160,10 @@ def run(args):
         config = output / 'empty.toml'
         config.write_text('default = "empty"\nsemantic_matcher = false\n[profiles.empty]\nread = []\n')
         env = environment(output / 'data', config, args.prefix.resolve())
-        execute(['lake', '--no-cache', 'build', 'lexical_scale_profile'], output / 'build', env, checkout, timeout=600)
+        targets = ['lexical_scale_profile'] + (['discovery_owner_tests'] if args.owner_candidate else [])
+        execute(['lake', '--no-cache', 'build'] + targets, output / 'build', env, checkout, timeout=600)
+        if args.owner_candidate:
+            execute([checkout / '.lake/build/bin/discovery_owner_tests'], output / 'owner-tests', env, checkout)
         fixture = next(row for row in manifest['fixtures'] if row['label'] == '10000')
         database = scale / 'prepared/10000/source.egg'
         before = json.loads((database.parent / 'prepared.json').read_text())['files']
@@ -178,6 +199,10 @@ def main():
         parser.add_argument('--' + name, required=True, type=Path)
     parser.add_argument('--depth-candidate', action='store_true',
         help='Inspect the isolated proof-equivalent relation membership change')
+    parser.add_argument('--owner-candidate', action='store_true',
+        help='Inspect the isolated ordinal-tree owner table and its native boundary checks')
+    parser.add_argument('--work-candidate', action='store_true',
+        help='Inspect exact child-demand deduplication and topology-only Work projection')
     args = parser.parse_args()
     try:
         run(args)
