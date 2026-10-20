@@ -1129,6 +1129,59 @@ The source/packet/answer mappings, per-anchor delivery and usage are retained in
 This audit makes zero answering-model calls, executes no LLVM command and
 adopts no implementation change.
 
+### Topic-1 memory delivery and subsequent investigation
+
+An additional read-only audit uses the exact original seed export. Its head/pages
+hashes match all three selected-centroid inputs. All 1,956 content-addressed
+windows are accounted for and 37 original documents are reconstructed. Later
+domain rows only locate windows already present in that export; later answers
+and observations are excluded. Matching uses evidence bodies, not Work commands
+or the current question. Source matching removes line-number prefixes and
+presentation captions; character matching is a provenance diagnostic.
+
+| Source fact or existing test | In original DB | In actual initial packet | Later observation |
+| --- | --- | --- | --- |
+| ToolChain cache key, `Driver.cpp:7101–7106` | Full excerpt in two observations | Full excerpt | No matching full-excerpt command output in the three trials |
+| Input-type tracking, `Driver.cpp:3097–3104` | Full excerpt | Full excerpt | No matching full-excerpt command output in the three trials |
+| Target-width test, `default-toolchain.c:1–5` | Full excerpt in two observations | Full excerpt | Re-read in repetitions 1 and 2 |
+| Complete HLSL OS/architecture/input branch, `Driver.cpp:7244–7252` | Full excerpt in two observations | Full branch omitted | Re-read in repetitions 0 and 1 |
+| OpenMP forwarding test, `openmp-Xopenmp-target-forward-args.c:1–10` | Full excerpt not found | Full excerpt not found | Obtained in repetitions 0 and 1 |
+| CL language test, `cl-inputs.c:4–31` | Full excerpt not found | Full excerpt not found | Obtained in repetition 2 |
+
+The warmed public diagnostic on this same seed also lacks the complete HLSL
+branch. This omission alone therefore does not identify a candidate-specific
+regression. The candidate does deliver the existing target-width test, which
+the public diagnostic omits in full. Neither difference alone establishes an
+answer-quality or token effect. An absent exact excerpt does not establish
+that all equivalent knowledge was absent. A command containing a delivered
+excerpt may also obtain necessary additional evidence; its entire cost must
+not automatically be counted as wasted re-reading.
+
+All three actual centroid initial packets have the same SHA-256. Subsequent
+command counts are 6 / 20 / 3, versus 60 / 61 / 70 in the reused fresh references.
+Observed inclusive totals remain 458,554 / 529,236 / 207,446 versus
+3,050,963 / 2,932,984 / 3,181,936. Their recorded 85.0% / 82.0% / 93.5% differences
+are descriptive historical results. Initial delivery differences cannot explain
+the variation between these three centroid runs; subsequent choices, evidence
+and hook events differ. This observation does not isolate pure model variance.
+
+The topic-1 fresh and memory captures have different runner hashes. The diff
+includes explicit daemon ownership, shutdown, protocol gating and recording.
+Prompt, model and effort match, but this audit does not certify an identical
+frozen harness or turn these reused references into a new matched adoption
+comparison. Missing historical transport hashes remain unknown. No model call
+is added to erase that qualification.
+
+The executed audit, exact hashes, command IDs, source/packet/answer matches and
+observed usage are in `readme-memory-reuse-20261021/topic1-trace-1`. The first
+source-anchor check and the subsequent harness-equality rejection are retained;
+the final descriptive audit records the mismatch instead of approving it.
+Literal answer-term matching is only a locator, not exhaustive quality review.
+There are zero additional model calls, hook replays or LLVM commands, and no
+production implementation change or adoption. The next comparison must keep
+saved evidence, actual delivery, further investigation, answer quality and
+inclusive usage linked for each topic and repetition.
+
 ### Retained-memory readiness before second-lap model calls
 
 The completed `415bcc2…` topic-3 repetition-0 output is checked against its saved

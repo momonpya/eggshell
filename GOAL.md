@@ -63,6 +63,19 @@ warm 1バッチで補完し、全3,340窓をreadyにした。別私有rootでの
 中立なmemo出版のchange metadataを比較器が拒否した停止は、実行済み1 hookを再送せず回収した。
 回答モデル呼出し0であり、2周目のトークン削減率/回答品質や採用を証明しない。
 記録はreadme-retained-memory-20261021/{preparation-1,native-1/resume-1}。Lunaの追加生成は未開始。
+題材1も既存記録だけで照合した。入力head/pagesが全3試行と一致するexportの1,956窓から、
+後の観測を混ぜず元の37文書を復元した。ToolChainのcache key、入力型の追跡、
+default-toolchain.cの既存期待は保存済みで初回本文にも配送されている。
+HLSLのOS/arch/input分岐全文は元の2観測にあるが初回本文にはなく、r0/r1は全文を読み直した。
+この全文欠落はwarm済み公開版の同一seed診断にもあり、開発版固有の悪化とは断定しない。
+default-toolchain.cは配送済みなのにr1/r2で再読された。ただし広いcommand全体を無駄とは数えない。
+OpenMP転送テストとcl-inputs.cの指定範囲は元DBで全文を確認できず、追加取得を配送失敗と扱わない。
+題材1の初回本文SHAは3回同一、後続commandは6/20/3。初回配送差だけではこの反復差を説明できない。
+再利用したfreshの記録は60/61/70 command。総トークン差は既存の観測値として保ち、
+fresh/memoryのcaptured runnerが異なることも明記する。同一凍結harnessによる新しい採用比較とはしない。
+記録はreadme-memory-reuse-20261021/topic1-trace-1。生成0、hook再送0、LLVM command実行0、本体変更0。
+次の比較は、保存済み根拠・実配送・再調査・回答・inclusive usageを各題材で結び付ける。
+「記憶がない」「保存済みだが未配送」「配送済みだが再読」を混同し、削減率だけで変更の効果を断定しない。
 
 2026-10-20の追加指示により、5万窓の追加計測より先にREADMEのLLVM題材1〜3を
 Luna/xhighの実モデルで再実行する。同じ保存スナップショット・質問・モデル設定で
