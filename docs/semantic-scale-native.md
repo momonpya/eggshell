@@ -73,8 +73,8 @@ than submitting a measured prompt again; missing evidence fails the attempt.
 
 ## First retained observations
 
-The collection is being resumed in
-`semantic-scale-20261020/combined-1`; its complete result has not been certified.
+The fixed collection in `semantic-scale-20261020/combined-1` has now finished
+with all 60 attempts retained, including failures.
 The 2- and 1,024-window strata each passed all 12 fixed observations. At 1,024
 windows, fresh questions took 3,206–3,495 ms and cached questions 1,609–1,780 ms.
 
@@ -145,8 +145,67 @@ The tool then invokes the **unchanged frozen runner with `--resume`**. It hashes
 all existing measured streams/results/receipts before resuming and verifies
 that they remain identical afterward. The first recovered pair preserved all
 714 existing files byte-for-byte. Failed priming records are copied into the
-recovery log; no failed measured hook is resubmitted. Remaining cells, including
-the actual corpus, are still pending.
+recovery log; no failed measured hook is resubmitted. The recovery finished
+with exit 0 after 1,684.842 seconds, sampled peak 1,555,472 KiB, no guard trigger.
+This exit status certifies retention and completion of collection, not a
+passing retrieval gate.
+
+## Completed fixed gate and phase inspection
+
+| Original windows / corpus | Passing hooks | Fresh elapsed | Cached elapsed |
+| --- | ---: | ---: | ---: |
+| 2 | 12/12 | 1.832–2.011 s | 0.274–0.297 s |
+| 1,024 | 12/12 | 3.206–3.495 s | 1.609–1.780 s |
+| 10,000 | 0/12 | 28.804–28.812 s | 28.803–28.812 s |
+| 50,000 | 0/12 | 28.816–28.824 s | 28.813–28.825 s |
+| Actual LLVM, 2,081 | 0/12 | 4.178–4.423 s | 4.843–4.924 s |
+
+Every 10,000/50,000 attempt lacks original body and accepted ACK. The actual
+LLVM corpus has a different failure: all twelve discovery observations score
+all 2,081 original windows with zero foreground source encoding, but downstream
+focus fails after requesting unwarmed prefix-stripped windows. The first
+focus record contains 33 source misses and 564,012 µs of foreground source
+encoding. Current `focusIndexedEvidence` explicitly permits durable repair;
+the original warm/doctor contract does not cover these derived locators.
+Lexical fallback offers actual body and receives ACK in all twelve LLVM cases,
+but none contains the fixed required original-body marker. These observations
+fail the frozen test; do not relabel them as complete semantic delivery or
+relax the marker. Warm focus preparation and its no-repair hook boundary need
+their own correction.
+
+After the collection lock was released, the standalone helper was built and
+measured serially against the same immutable warm publications:
+
+| Windows / corpus | Full lexical nomination | Posting reads/checks | Remaining nomination | Semantic domain enumeration |
+| --- | ---: | ---: | ---: | ---: |
+| 2 | 0.121 ms | 0.045 ms | 0.076 ms | 0.593 ms |
+| 1,024 | 100.086 ms | 95.813 ms | 2.793 ms | 124.563 ms |
+| 10,000 | 1,583.061 ms | 1,270.660 ms | 273.934 ms | 1,450.195 ms |
+| Actual LLVM | 27.136 ms | 26.929 ms | 0.164 ms | 23.103 ms |
+| 50,000 | 15,411.806 ms | 8,037.647 ms | 7,151.666 ms | 15,466.255 ms |
+
+Ordinal lookup time is separate from the remaining-nomination column:
+38.467 ms at 10,000 and 222.493 ms at 50,000. Every complete ranking and selected
+prefix is retained; the 50,000-window ranking contains all 49,969 matching
+owners. The stored-child lookup takes 0.433 ms at 10,000 and 5.102 ms at
+50,000. These are single diagnostic observations, not replicate estimates or
+end-to-end hook measurements.
+
+The exact full provider-free fallback at 10,000 windows returns original body
+after **69,939 ms** outside the hook deadline (69,965 ms process wall time).
+Its trace records a first known-Work discovery from 1 to 32,451 ms, producing
+no body, followed by lexical nomination at 1,614 ms of a second pass and
+discovery completing at 37,308 ms. Final rendering completes at 37,350 ms.
+Thus the two discovery intervals, about 32.450 and 35.694 seconds, dominate
+this observation. Neither postings-only nomination nor semantic-domain
+enumeration explains the cancelled lexical interval by itself. Next separate
+Work reads/compilation, demand frequencies, geometry and admission within
+discovery before selecting a cache or data-structure change.
+
+The helper build and all five inspections finish in 150.299 seconds at sampled
+peak 1,522,528 KiB, no guard trigger. Source/cache trees, qualified runtime and
+overlays remain unchanged. No additional native hook or generation-model call
+was made. Successful inspection does not certify a repaired latency gate.
 
 Source inspection also found list-wide scans inside `SearchRank.fused`,
 presentation deduplication and ranked evidence lookup. These grow quadratically
@@ -154,10 +213,37 @@ with complete rankings. Their actual phase costs remain to be profiled; use
 rank-position tables and dense indices only with the same complete order and
 floating-point addition order. The prepared `LexicalScaleProfile.lean` wrapper
 calls the exact nomination function and records each posting's reads, ordinal
-lookups, remaining nomination time and the full ranking. It has not yet been
-compiled or measured. Its runner rejects a live collection before creating
+lookups, remaining nomination time and the full ranking. Its runner rejects a live collection before creating
 output; two live-lock cases also preserve existing output. Heavy inspection
-waits until collection ends.
+was performed only after collection ended.
+
+## Additional review: route and storage audit
+
+The additional review's enumeration hypothesis is being split by actual route.
+The cited `indexedSemanticDocuments`, `indexedSemanticNominations` and
+`headerSemanticNominations` are semantic functions. For this single-DB timeout
+fallback, `Worker.search` clears the configured matcher, `indexedDiscovery`
+skips the semantic-header callback, and `knownThenLexical` can call the
+postings-only `lexicalNominations`. Later Work admission, discovery and
+rendering still require measurement. A prepared domain could help semantic
+enumeration; it is not yet an established cure for this lexical failure.
+The planned native helper now separates full `searchDocuments` and stored-child
+ordering, postings-only nomination, and the complete provider-free fallback
+using existing production stage trace labels. Full-path inspection runs
+outside the hook deadline and cannot pass the fixed latency gate.
+
+Storage figures also need the actual denominator: 5,562,013,928 bytes cover
+1,562 source publications, averaging 3,560,828 bytes/publication, or 111,240
+bytes per original window. Neither quotient is a measured marginal append
+cost. Before deciding on compaction, measure per-publication growth and the
+reachable-page/blob bytes separately. Any eventual rewrite must preserve
+logical DB ownership, all values/references and still-pinned reader views,
+with crash-safe publication. A byte count alone does not establish that an
+atomic replacement of the current file is correct.
+
+Positive-source recall and segment-count recommendation rates are now explicit
+remaining recorder gates in [the pilot draft](pilot-protocol.md). The null
+audit supplies neither those labels nor permission to change the threshold.
 
 ## Local records
 
@@ -169,11 +255,13 @@ All experiment paths below are under `/Users/ovm/.codex/experiments/eggshell/`:
   source mapping and imported publication.
 - `scale-harness-validation-20261020/record-replay-1`: existing native replay.
 - `semantic-scale-20261020/combined-1`: frozen runner/protocol, setup costs,
-  individual hook streams, timings, receipts and partial results.
+  all 60 individual hook streams, timings, receipts and failed gate results.
 - `semantic-scale-recovery-20261020/retained-1`: retained setup errors, exact
   resume commands, query-cache checks and immutable measured-file hashes.
 - `lexical-scale-profile-20261020/live-lock-check-2`: refusal before output or
   build while the collection owns the lock, including an existing-output case.
+- `lexical-scale-profile-20261020/construction-1`: helper build, five complete
+  nomination/domain inspections and the 10,000-window full fallback trace.
 
 The managed checkout's `.lake/hook-audit/semantic-scale-combined-1.log` and
 `-process.json` retain the terminated first run. Resume invocation streams are

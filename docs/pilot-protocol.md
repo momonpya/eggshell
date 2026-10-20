@@ -82,6 +82,20 @@ must not trigger whole-DB foreground embedding. Record actual semantic status,
 scored-window coverage, delivered body, stdout digest and ACK for every hook;
 lexical fallback must carry original DB body when semantic search is incomplete.
 
+Before trials, extend the recorder to retain the original-window count and
+query/source segment counts for every candidate owner, along with full rank,
+threshold admission, top-k recommendation and actual body delivery. Report
+these as separate events with explicit exposed-window/owner denominators,
+stratified by source-window count and source/query segment count. Do not merge
+long multi-window owners with single-window owners merely because their total
+segment counts agree. Retain gold-source relevance and rank, source character
+length and distinct primary/auxiliary lexical terms beside these measurements.
+The current null-only audit cannot measure positive-source recall or select a
+threshold. Keep 0.38 until independently labeled positives and matched task
+quality/token trials justify a change; a maximum's rise relative to 0.38 is
+not itself a calibration rule. These additions remain a recorder execution
+gate, not implemented pilot observations or a general false-positive estimate.
+
 Use at least three equal repetitions for every planned cell. Fix the initial
 use and history-available definitions for topics 1, 2 and 3, task order and
 condition order before running. Hold source snapshots, questions, model,
