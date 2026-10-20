@@ -13,6 +13,7 @@ from context_native_probe import sha
 from pilot_hook_probe import vetted_hooks
 from pilot_preflight import configuration
 from pilot_server import Server
+from owned_daemon import shutdown_owned
 from semantic_latency import save, graph_files
 
 LLVM = Path('/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project')
@@ -132,6 +133,8 @@ def model_turn(arm, label, topic):
     started = time.monotonic()
     identity = None
     successful = None
+    manager = None
+    manager_log = None
     try:
         with BenchmarkServer([shutil.which('codex'), '--strict-config', 'app-server'], LLVM, env,
                              attempt / 'rpc', timeout=900) as server:
@@ -148,6 +151,17 @@ def model_turn(arm, label, topic):
             if thread['model'] != model or thread['reasoningEffort'] != 'xhigh' or thread['instructionSources']:
                 raise ValueError('Model, reasoning effort or instructions differ from protocol')
             identity = thread['thread']['id']
+            if arm != 'fresh':
+                binary = Path(env['EGGSHELL_PREFIX']) / 'libexec/eggshell'
+                manager_log = (attempt / 'manager.log').open('wb')
+                manager = subprocess.Popen([str(binary), 'codex-daemon', identity],
+                    cwd=LLVM, env=env, stdout=manager_log, stderr=subprocess.STDOUT)
+                endpoint = Path(env['EGGSHELL_DATA_ROOT']) / 'sessions' / identity / 'daemon.json'
+                expires = time.monotonic() + 10
+                while not endpoint.exists():
+                    if manager.poll() is not None or time.monotonic() >= expires:
+                        raise RuntimeError('Owned native manager did not publish its endpoint')
+                    time.sleep(.005)
             turn = server.request('turn/start', dict(threadId=identity, model=model, effort='xhigh',
                 input=[dict(type='text', text=prompt)]))
             save(attempt / 'turn-start.json', turn)
@@ -193,9 +207,15 @@ def model_turn(arm, label, topic):
         save(attempt / 'failure.json', dict(error=f'{type(error).__name__}: {error}', elapsedSeconds=time.monotonic()-started))
         raise
     finally:
-        if arm != 'fresh':
-            execute([Path(env['EGGSHELL_PREFIX']) / 'libexec/eggshell', 'codex-daemon', 'shutdown'],
-                    env, attempt / 'shutdown.json', 30)
+        if manager is not None:
+            try:
+                shutdown_owned(manager, Path(env['EGGSHELL_PREFIX']) / 'libexec/eggshell',
+                    env, LLVM, attempt / 'shutdown.json')
+            finally:
+                if manager.poll() is None:
+                    manager.terminate()
+                    manager.wait(timeout=5)
+                manager_log.close()
     if arm != 'fresh':
         subprocess.run(['/bin/cp', '-cR', str(BASE / 'active/work.egg'), str(attempt / 'output.egg')], check=True)
         successful['outputGraphFiles'] = graph_files(attempt / 'output.egg')

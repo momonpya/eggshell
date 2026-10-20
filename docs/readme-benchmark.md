@@ -94,6 +94,26 @@ Implementation trials, all three repetitions, source-grounded answer review
 and the corresponding final summaries remain in progress. No README savings
 claim, production adoption or full-goal completion follows from preparation.
 
+The first matched topic-1 pair records **1,885,929 tokens** for public main and
+**789,335 tokens** for the candidate. Public main's initial hook delivers no
+context; the candidate delivers 120,302 UTF-8 bytes of original context in
+7,227 ms. Its discovery and focus receipts both complete with no source-cache
+miss, unusable record or source encoding; no foreground warm is requested.
+These are individual observations. Source review finds a material target
+condition error in both answers' generic `spirv` example: the cited branch's
+language-dependent alternative specifically requires `spirv32` or `spirv64`.
+The original answers and history remain unchanged, and neither explanation is
+accepted as source-verified correct. Fewer tokens alone do not pass adoption.
+
+The candidate's model turn and `egg keep` completed, but the harness's detached
+daemon shutdown client returned a wait-for-exit failure after acknowledgement.
+The endpoint disappeared and the saved result/usage were recovered without
+another model request. Its exact model duration is retained; the lost outer
+wall timer is left unavailable. Subsequent cells use a foreground manager
+owned by the runner and reap it together with the shutdown client. Zero-model
+checks for both executables confirm both exit 0. The original shutdown failure
+and recovery are retained; the cell is not rerun or selected for token count.
+
 ## Execution
 
 `tools/readme_benchmark.py` prepares private native environments and captures
