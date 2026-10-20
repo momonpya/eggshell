@@ -853,6 +853,47 @@ production runtime and prior raw records remain intact. Token savings, quality,
 other adoption cells and the full Phase 0–6 goal remain unproven; the candidate
 is isolated and unadopted, with no scheduled answering-model trials.
 
+### Fixed token diagnostic for source readiness
+
+`tools/readiness_token_cohort.py` prepares a new matched topic-3 first-lap
+diagnostic: fresh, the complete-index centroid parent, and the live-root
+readiness candidate, each three times. Order is balanced before any model call:
+fresh/parent/candidate, parent/candidate/fresh, candidate/fresh/parent. Both
+memory conditions receive the exact same prepared after-topic-2 graph and
+portable cache at the same active DB path. No output trial enters common history.
+The answering model stays `gpt-5.6-luna` with `xhigh`; MiniLM is unchanged.
+All nine new calls use the same current runner and transport. The public-main
+token arm is absent, and older failed or differently captured calls are not
+comparison arms in this cohort.
+
+Preparation completes without answering-model calls. Both installed runtimes
+pass native initial-hook preflight in 11,660/11,180 ms, with source encoding 0
+and the same centroid packet `b400ef4…`. Both complete portable cache preparation
+and repeat without encoding. LLVM reference-file hashes match the fixed source
+review criteria. These checks do not establish token savings or answer quality.
+
+The frozen runner records inclusive input plus output, including cached input;
+every submitted attempt is accounted for, and missing final usage remains
+unknown. A pre-existing incomplete attempt cannot be resubmitted. A nonblocking
+cohort lock prevents concurrent drivers. Aggregate RSS is guarded at 3,500,000
+KiB; new trials require 4 GiB free and the process guard stops at 2 GiB free.
+Exact driver, transport, runner and guard hashes are fixed before generation.
+
+Space preparation removes only regenerable build products from 11 failed
+constructions and compiler intermediates from 31 older copies. Forty-five unique
+generated test executables are stored once each in lossless gzip archives with
+verified SHA-256 and their original path/mode inventory. A selective restore
+script restores one exact executable without expanding all copied binaries.
+Runtime binaries, source DBs, source files and raw trial records are retained.
+The inventory is `benchmark-build-cache-cleanup-20261021/` in the experiment root.
+
+The new study is `readme-readiness-tokens-20261021/`, with separate private
+environments for all three conditions, the frozen nine-call order, source
+criteria and the common input. This is causal diagnosis of readiness on the
+problematic cell, not the complete adoption test. Topic 1/2, retained-lap cells,
+answer quality and public delivery differences remain open; no candidate is
+adopted on the basis of this preparation or this cell alone.
+
 `tools/readme_benchmark.py` prepares private native environments and captures
 one real turn. `tools/readme_sequence.py --stage N` runs one of the six frozen
 stages and prepares its common next checkpoint. It validates matching input
