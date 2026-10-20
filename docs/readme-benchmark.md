@@ -785,6 +785,74 @@ are retained separately. Source DBs, LLVM, frozen runtimes and production code
 remain unchanged. This result narrows the investigation to delivery selection
 as well as publication readiness; it does not establish restored savings.
 
+### Preparing saved observations before semantic continuation
+
+The next isolated candidate waits for the existing save/index producer before
+starting semantic lookup on observed current-turn work. This applies only to
+the built-in numerical provider and a writable DB in the captured read set.
+It reads warm metadata and checks exact **live root** membership; an interned
+but retracted node is insufficient. Read-only profiles, custom providers and
+lexical lookup keep their existing path. The wait never saves, encodes or drops
+a staged value. Search rechecks the live turn, epoch, enabled state and delivery
+claims after waiting. Every actual cache row and source certificate still goes
+through the existing search checks.
+
+At most one third of the remaining overall hook window is assigned to this
+preparation. The manager still enforces its semantic cutoff and hard deadline.
+If preparation remains incomplete, semantic lookup returns pending before
+starting a numerical provider, and the existing lexical fallback receives the
+unchanged staged and saved candidates. A `source-readiness` receipt records the
+observation count, outcome, wait duration and original deadline without source
+or question text. The pure wait-deadline bound is proved in Lean.
+
+`tools/prepare_source_readiness.py` constructs the candidate from the frozen
+complete-index parent. Construction 1 retains an unused-binding build failure;
+construction 2 is a working draft; construction 3 strengthens node lookup to
+the existing checked live-root lookup and is the final tested source. Build and
+ContractAudit pass. Its runtime is
+`19affc5411fbebb89f26373b00b9db77566b9c0a973dfdbd023b677a0e4c7745`.
+Worker is the only changed pre-existing library source; build registration and
+the new module are additional changes. Handoff, ranking, lexical grammar, Warm,
+MiniLM and the embedding runtime bytes remain equal to the parent.
+
+Native hooks receive the same saved snapshot, question, session/turn IDs and
+captured observations. No LLVM command or answering model runs. Two captured
+observation fixtures are used; their asynchronous historical schedule is not
+recreated. For the final source:
+
+| Observation fixture / condition | Internal preparation | Whole continuation hook | Semantic route | Source encoding during search |
+| --- | ---: | ---: | --- | --- |
+| r0, immediate | 7,596 ms | 13,005 ms | completed | 0 |
+| r1, immediate | 9,248 ms | 13,765 ms | completed | 0 |
+| r1, index claim held | 9,608 ms | 10,597 ms | pending, then lexical | numerical provider not started |
+
+The immediate r1 parent encodes staged source for 1,334,785 microseconds before
+semantic failure and supplies a 7,571-byte lexical body. The candidate completes
+semantic search and sends no new body. The same parent, given an explicit
+9,047 ms external warm barrier, also completes semantic search with the exact
+same empty stdout as the candidate. Thus the empty result reproduces that
+parent's healthy prepared behavior; it is not proof that the lexical additions
+are unnecessary for answer quality. When the index claim is held, the final
+candidate's complete stdout, including the 7,571-byte body, matches the
+immediate parent's lexical reply exactly. Both branches preserve their actual
+native outputs in the records.
+
+The final r0 reply also matches its parent's reply. All initial bodies reproduce
+the centroid packet `b400ef432319f610a29cb0595469968ac67741b0c4e2761ab95d5d7aaf391033`.
+These are parent-candidate checks, **not public-main delivery parity**. The
+previous public-main discrepancy remains open. The final candidate has 15 native
+hook calls across these three cases. Including draft and parent controls there
+are 50 native calls, all below 30 seconds, with maximum aggregate RSS
+1,984,288 KiB. There is no claim of faster overall replies: successful semantic
+completion waits longer than the parent's early lexical fallback.
+
+Evidence is in `source-readiness-20261021/construction-3/` and
+`readme-source-readiness-20261021/`, especially `final-r0/`, `final-r1/`,
+`r1-baseline-ready/` and `combined-summary.json`. Original source DBs, LLVM,
+production runtime and prior raw records remain intact. Token savings, quality,
+other adoption cells and the full Phase 0–6 goal remain unproven; the candidate
+is isolated and unadopted, with no scheduled answering-model trials.
+
 `tools/readme_benchmark.py` prepares private native environments and captures
 one real turn. `tools/readme_sequence.py --stage N` runs one of the six frozen
 stages and prepares its common next checkpoint. It validates matching input
