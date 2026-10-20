@@ -619,7 +619,113 @@ Records are under
 empty schedule. Topic 3 diagnosis, retained use, overall quality and the full
 practicality/paper goal remain open.
 
-## Execution
+## Retained publication and index-completion diagnosis
+
+The poor public-equivalent repetition 1 retains 22 publication heads, revisions
+1–22, spanning 58–78 documents. Read-only domain exports pin those actual roots
+against the retained append-only page file. Each failed search is linked to its
+recorded proposed command through native hook IDs, identical output, and nearby
+monotonic receipt times. Document and window-reference counts must resolve to
+one exported domain digest; physically different neutral revisions may share a
+domain. Original graph files remain unchanged. These are recovered source
+domains, not reconstructed historical cache states or complete native replay.
+
+In the first failure, 107 required discovery-window cache files have mtimes
+after the end of the hook's integer completion second. The native receipt
+reports 32 absent probes before failure, not an exhaustive count of every
+missing window. Earlier mtimes alone do not certify historical availability.
+Both the source-domain linkage and conservative timestamp limits are retained
+in `readme-continuation-audit-20261021/receipt-domains-and-cache-times.json`.
+
+The first failed 59-document publication is republished on a private copy by
+the public producer, preserving authoritative values, root order, owners, Work
+IDs, windows and unions. Both implementations receive that same prepared graph,
+original question, recorded proposed Work and the identical 207 initial-Handoff
+claims. Fully warmed public and first-segment-control bodies are byte-identical:
+19,516 bytes, SHA-256
+`9b2841c78d60391c70447b157a1bdd48caf7a345d616a7417fcb5b7ef59117d1`.
+The 22,699/5,955 ms helper times are uncensored diagnostics, not native deadline
+measurements. The later native delivery ledger and staged state are not
+reconstructed, so this does not prove that this exact body would have been
+delivered historically. The saved case is `first-failure-comparison/` under that
+study. `tools/DeliveryAudit.lean` now accepts an explicit proposed Work and claims
+for this controlled comparison; its original prompt-inspection mode remains.
+
+The drain can compute its warm hint from an older head before the worker pins a
+newer publication. The old worker indexes original windows and removes valid
+tickets before separately applying that hint to full warm. A false stale hint
+can therefore acknowledge a new owner's ticket while its focus view is cold.
+The isolated producer uses one existing `Warm.runTarget` path for both views and
+removes validated tickets only after that path succeeds. Its single index claim
+and encoder belong to warm, avoiding a nested claim or a second encoding path.
+Invalid tickets remain quarantined and provider failure retains valid tickets.
+
+`tools/prepare_complete_index.py` constructs the candidate from the frozen
+centroid baseline. The only changed pre-existing source file is `Worker.lean`;
+the new `tools/IndexCompletion.lean` supplies the producer. Handoff, numerical
+ranking, encoder, lexical grammar and equality source bytes are unchanged.
+The runtime is
+`57cceba86ee4b1e00bb35f0289ee0766b270c636fe47379e53ae1fde3e2d03cb`.
+It remains isolated and unadopted.
+
+The real worker is exercised on the same retained 59-document input, initially
+with only the preceding publication's vectors:
+
+| Worker condition | Ticket acknowledged | Missing focus windows after acknowledgment |
+| --- | ---: | ---: |
+| Existing producer, `warm=false` | 1 | 1 |
+| Complete-window producer, `warm=false` | 1 | 0 |
+
+Explicit warm repairs the old producer's remaining window. At that complete
+boundary all 2,564 cached files match the candidate byte-for-byte. Provider
+failure leaves the ticket in place; a foreign authority is quarantined with
+the injected bytes retained, without encoding. All source graph files remain
+unchanged. The old partial index takes 27,392 ms plus a later 2,767 ms warm;
+the candidate's complete index takes 29,382 ms. These single background-worker
+measurements do not establish a speed gain or satisfy a native-hook gate.
+
+Build and ContractAudit pass. Construction 1's diagnostic IO-type error and
+construction 2's missing library registration remain recorded. Construction 3
+is the successful effective source. Its initial native topic-3 hook completes
+in 12,122 ms with zero source encoding, reproducing the centroid packet
+`b400ef432319f610a29cb0595469968ac67741b0c4e2761ab95d5d7aaf391033`.
+This is preservation against centroid, **not public parity**.
+
+Recorded observations are then supplied to real native hooks without rerunning
+the LLVM commands or invoking an answering model. After an explicit 8,665 ms
+wait for background warm, the new 59-document publication has all 2,565 required
+window records. The second pre-tool search completes semantic discovery on 59
+documents and focus on 58, with zero source encoding; every hook is below 30
+seconds. This is a different captured observation fixture from the 2,564-window
+worker test and does not prove readiness without that external wait.
+
+The initial report accidentally used an initial-prompt-only receipt selector
+for continuation assertions. Original reports and executed scripts are kept;
+the corrected report matches the second sequential PreToolUse's captured input,
+output and receipt, without repeating any request. The no-wait case actually
+searches 58 durable documents plus one staged observation, encodes staged source
+for 1,097,198 microseconds, and fails semantic discovery before lexical fallback.
+The waited reply is empty; the no-wait reply is also empty after reconciliation.
+Neither publishes an incomplete notice in this fixture. This is not evidence
+that necessary material was omitted. It exposes publication/staging and duplicate
+encoding as unresolved concerns beyond the repaired ticket-completion invariant.
+
+One ticket survives no-wait shutdown. A separate daemon with no pending turn
+recovers it, validates all 2,565 window records and removes it without changing
+the source graph. The partial DB and state before recovery are archived. All
+these steps use zero answering-model calls; maximum guarded aggregate RSS is
+1,832,752 KiB. Token savings, answer quality, immediate continuation readiness,
+remaining adoption cells and the full goal are unproven. The candidate stays
+unadopted, with generation disabled and no scheduled model calls.
+
+Records are under `complete-index-20261021/construction-3/results/` and
+`checks/`, plus `readme-complete-index-20261021/native-preflight-topic3/`,
+`native-continuation/`, `native-no-wait/`, `receipt-selection-correction.json`,
+and `standalone-recovery/` in the experiment root. The next investigation is the
+staged-observation/save/index boundary, before another retrieval policy or more
+answering-model trials.
+
+## Execution tools
 
 `tools/readme_benchmark.py` prepares private native environments and captures
 one real turn. `tools/readme_sequence.py --stage N` runs one of the six frozen

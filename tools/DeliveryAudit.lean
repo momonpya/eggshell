@@ -24,8 +24,15 @@ def exportInputs (database : System.FilePath) : IO Unit := do
 The same original question, source workspace, graph and packet budgets are used.
 No generation endpoint is involved. -/
 def inspectDelivery (database questionFile cache output : System.FilePath)
-    (provider : Option System.FilePath := none) : IO Unit := do
+    (provider : Option System.FilePath := none)
+    (nativeWork : Option (System.FilePath × System.FilePath) := none) : IO Unit := do
   let question ← IO.FS.readFile questionFile
+  let (current, delivered) ← match nativeWork with
+    | none => pure (question, ([] : List String))
+    | some (workFile, claimsFile) => do
+        let work ← IO.FS.readFile workFile
+        let claims ← IO.ofExcept (Json.parse (← IO.FS.readFile claimsFile) >>= fromJson? (α := List String))
+        pure (work, claims)
   let binary := provider.getD ((← IO.appPath).withFileName "eggshell")
   let command := [binary.toString, "search-provider", "--cache", cache.toString]
   let started ← IO.monoMsNow
@@ -34,10 +41,13 @@ def inspectDelivery (database questionFile cache output : System.FilePath)
     semanticMatcher := some command, handoffChars := 120000
     handoffBytes := some Config.nativeHandoffBytes }
   let context : SourceContext := {
-    workspace := (← IO.currentDir), deadline := started + 300000, question }
-  let handoff ← automaticHandoff selection question [] false (sourceContext := some context)
+    workspace := (← IO.currentDir), deadline := started + 300000, question
+    native := nativeWork.isSome }
+  let handoff ← automaticHandoff selection current delivered nativeWork.isSome
+    (sourceContext := some context)
   IO.FS.writeFile output (Json.mkObj [
     ("purpose", toJson "uncensored delivery parity diagnosis; not a latency or token result"),
+    ("nativeWork", toJson nativeWork.isSome), ("suppliedClaims", toJson delivered.length),
     ("elapsedMs", toJson ((← IO.monoMsNow) - started)), ("handoff", toJson handoff)]).compress
 
 def main (arguments : List String) : IO UInt32 := do
@@ -48,7 +58,10 @@ def main (arguments : List String) : IO UInt32 := do
         inspectDelivery (.mk database) (.mk question) (.mk cache) (.mk output)
     | ["inspect-provider", database, question, cache, output, provider] =>
         inspectDelivery (.mk database) (.mk question) (.mk cache) (.mk output) (some (.mk provider))
-    | _ => throw (IO.userError "delivery_audit inputs DB | inspect DB QUESTION_FILE CACHE OUTPUT")
+    | ["inspect-work", database, question, work, claims, cache, output] =>
+        inspectDelivery (.mk database) (.mk question) (.mk cache) (.mk output)
+          none (some (.mk work, .mk claims))
+    | _ => throw (IO.userError "delivery_audit inputs DB | inspect DB QUESTION_FILE CACHE OUTPUT | inspect-work DB QUESTION_FILE WORK_FILE CLAIMS_FILE CACHE OUTPUT")
     return 0
   catch error =>
     IO.eprintln s!"delivery audit: {error}"
