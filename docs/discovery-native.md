@@ -354,11 +354,67 @@ The primitive check takes 4.346 seconds including build, sampled peak
 1,514,448 KiB; the guard does not trigger. Its first missing-library-root
 build failure and earlier proof drafts remain in the local records.
 
-This primitive has **not** been connected to prefix decisions, qualified
-through the complete runtime or measured in a hook. The next candidate must
-bind its entries to the exact source and prefix predicate, preserve every
-old decoder decision, and pass complete qualification before repeating the
-same fixed native gate. The existing 0/12 result remains unchanged.
+At this checkpoint the primitive was disconnected and the existing gate
+remained 0/12. The following isolated candidate connects it to prefix decisions.
+
+## Shared exact prefix decisions
+
+`context_prefix_candidate.py` adds one lazy decision tree to each immutable
+decoded layout. `PairDecisions` binds the boolean result to the exact
+predicate and both coordinates. A stride encodes those coordinates without
+hashing; a proof recovers the original pair. False decisions are cached too.
+Zero strides and positions outside the stride retain the original decision,
+and out-of-tree addresses retain the original computation. No source or
+question is written into a persistent cache.
+
+The decoder keeps every original bounds/re-encoding/prefix check. A universal
+compiler equality preserves its complete original result for every input.
+The callback's function equality carries the dependent certificate without
+expanding the whole renderer. Earlier component proof-shape failures and
+test-scope failures are retained. An independent copy of the old decoder
+passes 483 range comparisons; 484 decision comparisons include false results,
+different predicates and outside coordinates. Noncanonical JSON is rejected.
+Compiled traces show six repeatedly requested pairs evaluated once each.
+
+Full qualification passes all existing regressions in 110.333 seconds and
+ContractAudit. The new decision-component theorems use only `propext` and
+`Quot.sound`; no new trusted/native-decide axiom is introduced. Another daemon
+drains three tickets with both recorded graph heads unchanged, and shutdown
+client/daemon exit 0. Qualification takes 181.089 seconds, sampled peak
+3,075,520 KiB, without a guard trigger. Generated C constructs the memo once
+in `DecodedLayout.make`, stores it in the layout, and reads that same tree
+without constructing another one in the prefix callback. Actual construction
+and lookup use the standard cached Thunk primitives.
+
+The qualified full Handoff, original positions and required gold body exactly
+equal the frozen reference outside the hook deadline. The internal interval
+is 4,620 ms, including a 2,200 ms render interval. Helper process wall time
+is separately 17,241 ms. This diagnostic takes 36.345 seconds overall,
+sampled peak 1,550,592 KiB, without a guard trigger. Individual diagnostic
+timing differences do not establish a balanced latency effect.
+
+The new fixed collection reuses both complete warmed layouts; warm and repeat
+request zero work. All 12 hooks score every original discovery/focus reference
+with no source misses, invalid vectors or source encoding. Complete focus
+orders/positions match in both layouts. All source/vector bytes are unchanged,
+and publication/stdout hashes and ACKs agree in 12/12. The unchanged gold-body
+and five-second gate passes **2/12**:
+
+| Cache layout | Query cache | Gate/body passes | Replies in ms (q0, q1, q2) |
+| --- | --- | --- | --- |
+| Database | fresh | 0/3 | 4846.001, 4946.128, 4854.031 |
+| Database | cached | 2/3 | 4603.469, 4596.463, 4851.552 |
+| Private overlay | fresh | 0/3 | 4862.915, 4939.904, 4860.203 |
+| Private overlay | cached | 0/3 | 4845.076, 4947.019, 4856.388 |
+
+The two successful configured attempts take 4,495/4,483 ms, close to the
+unchanged 4.5-second semantic limit. All other attempts time out and return
+lexical fallback without the required marker. The ten failures, the earlier
+failed collections and every planned cell remain; the two passes do not
+establish reliable first-use or read-only-cache delivery. Collection takes
+151.969 seconds, sampled peak 1,643,408 KiB, without a guard trigger. The
+full scale gate and latest-public-main token/quality adoption remain open.
+Ordinary sources/runtime and README claims remain unchanged.
 
 ## Local records
 
@@ -411,3 +467,10 @@ Under `/Users/ovm/.codex/experiments/eggshell/`:
 - `exact-lazy-memo-20261020/construction-1`: retained build-root failure;
   `construction-2`: initial native checks; `construction-3`: the final 91
   comparisons, exact evaluation keys, axiom output and unchanged runtime.
+- `context-prefix-qualified-20261020/construction-1` through `construction-7`:
+  retained component/proof/test build failures; `construction-8`: final full
+  qualification, native sharing/C audits and independent recovery.
+- `context-prefix-qualified-profile-20261020/inspection-1`: complete original
+  Handoff equality, required gold body and separate internal/process timings.
+- `context-prefix-native-20261020/inspection-1`: all twelve fixed actual hooks,
+  including the two passes and ten failures, exact ranks and frozen cache bytes.

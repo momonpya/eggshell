@@ -72,7 +72,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['base', 'output', 'prefix']:
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--candidate', choices=['focus-warm', 'context-plan', 'context-memo'], default='focus-warm')
+    parser.add_argument('--candidate', choices=['focus-warm', 'context-plan', 'context-memo', 'context-prefix'], default='focus-warm')
     args = parser.parse_args()
     try:
         run(args)
