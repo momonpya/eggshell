@@ -94,6 +94,32 @@ a:JSON形式を検査器が誤読した停止は元コード/記録を保存し�
 記録はreadme-prepared-trials-20261021。回答モデル追加0、本体変更0、削減率/品質の採用判定0。
 次はこの実行器を使う共通seed・3反復・初回/履歴あり全題材の比較coordinatorを固定する。
 
+比較coordinatorを追加し、生成前に全54枠を固定した。5.6-luna/xhighで初回/履歴あり各3題材、
+各条件3反復。freshは各周回でも独立に測る計18呼出し、公開版/415bcc2…は計36呼出し。
+題材内の条件順を反復ごとに循環し、次の共通履歴は選択版r0と事前固定する。
+元seedの37文書/1,956入力を復元し、Work文字列を除いた元の観測本文で18の根拠probeを照合。
+selectedのoff-hook warm/repeatは追加処理0。公開provider自身が元入力を再分割する短いtailも
+再indexしているため、legacy source cacheは3,831記録。export外の除外logを質問削除数とは解釈しない。
+初回の全9枠を準備し終えるまで生成を開かず、各枠の保存状態/実配送/再調査/回答/usageをつなぐ。
+23検査が通過。初回準備の合計RSS観測ピークは1,209,664 KiB、3 GiB停止は作動していない。
+公開mainは5187316を再確認。sourceを温めた公開版の所定2セッションは28.815/28.810秒で
+ともに未完了通知となったため、cohortは未承認・Luna追加0のまま停止した。失敗をtoken比較に入れない。
+質問cache後のtraceも28.819秒で未完了。focusまで3.478秒、そこから終了marker前にcancel。
+初回と同じenforce=false/native=falseの期限外診断は30.813秒、focus3.408秒、render完了28.845秒。
+writerなし/期限拡張の診断であり、native成功や採用比較とはしない。先の24.776秒診断は
+tool操作用enforce=true/native=trueだったため、初回比較値から外した。両元DBは不変。
+公開workerをフック外で31.137秒かけて完了してneutral memoを出版しても、新nativeは28.809秒で未完了。
+公開版のこの保存DBで健康な本文配送を得る条件は未解決。queryの冷えだけと断定しない。
+選択版は同じsourceから独立に全3反復の準備を完了した。各反復の私有query状態は空から開始。
+最初の実nativeは11.632/7.870/8.051秒、次セッションは6.012/6.205/6.231秒で全6件が本文/ACK成功。
+本文SHAは3反復とも932b170…で同一。discovery/focusは各1,919 source hit、missing/unusable/source encode 0。
+cache key、target幅テスト、入力型追跡、effective targetの保存済みanchorが実配送されている。
+公開の完了した期限外本文とのprobe比較も記録するが、公開nativeの成功や回答品質とはしない。
+cohortは未承認・全生成gate閉のまま、Luna追加0。本体runtime変更/採用は0。
+選択版検査を含めたRSS観測ピークは1,390,704 KiB（約1.33 GiB）、3 GiB停止未作動。
+記録はreadme-matched-20261021とreadme-matched-{diagnostic,verification}-20261021。
+現goal turnは、比較器/根拠復元/実nativeの拒否と時間内訳の新証拠を得たprogressであり、モデル待機ではない。
+
 2026-10-20の追加指示により、5万窓の追加計測より先にREADMEのLLVM題材1〜3を
 Luna/xhighの実モデルで再実行する。同じ保存スナップショット・質問・モデル設定で
 トークンはfreshと候補を比較し、初回/履歴あり・各題材を同数3回ずつ評価する。

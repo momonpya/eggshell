@@ -87,7 +87,8 @@ def prepare(arm):
     env = {k:v for k,v in os.environ.items() if k in {'PATH','HOME','USER','LOGNAME','LANG','LC_ALL'}}
     env.update(CODEX_HOME=str(account), TMPDIR=str(temporary), EGGSHELL_PREFIX=str(prefix),
         EGGSHELL_DATA_ROOT=str(case / 'data'), EGGSHELL_CONFIG=str(egg_config),
-        HF_HUB_OFFLINE='1', LEAN_NUM_THREADS='1')
+        HF_HUB_OFFLINE='1', LEAN_NUM_THREADS='1', OMP_NUM_THREADS='1',
+        OPENBLAS_NUM_THREADS='1', MKL_NUM_THREADS='1', TOKENIZERS_PARALLELISM='false')
     save(case / 'environment.json', env)
     execute([source / '.lake/build/bin/eggshell', 'install', 'codex'], env, case / 'install.json', 180)
     if sha(prefix / 'libexec/eggshell') != sha(source / '.lake/build/bin/eggshell'):
@@ -119,7 +120,9 @@ def prepare_fresh():
     config = config.replace('[permissions.pilot.network]', json.dumps(str(LLVM)) + ' = "read"\n[permissions.pilot.network]')
     (account / 'config.toml').write_text('model = ' + json.dumps(model) + '\nmodel_reasoning_effort = "xhigh"\n' + config)
     env = {k:v for k,v in os.environ.items() if k in {'PATH','HOME','USER','LOGNAME','LANG','LC_ALL'}}
-    env.update(CODEX_HOME=str(account), TMPDIR=str(temporary))
+    env.update(CODEX_HOME=str(account), TMPDIR=str(temporary), HF_HUB_OFFLINE='1',
+        LEAN_NUM_THREADS='1', OMP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1',
+        MKL_NUM_THREADS='1', TOKENIZERS_PARALLELISM='false')
     save(case / 'environment.json', env)
     return env
 

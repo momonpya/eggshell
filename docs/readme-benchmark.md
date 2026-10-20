@@ -1311,4 +1311,99 @@ trace's 1,213,841 tokens as known partial usage, not a final total. All twelve
 retained native publication reports pass the stricter neutral-metadata check.
 These checks make zero answering-model calls and adopt no runtime change. The
 full matched public/selected/fresh first-use and retained topic-1/2/3 comparison
-still needs its coordinator and fixed repeated execution before any adoption.
+still requires fixed repeated execution before any adoption.
+
+### Matched public, selected and fresh cohort
+
+`tools/readme_matched.py` fixes the cohort before answering-model generation.
+It pins public main `5187316…`, selected runtime `415bcc2…`, the existing common
+5.6-luna seed, LLVM commit, exact questions, harness, helper binaries and native
+CLI. All conditions use `gpt-5.6-luna` with `xhigh`. Six stages cover topics 1–3
+in the first and retained laps, with three repetitions per condition: 54 calls,
+including 18 independent fresh calls. Fresh is measured again for the retained
+lap rather than reusing its first-lap samples. The within-stage orders are
+fresh/public/selected, public/selected/fresh, and selected/fresh/public.
+
+The next common saved history always comes from selected repetition 0. This
+choice is made before observing tokens or answers. A verified public producer
+republishes that single graph while preserving authority, roots and original
+owner/window identities. Both memory conditions receive copies of that same
+publication. Source vectors are carried by content; missing new observations
+are warmed off-hook, and a repeat from independent private state must do zero
+work. No new seed is acquired. The original acquisition receipt and failed
+acquisition costs remain separately recorded.
+
+Before the first generation of a stage, all nine trials must be prepared. Each
+memory repetition begins with empty private query state, a source-only warmed
+cache and exactly two native sessions: warmup, then qualification. The public
+cache is a private copy with non-source text records excluded. Every original
+input is validated through the public indexing provider. The selected cache
+must report both lanes ready with zero source encoding. A completed warmup
+hook is never replayed to manufacture a better result.
+
+The source inventory reconstructs original outcome evidence from overlapping
+content-addressed windows and checks complete domain coverage. Eighteen frozen
+probes in `docs/benchmarks/readme-memory-facts.json` distinguish anchor support
+from a full source excerpt; Work command strings do not count as evidence.
+The audit action connects these owners to actual initial/later packets,
+subsequent command outputs, the saved answer and inclusive usage. Bounded text
+matching does not establish model attention or quality. Quality review remains
+required, including correct HLSL branch scope and honest executable-test limits.
+
+Each dispatch restores its own qualified DB and checks the actual initial body
+against its preflight. The coordinator runs one scheduled slot per invocation.
+An incomplete attempted slot stops the cohort; known costs and unknown final
+usage remain in its raw records, with no automatic resubmission. All heavy work
+uses the aggregate 3 GiB RSS monitor below the 4 GiB ceiling, including owned
+detached daemons. Numerical and Lean thread caps are retained in the installed
+environment. No runtime policy is adopted by this measurement infrastructure.
+
+The initial cohort plan is retained as `readme-matched-20261021/plan.json`.
+Its stage-1 source inventory reconstructs 37 original documents and 1,956 unique
+discovery/focus inputs. Carried selected vectors are valid throughout, and both
+off-hook warm and its independent repeat request zero embeddings. The legacy
+provider expands each input again through its own overlapping windows, so its
+source-only cache contains 3,831 records. The exclusion log names records
+outside the exact export, including shorter source tails; reindexing restores
+those tails. The final cache equals the complete source-fragment closure:
+1,875 excluded records were source tails, while 15 were outside that closure.
+That log must not be interpreted as a count of removed queries.
+
+Stage admission correctly stops: public's planned warmup and qualification
+both emit incomplete notices at 28.815/28.810 s. The dispatcher opens no answering
+model. A separate traced diagnostic after query-cache warming still stops at
+28.819 s. Its discovery/provenance/hydration/focus markers reach 3.478 s, with
+no render-completion marker before cancellation. This does not establish which
+individual operation after focus dominates.
+
+An uncensored helper with the initial prompt's `enforce=false, native=false`
+mode finishes in 30.813 s; its trace has focus at 3.408 s and render completion
+at 28.845 s. It has no writer and an extended upstream deadline, so it is a
+diagnostic of the published kernel, not a successful native hook or an admitted
+model baseline. The earlier 24.776 s helper used `enforce=true, native=true`
+for tool operations and is explicitly excluded from initial-prompt comparisons.
+
+One off-hook call to the unmodified public search worker finishes in 31.137 s
+and publishes only neutral memo data. The subsequent new native session still
+returns incomplete at 28.809 s. Source authority, roots and unions remain
+unchanged. These failed readiness checks are preserved, never scored as poor
+token savings, and never resubmitted as answering-model trials. The full cohort
+remains unadmitted with zero new answering-model calls. Public's structured
+semantic/cache counters remain unavailable, rather than zero.
+
+The selected runtime is then qualified independently from the same source,
+without opening the failed public stage for generation. All six hooks deliver
+and acknowledge a body: new private state 11.632/7.870/8.051 s; subsequent new
+sessions 6.012/6.205/6.231 s. The initial query state is empty in each repetition.
+All three body hashes agree (`932b170…`). Both numerical lanes hit 1,919 source
+windows, with no missing/unusable vectors and zero source encoding. Off-hook
+warm requests no work. The body includes the saved ToolChain cache key,
+target-width test, input-language tracking and effective-target anchors; that
+presence alone is not an answer-quality verdict.
+
+Evidence is under `readme-matched-{diagnostic,verification}-20261021`. The initial
+preparation's aggregate observed RSS peak is 1,209,664 KiB; selected qualification
+raises the overall observed peak to 1,390,704 KiB (about 1.33 GiB). No monitor
+fires. The frozen preparation,
+pairing, evidence-reconstruction and trial checks pass 23 small tests. This is
+measurement progress, not a token-reduction or answer-quality acceptance.

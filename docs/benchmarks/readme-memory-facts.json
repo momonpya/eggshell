@@ -1,0 +1,32 @@
+{
+  "scope": "Predeclared source provenance probes, not an answer-quality verdict. Match outcome evidence only, never a command or current question. Missing an exact excerpt does not establish absence of equivalent knowledge.",
+  "qualityRequirements": [
+    "Trace parsed/configured arguments into target selection and default ToolChain; input language is not the general ToolChain cache key.",
+    "Explain positional -x scope and the trailing unused -x warning accurately.",
+    "Explain the normal -fsyntax-only Compile cutoff without overriding earlier Preprocess/Precompile cases.",
+    "Distinguish no backend/assembly/link from avoiding ToolChain, frontend Tool or job construction.",
+    "If discussing the HLSL exception, preserve the OS, spirv32/spirv64 and !usesInput(HLSL) guards.",
+    "Do not claim a checked-in RUN expectation is a passing test or an installed compiler reproduces this snapshot without build verification.",
+    "Separate applicable memory, additional investigation, and bounded unresolved behavior; justify a no-change or fix decision."
+  ],
+  "facts": [
+    {"name":"toolchain-cache-key","topics":[1,2,3],"path":"clang/lib/Driver/Driver.cpp","first":7101,"last":7106,"anchors":["auto &TC = ToolChains[Target.str()];"]},
+    {"name":"target-width-existing-test","topics":[1],"path":"clang/test/Driver/default-toolchain.c","first":1,"last":5,"anchors":["// RUN: grep 'Target: x86_64-unknown-unknown' %t","// ARM64: Target: arm64-apple-macos11"]},
+    {"name":"tracked-input-language","topics":[1,2,3],"path":"clang/lib/Driver/Driver.cpp","first":3097,"last":3104,"anchors":["// Track the current user specified (-x) input.","types::ID InputType = types::TY_Nothing;"]},
+    {"name":"complete-hlsl-branch-scope","topics":[1,2,3],"path":"clang/lib/Driver/Driver.cpp","first":7244,"last":7252,"anchors":["case llvm::Triple::Vulkan:","case llvm::Triple::ShaderModel:","Target.getArch() == llvm::Triple::spirv32","Target.getArch() == llvm::Triple::spirv64","!usesInput(Args, types::isHLSL)","std::make_unique<toolchains::HLSLToolChain>"]},
+    {"name":"input-language-predicate","topics":[1,2],"path":"clang/lib/Driver/Driver.cpp","first":128,"last":137,"anchors":["template <typename F> static bool usesInput","Fn(types::lookupTypeForTypeSpecifier(A->getValue()))"]},
+    {"name":"effective-target-computation","topics":[1,2],"path":"clang/lib/Driver/Driver.cpp","first":619,"last":754,"anchors":["static llvm::Triple computeTargetTriple","options::OPT_m64"]},
+    {"name":"clang-cl-language-existing-test","topics":[1,2],"path":"clang/test/Driver/cl-inputs.c","first":4,"last":31,"anchors":["/TC","/TP"]},
+    {"name":"openmp-forwarding-existing-test","topics":[1,2],"path":"clang/test/Driver/openmp-Xopenmp-target-forward-args.c","first":1,"last":10,"anchors":["-Xopenmp-target","// CHECK-NOT: -ffinite-math-only"]},
+    {"name":"mode-before-parse-and-config","topics":[2],"path":"clang/lib/Driver/Driver.cpp","first":1450,"last":1466,"anchors":["getDriverMode(DriverExecutable, ArgList.slice(1))","ParseArgStrings(ArgList.slice(1)","ContainsError = loadConfigFiles();"]},
+    {"name":"clang-cl-pass-through-reparse","topics":[2],"path":"clang/lib/Driver/Driver.cpp","first":1479,"last":1497,"anchors":["ParseArgStrings(CLModePassThroughArgList, /*UseDriverMode=*/false"]},
+    {"name":"dumpmachine-reports-toolchain-triple","topics":[2],"path":"clang/lib/Driver/Driver.cpp","first":2570,"last":2573,"anchors":["C.getDefaultToolChain().getTripleString()"]},
+    {"name":"last-target-value","topics":[3],"path":"clang/lib/Driver/Driver.cpp","first":1598,"last":1599,"anchors":["Args.getLastArg(options::OPT_target)","TargetTriple = A->getValue();"]},
+    {"name":"default-toolchain-selection","topics":[2,3],"path":"clang/lib/Driver/Driver.cpp","first":1698,"last":1700,"anchors":["getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));"]},
+    {"name":"syntax-only-final-phase","topics":[3],"path":"clang/lib/Driver/Driver.cpp","first":350,"last":392,"anchors":["PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)","FinalPhase = phases::Compile;"]},
+    {"name":"trailing-language-warning","topics":[3],"path":"clang/lib/Driver/Driver.cpp","first":3131,"last":3135,"anchors":["LastInputArg->getIndex() < LastXArg->getIndex()","warn_drv_unused_x"]},
+    {"name":"syntax-only-no-output-action","topics":[3],"path":"clang/lib/Driver/Driver.cpp","first":5326,"last":5328,"anchors":["return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);"]},
+    {"name":"frontend-job-construction","topics":[3],"path":"clang/lib/Driver/Driver.cpp","first":6382,"last":6382,"anchors":["T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);"]},
+    {"name":"trailing-language-existing-test","topics":[3],"path":"clang/test/Driver/x-args.c","first":1,"last":9,"anchors":["// CHECK: '-x c++' after last input file has no effect"]}
+  ]
+}
