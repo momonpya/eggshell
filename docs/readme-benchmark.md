@@ -413,6 +413,65 @@ executed outputs. These are text-presence checks, not full-range coverage or
 semantic-equivalence certificates; signature absence alone does not prove a
 read is necessary. Details are in `stage3-delivery-diagnosis/read-evidence-map.json`.
 
+## Complete window order before fusion: isolated candidate
+
+A cached-vector diagnostic separates question and source projection. It uses
+the same 2,456 unique cached windows and owner domain, without encoding or
+generation-model calls. With the 694-character focus suffix, the condition at
+`Driver.cpp:360` in owner `v16748591830955464422` has within-owner numerical rank
+11 with both first-segment projections, 26 with source-centroid projection only,
+10 with query-centroid projection only, and 25 with both centroids. These are
+window-order diagnostics, not complete graph rankings, deliveries or token
+results. Inputs, domain, cached scores and exact auditor source are retained in
+`readme-window-centroid-20261020/stage3-window-projections`.
+
+An identifier-component prototype improves that window's lexical rank from
+69 to 10, but cannot bring it back into the focused 16-window result. The
+provider has already discarded its numerical position before rank fusion.
+Another method-header window even leaves the focused result when the expanded
+lexical terms give more support to the already retained numerical windows.
+Component hints alone are not adopted; their source files, checks and failed
+ranking outcome are archived privately with source hashes.
+
+The next isolated candidate retains every already computed numerical window
+position until focused evidence fusion. It sorts the accumulated positions
+once, and still retains at most 16 final focused cues. Discovery's 16-window
+hint limit is unchanged. Ranked hints are checked against the original
+document's finite window domain; focused replies must contain the complete
+window permutation. Source repair remains a separate capability bounded to
+32 windows. Neither the encoder, stored vectors, lexical grammar nor equality
+rules change.
+
+The constructor is `tools/window_order_candidate.py`. Build artifacts are in
+`/Users/ovm/.codex/experiments/eggshell/window-order-20261021/construction-2`.
+The runtime SHA-256 is
+`d6a653aca67a51ddce327558dce812fa9b8c972aa562467203e773fb0c46495d`.
+Build, `ContractAudit` and rank-directory tests pass. Boundary checks reject
+foreign, repeated and omitted orders, retain the 32-window repair restriction,
+and validate a 100,000-position hint with hash-based distinctness. That last
+check is not a DB-size latency gate. A 65-window regression fixture demonstrates
+that a strong lexical match beyond the early numerical cutoff can return while
+the final cue count remains 16. An initial compilation proof failure and a test
+fixture syntax repair remain recorded. Maximum build aggregate RSS is
+2,840,336 KiB; the guard does not fire. Effective source hashes are retained
+after the fixture repairs.
+
+On the same prepared after-topic-2 DB and question, the uncensored helper and
+actual native initial hook produce identical text with SHA-256
+`b3c9e6499ce045a98a4bd6e1f2a0c47c0bece60cd67ffa310c613388b9a0a357`.
+The `getFinalPhase` opening is present again, as in the warmed public packet;
+the decisive `OPT_fsyntax_only` condition remains absent. This partial recovery
+does not establish restored answer quality or token savings.
+
+The native hook completes semantic delivery in 14,977 ms with zero source
+encoding, unchanged authoritative graph values and clean client/daemon shutdown.
+Its guard observes 1,426,768 KiB maximum aggregate RSS. This is one topic-3
+readiness check, not the complete deadline gate for all topics or retained use.
+The result is
+`/Users/ovm/.codex/experiments/eggshell/readme-window-order-20261021/native-preflight-topic3/result.json`.
+No generation-model call is made or scheduled. Total-token and quality gates
+remain open; the candidate stays isolated and unadopted.
+
 ## Execution
 
 `tools/readme_benchmark.py` prepares private native environments and captures
