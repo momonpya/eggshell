@@ -1048,6 +1048,49 @@ The first-use and second-lap topic-1/2/3 cells still require matched repeated
 evaluation after this evidence tracing; the second lap has not run. Generation
 remains closed while the interpretation and quality gaps are investigated.
 
+### Delivered source facts in the topic-2 answers
+
+The next offline audit uses the exact **before-topic-2** export. Its head/pages
+hashes match all three trial input records. All content-addressed windows are
+accounted for; the 57 original documents are reconstructed, and the one later
+topic-2 answer is excluded. No later evidence is used to infer prior knowledge.
+
+Two concrete source facts have matching original evidence, actual delivered raw
+anchors and statements in all three answers: mode selection before ordinary
+argument parsing, and `/clang:` pass-through reparsing in ordinary Clang mode.
+The `-dumpmachine` source call is delivered too and appears in two answers.
+Config-before-ToolChain is supported by the original source, but the full raw
+anchor set is not delivered; do not count it as the same complete raw-code trace.
+These matches establish textual support, not the model's internal attention.
+
+| Repetition | Fresh commands | Memory commands | Fresh total tokens | Memory total tokens | Reduction | Input share of token difference |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 27 | 0 | 3,654,187 | 51,242 | 98.6% | 99.84% |
+| 1 | 32 | 0 | 4,439,023 | 53,433 | 98.8% | 99.96% |
+| 2 | 63 | 0 | 2,767,030 | 51,451 | 98.1% | 99.65% |
+
+Each row has an identical task prompt and `gpt-5.6-luna/xhigh` across arms.
+Totals include cached input and output; the already recorded seed acquisition
+cost remains separate. The input share is a decomposition of observed usage,
+not a causal token estimate for each memory fact. These results are consistent
+with avoiding repeated source investigation; shorter answers alone do not
+explain the observed reduction.
+
+There is also an important quality qualification. The complete
+`Driver.cpp:7244–7252` OS/architecture/input branch is present in **two original
+observations**. All three actual packets omit the `spirv32`/`spirv64` guard and
+instead include a filtered `rg` observation showing the HLSL test and constructor.
+All three answers summarize HLSL selection without that architecture scope.
+The earlier review's statement about the filtered observation did not establish
+that this condition was absent from the DB. A sufficient-condition summary must
+not be read as an exhaustive necessary-condition rule. High savings and zero
+further tools do not resolve this qualification or accept overall quality.
+
+The source/packet/answer mappings, per-anchor delivery and usage are retained in
+`readme-memory-reuse-20261021/answer-trace-1/{audit.json,executed-audit.py}`.
+This audit makes zero answering-model calls, executes no LLVM command and
+adopts no implementation change.
+
 `tools/readme_benchmark.py` prepares private native environments and captures
 one real turn. `tools/readme_sequence.py --stage N` runs one of the six frozen
 stages and prepares its common next checkpoint. It validates matching input
