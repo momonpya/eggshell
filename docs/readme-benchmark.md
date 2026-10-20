@@ -227,6 +227,38 @@ owned by the runner and reap it together with the shutdown client. Zero-model
 checks for both executables confirm both exit 0. The original shutdown failure
 and recovery are retained; the cell is not rerun or selected for token count.
 
+## Continuing the fixed sequence
+
+Stage 2 uses the already fixed after-topic-1 canonical values from the original
+study, with complete public primary postings. One exact copy becomes the
+centroid study's `checkpoints/stage-1`. All three repetitions use that same
+publication. There is no new seed. Subsequent checkpoints use predeclared
+centroid repetition 0; the other repetitions never enter history. Any later
+implementation comparison must receive the same chosen checkpoint, rather than
+generating an independent history for each implementation.
+
+The sequence controller selects the study's configured active DB pathname and
+reuses completed external fresh references. An incomplete attempt stops instead
+of being submitted again. It checks matching question/model/effort, source
+snapshot hashes and the measured initial body against native preflight. Each
+attempt retains the exact executed sequence runner and its protocol hash.
+
+Checkpoint warm uses the configured writable DB name, and the repeat uses an
+independent private data root. Stage 2 validates all 2,437 windows with zero
+requested encodes or batches in either pass. Its zero-generation native preflight
+delivers semantic context in 8,127 ms with zero source encoding and unchanged
+authoritative source data. The first preflight's header-only detection failure
+is retained; the corrected check records the entire additional context,
+including the preceding source-status text. It does not strip that prefix to
+manufacture body equality.
+
+Quality follows the original README study's question-level correctness and
+source-support scope. Different unrequested examples are not failures, and the
+original study also had no verified configured Clang build. Missing execution
+evidence is reported honestly; source checks and justified qualifications remain
+necessary. The broader paper experiments still require their own executable
+tests or independent blind evaluations.
+
 ## Execution
 
 `tools/readme_benchmark.py` prepares private native environments and captures
