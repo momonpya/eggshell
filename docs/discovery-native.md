@@ -508,8 +508,55 @@ private-layout attempts failed and remain recorded. The next collection fixes
 that precondition and passes 12/12, but daemonization can hide rapidly reparented
 children from the RSS sampler; the final observation fixes process ownership
 and retains the same declared twelve cases. None of these is a generative
-token/quality trial or production adoption. The 10,000/50,000-window gates under
-the new deadline policy remain unmeasured.
+token/quality trial or production adoption. The following synthetic collection
+measures the scale boundary under the new deadline policy; these LLVM results
+do not imply the larger strata pass.
+
+## Fixed synthetic first/continuation scale collection
+
+`initial_scale_probe.py` declares 48 synthetic hooks on the same saved graph
+publications: four sizes, two protected cache layouts, three fixed questions,
+and first/subsequent prompts in one live session. The collection order is
+10,000, 50,000, 2, 1,024 windows. Preparation completes both discovery and focus,
+preserves all original graph/vector bytes, repeats warm with zero work, and
+checks warm/doctor again at each destination. Owned managers permit descendant
+RSS tracking and explicit manager/client reaping. No measured hook is resubmitted.
+
+The first preparation creates the missing 9,969 focus keys for the 10,000-window
+publication: the complete input-key union is 19,969. Extra warm takes 77,435 ms,
+recorded separately. A harness error repeatedly hashed the whole vector directory
+inside its per-file validation loop. That runner is interrupted before any native
+sample; its source and outputs remain. The corrected runner hashes each directory
+once, reuses those already warmed bytes, and verifies warm/repeat request zero
+embeddings while preserving the original source and vector bytes.
+
+The complete 10,000-window stratum fails the new semantic/deadline gate **0/12**:
+
+| Layout | First prompt (body/gate) | Subsequent prompt (body/gate) |
+| --- | --- | --- |
+| Database | 0/3, 0/3 | 3/3, 0/3 |
+| Private overlay | 0/3, 0/3 | 3/3, 0/3 |
+
+First replies take 28,804–28,812 ms and contain incomplete notices without
+the required original body or accepted delivery offer. Subsequent replies take
+24,748–24,960 ms: lexical fallback supplies the body, actual stdout/hash agrees,
+and ACK is accepted in 6/6, but the five-second continuation target fails.
+These six replies visibly report the semantic timeout. They are neither semantic
+successes nor evidence that initial delivery works. A generic incomplete notice
+in the first six replies is also not a confirmed per-route timeout notice.
+
+The first numerical receipt reports 9,952 scored windows and 9,984 source-cache
+hits at 2,209 ms, then no completed numerical record before cancellation.
+That prefix is not complete scoring. Static code inspection finds quadratic
+list operations after/around scoring: RRF repeatedly searches each ranking,
+complete presentation removes duplicates from concatenated full rankings,
+window choices repeatedly search their evidence list, and the receiver performs
+list-position/evidence searches and cumulative append. These motivate an exact
+indexed candidate; they are not yet a measured causal decomposition or a speedup.
+Keep floating-point addition order, first-duplicate semantics, complete rankings,
+owner/window membership and rejection behavior unchanged. Candidate proofs/builds
+and balanced native observations remain required. The remaining 36 predeclared
+samples are running; no generation-model call, token claim or adoption is made.
 
 ## Local records
 
@@ -587,3 +634,7 @@ Under `/Users/ovm/.codex/experiments/eggshell/`:
   including six private-cache preparation failures; `inspection-2`: destination
   warm/doctor and twelve policy passes; `inspection-3`: final owned-manager
   collection, twelve policy passes, complete cache-only scoring and shutdowns.
+- `initial-scale-native-20261020/inspection-1`: retained setup-only runner
+  interruption, completed source warm and original runner bytes; `inspection-2`:
+  corrected validation, verified prepared-byte reuse, complete twelve failed
+  10,000-window cases and the still-running remaining synthetic strata.

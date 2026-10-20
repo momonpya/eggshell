@@ -104,3 +104,34 @@ Build, preparation and inference stay serial under the sampled aggregate
 Only measured bottlenecks determine whether packed matrices, hook-scoped
 encoder sharing or residency should come next. The full original scoring
 domain and complete-rank checks remain mandatory for any storage optimization.
+
+## Separate first and continuation strata (2026-10-20)
+
+The user now permits 10–30 seconds for an initial hook. Keep the original
+fixed five-second collections above unchanged. `initial_scale_probe.py` declares
+a separate 48-hook collection against the same saved synthetic publications:
+four sizes × two layouts × three fixed questions × first/subsequent prompt.
+The initial cap is 30 seconds overall; the subsequent target is five seconds.
+Semantic search receives at most 15,000/4,500 ms respectively, limited to half
+the remaining native deadline so lexical body delivery retains a reserve.
+Measure in the fixed order 10,000, 50,000, 2, 1,024 windows. Report every case,
+including completed lexical fallback separately from completed semantic search.
+
+Prepare discovery and focus to completion once for each common publication,
+then copy it into every cell. Preserve the original graph and every existing
+vector byte. Record the added focus-window difference and its preparation cost;
+repeat warm must add/hydrate/encode zero. Each destination must also complete
+warm and doctor before measurement, with zero additional source encoding.
+Use the same three questions recorded in the original scale manifest. Each
+pair stays in one live session, with acknowledged evidence retained in history.
+An empty subsequent result is not another body delivery. This does not measure
+latency for a new follow-up question or demonstrate generative answer quality.
+
+Both cache layouts use a read-only profile and OS-protected source DBs during
+hooks. Private warm also protects the DB. Managers remain owned by the runner
+for descendant RSS accounting; record both manager/client shutdown exits.
+Retain raw stdin/stdout, per-invocation receipts and the original five-second
+classification alongside the separately declared policy/body outcomes. No
+partial ranking or notice-only output counts as semantic/body completion.
+The 12 owned-manager LLVM observations are a separate already measured stratum;
+these 48 synthetic hooks do not replace them or establish token adoption.
