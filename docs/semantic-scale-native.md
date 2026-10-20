@@ -207,6 +207,51 @@ peak 1,522,528 KiB, no guard trigger. Source/cache trees, qualified runtime and
 overlays remain unchanged. No additional native hook or generation-model call
 was made. Successful inspection does not certify a repaired latency gate.
 
+The deeper isolated `profile_discovery_scale.py` inspection binds the same
+question, warm DB, receipt and workspace as that full fallback. A different
+diagnostic workspace changes a source-status key, so equality checks retain
+that failure rather than ignoring the metadata. The completed inspection
+requires equality of the **whole Handoff**: text, packet, source records,
+delivered graph keys, selection and completion metadata.
+
+The successful instrumented fallback takes 73,317 ms and matches all those
+fields exactly. Both known-first and subsequent lexical discovery call
+`loadWork` 19,938 times and read all 9,969 original owners. Their cumulative
+`evaluate` times are 19.522 and 17.384 seconds; `loadWork` consumes 13.835 and
+11.235 seconds within those totals. Child-membership checks consume 2.447 and
+3.010 seconds. The complete program still preserves the original nomination
+and matching domain; the top-eight lexical recommendation does not bound the
+earlier intrinsic Work lane.
+
+A separate three-second native stack observation, begun at 20 seconds of the
+same diagnostic process, identifies `indexedDiscoveryUsing`'s `depth` closure.
+For each projected owner, its filter rebuilds `sourceOutcomes state` and scans
+every original relation with `any`. The compiled C closure and its repeated
+`IndexedOwners.graph` map are retained beside the stack trace. This is another
+quadratic operation outside postings and Work admission. The next isolated
+change computes the same count using one complete relation-value set; full
+value equality remains the membership decision. No matching candidate is
+pruned. The isolated `discovery_depth_candidate.py` overlay now proves
+`projectedOutcomeCount_exact` for arbitrary original and projected owner lists.
+Its compiled native inspection also matches the entire reference Handoff.
+It takes 44,857 ms: this still exceeds the hook deadline. The instrumented
+reference takes 73,317 ms, and the earlier uninstrumented reference takes
+69,939 ms. These individual diagnostics include instrumentation; the reference
+also contains the stack observation. They are not balanced repeated performance
+trials, a passing native-hook gate or a token-saving result. Keep the candidate
+isolated. Its build/inspection takes 74.956 seconds, peak 2,965,280 KiB, no guard
+trigger. Two earlier candidate compilation failures are retained.
+
+The remaining owner list re-sorts/duplicate scans and intrinsic Work comparisons
+need correction before rerunning the fixed gate. Prepare the focus view in
+warm and forbid durable repair there as well. Domain metadata, ranking tables
+and held-directory cache reads remain separate measured concerns.
+
+The completed instrumented build/inspection takes 106.919 seconds, sampled
+peak 2,931,008 KiB, no guard trigger. Instrumentation and the stack observer add
+overhead: these are diagnostic costs, not a controlled performance improvement.
+Earlier build and workspace-comparison failures remain in constructions 1–5.
+
 Source inspection also found list-wide scans inside `SearchRank.fused`,
 presentation deduplication and ranked evidence lookup. These grow quadratically
 with complete rankings. Their actual phase costs remain to be profiled; use
@@ -262,6 +307,11 @@ All experiment paths below are under `/Users/ovm/.codex/experiments/eggshell/`:
   build while the collection owns the lock, including an existing-output case.
 - `lexical-scale-profile-20261020/construction-1`: helper build, five complete
   nomination/domain inspections and the 10,000-window full fallback trace.
+- `discovery-scale-profile-20261020/construction-6`: exact-Handoff admission
+  timings and the native stack observation; preceding failed checks retained.
+- `discovery-depth-candidate-20261020/construction-3`: exact depth-count theorem,
+  isolated native candidate and whole-Handoff equality; earlier build failures
+  retained and no production adoption.
 
 The managed checkout's `.lake/hook-audit/semantic-scale-combined-1.log` and
 `-process.json` retain the terminated first run. Resume invocation streams are
