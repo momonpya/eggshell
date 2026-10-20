@@ -20,7 +20,6 @@ LLVM = Path('/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project
 BASE = Path('/Users/ovm/.codex/experiments/eggshell/readme-luna-20261020')
 ROOT = Path(__file__).resolve().parents[1]
 CANDIDATE = Path('/Users/ovm/.codex/experiments/eggshell/uniform-budget-qualified-20261020/construction-1/checkout')
-PUBLIC = BASE / 'public-main-5187316/checkout'
 
 
 class BenchmarkServer(Server):
@@ -41,7 +40,9 @@ def execute(command, env, destination, timeout=90):
 
 
 def prepare(arm):
-    source = PUBLIC if arm == 'public-main' else CANDIDATE
+    if arm != 'candidate':
+        raise ValueError('Only the candidate has a memory environment')
+    source = CANDIDATE
     case = BASE / 'environments' / arm
     if case.exists():
         raise ValueError('Inspect existing environment before resuming it')
@@ -108,7 +109,17 @@ def prepare_fresh():
     return env
 
 
+def generation_protocol(arm):
+    protocol = json.loads((BASE / 'protocol.json').read_text())
+    if arm not in {'fresh', 'candidate'}:
+        raise ValueError('Token comparison is fresh versus candidate only')
+    if protocol.get('generationAllowed') is not True:
+        raise ValueError('Model trials stopped for regression diagnosis; retain existing attempts')
+    return protocol
+
+
 def model_turn(arm, label, topic):
+    protocol = generation_protocol(arm)
     case = BASE / 'environments' / arm
     env = json.loads((case / 'environment.json').read_text())
     attempt = BASE / 'attempts' / label
@@ -116,7 +127,7 @@ def model_turn(arm, label, topic):
     if arm != 'fresh':
         env['EGGSHELL_DATA_ROOT'] = str(attempt / 'data')
     record = json.loads((ROOT / 'docs/benchmarks/llvm-three-topics.json').read_text())
-    model = json.loads((BASE / 'protocol.json').read_text())['model']
+    model = protocol['model']
     prompt = record['prompts'][topic].replace('<LLVM_SOURCE>', str(LLVM))
     (attempt / 'prompt.txt').write_text(prompt)
     shutil.copy2(Path(__file__), attempt / 'runner.py')
@@ -225,7 +236,7 @@ def model_turn(arm, label, topic):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['prepare', 'turn'])
-    parser.add_argument('--arm', choices=['public-main','candidate','fresh'], required=True)
+    parser.add_argument('--arm', choices=['candidate','fresh'], required=True)
     parser.add_argument('--label')
     parser.add_argument('--topic', type=int, choices=[0,1,2,3])
     args = parser.parse_args()

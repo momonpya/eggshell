@@ -14,22 +14,21 @@ is replaced with the fixed source path. LLVM is commit
 ## Frozen comparison
 
 - Native Codex CLI 0.145.0, Luna with `xhigh`, read-only source workspace.
-- Latest public main at freeze: `51873167c11c447a0af67e73430b5ab6635b2a65`, built
-  from a clean Git archive; executable SHA-256
-  `959809379df896e464da5419398187b714d26fc90d87004f434a36be681bd2f3`.
 - Qualified isolated candidate: SHA-256
   `a5fdc5d5446b92f7f90d3473ce781d204a0d81fd500abf3f3e0ab2900ed91193`.
 - Three predetermined repetitions of every topic/initial-history cell for
-  both memory implementations, plus one fresh reference per topic/repetition.
+  the candidate, plus one fresh reference per topic/repetition.
   Fresh references are reused for the first/history columns, as in the README.
 - One new common seed. Every compared memory cell starts from identical graph
   bytes at the same active DB pathname. Candidate repetition 0 is the
-  predeclared next common checkpoint, shared by both implementations; other
+  predeclared next common checkpoint; other
   trial outputs do not enter history. This avoids independently generated
   histories becoming an implementation confound.
-- First lap order per topic: repetition 0 fresh/public/candidate, repetition 1
-  fresh/candidate/public, repetition 2 fresh/public/candidate. Retained lap
-  uses the same arm ordering and corresponding fresh references.
+- Per topic, repetitions 0, 1 and 2 use fresh then candidate. The retained lap
+  uses the corresponding already recorded fresh references. Public-version
+  token trials were removed at the user's direction; their consumed usage and
+  interrupted observation remain in the original artifacts. The prior protocol
+  and every per-attempt protocol remain archived.
 - New ephemeral native chat and independent private state per attempt;
   native memory, other plugins, web and agent tools are disabled. The only
   enabled plugin in memory arms is the vetted native Eggshell command plugin.
@@ -79,31 +78,47 @@ copying a private directory alone would not establish cross-chat readiness.
 
 Each new common checkpoint is prepared outside measured model turns. The
 candidate's native chats reuse copied DB-owned hints, with source/query probes
-retained. Public main runs its actual session-owned cache behavior; the harness
-does not invent DB-owned caching for that executable. Native cold/incomplete
-or empty delivery is retained as observed, rather than labeled a warm delivery.
+retained. A public run that delivered no initial body is not a healthy token
+control. Public code is used for delivery diagnosis with explicitly prepared
+session caches, without a generation-model token arm.
 
 Use cumulative thread `inputTokens + outputTokens` once per new thread. Cached
 input is already included; reasoning is already in output. No character or
 packet-byte saving substitutes for token saving. Failed acquisition/trial
 usage remains in accounting, with missing usage stated explicitly.
 
-The first fresh topic-1 reference completes at **3,050,963 tokens**. That is one
-reference observation, not a reduction rate or a completed three-topic result.
-Implementation trials, all three repetitions, source-grounded answer review
-and the corresponding final summaries remain in progress. No README savings
-claim, production adoption or full-goal completion follows from preparation.
+The completed topic-1 first-use comparisons are:
 
-The first matched topic-1 pair records **1,885,929 tokens** for public main and
-**789,335 tokens** for the candidate. Public main's initial hook delivers no
-context; the candidate delivers 120,302 UTF-8 bytes of original context in
+| Repetition | Fresh total tokens | Candidate total tokens | Reduction vs fresh |
+| --- | ---: | ---: | ---: |
+| 0 | 3,050,963 | 789,335 | 74.1% |
+| 1 | 2,932,984 | 1,604,261 | 45.3% |
+| 2 | 3,181,936 | Not run | Unavailable |
+
+These are individual observations, not a completed three-topic result. The
+historical README study records 76.0% first-lap and 96.4% retained-lap reduction.
+Its answering model and seed differ, so the present observations alone cannot
+attribute that gap to an implementation change. The MiniLM model is unchanged;
+the isolated candidate changes its input segmentation and scoring, and changes
+lexical terms to 2-grams. Those changes can change delivery.
+
+The candidate's repetition 0 delivers 120,302 UTF-8 bytes of initial context in
 7,227 ms. Its discovery and focus receipts both complete with no source-cache
 miss, unusable record or source encoding; no foreground warm is requested.
-These are individual observations. Source review finds a material target
-condition error in both answers' generic `spirv` example: the cited branch's
+Repetitions 0 and 1 have the identical initial packet SHA-256
+`a6c99a918aac4a2149305bd1547aae96a908a423b216e36612eff22ee14017e7`,
+but execute 16 and 40 tool commands. Their difference cannot be attributed to
+a difference in that initial packet. Later packets and newly investigated facts
+also need review. Source review finds a material target-condition error in the
+candidate answers' generic `spirv` examples: the cited branch's
 language-dependent alternative specifically requires `spirv32` or `spirv64`.
 The original answers and history remain unchanged, and neither explanation is
 accepted as source-verified correct. Fewer tokens alone do not pass adoption.
+Generation is stopped in the protocol and the runner rejects new model calls
+until the delivery and quality diagnosis is resolved. Existing attempts are
+never replayed. The full goal remains active; the candidate is unadopted.
+The fixed-input body comparisons and their limits are recorded in
+[delivery-regression-diagnosis.md](delivery-regression-diagnosis.md).
 
 The candidate's model turn and `egg keep` completed, but the harness's detached
 daemon shutdown client returned a wait-for-exit failure after acknowledgement.

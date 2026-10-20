@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import subprocess
 
-from readme_benchmark import BASE, LLVM, model_turn, execute
+from readme_benchmark import BASE, LLVM, model_turn, execute, generation_protocol
 from semantic_latency import graph_files, save
 
 
@@ -84,6 +84,7 @@ def warm(checkpoint):
 
 
 def run(stage):
+    generation_protocol('candidate')
     if stage not in range(1, 7):
         raise ValueError('Expected one of the six predeclared stages')
     topic = (stage - 1) % 3 + 1
@@ -95,7 +96,7 @@ def run(stage):
     for repetition in range(3):
         reference = f'fresh-topic{topic}-r{repetition}'
         observe_or_run('fresh', reference, topic)
-        for arm in (['public-main', 'candidate'] if repetition != 1 else ['candidate', 'public-main']):
+        for arm in ['candidate']:
             label = f'stage{stage}-{arm}-r{repetition}'
             attempt = BASE / 'attempts' / label
             if not attempt.exists():
