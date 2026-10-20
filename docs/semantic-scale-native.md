@@ -73,12 +73,12 @@ than submitting a measured prompt again; missing evidence fails the attempt.
 
 ## First retained observations
 
-The collection is still running in
+The collection is being resumed in
 `semantic-scale-20261020/combined-1`; its complete result has not been certified.
 The 2- and 1,024-window strata each passed all 12 fixed observations. At 1,024
 windows, fresh questions took 3,206–3,495 ms and cached questions 1,609–1,780 ms.
 
-The first six 10,000-window observations all failed the gate at about 28.8
+All twelve 10,000-window observations failed the gate at about 28.8
 seconds. The first fresh receipt records 4,508 ms of semantic timeout followed
 by 24,224 ms on the lexical route. Actual stdout contained the incomplete
 notice, not original DB body; offer acceptance was absent. This fails the body
@@ -94,6 +94,71 @@ next inspection must separate posting reads, owner validation, ranking and
 the rest of delivery before choosing the optimization. Full rankings and
 original scoring domains must survive any change.
 
+## Complete 50,000-window preparation and recovery
+
+Both indexes are fully prepared: 49,969 lexical owners and 50,000 original
+windows represented by 50,032 segment vectors. Doctor reports warm/ready with
+zero invalid or missing objects. Numerical receipts account for 8,375,676
+tokenizer-mapped non-whitespace characters, all covered. These are encoder
+input diagnostics, not generation-model token savings.
+
+Explicit lexical warm took 480.212 seconds; numerical warm took 499.113 seconds.
+Repeated warm requested/encoded/hydrated/added zero and took 22.207 seconds.
+Doctor took 21.959 seconds. The separate full cache inspection took 37.796
+seconds across three passes. Each pass opens exactly 50,000 existing objects
+and reads 329,796,736 bytes:
+
+| Phase | Observed time per pass |
+| --- | ---: |
+| Open | 5.276–5.281 s |
+| Read | 0.160–0.162 s |
+| JSON decode | 1.621–1.649 s |
+| Validation | 0.442–0.446 s |
+
+Opening alone exceeds the 4,500 ms semantic allocation in this layout. This is
+a complete observed scan, not an extrapolation. The current
+`Eggshell/Storage/sync.c` securely walks every absolute path component for
+each open. A held, verified directory and one-component child open should be
+measured before assuming a new matrix file format is necessary. Keep no-follow,
+regular-file, extent and numerical-content checks.
+
+The first 50,000-window fresh hook failed at 28,817 ms with no body, and the
+cached hook subsequently failed at 28,820 ms. Both streams and failures are
+retained. Their roughly 24-second lexical intervals end at cancellation; they
+do not establish a completed ranking's execution cost.
+
+The original runner terminated with exit 1 after an **unmeasured** full-corpus
+query-priming command timed out at 31,191 ms. Its last numerical progress record
+has 49,952 of 50,000 windows scored at 13,706 ms; it is still `running`, not
+complete. The query itself was successfully cached. The initial guard report
+records 1,853.738 seconds, peak descendant RSS 1,604,304 KiB, no guard trigger.
+
+`resume_semantic_scale.py` accepts only this identified setup failure, takes
+the original live-process lock, verifies every sealed executable/helper hash,
+and checks the actual private query cache. If absent, the native provider can
+embed just the question through its empty-candidate lane; no DB owner, source
+windows or corpus is passed. Setup is separate from measured hooks and the
+DB/cache tree remains OS protected and byte-identical. In the first recovery,
+the cache was already valid, so no new embedding was needed.
+
+The tool then invokes the **unchanged frozen runner with `--resume`**. It hashes
+all existing measured streams/results/receipts before resuming and verifies
+that they remain identical afterward. The first recovered pair preserved all
+714 existing files byte-for-byte. Failed priming records are copied into the
+recovery log; no failed measured hook is resubmitted. Remaining cells, including
+the actual corpus, are still pending.
+
+Source inspection also found list-wide scans inside `SearchRank.fused`,
+presentation deduplication and ranked evidence lookup. These grow quadratically
+with complete rankings. Their actual phase costs remain to be profiled; use
+rank-position tables and dense indices only with the same complete order and
+floating-point addition order. The prepared `LexicalScaleProfile.lean` wrapper
+calls the exact nomination function and records each posting's reads, ordinal
+lookups, remaining nomination time and the full ranking. It has not yet been
+compiled or measured. Its runner rejects a live collection before creating
+output; two live-lock cases also preserve existing output. Heavy inspection
+waits until collection ends.
+
 ## Local records
 
 All experiment paths below are under `/Users/ovm/.codex/experiments/eggshell/`:
@@ -105,8 +170,15 @@ All experiment paths below are under `/Users/ovm/.codex/experiments/eggshell/`:
 - `scale-harness-validation-20261020/record-replay-1`: existing native replay.
 - `semantic-scale-20261020/combined-1`: frozen runner/protocol, setup costs,
   individual hook streams, timings, receipts and partial results.
+- `semantic-scale-recovery-20261020/retained-1`: retained setup errors, exact
+  resume commands, query-cache checks and immutable measured-file hashes.
+- `lexical-scale-profile-20261020/live-lock-check-2`: refusal before output or
+  build while the collection owns the lock, including an existing-output case.
 
-The managed checkout's `.lake/hook-audit/semantic-scale-combined-1.log` retains
-live cell summaries. The `-process.json` guard result becomes authoritative
-only after the runner terminates. The 3,500,000 KiB guard covers aggregate
-descendant RSS; source preparation, builds and inference are serial.
+The managed checkout's `.lake/hook-audit/semantic-scale-combined-1.log` and
+`-process.json` retain the terminated first run. Resume invocation streams are
+under each recovery step, with live wrapper progress in
+`.lake/hook-audit/semantic-scale-combined-recovery-1.log`; that wrapper's guard
+result becomes authoritative after it terminates. The 3,500,000 KiB guard
+covers aggregate descendant RSS; source preparation, builds and inference
+are serial.

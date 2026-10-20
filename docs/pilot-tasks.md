@@ -23,7 +23,7 @@ establish that the requests distinguish missing behavior from checked reference
 behavior. They are not success rates for a model or memory implementation.
 
 The third task's name refers to ItsDangerous's `loads_unsafe` API. It is separate
-from the study's still-unimplemented similarity-equality experimental condition.
+from the study's isolated similarity-equality experimental condition.
 An authenticated oversized payload raises `BadPayload`; recovering an oversized
 invalid/expired payload returns `(False, None)`. The task does not mislabel an
 authenticated signature as invalid merely because decoding was refused.
