@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Qualify the complete focus warm closure without changing ordinary sources."""
+"""Qualify an isolated retrieval candidate without changing ordinary sources."""
 import argparse
+import importlib
 import json
 from pathlib import Path
 import shutil
 
-import focus_warm_candidate as candidate
 from context_native_probe import environment, sha
 from prepare_discovery_candidate import sources, drain
 from semantic_latency import execute, save
 
 
 def run(args):
+    candidate = importlib.import_module(args.candidate.replace('-', '_') + '_candidate')
+    checks = 'focus_warm_tests' if args.candidate == 'focus-warm' else 'context_plan_tests'
     source = Path(__file__).resolve().parents[1]
     base = args.base.resolve(); output = args.output.resolve()
     if any(output.is_relative_to(p) or p.is_relative_to(output) for p in [source, base]):
@@ -27,7 +29,12 @@ def run(args):
     checkout = output / 'checkout'
     import subprocess
     subprocess.run(['/bin/cp', '-cpR', str(original), str(checkout)], check=True, timeout=300)
-    for name, transform in [('Handoff', candidate.handoff), ('Warm', candidate.warm)]:
+    transforms = [('Handoff', candidate.handoff)]
+    if args.candidate == 'focus-warm':
+        transforms.append(('Warm', candidate.warm))
+    if hasattr(candidate, 'audit'):
+        transforms.append(('ContractAudit', candidate.audit))
+    for name, transform in transforms:
         path = checkout / 'Eggshell' / (name + '.lean')
         path.write_text(transform(path.read_text()))
     for name in candidate.HELPERS:
@@ -38,15 +45,15 @@ def run(args):
     save(output / 'manifest.json', dict(sources=frozen, baseResultSha256=sha(base / 'result.json'),
         baseManifestSha256=sha(base / 'manifest.json'), qualifiedBaselineSha256=sha(runtime),
         ordinaryRuntimeSha256=ordinary_hash, runnerSha256=sha(Path(__file__)),
-        overlaySha256=sha(Path(candidate.__file__)), instrumentation=False,
+        overlaySha256=sha(Path(candidate.__file__)), candidate=args.candidate, instrumentation=False,
         generationModelCalls=0, productionAdoption=False))
     config = output / 'empty.toml'
     config.write_text('default = "empty"\nsemantic_matcher = false\n[profiles.empty]\nread = []\n')
     data = output / 'data'; env = environment(data, config, args.prefix.resolve())
-    execute(['lake', '--no-cache', 'build', 'eggshell', 'eggshell_tests', 'focus_warm_tests',
+    execute(['lake', '--no-cache', 'build', 'eggshell', 'eggshell_tests', checks,
              'Eggshell.ContractAudit'], output / 'build', env, checkout, timeout=600)
-    raw, focused = execute([checkout / '.lake/build/bin/focus_warm_tests'],
-                           output / 'focus-tests', env, checkout, timeout=60)
+    raw, focused = execute([checkout / '.lake/build/bin' / checks],
+                           output / 'candidate-tests', env, checkout, timeout=60)
     regression_env = dict(env); regression_env.pop('EGGSHELL_CONFIG', None)
     _, regression = execute([checkout / '.lake/build/bin/eggshell_tests'],
                            output / 'regression', regression_env, checkout, timeout=600)
@@ -55,7 +62,8 @@ def run(args):
             or sha(runtime) != qualified['candidateSha256'] or sha(ordinary) != ordinary_hash):
         raise ValueError('Qualification changed frozen sources or an ordinary executable')
     save(output / 'result.json', dict(passed=True, candidateSha256=sha(checkout / '.lake/build/bin/eggshell'),
-        focusTests=json.loads(raw), focusTiming=focused, regression=regression, indexRecovery=recovery,
+        candidate=args.candidate, candidateTests=json.loads(raw), checkTiming=focused,
+        regression=regression, indexRecovery=recovery,
         sourcesUnchanged=True, instrumentation=False, generationModelCalls=0, productionAdoption=False))
     print(json.dumps(dict(passed=True, regressionMs=regression['elapsedMs'], checkout=str(checkout))), flush=True)
 
@@ -64,6 +72,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['base', 'output', 'prefix']:
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--candidate', choices=['focus-warm', 'context-plan'], default='focus-warm')
     args = parser.parse_args()
     try:
         run(args)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check focus warm closure, exact ranking and 12 fixed LLVM native hooks."""
+"""Check exact focus ranking and 12 fixed LLVM native hooks."""
 import argparse
 import fcntl
 import json
@@ -34,6 +34,11 @@ def run(args):
             raise ValueError('An uninstrumented qualified input changed')
     sealed = json.loads((scale / 'manifest.json').read_text())
     fixture = next(row for row in sealed['fixtures'] if row['label'] == 'actual-llvm')
+    ready_native = args.ready_native.resolve() if args.ready_native else None
+    if ready_native:
+        ready = json.loads((ready_native / 'result.json').read_text())
+        if not ready['inspectionComplete'] or not ready['sourceAndVectorBytesUnchanged']:
+            raise ValueError('The complete warmed input collection is required')
     prepared = scale / 'prepared/actual-llvm/source.egg'
     prepared_files = json.loads((prepared.parent / 'prepared.json').read_text())['files']
     support = prefix / 'share/eggshell/minilm'
@@ -71,15 +76,29 @@ def run(args):
             qualifiedResultSha256=sha(build / 'result.json'), referenceResultSha256=sha(reference / 'result.json'),
             layouts=['database', 'private-overlay'], questions=fixture['questions'],
             conditions=['fresh', 'cached'], plannedNativeHooks=12, exactFullFocusComparisons=2,
+            readyNativeManifestSha256=sha(ready_native / 'manifest.json') if ready_native else None,
+            warmPrecondition='complete-discovery-and-focus' if ready_native else 'original-only',
             generationModelCalls=0, productionAdoption=False))
         binary = tools['candidate']['binary']; rows = []; comparisons = []
         identity = fixture['head']['identity']
         for layout in ['database', 'private-overlay']:
-            cell = output / layout; cell.mkdir(); database = cell / 'source.egg'; clone(prepared, database)
+            cell = output / layout; cell.mkdir(); database = cell / 'source.egg'
+            prepared_layout = ready_native / layout / 'source.egg' if ready_native else prepared
+            if ready_native and tree(prepared_layout) != json.loads(
+                    (prepared_layout.parent / 'setup.json').read_text())['sourceTree']:
+                raise ValueError('A fully warm publication changed before copying')
+            clone(prepared_layout, database)
             if layout == 'private-overlay':
                 destination = cell / 'data/read-cache' / identity
                 destination.parent.mkdir(parents=True)
-                clone(database / 'derived' / identity, destination); shutil.rmtree(database / 'derived')
+                if ready_native:
+                    original_cache = ready_native / layout / 'data/read-cache' / identity
+                    expected_vectors = json.loads((ready_native / layout / 'setup.json').read_text())['completeVectors']
+                    if tree(next(original_cache.glob('**/vectors'))) != expected_vectors:
+                        raise ValueError('A fully warm private vector cache changed')
+                    clone(original_cache, destination)
+                else:
+                    clone(database / 'derived' / identity, destination); shutil.rmtree(database / 'derived')
             cache = (database / 'derived' / identity if layout == 'database'
                      else cell / 'data/read-cache' / identity)
             # Obtain the actual cache path from the existing layout. Avoid a
@@ -104,7 +123,8 @@ def run(args):
                 warmed, timing = warm()
             before, after = warmed['before'], warmed['after']
             warmed_vectors = tree(vectors)
-            if (before['discovery']['valid'] != fixture['uniqueWindows'] or before['focus']['missing'] == 0
+            if (before['discovery']['valid'] != fixture['uniqueWindows']
+                    or (before['focus']['missing'] != 0 if ready_native else before['focus']['missing'] == 0)
                     or before['invalid'] or warmed['requested'] != before['missing']
                     or warmed['batches'] != (warmed['requested'] + 31) // 32
                     or after['valid'] != after['windows'] or after['focus']['valid'] != after['focus']['windows']
@@ -182,6 +202,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['build', 'reference', 'scale', 'output', 'prefix']:
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--ready-native', type=Path,
+        help='Reuse the exact complete discovery/focus inputs from a prior native collection')
     args = parser.parse_args()
     try:
         run(args)

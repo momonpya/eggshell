@@ -166,6 +166,94 @@ gate. The old failed 60 samples remain unchanged. Native collection takes
 Frozen DBs, source-vector bytes, model/runtime assets and ordinary sources
 remain unchanged. No generation-model trial or adoption comparison ran.
 
+## Reusable context preparation
+
+The complete configured LLVM diagnostic, outside the hook deadline, returns
+the required gold body in 19,142 ms. Existing trace points put source focus
+at 1,412 ms and completed rendering at 18,238 ms: the rendering interval is
+16,826 ms. A three-second native stack sample retains exact complete Handoff
+equality. It locates repeated context preparation under budget alternatives.
+Generated C confirms `prepareContextualOwnerPart` has seven runtime arguments,
+including the budget: its source preparation is repeated on each application.
+
+The isolated `context_plan_candidate.py` materializes `BudgetPlan`: either
+a constant result or a prepared renderer for a variable allowance. The
+budget-independent work runs before constructing the sized plan. Both actual
+renderer call sites use those values. The original context functions remain
+the specifications. Three universal Lean equalities preserve the complete
+owner part, selected slice and supporting slice for every input and budget.
+No budget level, nominated position, payload or completion field is removed.
+The 72 native comparisons cover short/plain/canonical escaped Unicode bodies,
+empty and multiple positions, and allowances from zero through 8,192.
+
+A second native stack and generated C identify another repeated source scan:
+the default-argument partial application in `coherentContextRanges` places
+record/head scans inside each range's map iteration. Naming these two values
+before the map preserves the original function definitionally; a `rfl`
+compiler equality retains its kernel specification. Actual generated C has
+one record scan and one head scan before the map, zero of either inside its
+loop, and the optimized call in `ownerContextDemand`. Prepared owner/slice
+factories now have six/three runtime arguments, excluding the budget.
+
+The same frozen publication, question, workspace, receipt and model inputs
+produce exactly the same complete Handoff in both candidate diagnostics.
+The first reports 8,330 ms, the composed candidate 8,549 ms; their render
+intervals are 3,990/2,878 ms. The second candidate's Handoff source, BudgetPlan
+source and generated Handoff C are byte-identical to the qualified build.
+These are individual diagnostics, with other time outside the existing trace
+intervals; they are not balanced latency evidence, token savings or hook passes.
+
+An attempted duplicate whole-renderer proof expansion hit the unchanged
+3,500,000 KiB guard at 3,530,624 KiB. It is retained and removed from the final
+candidate. The smaller candidate uses one renderer and the three exact
+component contracts. Its first qualification correctly fails ContractAudit's
+old direct-function reachability requirement. The updated isolated audit
+requires the actual prepared producers/evaluator, retains every other source
+boundary check, checks the three equalities against their exact original
+function types, and restricts their axioms plus the compiler equality to the
+existing allowed set. No `sorry` or new trusted/native-decide axiom is used.
+
+Final qualification passes: all existing regression tests in 100.222 seconds,
+the 72 native comparisons, ContractAudit, and separate recovery of three
+recorded tickets with both recorded graph heads unchanged. Shutdown client
+and daemon exit 0. The qualification takes 161.857 seconds, sampled peak
+3,225,776 KiB; the guard does not trigger. Ordinary sources/runtime remain
+unchanged. Latest-public-main adoption and the full scale gate remain open.
+
+The new fixed LLVM collection reuses the exact complete discovery/focus
+caches; both layouts repeat warm with zero requests or batches. Complete
+focus owner/window rankings again equal the reference in both layouts, and
+all source/vector bytes remain unchanged. All 12 hooks complete both numerical
+passes without source misses or encoding, and publication/stdout hashes and
+ACKs agree in 12/12. Nevertheless the semantic/gold-body gate remains **0/12**:
+every configured attempt reaches the 4.5-second deadline. Total replies take
+4,820.030–4,917.034 ms and carry lexical fallback without the required gold
+marker. No failed sample is replaced. Collection takes 153.765 seconds,
+sampled peak 1,602,304 KiB, without a guard trigger.
+
+One additional actual cached hook observes trace appends from outside the
+worker on a monotonic timeline, without changing the runtime. It retains
+the same deadline/body classification and fails in 4,839.647 ms. Its
+configured trace reaches source focus at 1,443 ms and never reaches completed
+rendering. The observer sees about 2,381 ms between that focus event and the
+start of fallback, and 3,827 ms from configured trace start to fallback,
+versus 4,510 ms for the complete configured attempt. These are passive
+observations with polling resolution/jitter, not exact phase subtraction.
+They show the indexed-discovery trace omits earlier configured work and that
+rendering still does not fit its remaining deadline. The fallback renders in
+206 ms; its body is not the required gold observation. Keep improving the
+actual deadline path and instrument its omitted preparation interval before
+repeating a broad scale gate or starting the adoption pilot.
+
+The qualified executable is also checked against the original complete
+Handoff with a separately built helper: exact equality and the gold body
+pass. Its internal complete-delivery interval is 5,414 ms, including a
+3,052 ms render interval; actual helper-process wall time is 17,233 ms.
+The earlier diagnostic times above are likewise internal intervals, distinct
+from process wall time and actual native-hook latency. All observations are
+retained. This check takes 36.508 seconds overall, sampled peak 1,555,104 KiB,
+without a guard trigger; it does not change the 0/12 native gate result.
+
 ## Local records
 
 Under `/Users/ovm/.codex/experiments/eggshell/`:
@@ -184,3 +272,20 @@ Under `/Users/ovm/.codex/experiments/eggshell/`:
   targeted tests, full regression, ContractAudit and independent recovery.
 - `focus-warm-native-20261020/inspection-1`: fixed LLVM inputs, separate
   discovery/focus coverage, complete focus ranking and native delivery runs.
+- `semantic-delivery-profile-20261020/inspection-1`: complete configured
+  delivery, gold body and original phase trace outside the hook deadline.
+- `semantic-delivery-stack-20261020/observation-1`: owned renderer sample
+  and exact complete Handoff equality.
+- `context-plan-inspection-20261020/inspection-1` and `inspection-2`:
+  complete reference equality, native comparisons and phase traces.
+- `context-plan-stack-20261020/observation-1`: remaining context preparation
+  after materializing budget plans, with complete reference equality.
+- `context-plan-qualified-20261020/construction-1`: retained old reachability
+  audit rejection; `construction-2`: exact bridge audit, native C audit,
+  complete regression and independent ticket recovery.
+- `context-plan-native-20261020/inspection-1`: the new complete fixed LLVM
+  12-hook collection; all failures and complete cache-only scoring retained.
+- `context-plan-hook-trace-20261020/inspection-1`: one additional actual
+  cached hook and passive absolute trace observations, separate from the gate.
+- `context-plan-qualified-profile-20261020/inspection-1`: complete reference
+  equality in the qualified executable, with internal/process timings retained.
