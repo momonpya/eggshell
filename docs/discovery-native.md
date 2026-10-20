@@ -323,6 +323,43 @@ presence is recorded separately from the internal delivery interval and
 does not by itself explain the whole process wall time. Sampling takes
 17.880 seconds, sampled peak 234,864 KiB, without a guard trigger.
 
+## Prefix multiplicity and a disconnected lazy memo primitive
+
+A diagnostic copy records every prefix decision after the bounded
+re-encoding check. Its complete Handoff equals the original reference. It
+records 7,423 decisions, grouped into 2,667 source-hash/character-length/start
+tuples, with 4,756 repeated observations. These hashes are grouping hints,
+not identity certificates or proposed runtime cache keys. Logging, hashing
+and character counting add overhead: the internal 7,927 ms interval and
+20,108 ms process wall interval are not latency comparison evidence. The
+diagnostic takes 50.937 seconds, sampled peak 2,627,104 KiB, without a guard
+trigger. The two earlier instrumentation proof failures are retained; the
+successful trace has an exposed logical identity and preserves the decoder's
+compiler equality. Neither instrumentation nor debug output enters a runtime.
+
+`tools/ExactLazyMemo.lean` is a disconnected candidate for sharing decisions
+across budget evaluations. It uses a finite binary address tree with lazy
+branches and certified leaf results. Only requested paths are built; Lean's
+standard cached Thunks share those computations. Its universal `read_exact`
+theorem preserves the original function at every key. Outside the configured
+domain, lookup evaluates the original function rather than aliasing a leaf.
+The theorem uses only `propext` and `Quot.sound` in the printed axiom audit.
+
+Native checks pass 91 comparisons, including absent results, domain
+boundaries and repeated keys. Evaluation traces show each of six requested
+in-domain keys computed once despite six reads per key. A second tree with
+2^40 virtual addresses computes each of its three requested keys once, plus
+one exact outside-domain evaluation. No whole-domain allocation occurs.
+The primitive check takes 4.346 seconds including build, sampled peak
+1,514,448 KiB; the guard does not trigger. Its first missing-library-root
+build failure and earlier proof drafts remain in the local records.
+
+This primitive has **not** been connected to prefix decisions, qualified
+through the complete runtime or measured in a hook. The next candidate must
+bind its entries to the exact source and prefix predicate, preserve every
+old decoder decision, and pass complete qualification before repeating the
+same fixed native gate. The existing 0/12 result remains unchanged.
+
 ## Local records
 
 Under `/Users/ovm/.codex/experiments/eggshell/`:
@@ -368,3 +405,9 @@ Under `/Users/ovm/.codex/experiments/eggshell/`:
   Handoff equality, original gold observation and separate process timings.
 - `context-memo-stack-20261020/observation-1`: remaining width/prefix work
   in the actual qualified renderer, with exact full Handoff equality.
+- `context-prefix-profile-20261020/observation-1` and `observation-2`:
+  retained instrumentation proof failures; `observation-3`: prefix counts,
+  original full Handoff equality and unchanged frozen inputs.
+- `exact-lazy-memo-20261020/construction-1`: retained build-root failure;
+  `construction-2`: initial native checks; `construction-3`: the final 91
+  comparisons, exact evaluation keys, axiom output and unchanged runtime.
