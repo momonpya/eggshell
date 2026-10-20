@@ -120,6 +120,22 @@ never replayed. The full goal remains active; the candidate is unadopted.
 The fixed-input body comparisons and their limits are recorded in
 [delivery-regression-diagnosis.md](delivery-regression-diagnosis.md).
 
+Prepared public-main delivery now differs from the full candidate on all three
+initial questions. A first-segment scoring control, isolated from production,
+retains modern cache/warm/performance code and reproduces all three public
+initial bodies. This is a causal diagnostic, not an adopted old implementation
+or a recovered token result. Its separate native topic-1 preflight completes in
+11,041 ms with no source encoding. Physical publication bytes change through a
+derived memo and neutral journal; authoritative graph equality is audited
+explicitly. The failed physical-immutability assertion remains recorded.
+
+The after-topic-1 checkpoint mixes public plain primary lexical terms with the
+candidate's newly saved `P`-prefixed terms. Public lookup cannot find those new
+postings, so its history delivery comparisons are excluded as healthy public
+controls. The first-use seed was produced by public main and has no such mixed
+index. No new generation trial has run for this scoring diagnosis yet. Full
+initial/history × three-topic × three-repetition adoption requirements remain.
+
 The candidate's model turn and `egg keep` completed, but the harness's detached
 daemon shutdown client returned a wait-for-exit failure after acknowledgement.
 The endpoint disappeared and the saved result/usage were recovered without

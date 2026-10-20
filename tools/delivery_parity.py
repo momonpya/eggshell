@@ -33,6 +33,7 @@ VARIANTS = {
     'owner-projection': EXPERIMENTS / 'owner-projection-qualified-20261020/construction-4/checkout',
     'uniform-budget': EXPERIMENTS / 'uniform-budget-qualified-20261020/construction-1/checkout',
     'uniform-public-provider': EXPERIMENTS / 'uniform-budget-qualified-20261020/construction-1/checkout',
+    'first-segment-control': EXPERIMENTS / 'first-segment-control-20261020/construction-1/checkout',
 }
 
 
@@ -69,8 +70,10 @@ def prepare(name):
     if not checkout.exists():
         clone(original, checkout)
         shutil.copy2(ROOT / 'tools/DeliveryAudit.lean', checkout / 'tools/DeliveryAudit.lean')
-        with (checkout / 'lakefile.lean').open('a') as stream:
-            stream.write('\nlean_exe delivery_audit where\n  root := `tools.DeliveryAudit\n')
+        lakefile = checkout / 'lakefile.lean'
+        if '\nlean_exe delivery_audit where\n' not in lakefile.read_text():
+            with lakefile.open('a') as stream:
+                stream.write('\nlean_exe delivery_audit where\n  root := `tools.DeliveryAudit\n')
         save(cell / 'input.json', dict(original=str(original), runtimeSha256=sha(original / '.lake/build/bin/eggshell'),
             helperSha256=sha(ROOT / 'tools/DeliveryAudit.lean'), generationModelCalls=0))
     env = dict(os.environ, EGGSHELL_PREFIX=str(STUDY / 'environments/candidate/prefix'),
@@ -91,6 +94,12 @@ def index_inputs(name, cell, binary, env, database, inputs):
         return
     identity = json.loads((database / 'head').read_text())['identity']
     previous = OUTPUT.parent / 'variants/public-warm/seed'
+    prepared_seed = OUTPUT / 'variants/public-warm/seed'
+    if name == 'public-warm' and cell != prepared_seed and not (cell / 'provider-cache').exists() and (prepared_seed / 'index.json').exists():
+        if json.loads((prepared_seed / 'index.json').read_text())['complete']:
+            clone(prepared_seed / 'provider-cache', cell / 'provider-cache')
+            save(cell / 'reused-cache-hints.json', dict(source=str(prepared_seed),
+                complete=False, verification='Provider validates model and exact text for every input below; encode all missing inputs before comparison'))
     if name == 'public-warm' and not (cell / 'provider-cache').exists() and (previous / 'index.json').exists():
         prior = json.loads((previous / 'index.json').read_text())
         prior_inputs = json.loads((previous / 'inputs.json').read_text())['stdout']

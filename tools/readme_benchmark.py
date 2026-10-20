@@ -27,6 +27,11 @@ class BenchmarkServer(Server):
     allow_turn_events = True
 
 
+def active_database():
+    protocol = json.loads((BASE / 'protocol.json').read_text())
+    return Path(protocol.get('activeDatabase', str(BASE / 'active/work.egg')))
+
+
 def execute(command, env, destination, timeout=90):
     if destination.exists():
         raise ValueError('Refusing to repeat an existing preparation command: ' + str(destination))
@@ -67,7 +72,7 @@ def prepare(arm):
     config = 'model = ' + json.dumps(model) + '\nmodel_reasoning_effort = "xhigh"\n' + config
     (account / 'config.toml').write_text(config)
     egg_config = case / 'eggshell.toml'
-    database = BASE / 'active/work.egg'
+    database = active_database()
     egg_config.write_text('default = "work"\n[eggs]\nwork = ' + json.dumps(str(database)) +
         '\n[profiles.work]\nread = ["work"]\nwrite = "work"\nhandoff_chars = 120000\n')
     env = {k:v for k,v in os.environ.items() if k in {'PATH','HOME','USER','LOGNAME','LANG','LC_ALL'}}
@@ -109,17 +114,17 @@ def prepare_fresh():
     return env
 
 
-def generation_protocol(arm):
+def generation_protocol(arm, label=None):
     protocol = json.loads((BASE / 'protocol.json').read_text())
     if arm not in {'fresh', 'candidate'}:
         raise ValueError('Token comparison is fresh versus candidate only')
-    if protocol.get('generationAllowed') is not True:
+    if protocol.get('generationAllowed') is not True and label not in protocol.get('scheduledLabels', []):
         raise ValueError('Model trials stopped for regression diagnosis; retain existing attempts')
     return protocol
 
 
 def model_turn(arm, label, topic):
-    protocol = generation_protocol(arm)
+    protocol = generation_protocol(arm, label)
     case = BASE / 'environments' / arm
     env = json.loads((case / 'environment.json').read_text())
     attempt = BASE / 'attempts' / label
@@ -133,12 +138,14 @@ def model_turn(arm, label, topic):
     shutil.copy2(Path(__file__), attempt / 'runner.py')
     shutil.copy2(BASE / 'protocol.json', attempt / 'protocol.json')
     if arm != 'fresh':
-        database = BASE / 'active/work.egg'
+        database = active_database()
         save(attempt / 'input-snapshot.json', dict(files=graph_files(database) if database.exists() else {},
             head=json.loads((database / 'head').read_text()) if (database / 'head').exists() else None))
     save(attempt / 'invocation.json', dict(arm=arm, label=label, topic=topic, model=model,
         effort='xhigh', promptSha256=sha(attempt / 'prompt.txt'),
         runtimeSha256=sha(Path(env['EGGSHELL_PREFIX']) / 'libexec/eggshell') if arm != 'fresh' else None,
+        study=str(BASE), runtimeSource=str(CANDIDATE),
+        activeDatabase=str(active_database()) if arm != 'fresh' else None,
         configurationSha256=sha(case / 'account/config.toml'),
         protocolSha256=sha(BASE / 'protocol.json'), startedUtc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())))
     started = time.monotonic()
@@ -228,7 +235,7 @@ def model_turn(arm, label, topic):
                     manager.wait(timeout=5)
                 manager_log.close()
     if arm != 'fresh':
-        subprocess.run(['/bin/cp', '-cR', str(BASE / 'active/work.egg'), str(attempt / 'output.egg')], check=True)
+        subprocess.run(['/bin/cp', '-cR', str(active_database()), str(attempt / 'output.egg')], check=True)
         successful['outputGraphFiles'] = graph_files(attempt / 'output.egg')
     save(attempt / 'result.json', successful)
 

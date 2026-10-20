@@ -39,6 +39,12 @@ retained. A combined-search attempt before explicit lexical-index warm also
 returned pending; its original observation remains separately recorded. Neither
 is used as a valid body comparison.
 
+The comparison baseline is public `main`
+`51873167c11c447a0af67e73430b5ab6635b2a65`, checked again against the remote.
+With healthy prepared caches, **public versus current delivery differs on all
+three initial questions**. The previous three-question equality concerned two
+candidate builds; it did not establish equality with the public version.
+
 On the common seed and topic 1:
 
 | Implementation | Delivered body SHA-256 |
@@ -54,14 +60,53 @@ the initial body, while changing the provider changes it. The provider control
 retains current delivery and lexical-index code. It is a diagnostic, not an
 adopted old provider or a production cache rollback.
 
-The same combined-search versus full-candidate comparison also byte-matches
-on topics 2 and 3, with identical input graph and prompt hashes. This checks
-the cumulative performance boundary on all three questions at the seed
-checkpoint; individual overlay boundaries and the retained checkpoint remain
-unmeasured. Per-command exits and source-integrity checks complete, but the
+The public and full-candidate body hashes for the other initial questions are:
+
+| Topic | Prepared public body SHA-256 | Full candidate body SHA-256 |
+| --- | --- | --- |
+| 2 | `e4c1cc050f6a0b62454025274dc0502de79fbd7b6bbf02eabbb19a506a415426` | `3df20daa7a9e245c486b4053e82a1c6df68226b7dab9222817c8c92b28b7ebcd` |
+| 3 | `484038fbdfe5dc2d9159b2ed5699001bdeff929d3b68fe9c0b4c9290190a5909` | `12473c8e1063c115a3ea8860e182f94dc74be0543058ef9fb3963f62d69546a9` |
+
+The combined-search versus full-candidate comparison byte-matches on topics
+2 and 3. That is only an internal cumulative-performance check, subordinate to
+the public comparison above. Individual overlay boundaries remain unmeasured.
+Per-command exits and source-integrity checks complete, but the
 last resource supervisor failed while parsing a multiline `ps` argument. Its
 missing final peak measurement remains unavailable. The parser was corrected;
 no model trial was repeated and this observation is not a latency result.
+
+All 1,956 source/focus windows in this public-produced seed have identical
+first-segment float32 bits in the public cache and the modern full bundles.
+An isolated diagnostic projects only the first segment into scoring while
+retaining modern full-bundle storage, DB cache ownership, warm, lexical code
+and delivery/performance changes. Its initial bodies equal the prepared public
+bodies on all three topics. This narrows the initial-body change to the expanded
+scoring input in these cases. It does not establish the cause of token use or
+quality errors, and the control is not a proposed production repair. Full stored
+coverage must not be reported as full scored coverage for this control.
+
+A native-hook preflight of the first-segment control delivers topic 1's public
+body in 11,041 ms, with semantic search complete and zero source encoding.
+The daemon and shutdown client exit 0. The first harness fails its overly broad
+physical-publication immutability assertion: 21 memo rows and two journal rows
+were added. An explicit logical-publication audit finds identical authoritative
+values in order and union endpoints, unchanged existing non-memo rows, and a
+neutral revision with no added/removed roots or changed unions. The original
+assertion failure is retained alongside the recovered observation; physical
+page/head bytes are not claimed unchanged. Each future measured turn must still
+start from the exact common snapshot bytes, not this preflight's memo state.
+No generation-model call was needed for these checks.
+
+The saved after-topic-1 checkpoint also has three public/candidate body
+differences, but its primary lexical index mixes old plain terms with newly
+saved `P`-prefixed terms. For example, plain `driver` still has 24 owners, while
+`Pdriver` has 10 owners; the public lookup cannot search those new primary
+postings. The original seed has zero `Pdriver` postings. Therefore these history
+comparisons are **not healthy public controls** and support no retained-lap
+conclusion. `primary-postings-audit.json` preserves the check. Prepare an
+identical private history snapshot with complete public-readable primary
+postings for both arms before comparing history; preserve every authoritative
+value, root order, owner ID and union. The original checkpoints stay intact.
 
 The actual three prompts are English. Executing each implementation's lexical
 term function shows that their ordered query terms agree after removing the
