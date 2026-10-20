@@ -85,7 +85,10 @@ def audit(attempt, terms):
     failures = [row for row in receipts if any(numeric['status'] == 'failed' for numeric in row['numerical'])]
     return dict(attempt=str(attempt), completed=bool(result and result['completed']),
         usage=result.get('usage') if result else None,
-        rawRpcSha256=digest(raw), completedCommandExecutions=len(commands),
+        rawRpcSha256=digest(raw), completedCommandItems=len(commands),
+        completedCommandExecutions=sum(item.get('exitCode') is not None for item in commands.values()),
+        commandItemStatuses=counts(item.get('status') or 'unreported' for item in commands.values()),
+        commandsWithoutReportedExit=[item['id'] for item in commands.values() if item.get('exitCode') is None],
         duplicateCommands=duplicates, hookCounts=counts(h['eventName'] for h in hooks),
         incompleteHookCounts=counts(h['eventName'] for h in hooks
             if any('EGGSHELL SEARCH INCOMPLETE' in e.get('text', '') for e in h['entries'])),
@@ -97,7 +100,7 @@ def audit(attempt, terms):
         initialBodySha256=digest(initial) if initial.exists() else None,
         initialTermCounts={term: text.count(term) for term in terms},
         toolOutputsContainingTerms={term: [item['id'] for item in commands.values()
-            if term in item.get('aggregatedOutput', '')] for term in terms},
+            if term in (item.get('aggregatedOutput') or '')] for term in terms},
         malformedLegacyMatcherTraceLines=malformed,
         receipts=receipts)
 

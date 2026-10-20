@@ -469,8 +469,86 @@ Its guard observes 1,426,768 KiB maximum aggregate RSS. This is one topic-3
 readiness check, not the complete deadline gate for all topics or retained use.
 The result is
 `/Users/ovm/.codex/experiments/eggshell/readme-window-order-20261021/native-preflight-topic3/result.json`.
-No generation-model call is made or scheduled. Total-token and quality gates
-remain open; the candidate stays isolated and unadopted.
+At this preflight boundary no generation-model call was made or scheduled.
+The subsequent fixed cohort below does not qualify the candidate for adoption.
+
+## Complete-window-order cohort: no confirmed improvement
+
+The predeclared three topic-3 repetitions restore the same prepared
+after-topic-2 publication, question, source and Luna/xhigh settings. They reuse
+the three completed fresh references; no seed is acquired again.
+
+| Repetition | Fresh total | Candidate total | Reduction vs fresh | Maximum completed hook |
+| --- | ---: | ---: | ---: | ---: |
+| 0 | 4,309,908 | 1,867,149 | 56.7% | 9,238 ms |
+| 1 | 2,306,333 | 1,997,323 | 13.4% | 10,995 ms |
+| 2 | 5,945,537 | unknown; interrupted | unknown | only partial records |
+
+The previous centroid reductions for repetitions 0 and 1 were 53.0% and 34.9%.
+The new candidate has no confirmed improvement and remains **unadopted**.
+These topic cells are reported separately; the historical first-lap target is
+not redefined as a new per-topic threshold. This incomplete cohort cannot prove
+that an entire lap, retained use or answer quality has recovered.
+
+The third turn stops at the old capture reader's 1 MiB response limit after
+23.3 seconds. It has no final answer or reported token usage and is not
+resubmitted. The completed calls report 3,864,472 inclusive tokens. The exact
+new cohort total is unknown and at least that large; the failed turn is not
+charged as zero. The earlier centroid interruption and its known 1,213,841-token
+lower bound remain separate. The guard's maximum aggregate RSS is
+2,958,848 KiB, without a guard trigger. All three actual initial packets equal
+the preflight body, including the interrupted turn. That equality does not
+make the third model turn complete.
+
+Static source review preserves qualifications rather than approving quality.
+In particular repetition 1's statement about `-x` after an input needs the
+**last input** restriction. The HLSL discussion also needs the full OS and
+architecture guard. No LLVM build or executed Driver-test result is available.
+The native audit observes 37/29 executed commands, 14/7 pre-tool incomplete
+notices and 18/3 numerical failures with missing durable windows in the two
+completed trials. These continuation gaps and initial selection remain distinct
+diagnostic questions.
+
+`results/topic3-window-order.json`, `topic3-cohort-accounting.json`,
+`topic3-initial-packet-audit.json`, `source-review.json` and
+`topic3-native-audit.json` retain these observations under the window-order
+study. `results/public-delivery-diff/` retains complete diffs against the
+warmed public implementation. Its graph files and question are identical
+across all four inspected implementations: public equals the first-segment
+control, and differs from both centroid and complete-window-order candidates.
+All include the source-status prefix. This comparison concerns the Handoff
+boundary, not public native latency or token savings. The next diagnostic is
+the still-unmeasured topic-3 public-equivalent control, before another retrieval
+policy is added.
+
+## Capture failure and storage recovery
+
+The unbounded test search observed immediately before the capture failure
+produces 1,813,239 bytes when reproduced without a model. The old reader did
+not retain the oversized RPC frame, so its exact method and contents cannot be
+claimed from that reproduction. The benchmark reader now admits responses up
+to 32 MiB and transcripts up to 256 MiB, using incremental byte buffering. The
+metadata-only preflight retains its 1 MiB/32 MiB limits. Configuration response
+redaction, bounded admission and the no-generation fence remain enforced.
+Twenty controls pass. Five completed actual RPC traces and the reproduced large
+output replay without lost or changed decoded messages. This replay invokes no
+answering model. A future generation protocol must freeze the exact transport
+hash before creating an attempt. The failed historical turn remains failed.
+
+`transport-diagnosis/` retains the old executed transport, replay records,
+controls and failure reproduction. No generation is performed with the repaired
+transport at this recording boundary; historical and future harness hashes must
+remain distinguishable.
+
+Before this cohort, the stopped synthetic 50,000-window fixture's 5,562,013,928-byte
+page file was archived with reversible compression. The expanded archive and
+all 13 identical copies were checked against the original SHA-256 before the
+raw files were removed; heads, derived data, source and logs remain. The archive
+is 218,969,652 bytes. The restore helper is
+`readme-window-order-20261021/obsolete-build-cleanup/restore-pages.py` under the
+experiment root. Restore it before resuming those fixtures. This is offline
+storage recovery, not a production compaction change or a 50,000-window gate.
+README model inputs are unaffected.
 
 ## Execution
 

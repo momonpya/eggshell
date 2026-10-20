@@ -23,6 +23,10 @@ CANDIDATE = Path('/Users/ovm/.codex/experiments/eggshell/uniform-budget-qualifie
 
 
 class BenchmarkServer(Server):
+    # Native terminal-output notifications can exceed the metadata preflight's
+    # 1 MiB admission limit. Bound capture without changing any model request.
+    max_response_bytes = 32 * 1024 * 1024
+    max_transcript_bytes = 256 * 1024 * 1024
     allowed_methods = Server.allowed_methods | {'thread/start', 'thread/read', 'thread/unsubscribe', 'turn/start'}
     allow_turn_events = True
 
@@ -125,6 +129,9 @@ def generation_protocol(arm, label=None):
 
 def model_turn(arm, label, topic):
     protocol = generation_protocol(arm, label)
+    transport = Path(__file__).with_name('pilot_server.py')
+    if protocol.get('transportSha256') != sha(transport):
+        raise ValueError('Freeze the exact benchmark transport before starting model turns')
     case = BASE / 'environments' / arm
     env = json.loads((case / 'environment.json').read_text())
     attempt = BASE / 'attempts' / label
@@ -136,6 +143,7 @@ def model_turn(arm, label, topic):
     prompt = record['prompts'][topic].replace('<LLVM_SOURCE>', str(LLVM))
     (attempt / 'prompt.txt').write_text(prompt)
     shutil.copy2(Path(__file__), attempt / 'runner.py')
+    shutil.copy2(transport, attempt / 'transport.py')
     shutil.copy2(BASE / 'protocol.json', attempt / 'protocol.json')
     if arm != 'fresh':
         database = active_database()
@@ -147,7 +155,10 @@ def model_turn(arm, label, topic):
         study=str(BASE), runtimeSource=str(CANDIDATE),
         activeDatabase=str(active_database()) if arm != 'fresh' else None,
         configurationSha256=sha(case / 'account/config.toml'),
-        protocolSha256=sha(BASE / 'protocol.json'), startedUtc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())))
+        protocolSha256=sha(BASE / 'protocol.json'), transportSha256=sha(transport),
+        captureLimits=dict(responseBytes=BenchmarkServer.max_response_bytes,
+            transcriptBytes=BenchmarkServer.max_transcript_bytes),
+        startedUtc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())))
     started = time.monotonic()
     identity = None
     successful = None

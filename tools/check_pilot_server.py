@@ -9,9 +9,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from pilot_server import Server
 from pilot_hook_probe import native_read_result
+import readme_benchmark as benchmark
+from readme_benchmark import BenchmarkServer
 
 
 class TransportControls(unittest.TestCase):
@@ -22,8 +25,8 @@ class TransportControls(unittest.TestCase):
     def tearDown(self):
         self.folder.cleanup()
 
-    def server(self, code, timeout=0.3):
-        return Server([sys.executable, "-u", "-c", code], self.root, os.environ.copy(),
+    def server(self, code, timeout=0.3, server_type=Server):
+        return server_type([sys.executable, "-u", "-c", code], self.root, os.environ.copy(),
                       self.root / "rpc", timeout=timeout)
 
     def stopped(self, server):
@@ -53,6 +56,14 @@ sys.stdin.read()
                     server.request(method, {})
         self.assertEqual((self.root / "rpc/exchange.jsonl").read_text(), "")
         self.stopped(server)
+
+    def test_model_turn_requires_frozen_transport_before_creating_attempt(self):
+        (self.root / "protocol.json").write_text(json.dumps(dict(generationAllowed=True,
+            model="synthetic", transportSha256="wrong")))
+        with patch.object(benchmark, "BASE", self.root):
+            with self.assertRaisesRegex(ValueError, "Freeze the exact benchmark transport"):
+                benchmark.model_turn("candidate", "must-not-start", 3)
+        self.assertFalse((self.root / "attempts").exists())
 
     def test_wrong_response_id_is_rejected(self):
         with self.server("import sys;sys.stdin.readline();print('{\"id\":99,\"result\":{}}',flush=True)") as server:
@@ -143,6 +154,58 @@ sys.stdin.read()
         with self.server(code) as server:
             with self.assertRaisesRegex(RuntimeError, "exceeds 1 MiB"):
                 server.request("hooks/list", {})
+        self.stopped(server)
+        diagnostic = json.loads((self.root / "rpc/transport-error.json").read_text())
+        self.assertEqual(diagnostic["limit_bytes"], 1024 * 1024)
+        self.assertFalse(diagnostic["frame_complete"])
+        self.assertGreater(diagnostic["observed_bytes"], diagnostic["limit_bytes"])
+
+    def test_benchmark_captures_large_fragmented_unicode_notification(self):
+        code = '''import sys,json,time
+r=json.loads(sys.stdin.readline())
+text='記録' * 400000
+message=dict(method='output/updated',params=dict(text=text))
+wire=(json.dumps(message,ensure_ascii=False)+chr(10)).encode()
+split=wire.index('記'.encode())+1
+sys.stdout.buffer.write(wire[:split]);sys.stdout.buffer.flush();time.sleep(.01)
+sys.stdout.buffer.write(wire[split:]);sys.stdout.buffer.flush()
+print(json.dumps(dict(id=r['id'],result=dict(ok=True))),flush=True)
+sys.stdin.read()
+'''
+        with self.server(code, timeout=3, server_type=BenchmarkServer) as server:
+            self.assertEqual(server.request("hooks/list", {}), dict(ok=True))
+            self.assertEqual(server.notifications[0]["params"]["text"], "記録" * 400000)
+        recorded = [json.loads(line)["message"] for line in
+                    (self.root / "rpc/exchange.jsonl").read_text().splitlines()]
+        self.assertEqual(recorded[1], server.notifications[0])
+        self.assertGreater(server.largest_response_bytes, 1024 * 1024)
+        self.stopped(server)
+
+    def test_benchmark_response_admission_stays_bounded(self):
+        class SmallBenchmark(BenchmarkServer):
+            max_response_bytes = 2 * 1024 * 1024
+        code = "import sys;sys.stdin.readline();sys.stdout.write('x'*(2*1024*1024+1));sys.stdout.flush();sys.stdin.read()"
+        with self.server(code, timeout=3, server_type=SmallBenchmark) as server:
+            with self.assertRaisesRegex(RuntimeError, "exceeds 2 MiB"):
+                server.request("hooks/list", {})
+        self.stopped(server)
+
+    def test_benchmark_transcript_admission_stays_bounded(self):
+        class SmallTranscript(BenchmarkServer):
+            max_transcript_bytes = 128 * 1024
+        code = "import sys,json;r=json.loads(sys.stdin.readline());print(json.dumps(dict(id=r['id'],result=dict(text='x'*200000))),flush=True);sys.stdin.read()"
+        with self.server(code, timeout=3, server_type=SmallTranscript) as server:
+            with self.assertRaisesRegex(RuntimeError, "transcript exceeds"):
+                server.request("hooks/list", {})
+        self.stopped(server)
+
+    def test_large_benchmark_configuration_is_still_redacted(self):
+        code = "import sys,json;r=json.loads(sys.stdin.readline());print(json.dumps(dict(id=r['id'],result=dict(secret='synthetic-secret'*100000))),flush=True);sys.stdin.read()"
+        with self.server(code, timeout=3, server_type=BenchmarkServer) as server:
+            self.assertEqual(len(server.request("config/read", {})["secret"]), 1600000)
+        capture = (self.root / "rpc/exchange.jsonl").read_text()
+        self.assertNotIn("synthetic-secret", capture)
+        self.assertTrue(json.loads(capture.splitlines()[1])["message"]["redacted"])
         self.stopped(server)
 
     def test_configuration_responses_are_redacted(self):

@@ -24,6 +24,8 @@ class Server:
 
     allowed_methods = frozenset(METHODS)
     allow_turn_events = False
+    max_response_bytes = 1024 * 1024
+    max_transcript_bytes = 32 * 1024 * 1024
 
     def __init__(self, command, cwd, env, output, timeout=45):
         self.output = Path(output)
@@ -34,6 +36,7 @@ class Server:
         self.requests = {}
         self.next_id = 0
         self.bytes_written = 0
+        self.largest_response_bytes = 0
         self.closed = False
         self.stop = threading.Event()
         self.generation_events = []
@@ -55,13 +58,14 @@ class Server:
         encoded = json.dumps(dict(direction=direction, message=message,
                                   monotonic_ns=time.monotonic_ns())) + "\n"
         self.bytes_written += len(encoded.encode())
-        if self.bytes_written > 32 * 1024 * 1024:
-            raise RuntimeError("Preflight transcript exceeds 32 MiB")
+        if self.bytes_written > self.max_transcript_bytes:
+            raise RuntimeError(f"App Server transcript exceeds {self.max_transcript_bytes} bytes")
         self.log.write(encoded)
         self.log.flush()
 
     def _read(self):
-        pending = b""
+        pending = bytearray()
+        scanned = 0
         descriptor = self.process.stdout.fileno()
         try:
             while not self.stop.is_set():
@@ -71,11 +75,20 @@ class Server:
                 if not chunk:
                     raise EOFError("App Server stdout closed mid-message" if pending
                                    else "App Server stdout closed")
-                pending += chunk
-                while b"\n" in pending:
-                    raw, pending = pending.split(b"\n", 1)
-                    if len(raw) > 1024 * 1024:
-                        raise RuntimeError("App Server message exceeds 1 MiB")
+                pending.extend(chunk)
+                while True:
+                    end = pending.find(b"\n", scanned)
+                    if end < 0:
+                        scanned = len(pending)
+                        if len(pending) > self.max_response_bytes:
+                            self._oversized_response(pending, complete=False)
+                        break
+                    if end > self.max_response_bytes:
+                        self._oversized_response(pending[:end], complete=True)
+                    raw = bytes(pending[:end])
+                    del pending[:end + 1]
+                    scanned = 0
+                    self.largest_response_bytes = max(self.largest_response_bytes, len(raw))
                     message = json.loads(raw)
                     if not isinstance(message, dict):
                         raise ValueError("App Server message must be an object")
@@ -84,13 +97,22 @@ class Server:
                         if message.get("method") in {"turn/started", "thread/tokenUsage/updated"}:
                             self.generation_events.append(message["method"])
                     self.messages.put(message, timeout=1)
-                if len(pending) > 1024 * 1024:
-                    raise RuntimeError("App Server message exceeds 1 MiB")
         except Exception as error:
             try:
                 self.messages.put(error, timeout=1)
             except queue.Full:
                 pass
+
+    def _oversized_response(self, raw, complete):
+        # A partial/unparsed response can contain configuration data. Record
+        # bounds and a digest, never bypass the normal response redaction.
+        (self.output / "transport-error.json").write_text(json.dumps(dict(
+            kind="response-limit", observed_bytes=len(raw), limit_bytes=self.max_response_bytes,
+            frame_complete=complete, captured_prefix_sha256=hashlib.sha256(raw).hexdigest()),
+            indent=2) + "\n")
+        limit = self.max_response_bytes
+        label = f"{limit // (1024 * 1024)} MiB" if limit % (1024 * 1024) == 0 else f"{limit} bytes"
+        raise RuntimeError(f"App Server message exceeds {label}")
 
     def request(self, method, params):
         if method not in self.allowed_methods:
@@ -199,6 +221,9 @@ class Server:
             (self.output / "process.json").write_text(json.dumps(dict(
                 pid=self.process.pid, exit_code=self.process.returncode,
                 methods=list(self.requests.values()), reader_stopped=not self.reader.is_alive(),
+                response_limit_bytes=self.max_response_bytes,
+                transcript_limit_bytes=self.max_transcript_bytes,
+                largest_response_bytes=self.largest_response_bytes,
                 observed_generation_events=self.generation_events), indent=2) + "\n")
 
     def __enter__(self):
