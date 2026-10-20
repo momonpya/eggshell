@@ -123,6 +123,34 @@ records 30-second limits plus the ready-search policy explicitly. Repeating an
 ACKed question may yield no new body; retained evidence is recorded separately
 and empty output is never counted as another body delivery.
 
+The completed `uniform-budget-native-20261020/inspection-1` cohort uses the
+qualified construction 1, the same saved 10,000-window publication, every
+complete warm source-vector byte and the three predetermined questions in
+both layouts. Reusing verified inputs adds zero source embeddings or lexical
+hydration; warm and repeat take 9,073.075 and 7,393.031 ms separately from hooks.
+
+| Same live session | Cases | Semantic / 30-second passes | Hook elapsed ms | New body / ACK |
+| --- | ---: | ---: | ---: | ---: |
+| Initial | 6 | 6 | 15,985.352–17,848.819 | 6 / 6 |
+| Identical question after ACK | 6 | 6 | 14,984.449–16,236.464 | 0 / 0 |
+
+All twelve discovery responses score the original 10,000 window references;
+twelve focus responses also complete. All 24 numerical responses report zero
+source-cache misses, unusable records and source encoding time. Every ready
+marker arrives before its nomination cutoff; every recorded finish deadline
+is the original whole-hook deadline. No case runs lexical fallback. Publication
+stdout/hash checks pass for all twelve, and initial body delivery/ACK passes
+for all six. Subsequent prompts preserve all previously ACKed keys and retain
+the same key count; they do not newly deliver that body. Graph and original vector bytes remain
+unchanged. All six owned managers and shutdown clients exit 0.
+
+Collection takes 442.802 seconds, peak 1,527,456 KiB, no guard trigger. The
+final audit reproduces both overlays and their helper bytes, verifies native
+policy/receipt/publication data, and checks all eighteen frozen ordinary
+artifact hashes. Other scales, different-question continuations and adoption
+comparisons remain open. These results are scoped to the saved 10,000-window
+fixture, rather than a claim that all DB sizes now satisfy the limit.
+
 These are isolated diagnostics and candidates. Latest-public-main matched
 inclusive input/output token and answer-quality comparisons remain required
 for production adoption. Generation-model trials and production adoptions
