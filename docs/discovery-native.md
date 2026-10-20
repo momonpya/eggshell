@@ -856,3 +856,7 @@ different-question continuations, other scales, the unmeasured 32 reference
 cases, latest-public-main inclusive-token/quality comparisons and production
 adoption remain open. The initial 30-second result is not a continuation or
 50,000-window pass.
+
+The subsequent [stage diagnosis and uniform-budget candidate](discovery-stages.md)
+use the user's updated 30-second limit for both initial and subsequent hooks.
+The observations above retain their original scheduling policy and labels.

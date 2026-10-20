@@ -17,7 +17,8 @@ from semantic_latency import execute, save
 from semantic_scale import check_subject, classify, config
 
 
-def sample(binary, cell, env, fixture, session, turn, question):
+def sample(binary, cell, env, fixture, session, turn, question, *,
+           semantic_cap_ms=None, completion_limit_ms=None, finish_ready_required=False):
     destination = cell / turn
     if destination.exists():
         raise ValueError('A measured hook must never be resubmitted')
@@ -47,21 +48,37 @@ def sample(binary, cell, env, fixture, session, turn, question):
     search = stage('search')
     row = classify(output, timing, stage('published'), stage('ack'), search, numerical, fixture)
     first = turn == 'first'
+    cap = semantic_cap_ms if semantic_cap_ms is not None else (15000 if first else 4500)
+    limit = completion_limit_ms if completion_limit_ms is not None else (30000 if first else 5000)
     policy = bool(search and search['initialSearch'] == first
         and search['semanticDeadlineMs'] <= search['deadlineMs']
         and search['semanticDeadlineMs'] - search['searchStartedMs'] <=
-            min(15000 if first else 4500, (search['deadlineMs'] - search['searchStartedMs']) // 2))
+            min(cap, (search['deadlineMs'] - search['searchStartedMs']) // 2))
+    if finish_ready_required:
+        row['legacyFiveSecondBodyGatePassed'] = row.pop('gatePassed')
+        ready = search.get('semanticReadyMs') if search else None
+        policy = bool(policy and search.get('finishReadyWithinHook') is True
+            and search['semanticDeadlineMs'] == min(search['deadlineMs'],
+                search['searchStartedMs'] + min(cap,
+                    (search['deadlineMs'] - search['searchStartedMs']) // 2))
+            and search['semanticFinishDeadlineMs'] ==
+                (search['deadlineMs'] if ready is not None else search['semanticDeadlineMs'])
+            and (ready is None or search['searchStartedMs'] <= ready < search['semanticDeadlineMs']))
     state = json.loads((cell / 'data/sessions' / session / 'state.json').read_text())
     policy = policy and state.get('searchStarted') is True and (first or before.get('searchStarted') is True)
+    history_retained = set(before['deliveredGraphs']).issubset(state['deliveredGraphs'])
+    if finish_ready_required and not first:
+        policy = policy and history_retained and bool(before['deliveredGraphs'])
     # A subsequent prompt may correctly omit a source already present in history.
     # Keep its actual body/ACK fields; do not count an empty result as a new delivery.
     passed = (policy and row['semanticComplete'] and row['publicationConfirmed']
-        and timing.get('exitCode') == 0 and row['elapsedMs'] < (30000 if first else 5000)
+        and timing.get('exitCode') == 0 and row['elapsedMs'] < limit
         and (not first or row['sourceBodyDelivered'] and row['acknowledgementConfirmed']))
     return dict(row, session=session, turn=turn, question=question, initial=first,
         declaredBudgetPassed=passed, schedulingPolicyConfirmed=policy,
         retainedDeliveryKeysBefore=len(before['deliveredGraphs']),
         retainedDeliveryKeysAfter=len(state['deliveredGraphs']),
+        acknowledgedHistoryRetained=history_retained,
         receipt=receipt.name, observerError=failure, stdoutSha256=sha(destination / 'stdout'))
 
 

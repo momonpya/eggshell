@@ -102,7 +102,7 @@ def prepare(binary, output, fixture, original, original_files, prefix, prepared_
     return database, prepared
 
 
-def collect(binary, output, fixture, prepared, prepared_files, prefix):
+def collect(binary, output, fixture, prepared, prepared_files, prefix, *, uniform_deadline=False):
     rows = []
     for layout in ['database', 'private-overlay']:
         for question_index, question in enumerate(fixture['questions']):
@@ -156,7 +156,9 @@ def collect(binary, output, fixture, prepared, prepared_files, prefix):
                     execute([binary, 'codex-hook'], cell / 'start', env, cell,
                         (json.dumps(payload) + '\n').encode(), timeout=35)
                     for turn in ['first', 'continuation']:
-                        row = sample(binary, cell, env, active, session, turn, question)
+                        policy = dict(semantic_cap_ms=15000, completion_limit_ms=30000,
+                            finish_ready_required=True) if uniform_deadline else {}
+                        row = sample(binary, cell, env, active, session, turn, question, **policy)
                         trace = (row.get('search') or {}).get('trace', {})
                         notice = {'pending': 'is pending', 'timedOut': 'timed out', 'failed': 'is unavailable'}.get(trace.get('semantic'))
                         stdout = json.loads((cell / turn / 'stdout').read_text())
@@ -164,7 +166,7 @@ def collect(binary, output, fixture, prepared, prepared_files, prefix):
                         fallback = (trace.get('route') == 'lexical' and unfinished_visible
                             and row['sourceBodyDelivered'] and row['publicationConfirmed']
                             and row['acknowledgementConfirmed']
-                            and row['elapsedMs'] < (30000 if row['initial'] else 5000))
+                            and row['elapsedMs'] < (30000 if uniform_deadline or row['initial'] else 5000))
                         row = dict(row, label=fixture['label'], layout=layout, questionIndex=question_index,
                             unfinishedStatusVisible=unfinished_visible, timelyLexicalBodyDelivered=fallback)
                         rows.append(row)
@@ -179,7 +181,7 @@ def collect(binary, output, fixture, prepared, prepared_files, prefix):
     return rows
 
 
-def run(args):
+def run(args, *, uniform_deadline=False, entrypoint=None):
     source = Path(__file__).resolve().parents[1]
     build = args.build.resolve(); scale = args.scale.resolve(); output = args.output.resolve(); prefix = args.prefix.resolve()
     if args.prepared_from and args.ready_inputs:
@@ -199,14 +201,18 @@ def run(args):
     if input_manifest(models) != sealed['encoderInputs']:
         raise ValueError('Pinned encoder assets changed')
     output.mkdir(parents=True, exist_ok=False, mode=0o700)
-    shutil.copy2(Path(__file__), output / 'runner.py')
+    runner = entrypoint or Path(__file__)
+    shutil.copy2(runner, output / 'runner.py')
     save(output / 'manifest.json', dict(candidateSha256=qualified['candidateSha256'],
         qualificationManifestSha256=sha(build / 'manifest.json'), scaleManifestSha256=sha(scale / 'manifest.json'),
-        runnerSha256=sha(Path(__file__)), helpers={name: sha(source / 'tools' / name) for name in [
+        runnerSha256=sha(runner), helpers={name: sha(source / 'tools' / name) for name in [
+            'initial_scale_probe.py',
             'initial_budget_probe.py', 'semantic_scale.py', 'semantic_latency.py', 'context_native_probe.py',
             'owned_daemon.py', 'pilot_memory_probe.py']}, fixtures=fixtures,
         layouts=['database', 'private-overlay'], questionPairsPerLayout=3, plannedNativeHooks=12 * len(fixtures),
-        initialLimitMs=30000, continuationLimitMs=5000, semanticCapsMs=dict(initial=15000, continuation=4500),
+        initialLimitMs=30000, continuationLimitMs=30000 if uniform_deadline else 5000,
+        semanticCapsMs=dict(initial=15000, continuation=15000 if uniform_deadline else 4500),
+        readyCompletionUnderOriginalDeadline=uniform_deadline,
         sameSessionContinuation=True, ownedDaemons=True, preparationCostSeparate=True,
         preparedFrom=str(args.prepared_from.resolve()) if args.prepared_from else None,
         readyInputsManifestSha256=sha(args.ready_inputs.resolve() / 'manifest.json') if args.ready_inputs else None,
@@ -222,7 +228,8 @@ def run(args):
             prepared, record = prepare(binary, output, fixture, original, files, prefix,
                 args.prepared_from.resolve() if args.prepared_from else None,
                 args.ready_inputs.resolve() if args.ready_inputs else None)
-            all_rows += collect(binary, output, fixture, prepared, record['sourceTree'], prefix)
+            all_rows += collect(binary, output, fixture, prepared, record['sourceTree'], prefix,
+                uniform_deadline=uniform_deadline)
             if tree(original) != files or tree(prepared) != record['sourceTree']:
                 raise ValueError('A common publication changed during measurement')
             save(output / 'completed-strata.json', [label for label in args.labels
