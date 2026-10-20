@@ -29,13 +29,16 @@ def run(args):
     checkout = output / 'checkout'
     import subprocess
     subprocess.run(['/bin/cp', '-cpR', str(original), str(checkout)], check=True, timeout=300)
-    transforms = [('Handoff', candidate.handoff)]
-    if args.candidate == 'focus-warm':
-        transforms.append(('Warm', candidate.warm))
-    if hasattr(candidate, 'audit'):
-        transforms.append(('ContractAudit', candidate.audit))
+    if hasattr(candidate, 'SOURCES'):
+        transforms = candidate.SOURCES.items()
+    else:
+        transforms = [('Eggshell/Handoff.lean', candidate.handoff)]
+        if args.candidate == 'focus-warm':
+            transforms.append(('Eggshell/Warm.lean', candidate.warm))
+        if hasattr(candidate, 'audit'):
+            transforms.append(('Eggshell/ContractAudit.lean', candidate.audit))
     for name, transform in transforms:
-        path = checkout / 'Eggshell' / (name + '.lean')
+        path = checkout / name
         path.write_text(transform(path.read_text()))
     for name in candidate.HELPERS:
         shutil.copy2(source / 'tools' / name, checkout / 'tools' / name)
@@ -72,7 +75,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['base', 'output', 'prefix']:
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--candidate', choices=['focus-warm', 'context-plan', 'context-memo', 'context-prefix'], default='focus-warm')
+    parser.add_argument('--candidate', choices=['focus-warm', 'context-plan', 'context-memo', 'context-prefix', 'directory-read', 'initial-budget'], default='focus-warm')
     args = parser.parse_args()
     try:
         run(args)

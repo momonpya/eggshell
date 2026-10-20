@@ -416,6 +416,101 @@ establish reliable first-use or read-only-cache delivery. Collection takes
 full scale gate and latest-public-main token/quality adoption remain open.
 Ordinary sources/runtime and README claims remain unchanged.
 
+## Request-local cache directory descriptors
+
+`directory_read_candidate.py` opens each cache directory once per indexed
+numerical request. Every vector still receives a fresh regular-file descriptor,
+bounded page reads, before/after identity checks, UTF-8/JSON decoding and the
+original contract/model/window/finite-vector checks. Native `openat` rejects
+unsafe leaves, symlinks, directories and FIFOs. The existing absolute-path
+resolver is unchanged. Failed directory opens are cached for that request;
+an own write invalidates its directory entry, and the next request starts fresh.
+No global descriptor table or new persistent cache format is introduced.
+
+The bounded reader and common decoder have exact original-body equalities.
+ContractAudit checks their types, allowed axioms and actual indexed-read/write
+call paths. These IO equalities report the existing allowed set `propext`,
+`Classical.choice`, `Quot.sound`; they do not claim an axiom-free IO model.
+Native checks cover 25 boundaries, replacement/mutation, negative-view
+invalidation and 1,024 repeated reads; descriptors return from 8 to 8.
+All regressions pass in 110.753 seconds. Another daemon drains three tickets,
+with recorded graph heads unchanged and both shutdown exits zero.
+Qualification takes 211.828 seconds, sampled peak 3,040,064 KiB, no guard trigger.
+
+The complete Handoff and required gold body equal the original frozen reference.
+One diagnostic reports internal 4,316 ms, render 2,185 ms and helper process
+17,207 ms; these distinct intervals do not establish a balanced latency effect.
+The fixed twelve actual LLVM hooks retain all discovery/focus source references,
+full focus orders/positions in both layouts, unchanged source/vector bytes,
+zero additional warm work and publication/stdout-hash/ACK agreement in 12/12.
+The old five-second semantic/gold-body gate passes 6/12: all cached-query cases,
+replying in 4,170–4,362 ms. All six fresh-query cases reach the 4.5-second semantic
+timeout. Their recorded encoder initialization costs are 0.792–1.106 seconds.
+Collection takes 170.293 seconds, sampled peak 1,608,960 KiB, no guard trigger.
+Every one of these twelve samples is a first prompt in a new session; cached
+questions are not continuation samples. Generation-model calls and adoption
+remain zero. The full scale and latest-public-main adoption gates remain open.
+
+## Initial and continuation deadlines
+
+The user's 2026-10-20 instruction allows 10–30 seconds for the initial hook.
+The previous universal five-second first-hook target is therefore historical.
+Its recorded failures remain unchanged. A separate isolated candidate gives the
+first eligible search a semantic cap of 15 seconds, subsequent searches 4.5
+seconds, both limited to half the actual remaining native deadline. The existing
+native 30-second ceiling and transport reserve remain. This leaves a fallback
+budget; it does not guarantee that fallback can finish for every corpus size.
+
+The scheduling bit is claimed under the existing session lock before searching.
+Empty output, failure and absent acknowledgement consume the initial allocation;
+compaction does not restore it. Neither the bit nor the larger deadline grants
+delivery or equality authority. Receipt fields record first/subsequent status,
+search start and the semantic deadline. New-session tests use the new first-hook
+allocation. The independent real-LLVM probe declares six first/subsequent prompt
+pairs in live sessions and retains the old five-second classification separately.
+Previously delivered evidence stays in history during the second prompt; an
+empty follow-up is recorded as empty, not counted as another body delivery.
+Qualification and observations for this candidate are recorded separately below.
+
+The final qualification completes its long empty-result semantic request in
+5,156 ms (native reply 6,757 ms including startup), with a 14,347 ms semantic
+allocation. The next prompt in that same session receives 4,500 ms and completes
+in 119 ms. Empty output consumes the first allowance, without requiring a
+delivery ACK; compaction preserves that state. Boundary checks include expired
+and short upstream deadlines. Both deadline theorems pass ContractAudit.
+All existing regressions pass in 116.209 seconds, including deliberate semantic
+stall-to-lexical-body delivery under the new initial allocation. Another daemon
+drains three tickets with recorded heads unchanged and both shutdown exits zero.
+Qualification takes 129.051 seconds, sampled peak 3,072,064 KiB, no guard trigger.
+Earlier helper build/configuration failures and missing lexical-warm fixture
+preconditions are retained. The final fixture explicitly warms its lexical index;
+its numerical responder is synthetic and makes zero generation-model calls.
+The qualified runtime SHA-256 is
+`2e27301ccfcdfa90e62b646ba05abd77ec10af9ea2fbff28a3dd2b3a4dd9bda8`.
+Ordinary runtime/source hashes and the old five-second results remain unchanged.
+
+The final twelve-hook observation verifies warm/doctor at each destination before
+measuring. Warm requests zero source embeddings and preserves every original
+source/vector byte. All six first prompts complete semantic discovery and focus,
+deliver the original gold body and receive the actual publication ACK in
+4,986–5,295 ms. The six identical subsequent prompts in the same live sessions
+complete in 2,091–2,173 ms. Their evidence remains in acknowledged history;
+no new body is delivered and they are not counted as six further body deliveries.
+Both layouts pass all declared first/continuation conditions. Every invocation
+scores all 2,081 discovery and 2,081 focus references with zero source-cache
+misses, invalid vectors or source encoding. Publication bytes/hashes agree.
+
+The runner owns each manager for reliable descendant RSS tracking and reaps it
+while the shutdown client waits; all six manager/client pairs exit zero.
+The final collection takes 75.767 seconds, sampled peak 1,347,328 KiB, no guard
+trigger. The earlier first collection omitted destination preparation: all six
+private-layout attempts failed and remain recorded. The next collection fixes
+that precondition and passes 12/12, but daemonization can hide rapidly reparented
+children from the RSS sampler; the final observation fixes process ownership
+and retains the same declared twelve cases. None of these is a generative
+token/quality trial or production adoption. The 10,000/50,000-window gates under
+the new deadline policy remain unmeasured.
+
 ## Local records
 
 Under `/Users/ovm/.codex/experiments/eggshell/`:
@@ -474,3 +569,21 @@ Under `/Users/ovm/.codex/experiments/eggshell/`:
   Handoff equality, required gold body and separate internal/process timings.
 - `context-prefix-native-20261020/inspection-1`: all twelve fixed actual hooks,
   including the two passes and ten failures, exact ranks and frozen cache bytes.
+- `directory-read-boundary-20261020/construction-1` through `construction-3`:
+  retained first build failure and final 25 boundaries/1,024 reads/descriptor counts.
+- `directory-read-qualified-20261020/construction-1`: full regression,
+  ContractAudit, native boundaries and independent ticket recovery.
+- `directory-read-qualified-profile-20261020/inspection-1`: original complete
+  Handoff/gold-body equality and separate internal/process intervals.
+- `directory-read-native-20261020/inspection-1`: complete original twelve-hook
+  collection, six old-gate passes, exact ranks and frozen input bytes.
+- `directory-read-inspection-20261020/inspection-1` and `inspection-2`:
+  auxiliary helper build failure followed by a SIGKILL during a helper's startup;
+  the RSS guard did not trigger. No provider or 50,000-record result is claimed.
+- `initial-budget-qualified-20261020/construction-1` through `construction-5`:
+  retained helper/fixture failures; `construction-6`: final native sequence,
+  complete regression, deadline theorems and independent ticket recovery.
+- `initial-budget-native-20261020/inspection-1`: complete original collection,
+  including six private-cache preparation failures; `inspection-2`: destination
+  warm/doctor and twelve policy passes; `inspection-3`: final owned-manager
+  collection, twelve policy passes, complete cache-only scoring and shutdowns.
