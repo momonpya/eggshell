@@ -716,3 +716,143 @@ Under `/Users/ovm/.codex/experiments/eggshell/`:
   10,000-window collection with completed numerical scoring but failed delivery.
 - `rank-directory-delivery-profile-20261020/inspection-1`: separate complete
   configured delivery, required body and internal/process/trace intervals.
+
+## Finishing a ready first search within the original hook deadline
+
+The user's initial-hook allowance is 10–30 seconds. The preceding 10,000-window
+collection completed numerical ranking in about two seconds but cancelled the
+entire configured worker at about 14 seconds. A separate complete Handoff took
+16.701 seconds internally and delivered the required body. These observations
+motivate a scheduling candidate; the separate helper is not a native-hook pass.
+
+`tools/ready_delivery_candidate.py` applies only to a copied qualified ranking
+checkout. A `SourceContext` callback is threaded through single/federated
+discovery. It runs after a complete checked semantic nomination result, before
+the remaining Work matching and body rendering. Pending/incomplete discovery results
+cannot emit it. A worker sends at most one typed ready frame, followed by one
+typed final reply. Both carry the turn, epoch, receipt and original deadline.
+The manager checks that identity before interpreting either frame. Repeated,
+foreign, malformed or late progress terminates the exchange without a body.
+
+The initial ready frame may retain the worker until the **original overall
+deadline**. An unready worker still gets at most 15 seconds and half the actual
+remaining hook time; continuation searches retain their 4.5-second/half-time
+cutoff. Failure before readiness still cancels the worker and runs the lexical
+body route. A ready search can consume the remaining time, so failure or a stall
+after readiness does not guarantee time for a second complete lexical attempt.
+The existing final turn/epoch/expiry checks, output size checks and ACK remain
+necessary. Progress carries no Handoff, completion certificate or authority to
+skip work, and it is not exposed as native hook stdout.
+
+`semanticDeadlineMs` in the diagnostic receipt records the nomination-wait
+cutoff. `semanticReadyMs` records the first accepted ready frame, when present;
+`finishReadyWithinHook` records whether the initial scheduling policy permits
+finishing after that cutoff. `trace.semanticMs` remains the entire configured
+worker duration. Only its final accepted result can mark that route completed.
+These fields are not numerical-ranking or delivery-success substitutes.
+The finishing deadline, also used for pending/timeout classification, is recorded
+as `semanticFinishDeadlineMs`: a ready initial search uses the original hook
+deadline, while an unready or continuation search uses its discovery cutoff.
+A pending result after readiness and before the overall deadline must retain
+`pending`; crossing the earlier nomination cutoff alone is not a timeout.
+
+The focused pipe fixture exercises completion beyond the first cutoff,
+continuation cancellation, absent progress, four foreign identity components,
+late/malformed/repeated progress, a foreign final reply and a progress-only
+stall. Pure deadline checks and existing `SearchDelivery` admission checks keep
+progress separate from a publishable result. This scheduling candidate does not
+change scores, source/cache formats, ranking order or certification rules.
+Qualification and fixed-input native observations are recorded separately below.
+
+`ready-delivery-qualified-20261020/construction-6` passes the twelve pipe cases
+and 350 deadline checks. The successful delayed-body case takes 298 ms across
+its 160 ms discovery cutoff; continuation and unready searches expire near
+160 ms. A progress-only stall expires at the original 550 ms deadline; repeated
+progress is rejected. Four universal cutoff/upstream theorems use only
+`propext`. ContractAudit checks the callback, decoder's deadline function and
+actual delivery call path. The generic search exchange also decodes these frames
+for direct callers, rather than leaking progress or tagged replies as a Handoff.
+The isolated parallel-pipe fixture now explicitly supplies each request's
+existing absolute deadline; its cancellation, queue and response assertions are
+unchanged. The ordinary test source remains unchanged.
+
+The full regression passes in 117,613.255 ms. Three pending tickets are drained
+by a separate owned daemon; graph head hashes remain unchanged and the client
+and daemon both exit 0. Qualification takes 215.610 seconds, with an aggregate
+descendant RSS peak of 2,890,672 KiB under the 3,500,000 KiB guard; the guard does
+not trigger. Runtime SHA-256 is
+`8f25a3a9813876128ecd0c11e115c3cfaeeb26882f46713dd3b99fd15f629377`.
+The frozen ordinary 18 artifact hashes and all qualified sources are unchanged.
+Construction attempts 1–5 retain the type/proof, connection-audit, pipe-reader
+and direct-caller failures; they are not passes. No generation-model trial,
+inclusive-token improvement or production adoption is claimed.
+
+The complete prototype collection
+`ready-delivery-native-20261020/inspection-1` uses that qualified construction 6,
+the original graph publication, every complete warm vector byte and the fixed
+three questions in both layouts. Preparation performs **zero source encodings**;
+19,969 cache windows are valid. Rebuilding the changed lexical metadata takes
+61,674.385 ms and the repeated warm takes 8,572.256 ms; both are separate from
+the measured hooks.
+
+| Same live session | Cases | New semantic/deadline passes | Hook elapsed ms | Required body / ACK |
+| --- | ---: | ---: | ---: | ---: |
+| Initial | 6 | 6 | 17,949.841–18,800.185 | 6 / 6 |
+| Identical question after ACK | 6 | 0 | 24,996.101–25,492.786 | 0 / 0 |
+
+All initial cases complete full discovery and focus, publish the original body
+before the deadline and confirm ACK. Continuation retains that delivery in its
+history; absence of a repeated body is not counted as a new delivery or, by
+itself, a loss of evidence. However, all continuations time out the configured
+route and take about 25 seconds on the lexical route, so the continuation target
+still fails. This is an initial-latency recovery, not a practical-scale solution.
+No source bytes or original vector bytes change, and all six owned managers
+and shutdown clients exit 0. Collection takes 560.851 seconds, with peak
+1,517,472 KiB and no guard trigger. The later pending/status-deadline correction
+is qualified and observed separately; these prototype values remain unchanged.
+
+`ready-delivery-qualified-20261020/construction-7` aligns the status deadline
+with the transport after readiness. Twelve pipe cases, the original 350 policy
+checks and nine pending/expiry checks pass. The fifth audited universal theorem
+bounds the configured status deadline by the original deadline. The complete
+regression passes in 112,679.300 ms, and separate recovery drains three tickets
+without changing graph heads; both shutdown processes exit 0. Qualification
+takes 220.657 seconds, peak 3,100,000 KiB, no guard trigger. Final runtime SHA-256:
+`93462e68caf360b9edb163187fa21f8a406d0b4057eb132ea5528bf3c3fe57f3`.
+Current overlay transformations and helper bytes reproduce this frozen checkout
+exactly. The final fixed-input native cohort is separate from the prototype.
+
+The final cohort `ready-delivery-native-20261020/inspection-2` completes all
+twelve planned hooks using construction 7 and the same frozen publication,
+three questions, complete vectors and both storage layouts. Reusing verified
+prepared inputs adds no embeddings or lexical hydration; warm and repeat take
+7,338.949 and 7,112.611 ms separately from hook time.
+
+| Same live session | Cases | New semantic/deadline passes | Hook elapsed ms | Required body / ACK |
+| --- | ---: | ---: | ---: | ---: |
+| Initial | 6 | 6 | 17,855.669–18,029.250 | 6 / 6 |
+| Identical question after ACK | 6 | 0 | 25,067.670–25,231.304 | 0 / 0 |
+
+Every discovery response scores all 10,000 original window references; six focus
+responses also complete. Across all eighteen numerical responses, source-cache
+misses, unusable records and source encoding time are zero. Both the original
+graph and every source-vector byte remain unchanged. All twelve receipt finish
+deadlines agree with actual readiness policy; all six initial ready times are
+before the nomination cutoff and use the original overall deadline. Continuation
+keeps its cutoff and prior ACKed delivery keys. Every publication's stdout/hash
+agrees, and all six owned managers and shutdown clients exit 0. Collection takes
+495.698 seconds, peak 1,524,896 KiB, no guard trigger. The final audit also
+reproduces every overlay/helper byte and all eighteen ordinary artifact hashes.
+
+The new ready marker separates the first search into narrower observed
+intervals. Before the numerical receipt marker, time outside its reported
+numerical duration is 2,798–2,829 ms. From that marker to checked nomination
+readiness is 1,580–1,682 ms. From readiness to the final configured reply is
+11,121–11,246 ms, including Work matching, focus and subsequent checks. These
+intervals do not attribute all time to a single function. The next profile must
+separate source preparation, nomination construction and Work matching before
+choosing the next data-structure change. Repeated-question continuations,
+different-question continuations, other scales, the unmeasured 32 reference
+cases, latest-public-main inclusive-token/quality comparisons and production
+adoption remain open. The initial 30-second result is not a continuation or
+50,000-window pass.
