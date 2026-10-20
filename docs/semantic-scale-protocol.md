@@ -135,3 +135,16 @@ classification alongside the separately declared policy/body outcomes. No
 partial ranking or notice-only output counts as semantic/body completion.
 The 12 owned-manager LLVM observations are a separate already measured stratum;
 these 48 synthetic hooks do not replace them or establish token adoption.
+
+An intermediate diagnostic may stop at a complete measured-pair boundary to
+prioritize a required implementation fix. Keep the completed raw observations,
+record the interruption and list every remaining case as unmeasured; do not
+report a completed 48-case gate or balanced adoption comparison. The remaining
+cases stay required. Never resubmit an already measured hook to replace it.
+
+For subsequent candidates, `--ready-inputs` may copy the completed discovery/focus
+inputs from an earlier stratum. Verify its frozen source tree and authoritative
+graph hashes, retain its manifest and preparation hashes, require the same
+encoder contract and zero new embeddings, and preserve every original vector
+byte. Lexical metadata may be rebuilt for changed code. This is reuse of the
+same saved snapshot, not a separately generated seed.

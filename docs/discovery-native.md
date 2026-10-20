@@ -530,7 +530,7 @@ sample; its source and outputs remain. The corrected runner hashes each director
 once, reuses those already warmed bytes, and verifies warm/repeat request zero
 embeddings while preserving the original source and vector bytes.
 
-The complete 10,000-window stratum fails the new semantic/deadline gate **0/12**:
+The complete 10,000-window stratum passes the new semantic/deadline gate **0/12**:
 
 | Layout | First prompt (body/gate) | Subsequent prompt (body/gate) |
 | --- | --- | --- |
@@ -556,7 +556,75 @@ indexed candidate; they are not yet a measured causal decomposition or a speedup
 Keep floating-point addition order, first-duplicate semantics, complete rankings,
 owner/window membership and rejection behavior unchanged. Candidate proofs/builds
 and balanced native observations remain required. The remaining 36 predeclared
-samples are running; no generation-model call, token claim or adoption is made.
+samples remain required. After a second 50,000-window pair, the runner is
+intentionally interrupted during unmeasured preparation at a complete-pair
+boundary to prioritize the exact indexed candidate below. All 16 completed
+hooks and the 32 unmeasured cases remain; no generation-model call, token claim
+or adoption is made.
+
+The 50,000-window common preparation adds 49,969 focus keys, for a 99,969-key
+union. Warm takes 476.807 seconds, repeat 64.672 seconds with zero encoding.
+Both observed first/subsequent pairs (database layout, questions 0/1) fail
+without the required body in 28,806–28,817 ms. No numerical receipt exists for
+these four attempts, so the 10,000-window ranking bottleneck is not asserted
+to be their sole cause. The interrupted runner's sampled peak is 1,517,472 KiB,
+no guard trigger. Only owned unmeasured preparation is stopped; no hook is
+resubmitted. The interruption is recorded separately from deadline failures.
+
+## Exact directories for complete rankings
+
+`rank_directory_candidate.py` builds each ranking's first-position hash table
+once. It preserves each floating-point addition in its original order. Hash
+deduplication has the proved first-occurrence list semantics. The presentation
+order and every window choice equal the original complete functions for arbitrary
+inputs, including duplicates and sparse/foreign keys. No threshold, score,
+source file format or prefilter is introduced.
+
+`OwnedRows` binds an array lookup to the original list and retains the original
+membership witness. The receiver uses `filterMapM` in place of accumulated
+append while retaining left-to-right order and the first error. A universal
+compiler equality preserves the complete original `indexedNominations` result,
+including rejection, duplicate choices, empty positions and window bounds.
+Earlier primitive/connection proof and test failures are retained.
+
+The primitive's final 8,140 native checks and 50,000-entry sparse-key case pass.
+Qualification passes 182 independent pre-change comparisons, 144 receiver
+boundaries and complete 50,000-entry order/owner/window checks. ContractAudit
+checks the exact compiler equalities, existing allowed axiom set and handler
+reachability. New theorems use only `propext`, `Classical.choice`, `Quot.sound`;
+no sorry/native-decide axiom is added. Generated C calls `fusedIndexed`,
+`selectIndexed`, `indexedEvidenceWindowsUsing`, and `indexedNominationsUsing`;
+the receiver uses prepared array/hash lookups and its tail collection loop.
+Full regressions pass in 110.508 seconds. Another daemon drains three tickets
+with recorded graph heads unchanged and both shutdown exits zero. Qualification
+takes 199.688 seconds, sampled peak 3,166,864 KiB, no guard trigger.
+
+The next complete twelve-hook 10,000-window collection copies the same fully
+warm source/vector inputs, explicitly checks the unchanged encoder contract,
+requests zero embeddings, and preserves every graph/vector byte. New lexical
+metadata is prepared separately. Both protected layouts and all three questions
+remain. The semantic/deadline delivery gate still passes **0/12**. First replies
+take 28,805–28,811 ms without a body; subsequent lexical body/ACK replies take
+24,479–24,688 ms and fail the five-second continuation target.
+
+Numerical discovery now completes in 12/12: first 2,097–2,165 ms, subsequent
+1,137–1,168 ms, all 10,000 references scored, zero source misses, invalid vectors
+or source encoding. This local stage result is not a hook success. Collection
+takes 602.910 seconds, sampled peak 1,516,592 KiB, no guard trigger. The ordinary
+18 artifact hashes remain unchanged. Generation-model calls and adoption are zero.
+
+One complete delivery diagnostic uses the same original DB path, question,
+receipt and workspace outside the hook deadline. It produces the required
+body in 16,701 ms internally, while the helper process takes 33,265 ms. Its
+trace reports nominations at 1 ms, discovery at 10,362 ms, hydration at 10,537 ms,
+focus at 10,546 ms, and rendering complete at 10,562 ms. The 6,139 ms outside
+this trace is not attributed solely to preprocessing. Source/vector bytes and
+model assets remain unchanged. The diagnostic takes 67.895 seconds overall,
+sampled peak 1,581,248 KiB, no guard trigger. It does not replace the twelve
+failed hooks. The next investigation separates the shared matching/rendering
+work from ranking deadlines and resolves the remaining preparation/postprocessing
+interval. Other candidate scale gates, 32 baseline cases and all adoption gates
+remain open.
 
 ## Local records
 
@@ -637,4 +705,14 @@ Under `/Users/ovm/.codex/experiments/eggshell/`:
 - `initial-scale-native-20261020/inspection-1`: retained setup-only runner
   interruption, completed source warm and original runner bytes; `inspection-2`:
   corrected validation, verified prepared-byte reuse, complete twelve failed
-  10,000-window cases and the still-running remaining synthetic strata.
+  10,000-window cases, four failed 50,000-window cases and the explicit
+  preparation-only interruption after sixteen measured hooks.
+- `rank-primitives-20261020/construction-1` through `construction-8`: retained
+  proof/type/test failures and the final primitive proofs/native checks.
+- `rank-directory-qualified-20261020/construction-1` through `construction-5`:
+  retained connection-proof failures; `construction-6`: final compiler equalities,
+  independent checks, full regression, ContractAudit and ticket recovery.
+- `rank-directory-native-20261020/inspection-1`: complete twelve-hook
+  10,000-window collection with completed numerical scoring but failed delivery.
+- `rank-directory-delivery-profile-20261020/inspection-1`: separate complete
+  configured delivery, required body and internal/process/trace intervals.

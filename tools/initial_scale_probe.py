@@ -32,11 +32,26 @@ def require_warm(result):
         raise ValueError('Discovery/focus numerical inputs are not completely warm')
 
 
-def prepare(binary, output, fixture, original, original_files, prefix, prepared_from=None):
+def prepare(binary, output, fixture, original, original_files, prefix, prepared_from=None, ready_inputs=None):
     cell = output / 'prepared' / fixture['label']; cell.mkdir(parents=True)
     database = cell / 'source.egg'
     donor = original
     reused = None
+    expected_contract = None
+    if ready_inputs:
+        candidate = ready_inputs / 'prepared' / fixture['label']
+        declaration = json.loads((ready_inputs / 'manifest.json').read_text())
+        if declaration['scaleManifestSha256'] != sha(original.parents[2] / 'manifest.json'):
+            raise ValueError('Warm inputs belong to a different fixed scale publication')
+        record = json.loads((candidate / 'prepared.json').read_text())
+        donor = candidate / 'source.egg'
+        if tree(donor) != record['sourceTree'] or graph_files(donor) != fixture['graphFilesSha256']:
+            raise ValueError('Complete warm input bytes changed')
+        require_warm(record['warm'])
+        expected_contract = record['warm']['after']['encoderContract']
+        reused = dict(directory=str(candidate), manifestSha256=sha(ready_inputs / 'manifest.json'),
+            preparedSha256=sha(candidate / 'prepared.json'), priorRuntimeSha256=declaration['candidateSha256'],
+            purpose='same original graph and complete discovery/focus vector inputs; lexical metadata may be rebuilt')
     if prepared_from:
         candidate = prepared_from / 'prepared' / fixture['label']
         if (candidate / 'warm/record.json').exists() and (candidate / 'repeat/record.json').exists():
@@ -58,12 +73,15 @@ def prepare(binary, output, fixture, original, original_files, prefix, prepared_
         raise ValueError('Source graph changed during preparation copy')
     roots = list(original.glob('derived/**/vectors'))
     original_vectors = {str(path.relative_to(original)): tree(path) for path in roots}
+    donor_vectors = {str(path.relative_to(database)): tree(path) for path in database.glob('derived/**/vectors')}
     config(cell / 'config.toml', binary, database, writable=True)
     env = environment(cell / 'data', cell / 'config.toml', prefix)
     initial, initial_timing = warm(binary, cell, env, 'warm')
     require_warm(initial)
     if reused and (initial['requested'] or initial['batches']):
         raise ValueError('Completed donor lost warmed numerical inputs')
+    if expected_contract and initial['after']['encoderContract'] != expected_contract:
+        raise ValueError('Candidate changed the warmed embedding contract')
     repeated, repeat_timing = warm(binary, cell, env, 'repeat')
     require_warm(repeated)
     if (repeated['requested'] or repeated['batches'] or repeated['lexical']['added']
@@ -73,12 +91,13 @@ def prepare(binary, output, fixture, original, original_files, prefix, prepared_
     for path, entries in original_vectors.items():
         current = tree(database / path)
         preserved = preserved and all(current.get(key) == digest for key, digest in entries.items())
+    preserved = preserved and all(tree(database / path) == entries for path, entries in donor_vectors.items())
     if (graph_files(database) != fixture['graphFilesSha256'] or tree(original) != original_files
             or tree(donor) != donor_files or not preserved):
         raise ValueError('Preparation changed an original graph or vector byte')
     prepared = dict(warm=initial, warmTiming=initial_timing, repeated=repeated,
         repeatTiming=repeat_timing, sourceTree=tree(database), originalVectors=original_vectors,
-        graphFilesSha256=fixture['graphFilesSha256'], reusedPreparation=reused)
+        graphFilesSha256=fixture['graphFilesSha256'], reusedPreparation=reused, completeDonorVectors=donor_vectors)
     save(cell / 'prepared.json', prepared)
     return database, prepared
 
@@ -163,6 +182,10 @@ def collect(binary, output, fixture, prepared, prepared_files, prefix):
 def run(args):
     source = Path(__file__).resolve().parents[1]
     build = args.build.resolve(); scale = args.scale.resolve(); output = args.output.resolve(); prefix = args.prefix.resolve()
+    if args.prepared_from and args.ready_inputs:
+        raise ValueError('Choose one verified preparation donor')
+    if args.ready_inputs and (output.is_relative_to(args.ready_inputs.resolve()) or args.ready_inputs.resolve().is_relative_to(output)):
+        raise ValueError('Keep observations separate from complete warm inputs')
     if any(output.is_relative_to(path) or path.is_relative_to(output) for path in [source, build, scale]):
         raise ValueError('Use a separate observation directory')
     qualified = json.loads((build / 'result.json').read_text())
@@ -186,6 +209,7 @@ def run(args):
         initialLimitMs=30000, continuationLimitMs=5000, semanticCapsMs=dict(initial=15000, continuation=4500),
         sameSessionContinuation=True, ownedDaemons=True, preparationCostSeparate=True,
         preparedFrom=str(args.prepared_from.resolve()) if args.prepared_from else None,
+        readyInputsManifestSha256=sha(args.ready_inputs.resolve() / 'manifest.json') if args.ready_inputs else None,
         generationModelCalls=0, productionAdoption=False))
     all_rows = []
     with (scale / 'run.guard').open('a') as lock:
@@ -196,7 +220,8 @@ def run(args):
             if tree(original) != files or graph_files(original) != fixture['graphFilesSha256']:
                 raise ValueError('Original saved warm publication changed')
             prepared, record = prepare(binary, output, fixture, original, files, prefix,
-                args.prepared_from.resolve() if args.prepared_from else None)
+                args.prepared_from.resolve() if args.prepared_from else None,
+                args.ready_inputs.resolve() if args.ready_inputs else None)
             all_rows += collect(binary, output, fixture, prepared, record['sourceTree'], prefix)
             if tree(original) != files or tree(prepared) != record['sourceTree']:
                 raise ValueError('A common publication changed during measurement')
@@ -219,4 +244,5 @@ if __name__ == '__main__':
     parser.add_argument('--labels', nargs='+', choices=['2', '1024', '10000', '50000'],
         default=['10000', '50000', '2', '1024'])
     parser.add_argument('--prepared-from', type=Path)
+    parser.add_argument('--ready-inputs', type=Path)
     run(parser.parse_args())
