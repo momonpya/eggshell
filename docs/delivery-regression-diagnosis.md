@@ -161,8 +161,21 @@ and answer claims must be compared before treating these commands as waste.
 An initial-body difference locates a behavior change; it does not by itself
 prove the cause of token use or quality loss.
 
-Continue the same fixed-input comparisons across the three topics and the
-available saved checkpoints, then narrow any differing boundary. Preserve
-performance improvements whose output agrees. Only a controlled fresh-relative
-token and quality result can accept a behavior-changing repair. The historical
-README savings claim remains unchanged and the full goal remains active.
+The full-window centroid candidate retains all source/query segments, weighted
+by newly covered source tokens, and normalizes one vector per original window.
+It leaves the encoder, stored bundles and cache/performance fixes unchanged.
+Its fixed topic-1 first-use trials consume 458,554 / 529,236 / 207,446 inclusive
+tokens, or 85.0% / 82.0% / 93.5% reduction against the same original fresh
+references. All three improve on the full maximum-over-pairs candidate. The
+first trial consumes more than the first-segment diagnostic; that observation
+remains visible in the complete table in `readme-benchmark.md`.
+
+All three actual initial packets match the prospective centroid hash, every
+hook is below 30 seconds, and initial semantic search completes with zero source
+encoding. Model errors/reroutes and retried attempts are zero; seed and fresh
+references are not reacquired. Source review records confirmed citations and
+precision concerns, with original answers preserved. Driver execution tests and
+independent quality acceptance remain unavailable. The candidate is isolated
+and unadopted. Complete the other topic/history token cells and quality checks
+before acceptance. The historical README claim stays unchanged and the full
+practical/paper goal remains active.

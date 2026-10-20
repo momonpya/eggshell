@@ -145,11 +145,11 @@ public-produced seed graph bytes, prompt, source, answering model, reasoning
 effort and native harness at the same active DB pathname. Its initial body is
 the healthy public body's hash in all three actual native chats.
 
-| Repetition | Fresh total | Full candidate total / reduction | First-segment control total / reduction |
-| --- | ---: | ---: | ---: |
-| 0 | 3,050,963 | 789,335 / 74.1% | 269,654 / 91.2% |
-| 1 | 2,932,984 | 1,604,261 / 45.3% | 562,109 / 80.8% |
-| 2 | 3,181,936 | 978,336 / 69.3% | 443,128 / 86.1% |
+| Repetition | Fresh total | Full candidate total / reduction | First-segment control total / reduction | Full-window centroid total / reduction |
+| --- | ---: | ---: | ---: | ---: |
+| 0 | 3,050,963 | 789,335 / 74.1% | 269,654 / 91.2% | 458,554 / 85.0% |
+| 1 | 2,932,984 | 1,604,261 / 45.3% | 562,109 / 80.8% | 529,236 / 82.0% |
+| 2 | 3,181,936 | 978,336 / 69.3% | 443,128 / 86.1% | 207,446 / 93.5% |
 
 All six initial bodies match their predeclared hashes and every recorded hook
 finishes within 30 seconds. The four new calls complete without recorded model
@@ -182,7 +182,7 @@ Full initial/history × three-topic × three-repetition token/quality requiremen
 remain, as do practical and paper requirements. No scoring control, benchmark
 claim or behavior-changing repair has been adopted into production or README.
 
-The next isolated candidate retains every encoded segment and projects each
+An isolated full-window candidate retains every encoded segment and projects each
 original window to one normalized centroid, weighted by newly covered source
 tokens. Its encoder runtime and stored bundles are unchanged. Numerical boundary
 checks, native build and ContractAudit pass. Three zero-generation native hooks
@@ -190,9 +190,33 @@ finish semantic delivery in 13,127 / 7,842 / 8,185 ms, with zero source encoding
 explicit centroid-policy receipts, unchanged authoritative source graphs, and
 clean daemon shutdowns. The maximum aggregate RSS is 1,405,824 KiB. The source
 publication may gain derived memos, so only the original common snapshot is used
-for subsequent measured turns. This candidate is not adopted; its total-token
-and answer-quality gates have not run at this checkpoint. Artifacts:
+for subsequent measured turns. Native preflight artifacts:
 `/Users/ovm/.codex/experiments/eggshell/window-centroid-20261020/construction-3/`.
+
+Its three fixed topic-1 first-use model trials are now complete, as shown in the
+last table column. They reuse the exact same original seed graph bytes, active
+DB pathname, source, question, Luna/xhigh settings, native harness and original
+fresh references. All three initial packets match the predeclared centroid body
+hash `932b170a0c22d8590f3a664f9e48060036892215fc2c5bacb616c58e81ae52b8`.
+The candidate uses fewer inclusive tokens than the full maximum-over-pairs
+candidate in every repetition. It uses more than the first-segment diagnostic
+in repetition 0; that result is retained rather than hidden by the other two.
+
+The three new calls consume 1,195,236 total tokens, with no recorded model errors
+or reroutes, repeated call or reacquired seed. Cached input remains included.
+All measured hooks finish within 30 seconds, with maxima 11,807 / 8,150 / 8,062 ms.
+Initial semantic searches complete with zero source encoding. The guard observes
+2,513,808 KiB peak aggregate RSS and does not fire. All owned daemon shutdowns
+exit 0. Generation is stopped again after this fixed sequence. Raw results:
+`/Users/ovm/.codex/experiments/eggshell/readme-window-centroid-20261020/`.
+
+Source review confirms the cited target/arch test expectations, HLSL argument
+translations and clang-cl language expectations. It retains a precision concern
+about repetition 0's abbreviated SPIR-V condition. Driver tests still lack a
+built Clang/lit configuration, and no independent quality acceptance is claimed.
+The original answers remain unchanged. This is an encouraging token result for
+one first-use cell, not complete quality recovery or a three-topic/history
+acceptance result. The candidate remains isolated and unadopted.
 
 The candidate's model turn and `egg keep` completed, but the harness's detached
 daemon shutdown client returned a wait-for-exit failure after acknowledgement.
