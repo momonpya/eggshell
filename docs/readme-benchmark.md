@@ -93,9 +93,10 @@ The completed topic-1 first-use comparisons are:
 | --- | ---: | ---: | ---: |
 | 0 | 3,050,963 | 789,335 | 74.1% |
 | 1 | 2,932,984 | 1,604,261 | 45.3% |
-| 2 | 3,181,936 | Not run | Unavailable |
+| 2 | 3,181,936 | 978,336 | 69.3% |
 
-These are individual observations, not a completed three-topic result. The
+These are the three predetermined topic-1 first-use repetitions, not a completed
+three-topic result. The
 historical README study records 76.0% first-lap and 96.4% retained-lap reduction.
 Its answering model and seed differ, so the present observations alone cannot
 attribute that gap to an implementation change. The MiniLM model is unchanged;
@@ -129,12 +130,69 @@ or a recovered token result. Its separate native topic-1 preflight completes in
 derived memo and neutral journal; authoritative graph equality is audited
 explicitly. The failed physical-immutability assertion remains recorded.
 
-The after-topic-1 checkpoint mixes public plain primary lexical terms with the
+The original after-topic-1 checkpoint mixes public plain primary lexical terms with the
 candidate's newly saved `P`-prefixed terms. Public lookup cannot find those new
-postings, so its history delivery comparisons are excluded as healthy public
-controls. The first-use seed was produced by public main and has no such mixed
-index. No new generation trial has run for this scoring diagnosis yet. Full
-initial/history × three-topic × three-repetition adoption requirements remain.
+postings, so its original history delivery comparisons are excluded as healthy
+public controls. The first-use seed was produced by public main and has no such
+mixed index.
+
+## Matched scoring diagnosis
+
+The first-segment control retains current full-bundle storage, DB cache/warm,
+lexical indexing and performance changes, and changes only the source/query
+bundle projection into numerical scoring. All compared cells use the original
+public-produced seed graph bytes, prompt, source, answering model, reasoning
+effort and native harness at the same active DB pathname. Its initial body is
+the healthy public body's hash in all three actual native chats.
+
+| Repetition | Fresh total | Full candidate total / reduction | First-segment control total / reduction |
+| --- | ---: | ---: | ---: |
+| 0 | 3,050,963 | 789,335 / 74.1% | 269,654 / 91.2% |
+| 1 | 2,932,984 | 1,604,261 / 45.3% | 562,109 / 80.8% |
+| 2 | 3,181,936 | 978,336 / 69.3% | 443,128 / 86.1% |
+
+All six initial bodies match their predeclared hashes and every recorded hook
+finishes within 30 seconds. The four new calls complete without recorded model
+errors or reroutes; existing calls are not repeated. Source code stays unchanged.
+The guard observes a maximum aggregate RSS of 2,321,856 KiB and does not fire.
+Seed acquisition is not repeated. Raw data is under
+`/Users/ovm/.codex/experiments/eggshell/readme-scoring-control-20261020/`.
+
+The control beats the full candidate in every matched repetition for this one
+first-use question. This supports investigating the expanded maximum-over-pairs
+scoring as a token-cost regression here. It does not prove the whole historical
+README gap, quality recovery, or the other topic/history cells. Answers still
+lack executable Driver-test evidence; the original outputs and source-review
+limitations remain. The control scores only first segments and is not adopted
+as a full-context repair. Generation is stopped again after the fixed sequence.
+
+For healthy history delivery comparison, a public-built offline helper republishes
+the original 148 values into one new private DB. Authority, root order, stable
+root/owner/Work/window IDs and unions are checked equal; no new seed or model
+answer is generated. Its ordinary public producer creates complete plain-term
+postings. Both implementations then inspect exact copies of this one prepared
+snapshot. Public versus full candidate differs on all three questions; the
+first-segment control equals public on all three. This is the checkpoint after
+topic 1, **not** a completed retained lap. Warm/repeat validates all 2,437 cached
+windows, and physical source publication bytes stay unchanged during inspection.
+Artifacts are under
+`/Users/ovm/.codex/experiments/eggshell/readme-history-public-index-20261020/`.
+
+Full initial/history × three-topic × three-repetition token/quality requirements
+remain, as do practical and paper requirements. No scoring control, benchmark
+claim or behavior-changing repair has been adopted into production or README.
+
+The next isolated candidate retains every encoded segment and projects each
+original window to one normalized centroid, weighted by newly covered source
+tokens. Its encoder runtime and stored bundles are unchanged. Numerical boundary
+checks, native build and ContractAudit pass. Three zero-generation native hooks
+finish semantic delivery in 13,127 / 7,842 / 8,185 ms, with zero source encoding,
+explicit centroid-policy receipts, unchanged authoritative source graphs, and
+clean daemon shutdowns. The maximum aggregate RSS is 1,405,824 KiB. The source
+publication may gain derived memos, so only the original common snapshot is used
+for subsequent measured turns. This candidate is not adopted; its total-token
+and answer-quality gates have not run at this checkpoint. Artifacts:
+`/Users/ovm/.codex/experiments/eggshell/window-centroid-20261020/construction-3/`.
 
 The candidate's model turn and `egg keep` completed, but the harness's detached
 daemon shutdown client returned a wait-for-exit failure after acknowledgement.

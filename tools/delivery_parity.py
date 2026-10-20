@@ -133,13 +133,13 @@ def index_inputs(name, cell, binary, env, database, inputs):
     save(record, dict(complete=True, windows=len(inputs), receipts=receipts, generationModelCalls=0))
 
 
-def inspect(name, checkpoint, topics):
+def inspect(name, checkpoint, topics, source_database=None):
     variant, checkout, env = prepare(name)
     helper = checkout / '.lake/build/bin/delivery_audit'
     binary = checkout / '.lake/build/bin/eggshell'
     cell = variant / checkpoint
     database = cell / 'work.egg'
-    common = STUDY / 'checkpoints' / checkpoint / 'work.egg'
+    common = Path(source_database) if source_database else STUDY / 'checkpoints' / checkpoint / 'work.egg'
     original = graph_files(common)
     if not database.exists():
         clone(common, database)
@@ -185,7 +185,8 @@ def inspect(name, checkpoint, topics):
         if graph_files(database) != original or graph_files(common) != original:
             raise ValueError('Inspection changed the saved graph')
         save(cell / f'topic-{topic}-result.json', dict(runtimeSha256=sha(binary),
-            checkpoint=checkpoint, topic=topic, graphFiles=original, promptSha256=sha(prompt),
+            checkpoint=checkpoint, topic=topic, sourceDatabase=str(common),
+            graphFiles=original, promptSha256=sha(prompt),
             bodySha256=sha(body), bodyBytes=body.stat().st_size, reason=handoff['reason'],
             generationModelCalls=0, productionAdoption=False))
         print(json.dumps(dict(variant=name, checkpoint=checkpoint, topic=topic,
@@ -196,7 +197,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--variants', nargs='+', choices=list(VARIANTS), required=True)
     parser.add_argument('--checkpoint', choices=['seed', 'stage-1'], default='seed')
+    parser.add_argument('--database', type=Path,
+                        help='Use this one frozen common snapshot for every implementation')
     parser.add_argument('--topics', type=int, nargs='+', choices=[1, 2, 3], default=[1, 2, 3])
     args = parser.parse_args()
     for name in args.variants:
-        inspect(name, args.checkpoint, args.topics)
+        inspect(name, args.checkpoint, args.topics, args.database)

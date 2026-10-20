@@ -4,10 +4,10 @@ The required outcome is recovery of token savings and answer quality while
 retaining the cache fixes. A rollback is not the acceptance criterion.
 
 The historical README records 76.0% first-lap and 96.4% retained-lap savings
-against fresh. The current topic-1 first-use candidate records 74.1% and 45.3%
-in its two completed repetitions. The latter is candidate repetition 1:
-2,932,984 fresh versus 1,604,261 candidate total tokens. Candidate repetition 2
-and the current retained-lap model trials have not run. The answering Luna
+against fresh. The current topic-1 first-use candidate records 74.1%, 45.3%
+and 69.3% in its three predetermined repetitions. The 45.3% observation is
+candidate repetition 1: 2,932,984 fresh versus 1,604,261 candidate total tokens.
+The current retained-lap model trials have not run. The answering Luna
 model and the saved seed differ from the historical study; the search MiniLM
 model does not. These facts do not establish a single cause of the gap.
 
@@ -97,6 +97,18 @@ page/head bytes are not claimed unchanged. Each future measured turn must still
 start from the exact common snapshot bytes, not this preflight's memo state.
 No generation-model call was needed for these checks.
 
+The subsequent fixed first-use scoring diagnosis completes all three control
+repetitions: 269,654 / 562,109 / 443,128 total tokens, or 91.2% / 80.8% / 86.1%
+reduction against their original fresh references. The control beats the full
+candidate in all three repetitions. Every initial native body matches the
+prepared public body; every recorded hook is below 30 seconds. Only four new
+model calls are made (the missing full-candidate repetition and three controls),
+with no recorded errors/reroutes, repeated existing attempt or reacquired seed.
+Cached input remains included. The fixed source is unchanged. These observations
+support a scoring-related token regression on this question, but do not accept
+the first-segment control, establish quality recovery, or complete the other
+topic/history cells. The original answers and source-review limits remain.
+
 The saved after-topic-1 checkpoint also has three public/candidate body
 differences, but its primary lexical index mixes old plain terms with newly
 saved `P`-prefixed terms. For example, plain `driver` still has 24 owners, while
@@ -107,6 +119,19 @@ conclusion. `primary-postings-audit.json` preserves the check. Prepare an
 identical private history snapshot with complete public-readable primary
 postings for both arms before comparing history; preserve every authoritative
 value, root order, owner ID and union. The original checkpoints stay intact.
+
+That preparation is now complete in
+`readme-history-public-index-20261020/construction-1`. A helper compiled against
+the public implementation imports the same 148 authoritative values into one
+new private publication through the ordinary producer. Authority, root order,
+root/owner/Work/window IDs and unions remain equal; complete plain-term postings
+include all 34 `driver` owners. Warm and repeat validate all 2,437 source/focus
+windows. Both implementations receive byte-identical copies of this publication.
+Public versus full-candidate bodies differ on all three questions, and the
+first-segment control equals public on all three. The model and source graph
+are not regenerated. The earlier mixed-index comparisons remain invalid; this
+separate comparison establishes the healthy public boundary after topic 1. It
+is not a whole retained lap, token result or quality result.
 
 The actual three prompts are English. Executing each implementation's lexical
 term function shows that their ordered query terms agree after removing the
