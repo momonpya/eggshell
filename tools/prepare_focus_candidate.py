@@ -13,7 +13,7 @@ from semantic_latency import execute, save
 
 def run(args):
     candidate = importlib.import_module(args.candidate.replace('-', '_') + '_candidate')
-    checks = 'focus_warm_tests' if args.candidate == 'focus-warm' else 'context_plan_tests'
+    checks = args.candidate.replace('-', '_') + '_tests'
     source = Path(__file__).resolve().parents[1]
     base = args.base.resolve(); output = args.output.resolve()
     if any(output.is_relative_to(p) or p.is_relative_to(output) for p in [source, base]):
@@ -72,7 +72,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['base', 'output', 'prefix']:
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--candidate', choices=['focus-warm', 'context-plan'], default='focus-warm')
+    parser.add_argument('--candidate', choices=['focus-warm', 'context-plan', 'context-memo'], default='focus-warm')
     args = parser.parse_args()
     try:
         run(args)

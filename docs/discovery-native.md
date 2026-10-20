@@ -254,6 +254,75 @@ from process wall time and actual native-hook latency. All observations are
 retained. This check takes 36.508 seconds overall, sampled peak 1,555,104 KiB,
 without a guard trigger; it does not change the 0/12 native gate result.
 
+## Exact scalar-range reuse and indexed characters
+
+The next native renderer sample still retains the complete reference Handoff.
+It locates repeated scalar-range validation and character-prefix traversal in
+`decodedEvidenceUsing?`. The isolated `context_memo_candidate.py` changes
+evaluation while preserving the original decoder as its kernel specification.
+
+`ExactMemo` uses a dependent hash table: a stored result carries equality to
+the exact function at its actual key. Its universal `map`/`filterMap`
+equalities retain order, duplicates and absent results, including hash
+collisions. Context and cue factories reuse validation of duplicate ranges
+within each preparation. The table is local to the exact source/function;
+it is neither persistent nor a cross-source cache.
+
+`IndexedCharacters` binds an immutable character array to the exact original
+String. Its slice theorem preserves the existing character coordinates for
+every string and bound, including Unicode, empty and out-of-bounds slices.
+The decoder's bounded re-encoding decision uses those slices, with an exact
+compiler equality to the original decoder. The full prefix certificate and
+every bounds check remain. There is no hash-based substitute for validation.
+The prepared owner also uses the same exact slices for original fragments.
+
+Native checks pass 2,730 memo comparisons, including forced collisions,
+315 range inputs and 162 character slices. Two retained development
+diagnostics preserve the entire old Handoff, original positions, metadata
+and required gold body. Their internal intervals are 7,152/6,986 ms, with
+render intervals 2,653/2,433 ms. These single diagnostics are not balanced
+performance comparisons, actual hook passes or token-saving evidence.
+
+The final uninstrumented qualification passes ContractAudit and all existing
+regressions in 106.044 seconds. Three remaining tickets are recovered by a
+separate daemon with both recorded graph heads unchanged; shutdown client
+and daemon exit 0. Qualification takes 180.119 seconds, sampled peak
+3,073,968 KiB, without a guard trigger. Generated C confirms six actual calls
+to the exact fast decoder, its indexed decision, and zero old bounded
+`EvidenceRange.text` calls inside that decoder. Ordinary sources/runtime
+remain unchanged. The candidate remains isolated and unadopted.
+
+The fixed actual LLVM collection again uses the complete warmed inputs from
+the previous collection, with no seed recreation. Both layouts repeat warm
+with zero requests/batches. Complete focus orders and positions equal the
+reference in both layouts, and all original source/vector bytes are unchanged.
+All 12 hooks complete discovery and focus scoring without source misses,
+invalid records or encoding. Publication/stdout hashes and ACKs agree in
+12/12. The gate remains **0/12**: every semantic attempt times out at the
+unchanged 4.5-second deadline, then returns lexical fallback without the
+unchanged required gold marker. Replies take 4,825.375–4,913.502 ms. This is
+not a notice-only failure or an absent publication; the required observation
+is missing from the fallback. Collection takes 155.182 seconds, sampled
+peak 1,650,576 KiB, without a guard trigger. All failed samples are retained.
+
+The final qualified executable also reproduces the exact complete original
+Handoff and gold body outside the hook deadline. Its internal interval is
+4,732 ms, with 2,375 ms from source focus to completed rendering; the helper
+process wall interval is 17,294 ms. Qualification and diagnostic inputs are
+frozen and unchanged. This single diagnostic takes 28.714 seconds overall,
+sampled peak 1,550,672 KiB, without a guard trigger. It does not supersede
+the twelve actual hook failures or establish a balanced latency effect.
+
+A further three-second native stack observation preserves exact complete
+Handoff equality (internal interval 4,728 ms). It still shows decoded-width
+scans, full prefix re-encoding and dynamic range validation inside rendering.
+Those checks remain required; the next candidate must share or index their
+work while preserving the same certificates. The observed process also has
+sleeping provider-deadline tasks during task-manager finalization; their
+presence is recorded separately from the internal delivery interval and
+does not by itself explain the whole process wall time. Sampling takes
+17.880 seconds, sampled peak 234,864 KiB, without a guard trigger.
+
 ## Local records
 
 Under `/Users/ovm/.codex/experiments/eggshell/`:
@@ -289,3 +358,13 @@ Under `/Users/ovm/.codex/experiments/eggshell/`:
   cached hook and passive absolute trace observations, separate from the gate.
 - `context-plan-qualified-profile-20261020/inspection-1`: complete reference
   equality in the qualified executable, with internal/process timings retained.
+- `context-memo-inspection-20261020/inspection-1` and `inspection-2`:
+  exact complete-Handoff diagnostics for memoized decoding and indexed slices.
+- `context-memo-qualified-20261020/construction-1`: exact compiler bridges,
+  native checks, full regression, independent recovery and generated-C audit.
+- `context-memo-native-20261020/inspection-1`: complete fixed LLVM 12-hook
+  collection, full focus comparisons, cache invariance and failed delivery gate.
+- `context-memo-qualified-profile-20261020/inspection-1`: qualified full
+  Handoff equality, original gold observation and separate process timings.
+- `context-memo-stack-20261020/observation-1`: remaining width/prefix work
+  in the actual qualified renderer, with exact full Handoff equality.
