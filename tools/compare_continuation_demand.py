@@ -134,6 +134,11 @@ def main():
         assert args.resume and json.loads((destination / 'demand.json').read_text()) == demand
     else:
         save(destination / 'demand.json', demand)
+    prepared_identity = json.loads((PRIOR / 'prepared-common.egg/head').read_text())['identity']
+    frontiers = [json.loads(key[2:])[1]['identity'] for key in demand['initialClaims']
+        if key.startswith('a:') and json.loads(key[2:])[0] == pending['prompt']]
+    if prepared_identity not in frontiers:
+        raise ValueError('Historical advisory claims belong to another DB identity; this comparison would reopen already closed advisory owners')
     original = graph_files(PRIOR / 'prepared-common.egg')
     recorded = graph_files(ATTEMPT / 'output.egg')
     protocol = dict(
