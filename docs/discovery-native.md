@@ -105,6 +105,67 @@ work and complete focus warm coverage are required before repeating that
 gate. Latest-public-main matched task quality and inclusive token accounting
 remain required for adoption.
 
+## Complete focus warm closure
+
+The actual LLVM failure has a separate cause: discovery uses original saved
+windows, while focus removes the Work prefix from those same window slots.
+An original-window-only warm therefore leaves some focus inputs cold. The
+isolated `focus_warm_candidate.py` shares the exact suffix function between
+warm and indexed focus. Warm plans the union of original and focus text keys,
+deduplicates it, and encodes only the missing or invalid inputs in bounded
+batches. It reads Work and only bounded original prefix windows to derive the
+extra keys. Original source windows, ordinal positions, model contract and
+valid vector bytes stay unchanged.
+
+Doctor reports the unique union as its total, with separate discovery/focus
+coverage denominators. Neither is a count of all original window references.
+The warm scheduling checkpoint includes the actual suffix implementation's
+content digest. Existing original vectors remain valid; an old scheduling
+hint cannot certify the new input closure. Query vectors remain private.
+
+Durable indexed focus no longer repairs numerical inputs in the foreground.
+Staged sources retain their existing bounded repair allowance. Cold/corrupt
+durable input must remain explicitly unfinished and fall back to lexical DB
+body delivery. This change remains isolated pending the complete latency
+gate and latest-public-main quality/inclusive-token adoption comparison.
+
+The targeted native tests pass with synthetic vectors: original-only warm
+is still cold for focus, only the difference is added, corrupt focus input
+is diagnosed separately, repeated warm starts no unavailable provider, and
+a durable provider pull cannot trigger foreground repair. The original
+staged-repair test is unchanged. The complete existing regression suite
+passes in 101.758 seconds and ContractAudit builds. Three pending index
+tickets drain through a separate daemon with the pre-recorded graph heads
+unchanged; the shutdown client and daemon both exit 0. Qualification takes
+179.241 seconds, sampled peak 3,189,376 KiB, without triggering the guard.
+The first three failed constructions are retained; their new test fixture
+needed syntax/type fixes and explicit cache-directory preparation before
+direct synthetic writes. Existing regression assertions were not relaxed.
+
+The same frozen LLVM publication is copied to both cache layouts. Each
+requires precisely 51 additional inputs in two batches (3,940/3,470 ms),
+preserving every original vector's bytes. Repeated warm requests no work.
+Original discovery has 2,081 unique inputs; focus has 2,080; their union has
+2,132. All 2,081 original reference positions remain. Warm on the protected
+shared DB writes only the private cache. The reference repair-enabled and
+candidate cache-only focus return exactly the same complete 46-owner order
+and original evidence positions in both layouts. Both perform the expected
+52 bounded prefix reads and no subsequent repair reads.
+
+All 12 fixed LLVM hooks complete discovery and focus scoring of every
+original reference with zero source misses, invalid records or encoding.
+This closes the missing-focus-input defect, but **the delivery gate is unmet
+(0/12 pass)**: after scoring, the outer semantic attempt reaches its 4.5-second
+deadline and falls back to lexical delivery. The unchanged required gold
+body marker is absent in every response. Publication/stdout hashes and ACKs
+agree in 12/12. The 4,831.253–4,922.529 ms response range is not successful
+semantic/body delivery. Diagnose the remaining post-scoring matching and
+extraction before claiming practical recovery or repeating the entire scale
+gate. The old failed 60 samples remain unchanged. Native collection takes
+160.706 seconds, sampled peak 1,626,368 KiB; the guard does not trigger.
+Frozen DBs, source-vector bytes, model/runtime assets and ordinary sources
+remain unchanged. No generation-model trial or adoption comparison ran.
+
 ## Local records
 
 Under `/Users/ovm/.codex/experiments/eggshell/`:
@@ -119,3 +180,7 @@ Under `/Users/ovm/.codex/experiments/eggshell/`:
   retained empty-config regression failure.
 - `discovery-candidate-qualified-20261020/construction-2`: corrected harness,
   exact source/build-cache verification and uninstrumented qualification.
+- `focus-warm-qualified-20261020/construction-4`: complete input closure,
+  targeted tests, full regression, ContractAudit and independent recovery.
+- `focus-warm-native-20261020/inspection-1`: fixed LLVM inputs, separate
+  discovery/focus coverage, complete focus ranking and native delivery runs.
