@@ -295,6 +295,68 @@ preparing complete primary postings for later public comparison. The stage-3
 native preflight delivers the next question in 8,716 ms with no source encoding.
 No new seed is acquired. Topic 3, the retained lap and quality gates remain open.
 
+## Topic 3 regression and interrupted third pair
+
+The same prepared after-topic-2 snapshot is used for every candidate repetition.
+Two fixed pairs complete with poor token reductions; the positive topic-1 and
+topic-2 cells do not offset this failure.
+
+| Repetition | Fresh total tokens | Centroid total tokens | Reduction vs fresh |
+| --- | ---: | ---: | ---: |
+| 0 | 4,309,908 | 2,025,867 | 53.0% |
+| 1 | 2,306,333 | 1,500,516 | 34.9% |
+| 2 | 5,945,537 | Incomplete; at least 1,213,841 | Unknown |
+
+The third candidate attempt has no recorded turn completion or final answer.
+Its last cumulative usage report includes 1,207,467 input tokens (1,065,856
+cached) and 6,374 output tokens. The final usage is unknown; the lower bound is
+not a completed result or a zero-cost failure. No request is resubmitted.
+Raw RPC, the exact executed runners and an explicitly interrupted DB copy are
+retained. This copy is not a completed output or the next canonical checkpoint.
+
+The disk filled during this batch, preventing both normal result capture and
+the final resource-guard report. The model child's exit cause and maximum RSS
+cannot be recovered from that missing report. Cleaning 28 obsolete or failed
+private build directories with `lake clean` restores about 4 GiB; source files,
+DBs, installed runtime prefixes and experiment logs are retained. The sequence
+controller now refuses new model or warm work below 2 GiB free. This is a start
+check, not a disk reservation or continuous monitor. Existing incomplete
+attempts still stop without automatic retry. All generation labels are cleared.
+
+The retained records are `results/stage-3.json`,
+`results/stage-3-interrupted-summary.json`,
+`attempts/stage3-candidate-r2/usage-observed.json`,
+`attempts/stage3-candidate-r2/failure-recovered.json`, and
+`disk-incident-recovery.json` under the centroid study. The candidate remains
+isolated and unadopted. Topic 3, retained use and overall quality are unresolved.
+
+## Diagnosing topic 3 against the public implementation
+
+The public `main` remains `51873167c11c447a0af67e73430b5ab6635b2a65` at this
+check. The warmed public implementation and first-segment diagnostic control
+receive copies of the same prepared after-topic-2 snapshot and the same question.
+Their Handoff text is byte-identical, with SHA-256
+`8c38292d58d776a23d9763a20c96cecb95ecb7d913126852404f1da33f94ac74`.
+This is an uncensored helper comparison, not a native hook latency measurement
+or another generation-model token arm. Native context also contains a preceding
+source-status block; comparing those different outer hashes would not isolate
+a retrieval change.
+
+The public text includes the beginning of `Driver::getFinalPhase`, but neither
+that public packet nor the centroid native packet includes the
+`OPT_fsyntax_only` condition. The stored windows contain this condition. Thus
+missing delivered evidence is established, but its attribution to a new scoring
+change is not. The investigation must distinguish evidence absent from the DB,
+evidence stored but not delivered, and evidence already delivered but reread.
+The saved comparison is `stage3-delivery-diagnosis/summary.json` and its raw
+per-implementation bodies under the centroid study.
+
+A pure lexical diagnostic also shows that `-fsyntax-only` and
+`OPT_fsyntax_only` have disjoint terms, as do `final phase` and `getFinalPhase`.
+That is a retrieval limitation, not proof of this token regression's cause or
+authorization to adopt identifier aliases. No additional retrieval change is
+implemented on the strength of these membership checks.
+
 ## Execution
 
 `tools/readme_benchmark.py` prepares private native environments and captures

@@ -39,8 +39,14 @@ def observe_or_run(arm, label, topic):
         # authorizes submitting the same measured model request a second time.
         return complete(label)
     bench.generation_protocol(arm, label)
+    require_disk_space()
     bench.model_turn(arm, label, topic)
     return complete(label)
+
+
+def require_disk_space():
+    if shutil.disk_usage(bench.BASE).free < 2 * 1024**3:
+        raise OSError('Need 2 GiB free before starting more benchmark work; preserve existing attempts')
 
 
 def clone(source, destination):
@@ -83,6 +89,7 @@ def warm(checkpoint):
             if captured['command'][-3:] != ['egg', 'warm', 'work']:
                 raise ValueError('Retained warm did not select the configured writable DB')
         else:
+            require_disk_space()
             local = dict(env, EGGSHELL_DATA_ROOT=str(checkpoint / ('warm-' + phase + '-data')))
             captured = bench.execute([binary, 'egg', 'warm', 'work'], local, record, 600)
             captured = dict(exitCode=captured.returncode, stdout=captured.stdout)
