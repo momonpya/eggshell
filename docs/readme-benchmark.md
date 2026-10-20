@@ -259,6 +259,42 @@ evidence is reported honestly; source checks and justified qualifications remain
 necessary. The broader paper experiments still require their own executable
 tests or independent blind evaluations.
 
+## Topic 2 first-lap results
+
+All three fixed pairs complete from the same prepared after-topic-1 snapshot.
+
+| Repetition | Fresh total tokens | Centroid total tokens | Reduction vs fresh |
+| --- | ---: | ---: | ---: |
+| 0 | 3,654,187 | 51,242 | 98.6% |
+| 1 | 4,439,023 | 53,433 | 98.8% |
+| 2 | 2,767,030 | 51,451 | 98.1% |
+
+All measured initial packets equal the full native preflight context, including
+source-status text. Initial hooks take 8,461 / 8,519 / 8,582 ms; every measured
+hook remains within 30 seconds and initial semantic searches encode no source
+windows. Candidate answers make no additional source-tool calls. The six new
+model calls consume 11,016,366 inclusive tokens, with no errors, reroutes or
+retries. The maximum aggregate RSS is 1,582,752 KiB; the guard does not fire.
+The common source remains unchanged, and all owned daemon shutdowns exit 0.
+
+Manual review supports the main mode/config/ToolChain API trace and records
+qualifications. HLSL descriptions need the target-architecture condition; the
+filtered original `rg` data in both the public and centroid packets lacks that
+guard, so this is not a newly lost delivered guard. Repetition 1's proposed
+multi-line RUN snippet also needs continuation syntax. Proposed tests are not
+reported as executed or passing. No independent or overall quality acceptance
+is claimed; original answers remain intact. Raw checks are in
+`results/stage-2-native-audit.json` and `results/stage-2-source-review.json` under
+the centroid study.
+
+The predeclared repetition-0 output forms the next checkpoint. Explicit warm
+fills its 19 new windows, and a repeat from an independent private root requests
+zero work; all 2,456 windows are ready. A separate public-producer copy preserves
+its 151 authoritative values, stable root/owner/window IDs and unions while
+preparing complete primary postings for later public comparison. The stage-3
+native preflight delivers the next question in 8,716 ms with no source encoding.
+No new seed is acquired. Topic 3, the retained lap and quality gates remain open.
+
 ## Execution
 
 `tools/readme_benchmark.py` prepares private native environments and captures
