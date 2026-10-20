@@ -80,6 +80,19 @@ fresh/memoryのcaptured runnerが異なることも明記する。同一凍結ha
 記録はreadme-memory-reuse-20261021/topic1-trace-1。生成0、hook再送0、LLVM command実行0、本体変更0。
 次の比較は、保存済み根拠・実配送・再調査・回答・inclusive usageを各題材で結び付ける。
 「記憶がない」「保存済みだが未配送」「配送済みだが再読」を混同し、削減率だけで変更の効果を断定しない。
+比較実行器に試行ごとの準備記録を必須化した。保存source、質問、workspace、
+runtime、設定、私有query/provider cacheとraw native入力/本文/ACKを固定し、
+異なる条件や未配送のまま回答モデルを起動しない。実配送の本文差・reroute・未知の最終usageは
+消費を残して無効にし、同じ試行を自動再送しない。fresh/公開版/選択版は同じ実行器を使う。
+実nativeでの準備検査は共通204 root・76文書から公開版/415bcc2…を私有の新prefixへ導入。
+既存query状態を明示的にコピーした確認であり、新しい通し周回やcold-query遅延とはしない。
+公開版22.694秒・選択版6.755秒で本文/受領を確認。選択版のwarmは追加処理0、
+全3,340入力がcache済み、discovery/focusは各3,263窓hit、missing/invalid/source encode 0。
+公開版の構造化counterは不明のまま残す。本文は両版で異なり、同一本文とは扱わない。
+a:JSON形式を検査器が誤読した停止は元コード/記録を保存し、完了済み公開hookを再送せず回収した。
+監視下の20検査を通過し、実native再開時の観測ピークは321,200 KiB（3 GiB停止閾値未満）。
+記録はreadme-prepared-trials-20261021。回答モデル追加0、本体変更0、削減率/品質の採用判定0。
+次はこの実行器を使う共通seed・3反復・初回/履歴あり全題材の比較coordinatorを固定する。
 
 2026-10-20の追加指示により、5万窓の追加計測より先にREADMEのLLVM題材1〜3を
 Luna/xhighの実モデルで再実行する。同じ保存スナップショット・質問・モデル設定で

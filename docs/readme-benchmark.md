@@ -1248,11 +1248,67 @@ readiness and delivery checks, not second-lap model results, token savings,
 independent quality acceptance or production adoption. The selected runtime
 remains `415bcc2…`; the public pin was rechecked as `5187316…`.
 
-`tools/readme_benchmark.py` prepares private native environments and captures
-one real turn. `tools/readme_sequence.py --stage N` runs one of the six frozen
-stages and prepares its common next checkpoint. It validates matching input
-graphs and reuses only completed recorded calls; a running, failed or missing
-record stops the controller for inspection rather than replaying the request.
-The process guard includes experiment-owned detached inference processes and
-enforces the existing aggregate 3,500,000 KiB limit. Raw authentication stays
-outside published artifacts. No subagent is used.
+Earlier sequence records used `tools/readme_sequence.py --stage N` to prepare
+common checkpoints and stop on incomplete calls rather than replaying them.
+Those protocols remain closed. Their old 3,500,000 KiB guard is historical;
+new heavy work uses `tools/memory_guard.py` with a 3 GiB aggregate RSS stop
+threshold, below the user's 4 GiB ceiling. Raw authentication stays outside
+published artifacts. No subagent is used.
+
+### Prepared trials before another answering-model call
+
+The benchmark dispatcher now requires a sealed preparation record for each
+planned label. It checks the canonical saved source, frozen runner/transport/
+monitor, question, workspace, model/effort, installed runtime, configuration,
+private state and native request. A publication audit permits derived rows and
+metadata belonging to verified neutral revisions while preserving authoritative
+values, roots and unions. A stale or missing record fails before App Server is
+opened. Memory preparation and generation require the live frozen RSS monitor.
+
+`tools/readme_preparation.py` prepares one independently owned trial. Source
+warming runs outside the hook. The fixed one- or two-session preparation is
+recorded, followed by a nonempty, acknowledged, sub-30-second qualification.
+Public main's explicit provider cache is private to the trial and sealed too.
+For the selected runtime, both numerical lanes must complete with source hits,
+zero missing/unusable vectors and zero source-encoding time. Public main lacks
+these structured receipts; unavailable counters remain unknown. The prepared
+input is retained so a later repetition can restore its exact qualified state.
+
+The source audit binds original owners to explicit evidence anchors. Delivery
+checks search grounded evidence bodies, excluding Work commands and the current
+question. Missing facts remain visible; admission needs at least one audited
+stored fact in the body. This bounded presence check neither proves task-wide
+coverage nor certifies the answering model's internal use or answer quality.
+
+After generation, the actual initial body must match that condition's qualified
+body. Public and selected bodies may differ; equality within one candidate is
+not public parity. Errors, reroutes, unknown final usage and failed hooks reject
+the trial. The raw RPC and known costs remain, including interrupted attempts.
+Input plus output includes cached input once and reasoning within output. An
+existing attempt is never automatically resubmitted.
+
+The admission check was exercised on the same retained 204-root/76-document
+snapshot with freshly installed private public and selected prefixes. This
+diagnostic explicitly copies existing private query state; it does not measure
+cold-query startup or execute a new continuous lap. Both bodies are acknowledged:
+public 22.694 s, selected 6.755 s. The selected DB retains all 3,340 unique cached
+inputs; off-hook warm requests zero work. Discovery and focus each hit 3,263
+scored windows, with no missing/unusable vectors or source encoding. The original
+canonical publication stays unchanged. Both bodies include the audited job-call
+boundary while the other inspected full-condition anchor sets remain absent.
+
+The first validator mistook the `a:JSON` advisory format for colon-separated
+fields. Its original code, manifests and failed run remain. Correcting the
+parser recovers the completed public hook and runs only the remaining selected
+qualification. No successful native hook is replayed. The selected resume's
+observed aggregate peak is 321,200 KiB; the monitor does not fire. Twenty tests
+cover admission failures, cost retention and monitor shutdown with small jobs.
+
+Evidence: `readme-prepared-trials-20261021/{native-admission-1/resume-1,verification-3}`
+and `memory-guard-{3,4}.json`. The final verification also checks two existing
+completed traces at 458,554 and 51,242 tokens and preserves the interrupted
+trace's 1,213,841 tokens as known partial usage, not a final total. All twelve
+retained native publication reports pass the stricter neutral-metadata check.
+These checks make zero answering-model calls and adopt no runtime change. The
+full matched public/selected/fresh first-use and retained topic-1/2/3 comparison
+still needs its coordinator and fixed repeated execution before any adoption.

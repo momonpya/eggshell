@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Run the README LLVM study through native Codex, keeping every real attempt."""
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,6 +13,8 @@ from pilot_hook_probe import vetted_hooks
 from pilot_preflight import configuration
 from pilot_server import Server
 from owned_daemon import shutdown_owned
+from readme_trial import capture_attempt, validate_observed_trial, validate_prepared_trial, sha as stream_sha
+from memory_guard import require_guard
 from semantic_latency import save, graph_files
 
 LLVM = Path('/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project')
@@ -51,7 +52,11 @@ def execute(command, env, destination, timeout=90):
 def prepare(arm):
     if arm != 'candidate':
         raise ValueError('Only the candidate has a memory environment')
-    source = CANDIDATE
+    protocol = json.loads((BASE / 'protocol.json').read_text())
+    require_guard(protocol)
+    source = Path(protocol['candidateSource'])
+    if sha(source / '.lake/build/bin/eggshell') != protocol['candidate']:
+        raise ValueError('Preparation source differs from the frozen runtime')
     case = BASE / 'environments' / arm
     if case.exists():
         raise ValueError('Inspect existing environment before resuming it')
@@ -102,6 +107,7 @@ def prepare(arm):
 
 
 def prepare_fresh():
+    require_guard(json.loads((BASE / 'protocol.json').read_text()))
     case = BASE / 'environments/fresh'
     case.mkdir(parents=True, exist_ok=False, mode=0o700)
     account = case / 'account'; account.mkdir(mode=0o700)
@@ -129,21 +135,39 @@ def generation_protocol(arm, label=None):
 
 def model_turn(arm, label, topic):
     protocol = generation_protocol(arm, label)
+    if protocol['sourceWorkspace'] != str(LLVM):
+        raise ValueError('Model workspace differs from the frozen investigation')
     transport = Path(__file__).with_name('pilot_server.py')
     if protocol.get('transportSha256') != sha(transport):
         raise ValueError('Freeze the exact benchmark transport before starting model turns')
+    if protocol.get('runnerSha256') != sha(Path(__file__)):
+        raise ValueError('Freeze the same benchmark runner for all conditions')
     case = BASE / 'environments' / arm
-    env = json.loads((case / 'environment.json').read_text())
+    record = json.loads((ROOT / 'docs/benchmarks/llvm-three-topics.json').read_text())
+    prompt = record['prompts'][topic].replace('<LLVM_SOURCE>', str(LLVM))
+    prepared = validate_prepared_trial(BASE, protocol, arm, label, topic, prompt, case / 'environment.json')
+    require_guard(protocol)
+    env = prepared['environment']
+    if shutil.disk_usage(BASE).free < 4 * 1024**3:
+        raise OSError('Need 4 GiB free before a model trial; retain existing attempts')
+    executable = shutil.which('codex')
+    if not executable or stream_sha(executable) != protocol['codexExecutableSha256']:
+        raise ValueError('The native CLI differs from the frozen harness')
+    if subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=LLVM, text=True).strip() != protocol['sourceCommit']:
+        raise ValueError('LLVM source differs from the frozen checkout')
+    if subprocess.check_output(['git', 'status', '--porcelain'], cwd=LLVM, text=True).strip():
+        raise ValueError('LLVM source has changed before generation')
     attempt = BASE / 'attempts' / label
     attempt.mkdir(parents=True, exist_ok=False, mode=0o700)
-    if arm != 'fresh':
-        env['EGGSHELL_DATA_ROOT'] = str(attempt / 'data')
-    record = json.loads((ROOT / 'docs/benchmarks/llvm-three-topics.json').read_text())
     model = protocol['model']
-    prompt = record['prompts'][topic].replace('<LLVM_SOURCE>', str(LLVM))
     (attempt / 'prompt.txt').write_text(prompt)
     shutil.copy2(Path(__file__), attempt / 'runner.py')
     shutil.copy2(transport, attempt / 'transport.py')
+    shutil.copy2(Path(__file__).with_name('readme_trial.py'), attempt / 'trial-gate.py')
+    shutil.copy2(Path(__file__).with_name('memory_guard.py'), attempt / 'memory-guard.py')
+    shutil.copy2(BASE / 'prepared' / label / 'ready.json', attempt / 'prepared-trial.json')
+    save(attempt / 'admission.json', dict(expectedBodySha256=prepared['expectedBodySha256'],
+        facts=prepared.get('facts'), finalUsageRequired=True, automaticResubmission=False))
     shutil.copy2(BASE / 'protocol.json', attempt / 'protocol.json')
     if arm != 'fresh':
         database = active_database()
@@ -152,7 +176,7 @@ def model_turn(arm, label, topic):
     save(attempt / 'invocation.json', dict(arm=arm, label=label, topic=topic, model=model,
         effort='xhigh', promptSha256=sha(attempt / 'prompt.txt'),
         runtimeSha256=sha(Path(env['EGGSHELL_PREFIX']) / 'libexec/eggshell') if arm != 'fresh' else None,
-        study=str(BASE), runtimeSource=str(CANDIDATE),
+        study=str(BASE), runtimeSource=protocol['candidateSource'] if arm != 'fresh' else None,
         activeDatabase=str(active_database()) if arm != 'fresh' else None,
         configurationSha256=sha(case / 'account/config.toml'),
         protocolSha256=sha(BASE / 'protocol.json'), transportSha256=sha(transport),
@@ -164,8 +188,9 @@ def model_turn(arm, label, topic):
     successful = None
     manager = None
     manager_log = None
+    generation_completed = False
     try:
-        with BenchmarkServer([shutil.which('codex'), '--strict-config', 'app-server'], LLVM, env,
+        with BenchmarkServer([executable, '--strict-config', 'app-server'], LLVM, env,
                              attempt / 'rpc', timeout=900) as server:
             hello = server.initialize('0.145.0')
             listed = server.request('hooks/list', dict(cwds=[str(LLVM)]))
@@ -197,42 +222,31 @@ def model_turn(arm, label, topic):
             completed = server.wait_notification('turn/completed', lambda p:
                 p['threadId'] == identity and p['turn']['id'] == turn['turn']['id'])
             save(attempt / 'completed.json', completed)
-            hooks = [m['params']['run'] for m in server.notifications if m.get('method') == 'hook/completed']
-            save(attempt / 'hooks-completed.json', hooks)
-            packets = []
-            for index, hook in enumerate(hooks):
-                for position, entry in enumerate(hook['entries']):
-                    if entry['kind'] != 'context':
-                        continue
-                    text = entry['text']
-                    path = attempt / f'packet-{index}-{position}.txt'
-                    path.write_text(text)
-                    packets.append(dict(event=hook['eventName'], file=path.name,
-                        bytes=len(text.encode()), sha256=hashlib.sha256(text.encode()).hexdigest(),
-                        elapsedMs=hook['durationMs'], status=hook['status']))
-            save(attempt / 'delivered-packets.json', packets)
-            usage = [m['params']['tokenUsage']['total'] for m in server.notifications
-                     if m.get('method') == 'thread/tokenUsage/updated' and m['params']['threadId'] == identity]
-            save(attempt / 'usage.json', dict(total=usage[-1] if usage else None,
-                errors=[m for m in server.notifications if m.get('method') == 'error'],
-                reroutes=[m for m in server.notifications if m.get('method') == 'model/rerouted']))
-            if completed['turn']['status'] != 'completed':
-                raise ValueError('Generation failed; see completed.json and usage.json')
+            generation_completed = completed['turn']['status'] == 'completed'
             answers = [message['params']['item']['text'] for message in server.notifications
                 if message.get('method') == 'item/completed' and message['params'].get('threadId') == identity
                 and message['params'].get('turnId') == turn['turn']['id']
                 and message['params']['item']['type'] == 'agentMessage'
                 and message['params']['item'].get('phase') == 'final_answer']
             (attempt / 'answer.txt').write_text('\n'.join(answers))
-            if completed['turn']['status'] != 'completed' or not answers:
+            with server.lock:
+                usage, packets = capture_attempt(attempt, identity, generation_completed)
+            validate_observed_trial(prepared, usage, packets, arm)
+            if not generation_completed or not answers:
                 raise ValueError('Generation did not complete; retain this attempt and its usage')
             if arm != 'fresh':
                 execute([Path(env['EGGSHELL_PREFIX']) / 'libexec/eggshell', 'egg', 'keep'],
                     dict(env, CODEX_THREAD_ID=identity), attempt / 'keep.json', 180)
             server.request('thread/unsubscribe', dict(threadId=identity))
         successful = dict(completed=True, elapsedSeconds=time.monotonic()-started,
-            threadId=identity, answerSha256=sha(attempt / 'answer.txt'), usage=usage[-1] if usage else None)
+            threadId=identity, answerSha256=sha(attempt / 'answer.txt'), usage=usage['total'])
     except BaseException as error:
+        if (attempt / 'rpc/exchange.jsonl').exists():
+            try:
+                capture_attempt(attempt, identity, generation_completed)
+            except BaseException as capture_error:
+                save(attempt / 'capture-failure.json', dict(error=f'{type(capture_error).__name__}: {capture_error}',
+                    rawRpcRetained=True, unknownFinalUsage=True))
         save(attempt / 'failure.json', dict(error=f'{type(error).__name__}: {error}', elapsedSeconds=time.monotonic()-started))
         raise
     finally:
@@ -240,6 +254,10 @@ def model_turn(arm, label, topic):
             try:
                 shutdown_owned(manager, Path(env['EGGSHELL_PREFIX']) / 'libexec/eggshell',
                     env, LLVM, attempt / 'shutdown.json')
+            except BaseException as cleanup_error:
+                save(attempt / 'cleanup-failure.json', dict(error=f'{type(cleanup_error).__name__}: {cleanup_error}',
+                    rawRpcRetained=True, trialAccepted=False))
+                raise
             finally:
                 if manager.poll() is None:
                     manager.terminate()
