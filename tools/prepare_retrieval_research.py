@@ -9,7 +9,7 @@ import shutil
 import subprocess
 
 HELPERS = ['RetrievalCategories.lean', 'RetrievalGrams.lean', 'RetrievalGramsTests.lean', 'RetrievalTerms.lean',
-           'RetrievalIndex.lean', 'RetrievalIndexTests.lean', 'RetrievalScale.lean']
+           'RetrievalIndex.lean', 'RetrievalIndexTests.lean', 'RetrievalScale.lean', 'ImportScaleGraph.lean']
 TARGETS = '''
 lean_lib RetrievalResearch where
   roots := #[`tools.RetrievalGrams, `tools.RetrievalCategories, `tools.RetrievalIndex]
@@ -25,6 +25,9 @@ lean_exe retrieval_index_tests where
 
 lean_exe retrieval_scale where
   root := `tools.RetrievalScale
+
+lean_exe import_scale_graph where
+  root := `tools.ImportScaleGraph
 '''
 
 
@@ -65,7 +68,7 @@ def main():
         raise ValueError('Research outputs alias the production cache')
     write(output/'manifest.json',dict(sourceHashes=frozen, productionBinarySha256=original,
         productionAdoption=False, generationModelCalls=0, helpers=HELPERS))
-    for label, command in [('build',['lake','--no-cache','build','retrieval_terms','retrieval_grams_tests','retrieval_index_tests','retrieval_scale']),
+    for label, command in [('build',['lake','--no-cache','build','retrieval_terms','retrieval_grams_tests','retrieval_index_tests','retrieval_scale','import_scale_graph']),
                             ('tests',[str(checkout/'.lake/build/bin/retrieval_grams_tests')]),
                             ('index-tests',[str(checkout/'.lake/build/bin/retrieval_index_tests')])]:
         with (output/(label+'.log')).open('w') as log:
@@ -77,7 +80,8 @@ def main():
         raise ValueError('Research changed production inputs')
     write(output/'result.json',dict(passed=True, productionFilesUnchanged=True,
         termsBinarySha256=sha(checkout/'.lake/build/bin/retrieval_terms'),
-        scaleProducerSha256=sha(checkout/'.lake/build/bin/retrieval_scale'),productionAdoption=False))
+        scaleProducerSha256=sha(checkout/'.lake/build/bin/retrieval_scale'),
+        importHelperSha256=sha(checkout/'.lake/build/bin/import_scale_graph'),productionAdoption=False))
     print(json.dumps(dict(passed=True, checkout=str(checkout))))
 
 
