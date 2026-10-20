@@ -991,15 +991,53 @@ zero missing/invalid windows and zero encoding batches. After fixing the source
 binding, the first pre-tool and post-tool responses are empty in all three
 conditions, replacing the spurious re-delivery above. The resource guard stopped
 `replay-3` after 32 complete points per condition; their bodies match across all
-three conditions. The remaining six points are unverified. The retained
-`partial-summary.json` records the incomplete run, with no answering-model call
-or automatic restart. None of these checks establishes token recovery or adoption.
+three conditions. The retained `partial-summary.json` records that original
+incomplete run; it is not rewritten as a success.
+
+`replay-3/resume-1` then verifies and reuses all 97 completed helper calls,
+including the one extra completed public point. It dispatches only the 17
+unfinished calls. Inputs, original partial results, helper/runtime hashes and
+acknowledged claims are checked without rebuilding or warming again. The
+unconfirmed prior control call and interrupted active DB remain preserved.
+All 38 points per condition now complete, with byte-identical bodies across
+public, first-segment control and the isolated complete-index centroid runtime.
+There are nine nonempty replies per condition, all source-status metadata;
+completed and blocking counts are zero. No old source excerpt is re-offered in
+this fixed sequence. The selected `415bcc2…` benchmark candidate is unchanged;
+this existing diagnostic's centroid condition is the Worker-only repair
+`57cceba…`, not a new selected benchmark variant.
+
+The resume makes zero answering-model calls. Its guard peaks at 382,224 KiB,
+exits successfully and does not trigger. This controlled warmed sequence does
+not establish historical asynchronous scheduling, native deadlines, token
+recovery, full benchmark parity or adoption. Initial packet differences remain.
 
 The separate identity audit of all six memory-enabled model trials in the
 completed nine-call readiness cohort finds no foreign advisory source. Its
 three-repetition negative token result remains valid. Exact evidence is in
 `readme-readiness-tokens-20261021/results/source-identity-audit.json` and
 `readme-delivery-sequence-20261021/` in the private experiment root.
+
+The publication-boundary policy explains why initial omissions are not repaired
+by simply reranking old advisory owners during the same request. Once the first
+packet is acknowledged, older root positions for that exact question and source
+DB are closed to further advisory offers, including original text omitted from
+the packet. This is publication metadata, not an assertion that omitted text
+was delivered or that its Work is complete. Independently grounded native
+operations remain eligible. Public main and the selected centroid implementation
+have byte-identical `AdvisoryFrontier.lean` policy source. The actual topic-3
+trial's retained final state contains the original DB's frontier at root 151;
+final state alone is not a record of every event's timing. Source references and
+these scope limits are in `resume-1/boundary-policy.json`.
+
+Before resuming, 18 stopped diagnostic executables are archived into nine
+content-addressed gzip files. Every expanded SHA-256 is checked before deleting
+the generated executable; the exact path/mode inventory and a one-path restore
+helper are retained in
+`benchmark-build-cache-cleanup-20261021/sequence-helper-archives/`. Actual free
+space rises by 653,156,352 bytes at that boundary. Original DBs, source, raw logs
+and runtime binaries remain present. This is storage recovery for diagnostics,
+not production compaction or an experiment result.
 
 ### Trace relevant memory before another model experiment
 
