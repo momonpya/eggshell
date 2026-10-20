@@ -1129,6 +1129,72 @@ The source/packet/answer mappings, per-anchor delivery and usage are retained in
 This audit makes zero answering-model calls, executes no LLVM command and
 adopts no implementation change.
 
+### Retained-memory readiness before second-lap model calls
+
+The completed `415bcc2…` topic-3 repetition-0 output is checked against its saved
+head/pages hashes and successful keep/shutdown records. A private publication
+rebuilt by the frozen public producer preserves all 204 roots, 76 documents,
+owners, original windows and unions. Its copied 3,321 vectors lack the last
+19 windows; one 32-capacity warm batch completes all 3,340 unique windows.
+Repeating warm from another private data root requests no work. The original
+DB is unchanged. No new seed or answering-model call is made.
+
+This is the earlier study's **fixed common history**, not a newly measured
+continuous lap from one variant. The topic-1 stored answer comes from the original
+candidate repetition 0; topic-2 and topic-3 answers come from centroid repetition
+0. The stored-memory audit identifies each exact answer hash and its origin.
+All previously investigated source facts, including the syntax phase, no-output
+Compile action, job-construction call, positional-language test and full HLSL
+branch, are present in the retained DB.
+
+Twelve actual native `UserPromptSubmit` calls inspect both runtimes, all three
+topics and two session states. Each first session starts from an identical
+prepared source; the next session retains private query state and verified
+neutral DB memo publications. That exploratory second-session condition is
+amended before any second-session call, in `native-1/resume-1/protocol.json`.
+All authoritative values, root order and unions remain identical to the common
+source. Legacy cache copies retain only original source-window records before
+the first call; subsequent query hits are observed rather than presumed cold.
+
+| Topic | Public, fresh private state | Public, next session | Selected centroid, fresh private state | Selected centroid, next session |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 28.821 s, incomplete | 27.699 s, body | 9.218 s, body | 7.223 s, body |
+| 2 | 23.042 s, body | 22.276 s, body | 8.270 s, body | 6.384 s, body |
+| 3 | 24.105 s, body | 23.080 s, body | 9.196 s, body | 7.224 s, body |
+
+All six centroid calls complete semantic search, publish the exact captured
+stdout and receive accepted acknowledgements. Original source windows all hit;
+no source vector is encoded within the hook. Each topic's two centroid bodies
+are byte-identical. Public main lacks the structured Receipt module: unavailable
+numerical counters remain unknown, while its stdout and acknowledged session
+state are retained. Its first topic-1 incomplete notice is not a healthy public
+reference. The resume guard peaks at 1,469,920 KiB and exits without triggering.
+
+Answer delivery must be checked after decoding the presentation. `CHARS`
+captions separate valid original ranges, so a failed contiguous whole-answer
+substring test does not establish missing text. Every span check succeeds;
+merging the validated ranges shows complete topic-2 and topic-3 historical
+answers in their centroid packets. On topic 1 the centroid instead delivers
+the topic-3 answer in full and the original HLSL OS/architecture/input branch;
+its same-question topic-1 answer is not offered. These are advisory context,
+with zero completed counts at these prompt hooks. The observed contents do not
+predict the answering model's tool use, correctness or token consumption.
+
+The first public call had already finished when bookkeeping failed: the public
+runtime has no structured receipts, and its neutral memo publication introduces
+`change:` metadata. The corrected audit checks all authoritative values and
+allows only derived rows plus metadata belonging to verified neutral revisions.
+It reuses that completed call and submits only the remaining eleven. The
+original failure, runner and protocol are retained; no completed hook is replayed.
+`validity-correction.json` records these bookkeeping and substring-test limits.
+
+Preparation, source/answer hashes, raw stdout, native state, timings and
+validated packet ranges are retained under
+`readme-retained-memory-20261021/{preparation-1,native-1/resume-1}`. These are
+readiness and delivery checks, not second-lap model results, token savings,
+independent quality acceptance or production adoption. The selected runtime
+remains `415bcc2…`; the public pin was rechecked as `5187316…`.
+
 `tools/readme_benchmark.py` prepares private native environments and captures
 one real turn. `tools/readme_sequence.py --stage N` runs one of the six frozen
 stages and prepares its common next checkpoint. It validates matching input
