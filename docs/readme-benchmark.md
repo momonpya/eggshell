@@ -894,6 +894,32 @@ problematic cell, not the complete adoption test. Topic 1/2, retained-lap cells,
 answer quality and public delivery differences remain open; no candidate is
 adopted on the basis of this preparation or this cell alone.
 
+The first repetition completes normally in all three conditions:
+
+| Condition | Inclusive tokens | Saving versus its fresh reference |
+| --- | ---: | ---: |
+| Fresh | 4,661,871 | — |
+| Complete-index parent | 1,746,693 | 62.5% |
+| Source-readiness candidate | 1,976,254 | 57.6% |
+
+The candidate consumes 13.1% more tokens than the parent in this repetition.
+Its semantic searches complete 18 times with no pending result, while the
+parent has 10 completions and 34 pending results. The candidate also delivers
+fewer context bytes: 121,748 versus 149,929. Neither semantic completion nor
+less delivered text establishes a token improvement. This one repetition does
+not identify a unique cause, and answer quality has not been accepted.
+
+All reported usage includes cached input and output; no API errors or model
+reroutes occur. Known consumption for these three new turns is 8,384,818 tokens,
+with no unknown final usage. The first driver stops at the 4 GiB disk check
+before dispatching repetition 1, after all three turns finish. It does not fail
+or resubmit a model turn. Additional generated diagnostic helpers are archived
+losslessly, with exact path, mode and SHA-256 inventories and a selective restore
+script. Runtime binaries and raw records remain present. After reclaiming space,
+the unchanged frozen driver resumes only the remaining six calls, in the
+original order. `interim-r0.json` retains the provisional result; the full three
+repetitions, other adoption cells and the public delivery discrepancy stay open.
+
 `tools/readme_benchmark.py` prepares private native environments and captures
 one real turn. `tools/readme_sequence.py --stage N` runs one of the six frozen
 stages and prepares its common next checkpoint. It validates matching input
