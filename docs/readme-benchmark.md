@@ -338,9 +338,14 @@ receive copies of the same prepared after-topic-2 snapshot and the same question
 Their Handoff text is byte-identical, with SHA-256
 `8c38292d58d776a23d9763a20c96cecb95ecb7d913126852404f1da33f94ac74`.
 This is an uncensored helper comparison, not a native hook latency measurement
-or another generation-model token arm. Native context also contains a preceding
-source-status block; comparing those different outer hashes would not isolate
-a retrieval change.
+or another generation-model token arm. A subsequent centroid run through the
+same helper reproduces its actual native initial packet byte-for-byte
+(`b400ef432319f610a29cb0595469968ac67741b0c4e2761ab95d5d7aaf391033`).
+Both helpers and the native packet include the source-status prefix. The
+public/centroid difference is therefore present at the same Handoff boundary;
+it is not explained by an extra outer prefix on one side. The source graph is
+unchanged. That diagnostic uses 1,240,864 KiB maximum aggregate RSS and no
+generation-model calls; it is not a native deadline result.
 
 The public text includes the beginning of `Driver::getFinalPhase`, but neither
 that public packet nor the centroid native packet includes the
@@ -356,6 +361,57 @@ A pure lexical diagnostic also shows that `-fsyntax-only` and
 That is a retrieval limitation, not proof of this token regression's cause or
 authorization to adopt identifier aliases. No additional retrieval change is
 implemented on the strength of these membership checks.
+
+## Topic 3 continuation audit
+
+`tools/readme_delivery_audit.py` reads the existing native RPC, hook output and
+per-request receipts. It neither invokes a model nor modifies a DB, and it
+refuses to replace an existing diagnostic. The two completed attempts show:
+
+| Repetition | Executed commands | Pre-tool incomplete notices | Numerical failures with missing durable windows |
+| --- | ---: | ---: | ---: |
+| 0 | 17 | 0 | 3 |
+| 1 | 36 | 19 | 15 |
+
+All observed numerical failures have missing vectors in durable documents,
+with zero source encoding in the hook. The initial 58-document publication is
+warm; later failure receipts name larger publications, including 63, 70, 83 and
+91 documents. One 63-document receipt has 32 absent cache probes and fails well
+before the semantic deadline. This establishes a readiness gap during ongoing
+publication, not a need to enlarge an expired search deadline. Background index
+work has not completed for every publication visible to every concurrent search.
+
+In repetition 1, 19 incomplete notices are published before the semantic finish
+deadline. Their lexical fallback search returns an empty result that the hook
+turns into a pending notice. This alone does not establish omitted new evidence:
+previously delivered ranges and empty matches must still be distinguished from
+undelivered material. Repetition 0 has poor savings despite no such notices, so
+the continuation gap cannot explain the whole regression.
+
+Repetition 1 executes three identical command strings twice. The file-list and
+numbered-range groups have identical captured outputs; the unsorted `rg` group
+does not. These are observed duplicate requests, not proof that arbitrary
+search outputs are interchangeable or that skipping them would preserve quality.
+The legacy shared matcher trace also has two malformed lines under concurrent
+use. The audit retains those line numbers and relies on per-request numerical
+receipts rather than treating the damaged trace as complete evidence.
+
+The full result and executed auditor are saved as
+`stage3-delivery-diagnosis/native-execution-audit.json` and
+`native-execution-audit-runner.py` under the centroid study. Initial selection,
+ongoing readiness and repeated reads remain separate hypotheses. No retrieval
+change or model retry is adopted from this audit.
+
+An additional source-line presence audit separates an initial delivery omission
+from material not found in the exported stored windows. The exact line of the
+`OPT_fsyntax_only` condition at `Driver.cpp:360` occurs in two stored windows,
+neither initial packet, and four executed command outputs across the two runs.
+The lines constructing the `TY_Nothing` action at `Driver.cpp:5328`, invoking
+`ConstructJob` at `Driver.cpp:6382`, and forwarding to `getFinalPhase` at
+`Types.cpp:431` are absent from the exported stored-window texts but occur in
+executed outputs. These are text-presence checks, not full-range coverage or
+semantic-equivalence certificates; signature absence alone does not prove a
+read is necessary. Details are in `stage3-delivery-diagnosis/read-evidence-map.json`.
 
 ## Execution
 
