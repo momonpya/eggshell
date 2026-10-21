@@ -1705,3 +1705,24 @@ use APFS clones at their original paths, with full hashes, modes and mtimes
 verified. The live numerical master is read-only. A disk-precondition stop is
 retained separately; no answering-model consumption occurred in that setup.
 The three-GiB aggregate RSS stop threshold remains unchanged.
+
+The source-domain audit identifies a separate pre-render loss. Reconstructing
+the original indexed strings gives 810,592 source bytes in the common history.
+The 512,000-byte hydration allowance consumes 511,591 bytes for topic 1 and
+511,785 for topic 2, leaving 409 and 215 bytes. The 11,350-byte predicate
+observation is absent from the topic-2 support pool. Topic 1 also nominates
+two original observations that appear in neither the clipping choices nor
+the surrounding-data lane, including the second full input-language witness.
+This loss cannot be repaired by changing the final packet fitting order.
+
+An isolated repair gives source hydration an independent 16-MiB envelope,
+loads dependencies for every nominated owner, and supplies semantic roots as
+zero-hop advisory `SourceSupport`. A real entry view removes a duplicate
+display, rather than a nomination being assumed to have been delivered. The
+existing no-control support theorem, encoder, matcher and control checks are
+unchanged. This repairs an admission boundary but still does not qualify all
+required body excerpts. Historical-prose and quoted-code focus expansion also
+fail and remain unadopted. No new answering-model trial or token claim follows.
+The next diagnostic joins per-owner window ranks with original-coordinate
+coverage; every subsequent repaired model comparison still starts at topic 1
+repetition 0 and includes all six stages without carrying old results forward.
