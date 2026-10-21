@@ -1383,8 +1383,10 @@ diagnostic of the published kernel, not a successful native hook or an admitted
 model baseline. The earlier 24.776 s helper used `enforce=true, native=true`
 for tool operations and is explicitly excluded from initial-prompt comparisons.
 
-One off-hook call to the unmodified public search worker finishes in 31.137 s
-and publishes only neutral memo data. The subsequent new native session still
+One off-hook call to the unmodified public search worker finishes in 31.137 s.
+Its publication audit has identical before/after heads and no changed rows;
+memo publication was not observed. The earlier claim that this call published
+neutral memo data is withdrawn. The subsequent new native session still
 returns incomplete at 28.809 s. Source authority, roots and unions remain
 unchanged. These failed readiness checks are preserved, never scored as poor
 token savings, and never resubmitted as answering-model trials. The full cohort
@@ -1407,3 +1409,46 @@ raises the overall observed peak to 1,390,704 KiB (about 1.33 GiB). No monitor
 fires. The frozen preparation,
 pairing, evidence-reconstruction and trial checks pass 23 small tests. This is
 measurement progress, not a token-reduction or answer-quality acceptance.
+
+### Candidate delivery and token targets after retiring public comparison
+
+The user's latest instruction retires public main from further investigation
+and model comparisons. The active targets are fresh-relative inclusive savings
+of at least 70% in the first lap and 90% with retained history, with topics and
+equal repetitions reported separately and answer quality maintained. The
+current `415bcc2…` candidate remains an implementation control for adoption.
+`tools/readme_token_dispatch.py` freezes those three conditions, not public main.
+
+A source-only diagnostic identifies one concrete clipping failure: an original
+result includes a branch consequence but omits its indented scope labels. An
+isolated attempt that added such labels to the general heading scanner restores
+HLSL conditions but displaces a previously delivered cache-key excerpt. It is
+not adopted. The refined candidate leaves ranking, context demand and minimum
+reservations unchanged; scope labels enrich the rendering of selected original
+cues. An indentation stack cuts numbered read gaps and outdents, so a preceding
+branch cannot lend its scope to another function. These are original positions,
+not new graph equivalence or completion authority.
+
+The isolated `63a457…` runtime retains the same MiniLM encoder, numerical
+provider, Worker and hook policy as `415bcc2…`. Six bounded context checks and
+ContractAudit pass. The maximum observed build RSS is 3,012,544 KiB, below the
+4 GiB ceiling and the monitor's 3 GiB stop threshold. A test fixture initially
+used a reserved Lean identifier; its failure is retained and the fixture is
+repaired. An early native check started before that failure was inspected and
+was stopped before any UserPromptSubmit completed; its records are excluded.
+
+For topic 1, all three candidate repetitions deliver the stored complete HLSL
+condition while retaining the existing cache-key, input-tracking and test facts.
+The stage admission checks every originally stored full source probe against
+the grounded body, rather than accepting one arbitrary memory hit. All nine
+fresh/current/candidate preparations share the same saved source and pass before
+the first generation. The fresh `gpt-5.6-luna`/`xhigh` call has started under the
+RSS monitor. This is not yet a token-reduction result or quality acceptance.
+Topic 3 still has undelivered original evidence and requires further work.
+
+The fixed comparison and exact dispatcher/harness copies are retained in
+`readme-reuse-tokens-20261021`; construction, rejected attempts, native packets,
+receipts and source gates are in `scope-context-20261021`. Candidate r0 remains
+the predeclared next common history. Failed or unknown-cost attempts cannot be
+resubmitted or silently replaced. No candidate is adopted into the runtime,
+README results or release before the full token and quality gates.
