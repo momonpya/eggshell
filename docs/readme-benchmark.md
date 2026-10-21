@@ -1,5 +1,14 @@
 # README LLVM benchmark rerun
 
+The latest 2026-10-22 instruction makes delivery of question-relevant stored
+history, including necessary original code, the acceptance criterion. Answer
+quality and total-token reduction remain measured outcomes; neither alone
+rejects a delivery implementation after adequate original evidence is delivered.
+A historical explanation cannot compensate for missing required stored code.
+The percentages and quality-based rejection language below are historical
+records, not current acceptance gates. Missing necessary source code remains a
+delivery failure. Modified runtimes still restart the fixed six-stage sequence.
+
 The 2026-10-20 user instruction puts this real-model benchmark before further
 50,000-window diagnosis. The full paper goal remains open. Cache lifetime and
 deadline repairs are not claimed to improve token reduction when the delivered

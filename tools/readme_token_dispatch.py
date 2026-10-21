@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Dispatch fixed token comparisons after the stored-evidence delivery gate.
 
-Fresh and the delivery candidate measure the user's 70%/90% targets. The fixed
-415bcc2 control measures whether the implementation improves on the current
-candidate. Public main is excluded. Nothing is automatically adopted or retried.
+Fresh/current/candidate record token and answer variation under fixed conditions.
+Relevant required original DB evidence delivery determines acceptance; quality
+and token variation alone do not reject a delivery implementation. Public main
+is excluded. Nothing is automatically adopted or retried.
 """
 import argparse
 import hashlib
@@ -58,7 +59,8 @@ def freeze(base, candidate):
         runtimes={k:v['candidate'] for k, v in protocols.items() if k != 'fresh'},
         sourceWorkspace=str(bench.LLVM), initialSource={k:source[k] for k in ['directory', 'files']},
         questionsSha256=sha(bench.ROOT / 'docs/benchmarks/llvm-three-topics.json'),
-        firstLapMinimumReduction=70, retainedLapMinimumReduction=90,
+        tokenReductionReferences=dict(firstLap=70, retainedLap=90),
+        adoptionCriterion='Required question-relevant original DB evidence delivery; token reduction and answer quality are separate observations, not rejection gates',
         criterion='Every lap/topic reported separately over three equal repetitions; no best-run selection',
         nextHistory='candidate repetition 0, fixed before any answering model',
         accounting='input + output, cached once, failed consumption retained, unknown never zero; seed separate',
@@ -196,7 +198,7 @@ def dispatch(base):
     states = [status(s) for s in plan['slots']]
     index = next((i for i, state in enumerate(states) if state is None), None)
     if index is None:
-        raise ValueError('All fixed calls completed; review quality and per-cell tokens before adoption')
+        raise ValueError('All fixed calls completed; review required original evidence delivery and report quality/tokens separately')
     slot = plan['slots'][index]
     admission = read(base / 'stages' / f"stage{slot['stage']}.json")
     cell, label = Path(slot['study']), slot['label']

@@ -106,10 +106,32 @@ class RestartTests(unittest.TestCase):
             (build / 'result.json').write_text(json.dumps(dict(complete=True, runtimeSha256=digest)))
             (qualification / 'protocol.json').write_text(json.dumps(dict(candidate=digest)))
             (qualification / 'result.json').write_text(json.dumps(dict(
-                complete=True, nativeIntegrityVerified=True, allStoredFullProbesDelivered=False)))
+                complete=True, nativeIntegrityVerified=True, allStoredFullProbesDelivered=False,
+                questionLevelDeliveryAccepted=True, missingRequiredCode=[],
+                qualityAccepted=False, tokenReductionAccepted=False, tokenReductionPercent=-15)))
             source, runtime, _ = qualified_source(build, qualification)
             self.assertEqual(source, build / 'checkout')
             self.assertEqual(runtime, digest)
+
+    def test_integrity_or_summaries_do_not_replace_required_original_code(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            build = base / 'build'; build.mkdir()
+            qualification = base / 'qualification'; qualification.mkdir()
+            binary = build / 'checkout/.lake/build/bin/eggshell'
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b'original-code-review-required')
+            digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+            (build / 'result.json').write_text(json.dumps(dict(complete=True, runtimeSha256=digest)))
+            (qualification / 'protocol.json').write_text(json.dumps(dict(candidate=digest)))
+            native = dict(complete=True, nativeIntegrityVerified=True,
+                          allStoredFullProbesDelivered=True, historicalSummaryDelivered=True)
+            for review in [{}, dict(questionLevelDeliveryAccepted=False, missingRequiredCode=['branch']),
+                           dict(questionLevelDeliveryAccepted=True, missingRequiredCode=['branch'])]:
+                with self.subTest(review=review):
+                    (qualification / 'result.json').write_text(json.dumps(dict(native, **review)))
+                    with self.assertRaisesRegex(ValueError, 'Required original DB code'):
+                        qualified_source(build, qualification)
 
     def test_withdrawn_candidate_cannot_freeze_even_with_valid_delivery(self):
         with tempfile.TemporaryDirectory() as temporary:

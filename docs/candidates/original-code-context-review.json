@@ -1,0 +1,976 @@
+{
+  "scope": "Isolated original-code context corrections; six actual saved histories, two independent native chats each; no answering-model experiment",
+  "candidate": {
+    "complete": true,
+    "runtimeSha256": "8755d7475bd7b82b87deaf801b806daa741414fee4950c82509067127e6b9a70",
+    "sourceSha256": "9655d747fd0c69ad9335a4a83203d3bbdca061b2ef2e6b3efa4e508934a891d6",
+    "auditSha256": "a09d842334298e1277906541a152d2be72d731e7615fa1963ff17e6b883d706a",
+    "unchanged": {
+      "Eggshell/SearchProvider.lean": "375d739788c47d15e7249b2833dc5a15d85a02014bc3a81211c5c0c32714116c",
+      "Eggshell/SemanticMatcher.lean": "a12a773dd78ce009a2af348a0486c0eef35ea6d5d95d9989263f23835f42e3c5",
+      "runtime/embedding.py": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "Eggshell/MiniLM.lean": "15fe872280a9819f39c12a360235523b23ada07ed5f2967d34b16634112a71e7",
+      "Eggshell/PluginHooks.lean": "16881d42f2d0a81cb6b4e4063d9c76c8b842fcec2863b74d7019bfdc1146c480",
+      "Eggshell/Worker.lean": "d59ca140da3562d6c10ed09dab38e307131b8cfc6f4383ffac455eebbfb407eb",
+      "Eggshell/SourceEvidence.lean": "fc087f4bdd058a47b35a5c01c847711bf46e576f7af3c6038fd5758194f41ce1",
+      "Eggshell/Matcher.lean": "2790c4b56001c4b94e15a08c14a970005f6661f4c7dfe9a33963e908afc03756"
+    },
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "deliveryAccepted": false
+  },
+  "overlapOnlyNativeResult": {
+    "bodySha256": "287cd3aec057711e219cde70292df2da696d601271d88a28826e1e1a741c53bd",
+    "previousBodySha256": "5488a8e768347eb0b555ecf826af516089bc6169da344c0b67fed61044779844",
+    "bodyUnchanged": false,
+    "sessions": [
+      {
+        "session": "prepare-stage3-native-0",
+        "elapsedMs": 13926.5005,
+        "bodySha256": "287cd3aec057711e219cde70292df2da696d601271d88a28826e1e1a741c53bd",
+        "incomplete": false
+      },
+      {
+        "session": "prepare-stage3-native-1",
+        "elapsedMs": 8564.804625,
+        "bodySha256": "287cd3aec057711e219cde70292df2da696d601271d88a28826e1e1a741c53bd",
+        "incomplete": false
+      }
+    ],
+    "blocks": [
+      {
+        "id": "trailing-x-condition-result",
+        "storedOwners": [
+          "v15256267109356037303"
+        ],
+        "deliveredOwners": [
+          "v15256267109356037303"
+        ],
+        "passDelivery": true
+      },
+      {
+        "id": "toolchain-cache-lookup",
+        "storedOwners": [
+          "v18406153573121058748",
+          "v16748591830955464422"
+        ],
+        "deliveredOwners": [],
+        "passDelivery": false
+      },
+      {
+        "id": "toolchain-language-target-branch",
+        "storedOwners": [
+          "v18406153573121058748",
+          "v16748591830955464422"
+        ],
+        "deliveredOwners": [],
+        "passDelivery": false
+      }
+    ],
+    "deliveryAccepted": false,
+    "answeringModelCalls": 0,
+    "productionAdoption": false
+  },
+  "native": {
+    "nativeIntegrityVerified": true,
+    "rows": [
+      {
+        "stage": 1,
+        "bodySha256": "5392e72a937bb735f59e615e48d27702b28972316675e68ca0e4611246dfb262",
+        "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/nominated-context-budget-20261022/native-all/prepared/stage1-native/native-1/body.txt",
+        "bodyChars": 118906,
+        "sourceDocuments": "/Users/ovm/.codex/experiments/eggshell/readme-matched-20261021/checkpoints/stage1/documents.json",
+        "sessions": [
+          {
+            "session": "prepare-stage1-native-0",
+            "elapsedMs": 13077.00775,
+            "bodySha256": "5392e72a937bb735f59e615e48d27702b28972316675e68ca0e4611246dfb262",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage1-native-1",
+            "elapsedMs": 7357.205125,
+            "bodySha256": "5392e72a937bb735f59e615e48d27702b28972316675e68ca0e4611246dfb262",
+            "incomplete": false
+          }
+        ],
+        "independentBodiesIdentical": true,
+        "withinDeadline": true,
+        "requiredBlocks": [],
+        "sourceProbeDiagnostics": [
+          {
+            "name": "toolchain-cache-key",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "target-width-existing-test",
+            "fullExcerptOwners": [
+              "v13041622778011058903",
+              "v7013212820002428201"
+            ],
+            "deliveredOwners": [
+              "v13041622778011058903"
+            ]
+          },
+          {
+            "name": "tracked-input-language",
+            "fullExcerptOwners": [
+              "v15256267109356037303"
+            ],
+            "deliveredOwners": [
+              "v15256267109356037303"
+            ]
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v16748591830955464422"
+            ]
+          }
+        ],
+        "missingDiagnosticProbes": [],
+        "allReviewedRequiredBlocksDelivered": true
+      },
+      {
+        "stage": 2,
+        "bodySha256": "12e18e1d2e6063b4e582102a3ec1203b6fa3005b740faa9edd942a688107841e",
+        "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/nominated-context-budget-20261022/native-all/prepared/stage2-native/native-1/body.txt",
+        "bodyChars": 117247,
+        "sourceDocuments": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage2/documents.json",
+        "sessions": [
+          {
+            "session": "prepare-stage2-native-0",
+            "elapsedMs": 9614.889042,
+            "bodySha256": "12e18e1d2e6063b4e582102a3ec1203b6fa3005b740faa9edd942a688107841e",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage2-native-1",
+            "elapsedMs": 7754.426916,
+            "bodySha256": "12e18e1d2e6063b4e582102a3ec1203b6fa3005b740faa9edd942a688107841e",
+            "incomplete": false
+          }
+        ],
+        "independentBodiesIdentical": true,
+        "withinDeadline": true,
+        "requiredBlocks": [],
+        "sourceProbeDiagnostics": [
+          {
+            "name": "toolchain-cache-key",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v18406153573121058748"
+            ]
+          },
+          {
+            "name": "tracked-input-language",
+            "fullExcerptOwners": [
+              "v15256267109356037303"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v18406153573121058748"
+            ]
+          },
+          {
+            "name": "mode-before-parse-and-config",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v13168123294867106979"
+            ]
+          },
+          {
+            "name": "clang-cl-pass-through-reparse",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v13168123294867106979"
+            ]
+          },
+          {
+            "name": "dumpmachine-reports-toolchain-triple",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v15256267109356037303"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "default-toolchain-selection",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v13168123294867106979"
+            ]
+          }
+        ],
+        "missingDiagnosticProbes": [
+          "tracked-input-language",
+          "dumpmachine-reports-toolchain-triple"
+        ],
+        "allReviewedRequiredBlocksDelivered": true
+      },
+      {
+        "stage": 3,
+        "bodySha256": "d27b529f33d2b6a33f3e42a59d7ce759ab2126cf0ce268d1c8d178f59d44c0ef",
+        "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/nominated-context-budget-20261022/native-all/prepared/stage3-native/native-1/body.txt",
+        "bodyChars": 117892,
+        "sourceDocuments": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage3/documents.json",
+        "sessions": [
+          {
+            "session": "prepare-stage3-native-0",
+            "elapsedMs": 10129.572,
+            "bodySha256": "d27b529f33d2b6a33f3e42a59d7ce759ab2126cf0ce268d1c8d178f59d44c0ef",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage3-native-1",
+            "elapsedMs": 8372.828792,
+            "bodySha256": "d27b529f33d2b6a33f3e42a59d7ce759ab2126cf0ce268d1c8d178f59d44c0ef",
+            "incomplete": false
+          }
+        ],
+        "independentBodiesIdentical": true,
+        "withinDeadline": true,
+        "requiredBlocks": [
+          {
+            "id": "trailing-x-condition-result",
+            "storedOwners": [
+              "v15256267109356037303"
+            ],
+            "deliveredOwners": [
+              "v15256267109356037303"
+            ],
+            "passDelivery": true
+          },
+          {
+            "id": "toolchain-cache-lookup",
+            "storedOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "passDelivery": true
+          },
+          {
+            "id": "toolchain-language-target-branch",
+            "storedOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v18406153573121058748"
+            ],
+            "passDelivery": true
+          }
+        ],
+        "sourceProbeDiagnostics": [
+          {
+            "name": "toolchain-cache-key",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "tracked-input-language",
+            "fullExcerptOwners": [
+              "v15256267109356037303"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": [
+              "v18406153573121058748"
+            ]
+          },
+          {
+            "name": "last-target-value",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v11688441620330750236",
+              "v4462512152088567747"
+            ],
+            "deliveredOwners": [
+              "v13168123294867106979",
+              "v18406153573121058748"
+            ]
+          },
+          {
+            "name": "default-toolchain-selection",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "syntax-only-final-phase",
+            "fullExcerptOwners": [
+              "v16748591830955464422"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "trailing-language-warning",
+            "fullExcerptOwners": [
+              "v15256267109356037303"
+            ],
+            "deliveredOwners": [
+              "v15256267109356037303"
+            ]
+          },
+          {
+            "name": "trailing-language-existing-test",
+            "fullExcerptOwners": [
+              "v18295893056279038714"
+            ],
+            "deliveredOwners": []
+          }
+        ],
+        "missingDiagnosticProbes": [
+          "tracked-input-language",
+          "default-toolchain-selection",
+          "syntax-only-final-phase",
+          "trailing-language-existing-test"
+        ],
+        "allReviewedRequiredBlocksDelivered": true
+      },
+      {
+        "stage": 4,
+        "bodySha256": "4958419e1b358592c30e709beb71b43f862e7489be9ec60df09b2077f581a7f1",
+        "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/nominated-context-budget-20261022/native-all/prepared/stage4-native/native-1/body.txt",
+        "bodyChars": 118386,
+        "sourceDocuments": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage4/documents.json",
+        "sessions": [
+          {
+            "session": "prepare-stage4-native-0",
+            "elapsedMs": 13065.108167,
+            "bodySha256": "4958419e1b358592c30e709beb71b43f862e7489be9ec60df09b2077f581a7f1",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage4-native-1",
+            "elapsedMs": 11222.871416,
+            "bodySha256": "4958419e1b358592c30e709beb71b43f862e7489be9ec60df09b2077f581a7f1",
+            "incomplete": false
+          }
+        ],
+        "independentBodiesIdentical": true,
+        "withinDeadline": true,
+        "requiredBlocks": [],
+        "sourceProbeDiagnostics": [
+          {
+            "name": "toolchain-cache-key",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v10600833252250082589"
+            ],
+            "deliveredOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "target-width-existing-test",
+            "fullExcerptOwners": [
+              "v13041622778011058903",
+              "v7013212820002428201"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "tracked-input-language",
+            "fullExcerptOwners": [
+              "v15256267109356037303",
+              "v14863864136040263094"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v10600833252250082589"
+            ],
+            "deliveredOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "input-language-predicate",
+            "fullExcerptOwners": [
+              "v14863864136040263094"
+            ],
+            "deliveredOwners": []
+          }
+        ],
+        "missingDiagnosticProbes": [
+          "target-width-existing-test",
+          "tracked-input-language",
+          "input-language-predicate"
+        ],
+        "allReviewedRequiredBlocksDelivered": true
+      },
+      {
+        "stage": 5,
+        "bodySha256": "7d4a69a5a8769b21383ac67d9e6bd743eb73ef1a3d2f66fe1ded5b0b61b54268",
+        "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/nominated-context-budget-20261022/native-all/prepared/stage5-native/native-1/body.txt",
+        "bodyChars": 118149,
+        "sourceDocuments": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage5/documents.json",
+        "sessions": [
+          {
+            "session": "prepare-stage5-native-0",
+            "elapsedMs": 12252.598,
+            "bodySha256": "7d4a69a5a8769b21383ac67d9e6bd743eb73ef1a3d2f66fe1ded5b0b61b54268",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage5-native-1",
+            "elapsedMs": 10792.355916,
+            "bodySha256": "7d4a69a5a8769b21383ac67d9e6bd743eb73ef1a3d2f66fe1ded5b0b61b54268",
+            "incomplete": false
+          }
+        ],
+        "independentBodiesIdentical": true,
+        "withinDeadline": true,
+        "requiredBlocks": [],
+        "sourceProbeDiagnostics": [
+          {
+            "name": "toolchain-cache-key",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v10600833252250082589"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "tracked-input-language",
+            "fullExcerptOwners": [
+              "v15256267109356037303",
+              "v14863864136040263094"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v10600833252250082589"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "input-language-predicate",
+            "fullExcerptOwners": [
+              "v14863864136040263094"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "mode-before-parse-and-config",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v16748591830955464422",
+              "v9756138358688687787"
+            ],
+            "deliveredOwners": [
+              "v13168123294867106979"
+            ]
+          },
+          {
+            "name": "clang-cl-pass-through-reparse",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v16748591830955464422",
+              "v9756138358688687787"
+            ],
+            "deliveredOwners": [
+              "v13168123294867106979"
+            ]
+          },
+          {
+            "name": "dumpmachine-reports-toolchain-triple",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v15256267109356037303"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "default-toolchain-selection",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v16748591830955464422",
+              "v9756138358688687787"
+            ],
+            "deliveredOwners": [
+              "v13168123294867106979"
+            ]
+          }
+        ],
+        "missingDiagnosticProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate",
+          "dumpmachine-reports-toolchain-triple"
+        ],
+        "allReviewedRequiredBlocksDelivered": true
+      },
+      {
+        "stage": 6,
+        "bodySha256": "6b238a36d4bfd0a8b8a51db32b724ca8b9ef9470b93f608b109a4ba8f6651858",
+        "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/nominated-context-budget-20261022/native-all/prepared/stage6-native/native-1/body.txt",
+        "bodyChars": 115942,
+        "sourceDocuments": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage6/documents.json",
+        "sessions": [
+          {
+            "session": "prepare-stage6-native-0",
+            "elapsedMs": 13920.182833,
+            "bodySha256": "6b238a36d4bfd0a8b8a51db32b724ca8b9ef9470b93f608b109a4ba8f6651858",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage6-native-1",
+            "elapsedMs": 12004.777584,
+            "bodySha256": "6b238a36d4bfd0a8b8a51db32b724ca8b9ef9470b93f608b109a4ba8f6651858",
+            "incomplete": false
+          }
+        ],
+        "independentBodiesIdentical": true,
+        "withinDeadline": true,
+        "requiredBlocks": [
+          {
+            "id": "trailing-x-condition-result",
+            "storedOwners": [
+              "v15256267109356037303",
+              "v14863864136040263094"
+            ],
+            "deliveredOwners": [
+              "v15256267109356037303"
+            ],
+            "passDelivery": true
+          },
+          {
+            "id": "toolchain-cache-lookup",
+            "storedOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v10600833252250082589"
+            ],
+            "deliveredOwners": [],
+            "passDelivery": false
+          },
+          {
+            "id": "toolchain-language-target-branch",
+            "storedOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v10600833252250082589"
+            ],
+            "deliveredOwners": [],
+            "passDelivery": false
+          }
+        ],
+        "sourceProbeDiagnostics": [
+          {
+            "name": "toolchain-cache-key",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v10600833252250082589"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "tracked-input-language",
+            "fullExcerptOwners": [
+              "v15256267109356037303",
+              "v14863864136040263094"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "fullExcerptOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v10600833252250082589"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "last-target-value",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v18406153573121058748",
+              "v16748591830955464422",
+              "v11688441620330750236",
+              "v4462512152088567747",
+              "v9756138358688687787"
+            ],
+            "deliveredOwners": [
+              "v13168123294867106979",
+              "v9756138358688687787"
+            ]
+          },
+          {
+            "name": "default-toolchain-selection",
+            "fullExcerptOwners": [
+              "v13168123294867106979",
+              "v16748591830955464422",
+              "v9756138358688687787"
+            ],
+            "deliveredOwners": [
+              "v13168123294867106979",
+              "v9756138358688687787"
+            ]
+          },
+          {
+            "name": "syntax-only-final-phase",
+            "fullExcerptOwners": [
+              "v16748591830955464422",
+              "v9756138358688687787"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "trailing-language-warning",
+            "fullExcerptOwners": [
+              "v15256267109356037303",
+              "v14863864136040263094"
+            ],
+            "deliveredOwners": [
+              "v15256267109356037303"
+            ]
+          },
+          {
+            "name": "syntax-only-no-output-action",
+            "fullExcerptOwners": [
+              "v11960447802706886118"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "frontend-job-construction",
+            "fullExcerptOwners": [
+              "v11731249417270010951"
+            ],
+            "deliveredOwners": []
+          },
+          {
+            "name": "trailing-language-existing-test",
+            "fullExcerptOwners": [
+              "v18295893056279038714",
+              "v7097430938626253290"
+            ],
+            "deliveredOwners": []
+          }
+        ],
+        "missingDiagnosticProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "syntax-only-final-phase",
+          "syntax-only-no-output-action",
+          "frontend-job-construction",
+          "trailing-language-existing-test"
+        ],
+        "allReviewedRequiredBlocksDelivered": false
+      }
+    ],
+    "allReviewedRequiredBlocksDelivered": false,
+    "questionLevelDeliveryAccepted": false,
+    "adoptionDeterminedByRelevantStoredCodeDelivery": true,
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "next": "Review actual question-level necessary original code in all six rows; diagnostic long excerpts and token/answer variance are not adoption gates"
+  },
+  "requiredCodeAssessment": {
+    "complete": true,
+    "nativeIntegrityVerified": true,
+    "questionLevelDeliveryAccepted": false,
+    "missingRequiredCode": [
+      {
+        "stage": 6,
+        "id": "toolchain-cache-lookup",
+        "storedOwners": [
+          "v18406153573121058748",
+          "v16748591830955464422",
+          "v10600833252250082589"
+        ]
+      },
+      {
+        "stage": 6,
+        "id": "toolchain-language-target-branch",
+        "storedOwners": [
+          "v18406153573121058748",
+          "v16748591830955464422",
+          "v10600833252250082589"
+        ]
+      }
+    ],
+    "knownMissingListIsNotExhaustive": true,
+    "runtimeSha256": "8755d7475bd7b82b87deaf801b806daa741414fee4950c82509067127e6b9a70",
+    "nativeResultSha256": "5a406b289849b4db98a1e25b34b4ae425014e6900bb55d8100e5b7714f99cc48",
+    "reason": "Necessary stored original code remains absent in retained topic3; answer quality and token percentages are not rejection criteria",
+    "answeringModelCalls": 0,
+    "productionAdoption": false
+  },
+  "generationGateRejection": "Required original DB code must be reviewed as delivered; native integrity or historical summaries alone do not qualify",
+  "gateMeaning": "Actual source/body integrity alone cannot pass without reviewed required-original-code delivery; low token reduction or answer-quality variation alone cannot reject it",
+  "numericalReceipts": [
+    {
+      "stage": 1,
+      "purpose": "discovery",
+      "source": {
+        "absent": 0,
+        "hit": 1919,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 1,
+      "purpose": "focus",
+      "source": {
+        "absent": 0,
+        "hit": 1919,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 2,
+      "purpose": "discovery",
+      "source": {
+        "absent": 0,
+        "hit": 2109,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 2,
+      "purpose": "focus",
+      "source": {
+        "absent": 0,
+        "hit": 2109,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 3,
+      "purpose": "discovery",
+      "source": {
+        "absent": 0,
+        "hit": 2124,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 3,
+      "purpose": "focus",
+      "source": {
+        "absent": 0,
+        "hit": 2124,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 4,
+      "purpose": "discovery",
+      "source": {
+        "absent": 0,
+        "hit": 3025,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 4,
+      "purpose": "focus",
+      "source": {
+        "absent": 0,
+        "hit": 3025,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 5,
+      "purpose": "discovery",
+      "source": {
+        "absent": 0,
+        "hit": 3055,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 5,
+      "purpose": "focus",
+      "source": {
+        "absent": 0,
+        "hit": 3055,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 6,
+      "purpose": "discovery",
+      "source": {
+        "absent": 0,
+        "hit": 3070,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 6,
+      "purpose": "focus",
+      "source": {
+        "absent": 0,
+        "hit": 3070,
+        "unusable": 0
+      },
+      "sourceEncodeUs": 0
+    }
+  ],
+  "guards": [
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/original-code-context-audit-20261022/build-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "peakRssKiB": 2974704,
+      "limitRssKiB": 3145728,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/original-code-context-audit-20261022/native-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "peakRssKiB": 1403024,
+      "limitRssKiB": 3145728,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/original-code-context-audit-20261022/native-stage3-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "peakRssKiB": 1404032,
+      "limitRssKiB": 3145728,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/coalesced-anchor-context-20261022/build-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "peakRssKiB": 2971216,
+      "limitRssKiB": 3145728,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/coalesced-anchor-context-20261022/finish-build-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "peakRssKiB": 1445648,
+      "limitRssKiB": 3145728,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/coalesced-anchor-context-20261022/native-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "peakRssKiB": 1406352,
+      "limitRssKiB": 3145728,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/nominated-context-budget-20261022/build-guard.json",
+      "state": "finished",
+      "exitCode": 2,
+      "peakRssKiB": 29888,
+      "limitRssKiB": 3145728,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/nominated-context-budget-20261022/build-valid-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "peakRssKiB": 3036000,
+      "limitRssKiB": 3145728,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/nominated-context-budget-20261022/native-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "peakRssKiB": 1441056,
+      "limitRssKiB": 3145728,
+      "guardTriggered": false
+    }
+  ],
+  "sourcePatch": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/original-code-context.patch",
+  "sourcePatchSha256": "ec409cbf874143f4b1df0b5e0ffae2b3074c5a40633d8b606a2d755aec41a32b",
+  "maximumHookMs": 13920.182833,
+  "answeringModelCalls": 0,
+  "newSeedAcquisition": 0,
+  "productionAdoption": false,
+  "allNecessaryHistoryDelivered": false,
+  "next": "Retain overlap-tail correction; refine allocation to bring required original graph observations alongside relevant interpretations in both laps. Review all six questions before any new fixed answering-model study. Do not resume the retired study or reject adequate delivery for model variance.",
+  "originalSourcePatchSha256": "15b51e95bf804bc64aa769a53b8c3a82990ae5078faed36a67a6adb4619266a6",
+  "patchFormatting": "Blank context is expressed as equal empty-line removal/addition; source result is unchanged"
+}

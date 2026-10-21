@@ -45,6 +45,9 @@ def qualified_source(construction, qualification):
             protocol['candidate'] != result['runtimeSha256'] or
             sha(source / '.lake/build/bin/eggshell') != result['runtimeSha256']):
         raise ValueError('Native source/body integrity and the exact candidate must qualify before freezing')
+    if (checked.get('questionLevelDeliveryAccepted') is not True or
+            checked.get('missingRequiredCode') != []):
+        raise ValueError('Required original DB code must be reviewed as delivered; native integrity or historical summaries alone do not qualify')
     return source, result['runtimeSha256'], protocol
 
 
@@ -61,10 +64,10 @@ def freeze(base, construction, qualification):
     inventory = EX / 'readme-reuse-tokens-20261021/sources/stage1.json'
     if read(inventory)['sourceGraphFiles'] != initial['files']:
         raise ValueError('Source inventory belongs to another saved source')
-    if template['sourceSnapshots']['0']['files'] != initial['files']:
+    if template['sourceSnapshots']['1']['files'] != initial['files']:
         raise ValueError('Initial qualification describes another saved source')
     initial_evidence = read(inventory)
-    initial_evidence['priorAnswer'] = prior_answer(read(qualification / 'sources/0/documents.json'))
+    initial_evidence['priorAnswer'] = prior_answer(read(qualification / 'sources/1/documents.json'))
     slots = new_slots(base)
     if len(slots) != 54 or any(status(slot) is not None for slot in slots):
         raise ValueError('A restarted comparison needs 54 unattempted calls')
@@ -79,14 +82,15 @@ def freeze(base, construction, qualification):
         code={name:sha(TOOLS / name) for name in PINNED},
         runtimes=dict(current=CONTROL, candidate=runtime), sourceWorkspace=str(bench.LLVM),
         initialSource=initial, questionsSha256=sha(bench.ROOT / 'docs/benchmarks/llvm-three-topics.json'),
-        firstLapMinimumReduction=70, retainedLapMinimumReduction=90,
+        tokenReductionReferences=dict(firstLap=70, retainedLap=90),
+        adoptionCriterion='Question-relevant required original DB evidence actually delivered with provenance, applicable freshness and within the hook deadline; token reduction and answer quality are measured separately, not rejection gates',
         criterion='Each topic/lap has three equal new repetitions; retain individual totals, paired mean, range and ratio of sums; inspect original DB, actual delivery and answer quality',
         nextHistory='candidate repetition 0 fixed before generation',
         evaluationOrder='Complete the six-stage sequence for repetition 0, then 1 and 2; each stage retains one common predeclared r0 history for all repetitions and conditions',
         accounting='input + output; cached once; failed usage retained; unknown never zero; seed separate',
         reusedCompletedControls={}, reusedCandidateTrials=[], newAnsweringCalls=54,
         newSeedAcquisition=False, sourceInventorySha256=sha(base / 'sources/stage1.json'),
-        deliveryGate='Captured DB evidence with unchanged source/index/body integrity; whole prior answer and original source probes are diagnostics; current-question relevance and quality require separate review before adoption',
+        deliveryGate='Source/index/body integrity plus reviewed delivery of required original code; historical summaries cannot replace missing necessary code. Whole previous answers and complete incidental probe excerpts are not required',
         sourceQualification=dict(directory=str(qualification), resultSha256=sha(qualification / 'result.json')),
         publicIncluded=False, automaticResubmission=False, qualityAccepted=False, productionAdoption=False))
     (base / 'plan.sha256').write_text(sha(base / 'plan.json') + '\n')

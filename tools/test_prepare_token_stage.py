@@ -29,12 +29,12 @@ class CommonHistoryTests(unittest.TestCase):
         (attempt / 'shutdown.json').write_text(json.dumps(dict(exit_code=0, daemon_exit_code=0)))
         return attempt
 
-    def test_r0_alone_cannot_advance_history(self):
+    def test_candidate_r0_without_the_matched_triple_cannot_advance_history(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             plan, slots = self.fixture(root)
             self.complete(next(s for s in slots if s['condition'] == 'candidate' and s['repetition'] == 0))
-            with self.assertRaisesRegex(ValueError, 'every fixed preceding'):
+            with self.assertRaisesRegex(ValueError, 'preceding r0 matched triple'):
                 checkpoint(root / 'study', plan, 2)
             self.assertFalse((root / 'study').exists())
 
