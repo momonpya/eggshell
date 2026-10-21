@@ -142,3 +142,36 @@ restored with exact hashes; the completed fresh preparation and failed native
 preparation are retained, and the same fixed plan resumes its missing native
 preparations. No answering call occurred before that repair. RSS still stops at
 three GiB below the user's four-GiB ceiling; the free-disk reserve is three GiB.
+
+The first-lap r0 triples for topics 1 and 2 have now completed (six of 54 new
+calls). Inclusive totals are:
+
+| Topic | Fresh | Fixed current | Candidate | Candidate reduction vs fresh |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 2,241,019 | 835,335 | 321,516 | 85.65% |
+| 2 | 4,870,992 | 52,917 | 51,238 | 98.95% |
+
+All final usage is known; errors, reroutes and hook failures are absent. The
+known answering cost is 8,373,017 tokens, with acquisition cost kept separate.
+Each comparison uses the same stored source snapshot. Topic 2's actual initial
+candidate packet matches preparation SHA-256 `9f1e06849fd5232b0efea44fb680f5a440e50eec4e9eb4e9c848debfd4bbf316`;
+its hook completed in 8,295 ms (current: 6,216 ms). Both memory conditions used
+zero additional commands. This does not establish complete question coverage.
+
+The topic-2 candidate/current difference is only 1,679 tokens (3.17%). Candidate
+input is 338 tokens larger; output is 2,017 tokens smaller. One stochastic pair
+does not establish a delivery improvement. Candidate leaves concrete external
+callers and documentation unidentified, whereas fresh identifies Tooling,
+Flang and UsersManual sites that exist in the fixed source. Quality remains
+pending. Neither memory condition newly executed tests in this topic; their
+answers retain the previous lit setup limitation. The raw usage, packet and
+answer references are in `query-anchor-first-two-topics.json`. No production
+or README benchmark adoption follows from these partial results.
+
+Topic 3 has nine admitted preparations from the predeclared candidate-r0
+history. Its 44 documents have 2,169 windows; warm encoded only the 17 missing
+windows in one batch, then requested zero windows in zero batches on repeat.
+The hard four-GiB model prelaunch free-space check stopped the next call before
+an attempt was created. Closed experiment artifacts are being compressed with
+byte hashes preserved; runtime, prompt, harness and both resource limits stay
+fixed. Continue topic 3, retained topics 1/2/3, then every equal repetition.
