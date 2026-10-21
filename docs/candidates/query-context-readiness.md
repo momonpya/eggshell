@@ -294,3 +294,22 @@ answer bytes, withholds condition/usage labels, and stores the key separately.
 It uses the existing question-level quality scope without scoring or adoption.
 Only syntax and premature-export rejection have been checked; export and
 independent review have not occurred. Wording may still reveal a condition.
+
+Retained topic 1 r1 completed at candidate 147,858, fresh 1,826,778 and current
+143,757 inclusive tokens. Candidate saves 91.91% against fresh but uses 2.85%
+more than current. Both memory conditions' initial bodies are byte-identical
+across r0/r1. Keep r0's 84.66% miss and both negative current-relative results;
+the positive fresh-relative r1 cell does not establish adoption.
+
+After thirty completed calls (45,172,508 known tokens), the unchanged four-GiB
+free-space check stopped before the next model invocation. No model failed or
+lost final usage; stage5-candidate-r1 had not been attempted. Transparent
+compression of 223 closed native test/runtime copies outside the frozen study
+preserved all paths, logical hashes, modes, mtimes and provenance. All nine
+protected runtime/auditor/local production files retain their hashes, inodes,
+modes and mtimes. Free space rose from 3.38 to 4.76 GiB; the compression job's
+sampled peak RSS was 252,096 KiB. Graph DBs, embeddings and generation inputs
+were untouched. A separately recorded continuation resumed the next unattempted
+slot without resubmission or changes to either memory cap or the disk reserve.
+`query-anchor-storage-resume.json` preserves the stop, cost and resumption
+evidence. The full repetition/quality/adoption decision remains pending.

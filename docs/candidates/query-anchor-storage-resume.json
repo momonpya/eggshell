@@ -1,0 +1,126 @@
+{
+  "scope": "Capacity stop after thirty completed calls, byte-preserving closed-file compression, and resumption of the next unattempted slot",
+  "planSha256": "2222107f60d56e834bba2cd7b7b1e40726cc0a2f9ab10cd6ffe3fb62b240eae6",
+  "model": "gpt-5.6-luna",
+  "effort": "xhigh",
+  "completedAtStop": 30,
+  "knownTokensAtStop": 45172508,
+  "unknownFinalUsageAtStop": 0,
+  "failedModelCallsAtStop": 0,
+  "stopReason": "Insufficient free space before model start; reserve unchanged",
+  "nextSlot": {
+    "stage": 5,
+    "topic": 2,
+    "repetition": 1,
+    "condition": "candidate",
+    "study": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate",
+    "arm": "candidate",
+    "label": "stage5-candidate-r1"
+  },
+  "noResubmission": true,
+  "generationConditionsChanged": false,
+  "compression": {
+    "record": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/filesystem-compression-20261022/closed-test-runtimes.json",
+    "recordSha256": "f8694ad4d5b0bdc38505cc32513da17e915f8c65d81ebd4fa6c0961227584666",
+    "files": 223,
+    "groups": 21,
+    "protectedFiles": 9,
+    "protectedUnchanged": true,
+    "freeBeforeGiB": 3.3808135986328125,
+    "freeAfterGiB": 4.756889343261719,
+    "sampledPeakKiB": 252096,
+    "scope": "Closed native test/runtime copies outside the frozen study only; every path, logical byte, mode, mtime and provenance preserved. Runtime masters, audit tools, local production binaries, graph DBs and embeddings unchanged."
+  },
+  "resumedBatch": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/serial-after-storage/state.json",
+  "limits": {
+    "rssStopKiB": 3145728,
+    "userCeilingKiB": 4194304,
+    "modelPrelaunchFreeGiB": 4,
+    "guardDiskStopGiB": 3
+  },
+  "retainedTopic1TwoRepetitions": {
+    "comparisons": [
+      {
+        "repetition": 0,
+        "fresh": 2919043,
+        "candidate": 447890,
+        "current": 90338,
+        "freshRelativeReductionPercent": 84.65627262085553,
+        "currentRelativeReductionPercent": -395.7935752396555
+      },
+      {
+        "repetition": 1,
+        "fresh": 1826778,
+        "candidate": 147858,
+        "current": 143757,
+        "freshRelativeReductionPercent": 91.90607725733504,
+        "currentRelativeReductionPercent": -2.8527306496379308
+      }
+    ],
+    "conditions": {
+      "candidate": {
+        "initialBodySha256": "4414f1d47c10212c159f6780334e44b18095308522b9f4db1a3ac2807fe1e5e9",
+        "sameInitialBody": true,
+        "trials": [
+          {
+            "repetition": 0,
+            "usage": {
+              "totalTokens": 447890,
+              "inputTokens": 440877,
+              "cachedInputTokens": 393216,
+              "cacheWriteInputTokens": 0,
+              "outputTokens": 7013,
+              "reasoningOutputTokens": 4426
+            },
+            "commandCount": 8
+          },
+          {
+            "repetition": 1,
+            "usage": {
+              "totalTokens": 147858,
+              "inputTokens": 142799,
+              "cachedInputTokens": 99072,
+              "cacheWriteInputTokens": 0,
+              "outputTokens": 5059,
+              "reasoningOutputTokens": 3749
+            },
+            "commandCount": 4
+          }
+        ]
+      },
+      "current": {
+        "initialBodySha256": "850bf5acb468be375b3048daf68b268e5f3bd71b5b01a4ef70e6ce06fcc22955",
+        "sameInitialBody": true,
+        "trials": [
+          {
+            "repetition": 0,
+            "usage": {
+              "totalTokens": 90338,
+              "inputTokens": 86811,
+              "cachedInputTokens": 42624,
+              "cacheWriteInputTokens": 0,
+              "outputTokens": 3527,
+              "reasoningOutputTokens": 2702
+            },
+            "commandCount": 1
+          },
+          {
+            "repetition": 1,
+            "usage": {
+              "totalTokens": 143757,
+              "inputTokens": 136119,
+              "cachedInputTokens": 86656,
+              "cacheWriteInputTokens": 0,
+              "outputTokens": 7638,
+              "reasoningOutputTokens": 6194
+            },
+            "commandCount": 3
+          }
+        ]
+      }
+    },
+    "interpretation": "Candidate 84.66%/91.91% fresh-relative reduction; keep the first target miss and both current-relative negative cells. Third repetition and quality remain pending."
+  },
+  "qualityAccepted": false,
+  "productionAdoption": false
+}
