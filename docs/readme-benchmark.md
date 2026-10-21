@@ -126,18 +126,23 @@ or adoption verdict. All 54 calls are collected anew after these harness
 corrections, with the delivery executable unchanged.
 
 `history-continuity-tokens-20261021` is the current new fixed comparison.
-Its first-lap r0 matched triples are complete:
+Its six r0 matched triples (18 answering calls) are complete:
 
-| Topic | Fresh | Current | Candidate | Fresh-relative saving |
-| --- | ---: | ---: | ---: | ---: |
-| 1 | 4,088,776 | 1,291,520 | 1,317,615 | 67.8% |
-| 2 | 3,652,453 | 52,736 | 48,147 | 98.7% |
-| 3 | 5,614,689 | 1,999,810 | 555,010 | 90.1% |
+| Lap | Topic | Fresh | Current | Candidate | Fresh-relative saving |
+| --- | --- | ---: | ---: | ---: | ---: |
+| First | 1 | 4,088,776 | 1,291,520 | 1,317,615 | 67.8% |
+| First | 2 | 3,652,453 | 52,736 | 48,147 | 98.7% |
+| First | 3 | 5,614,689 | 1,999,810 | 555,010 | 90.1% |
+| Retained | 1 | 1,883,938 | 48,839 | 149,190 | 92.1% |
+| Retained | 2 | 4,744,978 | 51,778 | 51,348 | 98.9% |
+| Retained | 3 | 2,271,411 | 51,451 | 50,979 | 97.8% |
 
-These are one repetition per topic. Topic 1 is below the 70% target and
+These are one repetition per topic/lap. First-lap topic 1 is below the 70% target and
 consumes 2.0% more than current; no overall aggregate conceals it. Its actual
 initial body is byte-identical to the earlier `caf318be…` trial. Runtime and
 prompts remain fixed while the predetermined repetitions continue.
+Retained topic 1 is also worse than current (149,190 versus 48,839), despite
+meeting the fresh-relative target. Neither regression is an adoption result.
 
 Topic 2 uses the actual new 53-document history. The prior answer is fully
 delivered and the actual initial body matches preparation. The answering turn
@@ -146,7 +151,24 @@ than a new source investigation. One HLSL full-excerpt probe remains absent;
 its delivered source contains five of six material anchors, and that omission
 stays in the admission and quality audit. It is not silently reclassified as
 full source coverage. Source statuses, save/shutdown and inclusive usage are
-retained in `audits/stage1-r0.json` through `audits/stage3-r0.json`.
+retained in `audits/stage1-r0.json` through `audits/stage6-r0.json`.
+
+Retained topics 2 and 3 also contain no tool calls. Their actual initial
+bodies match their prepared bodies and complete in 10.062/10.851 seconds;
+the previous answer is fully delivered in each case. The source-probe
+omissions remain recorded, including the missing complete phase/action
+excerpts in topic 3. The answer retains the static phase/job distinctions
+and explicitly does not claim a successful snapshot compiler/lit run.
+These observations are narrower than a complete independent quality verdict.
+
+The r0 stage-4 and stage-6 launcher sessions end with status 143 after their
+completed triples (stage 4 also finishes the next source admission). Their
+monitor records have no finalized exit status; they are not reported as
+finalized guard passes. A shell loop exposes its parent command to the owned
+prefix scan. Remaining launches use a Python parent outside that prefix,
+invoking the identical frozen guard and driver commands serially. No completed
+answer is resubmitted, and no runtime, prompt, source, model or measurement
+harness is changed. The other 36 calls retain their original fixed schedule.
 
 The retained lap and two later repetitions continue with the same predeclared
 r0 snapshots. No production adoption or full-cohort quality verdict follows
