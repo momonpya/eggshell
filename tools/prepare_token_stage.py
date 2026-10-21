@@ -89,7 +89,7 @@ def checkpoint(base, plan, stage):
     evidence = base / 'sources' / f'stage{stage}.json'
     if evidence.exists():
         raise ValueError('Preserve the existing source inventory')
-    save(evidence, dict(sourceGraphFiles=original, documents=len(documents),
+    save(evidence, dict(topic=topic, sourceGraphFiles=original, documents=len(documents),
         uniqueInputs=len(inputs), facts=facts,
         priorAnswer=prior_answer(documents, (attempt / 'answer.txt').read_text(), prompts[parent['topic']]),
         qualifications=['Original outcome evidence only; source presence is not a quality verdict.']))

@@ -41,6 +41,8 @@ def freeze(base, candidate):
     (base / 'harness').mkdir()
     for name in CODE:
         shutil.copy2(TOOLS / name, base / 'harness' / name)
+    fact_spec = bench.ROOT / 'docs/benchmarks/readme-memory-facts.json'
+    shutil.copy2(fact_spec, base / 'harness/readme-memory-facts.json')
     paths = dict(fresh=str(OLD / 'fresh'), current=str(OLD / 'candidate'), candidate=str(candidate))
     protocols = {k:read(Path(v) / 'protocol.json') for k, v in paths.items()}
     slots = []
@@ -59,6 +61,7 @@ def freeze(base, candidate):
         runtimes={k:v['candidate'] for k, v in protocols.items() if k != 'fresh'},
         sourceWorkspace=str(bench.LLVM), initialSource={k:source[k] for k in ['directory', 'files']},
         questionsSha256=sha(bench.ROOT / 'docs/benchmarks/llvm-three-topics.json'),
+        sourceFactsSpecSha256=sha(fact_spec),
         tokenReductionReferences=dict(firstLap=70, retainedLap=90),
         adoptionCriterion='Required question-relevant original DB evidence delivery; token reduction and answer quality are separate observations, not rejection gates',
         criterion='Every lap/topic reported separately over three equal repetitions; no best-run selection',
@@ -73,6 +76,10 @@ def checked(base):
         raise ValueError('Frozen comparison plan changed')
     plan = read(base / 'plan.json')
     require_guard(dict(memoryGuardSha256=plan['code']['memory_guard.py']))
+    fact_spec = bench.ROOT / 'docs/benchmarks/readme-memory-facts.json'
+    if (sha(fact_spec) != plan['sourceFactsSpecSha256'] or
+            sha(base / 'harness/readme-memory-facts.json') != plan['sourceFactsSpecSha256']):
+        raise ValueError('Required original-code specification changed after freezing')
     for name, digest in plan['code'].items():
         if sha(TOOLS / name) != digest or sha(base / 'harness' / name) != digest:
             raise ValueError('Frozen comparison harness changed: ' + name)
@@ -118,7 +125,7 @@ def memory_delivery_report(inventory, body):
     The captured body and source integrity are checked by native preparation.
     Relevance is judged against the current question. Whole-answer presence and
     incidental examples are diagnostics, not substitutes for that review.
-"""
+    """
     prior = inventory['priorAnswer']
     if not prior['text'] or hashlib.sha256(prior['text'].encode()).hexdigest() != prior['sha256']:
         raise ValueError('Invalid saved prior-answer inventory')
@@ -131,11 +138,15 @@ def memory_delivery_report(inventory, body):
     missing = [f['name'] for f in required if not any(
         owner in f['fullExcerptOwners'] and normalized(f['excerpt']) in normalized(text)
         for owner, text in parts)]
+    needed = [f for f in required if inventory.get('topic') in f.get('requiredOriginalForTopics', [])]
+    missing_required = [f['name'] for f in needed if f['name'] in missing]
     return dict(priorAnswerFullOwners=delivered, storedSourceProbes=[f['name'] for f in required],
                 deliveredOwners=list(dict.fromkeys(owner for owner, _ in parts)),
                 priorAnswerScope='diagnostic; the complete previous answer is not required',
                 missingSourceProbes=missing, relevanceReviewRequired=True,
-                sourceProbeScope='diagnostic; quality is judged against the actual question, not mandatory unrequested examples')
+                storedRequiredOriginalCode=[f['name'] for f in needed],
+                missingRequiredOriginalCode=missing_required,
+                sourceProbeScope='Other full excerpts are diagnostic; required short original code for this question cannot be replaced by a summary')
 
 
 def admit(base, stage):
@@ -175,6 +186,9 @@ def admit(base, stage):
             ready = prepared['manifest']
             body = (cell / 'prepared' / label / ready['memory']['body']).read_text()
             delivery_reports[label] = memory_delivery_report(inventory, body)
+            if delivery_reports[label]['missingRequiredOriginalCode']:
+                raise ValueError('Required original DB code missing before model admission: ' +
+                                 ', '.join(delivery_reports[label]['missingRequiredOriginalCode']))
     if stage == 1 and source != plan['initialSource']:
         raise ValueError('Initial seed changed')
     if stage > 1:

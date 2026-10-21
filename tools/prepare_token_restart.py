@@ -75,13 +75,17 @@ def freeze(base, construction, qualification):
     (base / 'harness').mkdir()
     for name in PINNED:
         shutil.copy2(TOOLS / name, base / 'harness' / name)
+    fact_spec = bench.ROOT / 'docs/benchmarks/readme-memory-facts.json'
+    shutil.copy2(fact_spec, base / 'harness/readme-memory-facts.json')
     (base / 'sources').mkdir()
+    initial_evidence['topic'] = 1
     save(base / 'sources/stage1.json', initial_evidence)
     paths = {condition:str(base / condition) for condition in ['fresh', 'current', 'candidate']}
     save(base / 'plan.json', dict(model='gpt-5.6-luna', effort='xhigh', slots=slots, paths=paths,
         code={name:sha(TOOLS / name) for name in PINNED},
         runtimes=dict(current=CONTROL, candidate=runtime), sourceWorkspace=str(bench.LLVM),
         initialSource=initial, questionsSha256=sha(bench.ROOT / 'docs/benchmarks/llvm-three-topics.json'),
+        sourceFactsSpecSha256=sha(fact_spec),
         tokenReductionReferences=dict(firstLap=70, retainedLap=90),
         adoptionCriterion='Question-relevant required original DB evidence actually delivered with provenance, applicable freshness and within the hook deadline; token reduction and answer quality are measured separately, not rejection gates',
         criterion='Each topic/lap has three equal new repetitions; retain individual totals, paired mean, range and ratio of sums; inspect original DB, actual delivery and answer quality',

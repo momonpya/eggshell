@@ -1,0 +1,288 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -3816,21 +3816,33 @@
+ termination_by limit - current
+ decreasing_by omega
+-
++
+-/-- Explicit query anchors receive their two independent complete contexts.
+-Normal semantic context retains its existing allocation and source scope. -/
++/-- Overlapping source windows are one interval union, not interchangeable
++copies. Preserve the complete extent of a chosen cluster before adding local
++context; otherwise a later overlapping window's condition/result disappears. -/
++def anchorCueRanges (ranked : List (RankedContext source)) : List (EvidenceRange source) :=
++  ((coalesceRankedContexts ranked).take 2).flatMap (·.span.ranges)
++
++theorem selected_anchor_cluster_retained (ranked : List (RankedContext source))
++    (group : RankedContext source) (position : Nat)
++    (selected : group ∈ (coalesceRankedContexts ranked).take 2)
++    (covered : group.span.covers position) :
++    ∃ range ∈ anchorCueRanges ranked, range.covers position := by
++  obtain ⟨range, present, contains⟩ := (group.span.ranges_cover position).mpr covered
++  exact ⟨range, List.mem_flatMap.mpr ⟨group, selected, present⟩, contains⟩
++
++/-- A selected region carries every overlapping original cue. Segmentation
++retains the existing per-fragment limit; it cannot truncate the cluster. -/
+ def prepareAnchorViews (records : List (ContextSpan source))
+     (heads : List (Nat × Option Nat)) (decoded : Option (DecodedLayout source))
+     (ranked : List (EvidenceRange source)) : List (EvidenceView source) :=
+-  match ranked.head? with
+-  | none => []
+-  | some first =>
+-      let independent := ranked.find? fun other =>
+-        other.stop ≤ first.start || first.stop ≤ other.start
+-      (first :: independent.toList).filterMap fun cue =>
+-        let context := cueContextWithBalance true records heads cue
+-        match decoded with
+-        | none => some (.original context)
+-        | some layout => (decodedEvidenceUsing? layout context).map EvidenceView.decoded
++  let original := ranked.zipIdx.map fun (range, priority) =>
++    ({span := ⟨range.start, range.stop, range.ordered, range.within⟩,
++      priority} : RankedContext source)
++  (anchorCueRanges original).filterMap fun cue =>
++    let context := cueContextWithBalance true records heads cue
++    match decoded with
++    | none => some (.original context)
++    | some layout => (decodedEvidenceUsing? layout context).map EvidenceView.decoded
+-
++
+ def ownerAnchorMinimum (owner : OutcomeEdge) (anchors : List Nat) : Nat :=
+   if anchors.isEmpty then 0 else
+@@ -4924,6 +4936,35 @@
+       nominated.contains returned.val.relation = true :=
+   ⟨chosen, accepted, chosen.property.2.1⟩
+-
++
++
++/-- Advisory source context is ranked within original graph children with
++recorded file data. This does not certify their meaning, current freshness,
++operation closure or native completion. Other owners remain eligible. -/
++def contextDataCandidates (all : List AllEdge)
++    (ranked : List (OutcomeEdge × List SourceEvidence.Record)) :
++    List (OutcomeEdge × List SourceEvidence.Record) :=
++  ranked.filter fun row =>
++    (all.any fun edge => edge.children.contains row.1.work) &&
++    row.2.any (fun record => record.valid && record.files.any (·.content.isSome))
++
++theorem context_data_has_original_child (all : List AllEdge)
++    (ranked : List (OutcomeEdge × List SourceEvidence.Record))
++    (row : OutcomeEdge × List SourceEvidence.Record)
++    (present : row ∈ contextDataCandidates all ranked) :
++    row ∈ ranked ∧ (all.any fun edge => edge.children.contains row.1.work) = true := by
++  have kept := List.mem_filter.mp present
++  exact ⟨kept.1, (Bool.and_eq_true_iff.mp kept.2).1⟩
++
++/-- Historical explanations cannot multiply the reserved data-context
++slots. Use the existing nomination allowance for original file observations
++and retain the best nominated interpretation beside them. No owner is pruned
++from the source graph, and these roles never enter native Match selection. -/
++def contextEntryOwners (all : List AllEdge)
++    (ranked : List (OutcomeEdge × List SourceEvidence.Record))
++    (nominated : List Value) (interpretation : Option OutcomeEdge) : List Value :=
++  let data := ((contextDataCandidates all ranked).take nominated.length).map (·.1.relation)
++  if data.isEmpty then nominated else
++    (data ++ interpretation.toList.map (·.relation)).eraseDups
+-
++
+ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+     (deliveredGraphs : List String) (enforce : Bool)
+@@ -5072,8 +5113,23 @@
+       -- family is a provenance association, not permission to outrank a
+       -- better current-request context from another family.
+       rankEvidenceChoices evidenceRanking choices else choices
++    let originals := selectedAll.map (·.matched.edge) ++ surrounding.map (·.owner)
++    let rankedOriginals := choices.filterMap fun choice =>
++      originals.find? (fun owner => owner.relation == choice.1)
++    let interpretation := primaryInterpretation rankedOriginals nominated sourceAll
++    let contextRows := rankedOriginals.map fun owner =>
++      let direct := (selectedAll.find? (·.matched.edge.relation == owner.relation)).map
++        (·.provenance) |>.getD []
++      let linked := (support.find? (·.owner.relation == owner.relation)).map
++        (·.provenance) |>.getD []
++      (owner, direct ++ linked)
++    let contextEntries := if meaningSelected then
++      contextEntryOwners sourceAll contextRows nominated (interpretation.map (·.val))
++      else nominated
++    let packetEntry := fun relation slice => if meaningSelected then contextEntries.contains relation
++      else meaningPacketEntry nominated relation slice
+     let centralPlans := choices.filterMap fun choice =>
+-      if meaningPacketEntry nominated choice.1 choice.2.1 then some choice.2 else none
++      if packetEntry choice.1 choice.2.1 then some choice.2 else none
+     let centralEntries := centralPlans.map Prod.fst
+     let slices := choices.map (·.2)
+     let graphVisibleFor := fun (fitted : List TransportSlice) (selected : Selected) =>
+@@ -5144,18 +5200,14 @@
+     let reservedBytes := fixedHeader.utf8ByteSize + maximalTree.utf8ByteSize +
+       maximalSource.utf8ByteSize + footer.utf8ByteSize + statusReserve.2
+     let fittedSlices := if meaningSelected then
+-      -- Cover the current meaning entries across all original families before
+-      -- enriching any one of them. Provenance is retained by packetCost and
+-      -- rendering; it must not turn the first past answer into a scope gate.
++      -- Fund the current original-data contexts and the selected interpretation.
++      -- Other source-graph owners still compete within the same packet; native
++      -- selection and the original nomination certificates are unchanged.
+       let isEntry := fun (slice : TransportSlice) => centralEntries.any (·.text == slice.text)
+-      let originals := selectedAll.map (·.matched.edge) ++ surrounding.map (·.owner)
+-      let rankedOriginals := choices.filterMap fun choice =>
+-        originals.find? (fun owner => owner.relation == choice.1)
+       -- Retain the best nominated interpretation beside original data. It
+       -- records conclusions and unavailable validation conditions that raw
+       -- excerpts alone cannot convey. The subtype binds it to this admitted
+       -- graph; other old explanations cannot crowd out original evidence.
+-      let interpretation := primaryInterpretation rankedOriginals nominated sourceAll
+       let priority := fun (slice : TransportSlice) =>
+         if isEntry slice then evidenceAdmissionPriority 0 true else if !slice.anchors.isEmpty then 1 else
+         match slice.owner.bind (fun owner => (referencePriorities.find? (·.1 == owner)).map Prod.snd) with
+@@ -5181,15 +5233,15 @@
+       -- exactly zero space for a useful result that was not a search hit.
+       -- This is capacity planning, not a count limit on admitted neighbors.
+       let rankedSupportPlans := (choices.filter fun choice =>
+-          !(meaningPacketEntry nominated choice.1 choice.2.1)).map (·.2)
++          !(packetEntry choice.1 choice.2.1)).map (·.2)
+       let rankedSupport := rankedSupportPlans.map Prod.fst
+       -- Additional reachable leaves compete within the same coherent
+       -- allowance. Their number and aggregate size do not create demand.
+       let available := coherentEntryPacketBudget (budget, byteBudget.getD (budget * 4))
+         packetCost demandedEntries rankedSupport
+-      -- All current-question-ranked, graph-admitted minimum observations
+-      -- compete before any old explanation is enlarged. Being outside the
+-      -- initial nomination is not evidence that a source is peripheral.
++      -- Original data-context entries share their minima before enrichment.
++      -- Remaining graph neighbors then compete in rank order; a repeated old
++      -- explanation cannot occupy another original-data reservation.
+       -- The entry-derived envelope stays independent of neighborhood size.
+       -- Reserve useful entry coverage from the actual envelope before adding
+       -- more neighbors. Reachable leaf count cannot reduce this reservation.
+@@ -5205,7 +5257,8 @@
+       -- enlargement. Historical citations locate original context; they
+       -- cannot reserve an enrichment group ahead of other observations.
+       let ordinary :=
+-        match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference with
++        match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference
++          (fun slice => if priority slice == 0 then 0 else 1) with
+         | some fitted =>
+             -- The existing meaning nomination and its source-graph certificate
+             -- choose the primary interpretation. Do not promote an explanation
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -1357,6 +1357,8 @@
+     ``Eggshell.Plugin.refined_source_positions_keep_original,
+     ``Eggshell.Plugin.ordinary_context_levels_preserved,
+     ``Eggshell.Plugin.explicit_context_keeps_its_minimum,
++    ``Eggshell.Plugin.selected_anchor_cluster_retained,
++    ``Eggshell.Plugin.context_data_has_original_child,
+     ``Eggshell.Plugin.ordinary_reference_minimum_preserved,
+     ``Eggshell.QueryLiterals.window_is_original, ``Eggshell.QueryLiterals.window_count_bounded,
+     ``Eggshell.QueryLiterals.windows_distinct, ``Eggshell.QueryLiterals.anchors_are_selected,
+--- /dev/null
++++ b/tools/AnchorCoverageTests.lean
+@@ -0,0 +1,30 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++private def require (ok : Bool) (message : String) : IO Unit :=
++  unless ok do throw (IO.userError message)
++private def cue (source : String) (first last priority : Nat) : IO (RankedContext source) := do
++  if bounds : first < last ∧ last ≤ source.length then
++    pure ⟨⟨first,last,bounds.1,bounds.2⟩,priority⟩
++  else throw (IO.userError "invalid source interval")
++def main : IO Unit := do
++  let source := String.ofList (List.replicate 6000 'q')
++  let first ← cue source 100 612 0
++  let overlapping ← cue source 484 996 1
++  let other ← cue source 3000 3512 2
++  let selected := anchorCueRanges [first, overlapping, other]
++  require (selected.any fun range => decide (range.covers 995))
++    "The non-overlapping tail of the overlapping cue was lost"
++  require (selected.any fun range => decide (range.covers 3511))
++    "The next independent original region was displaced"
++  let chain ← (List.range 7).mapM fun i => cue source (100+i*384) (612+i*384) i
++  let wide := anchorCueRanges chain
++  require (wide.any fun range => decide (range.covers 2915))
++    "A wide selected cluster was truncated by fragment segmentation"
++  require (wide.all fun range => range.stop-range.start ≤ 2048)
++    "An individual transport fragment escaped its bound"
++  require ((anchorCueRanges ([] : List (RankedContext source))).isEmpty)
++    "An absent anchor invented source context"
++  let separated := anchorCueRanges [other,first]
++  require ((separated.head?.map (·.start)) == some 100)
++    "Coalescing changed the provider priority of independent regions"
++  IO.println "anchor coverage: overlap tails, independent region, wide-cluster segmentation, bounds, empty input and rank passed"
+--- /dev/null
++++ b/tools/NominatedContextBudgetTests.lean
+@@ -0,0 +1,34 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++private def need (ok : Bool) (text : String) : IO Unit :=
++  unless ok do throw (IO.userError text)
++private def slice (owner text : String) : TransportSlice :=
++  {owner := some (.text owner),text,keys := [],members := [],visibleKeys := []}
++private def cost (items : List TransportSlice) : Nat × Nat :=
++  let n := (items.map (·.text.length)).sum
++  (n,n)
++def main : IO Unit := do
++  let a := slice "selected-source-a" "A"
++  let fullA := slice "selected-source-a" "condition=A"
++  let b := slice "selected-source-b" "B"
++  let fullB := slice "selected-source-b" "result=B!!!"
++  let linked := slice "linked-source" "LLLLL"
++  let low := slice "lower-source" "PPPPP"
++  let lower := slice "lowest-source" "QQQQQ"
++  let choices := [(a,[fullA]),(b,[fullB]),(linked,[]),(low,[]),(lower,[])]
++  let priority := fun item => if item.owner == a.owner || item.owner == b.owner then 0 else
++    if item.owner == linked.owner then 1 else 2
++  let some flat := boundedFlexiblePacketSlices 27 27 cost choices priority (fun _ => 1) |
++    throw (IO.userError "flat fixture was rejected")
++  need (!(flat.val.any (·.text == fullB.text)))
++    "The original minimum-first starvation case was not exercised"
++  let some current := boundedFlexiblePacketSlices 27 27 cost choices priority (fun _ => 1)
++      (fun item => if priority item == 0 then 0 else 1) |
++    throw (IO.userError "current-nomination plan was rejected")
++  need (current.val.any (·.text == fullA.text) && current.val.any (·.text == fullB.text))
++    "A nominated source lost its funded condition or result"
++  need (current.val.any (·.owner == linked.owner))
++    "A fitting highest-ranked original graph prerequisite was lost"
++  need (current.val.all fun item => item.members.isEmpty && item.visibleKeys.isEmpty)
++    "Advisory context acquired matching authority"
++  IO.println "current nominations: original starvation, funded condition/result, fitting graph prerequisite, packet bounds and advisory authority passed"
+--- /dev/null
++++ b/tools/SourceContextBasisTests.lean
+@@ -0,0 +1,39 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++
++private def require (ok : Bool) (message : String) : IO Unit :=
++  unless ok do throw (IO.userError message)
++
++private def outcome (work text : String) : OutcomeEdge :=
++  OutcomeEdge.make (.text work) (.text text) [] (by simp) (Nat.zero_le _)
++
++def main : IO Unit := do
++  let parent : Value := .text "question"
++  let a := outcome "read-a" "condition A"
++  let b := outcome "read-b" "result B"
++  let weak := outcome "unbounded-search" "possible names"
++  let graph := AllEdge.make parent [a.work,b.work,weak.work] (by decide) (by decide)
++  let answers := (List.range 6).map fun i => outcome s!"prior-question-{i}" s!"prior explanation {i}"
++  let record : SourceEvidence.Record := {
++    workspace := "sample"
++    files := [{relative := "pkg/a", content := some {bytes := 1,root := String.ofList (List.replicate 64 'a')}}]
++    complete := true
++    closed := false }
++  let absent : SourceEvidence.Record := {record with files := [{relative := "pkg/missing",content := none}]}
++  let ranked := answers.map (·, [record]) ++ [(weak,[absent]),(b,[record]),(a,[record])]
++  let nominated := answers.map (·.relation)
++  let some primary := answers.head? | throw (IO.userError "missing interpretation fixture")
++  let selected := contextEntryOwners [graph] ranked nominated (some primary)
++  require (selected == [b.relation,a.relation,primary.relation])
++    "Repeated interpretations displaced the ranked original conditions/results"
++  require ((contextDataCandidates [graph] ranked).map (·.1.relation) == [b.relation,a.relation])
++    "An interpretation or absent-file record became original file data"
++  require (!record.closed) "The test accidentally grants operation closure"
++  require (contextEntryOwners [] ranked nominated (some primary) == nominated)
++    "An interpretation-only graph lost its existing nomination basis"
++  require ((contextEntryOwners [graph] ranked [] none).isEmpty)
++    "An empty nomination budget invented a context entry"
++  let one := contextEntryOwners [graph] ranked [primary.relation] (some primary)
++  require (one == [b.relation,primary.relation])
++    "The original-data reservation exceeded the existing nomination allowance"
++  IO.println "source context basis: repeated interpretations, original graph data order, fingerprint presence, open-domain advice, text-only graph and existing allowance passed"
