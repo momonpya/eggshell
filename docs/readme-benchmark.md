@@ -125,6 +125,33 @@ does not excuse it. Complete prior-answer delivery is readiness, not a quality
 or adoption verdict. All 54 calls are collected anew after these harness
 corrections, with the delivery executable unchanged.
 
+`history-continuity-tokens-20261021` is the current new fixed comparison.
+Its first-lap r0 matched triples are complete:
+
+| Topic | Fresh | Current | Candidate | Fresh-relative saving |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 4,088,776 | 1,291,520 | 1,317,615 | 67.8% |
+| 2 | 3,652,453 | 52,736 | 48,147 | 98.7% |
+| 3 | 5,614,689 | 1,999,810 | 555,010 | 90.1% |
+
+These are one repetition per topic. Topic 1 is below the 70% target and
+consumes 2.0% more than current; no overall aggregate conceals it. Its actual
+initial body is byte-identical to the earlier `caf318be…` trial. Runtime and
+prompts remain fixed while the predetermined repetitions continue.
+
+Topic 2 uses the actual new 53-document history. The prior answer is fully
+delivered and the actual initial body matches preparation. The answering turn
+contains no tool calls, so this result uses delivered saved history rather
+than a new source investigation. One HLSL full-excerpt probe remains absent;
+its delivered source contains five of six material anchors, and that omission
+stays in the admission and quality audit. It is not silently reclassified as
+full source coverage. Source statuses, save/shutdown and inclusive usage are
+retained in `audits/stage1-r0.json` through `audits/stage3-r0.json`.
+
+The retained lap and two later repetitions continue with the same predeclared
+r0 snapshots. No production adoption or full-cohort quality verdict follows
+from these initial triples.
+
 Resource maintenance repacks 221 closed native executable payloads into 28
 shared zstd bundles, reading back and checking every original native SHA-256.
 Sources, DBs and raw model records remain unchanged; retired gzip containers
