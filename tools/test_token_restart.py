@@ -111,6 +111,23 @@ class RestartTests(unittest.TestCase):
             self.assertEqual(source, build / 'checkout')
             self.assertEqual(runtime, digest)
 
+    def test_withdrawn_candidate_cannot_freeze_even_with_valid_delivery(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            build = base / 'build'; build.mkdir()
+            qualification = base / 'qualification'; qualification.mkdir()
+            binary = build / 'checkout/.lake/build/bin/eggshell'
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b'qualified-but-withdrawn-artifact')
+            digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+            (build / 'result.json').write_text(json.dumps(dict(complete=True, runtimeSha256=digest)))
+            (qualification / 'protocol.json').write_text(json.dumps(dict(candidate=digest)))
+            (qualification / 'result.json').write_text(json.dumps(dict(
+                complete=True, nativeIntegrityVerified=True, allStoredFullProbesDelivered=True)))
+            (build / 'withdrawn.json').write_text(json.dumps(dict(reason='Explicit candidate review')))
+            with self.assertRaisesRegex(ValueError, 'Candidate withdrawn'):
+                qualified_source(build, qualification)
+
 
 if __name__ == '__main__':
     unittest.main()

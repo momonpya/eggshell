@@ -34,6 +34,8 @@ def new_slots(base):
 
 
 def qualified_source(construction, qualification):
+    if (construction / 'withdrawn.json').exists():
+        raise ValueError('Candidate withdrawn; review or construct a new candidate before freezing')
     result = read(construction / 'result.json')
     checked = read(qualification / 'result.json')
     protocol = read(qualification / 'protocol.json')

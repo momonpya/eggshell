@@ -1,0 +1,1219 @@
+{
+  "scope": "Unadopted context selection; native integrity and per-fact anchors are not answer quality or total-token improvement.",
+  "runtime": {
+    "complete": true,
+    "runtimeSha256": "1133cbce7c3fb6dccb59b81c56fb71fe7e5b745a56a6af8b6f4dbb0831b82057",
+    "sourceSha256": "ca5a39929e563da883f1f98bc6ba84762e206d697e66663f5e8359e76bb09a47",
+    "queryLiteralsSha256": "d4c121f84aa7397011b277ac22dc04d99346ffeac257dbbb36ef5029ea81dbeb",
+    "auditSha256": "2060b921f6e8f4df97b86bfe30b6bd8538b48308fca4b22685c8448b2d2f86cc",
+    "unchanged": {
+      "Eggshell/SearchProvider.lean": "375d739788c47d15e7249b2833dc5a15d85a02014bc3a81211c5c0c32714116c",
+      "Eggshell/SemanticMatcher.lean": "a12a773dd78ce009a2af348a0486c0eef35ea6d5d95d9989263f23835f42e3c5",
+      "runtime/embedding.py": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "Eggshell/MiniLM.lean": "15fe872280a9819f39c12a360235523b23ada07ed5f2967d34b16634112a71e7",
+      "Eggshell/PluginHooks.lean": "16881d42f2d0a81cb6b4e4063d9c76c8b842fcec2863b74d7019bfdc1146c480",
+      "Eggshell/Worker.lean": "d59ca140da3562d6c10ed09dab38e307131b8cfc6f4383ffac455eebbfb407eb",
+      "Eggshell/SourceEvidence.lean": "fc087f4bdd058a47b35a5c01c847711bf46e576f7af3c6038fd5758194f41ce1",
+      "Eggshell/Matcher.lean": "2790c4b56001c4b94e15a08c14a970005f6661f4c7dfe9a33963e908afc03756"
+    },
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "qualityAccepted": false,
+    "tokenReductionMeasured": false
+  },
+  "withdrawal": {
+    "withdrawn": true,
+    "reason": "Three explicit stage-3 facts recovered, but six-stage audit exposes unresolved losses in ordinary questions; do not start a model comparison before resolving relevance. Whole-example probes remain diagnostic, not mandatory.",
+    "runtimeSha256": "1133cbce7c3fb6dccb59b81c56fb71fe7e5b745a56a6af8b6f4dbb0831b82057",
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "recordsPreserved": true,
+    "scope": "Withdraw this isolated runtime from answering-study admission; components may be reviewed in a separately constructed and qualified candidate."
+  },
+  "native": {
+    "complete": true,
+    "nativeIntegrityVerified": true,
+    "rows": [
+      {
+        "stage": 1,
+        "topic": 1,
+        "bodySha256": "bc19d1edfd2265ed2017cb5feeed1c8534e96729ed3bf3ac1ee30bfcea09133f",
+        "bodyChars": 119521,
+        "hooks": [
+          {
+            "session": "prepare-stage1-native-0",
+            "elapsedMs": 12330.885958,
+            "bodySha256": "bc19d1edfd2265ed2017cb5feeed1c8534e96729ed3bf3ac1ee30bfcea09133f",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage1-native-1",
+            "elapsedMs": 6926.092875,
+            "bodySha256": "bc19d1edfd2265ed2017cb5feeed1c8534e96729ed3bf3ac1ee30bfcea09133f",
+            "incomplete": false
+          }
+        ],
+        "withinDeadline": true,
+        "independentBodiesIdentical": true,
+        "missingSourceProbes": [
+          "toolchain-cache-key",
+          "target-width-existing-test",
+          "complete-hlsl-branch-scope"
+        ]
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "bodySha256": "f3bf14b324bd84846ac567b25ab73450104325a303f79813a4445bec971c122e",
+        "bodyChars": 119214,
+        "hooks": [
+          {
+            "session": "prepare-stage2-native-0",
+            "elapsedMs": 10198.4865,
+            "bodySha256": "f3bf14b324bd84846ac567b25ab73450104325a303f79813a4445bec971c122e",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage2-native-1",
+            "elapsedMs": 8646.031959,
+            "bodySha256": "f3bf14b324bd84846ac567b25ab73450104325a303f79813a4445bec971c122e",
+            "incomplete": false
+          }
+        ],
+        "withinDeadline": true,
+        "independentBodiesIdentical": true,
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope",
+          "mode-before-parse-and-config",
+          "clang-cl-pass-through-reparse",
+          "dumpmachine-reports-toolchain-triple"
+        ]
+      },
+      {
+        "stage": 3,
+        "topic": 3,
+        "bodySha256": "e8e445cafb99e42028179b83924dd6d067362796ce4d43f239df4c1db27c4257",
+        "bodyChars": 119118,
+        "hooks": [
+          {
+            "session": "prepare-stage3-native-0",
+            "elapsedMs": 10732.600042,
+            "bodySha256": "e8e445cafb99e42028179b83924dd6d067362796ce4d43f239df4c1db27c4257",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage3-native-1",
+            "elapsedMs": 9018.740875,
+            "bodySha256": "e8e445cafb99e42028179b83924dd6d067362796ce4d43f239df4c1db27c4257",
+            "incomplete": false
+          }
+        ],
+        "withinDeadline": true,
+        "independentBodiesIdentical": true,
+        "missingSourceProbes": [
+          "toolchain-cache-key",
+          "complete-hlsl-branch-scope",
+          "syntax-only-final-phase"
+        ]
+      },
+      {
+        "stage": 4,
+        "topic": 1,
+        "bodySha256": "1ea60017200168a29e9d96ac674a693422fde616206a74fdb860ce87eae1d3e6",
+        "bodyChars": 118943,
+        "hooks": [
+          {
+            "session": "prepare-stage4-native-0",
+            "elapsedMs": 11533.209917,
+            "bodySha256": "1ea60017200168a29e9d96ac674a693422fde616206a74fdb860ce87eae1d3e6",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage4-native-1",
+            "elapsedMs": 9903.757208,
+            "bodySha256": "1ea60017200168a29e9d96ac674a693422fde616206a74fdb860ce87eae1d3e6",
+            "incomplete": false
+          }
+        ],
+        "withinDeadline": true,
+        "independentBodiesIdentical": true,
+        "missingSourceProbes": [
+          "toolchain-cache-key"
+        ]
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "bodySha256": "b78d3ad1eb0fc1892e9047df7b1a80a04016602adddf87f1258713718e717286",
+        "bodyChars": 119635,
+        "hooks": [
+          {
+            "session": "prepare-stage5-native-0",
+            "elapsedMs": 10935.792875,
+            "bodySha256": "b78d3ad1eb0fc1892e9047df7b1a80a04016602adddf87f1258713718e717286",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage5-native-1",
+            "elapsedMs": 9336.851666,
+            "bodySha256": "b78d3ad1eb0fc1892e9047df7b1a80a04016602adddf87f1258713718e717286",
+            "incomplete": false
+          }
+        ],
+        "withinDeadline": true,
+        "independentBodiesIdentical": true,
+        "missingSourceProbes": [
+          "toolchain-cache-key",
+          "mode-before-parse-and-config",
+          "clang-cl-pass-through-reparse",
+          "dumpmachine-reports-toolchain-triple"
+        ]
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "bodySha256": "8a3855ba53904b9334472412ba95d1f1c0003a934c3dbd35cbd823f74bb765e2",
+        "bodyChars": 119222,
+        "hooks": [
+          {
+            "session": "prepare-stage6-native-0",
+            "elapsedMs": 11919.749292,
+            "bodySha256": "8a3855ba53904b9334472412ba95d1f1c0003a934c3dbd35cbd823f74bb765e2",
+            "incomplete": false
+          },
+          {
+            "session": "prepare-stage6-native-1",
+            "elapsedMs": 10221.695542,
+            "bodySha256": "8a3855ba53904b9334472412ba95d1f1c0003a934c3dbd35cbd823f74bb765e2",
+            "incomplete": false
+          }
+        ],
+        "withinDeadline": true,
+        "independentBodiesIdentical": true,
+        "missingSourceProbes": [
+          "toolchain-cache-key",
+          "syntax-only-final-phase",
+          "trailing-language-warning"
+        ]
+      }
+    ]
+  },
+  "stage3": {
+    "runtimeSha256": "1133cbce7c3fb6dccb59b81c56fb71fe7e5b745a56a6af8b6f4dbb0831b82057",
+    "checks": {
+      "syntax-only-final-phase": true,
+      "trailing-language-warning": true,
+      "last-target-value": true,
+      "toolchain-cache-key": false
+    },
+    "hooks": [
+      {
+        "session": "prepare-stage3-native-0",
+        "elapsedMs": 13223.83825,
+        "bodySha256": "e8e445cafb99e42028179b83924dd6d067362796ce4d43f239df4c1db27c4257",
+        "incomplete": false
+      },
+      {
+        "session": "prepare-stage3-native-1",
+        "elapsedMs": 8848.929583,
+        "bodySha256": "e8e445cafb99e42028179b83924dd6d067362796ce4d43f239df4c1db27c4257",
+        "incomplete": false
+      }
+    ],
+    "bodySha256": "e8e445cafb99e42028179b83924dd6d067362796ce4d43f239df4c1db27c4257",
+    "bodyChars": 119118,
+    "facts": [
+      {
+        "name": "toolchain-cache-key",
+        "anchorOwners": {
+          "auto &TC = ToolChains[Target.str()];": []
+        },
+        "fullExcerptDiagnostic": false
+      },
+      {
+        "name": "tracked-input-language",
+        "anchorOwners": {
+          "// Track the current user specified (-x) input.": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ],
+          "types::ID InputType = types::TY_Nothing;": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ]
+        },
+        "fullExcerptDiagnostic": true
+      },
+      {
+        "name": "complete-hlsl-branch-scope",
+        "anchorOwners": {
+          "case llvm::Triple::Vulkan:": [],
+          "case llvm::Triple::ShaderModel:": [],
+          "Target.getArch() == llvm::Triple::spirv32": [],
+          "Target.getArch() == llvm::Triple::spirv64": [],
+          "!usesInput(Args, types::isHLSL)": [],
+          "std::make_unique<toolchains::HLSLToolChain>": []
+        },
+        "fullExcerptDiagnostic": false
+      },
+      {
+        "name": "last-target-value",
+        "anchorOwners": {
+          "Args.getLastArg(options::OPT_target)": [
+            "v13168123294867106979",
+            "v11688441620330750236",
+            "v4462512152088567747"
+          ],
+          "TargetTriple = A->getValue();": [
+            "v13168123294867106979",
+            "v11688441620330750236",
+            "v4462512152088567747"
+          ]
+        },
+        "fullExcerptDiagnostic": true
+      },
+      {
+        "name": "default-toolchain-selection",
+        "anchorOwners": {
+          "getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));": [
+            "v15181766247145803608",
+            "v3539927040460014407"
+          ]
+        },
+        "fullExcerptDiagnostic": true
+      },
+      {
+        "name": "syntax-only-final-phase",
+        "anchorOwners": {
+          "PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)": [
+            "v16748591830955464422"
+          ],
+          "FinalPhase = phases::Compile;": [
+            "v16748591830955464422"
+          ]
+        },
+        "fullExcerptDiagnostic": false
+      },
+      {
+        "name": "trailing-language-warning",
+        "anchorOwners": {
+          "LastInputArg->getIndex() < LastXArg->getIndex()": [
+            "v3745555973717331211"
+          ],
+          "warn_drv_unused_x": [
+            "v3745555973717331211"
+          ]
+        },
+        "fullExcerptDiagnostic": true
+      },
+      {
+        "name": "trailing-language-existing-test",
+        "anchorOwners": {
+          "// CHECK: '-x c++' after last input file has no effect": []
+        },
+        "fullExcerptDiagnostic": true
+      }
+    ],
+    "answeringModelCalls": 0,
+    "productionAdoption": false
+  },
+  "anchorAudit": {
+    "matchedSourcesAndPrompts": true,
+    "scope": "Diagnostic per-fact anchors at original stored owners across six saved sources; complete historical examples are not mandatory quality gates. Relevance and answer quality require review. New answering comparison not launched.",
+    "rows": [
+      {
+        "stage": 1,
+        "topic": 1,
+        "name": "toolchain-cache-key",
+        "anchors": [
+          "auto &TC = ToolChains[Target.str()];"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v16748591830955464422"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 1,
+        "topic": 1,
+        "name": "target-width-existing-test",
+        "anchors": [
+          "// RUN: grep 'Target: x86_64-unknown-unknown' %t",
+          "// ARM64: Target: arm64-apple-macos11"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v13041622778011058903",
+            "v7013212820002428201"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 1,
+        "topic": 1,
+        "name": "tracked-input-language",
+        "anchors": [
+          "// Track the current user specified (-x) input.",
+          "types::ID InputType = types::TY_Nothing;"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15256267109356037303"
+          ],
+          "structured": [
+            "v15256267109356037303"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 1,
+        "topic": 1,
+        "name": "complete-hlsl-branch-scope",
+        "anchors": [
+          "case llvm::Triple::Vulkan:",
+          "case llvm::Triple::ShaderModel:",
+          "Target.getArch() == llvm::Triple::spirv32",
+          "Target.getArch() == llvm::Triple::spirv64",
+          "!usesInput(Args, types::isHLSL)",
+          "std::make_unique<toolchains::HLSLToolChain>"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v16748591830955464422"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 1,
+        "topic": 1,
+        "name": "effective-target-computation",
+        "anchors": [
+          "static llvm::Triple computeTargetTriple",
+          "options::OPT_m64"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v4462512152088567747"
+          ],
+          "structured": [
+            "v4462512152088567747"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 1,
+        "topic": 1,
+        "name": "clang-cl-language-existing-test",
+        "anchors": [
+          "/TC",
+          "/TP"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": [
+            "v15256267109356037303"
+          ]
+        },
+        "change": "gained"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "toolchain-cache-key",
+        "anchors": [
+          "auto &TC = ToolChains[Target.str()];"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v16748591830955464422"
+          ],
+          "structured": [
+            "v18406153573121058748"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "tracked-input-language",
+        "anchors": [
+          "// Track the current user specified (-x) input.",
+          "types::ID InputType = types::TY_Nothing;"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ],
+          "structured": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "complete-hlsl-branch-scope",
+        "anchors": [
+          "case llvm::Triple::Vulkan:",
+          "case llvm::Triple::ShaderModel:",
+          "Target.getArch() == llvm::Triple::spirv32",
+          "Target.getArch() == llvm::Triple::spirv64",
+          "!usesInput(Args, types::isHLSL)",
+          "std::make_unique<toolchains::HLSLToolChain>"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": []
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "input-language-predicate",
+        "anchors": [
+          "template <typename F> static bool usesInput",
+          "Fn(types::lookupTypeForTypeSpecifier(A->getValue()))"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15984997637524446452"
+          ],
+          "structured": [
+            "v15984997637524446452"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "effective-target-computation",
+        "anchors": [
+          "static llvm::Triple computeTargetTriple",
+          "options::OPT_m64"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v4462512152088567747"
+          ],
+          "structured": [
+            "v4462512152088567747"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "clang-cl-language-existing-test",
+        "anchors": [
+          "/TC",
+          "/TP"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v3745555973717331211"
+          ],
+          "structured": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "mode-before-parse-and-config",
+        "anchors": [
+          "getDriverMode(DriverExecutable, ArgList.slice(1))",
+          "ParseArgStrings(ArgList.slice(1)",
+          "ContainsError = loadConfigFiles();"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v13168123294867106979",
+            "v16748591830955464422"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "clang-cl-pass-through-reparse",
+        "anchors": [
+          "ParseArgStrings(CLModePassThroughArgList, /*UseDriverMode=*/false"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v3539927040460014407"
+          ],
+          "structured": [
+            "v3539927040460014407"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "dumpmachine-reports-toolchain-triple",
+        "anchors": [
+          "C.getDefaultToolChain().getTripleString()"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15256267109356037303"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 2,
+        "topic": 2,
+        "name": "default-toolchain-selection",
+        "anchors": [
+          "getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v16748591830955464422",
+            "v3539927040460014407",
+            "v15181766247145803608"
+          ],
+          "structured": [
+            "v3539927040460014407",
+            "v15181766247145803608"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 3,
+        "topic": 3,
+        "name": "toolchain-cache-key",
+        "anchors": [
+          "auto &TC = ToolChains[Target.str()];"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v18406153573121058748"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 3,
+        "topic": 3,
+        "name": "tracked-input-language",
+        "anchors": [
+          "// Track the current user specified (-x) input.",
+          "types::ID InputType = types::TY_Nothing;"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v3745555973717331211"
+          ],
+          "structured": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 3,
+        "topic": 3,
+        "name": "complete-hlsl-branch-scope",
+        "anchors": [
+          "case llvm::Triple::Vulkan:",
+          "case llvm::Triple::ShaderModel:",
+          "Target.getArch() == llvm::Triple::spirv32",
+          "Target.getArch() == llvm::Triple::spirv64",
+          "!usesInput(Args, types::isHLSL)",
+          "std::make_unique<toolchains::HLSLToolChain>"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": []
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 3,
+        "topic": 3,
+        "name": "last-target-value",
+        "anchors": [
+          "Args.getLastArg(options::OPT_target)",
+          "TargetTriple = A->getValue();"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v4462512152088567747"
+          ],
+          "structured": [
+            "v13168123294867106979",
+            "v11688441620330750236",
+            "v4462512152088567747"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 3,
+        "topic": 3,
+        "name": "default-toolchain-selection",
+        "anchors": [
+          "getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15181766247145803608",
+            "v3539927040460014407"
+          ],
+          "structured": [
+            "v15181766247145803608",
+            "v3539927040460014407"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 3,
+        "topic": 3,
+        "name": "syntax-only-final-phase",
+        "anchors": [
+          "PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)",
+          "FinalPhase = phases::Compile;"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": [
+            "v16748591830955464422"
+          ]
+        },
+        "change": "gained"
+      },
+      {
+        "stage": 3,
+        "topic": 3,
+        "name": "trailing-language-warning",
+        "anchors": [
+          "LastInputArg->getIndex() < LastXArg->getIndex()",
+          "warn_drv_unused_x"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": [
+            "v3745555973717331211"
+          ]
+        },
+        "change": "gained"
+      },
+      {
+        "stage": 3,
+        "topic": 3,
+        "name": "trailing-language-existing-test",
+        "anchors": [
+          "// CHECK: '-x c++' after last input file has no effect"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": []
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 4,
+        "topic": 1,
+        "name": "toolchain-cache-key",
+        "anchors": [
+          "auto &TC = ToolChains[Target.str()];"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v16748591830955464422"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 4,
+        "topic": 1,
+        "name": "target-width-existing-test",
+        "anchors": [
+          "// RUN: grep 'Target: x86_64-unknown-unknown' %t",
+          "// ARM64: Target: arm64-apple-macos11"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v13041622778011058903"
+          ],
+          "structured": [
+            "v14795791755596032629"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 4,
+        "topic": 1,
+        "name": "tracked-input-language",
+        "anchors": [
+          "// Track the current user specified (-x) input.",
+          "types::ID InputType = types::TY_Nothing;"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ],
+          "structured": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 4,
+        "topic": 1,
+        "name": "complete-hlsl-branch-scope",
+        "anchors": [
+          "case llvm::Triple::Vulkan:",
+          "case llvm::Triple::ShaderModel:",
+          "Target.getArch() == llvm::Triple::spirv32",
+          "Target.getArch() == llvm::Triple::spirv64",
+          "!usesInput(Args, types::isHLSL)",
+          "std::make_unique<toolchains::HLSLToolChain>"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v16748591830955464422",
+            "v11435493478623490365"
+          ],
+          "structured": [
+            "v11435493478623490365"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 4,
+        "topic": 1,
+        "name": "input-language-predicate",
+        "anchors": [
+          "template <typename F> static bool usesInput",
+          "Fn(types::lookupTypeForTypeSpecifier(A->getValue()))"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15984997637524446452"
+          ],
+          "structured": [
+            "v15984997637524446452"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 4,
+        "topic": 1,
+        "name": "effective-target-computation",
+        "anchors": [
+          "static llvm::Triple computeTargetTriple",
+          "options::OPT_m64"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v4462512152088567747"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 4,
+        "topic": 1,
+        "name": "clang-cl-language-existing-test",
+        "anchors": [
+          "/TC",
+          "/TP"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v3745555973717331211"
+          ],
+          "structured": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "toolchain-cache-key",
+        "anchors": [
+          "auto &TC = ToolChains[Target.str()];"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": []
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "tracked-input-language",
+        "anchors": [
+          "// Track the current user specified (-x) input.",
+          "types::ID InputType = types::TY_Nothing;"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v3745555973717331211"
+          ],
+          "structured": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "complete-hlsl-branch-scope",
+        "anchors": [
+          "case llvm::Triple::Vulkan:",
+          "case llvm::Triple::ShaderModel:",
+          "Target.getArch() == llvm::Triple::spirv32",
+          "Target.getArch() == llvm::Triple::spirv64",
+          "!usesInput(Args, types::isHLSL)",
+          "std::make_unique<toolchains::HLSLToolChain>"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": [
+            "v11435493478623490365"
+          ]
+        },
+        "change": "gained"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "input-language-predicate",
+        "anchors": [
+          "template <typename F> static bool usesInput",
+          "Fn(types::lookupTypeForTypeSpecifier(A->getValue()))"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15984997637524446452"
+          ],
+          "structured": [
+            "v15984997637524446452"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "effective-target-computation",
+        "anchors": [
+          "static llvm::Triple computeTargetTriple",
+          "options::OPT_m64"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v4462512152088567747"
+          ],
+          "structured": [
+            "v4462512152088567747"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "clang-cl-language-existing-test",
+        "anchors": [
+          "/TC",
+          "/TP"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v3745555973717331211"
+          ],
+          "structured": [
+            "v15256267109356037303",
+            "v3745555973717331211"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "mode-before-parse-and-config",
+        "anchors": [
+          "getDriverMode(DriverExecutable, ArgList.slice(1))",
+          "ParseArgStrings(ArgList.slice(1)",
+          "ContainsError = loadConfigFiles();"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v13168123294867106979"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "clang-cl-pass-through-reparse",
+        "anchors": [
+          "ParseArgStrings(CLModePassThroughArgList, /*UseDriverMode=*/false"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v13168123294867106979",
+            "v3539927040460014407"
+          ],
+          "structured": [
+            "v3539927040460014407"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "dumpmachine-reports-toolchain-triple",
+        "anchors": [
+          "C.getDefaultToolChain().getTripleString()"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": []
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 5,
+        "topic": 2,
+        "name": "default-toolchain-selection",
+        "anchors": [
+          "getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v3539927040460014407"
+          ],
+          "structured": [
+            "v3539927040460014407",
+            "v15181766247145803608"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "toolchain-cache-key",
+        "anchors": [
+          "auto &TC = ToolChains[Target.str()];"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v18406153573121058748"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "tracked-input-language",
+        "anchors": [
+          "// Track the current user specified (-x) input.",
+          "types::ID InputType = types::TY_Nothing;"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15256267109356037303"
+          ],
+          "structured": [
+            "v15256267109356037303"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "complete-hlsl-branch-scope",
+        "anchors": [
+          "case llvm::Triple::Vulkan:",
+          "case llvm::Triple::ShaderModel:",
+          "Target.getArch() == llvm::Triple::spirv32",
+          "Target.getArch() == llvm::Triple::spirv64",
+          "!usesInput(Args, types::isHLSL)",
+          "std::make_unique<toolchains::HLSLToolChain>"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": [
+            "v11435493478623490365"
+          ]
+        },
+        "change": "gained"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "last-target-value",
+        "anchors": [
+          "Args.getLastArg(options::OPT_target)",
+          "TargetTriple = A->getValue();"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v4462512152088567747"
+          ],
+          "structured": [
+            "v13168123294867106979",
+            "v4462512152088567747"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "default-toolchain-selection",
+        "anchors": [
+          "getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v3539927040460014407"
+          ],
+          "structured": [
+            "v15181766247145803608",
+            "v3539927040460014407"
+          ]
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "syntax-only-final-phase",
+        "anchors": [
+          "PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)",
+          "FinalPhase = phases::Compile;"
+        ],
+        "anchorOwners": {
+          "shared": [
+            "v15589237142360696383"
+          ],
+          "structured": []
+        },
+        "change": "lost"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "trailing-language-warning",
+        "anchors": [
+          "LastInputArg->getIndex() < LastXArg->getIndex()",
+          "warn_drv_unused_x"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": []
+        },
+        "change": "unchanged"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "syntax-only-no-output-action",
+        "anchors": [
+          "return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": [
+            "v11435493478623490365"
+          ]
+        },
+        "change": "gained"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "frontend-job-construction",
+        "anchors": [
+          "T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": [
+            "v5922025795098484528"
+          ]
+        },
+        "change": "gained"
+      },
+      {
+        "stage": 6,
+        "topic": 3,
+        "name": "trailing-language-existing-test",
+        "anchors": [
+          "// CHECK: '-x c++' after last input file has no effect"
+        ],
+        "anchorOwners": {
+          "shared": [],
+          "structured": []
+        },
+        "change": "unchanged"
+      }
+    ],
+    "answeringModelCalls": 0,
+    "productionAdoption": false
+  },
+  "answeringModelCalls": 0,
+  "productionAdoption": false,
+  "qualityAccepted": false,
+  "tokenReductionMeasured": false
+}

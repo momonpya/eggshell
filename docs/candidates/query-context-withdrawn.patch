@@ -1,0 +1,276 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -20,0 +21,2 @@
++
++public import tools.QueryLiterals
+@@ -2237,6 +2239,6 @@
+-  (located ++ original).eraseDups
+-
+-/-- Refine every admitted source with the question-focused body order,
+-including primary search entries. Retain the initial cues as additional
+-candidates; an entry's old command must not freeze its body-position order.
+-No match, source identity or completion authority is changed here. -/
++  (original ++ located).eraseDups
++
++/-- Initial current-question nominations retain their ranked precedence.
++Source-only focus adds positions after that demand, including for owners
++reached only through the graph. This changes neither source identity nor
++Match/completion authority. -/
+@@ -2259 +2261 @@
+-      refine ⟨(refined.2 ++ positions).eraseDups, List.mem_append_left _ ?_, ?_⟩
++      refine ⟨(positions ++ refined.2).eraseDups, List.mem_append_left _ ?_, ?_⟩
+@@ -2261 +2263 @@
+-      · exact List.mem_eraseDups.mpr (List.mem_append_right _ present)
++      · exact List.mem_eraseDups.mpr (List.mem_append_left _ present)
+@@ -3273 +3275 @@
+-  let initialBefore := min (2 * spare / 3) (range.start - lower)
++  let initialBefore := min (spare / 2) (range.start - lower)
+@@ -3565,0 +3568,40 @@
++/-- The floor estimator reserves these same two independent original
++contexts. Offer them before other cues so the promised floor transports the
++actual nominated observations, including their nearby conditions/results. -/
++def prepareMinimumCueViews (records : List (ContextSpan source))
++    (heads : List (Nat × Option Nat)) (decoded : Option (DecodedLayout source))
++    (ranked : List (EvidenceRange source)) : List (EvidenceView source) :=
++  match ranked.head? with
++  | none => []
++  | some first =>
++      let independent := ranked.find? fun other =>
++        other.stop ≤ first.start || first.stop ≤ other.start
++      (first :: independent.toList).filterMap fun cue =>
++        let context := preferredCueContext records heads cue
++        match decoded with
++        | none => some (.original context)
++        | some layout => (decodedEvidenceUsing? layout context).map EvidenceView.decoded
++
++/-- Keep the original cue and its controlling section together. Nearby
++consequences are separate budget proposals, not part of every cue's floor. -/
++def scopedCueMinimum (records : List (ContextSpan source))
++    (heads : List (Nat × Option Nat)) (cue complete : EvidenceRange source) : EvidenceRange source :=
++  let scope := prerequisiteContextRange records heads cue
++  if bounds : scope.start < complete.start ∧ complete.stop - scope.start ≤ 2048 then
++    ⟨scope.start, complete.stop, Nat.lt_trans bounds.1 complete.ordered,
++      complete.within, bounds.2⟩
++  else complete
++
++theorem scoped_cue_minimum_retains_complete
++    (records : List (ContextSpan source)) (heads : List (Nat × Option Nat))
++    (cue complete : EvidenceRange source) (position : Nat)
++    (covered : complete.covers position) :
++    (scopedCueMinimum records heads cue complete).covers position := by
++  unfold scopedCueMinimum
++  dsimp only
++  split
++  · rename_i bounds
++    simp only [EvidenceRange.covers] at *
++    omega
++  · exact covered
++
+@@ -3582,6 +3624,3 @@
+-    let scope := prerequisiteContextRange records scopedHeads range
+-    let required := if bounds : scope.start < required.start ∧ required.stop - scope.start ≤ 2048 then
+-      (⟨scope.start, required.stop, Nat.lt_trans bounds.1 required.ordered,
+-        required.within, bounds.2⟩ : EvidenceRange source)
+-      else required
+-    (complete, required, coherent)
++    let minimal := scopedCueMinimum records scopedHeads range complete
++    let required := scopedCueMinimum records scopedHeads range required
++    (minimal, required, coherent)
+@@ -3591 +3630 @@
+-  let coverage := candidates.map (fun (_, required, _) => required)
++  let coverage := candidates.map (fun (minimal, _, _) => minimal)
+@@ -3596 +3635 @@
+-    if required.start == complete.start && required.stop == complete.stop then none else some complete
++    if required.start == complete.start && required.stop == complete.stop then none else some required
+@@ -3619,6 +3658,3 @@
+-    let scope := prerequisiteContextRange records scopedHeads range
+-    let required := if bounds : scope.start < required.start ∧ required.stop - scope.start ≤ 2048 then
+-      (⟨scope.start, required.stop, Nat.lt_trans bounds.1 required.ordered,
+-        required.within, bounds.2⟩ : EvidenceRange source)
+-      else required
+-    (complete, required, coherent)
++    let minimal := scopedCueMinimum records scopedHeads range complete
++    let required := scopedCueMinimum records scopedHeads range required
++    (minimal, required, coherent)
+@@ -3628 +3664 @@
+-  let coverage := candidates.map (fun (_, required, _) => required)
++  let coverage := candidates.map (fun (minimal, _, _) => minimal)
+@@ -3633 +3669 @@
+-    if required.start == complete.start && required.stop == complete.stop then none else some complete
++    if required.start == complete.start && required.stop == complete.stop then none else some required
+@@ -4047,2 +4083,3 @@
+-Every alternative retains its preceding fragments and its control fields;
+-the original minimum remains the fallback. A pointer never replaces a cue. -/
++The first compatible citation couples its source. Remaining numerical and
++citation offers compete by rendered size, preserving all earlier fragments
++and control fields. The original minimum remains the fallback. -/
+@@ -4050,0 +4088,12 @@
++  -- Retain the first compatible reference as the coupled-source minimum.
++  -- Further historical context has no precedence over current-query context:
++  -- merge their already rendered offers by actual UTF-8 size.
++  let firstReference := references.findIdx? fun candidate =>
++    match plan.1.context, candidate.context with
++    | some before, some offered => (checkedContextExtension before offered).isSome
++    | _, _ => false
++  let offers := match firstReference with
++    | none => (plan.2 ++ references).mergeSort (fun a b => a.text.utf8ByteSize ≤ b.text.utf8ByteSize)
++    | some index => references.take (index + 1) ++
++        (plan.2 ++ references.drop (index + 1)).mergeSort
++          (fun a b => a.text.utf8ByteSize ≤ b.text.utf8ByteSize)
+@@ -4053 +4102 @@
+-  for candidate in references ++ plan.2 do
++  for candidate in offers do
+@@ -4311 +4360,3 @@
+-          let fixed := required ++ prepareContextViews records heads decoded
++          let reservedViews := prepareMinimumCueViews records heads decoded
++            (rankedContextRanges source (work.length + 1) windows)
++          let fixed := reservedViews ++ required ++ prepareContextViews records heads decoded
+@@ -4462 +4513,3 @@
+-          let fixed := required ++ prepareContextViews records heads decoded
++          let reservedViews := prepareMinimumCueViews records heads decoded
++            (rankedContextRanges source (work.length + 1) windows)
++          let fixed := reservedViews ++ required ++ prepareContextViews records heads decoded
+@@ -4797 +4850 @@
+-  exact Or.inr nominated
++  exact Or.inl nominated
+@@ -4802 +4855 @@
+-  exact Or.inl nominated
++  exact Or.inr nominated
+@@ -4958 +5011,3 @@
+-      let windows := sourceContextWindows (positions.getD []) referenced
++      let windows := QueryLiterals.windows (requestQuestion.getD current)
++        (evidenceSearchWindows first.matched.edge)
++        (sourceContextWindows (positions.getD []) referenced)
+@@ -4978 +5033,3 @@
+-      let windows := sourceContextWindows (positions.getD []) referenced
++      let windows := QueryLiterals.windows (requestQuestion.getD current)
++        (evidenceSearchWindows source.owner)
++        (sourceContextWindows (positions.getD []) referenced)
+@@ -5127,3 +5184,3 @@
+-      let coherence := fun (slice : TransportSlice) =>
+-        if isEntry slice || slice.owner.any (fun owner => referenceEvidence.any (·.1 == owner))
+-        then 0 else 1
++      -- Admission minima share one packet before any discretionary
++      -- enlargement. Historical citations locate original context; they
++      -- cannot reserve an enrichment group ahead of other observations.
+@@ -5131 +5188 @@
+-        match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference coherence with
++        match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference with
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -263,0 +264,3 @@
++          ``Eggshell.Plugin.prepareMinimumCueViews,
++          ``Eggshell.QueryLiterals.windows,
++          ``Eggshell.Plugin.scopedCueMinimum,
+@@ -1355,0 +1359,4 @@
++    ``Eggshell.QueryLiterals.window_is_original,
++    ``Eggshell.QueryLiterals.window_count_bounded,
++    ``Eggshell.QueryLiterals.windows_distinct,
++    ``Eggshell.Plugin.scoped_cue_minimum_retains_complete,
+--- /dev/null
++++ b/tools/QueryLiterals.lean
+@@ -0,0 +1,69 @@
++module
++public import Eggshell.SearchRank
++public import tools.IdentifierParts
++@[expose] public section
++
++namespace Eggshell.QueryLiterals
++
++def nameChar (c : Char) : Bool := RetrievalResearch.Unicode.letterNumber c || c == '_'
++
++/-- Option-shaped text from the current question is a retrieval hint. Negative
++numbers, prose-internal hyphens and standalone list markers supply no hint. -/
++def query (text : String) : List (List String) := Id.run do
++  let chars := text.toList.toArray
++  let mut result := []
++  for i in [:chars.size] do
++    if chars[i]! != '-' || (i > 0 && (nameChar chars[i-1]! || chars[i-1]! == '-')) then continue
++    let mut first := i
++    while first < chars.size && chars[first]! == '-' do first := first + 1
++    if first == chars.size || !RetrievalResearch.Unicode.letterNumber chars[first]! || chars[first]!.isDigit then continue
++    let mut last := first
++    while last < chars.size && (nameChar chars[last]! || chars[last]! == '-') do last := last + 1
++    let parts := IdentifierParts.parts (fun _ => false) (String.ofList ((chars.toList.drop first).take (last-first)))
++    if !parts.isEmpty && !result.contains parts then result := result ++ [parts]
++  return result
++
++def identifiers (text : String) : List (List String) := Id.run do
++  let mut result : Array (List String) := #[]
++  let mut current : List Char := []
++  for c in text.toList do
++    if nameChar c then current := c :: current
++    else if !current.isEmpty then
++      result := result.push (IdentifierParts.parts (fun _ => false) (String.ofList current.reverse))
++      current := []
++  if !current.isEmpty then
++    result := result.push (IdentifierParts.parts (fun _ => false) (String.ofList current.reverse))
++  return result.toList
++
++/-- Match complete trailing identifier components, preserving component order.
++This is advice only; no prefix vocabulary, option alias table or Work identity
++is inferred from a spelling resemblance. -/
++def suffix (literal identifier : List String) : Bool :=
++  literal.length ≤ identifier.length && identifier.drop (identifier.length-literal.length) == literal
++
++def windows (question : String) (documents : List String) (ranked : List Nat) : List Nat :=
++  let literals := query question
++  let words := if literals.isEmpty then [] else documents.map identifiers
++  let channel := fun (literal : List String) (structured : Bool) =>
++    let matching := (words.zipIdx.filter fun (names,_) => names.any fun identifier =>
++      (!structured || literal.length < identifier.length) && suffix literal identifier).map Prod.snd
++    (ranked.filter matching.contains ++ matching.filter (fun index => !ranked.contains index)).toArray
++  let primary := literals.map fun literal => channel literal true
++  let channels := literals.map fun literal => channel literal false
++  let weave := fun (rows : List (Array Nat)) =>
++    (List.range documents.length).flatMap fun rank => rows.filterMap (·[rank]?)
++  let hints := weave primary ++ weave channels
++  SearchRank.select documents.length ranked.length [] (hints ++ ranked)
++
++theorem window_is_original (question : String) (documents : List String) (ranked : List Nat)
++    (index : Nat) (present : index ∈ windows question documents ranked) : index < documents.length :=
++  SearchRank.selected_is_existing _ _ _ _ _ present
++
++theorem window_count_bounded (question : String) (documents : List String) (ranked : List Nat) :
++    (windows question documents ranked).length ≤ ranked.length :=
++  SearchRank.selected_within_budget _ _ _ _
++
++theorem windows_distinct (question : String) (documents : List String) (ranked : List Nat) :
++    (windows question documents ranked).Nodup := SearchRank.selected_no_duplicates _ _ _ _
++
++end Eggshell.QueryLiterals
+--- /dev/null
++++ b/tools/QueryLiteralsTests.lean
+@@ -0,0 +1,23 @@
++import tools.QueryLiterals
++open Eggshell
++
++def main : IO Unit := do
++  unless QueryLiterals.query "Compare --alpha-beta, -z and --gamma. A tool-chain, -1 and - list are prose." ==
++      [["alpha","beta"],["z"],["gamma"]] do
++    throw (IO.userError "Option-shaped question hints lost boundaries or invented prose/numeric hints")
++  unless QueryLiterals.suffix ["alpha","beta"] ["prefix","alpha","beta"] &&
++      !QueryLiterals.suffix ["alpha","beta"] ["alpha","beta","tail"] &&
++      !QueryLiterals.suffix ["alpha","beta"] ["beta","alpha"] do
++    throw (IO.userError "Identifier hint suffix changed order or accepted a partial trailing component")
++  let selected := QueryLiterals.windows "Compare --alpha and --beta" [
++    "common surrounding prose", "PREFIX_alpha", "PREFIX_beta", "more prose"] [0,1,2]
++  unless selected == [1,2,0] do
++    throw (IO.userError "Different explicit literals were displaced by generic prose")
++  unless QueryLiterals.windows "ordinary question" ["first","second"] [1,0] == [1,0] do
++    throw (IO.userError "A question without literal hints changed a valid existing order")
++  unless QueryLiterals.windows "--alpha" ["PREFIX_alpha"] [] == [] do
++    throw (IO.userError "Literal hints manufactured a cue budget")
++  unless QueryLiterals.windows "--alpha --beta" [
++      "alpha appears in prose", "PREFIX_alpha", "PREFIX_beta", "beta in prose"] [0,3,1] == [1,2,0] do
++    throw (IO.userError "Incidental prose displaced an explicit structured identifier hint")
++  IO.println "query literals: option boundaries, ordered identifier suffixes, multi-literal coverage, ordinary ranking and unchanged cue budget passed"
+--- a/lakefile.lean
++++ b/lakefile.lean
+@@ -165,0 +166,6 @@
++
++lean_lib QueryLiteralsResearch where
++  roots := #[`tools.QueryLiterals]
++
++lean_exe query_literals_tests where
++  root := `tools.QueryLiteralsTests
