@@ -1,0 +1,314 @@
+{
+  "scope": "Readiness to run an unadopted matched comparison. This is not answer-quality acceptance, complete history coverage or measured token improvement.",
+  "runtimeSha256": "5d50ea0eb2f789473e38abdc0a93653fa2fd269e20bba691b70d60b1ca0973e4",
+  "construction": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/anchor-minimum-context-20261022",
+  "qualification": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/anchor-minimum-context-native-all-20261022",
+  "ordinaryBodyAudit": [
+    {
+      "stage": 1,
+      "byteIdentical": true
+    },
+    {
+      "stage": 2,
+      "byteIdentical": true
+    },
+    {
+      "stage": 4,
+      "byteIdentical": true
+    },
+    {
+      "stage": 5,
+      "byteIdentical": true
+    }
+  ],
+  "explicitFacts": [
+    {
+      "stage": 3,
+      "name": "last-target-value",
+      "owners": [
+        "v13168123294867106979",
+        "v11688441620330750236"
+      ],
+      "delivered": true
+    },
+    {
+      "stage": 3,
+      "name": "syntax-only-final-phase",
+      "owners": [
+        "v16748591830955464422"
+      ],
+      "delivered": true
+    },
+    {
+      "stage": 3,
+      "name": "trailing-language-warning",
+      "owners": [
+        "v3745555973717331211"
+      ],
+      "delivered": true
+    },
+    {
+      "stage": 6,
+      "name": "last-target-value",
+      "owners": [
+        "v13168123294867106979"
+      ],
+      "delivered": true
+    },
+    {
+      "stage": 6,
+      "name": "syntax-only-final-phase",
+      "owners": [
+        "v16748591830955464422"
+      ],
+      "delivered": true
+    },
+    {
+      "stage": 6,
+      "name": "trailing-language-warning",
+      "owners": [],
+      "delivered": false
+    }
+  ],
+  "allTrackedExplicitFactsDelivered": false,
+  "nativeIntegrityVerified": true,
+  "maxHookMs": 12711.919958,
+  "constructionPeakRssKiB": 3045792,
+  "nativePeakRssKiB": 1416560,
+  "relevanceReview": {
+    "runtimeSha256": "5d50ea0eb2f789473e38abdc0a93653fa2fd269e20bba691b70d60b1ca0973e4",
+    "nativeIntegrityVerified": true,
+    "ordinaryBodiesPreserved": [
+      {
+        "stage": 1,
+        "byteIdentical": true
+      },
+      {
+        "stage": 2,
+        "byteIdentical": true
+      },
+      {
+        "stage": 4,
+        "byteIdentical": true
+      },
+      {
+        "stage": 5,
+        "byteIdentical": true
+      }
+    ],
+    "enoughRelevantSavedEvidenceForComparison": true,
+    "scope": "Readiness to run an unadopted matched comparison. This is not answer-quality acceptance, complete history coverage or measured token improvement.",
+    "questionReview": [
+      {
+        "stages": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "finding": "Actual questions and snapshots match; all four native bodies are byte-identical to Shared-minima. Their question-relevant saved observations are preserved."
+      },
+      {
+        "stages": [
+          3
+        ],
+        "finding": "The actual question names target, language and syntax-only options. Their target value, phase condition/consequence and trailing-language condition/warning now occur at original stored owners."
+      },
+      {
+        "stages": [
+          6
+        ],
+        "finding": "The actual question receives target selection, explicit language-argument/InputType processing, syntax-only phase and job-construction context. The particular trailing-language warning is absent, as in Shared-minima. This known boundary remains in the audit; whole copies of all old examples are not required for model comparison."
+      }
+    ],
+    "knownLimits": [
+      {
+        "stage": 6,
+        "fact": "trailing-language-warning",
+        "delivered": false
+      },
+      {
+        "stages": [
+          3,
+          6
+        ],
+        "fact": "toolchain-cache-key",
+        "delivered": false
+      }
+    ],
+    "nextComparison": {
+      "calls": 54,
+      "model": "gpt-5.6-luna",
+      "effort": "xhigh",
+      "repetitions": 3,
+      "stages": 6,
+      "start": "topic 1 repetition 0",
+      "oldAnsweringCallsReused": 0,
+      "totalTokensIncludeCachedInputAndFailedTrials": true
+    },
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "qualityAccepted": false,
+    "tokenReductionMeasured": false
+  },
+  "sourceProtected": {
+    "Eggshell/SearchProvider.lean": "375d739788c47d15e7249b2833dc5a15d85a02014bc3a81211c5c0c32714116c",
+    "Eggshell/SemanticMatcher.lean": "a12a773dd78ce009a2af348a0486c0eef35ea6d5d95d9989263f23835f42e3c5",
+    "runtime/embedding.py": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+    "Eggshell/MiniLM.lean": "15fe872280a9819f39c12a360235523b23ada07ed5f2967d34b16634112a71e7",
+    "Eggshell/PluginHooks.lean": "16881d42f2d0a81cb6b4e4063d9c76c8b842fcec2863b74d7019bfdc1146c480",
+    "Eggshell/Worker.lean": "d59ca140da3562d6c10ed09dab38e307131b8cfc6f4383ffac455eebbfb407eb",
+    "Eggshell/SourceEvidence.lean": "fc087f4bdd058a47b35a5c01c847711bf46e576f7af3c6038fd5758194f41ce1",
+    "Eggshell/Matcher.lean": "2790c4b56001c4b94e15a08c14a970005f6661f4c7dfe9a33963e908afc03756"
+  },
+  "answeringModelCalls": 0,
+  "productionAdoption": false,
+  "qualityAccepted": false,
+  "tokenReductionMeasured": false,
+  "warmSourceAudit": {
+    "current415Protected": {
+      "Eggshell/SearchProvider.lean": true,
+      "Eggshell/SemanticMatcher.lean": true,
+      "runtime/embedding.py": true,
+      "Eggshell/MiniLM.lean": true,
+      "Eggshell/PluginHooks.lean": true,
+      "Eggshell/Worker.lean": true,
+      "Eggshell/SourceEvidence.lean": true,
+      "Eggshell/Matcher.lean": true
+    },
+    "profiles": [
+      {
+        "stage": 1,
+        "purpose": "discovery",
+        "source": {
+          "absent": 0,
+          "hit": 1919,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 1,
+        "purpose": "focus",
+        "source": {
+          "absent": 0,
+          "hit": 1919,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 2,
+        "purpose": "discovery",
+        "source": {
+          "absent": 0,
+          "hit": 2433,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 2,
+        "purpose": "focus",
+        "source": {
+          "absent": 0,
+          "hit": 2433,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 3,
+        "purpose": "discovery",
+        "source": {
+          "absent": 0,
+          "hit": 2447,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 3,
+        "purpose": "focus",
+        "source": {
+          "absent": 0,
+          "hit": 2447,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 4,
+        "purpose": "discovery",
+        "source": {
+          "absent": 0,
+          "hit": 2725,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 4,
+        "purpose": "focus",
+        "source": {
+          "absent": 0,
+          "hit": 2725,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 5,
+        "purpose": "discovery",
+        "source": {
+          "absent": 0,
+          "hit": 2773,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 5,
+        "purpose": "focus",
+        "source": {
+          "absent": 0,
+          "hit": 2773,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 6,
+        "purpose": "discovery",
+        "source": {
+          "absent": 0,
+          "hit": 2788,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      },
+      {
+        "stage": 6,
+        "purpose": "focus",
+        "source": {
+          "absent": 0,
+          "hit": 2788,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0
+      }
+    ],
+    "allSourceHit": true,
+    "sourceEncodeUs": 0
+  },
+  "comparisonPlan": {
+    "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022",
+    "calls": 54,
+    "model": "gpt-5.6-luna",
+    "effort": "xhigh",
+    "seedAcquisition": false,
+    "oldAnsweringCallsReused": 0,
+    "qualityAccepted": false,
+    "productionAdoption": false
+  }
+}

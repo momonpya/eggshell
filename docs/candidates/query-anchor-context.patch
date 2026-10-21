@@ -1,0 +1,366 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -20,0 +21,2 @@
++
++public import tools.QueryLiterals
+@@ -1924,0 +1927,2 @@
++  /-- Actual current-question anchor windows; planning metadata, never authority. -/
++  anchors : List Nat := []
+@@ -3267 +3271 @@
+-    (allowance : Nat := 2048) : EvidenceRange source :=
++    (allowance : Nat := 2048) (balanced : Bool := false) : EvidenceRange source :=
+@@ -3273 +3277 @@
+-  let initialBefore := min (2 * spare / 3) (range.start - lower)
++  let initialBefore := min (if balanced then spare / 2 else 2 * spare / 3) (range.start - lower)
+@@ -3294,9 +3298,12 @@
+-    (covered : range.covers position) (allowance : Nat := 2048) :
+-    (coherentRecordContext records heads range allowance).covers position := by
+-  unfold coherentRecordContext
+-  dsimp only
+-  split
+-  · rename_i bounds
+-    simp only [EvidenceRange.covers] at *
+-    exact ⟨Nat.le_trans bounds.1 covered.1, Nat.lt_of_lt_of_le covered.2 bounds.2.1⟩
+-  · exact record_context_retains_original records range position covered
++    (covered : range.covers position) (allowance : Nat := 2048) (balanced : Bool := false) :
++    (coherentRecordContext records heads range allowance balanced).covers position := by
++  cases balanced
++  all_goals
++    unfold coherentRecordContext
++    dsimp only
++    simp only [Bool.false_eq_true, ↓reduceIte]
++    split
++    · rename_i bounds
++      simp only [EvidenceRange.covers] at *
++      exact ⟨Nat.le_trans bounds.1 covered.1, Nat.lt_of_lt_of_le covered.2 bounds.2.1⟩
++    · exact record_context_retains_original records range position covered
+@@ -3558 +3565 @@
+-def preferredCueContext (records : List (ContextSpan source))
++def cueContextWithBalance (balanced : Bool) (records : List (ContextSpan source))
+@@ -3564 +3571,5 @@
+-  else coherentRecordContext records heads complete
++  else coherentRecordContext records heads complete 2048 balanced
++
++def preferredCueContext (records : List (ContextSpan source))
++    (heads : List (Nat × Option Nat)) (range : EvidenceRange source) : EvidenceRange source :=
++  cueContextWithBalance false records heads range
+@@ -3807,0 +3819,29 @@
++/-- Explicit query anchors receive their two independent complete contexts.
++Normal semantic context retains its existing allocation and source scope. -/
++def prepareAnchorViews (records : List (ContextSpan source))
++    (heads : List (Nat × Option Nat)) (decoded : Option (DecodedLayout source))
++    (ranked : List (EvidenceRange source)) : List (EvidenceView source) :=
++  match ranked.head? with
++  | none => []
++  | some first =>
++      let independent := ranked.find? fun other =>
++        other.stop ≤ first.start || first.stop ≤ other.start
++      (first :: independent.toList).filterMap fun cue =>
++        let context := cueContextWithBalance true records heads cue
++        match decoded with
++        | none => some (.original context)
++        | some layout => (decodedEvidenceUsing? layout context).map EvidenceView.decoded
++
++def ownerAnchorMinimum (owner : OutcomeEdge) (anchors : List Nat) : Nat :=
++  if anchors.isEmpty then 0 else
++    match Matcher.atomText? owner.outcome, Matcher.atomText? owner.work with
++    | some text, some work =>
++        if text.length ≤ 4096 then 0 else
++          let decoded := (decodedToolText? text).map DecodedLayout.make
++          let records := contextRecordSpans text decoded
++          let heads := contextStructureHeads text decoded
++          ((prepareAnchorViews records heads decoded
++            (rankedContextRanges text (work.length + 1) anchors)).map
++              fun view => view.range.stop - view.range.start).sum
++    | _, _ => 0
++
+@@ -3974,0 +4015,16 @@
++/-- Only actual explicit anchors can increase a source's minimum. Empty
++anchor metadata yields exactly the existing ordinary context levels. -/
++def ownerContextLevels (owner : OutcomeEdge) (windows anchors : List Nat)
++    (share limit : Nat) : List Nat :=
++  let wanted := ownerContextDemand owner windows
++  let ordinary := ownerContextAllowances owner windows share limit
++  if anchors.isEmpty then contextAllowanceLevels wanted ordinary else
++    let minimum := max (ownerAnchorMinimum owner anchors) (ordinary.head?.getD 0)
++    contextAllowanceLevels (max wanted minimum)
++      ((minimum :: ordinary).filter (fun amount => minimum ≤ amount))
++
++theorem ordinary_context_levels_preserved (owner : OutcomeEdge) (windows : List Nat)
++    (share limit : Nat) : ownerContextLevels owner windows [] share limit =
++      contextAllowanceLevels (ownerContextDemand owner windows)
++        (ownerContextAllowances owner windows share limit) := rfl
++
+@@ -4064,3 +4120,2 @@
+-/-- A supporting source is useful as the coupled observation and its
+-located reference, not as an unrelated interior with the reference omitted.
+-The checked union already retains every original minimum fragment. -/
++/-- Unanchored support retains its coupled reference minimum. An explicit
++current-question cue is useful independently; its references remain optional. -/
+@@ -4069,3 +4124,15 @@
+-  match plan.2 with
+-  | [] => plan
+-  | first :: rest => (first,rest)
++  if !plan.1.anchors.isEmpty then plan else
++    match plan.2 with
++    | [] => plan
++    | first :: rest => (first,rest)
++
++/-- Current-question source context is already independently useful. Historical
++reference enrichment cannot raise its admission minimum and exclude that cue. -/
++theorem explicit_context_keeps_its_minimum (plan : TransportSlice × List TransportSlice)
++    (explicit : plan.1.anchors.isEmpty = false) : requireReferenceContext plan = plan := by
++  simp [requireReferenceContext, explicit]
++
++theorem ordinary_reference_minimum_preserved (plan : TransportSlice × List TransportSlice)
++    (ordinary : plan.1.anchors.isEmpty = true) :
++    requireReferenceContext plan = (match plan.2 with | [] => plan | first :: rest => (first,rest)) := by
++  simp [requireReferenceContext, ordinary]
+@@ -4293 +4360 @@
+-    (slice : TransportSlice) : Nat → Option DeliveryPart :=
++    (slice : TransportSlice) (anchors : List Nat := []) : Nat → Option DeliveryPart :=
+@@ -4311 +4378,3 @@
+-          let fixed := required ++ prepareContextViews records heads decoded
++          let anchorViews := prepareAnchorViews records heads decoded
++            (rankedContextRanges source (work.length + 1) anchors)
++          let fixed := anchorViews ++ required ++ prepareContextViews records heads decoded
+@@ -4386,2 +4455,2 @@
+-    (slice : TransportSlice) : Nat → Option TransportSlice :=
+-  let body := prepareContextualOwnerPart delivered windows owner connections sources slice
++    (slice : TransportSlice) (anchors : List Nat := []) : Nat → Option TransportSlice :=
++  let body := prepareContextualOwnerPart delivered windows owner connections sources slice anchors
+@@ -4394 +4463 @@
+-  prepareContextualOwnerSlice delivered windows owner connections sources slice contextBudget
++  prepareContextualOwnerSlice delivered windows owner connections sources slice [] contextBudget
+@@ -4410 +4479 @@
+-    (slice : TransportSlice) : Nat → Option TransportSlice :=
++    (slice : TransportSlice) (anchors : List Nat := []) : Nat → Option TransportSlice :=
+@@ -4421 +4490 @@
+-        {slice with members := selected, visibleKeys := (selected.map graphKey).eraseDups}
++        {slice with members := selected, visibleKeys := (selected.map graphKey).eraseDups} anchors
+@@ -4425 +4494 @@
+-  prepareContextualSlice delivered windows slice contextBudget
++  prepareContextualSlice delivered windows slice [] contextBudget
+@@ -4428 +4497 @@
+-    (support : SourceSupport roots all unions) : Nat → Option TransportSlice :=
++    (support : SourceSupport roots all unions) (anchors : List Nat := []) : Nat → Option TransportSlice :=
+@@ -4433 +4502 @@
+-    support.provenance (renderSourceSupport support)
++    support.provenance (renderSourceSupport support) anchors
+@@ -4437 +4506 @@
+-  prepareContextualSupportSlice delivered windows support contextBudget
++  prepareContextualSupportSlice delivered windows support [] contextBudget
+@@ -4441 +4510 @@
+-    (slice : TransportSlice) : BudgetPlan DeliveryPart :=
++    (slice : TransportSlice) (anchors : List Nat := []) : BudgetPlan DeliveryPart :=
+@@ -4462 +4531,3 @@
+-          let fixed := required ++ prepareContextViews records heads decoded
++          let anchorViews := prepareAnchorViews records heads decoded
++            (rankedContextRanges source (work.length + 1) anchors)
++          let fixed := anchorViews ++ required ++ prepareContextViews records heads decoded
+@@ -4526,3 +4597,3 @@
+-    (slice : TransportSlice) :
+-    (prepareContextualOwnerPlan delivered windows owner connections sources slice).eval =
+-      prepareContextualOwnerPart delivered windows owner connections sources slice := by
++    (slice : TransportSlice) (anchors : List Nat := []) :
++    (prepareContextualOwnerPlan delivered windows owner connections sources slice anchors).eval =
++      prepareContextualOwnerPart delivered windows owner connections sources slice anchors := by
+@@ -4538 +4609 @@
+-    (slice : TransportSlice) : BudgetPlan TransportSlice :=
++    (slice : TransportSlice) (anchors : List Nat := []) : BudgetPlan TransportSlice :=
+@@ -4549 +4620 @@
+-      (prepareContextualOwnerPlan delivered windows owner connections first.sources original).map fun data =>
++      (prepareContextualOwnerPlan delivered windows owner connections first.sources original anchors).map fun data =>
+@@ -4553,2 +4624,2 @@
+-    (slice : TransportSlice) :
+-    (prepareContextualSlicePlan delivered windows slice).eval = prepareContextualSlice delivered windows slice := by
++    (slice : TransportSlice) (anchors : List Nat := []) :
++    (prepareContextualSlicePlan delivered windows slice anchors).eval = prepareContextualSlice delivered windows slice anchors := by
+@@ -4562 +4633 @@
+-    · rw [BudgetPlan.eval_map, prepareContextualOwnerPlan_exact]
++    · rw [BudgetPlan.eval_map, prepareContextualOwnerPlan_exact (anchors := anchors)]
+@@ -4566 +4637 @@
+-    (support : SourceSupport roots all unions) : BudgetPlan TransportSlice :=
++    (support : SourceSupport roots all unions) (anchors : List Nat := []) : BudgetPlan TransportSlice :=
+@@ -4572 +4643 @@
+-    support.provenance original).map fun data =>
++    support.provenance original anchors).map fun data =>
+@@ -4576,3 +4647,3 @@
+-    (support : SourceSupport roots all unions) :
+-    (prepareContextualSupportPlan delivered windows support).eval =
+-      prepareContextualSupportSlice delivered windows support := by
++    (support : SourceSupport roots all unions) (anchors : List Nat := []) :
++    (prepareContextualSupportPlan delivered windows support anchors).eval =
++      prepareContextualSupportSlice delivered windows support anchors := by
+@@ -4581 +4652 @@
+-  rw [BudgetPlan.eval_map, prepareContextualOwnerPlan_exact]
++  rw [BudgetPlan.eval_map, prepareContextualOwnerPlan_exact (anchors := anchors)]
+@@ -4958 +5029,4 @@
+-      let windows := sourceContextWindows (positions.getD []) referenced
++      let hint := QueryLiterals.focus (requestQuestion.getD current)
++        (evidenceSearchWindows first.matched.edge) (sourceContextWindows (positions.getD []) referenced)
++      let windows := hint.windows
++      let anchors := hint.anchors
+@@ -4960,3 +5034,3 @@
+-      let render := (prepareContextualSlicePlan planningReceipts windows slice).eval
+-      let wanted := ownerContextDemand first.matched.edge windows
+-      let levels := contextAllowanceLevels wanted (ownerContextAllowances first.matched.edge windows share allowance)
++      let prepared := prepareContextualSlicePlan planningReceipts windows slice anchors
++      let render := fun amount => (prepared.eval amount).map fun slice => {slice with anchors}
++      let levels := ownerContextLevels first.matched.edge windows anchors share allowance
+@@ -4978 +5052,4 @@
+-      let windows := sourceContextWindows (positions.getD []) referenced
++      let hint := QueryLiterals.focus (requestQuestion.getD current)
++        (evidenceSearchWindows source.owner) (sourceContextWindows (positions.getD []) referenced)
++      let windows := hint.windows
++      let anchors := hint.anchors
+@@ -4980,3 +5057,3 @@
+-      let render := (prepareContextualSupportPlan planningReceipts windows source).eval
+-      let wanted := ownerContextDemand source.owner windows
+-      let levels := contextAllowanceLevels wanted (ownerContextAllowances source.owner windows share allowance)
++      let prepared := prepareContextualSupportPlan planningReceipts windows source anchors
++      let render := fun amount => (prepared.eval amount).map fun slice => {slice with anchors}
++      let levels := ownerContextLevels source.owner windows anchors share allowance
+@@ -5083 +5160 @@
+-        if isEntry slice then evidenceAdmissionPriority 0 true else
++        if isEntry slice then evidenceAdmissionPriority 0 true else if !slice.anchors.isEmpty then 1 else
+@@ -5127,3 +5204,3 @@
+-      let coherence := fun (slice : TransportSlice) =>
+-        if isEntry slice || slice.owner.any (fun owner => referenceEvidence.any (·.1 == owner))
+-        then 0 else 1
++      -- Admission minima share one packet before any discretionary
++      -- enlargement. Historical citations locate original context; they
++      -- cannot reserve an enrichment group ahead of other observations.
+@@ -5131 +5208 @@
+-        match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference coherence with
++        match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference with
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -263,0 +264,2 @@
++          ``Eggshell.Plugin.prepareAnchorViews, ``Eggshell.Plugin.ownerAnchorMinimum,
++          ``Eggshell.Plugin.ownerContextLevels, ``Eggshell.QueryLiterals.focus,
+@@ -1355,0 +1358,5 @@
++    ``Eggshell.Plugin.ordinary_context_levels_preserved,
++    ``Eggshell.Plugin.explicit_context_keeps_its_minimum,
++    ``Eggshell.Plugin.ordinary_reference_minimum_preserved,
++    ``Eggshell.QueryLiterals.window_is_original, ``Eggshell.QueryLiterals.window_count_bounded,
++    ``Eggshell.QueryLiterals.windows_distinct, ``Eggshell.QueryLiterals.anchors_are_selected,
+--- /dev/null
++++ b/tools/QueryLiterals.lean
+@@ -0,0 +1,78 @@
++module
++public import Eggshell.SearchRank
++public import tools.IdentifierParts
++@[expose] public section
++
++namespace Eggshell.QueryLiterals
++
++def nameChar (c : Char) : Bool := RetrievalResearch.Unicode.letterNumber c || c == '_'
++
++/-- Option-shaped text from the current question is a retrieval hint. Negative
++numbers, prose-internal hyphens and standalone list markers supply no hint. -/
++def query (text : String) : List (List String) := Id.run do
++  let chars := text.toList.toArray
++  let mut result := []
++  for i in [:chars.size] do
++    if chars[i]! != '-' || (i > 0 && (nameChar chars[i-1]! || chars[i-1]! == '-')) then continue
++    let mut first := i
++    while first < chars.size && chars[first]! == '-' do first := first + 1
++    if first == chars.size || !RetrievalResearch.Unicode.letterNumber chars[first]! || chars[first]!.isDigit then continue
++    let mut last := first
++    while last < chars.size && (nameChar chars[last]! || chars[last]! == '-') do last := last + 1
++    let parts := IdentifierParts.parts (fun _ => false) (String.ofList ((chars.toList.drop first).take (last-first)))
++    if !parts.isEmpty && !result.contains parts then result := result ++ [parts]
++  return result
++
++def identifiers (text : String) : List (List String) := Id.run do
++  let mut result : Array (List String) := #[]
++  let mut current : List Char := []
++  for c in text.toList do
++    if nameChar c then current := c :: current
++    else if !current.isEmpty then
++      result := result.push (IdentifierParts.parts (fun _ => false) (String.ofList current.reverse))
++      current := []
++  if !current.isEmpty then
++    result := result.push (IdentifierParts.parts (fun _ => false) (String.ofList current.reverse))
++  return result.toList
++
++/-- Match complete trailing identifier components, preserving component order.
++This is advice only; no prefix vocabulary, option alias table or Work identity
++is inferred from a spelling resemblance. -/
++def suffix (literal identifier : List String) : Bool :=
++  literal.length ≤ identifier.length && identifier.drop (identifier.length-literal.length) == literal
++
++structure Focus where
++  windows : List Nat
++  anchors : List Nat
++
++def focus (question : String) (documents : List String) (ranked : List Nat) : Focus :=
++  let literals := query question
++  let words := if literals.isEmpty then [] else documents.map identifiers
++  let channels := literals.map fun literal =>
++    let matching := (words.zipIdx.filter fun (names,_) => names.any fun identifier =>
++      literal.length < identifier.length && suffix literal identifier).map Prod.snd
++    (ranked.filter matching.contains ++ matching.filter (fun index => !ranked.contains index)).toArray
++  let hints := (List.range documents.length).flatMap fun rank => channels.filterMap (·[rank]?)
++  let selected := SearchRank.select documents.length ranked.length [] (hints ++ ranked)
++  {windows := selected, anchors := selected.filter hints.contains}
++
++def windows (question : String) (documents : List String) (ranked : List Nat) : List Nat :=
++  (focus question documents ranked).windows
++
++theorem window_is_original (question : String) (documents : List String) (ranked : List Nat)
++    (index : Nat) (present : index ∈ windows question documents ranked) : index < documents.length :=
++  SearchRank.selected_is_existing _ _ _ _ _ present
++
++theorem window_count_bounded (question : String) (documents : List String) (ranked : List Nat) :
++    (windows question documents ranked).length ≤ ranked.length :=
++  SearchRank.selected_within_budget _ _ _ _
++
++theorem windows_distinct (question : String) (documents : List String) (ranked : List Nat) :
++    (windows question documents ranked).Nodup := SearchRank.selected_no_duplicates _ _ _ _
++
++theorem anchors_are_selected (question : String) (documents : List String) (ranked : List Nat)
++    (index : Nat) (present : index ∈ (focus question documents ranked).anchors) :
++    index ∈ (focus question documents ranked).windows :=
++  (List.mem_filter.mp present).1
++
++end Eggshell.QueryLiterals
+--- /dev/null
++++ b/tools/QueryLiteralsTests.lean
+@@ -0,0 +1,26 @@
++import tools.QueryLiterals
++open Eggshell
++
++def main : IO Unit := do
++  unless QueryLiterals.query "Compare --alpha-beta, -z and --gamma. A tool-chain, -1 and - list are prose." ==
++      [["alpha","beta"],["z"],["gamma"]] do
++    throw (IO.userError "Option-shaped question hints lost boundaries or invented prose/numeric hints")
++  unless QueryLiterals.suffix ["alpha","beta"] ["prefix","alpha","beta"] &&
++      !QueryLiterals.suffix ["alpha","beta"] ["alpha","beta","tail"] &&
++      !QueryLiterals.suffix ["alpha","beta"] ["beta","alpha"] do
++    throw (IO.userError "Identifier hint suffix changed order or accepted a partial trailing component")
++  let selected := QueryLiterals.windows "Compare --alpha and --beta" [
++    "common surrounding prose", "PREFIX_alpha", "PREFIX_beta", "more prose"] [0,1,2]
++  unless selected == [1,2,0] do
++    throw (IO.userError "Different explicit literals were displaced by generic prose")
++  unless QueryLiterals.windows "ordinary question" ["first","second"] [1,0] == [1,0] do
++    throw (IO.userError "A question without literal hints changed a valid existing order")
++  unless QueryLiterals.windows "--alpha" ["PREFIX_alpha"] [] == [] do
++    throw (IO.userError "Literal hints manufactured a cue budget")
++  unless QueryLiterals.windows "--alpha --beta" [
++      "alpha appears in prose", "PREFIX_alpha", "PREFIX_beta", "beta in prose"] [0,3,1] == [1,2,0] do
++    throw (IO.userError "Incidental prose displaced an explicit structured identifier hint")
++  let direct := QueryLiterals.focus "--alpha --beta" ["prose", "PREFIX_alpha", "PREFIX_beta"] [0,1,2]
++  unless direct.anchors == [1,2] && (QueryLiterals.focus "ordinary question" ["PREFIX_alpha"] [0]).anchors.isEmpty do
++    throw (IO.userError "Literal origin metadata was lost or invented for an ordinary question")
++  IO.println "query literals: option boundaries, ordered identifier suffixes, multi-literal coverage, ordinary ranking and unchanged cue budget passed"
+--- a/lakefile.lean
++++ b/lakefile.lean
+@@ -165,0 +166,6 @@
++
++lean_lib QueryLiteralsResearch where
++  roots := #[`tools.QueryLiterals]
++
++lean_exe query_literals_tests where
++  root := `tools.QueryLiteralsTests
