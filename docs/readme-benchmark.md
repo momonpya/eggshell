@@ -1664,3 +1664,18 @@ new fixed-version run at topic 1 repetition 0 and complete topics 1/2/3 then
 retained topics 1/2/3. Do not carry old candidate results forward or replace
 the runtime midway through the sequence. The next repair must address the
 missing observations' admission, rather than tune away model variation.
+
+Two further isolated delivery proposals were rejected without answering-model
+calls. Reserving all fitting owner minima before complete-observation enrichment
+passes only 3 of 15 fixed native cases over five known saved histories. Trying
+complete alternatives before optional padding also fails the first case: the
+46-document history's original predicate observation is present, but its full
+`usesInput` excerpt is absent. Its body is byte-identical to the preceding
+proposal, so changing enrichment order alone does not fix this omission.
+Builds and bounded fitting checks pass; neither proposal passes delivery.
+`scope-context-20261021/coverage-attempts` retains the exact scripts, generated
+source, bodies, receipts and rejection record. Unadopted working files were
+withdrawn. The active runtime was not replaced, and a new token comparison has
+not started. The next genuine repair still requires a complete fixed-version
+restart from topic 1 repetition 0; these native fixtures are qualification
+evidence, not a continuation or replacement of any token-result cell.
