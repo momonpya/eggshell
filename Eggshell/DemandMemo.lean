@@ -47,22 +47,61 @@ theorem changed_request_rejected (record : Record) (request : String)
     (different : record.request ≠ request) : requestMatches record request = false := by
   simp [requestMatches, different]
 
-/-- Only the observation produced by this request can authorize its cache
-record. This certificate does not predict or memoize an external provider. -/
-structure ObservedRecord (nominations : Option (List Nat)) where
+/-- A slot hash never establishes request identity. -/
+def requestedRecord? (record : Record) (request : String) :
+    Option { record : Record // record.request = request } :=
+  if exact : requestMatches record request then
+    some ⟨record, by simpa [requestMatches] using exact⟩ else none
+
+theorem requested_record_rejects_another_request (record : Record) (request : String)
+    (different : record.request ≠ request) : requestedRecord? record request = none := by
+  simp [requestedRecord?, requestMatches, different]
+
+/-- Retain both the checked request and current external observation. -/
+structure ObservedRecord (request : String) (nominations : Option (List Nat)) where
   record : Record
+  requestExact : record.request = request
   agrees : record.nominations = nominations
 
-def observedRecord? (record : Record) (nominations : Option (List Nat)) :
-    Option (ObservedRecord nominations) :=
-  if same : record.nominations = nominations then some ⟨record, same⟩ else none
+def observedRecord? (requested : { record : Record // record.request = request })
+    (nominations : Option (List Nat)) : Option (ObservedRecord request nominations) :=
+  if same : requested.val.nominations = nominations then
+    some ⟨requested.val, requested.property, same⟩ else none
 
-theorem changed_nominations_rejected (record : Record) (nominations : Option (List Nat))
-    (changed : record.nominations ≠ nominations) : observedRecord? record nominations = none := by
+theorem changed_nominations_rejected
+    (requested : { record : Record // record.request = request }) (nominations : Option (List Nat))
+    (changed : requested.val.nominations ≠ nominations) :
+    observedRecord? requested nominations = none := by
   simp [observedRecord?, changed]
 
-theorem observed_record_has_current_nominations (checked : ObservedRecord nominations) :
+theorem observed_record_has_current_request (checked : ObservedRecord request nominations) :
+    checked.record.request = request := checked.requestExact
+
+theorem observed_record_has_current_nominations (checked : ObservedRecord request nominations) :
     checked.record.nominations = nominations := checked.agrees
+
+/-- The publisher binds the actual computed payload to its request and
+observation. These proof fields erase; the stored Record codec is unchanged. -/
+structure CapturedRecord (request payload : String) (nominations : Option (List Nat)) where
+  observed : ObservedRecord request nominations
+  responseExact : observed.record.response = payload
+
+def capture (request : String) (sources : List Source) (payload : String)
+    (reads : Option (List (List PageMap.ReadObservation))) (nominations : Option (List Nat)) :
+    CapturedRecord request payload nominations :=
+  ⟨⟨⟨request, sources, payload, reads, nominations⟩, rfl, rfl⟩, rfl⟩
+
+/-- Canonical persistence preserves the computed response, request, nominations
+and complete source/read program together; a slot cannot exchange one field. -/
+theorem captured_decode_keeps_origin (captured : CapturedRecord request payload nominations)
+    (decoded : Record) (tail : List UInt8)
+    (restored : codec.decode (codec.encode captured.observed.record ++ tail) = .ok (decoded, tail)) :
+    decoded.request = request ∧ decoded.nominations = nominations ∧ decoded.response = payload ∧
+      decoded.sources = captured.observed.record.sources ∧ decoded.reads = captured.observed.record.reads := by
+  have same := Except.ok.inj ((codec_roundtrip captured.observed.record tail).symm.trans restored)
+  have recordSame := congrArg Prod.fst same
+  cases recordSame
+  exact ⟨captured.observed.requestExact, captured.observed.agrees, captured.responseExact, rfl, rfl⟩
 
 /-- Cache metadata is not a graph input. Give its reader a separate disabled
 observer while retaining the exact immutable file/root and resource counters.
@@ -194,7 +233,8 @@ def dependenciesAgree (record : Record) (paths : List System.FilePath)
     | _, _ => return false
   return true
 
-def read (snapshot : Store.Snapshot) (request : String) : IO (Option Record) := do
+def readChecked (snapshot : Store.Snapshot) (request : String) :
+    IO (Option { record : Record // record.request = request }) := do
   let snapshot := (← MetadataReader.make snapshot).snapshot
   let tag := row request
   if (← snapshot.get tag).isNone then return none
@@ -206,11 +246,14 @@ def read (snapshot : Store.Snapshot) (request : String) : IO (Option Record) := 
   let (record, tail) ← IO.ofExcept (codec.decode bytes.toList)
   unless tail.isEmpty && (codec.encode record).toByteArray == bytes do
     throw (IO.userError "noncanonical demand memo")
-  return if requestMatches record request then some record else none
+  return requestedRecord? record request
+
+def read (snapshot : Store.Snapshot) (request : String) : IO (Option Record) := do
+  pure ((← readChecked snapshot request).map (·.val))
 
 def readObserved (snapshot : Store.Snapshot) (request : String)
-    (nominations : Option (List Nat)) : IO (Option (ObservedRecord nominations)) := do
-  pure ((← read snapshot request).bind fun record => observedRecord? record nominations)
+    (nominations : Option (List Nat)) : IO (Option (ObservedRecord request nominations)) := do
+  pure ((← readChecked snapshot request).bind fun requested => observedRecord? requested nominations)
 
 /-- A cache write never waits for the authoritative writer. Cache slots and
 encoded records bound live optional data; they do not cap source data or users.
@@ -234,5 +277,11 @@ def publish (snapshot : Store.Snapshot) (record : Record) : IO Unit := do
     Store.putNat writer tag bytes.size
     Store.writeChange writer ⟨[], [], false⟩
   pure ()
+
+/-- Production publication receives a captured computation, with its exact
+payload and current observation, rather than reconstructing an unrelated row. -/
+def publishCaptured (snapshot : Store.Snapshot)
+    (captured : CapturedRecord request payload nominations) : IO Unit :=
+  publish snapshot captured.observed.record
 
 end Eggshell.Plugin.DemandMemo

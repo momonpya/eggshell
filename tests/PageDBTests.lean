@@ -3352,7 +3352,7 @@ def semanticDemandMemo : IO Unit := do
       let hit ← IO.mkRef false
       let reuse : SemanticReuse := fun nominations => do
         let found ← demandResponse? snapshot largeRequest [largePath] [some snapshot]
-          (some nominations.memoIdentity) (fun _ => true)
+          (some nominations.memoIdentity) (fun _ => true) none
         hit.set found.isSome
         pure found
       let start ← IO.monoNanosNow

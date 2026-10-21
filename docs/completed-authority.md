@@ -1,10 +1,12 @@
 # Completed authorization theorem
 
-Status: an isolated, compiled candidate based on `cb05351`. Its production
-functions and ContractAudit pass source-level checks. The executable and
-native hooks have not been qualified, and the patch is not applied to the
-main working implementation. Exact source, patch, checks and failed proof
-attempts are recorded in `docs/candidates/completed-authority-review.json`.
+Status: integrated into the development source with captured memo replay.
+The theorem was first checked in an isolated candidate based on `cb05351`;
+that historical patch and its failed/successful proof attempts remain in
+`docs/candidates/completed-authority-review.json`. The source integration and
+focused native memo fixture are recorded in `docs/memo-replay-review.json`.
+The application executable and six-stage native-hook protocol have not been
+qualified or deployed by this change.
 This is the proved kernel component of Theorem 1. The complete production
 claim still needs generator-origin and IO refinements.
 
@@ -74,9 +76,11 @@ source comparisons do not replace native hook/body qualification.
   delivery of stale source evidence.
 - Memo replay can return a previously captured response without executing
   discovery again. `DemandMemo.dependenciesAgree` checks the pinned source
-  heads or captured read dependencies. A complete replay argument must also
-  connect that response to its original checked authorization; it is not
-  established by the new extraction theorem.
+  heads or captured read dependencies. Captured publication now binds the
+  actual response to request/nominations, and canonical replay preserves its
+  bytes and original equality locator. Writer/storage and JSON refinement,
+  plus the locator's complete authorization ancestry, remain IO/model
+  boundaries. See `docs/memo-replay.md`.
 - Source filtering, final packet fragments, stdout publication and host
   acknowledgement need their own binding to the selected witness. The
   existing owner/component receipts leave final-fragment causal ancestry
@@ -101,6 +105,7 @@ The full IO suite was not executed.
 All resource guards stayed below their 3 GiB aggregate RSS stop. The peak
 was 3,032,768 KiB. The proof checks used the separate 2 GiB disk reserve;
 native preparation remains at 3 GiB and model prelaunch at 4 GiB. Available
-disk space is below those latter gates, so the candidate remains isolated.
+disk space is below those latter gates; native hook and model comparisons
+remain pending.
 No answering model or new seed was requested. Answer/token variation is not
 an adoption rejection gate.

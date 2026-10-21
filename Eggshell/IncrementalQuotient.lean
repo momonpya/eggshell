@@ -254,6 +254,47 @@ theorem generatedView_complete (graph : WorkGraph) (roots : List Value)
       cases found
       exact certified.complete left leftIn right rightIn equivalent
 
+/-- Recover the precise current local generators from an actual produced view. -/
+theorem generatedView_localUnions (graph : WorkGraph) (roots : List Value)
+    (persistent runLocal : List UnionEdge) (result : Option Quotient)
+    (exact : result = build? roots persistent runLocal) (view : RunView)
+    (found : generatedView graph roots persistent runLocal result exact = some view) :
+    view.localUnions = runLocal := by
+  unfold generatedView at found
+  cases checked : CongruenceSound.attach roots persistent runLocal result exact with
+  | none => simp [checked] at found
+  | some certified =>
+      simp only [checked, Option.map_some, Option.some.injEq] at found
+      cases found
+      rfl
+
+/-- Attach generated authority to the existing Atom certificate result. -/
+def certifyExplicitUsing (index : Index edges) (result : Option Quotient)
+    (exact : result = certify index.partition) :
+    Option { quotient : Quotient // CongruenceSound.QuotientSound edges quotient } :=
+  match result with
+  | none => none
+  | some quotient => some ⟨quotient, by
+      apply CongruenceSound.certified_sound edges _ _ exact.symm
+      · rw [index.exact]
+        exact explicit_valid valid_nil _
+      · rw [index.exact]
+        exact CongruenceSound.explicit_sound valid_nil (CongruenceSound.empty_sound _) _
+          (fun _ member => member)⟩
+
+theorem certifyExplicitUsing_exact (index : Index edges) (result : Option Quotient)
+    (exact : result = certify index.partition) :
+    (certifyExplicitUsing index result exact).map (·.val) = result := by
+  cases result <;> rfl
+
+/-- No second index fold: proof fields erase from the returned certificate. -/
+def certifyExplicit? (index : Index edges) :=
+  certifyExplicitUsing index (certify index.partition) rfl
+
+theorem certifyExplicit_exact (index : Index edges) :
+    (certifyExplicit? index).map (·.val) = certify index.partition :=
+  certifyExplicitUsing_exact index _ rfl
+
 /-- The dependent index is extended by new Union edges, not replayed. -/
 def make? (graph : WorkGraph) (roots : List Value) (persistent runLocal : List UnionEdge)
     (index : Option (Index (persistent ++ runLocal))) : Option RunView :=
@@ -264,6 +305,23 @@ def make? (graph : WorkGraph) (roots : List Value) (persistent runLocal : List U
         pure { graph, quotient, localUnions := runLocal }
     | none => generatedView graph roots persistent runLocal (build? roots persistent runLocal) rfl
   else generatedView graph roots persistent runLocal (build? roots persistent runLocal) rfl
+
+theorem make_localUnions (graph : WorkGraph) (roots : List Value)
+    (persistent runLocal : List UnionEdge) (index : Option (Index (persistent ++ runLocal)))
+    (view : RunView) (found : make? graph roots persistent runLocal index = some view) :
+    view.localUnions = runLocal := by
+  unfold make? at found
+  split at found
+  · cases index with
+    | none => exact generatedView_localUnions graph roots persistent runLocal _ rfl view found
+    | some index =>
+      cases built : certify index.partition with
+      | none => simp [built] at found
+      | some quotient =>
+        simp [built] at found
+        subst view
+        rfl
+  · exact generatedView_localUnions graph roots persistent runLocal _ rfl view found
 
 /-- Covers the executed Atom extension lane as well as general fresh and
 planned builds. A retired edge is usable only if today's edges still derive
@@ -299,6 +357,44 @@ structure ProducedView (graph : WorkGraph) (roots : List Value)
   val : Option RunView
   property : val = make? graph roots persistent runLocal index
   plan : Option CongruenceMemo.Entry := none
+
+/-- Carry the producer's erased authority through final discovery construction. -/
+def ProducedView.certified (produced : ProducedView graph roots persistent runLocal index) :
+    Option { view : RunView // CongruenceSound.QuotientSound
+      (persistent ++ view.localUnions) view.quotient } :=
+  match found : produced.val with
+  | none => none
+  | some view => some ⟨view, by
+      have built : make? graph roots persistent runLocal index = some view :=
+        produced.property.symm.trans found
+      rw [make_localUnions _ _ _ _ _ _ built]
+      exact make_generated _ _ _ _ _ _ built⟩
+
+def makeCertified? (graph : WorkGraph) (roots : List Value) (persistent runLocal : List UnionEdge)
+    (index : Option (Index (persistent ++ runLocal))) :=
+  (ProducedView.mk (make? graph roots persistent runLocal index) rfl none).certified
+
+theorem ProducedView.certified_exact (produced : ProducedView graph roots persistent runLocal index) :
+    produced.certified = makeCertified? graph roots persistent runLocal index := by
+  rcases produced with ⟨value, property, plan⟩
+  cases property
+  rfl
+
+theorem ProducedView.certified_found (produced : ProducedView graph roots persistent runLocal index)
+    (view : RunView) (found : produced.val = some view)
+    (generated : CongruenceSound.QuotientSound (persistent ++ view.localUnions) view.quotient) :
+    produced.certified = some ⟨view, generated⟩ := by
+  rcases produced with ⟨value, property, plan⟩
+  change value = some view at found
+  cases found
+  rfl
+
+theorem makeCertified_found (graph : WorkGraph) (roots : List Value)
+    (persistent runLocal : List UnionEdge) (index : Option (Index (persistent ++ runLocal)))
+    (view : RunView) (found : make? graph roots persistent runLocal index = some view)
+    (generated : CongruenceSound.QuotientSound (persistent ++ view.localUnions) view.quotient) :
+    makeCertified? graph roots persistent runLocal index = some ⟨view, generated⟩ :=
+  ProducedView.certified_found _ view found generated
 
 /-- The controller accepts acceleration only through this exact result type.
 Persistence code cannot replace a view by an unchecked old quotient. -/

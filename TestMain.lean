@@ -15,6 +15,7 @@ import tests.KernelFixtures
 import tests.MatcherFixtures
 public import tests.Blake3Fixtures
 import tests.ProofBoundaryAudit
+public import tests.MemoReplayTests
 
 @[expose] public section
 
@@ -6112,6 +6113,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
       return 0
     testStreamingNormalizer
     Eggshell.Blake3Fixtures.run
+    Eggshell.MemoReplayTests.run (testRoot / "memo-replay")
     Eggshell.EqualityDependencyTests.run
     Eggshell.SourceEvidenceTests.run
     Eggshell.SourceObservationTests.run

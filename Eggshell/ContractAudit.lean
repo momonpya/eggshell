@@ -15,7 +15,19 @@ open Lean
 reads use the same decoding/assembly implementation with their own read
 capability; no alternate body representation or compatibility lane exists. -/
 run_meta do
-  for theoremName in #[``Eggshell.Matcher.extraction_sound,
+  for theoremName in #[``Eggshell.Plugin.DemandMemo.requested_record_rejects_another_request,
+      ``Eggshell.Plugin.DemandMemo.observed_record_has_current_request,
+      ``Eggshell.Plugin.DemandMemo.captured_decode_keeps_origin,
+      ``Eggshell.Plugin.changed_memo_payload_rejected,
+      ``Eggshell.Plugin.replay_keeps_captured_payload,
+      ``Eggshell.Matcher.completed_original_authority,
+      ``Eggshell.Matcher.completed_authority,
+      ``Eggshell.Matcher.extraction_comparisons_generated,
+      ``Eggshell.Matcher.completed_not_retrieved,
+      ``Eggshell.IncrementalQuotient.certifyExplicit_exact,
+      ``Eggshell.IncrementalQuotient.ProducedView.certified_exact,
+      ``Eggshell.IncrementalQuotient.make_localUnions,
+      ``Eggshell.Matcher.extraction_sound,
       ``Eggshell.Matcher.extraction_completed_has_match,
       ``Eggshell.Extract.solve_demand_exact,
       ``Eggshell.Extract.solve_provenance,
@@ -1428,3 +1440,60 @@ run_meta do
       unless #[``propext, ``Quot.sound, ``Classical.choice].contains dependency do
         throwError "{contract} depends on unapproved axiom {dependency}"
     logInfo m!"Audited {contract}: {axioms}"
+
+/- Actual delivery consumes the extraction covered by completed_authority.
+The accelerated and terminal producers retain the current generated proof;
+this audit does not replace the source binding/freshness IO specification. -/
+run_meta do
+  let environment ← getEnv
+  for (root, required) in #[
+      (``Eggshell.Matcher.discoverUsingM?, ``Eggshell.IncrementalQuotient.ProducedView.certified),
+      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.IncrementalQuotient.certifyExplicit?),
+      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.Matcher.TerminalRoot.discovery)] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    while let name :: tail := pending do
+      pending := tail
+      if seen.contains name then continue
+      seen := seen.insert name
+      if name.toString.startsWith "Eggshell." then
+        if let some declaration := environment.find? name then
+          if let some body := declaration.value? then pending := body.getUsedConstants.toList ++ pending
+    unless seen.contains required do
+      throwError "Production completed-authority path bypassed: {root}, {required}"
+  for root in #[``Eggshell.Plugin.renderAutomatic, ``Eggshell.Plugin.auditRenderedSelection] do
+    let some declaration := environment.find? root | throwError "Missing delivery boundary {root}"
+    unless declaration.type.getUsedConstants.contains ``Eggshell.Matcher.extraction do
+      throwError "Delivery accepts an extraction without the main-theorem binding: {root}"
+    let some body := declaration.value? | throwError "Missing delivery implementation {root}"
+    unless body.getUsedConstants.contains ``Subtype.val do
+      throwError "Delivery no longer consumes its certified extraction: {root}"
+  let some receipt := environment.find? ``Eggshell.Plugin.auditRenderedSelection |
+    throwError "Missing equality receipt boundary"
+  let some body := receipt.value? | throwError "Missing equality receipt implementation"
+  unless body.getUsedConstants.contains ``Eggshell.Matcher.Discovery.persistentUnions do
+    throwError "Equality receipt is detached from the actual discovery generators"
+  logInfo "Audited generated authority in both producers and the actual delivery extraction type"
+
+/- A memo is the captured calculation under the exact request and observation;
+its replay keeps bytes and the origin locator without asserting complete ancestry. -/
+run_meta do
+  let environment ← getEnv
+  for (caller, required) in #[
+      (``Eggshell.Plugin.DemandMemo.readObserved, ``Eggshell.Plugin.DemandMemo.readChecked),
+      (``Eggshell.Plugin.DemandMemo.readChecked, ``Eggshell.Plugin.DemandMemo.requestedRecord?),
+      (``Eggshell.Plugin.demandResponse?, ``Eggshell.Plugin.checkedMemoResponse?),
+      (``Eggshell.Plugin.demandResponse?, ``Eggshell.Plugin.memoReplayTrace),
+      (``Eggshell.Plugin.demandResponse?, ``Eggshell.Receipt.observe),
+      (``Eggshell.Plugin.automaticHandoff, ``Eggshell.Plugin.DemandMemo.capture),
+      (``Eggshell.Plugin.automaticHandoff, ``Eggshell.Plugin.DemandMemo.publishCaptured)] do
+    let some declaration := environment.find? caller | throwError "Missing memo producer {caller}"
+    let some body := declaration.value? | throwError "Missing memo implementation {caller}"
+    unless body.getUsedConstants.contains required do
+      throwError "Memo binding bypassed: {caller}, {required}"
+  let some automatic := environment.find? ``Eggshell.Plugin.automaticHandoff |
+    throwError "Missing automatic handoff"
+  let some body := automatic.value? | throwError "Missing automatic handoff body"
+  if body.getUsedConstants.contains ``Eggshell.Plugin.DemandMemo.publish then
+    throwError "Automatic handoff publishes an uncaptured memo row"
+  logInfo "Audited exact memo request, captured response, canonical replay and current receipt origin link"

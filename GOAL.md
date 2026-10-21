@@ -77,6 +77,23 @@ docs/candidates/completed-authority-review.jsonとcompleted-authority.patchに�
 IOの所有者/依存記録完全性、memoの元認定との接続、最終断片の因果由来と実フック確認が残る。
 核の定理だけでPhase 0/2全体、合同依存割合、適切な履歴の実配送を完了扱いにしない。
 
+2026-10-22 主定理の核とmemo接続を開発ソースへ統合した。Discoveryの現在生成元証明と
+両producer/実配送のContractAuditを本体へ反映し、memoのreadChecked/ObservedRecordへ
+完全な現在要求・推薦順の一致を保持する。実計算からCapturedRecordを構築して出版し、
+codec復元が応答・要求・推薦・source/read programを共に保つことを証明した。
+再利用は復号後のcanonical bytes一致を確認し、現在receiptのmemo-replay段階へ保存payloadのSHAと
+元のequality locatorを結び付ける。locator-carriedは全因果由来の検証成功ではなく、欠損はuntracked。
+外部ファイルは従来どおり配送時に再確認する。Record codec・renderer・既存matching部分と
+MiniLM等8ファイルは不変。関連履歴選択を変えるsource-context候補はまだ統合していない。
+小DBのnative IO試験で元コード本文/全payloadの一致、slot衝突、要求/推薦差、空結果、
+非正規応答、未完了通知、読み取ったsource変更の失効、受領記録の正確な分類が成功した。
+最終ContractAudit・native fixture・test support・TestMain全体のelaborationが成功。
+full IO suite・LLVM全6段階は今回未実行。失敗と途中ディレクトリも保持した。
+memo作業の最大aggregate RSS 2,833,856 KiB、guard作動なし。回答モデル追加/seed取得0。
+installed application binary・README実績・releaseの置換はしていない。docs/memo-replay.mdと
+docs/memo-replay-review.jsonに採用ソースの実バイトと検証範囲を保存する。
+原文配送の両周確認、source/serde IO完全性、Union生成の非検索由来、最終断片とPhase 3以降は未完了。
+
 2026-10-19 のユーザー指示による組み替え。元の goal の要件は削除しない。
 主張は「推薦と認定の分離」。誤再利用率と実行テスト合格率を主指標、
 seed を償却した総トークン・費用・最初のフック遅延を副次指標とする。

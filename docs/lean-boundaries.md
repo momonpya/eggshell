@@ -25,6 +25,9 @@ Adapter code stays in its separate Lake package. The engine does not import it.
 | `checkedContextExtension` | An accepted extension retains every original fragment and the same owner, source notice, and observation envelope; overlapping original coordinates agree. |
 | `primaryInterpretation`, `preferContextGain` | Refinement uses an original meaning-nominated explanation. Without added cue coverage or a contiguous selected explanation span, the original packet is returned unchanged. Both choices carry the complete packet's character and byte bounds. |
 | `selectPreparedKeys` | Preparing graph identifiers once gives exactly the same selection as preparing them during each filter operation. |
+| `DemandMemo.readChecked`, `ObservedRecord` | A returned memo belongs to the complete current request and current nomination order. |
+| `CapturedRecord`, `captured_decode_keeps_origin` | Canonical record decoding preserves the computed response together with request, nominations, source heads and captured read program. |
+| `checkedMemoResponse?` | An accepted decoded memo re-encodes to its exact captured payload bytes. |
 
 These are the functions invoked by production code, not a separate test-only
 model. Builds reject `sorry`; the `ContractAudit.lean` modules enumerate
@@ -54,14 +57,15 @@ production dependency and axiom audits. The standard test target imports the
 fixture modules and this boundary audit; their computations remain test
 coverage rather than exported general claims.
 
-This separation does not finish the planned end-to-end theorem. The existing
-completion theorem connects an erased fragment to an automatic Match,
-forward applicability, local identity and its original Outcome owner. The
-generated-quotient theorem separately connects accepted equality to current
-Union edges and congruence. Their instantiation through every production
-producer, source IO and final delivered fragment still needs a combined
-statement and audit. Untracked local ancestry cannot yet support a
-delivery-wide congruence fraction. See `docs/equality-dependency.md`.
+The final Discovery now carries generated authority from both production
+producers. `completed_original_authority` combines the completed Match,
+forward applicability, local identity, original-owner premise and current
+Union/congruence chain. ContractAudit connects the actual delivery extraction
+to this theorem. Source IO refinement, generator ancestry and final delivered
+fragments still require further work. Captured memo publication and exact
+replay are described in `docs/memo-replay.md`; their IO/serialization boundary
+remains explicit. Untracked local ancestry cannot yet support a delivery-wide
+congruence fraction.
 
 The isolated migration built the library, ContractAudit, test support and
 native fixture runner. The runner passed both original hash vectors, all

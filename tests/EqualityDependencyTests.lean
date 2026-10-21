@@ -141,13 +141,13 @@ def nativeDiscovery : IO Unit := do
     "the production component omitted its completed Outcome equality"
   let rendered := Plugin.renderAutomatic [] 24000 text [] true true discovery
   require rendered.isSome "native selection did not render"
-  let unchanged ← Plugin.auditRenderedSelection none [] discovery ⟨extraction, rfl⟩ rendered
+  let unchanged ← Plugin.auditRenderedSelection none discovery ⟨extraction, rfl⟩ rendered
   require (Lean.toJson unchanged == Lean.toJson rendered)
     "disabled receipt capture changed the rendered handoff"
   let id ← Receipt.fresh
   let corpus := Matcher.Corpus.build LogicalText.logicalNormalizer graph
   let observed := discovery.hits.reverse.map (SelectionAudit.Admission.observe discovery.view work corpus {})
-  let some audited ← Plugin.auditRenderedSelection (some id) [] discovery ⟨extraction, rfl⟩ rendered observed |
+  let some audited ← Plugin.auditRenderedSelection (some id) discovery ⟨extraction, rfl⟩ rendered observed |
     throw (IO.userError "native selection disappeared while recording its premises")
   let some reference := audited.equalitySelection |
     throw (IO.userError "native selected extraction has no immutable receipt locator")

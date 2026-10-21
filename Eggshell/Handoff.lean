@@ -9,6 +9,7 @@ public import Eggshell.DiscoveryMemo
 public import Eggshell.DemandMemo
 public import Eggshell.FederatedSearch
 public import Eggshell.SelectionAudit
+public import Eggshell.CompletedAuthority
 
 @[expose] public section
 
@@ -284,6 +285,37 @@ structure Handoff where
   search : Option SearchTrace := none
   equalitySelection : Option SelectionAudit.Reference := none
   deriving Lean.ToJson, Lean.FromJson
+
+/-- A memo decoder may return only the exact canonical captured payload. -/
+def checkedMemoResponse? (payload : String) (result : Option Handoff) :
+    Option { result : Option Handoff // (toJson result).compress = payload } :=
+  if same : (toJson result).compress = payload then some ⟨result, same⟩ else none
+
+theorem changed_memo_payload_rejected (payload : String) (result : Option Handoff)
+    (changed : (toJson result).compress ≠ payload) : checkedMemoResponse? payload result = none := by
+  simp [checkedMemoResponse?, changed]
+
+theorem replay_keeps_captured_payload (captured : DemandMemo.CapturedRecord request payload nominations)
+    (replayed : { result : Option Handoff // (toJson result).compress = captured.observed.record.response }) :
+    (toJson replayed.val).compress = payload :=
+  replayed.property.trans captured.responseExact
+
+/-- A carried locator is not an independently replayed ancestry proof. Fresh
+external files are checked later, by the ordinary delivery source boundary. -/
+def memoReplayTrace (request response : String) (result : Option Handoff) : Json :=
+  let completed := result.any fun handoff => handoff.completed != 0 || handoff.blocksCurrent
+  let reference := result.bind (·.equalitySelection)
+  Json.mkObj [
+    ("route", toJson "demand-memo"),
+    ("requestSha256", toJson (Sha256.hex request.toUTF8)),
+    ("responseSha256", toJson (Sha256.hex response.toUTF8)),
+    ("result", toJson (if result.isSome then "context" else "no-context")),
+    ("currentRequestChecked", toJson true), ("currentNominationsChecked", toJson true),
+    ("graphDependenciesChecked", toJson true),
+    ("externalSourceCheck", toJson "delivery-stage"),
+    ("equalitySelection", toJson reference),
+    ("origin", toJson (if !completed then "no-completed-work" else
+      if reference.isSome then "locator-carried" else "untracked"))]
 
 /-- A search status carries no authority to certify or suppress work. -/
 def pendingSearch : Handoff := {
@@ -1327,11 +1359,12 @@ theorem boundaryMatch_demands_current {discovery : Matcher.Discovery}
 /-- Pin the actual chosen selection without rebuilding explicit closure in
 the hook. A memo carries the locator; final source/transport checks restrict
 its owner lists. Missing or failed capture never supplies a classification. -/
-def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdge)
+def auditRenderedSelection (receipt : Option String)
     (discovery : Matcher.Discovery)
     (prepared : { extraction : Extraction // extraction = Matcher.extraction discovery })
     (result : Option Handoff) (observed : List SelectionAudit.Admission := [])
     (trail : DiscoveryAudit.Trail := {}) : IO (Option Handoff) := do
+  let persistent := discovery.persistentUnions
   if receipt.isNone then return result
   let some handoff := result | return none
   if handoff.completed == 0 && !handoff.blocksCurrent then return result
@@ -4645,9 +4678,12 @@ theorem renderAutomatic_no_hits (staged : List Value) (budget : Nat) (current : 
 theorem renderAutomatic_empty_terminal (staged : List Value) (budget : Nat) (text : String)
     (delivered : List String) (enforce stagedVisible : Bool) (view : RunView)
     (fresh : HandoffRemainder.isValue (.text text) = false)
-    (noParent : view.graph.decompositionsFor view.quotient.toEquality (.text text) = []) :
+    (noParent : view.graph.decompositionsFor view.quotient.toEquality (.text text) = [])
+    (persistent : List UnionEdge)
+    (generated : QuotientBuilder.CongruenceSound.QuotientSound
+      (persistent ++ view.localUnions) view.quotient) :
     renderAutomatic staged budget text delivered enforce stagedVisible
-      (Matcher.TerminalRoot.empty view (.text text) text fresh noParent).discovery = none := by
+      ((Matcher.TerminalRoot.empty view (.text text) text fresh noParent).discovery persistent generated) = none := by
   apply renderAutomatic_no_hits
   rfl
 
@@ -4708,8 +4744,9 @@ def indexedTerminalRoot (selection : Config.Selection)
   let some unions ← if noUnions then pure (some []) else reader.atomUnions? owner | return none
   let persistent := unions.map (·.edge)
   let some index := QuotientBuilder.AtomQuotient.prepare persistent | return none
-  let some quotient := QuotientBuilder.certify index.partition |
+  let some certified := IncrementalQuotient.certifyExplicit? index |
     throw (IO.userError "published atom Union index is invalid")
+  let quotient := certified.val
   let topology : WorkGraph := { all }
   if !(topology.decompositionsFor quotient.toEquality currentValue).isEmpty then return none
   if ids.isEmpty then return some none
@@ -4749,15 +4786,16 @@ def indexedTerminalRoot (selection : Config.Selection)
     let owner ← reader.outcome entry.2
     let records ← try reader.sources entry.1 catch _ => pure [SourceEvidence.unverified]
     pure (owner.relation, if records.isEmpty then [SourceEvidence.unverified] else records)
-  let prepared : { extraction : Extraction // extraction = Matcher.extraction terminal.discovery } :=
-    ⟨Matcher.extraction terminal.discovery, rfl⟩
-  let rendered := renderAutomatic [] selection.handoffChars current delivered enforce true terminal.discovery prepared
+  let discovery := terminal.discovery persistent (by simpa [view] using certified.property)
+  let prepared : { extraction : Extraction // extraction = Matcher.extraction discovery } :=
+    ⟨Matcher.extraction discovery, rfl⟩
+  let rendered := renderAutomatic [] selection.handoffChars current delivered enforce true discovery prepared
     (provenance := provenance) (refreshSources := refreshSources) (byteBudget := selection.handoffBytes)
   let children ← observations.get
   let observed := if receipt.isSome then hits.reverse.map (fun matched =>
     {(SelectionAudit.Admission.observe view currentValue corpus children matched) with schedule := some 0}) else []
   let trail : DiscoveryAudit.Trail := {current := some 0, schedules := [DiscoveryAudit.Schedule.terminal terminal]}
-  pure (some (← auditRenderedSelection receipt persistent terminal.discovery prepared rendered observed trail))
+  pure (some (← auditRenderedSelection receipt discovery prepared rendered observed trail))
 
 /-- A loaded row carries the production compiler certificate with its owner.
 There is no second map which can omit or substitute the row's candidate. -/
@@ -5688,7 +5726,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
           (advisoryFrontierKey referenceQuery)).eraseDups}
     else handoff
   trace s!"render complete chars={(rendered.map (·.text.length)).getD 0}"
-  auditRenderedSelection source.receipt persistent discovery
+  auditRenderedSelection source.receipt discovery
     ⟨extraction, rfl⟩ rendered ((← admissionAudit.mapM (·.get)).getD [])
     ((← traceAudit.mapM (·.get)).getD {})
 
@@ -6069,14 +6107,17 @@ request. An external provider always runs before lookup: its complete current
 nomination order is bound to the record along with the graph read trace. -/
 def demandResponse? (writable : Persistence.Store.Snapshot) (request : String)
     (paths : List System.FilePath) (snapshots : List (Option Persistence.Store.Snapshot))
-    (nominations : Option (List Nat)) (accepts : Option Handoff → Bool) :
-    IO (Option (Option Handoff)) := do
+    (nominations : Option (List Nat)) (accepts : Option Handoff → Bool)
+    (receipt : Option String) : IO (Option (Option Handoff)) := do
   try
     if let some checked ← DemandMemo.readObserved writable request nominations then
       let record := checked.record
       if ← DemandMemo.dependenciesAgree record paths snapshots then
-        let found : Option Handoff ← IO.ofExcept (Lean.Json.parse record.response >>= fromJson?)
+        let parsed : Option Handoff ← IO.ofExcept (Lean.Json.parse record.response >>= fromJson?)
+        let some replayed := checkedMemoResponse? record.response parsed | return none
+        let found := replayed.val
         if found.all (fun h => h.reason != "search-incomplete") && accepts found then
+          Receipt.observe receipt "memo-replay" (memoReplayTrace request record.response found)
           return some found
   catch _ => pure () -- Damaged optional data is a miss, never evidence.
   pure none
@@ -6136,7 +6177,7 @@ def automaticHandoff (selection : Config.Selection) (current : String)
   let lookup := fun (nominations : Option (List Nat)) => do
     if let some request := request then
       if let some writable := writable then
-        return ← demandResponse? writable request paths snapshots nominations noticeFits
+        return ← demandResponse? writable request paths snapshots nominations noticeFits (sourceContext.bind (·.receipt))
     pure none
   if !externalSemantic then
     if let some found ← lookup none then
@@ -6195,8 +6236,9 @@ def automaticHandoff (selection : Config.Selection) (current : String)
                   complete := complete && trace.complete
                   observations := observations ++ [trace.operations.reverse]
               | none => complete := false
-        try DemandMemo.publish writable ⟨request, sources, (toJson result).compress,
-          if complete then some observations else none, ← observed.get⟩
+        let captured := DemandMemo.capture request sources (toJson result).compress
+          (if complete then some observations else none) (← observed.get)
+        try DemandMemo.publishCaptured writable captured
         catch _ => pure () -- No waiting behind saving, and no retry loop.
   -- Cache only the graph-derived result. External files are rechecked on
   -- every delivery, including a durable demand-memo hit.

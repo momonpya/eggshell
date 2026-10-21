@@ -1,0 +1,511 @@
+{
+  "status": "Source integrated on development branch; installed application binary and release unchanged",
+  "parentEvidence": "docs/candidates/completed-authority-review.json",
+  "manifest": {
+    "baseSource": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/checkout",
+    "baseManifestSha256": "899bb407cae2ca17ab2ce4c0be56712e866c0a8708e542d1976ff7962474a625",
+    "parentEvidence": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/completed-authority-review.json",
+    "parentEvidenceSha256": "4282de471039d3277ae5e10583ea9985303951766d32fc3833ce63a206156d19",
+    "source": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/checkout",
+    "changed": [
+      "Eggshell/DemandMemo.lean",
+      "Eggshell/Handoff.lean",
+      "Eggshell/ContractAudit.lean",
+      "lakefile.lean",
+      "TestMain.lean",
+      "tests/PageDBTests.lean"
+    ],
+    "created": [
+      "tests/MemoReplayTests.lean",
+      "tests/MemoReplayMain.lean"
+    ],
+    "baseSha256": {
+      "Eggshell/DemandMemo.lean": "87747a6822fb355054724aaf5ad3b41c2100d76ddc6c9c4c1552eaae03cdc432",
+      "Eggshell/Handoff.lean": "87e5469b3d157242b7a685384e3d41db42161112e1914b234989fe733f9d8f4e",
+      "Eggshell/ContractAudit.lean": "b6580cf1658b2fe36592eecbdff922f51f81735c7ef2f9bb21237c7782fb9da4",
+      "lakefile.lean": "58da2f66ea77478793b4a607b56c17eefa2b1e2f7d12e2b0ae006396bc2def2e",
+      "TestMain.lean": "454d27c912a252e8df994d60e4634a18c1a9a6276bfcaeb83b2504bcb733b7b6",
+      "tests/PageDBTests.lean": "c70d2ad0482f5228c445c4034afd6cc04c02aab7719bc62f2c1a6bf1cce1787c"
+    },
+    "candidateSha256": {
+      "Eggshell/DemandMemo.lean": "85edc20b7b658f568059b42c19ff588c15a05f9399f0c649bebcb663ade7337c",
+      "Eggshell/Handoff.lean": "f702ef5f3d9816a8336fe47b24a4ecea4012b80ae7ddbf08e6221ecb16677388",
+      "Eggshell/ContractAudit.lean": "9a8976a4afd00ac2bad513b719c6396950d919cb828a6278cd4d4de285da05d7",
+      "lakefile.lean": "719da40531079f6db0ba9f1918b0b35c18d0b9ec3b72b1ea6b24eaa074d3b463",
+      "TestMain.lean": "92505cd301ce2034d60cc44c5ffa6db7b33b7abba56218bb05a9742e8950f8c3",
+      "tests/PageDBTests.lean": "bb74927607a02c219a7045514919ac73c862bc9f5f883a49f2572bac9d3cbd08",
+      "tests/MemoReplayTests.lean": "95c91a9e3359cd9be0a34f1845bded1aecc730b6e6e6236482c87975d73f1b24",
+      "tests/MemoReplayMain.lean": "2a82da25b41b730d40aa99ff7e9805d9377ec9cad6dc339c9c3a0fc25e5cb1b8"
+    },
+    "scope": "Carry current request proof through memo replay; capture exact produced payload; accept only canonical response bytes; link current memo receipt to original equality locator without claiming verified ancestry",
+    "modelCalls": 0,
+    "productionAdoption": false,
+    "repairs": [
+      {
+        "reason": "Expose the fixture assertion in its public test section and make Option/Bool grouping explicit",
+        "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/fixture-build/record.json"
+      },
+      {
+        "reason": "Use the native fixture executable for filesystem externs; interpreted run lacked FileSystem.syncPath. Preserve its partial directory.",
+        "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/fixture-run-repaired/record.json"
+      },
+      {
+        "reason": "Pass the explicit optional receipt in the existing PageDB test; reuse the existing requestMatches gate inside the new typed reader.",
+        "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/native-test-support/record.json"
+      }
+    ]
+  },
+  "result": {
+    "complete": true,
+    "focusedMemoIoFixturePassed": true,
+    "standardSuiteElaborated": true,
+    "fullIoSuiteRuntimeExecuted": false,
+    "modelCalls": 0,
+    "productionAdoption": false,
+    "initialFailuresPreserved": true
+  },
+  "changed": [
+    "Eggshell/IncrementalQuotient.lean",
+    "Eggshell/Matcher.lean",
+    "Eggshell/Handoff.lean",
+    "Eggshell/ContractAudit.lean",
+    "tests/EqualityDependencyTests.lean",
+    "Eggshell/DemandMemo.lean",
+    "lakefile.lean",
+    "TestMain.lean",
+    "tests/PageDBTests.lean"
+  ],
+  "created": [
+    "Eggshell/CompletedAuthority.lean",
+    "tests/MemoReplayTests.lean",
+    "tests/MemoReplayMain.lean"
+  ],
+  "baseSha256": {
+    "Eggshell/IncrementalQuotient.lean": "66f0d33a5634daed402a1f00e582ded76d3633d79d59ee3a4d4ddd5c0984f647",
+    "Eggshell/Matcher.lean": "84522fd85b6d6c37530e7f63383a1b221c70226198bb1c23d048775d749b9d53",
+    "Eggshell/Handoff.lean": "874fc0d00bfb42cae37f99c0aaa191f0a806f1c88e7f436916ca90c59dd6d274",
+    "Eggshell/ContractAudit.lean": "47fa19a96d236a1884a39f7d3f01018ecd885237688b4b8fe72b0b450538703e",
+    "tests/EqualityDependencyTests.lean": "12de7fe936f14cea94da71817360967d9e8f39db2d7010e6f52b95bc4246e4f7",
+    "Eggshell/DemandMemo.lean": "87747a6822fb355054724aaf5ad3b41c2100d76ddc6c9c4c1552eaae03cdc432",
+    "lakefile.lean": "58da2f66ea77478793b4a607b56c17eefa2b1e2f7d12e2b0ae006396bc2def2e",
+    "TestMain.lean": "454d27c912a252e8df994d60e4634a18c1a9a6276bfcaeb83b2504bcb733b7b6",
+    "tests/PageDBTests.lean": "c70d2ad0482f5228c445c4034afd6cc04c02aab7719bc62f2c1a6bf1cce1787c"
+  },
+  "appliedSourceSha256": {
+    "Eggshell/IncrementalQuotient.lean": "4562e88410fc1e0595391ba9e32db460c1f8e8d391857a586630765077c5eb05",
+    "Eggshell/Matcher.lean": "8ba8687682c29398b189a0541df2c469126425e2ad382be09c7481def6af25c2",
+    "Eggshell/Handoff.lean": "f702ef5f3d9816a8336fe47b24a4ecea4012b80ae7ddbf08e6221ecb16677388",
+    "Eggshell/ContractAudit.lean": "9a8976a4afd00ac2bad513b719c6396950d919cb828a6278cd4d4de285da05d7",
+    "tests/EqualityDependencyTests.lean": "914ced9a26ed45d0ec756a7ec33f25f775d7aa23f2da58c318d28655ef295eb5",
+    "Eggshell/DemandMemo.lean": "85edc20b7b658f568059b42c19ff588c15a05f9399f0c649bebcb663ade7337c",
+    "lakefile.lean": "719da40531079f6db0ba9f1918b0b35c18d0b9ec3b72b1ea6b24eaa074d3b463",
+    "TestMain.lean": "92505cd301ce2034d60cc44c5ffa6db7b33b7abba56218bb05a9742e8950f8c3",
+    "tests/PageDBTests.lean": "bb74927607a02c219a7045514919ac73c862bc9f5f883a49f2572bac9d3cbd08",
+    "Eggshell/CompletedAuthority.lean": "be632fff03fe99bd71c982b948e58dce461f7de20330fc00a5e9e6d02476c4e9",
+    "tests/MemoReplayTests.lean": "95c91a9e3359cd9be0a34f1845bded1aecc730b6e6e6236482c87975d73f1b24",
+    "tests/MemoReplayMain.lean": "2a82da25b41b730d40aa99ff7e9805d9377ec9cad6dc339c9c3a0fc25e5cb1b8"
+  },
+  "unchanged": {
+    "Eggshell/SearchProvider.lean": "a5a9f2c256a4df3f16fb33255eac404cb9c0a351cf9836d0ae8b0ceaf794c0a2",
+    "Eggshell/SemanticMatcher.lean": "b4a80dc479bb97a24b39d97937ccf283fa49d998d875590f81cb7a2d3712b838",
+    "runtime/embedding.py": "36db6daa14d83ac5165c58a4036b57c6b7ba32b0d58a8a456b68f1da80034eb0",
+    "Eggshell/MiniLM.lean": "15fe872280a9819f39c12a360235523b23ada07ed5f2967d34b16634112a71e7",
+    "Eggshell/PluginHooks.lean": "ed319f6dc3bf20c4d96d987924ed2ac0de43a1a452a503fd8a5d27a092e0813b",
+    "Eggshell/Worker.lean": "ab1b50b0275d45ea01005d17b58efa1c2338ec4d5d3990723a753a0a239151c7",
+    "Eggshell/SourceEvidence.lean": "fc087f4bdd058a47b35a5c01c847711bf46e576f7af3c6038fd5758194f41ce1",
+    "Eggshell/GraphStore.lean": "a933bc83a62c9bf370a9c25326207d14358eaf9322af5de42fb432c215eaab5e"
+  },
+  "matchingPrefixUnchanged": true,
+  "rendererBytesUnchanged": true,
+  "storedRecordCodecUnchanged": true,
+  "records": {
+    "build-contract": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/build-contract/record.json",
+      "recordSha256": "3b3aff1896e3427f0bfdaff616d3d0d05730f4554ab808bd950d23fdae6be666",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.ContractAudit"
+      ],
+      "elapsedMs": 8613.315,
+      "exitCode": 0,
+      "stdoutSha256": "07036214903ed9aa57e3245de83b529694c541bdd74c5bfd1260a6af7e059baa",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build-handoff": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/build-handoff/record.json",
+      "recordSha256": "cbd6fc33ee823719681772518908a427780615c9f314f38c2959e04ac4bed64b",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.Handoff"
+      ],
+      "elapsedMs": 11502.297791,
+      "exitCode": 0,
+      "stdoutSha256": "e14febea277ea0f98fe12148b84b34298a0ed0d6ac34cabfd124a3c996ec24d5",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build-memo": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/build-memo/record.json",
+      "recordSha256": "ed8e457c617534357a4f7ef18ca5a85e154fc14d5028ecb4e9651ae7c2968a2c",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.DemandMemo"
+      ],
+      "elapsedMs": 1509.405791,
+      "exitCode": 0,
+      "stdoutSha256": "bd84267f67f480f932810c4866baeef48a5c1de4cfd85ff923016077fa5ddca2",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-contract": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/final-contract/record.json",
+      "recordSha256": "1acad7b3e8a7f035660ad39528a7620aa79d0df75e7960b9e950a081329c4358",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.ContractAudit"
+      ],
+      "elapsedMs": 22687.071792,
+      "exitCode": 0,
+      "stdoutSha256": "e5060d086ab3fffcb4188cf41d7bfc54af8aa95a3f9a650a25fbd8419fd13b74",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-native-build": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/final-native-build/record.json",
+      "recordSha256": "ed61c1769ad073956ce10097acc1caca0871dd3dcf7fed0d9f813fab5005db86",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "memo_replay_tests"
+      ],
+      "elapsedMs": 1754.449958,
+      "exitCode": 0,
+      "stdoutSha256": "f36089212ab1679b006005dd7c673874c39ed2157b9876dd674f2b03c95b4736",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-native-run": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/final-native-run/record.json",
+      "recordSha256": "5e793a6d956cbe8252d5f7ec0b15a64ad9dd2adcc749adedf84fa3e280b489ab",
+      "args": [
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/checkout/.lake/build/bin/memo_replay_tests",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/fixture-2/work.egg"
+      ],
+      "elapsedMs": 196.416958,
+      "exitCode": 0,
+      "stdoutSha256": "d4ccd076aa0f2e7d85a56f1548777d38334d9be0a56f9792d86d20c7d66448e6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-standard-suite": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/final-standard-suite/record.json",
+      "recordSha256": "80ef42484fa4c7da291e641e195253505e36afd43fe6d2b2253546ef43cfce77",
+      "args": [
+        "lake",
+        "env",
+        "lean",
+        "TestMain.lean"
+      ],
+      "elapsedMs": 12239.169875,
+      "exitCode": 0,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-support": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/final-support/record.json",
+      "recordSha256": "27fac254a0e579de99a4b1d31c330b19727f11dda76a5b91a8e7041a44ad76a1",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "PageDBTestSupport"
+      ],
+      "elapsedMs": 15579.0475,
+      "exitCode": 0,
+      "stdoutSha256": "4e51eadeea45b21abdcc50a3022118506a605585cc52ca2af56fd56910e837a4",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "fixture-build": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/fixture-build/record.json",
+      "recordSha256": "cb367f17c27c138b99fae5decfd44fba1616068426825eda7e3abbd1dd568ae6",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "tests.MemoReplayTests:dynlib"
+      ],
+      "elapsedMs": 29487.379375,
+      "exitCode": 1,
+      "stdoutSha256": "a97304f03988624d8fad5f7ba944ec157d7365f43954a167e1eefd28c81c4e24",
+      "stderrSha256": "c4a27db198c4d8632369ee6102944ef46e83c20d685f7c17a6aaff9cfcfc710f"
+    },
+    "fixture-build-repaired": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/fixture-build-repaired/record.json",
+      "recordSha256": "57f5bf4466f855768234876f185a763911b41510973c5366b3bf1eba5a943686",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "tests.MemoReplayTests:dynlib"
+      ],
+      "elapsedMs": 1140.929667,
+      "exitCode": 0,
+      "stdoutSha256": "8b0310d903fb8d592dbbb86f037cc1fd3f514b8b622ca826c92ef34e64374d36",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "fixture-run-repaired": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/fixture-run-repaired/record.json",
+      "recordSha256": "b659af7bc7b665b6103c970d967582c20022f8e0bb4f1c5b1ff0ffa1941b138b",
+      "args": [
+        "lake",
+        "env",
+        "lean",
+        "--run",
+        "tests/MemoReplayMain.lean",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/fixture-0/work.egg"
+      ],
+      "elapsedMs": 602.671959,
+      "exitCode": 1,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "0308789ec335c6b3d722ffdf9958a3ac901903546cee5cd105a8dbe56ca10cab"
+    },
+    "native-fixture-build": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/native-fixture-build/record.json",
+      "recordSha256": "0ee0fd82afe09fd3fe59e4a05fca6f10f6a303ac2aba66ca5c5c2612c14f5369",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "memo_replay_tests"
+      ],
+      "elapsedMs": 3059.757542,
+      "exitCode": 0,
+      "stdoutSha256": "a2a9139d4927294233d99845629eb10b165582ec23919f2281e7bd209e15644e",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native-fixture-run": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/native-fixture-run/record.json",
+      "recordSha256": "fe0b3e66f787f60ee53a561af5bd069f2b19b7af4d8121e5efdeaed6018b38fe",
+      "args": [
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/checkout/.lake/build/bin/memo_replay_tests",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/fixture-1/work.egg"
+      ],
+      "elapsedMs": 1073.184458,
+      "exitCode": 0,
+      "stdoutSha256": "d4ccd076aa0f2e7d85a56f1548777d38334d9be0a56f9792d86d20c7d66448e6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native-test-support": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/native-test-support/record.json",
+      "recordSha256": "ddd20c4cb57793ba128259d835e64251a7e8d6afbdee46def692aeaedfaaebc6",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "PageDBTestSupport"
+      ],
+      "elapsedMs": 13993.195834,
+      "exitCode": 1,
+      "stdoutSha256": "1c16b98c472496a0784fcfc2224e099f0516b81f16d9b92114a5c3df2ae5c57a",
+      "stderrSha256": "c4a27db198c4d8632369ee6102944ef46e83c20d685f7c17a6aaff9cfcfc710f"
+    }
+  },
+  "guards": [
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/build-guard.json",
+      "sha256": "8af756334f80d59cfe3201bd22535642836ae689c5f531cee5fa0a8f7e43794d",
+      "guardPid": 65452,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2766704,
+      "samples": 152,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/construct.py"
+      ],
+      "childPid": 65465,
+      "exitCode": 0,
+      "elapsedSeconds": 22.05302054202184
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/checked-standard-guard.json",
+      "sha256": "793d39a936b8934f80a5764104a4c84fbab8610eb65f4f821475248bcefca166",
+      "guardPid": 13076,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2833856,
+      "samples": 349,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/finish-standard-checked.py"
+      ],
+      "childPid": 13101,
+      "exitCode": 0,
+      "elapsedSeconds": 52.761898916214705
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/checks-guard.json",
+      "sha256": "0aa6dd99028882d83f8cbbec0f869c66cb788c63ecfb1aeba083cc2ea6e31f74",
+      "guardPid": 80864,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1260016,
+      "samples": 204,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/add-checks.py"
+      ],
+      "childPid": 80877,
+      "exitCode": 1,
+      "elapsedSeconds": 29.701933542266488
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/final-checks-guard.json",
+      "sha256": "891421765afd68dc55b5d7f5e7dbf09f2b5a0d3dba97f1343142e0d6ef97d7c4",
+      "guardPid": 9939,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 30416,
+      "samples": 3,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/finish-standard.py"
+      ],
+      "childPid": 9952,
+      "exitCode": 1,
+      "elapsedSeconds": 0.3296324578113854
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/maintenance-guard.json",
+      "sha256": "25ce32d22b5dd456f3be3286775ec42885adfcd4e357697197d7489dde78ccaf",
+      "guardPid": 64527,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 236976,
+      "samples": 11,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/compress-closed-fixture.py"
+      ],
+      "childPid": 64541,
+      "exitCode": 0,
+      "elapsedSeconds": 1.5510384580120444
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/native-checks-guard.json",
+      "sha256": "95570c7615768837b237748c102ac335bbc768729aaed1106b8ac8d89c980e13",
+      "guardPid": 95673,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1524512,
+      "samples": 125,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/finish-native-checks.py"
+      ],
+      "childPid": 95686,
+      "exitCode": 1,
+      "elapsedSeconds": 18.388485917355865
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/repaired-checks-guard.json",
+      "sha256": "da9da6da8e3b5f78fafa0ccb37e9c088465629e4cb4520ef925953afb84fb2da",
+      "guardPid": 84957,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1200336,
+      "samples": 14,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/repair-checks.py"
+      ],
+      "childPid": 84970,
+      "exitCode": 1,
+      "elapsedSeconds": 1.9790421249344945
+    }
+  ],
+  "peakRssKiB": 2833856,
+  "resourceGuardsTriggered": [],
+  "nativeFixtureStdout": "PASS memo replay: exact payload/code, current request/nominations, slot collision, no-context hit, canonical response, incomplete rejection, changed read input and honest origin receipt\n",
+  "nativeFixtureExecutableSha256": "f256b3372af45389b3ff3891b6742bba6f7aa2085c421b7da1d74b69c3fc6df9",
+  "failedRunsPreserved": [
+    "fixture-build",
+    "fixture-run-repaired",
+    "native-test-support"
+  ],
+  "compressionRecord": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/closed-fixture-compression.json",
+  "compressionRecordSha256": "ce23ea908f0f71397d18df2a84c7cbfcdf4ad526ce6e0e3a766315b92d7e6ff5",
+  "originScope": "Current memo receipt records exact request/payload checksums, current nomination/dependency gates and original equality locator. locator-carried is not independently verified full ancestry; absent completed lineage stays untracked. External files are rechecked at delivery.",
+  "pureProofScope": "Canonical record decode preserves the captured calculation payload and request/nominations/source read program; the trusted producer/storage/serde and complete causal ancestry remain explicit boundaries",
+  "fullIoSuiteRuntimeExecuted": false,
+  "llvmSixStageDeliveryQualified": false,
+  "sourceContextCandidateIntegrated": false,
+  "installedRuntimeBinaryReplaced": false,
+  "modelCalls": 0,
+  "newSeedAcquisition": false,
+  "adoptionCriterion": "Appropriate original DB history delivered within deadline; quality/token variance is separate, not a rejection gate",
+  "remaining": [
+    "Required original code coverage for all six LLVM stages",
+    "Source IO and memo serialization refinement completeness",
+    "Persistent/local generator causal ancestry and final delivered fragments",
+    "Phase 3 fraction, sound tool rules, multi-repository pilot and paper"
+  ],
+  "readOnlyCowProbe": {
+    "record": "/Users/ovm/.codex/experiments/eggshell/memo-origin-20261022/cow-sharing-probe.json",
+    "sha256": "9d6427043f804956668b2fa31abb77e30503112b9d09ceba8e81ca8a10271c17",
+    "result": "No positive aligned-page sharing savings for the selected closed runtime; no mutations attempted"
+  }
+}

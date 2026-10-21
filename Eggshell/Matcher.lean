@@ -2910,6 +2910,12 @@ theorem continuation_child_origin {current child : Value} {text : String}
 
 structure Discovery where
   view : RunView
+  /-- The actual durable generators supplied to this discovery run. -/
+  persistentUnions : List UnionEdge
+  /-- Every accepted equality follows from current generators and congruence.
+  This proof erases and does not rerun a solver during delivery. -/
+  generated : QuotientBuilder.CongruenceSound.QuotientSound
+    (persistentUnions ++ view.localUnions) view.quotient
   hits : List Match
   current : Value
   passes : Nat
@@ -3075,8 +3081,12 @@ def TerminalRoot.check? (view : RunView) (current : Value) (text : String)
    else none
   else none
 
-def TerminalRoot.discovery (terminal : TerminalRoot view current text) : Discovery := {
-  view, hits := addMatches [] terminal.hits, current, passes := 0 }
+def TerminalRoot.discovery (terminal : TerminalRoot view current text)
+    (persistentUnions : List UnionEdge)
+    (generated : QuotientBuilder.CongruenceSound.QuotientSound
+      (persistentUnions ++ view.localUnions) view.quotient) : Discovery := {
+  view, persistentUnions, generated
+  hits := addMatches [] terminal.hits, current, passes := 0 }
 
 /-- The empty native boundary is a genuine fixed point even when unrelated
 All edges and Outcome bodies exist elsewhere in the source. -/
@@ -3252,11 +3262,14 @@ def discoverUsingM? {m : Type → Type} [Monad m] {σ : Type}
               { finalBase with all := finalRunAll ++ finalBase.all } accumulated
             let finalRoots := roots state localUnions finalRunAll
             let produced := nextViews finalGraph finalRoots persistent localUnions index
-            let some finalView := produced.val | return none
+            let some final := produced.certified | return none
+            let finalView := final.val
             recordView finalRoots finalView
             recordPlan finalRoots finalView produced.plan
             pure (some {
               view := finalView
+              persistentUnions := persistent
+              generated := final.property
               hits := accumulated
               current
               passes
@@ -3302,6 +3315,7 @@ theorem discoverUsingM_views_exact {m : Type → Type} [Monad m] {σ : Type}
     | zero => rfl
     | succ fuel ih =>
         simp only [discoverUsingM?.saturate, IncrementalQuotient.ViewProvider.result_exact,
+          IncrementalQuotient.ProducedView.certified_exact,
           IncrementalQuotient.ViewProvider.reference_plan, IncrementalQuotient.ViewProvider.advance_none, ih]
   exact loop views iterations 0 initial [] [] [] _
 
@@ -3356,16 +3370,20 @@ theorem TerminalRoot.discovery_exact (normalize : Normalizer)
     (initial : IncrementalQuotient.make? view.graph (.text text :: storedValues)
       persistent [] ((QuotientBuilder.AtomQuotient.prepare persistent).map (·.beginRun)) = some view)
     (matchedExact : demandedMatchesUsing normalize demands cover corpus view (.text text)
-      evidence {} native [.text text] = terminal.hits) :
+      evidence {} native [.text text] = terminal.hits)
+    (generated : QuotientBuilder.CongruenceSound.QuotientSound
+      (persistent ++ view.localUnions) view.quotient) :
     discoverInUsing? normalize demands cover (.text text) storedValues persistent view.graph
-      corpus text evidence {} true native = some terminal.discovery := by
+      corpus text evidence {} true native = some (terminal.discovery persistent generated) := by
+  have certified := IncrementalQuotient.makeCertified_found view.graph (.text text :: storedValues)
+    persistent [] ((QuotientBuilder.AtomQuotient.prepare persistent).map (·.beginRun)) view initial generated
   have root := Extract.runWithPolicy_unadmitted_root view.graph view.quotient.toEquality
     (.text text) terminal.rootUnchanged
   have projectEmpty (graph : WorkGraph) : projectMatches graph [] = graph := rfl
   have one : [Value.text text].eraseDups = [Value.text text] := rfl
   simp [discoverInUsing?, discoverUsingM?, discoverUsingM?.saturate, bind, pure, extractAt, projectEmpty,
-    IncrementalQuotient.ViewProvider.result_exact,
-    initial, admissions, RunView.extractWith, root, one,
+    IncrementalQuotient.ViewProvider.result_exact, IncrementalQuotient.ProducedView.certified_exact,
+    certified, initial, admissions, RunView.extractWith, root, one,
     Extraction.fromSelection, Extraction.finalize, Selection.openWork,
     freshDemand, terminal.fresh, matchedExact, terminal.unionsUnchanged,
     terminal.ownersUnchanged,
