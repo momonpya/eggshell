@@ -6,6 +6,7 @@ Fresh and the delivery candidate measure the user's 70%/90% targets. The fixed
 candidate. Public main is excluded. Nothing is automatically adopted or retried.
 """
 import argparse
+import hashlib
 from pathlib import Path
 import shutil
 
@@ -90,17 +91,60 @@ def status(slot):
     return result
 
 
+def history_reference_slots(plan, stage):
+    """Independent repetitions cannot change the predeclared r0 history."""
+    preceding = [s for s in plan['slots'] if s['stage'] == stage - 1 and s['repetition'] == 0]
+    if len(preceding) != 3 or {s['condition'] for s in preceding} != {'fresh', 'current', 'candidate'}:
+        raise ValueError('Common history requires the complete fixed r0 matched triple')
+    return preceding
+
+
+def prior_answer(documents, text=None, work=None):
+    answers = [d for d in documents if d['kind'] == 'answer' and
+               (text is None or d['evidence'].strip() == text.strip()) and
+               (work is None or d['work'] == work)]
+    if not answers or len({d['evidence'] for d in answers}) != 1:
+        raise ValueError('The predeclared prior answer is missing or ambiguous in the saved DB')
+    evidence = answers[0]['evidence']
+    return dict(owners=[d['owner'] for d in answers], text=evidence,
+                sha256=hashlib.sha256(evidence.encode()).hexdigest())
+
+
+def memory_delivery_report(inventory, body):
+    """Require actual reusable history; retain example probes as diagnostics.
+
+The task may choose a different valid example. Incidental source lines from a
+previous broad read do not become universal requirements for later answers.
+Question-level source/quality review remains necessary before adoption.
+"""
+    prior = inventory['priorAnswer']
+    if not prior['text'] or hashlib.sha256(prior['text'].encode()).hexdigest() != prior['sha256']:
+        raise ValueError('Invalid saved prior-answer inventory')
+    parts = evidence_parts(body)
+    delivered = [owner for owner in prior['owners'] if normalized(prior['text']) in normalized(
+        '\n'.join(text for actual, text in parts if actual == owner))]
+    if not delivered:
+        raise ValueError('The actual predeclared prior answer is not fully delivered')
+    required = [f for f in inventory['facts'] if f['fullExcerptOwners']]
+    missing = [f['name'] for f in required if not any(
+        owner in f['fullExcerptOwners'] and normalized(f['excerpt']) in normalized(text)
+        for owner, text in parts)]
+    return dict(priorAnswerFullOwners=delivered, storedSourceProbes=[f['name'] for f in required],
+                missingSourceProbes=missing, sourceProbeScope='diagnostic; quality is judged against the actual question, not mandatory unrequested examples')
+
+
 def admit(base, stage):
     plan = checked(base)
     slots = [s for s in plan['slots'] if s['stage'] == stage]
     if stage > 1:
-        earlier = [s for s in plan['slots'] if s['stage'] == stage - 1]
+        earlier = history_reference_slots(plan, stage)
         if not all([status(s) is not None for s in earlier]):
-            raise ValueError('Finish the fixed preceding comparisons before advancing history')
+            raise ValueError('Finish the fixed preceding r0 matched triple before advancing history')
     if any(status(s) is not None for s in slots):
         raise ValueError('Stage generation already started; keep its admission')
     source = None
     digests = {}
+    delivery_reports = {}
     prompts = read(bench.ROOT / 'docs/benchmarks/llvm-three-topics.json')['prompts']
     for slot in slots:
         cell, label = Path(slot['study']), slot['label']
@@ -125,12 +169,7 @@ def admit(base, stage):
                 raise ValueError('Stored evidence gate belongs to another snapshot')
             ready = prepared['manifest']
             body = (cell / 'prepared' / label / ready['memory']['body']).read_text()
-            parts = evidence_parts(body)
-            missing = [f['name'] for f in inventory['facts'] if f['fullExcerptOwners'] and
-                not any(owner in f['fullExcerptOwners'] and normalized(f['excerpt']) in normalized(text)
-                        for owner, text in parts)]
-            if missing:
-                raise ValueError('Stored required source excerpts are still undelivered: ' + ', '.join(missing))
+            delivery_reports[label] = memory_delivery_report(inventory, body)
     if stage == 1 and source != plan['initialSource']:
         raise ValueError('Initial seed changed')
     if stage > 1:
@@ -143,7 +182,8 @@ def admit(base, stage):
     if target.exists():
         raise ValueError('Keep the existing stage admission')
     save(target, dict(source=source, preparations=digests, model=plan['model'], effort=plan['effort'],
-                      sourceFactsSha256=sha(base / 'sources' / f'stage{stage}.json')))
+                      sourceFactsSha256=sha(base / 'sources' / f'stage{stage}.json'),
+                      deliveryReports=delivery_reports))
 
 
 def dispatch(base):

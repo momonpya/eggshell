@@ -13,17 +13,9 @@ from pathlib import Path
 import readme_benchmark as bench
 from readme_matched import DOMAIN, INPUTS, normalized, reconstruct, restore_input
 from readme_preparation import clone, prepare_native_trial
-from readme_token_dispatch import admit, checked, status
+from readme_token_dispatch import admit, checked, status, history_reference_slots, prior_answer
 from readme_trial import read, sha, validate_prepared_trial
 from semantic_latency import execute, graph_files, save
-
-
-def history_reference_slots(plan, stage):
-    """Independent later repetitions cannot change the predeclared r0 history."""
-    preceding = [s for s in plan['slots'] if s['stage'] == stage - 1 and s['repetition'] == 0]
-    if len(preceding) != 3 or {s['condition'] for s in preceding} != {'fresh', 'current', 'candidate'}:
-        raise ValueError('Common history requires the complete fixed r0 matched triple')
-    return preceding
 
 
 def checkpoint(base, plan, stage):
@@ -99,6 +91,7 @@ def checkpoint(base, plan, stage):
         raise ValueError('Preserve the existing source inventory')
     save(evidence, dict(sourceGraphFiles=original, documents=len(documents),
         uniqueInputs=len(inputs), facts=facts,
+        priorAnswer=prior_answer(documents, (attempt / 'answer.txt').read_text(), prompts[parent['topic']]),
         qualifications=['Original outcome evidence only; source presence is not a quality verdict.']))
     ready = dict(directory=str(database), files=original, source=str(source),
         sourceFiles=original, documents=len(documents), uniqueInputs=len(inputs), warm=warm,

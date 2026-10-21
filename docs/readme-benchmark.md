@@ -99,6 +99,42 @@ reproduced in a temporary directory and recorded with the candidate in
 delivery cases; new token and quality results still require the complete
 new fixed comparison from topic 1 r0.
 
+The first `caf318be…` matched triple consumes 2,306,976 fresh, 1,246,483 current
+and 643,211 candidate tokens (72.1% fresh-relative saving; 48.4% less than
+current). The candidate's actual initial body exactly matches preparation,
+save/shutdown pass, and the answer correctly distinguishes static test
+expectations from the unavailable lit run. This one triple is closed without
+adoption: stage-2 preparation reaches the actual new 47-document history but
+the dispatcher still contains a stale all-repetitions barrier. Known cost is
+4,196,670 tokens; 51 answering calls remain unattempted.
+
+Checkpoint and admission now share the same r0-reference barrier, with tests
+of the real admission path. The next frozen protocol also restores the
+benchmark's question-level quality scope: different unrequested examples are
+not failures. The actual topic-1 answer discusses `-x`, standard-library
+forwarding and target tests. Requiring an incidental HLSL excerpt from an old
+broad read for every subsequent question is not a general relevance test.
+
+Before generation, the candidate must actually deliver the complete previous
+answer exported from the predeclared saved DB. It is never pasted into the
+model prompt. Original source probes are retained in each admission report,
+including omissions; they are diagnostic rather than mandatory examples.
+Quality/source review still checks the actual question and later reads. Needed
+stored evidence that was not delivered remains a delivery gap; model variance
+does not excuse it. Complete prior-answer delivery is readiness, not a quality
+or adoption verdict. All 54 calls are collected anew after these harness
+corrections, with the delivery executable unchanged.
+
+Resource maintenance repacks 221 closed native executable payloads into 28
+shared zstd bundles, reading back and checking every original native SHA-256.
+Sources, DBs and raw model records remain unchanged; retired gzip containers
+have explicit restoration markers. The restorer is
+`/Users/ovm/.codex/experiments/eggshell/native-payload-repack-20261021/restore.py`.
+It restores a payload by digest into its original executable path, whose mode
+and mtime remain in the original archive manifests. This recovers 5.95 GiB;
+the unchanged three-GiB aggregate RSS stop threshold remains below the user's
+four-GiB ceiling.
+
 The task is the README's Clang Driver sequence: topics 1, 2 and 3, first from a
 new seed and then with accumulated memory, in independent native chats. Prompts
 come verbatim from `docs/benchmarks/llvm-three-topics.json`; only `<LLVM_SOURCE>`

@@ -2,13 +2,45 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from prepare_token_restart import new_slots, qualified_source
-from prepare_token_stage import history_reference_slots
-from readme_token_dispatch import dispatch
+from readme_token_dispatch import dispatch, admit, history_reference_slots, prior_answer, memory_delivery_report
 
 
 class RestartTests(unittest.TestCase):
+    def test_real_admission_advances_after_the_r0_triple(self):
+        plan = dict(slots=new_slots(Path('/new-fixed-comparison')))
+        def finished(slot):
+            return {} if slot['stage'] == 1 and slot['repetition'] == 0 else None
+        with patch('readme_token_dispatch.checked', return_value=plan), \
+             patch('readme_token_dispatch.status', side_effect=finished), \
+             patch('readme_token_dispatch.read', side_effect=RuntimeError('prepared input inspection reached')):
+            with self.assertRaisesRegex(RuntimeError, 'prepared input inspection reached'):
+                admit(Path('/new-fixed-comparison'), 2)
+
+    def test_real_admission_rejects_an_incomplete_r0_triple(self):
+        plan = dict(slots=new_slots(Path('/new-fixed-comparison')))
+        def finished(slot):
+            return {} if slot['stage'] == 1 and slot['repetition'] == 0 and slot['condition'] != 'current' else None
+        with patch('readme_token_dispatch.checked', return_value=plan), \
+             patch('readme_token_dispatch.status', side_effect=finished), \
+             patch('readme_token_dispatch.read') as inspect:
+            with self.assertRaisesRegex(ValueError, 'preceding r0 matched triple'):
+                admit(Path('/new-fixed-comparison'), 2)
+            inspect.assert_not_called()
+
+    def test_reusable_answer_is_required_without_forcing_unrequested_examples(self):
+        prior = prior_answer([dict(kind='answer', owner='saved', work='previous task', evidence='prior finding')])
+        inventory = dict(priorAnswer=prior, facts=[dict(name='another valid example',
+            fullExcerptOwners=['raw'], excerpt='incidental source from a broad read')])
+        body = '\nWORK GRAPH saved\n  GROUNDED OUTCOME\nprior finding\n  TRACE\n'
+        report = memory_delivery_report(inventory, body)
+        self.assertEqual(report['priorAnswerFullOwners'], ['saved'])
+        self.assertEqual(report['missingSourceProbes'], ['another valid example'])
+        with self.assertRaisesRegex(ValueError, 'not fully delivered'):
+            memory_delivery_report(inventory, '\nWORK GRAPH raw\n  GROUNDED OUTCOME\nincidental source from a broad read\n  TRACE\n')
+
     def test_retired_comparison_cannot_dispatch_another_call(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)

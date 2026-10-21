@@ -13,7 +13,7 @@ import readme_benchmark as bench
 from memory_guard import require_guard
 from readme_matched import study
 from readme_preparation import prepare_native_trial
-from readme_token_dispatch import CODE, OLD, admit, order, status
+from readme_token_dispatch import CODE, OLD, admit, order, status, prior_answer
 from readme_trial import read, sha, validate_prepared_trial
 from semantic_latency import graph_files, save
 
@@ -59,6 +59,10 @@ def freeze(base, construction, qualification):
     inventory = EX / 'readme-reuse-tokens-20261021/sources/stage1.json'
     if read(inventory)['sourceGraphFiles'] != initial['files']:
         raise ValueError('Source inventory belongs to another saved source')
+    if template['sourceSnapshots']['0']['files'] != initial['files']:
+        raise ValueError('Initial qualification describes another saved source')
+    initial_evidence = read(inventory)
+    initial_evidence['priorAnswer'] = prior_answer(read(qualification / 'sources/0/documents.json'))
     slots = new_slots(base)
     if len(slots) != 54 or any(status(slot) is not None for slot in slots):
         raise ValueError('A restarted comparison needs 54 unattempted calls')
@@ -66,6 +70,8 @@ def freeze(base, construction, qualification):
     (base / 'harness').mkdir()
     for name in PINNED:
         shutil.copy2(TOOLS / name, base / 'harness' / name)
+    (base / 'sources').mkdir()
+    save(base / 'sources/stage1.json', initial_evidence)
     paths = {condition:str(base / condition) for condition in ['fresh', 'current', 'candidate']}
     save(base / 'plan.json', dict(model='gpt-5.6-luna', effort='xhigh', slots=slots, paths=paths,
         code={name:sha(TOOLS / name) for name in PINNED},
@@ -77,12 +83,11 @@ def freeze(base, construction, qualification):
         evaluationOrder='Complete the six-stage sequence for repetition 0, then 1 and 2; each stage retains one common predeclared r0 history for all repetitions and conditions',
         accounting='input + output; cached once; failed usage retained; unknown never zero; seed separate',
         reusedCompletedControls={}, reusedCandidateTrials=[], newAnsweringCalls=54,
-        newSeedAcquisition=False, sourceInventorySha256=sha(inventory),
+        newSeedAcquisition=False, sourceInventorySha256=sha(base / 'sources/stage1.json'),
+        deliveryGate='Actual predeclared prior answer fully delivered; source/index/body integrity unchanged; original source probes retained as diagnostics; question-level quality reviewed before adoption',
         sourceQualification=dict(directory=str(qualification), resultSha256=sha(qualification / 'result.json')),
         publicIncluded=False, automaticResubmission=False, qualityAccepted=False, productionAdoption=False))
     (base / 'plan.sha256').write_text(sha(base / 'plan.json') + '\n')
-    (base / 'sources').mkdir()
-    shutil.copy2(inventory, base / 'sources/stage1.json')
     for condition, directory in paths.items():
         cell = Path(directory); cell.mkdir(mode=0o700)
         protocol = dict(template)
