@@ -147,6 +147,8 @@ def admit(base, stage):
 
 
 def dispatch(base):
+    if (base / 'retired.json').exists():
+        raise ValueError('This comparison is retired; preserve its calls and start a new fixed study')
     plan = checked(base)
     states = [status(s) for s in plan['slots']]
     index = next((i for i, state in enumerate(states) if state is None), None)

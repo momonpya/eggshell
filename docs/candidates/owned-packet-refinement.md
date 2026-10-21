@@ -1,7 +1,7 @@
 # Isolated owner-packet candidate
 
 The adjacent patch records the fixed `c704e1d6…` delivery candidate for review.
-Production adoption awaits the complete token and quality comparison.
+It remains unadopted: its model comparison stopped at a subsequent delivery gap.
 
 It carries original owner Values through transport, admits current meaning
 entries ahead of graph-only neighboring observations, and refines the admitted
@@ -22,7 +22,11 @@ four stored full-source probes; two independent native sessions return the
 same body in 11.984 and 6.268 seconds. The body is 119,080 characters and
 120,268 UTF-8 bytes. These are delivery checks, not token or quality results.
 
-The new 54-call comparison is frozen in
+The closed comparison is recorded in
 `/Users/ovm/.codex/experiments/eggshell/owned-packet-tokens-20261021/`.
-Every fresh/current/candidate answering call is new. Each subsequent stage
-must qualify against its actual common saved history before generation.
+The first new matched triple consumes 2,821,577 fresh, 864,396 current and
+518,298 candidate tokens (81.63% saving relative to fresh). Prospective topic-2
+native preparation on the actual new 57-document saved output misses four
+related source excerpts, so the remaining 51 model calls are unattempted.
+Known total consumption is 4,204,271 tokens; the partial audit and retirement
+marker preserve it. No result is imported into a future repaired comparison.

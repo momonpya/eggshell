@@ -4,9 +4,17 @@ import tempfile
 import unittest
 
 from prepare_token_restart import new_slots, qualified_source
+from readme_token_dispatch import dispatch
 
 
 class RestartTests(unittest.TestCase):
+    def test_retired_comparison_cannot_dispatch_another_call(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            (base / 'retired.json').write_text('{}')
+            with self.assertRaisesRegex(ValueError, 'retired'):
+                dispatch(base)
+
     def test_all_controls_and_candidates_belong_to_the_new_study(self):
         base = Path('/new-fixed-comparison')
         slots = new_slots(base)

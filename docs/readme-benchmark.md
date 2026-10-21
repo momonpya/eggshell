@@ -54,13 +54,22 @@ ContractAudit and focused ownership/scope checks pass. The exact candidate
 delta and source hashes are recorded in
 `docs/candidates/owned-packet-refinement.md` and its adjacent review patch.
 
-`owned-packet-tokens-20261021` now freezes 54 entirely new answering calls at
-5.6-luna/xhigh. All nine stage-1 preparations pass admission; generation
-starts at topic 1 r0. Later stages use their actual new common saved history
-and still require delivery admission. No previous model result is imported,
-and no new reduction or quality result is claimed before its actual trials
-complete. This initial-source qualification does not claim all historical
-diagnostic fixtures or all subsequent stages pass.
+`owned-packet-tokens-20261021` is now closed after its first matched triple at
+5.6-luna/xhigh. Topic 1 r0 consumes 2,821,577 fresh, 864,396 current and
+518,298 candidate tokens: an 81.63% fresh-relative saving for this one trial.
+The candidate's actual initial body matches its prepared body, and save,
+shutdown and output graph checks pass. This is not a full-cohort or adoption
+result. Known consumption is 4,204,271 tokens, with no unknown final usage;
+seed acquisition remains separate.
+
+Before the other 51 answering calls, native topic-2 preparation against the
+predeclared candidate r0's actual 57-document output reveals four missing
+stored source excerpts: cache key, complete HLSL branch scope, input-language
+predicate and default ToolChain selection. Substantive original lines are
+absent, not merely separated by presentation captions. The remaining model
+calls are unattempted. `retired.json` and `audits/stage1-r0-retired.json` retain
+the exact records. The dispatcher rejects retired comparisons. A repaired
+candidate must start an entirely new comparison at topic 1 r0.
 
 The task is the README's Clang Driver sequence: topics 1, 2 and 3, first from a
 new seed and then with accumulated memory, in independent native chats. Prompts
