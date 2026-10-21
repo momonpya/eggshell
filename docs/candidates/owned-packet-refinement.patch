@@ -1,0 +1,309 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -595,6 +595,44 @@
+             simp only [Option.getD_some]
+             exact Or.inr (List.mem_of_getElem? found)⟩
+   else none
++
++/-- Enrichment replaces only an already admitted owner. It cannot admit a
++new owner, remove another owner, or exceed the same complete-packet budget. -/
++def refineOwnedPacket [DecidableEq β] (chars bytes : Nat)
++    (cost : List α → Nat × Nat) (owner : α → β)
++    (accepted : {items : List α // (cost items).1 ≤ chars ∧ (cost items).2 ≤ bytes}) :
++    List α → {items : List α // (cost items).1 ≤ chars ∧ (cost items).2 ≤ bytes}
++  | [] => accepted
++  | offered :: rest =>
++      let next := accepted.val.map fun prior =>
++        if owner prior = owner offered then offered else prior
++      if fits : (cost next).1 ≤ chars ∧ (cost next).2 ≤ bytes then
++        refineOwnedPacket chars bytes cost owner ⟨next, fits⟩ rest
++      else refineOwnedPacket chars bytes cost owner accepted rest
++
++theorem owned_replacement_preserves_domain [DecidableEq β]
++    (owner : α → β) (items : List α) (offered : α) :
++    (items.map (fun prior => if owner prior = owner offered then offered else prior)).map owner =
++      items.map owner := by
++  simp only [List.map_map]
++  apply List.map_congr_left
++  intro prior member
++  dsimp only [Function.comp_def]
++  split <;> simp_all
++
++theorem owned_enrichment_preserves_domain [DecidableEq β]
++    (chars bytes : Nat) (cost : List α → Nat × Nat) (owner : α → β)
++    (accepted : {items : List α // (cost items).1 ≤ chars ∧ (cost items).2 ≤ bytes})
++    (offers : List α) :
++    (refineOwnedPacket chars bytes cost owner accepted offers).val.map owner =
++      accepted.val.map owner := by
++  induction offers generalizing accepted with
++  | nil => rfl
++  | cons offered rest ih =>
++      simp only [refineOwnedPacket]
++      split
++      · exact (ih _).trans (owned_replacement_preserves_domain owner accepted.val offered)
++      · exact ih accepted
+
+ theorem fitting_owner_is_complete_when_it_fits (allowance : Nat) (render : α → String)
+     (preferred fallback : α) (rest : List (α × α))
+@@ -1876,6 +1914,8 @@
+         trace ++ origin ++ provenance ++ "\nEND WORK GRAPH\n"
+
+ structure TransportSlice where
++  /-- Original graph ownership is carried as a Value, never recovered from display text. -/
++  owner : Option Value := none
+   keys : List String
+   text : String
+   members : List Selected
+@@ -1887,6 +1927,7 @@
+     (String × List Selected) → Option TransportSlice
+   | (_, []) => none
+   | (_, first :: rest) => some {
++      owner := some first.matched.edge.relation
+       keys := ((if whole then ["g:" ++ ownerKey first ++ ":" ++ relationKey first.matched.edge.outcome] else []) ++
+         (first :: rest).map graphKey) |>.eraseDups
+       text := renderGraphSlice staged whole (ownerKey first, first :: rest)
+@@ -1939,7 +1980,8 @@
+   let provenance := "\n".intercalate (support.provenance.map fun source =>
+     "    workspace=" ++ source.workspace ++ " relative=" ++
+       ", ".intercalate (source.files.map (·.relative) ++ source.uris))
+-  {keys := ["g:" ++ relationKey owner.relation ++ ":" ++ relationKey owner.outcome]
++  {owner := some owner.relation
++   keys := ["g:" ++ relationKey owner.relation ++ ":" ++ relationKey owner.outcome]
+    members := [], visibleKeys := []
+    text := "WORK GRAPH " ++ relationKey owner.relation ++ "\n  WORK\n" ++ readable owner.work ++
+      "\n  SUPPORT OUTCOME " ++ displayKey owner.relation ++ " -> EVIDENCE " ++ displayKey owner.outcome ++
+@@ -4641,74 +4683,6 @@
+       nominated.contains returned.val.relation = true :=
+   ⟨chosen, accepted, chosen.property.2.1⟩
+
+-
+-/-- Original numbered stdout is a coverage hint, never a file-read or
+-equivalence certificate. Unknown or multi-file provenance remains contextual. -/
+-structure CompleteFileObservation where
+-  owner : Value
+-  slice : TransportSlice
+-  source : String
+-  lines : List Nat
+-
+-def observationLineHints (text : String) : List Nat :=
+-  ((text.splitOn "\n").filterMap fun row =>
+-    let body := row.toList.dropWhile (fun char => char == ' ' || char == '\t')
+-    let digits := body.takeWhile Char.isDigit
+-    if digits.isEmpty || !(body.drop digits.length).head?.any
+-        (fun char => char == '\t' || char == ':') then none
+-    else (String.ofList digits).toNat?).eraseDups
+-
+-def completeFileObservation? (question : String) (owner : OutcomeEdge)
+-    (sources : List SourceEvidence.Record) (slice : TransportSlice) :
+-    Option CompleteFileObservation := do
+-  if !Matcher.nativeOutcome owner then none else do
+-  let [record] := sources | none
+-  let [file] := record.files | none
+-  let some content := file.content | none
+-  if !record.valid || (question.splitOn file.relative).length < 2 then none else do
+-  let lines := observationLineHints (readableEvidence owner owner.outcome)
+-  if lines.isEmpty then none else
+-    -- Fingerprints keep different observed source states in different hint
+-    -- domains. Neither line numbers nor overlapping text assert equality.
+-    pure {
+-      owner := owner.relation
+-      slice := slice
+-      lines := lines
+-      source := record.workspace ++ "\n" ++ file.relative ++ "\n" ++ content.root}
+-
+-/-- Fit complete admitted originals against the actual framed packet cost.
+-An oversized original does not consume novelty or prevent a later fit. -/
+-def fitCompleteFileObservations (chars bytes : Nat)
+-    (cost : List TransportSlice → Nat × Nat) (seed : List TransportSlice)
+-    (domain : List CompleteFileObservation) :
+-    Option {items : List {item : CompleteFileObservation // item ∈ domain} //
+-      (cost (seed ++ items.map (·.val.slice))).1 ≤ chars ∧
+-      (cost (seed ++ items.map (·.val.slice))).2 ≤ bytes} :=
+-  if initialFits : (cost seed).1 ≤ chars ∧ (cost seed).2 ≤ bytes then
+-    let measure := fun (items : List {item : CompleteFileObservation // item ∈ domain}) =>
+-      cost (seed ++ items.map (·.val.slice))
+-    let rec fit (fuel : Nat)
+-        (pool : List {item : CompleteFileObservation // item ∈ domain})
+-        (seen : Std.HashSet (String × Nat))
+-        (accepted : {items : List {item : CompleteFileObservation // item ∈ domain} //
+-          (measure items).1 ≤ chars ∧ (measure items).2 ≤ bytes}) :=
+-      match fuel with
+-      | 0 => accepted
+-      | fuel + 1 =>
+-          let novelty := fun item => item.val.lines.countP fun line =>
+-            !seen.contains (item.val.source, line)
+-          match pool.mergeSort (fun left right => novelty right ≤ novelty left) with
+-          | [] => accepted
+-          | first :: rest =>
+-              if novelty first == 0 then accepted else
+-              let next := accepted.val ++ [first]
+-              if fits : (measure next).1 ≤ chars ∧ (measure next).2 ≤ bytes then
+-                let seen := first.val.lines.foldl
+-                  (fun seen line => seen.insert (first.val.source, line)) seen
+-                fit fuel rest seen ⟨next, fits⟩
+-              else fit fuel rest seen accepted
+-    some (fit domain.length domain.attach {} ⟨[], by simpa [measure] using initialFits⟩)
+-  else none
+
+ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+     (deliveredGraphs : List String) (enforce : Bool)
+@@ -4817,6 +4791,9 @@
+       pure plan
+     let entries := slices.filterMap fun choice =>
+       choice.1.members.head?.map fun first => (first.matched.edge.relation, choice)
++    -- Omit a duplicate root only when an actual entry view represents it.
++    let surrounding := surrounding.filter fun source =>
++      !entries.any (·.1 == source.owner.relation)
+     let neighbors := surrounding.filterMap fun source => do
+       let positions := (semanticEvidence.find? (·.1 == source.owner.relation)).map Prod.snd
+       let windows := positions.getD []
+@@ -4911,7 +4888,8 @@
+       -- graph; other old explanations cannot crowd out original evidence.
+       let interpretation := primaryInterpretation rankedOriginals nominated sourceAll
+       let priority := fun (slice : TransportSlice) =>
+-        match choices.find? (fun choice => choice.2.1.text == slice.text) >>= fun choice =>
++        if isEntry slice then evidenceAdmissionPriority 0 true else
++        1 + match choices.find? (fun choice => choice.2.1.text == slice.text) >>= fun choice =>
+             originals.find? (fun owner => owner.relation == choice.1) with
+         | none => evidenceAdmissionPriority 0 (isEntry slice)
+         | some owner =>
+@@ -4972,41 +4950,22 @@
+                 else fitted.val
+         | none => []
+
+-      -- A literal file in the current request can justify complete original
+-      -- observations, without increasing the configured packet ceilings.
+-      -- Other requests retain the earlier plan exactly.
+-      let completeEntries := if enforce then [] else rawSlices.filterMap fun slice => do
++      -- Whole original data can refine its already admitted owner, under
++      -- the same actual packet budget. No second allocator may replace the
++      -- nominated/ordinary packet, and no filename or language is an oracle.
++      let wholeEntries := if enforce then [] else rawSlices.filterMap fun slice => do
+         let first ← slice.members.head?
+         if !entries.any (·.1 == first.matched.edge.relation) then none else do
+         let members := slice.members.filter (·.matched.retrieved)
+-        if members.isEmpty then none else do
+-        let whole ← rawSlice (if stagedVisible then staged else []) true (ownerKey first, members)
+-        completeFileObservation? (requestQuestion.getD "") first.matched.edge first.sources whole
+-      let completeSupport := if enforce then [] else surrounding.filterMap fun source => do
+-        if !neighbors.any (·.1 == source.owner.relation) then none else
+-        completeFileObservation? (requestQuestion.getD "") source.owner source.provenance
+-          (renderSourceSupport source)
+-      let domain := choices.filterMap fun choice =>
+-        (completeEntries ++ completeSupport).find? (·.owner == choice.1)
+-      let seed := (interpretation.bind fun owner =>
+-        (choices.find? (·.1 == owner.val.relation)).map
+-          (fun choice => choice.2.2.getLast?.getD choice.2.1)).toList
+-      match fitCompleteFileObservations budget (byteBudget.getD (budget * 4)) packetCost seed domain with
+-      | none => ordinary
+-      | some accepted =>
+-          if accepted.val.isEmpty then ordinary else
+-          let whole := accepted.val.map (·.val.slice)
+-          let packetStart := seed ++ whole
+-          let startCost := packetCost packetStart
+-          let funded := (min budget (max available.1 startCost.1),
+-            min (byteBudget.getD (budget * 4)) (max available.2 startCost.2))
+-          let owners := accepted.val.map (·.val.owner) ++
+-            interpretation.toList.map (·.val.relation)
+-          let remaining := (choices.filter fun choice => !owners.contains choice.1).map (·.2)
+-          let costRemaining := fun suffix => packetCost (packetStart ++ suffix)
+-          match boundedFlexiblePacketSlices funded.1 funded.2 costRemaining remaining priority preference with
+-          | some fitted => packetStart ++ fitted.val
+-          | none => packetStart
++        if members.isEmpty then none else
++          rawSlice (if stagedVisible then staged else []) true (ownerKey first, members)
++      let wholeSupport := if enforce then [] else surrounding.map renderSourceSupport
++      let originals := wholeEntries ++ wholeSupport
++      let offers := choices.filterMap fun choice =>
++        originals.find? (fun slice => slice.owner == some choice.1)
++      if fits : (packetCost ordinary).1 ≤ available.1 ∧ (packetCost ordinary).2 ≤ available.2 then
++        (refineOwnedPacket available.1 available.2 packetCost (·.owner) ⟨ordinary, fits⟩ offers).val
++      else ordinary
+       else if reserved > budget || byteBudget.any (reservedBytes > ·) then [] else
+       -- Assembly adds one separator per slice, including the first. Charge
+       -- those characters now; a full packet must not fail the final hook cap.
+@@ -6024,10 +5983,13 @@
+   let some discovery := result | return some pendingSearch
+   let extraction := Matcher.extraction discovery
+   trace "discovery"
++  let nominated ← semanticIds.mapM source.readOwner
++  let nominatedOwners := nominated ++
++    (stagedGraph.outcomes.filter (fun owner => semanticOwners.staged.contains owner.relation))
+   let mut provenance := []
+-  for selected in selectedMatches discovery extraction ++
+-      boundaryMatches discovery extraction do
+-    let owner := selected.matched.edge.relation
++  for edge in ((selectedMatches discovery extraction ++ boundaryMatches discovery extraction).map
++      (·.matched.edge) ++ nominatedOwners) do
++    let owner := edge.relation
+     if provenance.any (fun row => row.1 == owner) then continue
+     let stagedSources := staged.filterMap (SourceEvidence.receiptRecord? owner)
+     let stored ← match ← source.liveOwner owner with
+@@ -6035,10 +5997,7 @@
+       | some id => try source.readSources id catch _ => pure [SourceEvidence.unverified]
+     let records := (stagedSources ++ stored).eraseDups
+     provenance := provenance ++ [(owner, if records.isEmpty then [SourceEvidence.unverified] else records)]
+-  let nominated ← semanticIds.mapM source.readOwner
+   let selected := selectedMatches discovery extraction
+-  let nominatedOwners := nominated ++
+-    (stagedGraph.outcomes.filter (fun owner => semanticOwners.staged.contains owner.relation))
+   let entries := sourceEntryOwners nominatedOwners selected
+   let nominationIds := Std.HashMap.ofList (semanticIds.zip (nominated.map (·.relation)))
+   let nominationRanking := semanticOwners.presentationOrder.filterMap fun row => match row with
+@@ -6081,9 +6040,10 @@
+           -- are different budgets. A raw body can be larger than its needed
+           -- context; wire-size admission was losing lower-ranked evidence
+           -- before the context fitter could consider it. Hydration remains
+-          -- one bounded pool (192000 bytes for the native 48000-byte allowance).
+-          (4 * min (selection.handoffChars * 4)
+-            (selection.handoffBytes.getD (selection.handoffChars * 4)))
++          -- one independently bounded source-memory pool.
++          -- Source working memory is independent of the final wire limit.
++          -- The renderer still pays each transmitted slice in both units.
++          (16 * 1024 * 1024)
+           (indexedFocus.map Prod.fst |>.getD semanticOwners.durableRanking)
+           (reached.map fun row => (row.work, sourceFamilyPriority evidenceRoots sourceAll row.work)) do
+         let some row := reached.find? (fun row => row.work == owner.work) |
+@@ -6176,7 +6136,10 @@
+     (nominated := nominated.map (·.relation) ++ semanticOwners.staged)
+     (semanticEvidence := prioritizedEvidence originalEvidence focusedWindows)
+     (meaningSelected := recommendation)
+-    (sourceAll := sourceAll) (sourceUnions := persistent) (entryWorks := entryWorks) (support := support)
++    (sourceAll := sourceAll) (sourceUnions := persistent) (entryWorks := entryWorks)
++    -- Every nomination is an original source root, even when the Match
++    -- renderer cannot represent it. Its zero-hop route creates no control.
++    (support := focusDomain)
+     (byteBudget := selection.handoffBytes)
+     (evidenceRanking := (focusedRanking ++ evidenceRanking).eraseDups)
+     (requestQuestion := meaningQuery) (nativeObserved := evidence.isSome)
+--- /dev/null
++++ b/tools/OwnedPacketTests.lean
+@@ -0,0 +1,28 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++private def require (ok : Bool) (message : String) : IO Unit :=
++  unless ok do throw (IO.userError message)
++private def slice (owner : Option Value) (text : String) : TransportSlice :=
++  {owner, text, keys := [], members := [], visibleKeys := []}
++private def cost (items : List TransportSlice) : Nat × Nat :=
++  let text := "frame:" ++ "|".intercalate (items.map (·.text))
++  (text.length,text.utf8ByteSize)
++def main : IO Unit := do
++  let a := Value.text "first original owner"
++  let b := Value.text "other original owner"
++  let initial := [slice (some a) "cue",slice (some b) "other"]
++  let accepted : {items : List TransportSlice // (cost items).1 ≤ 50 ∧ (cost items).2 ≤ 50} :=
++    ⟨initial,by decide⟩
++  let result := refineOwnedPacket 50 50 cost (·.owner) accepted
++    [slice (some a) (String.ofList (List.replicate 100 'x')),
++     slice none "unowned", slice (some b) "other original data"]
++  require (result.val.map (·.owner) == initial.map (·.owner)) "An enrichment changed original owners"
++  require ((result.val.head?.map (·.text)) == some "cue") "An oversized original evicted another cue"
++  require ((result.val[1]?.map (·.text)) == some "other original data") "A later fitting original was lost"
++  require (result.val.all (fun item => item.members.isEmpty && item.visibleKeys.isEmpty))
++    "Advisory data acquired control"
++  let bytes : {items : List TransportSlice // (cost items).1 ≤ 20 ∧ (cost items).2 ≤ 20} :=
++    ⟨[slice (some a) "A",slice (some b) "B"],by decide⟩
++  let result := refineOwnedPacket 20 20 cost (·.owner) bytes [slice (some a) "あああああ"]
++  require (result.val.map (·.text) == ["A","B"]) "UTF-8 overflow passed a character-only bound"
++  IO.println "owned packet: original Value ownership, retained admitted data, exact bounds and no control passed"

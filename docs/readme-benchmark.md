@@ -46,6 +46,22 @@ and pass stored-source delivery before freezing. Two focused checks cover the
 new-call schedule and refusal of failed delivery. This tooling does not adopt
 a runtime or create a new token result.
 
+The subsequent minimal owner-bound candidate `c704e1d6…` retains the earlier
+context planner. It qualifies on the actual 37-document initial source and
+topic 1: all four stored full-source probes are delivered, with byte-identical
+bodies from independent native sessions in 11.984/6.268 s. Library,
+ContractAudit and focused ownership/scope checks pass. The exact candidate
+delta and source hashes are recorded in
+`docs/candidates/owned-packet-refinement.md` and its adjacent review patch.
+
+`owned-packet-tokens-20261021` now freezes 54 entirely new answering calls at
+5.6-luna/xhigh. All nine stage-1 preparations pass admission; generation
+starts at topic 1 r0. Later stages use their actual new common saved history
+and still require delivery admission. No previous model result is imported,
+and no new reduction or quality result is claimed before its actual trials
+complete. This initial-source qualification does not claim all historical
+diagnostic fixtures or all subsequent stages pass.
+
 The task is the README's Clang Driver sequence: topics 1, 2 and 3, first from a
 new seed and then with accumulated memory, in independent native chats. Prompts
 come verbatim from `docs/benchmarks/llvm-three-topics.json`; only `<LLVM_SOURCE>`
