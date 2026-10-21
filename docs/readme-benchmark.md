@@ -1572,3 +1572,45 @@ concentrated in a few complete observations, while the current packet spreads
 its allowance across many clipped observations. The next investigation is
 general complete-observation selection using relevance and original-data
 redundancy, rather than another local cue-order adjustment.
+
+The complete-observation candidate `57db4e…` starts from `63a457…`, keeping
+the numerical provider, MiniLM assets/encoding, matcher, source checks, Worker,
+hook policy and request guidance byte-identical. It changes packet allocation
+among already admitted source observations. A single fingerprinted source
+literally named in the current question can receive its original observation
+in full. Original numbered stdout supplies coverage hints; greedy selection
+prefers unseen line numbers within the same recorded source state. Hints
+certify neither file-read semantics nor equality. An oversized observation
+spends no coverage. The existing framed packet cost prices every accepted
+observation, including source/status framing, against the original character
+and byte ceilings. The earlier bounded excerpts can use the remaining space.
+
+The existing lossless native renderer carries whole observation data. Entry
+slices retain only the already retrieved Matches; `Selected.localConnection`
+rejects such Matches for native control. Source support keeps empty members
+and visible keys. The change creates no Match, union, All edge, completion or
+freshness judgment. A whole-Outcome receipt records delivered bytes rather
+than granting an operation permission to skip. This boundary is recorded in
+`scope-context-20261021/native-9/mechanism-audit.json`.
+
+All six native source cells (initial saved DB and predeclared topic-1 r0
+history, each with topics 1/2/3) now deliver every predeclared full excerpt
+that exists in the original DB. Both native sessions per cell complete:
+5.307–11.998 seconds for twelve hooks. Body sizes are 118,303–119,841
+characters and 120,268–122,454 UTF-8 bytes, within the unchanged
+120,000-character/128,000-byte limits. Topic 1's initial body is byte-identical
+to the measured `63a457…` body. Four focused complete-observation checks,
+the six scope checks and ContractAudit pass. Structure syntax/identifier
+build failures and their repairs are retained; the constructor reproduces
+the final built source exactly. Observed construction RSS peaks at
+3,018,352 KiB and native qualification at 1,409,344 KiB; neither monitor fires.
+This candidate has zero answering-model calls and remains unadopted. These
+are delivery results, not new token savings or answer-quality acceptance.
+
+The user's latest instruction treats variation as model dispersion once the
+needed saved history, actual delivery and answer quality are checked. A bad
+repetition alone does not justify more delivery changes. Preserve the fixed
+equal repetitions and report individual inclusive consumption, mean and
+range. Freeze the delivery candidate before subsequent model evaluation;
+do not assign the old `63a457…` model results to this new runtime or discard
+the completed negative comparisons.
