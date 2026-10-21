@@ -1,0 +1,475 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -3069,6 +3069,138 @@
+     previousDelimiter := if numbered then delimiter else none
+   return heads.reverse
+
++/-- A locator in historical prose is only a hint into an already loaded
++observation with the same recorded dependency. It is never followed as a path. -/
++def citedLineNumbers (texts : List String) (relative : String) : List Nat :=
++  if !SourceEvidence.safeRelative relative then [] else
++    (texts.flatMap fun text => [relative ++ ":", relative ++ "#L"].flatMap fun marker =>
++      ((text.splitOn marker).drop 1).filterMap fun rest =>
++        (String.ofList (rest.toList.takeWhile Char.isDigit)).toNat?).eraseDups
++
++def observedLineNumber? (text : String) : Option (Nat × Char) := do
++  let chars := text.toList.dropWhile (· == ' ')
++  let digits := chars.takeWhile Char.isDigit
++  if digits.isEmpty then none else do
++    let number ← (String.ofList digits).toNat?
++    let delimiter ← (chars.drop digits.length).head?
++    if delimiter == '\t' || delimiter == ':' then some (number, delimiter) else none
++
++/-- Independent numbered read ranges have explicit discontinuities. Keep a
++short complete companion range when the same original observation supports
++a citation; this also handles multi-file reads without guessing source syntax.
++All offsets remain in the canonical saved scalar, including JSON escapes. -/
++def observedNumberedSegments (source : String) (layout : Option (DecodedLayout source)) :
++    List (ContextSpan source × List Nat) := Id.run do
++  let text := layout.map (·.decoded.text) |>.getD source
++  let rows := (contextRecordSpans source layout).zip (text.splitOn "\n")
++  let mut groups : List (ContextSpan source × List Nat) := []
++  let mut previous : Option (Nat × Char) := none
++  for (span, text) in rows do
++    match observedLineNumber? text with
++    | none => previous := none
++    | some (number, delimiter) =>
++        if previous == some (number - 1, delimiter) && number > 0 then
++          match groups with
++          | (first, numbers) :: rest =>
++              if valid : first.start < span.stop then
++                groups := (⟨first.start, span.stop, valid, span.within⟩, number :: numbers) :: rest
++              else groups := (span, [number]) :: groups
++          | [] => groups := [(span, [number])]
++        else groups := (span, [number]) :: groups
++        previous := some (number, delimiter)
++  return groups.reverse.map fun (span, numbers) => (span,numbers.reverse)
++
++/-- Existing directory positions covering an original observed scalar span. -/
++def observedSpanWindows (workChars : Nat) (span : ContextSpan source) : List Nat :=
++  let first := (workChars + span.start) / 384
++  let last := (workChars + span.stop - 1) / 384
++  (List.range (last + 1 - first)).map (· + first)
++
++/-- Literal native read metadata can locate an unnumbered observation too.
++Only a single fixed numeric print range is understood. Existing shell parsing
++rejects expansions and operators; unsupported output ends the projected prefix.
++This is a data-selection hint, never an equation for external shell behavior. -/
++def literalReadRange? (segment : String) : Option (String × Nat × Nat) := do
++  let words ← SourceEvidence.literalWords? segment
++  match words with
++  | ["sed", "-n", program, file] =>
++      if !program.endsWith "p" then none else do
++        let bounds := (program.dropEnd 1).copy.splitOn ","
++        let (first, last) ← match bounds with
++          | [first, last] => do pure (← first.toNat?, ← last.toNat?)
++          | [line] => do let value ← line.toNat?; pure (value,value)
++          | _ => none
++        if first > 0 && first ≤ last then some (file,first,last) else none
++  | _ => none
++
++def nativeReadPrefix (work : String) : List (String × Nat × Nat) := Id.run do
++  let input := Json.parse ("\n".intercalate ((work.splitOn "\n").drop 1)) |>.toOption
++  let command := input.bind fun input =>
++    (input.getObjValAs? String "command").toOption.orElse
++      (fun _ => (input.getObjValAs? String "cmd").toOption)
++  let segments := command.bind SourceEvidence.sequenceSegments? |>.getD []
++  let mut result := []
++  for segment in segments do
++    let some range := literalReadRange? segment | return result
++    result := result ++ [range]
++  return result
++
++/-- Project the recorded read prefix into existing original scalar rows.
++No file is opened. Every returned range is an actual bounded observation;
++the external command/OS relation remains advisory and freshness is separate. -/
++def nativeReadRows (source : String) (layout : Option (DecodedLayout source))
++    (work : String) (records : List SourceEvidence.Record) :
++    List (ContextSpan source × Nat) := Id.run do
++  let rows := (contextRecordSpans source layout).toArray
++  let files := (records.flatMap (·.files)).map (·.relative)
++  let mut offset := 0
++  let mut result := []
++  for (file, first, last) in nativeReadPrefix work do
++    let count := last + 1 - first
++    if count > rows.size - offset then return result.reverse
++    if files.any (fun relative => file == relative || file.endsWith ("/" ++ relative)) then
++      for i in List.range count do
++        if let some span := rows[offset + i]? then
++          result := (span,first+i) :: result
++    offset := offset + count
++  return result.reverse
++
++/-- A long interpretation cannot hide another admitted interpretation's
++references behind all of its own. No history timestamp or source language is
++needed: visit each original list once per depth. -/
++def balancedReferenceNumbers (rows : List (List Nat)) : List Nat :=
++  let depths := rows.foldl (fun n row => max n row.length) 0
++  ((List.range depths).flatMap fun depth => rows.filterMap (·[depth]?)).eraseDups
++
++/-- Resolve prose citations only against recorded source dependencies and
++original numbered rows. Ambiguous multi-file row numbers can offer multiple
++original ranges, but cannot assert file identity or completion. -/
++def citedObservationCoordinates (texts : List String) (owner : OutcomeEdge)
++    (records : List SourceEvidence.Record) : Option (Nat × List Nat) := Id.run do
++  let numbers := balancedReferenceNumbers (texts.map fun text =>
++    ((records.flatMap (·.files)).flatMap fun file => citedLineNumbers [text] file.relative).eraseDups)
++  if numbers.isEmpty then return none
++  let some source := Matcher.atomText? owner.outcome | return none
++  let some work := Matcher.atomText? owner.work | return none
++  let layout := (decodedToolText? source).map DecodedLayout.make
++  let text := layout.map (·.decoded.text) |>.getD source
++  let rows := (contextRecordSpans source layout).zip (text.splitOn "\n")
++  let native := nativeReadRows source layout work records
++  let indexed := numbers.zipIdx.filterMap fun (number, priority) =>
++    let spans := (rows.filterMap fun (span, row) =>
++      if (observedLineNumber? row).any (·.1 == number) then some span else none) ++
++      (native.filterMap fun (span, line) => if line == number then some span else none)
++    if spans.isEmpty then none else some (priority,spans)
++  let some first := indexed.head? | return none
++  let cited := indexed.flatMap Prod.snd
++  let compact := (observedNumberedSegments source layout).filterMap fun (span, rows) =>
++    if rows.length > 1 && span.stop - span.start ≤ 2048 then some span else none
++  return some (first.1,((cited ++ compact).flatMap (observedSpanWindows (work.length + 1))).eraseDups)
++
++def citedObservationWindows (texts : List String) (owner : OutcomeEdge)
++    (records : List SourceEvidence.Record) : List Nat :=
++  (citedObservationCoordinates texts owner records).map Prod.snd |>.getD []
++
+ def structureContextRanges (source : String) (workChars : Nat) (windows : List Nat)
+     (heads : List (Nat × Option Nat)) : List (Nat × EvidenceRange source) :=
+   (meaningContextGroups source workChars windows).filterMap fun group => do
+@@ -3899,6 +4031,44 @@
+       intro fragment present
+       simpa only [result, List.mem_mergeSort, List.mem_append] using Or.inl present⟩
+   else none
++
++/-- A graph-admitted source without numerical positions still has a
++bounded original-data context when an admitted interpretation cites it.
++Existing numerical positions retain precedence; this creates no Match. -/
++def sourceContextWindows (numerical referenced : List Nat) : List Nat :=
++  if numerical.isEmpty then referenced else numerical
++
++theorem numerical_context_is_retained (numerical referenced : List Nat)
++    (present : numerical.isEmpty = false) :
++    sourceContextWindows numerical referenced = numerical := by
++  simp [sourceContextWindows,present]
++
++/-- Citation context can add original data to an existing owner plan.
++Every alternative retains its preceding fragments and its control fields;
++the original minimum remains the fallback. A pointer never replaces a cue. -/
++def referencedContextPlan (plan : TransportSlice × List TransportSlice)
++    (references : List TransportSlice) : TransportSlice × List TransportSlice := Id.run do
++  let mut current := plan.1
++  let mut alternatives := []
++  for candidate in references ++ plan.2 do
++    if let some before := current.context then
++      if let some offered := candidate.context then
++        if let some checked := checkedContextExtension before offered then
++          current := {current with
++            keys := checked.val.keys
++            text := checked.val.render
++            context := some checked.val}
++          alternatives := alternatives ++ [current]
++  return (plan.1, alternatives)
++
++/-- A supporting source is useful as the coupled observation and its
++located reference, not as an unrelated interior with the reference omitted.
++The checked union already retains every original minimum fragment. -/
++def requireReferenceContext (plan : TransportSlice × List TransportSlice) :
++    TransportSlice × List TransportSlice :=
++  match plan.2 with
++  | [] => plan
++  | first :: rest => (first,rest)
+
+ /-- Count the union of selected meaning-cue positions. Repeated overlapping
+ cues add no utility; graph headers and optional neighboring text add none. -/
+@@ -4698,7 +4868,9 @@
+     (support : List (SourceSupport entryWorks sourceAll sourceUnions) := [])
+     (byteBudget : Option Nat := none) (evidenceRanking : List Value := [])
+     (requestQuestion : Option String := none) (nativeObserved : Bool := false)
+-    (advisoryExcluded : List Value := []) : Option Handoff :=
++    (advisoryExcluded : List Value := [])
++    (referenceEvidence : List (Value × List Nat) := [])
++    (referencePriorities : List (Value × Nat) := []) : Option Handoff :=
+   let extraction := prepared.val
+   let attach := fun selected : Selected => {
+     selected with
+@@ -4782,13 +4954,19 @@
+       else rawSlices.filterMap fun slice => do
+       let first ← slice.members.head?
+       let positions := (semanticEvidence.find? (·.1 == first.matched.edge.relation)).map Prod.snd
+-      let windows := positions.getD []
++      let referenced := (referenceEvidence.find? (·.1 == first.matched.edge.relation)).map Prod.snd |>.getD []
++      let windows := sourceContextWindows (positions.getD []) referenced
+       if !lookupContextAllowed (enforce && requestQuestion.isSome) meaningSelected first.blocks positions then none else do
+       let render := (prepareContextualSlicePlan planningReceipts windows slice).eval
+       let wanted := ownerContextDemand first.matched.edge windows
+       let levels := contextAllowanceLevels wanted (ownerContextAllowances first.matched.edge windows share allowance)
+       let plan ← contextSlicePlan (levels.filterMap render)
+-      pure plan
++      if referenced.isEmpty then pure plan else do
++        let extra := (prepareContextualSlicePlan planningReceipts referenced slice).eval
++        let demand := ownerContextDemand first.matched.edge referenced
++        let offers := contextAllowanceLevels demand
++          (ownerContextAllowances first.matched.edge referenced share allowance) |>.filterMap extra
++        pure (referencedContextPlan plan offers)
+     let entries := slices.filterMap fun choice =>
+       choice.1.members.head?.map fun first => (first.matched.edge.relation, choice)
+     -- Omit a duplicate root only when an actual entry view represents it.
+@@ -4796,12 +4974,20 @@
+       !entries.any (·.1 == source.owner.relation)
+     let neighbors := surrounding.filterMap fun source => do
+       let positions := (semanticEvidence.find? (·.1 == source.owner.relation)).map Prod.snd
+-      let windows := positions.getD []
++      let referenced := (referenceEvidence.find? (·.1 == source.owner.relation)).map Prod.snd |>.getD []
++      let windows := sourceContextWindows (positions.getD []) referenced
+       if !lookupContextAllowed (enforce && requestQuestion.isSome) meaningSelected false positions then none else do
+       let render := (prepareContextualSupportPlan planningReceipts windows source).eval
+       let wanted := ownerContextDemand source.owner windows
+       let levels := contextAllowanceLevels wanted (ownerContextAllowances source.owner windows share allowance)
+       let plan ← contextSlicePlan (levels.filterMap render)
++      let plan := if referenced.isEmpty then plan else
++        let extra := (prepareContextualSupportPlan planningReceipts referenced source).eval
++        let demand := ownerContextDemand source.owner referenced
++        let offers := contextAllowanceLevels demand
++          (ownerContextAllowances source.owner referenced share allowance) |>.filterMap extra
++        let coupled := referencedContextPlan plan offers
++        if nominated.contains source.owner.relation then coupled else requireReferenceContext coupled
+       pure (source.owner.relation, plan)
+     let choices := entries ++ neighbors
+     let choices := if meaningSelected && !evidenceRanking.isEmpty then
+@@ -4842,11 +5028,17 @@
+       let policyFrame : DeliveryFrame := {
+         key := policyKey, text := fixedHeader ++ tree ++ "\n" ++ evidenceGapGuidance ++ "\n"}
+       let owners := (visible.map (·.matched.edge) ++ support.map (·.owner)).eraseDups
+-      let sourceFrames := if !meaningSelected then [] else owners.map fun owner =>
+-        ({key := "f:links:" ++ relationKey owner.relation ++ ":" ++ relationKey owner.outcome
+-          owners := [relationKey owner.relation]
+-          text := renderSourceNeighborhood sourceAll sourceUnions nominated [owner]
+-            ((support.filter (·.owner.relation == owner.relation)).flatMap (·.route.works)) true} : DeliveryFrame)
++      -- One original graph has one transport frame. Repeating a parent
++      -- All/Union once per child adds no information and cannot consume the
++      -- budget intended for original observations. This is display sharing,
++      -- never a new equivalence or completion judgment.
++      let sourceText := renderSourceNeighborhood sourceAll sourceUnions nominated owners
++        (support.flatMap (·.route.works)) true
++      let sourceFrame : DeliveryFrame := {
++        key := "f:links:" ++ relationKey (.text sourceText)
++        owners := owners.map (fun owner => relationKey owner.relation)
++        text := sourceText }
++      let sourceFrames := if !meaningSelected || owners.isEmpty then [] else [sourceFrame]
+       policyFrame :: sourceFrames
+     let packetCost := fun (fitted : List TransportSlice) =>
+       let visible := visibleFor fitted
+@@ -4889,7 +5081,10 @@
+       let interpretation := primaryInterpretation rankedOriginals nominated sourceAll
+       let priority := fun (slice : TransportSlice) =>
+         if isEntry slice then evidenceAdmissionPriority 0 true else
+-        1 + match choices.find? (fun choice => choice.2.1.text == slice.text) >>= fun choice =>
++        match slice.owner.bind (fun owner => (referencePriorities.find? (·.1 == owner)).map Prod.snd) with
++        | some _ => 1 + slice.text.utf8ByteSize
++        | none => 2 + byteBudget.getD (budget * 4) +
++          match choices.find? (fun choice => choice.2.1.text == slice.text) >>= fun choice =>
+             originals.find? (fun owner => owner.relation == choice.1) with
+         | none => evidenceAdmissionPriority 0 (isEntry slice)
+         | some owner =>
+@@ -4927,9 +5122,13 @@
+       let entryShare := (available.1 / max 1 coreCount, available.2 / max 1 coreCount)
+       let preference := fun (slice : TransportSlice) =>
+         (choices.find? (fun choice => choice.2.1.text == slice.text)).map
+-            (fun choice => preferredContextLevel choice.2 entryShare) |>.getD 0
++            (fun choice => max (preferredContextLevel choice.2 entryShare)
++              (if referenceEvidence.any (·.1 == choice.1) && !choice.2.2.isEmpty then 1 else 0)) |>.getD 0
++      let coherence := fun (slice : TransportSlice) =>
++        if isEntry slice || slice.owner.any (fun owner => referenceEvidence.any (·.1 == owner))
++        then 0 else 1
+       let ordinary :=
+-        match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference with
++        match boundedFlexiblePacketSlices available.1 available.2 packetCost slices priority preference coherence with
+         | some fitted =>
+             -- The existing meaning nomination and its source-graph certificate
+             -- choose the primary interpretation. Do not promote an explanation
+@@ -6104,6 +6303,16 @@
+          let owner ← (entries ++ support.map (·.owner)).find? (·.relation == relation)
+          pure (relation, focusedEvidenceWindows focusQuestion (evidenceSearchWindows owner) positions)
+      focusedRows := focusedWindows
++  -- Historical locators choose positions only inside original hydrated
++  -- graph owners. Preserve the independent numerical focus unchanged.
++  let parents := nominationRanking.filterMap fun relation => do
++    let owner ← nominatedOwners.find? (·.relation == relation)
++    if sourceAll.any (·.parent == owner.work) then Matcher.atomText? owner.outcome else none
++  let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
++    (citedObservationCoordinates parents item.owner item.provenance).map
++      (fun (priority,positions) => (item.owner.relation,priority,positions))
++  let referencedEvidence := referenced.map fun (owner,_,positions) => (owner,positions)
++  let referencePriorities := referenced.map fun (owner,priority,_) => (owner,priority)
+   -- The focused provider is an independent observation. Include its exact
+   -- durable owner/order/window reply before asking the memo to reuse a packet.
+   -- An unchanged first nomination alone cannot certify an unchanged focus.
+@@ -6118,6 +6327,10 @@
+       | some id => observed := {observed with
+           focused := observed.focused ++ [id, windows.length] ++ windows}
+       | none => observed := {observed with stagedRanking := observed.stagedRanking ++ [relation]}
++    observed := {observed with focused := observed.focused ++ [referencedEvidence.length]}
++    for (relation, windows) in referencedEvidence do
++      if let some id ← source.liveOwner relation then
++        observed := {observed with focused := observed.focused ++ [id, windows.length] ++ windows}
+     if let some reused ← reuseSemantic observed then return reused
+   let evidenceRanking := semanticOwners.presentationOrder.filterMap fun row => match row with
+     | .inl id => rankedOwners[id]?
+@@ -6144,6 +6357,8 @@
+     (evidenceRanking := (focusedRanking ++ evidenceRanking).eraseDups)
+     (requestQuestion := meaningQuery) (nativeObserved := evidence.isSome)
+     (advisoryExcluded := advisoryExcluded)
++    (referenceEvidence := referencedEvidence)
++    (referencePriorities := referencePriorities)
+   let rendered := rendered.map fun handoff =>
+     if recommendation && handoff.packet.isSome then
+       {handoff with deliveredGraphs := (handoff.deliveredGraphs ++
+--- /dev/null
++++ b/tools/CitedSourceTests.lean
+@@ -0,0 +1,21 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++private def require (ok : Bool) (message : String) : IO Unit :=
++  unless ok do throw (IO.userError message)
++def main : IO Unit := do
++  require (citedLineNumbers ["[ref](/root/pkg/α.cc:17), pkg/α.cc#L23"] "pkg/α.cc" == [17,23])
++    "Recorded relative locators did not resolve"
++  require ((citedLineNumbers ["../outside:9"] "../outside").isEmpty)
++    "An escaping locator was admitted"
++  require (observedLineNumber? "   128\tdata" == some (128,'\t')) "Numbered tab row lost"
++  require (observedLineNumber? "plain text" == none) "Prose became a numbered source row"
++  let text := "   17\tfirst\n   18\tsecond\n   90\tother\n   91\tlast\n"
++  let source := (Lean.toJson text).compress
++  let layout := (decodedToolText? source).map DecodedLayout.make
++  let groups := observedNumberedSegments source layout
++  require (groups.map Prod.snd == [[17,18],[90,91]]) "Independent read ranges were merged"
++  require (groups.all fun item => item.1.start < item.1.stop && item.1.stop ≤ source.length)
++    "A hint left the original scalar"
++  let spans := contextRecordSpans source layout
++  require (groups.head?.map (·.1.start) == spans.head?.map (·.start)) "JSON offset changed"
++  IO.println "cited sources: dependency locators, original escaped offsets and independent read ranges passed"
+--- /dev/null
++++ b/tools/ReferencedPacketTests.lean
+@@ -0,0 +1,33 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++private def require (ok : Bool) (message : String) : IO Unit :=
++  unless ok do throw (IO.userError message)
++def main : IO Unit := do
++  let first : ContextDelivery := {
++    owner := "original", outcome := "result", sourceChars := 20
++    cues := [(0,3)], leading := "scope\n", trailing := "\nend"
++    fragments := [{first := 0, original := "cue"}]}
++  let citation : ContextDelivery := {first with
++    cues := [(10,14)], fragments := [{first := 10, original := "more"}]}
++  let rich : ContextDelivery := {first with
++    cues := [(3,6)], fragments := [{first := 3, original := "old"}]}
++  let make := fun (c : ContextDelivery) =>
++    ({owner := some (.text "original"), keys := c.keys, text := c.render,
++      members := [], visibleKeys := [], context := some c} : TransportSlice)
++  let original := (make first,[make rich])
++  let plan := referencedContextPlan original [make citation]
++  require (plan.1.text == original.1.text) "The original minimum changed"
++  let some final := (plan.2.getLast?.getD plan.1).context |
++    throw (IO.userError "Original context disappeared")
++  for pair in [(0,"cue"),(3,"old"),(10,"more")] do
++    require (final.fragments.any fun f => f.first == pair.1 && f.original == pair.2)
++      "A later alternative evicted earlier observed bytes"
++  require (plan.2.all fun slice => slice.members.isEmpty && slice.visibleKeys.isEmpty)
++    "Citation context created control"
++  let conflict := {citation with fragments := [{first := 0, original := "bad"}]}
++  let rejected := referencedContextPlan (make first,[]) [make conflict]
++  require (rejected.2.isEmpty) "Conflicting original bytes were accepted"
++  let foreign := {citation with owner := "other"}
++  require ((referencedContextPlan (make first,[]) [make foreign]).2.isEmpty)
++    "A citation crossed the original owner envelope"
++  IO.println "referenced packet: minimum retained, original-coordinate union, conflict/envelope rejection and no control passed"
+--- /dev/null
++++ b/tools/NativeReadContextTests.lean
+@@ -0,0 +1,25 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++private def require (ok : Bool) (message : String) : IO Unit :=
++  unless ok do throw (IO.userError message)
++def main : IO Unit := do
++  require (literalReadRange? "sed -n '17,19p' pkg/α.cc" == some ("pkg/α.cc",17,19))
++    "A literal read lost its recorded coordinates"
++  require (literalReadRange? "sed -n '1,$p' pkg/α.cc" == none) "An open range was guessed"
++  require (literalReadRange? "sed -n '1,2p' $(secret)" == none) "An expanded path was admitted"
++  let command := "sed -n '17,19p' pkg/α.cc\nsed -n '90,91p' pkg/β.cc\nunknown command\nsed -n '1,2p' later"
++  let work := "native tool\n" ++ (Lean.Json.mkObj [("command",Lean.toJson command)]).compress
++  require (nativeReadPrefix work == [("pkg/α.cc",17,19),("pkg/β.cc",90,91)])
++    "Unknown output did not stop the projected prefix"
++  let source := (Lean.toJson "first\nsecond\nthird\nfourth\nfifth\nextra\n").compress
++  let layout := (decodedToolText? source).map DecodedLayout.make
++  let records : List SourceEvidence.Record := [{
++    workspace := "example"
++    complete := true
++    files := [{relative := "pkg/α.cc",content := none},{relative := "pkg/β.cc",content := none}]}]
++  let projected := nativeReadRows source layout work records
++  require (projected.map Prod.snd == [17,18,19,90,91]) "Independent read offsets were lost"
++  require (projected.all fun (span,_) => span.start < span.stop && span.stop ≤ source.length)
++    "A metadata hint escaped the original scalar"
++  require ((nativeReadRows source layout work []).isEmpty) "An unrecorded dependency was used"
++  IO.println "native read context: literal ranges, safe dependency binding, original row bounds and unknown-prefix stop passed"
+--- /dev/null
++++ b/tools/BalancedReferenceTests.lean
+@@ -0,0 +1,8 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++def main : IO Unit := do
++  unless balancedReferenceNumbers [[1,2,3,4],[10,20]] == [1,10,2,20,3,4] do
++    throw (IO.userError "A longer history starved another reference frontier")
++  unless balancedReferenceNumbers [[],[1,2],[1,3],[]] == [1,2,3] do
++    throw (IO.userError "Duplicate or empty history changed distinct reference order")
++  IO.println "balanced reference frontiers: unequal histories, empty lists and duplicate observations passed"
+--- /dev/null
++++ b/tools/ReferencedFallbackTests.lean
+@@ -0,0 +1,22 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++def main : IO Unit := do
++  unless sourceContextWindows [7,3] [9] == [7,3] do
++    throw (IO.userError "Reference context replaced numerical positions")
++  unless sourceContextWindows [] [9] == [9] do
++    throw (IO.userError "Missing numerical positions discarded a located original citation")
++  let work := "recorded native read"
++  let text := "\n".intercalate (List.replicate 100 "original observation data, including recorded conditions")
++  let source := (Lean.toJson text).compress
++  let owner := OutcomeEdge.make (.text work) (.text source) [] (by decide) (by decide)
++  let slice : TransportSlice := {
++    owner := some owner.relation
++    keys := [],text := source,members := [],visibleKeys := []}
++  let whole := (prepareContextualOwnerPlan [] [] owner "saved support" [] slice).eval 2048
++  unless whole.any (fun part => part.context.isNone) do
++    throw (IO.userError "Fixture no longer exercises the whole-outcome fallback")
++  let windows := sourceContextWindows [] [3]
++  let bounded := (prepareContextualOwnerPlan [] windows owner "saved support" [] slice).eval 2048
++  unless bounded.any (fun part => part.context.isSome && part.text.length < source.length) do
++    throw (IO.userError "A located source still required an entire oversized Outcome")
++  IO.println "referenced fallback: numerical precedence, bounded original context without numerical positions, and whole-outcome regression passed"
+--- /dev/null
++++ b/tools/RequiredReferenceTests.lean
+@@ -0,0 +1,19 @@
++import Eggshell.Handoff
++open Eggshell Eggshell.Plugin
++def main : IO Unit := do
++  let context : ContextDelivery := {
++    owner := "original",outcome := "result",sourceChars := 20
++    cues := [(0,3)],leading := "scope",trailing := "end"
++    fragments := [{first := 0,original := "cue"}]}
++  let reference := {context with cues := [(10,14)],fragments := [{first := 10,original := "more"}]}
++  let make := fun (c : ContextDelivery) =>
++    ({owner := some (.text "original"),keys := c.keys,text := c.render,
++      members := [],visibleKeys := [],context := some c} : TransportSlice)
++  let coupled := requireReferenceContext (referencedContextPlan (make context,[]) [make reference])
++  let some minimum := coupled.1.context | throw (IO.userError "A coupled source lost its context")
++  unless minimum.fragments.any (fun f => f.first == 0 && f.original == "cue") &&
++      minimum.fragments.any (fun f => f.first == 10 && f.original == "more") do
++    throw (IO.userError "Source admission omitted its original cue or located reference")
++  unless coupled.1.members.isEmpty && coupled.1.visibleKeys.isEmpty do
++    throw (IO.userError "Coupled advisory data created control")
++  IO.println "required references: original observations and located data admitted together without control passed"

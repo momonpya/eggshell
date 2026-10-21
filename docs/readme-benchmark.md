@@ -80,6 +80,25 @@ calls are unattempted. `retired.json` and `audits/stage1-r0-retired.json` retain
 the exact records. The dispatcher rejects retired comparisons. A repaired
 candidate must start an entirely new comparison at topic 1 r0.
 
+The next isolated candidate `caf318be…` resolves historical citations inside
+original observed data, using numbered output and literal native read ranges.
+Supporting observations are admitted together with their checked reference
+context and packed by actual UTF-8 cost; nominated minima remain protected.
+No benchmark function names, model change, new source reads or control/equality
+rules are introduced. The earlier proposal's minimum plans cost 247,685
+characters for 57 source owners: reserving unrelated interiors first left no
+room for the actual cited material.
+
+On the actual initial 37-document source, all four stored topic-1 probes are
+delivered in independent native sessions (13.216/7.202 s). On the actual saved
+57-document topic-1 output, all eight stored topic-2 probes are delivered
+(11.163/9.427 s). Both cases remain within the original character/byte caps.
+ContractAudit and eight focused programs pass. The exact source/test patch is
+reproduced in a temporary directory and recorded with the candidate in
+`docs/candidates/referenced-packet.md`. These checks qualify those native
+delivery cases; new token and quality results still require the complete
+new fixed comparison from topic 1 r0.
+
 The task is the README's Clang Driver sequence: topics 1, 2 and 3, first from a
 new seed and then with accumulated memory, in independent native chats. Prompts
 come verbatim from `docs/benchmarks/llvm-three-topics.json`; only `<LLVM_SOURCE>`
