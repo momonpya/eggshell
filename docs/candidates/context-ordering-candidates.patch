@@ -1,0 +1,49 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -2237,6 +2237,6 @@
+-  (located ++ original).eraseDups
+-
+-/-- Refine every admitted source with the question-focused body order,
+-including primary search entries. Retain the initial cues as additional
+-candidates; an entry's old command must not freeze its body-position order.
+-No match, source identity or completion authority is changed here. -/
++  (original ++ located).eraseDups
++
++/-- Initial current-question nominations retain their ranked precedence.
++Source-only focus adds positions after that demand, including for owners
++reached only through the graph. This changes neither source identity nor
++Match/completion authority. -/
+@@ -2259 +2259 @@
+-      refine ⟨(refined.2 ++ positions).eraseDups, List.mem_append_left _ ?_, ?_⟩
++      refine ⟨(positions ++ refined.2).eraseDups, List.mem_append_left _ ?_, ?_⟩
+@@ -2261 +2261 @@
+-      · exact List.mem_eraseDups.mpr (List.mem_append_right _ present)
++      · exact List.mem_eraseDups.mpr (List.mem_append_left _ present)
+@@ -4047,2 +4047,3 @@
+-Every alternative retains its preceding fragments and its control fields;
+-the original minimum remains the fallback. A pointer never replaces a cue. -/
++The first compatible citation couples its source. Remaining numerical and
++citation offers compete by rendered size, preserving all earlier fragments
++and control fields. The original minimum remains the fallback. -/
+@@ -4050,0 +4052,12 @@
++  -- Retain the first compatible reference as the coupled-source minimum.
++  -- Further historical context has no precedence over current-query context:
++  -- merge their already rendered offers by actual UTF-8 size.
++  let firstReference := references.findIdx? fun candidate =>
++    match plan.1.context, candidate.context with
++    | some before, some offered => (checkedContextExtension before offered).isSome
++    | _, _ => false
++  let offers := match firstReference with
++    | none => (plan.2 ++ references).mergeSort (fun a b => a.text.utf8ByteSize ≤ b.text.utf8ByteSize)
++    | some index => references.take (index + 1) ++
++        (plan.2 ++ references.drop (index + 1)).mergeSort
++          (fun a b => a.text.utf8ByteSize ≤ b.text.utf8ByteSize)
+@@ -4053 +4066 @@
+-  for candidate in references ++ plan.2 do
++  for candidate in offers do
+@@ -4797 +4810 @@
+-  exact Or.inr nominated
++  exact Or.inl nominated
+@@ -4802 +4815 @@
+-  exact Or.inl nominated
++  exact Or.inr nominated
