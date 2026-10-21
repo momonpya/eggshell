@@ -1,0 +1,433 @@
+--- a/Eggshell/IncrementalQuotient.lean
++++ b/Eggshell/IncrementalQuotient.lean
+@@ -254,6 +254,47 @@
+       cases found
+       exact certified.complete left leftIn right rightIn equivalent
+-
++
++/-- Recover the precise current local generators from an actual produced view. -/
++theorem generatedView_localUnions (graph : WorkGraph) (roots : List Value)
++    (persistent runLocal : List UnionEdge) (result : Option Quotient)
++    (exact : result = build? roots persistent runLocal) (view : RunView)
++    (found : generatedView graph roots persistent runLocal result exact = some view) :
++    view.localUnions = runLocal := by
++  unfold generatedView at found
++  cases checked : CongruenceSound.attach roots persistent runLocal result exact with
++  | none => simp [checked] at found
++  | some certified =>
++      simp only [checked, Option.map_some, Option.some.injEq] at found
++      cases found
++      rfl
++
++/-- Attach generated authority to the existing Atom certificate result. -/
++def certifyExplicitUsing (index : Index edges) (result : Option Quotient)
++    (exact : result = certify index.partition) :
++    Option { quotient : Quotient // CongruenceSound.QuotientSound edges quotient } :=
++  match result with
++  | none => none
++  | some quotient => some ⟨quotient, by
++      apply CongruenceSound.certified_sound edges _ _ exact.symm
++      · rw [index.exact]
++        exact explicit_valid valid_nil _
++      · rw [index.exact]
++        exact CongruenceSound.explicit_sound valid_nil (CongruenceSound.empty_sound _) _
++          (fun _ member => member)⟩
++
++theorem certifyExplicitUsing_exact (index : Index edges) (result : Option Quotient)
++    (exact : result = certify index.partition) :
++    (certifyExplicitUsing index result exact).map (·.val) = result := by
++  cases result <;> rfl
++
++/-- No second index fold: proof fields erase from the returned certificate. -/
++def certifyExplicit? (index : Index edges) :=
++  certifyExplicitUsing index (certify index.partition) rfl
++
++theorem certifyExplicit_exact (index : Index edges) :
++    (certifyExplicit? index).map (·.val) = certify index.partition :=
++  certifyExplicitUsing_exact index _ rfl
++
+ /-- The dependent index is extended by new Union edges, not replayed. -/
+ def make? (graph : WorkGraph) (roots : List Value) (persistent runLocal : List UnionEdge)
+     (index : Option (Index (persistent ++ runLocal))) : Option RunView :=
+@@ -264,6 +305,23 @@
+         pure { graph, quotient, localUnions := runLocal }
+     | none => generatedView graph roots persistent runLocal (build? roots persistent runLocal) rfl
+   else generatedView graph roots persistent runLocal (build? roots persistent runLocal) rfl
++
++theorem make_localUnions (graph : WorkGraph) (roots : List Value)
++    (persistent runLocal : List UnionEdge) (index : Option (Index (persistent ++ runLocal)))
++    (view : RunView) (found : make? graph roots persistent runLocal index = some view) :
++    view.localUnions = runLocal := by
++  unfold make? at found
++  split at found
++  · cases index with
++    | none => exact generatedView_localUnions graph roots persistent runLocal _ rfl view found
++    | some index =>
++      cases built : certify index.partition with
++      | none => simp [built] at found
++      | some quotient =>
++        simp [built] at found
++        subst view
++        rfl
++  · exact generatedView_localUnions graph roots persistent runLocal _ rfl view found
+-
++
+ /-- Covers the executed Atom extension lane as well as general fresh and
+ planned builds. A retired edge is usable only if today's edges still derive
+@@ -299,6 +357,44 @@
+   val : Option RunView
+   property : val = make? graph roots persistent runLocal index
+   plan : Option CongruenceMemo.Entry := none
++
++/-- Carry the producer's erased authority through final discovery construction. -/
++def ProducedView.certified (produced : ProducedView graph roots persistent runLocal index) :
++    Option { view : RunView // CongruenceSound.QuotientSound
++      (persistent ++ view.localUnions) view.quotient } :=
++  match found : produced.val with
++  | none => none
++  | some view => some ⟨view, by
++      have built : make? graph roots persistent runLocal index = some view :=
++        produced.property.symm.trans found
++      rw [make_localUnions _ _ _ _ _ _ built]
++      exact make_generated _ _ _ _ _ _ built⟩
++
++def makeCertified? (graph : WorkGraph) (roots : List Value) (persistent runLocal : List UnionEdge)
++    (index : Option (Index (persistent ++ runLocal))) :=
++  (ProducedView.mk (make? graph roots persistent runLocal index) rfl none).certified
++
++theorem ProducedView.certified_exact (produced : ProducedView graph roots persistent runLocal index) :
++    produced.certified = makeCertified? graph roots persistent runLocal index := by
++  rcases produced with ⟨value, property, plan⟩
++  cases property
++  rfl
++
++theorem ProducedView.certified_found (produced : ProducedView graph roots persistent runLocal index)
++    (view : RunView) (found : produced.val = some view)
++    (generated : CongruenceSound.QuotientSound (persistent ++ view.localUnions) view.quotient) :
++    produced.certified = some ⟨view, generated⟩ := by
++  rcases produced with ⟨value, property, plan⟩
++  change value = some view at found
++  cases found
++  rfl
++
++theorem makeCertified_found (graph : WorkGraph) (roots : List Value)
++    (persistent runLocal : List UnionEdge) (index : Option (Index (persistent ++ runLocal)))
++    (view : RunView) (found : make? graph roots persistent runLocal index = some view)
++    (generated : CongruenceSound.QuotientSound (persistent ++ view.localUnions) view.quotient) :
++    makeCertified? graph roots persistent runLocal index = some ⟨view, generated⟩ :=
++  ProducedView.certified_found _ view found generated
+-
++
+ /-- The controller accepts acceleration only through this exact result type.
+ Persistence code cannot replace a view by an unchecked old quotient. -/
+--- a/Eggshell/Matcher.lean
++++ b/Eggshell/Matcher.lean
+@@ -2911,5 +2911,11 @@
+ structure Discovery where
+   view : RunView
++  /-- The actual durable generators supplied to this discovery run. -/
++  persistentUnions : List UnionEdge
++  /-- Every accepted equality follows from current generators and congruence.
++  This proof erases and does not rerun a solver during delivery. -/
++  generated : QuotientBuilder.CongruenceSound.QuotientSound
++    (persistentUnions ++ view.localUnions) view.quotient
+   hits : List Match
+   current : Value
+   passes : Nat
+@@ -3075,8 +3081,12 @@
+    else none
+   else none
+-
++
+-def TerminalRoot.discovery (terminal : TerminalRoot view current text) : Discovery := {
+-  view, hits := addMatches [] terminal.hits, current, passes := 0 }
++def TerminalRoot.discovery (terminal : TerminalRoot view current text)
++    (persistentUnions : List UnionEdge)
++    (generated : QuotientBuilder.CongruenceSound.QuotientSound
++      (persistentUnions ++ view.localUnions) view.quotient) : Discovery := {
++  view, persistentUnions, generated
++  hits := addMatches [] terminal.hits, current, passes := 0 }
+-
++
+ /-- The empty native boundary is a genuine fixed point even when unrelated
+ All edges and Outcome bodies exist elsewhere in the source. -/
+@@ -3252,11 +3262,14 @@
+               { finalBase with all := finalRunAll ++ finalBase.all } accumulated
+             let finalRoots := roots state localUnions finalRunAll
+             let produced := nextViews finalGraph finalRoots persistent localUnions index
+-            let some finalView := produced.val | return none
++            let some final := produced.certified | return none
++            let finalView := final.val
+             recordView finalRoots finalView
+             recordPlan finalRoots finalView produced.plan
+             pure (some {
+               view := finalView
++              persistentUnions := persistent
++              generated := final.property
+               hits := accumulated
+               current
+               passes
+@@ -3302,5 +3315,6 @@
+     | zero => rfl
+     | succ fuel ih =>
+         simp only [discoverUsingM?.saturate, IncrementalQuotient.ViewProvider.result_exact,
++          IncrementalQuotient.ProducedView.certified_exact,
+           IncrementalQuotient.ViewProvider.reference_plan, IncrementalQuotient.ViewProvider.advance_none, ih]
+   exact loop views iterations 0 initial [] [] [] _
+@@ -3356,16 +3370,20 @@
+     (initial : IncrementalQuotient.make? view.graph (.text text :: storedValues)
+       persistent [] ((QuotientBuilder.AtomQuotient.prepare persistent).map (·.beginRun)) = some view)
+     (matchedExact : demandedMatchesUsing normalize demands cover corpus view (.text text)
+-      evidence {} native [.text text] = terminal.hits) :
++      evidence {} native [.text text] = terminal.hits)
++    (generated : QuotientBuilder.CongruenceSound.QuotientSound
++      (persistent ++ view.localUnions) view.quotient) :
+     discoverInUsing? normalize demands cover (.text text) storedValues persistent view.graph
+-      corpus text evidence {} true native = some terminal.discovery := by
++      corpus text evidence {} true native = some (terminal.discovery persistent generated) := by
++  have certified := IncrementalQuotient.makeCertified_found view.graph (.text text :: storedValues)
++    persistent [] ((QuotientBuilder.AtomQuotient.prepare persistent).map (·.beginRun)) view initial generated
+   have root := Extract.runWithPolicy_unadmitted_root view.graph view.quotient.toEquality
+     (.text text) terminal.rootUnchanged
+   have projectEmpty (graph : WorkGraph) : projectMatches graph [] = graph := rfl
+   have one : [Value.text text].eraseDups = [Value.text text] := rfl
+   simp [discoverInUsing?, discoverUsingM?, discoverUsingM?.saturate, bind, pure, extractAt, projectEmpty,
+-    IncrementalQuotient.ViewProvider.result_exact,
+-    initial, admissions, RunView.extractWith, root, one,
++    IncrementalQuotient.ViewProvider.result_exact, IncrementalQuotient.ProducedView.certified_exact,
++    certified, initial, admissions, RunView.extractWith, root, one,
+     Extraction.fromSelection, Extraction.finalize, Selection.openWork,
+     freshDemand, terminal.fresh, matchedExact, terminal.unionsUnchanged,
+     terminal.ownersUnchanged,
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9,5 +9,6 @@
+ public import Eggshell.DemandMemo
+ public import Eggshell.FederatedSearch
+ public import Eggshell.SelectionAudit
++public import Eggshell.CompletedAuthority
+-
++
+ @[expose] public section
+@@ -1327,11 +1328,12 @@
+ /-- Pin the actual chosen selection without rebuilding explicit closure in
+ the hook. A memo carries the locator; final source/transport checks restrict
+ its owner lists. Missing or failed capture never supplies a classification. -/
+-def auditRenderedSelection (receipt : Option String) (persistent : List UnionEdge)
++def auditRenderedSelection (receipt : Option String)
+     (discovery : Matcher.Discovery)
+     (prepared : { extraction : Extraction // extraction = Matcher.extraction discovery })
+     (result : Option Handoff) (observed : List SelectionAudit.Admission := [])
+     (trail : DiscoveryAudit.Trail := {}) : IO (Option Handoff) := do
++  let persistent := discovery.persistentUnions
+   if receipt.isNone then return result
+   let some handoff := result | return none
+   if handoff.completed == 0 && !handoff.blocksCurrent then return result
+@@ -4645,8 +4647,11 @@
+ theorem renderAutomatic_empty_terminal (staged : List Value) (budget : Nat) (text : String)
+     (delivered : List String) (enforce stagedVisible : Bool) (view : RunView)
+     (fresh : HandoffRemainder.isValue (.text text) = false)
+-    (noParent : view.graph.decompositionsFor view.quotient.toEquality (.text text) = []) :
++    (noParent : view.graph.decompositionsFor view.quotient.toEquality (.text text) = [])
++    (persistent : List UnionEdge)
++    (generated : QuotientBuilder.CongruenceSound.QuotientSound
++      (persistent ++ view.localUnions) view.quotient) :
+     renderAutomatic staged budget text delivered enforce stagedVisible
+-      (Matcher.TerminalRoot.empty view (.text text) text fresh noParent).discovery = none := by
++      ((Matcher.TerminalRoot.empty view (.text text) text fresh noParent).discovery persistent generated) = none := by
+   apply renderAutomatic_no_hits
+   rfl
+@@ -4708,8 +4713,9 @@
+   let some unions ← if noUnions then pure (some []) else reader.atomUnions? owner | return none
+   let persistent := unions.map (·.edge)
+   let some index := QuotientBuilder.AtomQuotient.prepare persistent | return none
+-  let some quotient := QuotientBuilder.certify index.partition |
++  let some certified := IncrementalQuotient.certifyExplicit? index |
+     throw (IO.userError "published atom Union index is invalid")
++  let quotient := certified.val
+   let topology : WorkGraph := { all }
+   if !(topology.decompositionsFor quotient.toEquality currentValue).isEmpty then return none
+   if ids.isEmpty then return some none
+@@ -4749,15 +4755,16 @@
+     let owner ← reader.outcome entry.2
+     let records ← try reader.sources entry.1 catch _ => pure [SourceEvidence.unverified]
+     pure (owner.relation, if records.isEmpty then [SourceEvidence.unverified] else records)
+-  let prepared : { extraction : Extraction // extraction = Matcher.extraction terminal.discovery } :=
+-    ⟨Matcher.extraction terminal.discovery, rfl⟩
+-  let rendered := renderAutomatic [] selection.handoffChars current delivered enforce true terminal.discovery prepared
++  let discovery := terminal.discovery persistent (by simpa [view] using certified.property)
++  let prepared : { extraction : Extraction // extraction = Matcher.extraction discovery } :=
++    ⟨Matcher.extraction discovery, rfl⟩
++  let rendered := renderAutomatic [] selection.handoffChars current delivered enforce true discovery prepared
+     (provenance := provenance) (refreshSources := refreshSources) (byteBudget := selection.handoffBytes)
+   let children ← observations.get
+   let observed := if receipt.isSome then hits.reverse.map (fun matched =>
+     {(SelectionAudit.Admission.observe view currentValue corpus children matched) with schedule := some 0}) else []
+   let trail : DiscoveryAudit.Trail := {current := some 0, schedules := [DiscoveryAudit.Schedule.terminal terminal]}
+-  pure (some (← auditRenderedSelection receipt persistent terminal.discovery prepared rendered observed trail))
++  pure (some (← auditRenderedSelection receipt discovery prepared rendered observed trail))
+-
++
+ /-- A loaded row carries the production compiler certificate with its owner.
+ There is no second map which can omit or substitute the row's candidate. -/
+@@ -5688,6 +5695,6 @@
+           (advisoryFrontierKey referenceQuery)).eraseDups}
+     else handoff
+   trace s!"render complete chars={(rendered.map (·.text.length)).getD 0}"
+-  auditRenderedSelection source.receipt persistent discovery
++  auditRenderedSelection source.receipt discovery
+     ⟨extraction, rfl⟩ rendered ((← admissionAudit.mapM (·.get)).getD [])
+     ((← traceAudit.mapM (·.get)).getD {})
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -15,7 +15,14 @@
+ reads use the same decoding/assembly implementation with their own read
+ capability; no alternate body representation or compatibility lane exists. -/
+ run_meta do
+-  for theoremName in #[``Eggshell.Matcher.extraction_sound,
++  for theoremName in #[``Eggshell.Matcher.completed_original_authority,
++      ``Eggshell.Matcher.completed_authority,
++      ``Eggshell.Matcher.extraction_comparisons_generated,
++      ``Eggshell.Matcher.completed_not_retrieved,
++      ``Eggshell.IncrementalQuotient.certifyExplicit_exact,
++      ``Eggshell.IncrementalQuotient.ProducedView.certified_exact,
++      ``Eggshell.IncrementalQuotient.make_localUnions,
++      ``Eggshell.Matcher.extraction_sound,
+       ``Eggshell.Matcher.extraction_completed_has_match,
+       ``Eggshell.Extract.solve_demand_exact,
+       ``Eggshell.Extract.solve_provenance,
+@@ -1428,3 +1435,37 @@
+       unless #[``propext, ``Quot.sound, ``Classical.choice].contains dependency do
+         throwError "{contract} depends on unapproved axiom {dependency}"
+     logInfo m!"Audited {contract}: {axioms}"
++
++/- Actual delivery consumes the extraction covered by completed_authority.
++The accelerated and terminal producers retain the current generated proof;
++this audit does not replace the source binding/freshness IO specification. -/
++run_meta do
++  let environment ← getEnv
++  for (root, required) in #[
++      (``Eggshell.Matcher.discoverUsingM?, ``Eggshell.IncrementalQuotient.ProducedView.certified),
++      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.IncrementalQuotient.certifyExplicit?),
++      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.Matcher.TerminalRoot.discovery)] do
++    let mut seen : Std.HashSet Name := {}
++    let mut pending := [root]
++    while let name :: tail := pending do
++      pending := tail
++      if seen.contains name then continue
++      seen := seen.insert name
++      if name.toString.startsWith "Eggshell." then
++        if let some declaration := environment.find? name then
++          if let some body := declaration.value? then pending := body.getUsedConstants.toList ++ pending
++    unless seen.contains required do
++      throwError "Production completed-authority path bypassed: {root}, {required}"
++  for root in #[``Eggshell.Plugin.renderAutomatic, ``Eggshell.Plugin.auditRenderedSelection] do
++    let some declaration := environment.find? root | throwError "Missing delivery boundary {root}"
++    unless declaration.type.getUsedConstants.contains ``Eggshell.Matcher.extraction do
++      throwError "Delivery accepts an extraction without the main-theorem binding: {root}"
++    let some body := declaration.value? | throwError "Missing delivery implementation {root}"
++    unless body.getUsedConstants.contains ``Subtype.val do
++      throwError "Delivery no longer consumes its certified extraction: {root}"
++  let some receipt := environment.find? ``Eggshell.Plugin.auditRenderedSelection |
++    throwError "Missing equality receipt boundary"
++  let some body := receipt.value? | throwError "Missing equality receipt implementation"
++  unless body.getUsedConstants.contains ``Eggshell.Matcher.Discovery.persistentUnions do
++    throwError "Equality receipt is detached from the actual discovery generators"
++  logInfo "Audited generated authority in both producers and the actual delivery extraction type"
+--- a/tests/EqualityDependencyTests.lean
++++ b/tests/EqualityDependencyTests.lean
+@@ -141,13 +141,13 @@
+     "the production component omitted its completed Outcome equality"
+   let rendered := Plugin.renderAutomatic [] 24000 text [] true true discovery
+   require rendered.isSome "native selection did not render"
+-  let unchanged ← Plugin.auditRenderedSelection none [] discovery ⟨extraction, rfl⟩ rendered
++  let unchanged ← Plugin.auditRenderedSelection none discovery ⟨extraction, rfl⟩ rendered
+   require (Lean.toJson unchanged == Lean.toJson rendered)
+     "disabled receipt capture changed the rendered handoff"
+   let id ← Receipt.fresh
+   let corpus := Matcher.Corpus.build LogicalText.logicalNormalizer graph
+   let observed := discovery.hits.reverse.map (SelectionAudit.Admission.observe discovery.view work corpus {})
+-  let some audited ← Plugin.auditRenderedSelection (some id) [] discovery ⟨extraction, rfl⟩ rendered observed |
++  let some audited ← Plugin.auditRenderedSelection (some id) discovery ⟨extraction, rfl⟩ rendered observed |
+     throw (IO.userError "native selection disappeared while recording its premises")
+   let some reference := audited.equalitySelection |
+     throw (IO.userError "native selected extraction has no immutable receipt locator")
+--- /dev/null
++++ b/Eggshell/CompletedAuthority.lean
+@@ -0,0 +1,76 @@
++module
++
++public import Eggshell.Matcher
++public import Eggshell.SelectionDependency
++
++@[expose] public section
++
++namespace Eggshell.Matcher
++
++theorem completed_not_retrieved {matched : Match}
++    (completed : matched.judgment.delivery = .completed) : matched.retrieved = false := by
++  cases retrieved : matched.retrieved with
++  | false => rfl
++  | true => simp [Match.judgment, retrieved, ApplicabilityJudgment.delivery] at completed
++
++/-- Every selected equality premise follows from this run's current generators,
++including decomposition and child deduplication, and preserves Exact authority. -/
++theorem extraction_comparisons_generated (discovery : Discovery)
++    (comparison : SelectionDependency.Comparison)
++    (used : comparison ∈ SelectionDependency.comparisons discovery.view.quotient.toEquality
++      discovery.current (extraction discovery).selection) :
++    Equivalent (discovery.persistentUnions ++ discovery.view.localUnions)
++      comparison.left comparison.right ∧
++    Value.SameExactFootprint comparison.left comparison.right := by
++  have positive := SelectionDependency.comparisons_positive _ _ _ _ _
++    (extraction_sound discovery) comparison used
++  have generated := discovery.generated comparison.left comparison.right positive
++  exact ⟨generated, generated.exactAuthority⟩
++
++/-- Completed authorization is generated equality plus an intrinsic automatic
++Match and original-owner provenance. This is not semantic correctness of an
++Outcome. Source binding/freshness and transport are explicit IO boundaries. -/
++theorem completed_authority {discovery : Discovery} {demand : Value} {edge : OutcomeEdge}
++    (used : (demand, edge) ∈ (extraction discovery).selection.completedUses) :
++    ∃ matched ∈ discovery.hits,
++      matched.retrieved = false ∧ matched.automatic = true ∧
++      matched.projectionWork = demand ∧ matched.projectedEdge.relation = edge.relation ∧
++      matched.judgment.direction = .pastWorkInsideCurrentDemand ∧
++      matched.judgment.reusableOutcome = true ∧
++      matched.work.fragmentIdentity = true ∧ matched.work.subwork = true ∧
++      (matched.projectedEdge = matched.edge ∨
++        matched.edge.relation ∈ matched.projectedEdge.observations) ∧
++      edge.outcome ∈ (extraction discovery).priorOutcomes ∧
++      Equivalent (discovery.persistentUnions ++ discovery.view.localUnions) edge.work demand ∧
++      Value.SameExactFootprint edge.work demand := by
++  obtain ⟨matched, member, automatic, projection, relation, forward, reusable,
++    identity, subwork, coverage, origin, prior⟩ := extraction_completed_has_match used
++  have completed : matched.judgment.delivery = .completed := by
++    simp [ApplicabilityJudgment.delivery, forward, reusable]
++  have sound := Selection.completedUse_sound (extraction_sound discovery) used
++  have generated := discovery.generated edge.work demand sound.2.1
++  exact ⟨matched, member, completed_not_retrieved completed, automatic, projection, relation,
++    forward, reusable, identity, subwork, origin, prior, generated, generated.exactAuthority⟩
++
++/-- The source boundary supplies ownership in the pinned original publication.
++The predicate supports sparse IO; it does not materialize the whole DB. -/
++theorem completed_original_authority {discovery : Discovery} {demand : Value} {edge : OutcomeEdge}
++    (original : OutcomeEdge → Prop)
++    (owned : ∀ matched ∈ discovery.hits, original matched.edge)
++    (used : (demand, edge) ∈ (extraction discovery).selection.completedUses) :
++    ∃ matched ∈ discovery.hits,
++      original matched.edge ∧
++      matched.retrieved = false ∧ matched.automatic = true ∧
++      matched.projectionWork = demand ∧ matched.projectedEdge.relation = edge.relation ∧
++      matched.judgment.direction = .pastWorkInsideCurrentDemand ∧
++      matched.judgment.reusableOutcome = true ∧
++      matched.work.fragmentIdentity = true ∧ matched.work.subwork = true ∧
++      (matched.projectedEdge = matched.edge ∨
++        matched.edge.relation ∈ matched.projectedEdge.observations) ∧
++      edge.outcome ∈ (extraction discovery).priorOutcomes ∧
++      Equivalent (discovery.persistentUnions ++ discovery.view.localUnions) edge.work demand ∧
++      Value.SameExactFootprint edge.work demand := by
++  obtain ⟨matched, member, supported⟩ := completed_authority used
++  exact ⟨matched, member, owned matched member, supported⟩
++
++end Eggshell.Matcher

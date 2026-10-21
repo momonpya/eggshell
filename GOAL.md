@@ -61,6 +61,22 @@ source変更を本体へ取り込んだが、installed/runtime binaryの置換�
 詳細はdocs/lean-boundaries.mdとdocs/proof-boundary-audit.json。単一の主定理と本番全経路の接続、
 最終断片・local生成の因果由来、合同依存割合、配送/規模ゲート・パイロット・規則・論文は未完了。
 
+2026-10-22 主定理の隔離候補：completed_original_authorityとcompleted_authority、
+選択中の分解・子の重複排除まで含むextraction_comparisons_generatedがLeanで通った。
+最終Discoveryが実際の永続Unionと現在のlocal Unionの生成証明を保持し、通常controllerと
+native terminalの両方が既存の構築結果からその証明を運ぶ。配送で等価性を再構築しない。
+元所有者はpinned source IOが供給する明示的な述語を前提にし、全DBの具体化を要求しない。
+ContractAuditは両producer、配送/受領関数が実抽出へ等しいprepared値を使うこと、
+受領記録がDiscovery自身の永続Unionを使うことを検査した。library/証明/全計算fixture、
+通常test supportとTestMainのelaborationが成功。最後の元所有者前提の追加後も定理とContractAuditが成功。
+matchingの既存部分とpacket rendererは基準版とバイト一致。MiniLM等8ファイルも不変。
+最大RSS 3,032,768 KiB、guard作動なし。failed proof試行は成功記録とともに保持した。
+候補のruntime executable再build・native hook・回答モデル・seed取得は0で、本体未適用。
+docs/completed-authority.mdにTheorem 1の1段落、IO/memo/最終断片の未証明境界を記述し、
+docs/candidates/completed-authority-review.jsonとcompleted-authority.patchに正確な差分と証拠を保存する。
+IOの所有者/依存記録完全性、memoの元認定との接続、最終断片の因果由来と実フック確認が残る。
+核の定理だけでPhase 0/2全体、合同依存割合、適切な履歴の実配送を完了扱いにしない。
+
 2026-10-19 のユーザー指示による組み替え。元の goal の要件は削除しない。
 主張は「推薦と認定の分離」。誤再利用率と実行テスト合格率を主指標、
 seed を償却した総トークン・費用・最初のフック遅延を副次指標とする。

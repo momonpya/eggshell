@@ -1,0 +1,638 @@
+{
+  "status": "isolated; source/proof checks passed, runtime/hook qualification pending",
+  "manifest": {
+    "baseCommit": "cb05351ad95cdb13aee8114251feeb7875ae5641",
+    "source": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/checkout",
+    "changed": [
+      "Eggshell/IncrementalQuotient.lean",
+      "Eggshell/Matcher.lean",
+      "Eggshell/Handoff.lean",
+      "Eggshell/ContractAudit.lean",
+      "tests/EqualityDependencyTests.lean"
+    ],
+    "created": [
+      "Eggshell/CompletedAuthority.lean"
+    ],
+    "baseSha256": {
+      "Eggshell/IncrementalQuotient.lean": "66f0d33a5634daed402a1f00e582ded76d3633d79d59ee3a4d4ddd5c0984f647",
+      "Eggshell/Matcher.lean": "84522fd85b6d6c37530e7f63383a1b221c70226198bb1c23d048775d749b9d53",
+      "Eggshell/Handoff.lean": "874fc0d00bfb42cae37f99c0aaa191f0a806f1c88e7f436916ca90c59dd6d274",
+      "Eggshell/ContractAudit.lean": "47fa19a96d236a1884a39f7d3f01018ecd885237688b4b8fe72b0b450538703e",
+      "tests/EqualityDependencyTests.lean": "12de7fe936f14cea94da71817360967d9e8f39db2d7010e6f52b95bc4246e4f7"
+    },
+    "candidateSha256": {
+      "Eggshell/IncrementalQuotient.lean": "4562e88410fc1e0595391ba9e32db460c1f8e8d391857a586630765077c5eb05",
+      "Eggshell/Matcher.lean": "8ba8687682c29398b189a0541df2c469126425e2ad382be09c7481def6af25c2",
+      "Eggshell/Handoff.lean": "87e5469b3d157242b7a685384e3d41db42161112e1914b234989fe733f9d8f4e",
+      "Eggshell/ContractAudit.lean": "b6580cf1658b2fe36592eecbdff922f51f81735c7ef2f9bb21237c7782fb9da4",
+      "tests/EqualityDependencyTests.lean": "914ced9a26ed45d0ec756a7ec33f25f775d7aa23f2da58c318d28655ef295eb5",
+      "Eggshell/CompletedAuthority.lean": "be632fff03fe99bd71c982b948e58dce461f7de20330fc00a5e9e6d02476c4e9"
+    },
+    "scope": "Isolated completed authority certificate bound to actual current persistent/local generators; no ranking or evidence-selection change",
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "repairs": [
+      {
+        "reason": "Case split before unfolding dependent certificate match",
+        "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/build-incremental/record.json"
+      },
+      {
+        "reason": "Separate the existing result from its certificate, matching CongruenceSound.attach; avoid generalizing a dependent match",
+        "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair1-incremental/record.json"
+      },
+      {
+        "reason": "Carry the proof through a certified subtype; keep the monadic controller match nondependent",
+        "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair2-matcher/record.json"
+      },
+      {
+        "reason": "Eliminate the witnessed some-result equality, rather than substituting through the producer property",
+        "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair3-incremental/record.json"
+      },
+      {
+        "reason": "Normalize final certified views with the established producer equivalence and terminal result witness",
+        "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair4-matcher/record.json"
+      }
+    ]
+  },
+  "manifestSha256": "899bb407cae2ca17ab2ce4c0be56712e866c0a8708e542d1976ff7962474a625",
+  "checked": {
+    "complete": true,
+    "theorem": "Eggshell.Matcher.completed_original_authority",
+    "selectedComparisonsTheorem": "Eggshell.Matcher.extraction_comparisons_generated",
+    "actualProducerAndDeliveryAudit": true,
+    "receiptUsesCertifiedPersistentGenerators": true,
+    "computationalFixturesCompiled": true,
+    "standardSuiteElaborated": true,
+    "fullIoSuiteRuntimeExecuted": false,
+    "source": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/checkout",
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "remaining": "Native hook/body qualification; source IO/freshness, memo replay and final-fragment causal ancestry are separate boundaries",
+    "kernelTheorem": "Eggshell.Matcher.completed_authority",
+    "originalOwnerBoundary": "Explicit original-owner predicate supplied by the sparse pinned source IO; the pure theorem does not prove reader bytes or dependency-capture completeness",
+    "standardSuiteElaborationBeforeFinalProofOnlyAddition": true
+  },
+  "patch": "docs/candidates/completed-authority.patch",
+  "patchSha256": "08bafa7319395c7b1253fceb09e614c9b2dddf01b3abdc8ed7ef6352ae6273c2",
+  "patchAppliesToCurrentBase": true,
+  "patchReconstructsVerifiedSource": true,
+  "unchanged": {
+    "Eggshell/SearchProvider.lean": "a5a9f2c256a4df3f16fb33255eac404cb9c0a351cf9836d0ae8b0ceaf794c0a2",
+    "Eggshell/SemanticMatcher.lean": "b4a80dc479bb97a24b39d97937ccf283fa49d998d875590f81cb7a2d3712b838",
+    "runtime/embedding.py": "36db6daa14d83ac5165c58a4036b57c6b7ba32b0d58a8a456b68f1da80034eb0",
+    "Eggshell/MiniLM.lean": "15fe872280a9819f39c12a360235523b23ada07ed5f2967d34b16634112a71e7",
+    "Eggshell/PluginHooks.lean": "ed319f6dc3bf20c4d96d987924ed2ac0de43a1a452a503fd8a5d27a092e0813b",
+    "Eggshell/Worker.lean": "ab1b50b0275d45ea01005d17b58efa1c2338ec4d5d3990723a753a0a239151c7",
+    "Eggshell/SourceEvidence.lean": "fc087f4bdd058a47b35a5c01c847711bf46e576f7af3c6038fd5758194f41ce1",
+    "Eggshell/GraphStore.lean": "a933bc83a62c9bf370a9c25326207d14358eaf9322af5de42fb432c215eaab5e"
+  },
+  "matchingPrefixUnchanged": true,
+  "rendererBytesUnchanged": true,
+  "audits": [
+    "info: Eggshell/ContractAudit.lean:17:0: Audited Eggshell.Matcher.completed_original_authority: [propext, Quot.sound]",
+    "info: Eggshell/ContractAudit.lean:17:0: Audited Eggshell.Matcher.completed_authority: [propext, Quot.sound]",
+    "info: Eggshell/ContractAudit.lean:17:0: Audited Eggshell.Matcher.extraction_comparisons_generated: [propext, Classical.choice, Quot.sound]",
+    "info: Eggshell/ContractAudit.lean:17:0: Audited Eggshell.Matcher.completed_not_retrieved: [propext]",
+    "info: Eggshell/ContractAudit.lean:1442:0: Audited generated authority in both producers and the actual delivery extraction type"
+  ],
+  "records": {
+    "bound-receipt-contract": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/bound-receipt-contract/record.json",
+      "recordSha256": "2d67fab1baa4426896a70ea70ab9656631e7579a76b86753432c3f07407ad3df",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.ContractAudit"
+      ],
+      "elapsedMs": 19759.860292,
+      "exitCode": 0,
+      "stdoutSha256": "27ed424ac71001e49c476ae469ec3cb33664bb6f84e4b298f0f7f0124582425b",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 98177
+    },
+    "bound-receipt-standard-suite": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/bound-receipt-standard-suite/record.json",
+      "recordSha256": "f07d003adaf420035de418b5dc5f5cd1c81352e8ff81b68e6b7b08550cc2ad8e",
+      "args": [
+        "lake",
+        "env",
+        "lean",
+        "TestMain.lean"
+      ],
+      "elapsedMs": 11095.783958,
+      "exitCode": 0,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 0
+    },
+    "bound-receipt-test-support": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/bound-receipt-test-support/record.json",
+      "recordSha256": "4e38939290ff34274979872de2e84c91dd7ba94e73182edfcfc262d4ace74268",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "PageDBTestSupport"
+      ],
+      "elapsedMs": 11916.629833,
+      "exitCode": 0,
+      "stdoutSha256": "955f8574cbed61b495f5f014f09a4ad84fb396194b2f6b5c3f7971073caf6fdc",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 637
+    },
+    "build-incremental": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/build-incremental/record.json",
+      "recordSha256": "badbd7db6380582ba303eca965a0aaad1c6d4478e6ac14df2e66562c8013889f",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.IncrementalQuotient"
+      ],
+      "elapsedMs": 989.752125,
+      "exitCode": 1,
+      "stdoutSha256": "bbbc2fc45151180710d954dc2704eb75f898edaadead562edd4bbff3b5901124",
+      "stderrSha256": "c4a27db198c4d8632369ee6102944ef46e83c20d685f7c17a6aaff9cfcfc710f",
+      "stdoutBytes": 1506
+    },
+    "computational-fixtures": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/computational-fixtures/record.json",
+      "recordSha256": "faed06f1e6df55132e48d920476790b04178572ebd12ca18fecc05ee6dcf5924",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "tests.KernelFixtures",
+        "tests.MatcherFixtures",
+        "tests.ProofBoundaryAudit"
+      ],
+      "elapsedMs": 1734.675083,
+      "exitCode": 0,
+      "stdoutSha256": "233d651020060f7c2893b81edbf1a1884616cb4a9d80026e574c0d70cff92464",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 282
+    },
+    "contract": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/contract/record.json",
+      "recordSha256": "4f70153778a87c5e08fe9788a76a73e0b2e68b1cba0f558d8d96414a9357bb95",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.ContractAudit"
+      ],
+      "elapsedMs": 10377.805125,
+      "exitCode": 0,
+      "stdoutSha256": "3bddab73bbd75524991da32fabec66dd42cdbaa0549215966409793dff568080",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 98313
+    },
+    "original-authority": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/original-authority/record.json",
+      "recordSha256": "fefb65efe0b7c54925a022cd4fe6eaad0d03766633ab6478e25a07cfc2c734f7",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.CompletedAuthority"
+      ],
+      "elapsedMs": 574.886542,
+      "exitCode": 0,
+      "stdoutSha256": "9b8f76f09c81cd2c87df3c3273f465350723c5b695b78522693bfe8f26c161e6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 94
+    },
+    "original-owner-contract": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/original-owner-contract/record.json",
+      "recordSha256": "0b3f1948d7deca93a3e809a0ef7e3dacab05da08d175fe77c577166b020f902c",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.ContractAudit"
+      ],
+      "elapsedMs": 19463.646375,
+      "exitCode": 0,
+      "stdoutSha256": "263f500c9ca7ece585684d34cdd2bb615b23303e2c6b8a605771169ec3a81cdb",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 98294
+    },
+    "repair1-incremental": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair1-incremental/record.json",
+      "recordSha256": "ed166832c43711c7821466814235ee21c4616e76d339c070d7709fb2c5b50a35",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.IncrementalQuotient"
+      ],
+      "elapsedMs": 577.225875,
+      "exitCode": 1,
+      "stdoutSha256": "e317aec0d11cedd41b277b8fa827d963b39ca4f00ee1988b27955dbff8357269",
+      "stderrSha256": "c4a27db198c4d8632369ee6102944ef46e83c20d685f7c17a6aaff9cfcfc710f",
+      "stdoutBytes": 2106
+    },
+    "repair2-incremental": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair2-incremental/record.json",
+      "recordSha256": "7eb60b3b1383c23ac44916e0c41145a5c1a29581bb4e159d52e35c4202ebdfb0",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.IncrementalQuotient"
+      ],
+      "elapsedMs": 677.888375,
+      "exitCode": 0,
+      "stdoutSha256": "c6861433a3b144ffdde803d1dfff0aa7f1924c3818fe6ca2989aecf9d0d8d82e",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 95
+    },
+    "repair2-matcher": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair2-matcher/record.json",
+      "recordSha256": "8cb6ceb46d4360cc9262f34df2e492d43537a8d3f4153aa4cdae995d27fc560b",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.Matcher"
+      ],
+      "elapsedMs": 2083.995,
+      "exitCode": 1,
+      "stdoutSha256": "23eb7ebc2352a555cd39e857b5fdc04437fae4363f10ec48abe14f5031cbbc38",
+      "stderrSha256": "c4a27db198c4d8632369ee6102944ef46e83c20d685f7c17a6aaff9cfcfc710f",
+      "stdoutBytes": 7091
+    },
+    "repair3-incremental": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair3-incremental/record.json",
+      "recordSha256": "e1b7caeed4ce4b17bf95135395123edbdffe8657ad1e462ffb2e3ab21e7a5f2a",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.IncrementalQuotient"
+      ],
+      "elapsedMs": 579.850917,
+      "exitCode": 1,
+      "stdoutSha256": "a63d1eaab074e86431493a161ac41ff2b0165b1b14ceb40256d58248c9d783f9",
+      "stderrSha256": "c4a27db198c4d8632369ee6102944ef46e83c20d685f7c17a6aaff9cfcfc710f",
+      "stdoutBytes": 1719
+    },
+    "repair4-incremental": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair4-incremental/record.json",
+      "recordSha256": "c73bae3a34e99cd8d41e3282b18dc01768f523184bf216ec4df657672595cc2f",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.IncrementalQuotient"
+      ],
+      "elapsedMs": 670.221333,
+      "exitCode": 0,
+      "stdoutSha256": "9092e9710013b5f2bd63bb69a123d7d699930662803b2aab81865950c7f13503",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 95
+    },
+    "repair4-matcher": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair4-matcher/record.json",
+      "recordSha256": "b1e86cf93f684f741073125f186648a98a3ac6fed3dce218e602facbb7a0ec83",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.Matcher"
+      ],
+      "elapsedMs": 1957.697458,
+      "exitCode": 1,
+      "stdoutSha256": "9195a76e3fb133b8d26110447fa7ab4f2b7fc63a58d139ef537ec07510da163f",
+      "stderrSha256": "c4a27db198c4d8632369ee6102944ef46e83c20d685f7c17a6aaff9cfcfc710f",
+      "stdoutBytes": 40371
+    },
+    "repair5-authority": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair5-authority/record.json",
+      "recordSha256": "954df6513b01ca0c3d3b1e9dcbec2964ca481a619f4782456f4f0a0433895f14",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.CompletedAuthority"
+      ],
+      "elapsedMs": 563.256667,
+      "exitCode": 0,
+      "stdoutSha256": "1a5d3cf5e376354b7ce503f57bd8cbeaa1de6c887a2431c08d95ae11f662c237",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 94
+    },
+    "repair5-handoff": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair5-handoff/record.json",
+      "recordSha256": "dc39cc42e29899577e64728bd8aed3873ab76bac916fdef8131549266b63d4ba",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.Handoff"
+      ],
+      "elapsedMs": 17959.414333,
+      "exitCode": 0,
+      "stdoutSha256": "38141177d862ba6b60f7702c3feda17c7d1b44733ddbaffbadb5c3f48e17b5cf",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 763
+    },
+    "repair5-incremental": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair5-incremental/record.json",
+      "recordSha256": "0b7f63eb4a3d386f6b14a72fe3f742db528a78f1bfa620482ad5d5e26b3221c5",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.IncrementalQuotient"
+      ],
+      "elapsedMs": 361.177958,
+      "exitCode": 0,
+      "stdoutSha256": "d145fa45ec3efb70328de3c634c752e2478b8d3015a3282986af9b22996ee2cf",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 40
+    },
+    "repair5-matcher": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair5-matcher/record.json",
+      "recordSha256": "66d58b77cb85f66e4b5e1109b2ab087ee9680511938ebd46149857fd4a8a0f22",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "Eggshell.Matcher"
+      ],
+      "elapsedMs": 2176.467083,
+      "exitCode": 0,
+      "stdoutSha256": "ec5d7edc2c663ff04ff161aeb9112b91d691ecdfcbdb366ecf13787e77a8c289",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 82
+    },
+    "standard-suite-elaboration": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/standard-suite-elaboration/record.json",
+      "recordSha256": "90df7ae37d958d1a75c4534f41f4aca38318682db063fac62d41f59af014431d",
+      "args": [
+        "lake",
+        "env",
+        "lean",
+        "TestMain.lean"
+      ],
+      "elapsedMs": 10960.166833,
+      "exitCode": 0,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 0
+    },
+    "standard-test-support": {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/standard-test-support/record.json",
+      "recordSha256": "49a125ee973c255d297d4c0d6b6e177422e52d06a303323a98a3e62c95af73a0",
+      "args": [
+        "lake",
+        "--no-cache",
+        "build",
+        "PageDBTestSupport"
+      ],
+      "elapsedMs": 11039.838125,
+      "exitCode": 0,
+      "stdoutSha256": "d270e95dc04cca5bb4033690bb87f8396d504421420f2f23517e2363b889771e",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutBytes": 597
+    }
+  },
+  "guards": [
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/build-guard.json",
+      "sha256": "72eee545f466f8b15c7bd9434a7fb4d1f65251dd20ccf0375514ab2ba9a45274",
+      "guardPid": 59227,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1194992,
+      "samples": 11,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/construct.py"
+      ],
+      "childPid": 59241,
+      "exitCode": 1,
+      "elapsedSeconds": 1.5124983340501785
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/checks-guard.json",
+      "sha256": "89f61b6213c2827b39e66d687a7a983d5d88998fa26fbc38335330a89926b9dd",
+      "guardPid": 60509,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2841360,
+      "samples": 234,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/finish-checks.py"
+      ],
+      "childPid": 60522,
+      "exitCode": 0,
+      "elapsedSeconds": 34.327773708850145
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/original-owner-guard.json",
+      "sha256": "0831c1a4ef65ce76a561f87fd37647982bfb788baa8b708f8e63d5957e2f6ac9",
+      "guardPid": 61347,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2997616,
+      "samples": 139,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/original-owner-contract.py"
+      ],
+      "childPid": 61360,
+      "exitCode": 0,
+      "elapsedSeconds": 20.335850208997726
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/receipt-binding-guard.json",
+      "sha256": "f6deac306d291264f2dabe83de9b4b870d07f6eee7eea20b10faa8f95bd697c9",
+      "guardPid": 60804,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 3032768,
+      "samples": 293,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/bind-receipts.py"
+      ],
+      "childPid": 60817,
+      "exitCode": 0,
+      "elapsedSeconds": 43.080020333174616
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair1-guard.json",
+      "sha256": "ccbe4c8278b5f36eda176128add5f5d530437916e1e065bd79287d2d006fe591",
+      "guardPid": 59335,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1090544,
+      "samples": 6,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair-1.py"
+      ],
+      "childPid": 59348,
+      "exitCode": 1,
+      "elapsedSeconds": 0.7811606246978045
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair2-guard.json",
+      "sha256": "2b0a8e83faba96742ad968c20ccf692b574be24651f7faaac898f316fcb801b2",
+      "guardPid": 59444,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1298064,
+      "samples": 21,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair-2.py"
+      ],
+      "childPid": 59457,
+      "exitCode": 1,
+      "elapsedSeconds": 3.0377439172007143
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair3-guard.json",
+      "sha256": "e1887babed8170213ba0d60e68ede44d3041b0c390c79c6be4d3c849b4188c8d",
+      "guardPid": 59696,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1156944,
+      "samples": 7,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair-3.py"
+      ],
+      "childPid": 59709,
+      "exitCode": 1,
+      "elapsedSeconds": 0.916079374961555
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair4-guard.json",
+      "sha256": "ba43134039598f7d3b77bc0498c599d6f07aa85e6e3bf1c330a98f93da5760f2",
+      "guardPid": 59723,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1307472,
+      "samples": 20,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair-4.py"
+      ],
+      "childPid": 59737,
+      "exitCode": 1,
+      "elapsedSeconds": 2.8611088329926133
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair5-guard.json",
+      "sha256": "613f92006195bab0e8bac8b7c0ee4ba335215e7fba2d3a1668b63042bd415a19",
+      "guardPid": 59766,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2953488,
+      "samples": 145,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/completed-authority-20261022/repair-5.py"
+      ],
+      "childPid": 59779,
+      "exitCode": 0,
+      "elapsedSeconds": 21.290485792327672
+    }
+  ],
+  "peakRssKiB": 3032768,
+  "resourceGuardsTriggered": [],
+  "failedChecksPreserved": [
+    "build-incremental",
+    "repair1-incremental",
+    "repair2-matcher",
+    "repair3-incremental",
+    "repair4-matcher"
+  ],
+  "sourceOwnerAssumption": "The explicit original-owner predicate is supplied by pinned sparse source IO; reader/refinement completeness is not proved by the kernel theorem",
+  "ioBoundaries": [
+    "Non-retrieval/sound-rule ancestry of persistent and local Union generators; generated closure alone does not establish this ancestry",
+    "Pinned source ownership/binding",
+    "Declared-dependency capture completeness and current filesystem observation",
+    "Memo response replay and its original authorization witness",
+    "Final rendered fragment and transport receipt reconciliation"
+  ],
+  "selectionScope": "Generated equality for all executed selection comparisons, including All decomposition and child deduplication; not minimum causal ancestry of local Union proposals",
+  "productionSourceApplied": false,
+  "runtimeExecutableBuilt": false,
+  "nativeHookQualificationRun": false,
+  "modelCalls": 0,
+  "newSeedAcquisition": false,
+  "nativePreparationDiskReserveMiB": 3072,
+  "modelPrelaunchMiB": 4096,
+  "currentFreeBytes": 2242007040,
+  "adoptionCriterion": "Relevant original DB history actually delivered within deadline; answer/token variation is separate, not a rejection gate"
+}
