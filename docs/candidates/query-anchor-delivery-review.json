@@ -1,0 +1,453 @@
+{
+  "at": "2026-10-21T21:45:59.188387+00:00",
+  "scope": "First-lap topic3: required stored original code versus actual initial delivery, r0/r1",
+  "supersedes": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/reviews/question-relevant-delivery.json",
+    "sha256": "166ecae52058b532e5a4862b12ebc6116bd1a60cf70a76bab10bb4a68ae7ad5f",
+    "decisionWithdrawn": true,
+    "reason": "Historical summary text does not compensate for omission of original code required by this question"
+  },
+  "sourceDocuments": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage3/documents.json",
+  "sourceDocumentsSha256": "fc792d7c7ffe52e5e04fe402022ed7f1758dfae287d98dbb9f7ef39dacf3ee3a",
+  "question": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage3-candidate-r0/prompt.txt",
+  "questionSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+  "blocks": [
+    {
+      "id": "trailing-x-condition-result",
+      "owner": "v15256267109356037303",
+      "storedKind": "observation",
+      "sourceFile": "clang/lib/Driver/Driver.cpp",
+      "sourceLines": [
+        3131,
+        3135
+      ],
+      "originalEvidenceChars": [
+        22875,
+        23198
+      ],
+      "originalExcerpt": "  3131\t    Arg *LastXArg = Args.getLastArgNoClaim(options::OPT_x);\n  3132\t    Arg *LastInputArg = Args.getLastArgNoClaim(options::OPT_INPUT);\n  3133\t    if (LastXArg && LastInputArg &&\n  3134\t        LastInputArg->getIndex() < LastXArg->getIndex())\n  3135\t      Diag(clang::diag::warn_drv_unused_x) << LastXArg->getValue();",
+      "originalExcerptSha256": "d4ce409452725c192e7df22607bb8089b578aedefb978badda12fd249d1671e2",
+      "requiredOriginalCodeMissingFromInitialPacket": true,
+      "missingCode": [
+        "LastInputArg->getIndex() < LastXArg->getIndex()",
+        "Diag(clang::diag::warn_drv_unused_x)"
+      ],
+      "relevanceJudgment": "質問が-xの相互作用を調べている。最後の入力との順序条件と実際の警告を支える短いコード範囲が必要。コメントと変数取得だけでは条件と結果が欠ける。",
+      "verdict": "fail"
+    },
+    {
+      "id": "toolchain-cache-lookup",
+      "owner": "v16748591830955464422",
+      "storedKind": "observation",
+      "sourceFile": "clang/lib/Driver/Driver.cpp",
+      "sourceLines": [
+        7101,
+        7106
+      ],
+      "originalEvidenceChars": [
+        23615,
+        23872
+      ],
+      "originalExcerpt": "  7101\tconst ToolChain &Driver::getToolChain(const ArgList &Args,\n  7102\t                                      const llvm::Triple &Target) const {\n  7103\t\n  7104\t  auto &TC = ToolChains[Target.str()];\n  7105\t  if (!TC) {\n  7106\t    switch (Target.getOS()) {",
+      "originalExcerptSha256": "358884a853cbc7800db1b007137a4fead4cbc93202d27759b814138e77fdc2ee",
+      "requiredOriginalCodeMissingFromInitialPacket": true,
+      "missingCode": [
+        "auto &TC = ToolChains[Target.str()];"
+      ],
+      "relevanceJudgment": "質問がToolChain選択の境界を要求している。保存済みのキーと未生成時の分岐を示す短い元コードが必要。",
+      "verdict": "fail"
+    },
+    {
+      "id": "toolchain-language-target-branch",
+      "owner": "v16748591830955464422",
+      "storedKind": "observation",
+      "sourceFile": "clang/lib/Driver/Driver.cpp",
+      "sourceLines": [
+        7244,
+        7252
+      ],
+      "originalEvidenceChars": [
+        30590,
+        31058
+      ],
+      "originalExcerpt": "  7244\t    case llvm::Triple::Vulkan:\n  7245\t    case llvm::Triple::ShaderModel:\n  7246\t      if ((Target.getArch() == llvm::Triple::spirv32 ||\n  7247\t           Target.getArch() == llvm::Triple::spirv64) &&\n  7248\t          !usesInput(Args, types::isHLSL))\n  7249\t        TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);\n  7250\t      else\n  7251\t        TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);\n  7252\t      break;",
+      "originalExcerptSha256": "4f3f0601ea6bfb33f18547bcf87dcb4ee1b7ac551a55254e54a5559757097505",
+      "requiredOriginalCodeMissingFromInitialPacket": true,
+      "missingCode": [
+        "!usesInput(Args, types::isHLSL)",
+        "std::make_unique<toolchains::SPIRVToolChain>",
+        "std::make_unique<toolchains::HLSLToolChain>"
+      ],
+      "relevanceJudgment": "質問のtargetと言語の相互作用を直接決める。OS、spirv32/spirv64、HLSL入力の否定と両分岐の結果を省略できない。",
+      "verdict": "fail"
+    }
+  ],
+  "runs": [
+    {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage3-candidate-r0",
+      "initialPacketSha256": "5488a8e768347eb0b555ecf826af516089bc6169da344c0b67fed61044779844",
+      "initialHookMs": 9038,
+      "reviewedOriginalCodeDelivery": "fail",
+      "scope": "Initial delivery; later packets are not a substitute for availability before rereading"
+    },
+    {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage3-candidate-r1",
+      "initialPacketSha256": "5488a8e768347eb0b555ecf826af516089bc6169da344c0b67fed61044779844",
+      "initialHookMs": 8870,
+      "reviewedOriginalCodeDelivery": "fail",
+      "scope": "Initial delivery; later packets are not a substitute for availability before rereading"
+    }
+  ],
+  "historyTextPresenceDiagnostics": [
+    {
+      "id": "mode-config-order",
+      "label": "引数解析と設定統合の順序",
+      "owner": "v10827018069933719135",
+      "storedKind": "answer",
+      "originalEvidenceSha256": "1ce7727654fa710b30a424453047fce473c7c110c5569a50a3254564d5022334",
+      "delivery": "historical-text-presence-only; not a code-delivery acceptance decision",
+      "provenance": "historical-answer-with-original-citations; not a new source freshness attestation",
+      "judgment": "質問が要求する引数解析の既知の順序を再利用できる。",
+      "evidence": [
+        {
+          "text": "driver mode を通常の引数解析より先に決定し、その後 CLI を解析します。",
+          "originalEvidenceChars": [
+            334,
+            377
+          ],
+          "packetChars": [
+            11932,
+            11975
+          ],
+          "packetLine": 167
+        },
+        {
+          "text": "head・CLI・tail の順序で最終引数へ統合されます。",
+          "originalEvidenceChars": [
+            931,
+            961
+          ],
+          "packetChars": [
+            12529,
+            12559
+          ],
+          "packetLine": 170
+        }
+      ]
+    },
+    {
+      "id": "target-value",
+      "label": "最後のtarget引数と正規化",
+      "owner": "v11688441620330750236",
+      "storedKind": "observation",
+      "originalEvidenceSha256": "4c06b4209ac24f500163dc9b88e49619ec8f7923ed6335d19a5da1cfafce4f5f",
+      "delivery": "historical-text-presence-only; not a code-delivery acceptance decision",
+      "provenance": "declared-source-dependencies-unchanged",
+      "judgment": "--targetの値を採用する条件と結果が元の観測から届いている。",
+      "evidence": [
+        {
+          "text": "if (const Arg *A = Args.getLastArg(options::OPT_target))",
+          "originalEvidenceChars": [
+            7822,
+            7878
+          ],
+          "packetChars": [
+            85899,
+            85955
+          ],
+          "packetLine": 1547
+        },
+        {
+          "text": "TargetTriple = A->getValue();",
+          "originalEvidenceChars": [
+            7890,
+            7919
+          ],
+          "packetChars": [
+            85967,
+            85996
+          ],
+          "packetLine": 1548
+        },
+        {
+          "text": "llvm::Triple Target(llvm::Triple::normalize(TargetTriple));",
+          "originalEvidenceChars": [
+            7937,
+            7996
+          ],
+          "packetChars": [
+            86014,
+            86073
+          ],
+          "packetLine": 1550
+        }
+      ]
+    },
+    {
+      "id": "toolchain-conditions",
+      "label": "既知のToolChain選択条件",
+      "owner": "v10827018069933719135",
+      "storedKind": "answer",
+      "originalEvidenceSha256": "1ce7727654fa710b30a424453047fce473c7c110c5569a50a3254564d5022334",
+      "delivery": "historical-text-presence-only; not a code-delivery acceptance decision",
+      "provenance": "historical-answer-with-original-citations; not a new source freshness attestation",
+      "judgment": "以前の調査が記録したtargetと言語依存の条件を出典付きの結論として保持している。",
+      "evidence": [
+        {
+          "text": "ToolChain は `Target.str()` を cache key として生成され",
+          "originalEvidenceChars": [
+            1574,
+            1620
+          ],
+          "packetChars": [
+            13172,
+            13218
+          ],
+          "packetLine": 172
+        },
+        {
+          "text": "Vulkan/ShaderModel の SPIR-V target では、HLSL 入力かどうかで `SPIRVToolChain` と `HLSLToolChain` が分かれます。",
+          "originalEvidenceChars": [
+            1810,
+            1903
+          ],
+          "packetChars": [
+            13408,
+            13501
+          ],
+          "packetLine": 173
+        }
+      ]
+    },
+    {
+      "id": "input-language",
+      "label": "入力言語と末尾の-xの既知の例外",
+      "owner": "v13876844999117342090",
+      "storedKind": "answer",
+      "originalEvidenceSha256": "151493c7780bf02b3fd13b70ab60e84333e317cb5684b2b07ac3b10fc1bdac13",
+      "delivery": "historical-text-presence-only; not a code-delivery acceptance decision",
+      "provenance": "declared-source-dependencies-unchanged",
+      "judgment": "元コードの警告分岐全文がなくても、関連する既知の例外とテスト出典は届いている。",
+      "evidence": [
+        {
+          "text": "`-x` は入力言語型の追跡に使われます。",
+          "originalEvidenceChars": [
+            884,
+            905
+          ],
+          "packetChars": [
+            24807,
+            24828
+          ],
+          "packetLine": 322
+        },
+        {
+          "text": "`x-args.c`：入力後の `-x c++` は無効として診断される。",
+          "originalEvidenceChars": [
+            2047,
+            2084
+          ],
+          "packetChars": [
+            25970,
+            26007
+          ],
+          "packetLine": 331
+        }
+      ]
+    },
+    {
+      "id": "syntax-only-phase",
+      "label": "syntax-onlyの条件とCompile終了段階",
+      "owner": "v16748591830955464422",
+      "storedKind": "observation",
+      "originalEvidenceSha256": "dc525891be2bfd572bbf863aecf2fa71fe87327d6510d50b572045cb277654b1",
+      "delivery": "historical-text-presence-only; not a code-delivery acceptance decision",
+      "provenance": "declared-source-dependencies-unchanged",
+      "judgment": "-fsyntax-onlyの分岐とその結果が同じ原観測の配送範囲にある。",
+      "evidence": [
+        {
+          "text": "DAL.getLastArg(options::OPT_fsyntax_only)",
+          "originalEvidenceChars": [
+            36015,
+            36056
+          ],
+          "packetChars": [
+            70310,
+            70351
+          ],
+          "packetLine": 1198
+        },
+        {
+          "text": "FinalPhase = phases::Compile;",
+          "originalEvidenceChars": [
+            36816,
+            36845
+          ],
+          "packetChars": [
+            71111,
+            71140
+          ],
+          "packetLine": 1209
+        }
+      ]
+    },
+    {
+      "id": "job-boundary",
+      "label": "ActionからJobまでの既知の境界",
+      "owner": "v10827018069933719135",
+      "storedKind": "answer",
+      "originalEvidenceSha256": "1ce7727654fa710b30a424453047fce473c7c110c5569a50a3254564d5022334",
+      "delivery": "historical-text-presence-only; not a code-delivery acceptance decision",
+      "provenance": "historical-answer-with-original-citations; not a new source freshness attestation",
+      "judgment": "既知の全体フローを引き継ぐ。今回新たに求められた詳細なConstructJob実装の全観測が保存済みだった、とはしない。",
+      "evidence": [
+        {
+          "text": "→ -x 等による入力型・Action 構築",
+          "originalEvidenceChars": [
+            205,
+            227
+          ],
+          "packetChars": [
+            11803,
+            11825
+          ],
+          "packetLine": 159
+        },
+        {
+          "text": "→ ToolChain ごとの Job/引数生成",
+          "originalEvidenceChars": [
+            230,
+            254
+          ],
+          "packetChars": [
+            11828,
+            11852
+          ],
+          "packetLine": 160
+        }
+      ]
+    },
+    {
+      "id": "test-expectations",
+      "label": "関連する既存テストの期待",
+      "owner": "v13876844999117342090",
+      "storedKind": "answer",
+      "originalEvidenceSha256": "151493c7780bf02b3fd13b70ab60e84333e317cb5684b2b07ac3b10fc1bdac13",
+      "delivery": "historical-text-presence-only; not a code-delivery acceptance decision",
+      "provenance": "declared-source-dependencies-unchanged",
+      "judgment": "targetと言語が変わる既知の具体例を引き継いでいる。静的期待と実行済みPASSは区別する。",
+      "evidence": [
+        {
+          "text": "`default-toolchain.c`：`-target i386 ... -m64` で x86_64",
+          "originalEvidenceChars": [
+            1412,
+            1466
+          ],
+          "packetChars": [
+            25335,
+            25389
+          ],
+          "packetLine": 328
+        },
+        {
+          "text": "`spirv-amd-toolchain.c`：同じ SPIR-V target で backend 選択により job 列が変わり、cc1 へ `-x c` が転送される。",
+          "originalEvidenceChars": [
+            1816,
+            1903
+          ],
+          "packetChars": [
+            25739,
+            25826
+          ],
+          "packetLine": 330
+        }
+      ]
+    },
+    {
+      "id": "validation-limits",
+      "label": "実行不能・未解決・無変更の条件",
+      "owner": "v13876844999117342090",
+      "storedKind": "answer",
+      "originalEvidenceSha256": "151493c7780bf02b3fd13b70ab60e84333e317cb5684b2b07ac3b10fc1bdac13",
+      "delivery": "historical-text-presence-only; not a code-delivery acceptance decision",
+      "provenance": "declared-source-dependencies-unchanged",
+      "judgment": "過去の検証不能を成功に変えず、追加の証拠が必要な範囲も配送する。",
+      "evidence": [
+        {
+          "text": "AttributeError: 'TestingConfig' object has no attribute 'clang_obj_root'",
+          "originalEvidenceChars": [
+            2640,
+            2712
+          ],
+          "packetChars": [
+            26563,
+            26635
+          ],
+          "packetLine": 346
+        },
+        {
+          "text": "実行済みの pass ではありません。",
+          "originalEvidenceChars": [
+            2755,
+            2774
+          ],
+          "packetChars": [
+            26678,
+            26697
+          ],
+          "packetLine": 349
+        },
+        {
+          "text": "該当する失敗を実行確認できないため、修正根拠には不十分です。",
+          "originalEvidenceChars": [
+            2899,
+            2929
+          ],
+          "packetChars": [
+            26822,
+            26852
+          ],
+          "packetLine": 351
+        },
+        {
+          "text": "変更ファイル：なし。",
+          "originalEvidenceChars": [
+            2931,
+            2941
+          ],
+          "packetChars": [
+            26854,
+            26864
+          ],
+          "packetLine": 353
+        }
+      ]
+    }
+  ],
+  "verdict": "fail: necessary code observations exist in the common DB but are absent from initial delivery",
+  "failureReason": "Required stored source omitted, not a token-reduction threshold miss and not model variance",
+  "policy": {
+    "deliveryAcceptance": "Question-relevant stored original observations, required code conditions and results, conclusions and limits actually delivered with provenance and applicable freshness",
+    "summariesCannotSubstituteForRequiredCode": true,
+    "wholeFunctionOrFileRequired": false,
+    "fullPreviousAnswerRequired": false,
+    "varianceAfterAdequateDelivery": "Model variance; do not modify delivery just to chase one token percentage",
+    "tokenAndAnswerQualityRecordedSeparately": true
+  },
+  "limitations": [
+    "This identifies three concrete initial-delivery omissions, not every possible omission.",
+    "Code is extracted from the preserved DB observations, not a newly created seed.",
+    "No fix or runtime/prompt/model change has been made in this review."
+  ],
+  "additionalModelCallsForReview": 0,
+  "generationConditionsChanged": false,
+  "productionAdoption": false,
+  "dispatcher": {
+    "state": "stopped-for-relevance-review",
+    "completedCalls": 39,
+    "plannedCalls": 54,
+    "knownCompletedTokens": 57930060,
+    "inFlightCallCompletedNormally": true,
+    "evidence": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/reviews/dispatch-closed-after-active-call.json"
+  }
+}
