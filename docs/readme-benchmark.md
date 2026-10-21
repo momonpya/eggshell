@@ -5,6 +5,14 @@ The 2026-10-20 user instruction puts this real-model benchmark before further
 deadline repairs are not claimed to improve token reduction when the delivered
 warm-DB body is unchanged.
 
+The latest restart rule applies to every future model comparison: any change
+to implementation, delivery, prompt or harness starts a new frozen sequence at
+topic 1 repetition 0, followed by topics 2/3 and retained topics 1/2/3, with
+three equal repetitions. Fresh, current and candidate calls are all collected
+anew. Historical results, including previously reused controls documented
+below, remain records of their original closed comparisons and are not carried
+into the new run.
+
 The task is the README's Clang Driver sequence: topics 1, 2 and 3, first from a
 new seed and then with accumulated memory, in independent native chats. Prompts
 come verbatim from `docs/benchmarks/llvm-three-topics.json`; only `<LLVM_SOURCE>`
@@ -1726,3 +1734,24 @@ fail and remain unadopted. No new answering-model trial or token claim follows.
 The next diagnostic joins per-owner window ranks with original-coordinate
 coverage; every subsequent repaired model comparison still starts at topic 1
 repetition 0 and includes all six stages without carrying old results forward.
+
+`complete-source-ranks-1` now completes that matched rank diagnostic on the
+same 46-document source. The native rank checks and ContractAudit build pass;
+the interpreter's missing `RetrievalResearch.log1p` external is retained as a
+test-launch failure, followed by the same ten checks linked as a native
+executable. Runtime `3d06945e…` combines complete numerical window orders with
+the isolated source-admission repair, without changing the encoder, matcher,
+control checks or final 16-window selection limit.
+
+Across five traced observations and two questions, the original source and
+focus question match, and the original numerical top 16 are unchanged. Fusion
+changes its selected order, but the full `usesInput` predicate remains absent
+at every tested topic-1 allowance up to 16,384; it appears only at 32,768. Topic
+2 includes the full excerpt from 16,384 in both implementations; 8,192 includes
+its two principal anchors but still omits part of the excerpt. The complete-order repair
+alone does not resolve this coverage gap and remains unadopted. Exact source
+coordinates, selected windows and allowance bodies are retained in
+`complete-source-ranks-1/cue-comparison.json`, `full-predicate-coverage.json`
+and its topic outputs. No answering
+model was called. The build and native diagnostic guards observed aggregate
+peaks of 3,090,560 and 1,560,336 KiB, below the unchanged three-GiB stop threshold.
