@@ -1452,3 +1452,38 @@ receipts and source gates are in `scope-context-20261021`. Candidate r0 remains
 the predeclared next common history. Failed or unknown-cost attempts cannot be
 resubmitted or silently replaced. No candidate is adopted into the runtime,
 README results or release before the full token and quality gates.
+
+The first two topic-1 matched repetitions are now complete. Inclusive input
+plus output, with cached input counted once, is:
+
+| Repetition | Fresh | Current `415bcc2…` | Isolated `63a457…` | Candidate saving vs fresh |
+| --- | ---: | ---: | ---: | ---: |
+| 0 | 4,929,131 | 960,386 | 136,974 | 97.22% |
+| 1 | 2,072,591 | 140,700 | 911,106 | 56.04% |
+
+Repetition 1 misses the 70% target and consumes more than the current
+implementation. The identical candidate initial body contains all four
+originally stored full source probes in both repetitions, yet subsequent
+commands differ (2 versus 11). Source delivery alone therefore cannot explain
+the observed variance or establish adoption. Some later investigation obtains
+facts whose complete source was not originally stored; those commands are not
+automatically counted as wasted rereads. Answers also require separate source
+review. No answer-quality acceptance or full-topic/lap result is claimed.
+
+`tools/audit_token_stage.py` joins each original owner and full excerpt to the
+actual delivered packet, later command output, inclusive usage and saved output.
+`audits/stage1-partial-2.json` preserves the two matched triples, including the
+negative implementation comparison. The cohort retains every planned third
+repetition and all later cells; no best run becomes the result. All completed
+calls have known final usage, and the answering-model memory monitors have not
+fired. Seed acquisition remains separate, with no new seed generated.
+
+`tools/prepare_token_stage.py` prepares later stages from the predeclared new
+candidate r0 output after all nine preceding calls finish. It preserves the
+authoritative graph bytes, fills only missing derived indexes off hook and
+checks an independent warm repeat. It prepares all conditions before asking
+the frozen dispatcher's full stored-source gate to admit generation. Three
+small tests reject an incomplete preceding cohort, substituted r0 output and
+an unfinished save; together with existing pairing/reconstruction checks,
+12 tests pass. This preparation and audit tooling does not adopt the isolated
+candidate or change README performance claims.
