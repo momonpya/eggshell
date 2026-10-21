@@ -143,16 +143,17 @@ preparation are retained, and the same fixed plan resumes its missing native
 preparations. No answering call occurred before that repair. RSS still stops at
 three GiB below the user's four-GiB ceiling; the free-disk reserve is three GiB.
 
-The first-lap r0 triples for topics 1 and 2 have now completed (six of 54 new
+The first-lap r0 triples for all three topics have now completed (nine of 54 new
 calls). Inclusive totals are:
 
 | Topic | Fresh | Fixed current | Candidate | Candidate reduction vs fresh |
 | --- | ---: | ---: | ---: | ---: |
 | 1 | 2,241,019 | 835,335 | 321,516 | 85.65% |
 | 2 | 4,870,992 | 52,917 | 51,238 | 98.95% |
+| 3 | 5,171,855 | 1,203,452 | 1,982,869 | 61.66% |
 
 All final usage is known; errors, reroutes and hook failures are absent. The
-known answering cost is 8,373,017 tokens, with acquisition cost kept separate.
+known answering cost is 16,731,193 tokens, with acquisition cost kept separate.
 Each comparison uses the same stored source snapshot. Topic 2's actual initial
 candidate packet matches preparation SHA-256 `9f1e06849fd5232b0efea44fb680f5a440e50eec4e9eb4e9c848debfd4bbf316`;
 its hook completed in 8,295 ms (current: 6,216 ms). Both memory conditions used
@@ -162,16 +163,37 @@ The topic-2 candidate/current difference is only 1,679 tokens (3.17%). Candidate
 input is 338 tokens larger; output is 2,017 tokens smaller. One stochastic pair
 does not establish a delivery improvement. Candidate leaves concrete external
 callers and documentation unidentified, whereas fresh identifies Tooling,
-Flang and UsersManual sites that exist in the fixed source. Quality remains
+Flang and UsersManual sites that exist in the fixed source. The inspected
+excerpts and identifying strings are absent from the 43 common stored document
+bodies; these new discoveries are not a demonstrated loss of stored memory.
+This scoped absence check does not prove all similar information absent. Quality remains
 pending. Neither memory condition newly executed tests in this topic; their
-answers retain the previous lit setup limitation. The raw usage, packet and
-answer references are in `query-anchor-first-two-topics.json`. No production
+answers retain the previous lit setup limitation. The first two topic records
+are in `query-anchor-first-two-topics.json`; all three topic records are in
+`query-anchor-first-lap.json`. No production
 or README benchmark adoption follows from these partial results.
 
 Topic 3 has nine admitted preparations from the predeclared candidate-r0
 history. Its 44 documents have 2,169 windows; warm encoded only the 17 missing
 windows in one batch, then requested zero windows in zero batches on repeat.
 The hard four-GiB model prelaunch free-space check stopped the next call before
-an attempt was created. Closed experiment artifacts are being compressed with
-byte hashes preserved; runtime, prompt, harness and both resource limits stay
-fixed. Continue topic 3, retained topics 1/2/3, then every equal repetition.
+an attempt was created. Transparent compression of closed derived experiment
+pages preserved all logical bytes and paths and recovered sufficient capacity.
+Topic 3 then completed: candidate misses the 70% fresh-relative target and uses
+64.77% more total tokens than current in this pair. Its actual initial body
+matches preparation and arrives in 9,038 ms (current: 6,629 ms). Commands are
+fresh 39, current 24 and candidate 37. The predetermined probes show rereads of
+already delivered target/input-language data as well as new action/job data not
+present in the common history. These probes classify six commands, leaving 31
+unclassified; a missing full probe block does not establish absence of every
+fact in it. Do not assign a single cause, select the two positive cells or adopt
+the candidate from these partial results. Quality and the remaining repetitions
+are pending; no matching lit.py/ctest/ninja/cmake invocation appears in this
+topic's captured commands, and no PASS evidence is claimed.
+
+The retained topic-1 common checkpoint is saved and indexed: 82 documents,
+3,109 windows, 16 missing windows encoded in one batch, then zero windows and
+zero batches on repeat with independent private state. All nine native
+preparations are admitted and retained topic-1 fresh has started. Runtime,
+prompt, harness and both resource limits
+stay fixed. Continue retained topics 1/2/3, then every equal repetition.

@@ -411,7 +411,53 @@
       "clang/tools/driver/driver.cpp:388",
       "clang/docs/UsersManual.md:1050"
     ],
-    "tests": "Topic2 memory answers repeat previously recorded lit limitations; neither arm newly ran a test in this topic. Fresh reports investigation only, without test execution."
+    "tests": "Topic2 memory answers repeat previously recorded lit limitations; neither arm newly ran a test in this topic. Fresh reports investigation only, without test execution.",
+    "topic2CommonHistoryReview": {
+      "stage": 2,
+      "documents": 43,
+      "checks": [
+        {
+          "name": "tooling-public-driver-caller",
+          "path": "clang/lib/Tooling/Tooling.cpp",
+          "first": 406,
+          "last": 417,
+          "excerptSha256": "4e65d87334558d3507586fb7f0ba6cf5d3d3dafdb36ac2203742161533ce6cb0",
+          "fullExcerptOwners": [],
+          "literalTermOwners": {
+            "ToolInvocation": [],
+            "clang/lib/Tooling/Tooling.cpp": []
+          }
+        },
+        {
+          "name": "flang-driver-caller",
+          "path": "flang/tools/flang-driver/driver.cpp",
+          "first": 159,
+          "last": 169,
+          "excerptSha256": "54493b7f53a8e3afc650265126adf897b0faff436fd0cb58681cf8a700be67c7",
+          "fullExcerptOwners": [],
+          "literalTermOwners": {
+            "flang/tools/flang-driver/driver.cpp": [],
+            "theDriver.BuildCompilation(args)": []
+          }
+        },
+        {
+          "name": "configuration-user-documentation",
+          "path": "clang/docs/UsersManual.md",
+          "first": 1050,
+          "last": 1066,
+          "excerptSha256": "6074a1906617491ec408d952ba1259d0d9d91a7a90600ed436dfd743825a4b64",
+          "fullExcerptOwners": [],
+          "literalTermOwners": {
+            "UsersManual.md": [],
+            "Configuration files group command-line options": []
+          }
+        }
+      ],
+      "scope": "Check whether fresh-only concrete caller/document evidence was already in the common saved history. Literal/excerpt absence is scoped evidence, not a proof that all semantically similar information is absent.",
+      "conclusion": "The inspected fresh-only caller/document excerpts and the listed identifying strings are absent from the 43 common stored document bodies. Do not label these newly found sites a proven failure to deliver stored memory. Answer-quality coverage remains pending.",
+      "qualityAccepted": false,
+      "productionAdoption": false
+    }
   },
   "next": "Keep runtime, prompts, snapshots, model, effort and harness frozen; run topic3 then retained topics1/2/3 and all predeclared repetitions. Judge relevance and quality against actual questions; do not require entire old answers."
 }
