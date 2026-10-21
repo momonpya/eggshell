@@ -1453,28 +1453,37 @@ the predeclared next common history. Failed or unknown-cost attempts cannot be
 resubmitted or silently replaced. No candidate is adopted into the runtime,
 README results or release before the full token and quality gates.
 
-The first two topic-1 matched repetitions are now complete. Inclusive input
+All three topic-1 matched repetitions are now complete. Inclusive input
 plus output, with cached input counted once, is:
 
 | Repetition | Fresh | Current `415bcc2…` | Isolated `63a457…` | Candidate saving vs fresh |
 | --- | ---: | ---: | ---: | ---: |
 | 0 | 4,929,131 | 960,386 | 136,974 | 97.22% |
 | 1 | 2,072,591 | 140,700 | 911,106 | 56.04% |
+| 2 | 3,626,297 | 935,642 | 606,843 | 83.27% |
 
 Repetition 1 misses the 70% target and consumes more than the current
 implementation. The identical candidate initial body contains all four
-originally stored full source probes in both repetitions, yet subsequent
-commands differ (2 versus 11). Source delivery alone therefore cannot explain
+originally stored full source probes in all repetitions, yet subsequent
+commands differ. Source delivery alone therefore cannot explain
 the observed variance or establish adoption. Some later investigation obtains
 facts whose complete source was not originally stored; those commands are not
 automatically counted as wasted rereads. Answers also require separate source
-review. No answer-quality acceptance or full-topic/lap result is claimed.
+review. No answer-quality acceptance or full-lap result is claimed.
+
+The candidate total is 1,654,923 versus fresh 10,628,019, a ratio-of-sums saving
+of 84.43%. The mean of the three paired saving percentages is 78.84%, below the
+current implementation's 82.64%. The candidate consumes 18.75% fewer tokens
+than current in aggregate, but this does not resolve the negative repetition
+or establish a stable implementation improvement. All three actual candidate
+initial hooks complete in 6.392/6.245/6.840 s. `audits/stage1-complete.json`
+records all nine completed calls and 14,319,670 consumed tokens, excluding seed.
 
 `tools/audit_token_stage.py` joins each original owner and full excerpt to the
 actual delivered packet, later command output, inclusive usage and saved output.
-`audits/stage1-partial-2.json` preserves the two matched triples, including the
-negative implementation comparison. The cohort retains every planned third
-repetition and all later cells; no best run becomes the result. All completed
+`audits/stage1-partial-2.json` preserves the earlier two matched triples,
+including the negative implementation comparison. All later cells remain
+unclaimed; no best run becomes the result. All completed
 calls have known final usage, and the answering-model memory monitors have not
 fired. Seed acquisition remains separate, with no new seed generated.
 
@@ -1487,3 +1496,58 @@ small tests reject an incomplete preceding cohort, substituted r0 output and
 an unfinished save; together with existing pairing/reconstruction checks,
 12 tests pass. This preparation and audit tooling does not adopt the isolated
 candidate or change README performance claims.
+
+Stage 2 preparation preserves the candidate r0 saved graph bytes and DB ID.
+Its 40 original documents contain 1,973 unique inputs; off-hook warm fills ten
+missing inputs in one batch, and the independent repeat does no work. All nine
+preparations finish, but the candidate still omits three stored full probes:
+the ToolChain cache key, full HLSL branch conditions and default ToolChain
+selection. The stage admission rejects this body before any stage-2 answering
+model starts. The isolated runtime remains unadopted. The preparation monitor
+peaks at 1,455,936 KiB and does not fire; its nonzero exit is the intentional
+source-delivery rejection, not a model failure or unknown token cost.
+
+A local ASCII-component prototype (`7ced7d…`) does not solve the omissions and
+displaces previously delivered facts. Its two fixed-source/all-topic native
+checks remain in `scope-context-20261021/native-5`. It invokes no answering model
+and is rejected. The root constructor option for that broader prototype is
+removed; executed sources, repair records and test output remain in isolation.
+
+The read-only cue audit identifies two further boundaries. Numerical scoring
+visits every window, but `WindowScore.add` retains only the strongest 16 before
+local reciprocal-rank fusion with the lexical order. A high lexical match in
+the discarded numerical tail therefore receives only one list's contribution.
+The isolated complete-order implementation validates a full permutation of
+each original document before rank fusion, while keeping the 32-window IO pull
+bound and final 16-window selection bound distinct. Accumulation sorts once;
+4,096 deterministic scores preserve the former numerical top-16 prefix. A
+fixture demonstrates a relevant numerical-tail window excluded by truncated
+fusion and recovered by complete fusion. Document admission, encoder input,
+MiniLM, Worker and hook policy remain unchanged.
+
+The complete-order-only runtime (`46b4db…`, `native-6`) and its combination with
+path-preserving CLI/identifier terms (`c5190c…`, `native-7`) each finish twelve
+native hooks over the initial seed and predeclared topic-1 r0 history. Both
+still omit required full probes in topics 2/3. They invoke no answering models
+and remain unadopted. The combined build passes ContractAudit, ten complete-order
+cases, six scope cases and seventeen identifier cases, including sentence-final
+punctuation and paths that must remain atomic. Build errors from the empty
+corpus constructor and research-module registration are retained and repaired;
+their checks are not treated as token or quality acceptance.
+
+`cue-audit-2` uses the original renderer at several source-character allowances.
+The phase-side window returns to topic 3's nomination, but its complete stored
+350–392 excerpt is not assembled even at the tested 32,768-character allowance
+for that owner. An input-language excerpt in another owner is present at 4,096
+and absent at 8,192. This is an observed nonmonotone greedy fit, not evidence
+that simply increasing the total hook capacity fixes delivery. The next work
+is original cue/condition coverage before optional neighborhood expansion.
+The helper emits both local node ids and stable relation keys; earlier empty
+reports caused by passing relation hashes as local node ids are excluded.
+
+Only rejected-candidate and diagnostic ignored build caches are then removed.
+Six verified gzip blobs retain eleven executable aliases, with an exact-path
+restore helper in `rejected-cache-cleanup-1`; source, original DBs, model records
+and raw outputs are preserved. This recovers about 1.63 GiB. The cleanup's
+observed RSS peak is 56,176 KiB; none of these checks lift the 4 GiB ceiling or
+authorize adoption of a delivery candidate.
