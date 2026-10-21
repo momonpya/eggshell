@@ -1614,3 +1614,53 @@ equal repetitions and report individual inclusive consumption, mean and
 range. Freeze the delivery candidate before subsequent model evaluation;
 do not assign the old `63a457…` model results to this new runtime or discard
 the completed negative comparisons.
+
+The `57db4e…` comparison is retained separately in
+`whole-observation-tokens-20261021/comparison`. Six already completed matching
+fresh/current topic-1 controls were explicitly declared before three new
+candidate calls; no earlier candidate answer became a new-runtime result.
+An initial setup plan incorrectly applied the unused-private-state preflight
+check to consumed completed controls. It is preserved without model calls.
+The replacement setup validates those controls against their captured actual
+inputs, packets, model configuration, inclusive usage and saved output. It
+reuses the successful native preparations and freezes the same slot order,
+runtime and source before generation. Disk preconditions that prevented any
+attempt/server/turn creation are also recorded; no failed model consumption
+is silently removed.
+
+| Topic 1 repetition | Fresh | Current `415bcc2…` | Candidate `57db4e…` | Saving vs fresh |
+| --- | ---: | ---: | ---: | ---: |
+| 0 | 4,929,131 | 960,386 | 533,045 | 89.19% |
+| 1 | 2,072,591 | 140,700 | 193,180 | 90.68% |
+| 2 | 3,626,297 | 935,642 | 1,386,468 | 61.77% |
+
+Mean paired saving is 80.54%, range 61.77–90.68%. The candidate sum is
+2,112,693 versus fresh 10,628,019, a ratio-of-sums saving of 80.12%.
+Candidate consumption is 3.73% above the current control in aggregate. All
+candidate initial bodies are identical and contain the four originally stored
+full probes; the same body was measured earlier under `63a457…`. These data
+do not establish that complete-observation selection caused a topic-1 token
+change. The three new calls consume 2,112,693 tokens; reused controls account
+for 12,664,747 already consumed tokens, counted once per unique attempt in a
+spending total. Original source reviews retain the HLSL arch-scope mistakes,
+including a materially wrong static `spirv` versus `spirv32/spirv64` inference
+in repetition 2. Delivery does not certify answer correctness.
+
+Under the user's latest criterion, topic 1 passes the implementation delivery
+check. Quality/token variation after related-history delivery is model
+dispersion and does not, by itself, justify a delivery change. The subsequent
+46-document, 2,172-input common history is the predeclared candidate r0 saved
+output. Off-hook warm fills nine inputs in one batch; the independent repeat
+does no work. All nine topic-2 preparations finish, but all three candidate
+bodies entirely omit two newly stored original observations: a 9,698-character
+multi-file read containing the full input-language predicate, and a
+3,364-character observation containing the OpenMP forwarding test. This is an
+actual related-history delivery gap. The gate remains intact and no topic-2
+answering model is dispatched.
+
+`retired.json` closes that fixed comparison without discarding results. Any
+evaluation-affecting implementation, prompt or harness change must start a
+new fixed-version run at topic 1 repetition 0 and complete topics 1/2/3 then
+retained topics 1/2/3. Do not carry old candidate results forward or replace
+the runtime midway through the sequence. The next repair must address the
+missing observations' admission, rather than tune away model variation.
