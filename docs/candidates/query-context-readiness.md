@@ -239,3 +239,39 @@ windows: warm encoded the 16 missing windows in one batch, then repeated with
 zero windows/batches and no missing/invalid vectors. Finish the fixed r0 calls,
 then the equal r1/r2 repetitions; keep the candidate unadopted pending the full
 token and quality decision.
+
+Retained topic 3 r0 completed at fresh 5,538,028, current 47,603 and candidate
+50,053 inclusive tokens: candidate saves 99.10% against fresh, while using 5.15%
+more than current. Commands are 40/0/0 for fresh/current/candidate. Candidate and
+current initial bodies match preparation and arrive in 12,973/7,077 ms.
+`query-anchor-retained-topic3.json` preserves the complete cell.
+
+All six r0 triples are complete, with 29,915,533 known inclusive tokens over
+18 distinct answering chats. `query-anchor-r0-summary.json` checks matched saved
+snapshots, questions/model/effort, and actual/prepared initial bodies. The 76
+captured nonempty delivery packets have a maximum of 12,973 ms and none over
+30 seconds; this is not a measurement of every empty hook event.
+
+| Topic | First-lap candidate reduction | Retained-lap candidate reduction |
+| --- | ---: | ---: |
+| 1 | 85.65% | 84.66% |
+| 2 | 98.95% | 98.25% |
+| 3 | 61.66% | 99.10% |
+
+The two target misses remain visible. No average or positive-cell selection is
+used to declare success. The fixed r1/r2 continuations use the same predeclared
+stored histories; no implementation/prompt/harness change or old control reuse
+is made.
+
+Topic 1's first two repetitions also show substantial run variation under
+identical initial bodies within each memory arm: candidate 321,516/519,392,
+current 835,335/165,138. Question, model, effort, configuration, transport and
+saved snapshot match. `query-anchor-variability.json` records both runs. This is
+observed variability, not proof of a sole cause or grounds for a local patch.
+
+A post-run blinded-review exporter is prepared in the isolated experiment. It
+requires all 54 completed planned answers and the six final audits, keeps raw
+answer bytes, withholds condition/usage labels, and stores the key separately.
+It uses the existing question-level quality scope without scoring or adoption.
+Only syntax and premature-export rejection have been checked; export and
+independent review have not occurred. Wording may still reveal a condition.

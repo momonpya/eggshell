@@ -1,0 +1,121 @@
+{
+  "stage": 1,
+  "topic": 1,
+  "lap": 1,
+  "scope": "Observed two-repetition variability, not a causal attribution or acceptance",
+  "planSha256": "2222107f60d56e834bba2cd7b7b1e40726cc0a2f9ab10cd6ffe3fb62b240eae6",
+  "conditions": {
+    "fresh": {
+      "sameInitialBody": null,
+      "sameQuestionModelEffortConfigTransport": true,
+      "sameSavedSourceSnapshot": true,
+      "trials": [
+        {
+          "repetition": 0,
+          "usage": {
+            "totalTokens": 2241019,
+            "inputTokens": 2225806,
+            "cachedInputTokens": 2034688,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 15213,
+            "reasoningOutputTokens": 6814
+          },
+          "commandCount": 66,
+          "answerSha256": "aa776651e49087a2d658cbb294f88d028b80655208c89f6663bde5455a5a2b6c",
+          "finalUsageKnown": true
+        },
+        {
+          "repetition": 1,
+          "usage": {
+            "totalTokens": 3096987,
+            "inputTokens": 3079172,
+            "cachedInputTokens": 2862848,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 17815,
+            "reasoningOutputTokens": 8368
+          },
+          "commandCount": 74,
+          "answerSha256": "3f4ed3bdc933f0a68f004942a38e4a4e71d6db921e287175c2bd87b5326fd161",
+          "finalUsageKnown": true
+        }
+      ]
+    },
+    "candidate": {
+      "sameInitialBody": true,
+      "sameQuestionModelEffortConfigTransport": true,
+      "sameSavedSourceSnapshot": true,
+      "trials": [
+        {
+          "repetition": 0,
+          "usage": {
+            "totalTokens": 321516,
+            "inputTokens": 313195,
+            "cachedInputTokens": 242304,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 8321,
+            "reasoningOutputTokens": 6090
+          },
+          "commandCount": 5,
+          "answerSha256": "151493c7780bf02b3fd13b70ab60e84333e317cb5684b2b07ac3b10fc1bdac13",
+          "finalUsageKnown": true,
+          "initialBodySha256": "2741853c6256152391707c4d338baf2e5037b7eaf0a6ad460ba3e7a136959eba"
+        },
+        {
+          "repetition": 1,
+          "usage": {
+            "totalTokens": 519392,
+            "inputTokens": 510336,
+            "cachedInputTokens": 430720,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 9056,
+            "reasoningOutputTokens": 6696
+          },
+          "commandCount": 7,
+          "answerSha256": "939939f5fb530be557267e49232d19166e3f13bab6d8644231260e07c033e1e6",
+          "finalUsageKnown": true,
+          "initialBodySha256": "2741853c6256152391707c4d338baf2e5037b7eaf0a6ad460ba3e7a136959eba"
+        }
+      ]
+    },
+    "current": {
+      "sameInitialBody": true,
+      "sameQuestionModelEffortConfigTransport": true,
+      "sameSavedSourceSnapshot": true,
+      "trials": [
+        {
+          "repetition": 0,
+          "usage": {
+            "totalTokens": 835335,
+            "inputTokens": 824601,
+            "cachedInputTokens": 718208,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 10734,
+            "reasoningOutputTokens": 7672
+          },
+          "commandCount": 10,
+          "answerSha256": "8c773785a0ca46d018bb78933fb826ee94553f310d80a128055b81228967e25a",
+          "finalUsageKnown": true,
+          "initialBodySha256": "932b170a0c22d8590f3a664f9e48060036892215fc2c5bacb616c58e81ae52b8"
+        },
+        {
+          "repetition": 1,
+          "usage": {
+            "totalTokens": 165138,
+            "inputTokens": 157130,
+            "cachedInputTokens": 97024,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 8008,
+            "reasoningOutputTokens": 6209
+          },
+          "commandCount": 6,
+          "answerSha256": "4e52a50bc9ce8398ea32e62da9bb37304e648c6ad0ac0c9bd8f13e8ecaf30113",
+          "finalUsageKnown": true,
+          "initialBodySha256": "932b170a0c22d8590f3a664f9e48060036892215fc2c5bacb616c58e81ae52b8"
+        }
+      ]
+    }
+  },
+  "qualityAccepted": false,
+  "productionAdoption": false,
+  "conclusion": "With identical initial body within each memory arm, and unchanged question/model/effort/configuration/transport/saved snapshot, totals and investigation counts differ. This is observed run variability, not proof of its sole cause; do not change runtime from a single pair. Keep the third repetition and all other cells."
+}

@@ -1,0 +1,456 @@
+{
+  "scope": "Every first repetition, all three topics in both laps; r1/r2 and quality remain pending",
+  "model": "gpt-5.6-luna",
+  "effort": "xhigh",
+  "planSha256": "2222107f60d56e834bba2cd7b7b1e40726cc0a2f9ab10cd6ffe3fb62b240eae6",
+  "runtimes": {
+    "current": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+    "candidate": "5d50ea0eb2f789473e38abdc0a93653fa2fd269e20bba691b70d60b1ca0973e4"
+  },
+  "completedCalls": 18,
+  "plannedCalls": 54,
+  "cells": [
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 0,
+      "comparison": {
+        "repetition": 0,
+        "fresh": 2241019,
+        "candidate": 321516,
+        "current": 835335,
+        "freshRelativeReductionPercent": 85.65313368605977,
+        "currentRelativeReductionPercent": 61.510531702849754
+      },
+      "audit": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/audits/stage1-r0.json",
+      "auditSha256": "f0c546787658819a199279839210e950485bb2182f459bd2d41f70b1714524fe",
+      "trials": {
+        "fresh": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage1-fresh-r0",
+          "usage": {
+            "totalTokens": 2241019,
+            "inputTokens": 2225806,
+            "cachedInputTokens": 2034688,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 15213,
+            "reasoningOutputTokens": 6814
+          },
+          "commandCount": 66,
+          "answerSha256": "aa776651e49087a2d658cbb294f88d028b80655208c89f6663bde5455a5a2b6c",
+          "finalUsageKnown": true
+        },
+        "candidate": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage1-candidate-r0",
+          "usage": {
+            "totalTokens": 321516,
+            "inputTokens": 313195,
+            "cachedInputTokens": 242304,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 8321,
+            "reasoningOutputTokens": 6090
+          },
+          "commandCount": 5,
+          "answerSha256": "151493c7780bf02b3fd13b70ab60e84333e317cb5684b2b07ac3b10fc1bdac13",
+          "finalUsageKnown": true,
+          "initialBodySha256": "2741853c6256152391707c4d338baf2e5037b7eaf0a6ad460ba3e7a136959eba",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 7196
+        },
+        "current": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage1-current-r0",
+          "usage": {
+            "totalTokens": 835335,
+            "inputTokens": 824601,
+            "cachedInputTokens": 718208,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 10734,
+            "reasoningOutputTokens": 7672
+          },
+          "commandCount": 10,
+          "answerSha256": "8c773785a0ca46d018bb78933fb826ee94553f310d80a128055b81228967e25a",
+          "finalUsageKnown": true,
+          "initialBodySha256": "932b170a0c22d8590f3a664f9e48060036892215fc2c5bacb616c58e81ae52b8",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 6274
+        }
+      },
+      "targetPercent": 70,
+      "targetMetThisRepetition": true,
+      "identicalSavedSourceSnapshot": true
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 0,
+      "comparison": {
+        "repetition": 0,
+        "fresh": 4870992,
+        "candidate": 51238,
+        "current": 52917,
+        "freshRelativeReductionPercent": 98.94809927834002,
+        "currentRelativeReductionPercent": 3.1728933990966985
+      },
+      "audit": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/audits/stage2-r0.json",
+      "auditSha256": "ea1758282eb4689816134e99edb4aa0fa5dc1f0b9c15a9e700b7e4a812efda9f",
+      "trials": {
+        "fresh": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage2-fresh-r0",
+          "usage": {
+            "totalTokens": 4870992,
+            "inputTokens": 4852849,
+            "cachedInputTokens": 4615936,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 18143,
+            "reasoningOutputTokens": 8994
+          },
+          "commandCount": 36,
+          "answerSha256": "8cf93da37bafdbf4a1a5cde2413179c02f0bedfb0384bfd05e3edd3d51536e88",
+          "finalUsageKnown": true
+        },
+        "candidate": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage2-candidate-r0",
+          "usage": {
+            "totalTokens": 51238,
+            "inputTokens": 43467,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 7771,
+            "reasoningOutputTokens": 5696
+          },
+          "commandCount": 0,
+          "answerSha256": "1ce7727654fa710b30a424453047fce473c7c110c5569a50a3254564d5022334",
+          "finalUsageKnown": true,
+          "initialBodySha256": "9f1e06849fd5232b0efea44fb680f5a440e50eec4e9eb4e9c848debfd4bbf316",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 8295
+        },
+        "current": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage2-current-r0",
+          "usage": {
+            "totalTokens": 52917,
+            "inputTokens": 43129,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 9788,
+            "reasoningOutputTokens": 6732
+          },
+          "commandCount": 0,
+          "answerSha256": "8870be15cba909bdfb1318f2445e6ec44d9554a1066ba100189cbabccf4fd669",
+          "finalUsageKnown": true,
+          "initialBodySha256": "90ac3ecef0a68afec502256aba7de63b499d8a1f138b01cb3f9e383ec01c97bc",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 6216
+        }
+      },
+      "targetPercent": 70,
+      "targetMetThisRepetition": true,
+      "identicalSavedSourceSnapshot": true
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 0,
+      "comparison": {
+        "repetition": 0,
+        "fresh": 5171855,
+        "candidate": 1982869,
+        "current": 1203452,
+        "freshRelativeReductionPercent": 61.66039071087646,
+        "currentRelativeReductionPercent": -64.7651090363388
+      },
+      "audit": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/audits/stage3-r0.json",
+      "auditSha256": "f248aabd615092fbce88bd894bd3a8b34dc8098b8017a4466129006fec42e4ca",
+      "trials": {
+        "fresh": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage3-fresh-r0",
+          "usage": {
+            "totalTokens": 5171855,
+            "inputTokens": 5152802,
+            "cachedInputTokens": 4926208,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 19053,
+            "reasoningOutputTokens": 10863
+          },
+          "commandCount": 39,
+          "answerSha256": "73543c5b563c2c3b7f4cf3c9cf4ecf6dccdf97cc647543b454d1b032d05bc471",
+          "finalUsageKnown": true
+        },
+        "candidate": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage3-candidate-r0",
+          "usage": {
+            "totalTokens": 1982869,
+            "inputTokens": 1966515,
+            "cachedInputTokens": 1824896,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 16354,
+            "reasoningOutputTokens": 9429
+          },
+          "commandCount": 37,
+          "answerSha256": "a8339eb54fcd455d345b90ba7ba18ae5a91670684ef4213b3213a0eb924e5b53",
+          "finalUsageKnown": true,
+          "initialBodySha256": "5488a8e768347eb0b555ecf826af516089bc6169da344c0b67fed61044779844",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 9038
+        },
+        "current": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage3-current-r0",
+          "usage": {
+            "totalTokens": 1203452,
+            "inputTokens": 1190192,
+            "cachedInputTokens": 1056768,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 13260,
+            "reasoningOutputTokens": 8003
+          },
+          "commandCount": 24,
+          "answerSha256": "aad08416c86117e9a8924d4f6e1f33e24bf1314f9382cc22b130402bf2411651",
+          "finalUsageKnown": true,
+          "initialBodySha256": "ee5f422f6e0af7b1148d7123ab08850b56bfbf02063f34382345a318301cc4c1",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 6629
+        }
+      },
+      "targetPercent": 70,
+      "targetMetThisRepetition": false,
+      "identicalSavedSourceSnapshot": true
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 0,
+      "comparison": {
+        "repetition": 0,
+        "fresh": 2919043,
+        "candidate": 447890,
+        "current": 90338,
+        "freshRelativeReductionPercent": 84.65627262085553,
+        "currentRelativeReductionPercent": -395.7935752396555
+      },
+      "audit": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/audits/stage4-r0.json",
+      "auditSha256": "690470fa6f6697b216fdda582a1a622e3fbc4c0656e5afbf198271b301ceef14",
+      "trials": {
+        "fresh": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage4-fresh-r0",
+          "usage": {
+            "totalTokens": 2919043,
+            "inputTokens": 2898348,
+            "cachedInputTokens": 2736384,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 20695,
+            "reasoningOutputTokens": 13175
+          },
+          "commandCount": 47,
+          "answerSha256": "6ea19df7543eca48c3aeb9ffedfbc18374730017c6765e589ec7ba6ab4ef57ec",
+          "finalUsageKnown": true
+        },
+        "candidate": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage4-candidate-r0",
+          "usage": {
+            "totalTokens": 447890,
+            "inputTokens": 440877,
+            "cachedInputTokens": 393216,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 7013,
+            "reasoningOutputTokens": 4426
+          },
+          "commandCount": 8,
+          "answerSha256": "ea4b1caea18d56cec403c5ca3694e16fbbb49dd5b41dcf7a76562b8b98db17da",
+          "finalUsageKnown": true,
+          "initialBodySha256": "4414f1d47c10212c159f6780334e44b18095308522b9f4db1a3ac2807fe1e5e9",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 11408
+        },
+        "current": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage4-current-r0",
+          "usage": {
+            "totalTokens": 90338,
+            "inputTokens": 86811,
+            "cachedInputTokens": 42624,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 3527,
+            "reasoningOutputTokens": 2702
+          },
+          "commandCount": 1,
+          "answerSha256": "0afc97b3e8250b24809d3950d61d142b56707ae5975a4ba5b9a830d626f441c8",
+          "finalUsageKnown": true,
+          "initialBodySha256": "850bf5acb468be375b3048daf68b268e5f3bd71b5b01a4ef70e6ce06fcc22955",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 7016
+        }
+      },
+      "targetPercent": 90,
+      "targetMetThisRepetition": false,
+      "identicalSavedSourceSnapshot": true
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 0,
+      "comparison": {
+        "repetition": 0,
+        "fresh": 2929755,
+        "candidate": 51178,
+        "current": 1110452,
+        "freshRelativeReductionPercent": 98.25316451375627,
+        "currentRelativeReductionPercent": 95.39124608717891
+      },
+      "audit": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/audits/stage5-r0.json",
+      "auditSha256": "122d8c3c525b13ff4b434394725de137b0b989592fda3d4f4a3bf385b01ee161",
+      "trials": {
+        "fresh": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage5-fresh-r0",
+          "usage": {
+            "totalTokens": 2929755,
+            "inputTokens": 2913462,
+            "cachedInputTokens": 2715392,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 16293,
+            "reasoningOutputTokens": 6221
+          },
+          "commandCount": 58,
+          "answerSha256": "29ece2879c3a7072feb0307c3b2249c6091dbe1a9d4634b05c482f8803a566b9",
+          "finalUsageKnown": true
+        },
+        "candidate": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage5-candidate-r0",
+          "usage": {
+            "totalTokens": 51178,
+            "inputTokens": 45591,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 5587,
+            "reasoningOutputTokens": 3624
+          },
+          "commandCount": 0,
+          "answerSha256": "88e1ed786f70aede197aae42a1d9ba933c6a38c026666dfb9ef24e09d810e4bb",
+          "finalUsageKnown": true,
+          "initialBodySha256": "03acdc33627b656fcfec95f7870d3a959fb19919bb05692c586b48c65812ce52",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 10966
+        },
+        "current": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage5-current-r0",
+          "usage": {
+            "totalTokens": 1110452,
+            "inputTokens": 1096028,
+            "cachedInputTokens": 987136,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 14424,
+            "reasoningOutputTokens": 8580
+          },
+          "commandCount": 13,
+          "answerSha256": "590e56c82ca908a9320c1ab501d1ad6ff89542f27efda732a4ee01a91d524626",
+          "finalUsageKnown": true,
+          "initialBodySha256": "6ed230f9dfc8d0c46a1fb8706c36995b43465aa3eb8e503cb58925195f742c7b",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 6477
+        }
+      },
+      "targetPercent": 90,
+      "targetMetThisRepetition": true,
+      "identicalSavedSourceSnapshot": true
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 0,
+      "comparison": {
+        "repetition": 0,
+        "fresh": 5538028,
+        "candidate": 50053,
+        "current": 47603,
+        "freshRelativeReductionPercent": 99.09619452989403,
+        "currentRelativeReductionPercent": -5.146734449509485
+      },
+      "audit": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/audits/stage6-r0.json",
+      "auditSha256": "ddc1aa087bbd0e7cb12555bcf3f66a4fe0cc81d0e69acb1b729d207c3e3cb9a3",
+      "trials": {
+        "fresh": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage6-fresh-r0",
+          "usage": {
+            "totalTokens": 5538028,
+            "inputTokens": 5516863,
+            "cachedInputTokens": 5288192,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 21165,
+            "reasoningOutputTokens": 11423
+          },
+          "commandCount": 40,
+          "answerSha256": "03ad35e6e1fadfb6460f9756476df08a2200fd10484d1008dec353ddd16179ae",
+          "finalUsageKnown": true
+        },
+        "candidate": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage6-candidate-r0",
+          "usage": {
+            "totalTokens": 50053,
+            "inputTokens": 44931,
+            "cachedInputTokens": 0,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 5122,
+            "reasoningOutputTokens": 3624
+          },
+          "commandCount": 0,
+          "answerSha256": "dd3971b4b33323b4f8e031a0695c67e85231ec30a135f75b5d28a399a5e45653",
+          "finalUsageKnown": true,
+          "initialBodySha256": "cc8fc1d00b54437d042926e353c3e89c7f30792b20ef334263f899a6ad5b2a55",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 12973
+        },
+        "current": {
+          "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage6-current-r0",
+          "usage": {
+            "totalTokens": 47603,
+            "inputTokens": 43228,
+            "cachedInputTokens": 6400,
+            "cacheWriteInputTokens": 0,
+            "outputTokens": 4375,
+            "reasoningOutputTokens": 3106
+          },
+          "commandCount": 0,
+          "answerSha256": "b1eb902e1dd2abeb32b2e57057535a0725e962f93f41cf2cf945111685a79c0d",
+          "finalUsageKnown": true,
+          "initialBodySha256": "971ee05d746f6211846244832b116a923719da1edd6dbae0f98c80c7574a2afc",
+          "initialBodyMatchesPreparation": true,
+          "initialHookMs": 7077
+        }
+      },
+      "targetPercent": 90,
+      "targetMetThisRepetition": true,
+      "identicalSavedSourceSnapshot": true
+    }
+  ],
+  "knownConsumedTokens": 29915533,
+  "inputTokens": 29698695,
+  "outputTokens": 216838,
+  "cachedInputTokens": 27588352,
+  "seedAcquisitionSeparate": true,
+  "newSeedAcquisition": 0,
+  "qualityAccepted": false,
+  "productionAdoption": false,
+  "publicIncluded": false,
+  "capturedDeliveryPackets": {
+    "count": 76,
+    "maximumElapsedMs": 12973,
+    "overThirtySeconds": 0,
+    "scope": "Captured nonempty delivery packets; not a measurement of every empty hook event"
+  },
+  "accounting": "Inclusive input + output; cached input once; reasoning already in output; no failed consumption omitted; seed separate",
+  "limits": {
+    "rssStopKiB": 3145728,
+    "userCeilingKiB": 4194304,
+    "modelPrelaunchFreeGiB": 4,
+    "guardDiskStopGiB": 3
+  },
+  "limitations": [
+    "Four target passes and two misses in r0 do not establish a complete-study pass.",
+    "Do not select positive cells or average away first-lap topic3 and retained topic1 misses.",
+    "Fresh is the token baseline, not a quality oracle. Quality remains unaccepted.",
+    "The blinded-review exporter is prepared but has not exported or rated the unfinished cohort."
+  ]
+}

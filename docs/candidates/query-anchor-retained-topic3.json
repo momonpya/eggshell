@@ -1,0 +1,279 @@
+{
+  "stage": 6,
+  "topic": 3,
+  "lap": 2,
+  "repetition": 0,
+  "predeclaredRepetitions": 3,
+  "model": "gpt-5.6-luna",
+  "effort": "xhigh",
+  "planSha256": "2222107f60d56e834bba2cd7b7b1e40726cc0a2f9ab10cd6ffe3fb62b240eae6",
+  "comparison": {
+    "repetition": 0,
+    "fresh": 5538028,
+    "candidate": 50053,
+    "current": 47603,
+    "freshRelativeReductionPercent": 99.09619452989403,
+    "currentRelativeReductionPercent": -5.146734449509485
+  },
+  "accounting": "input + output, cached input once, reasoning already in output; failed consumption retained; seed separate",
+  "qualityAccepted": false,
+  "productionAdoption": false,
+  "trials": {
+    "fresh": {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage6-fresh-r0",
+      "usage": {
+        "totalTokens": 5538028,
+        "inputTokens": 5516863,
+        "cachedInputTokens": 5288192,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 21165,
+        "reasoningOutputTokens": 11423
+      },
+      "finalUsageKnown": true,
+      "commandCount": 40,
+      "answerSha256": "03ad35e6e1fadfb6460f9756476df08a2200fd10484d1008dec353ddd16179ae",
+      "errors": [],
+      "reroutes": [],
+      "hookFailures": []
+    },
+    "candidate": {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage6-candidate-r0",
+      "usage": {
+        "totalTokens": 50053,
+        "inputTokens": 44931,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 5122,
+        "reasoningOutputTokens": 3624
+      },
+      "finalUsageKnown": true,
+      "commandCount": 0,
+      "answerSha256": "dd3971b4b33323b4f8e031a0695c67e85231ec30a135f75b5d28a399a5e45653",
+      "errors": [],
+      "reroutes": [],
+      "hookFailures": [],
+      "runtimeSha256": "5d50ea0eb2f789473e38abdc0a93653fa2fd269e20bba691b70d60b1ca0973e4",
+      "initialBodySha256": "cc8fc1d00b54437d042926e353c3e89c7f30792b20ef334263f899a6ad5b2a55",
+      "initialBodyMatchesPreparation": true,
+      "initialHookMs": 12973,
+      "excerptProbes": [
+        {
+          "name": "toolchain-cache-key",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "tracked-input-language",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": [
+            "v15256267109356037303"
+          ]
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "last-target-value",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v11688441620330750236",
+            "v4462512152088567747",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": [
+            "v13168123294867106979",
+            "v9756138358688687787",
+            "v11688441620330750236"
+          ]
+        },
+        {
+          "name": "default-toolchain-selection",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "syntax-only-final-phase",
+          "storedOwners": [
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "trailing-language-warning",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": [
+            "v14863864136040263094"
+          ]
+        },
+        {
+          "name": "syntax-only-no-output-action",
+          "storedOwners": [
+            "v11960447802706886118"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "frontend-job-construction",
+          "storedOwners": [
+            "v11731249417270010951"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "trailing-language-existing-test",
+          "storedOwners": [
+            "v18295893056279038714",
+            "v7097430938626253290"
+          ],
+          "actualInitialOwners": []
+        }
+      ],
+      "probeScope": "Predetermined exact excerpt diagnostics, not whole-answer requirements or complete question coverage"
+    },
+    "current": {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage6-current-r0",
+      "usage": {
+        "totalTokens": 47603,
+        "inputTokens": 43228,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 4375,
+        "reasoningOutputTokens": 3106
+      },
+      "finalUsageKnown": true,
+      "commandCount": 0,
+      "answerSha256": "b1eb902e1dd2abeb32b2e57057535a0725e962f93f41cf2cf945111685a79c0d",
+      "errors": [],
+      "reroutes": [],
+      "hookFailures": [],
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "initialBodySha256": "971ee05d746f6211846244832b116a923719da1edd6dbae0f98c80c7574a2afc",
+      "initialBodyMatchesPreparation": true,
+      "initialHookMs": 7077,
+      "excerptProbes": [
+        {
+          "name": "toolchain-cache-key",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": [
+            "v18406153573121058748"
+          ]
+        },
+        {
+          "name": "tracked-input-language",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": [
+            "v15256267109356037303"
+          ]
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "last-target-value",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v11688441620330750236",
+            "v4462512152088567747",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "default-toolchain-selection",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "syntax-only-final-phase",
+          "storedOwners": [
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "trailing-language-warning",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "syntax-only-no-output-action",
+          "storedOwners": [
+            "v11960447802706886118"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "frontend-job-construction",
+          "storedOwners": [
+            "v11731249417270010951"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "trailing-language-existing-test",
+          "storedOwners": [
+            "v18295893056279038714",
+            "v7097430938626253290"
+          ],
+          "actualInitialOwners": []
+        }
+      ],
+      "probeScope": "Predetermined exact excerpt diagnostics, not whole-answer requirements or complete question coverage"
+    }
+  },
+  "identicalSavedSourceSnapshot": true,
+  "knownMatchedTokens": 5635684,
+  "targetPercent": 90,
+  "targetMetThisRepetition": true,
+  "limitations": [
+    "One repetition only; no quality equivalence or implementation adoption.",
+    "Keep all cells, including negative comparisons; the study remains frozen.",
+    "No inference about internal model attention follows from packet/probe checks."
+  ]
+}
