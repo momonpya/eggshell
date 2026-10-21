@@ -111,26 +111,29 @@ def prior_answer(documents, text=None, work=None):
 
 
 def memory_delivery_report(inventory, body):
-    """Require actual reusable history; retain example probes as diagnostics.
+    """Record original history without requiring an entire previous answer.
 
-The task may choose a different valid example. Incidental source lines from a
-previous broad read do not become universal requirements for later answers.
-Question-level source/quality review remains necessary before adoption.
+    The captured body and source integrity are checked by native preparation.
+    Relevance is judged against the current question. Whole-answer presence and
+    incidental examples are diagnostics, not substitutes for that review.
 """
     prior = inventory['priorAnswer']
     if not prior['text'] or hashlib.sha256(prior['text'].encode()).hexdigest() != prior['sha256']:
         raise ValueError('Invalid saved prior-answer inventory')
     parts = evidence_parts(body)
+    if not parts:
+        raise ValueError('No captured DB evidence in the delivered body')
     delivered = [owner for owner in prior['owners'] if normalized(prior['text']) in normalized(
         '\n'.join(text for actual, text in parts if actual == owner))]
-    if not delivered:
-        raise ValueError('The actual predeclared prior answer is not fully delivered')
     required = [f for f in inventory['facts'] if f['fullExcerptOwners']]
     missing = [f['name'] for f in required if not any(
         owner in f['fullExcerptOwners'] and normalized(f['excerpt']) in normalized(text)
         for owner, text in parts)]
     return dict(priorAnswerFullOwners=delivered, storedSourceProbes=[f['name'] for f in required],
-                missingSourceProbes=missing, sourceProbeScope='diagnostic; quality is judged against the actual question, not mandatory unrequested examples')
+                deliveredOwners=list(dict.fromkeys(owner for owner, _ in parts)),
+                priorAnswerScope='diagnostic; the complete previous answer is not required',
+                missingSourceProbes=missing, relevanceReviewRequired=True,
+                sourceProbeScope='diagnostic; quality is judged against the actual question, not mandatory unrequested examples')
 
 
 def admit(base, stage):

@@ -84,7 +84,7 @@ def freeze(base, construction, qualification):
         accounting='input + output; cached once; failed usage retained; unknown never zero; seed separate',
         reusedCompletedControls={}, reusedCandidateTrials=[], newAnsweringCalls=54,
         newSeedAcquisition=False, sourceInventorySha256=sha(base / 'sources/stage1.json'),
-        deliveryGate='Actual predeclared prior answer fully delivered; source/index/body integrity unchanged; original source probes retained as diagnostics; question-level quality reviewed before adoption',
+        deliveryGate='Captured DB evidence with unchanged source/index/body integrity; whole prior answer and original source probes are diagnostics; current-question relevance and quality require separate review before adoption',
         sourceQualification=dict(directory=str(qualification), resultSha256=sha(qualification / 'result.json')),
         publicIncluded=False, automaticResubmission=False, qualityAccepted=False, productionAdoption=False))
     (base / 'plan.sha256').write_text(sha(base / 'plan.json') + '\n')

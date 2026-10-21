@@ -30,7 +30,7 @@ class RestartTests(unittest.TestCase):
                 admit(Path('/new-fixed-comparison'), 2)
             inspect.assert_not_called()
 
-    def test_reusable_answer_is_required_without_forcing_unrequested_examples(self):
+    def test_related_source_does_not_require_the_whole_previous_answer(self):
         prior = prior_answer([dict(kind='answer', owner='saved', work='previous task', evidence='prior finding')])
         inventory = dict(priorAnswer=prior, facts=[dict(name='another valid example',
             fullExcerptOwners=['raw'], excerpt='incidental source from a broad read')])
@@ -38,8 +38,14 @@ class RestartTests(unittest.TestCase):
         report = memory_delivery_report(inventory, body)
         self.assertEqual(report['priorAnswerFullOwners'], ['saved'])
         self.assertEqual(report['missingSourceProbes'], ['another valid example'])
-        with self.assertRaisesRegex(ValueError, 'not fully delivered'):
-            memory_delivery_report(inventory, '\nWORK GRAPH raw\n  GROUNDED OUTCOME\nincidental source from a broad read\n  TRACE\n')
+        source_only = memory_delivery_report(inventory,
+            '\nWORK GRAPH raw\n  GROUNDED OUTCOME\nincidental source from a broad read\n  TRACE\n')
+        self.assertEqual(source_only['priorAnswerFullOwners'], [])
+        self.assertEqual(source_only['missingSourceProbes'], [])
+        self.assertEqual(source_only['deliveredOwners'], ['raw'])
+        self.assertTrue(source_only['relevanceReviewRequired'])
+        with self.assertRaisesRegex(ValueError, 'No captured DB evidence'):
+            memory_delivery_report(inventory, 'EGGSHELL SEARCH INCOMPLETE')
 
     def test_retired_comparison_cannot_dispatch_another_call(self):
         with tempfile.TemporaryDirectory() as temporary:
