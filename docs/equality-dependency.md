@@ -140,7 +140,8 @@ Consequently `localUnion` must remain unknown in a delivery-wide tally. Even
 all-literal selection comparisons cannot certify a congruence-free delivery.
 Admission and child coverage gaps are listed per selected branch; local causal
 ancestry, continuations and final fragment slicing remain incomplete. No overall fraction
-is reported, no Phase 0 completion is claimed, and no token adoption gate has
-been passed. Native receipts also retain semantic status, actual cache probes
+is reported and no Phase 0 completion is claimed. Delivery acceptance requires
+appropriate original DB evidence, independently of answer/token variation;
+the paper's empirical measurements remain separate. Native receipts retain semantic status, actual cache probes
 and stage durations; Phase 0 still needs the missing ancestry components and
 the remaining measurements in `GOAL.md`.

@@ -135,6 +135,9 @@ outcome may erase small work; every other match remains visible advice.
 -/
 structure ApplicabilityJudgment where
   direction : CoverageDirection
+  /-- Structural eligibility for completion under the matcher policy. This is
+  not a proof that the observed result or an answer is semantically correct,
+  and does not establish source freshness; delivery checks that IO boundary. -/
   reusableOutcome : Bool
 
 namespace ApplicabilityJudgment

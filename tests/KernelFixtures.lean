@@ -5,7 +5,7 @@ public meta import Eggshell.Quotient
 
 @[expose] public section
 
-namespace Eggshell.Laws
+namespace Eggshell.TestKernelFixtures
 
 def review : Value := .atom (.mk #[1])
 def reviewResult : Value := .atom (.mk #[2])
@@ -17,7 +17,7 @@ def directOutcomeGraph : WorkGraph where
   outcomes := [reviewOutcome]
 
 /-- An Outcome is prior work, never permission to omit the open agent handoff. -/
-theorem direct_outcome_is_context_not_completion :
+example :
     let extraction := Extract.run directOutcomeGraph Equality.exact review
     extraction.priorOutcomes = [reviewResult] ∧ extraction.residual = [review] := by
   native_decide
@@ -33,7 +33,7 @@ def partialGraph : WorkGraph where
   outcomes := [reviewOutcome]
 
 /-- Positive decomposition erases only the covered child inside the handoff. -/
-theorem all_erases_only_covered_work :
+example :
     let extraction := Extract.run partialGraph Equality.exact ship
     extraction.priorOutcomes = [reviewResult] ∧ extraction.residual = [test] := by
   native_decide
@@ -51,7 +51,7 @@ def cyclicGraph : WorkGraph where
   all := [cycleAB, cycleBA]
 
 /-- A positive cycle cannot erase the one external continuation. -/
-theorem cycle_cannot_close_the_handoff :
+example :
     (Extract.run cyclicGraph Equality.exact cycleA).residual.length = 1 :=
   Extract.run_always_hands_off _ _ _
 
@@ -74,7 +74,7 @@ def localIdentity : UnionEdge where
     simp [priorWork, currentWork, Value.exactFootprint]
 
 /-- Local Union must reopen the owning Outcome before the same run hands off. -/
-theorem local_union_resaturates_into_prior_work :
+example :
     (RunView.make? unionWorkGraph [priorWork, currentWork, priorResult]
       [] [localIdentity]).map (fun view =>
         let extraction := view.extract currentWork
@@ -92,7 +92,7 @@ def advisoryPolicy : OutcomePolicy := .admitted [{
 }]
 
 /-- A partial Local Union is delivered, but cannot erase the demanded work. -/
-theorem advisory_is_visible_without_erasure :
+example :
     (RunView.make? unionWorkGraph [priorWork, currentWork, priorResult]
       [] [localIdentity]).map (fun view =>
         let extraction := view.extractWith advisoryPolicy currentWork
@@ -121,7 +121,7 @@ def leafIdentity : UnionEdge where
     simp [semanticLeafA, semanticLeafB, Value.exactFootprint]
 
 /-- A child Union propagates through Semantic Apply structure. -/
-theorem semantic_congruence_closes_after_union :
+example :
     (QuotientBuilder.build?
       [semanticParentA, semanticParentB] [] [leafIdentity]).map
       (fun quotient => quotient.toEquality.same semanticParentA semanticParentB) =
@@ -129,7 +129,7 @@ theorem semantic_congruence_closes_after_union :
   native_decide
 
 /-- The same child Union cannot propagate through Exact provenance. -/
-theorem exact_arguments_never_follow_semantic_union :
+example :
     (QuotientBuilder.build?
       [exactParentA, exactParentB] [] [leafIdentity]).map
       (fun quotient => quotient.toEquality.same exactParentA exactParentB) =
@@ -171,7 +171,7 @@ def alternativeGraph : WorkGraph where
   outcomes := [sharedOutcome]
 
 /-- Unioned spellings occupy one Work node in the extracted explanation DAG. -/
-theorem union_collapses_duplicate_subwork_in_extracted_dag :
+example :
     (RunView.make? repeatedGraph
       [sharedRoot, sharedWorkA, sharedWorkB, sharedOpen, sharedResult,
         repeatedAll.relation, sharedOutcome.relation]
@@ -184,7 +184,7 @@ theorem union_collapses_duplicate_subwork_in_extracted_dag :
   native_decide
 
 /-- After saturation, extraction chooses the smallest equivalent All graph. -/
-theorem extraction_chooses_smallest_saturated_graph :
+example :
     (RunView.make? alternativeGraph
       [sharedRoot, sharedWorkA, sharedWorkB, sharedOpen, sharedResult,
         repeatedAll.relation, compactAll.relation, sharedOutcome.relation]
@@ -195,4 +195,4 @@ theorem extraction_chooses_smallest_saturated_graph :
       some ([compactAll.relation], [sharedResult], [sharedOpen]) := by
   native_decide
 
-end Eggshell.Laws
+end Eggshell.TestKernelFixtures

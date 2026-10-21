@@ -5,57 +5,57 @@ public meta import Eggshell.Matcher
 
 @[expose] public section
 
-namespace Eggshell.MatcherLaws
+namespace Eggshell.TestMatcherFixtures
 
 open LogicalText
 
 /-- Match-only shell segmentation respects actual top-level execution boundaries. -/
-theorem top_level_shell_clauses_are_independent :
+example :
     Matcher.shellClauses
       "sed -n '1,20p' a.c; sed -n '30,40p' b.c && rg 'a;b' src" =
       ["sed -n '1,20p' a.c", "sed -n '30,40p' b.c", "rg 'a;b' src"] := by
   native_decide
 
 /-- A separator inside a quoted substitution cannot become a different Work view. -/
-theorem quoted_substitution_stays_atomic :
+example :
     Matcher.shellClauses "echo $(printf 'a;b'); rg symbol src" =
       ["echo $(printf 'a;b')", "rg symbol src"] := by
   native_decide
 
 /-- Stateful shell control programs remain one match unit. -/
-theorem shell_control_program_stays_atomic :
+example :
     Matcher.shellClauses "for f in a b; do sed -n '1,20p' $f; done" =
       ["for f in a b; do sed -n '1,20p' $f; done"] := by
   native_decide
 
 /-- Structural views are never persistent Values and are always nonempty. -/
-theorem canonical_native_work_has_a_match_view :
+example :
     Matcher.nativeWorkSurfaces
       "Bash\nsed -n '1,20p' a.c; rg clocksource_select kernel/time" =
       ["Bash\nsed -n '1,20p' a.c", "Bash\nrg clocksource_select kernel/time"] := by
   native_decide
 
 /-- Regex punctuation does not invent another persistent Work. -/
-theorem regex_dot_preserves_work_units :
+example :
     (LogicalText.logical "timekeeping.*update").units.map (·.text) =
       ["timekeeping", "update"] := by
   native_decide
 
 /-- Prose punctuation cannot silently manufacture completed child Work. -/
-theorem prose_dot_preserves_one_work_value :
+example :
     (LogicalText.logical "inspect source. trace result").units.map (·.text) =
       ["inspect", "source", "trace", "result"] := by
   native_decide
 
 /-- Regex alternation keeps its content in one ordinary Work surface. -/
-theorem quoted_regex_does_not_invent_subwork :
+example :
     (LogicalText.logical "rg -n \"clocksource|noinstr|u64\" arch/x86/kernel/tsc.c").units.map
       (·.text) = ["rg", "n", "clocksource", "noinstr", "u64",
         "arch/x86/kernel/tsc.c"] := by
   native_decide
 
 /-- A pipeline is one observed native Work, not adapter-invented child tasks. -/
-theorem unquoted_pipe_stays_inside_native_work :
+example :
     (LogicalText.logical "rg clocksource|sed tsc.c").units.map (·.text) =
       ["rg", "clocksource", "sed", "tsc.c"] := by
   native_decide
@@ -109,7 +109,7 @@ def quotedRegexOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- A shared regex alternative remains advice and cannot complete the surrounding operation. -/
-theorem quoted_regex_alternative_stays_advisory :
+example :
     (discover quotedRegexCurrent [quotedRegexOutcome.relation]
       "rg -n \"noinstr|tsc_clocksource\" arch/x86/kernel/tsc.c").map
       (fun discovery =>
@@ -120,7 +120,7 @@ theorem quoted_regex_alternative_stays_advisory :
   native_decide
 
 /-- Orderless surface evidence reconnects the exact prior Outcome in one run. -/
-theorem local_union_changes_the_selected_work_graph :
+example :
     (discover currentWork [observed.relation]
       "kernel/time update_vsyscall rg").map (fun discovery =>
         let extraction := Matcher.extraction discovery
@@ -141,7 +141,7 @@ def multilingualOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- Relatedness alone is useful advisory retrieval, never equality or completion. -/
-theorem semantic_retrieval_does_not_union_or_complete :
+example :
     (discoverNominated multilingualCurrent [multilingualOutcome.relation]
       "shell 利用者空間から現在時刻を高速取得する経路を調査"
       [multilingualOutcome.relation]).map (fun discovery =>
@@ -154,7 +154,7 @@ theorem semantic_retrieval_does_not_union_or_complete :
   native_decide
 
 /-- Matching keeps the durable Outcome owner instead of assigning it to a substring. -/
-theorem local_union_preserves_outcome_ownership :
+example :
     (discover currentWork [observed.relation]
       "kernel/time update_vsyscall rg").bind (fun discovery =>
         discovery.hits.head?.map fun matched => matched.edge.relation) =
@@ -168,7 +168,7 @@ def evidenceOutcome : OutcomeEdge :=
 def unrelatedCurrent : Value := .text "read a new ACPI table"
 
 /-- Native result text alone cannot enter Demand or become Work identity. -/
-theorem native_result_is_advisory_not_a_local_union :
+example :
     (discoverWithEvidence unrelatedCurrent [evidenceOutcome.relation]
       "read a new ACPI table" "shared_result_symbol appeared").map (fun discovery =>
         let extraction := Matcher.extraction discovery
@@ -183,7 +183,7 @@ def secondObserved : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- Multiple Outcomes owned by one Work create one equivalence merge. -/
-theorem one_local_union_per_value_pair :
+example :
     (discover currentWork [observed.relation, secondObserved.relation]
       "kernel/time update_vsyscall rg").map
       (fun discovery => discovery.view.localUnions.length) = some 1 := by
@@ -193,7 +193,7 @@ def largerCurrent : Value :=
   .text "rg update_vsyscall kernel/time; investigate native tsc calibration"
 
 /-- A completed fragment is reusable without closing its larger Inquiry. -/
-theorem contained_work_is_reusable_but_the_inquiry_stays_open :
+example :
     (discover largerCurrent [observed.relation]
       "rg update_vsyscall kernel/time; investigate native tsc calibration").bind
       (fun discovery => discovery.hits.head?.map fun matched =>
@@ -214,7 +214,7 @@ Applicability is directional: a complete historical operation contained in a
 larger current operation is completed support, while the added current work
 remains in the open handoff.
 -/
-theorem forward_containment_erases_only_the_historical_work :
+example :
     (discover forwardCurrent [forwardOutcome.relation]
       "Bash rg n vdso timekeeping tsc clocksource").bind
       (fun discovery => discovery.hits.head?.map fun matched =>
@@ -236,7 +236,7 @@ Outcome ownership is structural. A complete historical All-child remains
 reusable inside a larger current Work even when its result does not repeat the
 matched command text; the projected edge cites its durable owner exactly.
 -/
-theorem forward_containment_uses_structural_outcome_ownership :
+example :
     (discover forwardCurrent [opaqueForwardOutcome.relation]
       "Bash rg n vdso timekeeping tsc clocksource").bind
       (fun discovery => discovery.hits.head?.map fun matched =>
@@ -255,7 +255,7 @@ def reverseOutcome : OutcomeEdge :=
   .make reversePast reverseResult [] (by simp) (by simp [maxOutcomeObservations])
 
 /-- A larger historical operation cannot erase a smaller current operation. -/
-theorem reverse_containment_stays_advisory_even_when_result_text_is_grounded :
+example :
     (discover forwardPast [reverseOutcome.relation]
       "Bash rg n vdso timekeeping").bind
       (fun discovery => discovery.hits.head?.map fun matched =>
@@ -269,7 +269,7 @@ theorem reverse_containment_stays_advisory_even_when_result_text_is_grounded :
   native_decide
 
 /-- Candidate restriction is structural rather than an approximate index filter. -/
-theorem candidate_universe_is_exactly_outcome_owners (graph : WorkGraph) :
+example (graph : WorkGraph) :
     Matcher.outcomeCandidates graph = graph.outcomes := rfl
 
 def priorParent : Value := .text "alpha beta gamma"
@@ -293,7 +293,7 @@ is probed in the next semi-naive pass, creates a second Local Union, and only
 then reaches its Outcome owner. A one-shot retrieval implementation cannot
 produce this result.
 -/
-theorem local_union_resaturates_newly_demanded_subwork :
+example :
     let values := [parentOutcome.relation, nestedWork.relation,
       childOutcome.relation]
     (discoverRaw currentParent values "gamma beta alpha").map (fun discovery =>
@@ -318,7 +318,7 @@ def historicalTurnFrame : AllEdge :=
     (by simp) (by native_decide)
 
 /-- A root turn may reconnect as advice, but only an All child can erase Work. -/
-theorem parent_turn_outcome_cannot_erase_a_native_operation :
+example :
     let values := [historicalTurnOutcome.relation, historicalTurnFrame.relation]
     (discoverRaw (.text "TSC") values "TSC").bind (fun discovery =>
       (discovery.hits.find? fun matched =>
@@ -331,7 +331,7 @@ theorem parent_turn_outcome_cannot_erase_a_native_operation :
   native_decide
 
 /-- Projection always transports the complete causal Outcome owner. -/
-theorem projection_preserves_the_whole_outcome :
+example :
     let values := [historicalTurnOutcome.relation, historicalTurnFrame.relation]
     (discoverRaw (.text "TSC") values "TSC").bind (fun discovery =>
       (discovery.hits.find? fun matched =>
@@ -340,7 +340,7 @@ theorem projection_preserves_the_whole_outcome :
   native_decide
 
 /-- A root turn cannot enter automatic context through one coincidental clause. -/
-theorem parent_turn_fragment_is_not_automatic :
+example :
     let values := [historicalTurnOutcome.relation, historicalTurnFrame.relation]
     (discoverRaw (.text "TSC") values "TSC").bind (fun discovery =>
       (discovery.hits.find? fun matched =>
@@ -371,7 +371,7 @@ def advisoryBackground (name : String) : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- A grounded parent Turn projects coherent advice without completing the new Turn. -/
-theorem parent_turn_projects_grounded_advice_without_erasing_work :
+example :
     let values := [advisoryParentOutcome.relation, advisoryParentFrame.relation,
       (advisoryBackground "unrelated-alpha").relation,
       (advisoryBackground "unrelated-beta").relation]
@@ -394,7 +394,7 @@ theorem parent_turn_projects_grounded_advice_without_erasing_work :
   native_decide
 
 /-- A related parent Turn cannot make an unrelated historical child mandatory Work. -/
-theorem parent_advice_does_not_demand_unmatched_historical_children :
+example :
     let values := [advisoryParentOutcome.relation, advisoryParentFrame.relation,
       advisoryChildOutcome.relation,
       (advisoryBackground "unrelated-alpha").relation,
@@ -416,7 +416,7 @@ def largerOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- Reverse containment can create local identity evidence but never completion. -/
-theorem enclosing_past_work_is_advisory_not_completed :
+example :
     (discover smallerDemand [largerOutcome.relation] "alpha beta").bind
       (fun discovery => discovery.hits.head?.map fun matched =>
         let extraction := Matcher.extraction discovery
@@ -427,7 +427,7 @@ theorem enclosing_past_work_is_advisory_not_completed :
   native_decide
 
 /-- Fragment reuse is expressed by the existing Outcome constructor. -/
-theorem projected_fragment_is_an_ordinary_outcome :
+example :
     (discover largerCurrent [observed.relation]
       "rg update_vsyscall kernel/time and investigate native tsc calibration").bind
       (fun discovery => discovery.hits.head?.map fun matched =>
@@ -440,7 +440,7 @@ theorem projected_fragment_is_an_ordinary_outcome :
   native_decide
 
 /-- Result text cannot bypass Work identity and become an automatic retrieval lane. -/
-theorem outcome_text_cannot_enter_demand_without_work_identity :
+example :
     let unrelated := OutcomeEdge.make (.text "inspect unrelated subsystem")
       (.text "kernel/time update_vsyscall rg") []
       (by simp) (by simp [maxOutcomeObservations])
@@ -462,7 +462,7 @@ def echoedForeignOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- An echoed command may remain advice but cannot become completed support. -/
-theorem echoed_command_in_outcome_never_completes_work :
+example :
     (discover proposedTscRead [echoedForeignOutcome.relation]
       "Bash nl -ba arch/x86/kernel/tsc.c sed n 1080 1460p").map
       (fun discovery =>
@@ -486,7 +486,7 @@ def transportBackground (name : String) : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- Ubiquitous transport scaffolding never becomes completed Work. -/
-theorem transport_scaffolding_is_advisory :
+example :
     let values := [scaffoldingOutcome.relation,
       (transportBackground "background_a").relation,
       (transportBackground "background_b").relation,
@@ -519,7 +519,7 @@ def nativeFlagBackground (name : String) : OutcomeEdge :=
   .make work outcome [nativeOccurrence work outcome]
     (by simp) (by simp [maxOutcomeObservations])
 
-theorem oriented_native_occurrence_is_native :
+example :
     Matcher.nativeOutcome nativeFlagOutcome = true := by
   native_decide
 
@@ -529,12 +529,12 @@ def turnFlagOutcome : OutcomeEdge :=
   .make work outcome [turnOccurrence work outcome]
     (by simp) (by simp [maxOutcomeObservations])
 
-theorem oriented_turn_occurrence_is_not_native :
+example :
     Matcher.nativeOutcome turnFlagOutcome = false := by
   native_decide
 
 /-- Native option syntax and ubiquitous path framing cannot erase unrelated Work. -/
-theorem native_option_scaffolding_never_completes_work :
+example :
     let values := [nativeFlagOutcome.relation,
       (nativeFlagBackground "background_a").relation,
       (nativeFlagBackground "background_b").relation,
@@ -566,7 +566,7 @@ One executed clause is one complete run-local Work even when its durable owner
 is a larger native invocation. Its projected result cites that owner, and the
 unmatched current clause stays open.
 -/
-theorem completed_native_clause_reuses_grounded_outcome_and_keeps_remainder :
+example :
     let values := framedValues [batchedNativeOutcome.relation]
     let graph := WorkGraph.fromValues values
     (Matcher.discoverIn? logicalNormalizer batchedNativeCurrent values [] graph
@@ -601,7 +601,7 @@ def batchedRangeOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- A shared file cannot complete a different observed range. -/
-theorem different_native_clause_range_stays_advisory :
+example :
     let values := framedValues [batchedRangeOutcome.relation]
     let graph := WorkGraph.fromValues values
     (Matcher.discoverIn? logicalNormalizer batchedRangeCurrent values [] graph
@@ -625,7 +625,7 @@ def backgroundOutcome (name : String) : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- A complete past Work is reusable inside a larger Demand while its remainder stays open. -/
-theorem distinctive_fragment_is_reusable_without_closing_the_inquiry :
+example :
     let values := [groundedOutcome.relation,
       (backgroundOutcome "background_a").relation,
       (backgroundOutcome "background_b").relation,
@@ -649,7 +649,7 @@ def singlyGroundedOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /- One distinctive token alone may connect advice but cannot control planning. -/
-theorem one_distinctive_anchor_keeps_partial_work_advisory :
+example :
     let values := [singlyGroundedOutcome.relation,
       (backgroundOutcome "background_a").relation,
       (backgroundOutcome "background_b").relation,
@@ -686,7 +686,7 @@ def loopOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- Shared shell scaffolding may nominate advice but never erases a different loop body. -/
-theorem shell_scaffolding_does_not_complete_an_atomic_native_work :
+example :
     let values := [loopOutcome.relation,
       (fragmentBackground "background_a").relation,
       (fragmentBackground "background_b").relation]
@@ -699,7 +699,7 @@ theorem shell_scaffolding_does_not_complete_an_atomic_native_work :
   native_decide
 
 /-- A shared fragment may Union, but neither enclosing operation is completed. -/
-theorem fragment_union_does_not_invent_completed_work :
+example :
     let values := [fragmentOutcome.relation,
       (fragmentBackground "background_a").relation,
       (fragmentBackground "background_b").relation,
@@ -726,7 +726,7 @@ def pipedOutcome : OutcomeEdge :=
   .make pipedPast pipedResult [] (by simp) (by simp [maxOutcomeObservations])
 
 /-- A dependent pipeline may reconnect advice, but it is not a completed subwork. -/
-theorem pipeline_overlap_stays_advisory :
+example :
     let values := [pipedOutcome.relation,
       (fragmentBackground "background_a").relation,
       (fragmentBackground "background_b").relation]
@@ -755,7 +755,7 @@ def proseOutcome : OutcomeEdge :=
   .make prosePast proseResult [] (by simp) (by simp [maxOutcomeObservations])
 
 /-- Prose overlap may create Union evidence but cannot close another Work. -/
-theorem grounded_prose_reverse_containment_stays_advisory :
+example :
     let values := [proseOutcome.relation,
       (fragmentBackground "background_a").relation,
       (fragmentBackground "background_b").relation,
@@ -778,7 +778,7 @@ def halfOutcome : OutcomeEdge :=
   .make halfPast halfResult [] (by simp) (by simp [maxOutcomeObservations])
 
 /-- A grounded half-overlap resaturates equality but leaves its enclosing clause open. -/
-theorem grounded_half_overlap_is_advisory_delivery :
+example :
     let values := [halfOutcome.relation,
       (fragmentBackground "background_a").relation,
       (fragmentBackground "background_b").relation,
@@ -802,7 +802,7 @@ def dominantOutcome : OutcomeEdge :=
   .make dominantPast dominantResult [] (by simp) (by simp [maxOutcomeObservations])
 
 /-- A high-scoring partial overlap may Union, but it never erases unfinished Work. -/
-theorem dominant_partial_fragment_stays_advisory :
+example :
     let values := [dominantOutcome.relation,
       (fragmentBackground "background_a").relation,
       (fragmentBackground "background_b").relation,
@@ -829,7 +829,7 @@ def flagVariantOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- Forward support may complete while the larger current clause stays open. -/
-theorem transport_flag_variation_keeps_current_clause_open :
+example :
     (discover flagVariantCurrent [flagVariantOutcome.relation]
       "rg n c 45 clocksource_select").map (fun discovery =>
         let extraction := Matcher.extraction discovery
@@ -852,7 +852,7 @@ def searchedBootOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /- The same target alone is advice, not completion of a different operation. -/
-theorem shared_target_reuses_observation_without_closing_demand :
+example :
     (discover readBootFile [searchedBootOutcome.relation,
       (backgroundOutcome "background_a").relation,
       (backgroundOutcome "background_b").relation,
@@ -875,7 +875,7 @@ def priorSourceOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- Shared shell syntax cannot erase reads of different targets and ranges. -/
-theorem different_native_targets_are_advisory_only :
+example :
     (discover differentSourceRead [priorSourceOutcome.relation]
       "shell sed n 1 260p arch/x86/kernel/acpi/boot.c").map (fun discovery =>
         let extraction := Matcher.extraction discovery
@@ -889,7 +889,7 @@ def reorderedTargetRead : Value :=
   .text "drivers/clocksource/acpi_pm.c 280p 1 n sed shell"
 
 /-- Syntax order may vary when every unit still identifies the same operation. -/
-theorem equivalent_native_target_is_locally_unioned_and_completed :
+example :
     (discover reorderedTargetRead [priorSourceOutcome.relation]
       "drivers/clocksource/acpi_pm.c 280p 1 n sed shell").map (fun discovery =>
         let extraction := Matcher.extraction discovery
@@ -910,7 +910,7 @@ def genericClocksourceHeaderOutcome : OutcomeEdge :=
     (by simp) (by simp [maxOutcomeObservations])
 
 /-- A shared path suffix can form advice, but cannot erase a different file read. -/
-theorem path_suffix_overlap_never_completes_another_file :
+example :
     (discover architectureClocksourceHeaderRead
       [genericClocksourceHeaderOutcome.relation]
       "shell sed n 1 240p arch/x86/include/asm/vdso/clocksource.h").map
@@ -924,7 +924,7 @@ def relativeGenericClocksourceHeaderRead : Value :=
   .text "./include/vdso/clocksource.h 240p 1 n sed shell"
 
 /-- A leading relative-path marker is spelling, not a different operation. -/
-theorem relative_path_spelling_preserves_operation_identity :
+example :
     (discover relativeGenericClocksourceHeaderRead
       [genericClocksourceHeaderOutcome.relation]
       "./include/vdso/clocksource.h 240p 1 n sed shell").map
@@ -936,4 +936,4 @@ theorem relative_path_spelling_preserves_operation_identity :
       some (1, true, 1) := by
   native_decide
 
-end Eggshell.MatcherLaws
+end Eggshell.TestMatcherFixtures

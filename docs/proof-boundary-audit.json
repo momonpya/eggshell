@@ -1,0 +1,859 @@
+{
+  "scope": "Production proof/test separation only; no retrieval, graph, matcher, source freshness or delivery algorithm change",
+  "manifest": {
+    "baseCommit": "edf25cb67f422ba122e165d25304fd71afb076c3",
+    "source": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/checkout",
+    "sites": [
+      {
+        "file": "Eggshell/Laws.lean",
+        "line": 23,
+        "kind": "theorem",
+        "name": "direct_outcome_is_context_not_completion",
+        "declarationLine": 20,
+        "sourceSha256": "abaca4a33f00a2d3d6d8d9db02d45c4e9a0f06eb2d2a13d4f2121fd7dd4b12f1"
+      },
+      {
+        "file": "Eggshell/Laws.lean",
+        "line": 39,
+        "kind": "theorem",
+        "name": "all_erases_only_covered_work",
+        "declarationLine": 36,
+        "sourceSha256": "abaca4a33f00a2d3d6d8d9db02d45c4e9a0f06eb2d2a13d4f2121fd7dd4b12f1"
+      },
+      {
+        "file": "Eggshell/Laws.lean",
+        "line": 83,
+        "kind": "theorem",
+        "name": "local_union_resaturates_into_prior_work",
+        "declarationLine": 77,
+        "sourceSha256": "abaca4a33f00a2d3d6d8d9db02d45c4e9a0f06eb2d2a13d4f2121fd7dd4b12f1"
+      },
+      {
+        "file": "Eggshell/Laws.lean",
+        "line": 102,
+        "kind": "theorem",
+        "name": "advisory_is_visible_without_erasure",
+        "declarationLine": 95,
+        "sourceSha256": "abaca4a33f00a2d3d6d8d9db02d45c4e9a0f06eb2d2a13d4f2121fd7dd4b12f1"
+      },
+      {
+        "file": "Eggshell/Laws.lean",
+        "line": 129,
+        "kind": "theorem",
+        "name": "semantic_congruence_closes_after_union",
+        "declarationLine": 124,
+        "sourceSha256": "abaca4a33f00a2d3d6d8d9db02d45c4e9a0f06eb2d2a13d4f2121fd7dd4b12f1"
+      },
+      {
+        "file": "Eggshell/Laws.lean",
+        "line": 137,
+        "kind": "theorem",
+        "name": "exact_arguments_never_follow_semantic_union",
+        "declarationLine": 132,
+        "sourceSha256": "abaca4a33f00a2d3d6d8d9db02d45c4e9a0f06eb2d2a13d4f2121fd7dd4b12f1"
+      },
+      {
+        "file": "Eggshell/Laws.lean",
+        "line": 184,
+        "kind": "theorem",
+        "name": "union_collapses_duplicate_subwork_in_extracted_dag",
+        "declarationLine": 174,
+        "sourceSha256": "abaca4a33f00a2d3d6d8d9db02d45c4e9a0f06eb2d2a13d4f2121fd7dd4b12f1"
+      },
+      {
+        "file": "Eggshell/Laws.lean",
+        "line": 196,
+        "kind": "theorem",
+        "name": "extraction_chooses_smallest_saturated_graph",
+        "declarationLine": 187,
+        "sourceSha256": "abaca4a33f00a2d3d6d8d9db02d45c4e9a0f06eb2d2a13d4f2121fd7dd4b12f1"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 17,
+        "kind": "theorem",
+        "name": "top_level_shell_clauses_are_independent",
+        "declarationLine": 13,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 23,
+        "kind": "theorem",
+        "name": "quoted_substitution_stays_atomic",
+        "declarationLine": 20,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 29,
+        "kind": "theorem",
+        "name": "shell_control_program_stays_atomic",
+        "declarationLine": 26,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 36,
+        "kind": "theorem",
+        "name": "canonical_native_work_has_a_match_view",
+        "declarationLine": 32,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 42,
+        "kind": "theorem",
+        "name": "regex_dot_preserves_work_units",
+        "declarationLine": 39,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 48,
+        "kind": "theorem",
+        "name": "prose_dot_preserves_one_work_value",
+        "declarationLine": 45,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 55,
+        "kind": "theorem",
+        "name": "quoted_regex_does_not_invent_subwork",
+        "declarationLine": 51,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 61,
+        "kind": "theorem",
+        "name": "unquoted_pipe_stays_inside_native_work",
+        "declarationLine": 58,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 120,
+        "kind": "theorem",
+        "name": "quoted_regex_alternative_stays_advisory",
+        "declarationLine": 112,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 131,
+        "kind": "theorem",
+        "name": "local_union_changes_the_selected_work_graph",
+        "declarationLine": 123,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 154,
+        "kind": "theorem",
+        "name": "semantic_retrieval_does_not_union_or_complete",
+        "declarationLine": 144,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 162,
+        "kind": "theorem",
+        "name": "local_union_preserves_outcome_ownership",
+        "declarationLine": 157,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 179,
+        "kind": "theorem",
+        "name": "native_result_is_advisory_not_a_local_union",
+        "declarationLine": 171,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 190,
+        "kind": "theorem",
+        "name": "one_local_union_per_value_pair",
+        "declarationLine": 186,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 203,
+        "kind": "theorem",
+        "name": "contained_work_is_reusable_but_the_inquiry_stays_open",
+        "declarationLine": 196,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 228,
+        "kind": "theorem",
+        "name": "forward_containment_erases_only_the_historical_work",
+        "declarationLine": 217,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 249,
+        "kind": "theorem",
+        "name": "forward_containment_uses_structural_outcome_ownership",
+        "declarationLine": 239,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 269,
+        "kind": "theorem",
+        "name": "reverse_containment_stays_advisory_even_when_result_text_is_grounded",
+        "declarationLine": 258,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 288,
+        "kind": "def",
+        "name": "nestedWork",
+        "declarationLine": 287,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 306,
+        "kind": "theorem",
+        "name": "local_union_resaturates_newly_demanded_subwork",
+        "declarationLine": 296,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 318,
+        "kind": "def",
+        "name": "historicalTurnFrame",
+        "declarationLine": 315,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 331,
+        "kind": "theorem",
+        "name": "parent_turn_outcome_cannot_erase_a_native_operation",
+        "declarationLine": 321,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 340,
+        "kind": "theorem",
+        "name": "projection_preserves_the_whole_outcome",
+        "declarationLine": 334,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 349,
+        "kind": "theorem",
+        "name": "parent_turn_fragment_is_not_automatic",
+        "declarationLine": 343,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 363,
+        "kind": "def",
+        "name": "advisoryParentFrame",
+        "declarationLine": 360,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 394,
+        "kind": "theorem",
+        "name": "parent_turn_projects_grounded_advice_without_erasing_work",
+        "declarationLine": 374,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 410,
+        "kind": "theorem",
+        "name": "parent_advice_does_not_demand_unmatched_historical_children",
+        "declarationLine": 397,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 427,
+        "kind": "theorem",
+        "name": "enclosing_past_work_is_advisory_not_completed",
+        "declarationLine": 419,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 440,
+        "kind": "theorem",
+        "name": "projected_fragment_is_an_ordinary_outcome",
+        "declarationLine": 430,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 453,
+        "kind": "theorem",
+        "name": "outcome_text_cannot_enter_demand_without_work_identity",
+        "declarationLine": 443,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 474,
+        "kind": "theorem",
+        "name": "echoed_command_in_outcome_never_completes_work",
+        "declarationLine": 465,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 500,
+        "kind": "theorem",
+        "name": "transport_scaffolding_is_advisory",
+        "declarationLine": 489,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 524,
+        "kind": "theorem",
+        "name": "oriented_native_occurrence_is_native",
+        "declarationLine": 522,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 534,
+        "kind": "theorem",
+        "name": "oriented_turn_occurrence_is_not_native",
+        "declarationLine": 532,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 551,
+        "kind": "theorem",
+        "name": "native_option_scaffolding_never_completes_work",
+        "declarationLine": 537,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 590,
+        "kind": "theorem",
+        "name": "completed_native_clause_reuses_grounded_outcome_and_keeps_remainder",
+        "declarationLine": 569,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 614,
+        "kind": "theorem",
+        "name": "different_native_clause_range_stays_advisory",
+        "declarationLine": 604,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 641,
+        "kind": "theorem",
+        "name": "distinctive_fragment_is_reusable_without_closing_the_inquiry",
+        "declarationLine": 628,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 665,
+        "kind": "theorem",
+        "name": "one_distinctive_anchor_keeps_partial_work_advisory",
+        "declarationLine": 652,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 699,
+        "kind": "theorem",
+        "name": "shell_scaffolding_does_not_complete_an_atomic_native_work",
+        "declarationLine": 689,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 717,
+        "kind": "theorem",
+        "name": "fragment_union_does_not_invent_completed_work",
+        "declarationLine": 702,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 746,
+        "kind": "theorem",
+        "name": "pipeline_overlap_stays_advisory",
+        "declarationLine": 729,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 772,
+        "kind": "theorem",
+        "name": "grounded_prose_reverse_containment_stays_advisory",
+        "declarationLine": 758,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 793,
+        "kind": "theorem",
+        "name": "grounded_half_overlap_is_advisory_delivery",
+        "declarationLine": 781,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 819,
+        "kind": "theorem",
+        "name": "dominant_partial_fragment_stays_advisory",
+        "declarationLine": 805,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 842,
+        "kind": "theorem",
+        "name": "transport_flag_variation_keeps_current_clause_open",
+        "declarationLine": 832,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 866,
+        "kind": "theorem",
+        "name": "shared_target_reuses_observation_without_closing_demand",
+        "declarationLine": 855,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 884,
+        "kind": "theorem",
+        "name": "different_native_targets_are_advisory_only",
+        "declarationLine": 878,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 900,
+        "kind": "theorem",
+        "name": "equivalent_native_target_is_locally_unioned_and_completed",
+        "declarationLine": 892,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 921,
+        "kind": "theorem",
+        "name": "path_suffix_overlap_never_completes_another_file",
+        "declarationLine": 913,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/MatcherLaws.lean",
+        "line": 937,
+        "kind": "theorem",
+        "name": "relative_path_spelling_preserves_operation_identity",
+        "declarationLine": 927,
+        "sourceSha256": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f"
+      },
+      {
+        "file": "Eggshell/Blake3.lean",
+        "line": 226,
+        "kind": "theorem",
+        "name": "empty_vector",
+        "declarationLine": 223,
+        "sourceSha256": "0ce3a15a5ef5c527e17209de38df0ae8df4d1f9aaeb03dbb476f5eec9217d584"
+      },
+      {
+        "file": "Eggshell/Blake3.lean",
+        "line": 231,
+        "kind": "theorem",
+        "name": "abc_vector",
+        "declarationLine": 228,
+        "sourceSha256": "0ce3a15a5ef5c527e17209de38df0ae8df4d1f9aaeb03dbb476f5eec9217d584"
+      }
+    ],
+    "changed": [
+      "Eggshell.lean",
+      "Eggshell/Blake3.lean",
+      "Eggshell/Extract.lean",
+      "Eggshell/Laws.lean",
+      "Eggshell/MatcherLaws.lean",
+      "TestMain.lean",
+      "lakefile.lean",
+      "Eggshell/ContractAudit.lean"
+    ],
+    "created": [
+      "tests/KernelFixtures.lean",
+      "tests/MatcherFixtures.lean",
+      "tests/Blake3Fixtures.lean",
+      "tests/ProofFixtureMain.lean",
+      "tests/ProofBoundaryAudit.lean"
+    ],
+    "sourceFiles": {
+      "Eggshell.lean": "b7a9fc29aa4a51bebb0b40a35cbab201a83dd7223a883050208cf4c01e3c1644",
+      "Eggshell/Blake3.lean": "0ce3a15a5ef5c527e17209de38df0ae8df4d1f9aaeb03dbb476f5eec9217d584",
+      "Eggshell/Extract.lean": "7abeb35a1390ffde4a6706b1042b4353775f16ee09961191399f235851034c76",
+      "Eggshell/Laws.lean": "abaca4a33f00a2d3d6d8d9db02d45c4e9a0f06eb2d2a13d4f2121fd7dd4b12f1",
+      "Eggshell/MatcherLaws.lean": "be4e6ab326d76f70e0a8d8d51f1d3c3976d477d75977c93b18681bf0f0b2807f",
+      "TestMain.lean": "9c95d7caf68249b893c063629ab8af2e51122e69da98d9e691b4eaefcbd41fb4",
+      "lakefile.lean": "8ec5da31304005be88e4beee9003a5e76d22af419c91b7605cd19f5e6fdd7a82",
+      "Eggshell/ContractAudit.lean": "5586681ae560ae6ef3b68512be103f17bf689874a78e0b7f777a83456c2423c5"
+    },
+    "candidateFiles": {
+      "Eggshell.lean": "522dd4f0cfb463cb3d4bef7652450348463343b2868b861e33ca76be3185c21c",
+      "Eggshell/Blake3.lean": "36bbdc38a551256b59f476cb37fbe9acd8f8dd297a4f4b4565939b0a6e2fa5fc",
+      "Eggshell/Extract.lean": "b19f0295dd35db4b4ac74bee8d4282e35717f6cebf04a6483d59f5808ca18ef2",
+      "TestMain.lean": "454d27c912a252e8df994d60e4634a18c1a9a6276bfcaeb83b2504bcb733b7b6",
+      "lakefile.lean": "58da2f66ea77478793b4a607b56c17eefa2b1e2f7d12e2b0ae006396bc2def2e",
+      "tests/KernelFixtures.lean": "7a35493b1232e43537b0d54e98c55c626cad25ecbc73e9874706e120eee2d711",
+      "tests/MatcherFixtures.lean": "59b9a90b0fc519993a354d3b649e3d00efbd3ff0971021abf11d2648ce3b45d6",
+      "tests/Blake3Fixtures.lean": "398acc9898767e814c10877079ad08350bb9b40b32b95576925a112958398d02",
+      "tests/ProofFixtureMain.lean": "459655067773160445311a90a07f40601e9425d3210b4985676665d11c9eb513",
+      "tests/ProofBoundaryAudit.lean": "c21687375d10b123f474ee2d24c5598167a14b7698347740e478e08c397f4981",
+      "Eggshell/ContractAudit.lean": "47fa19a96d236a1884a39f7d3f01018ecd885237688b4b8fe72b0b450538703e"
+    },
+    "scope": "Move 61 computed proof sites to test-only fixtures; clarify reusableOutcome; no matcher, delivery, graph or embedding behavior change",
+    "resourcePolicy": {
+      "aggregateRssStopKiB": 3145728,
+      "proofOnlyDiskReserveMiB": 2048,
+      "nativePreparationDiskReserveMiB": 3072,
+      "modelPrelaunchMiB": 4096
+    },
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "repairs": [
+      {
+        "reason": "Lean public main needs a public import of its hash-test function; initial error preserved",
+        "record": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/fixture-run/record.json"
+      },
+      {
+        "reason": "Run the real linked fixture executable; the ad hoc interpreter lacked the new imported module native symbol. Failed interpreter record preserved; no semantic fixture change.",
+        "record": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/fixture-run-after-visibility-fix/record.json"
+      },
+      {
+        "reason": "Resolve the standard test-support modules through Lake before direct elaboration; cloned baseline did not contain PageDBTests.olean. No source change.",
+        "record": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/standard-suite-elaboration/record.json"
+      }
+    ]
+  },
+  "manifestSha256": "b3586780d640a28c74ec0044197206a0af477e92ce9efbe0d263060dcd054cde",
+  "result": {
+    "complete": true,
+    "source": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/checkout",
+    "nativeDecideProductionSites": 0,
+    "computedSitesMoved": 61,
+    "proofToTests": {
+      "nativeExamples": 56,
+      "fixtureDefinitions": 3,
+      "ioHashVectors": 2
+    },
+    "additionalExistingGenericFixtures": 2,
+    "fixtureRunSha256": "983476273135f3290d02ee2ba45c8e6583c2c6ad7296e52db5990f274d487fcc",
+    "namespaceAuditSha256": "f9e3fbb1b6c09bd3e9d1b25a4d60d727b1475c0f51ee57943655e82740f5b024",
+    "standardSuiteElaborated": true,
+    "standardSuiteRuntimeExecuted": false,
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "initialFailedTestsPreserved": true
+  },
+  "records": {
+    "build-boundaries": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/build-boundaries",
+      "timing": {
+        "args": [
+          "lake",
+          "--no-cache",
+          "build",
+          "Eggshell",
+          "Eggshell.ContractAudit",
+          "tests.KernelFixtures",
+          "tests.MatcherFixtures",
+          "tests.Blake3Fixtures"
+        ],
+        "elapsedMs": 57082.045375,
+        "exitCode": 0,
+        "stdoutSha256": "aaef6b8172d9df0d58389ed22ce0b59ed06250b3a2aa96155b8ac686e7dc8936"
+      },
+      "stdoutSha256": "aaef6b8172d9df0d58389ed22ce0b59ed06250b3a2aa96155b8ac686e7dc8936",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "namespace-audit": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/namespace-audit",
+      "timing": {
+        "args": [
+          "lake",
+          "env",
+          "lean",
+          "tests/ProofBoundaryAudit.lean"
+        ],
+        "elapsedMs": 821.577375,
+        "exitCode": 0,
+        "stdoutSha256": "f9e3fbb1b6c09bd3e9d1b25a4d60d727b1475c0f51ee57943655e82740f5b024"
+      },
+      "stdoutSha256": "f9e3fbb1b6c09bd3e9d1b25a4d60d727b1475c0f51ee57943655e82740f5b024",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "fixture-run": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/fixture-run",
+      "timing": {
+        "args": [
+          "lake",
+          "env",
+          "lean",
+          "--run",
+          "tests/ProofFixtureMain.lean"
+        ],
+        "elapsedMs": 518.352834,
+        "exitCode": 1,
+        "stdoutSha256": "0dbeadc99575d4742f1693f31bac10a4fdf38de819bdf6f888e3bf9cdcf87ee9"
+      },
+      "stdoutSha256": "0dbeadc99575d4742f1693f31bac10a4fdf38de819bdf6f888e3bf9cdcf87ee9",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "audit-completion-theorems": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/audit-completion-theorems",
+      "timing": {
+        "args": [
+          "lake",
+          "--no-cache",
+          "build",
+          "Eggshell.ContractAudit"
+        ],
+        "elapsedMs": 2795.991375,
+        "exitCode": 0,
+        "stdoutSha256": "64ac2b64a848589278229dc2147930dfcab0266733127fb8495708afbeed066d"
+      },
+      "stdoutSha256": "64ac2b64a848589278229dc2147930dfcab0266733127fb8495708afbeed066d",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "fixture-run-after-visibility-fix": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/fixture-run-after-visibility-fix",
+      "timing": {
+        "args": [
+          "lake",
+          "env",
+          "lean",
+          "--run",
+          "tests/ProofFixtureMain.lean"
+        ],
+        "elapsedMs": 459.118333,
+        "exitCode": 1,
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "5428fd659a7ad0cca1ac51a84504886afe2badd57707c42b4b069257ce8d8199"
+    },
+    "native-fixture-build": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/native-fixture-build",
+      "timing": {
+        "args": [
+          "lake",
+          "--no-cache",
+          "build",
+          "proof_fixture_tests",
+          "tests.ProofBoundaryAudit"
+        ],
+        "elapsedMs": 15580.92875,
+        "exitCode": 0,
+        "stdoutSha256": "a2b16f9fd3f023b8ebdb745790c416bd9af4ca7c15552471c88841d8d4df6053"
+      },
+      "stdoutSha256": "a2b16f9fd3f023b8ebdb745790c416bd9af4ca7c15552471c88841d8d4df6053",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native-fixture-run": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/native-fixture-run",
+      "timing": {
+        "args": [
+          "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/checkout/.lake/build/bin/proof_fixture_tests"
+        ],
+        "elapsedMs": 1054.001417,
+        "exitCode": 0,
+        "stdoutSha256": "983476273135f3290d02ee2ba45c8e6583c2c6ad7296e52db5990f274d487fcc"
+      },
+      "stdoutSha256": "983476273135f3290d02ee2ba45c8e6583c2c6ad7296e52db5990f274d487fcc",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "standard-suite-elaboration": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/standard-suite-elaboration",
+      "timing": {
+        "args": [
+          "lake",
+          "env",
+          "lean",
+          "TestMain.lean"
+        ],
+        "elapsedMs": 491.812875,
+        "exitCode": 1,
+        "stdoutSha256": "f60757cceb5905f7e81cee6f3234efdaa6aa744a059889a1fd42ede332a26d59"
+      },
+      "stdoutSha256": "f60757cceb5905f7e81cee6f3234efdaa6aa744a059889a1fd42ede332a26d59",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "standard-test-support": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/standard-test-support",
+      "timing": {
+        "args": [
+          "lake",
+          "--no-cache",
+          "build",
+          "PageDBTestSupport"
+        ],
+        "elapsedMs": 11137.266,
+        "exitCode": 0,
+        "stdoutSha256": "82675e0a5e630f8f3f6e87b2298b1f60b4ca6036526dfa9cddc39e2226d9b322"
+      },
+      "stdoutSha256": "82675e0a5e630f8f3f6e87b2298b1f60b4ca6036526dfa9cddc39e2226d9b322",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "standard-suite-after-support": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/standard-suite-after-support",
+      "timing": {
+        "args": [
+          "lake",
+          "env",
+          "lean",
+          "TestMain.lean"
+        ],
+        "elapsedMs": 11060.790459,
+        "exitCode": 0,
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "guards": [
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/guard.json",
+      "sha256": "97407e4fb79c78d4c0ef7727cce7f475b82848e863fb11190b7a1564fda6ab10",
+      "guardPid": 57753,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2970160,
+      "samples": 399,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/construct.py"
+      ],
+      "childPid": 57767,
+      "exitCode": 1,
+      "elapsedSeconds": 58.79324591718614
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/repair-guard.json",
+      "sha256": "bfa54f123eabac6ec5ad837d143405cd49e28707de00c402295cc55ac774b8ce",
+      "guardPid": 58305,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1550992,
+      "samples": 25,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/repair.py"
+      ],
+      "childPid": 58318,
+      "exitCode": 1,
+      "elapsedSeconds": 3.563668457791209
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/native-runner-guard.json",
+      "sha256": "fc9ecd5444c11cf3fe2fd0bae04b87a663fca91a3fe2c9a3cf655f1ea3c117c5",
+      "guardPid": 58374,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1603984,
+      "samples": 120,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/finish-native.py"
+      ],
+      "childPid": 58387,
+      "exitCode": 1,
+      "elapsedSeconds": 17.488161792047322
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/elaboration-guard.json",
+      "sha256": "cac9d8bb7c7540e6d7276a507b6e6f6c16c7483342eb20669e4bfe010a237c43",
+      "guardPid": 58575,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2838000,
+      "samples": 154,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022"
+      ],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/experiments/eggshell/proof-boundary-20261022/finish-elaboration.py"
+      ],
+      "childPid": 58588,
+      "exitCode": 0,
+      "elapsedSeconds": 22.511534874793142
+    }
+  ],
+  "peakRssKiB": 2970160,
+  "allResourceGuardsUntriggered": true,
+  "productionSourceApplied": true,
+  "productionRuntimeBinaryReplaced": false,
+  "testCoverage": "All 59 former native sites outside BLAKE3 elaborated in test-only modules; 2 original hash vectors executed in native runner. Two additional existing non-native example checks retained. Public namespace excludes all 61 former declarations. Standard TestMain and test support elaborate successfully; full IO suite not executed in this change.",
+  "failedChecksPreserved": [
+    "private import in the initial standalone runner",
+    "ad hoc interpreter lacked the imported module native implementation",
+    "direct standard-suite elaboration before missing support modules were built"
+  ],
+  "remaining": [
+    "A single end-to-end completed-authorization theorem instantiated by every production equality producer and final delivery route",
+    "Complete source IO, final-fragment and local-generation causal ancestry",
+    "Phase 3 congruence-dependency fraction; do not classify untracked ancestry as direct-only",
+    "Remaining Phase 1 scaling/delivery validation, pilot, sound rules and paper"
+  ],
+  "answeringModelCalls": 0,
+  "newSeedAcquisition": false,
+  "tokenOrQualityAdoptionGate": false
+}

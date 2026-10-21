@@ -32,6 +32,45 @@ production contracts and reject any dependency outside `propext`, `Quot.sound`, 
 `Classical.choice`, Lean's standard logical basis. They supplement the existing
 graph, lifecycle and persistence proofs.
 
+`ApplicabilityJudgment.reusableOutcome` records structural eligibility under
+the matcher policy. It does not prove that an observation or answer is
+semantically correct. It also does not certify source freshness; that is
+checked against the recorded dependencies at the IO delivery boundary.
+
+## Computational fixtures
+
+The former 61 production `native_decide` sites are confined to tests. There
+were 58 named computed theorems and three uses inside fixture constructors,
+not 61 general theorems. The kernel and matcher examples now live in
+`tests/KernelFixtures.lean` and `tests/MatcherFixtures.lean`; the two BLAKE3
+known-answer vectors are ordinary IO checks in `tests/Blake3Fixtures.lean`.
+The general hash-length and matcher soundness proofs remain in the library.
+
+`tests/ProofBoundaryAudit.lean` imports the production umbrella and rejects
+all 61 former fixture declarations. It also checks the axiom dependencies of
+`extraction_sound`, `extraction_completed_has_match` and `build_sound`.
+`ContractAudit` checks the first two explicitly, alongside its existing
+production dependency and axiom audits. The standard test target imports the
+fixture modules and this boundary audit; their computations remain test
+coverage rather than exported general claims.
+
+This separation does not finish the planned end-to-end theorem. The existing
+completion theorem connects an erased fragment to an automatic Match,
+forward applicability, local identity and its original Outcome owner. The
+generated-quotient theorem separately connects accepted equality to current
+Union edges and congruence. Their instantiation through every production
+producer, source IO and final delivered fragment still needs a combined
+statement and audit. Untracked local ancestry cannot yet support a
+delivery-wide congruence fraction. See `docs/equality-dependency.md`.
+
+The isolated migration built the library, ContractAudit, test support and
+native fixture runner. The runner passed both original hash vectors, all
+fixture modules compiled, the production namespace/axiom audit passed, and
+the complete `TestMain.lean` elaborated. The full IO suite was not executed
+for this change. Peak sampled aggregate RSS was 2,970,160 KiB, below the
+3 GiB stop threshold; no resource guard fired. Setup and interpreter failures
+are retained alongside successful checks in `docs/proof-boundary-audit.json`.
+
 ## Numerical boundary
 
 `runtime/embedding.py` calls the pinned FastEmbed model and NumPy's existing
@@ -77,6 +116,8 @@ is an investigation target, not Eggshell implementation or a runtime dependency.
 
 ```sh
 lake build eggshell eggshell_tests lifecycle_tests eggshell_package setup_package_tests search_tests
+lake build proof_fixture_tests
+.lake/build/bin/proof_fixture_tests
 EGGSHELL_DATA_ROOT="$PWD/.lake/eggshell-tests-data" .lake/build/bin/eggshell_tests
 .lake/build/bin/lifecycle_tests
 .lake/build/bin/setup_package_tests

@@ -23,7 +23,8 @@ lean_lib Eggshell where
 lean_lib PageDBTestSupport where
   roots := #[`tests.PageDBTests, `tests.FullSearchOracle, `tests.SearchMemo, `tests.CorpusCache,
     `tests.SourceEvidenceTests, `tests.SourceObservationTests, `tests.EqualityDependencyTests,
-    `tests.DatabaseIndexTests, `tests.WarmTests, `tests.SemanticDeadlineTests, `tests.ReadOnlyCacheTests]
+    `tests.DatabaseIndexTests, `tests.WarmTests, `tests.SemanticDeadlineTests, `tests.ReadOnlyCacheTests,
+    `tests.KernelFixtures, `tests.MatcherFixtures, `tests.Blake3Fixtures, `tests.ProofBoundaryAudit]
 
 @[default_target]
 lean_exe eggshell where
@@ -52,3 +53,6 @@ lean_exe eggshell_render where
 
 lean_exe semantic_latency where
   root := `tools.SemanticLatency
+
+lean_exe proof_fixture_tests where
+  root := `tests.ProofFixtureMain

@@ -11,6 +11,10 @@ public import tests.ReadOnlyCacheTests
 public import tests.DatabaseIndexTests
 public import tests.WarmTests
 public import tests.SemanticDeadlineTests
+import tests.KernelFixtures
+import tests.MatcherFixtures
+public import tests.Blake3Fixtures
+import tests.ProofBoundaryAudit
 
 @[expose] public section
 
@@ -6107,6 +6111,7 @@ def runTests (semanticOnly : Bool := false) : IO UInt32 := do
       Worker.shutdown
       return 0
     testStreamingNormalizer
+    Eggshell.Blake3Fixtures.run
     Eggshell.EqualityDependencyTests.run
     Eggshell.SourceEvidenceTests.run
     Eggshell.SourceObservationTests.run

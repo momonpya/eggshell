@@ -15,7 +15,9 @@ open Lean
 reads use the same decoding/assembly implementation with their own read
 capability; no alternate body representation or compatibility lane exists. -/
 run_meta do
-  for theoremName in #[``Eggshell.Extract.solve_demand_exact,
+  for theoremName in #[``Eggshell.Matcher.extraction_sound,
+      ``Eggshell.Matcher.extraction_completed_has_match,
+      ``Eggshell.Extract.solve_demand_exact,
       ``Eggshell.Extract.solve_provenance,
       ``Eggshell.Selection.validFor_provenance_congr,
       ``Eggshell.Extract.runWithPolicyFuel_demand_exact,

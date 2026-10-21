@@ -219,15 +219,4 @@ theorem hashSegments_size (segments : List ByteArray) :
 theorem hash_size (bytes : ByteArray) : (hash bytes).size = 32 := by
   exact hashSegments_size [bytes]
 
-/-- Official BLAKE3 unkeyed known-answer vectors pin the executable definition. -/
-theorem empty_vector :
-    hex (hash {}) =
-      "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262" := by
-  native_decide
-
-theorem abc_vector :
-    hex (hash "abc".toUTF8) =
-      "6437b3ac38465133ffb63b75273a8db548c558465d79db03fd359c6cd5bd9d85" := by
-  native_decide
-
 end Eggshell.Blake3

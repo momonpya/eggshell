@@ -48,6 +48,19 @@ docs/candidates/source-context-basis-review.jsonとsource-context-basis.patchに
 仕様の実バイトを凍結した。要約での代用は拒否し、適切な元コードがあれば品質未認定・削減悪化でも
 投入判定を通ることを含めてPython16試験が成功。長い診断抜粋や前回回答全文は一律必須にしない。
 
+2026-10-22 証明と計算テストの分離：本番のnative_decide全61か所を棚卸しした。
+内訳は具体例の定理58件とfixture定義の3か所。Kernel/Matcherの59か所はtestsの匿名example・
+fixtureへ移し、BLAKE3の2ベクトルはIOテストへ移した。本番Eggshellソースのnative_decideは0。
+旧fixtureモジュールの公開importを廃し、61の旧宣言が本番namespaceへ漏れない検査を通常テストへ接続した。
+一般のhash長・照合/抽出の証明は保持し、reusableOutcomeが意味的な正しさや鮮度を保証しないことを明記した。
+ContractAuditにextraction_sound・extraction_completed_has_matchの公理検査を追加した。
+隔離版でlibrary・ContractAudit・test support・native fixture実行が成功し、TestMain全体もelaborateした。
+full IO suiteは今回未実行。最大aggregate RSS 2,970,160 KiB、4実行のguard作動なし。
+途中のimport可視性・interpreter・未build依存の失敗も保持し、修正後の成功と区別した。
+source変更を本体へ取り込んだが、installed/runtime binaryの置換・回答モデル追加・seed取得は0。
+詳細はdocs/lean-boundaries.mdとdocs/proof-boundary-audit.json。単一の主定理と本番全経路の接続、
+最終断片・local生成の因果由来、合同依存割合、配送/規模ゲート・パイロット・規則・論文は未完了。
+
 2026-10-19 のユーザー指示による組み替え。元の goal の要件は削除しない。
 主張は「推薦と認定の分離」。誤再利用率と実行テスト合格率を主指標、
 seed を償却した総トークン・費用・最初のフック遅延を副次指標とする。
@@ -1339,7 +1352,8 @@ DB を先に返す変更は採用しない。
 元 Phase 2 の全項目。completed により作業が省略されるなら、その根拠は
 検索由来ではなく、Exact の足跡を保つ union と合同から生成された等価性の鎖と
 元の観測へたどれる、という主定理を立てる。鮮度を前提か IO 境界の仕様にする。
-`native_decide` の61件は現物を棚卸しして定理からテストへ移す。
+`native_decide` の61か所は棚卸し・テストへの移動を完了した。計算例58定理・3fixture定義という
+内訳と、テスト専用namespace・公理監査・native fixtureの検証記録を維持する。
 `reusableOutcome` は意味的な正しさを保証しないと明記する。
 `ContractAudit` で本番配送が主定理の対象経路を通ることを検査する。
 Theorem 1 を一段落で記述できることを完了条件にする。
