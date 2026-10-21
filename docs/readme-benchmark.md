@@ -1551,3 +1551,24 @@ restore helper in `rejected-cache-cleanup-1`; source, original DBs, model record
 and raw outputs are preserved. This recovers about 1.63 GiB. The cleanup's
 observed RSS peak is 56,176 KiB; none of these checks lift the 4 GiB ceiling or
 authorize adoption of a delivery candidate.
+
+The minimum-cue-first follow-up (`5501df…`, `native-8`) also remains unadopted.
+Its three bounded checks preserve two independent cues before padding and keep
+scope labels in the minimum bundle. The old `c5190c…` implementation fails the
+same two-cue fixture with the expected assertion; this is a real counterexample,
+not a test inferred from the new implementation. A reserved identifier in the
+fixture is repaired without changing the already built runtime or ContractAudit.
+Nevertheless, all-topic native delivery checks still omit required full source
+and sometimes lose another probe. No answering-model trial is opened. The
+observed construction peak is 3,026,128 KiB, below the monitor's stop threshold.
+
+`whole-record-feasibility-1` changes the diagnostic question: can a small set of
+complete original observations cover the known stored probes? The oracle's
+minimum data/work byte totals are 66,325 for topic 1 (three observations), and
+64,104 for topics 2/3 (two observations). Packet framing is excluded. This does
+not qualify a real body or establish token savings, and runtime selection must
+not use these probe names or owner ids. It establishes that the stored facts are
+concentrated in a few complete observations, while the current packet spreads
+its allowance across many clipped observations. The next investigation is
+general complete-observation selection using relevance and original-data
+redundancy, rather than another local cue-order adjustment.
