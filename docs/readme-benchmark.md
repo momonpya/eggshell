@@ -161,6 +161,33 @@ preserved in the r1 audits. All 27 completed calls retain known inclusive
 usage; the other 27 calls continue in their fixed order. These partial
 repetitions do not establish a complete token or quality adoption result.
 
+Retained topic 1 r1 consumes 2,090,340 fresh, 696,002 current and 406,766
+candidate tokens (80.5% fresh-relative reduction), below the 90% target.
+Its initial body is byte-identical to r0. A retrospective source review finds
+that `HLSL.cpp:396–405` was stored under original owner
+`v9464950495224635698`, absent from the initial body, and read again by the
+answering model. The same command also reads `HLSL.cpp:433–459`, whose full
+range was not stored in that checkpoint. These are distinct delivery and
+new-evidence observations; neither their entire token cost nor this result
+is attributed solely to model variance. The diagnostic is retained in
+`audits/stage4-r1-additional-source-review.json`. It does not retroactively
+change the admission gate, drop this trial or alter the frozen comparison.
+
+Repetition 1's retained lap is now complete as well:
+
+| Topic | Fresh | Current | Candidate | Fresh-relative saving |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 2,090,340 | 696,002 | 406,766 | 80.5% |
+| 2 | 3,509,975 | 53,235 | 52,759 | 98.5% |
+| 3 | 3,656,447 | 49,739 | 50,546 | 98.6% |
+
+All 36 calls in repetitions 0 and 1 are complete; the last 18 calls retain
+their predeclared rotating order. Retained topics 2 and 3 again contain no
+tool executions in the candidate condition. Retained topic 3 r1 nevertheless
+uses more tokens than current (50,546 versus 49,739); its fresh-relative
+saving does not hide that comparison. Runtime and all measurement inputs
+remain fixed, with no quality or production adoption claimed.
+
 Topic 2 uses the actual new 53-document history. The prior answer is fully
 delivered and the actual initial body matches preparation. The answering turn
 contains no tool calls, so this result uses delivered saved history rather
