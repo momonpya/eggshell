@@ -263,6 +263,25 @@ used to declare success. The fixed r1/r2 continuations use the same predeclared
 stored histories; no implementation/prompt/harness change or old control reuse
 is made.
 
+The first-lap topics now have two repetitions each. The candidate's inclusive
+fresh-relative reductions are:
+
+| First-lap topic | r0 | r1 |
+| --- | ---: | ---: |
+| 1 | 85.65% | 83.23% |
+| 2 | 98.95% | 98.86% |
+| 3 | 61.66% | 67.09% |
+
+Topic 3 misses 70% twice. For all three topics, the question, model, effort,
+configuration, transport and saved snapshot match within each condition across
+repetitions; both memory arms also receive identical initial bodies within the
+arm. Current's topic-3 totals still vary from 1,203,452 to 49,558, with 24/0
+commands. This does not establish complete relevant-information coverage or a
+sole cause. `query-anchor-first-lap-two-repetitions.json` preserves all 18 calls
+in this first-lap subset (29,869,775 inclusive tokens); this subset is not the
+whole study's current consumption. Keep the third repetition and retained-lap
+repetitions. Quality and adoption remain pending.
+
 Topic 1's first two repetitions also show substantial run variation under
 identical initial bodies within each memory arm: candidate 321,516/519,392,
 current 835,335/165,138. Question, model, effort, configuration, transport and

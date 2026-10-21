@@ -1,0 +1,449 @@
+{
+  "scope": "First-lap topics1/2/3 through two predeclared repetitions; third repetition and retained repetitions pending",
+  "model": "gpt-5.6-luna",
+  "effort": "xhigh",
+  "planSha256": "2222107f60d56e834bba2cd7b7b1e40726cc0a2f9ab10cd6ffe3fb62b240eae6",
+  "cells": [
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "comparisons": [
+        {
+          "repetition": 0,
+          "fresh": 2241019,
+          "candidate": 321516,
+          "current": 835335,
+          "freshRelativeReductionPercent": 85.65313368605977,
+          "currentRelativeReductionPercent": 61.510531702849754
+        },
+        {
+          "repetition": 1,
+          "fresh": 3096987,
+          "candidate": 519392,
+          "current": 165138,
+          "freshRelativeReductionPercent": 83.22911914063572,
+          "currentRelativeReductionPercent": -214.51997723116423
+        }
+      ],
+      "conditions": {
+        "fresh": {
+          "sameQuestionModelEffortConfigurationTransport": true,
+          "sameSavedSourceSnapshot": true,
+          "sameInitialBody": null,
+          "trials": [
+            {
+              "repetition": 0,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage1-fresh-r0",
+              "usage": {
+                "totalTokens": 2241019,
+                "inputTokens": 2225806,
+                "cachedInputTokens": 2034688,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 15213,
+                "reasoningOutputTokens": 6814
+              },
+              "commandCount": 66,
+              "answerSha256": "aa776651e49087a2d658cbb294f88d028b80655208c89f6663bde5455a5a2b6c",
+              "finalUsageKnown": true
+            },
+            {
+              "repetition": 1,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage1-fresh-r1",
+              "usage": {
+                "totalTokens": 3096987,
+                "inputTokens": 3079172,
+                "cachedInputTokens": 2862848,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 17815,
+                "reasoningOutputTokens": 8368
+              },
+              "commandCount": 74,
+              "answerSha256": "3f4ed3bdc933f0a68f004942a38e4a4e71d6db921e287175c2bd87b5326fd161",
+              "finalUsageKnown": true
+            }
+          ]
+        },
+        "candidate": {
+          "sameQuestionModelEffortConfigurationTransport": true,
+          "sameSavedSourceSnapshot": true,
+          "sameInitialBody": true,
+          "trials": [
+            {
+              "repetition": 0,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage1-candidate-r0",
+              "usage": {
+                "totalTokens": 321516,
+                "inputTokens": 313195,
+                "cachedInputTokens": 242304,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 8321,
+                "reasoningOutputTokens": 6090
+              },
+              "commandCount": 5,
+              "answerSha256": "151493c7780bf02b3fd13b70ab60e84333e317cb5684b2b07ac3b10fc1bdac13",
+              "finalUsageKnown": true,
+              "initialBodySha256": "2741853c6256152391707c4d338baf2e5037b7eaf0a6ad460ba3e7a136959eba",
+              "initialHookMs": 7196
+            },
+            {
+              "repetition": 1,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage1-candidate-r1",
+              "usage": {
+                "totalTokens": 519392,
+                "inputTokens": 510336,
+                "cachedInputTokens": 430720,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 9056,
+                "reasoningOutputTokens": 6696
+              },
+              "commandCount": 7,
+              "answerSha256": "939939f5fb530be557267e49232d19166e3f13bab6d8644231260e07c033e1e6",
+              "finalUsageKnown": true,
+              "initialBodySha256": "2741853c6256152391707c4d338baf2e5037b7eaf0a6ad460ba3e7a136959eba",
+              "initialHookMs": 7418
+            }
+          ]
+        },
+        "current": {
+          "sameQuestionModelEffortConfigurationTransport": true,
+          "sameSavedSourceSnapshot": true,
+          "sameInitialBody": true,
+          "trials": [
+            {
+              "repetition": 0,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage1-current-r0",
+              "usage": {
+                "totalTokens": 835335,
+                "inputTokens": 824601,
+                "cachedInputTokens": 718208,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 10734,
+                "reasoningOutputTokens": 7672
+              },
+              "commandCount": 10,
+              "answerSha256": "8c773785a0ca46d018bb78933fb826ee94553f310d80a128055b81228967e25a",
+              "finalUsageKnown": true,
+              "initialBodySha256": "932b170a0c22d8590f3a664f9e48060036892215fc2c5bacb616c58e81ae52b8",
+              "initialHookMs": 6274
+            },
+            {
+              "repetition": 1,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage1-current-r1",
+              "usage": {
+                "totalTokens": 165138,
+                "inputTokens": 157130,
+                "cachedInputTokens": 97024,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 8008,
+                "reasoningOutputTokens": 6209
+              },
+              "commandCount": 6,
+              "answerSha256": "4e52a50bc9ce8398ea32e62da9bb37304e648c6ad0ac0c9bd8f13e8ecaf30113",
+              "finalUsageKnown": true,
+              "initialBodySha256": "932b170a0c22d8590f3a664f9e48060036892215fc2c5bacb616c58e81ae52b8",
+              "initialHookMs": 6486
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "comparisons": [
+        {
+          "repetition": 0,
+          "fresh": 4870992,
+          "candidate": 51238,
+          "current": 52917,
+          "freshRelativeReductionPercent": 98.94809927834002,
+          "currentRelativeReductionPercent": 3.1728933990966985
+        },
+        {
+          "repetition": 1,
+          "fresh": 4188873,
+          "candidate": 47750,
+          "current": 49851,
+          "freshRelativeReductionPercent": 98.86007525174432,
+          "currentRelativeReductionPercent": 4.21455938697318
+        }
+      ],
+      "conditions": {
+        "fresh": {
+          "sameQuestionModelEffortConfigurationTransport": true,
+          "sameSavedSourceSnapshot": true,
+          "sameInitialBody": null,
+          "trials": [
+            {
+              "repetition": 0,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage2-fresh-r0",
+              "usage": {
+                "totalTokens": 4870992,
+                "inputTokens": 4852849,
+                "cachedInputTokens": 4615936,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 18143,
+                "reasoningOutputTokens": 8994
+              },
+              "commandCount": 36,
+              "answerSha256": "8cf93da37bafdbf4a1a5cde2413179c02f0bedfb0384bfd05e3edd3d51536e88",
+              "finalUsageKnown": true
+            },
+            {
+              "repetition": 1,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage2-fresh-r1",
+              "usage": {
+                "totalTokens": 4188873,
+                "inputTokens": 4171245,
+                "cachedInputTokens": 3944960,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 17628,
+                "reasoningOutputTokens": 9490
+              },
+              "commandCount": 35,
+              "answerSha256": "1fc8ffda447cced389003203ea8121f365ebb30034fb6a7504c88f5c3b569526",
+              "finalUsageKnown": true
+            }
+          ]
+        },
+        "candidate": {
+          "sameQuestionModelEffortConfigurationTransport": true,
+          "sameSavedSourceSnapshot": true,
+          "sameInitialBody": true,
+          "trials": [
+            {
+              "repetition": 0,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage2-candidate-r0",
+              "usage": {
+                "totalTokens": 51238,
+                "inputTokens": 43467,
+                "cachedInputTokens": 0,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 7771,
+                "reasoningOutputTokens": 5696
+              },
+              "commandCount": 0,
+              "answerSha256": "1ce7727654fa710b30a424453047fce473c7c110c5569a50a3254564d5022334",
+              "finalUsageKnown": true,
+              "initialBodySha256": "9f1e06849fd5232b0efea44fb680f5a440e50eec4e9eb4e9c848debfd4bbf316",
+              "initialHookMs": 8295
+            },
+            {
+              "repetition": 1,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage2-candidate-r1",
+              "usage": {
+                "totalTokens": 47750,
+                "inputTokens": 43467,
+                "cachedInputTokens": 6400,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 4283,
+                "reasoningOutputTokens": 2070
+              },
+              "commandCount": 0,
+              "answerSha256": "3e90665e0412b91af03e04360481b739c3e7cf34c49dba79a80e4e82a78f3087",
+              "finalUsageKnown": true,
+              "initialBodySha256": "9f1e06849fd5232b0efea44fb680f5a440e50eec4e9eb4e9c848debfd4bbf316",
+              "initialHookMs": 8878
+            }
+          ]
+        },
+        "current": {
+          "sameQuestionModelEffortConfigurationTransport": true,
+          "sameSavedSourceSnapshot": true,
+          "sameInitialBody": true,
+          "trials": [
+            {
+              "repetition": 0,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage2-current-r0",
+              "usage": {
+                "totalTokens": 52917,
+                "inputTokens": 43129,
+                "cachedInputTokens": 0,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 9788,
+                "reasoningOutputTokens": 6732
+              },
+              "commandCount": 0,
+              "answerSha256": "8870be15cba909bdfb1318f2445e6ec44d9554a1066ba100189cbabccf4fd669",
+              "finalUsageKnown": true,
+              "initialBodySha256": "90ac3ecef0a68afec502256aba7de63b499d8a1f138b01cb3f9e383ec01c97bc",
+              "initialHookMs": 6216
+            },
+            {
+              "repetition": 1,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage2-current-r1",
+              "usage": {
+                "totalTokens": 49851,
+                "inputTokens": 42921,
+                "cachedInputTokens": 6400,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 6930,
+                "reasoningOutputTokens": 4142
+              },
+              "commandCount": 0,
+              "answerSha256": "3cbe2d5e2d208185bf130362f18468459441d102d23c51f8ca3569e45906f7da",
+              "finalUsageKnown": true,
+              "initialBodySha256": "90ac3ecef0a68afec502256aba7de63b499d8a1f138b01cb3f9e383ec01c97bc",
+              "initialHookMs": 6480
+            }
+          ]
+        }
+      }
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "comparisons": [
+        {
+          "repetition": 0,
+          "fresh": 5171855,
+          "candidate": 1982869,
+          "current": 1203452,
+          "freshRelativeReductionPercent": 61.66039071087646,
+          "currentRelativeReductionPercent": -64.7651090363388
+        },
+        {
+          "repetition": 1,
+          "fresh": 3777870,
+          "candidate": 1243163,
+          "current": 49558,
+          "freshRelativeReductionPercent": 67.09354742222469,
+          "currentRelativeReductionPercent": -2408.5011501674803
+        }
+      ],
+      "conditions": {
+        "fresh": {
+          "sameQuestionModelEffortConfigurationTransport": true,
+          "sameSavedSourceSnapshot": true,
+          "sameInitialBody": null,
+          "trials": [
+            {
+              "repetition": 0,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage3-fresh-r0",
+              "usage": {
+                "totalTokens": 5171855,
+                "inputTokens": 5152802,
+                "cachedInputTokens": 4926208,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 19053,
+                "reasoningOutputTokens": 10863
+              },
+              "commandCount": 39,
+              "answerSha256": "73543c5b563c2c3b7f4cf3c9cf4ecf6dccdf97cc647543b454d1b032d05bc471",
+              "finalUsageKnown": true
+            },
+            {
+              "repetition": 1,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage3-fresh-r1",
+              "usage": {
+                "totalTokens": 3777870,
+                "inputTokens": 3759447,
+                "cachedInputTokens": 3503872,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 18423,
+                "reasoningOutputTokens": 7112
+              },
+              "commandCount": 75,
+              "answerSha256": "ae6662c1f92b61039ba522109cb3953014a009ef51dc6a60d41760f903bb7924",
+              "finalUsageKnown": true
+            }
+          ]
+        },
+        "candidate": {
+          "sameQuestionModelEffortConfigurationTransport": true,
+          "sameSavedSourceSnapshot": true,
+          "sameInitialBody": true,
+          "trials": [
+            {
+              "repetition": 0,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage3-candidate-r0",
+              "usage": {
+                "totalTokens": 1982869,
+                "inputTokens": 1966515,
+                "cachedInputTokens": 1824896,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 16354,
+                "reasoningOutputTokens": 9429
+              },
+              "commandCount": 37,
+              "answerSha256": "a8339eb54fcd455d345b90ba7ba18ae5a91670684ef4213b3213a0eb924e5b53",
+              "finalUsageKnown": true,
+              "initialBodySha256": "5488a8e768347eb0b555ecf826af516089bc6169da344c0b67fed61044779844",
+              "initialHookMs": 9038
+            },
+            {
+              "repetition": 1,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage3-candidate-r1",
+              "usage": {
+                "totalTokens": 1243163,
+                "inputTokens": 1226288,
+                "cachedInputTokens": 1103744,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 16875,
+                "reasoningOutputTokens": 12731
+              },
+              "commandCount": 13,
+              "answerSha256": "f767f13e618e9f9106073a921b012afec9aacf1d42679fe5bbf0c8766181cf8e",
+              "finalUsageKnown": true,
+              "initialBodySha256": "5488a8e768347eb0b555ecf826af516089bc6169da344c0b67fed61044779844",
+              "initialHookMs": 8870
+            }
+          ]
+        },
+        "current": {
+          "sameQuestionModelEffortConfigurationTransport": true,
+          "sameSavedSourceSnapshot": true,
+          "sameInitialBody": true,
+          "trials": [
+            {
+              "repetition": 0,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage3-current-r0",
+              "usage": {
+                "totalTokens": 1203452,
+                "inputTokens": 1190192,
+                "cachedInputTokens": 1056768,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 13260,
+                "reasoningOutputTokens": 8003
+              },
+              "commandCount": 24,
+              "answerSha256": "aad08416c86117e9a8924d4f6e1f33e24bf1314f9382cc22b130402bf2411651",
+              "finalUsageKnown": true,
+              "initialBodySha256": "ee5f422f6e0af7b1148d7123ab08850b56bfbf02063f34382345a318301cc4c1",
+              "initialHookMs": 6629
+            },
+            {
+              "repetition": 1,
+              "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage3-current-r1",
+              "usage": {
+                "totalTokens": 49558,
+                "inputTokens": 42825,
+                "cachedInputTokens": 0,
+                "cacheWriteInputTokens": 0,
+                "outputTokens": 6733,
+                "reasoningOutputTokens": 5178
+              },
+              "commandCount": 0,
+              "answerSha256": "9443b88a00782f7690d256a1a5c20d974359f933fa24f05b82b586207a6bb9b1",
+              "finalUsageKnown": true,
+              "initialBodySha256": "ee5f422f6e0af7b1148d7123ab08850b56bfbf02063f34382345a318301cc4c1",
+              "initialHookMs": 6824
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "knownMatchedTokens": 29869775,
+  "qualityAccepted": false,
+  "productionAdoption": false,
+  "seedAcquisitionSeparate": true,
+  "limitations": [
+    "Keep every observed repetition and negative cell; do not select the best run.",
+    "Fixed initial context still has observed run variability; no sole-cause claim is made.",
+    "No quality/adoption approval and no full-study completion follow from two repetitions."
+  ]
+}
