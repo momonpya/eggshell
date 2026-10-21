@@ -39,10 +39,10 @@ def qualified_source(construction, qualification):
     protocol = read(qualification / 'protocol.json')
     source = construction / 'checkout'
     if (not result['complete'] or not checked['complete'] or
-            not checked['allStoredFullProbesDelivered'] or
+            not checked.get('nativeIntegrityVerified', False) or
             protocol['candidate'] != result['runtimeSha256'] or
             sha(source / '.lake/build/bin/eggshell') != result['runtimeSha256']):
-        raise ValueError('Stored-source delivery and the exact candidate must qualify before freezing')
+        raise ValueError('Native source/body integrity and the exact candidate must qualify before freezing')
     return source, result['runtimeSha256'], protocol
 
 

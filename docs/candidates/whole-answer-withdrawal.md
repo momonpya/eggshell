@@ -22,3 +22,9 @@ Detailed source, patch, native results and omissions remain at:
 `/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/minimum-before-refinement-20261021/withdrawal-records/`.
 The retired preparation is at:
 `/Users/ovm/.codex/experiments/eggshell/source-minima-tokens-20261021/retired.json`.
+
+The same distinction applies to example source probes: complete copies of
+all historical examples are diagnostics. Freezing now requires verified native
+source/body integrity and the exact runtime. Relevance to the actual question
+and answer quality still require review; native integrity alone does not
+approve a candidate. Eight admission/restart tests cover these boundaries.

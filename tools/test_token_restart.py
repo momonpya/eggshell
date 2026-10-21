@@ -1,4 +1,5 @@
 import json
+import hashlib
 from pathlib import Path
 import tempfile
 import unittest
@@ -88,9 +89,27 @@ class RestartTests(unittest.TestCase):
             qualification = base / 'qualification'; qualification.mkdir()
             (build / 'result.json').write_text(json.dumps(dict(complete=True, runtimeSha256='unqualified')))
             (qualification / 'protocol.json').write_text(json.dumps(dict(candidate='unqualified')))
-            (qualification / 'result.json').write_text(json.dumps(dict(complete=True, allStoredFullProbesDelivered=False)))
+            (qualification / 'result.json').write_text(json.dumps(dict(
+                complete=True, nativeIntegrityVerified=False, allStoredFullProbesDelivered=True)))
             with self.assertRaisesRegex(ValueError, 'must qualify'):
                 qualified_source(build, qualification)
+
+    def test_valid_native_delivery_does_not_require_every_example_in_full(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            build = base / 'build'; build.mkdir()
+            qualification = base / 'qualification'; qualification.mkdir()
+            binary = build / 'checkout/.lake/build/bin/eggshell'
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b'qualified-native-artifact')
+            digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+            (build / 'result.json').write_text(json.dumps(dict(complete=True, runtimeSha256=digest)))
+            (qualification / 'protocol.json').write_text(json.dumps(dict(candidate=digest)))
+            (qualification / 'result.json').write_text(json.dumps(dict(
+                complete=True, nativeIntegrityVerified=True, allStoredFullProbesDelivered=False)))
+            source, runtime, _ = qualified_source(build, qualification)
+            self.assertEqual(source, build / 'checkout')
+            self.assertEqual(runtime, digest)
 
 
 if __name__ == '__main__':
