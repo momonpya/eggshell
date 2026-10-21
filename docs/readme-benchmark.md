@@ -1679,3 +1679,29 @@ withdrawn. The active runtime was not replaced, and a new token comparison has
 not started. The next genuine repair still requires a complete fixed-version
 restart from topic 1 repetition 0; these native fixtures are qualification
 evidence, not a continuation or replacement of any token-result cell.
+
+Allocation profiling of the rejected `7d1e3b…` proposal establishes two
+distinct boundaries. Its minimum-only plan reserves 119,454 characters for
+topic 1 and 119,742 for topic 2. Replacing the topic-1 predicate owner's
+excerpt with its original observation costs 125,247 characters, exceeding the
+120,000-character ceiling even though the byte cost remains below 128,000.
+The topic-2 predicate owner is absent from the clipping choices altogether.
+`scope-context-20261021/packet-allocation-audit.json` joins the original owner
+IDs, minimum alternatives, complete costs and captured body hashes. Diagnostic
+topic 1 remains byte-identical to the rejected proposal; diagnostic stderr is
+explicitly separate from delivery and token measurement.
+
+Removing optional following context from minimum reservations restores all six
+stored topic-1 probes in the 46-document fixture, but does not qualify topic 2.
+Subsequent owner-domain and marginal-cost proposals also remain unadopted.
+Neither native qualification nor a successful fitting test is a token result;
+there are still no answering-model calls under these proposals. The next
+diagnostic traces original observation admission, clipping choices and actual
+delivery by the same owner IDs before any new frozen model comparison.
+
+Resource maintenance preserves every model record, DB and source. Twenty-three
+closed executable aliases and 224 byte-identical numerical asset aliases now
+use APFS clones at their original paths, with full hashes, modes and mtimes
+verified. The live numerical master is read-only. A disk-precondition stop is
+retained separately; no answering-model consumption occurred in that setup.
+The three-GiB aggregate RSS stop threshold remains unchanged.
