@@ -125,98 +125,84 @@ does not excuse it. Complete prior-answer delivery is readiness, not a quality
 or adoption verdict. All 54 calls are collected anew after these harness
 corrections, with the delivery executable unchanged.
 
-`history-continuity-tokens-20261021` is the current new fixed comparison.
-Its six r0 matched triples (18 answering calls) are complete:
+`history-continuity-tokens-20261021` is complete: all 54 new answering calls,
+with three matched repetitions per topic/lap at **gpt-5.6-luna / xhigh**.
+Each stage uses one predeclared saved r0 history for every condition and
+repetition. Runtime, model, prompts and measurement code remain unchanged.
+No historical answering trial or public-main arm is imported.
 
-| Lap | Topic | Fresh | Current | Candidate | Fresh-relative saving |
-| --- | --- | ---: | ---: | ---: | ---: |
-| First | 1 | 4,088,776 | 1,291,520 | 1,317,615 | 67.8% |
-| First | 2 | 3,652,453 | 52,736 | 48,147 | 98.7% |
-| First | 3 | 5,614,689 | 1,999,810 | 555,010 | 90.1% |
-| Retained | 1 | 1,883,938 | 48,839 | 149,190 | 92.1% |
-| Retained | 2 | 4,744,978 | 51,778 | 51,348 | 98.9% |
-| Retained | 3 | 2,271,411 | 51,451 | 50,979 | 97.8% |
+The [complete results](benchmarks/history-continuity-results.json) retain all
+54 inclusive input/output totals, cached input, source fingerprints, actual
+packet digests, commands, paired means, ranges and ratios of sums. Original
+bodies and RPC/save/shutdown records remain under the named study directory.
 
-These are one repetition per topic/lap. First-lap topic 1 is below the 70% target and
-consumes 2.0% more than current; no overall aggregate conceals it. Its actual
-initial body is byte-identical to the earlier `caf318be…` trial. Runtime and
-prompts remain fixed while the predetermined repetitions continue.
-Retained topic 1 is also worse than current (149,190 versus 48,839), despite
-meeting the fresh-relative target. Neither regression is an adoption result.
+| Lap | Topic | r0 saving | r1 saving | r2 saving | Paired mean | Ratio of sums |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| First | 1 | 67.8% | 88.9% | 83.6% | 80.1% | 80.1% |
+| First | 2 | 98.7% | 99.1% | 98.6% | 98.8% | 98.8% |
+| First | 3 | 90.1% | 97.5% | 80.5% | 89.4% | 90.3% |
+| Retained | 1 | 92.1% | 80.5% | 83.3% | 85.3% | 84.6% |
+| Retained | 2 | 98.9% | 98.5% | 98.3% | 98.6% | 98.6% |
+| Retained | 3 | 97.8% | 98.6% | 97.9% | 98.1% | 98.2% |
 
-The first lap of repetition 1 is also complete, with the same saved sources,
-prompts, runtime and model settings:
+Topics 2 and 3 meet the fresh-relative reduction targets in all three
+repetitions of both laps. First-lap topic 1 r0 misses 70%; retained topic 1
+r1/r2 miss 90%. These trials are retained without replacement.
 
-| Topic | Fresh | Current | Candidate | Fresh-relative saving |
-| --- | ---: | ---: | ---: | ---: |
-| 1 | 4,686,455 | 829,666 | 521,525 | 88.9% |
-| 2 | 5,334,632 | 50,382 | 48,172 | 99.1% |
-| 3 | 4,303,740 | 811,016 | 107,979 | 97.5% |
+The current-development comparison is also retained separately. A negative
+entry means the candidate consumed more tokens than current.
 
-Topic 1's initial body is byte-identical between repetitions 0 and 1; the
-different answering totals do not come from a delivery change. Topic 3 uses
-one source-inspection command in repetition 1 versus further investigation
-in repetition 0. The actual commands and retained source-probe omissions are
-preserved in the r1 audits. All 27 completed calls retain known inclusive
-usage; the other 27 calls continue in their fixed order. These partial
-repetitions do not establish a complete token or quality adoption result.
+| Lap | Topic | r0 vs current | r1 vs current | r2 vs current | Paired mean | Ratio of sums |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| First | 1 | -2.0% | +37.1% | -53.0% | -5.9% | +5.3% |
+| First | 2 | +8.7% | +4.4% | +3.3% | +5.5% | +5.5% |
+| First | 3 | +72.2% | +86.7% | +22.5% | +60.5% | +64.7% |
+| Retained | 1 | -205.5% | +41.6% | -1408.8% | -524.2% | -61.7% |
+| Retained | 2 | +0.8% | +0.9% | -3.0% | -0.4% | -0.4% |
+| Retained | 3 | +0.9% | -1.6% | +2.2% | +0.5% | +0.5% |
 
-Retained topic 1 r1 consumes 2,090,340 fresh, 696,002 current and 406,766
-candidate tokens (80.5% fresh-relative reduction), below the 90% target.
-Its initial body is byte-identical to r0. A retrospective source review finds
-that `HLSL.cpp:396–405` was stored under original owner
-`v9464950495224635698`, absent from the initial body, and read again by the
-answering model. The same command also reads `HLSL.cpp:433–459`, whose full
-range was not stored in that checkpoint. These are distinct delivery and
-new-evidence observations; neither their entire token cost nor this result
-is attributed solely to model variance. The diagnostic is retained in
-`audits/stage4-r1-additional-source-review.json`. It does not retroactively
-change the admission gate, drop this trial or alter the frozen comparison.
+**The candidate is not adopted.** Retained topic 1 consumes 61.7% more than
+current over its three matched runs and misses its target. Retained topic 2
+does not improve current in aggregate either. An overall reduction across
+different topics cannot override these regressions. Production and README
+release claims do not adopt this isolated runtime.
 
-Repetition 1's retained lap is now complete as well:
+All 18 actual candidate bodies contain the complete predeclared prior answer
+under an original saved owner. At each stage the initial candidate body is
+byte-identical across the three repetitions. Topic 2 in both laps and retained
+topic 3 have zero source-reading commands in all three candidate trials. All
+176 captured hooks complete within 30 seconds; the slowest initial body takes
+12.554 seconds. These checks do not establish complete source coverage or
+independent answer-quality acceptance.
 
-| Topic | Fresh | Current | Candidate | Fresh-relative saving |
-| --- | ---: | ---: | ---: | ---: |
-| 1 | 2,090,340 | 696,002 | 406,766 | 80.5% |
-| 2 | 3,509,975 | 53,235 | 52,759 | 98.5% |
-| 3 | 3,656,447 | 49,739 | 50,546 | 98.6% |
+The retained-topic-1 r1 source review finds that `HLSL.cpp:396–405` was stored
+under original owner `v9464950495224635698`, absent from the initial body and
+read again. The same command reads `HLSL.cpp:433–459`, whose full range was not
+stored. These delivery and new-evidence observations stay separate; the entire
+token difference is not assigned solely to model variance. See
+`audits/stage4-r1-additional-source-review.json`.
 
-All 36 calls in repetitions 0 and 1 are complete; the last 18 calls retain
-their predeclared rotating order. Retained topics 2 and 3 again contain no
-tool executions in the candidate condition. Retained topic 3 r1 nevertheless
-uses more tokens than current (50,546 versus 49,739); its fresh-relative
-saving does not hide that comparison. Runtime and all measurement inputs
-remain fixed, with no quality or production adoption claimed.
+The first-lap topic-3 r2 answer also misstates which flag is unused with `-E`,
+although it correctly gives `-E` precedence elsewhere. The model had read the
+full test: `CHECK-PP` expects `-fsyntax-only` to be unused, while `-S`/`-c` are
+unused in their respective cases. This interpretation error is recorded in
+`audits/stage3-r2-quality-note.json`, separately from the delivery omission.
+The benchmark does not claim a successful compiled-snapshot clang/lit run.
 
-Topic 2 uses the actual new 53-document history. The prior answer is fully
-delivered and the actual initial body matches preparation. The answering turn
-contains no tool calls, so this result uses delivered saved history rather
-than a new source investigation. One HLSL full-excerpt probe remains absent;
-its delivered source contains five of six material anchors, and that omission
-stays in the admission and quality audit. It is not silently reclassified as
-full source coverage. Source statuses, save/shutdown and inclusive usage are
-retained in `audits/stage1-r0.json` through `audits/stage6-r0.json`.
+Known answering consumption is **77,549,567 total tokens**, with no failed or
+unknown-final-usage trial in these 54 calls. No new seed is acquired. The
+accepted seed cost is 4,082,469 tokens; known acquisition including the rejected
+source-access attempt is 4,483,447, plus unknown usage for the unsupported-model
+rejection. These acquisition costs remain separate from follow-up reductions.
 
-Retained topics 2 and 3 also contain no tool calls. Their actual initial
-bodies match their prepared bodies and complete in 10.062/10.851 seconds;
-the previous answer is fully delivered in each case. The source-probe
-omissions remain recorded, including the missing complete phase/action
-excerpts in topic 3. The answer retains the static phase/job distinctions
-and explicitly does not claim a successful snapshot compiler/lit run.
-These observations are narrower than a complete independent quality verdict.
-
-The r0 stage-4 and stage-6 launcher sessions end with status 143 after their
-completed triples (stage 4 also finishes the next source admission). Their
-monitor records have no finalized exit status; they are not reported as
-finalized guard passes. A shell loop exposes its parent command to the owned
-prefix scan. Remaining launches use a Python parent outside that prefix,
-invoking the identical frozen guard and driver commands serially. No completed
-answer is resubmitted, and no runtime, prompt, source, model or measurement
-harness is changed. The other 36 calls retain their original fixed schedule.
-
-The retained lap and two later repetitions continue with the same predeclared
-r0 snapshots. No production adoption or full-cohort quality verdict follows
-from these initial triples.
+The three-GiB RSS stop threshold remains unchanged. The largest recorded model
+run peak is 2,904,480 KiB. The r0 stage-4 and stage-6 launcher sessions ended
+with status 143 after completed triples; their guard records did not finalize
+and are not described as finalized guard passes. A Python parent outside the
+owned prefix then invoked the identical frozen guard/driver commands for the
+remaining calls. No completed answer was resubmitted. The closure record
+`retired.json` prevents further dispatch from this completed, unadopted study.
+The full paper goal remains open.
 
 Resource maintenance repacks 221 closed native executable payloads into 28
 shared zstd bundles, reading back and checking every original native SHA-256.

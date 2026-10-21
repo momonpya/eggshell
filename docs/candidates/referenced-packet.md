@@ -34,3 +34,10 @@ Records:
 The latter source is a diagnostic saved history from the closed prior run;
 its answering trials are not imported into the new comparison. New model
 evaluation starts at topic 1 r0 and retains all 54 new matched calls.
+
+The fixed `history-continuity-tokens-20261021` evaluation is complete: 54 new
+matched calls. Topics 2/3 meet their first/retained reduction targets, but
+retained topic 1 misses 90% twice and consumes 61.7% more than current in its
+three-run aggregate. A stored-source omission and a model interpretation error
+are recorded separately. This candidate remains unadopted; see
+[the complete comparison](../readme-benchmark.md) and its per-trial result file.

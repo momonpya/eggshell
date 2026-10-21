@@ -1,0 +1,2524 @@
+{
+  "complete": true,
+  "createdUtc": "2026-10-21T12:48:51.182914+00:00",
+  "base": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021",
+  "planSha256": "59bf2ca0c40e3a0d88821c9b4224f9b49fa6be05cb06c19f1242c8f1c572c2d2",
+  "model": "gpt-5.6-luna",
+  "effort": "xhigh",
+  "runtimes": {
+    "current": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+    "candidate": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a"
+  },
+  "sourceWorkspace": "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project",
+  "llvmCommit": "6dfe1677ab8dffbc6ec13d53a1e0215d75147689",
+  "measurementCodeSha256": {
+    "readme_token_dispatch.py": "27ddacb25a6385f9054fc59c33e577d7917967066fad174a6890870cbc9817af",
+    "readme_benchmark.py": "5c13ed88c1f77b0ce951c16fa0643895d3b70eed6da87299d31253ad043be519",
+    "readme_trial.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a",
+    "readme_preparation.py": "6218240653bd5e682b479b24e16df4f1358a9efa2e52d2a4e26ab5141c21e251",
+    "readme_matched.py": "8e80dee0815f2a678315a8d2406a372b8d09254f812d48bd2f7b65d58f0b7513",
+    "memory_guard.py": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+    "pilot_server.py": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+    "prepare_token_restart.py": "258340b868ab580193d31a8268aa5e10c5d53acbba52ebeec81587fbfc91ae72",
+    "prepare_token_stage.py": "d68c066151b27863588f6a7b16dc3588762d58772ba216bc145203a7f5ae8db3",
+    "audit_token_stage.py": "79fd665fecb869ac20cb73136daa9a67c4e8f26d496e8a7c774ebdad913efba7",
+    "owned_daemon.py": "ce9257834622dac3030058076c0ff45c63c54b929b2def94b769a8a5a573a070"
+  },
+  "answeringCalls": 54,
+  "repetitionsPerCell": 3,
+  "knownConsumedTokens": 77549567,
+  "unknownFinalUsage": [],
+  "newSeedAcquisition": false,
+  "seedAcquisitionSeparate": {
+    "acceptedTokens": 4082469,
+    "deniedSourceAttemptTokens": 400978,
+    "knownTotalTokens": 4483447,
+    "unsupportedModelRejectionFinalUsageKnown": false
+  },
+  "cells": [
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "comparisons": [
+        {
+          "repetition": 0,
+          "fresh": 4088776,
+          "candidate": 1317615,
+          "current": 1291520,
+          "freshRelativeReductionPercent": 67.77483041379621,
+          "currentRelativeReductionPercent": -2.0204874876114967
+        },
+        {
+          "repetition": 1,
+          "fresh": 4686455,
+          "candidate": 521525,
+          "current": 829666,
+          "freshRelativeReductionPercent": 88.87165245372034,
+          "currentRelativeReductionPercent": 37.14036732853943
+        },
+        {
+          "repetition": 2,
+          "fresh": 2714286,
+          "candidate": 444503,
+          "current": 290593,
+          "freshRelativeReductionPercent": 83.6235754080447,
+          "currentRelativeReductionPercent": -52.9641113172031
+        }
+      ],
+      "totalTokens": {
+        "fresh": 11489517,
+        "candidate": 2283643,
+        "current": 2411779
+      },
+      "freshRelativeReduction": {
+        "pairedMeanPercent": 80.09001942518708,
+        "rangePercent": [
+          67.77483041379621,
+          88.87165245372034
+        ],
+        "ratioOfSumsPercent": 80.12411661865333
+      },
+      "currentRelativeReduction": {
+        "pairedMeanPercent": -5.948077158758387,
+        "rangePercent": [
+          -52.9641113172031,
+          37.14036732853943
+        ],
+        "ratioOfSumsPercent": 5.312924608763904
+      },
+      "targetPercent": 70,
+      "belowTargetRepetitions": [
+        0
+      ],
+      "worseThanCurrentRepetitions": [
+        0,
+        2
+      ]
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "comparisons": [
+        {
+          "repetition": 0,
+          "fresh": 3652453,
+          "candidate": 48147,
+          "current": 52736,
+          "freshRelativeReductionPercent": 98.681790018927,
+          "currentRelativeReductionPercent": 8.701835558252426
+        },
+        {
+          "repetition": 1,
+          "fresh": 5334632,
+          "candidate": 48172,
+          "current": 50382,
+          "freshRelativeReductionPercent": 99.0969948817463,
+          "currentRelativeReductionPercent": 4.386487237505459
+        },
+        {
+          "repetition": 2,
+          "fresh": 3569690,
+          "candidate": 48890,
+          "current": 50555,
+          "freshRelativeReductionPercent": 98.63041328518723,
+          "currentRelativeReductionPercent": 3.2934427850855506
+        }
+      ],
+      "totalTokens": {
+        "fresh": 12556775,
+        "candidate": 145209,
+        "current": 153673
+      },
+      "freshRelativeReduction": {
+        "pairedMeanPercent": 98.80306606195352,
+        "rangePercent": [
+          98.63041328518723,
+          99.0969948817463
+        ],
+        "ratioOfSumsPercent": 98.84358045756176
+      },
+      "currentRelativeReduction": {
+        "pairedMeanPercent": 5.460588526947812,
+        "rangePercent": [
+          3.2934427850855506,
+          8.701835558252426
+        ],
+        "ratioOfSumsPercent": 5.507799027805795
+      },
+      "targetPercent": 70,
+      "belowTargetRepetitions": [],
+      "worseThanCurrentRepetitions": []
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "comparisons": [
+        {
+          "repetition": 0,
+          "fresh": 5614689,
+          "candidate": 555010,
+          "current": 1999810,
+          "freshRelativeReductionPercent": 90.1150357571007,
+          "currentRelativeReductionPercent": 72.24686345202794
+        },
+        {
+          "repetition": 1,
+          "fresh": 4303740,
+          "candidate": 107979,
+          "current": 811016,
+          "freshRelativeReductionPercent": 97.49104267451101,
+          "currentRelativeReductionPercent": 86.68595933988972
+        },
+        {
+          "repetition": 2,
+          "fresh": 3086501,
+          "candidate": 602868,
+          "current": 777878,
+          "freshRelativeReductionPercent": 80.46759097113528,
+          "currentRelativeReductionPercent": 22.498386636464843
+        }
+      ],
+      "totalTokens": {
+        "fresh": 13004930,
+        "candidate": 1265857,
+        "current": 3588704
+      },
+      "freshRelativeReduction": {
+        "pairedMeanPercent": 89.35788980091566,
+        "rangePercent": [
+          80.46759097113528,
+          97.49104267451101
+        ],
+        "ratioOfSumsPercent": 90.26632976878768
+      },
+      "currentRelativeReduction": {
+        "pairedMeanPercent": 60.477069809460836,
+        "rangePercent": [
+          22.498386636464843,
+          86.68595933988972
+        ],
+        "ratioOfSumsPercent": 64.72662554504356
+      },
+      "targetPercent": 70,
+      "belowTargetRepetitions": [],
+      "worseThanCurrentRepetitions": []
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "comparisons": [
+        {
+          "repetition": 0,
+          "fresh": 1883938,
+          "candidate": 149190,
+          "current": 48839,
+          "freshRelativeReductionPercent": 92.08094958538975,
+          "currentRelativeReductionPercent": -205.4730850345011
+        },
+        {
+          "repetition": 1,
+          "fresh": 2090340,
+          "candidate": 406766,
+          "current": 696002,
+          "freshRelativeReductionPercent": 80.54067759311883,
+          "currentRelativeReductionPercent": 41.556777135697885
+        },
+        {
+          "repetition": 2,
+          "fresh": 4345556,
+          "candidate": 726317,
+          "current": 48140,
+          "freshRelativeReductionPercent": 83.28598227706651,
+          "currentRelativeReductionPercent": -1408.7598670544246
+        }
+      ],
+      "totalTokens": {
+        "fresh": 8319834,
+        "candidate": 1282273,
+        "current": 792981
+      },
+      "freshRelativeReduction": {
+        "pairedMeanPercent": 85.3025364851917,
+        "rangePercent": [
+          80.54067759311883,
+          92.08094958538975
+        ],
+        "ratioOfSumsPercent": 84.58775739996736
+      },
+      "currentRelativeReduction": {
+        "pairedMeanPercent": -524.2253916510759,
+        "rangePercent": [
+          -1408.7598670544246,
+          41.556777135697885
+        ],
+        "ratioOfSumsPercent": -61.70286551632385
+      },
+      "targetPercent": 90,
+      "belowTargetRepetitions": [
+        1,
+        2
+      ],
+      "worseThanCurrentRepetitions": [
+        0,
+        2
+      ]
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "comparisons": [
+        {
+          "repetition": 0,
+          "fresh": 4744978,
+          "candidate": 51348,
+          "current": 51778,
+          "freshRelativeReductionPercent": 98.91784535144315,
+          "currentRelativeReductionPercent": 0.8304685387616362
+        },
+        {
+          "repetition": 1,
+          "fresh": 3509975,
+          "candidate": 52759,
+          "current": 53235,
+          "freshRelativeReductionPercent": 98.49688388093932,
+          "currentRelativeReductionPercent": 0.8941485864562788
+        },
+        {
+          "repetition": 2,
+          "fresh": 3169297,
+          "candidate": 52830,
+          "current": 51304,
+          "freshRelativeReductionPercent": 98.3330688162075,
+          "currentRelativeReductionPercent": -2.9744269452674255
+        }
+      ],
+      "totalTokens": {
+        "fresh": 11424250,
+        "candidate": 156937,
+        "current": 156317
+      },
+      "freshRelativeReduction": {
+        "pairedMeanPercent": 98.58259934952999,
+        "rangePercent": [
+          98.3330688162075,
+          98.91784535144315
+        ],
+        "ratioOfSumsPercent": 98.62628181281048
+      },
+      "currentRelativeReduction": {
+        "pairedMeanPercent": -0.4166032733498368,
+        "rangePercent": [
+          -2.9744269452674255,
+          0.8941485864562788
+        ],
+        "ratioOfSumsPercent": -0.3966299250881222
+      },
+      "targetPercent": 90,
+      "belowTargetRepetitions": [],
+      "worseThanCurrentRepetitions": [
+        2
+      ]
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "comparisons": [
+        {
+          "repetition": 0,
+          "fresh": 2271411,
+          "candidate": 50979,
+          "current": 51451,
+          "freshRelativeReductionPercent": 97.75562414728114,
+          "currentRelativeReductionPercent": 0.9173776991700842
+        },
+        {
+          "repetition": 1,
+          "fresh": 3656447,
+          "candidate": 50546,
+          "current": 49739,
+          "freshRelativeReductionPercent": 98.61761978226404,
+          "currentRelativeReductionPercent": -1.6224692896921933
+        },
+        {
+          "repetition": 2,
+          "fresh": 2289564,
+          "candidate": 47841,
+          "current": 48910,
+          "freshRelativeReductionPercent": 97.91047553158593,
+          "currentRelativeReductionPercent": 2.185647106931098
+        }
+      ],
+      "totalTokens": {
+        "fresh": 8217422,
+        "candidate": 149366,
+        "current": 150100
+      },
+      "freshRelativeReduction": {
+        "pairedMeanPercent": 98.09457315371037,
+        "rangePercent": [
+          97.75562414728114,
+          98.61761978226404
+        ],
+        "ratioOfSumsPercent": 98.18232530835097
+      },
+      "currentRelativeReduction": {
+        "pairedMeanPercent": 0.49351850546966297,
+        "rangePercent": [
+          -1.6224692896921933,
+          2.185647106931098
+        ],
+        "ratioOfSumsPercent": 0.4890073284477015
+      },
+      "targetPercent": 90,
+      "belowTargetRepetitions": [],
+      "worseThanCurrentRepetitions": [
+        1
+      ]
+    }
+  ],
+  "trials": [
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 0,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage1-fresh-r0",
+      "usage": {
+        "totalTokens": 4088776,
+        "inputTokens": 4063366,
+        "cachedInputTokens": 3816576,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 25410,
+        "reasoningOutputTokens": 14333
+      },
+      "answerSha256": "cf92b8d6dee4315c9f83d61a541cb917d70c96b4788bdedeea916e9fe15ab131",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 78,
+      "initialPackets": []
+    },
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 0,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage1-candidate-r0",
+      "usage": {
+        "totalTokens": 1317615,
+        "inputTokens": 1304979,
+        "cachedInputTokens": 1182848,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 12636,
+        "reasoningOutputTokens": 9198
+      },
+      "answerSha256": "a2160fb91601a31bde061e5723614686e6fb593e40ffc371549370e2d99d8adc",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 15,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 121149,
+          "sha256": "6083a7ee4fc89b05ad3910fac20da3f48129ea4a0194b90b70406477139b7f4e",
+          "elapsedMs": 7737,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v1311888273957667032"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "target-width-existing-test",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope"
+        ],
+        "missingSourceProbes": [],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 0,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage1-current-r0",
+      "usage": {
+        "totalTokens": 1291520,
+        "inputTokens": 1274822,
+        "cachedInputTokens": 1140992,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 16698,
+        "reasoningOutputTokens": 10949
+      },
+      "answerSha256": "ef8878b1259c8f86aa97234580f67df36f3cd83f09d6be92dda10b97c3c05d63",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 37,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 120317,
+          "sha256": "932b170a0c22d8590f3a664f9e48060036892215fc2c5bacb616c58e81ae52b8",
+          "elapsedMs": 6997,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 1,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage1-candidate-r1",
+      "usage": {
+        "totalTokens": 521525,
+        "inputTokens": 513497,
+        "cachedInputTokens": 435200,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 8028,
+        "reasoningOutputTokens": 5458
+      },
+      "answerSha256": "80d95f2b0fe206e06327734bf86d78634675682e09d657c7a9ddb68eb29464fa",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 7,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 121149,
+          "sha256": "6083a7ee4fc89b05ad3910fac20da3f48129ea4a0194b90b70406477139b7f4e",
+          "elapsedMs": 7425,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v1311888273957667032"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "target-width-existing-test",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope"
+        ],
+        "missingSourceProbes": [],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 1,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage1-current-r1",
+      "usage": {
+        "totalTokens": 829666,
+        "inputTokens": 815007,
+        "cachedInputTokens": 701696,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 14659,
+        "reasoningOutputTokens": 11091
+      },
+      "answerSha256": "6840e610d7824133bac28609301a0bc96717eb9cc38c8399c3fe028c2b7991bb",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 11,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 120317,
+          "sha256": "932b170a0c22d8590f3a664f9e48060036892215fc2c5bacb616c58e81ae52b8",
+          "elapsedMs": 6661,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 1,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage1-fresh-r1",
+      "usage": {
+        "totalTokens": 4686455,
+        "inputTokens": 4661343,
+        "cachedInputTokens": 4427904,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 25112,
+        "reasoningOutputTokens": 15614
+      },
+      "answerSha256": "88caaa22c727992823dc7e1b9dcbb65615251dc28789bd1b537c6d64f43666e3",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 59,
+      "initialPackets": []
+    },
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 2,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage1-current-r2",
+      "usage": {
+        "totalTokens": 290593,
+        "inputTokens": 283902,
+        "cachedInputTokens": 238720,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 6691,
+        "reasoningOutputTokens": 5257
+      },
+      "answerSha256": "f2015ca4d8971eb083bc98d83fc4916670e4f99050b75caf14abecb99a91c72d",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 6,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 120317,
+          "sha256": "932b170a0c22d8590f3a664f9e48060036892215fc2c5bacb616c58e81ae52b8",
+          "elapsedMs": 6634,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 2,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage1-fresh-r2",
+      "usage": {
+        "totalTokens": 2714286,
+        "inputTokens": 2700797,
+        "cachedInputTokens": 2526592,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 13489,
+        "reasoningOutputTokens": 7929
+      },
+      "answerSha256": "0086e583305cfd126b198561acb31e4833406c3dbb314002ae3be184c9688a38",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 35,
+      "initialPackets": []
+    },
+    {
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 2,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage1-candidate-r2",
+      "usage": {
+        "totalTokens": 444503,
+        "inputTokens": 431511,
+        "cachedInputTokens": 351616,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 12992,
+        "reasoningOutputTokens": 9601
+      },
+      "answerSha256": "790c6ea8ba9a54719d6e00af518a40fa28083672297a70d957a5cbdc242288db",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 16,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 121149,
+          "sha256": "6083a7ee4fc89b05ad3910fac20da3f48129ea4a0194b90b70406477139b7f4e",
+          "elapsedMs": 7552,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v1311888273957667032"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "target-width-existing-test",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope"
+        ],
+        "missingSourceProbes": [],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 0,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage2-fresh-r0",
+      "usage": {
+        "totalTokens": 3652453,
+        "inputTokens": 3635397,
+        "cachedInputTokens": 3412992,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 17056,
+        "reasoningOutputTokens": 5871
+      },
+      "answerSha256": "7b65da0eb249dd3d9038f65cebec2a7878e8b9e66ee6c3c47fc1d3e0f0a15b1e",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 76,
+      "initialPackets": []
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 0,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage2-candidate-r0",
+      "usage": {
+        "totalTokens": 48147,
+        "inputTokens": 43714,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 4433,
+        "reasoningOutputTokens": 2588
+      },
+      "answerSha256": "db121fdcaec479aeb9b7dfae070b97e5330945f7e5105acdd12f65c54d429c9f",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 120830,
+          "sha256": "4c36f4a35a5868d2822a3ecfe2d4d289d76a75db3fe6d00a620372578dcea493",
+          "elapsedMs": 9406,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v16427935886263324197"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate",
+          "mode-before-parse-and-config",
+          "clang-cl-pass-through-reparse",
+          "dumpmachine-reports-toolchain-triple",
+          "default-toolchain-selection"
+        ],
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 0,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage2-current-r0",
+      "usage": {
+        "totalTokens": 52736,
+        "inputTokens": 43689,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 9047,
+        "reasoningOutputTokens": 6214
+      },
+      "answerSha256": "ed469241950f59e9329c267007c9d0c05e54ba8cfb944af48e579247350743e5",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 119983,
+          "sha256": "815a9ca6c1583e1f88951b4476904ede80c4a2b6a33f112fce90c41a5c28cd0a",
+          "elapsedMs": 6954,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 1,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage2-candidate-r1",
+      "usage": {
+        "totalTokens": 48172,
+        "inputTokens": 43715,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 4457,
+        "reasoningOutputTokens": 2588
+      },
+      "answerSha256": "7bc27afdcd41986221c63f22278bf6e9c9c1f204c3d73a3ea5b22a3a0be69507",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 120830,
+          "sha256": "4c36f4a35a5868d2822a3ecfe2d4d289d76a75db3fe6d00a620372578dcea493",
+          "elapsedMs": 9219,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v16427935886263324197"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate",
+          "mode-before-parse-and-config",
+          "clang-cl-pass-through-reparse",
+          "dumpmachine-reports-toolchain-triple",
+          "default-toolchain-selection"
+        ],
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 1,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage2-current-r1",
+      "usage": {
+        "totalTokens": 50382,
+        "inputTokens": 43690,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 6692,
+        "reasoningOutputTokens": 4461
+      },
+      "answerSha256": "486025669f0ca207cedf031f3f259e5efa47ddaaf98f109c00d1419a2e702fee",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 119983,
+          "sha256": "815a9ca6c1583e1f88951b4476904ede80c4a2b6a33f112fce90c41a5c28cd0a",
+          "elapsedMs": 6922,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 1,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage2-fresh-r1",
+      "usage": {
+        "totalTokens": 5334632,
+        "inputTokens": 5315756,
+        "cachedInputTokens": 5083904,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 18876,
+        "reasoningOutputTokens": 10016
+      },
+      "answerSha256": "89095c7e0be4f23873d1f55d72a7dd1b6b8048cf10a85911bfc5c5f51a8eab84",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 36,
+      "initialPackets": []
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 2,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage2-current-r2",
+      "usage": {
+        "totalTokens": 50555,
+        "inputTokens": 43690,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 6865,
+        "reasoningOutputTokens": 4660
+      },
+      "answerSha256": "5e0d29612e5ba17bd3158cc93422f8fa624138e6ea34de1bea77d8a1ab2ba16b",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 119983,
+          "sha256": "815a9ca6c1583e1f88951b4476904ede80c4a2b6a33f112fce90c41a5c28cd0a",
+          "elapsedMs": 7014,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 2,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage2-fresh-r2",
+      "usage": {
+        "totalTokens": 3569690,
+        "inputTokens": 3555768,
+        "cachedInputTokens": 3292032,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 13922,
+        "reasoningOutputTokens": 4670
+      },
+      "answerSha256": "622bff16540f65c128d73fe0d6291464719d3ebc10ad3db0be62a84653c11d0f",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 30,
+      "initialPackets": []
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 2,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage2-candidate-r2",
+      "usage": {
+        "totalTokens": 48890,
+        "inputTokens": 43507,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 5383,
+        "reasoningOutputTokens": 3106
+      },
+      "answerSha256": "21cae15e1afaa14443c021a50ddc9aef80a9d6c4ecbef73c4d84c5650cecb6f5",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 120830,
+          "sha256": "4c36f4a35a5868d2822a3ecfe2d4d289d76a75db3fe6d00a620372578dcea493",
+          "elapsedMs": 9386,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v16427935886263324197"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate",
+          "mode-before-parse-and-config",
+          "clang-cl-pass-through-reparse",
+          "dumpmachine-reports-toolchain-triple",
+          "default-toolchain-selection"
+        ],
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 0,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage3-fresh-r0",
+      "usage": {
+        "totalTokens": 5614689,
+        "inputTokens": 5596617,
+        "cachedInputTokens": 5341696,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 18072,
+        "reasoningOutputTokens": 7530
+      },
+      "answerSha256": "aefa782ac857b4c22f4b525ba2934a946a85c4d591a259eae1472aa17d1f0069",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 38,
+      "initialPackets": []
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 0,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage3-candidate-r0",
+      "usage": {
+        "totalTokens": 555010,
+        "inputTokens": 545347,
+        "cachedInputTokens": 466048,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 9663,
+        "reasoningOutputTokens": 6195
+      },
+      "answerSha256": "e4446d8e18bfae88dd3d6ccde34eee4397f7d424cd0a3c3e8550f291b5096045",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 8,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 122937,
+          "sha256": "5035f6294886ce2df6d5e3aebd7e180909846ee73de85ef4c80b072533d1e50d",
+          "elapsedMs": 9461,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v17810286119689152068"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "last-target-value",
+          "default-toolchain-selection",
+          "syntax-only-final-phase",
+          "trailing-language-warning"
+        ],
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope",
+          "syntax-only-final-phase",
+          "trailing-language-warning"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 0,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage3-current-r0",
+      "usage": {
+        "totalTokens": 1999810,
+        "inputTokens": 1986476,
+        "cachedInputTokens": 1836160,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 13334,
+        "reasoningOutputTokens": 8531
+      },
+      "answerSha256": "942fb0f71c024d341a7d268e99ad459806da152aef4c2b6df3fc25da8bf63d0b",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 17,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 117115,
+          "sha256": "9f5075133b1a4238c0bf7d97c17e2b09a88ad02baaad1821c626baebf42b9b2e",
+          "elapsedMs": 7025,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 1,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage3-candidate-r1",
+      "usage": {
+        "totalTokens": 107979,
+        "inputTokens": 102246,
+        "cachedInputTokens": 44032,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 5733,
+        "reasoningOutputTokens": 3622
+      },
+      "answerSha256": "9b97e2d13d582a746c40c6ecc94c14fb2547722c0fceb0391d099fd63f328b30",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 1,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 122937,
+          "sha256": "5035f6294886ce2df6d5e3aebd7e180909846ee73de85ef4c80b072533d1e50d",
+          "elapsedMs": 9390,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v17810286119689152068"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "last-target-value",
+          "default-toolchain-selection",
+          "syntax-only-final-phase",
+          "trailing-language-warning"
+        ],
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope",
+          "syntax-only-final-phase",
+          "trailing-language-warning"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 1,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage3-current-r1",
+      "usage": {
+        "totalTokens": 811016,
+        "inputTokens": 798315,
+        "cachedInputTokens": 678528,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 12701,
+        "reasoningOutputTokens": 7453
+      },
+      "answerSha256": "4a0c6875fb1d1304f03543a86a12751084134061646e1d30958c096b5ee50d84",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 22,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 117115,
+          "sha256": "9f5075133b1a4238c0bf7d97c17e2b09a88ad02baaad1821c626baebf42b9b2e",
+          "elapsedMs": 7019,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 1,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage3-fresh-r1",
+      "usage": {
+        "totalTokens": 4303740,
+        "inputTokens": 4282195,
+        "cachedInputTokens": 4060032,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 21545,
+        "reasoningOutputTokens": 8597
+      },
+      "answerSha256": "291c89a1c79ea5f11b42e138e7da65910d033dd92f24c5722e705910de79cb9d",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 92,
+      "initialPackets": []
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 2,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage3-current-r2",
+      "usage": {
+        "totalTokens": 777878,
+        "inputTokens": 766266,
+        "cachedInputTokens": 654592,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 11612,
+        "reasoningOutputTokens": 8025
+      },
+      "answerSha256": "e75f82d664480fdf40453b6d6318c15f4db6bc4a50782e474d732b220006f34a",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 8,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 117115,
+          "sha256": "9f5075133b1a4238c0bf7d97c17e2b09a88ad02baaad1821c626baebf42b9b2e",
+          "elapsedMs": 7160,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 2,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage3-fresh-r2",
+      "usage": {
+        "totalTokens": 3086501,
+        "inputTokens": 3067022,
+        "cachedInputTokens": 2863872,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 19479,
+        "reasoningOutputTokens": 8699
+      },
+      "answerSha256": "5db5ba7a1302098d259b01d089163671837f90455e0a58be93cc03d2d2e94c07",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 73,
+      "initialPackets": []
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 2,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage3-candidate-r2",
+      "usage": {
+        "totalTokens": 602868,
+        "inputTokens": 593719,
+        "cachedInputTokens": 522624,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 9149,
+        "reasoningOutputTokens": 5634
+      },
+      "answerSha256": "1447f23c1fcb6f3791d48474271e902c525425fb476848ed06f0f2cc77594853",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 9,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 122937,
+          "sha256": "5035f6294886ce2df6d5e3aebd7e180909846ee73de85ef4c80b072533d1e50d",
+          "elapsedMs": 9548,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v17810286119689152068"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "last-target-value",
+          "default-toolchain-selection",
+          "syntax-only-final-phase",
+          "trailing-language-warning"
+        ],
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope",
+          "syntax-only-final-phase",
+          "trailing-language-warning"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 0,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage4-fresh-r0",
+      "usage": {
+        "totalTokens": 1883938,
+        "inputTokens": 1864596,
+        "cachedInputTokens": 1688704,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 19342,
+        "reasoningOutputTokens": 10902
+      },
+      "answerSha256": "901221a68af37e471282b1f6990f45e99c09cb3fdf86e66e003598bf046a8c9a",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 54,
+      "initialPackets": []
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 0,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage4-candidate-r0",
+      "usage": {
+        "totalTokens": 149190,
+        "inputTokens": 143547,
+        "cachedInputTokens": 92032,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 5643,
+        "reasoningOutputTokens": 4225
+      },
+      "answerSha256": "bc7ae6eb38a21b0ad85b2f5645b0e4895e7d4a58bfe00bb59bca23922cca157a",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 4,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 126489,
+          "sha256": "5eb178b62de5f6254c29aeaced0b7ad15cddaa69be4412caf3827a1007510c2a",
+          "elapsedMs": 12554,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v3435885607457606897"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "target-width-existing-test",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate"
+        ],
+        "missingSourceProbes": [
+          "target-width-existing-test"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 0,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage4-current-r0",
+      "usage": {
+        "totalTokens": 48839,
+        "inputTokens": 44302,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 4537,
+        "reasoningOutputTokens": 3624
+      },
+      "answerSha256": "c86f400d1500c900d098361d5ea469a130b6e53c98d8353dba53acae4b5899b8",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 122864,
+          "sha256": "ac9d8dee96b3e7b9f619d7b076f46517129e5fd3ccf381945479f8b8fc2bbb13",
+          "elapsedMs": 6779,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 1,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage4-candidate-r1",
+      "usage": {
+        "totalTokens": 406766,
+        "inputTokens": 397609,
+        "cachedInputTokens": 326784,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 9157,
+        "reasoningOutputTokens": 6990
+      },
+      "answerSha256": "3af3feb5e1534ecf5535042738b6aa6c5a6aa029d8e112f54bf105ccae6e4bb8",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 6,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 126489,
+          "sha256": "5eb178b62de5f6254c29aeaced0b7ad15cddaa69be4412caf3827a1007510c2a",
+          "elapsedMs": 10517,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v3435885607457606897"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "target-width-existing-test",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate"
+        ],
+        "missingSourceProbes": [
+          "target-width-existing-test"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 1,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage4-current-r1",
+      "usage": {
+        "totalTokens": 696002,
+        "inputTokens": 683724,
+        "cachedInputTokens": 596736,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 12278,
+        "reasoningOutputTokens": 8841
+      },
+      "answerSha256": "4a461672f49db0756fa39a2a978ce86f5d5108ed80886ccf3fd355b4f3e178cf",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 17,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 122864,
+          "sha256": "ac9d8dee96b3e7b9f619d7b076f46517129e5fd3ccf381945479f8b8fc2bbb13",
+          "elapsedMs": 7318,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 1,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage4-fresh-r1",
+      "usage": {
+        "totalTokens": 2090340,
+        "inputTokens": 2071293,
+        "cachedInputTokens": 1899648,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 19047,
+        "reasoningOutputTokens": 10426
+      },
+      "answerSha256": "5ab2e4eb17cf7a7ccbd2bae464d3d761cce9f01fbb67eb7944220bab9c5504db",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 58,
+      "initialPackets": []
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 2,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage4-current-r2",
+      "usage": {
+        "totalTokens": 48140,
+        "inputTokens": 44303,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 3837,
+        "reasoningOutputTokens": 3106
+      },
+      "answerSha256": "a825b96eccbc63bf25f77adb377edf501bf6e7c71ba64f3ec28b36c5d18aa0c7",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 122864,
+          "sha256": "ac9d8dee96b3e7b9f619d7b076f46517129e5fd3ccf381945479f8b8fc2bbb13",
+          "elapsedMs": 6829,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 2,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage4-fresh-r2",
+      "usage": {
+        "totalTokens": 4345556,
+        "inputTokens": 4323683,
+        "cachedInputTokens": 4129280,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 21873,
+        "reasoningOutputTokens": 13906
+      },
+      "answerSha256": "7b683842dee39060c90df7b19585cd8815a4fabce45eabb2faf182450d00e645",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 37,
+      "initialPackets": []
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 2,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage4-candidate-r2",
+      "usage": {
+        "totalTokens": 726317,
+        "inputTokens": 717643,
+        "cachedInputTokens": 643200,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 8674,
+        "reasoningOutputTokens": 5599
+      },
+      "answerSha256": "f61754197689bccd8e5509ffadd524c9b84cc7a955104170aaf4b703565dc6d0",
+      "promptSha256": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 9,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 126489,
+          "sha256": "5eb178b62de5f6254c29aeaced0b7ad15cddaa69be4412caf3827a1007510c2a",
+          "elapsedMs": 10650,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v3435885607457606897"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "target-width-existing-test",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate"
+        ],
+        "missingSourceProbes": [
+          "target-width-existing-test"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 0,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage5-fresh-r0",
+      "usage": {
+        "totalTokens": 4744978,
+        "inputTokens": 4724010,
+        "cachedInputTokens": 4501120,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 20968,
+        "reasoningOutputTokens": 10202
+      },
+      "answerSha256": "83e645602bc6ba2a8f66a51ecc7e54b1c45931b6c03343c936c3ee0a38d65059",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 63,
+      "initialPackets": []
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 0,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage5-candidate-r0",
+      "usage": {
+        "totalTokens": 51348,
+        "inputTokens": 45164,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 6184,
+        "reasoningOutputTokens": 4142
+      },
+      "answerSha256": "921d6ddf271a5c4efc7c1e9ab826d99c755f6b99234324af5a33b3d4fe5b6a0b",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 125763,
+          "sha256": "b5520c39e04b8a7c20ec355697a7f7e2e431400f90c223659af98880d99618aa",
+          "elapsedMs": 10062,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v13007060328063607341"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate",
+          "mode-before-parse-and-config",
+          "clang-cl-pass-through-reparse",
+          "dumpmachine-reports-toolchain-triple",
+          "default-toolchain-selection"
+        ],
+        "missingSourceProbes": [
+          "toolchain-cache-key",
+          "complete-hlsl-branch-scope",
+          "dumpmachine-reports-toolchain-triple"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 0,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage5-current-r0",
+      "usage": {
+        "totalTokens": 51778,
+        "inputTokens": 43474,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 8304,
+        "reasoningOutputTokens": 6028
+      },
+      "answerSha256": "a3e24bcec7d92fe2d07518292c3621e9b26b3e7fbdb71f5d8ef3bd8703f9e20e",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 119617,
+          "sha256": "9996b8d3a6ea5f3fc58d6415b2384337e8ea535c353739afb1a6a719729ab492",
+          "elapsedMs": 6239,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 1,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage5-candidate-r1",
+      "usage": {
+        "totalTokens": 52759,
+        "inputTokens": 45164,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 7595,
+        "reasoningOutputTokens": 5696
+      },
+      "answerSha256": "46b2edb155cd103283442f62b34fad95dc8d47165e1f9b685a0b2aa4ccfd3d76",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 125763,
+          "sha256": "b5520c39e04b8a7c20ec355697a7f7e2e431400f90c223659af98880d99618aa",
+          "elapsedMs": 9828,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v13007060328063607341"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate",
+          "mode-before-parse-and-config",
+          "clang-cl-pass-through-reparse",
+          "dumpmachine-reports-toolchain-triple",
+          "default-toolchain-selection"
+        ],
+        "missingSourceProbes": [
+          "toolchain-cache-key",
+          "complete-hlsl-branch-scope",
+          "dumpmachine-reports-toolchain-triple"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 1,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage5-current-r1",
+      "usage": {
+        "totalTokens": 53235,
+        "inputTokens": 43267,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 9968,
+        "reasoningOutputTokens": 7919
+      },
+      "answerSha256": "37e321129769446f2fe0e8e2618cecc3afc51fdf7bb4226d9aa48c2241233aaa",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 119617,
+          "sha256": "9996b8d3a6ea5f3fc58d6415b2384337e8ea535c353739afb1a6a719729ab492",
+          "elapsedMs": 6191,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 1,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage5-fresh-r1",
+      "usage": {
+        "totalTokens": 3509975,
+        "inputTokens": 3495038,
+        "cachedInputTokens": 3245056,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 14937,
+        "reasoningOutputTokens": 5109
+      },
+      "answerSha256": "9b1ed7a1112a0190902292e188728de0d1b15091f82581e4dbbf4c2b0205d7cc",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 67,
+      "initialPackets": []
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 2,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage5-current-r2",
+      "usage": {
+        "totalTokens": 51304,
+        "inputTokens": 43475,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 7829,
+        "reasoningOutputTokens": 5178
+      },
+      "answerSha256": "066685b03b59a3d2840880392ae34baf0babb25333054cb9b65dc4012e436cc8",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 119617,
+          "sha256": "9996b8d3a6ea5f3fc58d6415b2384337e8ea535c353739afb1a6a719729ab492",
+          "elapsedMs": 6115,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 2,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage5-fresh-r2",
+      "usage": {
+        "totalTokens": 3169297,
+        "inputTokens": 3149360,
+        "cachedInputTokens": 2916480,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 19937,
+        "reasoningOutputTokens": 8837
+      },
+      "answerSha256": "e5fd8300671a548f34322bf9c64ed59739caa54ac313b182893c87d4a5239d39",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 80,
+      "initialPackets": []
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 2,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage5-candidate-r2",
+      "usage": {
+        "totalTokens": 52830,
+        "inputTokens": 44956,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 7874,
+        "reasoningOutputTokens": 5696
+      },
+      "answerSha256": "4dcb49c72ca30e026629342d9ef18582f8e431f811a2d8eb842eb1509651badc",
+      "promptSha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 125763,
+          "sha256": "b5520c39e04b8a7c20ec355697a7f7e2e431400f90c223659af98880d99618aa",
+          "elapsedMs": 9842,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v13007060328063607341"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "input-language-predicate",
+          "mode-before-parse-and-config",
+          "clang-cl-pass-through-reparse",
+          "dumpmachine-reports-toolchain-triple",
+          "default-toolchain-selection"
+        ],
+        "missingSourceProbes": [
+          "toolchain-cache-key",
+          "complete-hlsl-branch-scope",
+          "dumpmachine-reports-toolchain-triple"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 0,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage6-fresh-r0",
+      "usage": {
+        "totalTokens": 2271411,
+        "inputTokens": 2255131,
+        "cachedInputTokens": 2117248,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 16280,
+        "reasoningOutputTokens": 7580
+      },
+      "answerSha256": "986acb92250c82d91742bbf13a42ac90426a45f41a4e1a57346aef7a036bb982",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 82,
+      "initialPackets": []
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 0,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage6-candidate-r0",
+      "usage": {
+        "totalTokens": 50979,
+        "inputTokens": 45666,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 5313,
+        "reasoningOutputTokens": 3624
+      },
+      "answerSha256": "d5d1d917956deabc53717f68229c3393e89b124544ec97af283d99737385d9e2",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 127513,
+          "sha256": "186a108ac5682c78d841e5388b636c2fefe088549eb3395eeb54d8a51ee011e0",
+          "elapsedMs": 10851,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v5468521053980534542"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "last-target-value",
+          "default-toolchain-selection",
+          "syntax-only-final-phase",
+          "trailing-language-warning",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ],
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope",
+          "syntax-only-final-phase",
+          "trailing-language-warning",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 0,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage6-current-r0",
+      "usage": {
+        "totalTokens": 51451,
+        "inputTokens": 42785,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 8666,
+        "reasoningOutputTokens": 6859
+      },
+      "answerSha256": "349a7d18d91a50689a4e2b674701e10a6500d1050c9f18e0389b2412714edfd9",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 117516,
+          "sha256": "70ed47b2a7005370f95870434940bc25719cdf7343d028b574fc9e5b510f8891",
+          "elapsedMs": 7015,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 1,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage6-candidate-r1",
+      "usage": {
+        "totalTokens": 50546,
+        "inputTokens": 45459,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 5087,
+        "reasoningOutputTokens": 3373
+      },
+      "answerSha256": "e7619b36791d4dd1a54671f2680b7fa932d33dd8442143e2cfea0bb129aa1511",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 127513,
+          "sha256": "186a108ac5682c78d841e5388b636c2fefe088549eb3395eeb54d8a51ee011e0",
+          "elapsedMs": 10886,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v5468521053980534542"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "last-target-value",
+          "default-toolchain-selection",
+          "syntax-only-final-phase",
+          "trailing-language-warning",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ],
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope",
+          "syntax-only-final-phase",
+          "trailing-language-warning",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 1,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage6-current-r1",
+      "usage": {
+        "totalTokens": 49739,
+        "inputTokens": 42785,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 6954,
+        "reasoningOutputTokens": 5459
+      },
+      "answerSha256": "c398eb9d4107e5b966c0de92b96f094069e3f27b23e420d865ae4d652eef37d3",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 117516,
+          "sha256": "70ed47b2a7005370f95870434940bc25719cdf7343d028b574fc9e5b510f8891",
+          "elapsedMs": 6827,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 1,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage6-fresh-r1",
+      "usage": {
+        "totalTokens": 3656447,
+        "inputTokens": 3637851,
+        "cachedInputTokens": 3408896,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 18596,
+        "reasoningOutputTokens": 6750
+      },
+      "answerSha256": "ef1737c02dc0ec0faaf6a80b5fea258ea5d7539fccfdf18269e16e1c981d6a26",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 78,
+      "initialPackets": []
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 2,
+      "condition": "current",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/current/attempts/stage6-current-r2",
+      "usage": {
+        "totalTokens": 48910,
+        "inputTokens": 42784,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 6126,
+        "reasoningOutputTokens": 4514
+      },
+      "answerSha256": "071690f9c0546e54746ee2d20c946a7b6806f1ceec0f78711ce149d86f02fcb8",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 117516,
+          "sha256": "70ed47b2a7005370f95870434940bc25719cdf7343d028b574fc9e5b510f8891",
+          "elapsedMs": 6659,
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 2,
+      "condition": "fresh",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/fresh/attempts/stage6-fresh-r2",
+      "usage": {
+        "totalTokens": 2289564,
+        "inputTokens": 2272666,
+        "cachedInputTokens": 2085120,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 16898,
+        "reasoningOutputTokens": 7463
+      },
+      "answerSha256": "1277cfa61fcf13918eb3dd293c5c4d5b14dcac6b2795b35f30fe39abec136dd4",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": null,
+      "commandCount": 68,
+      "initialPackets": []
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 2,
+      "condition": "candidate",
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/candidate/attempts/stage6-candidate-r2",
+      "usage": {
+        "totalTokens": 47841,
+        "inputTokens": 45457,
+        "cachedInputTokens": 6400,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 2384,
+        "reasoningOutputTokens": 1034
+      },
+      "answerSha256": "fbc224b812e4cfb0c990c2ba9a78744069f217255e6949ffbba1c2e3548a7bab",
+      "promptSha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+      "transportSha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d",
+      "runtimeSha256": "caf318be7c2742a786c7a55ffdf8fd87705d37174021abd699729d234794760a",
+      "commandCount": 0,
+      "initialPackets": [
+        {
+          "event": "userPromptSubmit",
+          "file": "packet-1-0.txt",
+          "bytes": 127513,
+          "sha256": "186a108ac5682c78d841e5388b636c2fefe088549eb3395eeb54d8a51ee011e0",
+          "elapsedMs": 10498,
+          "status": "completed"
+        }
+      ],
+      "actualDelivery": {
+        "priorAnswerFullOwners": [
+          "v5468521053980534542"
+        ],
+        "storedSourceProbes": [
+          "toolchain-cache-key",
+          "tracked-input-language",
+          "complete-hlsl-branch-scope",
+          "last-target-value",
+          "default-toolchain-selection",
+          "syntax-only-final-phase",
+          "trailing-language-warning",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ],
+        "missingSourceProbes": [
+          "complete-hlsl-branch-scope",
+          "syntax-only-final-phase",
+          "trailing-language-warning",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ],
+        "sourceProbeScope": "diagnostic; quality is judged against the actual question, not mandatory unrequested examples"
+      }
+    }
+  ],
+  "candidateActualPriorAnswerReceipts": 18,
+  "candidateInitialBodyDigestsByStage": {
+    "1": [
+      "6083a7ee4fc89b05ad3910fac20da3f48129ea4a0194b90b70406477139b7f4e"
+    ],
+    "2": [
+      "4c36f4a35a5868d2822a3ecfe2d4d289d76a75db3fe6d00a620372578dcea493"
+    ],
+    "3": [
+      "5035f6294886ce2df6d5e3aebd7e180909846ee73de85ef4c80b072533d1e50d"
+    ],
+    "4": [
+      "5eb178b62de5f6254c29aeaced0b7ad15cddaa69be4412caf3827a1007510c2a"
+    ],
+    "5": [
+      "b5520c39e04b8a7c20ec355697a7f7e2e431400f90c223659af98880d99618aa"
+    ],
+    "6": [
+      "186a108ac5682c78d841e5388b636c2fefe088549eb3395eeb54d8a51ee011e0"
+    ]
+  },
+  "hookObservations": {
+    "allCapturedBodiesMatchPreparation": true,
+    "allCapturedHooksCompleteWithin30s": true,
+    "maxInitialElapsedMs": 12554,
+    "maxCandidateInitialElapsedMs": 12554,
+    "packetCount": 176
+  },
+  "resources": {
+    "rssStopKiB": 3145728,
+    "userCeilingKiB": 4194304,
+    "maxRecordedPeakRssKiB": 2904480,
+    "unfinalizedGuardRecords": [
+      {
+        "stage": 4,
+        "repetition": 0,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage4-r0-guard.json",
+        "state": "running",
+        "recordedPeakRssKiB": 1957712,
+        "reason": null,
+        "exitCode": null
+      },
+      {
+        "stage": 6,
+        "repetition": 0,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage6-r0-guard.json",
+        "state": "running",
+        "recordedPeakRssKiB": 634512,
+        "reason": null,
+        "exitCode": null
+      }
+    ],
+    "guardRuns": [
+      {
+        "stage": 1,
+        "repetition": 0,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage1-r0-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 2822160,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 2,
+        "repetition": 0,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage2-r0-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 1463712,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 3,
+        "repetition": 0,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage3-r0-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 2327488,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 4,
+        "repetition": 0,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage4-r0-guard.json",
+        "state": "running",
+        "recordedPeakRssKiB": 1957712,
+        "reason": null,
+        "exitCode": null
+      },
+      {
+        "stage": 5,
+        "repetition": 0,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage5-r0-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 1480320,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 6,
+        "repetition": 0,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage6-r0-guard.json",
+        "state": "running",
+        "recordedPeakRssKiB": 634512,
+        "reason": null,
+        "exitCode": null
+      },
+      {
+        "stage": 1,
+        "repetition": 1,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage1-r1-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 2132784,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 2,
+        "repetition": 1,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage2-r1-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 643344,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 3,
+        "repetition": 1,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage3-r1-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 2904480,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 4,
+        "repetition": 1,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage4-r1-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 2518624,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 5,
+        "repetition": 1,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage5-r1-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 576192,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 6,
+        "repetition": 1,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage6-r1-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 529152,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 1,
+        "repetition": 2,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage1-r2-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 2429552,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 2,
+        "repetition": 2,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage2-r2-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 600752,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 3,
+        "repetition": 2,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage3-r2-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 2231280,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 4,
+        "repetition": 2,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage4-r2-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 2127152,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 5,
+        "repetition": 2,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage5-r2-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 592496,
+        "reason": null,
+        "exitCode": 0
+      },
+      {
+        "stage": 6,
+        "repetition": 2,
+        "record": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021-stage6-r2-guard.json",
+        "state": "finished",
+        "recordedPeakRssKiB": 575904,
+        "reason": null,
+        "exitCode": 0
+      }
+    ]
+  },
+  "diagnosticFiles": [
+    "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/audits/stage4-r1-additional-source-review.json",
+    "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/audits/stage3-r2-quality-note.json",
+    "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/audits/launcher-prefix-diagnosis.json"
+  ],
+  "qualityAccepted": false,
+  "productionAdoption": false,
+  "adoptionDecision": "not adopted",
+  "decisionReasons": [
+    "Retained topic 1 misses the 90% target in two repetitions and uses more tokens than current in the full matched cell.",
+    "Retained topic 2 does not improve current in the matched aggregate; all individual comparisons remain visible.",
+    "A stored-source omission and an answer interpretation error are recorded separately. Complete prior-answer delivery is not a complete quality or source-coverage certificate."
+  ],
+  "limitations": [
+    "No public-main answering arm or historical completed trial is imported.",
+    "Source-probe omissions remain diagnostic and were not used to discard completed trials.",
+    "The r0 stage4/stage6 monitor records did not finalize after the launcher-parent issue; they are not reported as finalized guard passes.",
+    "This static LLVM benchmark does not establish the full paper goal or compiled snapshot test success."
+  ],
+  "sourceSnapshotsByStage": {
+    "1": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/readme-matched-20261021/checkpoints/stage1/work.egg",
+      "files": {
+        "head": "733a50e14a1e6a54cae54a7b2e89b2ef9c67726f569c3414b652eb85c39cc2af",
+        "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "26bbde5e4b37b88b84744046cd00f58b1214367810dad085b15f0c0b212d9e51"
+      }
+    },
+    "2": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/checkpoints/stage2/work.egg",
+      "files": {
+        "head": "866e5c984e12eb734c7a1825e370cc99ab62862e7f8583ead401cd6b09bbf934",
+        "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "fb44a5abf43736f82afc3369a0c795a99ea83a8a20beeaa4dcc56ea6b06cf968"
+      }
+    },
+    "3": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/checkpoints/stage3/work.egg",
+      "files": {
+        "head": "b7679003aebd3854ab6e011a594d206fb7e1ca43c29096cfefef3a5718bbd00c",
+        "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "9d6c09bde4418d64066044758eaaa1d70c632c5ce4dedd760eaa875437c85207"
+      }
+    },
+    "4": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/checkpoints/stage4/work.egg",
+      "files": {
+        "head": "abb9042d602590e0606a02c9b96e35cb955bca6a7393ed4c94d8489b09a3ef49",
+        "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "1bc7489c0a3c1d9a849fed361af159574c4c2126cf5137e2db2846f8862b6c8e"
+      }
+    },
+    "5": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/checkpoints/stage5/work.egg",
+      "files": {
+        "head": "744097ba47524ab592f4c1e7b1dfdb2d7d13120a5500aef9d463a52b579eb674",
+        "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "c9833f0a52c30f80df416ea90fdef717aa033304ba31b0dc451bbdbb79cb4f61"
+      }
+    },
+    "6": {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/history-continuity-tokens-20261021/checkpoints/stage6/work.egg",
+      "files": {
+        "head": "b0b0959bf141f84610bf985bfb74c04d0f8503b9ba5688898bb0592da320ae54",
+        "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "01e4f1797b71207f9dd59f074ccdfde3aa8877ee4793a3ccd10bd31f74d21ebb"
+      }
+    }
+  }
+}
