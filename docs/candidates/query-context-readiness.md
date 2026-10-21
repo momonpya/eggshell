@@ -223,3 +223,19 @@ completed at 2,929,755 tokens and candidate is running. The remaining fixed r0
 calls run serially and stop on failure or insufficient capacity, without
 automatic resubmission. No runtime, prompt, model, effort or harness change is
 made; the equal r1/r2 repetitions still remain.
+
+Retained topic 2 r0 has completed: fresh 2,929,755, current 1,110,452 and
+candidate 51,178 inclusive tokens. Candidate saves 98.25% against fresh and
+95.39% against current in this pair. Commands are fresh 58, current 13 and
+candidate zero. Both initial bodies match preparation; candidate arrives in
+10,966 ms and current in 6,477 ms. The five completed triples cost 24,279,849
+tokens; all final usage is known, with no API, reroute or hook failure, and seed
+acquisition remains separate. `query-anchor-retained-topic2.json` preserves the
+complete comparison and exact excerpt diagnostics. This positive cell does not
+erase retained topic 1's 84.66% target miss or establish quality equivalence.
+
+Retained topic 3's predeclared common history has 95 documents and 3,162
+windows: warm encoded the 16 missing windows in one batch, then repeated with
+zero windows/batches and no missing/invalid vectors. Finish the fixed r0 calls,
+then the equal r1/r2 repetitions; keep the candidate unadopted pending the full
+token and quality decision.

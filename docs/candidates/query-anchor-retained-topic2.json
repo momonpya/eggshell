@@ -1,0 +1,271 @@
+{
+  "stage": 5,
+  "topic": 2,
+  "lap": 2,
+  "repetition": 0,
+  "predeclaredRepetitions": 3,
+  "model": "gpt-5.6-luna",
+  "effort": "xhigh",
+  "planSha256": "2222107f60d56e834bba2cd7b7b1e40726cc0a2f9ab10cd6ffe3fb62b240eae6",
+  "comparison": {
+    "repetition": 0,
+    "fresh": 2929755,
+    "candidate": 51178,
+    "current": 1110452,
+    "freshRelativeReductionPercent": 98.25316451375627,
+    "currentRelativeReductionPercent": 95.39124608717891
+  },
+  "accounting": "input + output, cached input once, reasoning already in output; failed consumption retained; seed separate",
+  "qualityAccepted": false,
+  "productionAdoption": false,
+  "trials": {
+    "fresh": {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage5-fresh-r0",
+      "usage": {
+        "totalTokens": 2929755,
+        "inputTokens": 2913462,
+        "cachedInputTokens": 2715392,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 16293,
+        "reasoningOutputTokens": 6221
+      },
+      "finalUsageKnown": true,
+      "commandCount": 58,
+      "answerSha256": "29ece2879c3a7072feb0307c3b2249c6091dbe1a9d4634b05c482f8803a566b9",
+      "errors": [],
+      "reroutes": [],
+      "hookFailures": []
+    },
+    "candidate": {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage5-candidate-r0",
+      "usage": {
+        "totalTokens": 51178,
+        "inputTokens": 45591,
+        "cachedInputTokens": 0,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 5587,
+        "reasoningOutputTokens": 3624
+      },
+      "finalUsageKnown": true,
+      "commandCount": 0,
+      "answerSha256": "88e1ed786f70aede197aae42a1d9ba933c6a38c026666dfb9ef24e09d810e4bb",
+      "errors": [],
+      "reroutes": [],
+      "hookFailures": [],
+      "runtimeSha256": "5d50ea0eb2f789473e38abdc0a93653fa2fd269e20bba691b70d60b1ca0973e4",
+      "initialBodySha256": "03acdc33627b656fcfec95f7870d3a959fb19919bb05692c586b48c65812ce52",
+      "initialBodyMatchesPreparation": true,
+      "initialHookMs": 10966,
+      "excerptProbes": [
+        {
+          "name": "toolchain-cache-key",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "tracked-input-language",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "input-language-predicate",
+          "storedOwners": [
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "effective-target-computation",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "clang-cl-language-existing-test",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "openmp-forwarding-existing-test",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "mode-before-parse-and-config",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": [
+            "v13168123294867106979"
+          ]
+        },
+        {
+          "name": "clang-cl-pass-through-reparse",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": [
+            "v13168123294867106979"
+          ]
+        },
+        {
+          "name": "dumpmachine-reports-toolchain-triple",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v15256267109356037303"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "default-toolchain-selection",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": []
+        }
+      ],
+      "probeScope": "Predetermined exact excerpt diagnostics, not whole-answer requirements or complete question coverage"
+    },
+    "current": {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage5-current-r0",
+      "usage": {
+        "totalTokens": 1110452,
+        "inputTokens": 1096028,
+        "cachedInputTokens": 987136,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 14424,
+        "reasoningOutputTokens": 8580
+      },
+      "finalUsageKnown": true,
+      "commandCount": 13,
+      "answerSha256": "590e56c82ca908a9320c1ab501d1ad6ff89542f27efda732a4ee01a91d524626",
+      "errors": [],
+      "reroutes": [],
+      "hookFailures": [],
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "initialBodySha256": "6ed230f9dfc8d0c46a1fb8706c36995b43465aa3eb8e503cb58925195f742c7b",
+      "initialBodyMatchesPreparation": true,
+      "initialHookMs": 6477,
+      "excerptProbes": [
+        {
+          "name": "toolchain-cache-key",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "tracked-input-language",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "input-language-predicate",
+          "storedOwners": [
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "effective-target-computation",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "clang-cl-language-existing-test",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "openmp-forwarding-existing-test",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "mode-before-parse-and-config",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": [
+            "v13168123294867106979"
+          ]
+        },
+        {
+          "name": "clang-cl-pass-through-reparse",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": [
+            "v13168123294867106979"
+          ]
+        },
+        {
+          "name": "dumpmachine-reports-toolchain-triple",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v15256267109356037303"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "default-toolchain-selection",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "actualInitialOwners": []
+        }
+      ],
+      "probeScope": "Predetermined exact excerpt diagnostics, not whole-answer requirements or complete question coverage"
+    }
+  },
+  "identicalSavedSourceSnapshot": true,
+  "knownMatchedTokens": 4091385,
+  "targetPercent": 90,
+  "targetMetThisRepetition": true,
+  "limitations": [
+    "One repetition only; no quality equivalence or implementation adoption.",
+    "Keep all cells, including negative comparisons; the study remains frozen.",
+    "No inference about internal model attention follows from packet/probe checks."
+  ]
+}
