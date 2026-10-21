@@ -13,6 +13,15 @@ anew. Historical results, including previously reused controls documented
 below, remain records of their original closed comparisons and are not carried
 into the new run.
 
+The next plan freezes a repetition-first order before answering calls: run
+topics 1/2/3 and retained 1/2/3 for repetition 0, then repetitions 1 and 2.
+All 54 calls and rotating condition orders remain. Every condition and
+repetition at a stage uses the same predeclared candidate-r0 saved history.
+Only the preceding r0 matched triple must finish before preparing that history;
+independent later repetitions cannot change it. Four focused tooling checks
+cover this order, unique new calls, complete reference triples, failed delivery,
+and rejection of retired comparisons.
+
 The latest delivery work must be general: no function-name, filename, or
 expected-answer rule may qualify a runtime. The `source-definition-cues-*`
 experiments are retired without answering-model calls. Their raw positive and

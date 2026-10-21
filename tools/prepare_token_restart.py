@@ -30,7 +30,7 @@ def new_slots(base):
     return [dict(**item, study=str(base / item['condition']),
                  arm='fresh' if item['condition'] == 'fresh' else 'candidate',
                  label=f"stage{item['stage']}-{item['condition']}-r{item['repetition']}")
-            for item in order()]
+            for item in sorted(order(), key=lambda item: (item['repetition'], item['stage']))]
 
 
 def qualified_source(construction, qualification):
@@ -74,6 +74,7 @@ def freeze(base, construction, qualification):
         firstLapMinimumReduction=70, retainedLapMinimumReduction=90,
         criterion='Each topic/lap has three equal new repetitions; retain individual totals, paired mean, range and ratio of sums; inspect original DB, actual delivery and answer quality',
         nextHistory='candidate repetition 0 fixed before generation',
+        evaluationOrder='Complete the six-stage sequence for repetition 0, then 1 and 2; each stage retains one common predeclared r0 history for all repetitions and conditions',
         accounting='input + output; cached once; failed usage retained; unknown never zero; seed separate',
         reusedCompletedControls={}, reusedCandidateTrials=[], newAnsweringCalls=54,
         newSeedAcquisition=False, sourceInventorySha256=sha(inventory),

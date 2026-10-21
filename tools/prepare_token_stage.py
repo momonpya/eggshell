@@ -18,10 +18,18 @@ from readme_trial import read, sha, validate_prepared_trial
 from semantic_latency import execute, graph_files, save
 
 
+def history_reference_slots(plan, stage):
+    """Independent later repetitions cannot change the predeclared r0 history."""
+    preceding = [s for s in plan['slots'] if s['stage'] == stage - 1 and s['repetition'] == 0]
+    if len(preceding) != 3 or {s['condition'] for s in preceding} != {'fresh', 'current', 'candidate'}:
+        raise ValueError('Common history requires the complete fixed r0 matched triple')
+    return preceding
+
+
 def checkpoint(base, plan, stage):
-    preceding = [s for s in plan['slots'] if s['stage'] == stage - 1]
+    preceding = history_reference_slots(plan, stage)
     if not all(status(s) is not None for s in preceding):
-        raise ValueError('Finish every fixed preceding comparison before advancing history')
+        raise ValueError('Finish the fixed preceding r0 matched triple before advancing history')
     parent = next(s for s in preceding if s['condition'] == 'candidate' and s['repetition'] == 0)
     attempt = Path(parent['study']) / 'attempts' / parent['label']
     source = attempt / 'output.egg'
