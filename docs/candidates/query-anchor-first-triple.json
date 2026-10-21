@@ -1,0 +1,133 @@
+{
+  "scope": "First predeclared matched triple only, stage 1 topic 1 repetition 0; quality and all equal repetitions remain pending. No runtime adoption.",
+  "study": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022",
+  "planSha256": "2222107f60d56e834bba2cd7b7b1e40726cc0a2f9ab10cd6ffe3fb62b240eae6",
+  "model": "gpt-5.6-luna",
+  "effort": "xhigh",
+  "comparison": {
+    "repetition": 0,
+    "fresh": 2241019,
+    "candidate": 321516,
+    "current": 835335,
+    "freshRelativeReductionPercent": 85.65313368605977,
+    "currentRelativeReductionPercent": 61.510531702849754
+  },
+  "completedCalls": 3,
+  "plannedCalls": 54,
+  "knownConsumedTokens": 3397870,
+  "unknownFinalUsage": [],
+  "seedAcquisitionSeparate": true,
+  "newSeedAcquisition": false,
+  "accounting": "input + output; cached input already included once; reasoning already included in output",
+  "trials": [
+    {
+      "condition": "fresh",
+      "totalTokens": 2241019,
+      "inputTokens": 2225806,
+      "outputTokens": 15213,
+      "cachedInputTokens": 2034688,
+      "commands": 66,
+      "initialFullSourceFacts": [],
+      "answerSha256": "aa776651e49087a2d658cbb294f88d028b80655208c89f6663bde5455a5a2b6c"
+    },
+    {
+      "condition": "candidate",
+      "totalTokens": 321516,
+      "inputTokens": 313195,
+      "outputTokens": 8321,
+      "cachedInputTokens": 242304,
+      "commands": 5,
+      "initialFullSourceFacts": [
+        "toolchain-cache-key",
+        "target-width-existing-test",
+        "tracked-input-language",
+        "complete-hlsl-branch-scope"
+      ],
+      "answerSha256": "151493c7780bf02b3fd13b70ab60e84333e317cb5684b2b07ac3b10fc1bdac13"
+    },
+    {
+      "condition": "current",
+      "totalTokens": 835335,
+      "inputTokens": 824601,
+      "outputTokens": 10734,
+      "cachedInputTokens": 718208,
+      "commands": 10,
+      "initialFullSourceFacts": [
+        "toolchain-cache-key",
+        "target-width-existing-test",
+        "tracked-input-language"
+      ],
+      "answerSha256": "8c773785a0ca46d018bb78933fb826ee94553f310d80a128055b81228967e25a"
+    }
+  ],
+  "candidateInitialBodySha256": "2741853c6256152391707c4d338baf2e5037b7eaf0a6ad460ba3e7a136959eba",
+  "candidateInitialBodyMatchesPreparation": true,
+  "qualityReview": {
+    "accepted": false,
+    "testEvidence": [
+      {
+        "condition": "fresh",
+        "testCommands": [
+          {
+            "command": "/bin/bash -lc \"find . -maxdepth 3 -type f \\\\( -name clang -o -name clang++ -o -name FileCheck -o -name lit.py \\\\) -print | head -n 100\"",
+            "exitCode": 0,
+            "missingBuildConfig": false
+          },
+          {
+            "command": "/bin/bash -c 'python3 llvm/utils/lit/lit.py -v clang/test/Driver/spirv-toolchain.cl'",
+            "exitCode": 2,
+            "missingBuildConfig": true
+          }
+        ],
+        "answerSha256": "aa776651e49087a2d658cbb294f88d028b80655208c89f6663bde5455a5a2b6c"
+      },
+      {
+        "condition": "candidate",
+        "testCommands": [
+          {
+            "command": "/bin/bash -lc \"rg --files -g 'llvm-lit' -g 'lit.py' -g 'clang' -g 'clang++' -g 'clang-cl' -g 'default-toolchain.c' -g 'dumpmachine.c' -g 'gcc-toolchain.cpp' -g 'offload-target.c' | sed -n '1,160p'\"",
+            "exitCode": 0,
+            "missingBuildConfig": false
+          },
+          {
+            "command": "/bin/bash -lc \"ls -1 | sed -n '1,120p'\nrg --files clang/test/Driver | rg '(default-toolchain|dumpmachine|gcc-toolchain|offload-target|language|x-)' | sed -n '1,120p'\npython3 llvm/utils/lit/lit.py --help | sed -n '1,80p'\"",
+            "exitCode": 0,
+            "missingBuildConfig": false
+          },
+          {
+            "command": "/bin/bash -lc 'python3 llvm/utils/lit/lit.py -v clang/test/Driver/default-toolchain.c'",
+            "exitCode": 2,
+            "missingBuildConfig": true
+          }
+        ],
+        "answerSha256": "151493c7780bf02b3fd13b70ab60e84333e317cb5684b2b07ac3b10fc1bdac13"
+      },
+      {
+        "condition": "current",
+        "testCommands": [
+          {
+            "command": "/bin/bash -c \"git status --short && rg --files -g 'clang' -g 'clang++' -g 'llvm-lit' -g 'lit.py' -g 'bin/clang' -g 'bin/llvm-lit' . | sed -n '1,120p'\"",
+            "exitCode": 0,
+            "missingBuildConfig": false
+          },
+          {
+            "command": "/bin/bash -c 'python3 llvm/utils/lit/lit.py --show-tests clang/test/Driver/default-toolchain.c clang/test/Driver/dxc_spirv.hlsl clang/test/Driver/dxc_fspv_extension.hlsl'",
+            "exitCode": 2,
+            "missingBuildConfig": true
+          }
+        ],
+        "answerSha256": "8c773785a0ca46d018bb78933fb826ee94553f310d80a128055b81228967e25a"
+      }
+    ],
+    "findings": [
+      "All three retain source unchanged and report missing generated lit configuration rather than a test PASS.",
+      "Fresh investigates a potential SPIR-V/HLSL downcast issue in Driver.cpp around 4779; the initial 37 stored observations contain neither that downcast nor requiresObjcopy. That newly discovered source fact was unavailable for delivery.",
+      "Candidate and current cover the saved target/language cases. Candidate states the SPIR-V architecture qualification explicitly; current wording is broader. Neither token savings nor source freshness establishes complete answer quality."
+    ],
+    "initialDowncastStoredOwners": [],
+    "scope": "Source-grounded review notes, not a full quality verdict or assumption that fresh and memory must discover the same previously unstored fact."
+  },
+  "qualityAccepted": false,
+  "productionAdoption": false,
+  "next": "Prepare topic 2 from the predeclared candidate r0 output; preserve the frozen runtime and all 54 slots"
+}
