@@ -144,6 +144,23 @@ prompts remain fixed while the predetermined repetitions continue.
 Retained topic 1 is also worse than current (149,190 versus 48,839), despite
 meeting the fresh-relative target. Neither regression is an adoption result.
 
+The first lap of repetition 1 is also complete, with the same saved sources,
+prompts, runtime and model settings:
+
+| Topic | Fresh | Current | Candidate | Fresh-relative saving |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 4,686,455 | 829,666 | 521,525 | 88.9% |
+| 2 | 5,334,632 | 50,382 | 48,172 | 99.1% |
+| 3 | 4,303,740 | 811,016 | 107,979 | 97.5% |
+
+Topic 1's initial body is byte-identical between repetitions 0 and 1; the
+different answering totals do not come from a delivery change. Topic 3 uses
+one source-inspection command in repetition 1 versus further investigation
+in repetition 0. The actual commands and retained source-probe omissions are
+preserved in the r1 audits. All 27 completed calls retain known inclusive
+usage; the other 27 calls continue in their fixed order. These partial
+repetitions do not establish a complete token or quality adoption result.
+
 Topic 2 uses the actual new 53-document history. The prior answer is fully
 delivered and the actual initial body matches preparation. The answering turn
 contains no tool calls, so this result uses delivered saved history rather
