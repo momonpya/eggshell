@@ -13,6 +13,39 @@ anew. Historical results, including previously reused controls documented
 below, remain records of their original closed comparisons and are not carried
 into the new run.
 
+The latest delivery work must be general: no function-name, filename, or
+expected-answer rule may qualify a runtime. The `source-definition-cues-*`
+experiments are retired without answering-model calls. Their raw positive and
+negative native checks remain, including the interrupted partial matrix.
+
+An owner-plan diagnostic now explains one rejected allocation proposal with
+the same actual topic-2 body as its uninstrumented runtime. Its 45 admitted
+minimum views cost 118,720 characters and 120,296 bytes against limits of
+120,000 and 128,000. No complete-original upgrade fits. A nominated previous
+answer is entirely absent from the admitted set while graph-only child
+observations have higher admission priority. See
+`/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/owner-plan-audit-1/summary.json`
+and its original-coordinate, per-owner receipt.
+
+The isolated nominated-owner proposal `a8f3964…` reserves nominated contexts
+before graph-only neighbors. Both stored parent answers are delivered in full
+for all three questions on the 46-document diagnostic source. This is scoped
+progress, not source-coverage, quality, token, or adoption approval. Original
+source excerpts still fail the fixed probes; the actual 37-document initial
+source also misses the input-language excerpt on topic 1. No new answering
+model was dispatched. The source-origin and historical-query proposals also
+remain unadopted. The next candidate retains the earlier context policy and
+uses actual owner Values for same-owner enrichment, removing the independent
+whole-file prefill instead of rebuilding the selected packet around it.
+
+`tools/prepare_token_restart.py` prepares a wholly new comparison: all 54
+fresh/current/candidate calls are newly owned by the new study, with the same
+common saved input and three repetitions per topic/lap. No old control or
+candidate attempt is imported. Qualification must match the actual runtime
+and pass stored-source delivery before freezing. Two focused checks cover the
+new-call schedule and refusal of failed delivery. This tooling does not adopt
+a runtime or create a new token result.
+
 The task is the README's Clang Driver sequence: topics 1, 2 and 3, first from a
 new seed and then with accumulated memory, in independent native chats. Prompts
 come verbatim from `docs/benchmarks/llvm-three-topics.json`; only `<LLVM_SOURCE>`
