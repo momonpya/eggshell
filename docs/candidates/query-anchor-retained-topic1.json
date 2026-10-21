@@ -1,0 +1,332 @@
+{
+  "stage": 4,
+  "topic": 1,
+  "lap": 2,
+  "repetition": 0,
+  "predeclaredRepetitions": 3,
+  "model": "gpt-5.6-luna",
+  "effort": "xhigh",
+  "planSha256": "2222107f60d56e834bba2cd7b7b1e40726cc0a2f9ab10cd6ffe3fb62b240eae6",
+  "comparison": {
+    "repetition": 0,
+    "fresh": 2919043,
+    "candidate": 447890,
+    "current": 90338,
+    "freshRelativeReductionPercent": 84.65627262085553,
+    "currentRelativeReductionPercent": -395.7935752396555
+  },
+  "accounting": "input + output, cached input once, reasoning already in output; failed consumption retained; seed separate",
+  "qualityAccepted": false,
+  "productionAdoption": false,
+  "trials": {
+    "fresh": {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage4-fresh-r0",
+      "usage": {
+        "totalTokens": 2919043,
+        "inputTokens": 2898348,
+        "cachedInputTokens": 2736384,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 20695,
+        "reasoningOutputTokens": 13175
+      },
+      "finalUsageKnown": true,
+      "commandCount": 47,
+      "answerSha256": "6ea19df7543eca48c3aeb9ffedfbc18374730017c6765e589ec7ba6ab4ef57ec",
+      "errors": [],
+      "reroutes": [],
+      "hookFailures": []
+    },
+    "candidate": {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage4-candidate-r0",
+      "usage": {
+        "totalTokens": 447890,
+        "inputTokens": 440877,
+        "cachedInputTokens": 393216,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 7013,
+        "reasoningOutputTokens": 4426
+      },
+      "finalUsageKnown": true,
+      "commandCount": 8,
+      "answerSha256": "ea4b1caea18d56cec403c5ca3694e16fbbb49dd5b41dcf7a76562b8b98db17da",
+      "errors": [],
+      "reroutes": [],
+      "hookFailures": [],
+      "runtimeSha256": "5d50ea0eb2f789473e38abdc0a93653fa2fd269e20bba691b70d60b1ca0973e4",
+      "initialBodySha256": "4414f1d47c10212c159f6780334e44b18095308522b9f4db1a3ac2807fe1e5e9",
+      "initialBodyMatchesPreparation": true,
+      "initialHookMs": 11408,
+      "excerptProbes": [
+        {
+          "name": "toolchain-cache-key",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": [
+            "v16748591830955464422"
+          ]
+        },
+        {
+          "name": "target-width-existing-test",
+          "storedOwners": [
+            "v13041622778011058903",
+            "v7013212820002428201"
+          ],
+          "actualInitialOwners": [
+            "v13041622778011058903"
+          ]
+        },
+        {
+          "name": "tracked-input-language",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": [
+            "v15256267109356037303"
+          ]
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": [
+            "v16748591830955464422"
+          ]
+        },
+        {
+          "name": "input-language-predicate",
+          "storedOwners": [
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "effective-target-computation",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "clang-cl-language-existing-test",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "openmp-forwarding-existing-test",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        }
+      ],
+      "probeScope": "Predetermined exact excerpt diagnostics, not whole-answer requirements or complete question coverage"
+    },
+    "current": {
+      "attempt": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/current/attempts/stage4-current-r0",
+      "usage": {
+        "totalTokens": 90338,
+        "inputTokens": 86811,
+        "cachedInputTokens": 42624,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 3527,
+        "reasoningOutputTokens": 2702
+      },
+      "finalUsageKnown": true,
+      "commandCount": 1,
+      "answerSha256": "0afc97b3e8250b24809d3950d61d142b56707ae5975a4ba5b9a830d626f441c8",
+      "errors": [],
+      "reroutes": [],
+      "hookFailures": [],
+      "runtimeSha256": "415bcc2cd64412dad79d089da89f20533048901e5536f3d7206bdaa372b6f6f4",
+      "initialBodySha256": "850bf5acb468be375b3048daf68b268e5f3bd71b5b01a4ef70e6ce06fcc22955",
+      "initialBodyMatchesPreparation": true,
+      "initialHookMs": 7016,
+      "excerptProbes": [
+        {
+          "name": "toolchain-cache-key",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": [
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ]
+        },
+        {
+          "name": "target-width-existing-test",
+          "storedOwners": [
+            "v13041622778011058903",
+            "v7013212820002428201"
+          ],
+          "actualInitialOwners": [
+            "v13041622778011058903"
+          ]
+        },
+        {
+          "name": "tracked-input-language",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "input-language-predicate",
+          "storedOwners": [
+            "v14863864136040263094"
+          ],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "effective-target-computation",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "clang-cl-language-existing-test",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        },
+        {
+          "name": "openmp-forwarding-existing-test",
+          "storedOwners": [],
+          "actualInitialOwners": []
+        }
+      ],
+      "probeScope": "Predetermined exact excerpt diagnostics, not whole-answer requirements or complete question coverage"
+    }
+  },
+  "identicalSavedSourceSnapshot": true,
+  "knownMatchedTokens": 3457271,
+  "targetPercent": 90,
+  "targetMetThisRepetition": false,
+  "limitations": [
+    "One repetition only; no quality equivalence or implementation adoption.",
+    "Keep all cells, including negative comparisons; the study remains frozen.",
+    "No inference about internal model attention follows from packet/probe checks."
+  ],
+  "sourceQualityReview": {
+    "stage": 4,
+    "topic": 1,
+    "lap": 2,
+    "repetition": 0,
+    "scope": "Post-hoc source-based quality diagnostic; no change to questions, metrics, acceptance rules or generation.",
+    "freshClaim": "The provided clang_dxc -spirv command with a .test input chooses SPIRVToolChain and loses HLSL translation.",
+    "finding": "The fresh explanation conflates distinct logical spirv and physical spirv32/spirv64. The DXC -spirv setup assigns logical spirv; the shown SPIRVToolChain branch requires spirv32 or spirv64. Under the stated unchanged architecture, that branch is false and HLSLToolChain is selected irrespective of usesInput.",
+    "assumptions": [
+      "No additional config/target/architecture override changes the logical architecture before toolchain selection.",
+      "This is a static source trace, not a native driver execution."
+    ],
+    "limitations": [
+      "The explicit spirv64 plus -x c case is separate and remains an unverified specification/behavior question.",
+      "Fresh is a token baseline, not an answer-quality oracle.",
+      "This diagnostic does not establish complete quality equivalence or adoption."
+    ],
+    "facts": [
+      {
+        "name": "dxc-sets-logical-spirv",
+        "file": "clang/lib/Driver/Driver.cpp",
+        "first": 1587,
+        "last": 1591,
+        "sourceSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+        "excerpt": "        if (TargetInfo != ValidTargets.end()) {\n          T.setOSName(TargetInfo->getKey());\n          T.setArch(llvm::Triple::spirv, TargetInfo->getValue());\n          TargetTriple = T.str();\n        }",
+        "commonHistoryFullExcerptOwners": [
+          "v13168123294867106979",
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ],
+        "actualInitialFullExcerptPresent": {
+          "candidate": false,
+          "current": false
+        }
+      },
+      {
+        "name": "distinct-logical-and-physical-architectures",
+        "file": "llvm/include/llvm/TargetParser/Triple.h",
+        "first": 106,
+        "last": 108,
+        "sourceSha256": "7ad7e034f04b94dd8546963fdce460195993eb6a091e0cbbf9bf132647bcf18c",
+        "excerpt": "    spirv,          // SPIR-V with logical memory layout.\n    spirv32,        // SPIR-V with 32-bit pointers\n    spirv64,        // SPIR-V with 64-bit pointers",
+        "commonHistoryFullExcerptOwners": [],
+        "actualInitialFullExcerptPresent": {
+          "candidate": false,
+          "current": false
+        }
+      },
+      {
+        "name": "physical-architecture-only-spirv-toolchain-branch",
+        "file": "clang/lib/Driver/Driver.cpp",
+        "first": 7244,
+        "last": 7252,
+        "sourceSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+        "excerpt": "    case llvm::Triple::Vulkan:\n    case llvm::Triple::ShaderModel:\n      if ((Target.getArch() == llvm::Triple::spirv32 ||\n           Target.getArch() == llvm::Triple::spirv64) &&\n          !usesInput(Args, types::isHLSL))\n        TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);\n      else\n        TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);\n      break;",
+        "commonHistoryFullExcerptOwners": [
+          "v18406153573121058748",
+          "v16748591830955464422",
+          "v10600833252250082589"
+        ],
+        "actualInitialFullExcerptPresent": {
+          "candidate": true,
+          "current": false
+        }
+      },
+      {
+        "name": "logical-arch-name-parser",
+        "file": "llvm/lib/TargetParser/Triple.cpp",
+        "first": 699,
+        "last": 706,
+        "sourceSha256": "fe3e0beb66d30350f62fb7259ee0ed83b6fe9b423aa59c8574f87b63f654c630",
+        "excerpt": "          .Case(\"spir\", Triple::spir)\n          .Case(\"spir64\", Triple::spir64)\n          .Cases({\"spirv\", \"spirv1.5\", \"spirv1.6\"}, Triple::spirv)\n          .Cases({\"spirv32\", \"spirv32v1.0\", \"spirv32v1.1\", \"spirv32v1.2\",\n                  \"spirv32v1.3\", \"spirv32v1.4\", \"spirv32v1.5\", \"spirv32v1.6\"},\n                 Triple::spirv32)\n          .Cases({\"spirv64\", \"spirv64v1.0\", \"spirv64v1.1\", \"spirv64v1.2\",\n                  \"spirv64v1.3\", \"spirv64v1.4\", \"spirv64v1.5\", \"spirv64v1.6\"},",
+        "commonHistoryFullExcerptOwners": [],
+        "actualInitialFullExcerptPresent": {
+          "candidate": false,
+          "current": false
+        }
+      },
+      {
+        "name": "dxc-unknown-extension-hlsl-fallback",
+        "file": "clang/lib/Driver/Driver.cpp",
+        "first": 3182,
+        "last": 3190,
+        "sourceSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+        "excerpt": "            if (IsCLMode() && (Args.hasArgNoClaim(options::OPT_E) || CCGenDiagnostics))\n              Ty = types::TY_CXX;\n            else if (CCCIsCPP() || CCGenDiagnostics)\n              Ty = types::TY_C;\n            else if (IsDXCMode())\n              Ty = types::TY_HLSL;\n            else\n              Ty = types::TY_Object;\n          }",
+        "commonHistoryFullExcerptOwners": [
+          "v14863864136040263094"
+        ],
+        "actualInitialFullExcerptPresent": {
+          "candidate": false,
+          "current": false
+        }
+      },
+      {
+        "name": "hlsl-16bit-option-translation",
+        "file": "clang/lib/Driver/ToolChains/HLSL.cpp",
+        "first": 536,
+        "last": 541,
+        "sourceSha256": "1cf144ba4588bedb4e7bc9c8eaabb3474c4d762ade3995e15ddf6220705529c9",
+        "excerpt": "    if (A->getOption().getID() == options::OPT_enable_16bit_types) {\n      // Translate -enable-16bit-types into -fnative-half-type and\n      // -fnative-int16-type\n      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_half_type));\n      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_int16_type));\n      A->claim();",
+        "commonHistoryFullExcerptOwners": [],
+        "actualInitialFullExcerptPresent": {
+          "candidate": false,
+          "current": false
+        }
+      }
+    ],
+    "qualityAccepted": false,
+    "productionAdoption": false
+  }
+}

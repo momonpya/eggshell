@@ -197,3 +197,29 @@ zero batches on repeat with independent private state. All nine native
 preparations are admitted and retained topic-1 fresh has started. Runtime,
 prompt, harness and both resource limits
 stay fixed. Continue retained topics 1/2/3, then every equal repetition.
+
+Retained topic 1 r0 has completed: fresh 2,919,043, fixed current 90,338 and
+candidate 447,890 inclusive tokens. Candidate saves 84.66% against fresh, missing
+the 90% target; current saves 96.91%. Candidate uses 395.79% more tokens than
+current in this pair. Commands are 47/1/8 for fresh/current/candidate. Both actual
+initial bodies match their preparations; candidate arrives in 11,408 ms and
+current in 7,016 ms. `query-anchor-retained-topic1.json` records all totals,
+original-evidence probe results and source-based quality diagnostics. The first
+four completed triples cost 20,188,464 tokens, with final usage known and no API,
+reroute or hook failure; seed acquisition remains separate.
+
+Fresh's DXC example conflates logical `spirv` with the distinct `spirv32` and
+`spirv64` architectures. DXC `-spirv` sets the logical architecture, whereas the
+claimed SPIRVToolChain branch requires a physical architecture. Without further
+config/target/architecture overrides, the static trace contradicts that claimed
+selection. This is not a native execution, nor a resolution of the separate
+explicit-spirv64 plus `-x c` case. Fresh is the token baseline, not a quality
+oracle. Neither quality equivalence nor adoption is established.
+
+Retained topic 2 has nine admitted preparations from the predeclared common
+history: 94 documents, 3,146 windows, seven missing windows in one warm batch,
+then zero windows/batches on repeat with independent private state. Fresh has
+completed at 2,929,755 tokens and candidate is running. The remaining fixed r0
+calls run serially and stop on failure or insufficient capacity, without
+automatic resubmission. No runtime, prompt, model, effort or harness change is
+made; the equal r1/r2 repetitions still remain.
