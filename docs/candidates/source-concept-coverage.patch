@@ -1,0 +1,161 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5317,6 +5317,95 @@
+     pure ({closure,covers} : SharedCoverage.Offer costs.size weights.size)
+   pure {costs,weights,offers := offers.toArray,fixed,limit := ceiling}
+
++/-- Saved numbered-read prefixes are locators, not independent concepts.
++All normalization is retrieval advice; the original fragments remain intact. -/
++def observedConceptTerms (text : String) : List String :=
++  let content := "\n".intercalate ((text.splitOn "\n").map fun line =>
++    if (observedLineNumber? line).isSome then
++      String.ofList (((line.toList.dropWhile (· == ' ')).dropWhile Char.isDigit).drop 1)
++    else line)
++  SearchRank.terms content
++
++/-- Drop a clipped word/path edge from the feature view only. Complete
++source ranges and evidence rendering keep their original coordinates. CJK
++pair runs use their existing local pair semantics instead of word clipping. -/
++def conceptWord (c : Char) : Bool :=
++  !RetrievalResearch.script c &&
++    (RetrievalResearch.Unicode.letterNumber c || RetrievalResearch.Unicode.mark c ||
++      SearchRank.asciiTerm c.toLower)
++
++def conceptView (chars : Array Char) (first last : Nat) : String :=
++  let span := (chars.extract first last).toList
++  let left := first > 0 && ((chars[first-1]?).any conceptWord) &&
++    ((chars[first]?).any conceptWord)
++  let right := last > first && ((chars[last-1]?).any conceptWord) &&
++    ((chars[last]?).any conceptWord)
++  let span := if left then span.dropWhile conceptWord else span
++  let span := if right then (span.reverse.dropWhile conceptWord).reverse else span
++  String.ofList span
++
++structure ConceptSignal where
++  first : Nat
++  last : Nat
++  concepts : List Nat
++
++/-- Source words/identifier parts share one saturating concept across all
++original occurrences. A concept gets its best actual cue rank, never a byte
++multiplier. Historical interpretations have their own bounded cue labels and
++cannot stand in for an original tool-data concept. Costs and closures are
++copied from the original checked problem without modification. -/
++def conceptProblem (p : SharedCoverage.Problem) (families : List Family)
++    (units : List UnitPlan) (scale : Nat) : Option SharedCoverage.Problem := do
++  if units.length != p.offers.size then none else do
++    let mut keys : Std.HashMap (Bool × String) Nat := {}
++    let mut weights : Array Nat := #[]
++    let mut signals : Array (List ConceptSignal) := Array.replicate families.length []
++    for (family,index) in families.zipIdx do
++      let some source := Matcher.atomText? family.owner.outcome | continue
++      let native := Matcher.nativeOutcome family.owner
++      let decoded := (decodedToolText? source).map DecodedLayout.make
++      let plainChars := if native && decoded.isNone then source.toList.toArray else #[]
++      let cues := if family.template.context.isNone then
++          if source.isEmpty then [] else [{priority := 0,first := 0,last := source.length}]
++        else rankedCues family
++      for cue in cues do
++        let atomic := family.template.context.isNone
++        let weight := if atomic then scale/(61+index) else scale/(61+index)+scale/(61+cue.priority)
++        let original ← if bounds : cue.first < cue.last ∧ cue.last ≤ source.length ∧ cue.last-cue.first ≤ 2048 then
++            let range : EvidenceRange source := ⟨cue.first,cue.last,bounds.1,bounds.2.1,bounds.2.2⟩
++            if atomic || !native then pure (cue.first,cue.last,"") else
++              match decoded with
++              | none => pure (cue.first,cue.last,conceptView plainChars cue.first cue.last)
++              | some layout => match decodedEvidenceUsing? layout range with
++                  | none => pure (cue.first,cue.last,"")
++                  | some projected =>
++                    pure (projected.original.start,projected.original.stop,
++                      conceptView layout.content.chars projected.content.start projected.content.stop)
++          else if atomic then pure (cue.first,cue.last,"") else none
++        let concepts := if atomic || !native then
++            [(false,toString index ++ ":" ++ toString cue.first ++ ":" ++ toString cue.last)]
++          else (observedConceptTerms original.2.2).map (true,·)
++        let mut ids := []
++        for key in concepts do
++          let id := keys[key]?.getD weights.size
++          if id == weights.size then
++            weights := weights.push weight
++            keys := keys.insert key id
++          else
++            weights := weights.modify id (max weight)
++          ids := id :: ids
++        signals := signals.modify index (fun previous =>
++          {first := original.1,last := original.2.1,concepts := ids} :: previous)
++    let offers ← units.zipIdx.mapM fun (unit,index) => do
++      let prior ← p.offers[index]?
++      let source ← signals[unit.family]?
++      let ids := Eggshell.hashDistinct (source.flatMap fun cue =>
++        if covers unit.ranges cue.first cue.last then cue.concepts else [])
++      let covered ← ids.mapM fun id =>
++        if valid : id < weights.size then some (⟨id,valid⟩ : Fin weights.size) else none
++      pure ({closure := prior.closure,covers := covered} : SharedCoverage.Offer p.costs.size weights.size)
++    pure {costs := p.costs,weights,offers := offers.toArray,fixed := p.fixed,limit := p.limit}
++
+ def materialize (units : Array UnitPlan) (indices : List Nat) : Option (List TransportSlice) := do
+   let mut rows : List (Nat × TransportSlice) := []
+   for index in indices do
+@@ -5350,8 +5439,8 @@
+     let units := prepared.flatMap (·.1)
+     let depth := max families.length (families.foldl (fun n family => max n (max family.windows.length family.references.length)) 0)
+     let scale := (List.range depth).foldl (fun value rank => Nat.lcm value (61+rank)) 1
+-    let pieces := cuePieces scale families units
+-    let p ← problem families units pieces fixed ceiling
++    let basis ← problem families units [] fixed ceiling
++    let p ← conceptProblem basis families units scale
+     let chosen ← SharedCoverage.choose? p
+     let selected ← materialize units.toArray (chosen.selected.map (·.val))
+     let result := mandatory ++ selected
+--- /dev/null
++++ b/tools/SourceConceptTests.lean
+@@ -0,0 +1,49 @@
++import Eggshell.Handoff
++open Lean Eggshell Eggshell.Plugin
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++private def native (source : String) : OutcomeEdge :=
++  let work := Value.text "w"
++  let outcome := Value.text source
++  let occurrence := Value.applyList .occurrence [.semantic outcome,.semantic work,.exact (.text "receipt")]
++  OutcomeEdge.make work outcome [occurrence] (by simp) (by simp [maxOutcomeObservations])
++private def costBasis : SharedCoverage.Problem := {
++  costs := #[(4,4),(4,4),(4,4)],weights := #[100,99,1]
++  offers := #[{closure := [⟨0,by decide⟩],covers := [⟨0,by decide⟩]},
++    {closure := [⟨1,by decide⟩],covers := [⟨1,by decide⟩]},
++    {closure := [⟨2,by decide⟩],covers := [⟨2,by decide⟩]}]
++  limit := (8,8)}
++def main : IO Unit := do
++  let words := SharedRangeAdapter.observedConceptTerms "123\tOPT_Name(42)\n999\tlast_arg"
++  check (!words.contains "P123" && !words.contains "P999" && words.contains "P42")
++    "numbered locators became value, or a source constant disappeared"
++  let source := String.join (List.replicate 165 "alpha ") ++ "rare_exception " ++ String.join (List.replicate 80 "alpha ")
++  let owner := native source
++  check (Matcher.nativeOutcome owner) "test lost original native occurrence orientation"
++  let context : ContextDelivery := {
++    owner := "original",outcome := "data",sourceChars := source.length,cues := []
++    leading := "",trailing := "",fragments := []}
++  let slice : TransportSlice := {
++    owner := some owner.relation,keys := [],text := source,members := [],visibleKeys := [],context := some context}
++  let family : SharedRangeAdapter.Family := {owner,template := slice,windows := [0,1,2]}
++  let cues := SharedRangeAdapter.rankedCues family
++  check (cues.length == 3) "test lost its original source coordinates"
++  let units := cues.map fun cue => ({family := 0,slice,ranges := [(cue.first,cue.last)]} : SharedRangeAdapter.UnitPlan)
++  let some problem := SharedRangeAdapter.conceptProblem costBasis [family] units (61*62*63) |
++    throw (IO.userError "source concepts failed")
++  check (problem.costs == costBasis.costs && problem.fixed == costBasis.fixed && problem.limit == costBasis.limit)
++    "value policy changed shared source costs or wire bounds"
++  let some first := problem.offers[0]? | throw (IO.userError "missing first offer")
++  let some second := problem.offers[1]? | throw (IO.userError "missing second offer")
++  check (first.covers == second.covers)
++    "duplicate lexical content acquired distinct concepts"
++  let some selected := SharedCoverage.choose? problem | throw (IO.userError "concept selection failed")
++  check ((selected.selected.map (·.val)).contains 2 && selected.selected.length == 1)
++    "new source condition lost to another occurrence of the same words"
++  let some old := SharedCoverage.choose? costBasis | throw (IO.userError "old selection failed")
++  check (!(old.selected.map (·.val)).contains 2) "test does not distinguish the value policies"
++  let partialUnits := units.map fun unit => {unit with ranges := [(0,1)]}
++  let some incompleteProblem := SharedRangeAdapter.conceptProblem costBasis [family] partialUnits (61*62*63) |
++    throw (IO.userError "partial context failed")
++  check (incompleteProblem.offers.toList.all (·.covers.isEmpty)) "partial context acquired an undispatched cue's concepts"
++  IO.println "source concept saturation, original cue, numerical constant and immutable cost checks passed"

@@ -1,0 +1,273 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -3291,7 +3291,7 @@
+ window. Only already admitted, graph-reachable observations are supplied.
+ Neither a citation nor its rank adds equality or completion authority. -/
+ def rankedCitedObservationCoordinates (texts : List (Nat × String)) (owner : OutcomeEdge)
+-    (records : List SourceEvidence.Record) : Option (Nat × List Nat × List (Nat × Nat)) := Id.run do
++    (records : List SourceEvidence.Record) : Option (Nat × List Nat × List (Nat × Nat) × List (Nat × List Nat)) := Id.run do
+   let some source := Matcher.atomText? owner.outcome | return none
+   let some work := Matcher.atomText? owner.work | return none
+   let layout := (decodedToolText? source).map DecodedLayout.make
+@@ -3299,6 +3299,7 @@
+   let rows := (contextRecordSpans source layout).zip (text.splitOn "\n")
+   let native := nativeReadRows source layout work records
+   let mut hints : List (Nat × Nat) := []
++  let mut groups : List (Nat × List Nat) := []
+   for (priority,parent) in texts do
+     let intervals := ((records.flatMap (·.files)).flatMap fun file =>
+       citedLineIntervals parent file.relative).eraseDups
+@@ -3309,13 +3310,19 @@
+         if first ≤ number && number ≤ last then some span else none) ++
+         (native.filterMap fun (span,number) =>
+           if first ≤ number && number ≤ last then some span else none)
+-      for position in (spans.flatMap (observedSpanWindows (work.length+1))).eraseDups do
++      let positions := (spans.flatMap (observedSpanWindows (work.length+1))).eraseDups.mergeSort (· ≤ ·)
++      if !positions.isEmpty then
++        match groups.find? (·.2 == positions) with
++        | none => groups := groups ++ [(priority,positions)]
++        | some (old,_) => if priority < old then
++            groups := groups.map fun row => if row.2 == positions then (priority,positions) else row
++      for position in positions do
+         match hints.find? (·.1 == position) with
+         | none => hints := hints ++ [(position,priority)]
+         | some (_,old) => if priority < old then
+             hints := hints.map fun row => if row.1 == position then (position,priority) else row
+   let some first := hints.head? | return none
+-  return some (first.2,hints.map Prod.fst,hints)
++  return some (first.2,hints.map Prod.fst,hints,groups)
+
+ def citedObservationWindows (texts : List String) (owner : OutcomeEdge)
+     (records : List SourceEvidence.Record) : List Nat :=
+@@ -5129,11 +5136,15 @@
+   windows : List Nat
+   references : List Nat := []
+   referenceRanks : List (Nat × Nat) := []
++  referenceGroups : List (Nat × List Nat) := []
+
+ structure UnitPlan where
+   family : Nat
+   slice : TransportSlice
+   ranges : List (Nat × Nat)
++  positions : List Nat := []
++  referencePriority : Option Nat := none
++  costFragments : Option (List DeliveryFragment) := none
+
+ structure CuePiece where
+   family : Nat
+@@ -5210,7 +5221,10 @@
+       if ranges.isEmpty || demanded.isEmpty ||
+           !demanded.all (fun range => covers ranges range.start range.stop) ||
+           !requirements.all (fun range => covers ranges range.start range.stop) then continue
+-      if seen.contains ranges then continue
++      if seen.contains ranges then
++        units := units.map fun unit => if unit.ranges == ranges then
++          {unit with positions := (unit.positions ++ [position]).eraseDups} else unit
++        continue
+       seen := seen.insert ranges
+       let selectedCues := cues.flatMap fun (a,b) => ranges.filterMap fun (c,d) =>
+         let first := max a c
+@@ -5218,7 +5232,7 @@
+         if first < last then some (first,last) else none
+       let context := {envelope with fragments,cues := selectedCues}
+       let slice := {family.template with context := some context,keys := context.keys,text := context.render}
+-      units := units ++ [{family := familyIndex,slice,ranges}]
++      units := units ++ [{family := familyIndex,slice,ranges,positions := [position]}]
+   return (units,cues)
+
+ def join (prior next : TransportSlice) : Option TransportSlice := do
+@@ -5228,6 +5242,38 @@
+     pure {prior with context := some checked.val,keys := checked.val.keys,text := checked.val.render}
+   | none,none => if prior.text == next.text then some prior else none
+   | _,_ => none
++
++/-- A citation is an entire finite stored range, not a byte-valued collection
++of independently rewarded fragments. Join existing minimal local closures;
++this never hydrates extra data or invents a Match. Identical closed payloads
++receive only their best producer rank. -/
++def closeReferenceGroups (familyIndex : Nat) (family : Family)
++    (units : List UnitPlan) : List UnitPlan := Id.run do
++  let mut bundled : List UnitPlan := []
++  for (priority,positions) in family.referenceGroups do
++    if positions.isEmpty then continue
++    let parts := positions.filterMap fun position =>
++      (units.filter (fun unit => unit.positions.contains position)).foldl
++        (fun found unit => match found with
++          | none => some unit
++          | some before => if unit.slice.text.utf8ByteSize < before.slice.text.utf8ByteSize then
++              some unit else found) none
++    if parts.length != positions.length then continue
++    let some first := parts.head? | continue
++    let joined := parts.tail.foldl (fun found unit =>
++      found.bind fun prior => join prior unit.slice) (some first.slice)
++    let some slice := joined | continue
++    let some context := slice.context | continue
++    let ranges := fragmentRanges context.fragments
++    if let some previous := bundled.find? (·.ranges == ranges) then
++      let best := min priority (previous.referencePriority.getD priority)
++      bundled := bundled.map fun unit => if unit.ranges == ranges then
++        {unit with referencePriority := some best} else unit
++    else
++      let costFragments := parts.flatMap fun unit =>
++        unit.costFragments.getD (unit.slice.context.map (·.fragments) |>.getD [])
++      bundled := bundled ++ [{family := familyIndex,slice,ranges,positions,referencePriority := some priority,costFragments := some costFragments}]
++  return units ++ bundled
+
+ /-- A numerical window keeps its producer's original priority. Display
+ coalescing and record completion cannot promote the rest of a merged span. -/
+@@ -5294,7 +5340,7 @@
+   for unit in units do
+     let parts := match unit.slice.context with
+       | none => [(none,unit.slice.text)]
+-      | some context => context.fragments.map fun (fragment : DeliveryFragment) =>
++      | some context => (unit.costFragments.getD context.fragments).map fun (fragment : DeliveryFragment) =>
+           (some (fragment.first,fragment.original,fragment.decoded),
+             fragment.render context.compactCaptions)
+     let mut closure := [unit.family]
+@@ -5316,6 +5362,49 @@
+       if h : id < weights.size then some (⟨id,h⟩ : Fin weights.size) else none
+     pure ({closure,covers} : SharedCoverage.Offer costs.size weights.size)
+   pure {costs,weights,offers := offers.toArray,fixed,limit := ceiling}
++
++/-- Complete cited regions in the best actually nominated parent form the
++first advisory tier. One region has one vote, independent of byte length.
++Ordinary units may fulfill a region only when they carry every required
++original range. Closures/costs are exactly the ordinary immutable problem. -/
++def referenceProblem (p : SharedCoverage.Problem) (units : List UnitPlan) :
++    Option SharedCoverage.Problem := do
++  if units.length != p.offers.size then none else do
++    let candidates := units.filterMap fun unit => unit.referencePriority.map (unit,·)
++    let ranked : List (UnitPlan × Nat) := candidates.foldl (fun known row =>
++      match known.find? (fun prior => prior.1.family == row.1.family && prior.1.ranges == row.1.ranges) with
++      | none => known ++ [row]
++      | some prior => known.map fun old =>
++          if old.1.family == row.1.family && old.1.ranges == row.1.ranges then
++            (old.1,min prior.2 row.2) else old) []
++    let initial ← ranked.head?
++    let first := ranked.foldl (fun value row => min value row.2) initial.2
++    let demands := (ranked.filter (·.2 == first)).map Prod.fst
++    let weights := (demands.map fun _ => 1).toArray
++    let offers ← units.zipIdx.mapM fun (unit,index) => do
++      let original ← p.offers[index]?
++      let covered ← demands.zipIdx.filterMapM fun (demand,index) =>
++        if unit.family == demand.family &&
++            demand.ranges.all (fun (a,b) => covers unit.ranges a b) then
++          if valid : index < weights.size then some (some (⟨index,valid⟩ : Fin weights.size)) else none
++        else some none
++      pure ({closure := original.closure,covers := covered} : SharedCoverage.Offer p.costs.size weights.size)
++    pure {costs := p.costs,weights,offers := offers.toArray,fixed := p.fixed,limit := p.limit}
++
++/-- Replay the selected first-tier indices through the ordinary checked
++extension, then spend the remaining shared budget on current-question focus.
++This tier carries no native control and never relaxes a wire limit. -/
++def choose (p : SharedCoverage.Problem) (units : List UnitPlan) :
++    Option (SharedCoverage.Selection p) := do
++  if !units.any (·.referencePriority.isSome) then SharedCoverage.choose? p else do
++    let references ← referenceProblem p units
++    let selected ← SharedCoverage.choose? references
++    let mut prior ← SharedCoverage.empty? p
++    for index in selected.selected do
++      if valid : index.val < p.offers.size then
++        prior ← SharedCoverage.extend? prior ⟨index.val,valid⟩
++      else none
++    pure (SharedCoverage.fill p.offers.size prior)
+
+ def materialize (units : Array UnitPlan) (indices : List Nat) : Option (List TransportSlice) := do
+   let mut rows : List (Nat × TransportSlice) := []
+@@ -5346,13 +5435,15 @@
+     let fixedData := mandatory.foldl (fun total slice =>
+       (total.1+slice.text.length+1,total.2+slice.text.utf8ByteSize+1)) (0,0)
+     let fixed := (allCost.1-dataCost.1+fixedData.1,allCost.2-dataCost.2+fixedData.2)
+-    let prepared := families.zipIdx.map fun (family,index) => prepare index family
++    let prepared := families.zipIdx.map fun (family,index) =>
++      let (units,cues) := prepare index family
++      (closeReferenceGroups index family units,cues)
+     let units := prepared.flatMap (·.1)
+     let depth := max families.length (families.foldl (fun n family => max n (max family.windows.length family.references.length)) 0)
+     let scale := (List.range depth).foldl (fun value rank => Nat.lcm value (61+rank)) 1
+     let pieces := cuePieces scale families units
+     let p ← problem families units pieces fixed ceiling
+-    let chosen ← SharedCoverage.choose? p
++    let chosen ← choose p units
+     let selected ← materialize units.toArray (chosen.selected.map (·.val))
+     let result := mandatory ++ selected
+     if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
+@@ -5378,7 +5469,8 @@
+     (advisoryExcluded : List Value := [])
+     (referenceEvidence : List (Value × List Nat) := [])
+     (referencePriorities : List (Value × Nat) := [])
+-    (referenceRanks : List (Value × List (Nat × Nat)) := []) : Option Handoff :=
++    (referenceRanks : List (Value × List (Nat × Nat)) := [])
++    (referenceGroups : List (Value × List (Nat × List Nat)) := []) : Option Handoff :=
+   let extraction := prepared.val
+   let attach := fun selected : Selected => {
+     selected with
+@@ -5605,7 +5697,8 @@
+           let hint := QueryLiterals.focus (requestQuestion.getD current)
+             (evidenceSearchWindows owner) (sourceContextWindows positions referenced)
+           let ranks := (referenceRanks.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+-          pure ({owner,template := choice.2.1,windows := hint.windows,references := referenced,referenceRanks := ranks} : SharedRangeAdapter.Family)
++          let groups := (referenceGroups.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
++          pure ({owner,template := choice.2.1,windows := hint.windows,references := referenced,referenceRanks := ranks,referenceGroups := groups} : SharedRangeAdapter.Family)
+       match SharedRangeAdapter.fit (budget,byteBudget.getD (budget*4)) packetCost families mandatory with
+       | some fitted => fitted.val
+       | none => []
+@@ -6861,10 +6954,11 @@
+       if (sourceNeighborhood [work] sourceAll persistent).any (·.work == item.owner.work) then
+         some (rank,text) else none
+     (rankedCitedObservationCoordinates admitted item.owner item.provenance).map
+-      (fun (priority,positions,ranks) => (item.owner.relation,priority,positions,ranks))
+-  let referencedEvidence := referenced.map fun (owner,_,positions,_) => (owner,positions)
+-  let referencePriorities := referenced.map fun (owner,priority,_,_) => (owner,priority)
+-  let referenceRanks := referenced.map fun (owner,_,_,ranks) => (owner,ranks)
++      (fun (priority,positions,ranks,groups) => (item.owner.relation,priority,positions,ranks,groups))
++  let referencedEvidence := referenced.map fun (owner,_,positions,_,_) => (owner,positions)
++  let referencePriorities := referenced.map fun (owner,priority,_,_,_) => (owner,priority)
++  let referenceRanks := referenced.map fun (owner,_,_,ranks,_) => (owner,ranks)
++  let referenceGroups := referenced.map fun (owner,_,_,_,groups) => (owner,groups)
+   -- The focused provider is an independent observation. Include its exact
+   -- durable owner/order/window reply before asking the memo to reuse a packet.
+   -- An unchanged first nomination alone cannot certify an unchanged focus.
+@@ -6888,6 +6982,11 @@
+       if let some id ← source.liveOwner relation then
+         observed := {observed with focused := observed.focused ++
+           [id,ranks.length] ++ ranks.flatMap (fun (position,priority) => [position,priority])}
++    observed := {observed with focused := observed.focused ++ [referenceGroups.length]}
++    for (relation,groups) in referenceGroups do
++      if let some id ← source.liveOwner relation then
++        let keys := groups.flatMap (fun (priority,positions) => [priority,positions.length] ++ positions)
++        observed := {observed with focused := observed.focused ++ [id,groups.length] ++ keys}
+     if let some reused ← reuseSemantic observed then return reused
+   let evidenceRanking := semanticOwners.presentationOrder.filterMap fun row => match row with
+     | .inl id => rankedOwners[id]?
+@@ -6917,6 +7016,7 @@
+     (referenceEvidence := referencedEvidence)
+     (referencePriorities := referencePriorities)
+     (referenceRanks := referenceRanks)
++    (referenceGroups := referenceGroups)
+   let rendered := rendered.map fun handoff =>
+     if recommendation && handoff.packet.isSome then
+       {handoff with deliveredGraphs := (handoff.deliveredGraphs ++
+--- a/tools/CitationProjectionTests.lean
++++ b/tools/CitationProjectionTests.lean
+@@ -10,9 +10,10 @@
+     workspace := "/unused",files := [{relative := "src/driver.cpp",content := none}]
+     complete := false}
+   let citation := "[driver.cpp:10-15](/unused/src/driver.cpp:10)"
+-  let some (_,positions,ranks) := rankedCitedObservationCoordinates [(4,citation),(1,citation)] owner [record] |
++  let some (_,positions,ranks,groups) := rankedCitedObservationCoordinates [(4,citation),(1,citation)] owner [record] |
+     throw (IO.userError "stored interval disappeared")
+   check (positions.contains 0 && positions.any (fun i => i >= 2)) "the citation end never reached its original source window"
++  check (groups.length == 1) "duplicate citation acquired another vote"
+   check (ranks.all (fun row => row.2 == 1)) "producer rank was replaced by citation or source-window enumeration"
+   let original : TransportSlice := {
+     owner := some owner.relation,keys := [],text := source,members := [],visibleKeys := []}
+@@ -20,7 +21,7 @@
+     owner,template := original,windows := [],references := [0,1],referenceRanks := [(0,7),(1,3)]}
+   check ((SharedRangeAdapter.rankedCues family).map (·.priority) == [7,3]) "actual producer priority did not reach the fitter"
+   let huge := "[driver.cpp:1-100000000000000000000](/unused/src/driver.cpp:1)"
+-  let some (_,bounded,_) := rankedCitedObservationCoordinates [(0,huge)] owner [record] |
++  let some (_,bounded,_,_) := rankedCitedObservationCoordinates [(0,huge)] owner [record] |
+     throw (IO.userError "finite stored interval disappeared")
+   check (bounded.length <= 10) "untrusted line interval became an allocation bound"
+   check (owner.outcome == .text source) "original source was changed"

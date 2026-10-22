@@ -1,0 +1,1232 @@
+{
+  "base": "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022",
+  "baseRuntimeSha256": "6db03cfb21625376e54d465e8147779f58a83136627990851abc779f7640bfd1",
+  "baseMissing": [
+    1,
+    0,
+    1,
+    1,
+    0,
+    3
+  ],
+  "candidates": [
+    {
+      "name": "closed-citation-priority",
+      "directory": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022",
+      "mechanism": "Complete cited source regions at the best actual parent rank receive one length-independent vote in an earlier tier, then the original focus selector fills the remainder.",
+      "status": "rejected-required-original-code-missing",
+      "productionAdoption": false,
+      "sourceManifest": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/frozen-checked-inputs.json",
+      "sourceManifestSha256": "c7feaa7e55456a384649b89b07dbba198930897fb17224f841bb9aff56141e2f",
+      "runtimeSha256": "3856c9756611e73376bcf15fa23d0b6945cd378d6e60b2a464cad0a64400ab73",
+      "patch": "docs/candidates/closed-citation-priority.patch",
+      "patchSha256": "240184fe1729d78eb6303140ff75611a3fd659332e57b3309bbaf4bc19f60b70",
+      "patchCheckedAgainst": "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022/checkout",
+      "patchAppliedBytesExactly": true,
+      "changedFiles": [
+        {
+          "file": "Eggshell/Handoff.lean",
+          "beforeSha256": "5969a5cb4fefddce6794d997643e19bbe2a8b3042c5e6d55db49d75f5da89780",
+          "afterSha256": "c0a6d6182f1def93bd05efd582fb11cc76fe188acb6d5cf66cd813724799f263"
+        },
+        {
+          "file": "tools/CitationProjectionTests.lean",
+          "beforeSha256": "985435b52270af7100c75ec5fdf897560d73923ce3842023cb907d27d98553d1",
+          "afterSha256": "3829802aafc65f1fe828b1d48393db9db753d8326010efdd6c092a4a3ada4a3a"
+        }
+      ],
+      "result": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-result.json",
+      "resultSha256": "506d5e399f78fd2f0e527930c6decf37e0fe1bf043e7281070932931d5587ccd",
+      "oracle": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-question-requirements.json",
+      "oracleSha256": "bdac318fd2b3704c240fb4e458d05e4b14a97665b9f8ecdc174df1021302e726",
+      "sameRequiredCodeAsBase": true,
+      "rows": [
+        {
+          "stage": 1,
+          "topic": 1,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 16287.81425,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage1-native/native-0/body.txt",
+              "bodySha256": "181850bb1e43cfb0cc46e1042317453b14b96d5174715a0bdbfb85516acb7ffb",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "trailing-language-warning"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 10732.100833,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage1-native/native-1/body.txt",
+              "bodySha256": "181850bb1e43cfb0cc46e1042317453b14b96d5174715a0bdbfb85516acb7ffb",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "trailing-language-warning"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "complete-hlsl-branch-scope",
+            "trailing-language-warning"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage1-native/data/receipts/be05f23a70e210abd68c8ef8ca89bd5d3a97450d1988016f4bb67f81d97cef5f/numerical-42514-2512597752185458.json",
+              "sha256": "b9ec995acb5f8a8f065fb640940ceeebbec1095aa63a9f37d94b03b7ca4c344e"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage1-native/data/receipts/be05f23a70e210abd68c8ef8ca89bd5d3a97450d1988016f4bb67f81d97cef5f/numerical-42695-2512599365793375.json",
+              "sha256": "04c66ff5347f2ddaf80baf8ef92058ac0eece58fb8f9ae4c136719f1c073672d"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage1-native/ready.json",
+          "readySha256": "dad1d85502c0d1ff3ce62a4cc6d0485b3bc851a45135e5feafa0baa27aa5aecd"
+        },
+        {
+          "stage": 2,
+          "topic": 2,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 13442.665,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage2-native/native-0/body.txt",
+              "bodySha256": "965fc20df988da2f60728ed3b7b8f4119ab385ef79904cf45ab9ee91397c5707",
+              "missingRequired": []
+            },
+            {
+              "index": 1,
+              "elapsedMs": 11636.566667,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage2-native/native-1/body.txt",
+              "bodySha256": "965fc20df988da2f60728ed3b7b8f4119ab385ef79904cf45ab9ee91397c5707",
+              "missingRequired": []
+            }
+          ],
+          "missingRequired": [],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage2-native/data/receipts/f652b1206c2ea87c14bce910193c2c95cfa43e8a9a22f2b87b58b8697d3e8636/numerical-45680-2512625510837500.json",
+              "sha256": "b84f51fdd650709a05366f20eaeea0e30ee465f5bca15d5b1d4e664150fc65be"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage2-native/data/receipts/f652b1206c2ea87c14bce910193c2c95cfa43e8a9a22f2b87b58b8697d3e8636/numerical-45874-2512627280714333.json",
+              "sha256": "06884c821857954aaa2f0f7c22c1b175574d07dd8ebae180c6ac9f90818925ac"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage2-native/ready.json",
+          "readySha256": "2f9b78989f485634e14a2b119830ee08d2e444e9e9cab70fdf4b5600749be965"
+        },
+        {
+          "stage": 3,
+          "topic": 3,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 14306.776958,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage3-native/native-0/body.txt",
+              "bodySha256": "3e7de7f452b63ae8bc01aeb8f588077fdaf5f37eddece380488e74dfc723b98a",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 12340.067584,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage3-native/native-1/body.txt",
+              "bodySha256": "3e7de7f452b63ae8bc01aeb8f588077fdaf5f37eddece380488e74dfc723b98a",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "complete-hlsl-branch-scope",
+            "syntax-only-compile-cutoff",
+            "trailing-language-warning"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage3-native/data/receipts/6eaf544f83cb43e77f7c4c13ad7e2be161ee43a58d52cbc02fb6c2893bb0e7cf/numerical-49166-2512655319585291.json",
+              "sha256": "28735d0f5ad3518cb11a7be4065904e3dea1bd91fb32026d40695f54ae162346"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage3-native/data/receipts/6eaf544f83cb43e77f7c4c13ad7e2be161ee43a58d52cbc02fb6c2893bb0e7cf/numerical-49380-2512657182233125.json",
+              "sha256": "8438572580cd53aeba93be612f4ca3ed0685d72aa9423a6ac649f2a312982dfa"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage3-native/ready.json",
+          "readySha256": "cafbd9c519ccbd921ca393b500f44c7f6feb780c0c8789d177f3cd2064fd5abf"
+        },
+        {
+          "stage": 4,
+          "topic": 1,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 19120.998875,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage4-native/native-0/body.txt",
+              "bodySha256": "2b1228404ea4e5f937fc24a97eb58cfacac257cbfcdf5733b3d7eb5d606ecb1c",
+              "missingRequired": [
+                "trailing-language-warning"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 17290.509375,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage4-native/native-1/body.txt",
+              "bodySha256": "2b1228404ea4e5f937fc24a97eb58cfacac257cbfcdf5733b3d7eb5d606ecb1c",
+              "missingRequired": [
+                "trailing-language-warning"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "trailing-language-warning"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage4-native/data/receipts/5df09b3f549fc03535dc4b52b1513f5ae57e24906d09755bfb8a3a350f54c66e/numerical-53260-2512691451433833.json",
+              "sha256": "ae9915d1117ff34b38c4a186bcba253fd75b7c9688f7092ae18b61b94fc58804"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage4-native/data/receipts/5df09b3f549fc03535dc4b52b1513f5ae57e24906d09755bfb8a3a350f54c66e/numerical-53531-2512693868595375.json",
+              "sha256": "08346ec0ba0fb069fd38ab9e00a1ec0b024e546b036f48c9132b5a44506f1f31"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage4-native/ready.json",
+          "readySha256": "340d1c8054464a88682925b618f0ff73d10369cb194d584f6169517273f31839"
+        },
+        {
+          "stage": 5,
+          "topic": 2,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 17343.224334,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage5-native/native-0/body.txt",
+              "bodySha256": "517c088456e8ce84e0279121d3eaa9513d8379f4f54896609838836665e197e6",
+              "missingRequired": []
+            },
+            {
+              "index": 1,
+              "elapsedMs": 15773.794,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage5-native/native-1/body.txt",
+              "bodySha256": "517c088456e8ce84e0279121d3eaa9513d8379f4f54896609838836665e197e6",
+              "missingRequired": []
+            }
+          ],
+          "missingRequired": [],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage5-native/data/receipts/268d30987d98b6d5a09647208156adfed29c6aa555205a4e9fbcc32be510b5bd/numerical-57822-2512732038418291.json",
+              "sha256": "1d4758f00db3c3c392fccefb1ad35304f648cd23022d4020ec0affdb2c8c58bc"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage5-native/data/receipts/268d30987d98b6d5a09647208156adfed29c6aa555205a4e9fbcc32be510b5bd/numerical-58042-2512733975883291.json",
+              "sha256": "fded98f00346a08898161d0f12f9c3dadaeeadb6c106d7378662d894de24b753"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage5-native/ready.json",
+          "readySha256": "3c61282cd8654c2ada9761fafd5979a76f21a12e865502c1d4225c305174121f"
+        },
+        {
+          "stage": 6,
+          "topic": 3,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 19981.210833,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage6-native/native-0/body.txt",
+              "bodySha256": "ab229acacba75447eb5ae4c99bb7874d29125965e6b5eb87339e0d5413dd916b",
+              "missingRequired": [
+                "syntax-only-no-output-action"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 18123.212667,
+              "body": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage6-native/native-1/body.txt",
+              "bodySha256": "ab229acacba75447eb5ae4c99bb7874d29125965e6b5eb87339e0d5413dd916b",
+              "missingRequired": [
+                "syntax-only-no-output-action"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "syntax-only-no-output-action"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage6-native/data/receipts/25538b5e1f67a37197dc701988e8d38b763a0d507c55fb4f21ccdac3adefa8fb/numerical-62572-2512774110681583.json",
+              "sha256": "50ca26fd7bf0db853572d72aa37a2aba800e03d856fedf0b6bd7f1cb65977874"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage6-native/data/receipts/25538b5e1f67a37197dc701988e8d38b763a0d507c55fb4f21ccdac3adefa8fb/numerical-62858-2512776661131958.json",
+              "sha256": "9f63074b3273cf711f0928c5113967b301e616b8ead031bfec7f427be4c5012a"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all/prepared/stage6-native/ready.json",
+          "readySha256": "ea1c926a378b0416cc372a1da6e63bdc92caf7b975cb6d7848d7372e39f48b32"
+        }
+      ],
+      "guards": [
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/build-checked-guard.json",
+          "sha256": "18c47c11b3fbcbaab3ad31a57e7e14498c4676e40723b987985f341f9b0480db",
+          "guardPid": 20406,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 2676208,
+          "samples": 271,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/build-checked.py"
+          ],
+          "childPid": 20420,
+          "exitCode": 0,
+          "elapsedSeconds": 40.11223474983126
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/build-guard.json",
+          "sha256": "6c29044fcc8ead1eb89a155c952668d8684547377ce3e1d827037f45aceb3e8e",
+          "guardPid": 8264,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 2886736,
+          "samples": 149,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/build.py"
+          ],
+          "childPid": 8278,
+          "exitCode": 1,
+          "elapsedSeconds": 22.249217415694147
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/demand-tests-guard.json",
+          "sha256": "eb42d763be3ec6261522415f0d8be3cbeff4be5032e9ae24112a140d6242a81c",
+          "guardPid": 34712,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 1463408,
+          "samples": 27,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/check-demands.py"
+          ],
+          "childPid": 34726,
+          "exitCode": 1,
+          "elapsedSeconds": 3.762818875256926
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/demand-tests-repaired-guard.json",
+          "sha256": "3a74ee2178472defc6d66313b3f67ad773871ffcba5bf6a6d4624a9d8d2c2a1c",
+          "guardPid": 38722,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 1396608,
+          "samples": 8,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/check-demands-repaired.py"
+          ],
+          "childPid": 38724,
+          "exitCode": 0,
+          "elapsedSeconds": 1.0377438343130052
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/native-all-guard.json",
+          "sha256": "7f150e3fa33d266b520b7efe23592f0893a7d7997f2597d4b16bfd74e11407f2",
+          "guardPid": 39785,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 1411888,
+          "samples": 1548,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/qualify-native.py"
+          ],
+          "childPid": 39786,
+          "exitCode": 0,
+          "elapsedSeconds": 220.87161116721109
+        }
+      ],
+      "maximumAggregateRssKiB": 2886736,
+      "answeringModelCalls": 0,
+      "newSeedCalls": 0,
+      "newTokenReductionMeasured": false
+    },
+    {
+      "name": "source-concept-coverage",
+      "directory": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022",
+      "mechanism": "Original source lexical concepts share saturating value across occurrences; actual source cue ranks are retained, without a character multiplier. Original cost closures and wire checks remain.",
+      "status": "rejected-required-original-code-missing",
+      "productionAdoption": false,
+      "sourceManifest": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/frozen-saturation-inputs.json",
+      "sourceManifestSha256": "fc2e681ec332b513e19fdb5c3c94bbc58cd3342f6a05c356c45ed0364d93e401",
+      "runtimeSha256": "cc2af7fdaa8bb67ba67a604ac3f542339f47eca969bfca153dfcf58382d516c7",
+      "patch": "docs/candidates/source-concept-coverage.patch",
+      "patchSha256": "d5979a843b51201e6f69d7fdc5105a310db2ac84c28604afc88cb3076668e6c7",
+      "patchCheckedAgainst": "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022/checkout",
+      "patchAppliedBytesExactly": true,
+      "changedFiles": [
+        {
+          "file": "Eggshell/Handoff.lean",
+          "beforeSha256": "5969a5cb4fefddce6794d997643e19bbe2a8b3042c5e6d55db49d75f5da89780",
+          "afterSha256": "657b64d47ba1ba05bf5ad60f4454c1dd9ec6b662b4507abff8f3127176c92d78"
+        },
+        {
+          "file": "tools/SourceConceptTests.lean",
+          "beforeSha256": null,
+          "afterSha256": "f59a8e00c888348a860e99ff363c78addb9c2218c7554f8b9a1228a9d13f975a"
+        }
+      ],
+      "result": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-result.json",
+      "resultSha256": "70dbc012d40c96b50a70009009dc67da9f0ab344014b64936e1fb5b021a0b543",
+      "oracle": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-question-requirements.json",
+      "oracleSha256": "bdac318fd2b3704c240fb4e458d05e4b14a97665b9f8ecdc174df1021302e726",
+      "sameRequiredCodeAsBase": true,
+      "rows": [
+        {
+          "stage": 1,
+          "topic": 1,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 17379.252917,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage1-native/native-0/body.txt",
+              "bodySha256": "7b9f2c818bf6336e268705195c3b31509389c38f67e74d6f21dfcec6490b2d86",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "trailing-language-warning"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 11095.1275,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage1-native/native-1/body.txt",
+              "bodySha256": "7b9f2c818bf6336e268705195c3b31509389c38f67e74d6f21dfcec6490b2d86",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "trailing-language-warning"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "complete-hlsl-branch-scope",
+            "trailing-language-warning"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage1-native/data/receipts/50aa7c5c0eae5de70a8fb79caf63ef6881550ffc63468b13743fe776ab5367a0/numerical-96427-2514578634996625.json",
+              "sha256": "adc65454d06d3ac87e9dd34b918aec5ee9207bf3ccd7072ce554dfd0b769cfb3"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage1-native/data/receipts/50aa7c5c0eae5de70a8fb79caf63ef6881550ffc63468b13743fe776ab5367a0/numerical-96442-2514580175550791.json",
+              "sha256": "57a0de240f02fa379c4fca6519ea96396b698b0635cfc8fb97a657b3b783f474"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage1-native/ready.json",
+          "readySha256": "950cc29f72a38279457f254bfccb7933792aa705c311d59b369b6ac31a579797"
+        },
+        {
+          "stage": 2,
+          "topic": 2,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 13633.670167,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage2-native/native-0/body.txt",
+              "bodySha256": "bf292248322c7721da33790fe69dca0b3aae903c2cd2bfd93133e5f3d787576b",
+              "missingRequired": []
+            },
+            {
+              "index": 1,
+              "elapsedMs": 11754.347916,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage2-native/native-1/body.txt",
+              "bodySha256": "bf292248322c7721da33790fe69dca0b3aae903c2cd2bfd93133e5f3d787576b",
+              "missingRequired": []
+            }
+          ],
+          "missingRequired": [],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage2-native/data/receipts/3cd2b9e21ecf60170d42d9816bb0f397e4903c31236b1754aa8d607171e0bad1/numerical-96705-2514606876870250.json",
+              "sha256": "11a953eea994fbc460b9584b7da3fb3f5926b1824d27d0a6d22d8e5639842f2c"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage2-native/data/receipts/3cd2b9e21ecf60170d42d9816bb0f397e4903c31236b1754aa8d607171e0bad1/numerical-96719-2514608590849625.json",
+              "sha256": "69257739bbb6de2473a01b1a0ee67e878701dc07fdf248e36637d1ee97350b51"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage2-native/ready.json",
+          "readySha256": "4c7909bf9b5dc143216b1a810cfa42b03856b095e179d1ad045b82e1868bb984"
+        },
+        {
+          "stage": 3,
+          "topic": 3,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 14263.00025,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage3-native/native-0/body.txt",
+              "bodySha256": "53f7c6b5f182c471ebc25513b695a0da1f5edc334b5aae0fdca74272fbf98d93",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 12917.911917,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage3-native/native-1/body.txt",
+              "bodySha256": "53f7c6b5f182c471ebc25513b695a0da1f5edc334b5aae0fdca74272fbf98d93",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "complete-hlsl-branch-scope",
+            "syntax-only-compile-cutoff",
+            "trailing-language-warning"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage3-native/data/receipts/0f13fc31633a10c40ee52758ebf5eb88ea2b64cbeaf13e6a351dc048aca1532e/numerical-97007-2514636684768541.json",
+              "sha256": "e8b1c1112ee248eb72aa0fc4ff5926c74366470751f38ca49ba8c7ab0f5a268a"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage3-native/data/receipts/0f13fc31633a10c40ee52758ebf5eb88ea2b64cbeaf13e6a351dc048aca1532e/numerical-97023-2514638505150833.json",
+              "sha256": "c6a90df12c6a5e98e8266a7949b8569c972b43c94f6c48ff3d45ae51ab347d7b"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage3-native/ready.json",
+          "readySha256": "ef801600e12ea435f3d68079a3f7941d628eb504509364fc8288a918e647a690"
+        },
+        {
+          "stage": 4,
+          "topic": 1,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 18924.581166,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage4-native/native-0/body.txt",
+              "bodySha256": "c95e8c321df23a00a95afe07afeae5b4619fa9a96e7782fe38d3046aa31ebb36",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "trailing-language-warning"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 17088.666792,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage4-native/native-1/body.txt",
+              "bodySha256": "c95e8c321df23a00a95afe07afeae5b4619fa9a96e7782fe38d3046aa31ebb36",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "trailing-language-warning"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "complete-hlsl-branch-scope",
+            "trailing-language-warning"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage4-native/data/receipts/a0e6cf7b85b3e54167627f5e5b77e67223d2aa1e8b2fd8dba1ca5c212b71c49e/numerical-97449-2514673221265958.json",
+              "sha256": "4cf152eff0fe85f1e4f3cf1789eb0d0e27e9e16b577859efb9268032feb977cd"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage4-native/data/receipts/a0e6cf7b85b3e54167627f5e5b77e67223d2aa1e8b2fd8dba1ca5c212b71c49e/numerical-97470-2514675621492291.json",
+              "sha256": "89a56a8de26992b9241efcfc350c19823e3fd2280ff623d2fdf760067a880fa9"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage4-native/ready.json",
+          "readySha256": "26eefd586894adca680882a4715c9456a325b5a5d589e2f7f88854008c57f7a8"
+        },
+        {
+          "stage": 5,
+          "topic": 2,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 18336.429375,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage5-native/native-0/body.txt",
+              "bodySha256": "ea197b5bcf5f2d61dd8a466391eefa632cad1e6cb4eb76342f9762befa569e55",
+              "missingRequired": [
+                "toolchain-cache-key"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 16416.184875,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage5-native/native-1/body.txt",
+              "bodySha256": "ea197b5bcf5f2d61dd8a466391eefa632cad1e6cb4eb76342f9762befa569e55",
+              "missingRequired": [
+                "toolchain-cache-key"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "toolchain-cache-key"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage5-native/data/receipts/d96bec4e00524ff4bc2b50acc507e8e5835c8c82e9d3761e67605fade8c8fb15/numerical-99632-2514714527862375.json",
+              "sha256": "d6446a47f09c724d0b9f344cd7d583c670586af31b67284e9f435318f5fc8dcf"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage5-native/data/receipts/d96bec4e00524ff4bc2b50acc507e8e5835c8c82e9d3761e67605fade8c8fb15/numerical-99865-2514716466573083.json",
+              "sha256": "3630290bc6cd58f45561486a05332f75a1606292be9d93c5bc569f073a3a4b1f"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage5-native/ready.json",
+          "readySha256": "8e481d20034c094aa7319290369ede7d380ab406b16e2d2eb2fcd5c9895eadeb"
+        },
+        {
+          "stage": 6,
+          "topic": 3,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 20927.328958,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage6-native/native-0/body.txt",
+              "bodySha256": "4406a61b3d68eb1cad7251bd6b26ad8dcd2aea3868331322502d7ba6e74ed34f",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning",
+                "syntax-only-no-output-action",
+                "frontend-job-construction"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 18647.368167,
+              "body": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage6-native/native-1/body.txt",
+              "bodySha256": "4406a61b3d68eb1cad7251bd6b26ad8dcd2aea3868331322502d7ba6e74ed34f",
+              "missingRequired": [
+                "complete-hlsl-branch-scope",
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning",
+                "syntax-only-no-output-action",
+                "frontend-job-construction"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "complete-hlsl-branch-scope",
+            "syntax-only-compile-cutoff",
+            "trailing-language-warning",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage6-native/data/receipts/1dd9baf5569beacedad31306c4c1b5f95f1dfb158d89dc035a088a5c71c7e709/numerical-4893-2514758190581375.json",
+              "sha256": "6d705bd5bad3a875593baa4e82516c230613b849532ee5afc967f9d813e36a02"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage6-native/data/receipts/1dd9baf5569beacedad31306c4c1b5f95f1dfb158d89dc035a088a5c71c7e709/numerical-5180-2514760698965875.json",
+              "sha256": "d301fbc05db722db57361778614db6f99169e80098ef4af1ad2c970b68072adb"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all/prepared/stage6-native/ready.json",
+          "readySha256": "c35ace5c21ad84e668a187d9da50b0cd79f22a46e11b80d808c14e4ae26b3495"
+        }
+      ],
+      "guards": [
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/build-checked-guard.json",
+          "sha256": "7818cc7f27a3bd6a0018978461669f3e6b3a07e79a7cb3281b092bf0227f5f96",
+          "guardPid": 69520,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 2820560,
+          "samples": 267,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/build-checked.py"
+          ],
+          "childPid": 69523,
+          "exitCode": 0,
+          "elapsedSeconds": 37.89398287516087
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/build-edge-guard.json",
+          "sha256": "b9c435ff25a70f7bd64cc3cd7d300ece135e84508e3c8086cad43b8ba3e7a689",
+          "guardPid": 86256,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 2885904,
+          "samples": 320,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "build-edge.py"
+          ],
+          "childPid": 86257,
+          "exitCode": 1,
+          "elapsedSeconds": 45.26587941730395
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/build-guard.json",
+          "sha256": "7909a2bc1d8455bb66ecc60c30b42d214f88066f2c3c82524e85e70efdd50272",
+          "guardPid": 57689,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 2949472,
+          "samples": 321,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/build.py"
+          ],
+          "childPid": 57705,
+          "exitCode": 0,
+          "elapsedSeconds": 46.42539370805025
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-guard.json",
+          "sha256": "2904b30a41d835c3d27b97e9b6e74634c03d14b8d8f158c9f0c8f6eaea5d9979",
+          "guardPid": 93938,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 1433248,
+          "samples": 1593,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [
+            "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/native-all"
+          ],
+          "childCommand": [
+            "python3",
+            "qualify-native.py"
+          ],
+          "childPid": 93939,
+          "exitCode": 0,
+          "elapsedSeconds": 226.04092175001279
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/test-edge-fixed-guard.json",
+          "sha256": "225a8aeef8715add365ecc92e3f301630c83c3a074cfba1ca0d6ebccf8eec94c",
+          "guardPid": 86762,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 1461808,
+          "samples": 8,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "test-edge-fixed.py"
+          ],
+          "childPid": 86764,
+          "exitCode": 1,
+          "elapsedSeconds": 1.0057830419391394
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/test-edge-saturation-guard.json",
+          "sha256": "4b50b0d5b5756f0d7314cb7a0fcec3627f255961af58192d62b745433def5600",
+          "guardPid": 88080,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 1463152,
+          "samples": 12,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "test-edge-saturation.py"
+          ],
+          "childPid": 88082,
+          "exitCode": 0,
+          "elapsedSeconds": 1.6048300829716027
+        }
+      ],
+      "maximumAggregateRssKiB": 2949472,
+      "answeringModelCalls": 0,
+      "newSeedCalls": 0,
+      "newTokenReductionMeasured": false
+    },
+    {
+      "name": "cue-piece-count",
+      "directory": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022",
+      "mechanism": "Only remove the character multiplier from existing disjoint cue-piece weights. Preserve candidate units, costs, ranks, original coordinates and semantic scores.",
+      "status": "rejected-required-original-code-missing",
+      "productionAdoption": false,
+      "sourceManifest": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/frozen-inputs.json",
+      "sourceManifestSha256": "a339fdab2ced53e75ae60601b98ae3895f72b7184f1e11db724afce660d0148e",
+      "runtimeSha256": "3e687b5170df08403b29ac2e818671e5c488e6b93b0e965897841fe3834f7d6c",
+      "patch": "docs/candidates/cue-piece-count.patch",
+      "patchSha256": "0a40f912cd1a9db991751d5344e692e678f2c121bf3b788134ae4a1e1652cefa",
+      "patchCheckedAgainst": "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022/checkout",
+      "patchAppliedBytesExactly": true,
+      "changedFiles": [
+        {
+          "file": "Eggshell/Handoff.lean",
+          "beforeSha256": "5969a5cb4fefddce6794d997643e19bbe2a8b3042c5e6d55db49d75f5da89780",
+          "afterSha256": "594a39e2b000bb0b7ff6f142e8b67e04865d7020f085b4cb76044b7500818532"
+        }
+      ],
+      "result": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-result.json",
+      "resultSha256": "8c5b51962f28fa30da601d8b05d76ed5e3559d0e237ca8af3be55002301546fe",
+      "oracle": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-question-requirements.json",
+      "oracleSha256": "bdac318fd2b3704c240fb4e458d05e4b14a97665b9f8ecdc174df1021302e726",
+      "sameRequiredCodeAsBase": true,
+      "rows": [
+        {
+          "stage": 1,
+          "topic": 1,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 16753.062917,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage1-native/native-0/body.txt",
+              "bodySha256": "8002d6d2df99ae67c0dc0de6cf1bf493964c817ae967fb24a6fd1ffdb49c9b13",
+              "missingRequired": [
+                "trailing-language-warning"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 11135.663208,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage1-native/native-1/body.txt",
+              "bodySha256": "8002d6d2df99ae67c0dc0de6cf1bf493964c817ae967fb24a6fd1ffdb49c9b13",
+              "missingRequired": [
+                "trailing-language-warning"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "trailing-language-warning"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage1-native/data/receipts/e94adf6c8debe61089262a0084b378ceddde50971e9b209f9b63468d394f9451/numerical-16737-2514890798488166.json",
+              "sha256": "7bbffcb74da47a3496636525f8372ac56a0568dc80b9609b5c95c40842c91354"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage1-native/data/receipts/e94adf6c8debe61089262a0084b378ceddde50971e9b209f9b63468d394f9451/numerical-16906-2514892376779583.json",
+              "sha256": "73ad8af63b386ff247e08ef9fea736841a96ceba42b70daca7309c88f6c0556d"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage1-native/ready.json",
+          "readySha256": "801cb2e799c961dc14ac31e937d57897f2e21c99b4a150d4a5a223f6b6271eb3"
+        },
+        {
+          "stage": 2,
+          "topic": 2,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 13638.669291,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage2-native/native-0/body.txt",
+              "bodySha256": "48126b095c0af99ba36e32d41abe5a083f968eb929b8b802f910e961d94cd9a7",
+              "missingRequired": []
+            },
+            {
+              "index": 1,
+              "elapsedMs": 11634.162625,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage2-native/native-1/body.txt",
+              "bodySha256": "48126b095c0af99ba36e32d41abe5a083f968eb929b8b802f910e961d94cd9a7",
+              "missingRequired": []
+            }
+          ],
+          "missingRequired": [],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage2-native/data/receipts/27bd3fb55c92fb100ce3330fd4e7292152ba5ecfe23ccb483327f8c5c34d1487/numerical-19974-2514919209007000.json",
+              "sha256": "94623ac24eda9f39023bfdc7a400c8892fe9a178712e5cb915f6b20f2122b897"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage2-native/data/receipts/27bd3fb55c92fb100ce3330fd4e7292152ba5ecfe23ccb483327f8c5c34d1487/numerical-20168-2514920947192833.json",
+              "sha256": "cae08054a6d03ab069aee030c8345b6861cdfc096216d5e60c6b6bd052e66b80"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage2-native/ready.json",
+          "readySha256": "fd9306de15f9236619e65ccb006379b16f9081f294a381c3eb7e7e5f3143c8e9"
+        },
+        {
+          "stage": 3,
+          "topic": 3,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 13975.038875,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage3-native/native-0/body.txt",
+              "bodySha256": "c1c455b82404f2d49bdb06d9f75fe9f46481bd9ad301fda1e536cc7b5a1d1997",
+              "missingRequired": [
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 12216.730583,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage3-native/native-1/body.txt",
+              "bodySha256": "c1c455b82404f2d49bdb06d9f75fe9f46481bd9ad301fda1e536cc7b5a1d1997",
+              "missingRequired": [
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "syntax-only-compile-cutoff",
+            "trailing-language-warning"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage3-native/data/receipts/2f100dbb0dcc9f74f736ba527aa7d787555cab1124af9a9ea87e6b31dee6030a/numerical-23352-2514948665445208.json",
+              "sha256": "74fe3a9428f49711be8342a1347235ec9cf72314902058b13d4c473bc77daae6"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage3-native/data/receipts/2f100dbb0dcc9f74f736ba527aa7d787555cab1124af9a9ea87e6b31dee6030a/numerical-23559-2514950477740583.json",
+              "sha256": "d683c3cb00735bbf088450b275511788af10f7892b138545bf4e6f78ac161273"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage3-native/ready.json",
+          "readySha256": "4bd8fbc702be0ab006c754dc3dc97fb6fa4aa8ae944e96e46558004b3889cc27"
+        },
+        {
+          "stage": 4,
+          "topic": 1,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 18338.448917,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage4-native/native-0/body.txt",
+              "bodySha256": "186150aedbcc8411ea419636151126fa99661b0d7ccf5976ca8049b93600ae77",
+              "missingRequired": [
+                "trailing-language-warning"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 17450.680625,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage4-native/native-1/body.txt",
+              "bodySha256": "186150aedbcc8411ea419636151126fa99661b0d7ccf5976ca8049b93600ae77",
+              "missingRequired": [
+                "trailing-language-warning"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "trailing-language-warning"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage4-native/data/receipts/133cd671539e6fc8d329a35c4c7a0ab209c3fd734d149da8a1cbe303ddf22249/numerical-25041-2514984698513916.json",
+              "sha256": "21ba7faba26fc61db4d965da5d1031ca8956a135c8dcdfedba66d0955848e063"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage4-native/data/receipts/133cd671539e6fc8d329a35c4c7a0ab209c3fd734d149da8a1cbe303ddf22249/numerical-25059-2514987080509541.json",
+              "sha256": "6ed6f353da7ca12ac0d6b0230fba5adb3d7b290f315dc1bf6060223104c10793"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage4-native/ready.json",
+          "readySha256": "5e14ed8a5f0ee2574a40a4120c140894e71b30ba942c21ffa2ba2571b29a6b37"
+        },
+        {
+          "stage": 5,
+          "topic": 2,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 18776.484625,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage5-native/native-0/body.txt",
+              "bodySha256": "1d8838eb98a674f2e2dcbca0ee2f5526109f478b80c09b89193f4ef562d81412",
+              "missingRequired": []
+            },
+            {
+              "index": 1,
+              "elapsedMs": 16384.378041,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage5-native/native-1/body.txt",
+              "bodySha256": "1d8838eb98a674f2e2dcbca0ee2f5526109f478b80c09b89193f4ef562d81412",
+              "missingRequired": []
+            }
+          ],
+          "missingRequired": [],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage5-native/data/receipts/0972dc6a29fbdd07865a6cfc61b9b4cb3d804221c827ceea11df12d3399098ea/numerical-29765-2515027606873541.json",
+              "sha256": "2d801f9d1395d5ec56b95a629224b487f0f07476657bc7a528201a6e0d33291d"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage5-native/data/receipts/0972dc6a29fbdd07865a6cfc61b9b4cb3d804221c827ceea11df12d3399098ea/numerical-30074-2515029573160791.json",
+              "sha256": "d4e712343e1f7a37a974904058f496d9d7cc68ed855955d539db8e34c7e35189"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage5-native/ready.json",
+          "readySha256": "0b79e09d520fb6653486507470287eff060d1f20b2bdd8a74ff5b8a9e9a71ece"
+        },
+        {
+          "stage": 6,
+          "topic": 3,
+          "sessions": [
+            {
+              "index": 0,
+              "elapsedMs": 20204.826083,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage6-native/native-0/body.txt",
+              "bodySha256": "33343ac0627793fd5fc01a6ba813ebe7f944d18346d1668dc8a3f7de896f8a85",
+              "missingRequired": [
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning",
+                "syntax-only-no-output-action",
+                "frontend-job-construction"
+              ]
+            },
+            {
+              "index": 1,
+              "elapsedMs": 18333.982875,
+              "body": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage6-native/native-1/body.txt",
+              "bodySha256": "33343ac0627793fd5fc01a6ba813ebe7f944d18346d1668dc8a3f7de896f8a85",
+              "missingRequired": [
+                "syntax-only-compile-cutoff",
+                "trailing-language-warning",
+                "syntax-only-no-output-action",
+                "frontend-job-construction"
+              ]
+            }
+          ],
+          "missingRequired": [
+            "syntax-only-compile-cutoff",
+            "trailing-language-warning",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ],
+          "independentBodiesIdentical": true,
+          "withinDeadline": true,
+          "numericalReceipts": [
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage6-native/data/receipts/8ce156a0928ccc6dcc71b43664c6cbc5c09c1926b053b0525eb1e951d5f212ab/numerical-36042-2515070725179625.json",
+              "sha256": "aeda089fc66cf4afd12eb2b9d6ce35cb93db33b3e3bfd9d034540f0c3751138f"
+            },
+            {
+              "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage6-native/data/receipts/8ce156a0928ccc6dcc71b43664c6cbc5c09c1926b053b0525eb1e951d5f212ab/numerical-36381-2515073313741166.json",
+              "sha256": "0a9e8bd7817ddc108cad120cbd38f8e08d2b8c6487c0499c10769f7d0ffd563a"
+            }
+          ],
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0,
+          "ready": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all/prepared/stage6-native/ready.json",
+          "readySha256": "affe17a504789950cb7ee91fafaebb3a54f7131ea867cb853a2de646725151ba"
+        }
+      ],
+      "guards": [
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/build-guard.json",
+          "sha256": "0da16acc115777b6b14770e79123f1bad724de659f973cfc99e6724358ddb842",
+          "guardPid": 8436,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 2872496,
+          "samples": 323,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [],
+          "childCommand": [
+            "python3",
+            "build.py"
+          ],
+          "childPid": 8437,
+          "exitCode": 0,
+          "elapsedSeconds": 46.432826874777675
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-guard.json",
+          "sha256": "02214693b30514d4f1b4335de37958ed9b95f6bbb0d287f02b2d5cb8a738b24d",
+          "guardPid": 14126,
+          "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+          "state": "finished",
+          "limitRssKiB": 3145728,
+          "userCeilingRssKiB": 4194304,
+          "sampledPeakRssKiB": 1424144,
+          "samples": 1580,
+          "guardTriggered": false,
+          "reason": null,
+          "ownedPrefixes": [
+            "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/native-all"
+          ],
+          "childCommand": [
+            "python3",
+            "qualify-native.py"
+          ],
+          "childPid": 14127,
+          "exitCode": 0,
+          "elapsedSeconds": 225.3861453337595
+        }
+      ],
+      "maximumAggregateRssKiB": 2872496,
+      "answeringModelCalls": 0,
+      "newSeedCalls": 0,
+      "newTokenReductionMeasured": false
+    }
+  ],
+  "additionalNegativeDiagnostics": [
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/numbered-file-atlas-size.json",
+      "sha256": "31402cf3fbede232535d907fcb15d90f70009ca950a38d357ade73198c8fb9e5"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/regional-nomination-audit.json",
+      "sha256": "8cb4eaf31a7f6ad384bc4468301cf637888727364ea278c0a0ec6cec1372567a"
+    }
+  ],
+  "scope": "Six-stage development delivery ablations over the identical saved histories; no answering-model or token-reduction result, no production adoption.",
+  "hypothesisBoundaries": [
+    "Whole-citation priority can shift missing code elsewhere. It does not establish that every citation must be shipped in full.",
+    "Shared lexical concepts are an incomplete proxy for distinct source conditions; higher proxy coverage cannot substitute for actual original code.",
+    "Counting existing disjoint cue pieces without length changes their subdivision sensitivity; failure does not rule out every length-independent objective.",
+    "The earlier closed-demand replay changed the value domain to whole prerequisite closures and is distinct from the one-line cue-piece ablation."
+  ],
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "productionAdoption": false,
+  "readmeResultsChanged": false,
+  "scriptSha256": "3828f4291a1c2e918e187884b1834054da2aac7bfadfc992e3823a3519384b4e"
+}

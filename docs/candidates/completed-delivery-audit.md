@@ -16,7 +16,7 @@
 プロセス完了なので、認定件数に数えていない。
 
 `search.completed` は配送の重複除去後の `handoff.map completed` である。
-null 198件は `empty` 124+9件と `reconciled-empty` 94件で、Handoffが残らない記録。
+null 198件は `empty` 104件と `reconciled-empty` 94件で、Handoffが残らない記録。
 これを内部照合の「認定候補も0件」とは読み替えない。実際に認定を配送した記録はなく、
 equalityOriginも全てnullだった。初回の自然言語質問が同じだけではExactの権限を作れない。
 

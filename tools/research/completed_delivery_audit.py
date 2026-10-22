@@ -28,6 +28,8 @@ def aggregate(receipts):
                 explicitCompletedSum=sum(counts),
                 positiveCompletedReceipts=sum(c > 0 for c in counts),
                 noHandoffCountUnavailable=sum(r['completed'] is None for r in receipts),
+                countUnavailableDispositions=dict(Counter(r['disposition'] for r in receipts
+                    if r['completed'] is None)),
                 dispositions=dict(Counter(r['disposition'] for r in receipts)),
                 equalityOriginPresent=sum(r['equalityOrigin'] is not None for r in receipts))
 

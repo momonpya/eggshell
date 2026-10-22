@@ -1,0 +1,11 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5279,7 +5279,7 @@
+     (endpoints.zip (endpoints.drop 1)).filterMap fun (first,last) => do
+       if first ≥ last then none else do
+         let cue ← coveringCue? ownerCues first last
+-        pure {family := familyIndex, first := first, last := last, weight := (last-first)*(scale/(61+familyIndex)+scale/(61+cue.priority))}
++        pure {family := familyIndex, first := first, last := last, weight := scale/(61+familyIndex)+scale/(61+cue.priority)}
+
+ def problem (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
+     (fixed ceiling : Nat × Nat) : Option SharedCoverage.Problem := do
