@@ -11,7 +11,7 @@
 - 質問の利用記録は私有の`read-cache/<DB identity>/synapses/usage/`だけに置く。
   質問はダイジェストで識別する。共有DBの推薦関係のレーンは利用記録を拒否する。
 - パス・記録指紋・バイト長・行範囲の同一性と、元所有者・元座標への束縛はそのまま保存する。
-- `owner / answer / claim / consumer / group / quoted / source / query / usage`の逆引きから必要なpostingだけを読む。
+- `owner / answer / claim / consumer / group / quoted / source / file / query / usage`の逆引きから必要なpostingだけを読む。
   件数・期限の上限に達したらB木の走査を止め、`complete=false`を返す。全件と偽らない。
 - 読出しはディレクトリやキャッシュを作らない。初回構築・更新・修復はwarm/背景側の責任である。
 
@@ -66,6 +66,7 @@ DBからの自動抽出、索引チケット、`egg warm`、本番フックが�
 
 DBの出版に応じたLean抽出・増分更新と、隔離したwarm/背景workerへの接続は`SynapseBuild.lean`に実装・検証した。
 最新の範囲と記録は`synaptic-build.md`を参照する。
-実Pre/Postの時系列・受領記録からの利用ラベルの継続生成と、既存の推薦・配送候補への接続は残っている。
+実Pre/Post・私有保存先と受領記録からの継続生成は、隔離候補でネイティブ検証した（`synaptic-journal.md`）。
+既存の推薦・配送候補への接続は残っている。
 フックで全履歴や全窓の具体化を再開しない。
 新しいチャットでの実配送、全6段階の監査、同条件のモデル試験はまだ完了していない。

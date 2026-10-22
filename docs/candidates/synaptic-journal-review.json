@@ -1,0 +1,358 @@
+{
+  "status": "isolated candidate, not adopted; installed runtime unchanged",
+  "baselineCommit": "f709a3b0d2bd47d9c94c3e3057334ff4c2d78ea6",
+  "toolchain": "leanprover/lean4:v4.33.0",
+  "implementation": "Lean native ingress, private B-tree events, typed background target, publication-bound derivation and private usage",
+  "sources": [
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/Synapses.lean",
+      "sha256": "413a9dac0e7e7bbd904f15cbf8db5bc96d53b0caec72cd1d9c81aebe777fef1a"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseExtraction.lean",
+      "sha256": "0bfcddf054be781397a237284f1de5598263e62e1a1bf9f1bf5a78cf6ca864ab"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseSource.lean",
+      "sha256": "094d24969a062e9a08e3a27c7a6232931057d35f188a09259d035976817339e1"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseIndex.lean",
+      "sha256": "890445e916fabba221beab7162af76c5660d5ea797e4c74775b2ea9fb6991692"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseBuild.lean",
+      "sha256": "65fe734b0d3fc70da981568cbfb9a1b09adc683453f607ce552ad3a0923c0bb3"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseUsage.lean",
+      "sha256": "8b253904dc2a018a69162e8e7c8da179e9d1c426a1dbf37dc3c19960c513d9cd"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseJournal.lean",
+      "sha256": "b9bf5194a2a8f6de42ace4d10f0f75c229165347462a71e09e9b87fecb0bed27"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseLive.lean",
+      "sha256": "032b0957e85fb56bba8ef49605fa04aa6dbca9c037c4e11d2ca41ab4a60d93f6"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tests/SynapseJournalTests.lean",
+      "sha256": "f98b7568ba345839472fdae79a3d5de7d5b595a22f44d6c298528b7448756134"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/SynapseIngressIntegration.lean",
+      "sha256": "ed70155136caeced1e20362be7cf2e521bdd5842adca2c9c2e01bc7c5e3fcbe7"
+    }
+  ],
+  "runtimeCandidateSources": [
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Warm.lean",
+      "sha256": "2decb5293e54e58849eff3f2838fa559d472356d0c8abbf7474f2a870b352f06"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Worker.lean",
+      "sha256": "114249e1f64ca6160c9dbc925de29883ac794c483c23e08b3ac685c5436f4bff"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/PluginHooks.lean",
+      "sha256": "a9ed2a342cc7434101cd05c0135f4aba506fadb81aeee58584e71f9a93f22ca6"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Daemon.lean",
+      "sha256": "3fdb7d372819ee9e71f3f29dec1d7fd28de91e1ca11d6a980f1fba87e6825f5e"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/PluginCli.lean",
+      "sha256": "15f253e6612f549d7e9dbb6a5bf15b815bcd15fa33392ec3b8471aabc7b4ad28"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Install.lean",
+      "sha256": "7326030b2816c694ef82f05c56f4543cad37eee4f09401318875e418dd0e3c05"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Setup.lean",
+      "sha256": "c51b7da7786c3553ff2a164e69341f68dac7b52dcb8e3b8fd3916625a57b5dad"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Main.lean",
+      "sha256": "c72bc5c34dedea45d6834d6cf3a1c7b349d4dd6e7c5cf1cb6c343f1cf394b93c"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/PluginModel.lean",
+      "sha256": "9fed66c4fc9aca46a4ca9bb8a14f3da917634c17d2210c48463051f61a3e0b76"
+    }
+  ],
+  "runtimePatch": {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/synaptic-ingress.patch",
+    "sha256": "7e14414d6101b321cf9ecfa8a23df34195257fe1a78407fd5368de4d5e6881ad"
+  },
+  "lakefile": {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/lakefile.lean",
+    "sha256": "3bb596f8d09b6f3caf54b3f657c621eb1bc1588de06cfc100e904368528a5194"
+  },
+  "frozenSources": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/verified-source",
+  "reusedDependencyManifest": {
+    "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/compiled-dependencies.json",
+    "sha256": "e8d9e9a1ab388e26a17fee5f3ed5004e31c68772769da6ee58f6475240c039c2"
+  },
+  "compiledBaseCaveat": "Reused frozen LOC objects. Its PluginModel contains searchStarted, and its storage FFI includes directory-read extensions. This is not a full normal build of all current-worktree sources.",
+  "artifacts": [
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/SynapseJournalTests",
+      "sha256": "3f08a648c4719d37c61e73d70964196c0178be77992287b194e0012ca2a26c8e"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/SynapseIngressIntegration",
+      "sha256": "481227c34ec669c4608f461e843f113ffd4a46e7ccefcc9eefe0b73b5461775d"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/eggshell",
+      "sha256": "8827c5599a4d50854a5f86c23dbf621090524aff07ec798c644cc6cd6d454b9e"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/SynapseWarm",
+      "sha256": "fd216eaf8cdcbfb8adab6bfb377aa511da8be30f160361c2ea46bf21cd68f89e"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/journal-tests.rsp",
+      "sha256": "b0bd8eb504b977bddb425ccafe3f5a874ad2fbe128de3e4ffcf1d66bfd401428"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/ingress-tests.rsp",
+      "sha256": "d9af25b6d106c6d4f1b5a64744ad1463335365efb9143db3a883e9ecf5d0a5b9"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/candidate-main.rsp",
+      "sha256": "ddfa51f80594f778342219fa258e48c2a57e92f897d11c2ac9cae7859e488761"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/ProofAuditFinal.lean",
+      "sha256": "a26914c2b1226b5b30931bc8915fa8cb4df61a284303410bc6dd864ab6e0d4f7"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/real-db-source-after.sha256",
+      "sha256": "b476e60530714c7c2912ad2666d9737bad3f6334d6dd5fc3b2e2845985531b6e"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/real-db-facts.json",
+      "sha256": "83cc9357b96cb1a41876bbd7641c9fdef9ec5bb41b67639db092745f71afee72"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/build-review.rb",
+      "sha256": "26030b8012fd8d9c03194a7ed180068203ecebd2b570cba260ef2eede1f3e834"
+    }
+  ],
+  "successfulGuards": [
+    {
+      "record": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/verified-pinned-build-guard.json",
+        "sha256": "9209fdf72c925dcee2ac990f8025d62d65e4552621930372a56f22bac82a19b3"
+      },
+      "peakRssKiB": 1545872,
+      "elapsedSeconds": 29.145416209008545,
+      "stdout": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/verified-pinned-build-guard.stdout",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/verified-pinned-build-guard.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "record": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/pinned-core-tests-guard.json",
+        "sha256": "49b0dd79ef4b3f9709e8cc71b245a0ec5bb4fe3e802eefd968fb5202b48fe39a"
+      },
+      "peakRssKiB": 68416,
+      "elapsedSeconds": 3.7360483752563596,
+      "stdout": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/pinned-core-tests-guard.stdout",
+        "sha256": "e9199560a1b3bbf25d10ab48c6cb204136520a319b3285fe3481fa3dde0ca288"
+      },
+      "stderr": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/pinned-core-tests-guard.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "record": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/pinned-protocol-tests-guard.json",
+        "sha256": "fcfdfddc4c70177c2422a88b35545d7072a9419f647786552f021ed83278fe75"
+      },
+      "peakRssKiB": 269920,
+      "elapsedSeconds": 9.693155624903738,
+      "stdout": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/pinned-protocol-tests-guard.stdout",
+        "sha256": "07a166d3d266ff598283435f21baa7413ab913243998dca20bfc4733790525b4"
+      },
+      "stderr": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/pinned-protocol-tests-guard.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "record": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/regressions-guard.json",
+        "sha256": "d2d10cde0d66203f05eee5b40065d5ab7384ce96eedf9982d31ae8e0fc7d5068"
+      },
+      "peakRssKiB": 1546656,
+      "elapsedSeconds": 12.850030583329499,
+      "stdout": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/regressions-guard.stdout",
+        "sha256": "5acf0e8c14aa1a474e69a6c49185cd8dc0758947af5a5d56d3cea4648272a5ea"
+      },
+      "stderr": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/regressions-guard.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "record": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/real-probe-build-guard.json",
+        "sha256": "ab135e75202f72bc4e2f04fc215c673fa0a53ae00cd2ffc45d752247b56b36bf"
+      },
+      "peakRssKiB": 1527232,
+      "elapsedSeconds": 5.962570750154555,
+      "stdout": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/real-probe-build-guard.stdout",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/real-probe-build-guard.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "record": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/real-db-regression-guard.json",
+        "sha256": "8fcdcc64f717fccec34c605c5a9d629a2415288bef747130276a5f20ff8687c2"
+      },
+      "peakRssKiB": 73152,
+      "elapsedSeconds": 4.408181041944772,
+      "stdout": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/real-db-regression-guard.stdout",
+        "sha256": "44460ff839bb64e904b992b3129ae698d3e23f2827b88e7fd86509a0d973734d"
+      },
+      "stderr": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/real-db-regression-guard.stderr",
+        "sha256": "548450877832b0a92cbb15552d6a71e491216f408912f54ff742cc9e314fccf9"
+      }
+    },
+    {
+      "record": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/final-proof-audit-guard.json",
+        "sha256": "6fd9ceed51542956ea9efa2a1fa04ae8c34b84e746f17e68916b83df0e3c5fbe"
+      },
+      "peakRssKiB": 1371744,
+      "elapsedSeconds": 2.9743405831977725,
+      "stdout": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/final-proof-audit-guard.stdout",
+        "sha256": "3d47b3bb0f8461616b176438dbc64e67417340c360f24e08b9b71a64f48d61ba"
+      },
+      "stderr": {
+        "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/final-proof-audit-guard.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ],
+  "allPreservedGuardRecords": {
+    "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/all-guard-summary.json",
+    "sha256": "078e7ba73cee775a490e9cbe8e4b35e474cf92819f85ffa480ed656759ac0682"
+  },
+  "supersededRecord": {
+    "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-ingress-20261023/final-core-tests-guard.json",
+    "note": "This used the preceding binary after a failed memo build. It is not evidence for final changes; pinned-core-tests-guard is authoritative."
+  },
+  "realDatabaseRegression": {
+    "facts": 144,
+    "exactFrozenLeanBindingEquality": true,
+    "sourceHeadAndPagesUnchanged": true,
+    "receipt": {
+      "answers": 1,
+      "candidates": 37,
+      "elapsedMs": 263,
+      "facts": 144,
+      "hydrated": 37,
+      "index": {
+        "authority": "advisory:e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d:recommendations",
+        "bytes": 249188,
+        "identity": "9a9fe98048028c090412014521d7c976534138d1a4bf0d43aa5806edce0bfd20",
+        "revision": 1,
+        "root": {
+          "bytes": 505,
+          "checksum": "e1fae3babac417c7f88013ffc37cfb5cc2c268c8e7d6b744c8e63afc9774e071",
+          "first": "fact:0055bb6efb0ed73d47d09ff90176c1b8c1f130e28357bea7e1c3e2c0e722d8b1",
+          "height": 2,
+          "last": "manifest",
+          "offset": 248683,
+          "rows": 511
+        }
+      },
+      "mode": "rebuild",
+      "source": {
+        "authority": "[\"atom\",[101,103,103,32,97,117,116,104,111,114,105,116,121,32,101,98,101,52,54,53,48,54,101,98,50,102,54,99,49,98,50,52,100,102,51,101,52,56,57,100,56,53,56,55,55,48,99,101,49,56,51,56,48,52,54,50,50,97,100,51,97,100,101,99,57,48,49,98,102,99,102,99,97,51,102,54,49,54]]",
+        "bytes": 4111384,
+        "identity": "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d",
+        "revision": 1,
+        "root": {
+          "bytes": 1916,
+          "checksum": "54a4e572c7e520fff7f5fca8ac8611cea9922592a1ee6a6d8d3cf9a4446d94b6",
+          "first": "all:0",
+          "height": 2,
+          "last": "workSurfaces:93:0",
+          "offset": 4109468,
+          "rows": 111715
+        }
+      },
+      "unsupported": 21
+    }
+  },
+  "nativeProtocol": {
+    "actualShellRead": true,
+    "answeringModelCalls": 0,
+    "automaticBackground": true,
+    "nativeEvents": 3,
+    "privateWorkPublished": true,
+    "readOnlySourceUnchanged": true
+  },
+  "assertions": [
+    "immutable retries preserve first knowledge and time",
+    "partial delivery records exact omitted intervals",
+    "uncertain delivery produces no missing label",
+    "future outputs and different clocks do not create consumption",
+    "cache replacement restores consumption without relabelling old usage",
+    "derived-only memo does not replay bodies",
+    "private archives label read-only source omissions",
+    "previous private reads do not earn repeated omission weight",
+    "private or later-head outputs do not enter pinned public consumption",
+    "native targets need no numerical provider",
+    "real Pre/Shell/Post/save/Stop automatically record omission and citation",
+    "patch applied to the current runtime sources reproduces every compiled candidate runtime file byte-for-byte"
+  ],
+  "resources": {
+    "serialHeavyWork": true,
+    "guardStopMiB": 3072,
+    "userCeilingMiB": 4096,
+    "maxPeakRssKiB": 1548096,
+    "nativeProtocolPeakRssKiB": 269920
+  },
+  "answeringModelCalls": 0,
+  "tokenImprovement": null,
+  "incomplete": [
+    "portable derivation provenance for DB-only import without derived/private data",
+    "recommendation/source-range delivery integration",
+    "retrieval-hook latency and memory across all frozen stages",
+    "full current-source normal build and installation",
+    "all six matched answering-model stages and adoption gates"
+  ],
+  "nativeFfiSource": {
+    "file": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/Eggshell/Storage/sync.c",
+    "sha256": "e022acdf9a28b5a028faaf1adeb1aadea3cd3c604aec418b567d6dc8ebb78849"
+  },
+  "currentWorktreeFfiSource": {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/Storage/sync.c",
+    "sha256": "41f13614f456ffbbcb3d3587d37a541ae9b43d402f9c870a69492922866b6119"
+  }
+}

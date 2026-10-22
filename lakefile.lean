@@ -22,8 +22,11 @@ target embeddingSource pkg : System.FilePath :=
 target synapseBuildSource pkg : System.FilePath :=
   inputFile (pkg.dir / "Eggshell" / "SynapseBuild.lean") true
 
+target synapseLiveSource pkg : System.FilePath :=
+  inputFile (pkg.dir / "Eggshell" / "SynapseLive.lean") true
+
 lean_lib Eggshell where
-  extraDepTargets := #[`embeddingSource, `synapseBuildSource]
+  extraDepTargets := #[`embeddingSource, `synapseBuildSource, `synapseLiveSource]
 
 lean_lib PageDBTestSupport where
   roots := #[`tests.PageDBTests, `tests.FullSearchOracle, `tests.SearchMemo, `tests.CorpusCache,
@@ -89,3 +92,6 @@ lean_exe synapse_build_tests where
 
 lean_exe synapse_warm where
   root := `tools.SynapseWarm
+
+lean_exe synapse_journal_tests where
+  root := `tests.SynapseJournalTests

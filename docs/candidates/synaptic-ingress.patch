@@ -1,0 +1,197 @@
+diff --git a/Eggshell/Warm.lean b/Eggshell/Warm.lean
+index b635900..d9c2d06 100644
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -2,6 +2,7 @@ module
+
+ public import Eggshell.PluginModel
+ public import Eggshell.SearchProvider
++public import Eggshell.SynapseJournal
+
+ @[expose] public section
+
+@@ -134,6 +135,8 @@ missing original windows, in bounded batches, and require exact ACKs. A failed
+ batch leaves its completed cache writes available to a subsequent invocation. -/
+ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : IO Result := do
+   let started ← IO.monoMsNow
++  -- Each derived producer takes its own non-waiting claim; never nest them.
++  let _ ← Synapses.Journal.refresh snapshot target.storage ((← IO.monoMsNow) + 60000)
+   let settings ← options snapshot target.command target.storage
+   let before ← inspect snapshot settings
+   if before.needed.isEmpty then
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index 8be5d8b..6957abf 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -399,6 +399,8 @@ def search (request : Search) : IO (Option Handoff) := do
+     retains every ticket; indexing never republishes or locks the graph writer. -/
+ def indexQueued (target : IndexTarget) (paths : List System.FilePath) : IO Nat := do
+   let pinned ← target.owner.pin
++  -- A failed native update must leave every numerical ticket replayable.
++  let _ ← Synapses.Journal.refresh pinned target.storage ((← IO.monoMsNow) + 60000)
+   let directory ← target.indexes pinned
+   DB.Sidecar.withIndexClaim target.owner (fun _ => indexOwned pinned directory) target.storage
+ where
+@@ -468,13 +470,17 @@ def run (role : String) : IO UInt32 := do
+         if finished then removeIfExists path
+         pure (toJson keys)
+       else if role == "index" then
+-        let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := IndexTarget))
+-        let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")
+-        let count ← indexQueued target (paths.map System.FilePath.mk)
+-        if (json.getObjValAs? Bool "warm").toOption.getD false then
+-          let _ ← Warm.runTarget (← target.owner.pin) target
+-          pure ()
+-        pure (toJson count)
++        if (json.getObjValAs? String "kind").toOption == some "synapses" then
++          let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := Synapses.Journal.Target))
++          pure (toJson (← Synapses.Journal.refresh (← target.owner.pin) target.storage ((← IO.monoMsNow)+60000)))
++        else
++          let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := IndexTarget))
++          let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")
++          let count ← indexQueued target (paths.map System.FilePath.mk)
++          if (json.getObjValAs? Bool "warm").toOption.getD false then
++            let _ ← Warm.runTarget (← target.owner.pin) target
++            pure ()
++          pure (toJson count)
+       else throw (IO.userError "unknown worker role")
+       catch error => pure (Json.mkObj [("error", error.toString)])
+     output.putStr (result.compress ++ "\n")
+diff --git a/Eggshell/PluginHooks.lean b/Eggshell/PluginHooks.lean
+index e6f2924..ad9b444 100644
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -4,6 +4,7 @@ public import Eggshell.DB.CacheReclaim
+
+ public import Eggshell.Worker
+ public import Eggshell.MiniLM
++public import Eggshell.SynapseLive
+
+ @[expose] public section
+
+@@ -229,7 +230,8 @@ def drainIndexTarget (session : String) (deadline : Nat)
+   let entries := (entries.toList.filter (·.fileName.endsWith ".json"))
+     |>.mergeSort (fun a b => a.fileName ≤ b.fileName)
+   let warm ← Warm.required target snapshot
+-  if entries.isEmpty && !warm then return
++  let synapses := (← Synapses.Build.required snapshot target.storage) || (← Synapses.Journal.required snapshot target.storage)
++  if entries.isEmpty && !warm && !synapses then return
+   let payload := Json.mkObj [("target", toJson target), ("warm", toJson warm),
+     ("paths", toJson (entries.take 8 |>.map (·.path.toString)))]
+   if let some result ← Worker.exchange session "index" payload deadline then
+@@ -242,6 +244,28 @@ def drainRegisteredIndexes (session : String) (deadline : Nat) : IO Unit := do
+     try drainIndexTarget session deadline reference target
+     catch error => IO.eprintln s!"Eggshell retained DB index work: {error}"
+
++def drainSynapticTargets (session : String) (deadline : Nat) : IO Unit := do
++  for (reference, target) in ← Synapses.Journal.targets do
++    if (← IO.monoMsNow) ≥ deadline then return
++    try
++      let some source ← DB.PageMap.open? (.mk target.owner.directory) | do
++        removeIfExists reference
++        continue
++      if source.head.identity != target.owner.database then
++        removeIfExists reference
++        continue
++      if target.storage == .database then
++        let files ← sessionFiles session
++        if let some pending ← readPendingBase? files then
++          unless pending.write.any (fun path => (System.FilePath.mk path).normalize ==
++              (System.FilePath.mk target.owner.directory).normalize) do continue
++      if !(← Synapses.Journal.required source target.storage) then continue
++      let payload := Json.mkObj [("kind", toJson "synapses"), ("target", toJson target)]
++      let reply ← Worker.exchange session "index" payload deadline
++      if reply.any (fun json => !(fromJson? json : Except String Synapses.Journal.Result).isOk) then
++        IO.eprintln "Eggshell retained native synaptic index work"
++    catch error => IO.eprintln s!"Eggshell retained native synaptic index work: {error}"
++
+ def flushIndexWork (session : String) (deadline : Nat) : IO Unit := do
+   -- Current configuration discovers portable work at a new DB location.
+   -- This optional discovery cannot prevent draining already registered DBs.
+@@ -267,6 +291,7 @@ def flushIndexWork (session : String) (deadline : Nat) : IO Unit := do
+       let _ ← DB.Sidecar.collect (min deadline ((← IO.monoMsNow) + 50))
+       pure ()
+     catch error => IO.eprintln s!"Eggshell retained private caches: {error}"
++    drainSynapticTargets session deadline
+     drainRegisteredIndexes session deadline
+   finally guard.unlock
+
+@@ -329,6 +354,8 @@ def acknowledge (session id : String) : IO Bool := withSession session fun files
+   let some pending ← readPendingBase? files | return false
+   let now ← IO.monoMsNow
+   let some offer := state.offers.find? (·.id == id) | return false
++  if !(state.enabled && offer.stamp.accepts pending.turnId state.epoch now) then
++    Synapses.Live.unconfirmed files
+   let state := { state with offers := state.offers.filter (·.id != id) }
+   writeJson files.state (acceptOffer state pending.turnId now offer)
+   pure (state.enabled && offer.stamp.accepts pending.turnId state.epoch now)
+@@ -436,6 +463,9 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
+         let offer : DeliveryOffer := {
+           id, stamp, graphs := handoff.deliveredGraphs, text := handoff.text
+           reason := handoff.reason, search := handoff.search }
++        if state.offers.any (fun previous => previous.id == id ||
++            !previous.stamp.accepts current.turnId state.epoch now) || state.offers.length ≥ 15 then
++          Synapses.Live.unconfirmed files
+         writeJson files.state {
+           (addDeliveredGraphs state checkpoints) with
+           offers := offer :: (state.offers.filter fun (offer : DeliveryOffer) =>
+@@ -562,6 +592,7 @@ def preToolUse (input : Json) : IO String := do
+           {tool with source := none} else tool
+         let reserved := reserveTool pending tool
+         writeJson files.pending reserved
++        Synapses.Live.attempt (Synapses.Live.start input files reserved state tool)
+         pure (.reserved reserved)
+   match preflight with
+   | .ignore => pure emptyHook
+@@ -665,6 +696,11 @@ def postToolUse (input : Json) : IO String := do
+   let postflight ← withSession session fun files => do
+     let some state ← readState? files |
+       pure PostToolState.ignore
++    if state.enabled then
++      let active ← readPendingBase? files
++      let recorded ← if active.any (·.turnId == turn) then pure active else readClosedTurn? files turn
++      if let some pending := recorded then
++        Synapses.Live.attempt (Synapses.Live.finish input pending tool)
+     if !state.enabled then
+       do
+         removeIfExists files.pending
+@@ -699,7 +735,9 @@ def postCompact (input : Json) : IO String := do
+   let session ← IO.ofExcept (requiredString input "session_id")
+   withSession session fun files => do
+     if let some state ← readState? files then
+-      if state.enabled then writeJson files.state (compactState state)
++      if state.enabled then
++        writeJson files.state (compactState state)
++        Synapses.Live.reset files
+   Worker.cancel session "search"
+   pure emptyHook
+
+@@ -720,6 +758,7 @@ def stop (input : Json) : IO String := do
+     -- Queue first. A crash while updating lifecycle metadata cannot discard
+     -- the already durable final answer, and replay is idempotent in the DB.
+     queueCheckpoint files sealed
++    Synapses.Live.attempt (Synapses.Live.answer input files sealed state)
+     if current then
+       writeJson files.pending sealed
+       writeJson files.state { state with epoch := state.epoch + 1, offers := [] }
+diff --git a/Eggshell/Daemon.lean b/Eggshell/Daemon.lean
+index 4c3fab5..6d6784c 100644
+--- a/Eggshell/Daemon.lean
++++ b/Eggshell/Daemon.lean
+@@ -429,6 +429,7 @@ theorem invalid_hook_reply_is_incomplete (reply : Option Json) (text : String)
+   simp [decodeHookReply, field, invalid]
+
+ def hookRequest (input : Json) (deadline : Nat) (receipt : String) : IO Json := do
++  let observedNanos ← IO.monoNanosNow
+   let event := (optionalString input "hook_event_name").getD ""
+   try
+     let input := attachClientConfig input (← IO.getEnv "EGGSHELL_CONFIG")
+@@ -440,6 +441,8 @@ def hookRequest (input : Json) (deadline : Nat) (receipt : String) : IO Json :=
+     let session ← IO.ofExcept (requiredString input "session_id")
+     let ensureStarted ← IO.monoMsNow
+     let endpoint ← ensure session
++    let input := (input.setObjVal! "_eggshell_synapse_clock" (toJson (Sha256.hex endpoint.secret.toUTF8)))
++      |>.setObjVal! "_eggshell_synapse_nanos" (toJson observedNanos)
+     let ready ← IO.monoMsNow
+     let output ← exchangeBefore endpoint "hook" input (deadline - 250)
+     Receipt.observe (some receipt) "transport" (Json.mkObj [

@@ -52,6 +52,14 @@ docs/synaptic-index.mdとdocs/candidates/synaptic-index-review.jsonに範囲と�
 実Pre/Postからの消費/利用event更新、推薦候補・実配送への接続、全6段階、モデル比較、最終採用は未完了。
 本体のWarm/Worker/PluginHooksとinstalled実行体へは未適用。docs/synaptic-build.mdとcandidates/synaptic-build-review.jsonを参照する。
 
+2026-10-23 実Pre/Postの継続入力をLeanのSynapseJournal/Liveへ接続した。私有のイベントB木とDB所有targetを使い、
+数値プロバイダなしでも既存index workerが背景更新する。Preの受領状態を固定し、未受領の可能性・時計の領域・
+未出版・索引の再構築・対象出版の所属を区別する。共有DBの利用を私有作業DBの実観測に照合し、私有の消費辺を共有索引へ流さない。
+ネイティブ試験で部分欠落、時系列、再送、キャッシュ再構築、派生メモ、別保存先と固定headの境界を検査した。
+隔離実行体の実Pre→実シェル読み取り→実Post→save worker→Stopで、試験から再生関数を呼ばず、背景のみで利用を記録した。
+共有DBのhead/ページ不変、回答モデル0。docs/synaptic-journal.mdとcandidates/synaptic-journal-review.jsonに証拠を固定する。
+現行runtime/installedへの適用、DB単体へ持ち運ぶ導出来歴、推薦・実配送への統合、全6段階とモデル比較は未完了のまま維持する。
+
 2026-10-22 シナプス結合の開始：推薦専用の導出/共引用/利用の核・抽出器・実DBの読み出しを実装した。
 核6試験とadapter3試験が成功。既存seed31コマンド中、15元観測を保存されたExactなsession/turn/use IDで結び付けた。
 候補13実行では、同指紋の未配送範囲の後続再読16、配送後引用54、欠落と断定できない再読46を記録した。

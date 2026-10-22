@@ -15,16 +15,31 @@ structure Layout where
 
 /-- Canonical JSON is checked once; coordinates name original scalar characters. -/
 def layout (raw : String) : Except String Layout := do
-  let encoded := raw.startsWith "\""
-  let text ← if encoded then Json.parse raw >>= Json.getStr? else pure raw
-  if encoded && (toJson text).compress != raw then throw "noncanonical saved scalar"
+  let projected ← if raw.startsWith "\"" then pure (some (raw, 0)) else
+    match Json.parse raw with
+    | .ok (.obj value) => do
+      let json := Json.obj value
+      unless json.compress == raw do throw "noncanonical native response"
+      let outputs := (["output", "aggregatedOutput", "stdout"].filterMap fun key =>
+        (json.getObjValAs? String key).toOption).eraseDups
+      let [text] := outputs | throw "no unambiguous native text output"
+      let fragment := (toJson text).compress
+      let [before, _] := raw.splitOn fragment | throw "ambiguous native output position"
+      pure (some (fragment, before.length))
+    | .ok (.arr _) => throw "unsupported native output array"
+    | _ => pure none
+  let encoded := projected.isSome
+  let fragment := projected.map (·.1) |>.getD raw
+  let base := projected.map (·.2) |>.getD 0
+  let text ← if encoded then Json.parse fragment >>= Json.getStr? else pure raw
+  if encoded && (toJson text).compress != fragment then throw "noncanonical saved scalar"
   let mut offsets := #[]
-  let mut position := if encoded then 1 else 0
+  let mut position := base + if encoded then 1 else 0
   for char in text.toList do
     offsets := offsets.push position
     position := position + if encoded then (toJson (String.singleton char)).compress.length - 2 else 1
   offsets := offsets.push position
-  unless position + (if encoded then 1 else 0) == raw.length do throw "scalar layout mismatch"
+  unless position + (if encoded then 1 else 0) == base + fragment.length do throw "scalar layout mismatch"
   return ⟨text, raw, offsets⟩
 
 structure TextLine where

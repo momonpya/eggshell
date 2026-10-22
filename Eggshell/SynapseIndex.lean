@@ -37,12 +37,13 @@ inductive Key where
   | group (group : Group)
   | quoted (source : Range)
   | source (source : Range)
+  | file (file : File)
   | query (digest : String)
   | usage (source : Range)
   deriving Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, ToJson, FromJson
 
 def addresses : Fact → Array Key
-  | .read recorded => #[.owner recorded.binding.database recorded.binding.owner, .source recorded.source]
+  | .read recorded => #[.owner recorded.binding.database recorded.binding.owner, .source recorded.source, .file recorded.source.file]
   | .supports support => #[
       .answer support.claim.database support.claim.answer, .claim support.claim, .source support.source]
   | .consumed edge => #[.consumer edge.consumer]
