@@ -60,6 +60,14 @@ docs/synaptic-index.mdとdocs/candidates/synaptic-index-review.jsonに範囲と�
 共有DBのhead/ページ不変、回答モデル0。docs/synaptic-journal.mdとcandidates/synaptic-journal-review.jsonに証拠を固定する。
 現行runtime/installedへの適用、DB単体へ持ち運ぶ導出来歴、推薦・実配送への統合、全6段階とモデル比較は未完了のまま維持する。
 
+2026-10-23 導出来歴の持ち運びもLeanで実装した。元DBの非認定メタデータへ、元の観測IDと実時刻だけを保存する。
+実Pre/Postの背景workerが4イベント/2来歴を作り、そのhead/ページだけを書き込み不可の別環境へ移した後も、
+私有ログやderivedなし・独立プロセスのwarmで原文行に結び付いた同じ消費辺を復元した。
+不変の再送、時計/同時刻/挿入順、破損/撤回、読み取り専用の境界を検査し、時刻順と非認定キーの保存をLeanで証明した。
+既存seed144関係は以前のLean抽出結果と完全一致、初回259ms・再利用2ms、元head/ページSHA不変。
+抽出・辺生成のPython実装0、今回の回答モデル/seed追加0。推薦・実配送統合、全6段階と総トークン比較、最終採用は未完了。
+docs/synaptic-portable.mdとcandidates/synaptic-portable-review.jsonに適用範囲・凍結依存・全guardを固定する。
+
 2026-10-22 シナプス結合の開始：推薦専用の導出/共引用/利用の核・抽出器・実DBの読み出しを実装した。
 核6試験とadapter3試験が成功。既存seed31コマンド中、15元観測を保存されたExactなsession/turn/use IDで結び付けた。
 候補13実行では、同指紋の未配送範囲の後続再読16、配送後引用54、欠落と断定できない再読46を記録した。

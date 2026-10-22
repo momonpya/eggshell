@@ -86,7 +86,7 @@ structure Trace where
   lastOrdinal : Option Nat := none
 
 def Trace.advance (trace : Trace) (ordinal : Nat) : Except String Trace := do
-  if trace.lastOrdinal.any (ordinal ≤ ·) then throw "RPC trace is not in observed order"
+  if trace.lastOrdinal.any (ordinal < ·) then throw "RPC trace is not in observed order"
   return {trace with lastOrdinal := some ordinal}
 
 def Trace.start (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (command : String) :
@@ -99,6 +99,7 @@ def Trace.start (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (comma
   let mut pending := #[]
   for term in terms command do
     for (_, producer) in trace.outputs[(term.kind, term.text)]?.getD {} do
+      if ordinal ≤ producer.finished then continue
       pending := pending.push {
         producer := producer.occurrence, consumer := occurrence
         producerFinish := producer.finished, consumerStart := ordinal

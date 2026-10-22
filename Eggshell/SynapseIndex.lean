@@ -1,7 +1,7 @@
 module
 
 public import Eggshell.GraphStore
-public import Eggshell.SynapseSource
+public import Eggshell.SynapseProvenance
 
 @[expose] public section
 
@@ -27,7 +27,8 @@ def implementation : String :=
   Blake3.hex (Blake3.digest "eggshell.synaptic-index".toUTF8 [
     (include_str "Synapses.lean").toUTF8, (include_str "SynapseExtraction.lean").toUTF8,
     (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
-    (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8])
+    (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
+    (include_str "SynapseProvenance.lean").toUTF8])
 
 inductive Key where
   | owner (database owner : String)
@@ -138,6 +139,7 @@ def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope : Scope
   let some metadata ← manifest? index | return none
   unless metadata.implementation == implementation && metadata.scope == scope do return none
   if scope == .shared then
+    unless (← index.get "provenance") == some (toJson (← Provenance.stamp source)).compress.toUTF8 do return none
     unless ← sameSources source metadata.source do return none
   else
     unless metadata.source.identity == source.head.identity &&
@@ -215,6 +217,8 @@ def publishDelta (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope 
       let next : Manifest := ⟨source.head, implementation, scope, count⟩
       let bytes ← checkedBytes next
       if (← writer.get "manifest") != some bytes then writer.put "manifest" (some bytes)
+      let provenance := (toJson (← Provenance.stamp source)).compress.toUTF8
+      if (← writer.get "provenance") != some provenance then writer.put "provenance" (some provenance)
     return head) storage
 
 def allFacts (index : PageMap.Snapshot) : IO (Array Fact) :=
@@ -243,6 +247,8 @@ def replace (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope : Sco
       let next : Manifest := ⟨source.head, implementation, scope, wanted.size⟩
       let bytes ← checkedBytes next
       if (← writer.get "manifest") != some bytes then writer.put "manifest" (some bytes)
+      let provenance := (toJson (← Provenance.stamp source)).compress.toUTF8
+      if (← writer.get "provenance") != some provenance then writer.put "provenance" (some provenance)
     return head) storage
 
 structure Scan where

@@ -9,27 +9,9 @@ open Lean DB Persistence.Store _root_.Eggshell.Synapses.Extraction
 
 /-- This adapter reads a pinned native publication. No export, tool execution,
 or model is involved; unsupported observations remain unlocated. -/
-def identities (edge : OutcomeEdge) : Array Occurrence :=
-  edge.observations.toArray.filterMap fun observation => do
-    let .apply .occurrence references := observation | none
-    let [(.semantic, result), (.semantic, work), (.exact, session),
-        (.exact, turn), (.exact, useId)] := references.toList | none
-    if result != edge.outcome || work != edge.work then none else
-      some ⟨← text? session, ← text? turn, ← text? useId⟩
+def identities (edge : OutcomeEdge) : Array Occurrence := Provenance.identities edge
 
-def document (reader : NodeReader snapshot) (id : Nat) : IO Document := do
-  let edge ← reader.outcome (← reader.locateOutcome id)
-  let owner := Persistence.selectionKey edge.relation
-  -- A display hash nominates a bucket, never a unique source by itself.
-  let candidates ← getIds snapshot.get ("owner:" ++ toString (hash edge.relation).toNat)
-  let live ← candidates.filterM fun id => return (← snapshot.get (key "member" id)).isSome
-  unless live == [id] do throw (IO.userError "ambiguous synaptic source owner")
-  return {
-    owner, work := Persistence.selectionKey edge.work
-    workText := text? edge.work, source := text? edge.outcome
-    native := edge.observations.any (Relation.observesOutcomeWork edge.outcome edge.work)
-    occurrences := identities edge
-    files := ← IO.ofExcept (fileMap ((← reader.sources id).toArray.map toJson)) }
+def document (reader : NodeReader snapshot) (id : Nat) : IO Document := Provenance.document reader id
 
 structure Entry where
   id : Nat
@@ -206,7 +188,7 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Resul
         if !doc.native then
           let entry := catalog.find? (·.id == id)
           if let some entry := entry then answerOwners := answerOwners.push entry
-  let mut graph ← IO.ofExcept (Graph.ofFacts (old.filter (retain retiredReads retiredAnswers (!changed.removed))))
+  let mut graph ← IO.ofExcept (Graph.ofFacts (old.filter (retain retiredReads retiredAnswers false)))
   for entry in readOwners do
     match recordedReads snapshot.head.identity (← documents.get entry.id) with
     | .ok reads =>
@@ -244,6 +226,8 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Resul
     match addAnswer snapshot.head.identity doc located graph with
     | .ok next => graph := next
     | .error _ => unsupported := unsupported + 1
+  let portable ← Provenance.derive snapshot
+  graph ← IO.ofExcept (graph.merge portable.graph)
   let facts := graph.snapshot
   let head ← if incremental then
       let wanted := graph.facts

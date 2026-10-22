@@ -224,6 +224,7 @@ structure Replay where
   consumers : Array Occurrence := #[]
   pending : Nat := 0
   unknown : Nat := 0
+  origins : Array Provenance.Origin := #[]
 
 def acceptPublishedOutput (ownerId : Option Nat) (previous observed : Trace) : Trace :=
   if ownerId.isSome then observed else previous
@@ -246,7 +247,7 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       let projected ← IO.ofExcept (trace.locate locations)
       result := {result with consumed := result.consumed ++ projected.graph.snapshot}
       trace := {}; starts := {}; locations := {}; domain := value.clock.domain
-    if trace.lastOrdinal.any (value.clock.nanos ≤ ·) then
+    if trace.lastOrdinal.any (value.clock.nanos < ·) then
       result := {result with unknown := result.unknown+1}
       continue
     match value.payload with
@@ -276,6 +277,10 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
         else result := {result with unknown := result.unknown+1}
         continue
       let currentOriginal := localId.isSome
+      if currentOriginal then
+        let origin : Provenance.Origin :=
+          ⟨id, occurrence, value.clock.domain, started.ordinal, value.clock.nanos⟩
+        result := {result with origins := result.origins.push origin}
       let originalReader ← NodeReader.new recorded
       let doc ← Build.document originalReader id
       unless doc.occurrences.contains occurrence && doc.workText == some (Plugin.canonicalToolWork tool) do
@@ -393,6 +398,7 @@ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline : 
     unless row.1 == "turn:" ++ turn.name do throw (IO.userError "foreign event turn directory")
     return turns.push turn) #[]
   let mut result : Result := {}
+  let mut current := source
   for turn in turns do
     let checkpoint : Checkpoint := ⟨source.head, reader.index.head.identity, ← getNat journal.get ("latest:" ++ turn.name), implementation⟩
     let turnKey := "processed:" ++ lane storage ++ ":" ++ turn.name
@@ -401,14 +407,20 @@ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline : 
     if result.turns ≥ limit || (← IO.monoMsNow) ≥ deadline then
       result := {result with complete := false}
       break
-    let replayed ← replay source (← turnEntries journal turn) deadline
-    publish source storage replayed deadline
-    if replayed.pending == 0 then mark source turnKey checkpoint
+    let replayed ← replay current (← turnEntries journal turn) deadline
+    if storage == .database && !replayed.origins.isEmpty then
+      let updated ← Provenance.publish current replayed.origins
+      if updated.head != current.head then
+        current := updated
+        let _ ← Build.refresh current storage
+        pure ()
+    publish current storage replayed deadline
+    if replayed.pending == 0 then mark current turnKey checkpoint
     else result := {result with complete := false}
     result := {result with
       turns := result.turns+1, consumed := result.consumed+replayed.consumed.size
       usage := result.usage+replayed.usage.size, pending := result.pending+replayed.pending, unknown := result.unknown+replayed.unknown}
-  if result.complete then mark source checkpointKey expected
+  if result.complete then mark current checkpointKey expected
   return result
 
 /-- Native maintenance has no executable or numerical-provider configuration. -/

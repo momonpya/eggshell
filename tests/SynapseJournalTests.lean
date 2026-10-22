@@ -60,9 +60,11 @@ private def scenario (root : System.FilePath) : IO Unit := do
   check (!(← append source late)) "retry rewrote first knowledge or clock"
   check (← append source (finishEvent "missing" 200 command body (some source.directory.toString))) "Post event was not recorded"
   let before ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   check (before.pending == 1 && before.usage == 0) "unpublished Post invented a saved observation"
   let (source, _) ← publish source "live" "turn" (tool "missing")
   let first ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   let missing ← usages source "missing"
   check (first.usage == 1 && missing.size == 1 && missing.all (·.kind == .omittedThenRead))
     "saved pre-read evidence or first observed knowledge was lost"
@@ -70,22 +72,26 @@ private def scenario (root : System.FilePath) : IO Unit := do
   let saved ← turnEntries journal ⟨"live", "turn"⟩
   check (saved[0]?.any (· == start)) "first event changed after identical retry"
   let repeated ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   check (repeated.turns == 0 && (← usages source "missing").size == 1) "replay inflated feedback"
   let shown := ["h:" ++ Persistence.selectionKey seed.relation]
   let answer : Entry := ⟨⟨domain, 300⟩, .answer (occurrence "answer") query
     "[source.cpp:11](src/source.cpp:11)" (← knowledge source shown false)⟩
   let _ ← append source answer
   let _ ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   check ((← usages source "answer").any (·.kind == .deliveredThenCited)) "acknowledged source citation was not recorded"
   let _ ← append source (← startEvent source "known" 400 shown)
   let _ ← append source (finishEvent "known" 500)
   let (source, _) ← publish source "live" "turn" (tool "known")
   let _ ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   check ((← usages source "known").all (·.kind == .reread)) "known native source was rewarded as missing"
   let _ ← append source (← startEvent source "uncertain" 600 [] true)
   let _ ← append source (finishEvent "uncertain" 700)
   let (source, _) ← publish source "live" "turn" (tool "uncertain")
   let unknown ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   check (unknown.unknown > 0 && (← usages source "uncertain").isEmpty)
     "unconfirmed stdout was called absent"
   let reader ← NodeReader.new source
@@ -100,6 +106,7 @@ private def scenario (root : System.FilePath) : IO Unit := do
   let _ ← append source (finishEvent "partial" 900)
   let (source, _) ← publish source "live" "turn" (tool "partial")
   let _ ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   let gaps ← usages source "partial"
   check (gaps.size == 2 && gaps.all (·.kind == .omittedThenRead) &&
     gaps.any (·.source.first == 10) && gaps.any (·.source.first == 12))
@@ -110,6 +117,7 @@ private def scenario (root : System.FilePath) : IO Unit := do
   let _ ← append source (finishEvent "consume" 1100 consume "done")
   let (source, _) ← publish source "live" "turn" (tool "consume" consume "done")
   let consumed ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   check (consumed.consumed > 0) "observed output consumption was not indexed"
   let some shared ← Index.open? source .database .shared | throw (IO.userError "missing shared index")
   let found ← shared.lookup (.consumer (occurrence "consume")) 1000 ((← IO.monoMsNow)+3000)
@@ -120,6 +128,7 @@ private def scenario (root : System.FilePath) : IO Unit := do
     "background journal processing changed the source graph"
   let beforeHead := shared.index.head
   let again ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   let some shared ← Index.open? source .database .shared | throw (IO.userError "missing repeat index")
   check (again.turns == 0 && shared.index.head == beforeHead) "replay rewrote identical synaptic facts"
   -- Arrival order is not chronology; different manager-clock domains never mix.
@@ -136,6 +145,7 @@ private def scenario (root : System.FilePath) : IO Unit := do
   let separated ← replay source #[a, outA, isolated, isolatedEnd] ((← IO.monoMsNow)+3000)
   check (separated.consumed.isEmpty) "different manager clocks were joined"
   let _ ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   check (!(← Journal.required source)) "journal was not ready before the cache-only replacement"
   let priorUsage ← facts source
   let cache ← Index.directory source .database .shared
@@ -143,6 +153,7 @@ private def scenario (root : System.FilePath) : IO Unit := do
   let _ ← Build.refresh source .database
   check (← Journal.required source) "new cache incarnation forgot its journal replay debt"
   let recovered ← refresh source .database ((← IO.monoMsNow)+3000)
+  let source ← DB.PageMap.pin source.directory
   check (recovered.unknown > 0 && (← facts source) == priorUsage)
     "lost captured cache relabelled earlier immutable usage events"
   let some restored ← Index.open? source .database .shared | throw (IO.userError "missing restored cache")
