@@ -1,0 +1,196 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5133,3 +5133,21 @@
+-/-- Disjoint position cells receive the best existing reciprocal rank at
+-that position. Overlapping numerical windows cannot vote for a byte twice.
+-No relevance threshold, benchmark token or expected code is introduced. -/
++/-- A numerical window keeps its producer's original priority. Display
++coalescing and record completion cannot promote the rest of a merged span. -/
++structure RankedCue where
++  priority : Nat
++  first : Nat
++  last : Nat
++  deriving BEq
++
++def numericalCues (family : Family) : List RankedCue :=
++  match Matcher.atomText? family.owner.outcome,Matcher.atomText? family.owner.work with
++  | some source,some work => family.windows.zipIdx.filterMap fun (position,priority) =>
++      (meaningContext? source (work.length+1) position priority).map fun context =>
++        {priority,first := context.span.start,last := context.span.stop}
++  | _,_ => []
++
++def coveringCue? (cues : List RankedCue) (first last : Nat) : Option RankedCue :=
++  cues.find? fun cue => cue.first ≤ first && last ≤ cue.last
++
++/-- Disjoint original-position cells receive the best producer window rank
++covering that cell. Source context and coalesced display spans carry no vote.
++Overlapping numerical windows cannot vote for an original position twice. -/
+@@ -5137,3 +5155,3 @@
+-    (units : List UnitPlan) (cues : List (List (Nat × Nat))) : List CuePiece :=
+-  families.zipIdx.flatMap fun (_,familyIndex) =>
+-    let ownerCues := cues[familyIndex]?.getD []
++    (units : List UnitPlan) : List CuePiece :=
++  families.zipIdx.flatMap fun (family,familyIndex) =>
++    let ownerCues := numericalCues family
+@@ -5142 +5160 @@
+-      ownerCues.flatMap (fun (a,b) => [a,b])).eraseDups.mergeSort (· ≤ ·)
++      ownerCues.flatMap (fun cue => [cue.first,cue.last])).eraseDups.mergeSort (· ≤ ·)
+@@ -5145,2 +5163,2 @@
+-        let rank ← ownerCues.findIdx? fun (a,b) => a ≤ first && last ≤ b
+-        pure {family := familyIndex, first := first, last := last, weight := (last-first)*(scale/(61+familyIndex)+scale/(61+rank))}
++        let cue ← coveringCue? ownerCues first last
++        pure {family := familyIndex, first := first, last := last, weight := (last-first)*(scale/(61+familyIndex)+scale/(61+cue.priority))}
+@@ -5215,2 +5233 @@
+-    let cues := prepared.map (·.2)
+-    let depth := max families.length (cues.foldl (fun n row => max n row.length) 0)
++    let depth := max families.length (families.foldl (fun n family => max n family.windows.length) 0)
+@@ -5218 +5235 @@
+-    let pieces := cuePieces scale families units cues
++    let pieces := cuePieces scale families units
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -27,0 +28,3 @@
++      ``SharedCoverage.best_cached_compiled,
++      ``SharedCoverage.Evaluation.afterCost_exact,
++      ``SharedCoverage.Evaluation.afterBenefit_exact,
+--- a/tools/SharedRangeTests.lean
++++ b/tools/SharedRangeTests.lean
+@@ -86 +86,15 @@
+-  let pieces := SharedRangeAdapter.cuePieces 100 [family] units [cues]
++  let numeric := SharedRangeAdapter.numericalCues family
++  requireRange (numeric.map (·.priority) == [0,1,2])
++    "numerical producer ranks were replaced by display-cluster ranks"
++  let overlapping : List SharedRangeAdapter.RankedCue := [
++    {priority := 0,first := 0,last := 512},
++    {priority := 7,first := 384,last := 896},
++    {priority := 19,first := 768,last := 1280}]
++  requireRange ((SharedRangeAdapter.coveringCue? overlapping 384 512).map (·.priority) == some 0)
++    "overlap lost its best original producer rank"
++  requireRange ((SharedRangeAdapter.coveringCue? overlapping 512 768).map (·.priority) == some 7 &&
++    (SharedRangeAdapter.coveringCue? overlapping 896 1280).map (·.priority) == some 19)
++    "a merged connected span promoted a later window to the first window's rank"
++  requireRange ((SharedRangeAdapter.coveringCue? overlapping 1300 1400).isNone)
++    "unretrieved surroundings acquired a coverage vote"
++  let pieces := SharedRangeAdapter.cuePieces 100 [family] units
+--- a/tools/SharedCoverage.lean
++++ b/tools/SharedCoverage.lean
+@@ -105,0 +106,119 @@
++
++
++theorem removeAll_distinct [BEq α] [LawfulBEq α] (left right : List α) :
++    left.removeAll right.eraseDups = left.removeAll right := by
++  simp [List.removeAll, List.elem_eq_contains, List.contains_eq_mem]
++
++theorem nodes_append_one (p : Problem) (selected : List (Fin p.offers.size))
++    (index : Fin p.offers.size) :
++    nodes p (selected ++ [index]) = nodes p selected ++
++      (p.offers[index].closure.removeAll (nodes p selected)).eraseDups := by
++  simp only [nodes, List.flatMap_append, List.flatMap_singleton, List.eraseDups_append]
++  rw [removeAll_distinct]
++
++theorem cues_append_one (p : Problem) (selected : List (Fin p.offers.size))
++    (index : Fin p.offers.size) :
++    cues p (selected ++ [index]) = cues p selected ++
++      (p.offers[index].covers.removeAll (cues p selected)).eraseDups := by
++  simp only [cues, List.flatMap_append, List.flatMap_singleton, List.eraseDups_append]
++  rw [removeAll_distinct]
++
++structure Evaluation (prior : Selection p) where
++  nodeIndex : Std.HashMap (Fin p.costs.size) Unit
++  nodesExact : Eggshell.HashDistinct.Seen nodeIndex (nodes p prior.selected)
++  cueIndex : Std.HashMap (Fin p.weights.size) Unit
++  cuesExact : Eggshell.HashDistinct.Seen cueIndex (cues p prior.selected)
++  beforeCost : Nat × Nat
++  costExact : beforeCost = cost p prior.selected
++  beforeBenefit : Nat
++  benefitExact : beforeBenefit = benefit p prior.selected
++
++def evaluation (prior : Selection p) : Evaluation prior := {
++  nodeIndex := (nodes p prior.selected).foldl (fun known node => known.insert node ()) {}
++  nodesExact := by intro query; simp [Eggshell.HashDistinct.fold_contains]
++  cueIndex := (cues p prior.selected).foldl (fun known cue => known.insert cue ()) {}
++  cuesExact := by intro query; simp [Eggshell.HashDistinct.fold_contains]
++  beforeCost := cost p prior.selected
++  costExact := rfl
++  beforeBenefit := benefit p prior.selected
++  benefitExact := rfl}
++
++variable {p : Problem} {prior : Selection p}
++
++def Evaluation.afterCost (cached : Evaluation prior) (index : Fin p.offers.size) : Nat × Nat :=
++  let fresh := Eggshell.hashDistinct (p.offers[index].closure.filter fun node => !cached.nodeIndex.contains node)
++  fresh.foldl (fun total node => (total.1+p.costs[node].1,total.2+p.costs[node].2)) cached.beforeCost
++
++def Evaluation.afterBenefit (cached : Evaluation prior) (index : Fin p.offers.size) : Nat :=
++  let fresh := Eggshell.hashDistinct (p.offers[index].covers.filter fun cue => !cached.cueIndex.contains cue)
++  cached.beforeBenefit + (fresh.map fun cue => p.weights[cue]).sum
++
++theorem Evaluation.afterCost_exact (cached : Evaluation prior) (index : Fin p.offers.size) :
++    cached.afterCost index = cost p (prior.selected ++ [index]) := by
++  unfold Evaluation.afterCost cost
++  rw [nodes_append_one, List.foldl_append, Eggshell.HashDistinct.reference, cached.costExact]
++  simp only [List.removeAll, List.elem_eq_contains, cached.nodesExact _]
++  rfl
++
++theorem Evaluation.afterBenefit_exact (cached : Evaluation prior) (index : Fin p.offers.size) :
++    cached.afterBenefit index = benefit p (prior.selected ++ [index]) := by
++  unfold Evaluation.afterBenefit benefit
++  rw [cues_append_one, List.map_append, List.sum_append, Eggshell.HashDistinct.reference, cached.benefitExact]
++  simp only [List.removeAll, List.elem_eq_contains, cached.cuesExact _]
++  rfl
++
++def extendCached? (prior : Selection p) (cached : Evaluation prior)
++    (index : Fin p.offers.size) : Option (Selection p) :=
++  if fresh : index ∉ prior.selected then
++    let after := cached.afterCost index
++    if fits : after.1 ≤ p.limit.1 ∧ after.2 ≤ p.limit.2 then
++      some ⟨prior.selected ++ [index],by
++        apply List.nodup_append.mpr
++        refine ⟨prior.unique,by simp,?_⟩
++        intro a present b singleton same
++        have last : b = index := List.mem_singleton.mp singleton
++        exact fresh ((same.trans last) ▸ present),
++        by rw [← cached.afterCost_exact index]; exact fits.1,
++        by rw [← cached.afterCost_exact index]; exact fits.2⟩
++    else none
++  else none
++
++theorem extendCached_exact (cached : Evaluation prior) (index : Fin p.offers.size) :
++    extendCached? prior cached index = extend? prior index := by
++  simp only [extendCached?, extend?, Evaluation.afterCost_exact]
++
++def proposalCached? (prior : Selection p) (cached : Evaluation prior)
++    (index : Fin p.offers.size) : Option (Proposal prior) := do
++  let result ← extendCached? prior cached index
++  let gain := cached.afterBenefit index - cached.beforeBenefit
++  if positive : 0 < gain then
++    let before := cached.beforeCost
++    let after := cached.afterCost index
++    let charge := max ((after.1-before.1)*p.limit.2) ((after.2-before.2)*p.limit.1)
++    pure ⟨result,gain,positive,charge⟩
++  else none
++
++theorem proposalCached_exact (cached : Evaluation prior) (index : Fin p.offers.size) :
++    proposalCached? prior cached index = proposal? prior index := by
++  unfold proposalCached? proposal?
++  rw [extendCached_exact]
++  by_cases fresh : index ∉ prior.selected
++  · by_cases fits : (cost p (prior.selected ++ [index])).1 ≤ p.limit.1 ∧
++        (cost p (prior.selected ++ [index])).2 ≤ p.limit.2
++    · simp [extend?,fresh,fits,Evaluation.afterBenefit_exact,Evaluation.afterCost_exact,
++        cached.costExact,cached.benefitExact]
++    · simp [extend?,fresh,fits]
++  · simp [extend?,fresh]
++
++def bestCached (prior : Selection p) : Option (Proposal prior) :=
++  let cached := evaluation prior
++  (List.finRange p.offers.size).foldl (fun found index =>
++    match proposalCached? prior cached index,found with
++    | none,_ => found
++    | some next,none => some next
++    | some next,some previous => if better next previous then some next else found) none
++
++@[csimp] theorem best_cached_compiled : @best = @bestCached := by
++  funext p prior
++  simp only [best,bestCached,proposalCached_exact]
++

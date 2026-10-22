@@ -1,0 +1,541 @@
+{
+  "candidateSource": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/checkout",
+  "runtimeSha256": "824706966bcc964aa42059d3f651949c2b86442c566549a454f263f420727fb3",
+  "baseCandidate": "/Users/ovm/.codex/experiments/eggshell/shared-range-closures-20261022/checkout",
+  "basePatchSha256": "f81bb75478ae5f784851189da0e9d8efbbd5af67bffea0447c7c2809b24d49b2",
+  "incrementalPatchSha256": "e97169c5af1e56c09479d86e5d2bd3347a8f8cb4072c9e9ad04c05b7e88cd2d6",
+  "incrementalPatchApplyCheck": true,
+  "changed": [
+    {
+      "file": "Eggshell/Handoff.lean",
+      "baseSha256": "b9abde6a77f2ce24e6d21da25618772e5fa5dd8054189664b7df163cdfcf10f3",
+      "candidateSha256": "6a4887f325b3403ac35ea7fb464adfa3ea4c29d06b8f7c801c345857fc207f4b"
+    },
+    {
+      "file": "Eggshell/ContractAudit.lean",
+      "baseSha256": "ef8d78d8f58f0830dc02641b6ae6c4edf8cb6533dc5abff31b1ee1dd507abbb6",
+      "candidateSha256": "080ad3927e9b1cb63833b26c52320edd9cf899dbadf89e85c92043e6c77a608c"
+    },
+    {
+      "file": "tools/SharedRangeTests.lean",
+      "baseSha256": "76c43a5f173b1f7ddb5c3a59fd9991af37d5b206febd3e4adb32dc8a1024a5a0",
+      "candidateSha256": "4a4e3231070f40af0f9b548faab509477959a58cfb7a9b97dfd0817743b258a5"
+    },
+    {
+      "file": "tools/SharedCoverage.lean",
+      "baseSha256": "2680597c7dd7ad8e44ee636d0880ea852938d01f1aad85c93239d898a57a58c5",
+      "candidateSha256": "018b3105291254b495fe3157e014a01b549346fa5ddab9226c71b86b05991038"
+    }
+  ],
+  "sourceManifest": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/frozen-library-inputs.json",
+  "sourceManifestSha256": "d2ab54d29e7fb6598de065f96dfaa77ea0f53e8667a52f1c22e9bfa42960ac88",
+  "records": [
+    {
+      "label": "checked-contract",
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/checked-contract/record.json",
+      "sha256": "38d3a7e399f1a43000c65bcec931f1dec95730a69f93fd47085cb68a7685573a",
+      "elapsedMs": 22961.928542,
+      "stdoutSha256": "ddffdbb461a0c6f8a091be1f54a0d1a923f710e64314260670873fa4e39d00a8",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "checked-adapter-tests",
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/checked-adapter-tests/record.json",
+      "sha256": "6af42ae395566e5782dd5c64417454db9d4b740b392c797bb5b5409d3325da80",
+      "elapsedMs": 1251.148334,
+      "stdoutSha256": "3ea8c70a1c331ea1225f5c647b5b18d0d1dc97703f34ce49f5842db0046e736f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "checked-support",
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/checked-support/record.json",
+      "sha256": "90fe1b95f5e91fca82a2c6b593b8ed5262d3b88c4c3bd9fc0c0f61a3b8eb4f58",
+      "elapsedMs": 12408.625875,
+      "stdoutSha256": "0e166e99594f1f80b9a1e9fe9b5c7f08122d6ac122fd81f7dfb098a1998a6da0",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "checked-test-main",
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/checked-test-main/record.json",
+      "sha256": "ed91a4cc50cb19a1a6bec08b8f4e8619a623c542a609db76971b3fda3c3f0305",
+      "elapsedMs": 11228.82975,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "checked-native-build",
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/checked-native-build/record.json",
+      "sha256": "2e37f411776f22d2c385a815490e770470377ce4891a9360c883c7e58d7aa36f",
+      "elapsedMs": 3610.340666,
+      "stdoutSha256": "d2e0c93cef72b382ccd453535f0554a758fbf66dbfafe9aaf33eccc9b6d6e65d",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "origin-memo-build",
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/origin-memo-build/record.json",
+      "sha256": "a762475df1aa44c0f5c79d888166c4aeaef5533c6e5fe555e2f7747d616aa269",
+      "elapsedMs": 12355.858416,
+      "stdoutSha256": "dcdc04f2262e4d5c717a8d4f26daee32355a0eabfba1ecca35a922340332c9f5",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "origin-fixtures",
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/origin-fixtures/record.json",
+      "sha256": "622ad6f15e19c475c41a92d74a259ab9c0ab9e28b722ab7ac53553921bd24edc",
+      "elapsedMs": 1183.68225,
+      "stdoutSha256": "983476273135f3290d02ee2ba45c8e6583c2c6ad7296e52db5990f274d487fcc",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "memo-fixtures",
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/memo-fixtures/record.json",
+      "sha256": "20fd1d1268c65ec42d8d5aacdc13ea86fa7693cfeeb6d1e827f629f67addb762",
+      "elapsedMs": 946.657167,
+      "stdoutSha256": "d4ccd076aa0f2e7d85a56f1548777d38334d9be0a56f9792d86d20c7d66448e6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "private-memo-fixtures",
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/private-memo-fixtures/record.json",
+      "sha256": "775f9be27a77236058e62df80ba116d72a1f24b11801c16bae240531f92a2d8f",
+      "elapsedMs": 29.808416,
+      "stdoutSha256": "d4ccd076aa0f2e7d85a56f1548777d38334d9be0a56f9792d86d20c7d66448e6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "guards": [
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-ranked-cues-20261022/check-build-guard.json",
+      "sha256": "ed7a59e52550cfdc8a81cc9d070011fb26acc7a4ccef740e300db96ea87f3592",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 2800592,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-ranked-cues-20261022/native-all-guard.json",
+      "sha256": "fc41e3ff971c599f35fed37277398fc9521ec59eb57b0e4dc73d99310d3f525e",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 1424944,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-ranked-cues-20261022/repaired-build-guard.json",
+      "sha256": "02daca1cc0be663619552d8054f06efe166526b4c793a647e985756a2bb7e807",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 2836768,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/build-guard.json",
+      "sha256": "be45586f838e2ee8cb5143120f6f413fb74f0fe2278fa537815eadce4fa5f512",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 1145680,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/checked-build-guard.json",
+      "sha256": "13f0bff4917b6146464db7fb61469a862e7ddabbba17b59e2c63ce572fde2210",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 2843248,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/checked-core-latency-guard.json",
+      "sha256": "f8ad3543171f2aa091ec762694e349e10f09c08be7360a9975e7169bfdf767b5",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 1398320,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/core-latency-guard.json",
+      "sha256": "a95ae11fa6244becf5640f315d44a68d7baf4342aca07b56068af2dc44bf795c",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 1285840,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all-guard.json",
+      "sha256": "f9545489fdf147f20ef20e0628a0c1b8a4faaae14d3be79ad164c787fda01836",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 1438128,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/origin-memo-guard.json",
+      "sha256": "43be51f54cfa14e2a11db2dc0f9a5f803d8f73abc3041f35cf804bbaf05ddf17",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 1470032,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/private-memo-guard.json",
+      "sha256": "e34d58763c68ebcb4b7144fb151e4beabd6843d4e3b58c5af1d49e719463b10c",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 28784,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/proof-2-guard.json",
+      "sha256": "770cc414a347844a56a8b7324a065eb50d1ef9e4edbc1865bfd6700aef2fc87b",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 1386976,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/proof-3-guard.json",
+      "sha256": "d97b5cce823f6d5021cb0bc9ecc1039cd0beec42fb475143a53bee35e3407324",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 1316336,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/proof-4-guard.json",
+      "sha256": "1f7d43420bdd489c0ec60b4e4f1a7d0d767e1eced000a61536919456c1d5bcc4",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 1386176,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/proof-5-guard.json",
+      "sha256": "f0d3899abb6acd224693687d7165f73f8d199caf5a6e60bfd9baaceb827916f6",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 1384480,
+      "guardTriggered": false
+    },
+    {
+      "record": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/proof-guard.json",
+      "sha256": "b3bcd48ca6a3388cd00dc0f18628107926c7dae892190ddea9d663d1d4203695",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 1380304,
+      "guardTriggered": false
+    }
+  ],
+  "protectedPractical": {
+    "Eggshell/SearchProvider.lean": "375d739788c47d15e7249b2833dc5a15d85a02014bc3a81211c5c0c32714116c",
+    "Eggshell/SemanticMatcher.lean": "a12a773dd78ce009a2af348a0486c0eef35ea6d5d95d9989263f23835f42e3c5",
+    "Eggshell/MiniLM.lean": "15fe872280a9819f39c12a360235523b23ada07ed5f2967d34b16634112a71e7",
+    "Eggshell/PluginHooks.lean": "16881d42f2d0a81cb6b4e4063d9c76c8b842fcec2863b74d7019bfdc1146c480",
+    "Eggshell/Worker.lean": "d59ca140da3562d6c10ed09dab38e307131b8cfc6f4383ffac455eebbfb407eb",
+    "Eggshell/SourceEvidence.lean": "fc087f4bdd058a47b35a5c01c847711bf46e576f7af3c6038fd5758194f41ce1",
+    "runtime/embedding.py": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4"
+  },
+  "productionNativeDecide": 0,
+  "certified": [
+    "All-input equality of cached versus reference extension cost and benefit",
+    "All-input equality of candidate proposals and stable best selection",
+    "Native compiler csimp call uses the certified cached evaluator"
+  ],
+  "coreReplay": {
+    "result": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/core-latency-result.json",
+    "sha256": "992a5ac72fe104048f7f220ee900f5d761cdee9f1351c7cf7febf44503802c4f",
+    "sameSelectedOffers": true,
+    "selectedOffers": 65,
+    "timesMs": [
+      193929,
+      3606
+    ],
+    "scope": "One exact fixed native proposal domain replay in Lean runtime; not full-hook latency or token improvement"
+  },
+  "originMemo": {
+    "result": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/origin-memo-result.json",
+    "sha256": "ab9462ac9da11d63d2f6a5ccc9a7cd24411ff61e0a8282ed6c28a01d01ecb979",
+    "privateReplay": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/private-memo-result.json",
+    "privateReplaySha256": "d72665f23197a825ea4f2c219fa4d170bca8c1ebc4e27c6c87731e2a7ff195e1",
+    "fixtureReceiptIsolation": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/fixture-receipt-isolation.json",
+    "fixtureReceiptIsolationSha256": "cc972d7878548d8e431b49d7227e01c65414107fc10be521deb34610d58a6c96"
+  },
+  "referencePartial": {
+    "candidate": "/Users/ovm/.codex/experiments/eggshell/shared-range-ranked-cues-20261022",
+    "completeStages": [
+      1,
+      2,
+      3
+    ],
+    "stage4": [
+      {
+        "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-ranked-cues-20261022/native-all/prepared/stage4-native/native-0/body.txt",
+        "sha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+        "chars": 356,
+        "elapsedMs": 28809.944708,
+        "incomplete": true
+      },
+      {
+        "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-ranked-cues-20261022/native-all/prepared/stage4-native/native-1/body.txt",
+        "sha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+        "chars": 356,
+        "elapsedMs": 28808.018208,
+        "incomplete": true
+      }
+    ],
+    "stages5and6NotAttempted": true,
+    "reason": "deadline/incomplete; ACK absent; harness stopped; no model dispatch"
+  },
+  "nativeResult": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-result.json",
+  "nativeResultSha256": "3ed0ef09a277a5c1bc5999f9b1f7c0ccdf9c532de12603ff03bd1031bed7c178",
+  "rows": [
+    {
+      "stage": 1,
+      "topic": 1,
+      "sessions": [
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage1-native/native-0/body.txt",
+          "sha256": "cfdcfe82aa284e805d1859ebb892aee718078e94ca9141c23f407bb9654897db",
+          "elapsedMs": 15020.679459,
+          "missingRequired": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "trailing-language-warning"
+          ]
+        },
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage1-native/native-1/body.txt",
+          "sha256": "cfdcfe82aa284e805d1859ebb892aee718078e94ca9141c23f407bb9654897db",
+          "elapsedMs": 8929.222959,
+          "missingRequired": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "trailing-language-warning"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "sameBodiesAsReference": [
+        true,
+        true
+      ],
+      "referenceElapsedMs": [
+        24387.366917,
+        19073.1065
+      ],
+      "numericCompleted": true,
+      "sourceMissing": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "sessions": [
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage2-native/native-0/body.txt",
+          "sha256": "da944e4e2f85e49c38083776452f10bab8e365524eb85d8cdbd61391210bff7c",
+          "elapsedMs": 11490.527,
+          "missingRequired": [
+            "default-toolchain-selection"
+          ]
+        },
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage2-native/native-1/body.txt",
+          "sha256": "da944e4e2f85e49c38083776452f10bab8e365524eb85d8cdbd61391210bff7c",
+          "elapsedMs": 9676.853458,
+          "missingRequired": [
+            "default-toolchain-selection"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "sameBodiesAsReference": [
+        true,
+        true
+      ],
+      "referenceElapsedMs": [
+        19980.992166,
+        18062.345541
+      ],
+      "numericCompleted": true,
+      "sourceMissing": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "sessions": [
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage3-native/native-0/body.txt",
+          "sha256": "f978a3a3fcdd43754a8eeb9986dd17b1bf8f56a3e91e38538a1e37d128501cb9",
+          "elapsedMs": 12092.928958,
+          "missingRequired": [
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "syntax-only-compile-cutoff"
+          ]
+        },
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage3-native/native-1/body.txt",
+          "sha256": "f978a3a3fcdd43754a8eeb9986dd17b1bf8f56a3e91e38538a1e37d128501cb9",
+          "elapsedMs": 10482.884708,
+          "missingRequired": [
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "syntax-only-compile-cutoff"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "sameBodiesAsReference": [
+        true,
+        true
+      ],
+      "referenceElapsedMs": [
+        21129.448542,
+        19033.737584
+      ],
+      "numericCompleted": true,
+      "sourceMissing": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "sessions": [
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage4-native/native-0/body.txt",
+          "sha256": "9ca0f27d2f1a662dbf55d26020b32658eebe3b3237b6c14b00c2d03b204b7912",
+          "elapsedMs": 15998.517667,
+          "missingRequired": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "trailing-language-warning"
+          ]
+        },
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage4-native/native-1/body.txt",
+          "sha256": "9ca0f27d2f1a662dbf55d26020b32658eebe3b3237b6c14b00c2d03b204b7912",
+          "elapsedMs": 14236.607875,
+          "missingRequired": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "trailing-language-warning"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "sameBodiesAsReference": null,
+      "referenceElapsedMs": null,
+      "numericCompleted": true,
+      "sourceMissing": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "sessions": [
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage5-native/native-0/body.txt",
+          "sha256": "f4e04eab52a2b20a82bcb10d855a9bbc4b0c0545face15dc20f02062d1a8f27e",
+          "elapsedMs": 15261.26375,
+          "missingRequired": [
+            "toolchain-cache-key",
+            "default-toolchain-selection"
+          ]
+        },
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage5-native/native-1/body.txt",
+          "sha256": "f4e04eab52a2b20a82bcb10d855a9bbc4b0c0545face15dc20f02062d1a8f27e",
+          "elapsedMs": 13277.018417,
+          "missingRequired": [
+            "toolchain-cache-key",
+            "default-toolchain-selection"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "sameBodiesAsReference": null,
+      "referenceElapsedMs": null,
+      "numericCompleted": true,
+      "sourceMissing": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "sessions": [
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage6-native/native-0/body.txt",
+          "sha256": "904ae9071ae8d731ab404cc86e7484e7e2f0b2fd704ebaef3aadb16003b58165",
+          "elapsedMs": 16808.913584,
+          "missingRequired": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "syntax-only-compile-cutoff",
+            "trailing-language-warning",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ]
+        },
+        {
+          "body": "/Users/ovm/.codex/experiments/eggshell/shared-range-marginals-20261022/native-all/prepared/stage6-native/native-1/body.txt",
+          "sha256": "904ae9071ae8d731ab404cc86e7484e7e2f0b2fd704ebaef3aadb16003b58165",
+          "elapsedMs": 15088.332666,
+          "missingRequired": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "syntax-only-compile-cutoff",
+            "trailing-language-warning",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "sameBodiesAsReference": null,
+      "referenceElapsedMs": null,
+      "numericCompleted": true,
+      "sourceMissing": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    }
+  ],
+  "nativeHooks": 12,
+  "nativeIntegrityVerified": true,
+  "allSixRequiredStoredCodeDelivered": false,
+  "sourceClosureInspection": {
+    "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-closure-trace-20261022/required-closure-inspection.json",
+    "sha256": "4d5605bfdd8311b08662b23cb59a3c21bce1c0647e59a4f3c5a022affac86fe1",
+    "scope": "Stage 1 development gate: full original code lines in constructed closures versus selected closures. Oracle is audit-only, never passed to runtime selector.",
+    "allFourStage1RequirementsHaveCompleteOffers": true,
+    "allFourOmittedBySelection": true
+  },
+  "freeBytes": 8615829504,
+  "nativePreparationReserveMiB": 3072,
+  "modelPrelaunchReserveMiB": 4096,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "newTokenReductionMeasured": false,
+  "productionAdoption": false,
+  "fullNativeIOSuiteExecuted": false,
+  "decision": "Retain as isolated candidate. Incremental evaluation fixes repeated work and restores deadline completion, but stored-code delivery omissions remain; no model launch/adoption.",
+  "remaining": "Budget allocation discards complete required original-code offers; preserve witnesses and redesign generic relevance/coverage accounting, not benchmark-specific identifiers or oracle rules.",
+  "scriptSha256": "fbe3f171878c46d4a8f9c740a646fdc1e795ae062306f96e42ad8c70d966e0ad"
+}
