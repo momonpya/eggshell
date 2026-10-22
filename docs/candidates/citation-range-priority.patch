@@ -1,0 +1,232 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -3123,6 +3123,50 @@
+       ((text.splitOn marker).drop 1).filterMap fun rest =>
+         (String.ofList (rest.toList.takeWhile Char.isDigit)).toNat?).eraseDups
+
++/-- A closed line interval in a stored citation. Unsupported or conflicting
++Markdown locators are ignored; this parser never opens a path. -/
++def citationBounds? (text : String) : Option (Nat × Nat) := do
++  let chars := text.toList
++  let digits := chars.takeWhile Char.isDigit
++  let first ← (String.ofList digits).toNat?
++  if first == 0 then none else do
++    let rest := chars.drop digits.length
++    if rest.isEmpty then some (first,first) else do
++      let dash ← rest.head?
++      if dash != '-' && dash != '–' && dash != '—' then none else do
++        let tail := rest.drop 1
++        let tail := if tail.head? == some 'L' then tail.drop 1 else tail
++        let last ← (String.ofList tail).toNat?
++        if first ≤ last then some (first,last) else none
++
++def citationTarget? (text relative : String) : Option (Nat × Nat) :=
++  [relative ++ ":",relative ++ "#L"].findSome? fun marker =>
++    match text.splitOn marker with
++    | [leading,bounds] =>
++        if leading.isEmpty || leading.endsWith "/" then citationBounds? bounds else none
++    | _ => none
++
++def citedLineIntervals (text relative : String) : List (Nat × Nat) :=
++  if !SourceEvidence.safeRelative relative then [] else
++    ((text.splitOn "](").drop 1).zipIdx.filterMap fun (tail,index) => do
++      let before ← (text.splitOn "](")[index]?
++      let label ← (before.splitOn "[").getLast?
++      let target ← (tail.splitOn ")").head?
++      let destination ← citationTarget? target relative
++      let explicitRange := [relative ++ ":",relative ++ "#L"].any fun marker =>
++        ((target.splitOn marker).drop 1).any fun bounds =>
++          !(bounds.toList.dropWhile Char.isDigit).isEmpty
++      let basename := (relative.splitOn "/").getLast?.getD relative
++      let displayed := (label.splitOn (basename ++ ":")).drop 1
++      match displayed with
++      | [] => some destination
++      | [bounds] => do
++          let shown ← citationBounds? bounds
++          if shown.1 == destination.1 &&
++              (!explicitRange || shown.2 == destination.2) then
++            some shown else none
++      | _ => none
++
+ def observedLineNumber? (text : String) : Option (Nat × Char) := do
+   let chars := text.toList.dropWhile (· == ' ')
+   let digits := chars.takeWhile Char.isDigit
+@@ -3242,6 +3286,36 @@
+   let compact := (observedNumberedSegments source layout).filterMap fun (span, rows) =>
+     if rows.length > 1 && span.stop - span.start ≤ 2048 then some span else none
+   return some (first.1,((cited ++ compact).flatMap (observedSpanWindows (work.length + 1))).eraseDups)
++
++/-- Preserve the producer's actual nomination rank for each projected
++window. Only already admitted, graph-reachable observations are supplied.
++Neither a citation nor its rank adds equality or completion authority. -/
++def rankedCitedObservationCoordinates (texts : List (Nat × String)) (owner : OutcomeEdge)
++    (records : List SourceEvidence.Record) : Option (Nat × List Nat × List (Nat × Nat)) := Id.run do
++  let some source := Matcher.atomText? owner.outcome | return none
++  let some work := Matcher.atomText? owner.work | return none
++  let layout := (decodedToolText? source).map DecodedLayout.make
++  let text := layout.map (·.decoded.text) |>.getD source
++  let rows := (contextRecordSpans source layout).zip (text.splitOn "\n")
++  let native := nativeReadRows source layout work records
++  let mut hints : List (Nat × Nat) := []
++  for (priority,parent) in texts do
++    let intervals := ((records.flatMap (·.files)).flatMap fun file =>
++      citedLineIntervals parent file.relative).eraseDups
++    for (first,last) in intervals do
++      -- Filter finite saved rows, never enumerate an untrusted interval.
++      let spans := (rows.filterMap fun (span,row) => do
++        let (number,_) ← observedLineNumber? row
++        if first ≤ number && number ≤ last then some span else none) ++
++        (native.filterMap fun (span,number) =>
++          if first ≤ number && number ≤ last then some span else none)
++      for position in (spans.flatMap (observedSpanWindows (work.length+1))).eraseDups do
++        match hints.find? (·.1 == position) with
++        | none => hints := hints ++ [(position,priority)]
++        | some (_,old) => if priority < old then
++            hints := hints.map fun row => if row.1 == position then (position,priority) else row
++  let some first := hints.head? | return none
++  return some (first.2,hints.map Prod.fst,hints)
+
+ def citedObservationWindows (texts : List String) (owner : OutcomeEdge)
+     (records : List SourceEvidence.Record) : List Nat :=
+@@ -5054,6 +5128,7 @@
+   template : TransportSlice
+   windows : List Nat
+   references : List Nat := []
++  referenceRanks : List (Nat × Nat) := []
+
+ structure UnitPlan where
+   family : Nat
+@@ -5167,10 +5242,12 @@
+ def rankedCues (family : Family) : List RankedCue :=
+   match Matcher.atomText? family.owner.outcome,Matcher.atomText? family.owner.work with
+   | some source,some work =>
+-    [family.windows,family.references].flatMap fun positions =>
+-      positions.zipIdx.filterMap fun (position,priority) =>
+-        (meaningContext? source (work.length+1) position priority).map fun context =>
+-          {priority,first := context.span.start,last := context.span.stop}
++    let focus := family.windows.zipIdx
++    let references := if family.referenceRanks.isEmpty then family.references.zipIdx
++      else family.referenceRanks
++    (focus ++ references).filterMap fun (position,priority) =>
++      (meaningContext? source (work.length+1) position priority).map fun context =>
++        {priority,first := context.span.start,last := context.span.stop}
+   | _,_ => []
+
+ def coveringCue? (cues : List RankedCue) (first last : Nat) : Option RankedCue :=
+@@ -5300,7 +5377,8 @@
+     (requestQuestion : Option String := none) (nativeObserved : Bool := false)
+     (advisoryExcluded : List Value := [])
+     (referenceEvidence : List (Value × List Nat) := [])
+-    (referencePriorities : List (Value × Nat) := []) : Option Handoff :=
++    (referencePriorities : List (Value × Nat) := [])
++    (referenceRanks : List (Value × List (Nat × Nat)) := []) : Option Handoff :=
+   let extraction := prepared.val
+   let attach := fun selected : Selected => {
+     selected with
+@@ -5526,7 +5604,8 @@
+           let referenced := (referenceEvidence.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+           let hint := QueryLiterals.focus (requestQuestion.getD current)
+             (evidenceSearchWindows owner) (sourceContextWindows positions referenced)
+-          pure ({owner,template := choice.2.1,windows := hint.windows,references := referenced} : SharedRangeAdapter.Family)
++          let ranks := (referenceRanks.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
++          pure ({owner,template := choice.2.1,windows := hint.windows,references := referenced,referenceRanks := ranks} : SharedRangeAdapter.Family)
+       match SharedRangeAdapter.fit (budget,byteBudget.getD (budget*4)) packetCost families mandatory with
+       | some fitted => fitted.val
+       | none => []
+@@ -6773,14 +6852,19 @@
+      focusedRows := focusedWindows
+   -- Historical locators choose positions only inside original hydrated
+   -- graph owners. Preserve the independent numerical focus unchanged.
+-  let parents := nominationRanking.filterMap fun relation => do
++  let parents := nominationRanking.zipIdx.filterMap fun (relation,rank) => do
+     let owner ← nominatedOwners.find? (·.relation == relation)
+-    if sourceAll.any (·.parent == owner.work) then Matcher.atomText? owner.outcome else none
++    let text ← Matcher.atomText? owner.outcome
++    if sourceAll.any (·.parent == owner.work) then some (rank,owner.work,text) else none
+   let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
+-    (citedObservationCoordinates parents item.owner item.provenance).map
+-      (fun (priority,positions) => (item.owner.relation,priority,positions))
+-  let referencedEvidence := referenced.map fun (owner,_,positions) => (owner,positions)
+-  let referencePriorities := referenced.map fun (owner,priority,_) => (owner,priority)
++    let admitted := parents.filterMap fun (rank,work,text) =>
++      if (sourceNeighborhood [work] sourceAll persistent).any (·.work == item.owner.work) then
++        some (rank,text) else none
++    (rankedCitedObservationCoordinates admitted item.owner item.provenance).map
++      (fun (priority,positions,ranks) => (item.owner.relation,priority,positions,ranks))
++  let referencedEvidence := referenced.map fun (owner,_,positions,_) => (owner,positions)
++  let referencePriorities := referenced.map fun (owner,priority,_,_) => (owner,priority)
++  let referenceRanks := referenced.map fun (owner,_,_,ranks) => (owner,ranks)
+   -- The focused provider is an independent observation. Include its exact
+   -- durable owner/order/window reply before asking the memo to reuse a packet.
+   -- An unchanged first nomination alone cannot certify an unchanged focus.
+@@ -6799,6 +6883,11 @@
+     for (relation, windows) in referencedEvidence do
+       if let some id ← source.liveOwner relation then
+         observed := {observed with focused := observed.focused ++ [id, windows.length] ++ windows}
++    observed := {observed with focused := observed.focused ++ [referenceRanks.length]}
++    for (relation,ranks) in referenceRanks do
++      if let some id ← source.liveOwner relation then
++        observed := {observed with focused := observed.focused ++
++          [id,ranks.length] ++ ranks.flatMap (fun (position,priority) => [position,priority])}
+     if let some reused ← reuseSemantic observed then return reused
+   let evidenceRanking := semanticOwners.presentationOrder.filterMap fun row => match row with
+     | .inl id => rankedOwners[id]?
+@@ -6827,6 +6916,7 @@
+     (advisoryExcluded := advisoryExcluded)
+     (referenceEvidence := referencedEvidence)
+     (referencePriorities := referencePriorities)
++    (referenceRanks := referenceRanks)
+   let rendered := rendered.map fun handoff =>
+     if recommendation && handoff.packet.isSome then
+       {handoff with deliveredGraphs := (handoff.deliveredGraphs ++
+--- /dev/null
++++ b/tools/CitationRangeTests.lean
+@@ -0,0 +1,18 @@
++import Eggshell.Handoff
++open Lean Eggshell Eggshell.Plugin
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++def main : IO Unit := do
++  check (citationBounds? "10-15" == some (10,15)) "range end lost"
++  check (citationBounds? "10–15" == some (10,15)) "en dash lost"
++  check (citationBounds? "10-L15" == some (10,15)) "GitHub range lost"
++  check (citationBounds? "0-15" == none && citationBounds? "15-10" == none) "invalid interval admitted"
++  let path := "src/driver.cpp"
++  check (citedLineIntervals "[driver.cpp:10-15](/snapshot/src/driver.cpp:10)" path == [(10,15)]) "displayed range lost"
++  check (citedLineIntervals "[driver.cpp:10-15](/snapshot/src/driver.cpp#L10-L15)" path == [(10,15)]) "GitHub range lost"
++  check (citedLineIntervals "[driver.cpp:10-15](/snapshot/src/driver.cpp:11)" path == []) "conflicting start admitted"
++  check (citedLineIntervals "[driver.cpp:10-15](/snapshot/src/driver.cpp#L10-L16)" path == []) "conflicting end admitted"
++  check (citedLineIntervals "[driver.cpp:10-15](/snapshot/other/driver.cpp:10)" path == []) "undeclared path admitted"
++  check (citedLineIntervals "[driver.cpp:10-15](/snapshot/src/driver.cpp:10)" "../src/driver.cpp" == []) "unsafe path admitted"
++  check (citedLineIntervals "[driver.cpp:10-15](/snapshot/src/driver.cpp#L10-L10)" path == []) "explicit singleton conflict admitted"
++  IO.println "citation interval checks passed"
+--- /dev/null
++++ b/tools/CitationProjectionTests.lean
+@@ -0,0 +1,27 @@
++import Eggshell.Handoff
++open Lean Eggshell Eggshell.Plugin
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++def main : IO Unit := do
++  let source := "\n".intercalate ((List.range 6).map fun i =>
++    toString (10+i) ++ "\t" ++ String.ofList (List.replicate 200 'a'))
++  let owner := OutcomeEdge.make (.text "read") (.text source) [] (by simp) (by simp)
++  let record : SourceEvidence.Record := {
++    workspace := "/unused",files := [{relative := "src/driver.cpp",content := none}]
++    complete := false}
++  let citation := "[driver.cpp:10-15](/unused/src/driver.cpp:10)"
++  let some (_,positions,ranks) := rankedCitedObservationCoordinates [(4,citation),(1,citation)] owner [record] |
++    throw (IO.userError "stored interval disappeared")
++  check (positions.contains 0 && positions.any (fun i => i >= 2)) "the citation end never reached its original source window"
++  check (ranks.all (fun row => row.2 == 1)) "producer rank was replaced by citation or source-window enumeration"
++  let original : TransportSlice := {
++    owner := some owner.relation,keys := [],text := source,members := [],visibleKeys := []}
++  let family : SharedRangeAdapter.Family := {
++    owner,template := original,windows := [],references := [0,1],referenceRanks := [(0,7),(1,3)]}
++  check ((SharedRangeAdapter.rankedCues family).map (·.priority) == [7,3]) "actual producer priority did not reach the fitter"
++  let huge := "[driver.cpp:1-100000000000000000000](/unused/src/driver.cpp:1)"
++  let some (_,bounded,_) := rankedCitedObservationCoordinates [(0,huge)] owner [record] |
++    throw (IO.userError "finite stored interval disappeared")
++  check (bounded.length <= 10) "untrusted line interval became an allocation bound"
++  check (owner.outcome == .text source) "original source was changed"
++  IO.println "citation range/rank projection checks passed"
