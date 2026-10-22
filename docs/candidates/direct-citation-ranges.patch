@@ -1,0 +1,295 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -3291,7 +3291,8 @@
+ window. Only already admitted, graph-reachable observations are supplied.
+ Neither a citation nor its rank adds equality or completion authority. -/
+ def rankedCitedObservationCoordinates (texts : List (Nat × String)) (owner : OutcomeEdge)
+-    (records : List SourceEvidence.Record) : Option (Nat × List Nat × List (Nat × Nat)) := Id.run do
++    (records : List SourceEvidence.Record) : Option
++      (Nat × List Nat × List (Nat × Nat) × List (Nat × List (Nat × Nat))) := Id.run do
+   let some source := Matcher.atomText? owner.outcome | return none
+   let some work := Matcher.atomText? owner.work | return none
+   let layout := (decodedToolText? source).map DecodedLayout.make
+@@ -3299,23 +3300,30 @@
+   let rows := (contextRecordSpans source layout).zip (text.splitOn "\n")
+   let native := nativeReadRows source layout work records
+   let mut hints : List (Nat × Nat) := []
++  let mut groups : List (Nat × List (Nat × Nat)) := []
+   for (priority,parent) in texts do
+     let intervals := ((records.flatMap (·.files)).flatMap fun file =>
+       citedLineIntervals parent file.relative).eraseDups
+     for (first,last) in intervals do
+       -- Filter finite saved rows, never enumerate an untrusted interval.
+-      let spans := (rows.filterMap fun (span,row) => do
++      let numbered := (rows.filterMap fun (span,row) => do
+         let (number,_) ← observedLineNumber? row
+-        if first ≤ number && number ≤ last then some span else none) ++
++        if first ≤ number && number ≤ last then some (number,span) else none) ++
+         (native.filterMap fun (span,number) =>
+-          if first ≤ number && number ≤ last then some span else none)
++          if first ≤ number && number ≤ last then some (number,span) else none)
++      let spans := numbered.map Prod.snd
++      -- Completeness counts the finite stored row domain; it never expands
++      -- citation-controlled line bounds into a new allocation or file read.
++      if (numbered.map Prod.fst).eraseDups.length == last-first+1 && !spans.isEmpty then
++        let original := (spans.map fun span => (span.start,span.stop)).eraseDups
++        if !groups.contains (priority,original) then groups := groups ++ [(priority,original)]
+       for position in (spans.flatMap (observedSpanWindows (work.length+1))).eraseDups do
+         match hints.find? (·.1 == position) with
+         | none => hints := hints ++ [(position,priority)]
+         | some (_,old) => if priority < old then
+             hints := hints.map fun row => if row.1 == position then (position,priority) else row
+   let some first := hints.head? | return none
+-  return some (first.2,hints.map Prod.fst,hints)
++  return some (first.2,hints.map Prod.fst,hints,groups)
+ 
+ def citedObservationWindows (texts : List String) (owner : OutcomeEdge)
+     (records : List SourceEvidence.Record) : List Nat :=
+@@ -5129,6 +5137,7 @@
+   windows : List Nat
+   references : List Nat := []
+   referenceRanks : List (Nat × Nat) := []
++  referenceRanges : List (Nat × List (Nat × Nat)) := []
+ 
+ structure UnitPlan where
+   family : Nat
+@@ -5159,6 +5168,50 @@
+ 
+ theorem atomic_payload (familyIndex sourceChars : Nat) (family : Family) :
+     (atomicUnit familyIndex sourceChars family).slice = family.template := rfl
++
++/-- A source record keeps its original paragraph and bounded scope entry.
++The fixed-width surrounding display is an enrichment, not a prerequisite of
++this smaller advisory offer. This creates no Match or completion authority. -/
++def recordPrerequisite (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (record : EvidenceRange source) :
++    EvidenceRange source :=
++  let prior := prerequisiteContextRange records heads record
++  let scope := prerequisiteContextRange records scopedHeads record
++  if valid : scope.start < prior.start ∧ prior.stop-scope.start ≤ 2048 then
++    ⟨scope.start,prior.stop,Nat.lt_trans valid.1 prior.ordered,prior.within,valid.2⟩
++  else prior
++
++theorem record_prerequisite_retains_source (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (record : EvidenceRange source)
++    (position : Nat) (inside : record.covers position) :
++    (recordPrerequisite records heads scopedHeads record).covers position := by
++  have retained := prerequisite_context_keeps_cue records heads record position inside
++  unfold recordPrerequisite
++  dsimp only
++  split
++  · rename_i valid
++    change _ ≤ position ∧ position < (prerequisiteContextRange records heads record).stop
++    exact ⟨Nat.le_trans (Nat.le_of_lt valid.1) retained.1,retained.2⟩
++  · exact retained
++
++/-- Preserve all finite stored rows of a citation in bounded original
++ranges. Joining adjacent rows adds no surrounding window or unobserved byte. -/
++def citationRecordRanges (source : String) (spans : List (Nat × Nat)) :
++    Option (List (EvidenceRange source)) := do
++  let mut combined : Array (Nat × Nat) := #[]
++  for (first,last) in (spans.eraseDups.mergeSort fun a b => a.1 ≤ b.1) do
++    if first < last ∧ last ≤ source.length ∧ last-first ≤ 2048 then
++      match combined.back? with
++      | some (a,b) =>
++          if first ≤ b && max b last-a ≤ 2048 then
++            combined := combined.pop.push (a,max b last)
++          else combined := combined.push (first,last)
++      | none => combined := combined.push (first,last)
++    else none
++  combined.toList.mapM fun (first,last) =>
++    if valid : first < last ∧ last ≤ source.length ∧ last-first ≤ 2048 then
++      some (⟨first,last,valid.1,valid.2.1,valid.2.2⟩ : EvidenceRange source)
++    else none
+ 
+ /-- Prepare the immutable record/structure index once per owner. Each query
+ window gets its own complete local dependency closure, not a prefix of the
+@@ -5219,6 +5272,41 @@
+       let context := {envelope with fragments,cues := selectedCues}
+       let slice := {family.template with context := some context,keys := context.keys,text := context.render}
+       units := units ++ [{family := familyIndex,slice,ranges}]
++  -- A complete citation names stored source rows, not all windows that
++  -- intersect them. Offer that exact bounded data with its original scope;
++  -- the unchanged selector still decides its value against current focus.
++  if Matcher.nativeOutcome family.owner then
++    for (_,spans) in family.referenceRanges do
++      let some quoted := citationRecordRanges source spans | continue
++      let requested := quoted.filterMap aligned
++      if requested.length != quoted.length || requested.isEmpty then continue
++      let requirements := requested.map (recordPrerequisite records heads scopedHeads)
++      let views := requirements.filterMap fun range => match decoded with
++        | none => some (EvidenceView.original range)
++        | some layout => (decodedEvidenceUsing? layout range).map EvidenceView.decoded
++      if views.length != requirements.length then continue
++      let limit := (views.map fun view => view.range.stop-view.range.start).sum
++      let selected := views.foldl (fun selected view =>
++        offerContextView selected family.owner decoded view)
++        (ContextSelection.empty : ContextSelection source limit)
++      let fragments := (sourceOrderedEvidence selected.views).map fun view => ({
++        first := view.range.start
++        original := original.slice view.range.start (view.range.stop-view.range.start)
++        decoded := match view with | .decoded _ => true | .original _ => false} : DeliveryFragment)
++      let ranges := fragmentRanges fragments
++      if !requested.all (fun range => covers ranges range.start range.stop) then continue
++      let required := requirements.filterMap aligned
++      if required.length != requirements.length ||
++          !required.all (fun range => covers ranges range.start range.stop) then continue
++      if seen.contains ranges then continue
++      seen := seen.insert ranges
++      let selectedCues := cues.flatMap fun (a,b) => ranges.filterMap fun (c,d) =>
++        let first := max a c
++        let last := min b d
++        if first < last then some (first,last) else none
++      let context := {envelope with fragments,cues := selectedCues}
++      let slice := {family.template with context := some context,keys := context.keys,text := context.render}
++      units := units ++ [{family := familyIndex,slice,ranges}]
+   return (units,cues)
+ 
+ def join (prior next : TransportSlice) : Option TransportSlice := do
+@@ -5378,7 +5466,8 @@
+     (advisoryExcluded : List Value := [])
+     (referenceEvidence : List (Value × List Nat) := [])
+     (referencePriorities : List (Value × Nat) := [])
+-    (referenceRanks : List (Value × List (Nat × Nat)) := []) : Option Handoff :=
++    (referenceRanks : List (Value × List (Nat × Nat)) := [])
++    (referenceRanges : List (Value × List (Nat × List (Nat × Nat))) := []) : Option Handoff :=
+   let extraction := prepared.val
+   let attach := fun selected : Selected => {
+     selected with
+@@ -5605,7 +5694,14 @@
+           let hint := QueryLiterals.focus (requestQuestion.getD current)
+             (evidenceSearchWindows owner) (sourceContextWindows positions referenced)
+           let ranks := (referenceRanks.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+-          pure ({owner,template := choice.2.1,windows := hint.windows,references := referenced,referenceRanks := ranks} : SharedRangeAdapter.Family)
++          let ranges := (referenceRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
++          pure ({
++            owner := owner
++            template := choice.2.1
++            windows := hint.windows
++            references := referenced
++            referenceRanks := ranks
++            referenceRanges := ranges} : SharedRangeAdapter.Family)
+       match SharedRangeAdapter.fit (budget,byteBudget.getD (budget*4)) packetCost families mandatory with
+       | some fitted => fitted.val
+       | none => []
+@@ -6861,10 +6957,11 @@
+       if (sourceNeighborhood [work] sourceAll persistent).any (·.work == item.owner.work) then
+         some (rank,text) else none
+     (rankedCitedObservationCoordinates admitted item.owner item.provenance).map
+-      (fun (priority,positions,ranks) => (item.owner.relation,priority,positions,ranks))
+-  let referencedEvidence := referenced.map fun (owner,_,positions,_) => (owner,positions)
+-  let referencePriorities := referenced.map fun (owner,priority,_,_) => (owner,priority)
+-  let referenceRanks := referenced.map fun (owner,_,_,ranks) => (owner,ranks)
++      (fun (priority,positions,ranks,ranges) => (item.owner.relation,priority,positions,ranks,ranges))
++  let referencedEvidence := referenced.map fun (owner,_,positions,_,_) => (owner,positions)
++  let referencePriorities := referenced.map fun (owner,priority,_,_,_) => (owner,priority)
++  let referenceRanks := referenced.map fun (owner,_,_,ranks,_) => (owner,ranks)
++  let referenceRanges := referenced.map fun (owner,_,_,_,ranges) => (owner,ranges)
+   -- The focused provider is an independent observation. Include its exact
+   -- durable owner/order/window reply before asking the memo to reuse a packet.
+   -- An unchanged first nomination alone cannot certify an unchanged focus.
+@@ -6888,6 +6985,12 @@
+       if let some id ← source.liveOwner relation then
+         observed := {observed with focused := observed.focused ++
+           [id,ranks.length] ++ ranks.flatMap (fun (position,priority) => [position,priority])}
++    observed := {observed with focused := observed.focused ++ [referenceRanges.length]}
++    for (relation,groups) in referenceRanges do
++      if let some id ← source.liveOwner relation then
++        let encoded := groups.flatMap fun (priority,ranges) =>
++          [priority,ranges.length] ++ ranges.flatMap (fun (first,last) => [first,last])
++        observed := {observed with focused := observed.focused ++ [id,groups.length] ++ encoded}
+     if let some reused ← reuseSemantic observed then return reused
+   let evidenceRanking := semanticOwners.presentationOrder.filterMap fun row => match row with
+     | .inl id => rankedOwners[id]?
+@@ -6917,6 +7020,7 @@
+     (referenceEvidence := referencedEvidence)
+     (referencePriorities := referencePriorities)
+     (referenceRanks := referenceRanks)
++    (referenceRanges := referenceRanges)
+   let rendered := rendered.map fun handoff =>
+     if recommendation && handoff.packet.isSome then
+       {handoff with deliveredGraphs := (handoff.deliveredGraphs ++
+--- a/tools/CitationProjectionTests.lean
++++ b/tools/CitationProjectionTests.lean
+@@ -10,7 +10,7 @@
+     workspace := "/unused",files := [{relative := "src/driver.cpp",content := none}]
+     complete := false}
+   let citation := "[driver.cpp:10-15](/unused/src/driver.cpp:10)"
+-  let some (_,positions,ranks) := rankedCitedObservationCoordinates [(4,citation),(1,citation)] owner [record] |
++  let some (_,positions,ranks,groups) := rankedCitedObservationCoordinates [(4,citation),(1,citation)] owner [record] |
+     throw (IO.userError "stored interval disappeared")
+   check (positions.contains 0 && positions.any (fun i => i >= 2)) "the citation end never reached its original source window"
+   check (ranks.all (fun row => row.2 == 1)) "producer rank was replaced by citation or source-window enumeration"
+@@ -20,8 +20,10 @@
+     owner,template := original,windows := [],references := [0,1],referenceRanks := [(0,7),(1,3)]}
+   check ((SharedRangeAdapter.rankedCues family).map (·.priority) == [7,3]) "actual producer priority did not reach the fitter"
+   let huge := "[driver.cpp:1-100000000000000000000](/unused/src/driver.cpp:1)"
+-  let some (_,bounded,_) := rankedCitedObservationCoordinates [(0,huge)] owner [record] |
++  let some (_,bounded,_,hugeGroups) := rankedCitedObservationCoordinates [(0,huge)] owner [record] |
+     throw (IO.userError "finite stored interval disappeared")
+   check (bounded.length <= 10) "untrusted line interval became an allocation bound"
++  check (groups.any (fun row => row.1 == 1)) "complete source rows lost their actual producer rank"
++  check hugeGroups.isEmpty "an incomplete enormous citation acquired a complete source group"
+   check (owner.outcome == .text source) "original source was changed"
+   IO.println "citation range/rank projection checks passed"
+--- a/tools/DirectCitationTests.lean
++++ b/tools/DirectCitationTests.lean
+@@ -0,0 +1,58 @@
++import Eggshell.Handoff
++open Lean Eggshell Eggshell.Plugin
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++private def nativeOwner (source : String) : OutcomeEdge :=
++  let work := Value.text "read immutable source"
++  let result := Value.text source
++  let observation := Value.applyList .occurrence [.semantic result,.semantic work,.exact (.text "observed")]
++  OutcomeEdge.make work result [observation] (by simp) (by simp [maxOutcomeObservations])
++def main : IO Unit := do
++  let text := "\n".intercalate ((List.range 36).map fun i =>
++    toString (10+i) ++ "\t" ++ String.ofList (List.replicate 180 'a') ++ " 条件🧪")
++  let source := (toJson text).compress
++  let owner := nativeOwner source
++  let record : SourceEvidence.Record := {
++    workspace := "/unused",files := [{relative := "src/example.cpp",content := none}]
++    complete := false}
++  let some (_,positions,ranks,groups) := rankedCitedObservationCoordinates
++      [(3,"[example.cpp:12-13](/unused/src/example.cpp:12)")] owner [record] |
++    throw (IO.userError "complete original citation disappeared")
++  check (groups.length == 1 && groups.all (fun row => row.1 == 3))
++    "citation source rows or real producer rank vanished"
++  let template : TransportSlice := {owner := some owner.relation,keys := [],text := "",members := [],visibleKeys := []}
++  let some part := (prepareContextualOwnerPlan [] positions owner "source conditions" [] template).eval 120000 |
++    throw (IO.userError "source envelope could not be prepared")
++  let family : SharedRangeAdapter.Family := {
++    owner := owner
++    windows := []
++    references := positions
++    referenceRanks := ranks
++    referenceRanges := groups
++    template := {template with context := part.context,text := part.text,keys := part.keys}}
++  let (units,_) := SharedRangeAdapter.prepare 0 family
++  let some envelope := part.context | throw (IO.userError "missing original envelope")
++  let exact := groups.flatMap (·.2)
++  check (units.any fun unit => exact.all (fun (a,b) =>
++      let first := max 1 a
++      let last := min (source.length-1) b
++      SharedRangeAdapter.covers unit.ranges first last) &&
++      (unit.ranges.map fun (a,b) => b-a).sum < 1024)
++    "literal source rows were inflated to a fixed surrounding window"
++  for unit in units do
++    check unit.slice.members.isEmpty "a citation created a native-control member"
++    let some context := unit.slice.context | throw (IO.userError "source context vanished")
++    check (decide (context.sameEnvelope envelope)) "citation changed source status or provenance"
++    check (context.cues.all fun (a,b) => SharedRangeAdapter.covers unit.ranges a b)
++      "a quote received credit for undispatched source"
++    for fragment in context.fragments do
++      check (fragment.original == ((source.drop fragment.first).take fragment.original.length).copy)
++        "a quote rewrote original source or mixed decoded coordinates"
++  let sparse := nativeOwner "10\ta\n11\tb\n14\tc\n15\td"
++  let some (_,_,_,partialGroups) := rankedCitedObservationCoordinates
++      [(0,"[example.cpp:10-15](/unused/src/example.cpp:10)")] sparse [record] |
++    throw (IO.userError "partial citation lost its bounded window hints")
++  check partialGroups.isEmpty "a missing stored row was invented to complete a citation"
++  check ((SharedRangeAdapter.citationRecordRanges source [(0,source.length+1)]).isNone)
++    "a citation escaped the original source"
++  IO.println s!"direct citation offers={units.length}; original range, complete-row, Unicode, envelope and authority checks passed"

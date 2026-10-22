@@ -1,0 +1,1271 @@
+{
+  "status": "isolated-native-checked-with-known-source-gaps-not-adopted",
+  "base": "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022",
+  "baseRuntimeSha256": "6db03cfb21625376e54d465e8147779f58a83136627990851abc779f7640bfd1",
+  "complete": true,
+  "diagnosticOnly": false,
+  "runtimeSha256": "58a899c10ed25c913c36bbcc741d9e3d6354965dd6a8d73ad9273a74287848cd",
+  "sourceManifestSha256": "709e7924d5980a3c4885fdb1cf8ce0e278cb7fca86bc4842b9cb46d074b6b711",
+  "scriptSha256": "fc5e40e499188627741e905653bddeb9fb25b08ed21ffe104782299be5475e06",
+  "answeringModelCalls": 0,
+  "productionAdoption": false,
+  "patch": "docs/candidates/direct-citation-ranges.patch",
+  "patchSha256": "8aa9c81c61a58cf6fb98a5a2170ff97a61f0493b315a97ff373e0c9618ac653f",
+  "patchAppliedExactly": true,
+  "changedFiles": [
+    {
+      "file": "Eggshell/Handoff.lean",
+      "beforeSha256": "5969a5cb4fefddce6794d997643e19bbe2a8b3042c5e6d55db49d75f5da89780",
+      "afterSha256": "7269472044094baa400a3abea88c02ebb358c60a4b7eabd85186a79ea2db9f76"
+    },
+    {
+      "file": "tools/CitationProjectionTests.lean",
+      "beforeSha256": "985435b52270af7100c75ec5fdf897560d73923ce3842023cb907d27d98553d1",
+      "afterSha256": "9fbf833227172c97645803328baf474a41fcece0be190b64eb2d51ec7994e3e5"
+    },
+    {
+      "file": "tools/DirectCitationTests.lean",
+      "beforeSha256": null,
+      "afterSha256": "cf6813f3ada8b485f2681f96bba6b9f6e17b657ede068b805e4209b89497cbcc"
+    }
+  ],
+  "nativeResult": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-result.json",
+  "nativeResultSha256": "fee7d534efb35d924768f600dd106e27663ebb3ca179d6f2d62e0aca19c028fb",
+  "rows": [
+    {
+      "stage": 1,
+      "topic": 1,
+      "sessions": [
+        {
+          "index": 0,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage1-native/native-0/body.txt",
+          "session": "prepare-stage1-native-0",
+          "elapsedMs": 16615.715625,
+          "bodySha256": "9b0641303dcf1162dc2a009a0a653db82fbc94866e8f1da5b23a35bc84437b72",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "complete-hlsl-branch-scope",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "trailing-language-warning",
+              "originalOwners": [
+                "v15256267109356037303"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            }
+          ],
+          "missingRequired": [
+            "trailing-language-warning"
+          ]
+        },
+        {
+          "index": 1,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage1-native/native-1/body.txt",
+          "session": "prepare-stage1-native-1",
+          "elapsedMs": 10828.312084,
+          "bodySha256": "9b0641303dcf1162dc2a009a0a653db82fbc94866e8f1da5b23a35bc84437b72",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "complete-hlsl-branch-scope",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "trailing-language-warning",
+              "originalOwners": [
+                "v15256267109356037303"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            }
+          ],
+          "missingRequired": [
+            "trailing-language-warning"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "allReviewedRequiredBlocksDelivered": false,
+      "ready": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage1-native/ready.json",
+      "readySha256": "3f73588e976d048d0d01fe33e3b0aec5a475fd6a2e42f88e669869b7dd0c8e4c"
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "sessions": [
+        {
+          "index": 0,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage2-native/native-0/body.txt",
+          "session": "prepare-stage2-native-0",
+          "elapsedMs": 13405.068375,
+          "bodySha256": "18e05272e2ed4af093c3604a3c890775565c8c13ee2d0617f871006a0ba33db1",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "mode-before-parse-and-config",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            }
+          ],
+          "missingRequired": []
+        },
+        {
+          "index": 1,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage2-native/native-1/body.txt",
+          "session": "prepare-stage2-native-1",
+          "elapsedMs": 11981.188375,
+          "bodySha256": "18e05272e2ed4af093c3604a3c890775565c8c13ee2d0617f871006a0ba33db1",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "mode-before-parse-and-config",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            }
+          ],
+          "missingRequired": []
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "allReviewedRequiredBlocksDelivered": true,
+      "ready": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage2-native/ready.json",
+      "readySha256": "52bbafa001fd76390b9a461721bc25714b18aed67b2c43a028b0b3f42377a858"
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "sessions": [
+        {
+          "index": 0,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage3-native/native-0/body.txt",
+          "session": "prepare-stage3-native-0",
+          "elapsedMs": 14319.889583,
+          "bodySha256": "642c8ed36bc59b31e995ea4052c720b9bc308f3f0225087ce2bef5515a8d7084",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "complete-hlsl-branch-scope",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "syntax-only-compile-cutoff",
+              "originalOwners": [
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            },
+            {
+              "name": "trailing-language-warning",
+              "originalOwners": [
+                "v15256267109356037303"
+              ],
+              "deliveredOwners": [
+                "v15256267109356037303"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "syntax-only-no-output-action",
+              "originalOwners": [],
+              "deliveredOwners": [],
+              "disposition": "not-stored-additional-investigation",
+              "passDelivery": null
+            },
+            {
+              "name": "frontend-job-construction",
+              "originalOwners": [],
+              "deliveredOwners": [],
+              "disposition": "not-stored-additional-investigation",
+              "passDelivery": null
+            }
+          ],
+          "missingRequired": [
+            "syntax-only-compile-cutoff"
+          ]
+        },
+        {
+          "index": 1,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage3-native/native-1/body.txt",
+          "session": "prepare-stage3-native-1",
+          "elapsedMs": 12356.13875,
+          "bodySha256": "642c8ed36bc59b31e995ea4052c720b9bc308f3f0225087ce2bef5515a8d7084",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "complete-hlsl-branch-scope",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "syntax-only-compile-cutoff",
+              "originalOwners": [
+                "v16748591830955464422"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            },
+            {
+              "name": "trailing-language-warning",
+              "originalOwners": [
+                "v15256267109356037303"
+              ],
+              "deliveredOwners": [
+                "v15256267109356037303"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "syntax-only-no-output-action",
+              "originalOwners": [],
+              "deliveredOwners": [],
+              "disposition": "not-stored-additional-investigation",
+              "passDelivery": null
+            },
+            {
+              "name": "frontend-job-construction",
+              "originalOwners": [],
+              "deliveredOwners": [],
+              "disposition": "not-stored-additional-investigation",
+              "passDelivery": null
+            }
+          ],
+          "missingRequired": [
+            "syntax-only-compile-cutoff"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "allReviewedRequiredBlocksDelivered": false,
+      "ready": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage3-native/ready.json",
+      "readySha256": "fc28d1d57985cb6aa360790afb43ea8e92aaac20110dd7875ca098a9037cfd8c"
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "sessions": [
+        {
+          "index": 0,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage4-native/native-0/body.txt",
+          "session": "prepare-stage4-native-0",
+          "elapsedMs": 19004.516208,
+          "bodySha256": "9808d07838398f2e4f20587193f7b7ab31a3568e874fb44153b1f0a3149bf417",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "complete-hlsl-branch-scope",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "trailing-language-warning",
+              "originalOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            }
+          ],
+          "missingRequired": [
+            "trailing-language-warning"
+          ]
+        },
+        {
+          "index": 1,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage4-native/native-1/body.txt",
+          "session": "prepare-stage4-native-1",
+          "elapsedMs": 16967.545958,
+          "bodySha256": "9808d07838398f2e4f20587193f7b7ab31a3568e874fb44153b1f0a3149bf417",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "complete-hlsl-branch-scope",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "trailing-language-warning",
+              "originalOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            }
+          ],
+          "missingRequired": [
+            "trailing-language-warning"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "allReviewedRequiredBlocksDelivered": false,
+      "ready": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage4-native/ready.json",
+      "readySha256": "0c62a4065a4856d89710a13df9918b578403dc25dd9ac8d0a1e7cee81e92d6bd"
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "sessions": [
+        {
+          "index": 0,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage5-native/native-0/body.txt",
+          "session": "prepare-stage5-native-0",
+          "elapsedMs": 17654.490833,
+          "bodySha256": "179ef684f7b5468222ed1151309d9f737311485980e41593709298fb0d75d812",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "mode-before-parse-and-config",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v9756138358688687787",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v9756138358688687787",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            }
+          ],
+          "missingRequired": []
+        },
+        {
+          "index": 1,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage5-native/native-1/body.txt",
+          "session": "prepare-stage5-native-1",
+          "elapsedMs": 16154.772875,
+          "bodySha256": "179ef684f7b5468222ed1151309d9f737311485980e41593709298fb0d75d812",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "mode-before-parse-and-config",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v9756138358688687787",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v9756138358688687787",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            }
+          ],
+          "missingRequired": []
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "allReviewedRequiredBlocksDelivered": true,
+      "ready": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage5-native/ready.json",
+      "readySha256": "2f2a9e45943461948973045e8c723eebf3fb37b66cd40200d4b12c7e1e6888ed"
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "sessions": [
+        {
+          "index": 0,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage6-native/native-0/body.txt",
+          "session": "prepare-stage6-native-0",
+          "elapsedMs": 21200.011958,
+          "bodySha256": "db1c593c33d62d2984c25f5b577a74f4b87312241c50f6822e91ddd640cee259",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "complete-hlsl-branch-scope",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v9756138358688687787",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "syntax-only-compile-cutoff",
+              "originalOwners": [
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v9756138358688687787"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "trailing-language-warning",
+              "originalOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "deliveredOwners": [
+                "v15256267109356037303"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "syntax-only-no-output-action",
+              "originalOwners": [
+                "v11960447802706886118"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            },
+            {
+              "name": "frontend-job-construction",
+              "originalOwners": [
+                "v11731249417270010951"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            }
+          ],
+          "missingRequired": [
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ]
+        },
+        {
+          "index": 1,
+          "body": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage6-native/native-1/body.txt",
+          "session": "prepare-stage6-native-1",
+          "elapsedMs": 18821.395875,
+          "bodySha256": "db1c593c33d62d2984c25f5b577a74f4b87312241c50f6822e91ddd640cee259",
+          "incomplete": false,
+          "requiredBlocks": [
+            {
+              "name": "toolchain-cache-key",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "complete-hlsl-branch-scope",
+              "originalOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "deliveredOwners": [
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "default-toolchain-selection",
+              "originalOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v13168123294867106979",
+                "v9756138358688687787",
+                "v16748591830955464422"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "syntax-only-compile-cutoff",
+              "originalOwners": [
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "deliveredOwners": [
+                "v9756138358688687787"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "trailing-language-warning",
+              "originalOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "deliveredOwners": [
+                "v15256267109356037303"
+              ],
+              "disposition": "required-when-stored",
+              "passDelivery": true
+            },
+            {
+              "name": "syntax-only-no-output-action",
+              "originalOwners": [
+                "v11960447802706886118"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            },
+            {
+              "name": "frontend-job-construction",
+              "originalOwners": [
+                "v11731249417270010951"
+              ],
+              "deliveredOwners": [],
+              "disposition": "required-when-stored",
+              "passDelivery": false
+            }
+          ],
+          "missingRequired": [
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ]
+        }
+      ],
+      "independentBodiesIdentical": true,
+      "withinDeadline": true,
+      "allReviewedRequiredBlocksDelivered": false,
+      "ready": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage6-native/ready.json",
+      "readySha256": "dd3a8a6383d33155b2a69e86cee24876fe4a6bf1a56102bc132b11b814a6daf1"
+    }
+  ],
+  "numericalReceipts": [
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage1-native/data/receipts/7e21920e43951896ff7e858fb0463cf4e8183f8fdfdc4621dd21282017c5eb14/numerical-22323-2519395886381458.json",
+      "sha256": "80d1dd58dd0cd6a905f09d9c52ff0058f1c7becb14e29e36b29e3b96c88446ee",
+      "purpose": "discovery",
+      "sourceHits": 1919,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage1-native/data/receipts/7e21920e43951896ff7e858fb0463cf4e8183f8fdfdc4621dd21282017c5eb14/numerical-22336-2519397459128833.json",
+      "sha256": "7fedd436cb8d97eb745a7647f91badfb29904aa5ca6ea64f3ad5c6599e573f57",
+      "purpose": "focus",
+      "sourceHits": 1919,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage1-native/data/receipts/8c083b88c21afb7de5f7dd2d2a33e2f6726b4f81869ef74ca5889ffb8d0fd686/numerical-21509-2519379121983541.json",
+      "sha256": "840f83507dc47d7d8e4559c0e0f1991569fe79e4dbcb2988d559e2b22396e925",
+      "purpose": "discovery",
+      "sourceHits": 1919,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage1-native/data/receipts/8c083b88c21afb7de5f7dd2d2a33e2f6726b4f81869ef74ca5889ffb8d0fd686/numerical-21636-2519385404355875.json",
+      "sha256": "1f3457e87f48cd247bd78ad781d6acb779433972236f3cd98c74bffc3d3cf22c",
+      "purpose": "focus",
+      "sourceHits": 1919,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage2-native/data/receipts/55daf056075695a0845f6d711fcf0bc4b4c5260c56ec0301aaa016c4cc7fc6a5/numerical-22824-2519423727376833.json",
+      "sha256": "d0dbecd8b8f64f90024064ac50d3f68994df27eee9869e6bae09c67c60e44f87",
+      "purpose": "discovery",
+      "sourceHits": 2109,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage2-native/data/receipts/55daf056075695a0845f6d711fcf0bc4b4c5260c56ec0301aaa016c4cc7fc6a5/numerical-22890-2519425492305791.json",
+      "sha256": "c37a93d307ae27d0ed1f6b5cddd259b3abac3696f5c3a194440a3919211eaa12",
+      "purpose": "focus",
+      "sourceHits": 2109,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage2-native/data/receipts/e13ea4b45c28b9f94742c5ce4a8284eae31053e81c3dba2caf4480b3392c3eab/numerical-22556-2519410192419958.json",
+      "sha256": "ed6322c5cc1203979e8df5a74496703932520a3149e0abcab1311cd570770461",
+      "purpose": "discovery",
+      "sourceHits": 2109,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage2-native/data/receipts/e13ea4b45c28b9f94742c5ce4a8284eae31053e81c3dba2caf4480b3392c3eab/numerical-22632-2519412867110791.json",
+      "sha256": "f749a6fa164d4b05ca60826e69abba3d977b5d6208c22a2e1ab0d6d6fedd906f",
+      "purpose": "focus",
+      "sourceHits": 2109,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage3-native/data/receipts/35256095d626ec52a4152451f0c288a010d1398e5e5d10c4bf0b9d52fee61dc0/numerical-23161-2519439547504416.json",
+      "sha256": "c894e0d4a6dfba08ad72a3e25589e7a173211a390804a37bd23288ef51d72fc2",
+      "purpose": "discovery",
+      "sourceHits": 2124,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage3-native/data/receipts/35256095d626ec52a4152451f0c288a010d1398e5e5d10c4bf0b9d52fee61dc0/numerical-23204-2519442422566625.json",
+      "sha256": "3453f79e0a497a1c487ad0056f1adccea86cb365d8ff2bf7bfc62ea5521c2f5c",
+      "purpose": "focus",
+      "sourceHits": 2124,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage3-native/data/receipts/3dd6b659dde2d0eb5d6cf2ecb4cc62159bbe965bdb4ad6792a65f26a63d8c6fd/numerical-23484-2519454003899458.json",
+      "sha256": "0ad9cfec762e8f5858a616e94073057f86cd87754c45080ec08ff916e2f3990f",
+      "purpose": "discovery",
+      "sourceHits": 2124,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage3-native/data/receipts/3dd6b659dde2d0eb5d6cf2ecb4cc62159bbe965bdb4ad6792a65f26a63d8c6fd/numerical-23550-2519455857985166.json",
+      "sha256": "912c0a7b51fb1529a9611559d710627c5f3094b920afb565d93856b14ea35240",
+      "purpose": "focus",
+      "sourceHits": 2124,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage4-native/data/receipts/0c282578966342eb6e8da0eb9c2cd7a091b2fac1d96351e0bf7fdf6ba0114913/numerical-23766-2519470922880666.json",
+      "sha256": "1799e9b6785d1e791e94c5cd98f8f3d451cc2799ad0568173029dea44c10ed31",
+      "purpose": "discovery",
+      "sourceHits": 3025,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage4-native/data/receipts/0c282578966342eb6e8da0eb9c2cd7a091b2fac1d96351e0bf7fdf6ba0114913/numerical-23792-2519474251386375.json",
+      "sha256": "edab8f2d7ba4bc209727d78af9f31a77eccfbec6359a14f057ea47c76e8712e1",
+      "purpose": "focus",
+      "sourceHits": 3025,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage4-native/data/receipts/dca9c8a487dde0ffda449ba085249cac1bf050a4d77acd56769efdebf95a67eb/numerical-25242-2519490032778500.json",
+      "sha256": "45cd79ee580f6df476d5098513586fb7a3e7392d40d2799ab287e0345f7a1d8d",
+      "purpose": "discovery",
+      "sourceHits": 3025,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage4-native/data/receipts/dca9c8a487dde0ffda449ba085249cac1bf050a4d77acd56769efdebf95a67eb/numerical-25261-2519492406979125.json",
+      "sha256": "c48735f4bfb40275a2b261a6deeadc4816356cc7e97d51d2f7f5555cf8b9fdff",
+      "purpose": "focus",
+      "sourceHits": 3025,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage5-native/data/receipts/a02d907145cc9dce0e1e48881d447e457f7735a4a523f09779f93ec2f4a2fb88/numerical-26462-2519530713952041.json",
+      "sha256": "244833b303e3d08e5c906b009075ceedbe827b6b1e4d35c50cf1e52d7d073277",
+      "purpose": "discovery",
+      "sourceHits": 3055,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage5-native/data/receipts/a02d907145cc9dce0e1e48881d447e457f7735a4a523f09779f93ec2f4a2fb88/numerical-26480-2519532685941458.json",
+      "sha256": "d5dee088fcf057e1476008485518e4f62460f7665bbf6674a6c8f00a7430cbed",
+      "purpose": "focus",
+      "sourceHits": 3055,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage5-native/data/receipts/b1827fc19d5e6a57b099bec0c61e229ea15af547f8051df48d88008cdfc640ea/numerical-26174-2519512942676291.json",
+      "sha256": "ae7b55f9dca0c8ab79ecd35dda8a29d2e8840be5068d62b2ad4f06c3e5369dd4",
+      "purpose": "discovery",
+      "sourceHits": 3055,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage5-native/data/receipts/b1827fc19d5e6a57b099bec0c61e229ea15af547f8051df48d88008cdfc640ea/numerical-26249-2519515756349791.json",
+      "sha256": "f75d9e8b349c368cd383fd151f21e7e86b6b094e56592aad91c48c9289d20cf3",
+      "purpose": "focus",
+      "sourceHits": 3055,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage6-native/data/receipts/2b4a433eb3edfe4808fec59f082a521f902e2680077020514a7c8ef6c511567c/numerical-27321-2519553197310375.json",
+      "sha256": "88e165778767c2dc181469f6ef657e919dd202016e771642c3750ad92a726646",
+      "purpose": "discovery",
+      "sourceHits": 3070,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage6-native/data/receipts/2b4a433eb3edfe4808fec59f082a521f902e2680077020514a7c8ef6c511567c/numerical-27879-2519557004435458.json",
+      "sha256": "1c2f858aee3e0cd61d015ebe657a8a368347c5ed7ec817d61cc64e8e81dc272e",
+      "purpose": "focus",
+      "sourceHits": 3070,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage6-native/data/receipts/5e89299424605bd6dae3e2807dcddd549ca73cca5f3e2572b4178b81fbad2976/numerical-30123-2519574538391041.json",
+      "sha256": "d8fba13e7f33d2c536cfef22fbe39d72be965d8f703a57f4bbe9f7a8fce2eac2",
+      "purpose": "discovery",
+      "sourceHits": 3070,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all/prepared/stage6-native/data/receipts/5e89299424605bd6dae3e2807dcddd549ca73cca5f3e2572b4178b81fbad2976/numerical-30541-2519577045171416.json",
+      "sha256": "a6e35c572f72e475d19cf801b76521461bd50debb83dbc90db6b6acab7b66f6d",
+      "purpose": "focus",
+      "sourceHits": 3070,
+      "sourceAbsent": 0,
+      "sourceUnusable": 0,
+      "sourceEncodeUs": 0
+    }
+  ],
+  "guards": [
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/build-fixed-guard.json",
+      "sha256": "c5cf096f1bba395ee355dcfc8b2df61694eb26b3f7a74cf5ba6bf2f1310827f6",
+      "data": {
+        "guardPid": 881,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 2940208,
+        "samples": 391,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [],
+        "childCommand": [
+          "python3",
+          "build-fixed.py"
+        ],
+        "childPid": 895,
+        "exitCode": 1,
+        "elapsedSeconds": 57.58728833403438
+      }
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/build-guard.json",
+      "sha256": "8cac0c6d6eec76d7b20cf9c94c44dd22a299f18ffd4f85545d363e4369ea0a52",
+      "data": {
+        "guardPid": 86369,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 2963840,
+        "samples": 147,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [],
+        "childCommand": [
+          "python3",
+          "build.py"
+        ],
+        "childPid": 86408,
+        "exitCode": 1,
+        "elapsedSeconds": 20.8078503748402
+      }
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-guard.json",
+      "sha256": "200aba96be8c53ec71f7d7d464a79e487c960eb652a9c7dfe52e4c6ff24e1c7f",
+      "data": {
+        "guardPid": 21349,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1416304,
+        "samples": 1593,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+          "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/native-all"
+        ],
+        "childCommand": [
+          "python3",
+          "qualify-native.py"
+        ],
+        "childPid": 21364,
+        "exitCode": 0,
+        "elapsedSeconds": 224.3950398331508
+      }
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/terminal-storage-guard.json",
+      "sha256": "506696d932985da99f60173d51355fee829a20479c99a1edc1fd46a2043af1aa",
+      "data": {
+        "guardPid": 40390,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 55088,
+        "samples": 42,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [],
+        "childCommand": [
+          "python3",
+          "archive-terminal.py"
+        ],
+        "childPid": 40423,
+        "exitCode": 0,
+        "elapsedSeconds": 5.8891387921758
+      }
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/test-final-guard.json",
+      "sha256": "b491a7fc5f55a524cac01d35dd13552b938be7623ffe24f73759a4c243f98c7e",
+      "data": {
+        "guardPid": 20212,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1458704,
+        "samples": 66,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [],
+        "childCommand": [
+          "python3",
+          "test-final.py"
+        ],
+        "childPid": 20225,
+        "exitCode": 0,
+        "elapsedSeconds": 8.981773917097598
+      }
+    }
+  ],
+  "retiredPilot": "/Users/ovm/.codex/experiments/eggshell/direct-citation-ranges-20261022/pilot-retired.json",
+  "retiredPilotSha256": "38807684edd4b92294ddee7a952817d893e71fc9c6742a59ea3f8ecc45cf7b80",
+  "next": "User requests omitted-range locations on this strongest six-stage candidate before the exploratory model pilot. Native source gaps remain recorded; zero gaps no longer block exploratory model measurement.",
+  "newSeedCalls": 0
+}

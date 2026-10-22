@@ -1,0 +1,146 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5159,6 +5159,31 @@
+ 
+ theorem atomic_payload (familyIndex sourceChars : Nat) (family : Family) :
+     (atomicUnit familyIndex sourceChars family).slice = family.template := rfl
++
++/-- A source record keeps its original paragraph and bounded scope entry.
++The fixed-width surrounding display is an enrichment, not a prerequisite of
++this smaller advisory offer. This creates no Match or completion authority. -/
++def recordPrerequisite (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (record : EvidenceRange source) :
++    EvidenceRange source :=
++  let prior := prerequisiteContextRange records heads record
++  let scope := prerequisiteContextRange records scopedHeads record
++  if valid : scope.start < prior.start ∧ prior.stop-scope.start ≤ 2048 then
++    ⟨scope.start,prior.stop,Nat.lt_trans valid.1 prior.ordered,prior.within,valid.2⟩
++  else prior
++
++theorem record_prerequisite_retains_source (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (record : EvidenceRange source)
++    (position : Nat) (inside : record.covers position) :
++    (recordPrerequisite records heads scopedHeads record).covers position := by
++  have retained := prerequisite_context_keeps_cue records heads record position inside
++  unfold recordPrerequisite
++  dsimp only
++  split
++  · rename_i valid
++    change _ ≤ position ∧ position < (prerequisiteContextRange records heads record).stop
++    exact ⟨Nat.le_trans (Nat.le_of_lt valid.1) retained.1,retained.2⟩
++  · exact retained
+ 
+ /-- Prepare the immutable record/structure index once per owner. Each query
+ window gets its own complete local dependency closure, not a prefix of the
+@@ -5183,7 +5208,7 @@
+   if cues.isEmpty then return ([],[])
+   let some envelope := family.template.context |
+     return ([{family := familyIndex,slice := family.template,ranges := [(0,source.length)]}],cues)
+-  let mut units := []
++  let mut units : Array UnitPlan := #[]
+   let mut seen : Std.HashSet (List (Nat × Nat)) := {}
+   for position in positions do
+     let structural := (completeStructureContexts records
+@@ -5218,8 +5243,41 @@
+         if first < last then some (first,last) else none
+       let context := {envelope with fragments,cues := selectedCues}
+       let slice := {family.template with context := some context,keys := context.keys,text := context.render}
+-      units := units ++ [{family := familyIndex,slice,ranges}]
+-  return (units,cues)
++      units := units.push {family := familyIndex,slice,ranges}
++  -- A numerical/citation window remains a nomination into the same saved
++  -- source. Complete intersecting records can also compete independently,
++  -- with their original source envelope and actual bounded prerequisites.
++  -- Do not split stored interpretations or native-control projections.
++  if Matcher.nativeOutcome family.owner then
++    for record in records do
++      if !(cues.any fun (a,b) => a < record.stop && record.start < b) then continue
++      if bounds : record.start < record.stop ∧ record.stop ≤ source.length ∧
++          record.stop-record.start ≤ 2048 then
++        let raw : EvidenceRange source := ⟨record.start,record.stop,bounds.1,bounds.2.1,bounds.2.2⟩
++        let some wanted := aligned raw | continue
++        let requirement := recordPrerequisite records heads scopedHeads wanted
++        let required : Option (EvidenceView source) := match decoded with
++          | none => some (.original requirement)
++          | some layout => (decodedEvidenceUsing? layout requirement).map EvidenceView.decoded
++        let some required := required | continue
++        let fragment : DeliveryFragment := {
++          first := required.range.start
++          original := original.slice required.range.start (required.range.stop-required.range.start)
++          decoded := match required with | .decoded _ => true | .original _ => false}
++        let ranges := fragmentRanges [fragment]
++        if !covers ranges wanted.start wanted.stop then continue
++        let some alignedRequirement := aligned requirement | continue
++        if !covers ranges alignedRequirement.start alignedRequirement.stop then continue
++        if seen.contains ranges then continue
++        seen := seen.insert ranges
++        let selectedCues := cues.filterMap fun (a,b) =>
++          let first := max a fragment.first
++          let last := min b (fragment.first+fragment.original.length)
++          if first < last then some (first,last) else none
++        let context := {envelope with fragments := [fragment],cues := selectedCues}
++        let slice := {family.template with context := some context,keys := context.keys,text := context.render}
++        units := units.push {family := familyIndex,slice,ranges}
++  return (units.toList,cues)
+ 
+ def join (prior next : TransportSlice) : Option TransportSlice := do
+   match prior.context,next.context with
+--- a/tools/SourceRecordTests.lean
++++ b/tools/SourceRecordTests.lean
+@@ -0,0 +1,56 @@
++import Eggshell.Handoff
++open Lean Eggshell Eggshell.Plugin
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++private def nativeOwner (work source : String) : OutcomeEdge :=
++  let invocation := Value.text work
++  let result := Value.text source
++  let occurrence := Value.applyList .occurrence [.semantic result,.semantic invocation,.exact (.text "record")]
++  OutcomeEdge.make invocation result [occurrence] (by simp) (by simp [maxOutcomeObservations])
++def main : IO Unit := do
++  let lines := (List.range 60).flatMap fun n =>
++    [s!"{n*4+1}\tvoid item_{n}() " ++ "{",s!"{n*4+2}\t  if (ready) emit(\"条件🧪\");",s!"{n*4+3}\t" ++ "}",s!"{n*4+4}\t"]
++  let source := (toJson ("\n".intercalate lines)).compress
++  let work := "read immutable source ranges"
++  let owner := nativeOwner work source
++  check (Matcher.nativeOutcome owner) "fixture lost its original native occurrence"
++  let original : TransportSlice := {owner := some owner.relation,keys := [],text := "",members := [],visibleKeys := []}
++  let positions := [0,1,2]
++  let some part := (prepareContextualOwnerPlan [] positions owner "source status" [] original).eval 120000 |
++    throw (IO.userError "could not prepare source envelope")
++  let family : SharedRangeAdapter.Family := {
++    owner := owner
++    windows := positions
++    template := {original with text := part.text,keys := part.keys,context := part.context}}
++  let (units,cues) := SharedRangeAdapter.prepare 0 family
++  check (!units.isEmpty && !cues.isEmpty) "original source nominations vanished"
++  check (units.any fun unit => (unit.ranges.map fun (a,b) => b-a).sum < 512)
++    "complete small source records still require a fixed surrounding window"
++  let some envelope := family.template.context | throw (IO.userError "missing source envelope")
++  for unit in units do
++    check (unit.slice.members.isEmpty && unit.slice.visibleKeys == family.template.visibleKeys)
++      "an advisory source record changed native authority"
++    let some context := unit.slice.context | throw (IO.userError "source context disappeared")
++    check (decide (context.sameEnvelope envelope)) "a record changed provenance or source status"
++    check (context.cues.all fun (a,b) => SharedRangeAdapter.covers unit.ranges a b)
++      "a record received value for undispatched original data"
++    for fragment in context.fragments do
++      check (fragment.original == ((source.drop fragment.first).take fragment.original.length).copy)
++        "a source record was rewritten or used decoded offsets as raw coordinates"
++      if fragment.decoded then
++        check (Json.parse ("\"" ++ fragment.original ++ "\"")).isOk
++          "a record split a JSON escape or Unicode scalar"
++  let some layout := (decodedToolText? source).map DecodedLayout.make |
++    throw (IO.userError "fixture is not a canonical string scalar")
++  let records := contextRecordSpans source (some layout)
++  let heads := contextStructureHeads source (some layout)
++  let scopeHeads := contextStructureHeads source (some layout) true
++  let mut checked := 0
++  for record in records do
++    if bounds : record.start < record.stop ∧ record.stop ≤ source.length ∧ record.stop-record.start ≤ 2048 then
++      let range : EvidenceRange source := ⟨record.start,record.stop,bounds.1,bounds.2.1,bounds.2.2⟩
++      let prior := SharedRangeAdapter.recordPrerequisite records heads scopeHeads range
++      check (prior.start ≤ range.start && range.stop ≤ prior.stop && prior.stop-prior.start ≤ 2048)
++        "a record lost its requested source or exceeded the bounded prerequisite"
++      checked := checked+1
++  IO.println s!"source-record offers={units.length}; raw/Unicode/authority/envelope checks; prerequisites={checked}"
