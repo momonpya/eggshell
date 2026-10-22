@@ -1,0 +1,1152 @@
+{
+  "scope": "Offline global diagnosis and a rejected two-channel signal-coverage prototype",
+  "newAutomaticDeliveryVerified": false,
+  "productionAdoption": false,
+  "answeringModelCalls": 0,
+  "seedAcquisitions": 0,
+  "mip": {
+    "rows": [
+      {
+        "stage": 1,
+        "mode": "regular",
+        "status": "Time limit reached",
+        "seconds": 45.082466166932136,
+        "improvementRatio": 0.0,
+        "numericalRelativeGap": 0.27358368223565444,
+        "selected": 67,
+        "cost": [
+          119516,
+          119516
+        ],
+        "objective": 157.88655954951162,
+        "upper": 201.08174588658594
+      },
+      {
+        "stage": 6,
+        "mode": "regular",
+        "status": "Time limit reached",
+        "seconds": 45.65179054066539,
+        "improvementRatio": 0.0,
+        "numericalRelativeGap": 0.4996887916779019,
+        "selected": 52,
+        "cost": [
+          119772,
+          119772
+        ],
+        "objective": 141.89961986942592,
+        "upper": 212.80526946153296
+      },
+      {
+        "stage": 1,
+        "mode": "oracle-constrained",
+        "status": "Time limit reached",
+        "seconds": 45.785910666920245,
+        "improvementRatio": 3.572237251615741,
+        "numericalRelativeGap": 5.6315766248767565,
+        "selected": 21,
+        "cost": [
+          39838,
+          39838
+        ],
+        "objective": 29.920196876890866,
+        "upper": 198.41807822049998
+      },
+      {
+        "stage": 6,
+        "mode": "oracle-constrained",
+        "status": "Time limit reached",
+        "seconds": 45.039880000054836,
+        "improvementRatio": 7.224604030940769,
+        "numericalRelativeGap": 0.7599936014974138,
+        "selected": 40,
+        "cost": [
+          119983,
+          121723
+        ],
+        "objective": 115.97998566953315,
+        "upper": 204.1240326801401
+      }
+    ],
+    "scope": "Same declared cost/coverage objective and domain; regular runs have no oracle input, constrained runs are feasibility/opportunity-cost diagnostics only.",
+    "answeringModelCalls": 0,
+    "productionAdoption": false
+  },
+  "mipEvaluation": {
+    "rows": [
+      {
+        "stage": 1,
+        "mode": "regular",
+        "status": "Time limit reached",
+        "numericalRelativeGap": 0.27358368223565444,
+        "newValue": 8122297024807611915440957459423587922070,
+        "baselineValue": 8122297024807611915440957459423587922070,
+        "relativeToOriginalGreedy": 0.0,
+        "scaledExactObjective": 157.88655954951162,
+        "numericalUpper": 201.08174588658594,
+        "cost": [
+          119516,
+          119516
+        ],
+        "selected": 67,
+        "missing": [
+          "trailing-language-warning"
+        ],
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "covered": true,
+            "owners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "covered": true,
+            "owners": [
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "default-toolchain-selection",
+            "covered": true,
+            "owners": [
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "trailing-language-warning",
+            "covered": false,
+            "owners": []
+          }
+        ],
+        "resultSha256": "91a2c921a2367d74bb7322ffafede48f694756e95d28ade74839c298ad3024da"
+      },
+      {
+        "stage": 6,
+        "mode": "regular",
+        "status": "Time limit reached",
+        "numericalRelativeGap": 0.4996887916779019,
+        "newValue": 1637786979056670558048953212456437259365202536057963807515617508225640,
+        "baselineValue": 1637786979056670558048953212456437259365202536057963807515617508225640,
+        "relativeToOriginalGreedy": 0.0,
+        "scaledExactObjective": 141.89961986942592,
+        "numericalUpper": 212.80526946153296,
+        "cost": [
+          119772,
+          119772
+        ],
+        "selected": 52,
+        "missing": [
+          "complete-hlsl-branch-scope",
+          "syntax-only-compile-cutoff",
+          "trailing-language-warning",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ],
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "covered": true,
+            "owners": [
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "covered": false,
+            "owners": []
+          },
+          {
+            "name": "default-toolchain-selection",
+            "covered": true,
+            "owners": [
+              "v13168123294867106979",
+              "v9756138358688687787",
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "syntax-only-compile-cutoff",
+            "covered": false,
+            "owners": []
+          },
+          {
+            "name": "trailing-language-warning",
+            "covered": false,
+            "owners": []
+          },
+          {
+            "name": "syntax-only-no-output-action",
+            "covered": false,
+            "owners": []
+          },
+          {
+            "name": "frontend-job-construction",
+            "covered": false,
+            "owners": []
+          }
+        ],
+        "resultSha256": "6f2e7a06b2e67910061bfe3fb42a4443d588096c87b6ca7a1f1638b272d86e87"
+      },
+      {
+        "stage": 1,
+        "mode": "oracle-constrained",
+        "status": "Time limit reached",
+        "numericalRelativeGap": 5.6315766248767565,
+        "newValue": 1539210980138051900592012421073280101584,
+        "baselineValue": 8122297024807611915440957459423587922070,
+        "relativeToOriginalGreedy": -0.8104956054381045,
+        "scaledExactObjective": 29.920196876890866,
+        "numericalUpper": 198.41807822049998,
+        "cost": [
+          39838,
+          39838
+        ],
+        "selected": 21,
+        "missing": [],
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "covered": true,
+            "owners": [
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "covered": true,
+            "owners": [
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "default-toolchain-selection",
+            "covered": true,
+            "owners": [
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "trailing-language-warning",
+            "covered": true,
+            "owners": [
+              "v15256267109356037303"
+            ]
+          }
+        ],
+        "resultSha256": "1bea7332812569580ff4cbd8fd7f52a9080ce685d827708a68e1da86ed2977b3"
+      },
+      {
+        "stage": 6,
+        "mode": "oracle-constrained",
+        "status": "Time limit reached",
+        "numericalRelativeGap": 0.7599936014974138,
+        "newValue": 1338625928212707549653904897427425843410499120994676478073564824001144,
+        "baselineValue": 1637786979056670558048953212456437259365202536057963807515617508225640,
+        "relativeToOriginalGreedy": -0.1826617592333487,
+        "scaledExactObjective": 115.97998566953315,
+        "numericalUpper": 204.1240326801401,
+        "cost": [
+          119983,
+          121723
+        ],
+        "selected": 40,
+        "missing": [],
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "covered": true,
+            "owners": [
+              "v10600833252250082589"
+            ]
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "covered": true,
+            "owners": [
+              "v10600833252250082589"
+            ]
+          },
+          {
+            "name": "default-toolchain-selection",
+            "covered": true,
+            "owners": [
+              "v13168123294867106979"
+            ]
+          },
+          {
+            "name": "syntax-only-compile-cutoff",
+            "covered": true,
+            "owners": [
+              "v16748591830955464422"
+            ]
+          },
+          {
+            "name": "trailing-language-warning",
+            "covered": true,
+            "owners": [
+              "v14863864136040263094"
+            ]
+          },
+          {
+            "name": "syntax-only-no-output-action",
+            "covered": true,
+            "owners": [
+              "v11960447802706886118"
+            ]
+          },
+          {
+            "name": "frontend-job-construction",
+            "covered": true,
+            "owners": [
+              "v11731249417270010951"
+            ]
+          }
+        ],
+        "resultSha256": "cc7f60e032b86feb4eae8a7ed5aa52cf6e53dd6fe3ad5d3b7fedcdd2bb0aafcc"
+      }
+    ],
+    "scope": "Original-code evaluation is separate from unconstrained optimization; only the explicitly oracle-constrained runs receive forced coverage clauses.",
+    "runtimePacketGenerated": false,
+    "productionAdoption": false,
+    "answeringModelCalls": 0
+  },
+  "mipNumericalOptimalityProved": false,
+  "quotient": {
+    "rows": [
+      {
+        "stage": 1,
+        "nodes": [
+          2633,
+          1563
+        ],
+        "cues": [
+          2673,
+          1594
+        ],
+        "checkedSamples": 66
+      },
+      {
+        "stage": 6,
+        "nodes": [
+          4491,
+          2779
+        ],
+        "cues": [
+          4836,
+          2764
+        ],
+        "checkedSamples": 66
+      }
+    ],
+    "allSmallSubsetsChecked": 4,
+    "exactCostsBenefitsPreserved": true
+  },
+  "newBasis": {
+    "rows": [
+      {
+        "stage": 1,
+        "features": 4239,
+        "numberedOwners": 15,
+        "cataloguedRows": 5265,
+        "canonicalRows": 5116,
+        "conflictingRows": 0,
+        "focusMass": "18380541146019927921789237598302089498139647/1088294849764125088600044207442239764889600",
+        "citationMass": "148999862246932927957/472278804998789388600",
+        "referenceSignalBudget": "35/61",
+        "unsupported": [
+          [
+            "v1311888273957667032",
+            "invalid-literal-command"
+          ],
+          [
+            "v18406153573121058748",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v13168123294867106979",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v13041622778011058903",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v9243595956265966562",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v8539710388206421104",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v5862293711464210360",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v5544983275525531559",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v15835471621717412810",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v2791964051346432457",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v11072426849975431903",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v9391487804273903611",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v2878139921625497815",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v17724618624315201387",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v3539927040460014407",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v2213995081355866723",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v16165488034324363563",
+            "unsupported-read-sequence"
+          ]
+        ]
+      },
+      {
+        "stage": 6,
+        "features": 7044,
+        "numberedOwners": 36,
+        "cataloguedRows": 9148,
+        "canonicalRows": 6923,
+        "conflictingRows": 0,
+        "focusMass": "2277161304695556694431386610171040957634233410172389849817546312146103/92383172414186704284147354200154518876993883556134461700506382336000",
+        "citationMass": "103718534013409142544237971/227292298101113372441233920",
+        "referenceSignalBudget": "3159/3904",
+        "unsupported": [
+          [
+            "v14872548599824763592",
+            "invalid-literal-command"
+          ],
+          [
+            "v1311888273957667032",
+            "invalid-literal-command"
+          ],
+          [
+            "v16368256707592180605",
+            "invalid-literal-command"
+          ],
+          [
+            "v10827018069933719135",
+            "invalid-literal-command"
+          ],
+          [
+            "v13168123294867106979",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v15835471621717412810",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v8539710388206421104",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v9243595956265966562",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v14111631469224785894",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v13187625413507680480",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v2791964051346432457",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v5862293711464210360",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v5544983275525531559",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v17724618624315201387",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v3517593723174549798",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v3539927040460014407",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v12568065477747517101",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v13041622778011058903",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v18406153573121058748",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v3559980046443674849",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v2213995081355866723",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v18295893056279038714",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v11072426849975431903",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v7974989979524798984",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v16165488034324363563",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v2878139921625497815",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v8615295099363444333",
+            "unsupported-read-sequence"
+          ],
+          [
+            "v9391487804273903611",
+            "unsupported-read-sequence"
+          ]
+        ]
+      }
+    ],
+    "scriptSha256": "4ca7b0cc8dfb9eba51c06b1d90a4852fad8e4b1fd754fda993e361df0a6aa30c",
+    "runtimeExecuted": false,
+    "productionAdoption": false,
+    "answeringModelCalls": 0
+  },
+  "newSelection": {
+    "rows": [
+      {
+        "stage": 1,
+        "seconds": 3.1812077090144157,
+        "selected": 64,
+        "cost": [
+          119784,
+          119784
+        ],
+        "proposals": 883998,
+        "focus": 0.26240226148756507,
+        "citation": 0.317657593527479,
+        "baselineFocus": 0.20605103155464544,
+        "baselineCitation": 0.23932849976709955
+      },
+      {
+        "stage": 6,
+        "seconds": 3.847304292023182,
+        "selected": 54,
+        "cost": [
+          119951,
+          120731
+        ],
+        "proposals": 1046188,
+        "focus": 0.1578021612504496,
+        "citation": 0.18632566385910448,
+        "baselineFocus": 0.09380324472599497,
+        "baselineCitation": 0.12914876181536883
+      }
+    ],
+    "oracleRead": false,
+    "runtimeExecuted": false,
+    "productionAdoption": false,
+    "answeringModelCalls": 0
+  },
+  "newSelectionEvaluation": {
+    "rows": [
+      {
+        "stage": 1,
+        "selected": 64,
+        "cost": [
+          119784,
+          119784
+        ],
+        "seconds": 3.1812077090144157,
+        "proposals": 883998,
+        "missing": [
+          "complete-hlsl-branch-scope",
+          "trailing-language-warning"
+        ],
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "originalOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "covered": true
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "originalOwners": [],
+            "covered": false
+          },
+          {
+            "name": "default-toolchain-selection",
+            "originalOwners": [
+              "v16748591830955464422"
+            ],
+            "covered": true
+          },
+          {
+            "name": "trailing-language-warning",
+            "originalOwners": [],
+            "covered": false
+          }
+        ],
+        "selectionSha256": "940995e52bcb31a890ac76fa595fbf427c4668ec6a44aab1b65e3e7194e6570d",
+        "closedDomainAndCostsUnchanged": true
+      },
+      {
+        "stage": 6,
+        "selected": 54,
+        "cost": [
+          119951,
+          120731
+        ],
+        "seconds": 3.847304292023182,
+        "proposals": 1046188,
+        "missing": [
+          "complete-hlsl-branch-scope",
+          "syntax-only-compile-cutoff",
+          "trailing-language-warning",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ],
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "originalOwners": [
+              "v18406153573121058748",
+              "v16748591830955464422"
+            ],
+            "covered": true
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "originalOwners": [],
+            "covered": false
+          },
+          {
+            "name": "default-toolchain-selection",
+            "originalOwners": [
+              "v13168123294867106979",
+              "v16748591830955464422"
+            ],
+            "covered": true
+          },
+          {
+            "name": "syntax-only-compile-cutoff",
+            "originalOwners": [],
+            "covered": false
+          },
+          {
+            "name": "trailing-language-warning",
+            "originalOwners": [],
+            "covered": false
+          },
+          {
+            "name": "syntax-only-no-output-action",
+            "originalOwners": [],
+            "covered": false
+          },
+          {
+            "name": "frontend-job-construction",
+            "originalOwners": [],
+            "covered": false
+          }
+        ],
+        "selectionSha256": "479ef9f1d1631ac0f3add1eb2322724c9e22b045cde2bf6005a966ad46a34652",
+        "closedDomainAndCostsUnchanged": true
+      }
+    ],
+    "scope": "Post-selection original-code audit; required code is never provided to basis/selector.",
+    "runtimePacketGenerated": false,
+    "productionAdoption": false,
+    "answeringModelCalls": 0
+  },
+  "conditionalCosts": {
+    "rows": [
+      {
+        "stage": 1,
+        "cost": [
+          119995,
+          119995
+        ],
+        "missing": [
+          "complete-hlsl-branch-scope",
+          "trailing-language-warning"
+        ],
+        "seconds": 3.225101208779961
+      },
+      {
+        "stage": 6,
+        "cost": [
+          119889,
+          122783
+        ],
+        "missing": [
+          "complete-hlsl-branch-scope",
+          "syntax-only-compile-cutoff",
+          "trailing-language-warning",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ],
+        "seconds": 3.7843005838803947
+      }
+    ],
+    "scope": "Post-selection oracle evaluation only",
+    "runtimeExecuted": false,
+    "productionAdoption": false
+  },
+  "compression": {
+    "complete": true,
+    "scope": "Closed diagnostic binaries only; logical bytes, original paths, modes, mtimes, attrs preserved. No DB, source, model, installed or frozen baseline runtime change.",
+    "rows": [
+      {
+        "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/bin/eggshell",
+        "before": {
+          "sha256": "91b84a160cb927f831a23aec40f102fc961399b15f9742c490987d628c047054",
+          "mode": 493,
+          "mtimeNs": 1792650334250950441,
+          "allocated": 106610688,
+          "attrs": {
+            "com.apple.provenance": "01 02 00 3B 00 10 75 F6 E6 49 9D \n"
+          }
+        },
+        "after": {
+          "sha256": "91b84a160cb927f831a23aec40f102fc961399b15f9742c490987d628c047054",
+          "mode": 493,
+          "mtimeNs": 1792650334250950441,
+          "allocated": 36368384,
+          "attrs": {
+            "com.apple.provenance": "01 02 00 3B 00 10 75 F6 E6 49 9D \n"
+          }
+        }
+      },
+      {
+        "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/checkout/.lake/build/bin/eggshell",
+        "before": {
+          "sha256": "debdbc80a1119add2c459e923ead5af8fa5e4c9a3b11b0ab03b68590cd355ed4",
+          "mode": 493,
+          "mtimeNs": 1792651359027726003,
+          "allocated": 106606592,
+          "attrs": {
+            "com.apple.provenance": "01 02 00 3B 00 10 75 F6 E6 49 9D \n"
+          }
+        },
+        "after": {
+          "sha256": "debdbc80a1119add2c459e923ead5af8fa5e4c9a3b11b0ab03b68590cd355ed4",
+          "mode": 493,
+          "mtimeNs": 1792651359027726003,
+          "allocated": 36372480,
+          "attrs": {
+            "com.apple.provenance": "01 02 00 3B 00 10 75 F6 E6 49 9D \n"
+          }
+        }
+      },
+      {
+        "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-budget-witness-20261022/checkout/.lake/build/bin/eggshell",
+        "before": {
+          "sha256": "1b817fbeb5f32149869c7451d7196b55a6af7f37ba0f6d19218a9110bcac112f",
+          "mode": 493,
+          "mtimeNs": 1792655717340243073,
+          "allocated": 106610688,
+          "attrs": {
+            "com.apple.provenance": "01 02 00 3B 00 10 75 F6 E6 49 9D \n"
+          }
+        },
+        "after": {
+          "sha256": "1b817fbeb5f32149869c7451d7196b55a6af7f37ba0f6d19218a9110bcac112f",
+          "mode": 493,
+          "mtimeNs": 1792655717340243073,
+          "allocated": 36356096,
+          "attrs": {
+            "com.apple.provenance": "01 02 00 3B 00 10 75 F6 E6 49 9D \n"
+          }
+        }
+      },
+      {
+        "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/checkout/.lake/build/bin/eggshell",
+        "before": {
+          "sha256": "0d0fb955e122eb32bcf36c381069eb09b419986d67b768d1dcb048928d5daeb6",
+          "mode": 493,
+          "mtimeNs": 1792656960060276250,
+          "allocated": 106643456,
+          "attrs": {
+            "com.apple.provenance": "01 02 00 3B 00 10 75 F6 E6 49 9D \n"
+          }
+        },
+        "after": {
+          "sha256": "0d0fb955e122eb32bcf36c381069eb09b419986d67b768d1dcb048928d5daeb6",
+          "mode": 493,
+          "mtimeNs": 1792656960060276250,
+          "allocated": 36384768,
+          "attrs": {
+            "com.apple.provenance": "01 02 00 3B 00 10 75 F6 E6 49 9D \n"
+          }
+        }
+      }
+    ],
+    "freeBefore": 3008479232,
+    "freeAfter": 3267944448,
+    "scriptSha256": "3be3af5573d008e1018a22fac5a7c04541972a3b0f09ca914bc017628379837f"
+  },
+  "source": [
+    {
+      "path": "tools/research/shared_coverage_mip.py",
+      "sha256": "e1c1a6f722fa7432096b954d371bb9afd1eb434162b5166778bef4b1e80b6295"
+    },
+    {
+      "path": "tools/research/incidence_quotient.py",
+      "sha256": "4d1e4bbda6e32bcb994e6ce10e1f0a5d817c7bbe12255180aa2a092288014788"
+    },
+    {
+      "path": "tools/research/signal_coverage.py",
+      "sha256": "8e3329923714e3c4be172612dff81dad4d7e5058eab39eab3bd7de30690bd6fd"
+    },
+    {
+      "path": "tools/research/test_signal_coverage.py",
+      "sha256": "7ac1a0c2be7abfbabcbd7647df4ffc3a0eaedfd71cbaf33d5fbdea0931418439"
+    },
+    {
+      "path": "tools/research/test_incidence_quotient.py",
+      "sha256": "7e5b516c56f2b4edacbb2924bf78e78aa8f59db2e0e8a5ffbf511b4e497ed5d5"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/compression.json",
+      "sha256": "818380f1e7ff6eb68b8404e4968f3166638742ceda01955fb6f28864fbcbef98"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/compression-guard.json",
+      "sha256": "b6afe80bd78f2378e4a51b3e0e2eadebe164ab991ae33155a4e86f265265aac2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/solver-install.json",
+      "sha256": "ca7939cb762e041c680ff96ed52a82a7266ccaf610f784c3f369a1e8fd1293cf"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/solver-install-guard.json",
+      "sha256": "bb352c75ed02832a3801c92bf313bcc7d23369b0a1e31101100be69b4aa72e26"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/mip-before-output-directory-fix.py",
+      "sha256": "8eb0f27d803eed9ae8344b3b4f507a44d30a407f80fdcf94792196f13a6d39eb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/check.py",
+      "sha256": "97e249c79aa96599162668eef46ec921f24c509c0c1501d6074f255512fcac88"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/check-guard.json",
+      "sha256": "f743cf1b2b286a34e02ca063d4649735fd06a640cb4243fc01d790917fecc0d1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/check-2-guard.json",
+      "sha256": "38bdbef2b60d98c0ec07d586bff29c382e30405920353f0d417402ef073dcb18"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/checks.json",
+      "sha256": "a0d93a3e81de1222a8b82dba38d3273644eef73314e5a86db9627c9ae0118bac"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/prepare-first-attempt.py",
+      "sha256": "9bfb8747ba60bd826120943fb9276fb2175e3f3cac95aab44254e078d2bb57a5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/prepare.py",
+      "sha256": "d27ce8e2965a7bc658cc04ae505d0cb027eab6d67b36c113149ec101bde77e37"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/prepare-guard.json",
+      "sha256": "8bd688f6aed5cb9ae436f78d884240e9e7917925ea171063706d65bae2441857"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/prepare-2-guard.json",
+      "sha256": "a5b60c582ee4be0eb2fb37dda3006cf61dec3fc288a0dd29c60643449ee513b5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/run.py",
+      "sha256": "7c329899bc1199090270ac31fcb3ff9a7dc0e9285fcd184c3a3b3c62998ff02e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/run-guard.json",
+      "sha256": "76222c6a62627667b96ee08b35e0fb980a3564455a323f3678acc5ca24781e0d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/result.json",
+      "sha256": "194e5f9deff1e543d724f092ab9d3f00303219d479571d9f5426e1dc02a90273"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/inputs.json",
+      "sha256": "b6e3fd62430560ed33d840723b3be3a0e6b0b11d8ede0863c6dd487473d84abc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/evaluation.json",
+      "sha256": "c486cfb468fd8ddbbbcb156fff6a1f22a962cdab124de3ecb3f2c957dbe528d6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/evaluate.py",
+      "sha256": "1a5e69430318bda54ba5310eecbdd6530dd39c454227ef36d071096b2ee7d231"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/check_quotient.py",
+      "sha256": "ca687cc30fd5db5fc9a5c1a8b0336f823fe061d7c069b58718c2445cc7aba57b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/quotient-check-guard.json",
+      "sha256": "faf040ac3a7ead0acab810cb14dbb8449d11f1960939bb2801c2bbe9f4095193"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/quotient-check.json",
+      "sha256": "5073157b4d50f7ccadc45231c0e68546bdcb0b1add141e44534d78b17b0b0579"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/problem.json",
+      "sha256": "02334ecfbf49d6b345a73ffa5a614bd48129f86bffd933c7ed7e616741f962b7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/oracle-required.json",
+      "sha256": "7fa787f3040612b1b2f4ec2a3b718fa4cad319bf9eadf8114299ab4878deffbb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/oracle-seed.json",
+      "sha256": "5ee91bf31af5d6f7cf1ef7095d905888c5c78ebb8f72a6e31375c05ffe568e2c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/quotient.json",
+      "sha256": "bc2c5fc26500accc803a68f2a711770f400eff76ad706916da3d5f885f689bb3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/quotient-mapping.json",
+      "sha256": "affaf602fd2459b7912a192c7d947f040114358067cb0faa6f99eee750e8ef14"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/regular/result.json",
+      "sha256": "91a2c921a2367d74bb7322ffafede48f694756e95d28ade74839c298ad3024da"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/regular/model.lp",
+      "sha256": "2b261725a65ce2c556059b2be0dd71a7ed4fa4f5a6771f1d2042a1053666038c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/regular/solver.log",
+      "sha256": "71074d44635cb9571f1fcbdebee20810fc76e79d528a3f93f766fa09bb6821d1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/oracle-constrained/result.json",
+      "sha256": "1bea7332812569580ff4cbd8fd7f52a9080ce685d827708a68e1da86ed2977b3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/oracle-constrained/model.lp",
+      "sha256": "69f34ac0199625b94a3a3590d87a5f0e0c7145168eb3f042cc9332fcc7d37802"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage1/oracle-constrained/solver.log",
+      "sha256": "a47c1a9b4cd0b56cb82ab8f7f3c8464349060cac7ad404d0fc97bc1f94c0199c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/problem.json",
+      "sha256": "be08e31cb97672ff09502a302b87597a1ad3676e2caa74ebe47e7b0f4b6c4f8e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/oracle-required.json",
+      "sha256": "06080540d49e6f36c4b5b103d4412aa8d8f5416216a16a8494868da3c94b41c0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/oracle-seed.json",
+      "sha256": "12a26437c76a1877fbb3d3a5f82aaeddb30ff51ae44f0dc19d0af7236f1f7d9e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/quotient.json",
+      "sha256": "22fcff53323428da318b74ad806d573e50ef7e60fee94a2eb493016114177ff9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/quotient-mapping.json",
+      "sha256": "6b85d8429c957f25ca45a2d57b982e44f1a22b5070488b7bc62a80b828273c26"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/regular/result.json",
+      "sha256": "6f2e7a06b2e67910061bfe3fb42a4443d588096c87b6ca7a1f1638b272d86e87"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/regular/model.lp",
+      "sha256": "66f0f348ab4081278f01ee82df3fd24b3a39eb49901dcd115d1bc9eef64d55e1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/regular/solver.log",
+      "sha256": "f72e0e81b92864525f13e205e0cd5a456b8cab57e392b54a00b27327e6e214cd"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/oracle-constrained/result.json",
+      "sha256": "cc7f60e032b86feb4eae8a7ed5aa52cf6e53dd6fe3ad5d3b7fedcdd2bb0aafcc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/oracle-constrained/model.lp",
+      "sha256": "83e7dd4a2192edeb301808814f6c3c92608547291a99fbb76d3a4fa149d0147a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/shared-range-global-optimum-20261022/stage6/oracle-constrained/solver.log",
+      "sha256": "9cf808aff5e49825a70536acb7f65aa08d536d52f0a06ebc4e2bc52f4d24965b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/basis.py",
+      "sha256": "4ca7b0cc8dfb9eba51c06b1d90a4852fad8e4b1fd754fda993e361df0a6aa30c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/basis.json",
+      "sha256": "e27f11770354af5aa3a541d7a96c26f3c3e2fd242461dd74650350e971362a18"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/basis-guard.json",
+      "sha256": "daa6161e24661c5c25100a7b58f7292ee91402e3a42967902a046f7ae81fdb13"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/protocol.json",
+      "sha256": "c01c623581cba80d04d0aaf3cf5bc96d86b8d30619133531cb5fad41c676f1e0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/run.py",
+      "sha256": "b65b2743e5dde0d78b8c86f419b18a2955da27a906034a3fb74085430e684656"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/run-guard.json",
+      "sha256": "6659ab40e9ef7b26c075e7855df00e0a728216f56ad630d5d5a6a7579780f4e7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/result.json",
+      "sha256": "01a9ab4b9d1f3c035ab4efd9a7f81204ba2ae75ea95312066b27d40791f54793"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/evaluation.json",
+      "sha256": "e06b5d85fa38f322bf62e1a07e4851cbbd2e7ddc19c3a5448e2a4cc5efac0375"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/evaluate.py",
+      "sha256": "e3ebe90063722bd33e6349c657d01b98f6104bc1467bf31586f40e6f1253d304"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/conditional_cost.py",
+      "sha256": "d89759ff5e87660b6eb2ebf81500df7dff4aad2f546c2f16bb2939b8e5e4f89e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/conditional-guard.json",
+      "sha256": "4f11da21710b84756dada541e602ac6811b888eed7f73332e3634a02d0dcec67"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/conditional-result.json",
+      "sha256": "dfbfffa49f321ff5dc4c61986533f3cc46da74e1d2012997447bad9991b6cf77"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/conditional-evaluation.json",
+      "sha256": "7b2064092eae99a03317a2f6d7da55a1f19bcc4d2cc2b8be4df4a9fea7184fdd"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/core-check-guard.json",
+      "sha256": "9719cd84f6a7c73963ecb6cc6a64a26c41e9ae0f044d87a64cf523ff3b269fa8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/stage1/problem.json",
+      "sha256": "7cd6f53c60de6f2eafc5dcf8ecf907d18402aed09c3595316105eed3e644e058"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/stage1/selection.json",
+      "sha256": "940995e52bcb31a890ac76fa595fbf427c4668ec6a44aab1b65e3e7194e6570d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/conditional-stage1/problem.json",
+      "sha256": "2b4ade5b41c1d99060b79b1004c5231248e56ea3149f3f1e14bfe0fba4519c86"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/conditional-stage1/selection.json",
+      "sha256": "9812aaf64f5e8fd708fde8aa76ef54eb7fbf82ea7996ba54594ff206752e8218"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/stage6/problem.json",
+      "sha256": "54a1ef880a026afd0849c0d247293cb8346a8de43166f8be408a2c692244e510"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/stage6/selection.json",
+      "sha256": "479ef9f1d1631ac0f3add1eb2322724c9e22b045cde2bf6005a966ad46a34652"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/conditional-stage6/problem.json",
+      "sha256": "216913b760880eb5ea3a2100f43f20ce8553cb232edc03bac9d647a06f9490df"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/conditional-stage6/selection.json",
+      "sha256": "89fce8564b9f1741464b67d386d1d466e21c7fad6634a260d7147a6a74ffa295"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/retired.json",
+      "sha256": "9193d5502f7ed1054bef9ca50a8597e458e6a213d226fcb131cb9fabbad12756"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/mass-check.json",
+      "sha256": "31375bee21a90931b869c678d1450e0dac67ec6a3afa3bce63dfb88985b38f42"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-fair-coverage-20261022/final-research-tests-guard.json",
+      "sha256": "e065b994fecb20deef685c815cf99a1fe2a4dc900d059a333eb0bd7f12e77720"
+    }
+  ],
+  "next": "Do not tune the rejected channel/row coverage objective. Measure current-question to cited-claim relevance with unchanged MiniLM, then bind useful claims to their stored original evidence. No answering-model run before all six original-code delivery gates pass.",
+  "signalMassCheck": [
+    {
+      "stage": 1,
+      "focusMass": "18380541146019927921789237598302089498139647/1088294849764125088600044207442239764889600",
+      "focusSignalBudget": "1197239842168655031885010482459433853/57912338891441925719879066642283840",
+      "withinDeclaredSignalBudget": true
+    },
+    {
+      "stage": 6,
+      "focusMass": "2277161304695556694431386610171040957634233410172389849817546312146103/92383172414186704284147354200154518876993883556134461700506382336000",
+      "focusSignalBudget": "934909674004670805376159567293731232795525553419039459864378659377/27759366710993601046919277103411814566404412126242326232123312000",
+      "withinDeclaredSignalBudget": true
+    }
+  ],
+  "researchTestsPassed": 20
+}
