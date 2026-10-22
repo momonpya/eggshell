@@ -121,6 +121,18 @@ docs/candidates/delivery-structure-review.mdと2つのJSONに履歴・新しい�
 今回の追加作業は保存済みデータの監査だけで、runtime変更・native build・warm・回答モデル・seed取得0。
 同じ失敗候補や失敗したinterpreter replayを根拠なく再実行せず、全体goalは継続する。
 
+2026-10-22 独立した原文範囲の参照実装：所有者の最低枠を予約せず、検索被覆の追加分と
+共有ノードの追加費用で選ぶ純粋なSharedCoverageを隔離した。両予算、宣言済みノード、
+必要出典集合の保持、本文/手掛かりの重複計上防止をLeanで検査し、以前の二つの配分失敗形を
+含む10assertionが成功した。実フックへの接続・十分性・最適性・実用速度の証拠ではない。
+保存済みJSONの再生はlibSystem log1pの有限領域の実ビット列で外部symbol欠損を回避し、
+元の質問窓SHAも実native診断の私有cacheと一致した。4所有者・16原文断片を出典付き範囲へ
+分離し、全本文のバイト一致再構成を確認した。局所費用を実配送やトークン削減の代用にしない。
+現行native全体のdomain順・全競合所有者・packet framingは未再生と明記する。
+docs/candidates/shared-range-basis.mdとpatch/review JSONに未適用の実装・失敗と成功・境界を保存した。
+再生の最大RSS1,457,696 KiB、最終核検査1,381,744 KiB、guard作動なし。native build/hook/warm・モデル・seed追加0。
+次はprepared contextと実パケットへ接続し、必要原文の全6段階審査後に新規luna比較を題材1から始める。
+
 2026-10-19 のユーザー指示による組み替え。元の goal の要件は削除しない。
 主張は「推薦と認定の分離」。誤再利用率と実行テスト合格率を主指標、
 seed を償却した総トークン・費用・最初のフック遅延を副次指標とする。

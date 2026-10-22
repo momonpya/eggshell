@@ -1,0 +1,217 @@
+diff --git a/tools/SharedCoverage.lean b/tools/SharedCoverage.lean
+new file mode 100644
+--- /dev/null
++++ b/tools/SharedCoverage.lean
+@@ -0,0 +1,141 @@
++import Std
++
++/- Independent evidence closures over a shared, immutable payload basis.
++   This module has no Work, Match, Union, IO or completion operation.
++   A caller must supply original ranges and their required provenance nodes.
++   Selection uses current-search cue weights; it contains no expected answer. -/
++namespace SharedCoverage
++
++structure Offer (nodes cues : Nat) where
++  closure : List (Fin nodes)
++  covers : List (Fin cues)
++
++structure Problem where
++  costs : Array (Nat × Nat)
++  weights : Array Nat
++  offers : Array (Offer costs.size weights.size)
++  fixed : Nat × Nat := (0,0)
++  limit : Nat × Nat
++
++def nodes (p : Problem) (selected : List (Fin p.offers.size)) : List (Fin p.costs.size) :=
++  (selected.flatMap fun index => p.offers[index].closure).eraseDups
++
++def cues (p : Problem) (selected : List (Fin p.offers.size)) : List (Fin p.weights.size) :=
++  (selected.flatMap fun index => p.offers[index].covers).eraseDups
++
++def cost (p : Problem) (selected : List (Fin p.offers.size)) : Nat × Nat :=
++  (nodes p selected).foldl (fun total index =>
++    (total.1 + p.costs[index].1,total.2 + p.costs[index].2)) p.fixed
++
++def benefit (p : Problem) (selected : List (Fin p.offers.size)) : Nat :=
++  ((cues p selected).map fun index => p.weights[index]).sum
++
++/-- Native and byte limits apply to the union, including shared source frames. -/
++structure Selection (p : Problem) where
++  selected : List (Fin p.offers.size)
++  unique : selected.Nodup
++  charsFit : (cost p selected).1 ≤ p.limit.1
++  bytesFit : (cost p selected).2 ≤ p.limit.2
++
++def empty? (p : Problem) : Option (Selection p) :=
++  if fits : p.fixed.1 ≤ p.limit.1 ∧ p.fixed.2 ≤ p.limit.2 then
++    some ⟨[],by simp,by simpa [cost,nodes] using fits.1,by simpa [cost,nodes] using fits.2⟩
++  else none
++
++def extend? (prior : Selection p) (index : Fin p.offers.size) : Option (Selection p) :=
++  if fresh : index ∉ prior.selected then
++    let next := prior.selected ++ [index]
++    if fits : (cost p next).1 ≤ p.limit.1 ∧ (cost p next).2 ≤ p.limit.2 then
++      some ⟨next,by
++        apply List.nodup_append.mpr
++        refine ⟨prior.unique,by simp,?_⟩
++        intro a present b singleton same
++        have last : b = index := List.mem_singleton.mp singleton
++        exact fresh ((same.trans last) ▸ present),fits.1,fits.2⟩
++    else none
++  else none
++
++structure Proposal (prior : Selection p) where
++  result : Selection p
++  gain : Nat
++  positive : 0 < gain
++  /-- Both limits enter the same denominator. Integer cross-products avoid
++  rounding, division and a fitted tuning coefficient. -/
++  charge : Nat
++
++def proposal? (prior : Selection p) (index : Fin p.offers.size) : Option (Proposal prior) := do
++  let result ← extend? prior index
++  let gain := benefit p result.selected - benefit p prior.selected
++  if positive : 0 < gain then
++    let before := cost p prior.selected
++    let after := cost p result.selected
++    let charge := max ((after.1-before.1)*p.limit.2) ((after.2-before.2)*p.limit.1)
++    pure ⟨result,gain,positive,charge⟩
++  else none
++
++/-- Stable ties retain the earlier declared offer. Zero-charge novel evidence
++precedes charged evidence, without giving a duplicate cue another vote. -/
++def better (next previous : Proposal prior) : Bool :=
++  if next.charge == 0 then previous.charge != 0 || previous.gain < next.gain
++  else if previous.charge == 0 then false
++  else previous.gain*next.charge < next.gain*previous.charge
++
++def best (prior : Selection p) : Option (Proposal prior) :=
++  (List.finRange p.offers.size).foldl (fun found index =>
++    match proposal? prior index,found with
++    | none,_ => found
++    | some next,none => some next
++    | some next,some previous => if better next previous then some next else found) none
++
++def fill (fuel : Nat) (prior : Selection p) : Selection p :=
++  match fuel with
++  | 0 => prior
++  | fuel+1 => match best prior with
++    | none => prior
++    | some next => fill fuel next.result
++
++def choose? (p : Problem) : Option (Selection p) := do
++  let initial ← empty? p
++  pure (fill p.offers.size initial)
++
++theorem within_limits (result : Selection p) :
++    (cost p result.selected).1 ≤ p.limit.1 ∧ (cost p result.selected).2 ≤ p.limit.2 :=
++  ⟨result.charsFit,result.bytesFit⟩
++
++theorem source_node_is_declared (p : Problem) (selected : List (Fin p.offers.size))
++    (node : Fin p.costs.size) (present : node ∈ nodes p selected) :
++    ∃ index ∈ selected, node ∈ p.offers[index].closure := by
++  have member : node ∈ selected.flatMap (fun index => p.offers[index].closure) := by
++    simpa [nodes] using present
++  exact List.mem_flatMap.mp member
++
++theorem selected_closure_is_complete (p : Problem) (selected : List (Fin p.offers.size))
++    (index : Fin p.offers.size) (chosen : index ∈ selected)
++    (node : Fin p.costs.size) (required : node ∈ p.offers[index].closure) :
++    node ∈ nodes p selected := by
++  simp only [nodes,List.mem_eraseDups]
++  exact List.mem_flatMap.mpr ⟨index,chosen,required⟩
++
++private theorem erase_nodup [BEq α] [LawfulBEq α] (xs : List α) : xs.eraseDups.Nodup := by
++  match xs with
++  | [] => simp
++  | x :: tail =>
++      rw [List.eraseDups_cons,List.nodup_cons]
++      constructor
++      · simp
++      · exact erase_nodup (tail.filter fun y => !y == x)
++termination_by xs.length
++decreasing_by
++  have := List.length_filter_le (fun y => !y == x) tail
++  simp only [List.length_cons]
++  omega
++
++theorem duplicate_payload_charged_once (p : Problem) (selected : List (Fin p.offers.size)) :
++    (nodes p selected).Nodup := by
++  exact erase_nodup _
++
++theorem duplicate_cue_scored_once (p : Problem) (selected : List (Fin p.offers.size)) :
++    (cues p selected).Nodup := by
++  exact erase_nodup _
++
++end SharedCoverage
+diff --git a/tools/SharedCoverageTests.lean b/tools/SharedCoverageTests.lean
+new file mode 100644
+--- /dev/null
++++ b/tools/SharedCoverageTests.lean
+@@ -0,0 +1,66 @@
++import tools.SharedCoverage
++
++namespace SharedCoverage.Cases
++
++private def make (costs : Array (Nat × Nat)) (weights : Array Nat)
++    (rows : List (List Nat × List Nat)) (limit : Nat × Nat)
++    (fixed : Nat × Nat := (0,0)) : Except String Problem := do
++  let offers ← rows.mapM fun (nodes,cues) => do
++    let closure ← nodes.mapM fun n => if h : n < costs.size then pure ⟨n,h⟩ else throw "foreign payload node"
++    let covers ← cues.mapM fun n => if h : n < weights.size then pure ⟨n,h⟩ else throw "foreign query cue"
++    pure ({closure,covers} : Offer costs.size weights.size)
++  pure {costs,weights,offers := offers.toArray,limit,fixed}
++
++private def need (condition : Bool) (message : String) : IO Unit :=
++  unless condition do throw (IO.userError message)
++
++private def selected (p : Problem) : IO (Selection p) :=
++  match choose? p with
++  | some result => pure result
++  | none => throw (IO.userError "fixed envelope does not fit")
++
++private def has (s : Selection p) (index : Nat) : Bool :=
++  (nodes p s.selected).any (·.val == index)
++
++def check : IO Unit := do
++  -- Historical SharedMinimaTests counterexample: complete old explanations
++  -- add no newly requested evidence; the original source unit does.
++  let p ← IO.ofExcept (make #[(1,1),(1,1),(20,20),(23,23),(21,21)] #[1,1,1]
++    [([0],[0]),([0,3],[0]),([1],[1]),([1,4],[1]),([2],[2])] (30,30) (8,8))
++  let result ← selected p
++  need (has result 0 && has result 1 && has result 2) "old-answer enlargement displaced current evidence"
++  need (!has result 3 && !has result 4) "zero-gain enlargement consumed unused capacity"
++
++  -- Historical NominatedContextBudgetTests counterexample: independent
++  -- condition/result units carry their shared graph prerequisite together.
++  let p ← IO.ofExcept (make #[(1,1),(10,10),(1,1),(9,9),(5,5),(5,5),(5,5)] #[1,1,1,1]
++    [([0],[0]),([0,1,4],[0,1]),([2],[2]),([2,3,4],[2,3]),([5],[]),([6],[])] (27,27))
++  let result ← selected p
++  need ((List.range 5).all (has result)) "a fitting original condition/result/prerequisite was lost"
++  need ((cost p result.selected) == (26,26)) "shared prerequisite was charged more than once"
++  need (!has result 5 && !has result 6) "peripheral reachability invented query demand"
++
++  -- Shared UTF-8 data pays for one immutable payload, with independent cues.
++  let text := "条件"
++  let p ← IO.ofExcept (make #[(text.length,text.utf8ByteSize)] #[7,5]
++    [([0],[0]),([0],[1]),([0],[0])] (2,6))
++  let result ← selected p
++  need (result.selected.length == 2 && benefit p result.selected == 12) "duplicate payload or cue handling failed"
++  need ((cost p result.selected) == (2,6)) "shared UTF-8 cost differs"
++
++  -- A cue and its original prerequisites are indivisible. An affordable
++  -- interior alone cannot stand in for a closure that exceeds the byte cap.
++  let p ← IO.ofExcept (make #[(1,1),(2,6),(1,1)] #[100,1]
++    [([0,1],[0]),([2],[1])] (10,5))
++  let result ← selected p
++  need (!has result 0 && !has result 1 && has result 2) "partial prerequisite closure was admitted"
++  let p ← IO.ofExcept (make #[(1,1)] #[1] [([0],[0])] (2,2) (3,1))
++  need (choose? p |>.isNone) "oversized fixed frame was accepted"
++  need (match make #[(1,1)] #[1] [([1],[0])] (2,2) with
++    | .error _ => true
++    | .ok _ => false) "foreign original payload node was accepted"
++  IO.println "shared basis: both historical starvation shapes, complete prerequisites, one-charge sharing, cue deduplication, UTF-8 bound, zero-gain stop and foreign-node rejection passed"
++
++end SharedCoverage.Cases
++
++#eval SharedCoverage.Cases.check
