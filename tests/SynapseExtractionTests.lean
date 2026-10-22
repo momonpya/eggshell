@@ -87,8 +87,52 @@ private def checkTrace : IO Unit := do
   let duplicate ← IO.ofExcept (trace.finish (occurrence "C") 6 "done")
   check (duplicate.graph.snapshot == trace.graph.snapshot) "duplicate notification increased weight"
 
+private def checkRepeatedPositions : IO Unit := do
+  let text := "    10\t前😀 NEEDED_SYMBOL\n    11\tother\n    12\tNEEDED_SYMBOL\n"
+  let trace : Trace := {}
+  let trace ← IO.ofExcept (trace.start (occurrence "producer") 10 command)
+  let trace ← IO.ofExcept (trace.finish (occurrence "producer") 20 text)
+  let trace ← IO.ofExcept (trace.start (occurrence "consumer") 30 "NEEDED_SYMBOL NEEDED_SYMBOL")
+  let some started := trace.starts[occurrence "consumer"]? | throw (IO.userError "missing started consumer")
+  check (started.pending.size == 2 && started.pending.all (fun pending =>
+    literal pending.input pending.edge.inputFirst pending.edge.inputLimit pending.edge.term &&
+    literal pending.output pending.edge.outputFirst pending.edge.outputLimit pending.edge.term))
+    "repeated producer positions were lost or duplicate arguments multiplied evidence"
+  let original := {doc with source := some (toJson text).compress, occurrences := #[occurrence "producer"]}
+  let trace ← IO.ofExcept (trace.finish (occurrence "consumer") 40 "done")
+  let reads ← IO.ofExcept (locateReads "database" original trace)
+  let trace ← IO.ofExcept (trace.locate (({} : Std.HashMap Occurrence (Array OutputRow)).insert
+    (occurrence "producer") (reads.flatMap (·.rows))))
+  let consumed := trace.graph.snapshot.filterMap fun fact => match fact with
+    | .consumed edge => some edge | _ => none
+  check (consumed.size == 2 && consumed.any (·.rows.any (·.first == 10)) &&
+    consumed.any (·.rows.any (·.first == 12))) "later original row disappeared behind the first token"
+  let repeated ← IO.ofExcept (trace.finish (occurrence "consumer") 50 "done")
+  check (repeated.graph.snapshot == trace.graph.snapshot) "repeated completion added token positions again"
+  let some pending := started.pending[0]? | throw (IO.userError "missing pending literal witness")
+  check ((Pending.check? {pending.edge with outputFirst := pending.edge.outputFirst+1}
+    pending.input pending.output).isNone) "shifted output span passed its literal certificate"
+  check ((Pending.check? {pending.edge with term := "OTHER_SYMBOL"}
+    pending.input pending.output).isNone) "different literal word passed its certificate"
+
+private def checkKinds : IO Unit := do
+  for word in ["1", "180", "１２３", "١٢٣", "//", "/", "-", "--flag", "12p"] do
+    check ((termKind? word).isNone) s!"non-name became an independent witness: {word}"
+  for word in ["X", "_x", "TargetTriple", "clang::driver", "日本語", "한국어", "каталог", "café", "école"] do
+    check (termKind? word == some .identifier) s!"named Unicode identifier disappeared: {word}"
+  check (termKind? "/123" == some .path && termKind? "src/日本語.cpp:10" == some .pathLine)
+    "named/numeric file components or explicit path-line witnesses disappeared"
+  let trace : Trace := {}
+  let trace ← IO.ofExcept (trace.start (occurrence "punctuation-producer") 10 "read")
+  let trace ← IO.ofExcept (trace.finish (occurrence "punctuation-producer") 20 "1 // / -")
+  let trace ← IO.ofExcept (trace.start (occurrence "punctuation-consumer") 30 "1 // / -")
+  let trace ← IO.ofExcept (trace.finish (occurrence "punctuation-consumer") 40 "done")
+  check (trace.graph.snapshot.isEmpty) "numeric literals or delimiters created a consumption relation"
+
 def main : IO Unit := do
   let (rows, packet) ← checkSource
   checkFeedback rows packet
   checkTrace
+  checkRepeatedPositions
+  checkKinds
   IO.println "Lean extraction checks passed: literal reads/citations, exact IDs, original Unicode coordinates, actual proposal order and usage labels"

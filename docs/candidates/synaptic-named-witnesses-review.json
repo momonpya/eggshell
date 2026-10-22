@@ -1,0 +1,676 @@
+{
+  "status": "unadopted isolated candidate; extraction corrected, required delivery gaps remain",
+  "parentCommit": "e026ceeb86ae08e8a836d6c0a4f2e6ed4b7a27d0",
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "newPythonSemanticImplementations": 0,
+  "rankingAndMiniLMChanged": false,
+  "frozenInputs": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/frozen-inputs.json",
+    "sha256": "b7ff921e46bce8696c64351e97d8704fcb974692728b0ee8c754c868c025b24f",
+    "bytes": 41605
+  },
+  "guards": [
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/build-guard.json",
+        "sha256": "8a92d15a7abcc37ddb99f68d1015b96e8013c3ede16784503cb9ffb3ab1efad7",
+        "bytes": 608
+      },
+      "sampledPeakRssKiB": 2084320,
+      "exitCode": 0,
+      "stdout": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/build-guard.stdout",
+        "sha256": "f8aa0f2805cfe1f51d193169d90aafb5a2276d65606cdf830defba55e16aefdd",
+        "bytes": 74598
+      },
+      "stderr": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/build-guard.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/payload-audit-guard.json",
+        "sha256": "b5837134b79b6c37aa750b4804818b9eca81fc74cb10c441c49a70a455fc8d2f",
+        "bytes": 804
+      },
+      "sampledPeakRssKiB": 668560,
+      "exitCode": 0,
+      "stdout": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/payload-audit-guard.stdout",
+        "sha256": "07f3d1317e2f46fe4c78d03329a0710fbe739fe6a28b0ebb756555cd4a0cc9ca",
+        "bytes": 6290
+      },
+      "stderr": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/payload-audit-guard.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native-guard.json",
+        "sha256": "5cd20c41a520f2e8643a38cf2f15316044fdceac0f7eb0c0350d393debe01b17",
+        "bytes": 883
+      },
+      "sampledPeakRssKiB": 2375888,
+      "exitCode": 0,
+      "stdout": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native-guard.stdout",
+        "sha256": "c36ba4993e2e55f1c70981ad1074f3a47663db0dd6d1ea4403459a0c887ee9d8",
+        "bytes": 10842
+      },
+      "stderr": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native-guard.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    }
+  ],
+  "sixStageSummary": [
+    {
+      "stage": 1,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 16551,
+          "incomplete": false,
+          "bodySha256": "b8fe472b38de01babdb6366b19467d803e5b2ab22270b880b36e2bd7ef60cdbd",
+          "missing": [
+            "trailing-language-warning"
+          ],
+          "unlocated": 0
+        },
+        {
+          "elapsedMs": 14716,
+          "incomplete": false,
+          "bodySha256": "b8fe472b38de01babdb6366b19467d803e5b2ab22270b880b36e2bd7ef60cdbd",
+          "missing": [
+            "trailing-language-warning"
+          ],
+          "unlocated": 0
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 17357,
+          "incomplete": false,
+          "bodySha256": "819c2c392de6b967413b99250aed4d6c8c874636a2692809755cf0307689489f",
+          "missing": [
+
+          ],
+          "unlocated": 0
+        },
+        {
+          "elapsedMs": 15837,
+          "incomplete": false,
+          "bodySha256": "819c2c392de6b967413b99250aed4d6c8c874636a2692809755cf0307689489f",
+          "missing": [
+
+          ],
+          "unlocated": 0
+        }
+      ]
+    },
+    {
+      "stage": 3,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 18027,
+          "incomplete": false,
+          "bodySha256": "e54d64ec588b677e4820c40179f47515e389ae97a64fe76d296a025f10c47686",
+          "missing": [
+            "syntax-only-compile-cutoff",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ],
+          "unlocated": 0
+        },
+        {
+          "elapsedMs": 16191,
+          "incomplete": false,
+          "bodySha256": "e54d64ec588b677e4820c40179f47515e389ae97a64fe76d296a025f10c47686",
+          "missing": [
+            "syntax-only-compile-cutoff",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ],
+          "unlocated": 0
+        }
+      ]
+    },
+    {
+      "stage": 4,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 25357,
+          "incomplete": false,
+          "bodySha256": "dad145386b1a2f37b67cd5412f3f6fa544318eaeef0cce37d3887447c160e039",
+          "missing": [
+            "trailing-language-warning"
+          ],
+          "unlocated": 0
+        },
+        {
+          "elapsedMs": 23906,
+          "incomplete": false,
+          "bodySha256": "dad145386b1a2f37b67cd5412f3f6fa544318eaeef0cce37d3887447c160e039",
+          "missing": [
+            "trailing-language-warning"
+          ],
+          "unlocated": 0
+        }
+      ]
+    },
+    {
+      "stage": 5,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 24405,
+          "incomplete": false,
+          "bodySha256": "8390e5d50d50a955442c79ae7a25d930e534f4a2a30f1ddeabbd07ec38f228ef",
+          "missing": [
+
+          ],
+          "unlocated": 0
+        },
+        {
+          "elapsedMs": 22574,
+          "incomplete": false,
+          "bodySha256": "8390e5d50d50a955442c79ae7a25d930e534f4a2a30f1ddeabbd07ec38f228ef",
+          "missing": [
+
+          ],
+          "unlocated": 0
+        }
+      ]
+    },
+    {
+      "stage": 6,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 26341,
+          "incomplete": false,
+          "bodySha256": "9d3d68d55d80e54f570db8a21ca66b96c446cb55d59cfc40cff88a258d3a3b10",
+          "missing": [
+            "trailing-language-warning",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ],
+          "unlocated": 0
+        },
+        {
+          "elapsedMs": 24634,
+          "incomplete": false,
+          "bodySha256": "9d3d68d55d80e54f570db8a21ca66b96c446cb55d59cfc40cff88a258d3a3b10",
+          "missing": [
+            "trailing-language-warning",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ],
+          "unlocated": 0
+        }
+      ]
+    }
+  ],
+  "sourceSpec": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-evidence-20261023/imported-sources/frozen-spec.json",
+    "sha256": "586356dec7c9ba417f001078b57d3f9e5336393fe72d73983de0265245558ff9",
+    "bytes": 13904
+  },
+  "synapticReceipts": [
+    {
+      "stage": "stage1",
+      "independentInputsIdentical": true,
+      "summary": {
+        "complete": true,
+        "inputs": [
+          {
+            "complete": true,
+            "available": true,
+            "requests": 51,
+            "facts": 145,
+            "bytes": 76437,
+            "failure": null
+          }
+        ],
+        "counts": {
+          "support": {
+            "offered": 34,
+            "bodyDelivered": 21
+          },
+          "coquotation": {
+            "offered": 33,
+            "bodyDelivered": 20
+          }
+        }
+      }
+    },
+    {
+      "stage": "stage2",
+      "independentInputsIdentical": true,
+      "summary": {
+        "complete": true,
+        "inputs": [
+          {
+            "complete": true,
+            "available": true,
+            "requests": 51,
+            "facts": 145,
+            "bytes": 76437,
+            "failure": null
+          }
+        ],
+        "counts": {
+          "support": {
+            "offered": 34,
+            "bodyDelivered": 23
+          },
+          "coquotation": {
+            "offered": 33,
+            "bodyDelivered": 22
+          }
+        }
+      }
+    },
+    {
+      "stage": "stage3",
+      "independentInputsIdentical": true,
+      "summary": {
+        "complete": true,
+        "inputs": [
+          {
+            "complete": true,
+            "available": true,
+            "requests": 51,
+            "facts": 145,
+            "bytes": 76437,
+            "failure": null
+          }
+        ],
+        "counts": {
+          "support": {
+            "offered": 34,
+            "bodyDelivered": 22
+          },
+          "coquotation": {
+            "offered": 33,
+            "bodyDelivered": 21
+          }
+        }
+      }
+    },
+    {
+      "stage": "stage4",
+      "independentInputsIdentical": true,
+      "summary": {
+        "complete": true,
+        "inputs": [
+          {
+            "complete": true,
+            "available": true,
+            "requests": 76,
+            "facts": 207,
+            "bytes": 109905,
+            "failure": null
+          }
+        ],
+        "counts": {
+          "support": {
+            "offered": 51,
+            "bodyDelivered": 29
+          },
+          "coquotation": {
+            "offered": 48,
+            "bodyDelivered": 26
+          }
+        }
+      }
+    },
+    {
+      "stage": "stage5",
+      "independentInputsIdentical": true,
+      "summary": {
+        "complete": true,
+        "inputs": [
+          {
+            "complete": true,
+            "available": true,
+            "requests": 76,
+            "facts": 207,
+            "bytes": 109905,
+            "failure": null
+          }
+        ],
+        "counts": {
+          "support": {
+            "offered": 51,
+            "bodyDelivered": 27
+          },
+          "coquotation": {
+            "offered": 48,
+            "bodyDelivered": 24
+          }
+        }
+      }
+    },
+    {
+      "stage": "stage6",
+      "independentInputsIdentical": true,
+      "summary": {
+        "complete": true,
+        "inputs": [
+          {
+            "complete": true,
+            "available": true,
+            "requests": 76,
+            "facts": 207,
+            "bytes": 109905,
+            "failure": null
+          }
+        ],
+        "counts": {
+          "support": {
+            "offered": 51,
+            "bodyDelivered": 29
+          },
+          "coquotation": {
+            "offered": 48,
+            "bodyDelivered": 26
+          }
+        }
+      }
+    }
+  ],
+  "receiptFiles": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage1/data/receipts/7a72d490674d28f39e81dbba7def304f054d0156ad4da3f2329aa4267f20fb3f/synaptic-delivery.json",
+      "sha256": "4c476cef6d730d9b0cb0069e8c6ba2562911b72503893b14da776efc770298c2",
+      "bytes": 42475
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage1/data/receipts/c75df542d106d4b02b840a57fbbd08ec30df33ca3c2c0fe50f98f2ee7c55a20c/synaptic-delivery.json",
+      "sha256": "e37789fbe08a36cc312b7133d5cdac079a851803a70e1ea6752e7acd9b51c555",
+      "bytes": 42475
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage2/data/receipts/3923c83b024dedde5faa4ca5302bc76a59a51012cce1f1c01314192962ed794c/synaptic-delivery.json",
+      "sha256": "6ced250d163d3505f4e78cef4426589161d7171399b26dacdc3692b789e0d3e9",
+      "bytes": 42471
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage2/data/receipts/dee3c7fe7b8074e6efafdb3727a1522f919594d5619b154c2cc99d69d2c15abb/synaptic-delivery.json",
+      "sha256": "2574a2d95794fbf6dfab39780b58a198cd566bc73f9b6b7292f69ad42a894330",
+      "bytes": 42471
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage3/data/receipts/0ce05d08f0ed078e679fb152cec6e389e5f7e14cd253f71cf231fdaccb1d5adc/synaptic-delivery.json",
+      "sha256": "b2063df0592a51a0cb46be747a610f93f1ff65f504b767a7a615e3a5a1d4262d",
+      "bytes": 42473
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage3/data/receipts/0dd9e14cb06741a87bb2e585652715bd2b8627dad5aa8ec0fdb247893016d2ce/synaptic-delivery.json",
+      "sha256": "cdd8b70dfeff2c49c47d39567ee437305a3135c21779caf6b313ccf041366907",
+      "bytes": 42473
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage4/data/receipts/72d6676cd768bc33bbb14d3c869ae4dd442b6b125c5bd5994c7ba190f9c59f6e/synaptic-delivery.json",
+      "sha256": "894dc5f93f44008b050e85aa92e311b5cd8aace8a1571908d218bdb60c0b14e9",
+      "bytes": 62401
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage4/data/receipts/b7713974fbfdb61165a2dbd048b9997d2bca3a7382943c705b4c9673044fd76b/synaptic-delivery.json",
+      "sha256": "e1fb3b9b5b36af1b63dabe735c42b5282ab809543e2d33c8424bcffabffa2861",
+      "bytes": 62401
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage5/data/receipts/18281869f73ae2e8c77735d4ea461e02d683ba488f47bc0ae99fa3d577813bd6/synaptic-delivery.json",
+      "sha256": "e13fd0af79a002d5c7e38d04b43bbd54473bb09c5f1d7f63babc36aeb0b3ff4f",
+      "bytes": 62405
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage5/data/receipts/284d1e9adcb6ed766fae3df406b18856fb60f5231767edd03ef89c855ea7c4ec/synaptic-delivery.json",
+      "sha256": "6256725f5fb5f9e2d106500922800cda0a08e4a8e33183e791356a339478a493",
+      "bytes": 62405
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage6/data/receipts/685573d34d84bfdb75f342550a8ff36646153923c4c40322e053ca0fe287ec7b/synaptic-delivery.json",
+      "sha256": "7fa80825e73dda3bf833a72ea83539ec0f48c803d3d52d0776f4394db3084070",
+      "bytes": 62401
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/six-native/stage6/data/receipts/8e002d8598eaa3b4df42ecab07b6550d40f016cd093b6c9c86752f793683b088/synaptic-delivery.json",
+      "sha256": "fc0971522f76a70ab640102853f411d4189f8b8a64c7f4022822dff70cda674d",
+      "bytes": 62401
+    }
+  ],
+  "payloadAudit": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/payload-audit.json",
+    "sha256": "1257e6890c82571e5b6d44d6f0a1a3671052f302bfc6c0e6aad4341f4aa1d3ed",
+    "bytes": 6289
+  },
+  "payloadSummary": [
+    {
+      "stage": 1,
+      "consumptionFacts": 152,
+      "numericWitnessFacts": 0,
+      "conflictingCanonicalRows": 0,
+      "sessions": [
+        {
+          "bodySha256": "b8fe472b38de01babdb6366b19467d803e5b2ab22270b880b36e2bd7ef60cdbd",
+          "distinctOriginalRows": 951,
+          "repeatedRowOccurrences": 0,
+          "rowsStoredUnderMultipleOwners": 93,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 951
+        },
+        {
+          "bodySha256": "b8fe472b38de01babdb6366b19467d803e5b2ab22270b880b36e2bd7ef60cdbd",
+          "distinctOriginalRows": 951,
+          "repeatedRowOccurrences": 0,
+          "rowsStoredUnderMultipleOwners": 93,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 951
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "consumptionFacts": 152,
+      "numericWitnessFacts": 0,
+      "conflictingCanonicalRows": 0,
+      "sessions": [
+        {
+          "bodySha256": "819c2c392de6b967413b99250aed4d6c8c874636a2692809755cf0307689489f",
+          "distinctOriginalRows": 1098,
+          "repeatedRowOccurrences": 0,
+          "rowsStoredUnderMultipleOwners": 93,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 1098
+        },
+        {
+          "bodySha256": "819c2c392de6b967413b99250aed4d6c8c874636a2692809755cf0307689489f",
+          "distinctOriginalRows": 1098,
+          "repeatedRowOccurrences": 0,
+          "rowsStoredUnderMultipleOwners": 93,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 1098
+        }
+      ]
+    },
+    {
+      "stage": 3,
+      "consumptionFacts": 152,
+      "numericWitnessFacts": 0,
+      "conflictingCanonicalRows": 0,
+      "sessions": [
+        {
+          "bodySha256": "e54d64ec588b677e4820c40179f47515e389ae97a64fe76d296a025f10c47686",
+          "distinctOriginalRows": 958,
+          "repeatedRowOccurrences": 0,
+          "rowsStoredUnderMultipleOwners": 101,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 958
+        },
+        {
+          "bodySha256": "e54d64ec588b677e4820c40179f47515e389ae97a64fe76d296a025f10c47686",
+          "distinctOriginalRows": 958,
+          "repeatedRowOccurrences": 0,
+          "rowsStoredUnderMultipleOwners": 101,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 958
+        }
+      ]
+    },
+    {
+      "stage": 4,
+      "consumptionFacts": 152,
+      "numericWitnessFacts": 0,
+      "conflictingCanonicalRows": 0,
+      "sessions": [
+        {
+          "bodySha256": "dad145386b1a2f37b67cd5412f3f6fa544318eaeef0cce37d3887447c160e039",
+          "distinctOriginalRows": 1004,
+          "repeatedRowOccurrences": 346,
+          "rowsStoredUnderMultipleOwners": 776,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 1350
+        },
+        {
+          "bodySha256": "dad145386b1a2f37b67cd5412f3f6fa544318eaeef0cce37d3887447c160e039",
+          "distinctOriginalRows": 1004,
+          "repeatedRowOccurrences": 346,
+          "rowsStoredUnderMultipleOwners": 776,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 1350
+        }
+      ]
+    },
+    {
+      "stage": 5,
+      "consumptionFacts": 152,
+      "numericWitnessFacts": 0,
+      "conflictingCanonicalRows": 0,
+      "sessions": [
+        {
+          "bodySha256": "8390e5d50d50a955442c79ae7a25d930e534f4a2a30f1ddeabbd07ec38f228ef",
+          "distinctOriginalRows": 1137,
+          "repeatedRowOccurrences": 176,
+          "rowsStoredUnderMultipleOwners": 693,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 1313
+        },
+        {
+          "bodySha256": "8390e5d50d50a955442c79ae7a25d930e534f4a2a30f1ddeabbd07ec38f228ef",
+          "distinctOriginalRows": 1137,
+          "repeatedRowOccurrences": 176,
+          "rowsStoredUnderMultipleOwners": 693,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 1313
+        }
+      ]
+    },
+    {
+      "stage": 6,
+      "consumptionFacts": 152,
+      "numericWitnessFacts": 0,
+      "conflictingCanonicalRows": 0,
+      "sessions": [
+        {
+          "bodySha256": "9d3d68d55d80e54f570db8a21ca66b96c446cb55d59cfc40cff88a258d3a3b10",
+          "distinctOriginalRows": 1059,
+          "repeatedRowOccurrences": 226,
+          "rowsStoredUnderMultipleOwners": 740,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 1285
+        },
+        {
+          "bodySha256": "9d3d68d55d80e54f570db8a21ca66b96c446cb55d59cfc40cff88a258d3a3b10",
+          "distinctOriginalRows": 1059,
+          "repeatedRowOccurrences": 226,
+          "rowsStoredUnderMultipleOwners": 740,
+          "uncertainFiles": 0,
+          "verifiedRowOccurrences": 1285
+        }
+      ]
+    }
+  ],
+  "priorFailure": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/synaptic-positions-review.json",
+    "sha256": "66e0f0c1681864097d97094eab77aaea124d42d7234d8d91898877d59a974fab",
+    "bytes": 16537
+  },
+  "terminalArchives": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/terminal-test-archives.json",
+    "sha256": "0bc460907301e9df01394a00cf67249b8d0ba8bf4a1628ed8dc0513a2446eacb",
+    "bytes": 1445
+  },
+  "artifacts": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/SynapseDeliveryIntegration.rsp",
+      "sha256": "597514e79464a64ebe362435dca63d3e07dfd9e2400e913a423b0d5c48fe1edd",
+      "bytes": 12407
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/SynapseExtractionTests.rsp",
+      "sha256": "a19c861f63932e862bfa02866f206f28b13af1f31302752e375a129ddb870371",
+      "bytes": 12403
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/SynapseJournalTests.rsp",
+      "sha256": "c18902a12d837f2fca0db4130e567e0ef1d608b8bfe34907107979ea3300480e",
+      "bytes": 12400
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/SynapsePayloadAudit.rsp",
+      "sha256": "49fbeab6e4d1876fabd85f2e5d602390942fd25045fb7880d7440b6b22e9caab",
+      "bytes": 12400
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/SynapseSixGate.rsp",
+      "sha256": "89c7a1467f2d06b8de18cbf5baa98b95281aedeaef5ef629c0f9a53b39f61c11",
+      "bytes": 12395
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/archive-one.rb",
+      "sha256": "7d1abfd3dcc1fa9f8519d1a6f8768ec67d0aa1f1bb05d089fb6de17bb2989489",
+      "bytes": 744
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/build.sh",
+      "sha256": "50540afa82144c145e5a272cd413294c8ead97efe16df1792c26fdff6269d1ff",
+      "bytes": 2527
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/candidate-main.rsp",
+      "sha256": "8a552e7475260ca650f437faa4b22436027a6382e4bf40eb452d3a7aa7e15196",
+      "bytes": 12395
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/freeze.rb",
+      "sha256": "c95e8e5987c04fe9ecadad55a1aeead1ef901175827e5de803f5a047fed3048e",
+      "bytes": 2333
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/proof-audit.lean",
+      "sha256": "984279da0e96eee6c147edab9a63061b03cc7c89176ab67917c1f6ccc564fdd2",
+      "bytes": 486
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/review.rb",
+      "sha256": "89f96a669ad2ebca51bbae75d6201f9dd330aeb8eff29b9d917a94f76b848c05",
+      "bytes": 4180
+    }
+  ],
+  "scope": "frozen runtime integration and native delivery, not a normal whole-worktree build; no ordinary runtime/installed/README adoption; no token or answer-quality measurements"
+}

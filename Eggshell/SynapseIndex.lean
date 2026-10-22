@@ -28,7 +28,9 @@ def implementation : String :=
     (include_str "Synapses.lean").toUTF8, (include_str "SynapseExtraction.lean").toUTF8,
     (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
     (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
-    (include_str "SynapseProvenance.lean").toUTF8])
+    (include_str "SynapseProvenance.lean").toUTF8,
+    (include_str "SearchUnicode.lean").toUTF8,
+    (include_str "../tools/RetrievalCategories.lean").toUTF8])
 
 inductive Key where
   | owner (database owner : String)

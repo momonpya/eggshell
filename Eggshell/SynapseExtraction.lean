@@ -1,6 +1,8 @@
 module
 
 public import Eggshell.Synapses
+public import Eggshell.SearchUnicode
+public import tools.RetrievalCategories
 
 @[expose] public section
 
@@ -16,34 +18,70 @@ structure Term where
 
 def termCharacter (char : Char) : Bool :=
   char.isAlphanum || char == '_' || char == '/' || char == '.' || char == '+' ||
-    char == '-' || char == ':' || (128 ≤ char.toNat && !char.isWhitespace)
+    char == '-' || char == ':' || (128 ≤ char.toNat &&
+      (RetrievalResearch.Unicode.letterNumber char || RetrievalResearch.Unicode.mark char))
 
-def terms (text : String) : Array Term := Id.run do
+def nameStart (char : Char) : Bool :=
+  char == '_' || (RetrievalResearch.Unicode.letterNumber char && !SearchUnicode.isDigit char)
+
+def namePart (char : Char) : Bool :=
+  RetrievalResearch.Unicode.letterNumber char || RetrievalResearch.Unicode.mark char ||
+    "_:.+-".contains char
+
+/-- A named file component is required: separators and C++ comment delimiters
+are not paths. Pure numbers, options and sed bounds are not identifiers.
+This is a lexical witness policy, not a proof of tool data dependence. -/
+def termKind? (value : String) : Option WitnessKind :=
+  if value.isEmpty || value.toList.all SearchUnicode.isDigit then none
+  else if value.contains '/' then
+    if value.toList.any (fun char => RetrievalResearch.Unicode.letterNumber char || char == '_') then
+      let suffix := value.splitOn ":" |>.getLast!
+      some (if suffix.toNat?.isSome && value.contains ':' then .pathLine else .path)
+    else none
+  else if value.toList.head?.any nameStart && value.toList.all namePart then some .identifier
+  else none
+
+theorem numeric_not_a_witness (value : String)
+    (numeric : value.toList.all SearchUnicode.isDigit = true) : termKind? value = none := by
+  simp [termKind?, numeric]
+
+theorem unnamed_path_not_a_witness (value : String) (slash : value.contains '/' = true)
+    (unnamed : value.toList.any (fun char => RetrievalResearch.Unicode.letterNumber char || char == '_') = false) :
+    termKind? value = none := by
+  simp [termKind?, slash, unnamed]
+
+/-- Preserve every source position. Repeating a token on another output row
+is another possible witness, not a duplicate of the first row. -/
+def termOccurrences (text : String) : Array Term := Id.run do
   let mut result := #[]
   let mut first := 0
   let mut position := 0
   let mut token : Array Char := #[]
-  let mut seen : Std.HashSet (WitnessKind × String) := {}
   for char in text.toList ++ [' '] do
     if termCharacter char then
       if token.isEmpty then first := position
       token := token.push char
     else if !token.isEmpty then
       let value := String.ofList token.toList
-      let suffix := value.splitOn ":" |>.getLast!
-      let kind := if value.contains '/' then
-          if suffix.toNat?.isSome && value.contains ':' then WitnessKind.pathLine else .path
-        else WitnessKind.identifier
-      if !seen.contains (kind, value) then
+      if let some kind := termKind? value then
         result := result.push ⟨kind, value, first, position⟩
-        seen := seen.insert (kind, value)
-      if kind == .pathLine then
-        let path := ":".intercalate (value.splitOn ":" |>.dropLast)
-        if !seen.contains (.path, path) then
-          result := result.push ⟨.path, path, first, first + path.length⟩
-          seen := seen.insert (.path, path)
+        if kind == .pathLine then
+          let path := ":".intercalate (value.splitOn ":" |>.dropLast)
+          if termKind? path == some .path then
+            result := result.push ⟨.path, path, first, first + path.length⟩
       token := #[]
     position := position + 1
+  return result
+
+/-- A consumer needs one literal argument witness per key. Deduplicating
+arguments does not discard any position in a producer's output. -/
+def terms (text : String) : Array Term := Id.run do
+  let mut seen : Std.HashSet (WitnessKind × String) := {}
+  let mut result := #[]
+  for term in termOccurrences text do
+    if seen.contains (term.kind, term.text) then continue
+    seen := seen.insert (term.kind, term.text)
+    result := result.push term
   return result
 
 structure OutputRow where
@@ -70,16 +108,76 @@ structure Produced where
   occurrence : Occurrence
   finished : Nat
   term : Term
+  source : Array Char
   deriving Repr
+
+def literal (source : Array Char) (first limit : Nat) (term : String) : Bool :=
+  first < limit && limit ≤ source.size &&
+    String.ofList (source.extract first limit).toList == term
+
+/-- A pending link carries checked literal positions in both actual texts.
+The output array is shared by all witnesses from one immutable completion. -/
+structure Pending where
+  edge : Consumption
+  input : Array Char
+  output : Array Char
+  valid : edge.valid = true
+  classified : termKind? edge.term = some edge.kind
+  inputExact : literal input edge.inputFirst edge.inputLimit edge.term = true
+  outputExact : literal output edge.outputFirst edge.outputLimit edge.term = true
+
+def Pending.check? (edge : Consumption) (input output : Array Char) : Option Pending :=
+  if valid : edge.valid = true then
+    if classified : termKind? edge.term = some edge.kind then
+      if inputExact : literal input edge.inputFirst edge.inputLimit edge.term = true then
+        if outputExact : literal output edge.outputFirst edge.outputLimit edge.term = true then
+          some ⟨edge, input, output, valid, classified, inputExact, outputExact⟩ else none
+      else none
+    else none
+  else none
+
+theorem Pending.input_literal (pending : Pending) :
+    String.ofList (pending.input.extract pending.edge.inputFirst pending.edge.inputLimit).toList =
+      pending.edge.term := by
+  have witness := pending.inputExact
+  simp only [literal, Bool.and_eq_true, beq_iff_eq] at witness
+  exact witness.2
+
+theorem Pending.output_literal (pending : Pending) :
+    String.ofList (pending.output.extract pending.edge.outputFirst pending.edge.outputLimit).toList =
+      pending.edge.term := by
+  have witness := pending.outputExact
+  simp only [literal, Bool.and_eq_true, beq_iff_eq] at witness
+  exact witness.2
+
+theorem Pending.output_within (pending : Pending) :
+    pending.edge.outputFirst < pending.edge.outputLimit ∧ pending.edge.outputLimit ≤ pending.output.size := by
+  have witness := pending.outputExact
+  simp only [literal, Bool.and_eq_true, decide_eq_true_eq] at witness
+  exact witness.1
+
+theorem Pending.before (pending : Pending) : pending.edge.producerFinish < pending.edge.consumerStart :=
+  Consumption.checked_before (edge := pending.edge) (accepted := pending.edge)
+    (by simp [Consumption.checked, pending.valid])
+
+theorem Pending.non_numeric (pending : Pending) :
+    pending.edge.term.toList.all SearchUnicode.isDigit = false := by
+  cases numeric : pending.edge.term.toList.all SearchUnicode.isDigit with
+  | false => rfl
+  | true =>
+    have rejected := numeric_not_a_witness pending.edge.term numeric
+    have accepted := pending.classified
+    rw [rejected] at accepted
+    contradiction
 
 structure Started where
   command : String
   ordinal : Nat
-  pending : Array Consumption
+  pending : Array Pending
 
 structure Trace where
   graph : Graph := .empty
-  outputs : Std.HashMap (WitnessKind × String) (Std.HashMap Occurrence Produced) := {}
+  outputs : Std.HashMap (WitnessKind × String) (Std.HashMap Occurrence (Array Produced)) := {}
   starts : Std.HashMap Occurrence Started := {}
   finished : Std.HashMap Occurrence String := {}
   rows : Std.HashMap Occurrence (Array OutputRow) := {}
@@ -97,16 +195,20 @@ def Trace.start (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (comma
     unless previous.command == command do throw "one occurrence changed its input"
     return trace
   let mut pending := #[]
+  let input := command.toList.toArray
   for term in terms command do
-    for (_, producer) in trace.outputs[(term.kind, term.text)]?.getD {} do
-      if ordinal ≤ producer.finished then continue
-      pending := pending.push {
-        producer := producer.occurrence, consumer := occurrence
-        producerFinish := producer.finished, consumerStart := ordinal
-        kind := term.kind, term := term.text
-        inputFirst := term.first, inputLimit := term.limit
-        outputFirst := producer.term.first, outputLimit := producer.term.limit
-        rows := project (trace.rows[producer.occurrence]?.getD {}) producer.term.first producer.term.limit }
+    for (_, producers) in trace.outputs[(term.kind, term.text)]?.getD {} do
+      for producer in producers do
+        if ordinal ≤ producer.finished then continue
+        let edge : Consumption := {
+          producer := producer.occurrence, consumer := occurrence
+          producerFinish := producer.finished, consumerStart := ordinal
+          kind := term.kind, term := term.text
+          inputFirst := term.first, inputLimit := term.limit
+          outputFirst := producer.term.first, outputLimit := producer.term.limit
+          rows := project (trace.rows[producer.occurrence]?.getD {}) producer.term.first producer.term.limit }
+        if let some checked := Pending.check? edge input producer.source then
+          pending := pending.push checked
   return {trace with starts := trace.starts.insert occurrence ⟨command, ordinal, pending⟩}
 
 def Trace.finish (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (output : String) :
@@ -118,11 +220,14 @@ def Trace.finish (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (outp
     return trace
   unless started.ordinal < ordinal do throw "output predates call start"
   let mut graph := trace.graph
-  for edge in started.pending do graph ← graph.insert (.consumed edge)
+  for pending in started.pending do graph ← graph.insert (.consumed pending.edge)
   let mut outputs := trace.outputs
-  for term in terms output do
+  let source := output.toList.toArray
+  for term in termOccurrences output do
     let previous := outputs[(term.kind, term.text)]?.getD {}
-    outputs := outputs.insert (term.kind, term.text) (previous.insert occurrence ⟨occurrence, ordinal, term⟩)
+    let positions := previous[occurrence]?.getD #[]
+    outputs := outputs.insert (term.kind, term.text)
+      (previous.insert occurrence (positions.push ⟨occurrence, ordinal, term, source⟩))
   return {trace with graph, outputs, finished := trace.finished.insert occurrence output}
 
 /-- Attach verified row locations after exact native occurrence binding. -/
