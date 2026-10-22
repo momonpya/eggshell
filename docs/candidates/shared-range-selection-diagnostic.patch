@@ -1,0 +1,56 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5122 +5122,5 @@
+-    let some required := prepareRequiredCueViewsUsing records heads scopedHeads decoded dependencies | continue
++    let some required := prepareRequiredCueViewsUsing records heads scopedHeads decoded dependencies |
++      dbg_trace ("EGGSHELL_RANGE_REJECT " ++ (Json.mkObj [
++        ("owner",toJson (relationKey family.owner.relation)),("position",toJson position),
++        ("reason",toJson "required-closure-unavailable")]).compress)
++      continue
+@@ -5134,0 +5139,8 @@
++      dbg_trace ("EGGSHELL_RANGE_UNIT " ++ (Json.mkObj [
++        ("owner",toJson (relationKey family.owner.relation)),("position",toJson position),
++        ("requested",toJson (requested.map fun range => (range.start,range.stop))),
++        ("requirements",toJson (requirements.map fun range => (range.start,range.stop))),
++        ("ranges",toJson ranges),
++        ("demanded",toJson (demanded.map fun range => (range.start,range.stop))),
++        ("demandedCovered",toJson (demanded.all fun range => covers ranges range.start range.stop)),
++        ("requirementsCovered",toJson (requirements.all fun range => covers ranges range.start range.stop))]).compress)
+@@ -5280,0 +5293,29 @@
++    dbg_trace ("EGGSHELL_RANGE_SELECTION " ++ (Json.mkObj [
++      ("fixed",toJson fixed),("limit",toJson ceiling),
++      ("mandatoryPacketCost",toJson (cost mandatory)),
++      ("mandatoryDataCost",toJson fixedData),
++      ("singletonPacketCosts",toJson (families.map fun family => cost (mandatory ++ [family.template]))),
++      ("templateDataCosts",toJson (families.map fun family => (family.template.text.length+1,family.template.text.utf8ByteSize+1))),
++      ("materializedDataCost",toJson (result.foldl (fun total slice => (total.1+slice.text.length+1,total.2+slice.text.utf8ByteSize+1)) (0,0))),
++      ("families",toJson (families.map fun family => Json.mkObj [
++        ("owner",toJson (relationKey family.owner.relation)),
++        ("outcome",toJson (relationKey family.owner.outcome)),
++        ("sourceSha256",toJson (Sha256.hex ((Matcher.atomText? family.owner.outcome).getD "").toUTF8)),
++        ("workChars",toJson ((Matcher.atomText? family.owner.work).getD "").length),
++        ("sourceChars",toJson ((Matcher.atomText? family.owner.outcome).getD "").length),
++        ("windows",toJson family.windows),("references",toJson family.references),
++        ("context",toJson family.template.context.isSome)])),
++      ("units",toJson (units.map fun unit => Json.mkObj [
++        ("family",toJson unit.family),("ranges",toJson unit.ranges),
++        ("cost",toJson (unit.slice.text.length,unit.slice.text.utf8ByteSize))])),
++      ("pieces",toJson (pieces.map fun piece => Json.mkObj [
++        ("family",toJson piece.family),("first",toJson piece.first),
++        ("last",toJson piece.last),("weight",toJson piece.weight)])),
++      ("nodeCosts",toJson p.costs.toList),
++      ("offers",toJson (p.offers.toList.map fun offer => Json.mkObj [
++        ("closure",toJson (offer.closure.map (·.val))),
++        ("covers",toJson (offer.covers.map (·.val)))])),
++      ("chosen",toJson (chosen.selected.map (·.val))),
++      ("modeledCost",toJson (SharedCoverage.cost p chosen.selected)),
++      ("realCost",toJson (cost result)),
++      ("benefit",toJson (SharedCoverage.benefit p chosen.selected))]).compress)
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -13 +13 @@
+-abbrev Child := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .null }
++abbrev Child := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .inherit }
+@@ -288 +288 @@
+-            stdin := .piped, stdout := .piped, stderr := .null, setsid := true }
++            stdin := .piped, stdout := .piped, stderr := .inherit, setsid := true }

@@ -1,0 +1,1523 @@
+{
+  "scope": "New implementation only: actual offered original-code closures and static graph-frame reservations. No answering-model dispatch or candidate ranking change.",
+  "referenceRuntimeSha256": "4736accf662765004157963037c1b4152db0c369c19a195cb86f4dee7a502dc4",
+  "diagnosticOnly": true,
+  "diagnosticPatchSha256": "3f9c812f398700054258506eeba7258857e2942979f768a29dafa9331b4982ea",
+  "patchApplyCheck": true,
+  "changed": [
+    {
+      "file": "Eggshell/Handoff.lean",
+      "beforeSha256": "a995d00657d35494086a98d2599d486552bbc4a07bf0d1d1b10778e1dd89b9f1",
+      "diagnosticSha256": "b152c70eb40a40b2f4d798461ec638fd26754187fdffd07ad014547617d9d559"
+    },
+    {
+      "file": "Eggshell/Worker.lean",
+      "beforeSha256": "d59ca140da3562d6c10ed09dab38e307131b8cfc6f4383ffac455eebbfb407eb",
+      "diagnosticSha256": "35627e63982e9c0ae2e4bfc0b9d6a27709feebef72b6c0ebd5358c09df45c63d"
+    }
+  ],
+  "runs": [
+    {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022",
+      "runtimeSha256": "91b84a160cb927f831a23aec40f102fc961399b15f9742c490987d628c047054",
+      "rows": [
+        {
+          "stage": 1,
+          "elapsedMs": 11697.095208,
+          "bodySha256": "40e80c7de464f8d36fbffdd904223ea7aac073bfbea232d75013d2200e276575",
+          "sameBodyAsFrozenCandidate": true,
+          "audit": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/run/stage1/audit.json",
+          "auditSha256": "80ebf1c446990045d2d7c1c4fe0e14b83ad79ebaad567f32296a6faa67e9c340",
+          "canonicalUnchanged": true,
+          "authoritativeGraphEqual": true,
+          "beforeRoots": 97,
+          "afterRoots": 97,
+          "publication": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/run/stage1/publication/stdout",
+          "publicationSha256": "c37c8047912ddfdd94664165dc1c959be7ae344db5938d029c42d7f9c700cd5b"
+        },
+        {
+          "stage": 6,
+          "elapsedMs": 18503.255125,
+          "bodySha256": "9e358d171b9195cbde449b3dbd848c0b4e3d5c2b65636937b9f391465f4d57bc",
+          "sameBodyAsFrozenCandidate": true,
+          "audit": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/run/stage6/audit.json",
+          "auditSha256": "e43ed6cdca1f3d07151aea4d407df5fae2a43dac59c5256289fe97755d4e1100",
+          "canonicalUnchanged": true,
+          "authoritativeGraphEqual": true,
+          "beforeRoots": 253,
+          "afterRoots": 253,
+          "publication": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/run/stage6/publication/stdout",
+          "publicationSha256": "b9b3c84096a39df5be4a238996b638e5108ed9be0e0f8600a651a16651491e22"
+        }
+      ],
+      "resultSha256": "2b242ead07d261042efb374b483953afa5fdce7d7752d643148606ab8199c758"
+    },
+    {
+      "directory": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022",
+      "runtimeSha256": "debdbc80a1119add2c459e923ead5af8fa5e4c9a3b11b0ab03b68590cd355ed4",
+      "rows": [
+        {
+          "stage": 1,
+          "elapsedMs": 11407.880834,
+          "bodySha256": "40e80c7de464f8d36fbffdd904223ea7aac073bfbea232d75013d2200e276575",
+          "sameBodyAsFrozenCandidate": true,
+          "audit": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/run/stage1/audit.json",
+          "auditSha256": "41a8e0f2c47bdd370ed4e492dd750aa97ec60e5b6309902b7591d96108bd41e1",
+          "canonicalUnchanged": true,
+          "authoritativeGraphEqual": true,
+          "beforeRoots": 97,
+          "afterRoots": 97,
+          "publication": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/run/stage1/publication/stdout",
+          "publicationSha256": "2f5b89e0c611c201df317c87efb864081d4af418b97c39134b77afc0effc16b1"
+        },
+        {
+          "stage": 6,
+          "elapsedMs": 17831.521666,
+          "bodySha256": "9e358d171b9195cbde449b3dbd848c0b4e3d5c2b65636937b9f391465f4d57bc",
+          "sameBodyAsFrozenCandidate": true,
+          "audit": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/run/stage6/audit.json",
+          "auditSha256": "38c3781c5f7bcfb276fd363c389711a0a39ef428db25049b1b27ef6abbcd3da7",
+          "canonicalUnchanged": true,
+          "authoritativeGraphEqual": true,
+          "beforeRoots": 253,
+          "afterRoots": 253,
+          "publication": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/run/stage6/publication/stdout",
+          "publicationSha256": "6098f47676b29353c3c959a02cc33b0cd09ec9e24b1b4f933d75229373ba0ff6"
+        }
+      ],
+      "resultSha256": "48334a67e616ef36f5a45555512fbeef7f0f98eecfed723cba19909b79ea515c"
+    }
+  ],
+  "guards": [
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/analysis-2-guard.json",
+      "sha256": "13d56a1097b6eee4ae38ee8da52d59367001f397a6c4fe959b7ffffce4752647",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 104704,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/analysis-3-guard.json",
+      "sha256": "fdcb8b4e42e29bcd315643ced866cdad0f402fb37817e9c42faab08700fc72dc",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 104960,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/analysis-guard.json",
+      "sha256": "b5efd561d53cf29fe1caa9c11f117953eb55e1b82f9b2501ad716c81e598b26b",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 79104,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/build-2-guard.json",
+      "sha256": "6cfdfaf224758aae8a906d9e20ad68b28c5caf77c80c3b034355644475a64c5a",
+      "exitCode": -15,
+      "reason": "disk-space",
+      "peakRssKiB": 2791520,
+      "guardTriggered": true
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/build-3-guard.json",
+      "sha256": "526b769a66c128cce08526ad57f412596a99483f9a07b0c9b8724d66d5e0cf48",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 1479488,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/build-guard.json",
+      "sha256": "e1a2668ed1f275c0b4e3be55cede703d8d28e4ca0e47ffbb551ebc348266721a",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 2902320,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/resume-guard.json",
+      "sha256": "999d124ded11e7c27b4cbe825edb3377c229cc65db1102651ed505b27f3e0fdc",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 1435104,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/run-guard.json",
+      "sha256": "1632bb75491199ca64b9b2dc4df98e1ebdd02442f960a8ee6cc6528f12e4125f",
+      "exitCode": 1,
+      "reason": null,
+      "peakRssKiB": 1381584,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/analysis-guard.json",
+      "sha256": "0b44a3415b6bc79026c319bb2fe23885fbe60025afbdbcf8eb6aa7837f431387",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 105920,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/build-guard.json",
+      "sha256": "a56ef93bf139daee9c3cd2bb064d9e5fde8c31c1916b41128aa3467f0eb976e8",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 2852640,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/generic-analysis-guard.json",
+      "sha256": "12673b4ad22d7e8909f6d6065f9d4062a22d0b0baf8a6f5dbd020da5fd768799",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 110960,
+      "guardTriggered": false
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/run-guard.json",
+      "sha256": "f1515b5af8f3f99adf1389687ad5b225bc23a1b0b3e313f05a69fabf330c2edd",
+      "exitCode": 0,
+      "reason": null,
+      "peakRssKiB": 1435456,
+      "guardTriggered": false
+    }
+  ],
+  "analysis": {
+    "file": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/generic-cost-analysis.json",
+    "sha256": "a30b494ca31b4965f385aa9e2c145390d5fc9ca4bd5e4fecb856ae8155339518",
+    "script": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/analyze_shared_range_audit.py",
+    "scriptSha256": "43c0ade3d26ed7807098a01e44b9eba15fd85d42624279f8fbf006186424f8e1",
+    "rows": [
+      {
+        "stage": 1,
+        "referenceSelectionExactlyReproduced": true,
+        "modeledCost": [
+          119516,
+          119516
+        ],
+        "realCost": [
+          113329,
+          113329
+        ],
+        "materializedDataCost": [
+          104637,
+          104637
+        ],
+        "fixedReservation": [
+          14258,
+          14258
+        ],
+        "actualFrameCost": [
+          8692,
+          8692
+        ],
+        "correctedCurrentCost": [
+          119037,
+          119037
+        ],
+        "conditionalCurrentCost": [
+          115294,
+          115294
+        ],
+        "recoverablePayloadCharge": [
+          479,
+          479
+        ],
+        "ambiguousNodeOccurrences": 96,
+        "uniqueAmbiguousNodes": 68,
+        "unseparableNodes": [],
+        "counterfactuals": {
+          "counterfactual": {
+            "cost": [
+              119994,
+              119998
+            ],
+            "benefit": 8341557502882929140599769802972046626528,
+            "productionExecuted": false
+          },
+          "conditionalCounter": {
+            "cost": [
+              119539,
+              119539
+            ],
+            "benefit": 8354994572581244338547351715770947750098,
+            "productionExecuted": false
+          },
+          "combinedCounter": {
+            "cost": [
+              119986,
+              119990
+            ],
+            "benefit": 8475488652353012308892261966973964485470,
+            "productionExecuted": false
+          }
+        },
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "owners": [
+              {
+                "owner": "v18406153573121058748",
+                "family": 2,
+                "requiredOriginalRanges": [
+                  [
+                    7101,
+                    23091,
+                    23149
+                  ],
+                  [
+                    7102,
+                    23189,
+                    23224
+                  ],
+                  [
+                    7104,
+                    23230,
+                    23266
+                  ],
+                  [
+                    7105,
+                    23270,
+                    23280
+                  ],
+                  [
+                    7106,
+                    23286,
+                    23311
+                  ]
+                ],
+                "allOffered": true,
+                "current": true,
+                "counterfactual": true,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  106,
+                  107,
+                  108,
+                  109,
+                  114,
+                  115,
+                  116,
+                  117,
+                  118,
+                  119,
+                  120,
+                  121,
+                  122,
+                  123,
+                  136,
+                  137
+                ],
+                "minCompleteOfferCost": 1539
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 4,
+                "requiredOriginalRanges": [
+                  [
+                    7101,
+                    26820,
+                    26878
+                  ],
+                  [
+                    7102,
+                    26930,
+                    26965
+                  ],
+                  [
+                    7104,
+                    26995,
+                    27031
+                  ],
+                  [
+                    7105,
+                    27047,
+                    27057
+                  ],
+                  [
+                    7106,
+                    27075,
+                    27100
+                  ]
+                ],
+                "allOffered": true,
+                "current": true,
+                "counterfactual": true,
+                "conditional": true,
+                "combined": true,
+                "singleCompleteOffers": [
+                  206,
+                  207,
+                  210,
+                  211,
+                  214,
+                  215,
+                  218,
+                  219,
+                  222,
+                  223,
+                  226,
+                  227,
+                  230,
+                  231,
+                  232,
+                  233,
+                  234,
+                  235,
+                  238,
+                  239,
+                  246,
+                  247,
+                  264,
+                  265
+                ],
+                "minCompleteOfferCost": 1461
+              }
+            ],
+            "current": true,
+            "counterfactual": true,
+            "allOffered": true,
+            "conditional": true,
+            "combined": true
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "owners": [
+              {
+                "owner": "v18406153573121058748",
+                "family": 2,
+                "requiredOriginalRanges": [
+                  [
+                    7244,
+                    29214,
+                    29240
+                  ],
+                  [
+                    7245,
+                    29246,
+                    29277
+                  ],
+                  [
+                    7246,
+                    29285,
+                    29334
+                  ],
+                  [
+                    7247,
+                    29347,
+                    29392
+                  ],
+                  [
+                    7248,
+                    29404,
+                    29436
+                  ],
+                  [
+                    7249,
+                    29446,
+                    29517
+                  ],
+                  [
+                    7250,
+                    29525,
+                    29529
+                  ],
+                  [
+                    7251,
+                    29539,
+                    29609
+                  ],
+                  [
+                    7252,
+                    29617,
+                    29623
+                  ]
+                ],
+                "allOffered": false,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [],
+                "minCompleteOfferCost": null
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 4,
+                "requiredOriginalRanges": [
+                  [
+                    7244,
+                    34659,
+                    34685
+                  ],
+                  [
+                    7245,
+                    34703,
+                    34734
+                  ],
+                  [
+                    7246,
+                    34754,
+                    34803
+                  ],
+                  [
+                    7247,
+                    34828,
+                    34873
+                  ],
+                  [
+                    7248,
+                    34897,
+                    34929
+                  ],
+                  [
+                    7249,
+                    34951,
+                    35022
+                  ],
+                  [
+                    7250,
+                    35042,
+                    35046
+                  ],
+                  [
+                    7251,
+                    35068,
+                    35138
+                  ],
+                  [
+                    7252,
+                    35158,
+                    35164
+                  ]
+                ],
+                "allOffered": true,
+                "current": true,
+                "counterfactual": true,
+                "conditional": true,
+                "combined": true,
+                "singleCompleteOffers": [
+                  206,
+                  207,
+                  232,
+                  233
+                ],
+                "minCompleteOfferCost": 2035
+              }
+            ],
+            "current": true,
+            "counterfactual": true,
+            "allOffered": true,
+            "conditional": true,
+            "combined": true
+          },
+          {
+            "name": "default-toolchain-selection",
+            "owners": [
+              {
+                "owner": "v13168123294867106979",
+                "family": 3,
+                "requiredOriginalRanges": [
+                  [
+                    1699,
+                    20262,
+                    20283
+                  ],
+                  [
+                    1700,
+                    20291,
+                    20362
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": true,
+                "conditional": true,
+                "combined": true,
+                "singleCompleteOffers": [
+                  186,
+                  187,
+                  200,
+                  201,
+                  204,
+                  205
+                ],
+                "minCompleteOfferCost": 2124
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 4,
+                "requiredOriginalRanges": [
+                  [
+                    1699,
+                    13729,
+                    13750
+                  ],
+                  [
+                    1700,
+                    13770,
+                    13841
+                  ]
+                ],
+                "allOffered": true,
+                "current": true,
+                "counterfactual": true,
+                "conditional": true,
+                "combined": true,
+                "singleCompleteOffers": [
+                  268,
+                  269,
+                  272,
+                  273
+                ],
+                "minCompleteOfferCost": 2074
+              }
+            ],
+            "current": true,
+            "counterfactual": true,
+            "allOffered": true,
+            "conditional": true,
+            "combined": true
+          },
+          {
+            "name": "trailing-language-warning",
+            "owners": [
+              {
+                "owner": "v15256267109356037303",
+                "family": 10,
+                "requiredOriginalRanges": [
+                  [
+                    3131,
+                    25923,
+                    25978
+                  ],
+                  [
+                    3132,
+                    25996,
+                    26059
+                  ],
+                  [
+                    3133,
+                    26077,
+                    26108
+                  ],
+                  [
+                    3134,
+                    26130,
+                    26178
+                  ],
+                  [
+                    3135,
+                    26198,
+                    26259
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  538,
+                  539
+                ],
+                "minCompleteOfferCost": 2210
+              }
+            ],
+            "current": false,
+            "counterfactual": false,
+            "allOffered": true,
+            "conditional": false,
+            "combined": false
+          }
+        ]
+      },
+      {
+        "stage": 6,
+        "referenceSelectionExactlyReproduced": true,
+        "modeledCost": [
+          119772,
+          119772
+        ],
+        "realCost": [
+          99256,
+          99256
+        ],
+        "materializedDataCost": [
+          90998,
+          90998
+        ],
+        "fixedReservation": [
+          28301,
+          28301
+        ],
+        "actualFrameCost": [
+          8258,
+          8258
+        ],
+        "correctedCurrentCost": [
+          119298,
+          119298
+        ],
+        "conditionalCurrentCost": [
+          100875,
+          100875
+        ],
+        "recoverablePayloadCharge": [
+          474,
+          474
+        ],
+        "ambiguousNodeOccurrences": 169,
+        "uniqueAmbiguousNodes": 124,
+        "unseparableNodes": [],
+        "counterfactuals": {
+          "counterfactual": {
+            "cost": [
+              119964,
+              119968
+            ],
+            "benefit": 1657330060523895263686571902553965051394768496446473915577912554035550,
+            "productionExecuted": false
+          },
+          "conditionalCounter": {
+            "cost": [
+              119981,
+              120761
+            ],
+            "benefit": 1913725842433258675478700651060815729018650969567530268502907953434830,
+            "productionExecuted": false
+          },
+          "combinedCounter": {
+            "cost": [
+              119973,
+              119977
+            ],
+            "benefit": 1949483460563516006218913188506761960333479970116375283861422018492030,
+            "productionExecuted": false
+          }
+        },
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "owners": [
+              {
+                "owner": "v18406153573121058748",
+                "family": 16,
+                "requiredOriginalRanges": [
+                  [
+                    7101,
+                    23091,
+                    23149
+                  ],
+                  [
+                    7102,
+                    23189,
+                    23224
+                  ],
+                  [
+                    7104,
+                    23230,
+                    23266
+                  ],
+                  [
+                    7105,
+                    23270,
+                    23280
+                  ],
+                  [
+                    7106,
+                    23286,
+                    23311
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  590,
+                  591,
+                  618,
+                  619,
+                  622,
+                  623,
+                  624,
+                  625,
+                  626,
+                  627,
+                  632,
+                  633,
+                  634,
+                  635
+                ],
+                "minCompleteOfferCost": 1626
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 19,
+                "requiredOriginalRanges": [
+                  [
+                    7101,
+                    26820,
+                    26878
+                  ],
+                  [
+                    7102,
+                    26930,
+                    26965
+                  ],
+                  [
+                    7104,
+                    26995,
+                    27031
+                  ],
+                  [
+                    7105,
+                    27047,
+                    27057
+                  ],
+                  [
+                    7106,
+                    27075,
+                    27100
+                  ]
+                ],
+                "allOffered": true,
+                "current": true,
+                "counterfactual": true,
+                "conditional": true,
+                "combined": true,
+                "singleCompleteOffers": [
+                  723,
+                  724,
+                  741,
+                  742,
+                  743,
+                  744,
+                  749,
+                  750,
+                  751,
+                  752,
+                  755,
+                  756,
+                  759,
+                  760,
+                  775,
+                  776,
+                  777,
+                  778
+                ],
+                "minCompleteOfferCost": 1548
+              },
+              {
+                "owner": "v10600833252250082589",
+                "family": 30,
+                "requiredOriginalRanges": [
+                  [
+                    7101,
+                    22144,
+                    22202
+                  ],
+                  [
+                    7102,
+                    22254,
+                    22289
+                  ],
+                  [
+                    7104,
+                    22319,
+                    22355
+                  ],
+                  [
+                    7105,
+                    22371,
+                    22381
+                  ],
+                  [
+                    7106,
+                    22399,
+                    22424
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  1248,
+                  1249,
+                  1256,
+                  1257,
+                  1258,
+                  1259,
+                  1260,
+                  1261,
+                  1262,
+                  1263,
+                  1264,
+                  1265,
+                  1266,
+                  1267,
+                  1268,
+                  1269,
+                  1272,
+                  1273,
+                  1274,
+                  1275
+                ],
+                "minCompleteOfferCost": 1557
+              }
+            ],
+            "current": true,
+            "counterfactual": true,
+            "allOffered": true,
+            "conditional": true,
+            "combined": true
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "owners": [
+              {
+                "owner": "v18406153573121058748",
+                "family": 16,
+                "requiredOriginalRanges": [
+                  [
+                    7244,
+                    29214,
+                    29240
+                  ],
+                  [
+                    7245,
+                    29246,
+                    29277
+                  ],
+                  [
+                    7246,
+                    29285,
+                    29334
+                  ],
+                  [
+                    7247,
+                    29347,
+                    29392
+                  ],
+                  [
+                    7248,
+                    29404,
+                    29436
+                  ],
+                  [
+                    7249,
+                    29446,
+                    29517
+                  ],
+                  [
+                    7250,
+                    29525,
+                    29529
+                  ],
+                  [
+                    7251,
+                    29539,
+                    29609
+                  ],
+                  [
+                    7252,
+                    29617,
+                    29623
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  626,
+                  627
+                ],
+                "minCompleteOfferCost": 2196
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 19,
+                "requiredOriginalRanges": [
+                  [
+                    7244,
+                    34659,
+                    34685
+                  ],
+                  [
+                    7245,
+                    34703,
+                    34734
+                  ],
+                  [
+                    7246,
+                    34754,
+                    34803
+                  ],
+                  [
+                    7247,
+                    34828,
+                    34873
+                  ],
+                  [
+                    7248,
+                    34897,
+                    34929
+                  ],
+                  [
+                    7249,
+                    34951,
+                    35022
+                  ],
+                  [
+                    7250,
+                    35042,
+                    35046
+                  ],
+                  [
+                    7251,
+                    35068,
+                    35138
+                  ],
+                  [
+                    7252,
+                    35158,
+                    35164
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  760
+                ],
+                "minCompleteOfferCost": 4496
+              },
+              {
+                "owner": "v10600833252250082589",
+                "family": 30,
+                "requiredOriginalRanges": [
+                  [
+                    7244,
+                    29983,
+                    30009
+                  ],
+                  [
+                    7245,
+                    30027,
+                    30058
+                  ],
+                  [
+                    7246,
+                    30078,
+                    30127
+                  ],
+                  [
+                    7247,
+                    30152,
+                    30197
+                  ],
+                  [
+                    7248,
+                    30221,
+                    30253
+                  ],
+                  [
+                    7249,
+                    30275,
+                    30346
+                  ],
+                  [
+                    7250,
+                    30366,
+                    30370
+                  ],
+                  [
+                    7251,
+                    30392,
+                    30462
+                  ],
+                  [
+                    7252,
+                    30482,
+                    30488
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  1262,
+                  1263,
+                  1275
+                ],
+                "minCompleteOfferCost": 2124
+              }
+            ],
+            "current": false,
+            "counterfactual": false,
+            "allOffered": true,
+            "conditional": false,
+            "combined": false
+          },
+          {
+            "name": "default-toolchain-selection",
+            "owners": [
+              {
+                "owner": "v13168123294867106979",
+                "family": 6,
+                "requiredOriginalRanges": [
+                  [
+                    1699,
+                    20262,
+                    20283
+                  ],
+                  [
+                    1700,
+                    20291,
+                    20362
+                  ]
+                ],
+                "allOffered": true,
+                "current": true,
+                "counterfactual": true,
+                "conditional": true,
+                "combined": true,
+                "singleCompleteOffers": [
+                  161,
+                  162,
+                  169,
+                  170
+                ],
+                "minCompleteOfferCost": 2211
+              },
+              {
+                "owner": "v9756138358688687787",
+                "family": 8,
+                "requiredOriginalRanges": [
+                  [
+                    1699,
+                    19005,
+                    19026
+                  ],
+                  [
+                    1700,
+                    19046,
+                    19117
+                  ]
+                ],
+                "allOffered": true,
+                "current": true,
+                "counterfactual": true,
+                "conditional": true,
+                "combined": true,
+                "singleCompleteOffers": [
+                  251,
+                  252,
+                  259,
+                  260
+                ],
+                "minCompleteOfferCost": 2130
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 19,
+                "requiredOriginalRanges": [
+                  [
+                    1699,
+                    13729,
+                    13750
+                  ],
+                  [
+                    1700,
+                    13770,
+                    13841
+                  ]
+                ],
+                "allOffered": true,
+                "current": true,
+                "counterfactual": true,
+                "conditional": true,
+                "combined": true,
+                "singleCompleteOffers": [
+                  761,
+                  762,
+                  781,
+                  782
+                ],
+                "minCompleteOfferCost": 2161
+              }
+            ],
+            "current": true,
+            "counterfactual": true,
+            "allOffered": true,
+            "conditional": true,
+            "combined": true
+          },
+          {
+            "name": "syntax-only-compile-cutoff",
+            "owners": [
+              {
+                "owner": "v9756138358688687787",
+                "family": 8,
+                "requiredOriginalRanges": [
+                  [
+                    360,
+                    1595,
+                    1663
+                  ],
+                  [
+                    361,
+                    1690,
+                    1755
+                  ],
+                  [
+                    362,
+                    1782,
+                    1793
+                  ],
+                  [
+                    363,
+                    1825,
+                    1882
+                  ],
+                  [
+                    364,
+                    1909,
+                    1970
+                  ],
+                  [
+                    365,
+                    1997,
+                    2052
+                  ],
+                  [
+                    366,
+                    2079,
+                    2136
+                  ],
+                  [
+                    367,
+                    2163,
+                    2227
+                  ],
+                  [
+                    368,
+                    2254,
+                    2307
+                  ],
+                  [
+                    369,
+                    2334,
+                    2387
+                  ],
+                  [
+                    370,
+                    2414,
+                    2467
+                  ],
+                  [
+                    371,
+                    2485,
+                    2514
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  246
+                ],
+                "minCompleteOfferCost": 3995
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 19,
+                "requiredOriginalRanges": [
+                  [
+                    360,
+                    40696,
+                    40764
+                  ],
+                  [
+                    361,
+                    40791,
+                    40856
+                  ],
+                  [
+                    362,
+                    40883,
+                    40894
+                  ],
+                  [
+                    363,
+                    40926,
+                    40983
+                  ],
+                  [
+                    364,
+                    41010,
+                    41071
+                  ],
+                  [
+                    365,
+                    41098,
+                    41153
+                  ],
+                  [
+                    366,
+                    41180,
+                    41237
+                  ],
+                  [
+                    367,
+                    41264,
+                    41328
+                  ],
+                  [
+                    368,
+                    41355,
+                    41408
+                  ],
+                  [
+                    369,
+                    41435,
+                    41488
+                  ],
+                  [
+                    370,
+                    41515,
+                    41568
+                  ],
+                  [
+                    371,
+                    41586,
+                    41615
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  717
+                ],
+                "minCompleteOfferCost": 2658
+              }
+            ],
+            "current": false,
+            "counterfactual": false,
+            "allOffered": true,
+            "conditional": false,
+            "combined": false
+          },
+          {
+            "name": "trailing-language-warning",
+            "owners": [
+              {
+                "owner": "v15256267109356037303",
+                "family": 10,
+                "requiredOriginalRanges": [
+                  [
+                    3131,
+                    25923,
+                    25978
+                  ],
+                  [
+                    3132,
+                    25996,
+                    26059
+                  ],
+                  [
+                    3133,
+                    26077,
+                    26108
+                  ],
+                  [
+                    3134,
+                    26130,
+                    26178
+                  ],
+                  [
+                    3135,
+                    26198,
+                    26259
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  327,
+                  328
+                ],
+                "minCompleteOfferCost": 2210
+              },
+              {
+                "owner": "v14863864136040263094",
+                "family": 26,
+                "requiredOriginalRanges": [
+                  [
+                    3131,
+                    5657,
+                    5712
+                  ],
+                  [
+                    3132,
+                    5730,
+                    5793
+                  ],
+                  [
+                    3133,
+                    5811,
+                    5842
+                  ],
+                  [
+                    3134,
+                    5864,
+                    5912
+                  ],
+                  [
+                    3135,
+                    5932,
+                    5993
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": true,
+                "conditional": false,
+                "combined": true,
+                "singleCompleteOffers": [
+                  1040,
+                  1041,
+                  1042,
+                  1043,
+                  1073
+                ],
+                "minCompleteOfferCost": 2151
+              }
+            ],
+            "current": false,
+            "counterfactual": true,
+            "allOffered": true,
+            "conditional": false,
+            "combined": true
+          },
+          {
+            "name": "syntax-only-no-output-action",
+            "owners": [
+              {
+                "owner": "v11960447802706886118",
+                "family": 59,
+                "requiredOriginalRanges": [
+                  [
+                    5327,
+                    9894,
+                    9937
+                  ],
+                  [
+                    5328,
+                    9957,
+                    10021
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  2082,
+                  2083,
+                  2084,
+                  2085,
+                  2109
+                ],
+                "minCompleteOfferCost": 2033
+              }
+            ],
+            "current": false,
+            "counterfactual": false,
+            "allOffered": true,
+            "conditional": false,
+            "combined": false
+          },
+          {
+            "name": "frontend-job-construction",
+            "owners": [
+              {
+                "owner": "v11731249417270010951",
+                "family": 62,
+                "requiredOriginalRanges": [
+                  [
+                    6382,
+                    5102,
+                    5167
+                  ]
+                ],
+                "allOffered": true,
+                "current": false,
+                "counterfactual": false,
+                "conditional": false,
+                "combined": false,
+                "singleCompleteOffers": [
+                  2194,
+                  2195,
+                  2207,
+                  2215,
+                  2218,
+                  2219
+                ],
+                "minCompleteOfferCost": 1560
+              }
+            ],
+            "current": false,
+            "counterfactual": false,
+            "allOffered": true,
+            "conditional": false,
+            "combined": false
+          }
+        ]
+      }
+    ]
+  },
+  "conclusions": [
+    "Every missing required block in the audited first/last stages exists in at least one complete offered closure; final selection omits it. This is not a corpus-absence conclusion or a model-variance explanation.",
+    "The large cost gap is primarily full-candidate graph/source-status reservation, not partially overlapping payload. For stage1 fixed 14258 versus actual 8692; stage6 fixed 28301 versus actual 8258.",
+    "Reproducing the exact native chosen indices, cost and benefit succeeds before all counterfactuals. Changing only payload overlap charges or replacing full-domain reservation with single-owner marginal frame charges does not restore every required block.",
+    "Counterfactual selections are numerical replays only. Their delivery bodies, final actual packet costs, quality and token reductions have not been executed or established.",
+    "No new full six-stage trial or answering-model run was started for these insufficient counterfactuals. Next inspect current-query cue valuation and source identity/duplication before proposing a replacement shared graph/payload basis."
+  ],
+  "knownFailures": [
+    "Initial diagnostic trace syntax error, corrected with parentheses; no candidate behavior change.",
+    "A native build was stopped by the unchanged 3072 MiB disk reserve. After the process was terminal and space recovered, only unfinished native compilation resumed.",
+    "The first diagnostic compared a writable clone byte-for-byte with its pre-query snapshot and rejected a normal derived memo revision. The clone instead matches the qualified candidate post-query bytes exactly; independent publication audit verifies unchanged authoritative graph/roots/unions. Completed stage1 was reused, not rerun.",
+    "Original-code mapping initially assumed numbered observations. The generic analysis now matches the exact code sequence in both numbered and plain sed output, through verified original JSON coordinates."
+  ],
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "newTokenReductionMeasured": false,
+  "productionAdoption": false,
+  "goalComplete": false,
+  "scriptSha256": "17f4b5ca324af01401c61f498caddb4d8d8da0f4101a7026fa119fed5fe70b3c"
+}
