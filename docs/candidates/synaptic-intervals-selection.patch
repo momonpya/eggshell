@@ -1,0 +1,58 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 6cf3d86..2975491 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5141,6 +5141,7 @@ structure Family where
+   referenceRanks : List (Nat × Nat) := []
+   referenceRanges : List (Nat × List (Nat × Nat)) := []
+   synapticRanges : List (Nat × Nat × Nat) := []
++  synapticGroups : List (Nat × List (Nat × Nat)) := []
+   provenance : List SourceEvidence.Record := []
+ 
+ structure UnitPlan where
+@@ -5235,8 +5236,8 @@ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat 
+   let aligned := fun range => match decoded with
+     | none => some range
+     | some layout => (decodedEvidenceUsing? layout range).map (·.original)
+-  let cues := (rankedContextRanges source (work.length+1) positions).map fun range =>
+-    (range.start,range.stop)
++  let cues := ((rankedContextRanges source (work.length+1) positions).map fun range =>
++    (range.start,range.stop)) ++ family.synapticRanges.map (fun (_,first,last) => (first,last))
+   if cues.isEmpty then return ([],[])
+   let some envelope := family.template.context |
+     return ([{family := familyIndex,slice := family.template,ranges := [(0,source.length)]}],cues)
+@@ -5280,7 +5281,7 @@ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat 
+   -- intersect them. Offer that exact bounded data with its original scope;
+   -- the unchanged selector still decides its value against current focus.
+   if Matcher.nativeOutcome family.owner then
+-    for (_,spans) in family.referenceRanges ++ family.synapticRanges.map (fun (priority,a,b) => (priority,[(a,b)])) do
++    for (_,spans) in family.referenceRanges ++ family.synapticGroups do
+       let some quoted := citationRecordRanges source spans | continue
+       let requested := quoted.filterMap aligned
+       if requested.length != quoted.length || requested.isEmpty then continue
+@@ -5572,7 +5573,8 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+     (referencePriorities : List (Value × Nat) := [])
+     (referenceRanks : List (Value × List (Nat × Nat)) := [])
+     (referenceRanges : List (Value × List (Nat × List (Nat × Nat))) := [])
+-    (synapticRanges : List (Value × List (Nat × Nat × Nat)) := []) : Option Handoff :=
++    (synapticRanges : List (Value × List (Nat × Nat × Nat)) := [])
++    (synapticGroups : List (Value × List (Nat × List (Nat × Nat))) := []) : Option Handoff :=
+   let extraction := prepared.val
+   let attach := fun selected : Selected => {
+     selected with
+@@ -5760,6 +5762,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+             referenceRanks := ranks
+             referenceRanges := ranges
+             synapticRanges := (synapticRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
++            synapticGroups := (synapticGroups.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+             provenance := (contextRows.find? (·.1.relation == owner.relation)).map Prod.snd |>.getD []} : SharedRangeAdapter.Family) else []
+     let locations := SharedRangeAdapter.RangeLocators.combine
+       (families.flatMap SharedRangeAdapter.RangeLocators.prepare)
+@@ -7163,6 +7166,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+     (referenceRanks := referenceRanks)
+     (referenceRanges := referenceRanges)
+     (synapticRanges := synaptic.ranges)
++    (synapticGroups := synaptic.groups)
+   let rendered := rendered.map fun handoff => {handoff with synapticComplete := synaptic.complete}
+   Receipt.observe source.receipt "synaptic-delivery" (synaptic.receipt ((rendered.map (·.text)).getD ""))
+   let rendered := rendered.map fun handoff =>

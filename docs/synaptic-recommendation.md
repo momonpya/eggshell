@@ -7,6 +7,7 @@
 2026-10-23の実フック接続は[synaptic-delivery.md](synaptic-delivery.md)、
 厳密な実ログ移行・破損した任意索引への対処は[synaptic-evidence.md](synaptic-evidence.md)を参照する。
 最新の位置保持・語の種類の検査と証明は[synaptic-named-witnesses.md](synaptic-named-witnesses.md)を参照する。
+辺の抽出・原文区間・数値窓なしの候補化の接続不良は[synaptic-intervals.md](synaptic-intervals.md)で検査する。
 以下の初期診断や未接続の記録と、現在の隔離候補の適用範囲を区別する。
 
 現行の`Value.Operator`はall/outcome/occurrence/inquiry/receiptの5種である。

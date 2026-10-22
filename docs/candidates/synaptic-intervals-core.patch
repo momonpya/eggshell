@@ -1,0 +1,242 @@
+diff --git a/Eggshell/SynapseBuild.lean b/Eggshell/SynapseBuild.lean
+index 0831e34..551d10e 100644
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -213,7 +213,8 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Resul
+     let files := available.foldl (fun files read => files.insert read.source.file) ({} : Std.HashSet File)
+     let citations := ((layout (doc.source.getD "")).map fun decoded =>
+       paragraphCitations decoded.text files.toArray).toOption.getD #[]
+-    let needed := available.filter fun read => citations.any (fun cited => read.source.contains cited)
++    let needed := available.filter fun read => citations.any (fun cited =>
++      (cited.intersection? read.source).isSome)
+     let mut located := #[]
+     let mut seen : Std.HashSet Nat := {}
+     for read in needed do
+diff --git a/Eggshell/SynapseExtraction.lean b/Eggshell/SynapseExtraction.lean
+index 1c3cf49..a73a1df 100644
+--- a/Eggshell/SynapseExtraction.lean
++++ b/Eggshell/SynapseExtraction.lean
+@@ -246,9 +246,9 @@ def supportCitations (graph : Graph) (claim : Claim) (cited : Array Range) (read
+     (original : Array Read := #[]) :
+     Except String Graph := do
+   let mut graph := graph
+-  for source in cited do
++  for citation in cited do
+     for recorded in reads do
+-      if recorded.source.contains source then
++      if let some source := citation.intersection? recorded.source then
+         let rows := original.filter (fun row => row.occurrence == recorded.occurrence &&
+           row.binding.database == recorded.binding.database &&
+           row.binding.owner == recorded.binding.owner && row.binding.work == recorded.binding.work &&
+@@ -258,7 +258,7 @@ def supportCitations (graph : Graph) (claim : Claim) (cited : Array Range) (read
+           let first := rows.foldl (fun first row => min first row.binding.first) recorded.binding.limit
+           let limit := rows.foldl (fun limit row => max limit row.binding.limit) recorded.binding.first
+           pure {recorded.binding with first, limit}
+-        let support ← Support.checked recorded source claim binding
++        let support ← Support.checked recorded source claim binding citation
+         graph ← graph.insert (.supports support)
+         graph ← graph.insert (.coquoted (.answer claim.database claim.answer) source)
+         graph ← graph.insert (.coquoted (.claim claim) source)
+diff --git a/Eggshell/SynapseIndex.lean b/Eggshell/SynapseIndex.lean
+index e5c4c30..5c0b730 100644
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -237,12 +237,22 @@ def replace (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope : Sco
+   checkFacts source.head.identity scope facts
+   Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun _ => do
+     let index ← prepare source storage scope
+-    if let some previous ← manifest? index then
++    let previous ← manifest? index
++    if let some previous := previous then
+       if scope == .shared && previous.source.revision > source.head.revision then
+         throw (IO.userError "older source cannot replace a later synaptic publication")
+     let wanted := facts.foldl (fun wanted fact => wanted.insert (factName fact)) ({} : Std.HashSet String)
+-    let old ← allFacts index
++    let compatible := previous.any fun saved => saved.implementation == implementation && saved.scope == scope
++    let old ← if compatible then allFacts index else pure #[]
++    -- A full rebuild replaces derived rows by key. Decoding obsolete fact
++    -- formats would make the very operation intended to retire them fail.
++    -- Keep immutable event witnesses, source pages and pinned readers intact.
++    let mut obsolete : Array String := #[]
++    if !compatible then
++      for range in [PageMap.KeyRange.mk "fact:" "fact;", PageMap.KeyRange.mk "lookup:" "lookup;"] do
++        obsolete ← index.foldRange range (fun names row => pure (names.push row.1)) obsolete
+     let (_, head, _) ← PageMap.withWriter index fun writer => do
++      for name in obsolete do writer.put name none
+       for fact in old do
+         if !wanted.contains (factName fact) then let _ ← erase writer fact; pure ()
+       for fact in facts do let _ ← insert writer source.head.identity scope fact; pure ()
+diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
+index 9f3b0c4..cc40656 100644
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -41,6 +41,18 @@ def Plan.ranges (plan : Plan) : List (Value × List (Nat × Nat × Nat)) :=
+     (owner.owner.relation, (owner.located.toList.map fun located =>
+       (located.offer.priority, located.row.binding.first, located.row.binding.limit)).eraseDups)
+ 
++/-- Keep the finite rows of one evidence item together. Scalar row positions
++are needed by the renderer, but flattening them must not erase that a citation
++or a usage observation recommends a complete interval. -/
++def Plan.groups (plan : Plan) : List (Value × List (Nat × List (Nat × Nat))) :=
++  plan.owners.toList.map fun owner =>
++    let identities := (owner.located.toList.map (·.offer.identity)).eraseDups
++    (owner.owner.relation, identities.filterMap fun identity => do
++      let locations := owner.located.toList.filter (·.offer.identity == identity)
++      let first ← locations.head?
++      pure (first.offer.priority, (locations.map fun location =>
++        (location.row.binding.first,location.row.binding.limit)).eraseDups))
++
+ /-- Stored original rows are the only source of transport coordinates.
+ Neither a graph hint nor its priority may invent a range or an owner. -/
+ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat))
+diff --git a/Eggshell/Synapses.lean b/Eggshell/Synapses.lean
+index 17e955b..53211cd 100644
+--- a/Eggshell/Synapses.lean
++++ b/Eggshell/Synapses.lean
+@@ -40,6 +40,24 @@ def Range.contains (outer inner : Range) : Bool :=
+ theorem Range.contains_self (range : Range) : range.contains range = true := by
+   simp [Range.contains]
+ 
++/-- A saved part of a citation must lie in both original intervals. The
++fingerprint is part of equality; a path match alone cannot make an overlap. -/
++def Range.intersection? (left right : Range) : Option Range :=
++  let source := {left with first := max left.first right.first, last := min left.last right.last}
++  if source.valid && left.contains source && right.contains source then some source else none
++
++theorem Range.intersection_within {left right source : Range}
++    (found : left.intersection? right = some source) :
++    source.valid = true ∧ left.contains source = true ∧ right.contains source = true := by
++  unfold intersection? at found
++  dsimp only at found
++  split at found
++  · rename_i valid
++    simp only [Option.some.injEq] at found
++    subst source
++    simpa only [Bool.and_eq_true, and_assoc] using valid
++  · contradiction
++
+ structure Occurrence where
+   session : String
+   turn : String
+@@ -85,6 +103,8 @@ structure Support where
+   source : Range
+   claim : Claim
+   binding : Binding
++  /-- The original citation can be wider than the part present in this read. -/
++  cited : Range := source
+   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+ 
+ def Support.valid (support : Support) : Bool :=
+@@ -92,17 +112,18 @@ def Support.valid (support : Support) : Bool :=
+     support.binding.valid && support.binding.database == support.read.binding.database &&
+     support.binding.owner == support.read.binding.owner && support.binding.work == support.read.binding.work &&
+     support.read.binding.first ≤ support.binding.first && support.binding.limit ≤ support.read.binding.limit &&
++    support.cited.valid && support.cited.contains support.source &&
+     support.read.source.contains support.source
+ 
+ /-- The constructor checks the exact saved read covers the cited source range. -/
+ def Support.checked (read : Read) (source : Range) (claim : Claim)
+-    (binding : Binding := read.binding) : Except String Support :=
+-  let support := Support.mk read source claim binding
++    (binding : Binding := read.binding) (cited : Range := source) : Except String Support :=
++  let support := Support.mk read source claim binding cited
+   if support.valid then .ok support else .error "citation is not covered by its recorded read"
+ 
+ theorem Support.checked_covers {read : Read} {source : Range} {claim : Claim}
+-    {binding : Binding} {support : Support}
+-    (checked : Support.checked read source claim binding = .ok support) :
++    {binding : Binding} {cited : Range} {support : Support}
++    (checked : Support.checked read source claim binding cited = .ok support) :
+     read.source.contains source = true := by
+   unfold Support.checked at checked
+   dsimp only at checked
+@@ -112,6 +133,18 @@ theorem Support.checked_covers {read : Read} {source : Range} {claim : Claim}
+     exact valid.2
+   next => contradiction
+ 
++theorem Support.checked_within_citation {read : Read} {source : Range} {claim : Claim}
++    {binding : Binding} {cited : Range} {support : Support}
++    (checked : Support.checked read source claim binding cited = .ok support) :
++    cited.contains source = true := by
++  unfold Support.checked at checked
++  dsimp only at checked
++  split at checked
++  next valid =>
++    simp only [Support.valid, Bool.and_eq_true] at valid
++    exact valid.1.2
++  next => contradiction
++
+ inductive WitnessKind where
+   | pathLine | path | identifier
+   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+diff --git a/tests/SynapseExtractionTests.lean b/tests/SynapseExtractionTests.lean
+index b6aeb5d..0a458ab 100644
+--- a/tests/SynapseExtractionTests.lean
++++ b/tests/SynapseExtractionTests.lean
+@@ -51,6 +51,26 @@ private def checkSource : IO (Array Read × Presentation) := do
+   check (precise.binding.first == rows[1]!.binding.first &&
+     precise.binding.limit == rows[1]!.binding.limit)
+     "citation retained the whole ancestor read instead of its exact original row"
++  let broad := {answer with source := some "[日本語.cpp:9–14](src/日本語.cpp:9)"}
++  let clipped ← IO.ofExcept (addAnswer "database" broad reads Graph.empty)
++  let supports := clipped.snapshot.filterMap fun fact =>
++    match fact with | .supports value => some value | _ => none
++  check (supports.size == 1 && supports.all (fun support =>
++    support.cited.first == 9 && support.cited.last == 14 &&
++    support.source.first == 10 && support.source.last == 12 &&
++    support.read.source.contains support.source && support.cited.contains support.source))
++    "a partially stored citation was discarded or invented unobserved rows"
++  let outside := {answer with source := some "[日本語.cpp:13–14](src/日本語.cpp:13)"}
++  let unrelated ← IO.ofExcept (addAnswer "database" outside reads Graph.empty)
++  check (unrelated.snapshot.isEmpty) "a disjoint citation acquired saved evidence"
++  let gapped := {doc with source := some (toJson "    10\t日本語 α\n    12\tgamma\n").compress}
++  let reads ← IO.ofExcept (recordedReads "database" gapped)
++  let clipped ← IO.ofExcept (addAnswer "database" broad reads Graph.empty)
++  let supports := clipped.snapshot.filterMap fun fact =>
++    match fact with | .supports value => some value | _ => none
++  check (supports.size == 2 && supports.all (fun support =>
++    support.source.first == support.source.last && support.source.first != 11))
++    "citation projection invented a row in a stored gap"
+   return (rows, presented)
+ 
+ private def checkFeedback (rows : Array Read) (packet : Presentation) : IO Unit := do
+diff --git a/tests/SynapseIndexTests.lean b/tests/SynapseIndexTests.lean
+index aac8a9c..88a4036 100644
+--- a/tests/SynapseIndexTests.lean
++++ b/tests/SynapseIndexTests.lean
+@@ -88,6 +88,27 @@ private def bounded (root : System.FilePath) : IO Unit := do
+   check (complete.complete && complete.facts.size == 1000) "complete lookup lost coquotation incidence"
+   IO.println s!"bounded posting scan pages={result.postingPages}; full posting scan pages={complete.postingPages}"
+ 
++private def obsoleteEncoding (root : System.FilePath) : IO Unit := do
++  let snapshot ← DB.PageMap.create (root / "obsolete.egg") "source-authority"
++  let before := snapshot.head
++  let old := readFact snapshot.head.identity "obsolete"
++  let current := readFact snapshot.head.identity "current"
++  let _ ← Index.replace snapshot .database .shared #[old]
++  let reader ← needReader snapshot
++  let pinned := reader.index.head
++  let _ ← DB.PageMap.withWriter reader.index fun writer => do
++    writer.put "manifest" (some (← checkedBytes {reader.manifest with implementation := "obsolete bytes"}))
++    writer.put (factName old) (some "undecodable obsolete fact".toUTF8)
++  check ((← Index.openShared? snapshot).isNone) "obsolete implementation was considered ready"
++  let _ ← Index.replace snapshot .database .shared #[current]
++  let fresh ← needReader snapshot
++  check ((← lookup fresh (.owner snapshot.head.identity "current")).facts == #[current] &&
++    (← lookup fresh (.owner snapshot.head.identity "obsolete")).facts.isEmpty)
++    "full rebuild decoded obsolete bytes or retained obsolete postings"
++  check ((← lookup reader (.owner snapshot.head.identity "obsolete")).facts == #[old] &&
++    reader.index.head == pinned && (← DB.PageMap.pin snapshot.directory).head == before)
++    "rebuilding derived data altered pinned evidence or source publication"
++
+ private def privacy (root : System.FilePath) : IO Unit := do
+   let snapshot ← DB.PageMap.create (root / "readonly.egg") "source-authority"
+   let usage : Fact := .used {
+@@ -157,6 +178,7 @@ def main (args : List String) : IO Unit := do
+   IO.FS.createDirAll root
+   basics root
+   bounded root
++  obsoleteEncoding root
+   privacy root
+   filesystemReadOnly root
+   IO.println "native synaptic index checks passed: atomic delta, idempotence, bounded reads, source invalidation, private usage and cross-chat reuse"
