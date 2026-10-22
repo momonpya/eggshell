@@ -1,0 +1,3575 @@
+{
+  "status": "completed-diagnostic-only-no-delivery-fix",
+  "base": "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022",
+  "baseRuntimeSha256": "6db03cfb21625376e54d465e8147779f58a83136627990851abc779f7640bfd1",
+  "runtimeSha256": "f2cd231b3ace76a7308c77abf50a29f87a98ebdc071acc857ba680f51f06eaad",
+  "sourceManifest": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/frozen-domain-inputs.json",
+  "sourceManifestSha256": "c7aaf6fd6a1519c80fa1f92a04c1d28d0d382e6a84603de2091250a6b6f8a01a",
+  "patch": "docs/candidates/current-selection-scores-diagnostic.patch",
+  "patchSha256": "16ee016564e95cb5290726e78942e21afec67eac4371d26eb07780f0c7d7f960",
+  "changedFiles": [
+    {
+      "file": "Eggshell/Handoff.lean",
+      "beforeSha256": "5969a5cb4fefddce6794d997643e19bbe2a8b3042c5e6d55db49d75f5da89780",
+      "afterSha256": "bef654fab493c150d9f505c8e11a874d46c3de3dfb9675760defc5d45fa0ae73"
+    },
+    {
+      "file": "Eggshell/SearchProvider.lean",
+      "beforeSha256": "375d739788c47d15e7249b2833dc5a15d85a02014bc3a81211c5c0c32714116c",
+      "afterSha256": "a0a39b022d6be181f28bcad6f1e80ae114599efcc7e9418dcf268d2e4d15d50a"
+    },
+    {
+      "file": "Eggshell/Worker.lean",
+      "beforeSha256": "d59ca140da3562d6c10ed09dab38e307131b8cfc6f4383ffac455eebbfb407eb",
+      "afterSha256": "7e264853b2c075fd027a401c8daac6453808514b2845d83fe0d725cad1e20630"
+    }
+  ],
+  "patchAppliedExactly": true,
+  "qualifications": [
+    {
+      "stage": 1,
+      "elapsedMs": 12571.53925,
+      "bodySha256": "24a7fe1635163726bb522b77b29ba883d984f316aa4df3278c654ff23c5954ac",
+      "referenceSha256": "24a7fe1635163726bb522b77b29ba883d984f316aa4df3278c654ff23c5954ac",
+      "sameBody": true,
+      "audit": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage1/audit.json",
+      "auditSha256": "5aa987247fa43260374b626ae61b3dfb3768374678c15829a05854bbdb19024a",
+      "sourceUnchanged": true,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/readme-matched-20261021/checkpoints/stage1/work.egg",
+        "files": {
+          "head": "733a50e14a1e6a54cae54a7b2e89b2ef9c67726f569c3414b652eb85c39cc2af",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "26bbde5e4b37b88b84744046cd00f58b1214367810dad085b15f0c0b212d9e51"
+        }
+      },
+      "numericalReceipts": [
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage1/data/receipts/b50310216ce485b32f9a5de9bedabcc093b38fb83bb2031656e8c932db4d7d9b/numerical-23607-2516182668892916.json",
+          "sha256": "839a6f30cdb44cc10c4645503835e02af44c98618caba4d01dc4003ce2bd0edc",
+          "purpose": "focus",
+          "sourceHits": 1919,
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage1/data/receipts/b50310216ce485b32f9a5de9bedabcc093b38fb83bb2031656e8c932db4d7d9b/numerical-23573-2516180067487541.json",
+          "sha256": "7b7d9d421ed43ecc2f66539b745ccc36fbbc2f407ec2209c02fcd287d668b097",
+          "purpose": "discovery",
+          "sourceHits": 1919,
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0
+        }
+      ],
+      "publication": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage1/publication/record.json",
+      "publicationSha256": "11ff071447a2fcf740cefb83f90a439b8592ea9c3463eef3549501cc58c08f79"
+    },
+    {
+      "stage": 6,
+      "elapsedMs": 19521.139541,
+      "bodySha256": "9f82074383c90278d520cf7342711a6f8aadcc8597e2de9e2b226cc2824022ed",
+      "referenceSha256": "9f82074383c90278d520cf7342711a6f8aadcc8597e2de9e2b226cc2824022ed",
+      "sameBody": true,
+      "audit": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage6/audit.json",
+      "auditSha256": "282f90a86665505af58d46a675a014ebc445bc05eb41e3e96487ed84ecb99926",
+      "sourceUnchanged": true,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage6/work.egg",
+        "files": {
+          "head": "3c45c01e9768a49cb1d4a09e88ce2c3dd1b52bc0466b2ad0efa93057429fefea",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "7447e519c91ce6b6686e3e356938af1c643e92de6c0fd6eb551d2a786cc6f657"
+        }
+      },
+      "numericalReceipts": [
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage6/data/receipts/2de73a5ba85b13c66619e84a4e2f1d5413dd14bc8db92594b37eceafde2d944a/numerical-23906-2516197156057958.json",
+          "sha256": "848e041dc59813103bf4b6a55ac119854bf7a210704b61f998c17cd428b3cdc7",
+          "purpose": "discovery",
+          "sourceHits": 3070,
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0
+        },
+        {
+          "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage6/data/receipts/2de73a5ba85b13c66619e84a4e2f1d5413dd14bc8db92594b37eceafde2d944a/numerical-23932-2516200481623333.json",
+          "sha256": "ba60afaef91fab8e071b5fd993fba16a955f7f2906ee987d69c1480381273acc",
+          "purpose": "focus",
+          "sourceHits": 3070,
+          "sourceAbsent": 0,
+          "sourceUnusable": 0,
+          "sourceEncodeUs": 0
+        }
+      ],
+      "publication": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage6/publication/record.json",
+      "publicationSha256": "831c4dfe829e3f40781f9516b13e44bc34ddeb4a20b0cd1f8f210b8222c4e834"
+    }
+  ],
+  "analysis": {
+    "rows": [
+      {
+        "stage": 1,
+        "originalBodyPreserved": true,
+        "nativeSelectionExactlyReplayed": true,
+        "focusDocuments": 37,
+        "focusScoredWindows": 1919,
+        "completeScoreDomainVerified": true,
+        "ambiguousNumericalViews": [
+          {
+            "document": 6,
+            "possibleOwners": [
+              "v6086051053744440956",
+              "v10117161730939691488",
+              "v6784653395983009672"
+            ]
+          },
+          {
+            "document": 80,
+            "possibleOwners": [
+              "v6086051053744440956",
+              "v10117161730939691488",
+              "v6784653395983009672"
+            ]
+          },
+          {
+            "document": 252,
+            "possibleOwners": [
+              "v6086051053744440956",
+              "v10117161730939691488",
+              "v6784653395983009672"
+            ]
+          }
+        ],
+        "audit": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage1/audit.json",
+        "auditSha256": "5aa987247fa43260374b626ae61b3dfb3768374678c15829a05854bbdb19024a",
+        "querySha256": "88e6ade36f875af7981d49c09feee096dbe7aa92163539a88ed7cc14ad77f92d",
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "delivered": true,
+            "owners": [
+              {
+                "owner": "v18406153573121058748",
+                "family": 2,
+                "requiredRanges": [
+                  [
+                    23091,
+                    23149
+                  ],
+                  [
+                    23189,
+                    23224
+                  ],
+                  [
+                    23230,
+                    23266
+                  ],
+                  [
+                    23270,
+                    23280
+                  ],
+                  [
+                    23286,
+                    23311
+                  ]
+                ],
+                "completeOffers": [
+                  106,
+                  107,
+                  108,
+                  109,
+                  114,
+                  115,
+                  116,
+                  117,
+                  118,
+                  119,
+                  120,
+                  121,
+                  122,
+                  123,
+                  152,
+                  153,
+                  154,
+                  155,
+                  156,
+                  157,
+                  158,
+                  159,
+                  160,
+                  161,
+                  162,
+                  163,
+                  164,
+                  165,
+                  166,
+                  167,
+                  168,
+                  169,
+                  170,
+                  171,
+                  172,
+                  173,
+                  174,
+                  175,
+                  176,
+                  177,
+                  178,
+                  179,
+                  180,
+                  181,
+                  182,
+                  183,
+                  184,
+                  185,
+                  186,
+                  187,
+                  188,
+                  189,
+                  199
+                ],
+                "selectedCompleteOffers": [
+                  118,
+                  164,
+                  165,
+                  175,
+                  182
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 1539,
+                "intersectingCues": [
+                  {
+                    "position": 60,
+                    "range": [
+                      22879,
+                      23391
+                    ],
+                    "focusedPriority": 9,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 36,
+                    "globalNumericalRankBounds": [
+                      36,
+                      36
+                    ],
+                    "numericalScore": 0.44844841957092285,
+                    "numericalScoreRange": [
+                      0.44844841957092285,
+                      0.44844841957092285
+                    ],
+                    "coversAllRequiredLines": true
+                  },
+                  {
+                    "position": 61,
+                    "range": [
+                      23263,
+                      23775
+                    ],
+                    "focusedPriority": 8,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 35,
+                    "globalNumericalRankBounds": [
+                      35,
+                      35
+                    ],
+                    "numericalScore": 0.45048075914382935,
+                    "numericalScoreRange": [
+                      0.45048075914382935,
+                      0.45048075914382935
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 4,
+                "requiredRanges": [
+                  [
+                    26820,
+                    26878
+                  ],
+                  [
+                    26930,
+                    26965
+                  ],
+                  [
+                    26995,
+                    27031
+                  ],
+                  [
+                    27047,
+                    27057
+                  ],
+                  [
+                    27075,
+                    27100
+                  ]
+                ],
+                "completeOffers": [
+                  292,
+                  293,
+                  296,
+                  297,
+                  300,
+                  301,
+                  304,
+                  305,
+                  308,
+                  309,
+                  312,
+                  313,
+                  316,
+                  317,
+                  318,
+                  319,
+                  320,
+                  321,
+                  324,
+                  325,
+                  332,
+                  333,
+                  366,
+                  367,
+                  368,
+                  369,
+                  370,
+                  371,
+                  372,
+                  373,
+                  374,
+                  375,
+                  376,
+                  377,
+                  378,
+                  379,
+                  380,
+                  381,
+                  382,
+                  383,
+                  384,
+                  385,
+                  386,
+                  387,
+                  388,
+                  389,
+                  390,
+                  391,
+                  392,
+                  393,
+                  394,
+                  395,
+                  396,
+                  397,
+                  398,
+                  399,
+                  400,
+                  401,
+                  402,
+                  403,
+                  404,
+                  405,
+                  406,
+                  407,
+                  408,
+                  409,
+                  420
+                ],
+                "selectedCompleteOffers": [
+                  366,
+                  367
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 1461,
+                "intersectingCues": [
+                  {
+                    "position": 70,
+                    "range": [
+                      26690,
+                      27202
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 503,
+                    "globalNumericalRankBounds": [
+                      503,
+                      503
+                    ],
+                    "numericalScore": 0.3757699728012085,
+                    "numericalScoreRange": [
+                      0.3757699728012085,
+                      0.3757699728012085
+                    ],
+                    "coversAllRequiredLines": true
+                  },
+                  {
+                    "position": 71,
+                    "range": [
+                      27074,
+                      27586
+                    ],
+                    "focusedPriority": 6,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 30,
+                    "globalNumericalRankBounds": [
+                      30,
+                      30
+                    ],
+                    "numericalScore": 0.4542407989501953,
+                    "numericalScoreRange": [
+                      0.4542407989501953,
+                      0.4542407989501953
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "delivered": true,
+            "owners": [
+              {
+                "owner": "v18406153573121058748",
+                "family": 2,
+                "requiredRanges": [
+                  [
+                    29214,
+                    29240
+                  ],
+                  [
+                    29246,
+                    29277
+                  ],
+                  [
+                    29285,
+                    29334
+                  ],
+                  [
+                    29347,
+                    29392
+                  ],
+                  [
+                    29404,
+                    29436
+                  ],
+                  [
+                    29446,
+                    29517
+                  ],
+                  [
+                    29525,
+                    29529
+                  ],
+                  [
+                    29539,
+                    29609
+                  ],
+                  [
+                    29617,
+                    29623
+                  ]
+                ],
+                "completeOffers": [
+                  173,
+                  174,
+                  175,
+                  176,
+                  177,
+                  179,
+                  181
+                ],
+                "selectedCompleteOffers": [
+                  175
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2079,
+                "intersectingCues": [
+                  {
+                    "position": 76,
+                    "range": [
+                      29023,
+                      29535
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 227,
+                    "globalNumericalRankBounds": [
+                      227,
+                      227
+                    ],
+                    "numericalScore": 0.40637946128845215,
+                    "numericalScoreRange": [
+                      0.40637946128845215,
+                      0.40637946128845215
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 77,
+                    "range": [
+                      29407,
+                      29919
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 93,
+                    "globalNumericalRankBounds": [
+                      93,
+                      93
+                    ],
+                    "numericalScore": 0.42971235513687134,
+                    "numericalScoreRange": [
+                      0.42971235513687134,
+                      0.42971235513687134
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 4,
+                "requiredRanges": [
+                  [
+                    34659,
+                    34685
+                  ],
+                  [
+                    34703,
+                    34734
+                  ],
+                  [
+                    34754,
+                    34803
+                  ],
+                  [
+                    34828,
+                    34873
+                  ],
+                  [
+                    34897,
+                    34929
+                  ],
+                  [
+                    34951,
+                    35022
+                  ],
+                  [
+                    35042,
+                    35046
+                  ],
+                  [
+                    35068,
+                    35138
+                  ],
+                  [
+                    35158,
+                    35164
+                  ]
+                ],
+                "completeOffers": [
+                  292,
+                  293,
+                  318,
+                  319,
+                  391,
+                  393
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2035,
+                "intersectingCues": [
+                  {
+                    "position": 90,
+                    "range": [
+                      34370,
+                      34882
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 254,
+                    "globalNumericalRankBounds": [
+                      254,
+                      254
+                    ],
+                    "numericalScore": 0.4018770456314087,
+                    "numericalScoreRange": [
+                      0.4018770456314087,
+                      0.4018770456314087
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 91,
+                    "range": [
+                      34754,
+                      35266
+                    ],
+                    "focusedPriority": 13,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 124,
+                    "globalNumericalRankBounds": [
+                      124,
+                      124
+                    ],
+                    "numericalScore": 0.42366886138916016,
+                    "numericalScoreRange": [
+                      0.42366886138916016,
+                      0.42366886138916016
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 92,
+                    "range": [
+                      35138,
+                      35650
+                    ],
+                    "focusedPriority": 0,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 51,
+                    "globalNumericalRankBounds": [
+                      51,
+                      51
+                    ],
+                    "numericalScore": 0.4425176680088043,
+                    "numericalScoreRange": [
+                      0.4425176680088043,
+                      0.4425176680088043
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "default-toolchain-selection",
+            "delivered": true,
+            "owners": [
+              {
+                "owner": "v13168123294867106979",
+                "family": 3,
+                "requiredRanges": [
+                  [
+                    20262,
+                    20283
+                  ],
+                  [
+                    20291,
+                    20362
+                  ]
+                ],
+                "completeOffers": [
+                  246,
+                  247,
+                  282,
+                  283,
+                  284,
+                  285,
+                  289
+                ],
+                "selectedCompleteOffers": [
+                  246
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2124,
+                "intersectingCues": [
+                  {
+                    "position": 52,
+                    "range": [
+                      19805,
+                      20317
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 599,
+                    "globalNumericalRankBounds": [
+                      599,
+                      599
+                    ],
+                    "numericalScore": 0.36788100004196167,
+                    "numericalScoreRange": [
+                      0.36788100004196167,
+                      0.36788100004196167
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 53,
+                    "range": [
+                      20189,
+                      20701
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 636,
+                    "globalNumericalRankBounds": [
+                      636,
+                      636
+                    ],
+                    "numericalScore": 0.36507925391197205,
+                    "numericalScoreRange": [
+                      0.36507925391197205,
+                      0.36507925391197205
+                    ],
+                    "coversAllRequiredLines": true
+                  }
+                ]
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 4,
+                "requiredRanges": [
+                  [
+                    13729,
+                    13750
+                  ],
+                  [
+                    13770,
+                    13841
+                  ]
+                ],
+                "completeOffers": [
+                  421,
+                  422,
+                  423,
+                  424,
+                  427,
+                  428,
+                  430
+                ],
+                "selectedCompleteOffers": [
+                  423
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2074,
+                "intersectingCues": [
+                  {
+                    "position": 35,
+                    "range": [
+                      13250,
+                      13762
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1330,
+                    "globalNumericalRankBounds": [
+                      1330,
+                      1330
+                    ],
+                    "numericalScore": 0.31220734119415283,
+                    "numericalScoreRange": [
+                      0.31220734119415283,
+                      0.31220734119415283
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 36,
+                    "range": [
+                      13634,
+                      14146
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1517,
+                    "globalNumericalRankBounds": [
+                      1517,
+                      1517
+                    ],
+                    "numericalScore": 0.2894376814365387,
+                    "numericalScoreRange": [
+                      0.2894376814365387,
+                      0.2894376814365387
+                    ],
+                    "coversAllRequiredLines": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "trailing-language-warning",
+            "delivered": false,
+            "owners": [
+              {
+                "owner": "v15256267109356037303",
+                "family": 10,
+                "requiredRanges": [
+                  [
+                    25923,
+                    25978
+                  ],
+                  [
+                    25996,
+                    26059
+                  ],
+                  [
+                    26077,
+                    26108
+                  ],
+                  [
+                    26130,
+                    26178
+                  ],
+                  [
+                    26198,
+                    26259
+                  ]
+                ],
+                "completeOffers": [
+                  813,
+                  814
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2210,
+                "intersectingCues": [
+                  {
+                    "position": 68,
+                    "range": [
+                      25866,
+                      26378
+                    ],
+                    "focusedPriority": 4,
+                    "referencePriority": null,
+                    "globalNumericalRank": 241,
+                    "globalNumericalRankBounds": [
+                      241,
+                      241
+                    ],
+                    "numericalScore": 0.40438875555992126,
+                    "numericalScoreRange": [
+                      0.40438875555992126,
+                      0.40438875555992126
+                    ],
+                    "coversAllRequiredLines": true
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "missingRequired": [
+          "trailing-language-warning"
+        ]
+      },
+      {
+        "stage": 6,
+        "originalBodyPreserved": true,
+        "nativeSelectionExactlyReplayed": true,
+        "focusDocuments": 95,
+        "focusScoredWindows": 3070,
+        "completeScoreDomainVerified": true,
+        "ambiguousNumericalViews": [
+          {
+            "document": 6,
+            "possibleOwners": [
+              "v6086051053744440956",
+              "v10117161730939691488",
+              "v6784653395983009672",
+              "v2849346017345138296",
+              "v10110357147818994769",
+              "v12202731169561273226"
+            ]
+          },
+          {
+            "document": 80,
+            "possibleOwners": [
+              "v6086051053744440956",
+              "v10117161730939691488",
+              "v6784653395983009672",
+              "v2849346017345138296",
+              "v10110357147818994769",
+              "v12202731169561273226"
+            ]
+          },
+          {
+            "document": 252,
+            "possibleOwners": [
+              "v6086051053744440956",
+              "v10117161730939691488",
+              "v6784653395983009672",
+              "v2849346017345138296",
+              "v10110357147818994769",
+              "v12202731169561273226"
+            ]
+          },
+          {
+            "document": 599,
+            "possibleOwners": [
+              "v6086051053744440956",
+              "v10117161730939691488",
+              "v6784653395983009672",
+              "v2849346017345138296",
+              "v10110357147818994769",
+              "v12202731169561273226"
+            ]
+          },
+          {
+            "document": 646,
+            "possibleOwners": [
+              "v6086051053744440956",
+              "v10117161730939691488",
+              "v6784653395983009672",
+              "v2849346017345138296",
+              "v10110357147818994769",
+              "v12202731169561273226"
+            ]
+          },
+          {
+            "document": 656,
+            "possibleOwners": [
+              "v6086051053744440956",
+              "v10117161730939691488",
+              "v6784653395983009672",
+              "v2849346017345138296",
+              "v10110357147818994769",
+              "v12202731169561273226"
+            ]
+          }
+        ],
+        "audit": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged/stage6/audit.json",
+        "auditSha256": "282f90a86665505af58d46a675a014ebc445bc05eb41e3e96487ed84ecb99926",
+        "querySha256": "a8d5401727378392e63e3f9d16a228dcb480bebbb93bc63878acb13bb79153ae",
+        "blocks": [
+          {
+            "name": "toolchain-cache-key",
+            "delivered": true,
+            "owners": [
+              {
+                "owner": "v18406153573121058748",
+                "family": 16,
+                "requiredRanges": [
+                  [
+                    23091,
+                    23149
+                  ],
+                  [
+                    23189,
+                    23224
+                  ],
+                  [
+                    23230,
+                    23266
+                  ],
+                  [
+                    23270,
+                    23280
+                  ],
+                  [
+                    23286,
+                    23311
+                  ]
+                ],
+                "completeOffers": [
+                  694,
+                  695,
+                  722,
+                  723,
+                  726,
+                  727,
+                  752,
+                  753,
+                  754,
+                  755,
+                  756,
+                  757,
+                  758,
+                  759,
+                  760,
+                  761,
+                  762,
+                  763,
+                  764,
+                  765,
+                  766,
+                  767,
+                  768,
+                  769,
+                  770,
+                  771,
+                  772,
+                  773,
+                  774,
+                  775,
+                  776,
+                  777,
+                  778,
+                  779,
+                  780,
+                  781,
+                  782,
+                  783,
+                  784,
+                  785,
+                  786,
+                  787,
+                  788,
+                  789,
+                  790,
+                  791,
+                  792,
+                  793,
+                  794,
+                  795,
+                  796,
+                  797,
+                  807
+                ],
+                "selectedCompleteOffers": [
+                  694,
+                  772,
+                  773,
+                  785,
+                  792
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 1626,
+                "intersectingCues": [
+                  {
+                    "position": 60,
+                    "range": [
+                      22879,
+                      23391
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 313,
+                    "globalNumericalRankBounds": [
+                      313,
+                      313
+                    ],
+                    "numericalScore": 0.5243837237358093,
+                    "numericalScoreRange": [
+                      0.5243837237358093,
+                      0.5243837237358093
+                    ],
+                    "coversAllRequiredLines": true
+                  },
+                  {
+                    "position": 61,
+                    "range": [
+                      23263,
+                      23775
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 1005,
+                    "globalNumericalRankBounds": [
+                      1005,
+                      1005
+                    ],
+                    "numericalScore": 0.4501442313194275,
+                    "numericalScoreRange": [
+                      0.4501442313194275,
+                      0.4501442313194275
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 19,
+                "requiredRanges": [
+                  [
+                    26820,
+                    26878
+                  ],
+                  [
+                    26930,
+                    26965
+                  ],
+                  [
+                    26995,
+                    27031
+                  ],
+                  [
+                    27047,
+                    27057
+                  ],
+                  [
+                    27075,
+                    27100
+                  ]
+                ],
+                "completeOffers": [
+                  895,
+                  896,
+                  913,
+                  914,
+                  915,
+                  916,
+                  921,
+                  922,
+                  923,
+                  924,
+                  927,
+                  928,
+                  945,
+                  946,
+                  947,
+                  948,
+                  949,
+                  950,
+                  951,
+                  952,
+                  953,
+                  954,
+                  955,
+                  956,
+                  957,
+                  958,
+                  959,
+                  960,
+                  961,
+                  962,
+                  963,
+                  964,
+                  965,
+                  966,
+                  967,
+                  968,
+                  969,
+                  970,
+                  971,
+                  972,
+                  973,
+                  974,
+                  975,
+                  976,
+                  977,
+                  978,
+                  979,
+                  980,
+                  981,
+                  982,
+                  983,
+                  984,
+                  985,
+                  986,
+                  987,
+                  988,
+                  989,
+                  990,
+                  991,
+                  992,
+                  993,
+                  994,
+                  995,
+                  996,
+                  997,
+                  998,
+                  1012
+                ],
+                "selectedCompleteOffers": [
+                  913,
+                  914
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 1548,
+                "intersectingCues": [
+                  {
+                    "position": 70,
+                    "range": [
+                      26690,
+                      27202
+                    ],
+                    "focusedPriority": 14,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 588,
+                    "globalNumericalRankBounds": [
+                      588,
+                      588
+                    ],
+                    "numericalScore": 0.48699426651000977,
+                    "numericalScoreRange": [
+                      0.48699426651000977,
+                      0.48699426651000977
+                    ],
+                    "coversAllRequiredLines": true
+                  },
+                  {
+                    "position": 71,
+                    "range": [
+                      27074,
+                      27586
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 1274,
+                    "globalNumericalRankBounds": [
+                      1274,
+                      1274
+                    ],
+                    "numericalScore": 0.4311462342739105,
+                    "numericalScoreRange": [
+                      0.4311462342739105,
+                      0.4311462342739105
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              },
+              {
+                "owner": "v10600833252250082589",
+                "family": 30,
+                "requiredRanges": [
+                  [
+                    22144,
+                    22202
+                  ],
+                  [
+                    22254,
+                    22289
+                  ],
+                  [
+                    22319,
+                    22355
+                  ],
+                  [
+                    22371,
+                    22381
+                  ],
+                  [
+                    22399,
+                    22424
+                  ]
+                ],
+                "completeOffers": [
+                  1628,
+                  1629,
+                  1636,
+                  1637,
+                  1638,
+                  1639,
+                  1640,
+                  1641,
+                  1642,
+                  1643,
+                  1644,
+                  1645,
+                  1646,
+                  1647,
+                  1648,
+                  1649,
+                  1652,
+                  1653,
+                  1654,
+                  1655,
+                  1656,
+                  1657,
+                  1658,
+                  1659,
+                  1660,
+                  1661,
+                  1662,
+                  1663,
+                  1664,
+                  1665,
+                  1666,
+                  1667,
+                  1668,
+                  1669,
+                  1670,
+                  1671,
+                  1672,
+                  1673,
+                  1674,
+                  1675,
+                  1676,
+                  1677,
+                  1678,
+                  1679,
+                  1695
+                ],
+                "selectedCompleteOffers": [
+                  1664,
+                  1665,
+                  1670,
+                  1675
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 1551,
+                "intersectingCues": [
+                  {
+                    "position": 57,
+                    "range": [
+                      21696,
+                      22208
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1601,
+                    "globalNumericalRankBounds": [
+                      1601,
+                      1601
+                    ],
+                    "numericalScore": 0.4091270864009857,
+                    "numericalScoreRange": [
+                      0.4091270864009857,
+                      0.4091270864009857
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 58,
+                    "range": [
+                      22080,
+                      22592
+                    ],
+                    "focusedPriority": 7,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 846,
+                    "globalNumericalRankBounds": [
+                      846,
+                      846
+                    ],
+                    "numericalScore": 0.4619404375553131,
+                    "numericalScoreRange": [
+                      0.4619404375553131,
+                      0.4619404375553131
+                    ],
+                    "coversAllRequiredLines": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "complete-hlsl-branch-scope",
+            "delivered": true,
+            "owners": [
+              {
+                "owner": "v18406153573121058748",
+                "family": 16,
+                "requiredRanges": [
+                  [
+                    29214,
+                    29240
+                  ],
+                  [
+                    29246,
+                    29277
+                  ],
+                  [
+                    29285,
+                    29334
+                  ],
+                  [
+                    29347,
+                    29392
+                  ],
+                  [
+                    29404,
+                    29436
+                  ],
+                  [
+                    29446,
+                    29517
+                  ],
+                  [
+                    29525,
+                    29529
+                  ],
+                  [
+                    29539,
+                    29609
+                  ],
+                  [
+                    29617,
+                    29623
+                  ]
+                ],
+                "completeOffers": [
+                  783,
+                  784,
+                  785,
+                  786,
+                  787,
+                  789,
+                  791
+                ],
+                "selectedCompleteOffers": [
+                  785
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2166,
+                "intersectingCues": [
+                  {
+                    "position": 76,
+                    "range": [
+                      29023,
+                      29535
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 1012,
+                    "globalNumericalRankBounds": [
+                      1012,
+                      1012
+                    ],
+                    "numericalScore": 0.44963952898979187,
+                    "numericalScoreRange": [
+                      0.44963952898979187,
+                      0.44963952898979187
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 77,
+                    "range": [
+                      29407,
+                      29919
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 924,
+                    "globalNumericalRankBounds": [
+                      924,
+                      924
+                    ],
+                    "numericalScore": 0.4560374915599823,
+                    "numericalScoreRange": [
+                      0.4560374915599823,
+                      0.4560374915599823
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 19,
+                "requiredRanges": [
+                  [
+                    34659,
+                    34685
+                  ],
+                  [
+                    34703,
+                    34734
+                  ],
+                  [
+                    34754,
+                    34803
+                  ],
+                  [
+                    34828,
+                    34873
+                  ],
+                  [
+                    34897,
+                    34929
+                  ],
+                  [
+                    34951,
+                    35022
+                  ],
+                  [
+                    35042,
+                    35046
+                  ],
+                  [
+                    35068,
+                    35138
+                  ],
+                  [
+                    35158,
+                    35164
+                  ]
+                ],
+                "completeOffers": [
+                  976,
+                  977,
+                  978,
+                  979,
+                  980,
+                  982
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2122,
+                "intersectingCues": [
+                  {
+                    "position": 90,
+                    "range": [
+                      34370,
+                      34882
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 1730,
+                    "globalNumericalRankBounds": [
+                      1730,
+                      1730
+                    ],
+                    "numericalScore": 0.40032315254211426,
+                    "numericalScoreRange": [
+                      0.40032315254211426,
+                      0.40032315254211426
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 91,
+                    "range": [
+                      34754,
+                      35266
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 1002,
+                    "globalNumericalRankBounds": [
+                      1002,
+                      1002
+                    ],
+                    "numericalScore": 0.4502418041229248,
+                    "numericalScoreRange": [
+                      0.4502418041229248,
+                      0.4502418041229248
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 92,
+                    "range": [
+                      35138,
+                      35650
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 1648,
+                    "globalNumericalRankBounds": [
+                      1648,
+                      1648
+                    ],
+                    "numericalScore": 0.40554139018058777,
+                    "numericalScoreRange": [
+                      0.40554139018058777,
+                      0.40554139018058777
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              },
+              {
+                "owner": "v10600833252250082589",
+                "family": 30,
+                "requiredRanges": [
+                  [
+                    29983,
+                    30009
+                  ],
+                  [
+                    30027,
+                    30058
+                  ],
+                  [
+                    30078,
+                    30127
+                  ],
+                  [
+                    30152,
+                    30197
+                  ],
+                  [
+                    30221,
+                    30253
+                  ],
+                  [
+                    30275,
+                    30346
+                  ],
+                  [
+                    30366,
+                    30370
+                  ],
+                  [
+                    30392,
+                    30462
+                  ],
+                  [
+                    30482,
+                    30488
+                  ]
+                ],
+                "completeOffers": [
+                  1642,
+                  1643,
+                  1679
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2124,
+                "intersectingCues": [
+                  {
+                    "position": 78,
+                    "range": [
+                      29760,
+                      30272
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1569,
+                    "globalNumericalRankBounds": [
+                      1569,
+                      1569
+                    ],
+                    "numericalScore": 0.4110150933265686,
+                    "numericalScoreRange": [
+                      0.4110150933265686,
+                      0.4110150933265686
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 79,
+                    "range": [
+                      30144,
+                      30656
+                    ],
+                    "focusedPriority": 14,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 902,
+                    "globalNumericalRankBounds": [
+                      902,
+                      902
+                    ],
+                    "numericalScore": 0.4574332535266876,
+                    "numericalScoreRange": [
+                      0.4574332535266876,
+                      0.4574332535266876
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "default-toolchain-selection",
+            "delivered": true,
+            "owners": [
+              {
+                "owner": "v13168123294867106979",
+                "family": 6,
+                "requiredRanges": [
+                  [
+                    20262,
+                    20283
+                  ],
+                  [
+                    20291,
+                    20362
+                  ]
+                ],
+                "completeOffers": [
+                  183,
+                  184,
+                  185,
+                  186,
+                  189,
+                  190,
+                  192
+                ],
+                "selectedCompleteOffers": [
+                  189
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2211,
+                "intersectingCues": [
+                  {
+                    "position": 52,
+                    "range": [
+                      19805,
+                      20317
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 1567,
+                    "globalNumericalRankBounds": [
+                      1567,
+                      1567
+                    ],
+                    "numericalScore": 0.41121208667755127,
+                    "numericalScoreRange": [
+                      0.41121208667755127,
+                      0.41121208667755127
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 53,
+                    "range": [
+                      20189,
+                      20701
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 1440,
+                    "globalNumericalRankBounds": [
+                      1440,
+                      1440
+                    ],
+                    "numericalScore": 0.4205292761325836,
+                    "numericalScoreRange": [
+                      0.4205292761325836,
+                      0.4205292761325836
+                    ],
+                    "coversAllRequiredLines": true
+                  }
+                ]
+              },
+              {
+                "owner": "v9756138358688687787",
+                "family": 8,
+                "requiredRanges": [
+                  [
+                    19005,
+                    19026
+                  ],
+                  [
+                    19046,
+                    19117
+                  ]
+                ],
+                "completeOffers": [
+                  275,
+                  276,
+                  289,
+                  290,
+                  292,
+                  294
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2130,
+                "intersectingCues": [
+                  {
+                    "position": 49,
+                    "range": [
+                      18626,
+                      19138
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 2616,
+                    "globalNumericalRankBounds": [
+                      2616,
+                      2616
+                    ],
+                    "numericalScore": 0.31956422328948975,
+                    "numericalScoreRange": [
+                      0.31956422328948975,
+                      0.31956422328948975
+                    ],
+                    "coversAllRequiredLines": true
+                  },
+                  {
+                    "position": 50,
+                    "range": [
+                      19010,
+                      19522
+                    ],
+                    "focusedPriority": 21,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1607,
+                    "globalNumericalRankBounds": [
+                      1607,
+                      1607
+                    ],
+                    "numericalScore": 0.4087604880332947,
+                    "numericalScoreRange": [
+                      0.4087604880332947,
+                      0.4087604880332947
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 19,
+                "requiredRanges": [
+                  [
+                    13729,
+                    13750
+                  ],
+                  [
+                    13770,
+                    13841
+                  ]
+                ],
+                "completeOffers": [
+                  1013,
+                  1014,
+                  1015,
+                  1016,
+                  1019,
+                  1020,
+                  1022
+                ],
+                "selectedCompleteOffers": [
+                  1015
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2161,
+                "intersectingCues": [
+                  {
+                    "position": 35,
+                    "range": [
+                      13250,
+                      13762
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 2745,
+                    "globalNumericalRankBounds": [
+                      2745,
+                      2745
+                    ],
+                    "numericalScore": 0.3018794059753418,
+                    "numericalScoreRange": [
+                      0.3018794059753418,
+                      0.3018794059753418
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 36,
+                    "range": [
+                      13634,
+                      14146
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 3,
+                    "globalNumericalRank": 2366,
+                    "globalNumericalRankBounds": [
+                      2366,
+                      2366
+                    ],
+                    "numericalScore": 0.3493223488330841,
+                    "numericalScoreRange": [
+                      0.3493223488330841,
+                      0.3493223488330841
+                    ],
+                    "coversAllRequiredLines": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "syntax-only-compile-cutoff",
+            "delivered": false,
+            "owners": [
+              {
+                "owner": "v9756138358688687787",
+                "family": 8,
+                "requiredRanges": [
+                  [
+                    1595,
+                    1663
+                  ],
+                  [
+                    1690,
+                    1755
+                  ],
+                  [
+                    1782,
+                    1793
+                  ],
+                  [
+                    1825,
+                    1882
+                  ],
+                  [
+                    1909,
+                    1970
+                  ],
+                  [
+                    1997,
+                    2052
+                  ],
+                  [
+                    2079,
+                    2136
+                  ],
+                  [
+                    2163,
+                    2227
+                  ],
+                  [
+                    2254,
+                    2307
+                  ],
+                  [
+                    2334,
+                    2387
+                  ],
+                  [
+                    2414,
+                    2467
+                  ],
+                  [
+                    2485,
+                    2514
+                  ]
+                ],
+                "completeOffers": [
+                  270,
+                  304,
+                  306,
+                  308
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 3329,
+                "intersectingCues": [
+                  {
+                    "position": 4,
+                    "range": [
+                      1346,
+                      1858
+                    ],
+                    "focusedPriority": 1,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 800,
+                    "globalNumericalRankBounds": [
+                      800,
+                      800
+                    ],
+                    "numericalScore": 0.4656733274459839,
+                    "numericalScoreRange": [
+                      0.4656733274459839,
+                      0.4656733274459839
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 5,
+                    "range": [
+                      1730,
+                      2242
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1832,
+                    "globalNumericalRankBounds": [
+                      1832,
+                      1832
+                    ],
+                    "numericalScore": 0.3935069143772125,
+                    "numericalScoreRange": [
+                      0.3935069143772125,
+                      0.3935069143772125
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 6,
+                    "range": [
+                      2114,
+                      2626
+                    ],
+                    "focusedPriority": null,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1788,
+                    "globalNumericalRankBounds": [
+                      1788,
+                      1788
+                    ],
+                    "numericalScore": 0.3958321809768677,
+                    "numericalScoreRange": [
+                      0.3958321809768677,
+                      0.3958321809768677
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 7,
+                    "range": [
+                      2498,
+                      3010
+                    ],
+                    "focusedPriority": 18,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1687,
+                    "globalNumericalRankBounds": [
+                      1687,
+                      1687
+                    ],
+                    "numericalScore": 0.4029368460178375,
+                    "numericalScoreRange": [
+                      0.4029368460178375,
+                      0.4029368460178375
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              },
+              {
+                "owner": "v16748591830955464422",
+                "family": 19,
+                "requiredRanges": [
+                  [
+                    40696,
+                    40764
+                  ],
+                  [
+                    40791,
+                    40856
+                  ],
+                  [
+                    40883,
+                    40894
+                  ],
+                  [
+                    40926,
+                    40983
+                  ],
+                  [
+                    41010,
+                    41071
+                  ],
+                  [
+                    41098,
+                    41153
+                  ],
+                  [
+                    41180,
+                    41237
+                  ],
+                  [
+                    41264,
+                    41328
+                  ],
+                  [
+                    41355,
+                    41408
+                  ],
+                  [
+                    41435,
+                    41488
+                  ],
+                  [
+                    41515,
+                    41568
+                  ],
+                  [
+                    41586,
+                    41615
+                  ]
+                ],
+                "completeOffers": [
+                  889
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": false,
+                "minimumCompleteCost": 2658,
+                "intersectingCues": [
+                  {
+                    "position": 106,
+                    "range": [
+                      40514,
+                      41026
+                    ],
+                    "focusedPriority": 1,
+                    "referencePriority": null,
+                    "globalNumericalRank": 1085,
+                    "globalNumericalRankBounds": [
+                      1085,
+                      1085
+                    ],
+                    "numericalScore": 0.44448649883270264,
+                    "numericalScoreRange": [
+                      0.44448649883270264,
+                      0.44448649883270264
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "trailing-language-warning",
+            "delivered": true,
+            "owners": [
+              {
+                "owner": "v15256267109356037303",
+                "family": 10,
+                "requiredRanges": [
+                  [
+                    25923,
+                    25978
+                  ],
+                  [
+                    25996,
+                    26059
+                  ],
+                  [
+                    26077,
+                    26108
+                  ],
+                  [
+                    26130,
+                    26178
+                  ],
+                  [
+                    26198,
+                    26259
+                  ]
+                ],
+                "completeOffers": [
+                  391,
+                  392
+                ],
+                "selectedCompleteOffers": [
+                  391
+                ],
+                "delivered": true,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2210,
+                "intersectingCues": [
+                  {
+                    "position": 67,
+                    "range": [
+                      25482,
+                      25994
+                    ],
+                    "focusedPriority": 1,
+                    "referencePriority": null,
+                    "globalNumericalRank": 2384,
+                    "globalNumericalRankBounds": [
+                      2384,
+                      2384
+                    ],
+                    "numericalScore": 0.3473544716835022,
+                    "numericalScoreRange": [
+                      0.3473544716835022,
+                      0.3473544716835022
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 68,
+                    "range": [
+                      25866,
+                      26378
+                    ],
+                    "focusedPriority": 2,
+                    "referencePriority": null,
+                    "globalNumericalRank": 1393,
+                    "globalNumericalRankBounds": [
+                      1393,
+                      1393
+                    ],
+                    "numericalScore": 0.4238424599170685,
+                    "numericalScoreRange": [
+                      0.4238424599170685,
+                      0.4238424599170685
+                    ],
+                    "coversAllRequiredLines": true
+                  }
+                ]
+              },
+              {
+                "owner": "v14863864136040263094",
+                "family": 26,
+                "requiredRanges": [
+                  [
+                    5657,
+                    5712
+                  ],
+                  [
+                    5730,
+                    5793
+                  ],
+                  [
+                    5811,
+                    5842
+                  ],
+                  [
+                    5864,
+                    5912
+                  ],
+                  [
+                    5932,
+                    5993
+                  ]
+                ],
+                "completeOffers": [
+                  1366,
+                  1367,
+                  1368,
+                  1369,
+                  1399
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2151,
+                "intersectingCues": [
+                  {
+                    "position": 14,
+                    "range": [
+                      5186,
+                      5698
+                    ],
+                    "focusedPriority": 14,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 2115,
+                    "globalNumericalRankBounds": [
+                      2115,
+                      2115
+                    ],
+                    "numericalScore": 0.3698195815086365,
+                    "numericalScoreRange": [
+                      0.3698195815086365,
+                      0.3698195815086365
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 15,
+                    "range": [
+                      5570,
+                      6082
+                    ],
+                    "focusedPriority": 1,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1640,
+                    "globalNumericalRankBounds": [
+                      1640,
+                      1640
+                    ],
+                    "numericalScore": 0.4059537947177887,
+                    "numericalScoreRange": [
+                      0.4059537947177887,
+                      0.4059537947177887
+                    ],
+                    "coversAllRequiredLines": true
+                  },
+                  {
+                    "position": 16,
+                    "range": [
+                      5954,
+                      6466
+                    ],
+                    "focusedPriority": 0,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1992,
+                    "globalNumericalRankBounds": [
+                      1992,
+                      1992
+                    ],
+                    "numericalScore": 0.3812589645385742,
+                    "numericalScoreRange": [
+                      0.3812589645385742,
+                      0.3812589645385742
+                    ],
+                    "coversAllRequiredLines": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "syntax-only-no-output-action",
+            "delivered": false,
+            "owners": [
+              {
+                "owner": "v11960447802706886118",
+                "family": 59,
+                "requiredRanges": [
+                  [
+                    9894,
+                    9937
+                  ],
+                  [
+                    9957,
+                    10021
+                  ]
+                ],
+                "completeOffers": [
+                  2540,
+                  2541,
+                  2542,
+                  2543,
+                  2567
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 2033,
+                "intersectingCues": [
+                  {
+                    "position": 25,
+                    "range": [
+                      9466,
+                      9978
+                    ],
+                    "focusedPriority": 0,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1830,
+                    "globalNumericalRankBounds": [
+                      1830,
+                      1830
+                    ],
+                    "numericalScore": 0.3936178684234619,
+                    "numericalScoreRange": [
+                      0.3936178684234619,
+                      0.3936178684234619
+                    ],
+                    "coversAllRequiredLines": false
+                  },
+                  {
+                    "position": 26,
+                    "range": [
+                      9850,
+                      10362
+                    ],
+                    "focusedPriority": 1,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 1880,
+                    "globalNumericalRankBounds": [
+                      1880,
+                      1880
+                    ],
+                    "numericalScore": 0.38990598917007446,
+                    "numericalScoreRange": [
+                      0.38990598917007446,
+                      0.38990598917007446
+                    ],
+                    "coversAllRequiredLines": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "frontend-job-construction",
+            "delivered": false,
+            "owners": [
+              {
+                "owner": "v11731249417270010951",
+                "family": 62,
+                "requiredRanges": [
+                  [
+                    5102,
+                    5167
+                  ]
+                ],
+                "completeOffers": [
+                  2664,
+                  2665,
+                  2677,
+                  2685,
+                  2688,
+                  2689
+                ],
+                "selectedCompleteOffers": [],
+                "delivered": false,
+                "allRequiredCodeHasOfferedValue": true,
+                "minimumCompleteCost": 1560,
+                "intersectingCues": [
+                  {
+                    "position": 13,
+                    "range": [
+                      4856,
+                      5368
+                    ],
+                    "focusedPriority": 13,
+                    "referencePriority": 0,
+                    "globalNumericalRank": 2783,
+                    "globalNumericalRankBounds": [
+                      2783,
+                      2783
+                    ],
+                    "numericalScore": 0.29363635182380676,
+                    "numericalScoreRange": [
+                      0.29363635182380676,
+                      0.29363635182380676
+                    ],
+                    "coversAllRequiredLines": true
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "missingRequired": [
+          "syntax-only-compile-cutoff",
+          "syntax-only-no-output-action",
+          "frontend-job-construction"
+        ]
+      }
+    ],
+    "sourceRecordsSha256": "98eea2d41806f204d762fed1aece16d9d1a434e710155a9cb66d8736b486a2cf",
+    "requirementsSha256": "bdac318fd2b3704c240fb4e458d05e4b14a97665b9f8ecdc174df1021302e726",
+    "scope": "Current frozen candidate, actual scores and exact original coordinates; offline diagnostics only.",
+    "alternativeSelectorExecuted": false,
+    "answeringModelCalls": 0,
+    "newSourceEncoding": false,
+    "productionAdoption": false,
+    "scriptSha256": "8cb965d00aa00a53b050198121997db879ce4714ff398644620e3abcdfea10da"
+  },
+  "analysisFile": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/analysis-final.json",
+  "analysisSha256": "1c07b1a80cd7fb0b6fa80581aa180beb3e414cd56d4a9bffaaff2f15cb92d592",
+  "closureCosts": {
+    "rows": [
+      {
+        "stage": 1,
+        "missing": [
+          {
+            "name": "trailing-language-warning",
+            "owner": "v15256267109356037303",
+            "family": 10,
+            "minCompleteOffer": 813,
+            "modeledCost": 2210,
+            "frameCost": [
+              701,
+              701
+            ],
+            "payloadAndCaptionsCost": [
+              1509,
+              1509
+            ],
+            "originalRequiredCodeCharacters": 258,
+            "rawSourceCharacters": 1571,
+            "positions": [
+              68
+            ],
+            "ranges": [
+              [
+                24102,
+                24681
+              ],
+              [
+                25515,
+                26507
+              ]
+            ],
+            "requested": [
+              [
+                [
+                  25866,
+                  26378
+                ]
+              ]
+            ],
+            "requirements": [
+              [
+                [
+                  25515,
+                  26507
+                ],
+                [
+                  24102,
+                  24681
+                ]
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "stage": 6,
+        "missing": [
+          {
+            "name": "syntax-only-compile-cutoff",
+            "owner": "v9756138358688687787",
+            "family": 8,
+            "minCompleteOffer": 304,
+            "modeledCost": 3329,
+            "frameCost": [
+              645,
+              645
+            ],
+            "payloadAndCaptionsCost": [
+              2684,
+              2684
+            ],
+            "originalRequiredCodeCharacters": 626,
+            "rawSourceCharacters": 2651,
+            "positions": [
+              5
+            ],
+            "ranges": [
+              [
+                63,
+                600
+              ],
+              [
+                600,
+                712
+              ],
+              [
+                712,
+                1359
+              ],
+              [
+                1359,
+                2309
+              ],
+              [
+                2309,
+                2714
+              ]
+            ],
+            "requested": [
+              [
+                [
+                  1730,
+                  2242
+                ]
+              ]
+            ],
+            "requirements": [
+              [
+                [
+                  1359,
+                  2309
+                ],
+                [
+                  63,
+                  600
+                ]
+              ]
+            ]
+          },
+          {
+            "name": "syntax-only-compile-cutoff",
+            "owner": "v16748591830955464422",
+            "family": 19,
+            "minCompleteOffer": 889,
+            "modeledCost": 2658,
+            "frameCost": [
+              645,
+              645
+            ],
+            "payloadAndCaptionsCost": [
+              2013,
+              2013
+            ],
+            "originalRequiredCodeCharacters": 626,
+            "rawSourceCharacters": 2010,
+            "positions": [
+              106
+            ],
+            "ranges": [
+              [
+                39942,
+                40169
+              ],
+              [
+                40169,
+                41155
+              ],
+              [
+                41155,
+                41952
+              ]
+            ],
+            "requested": [
+              [
+                [
+                  40514,
+                  41026
+                ]
+              ]
+            ],
+            "requirements": [
+              [
+                [
+                  40169,
+                  41155
+                ]
+              ]
+            ]
+          },
+          {
+            "name": "syntax-only-no-output-action",
+            "owner": "v11960447802706886118",
+            "family": 59,
+            "minCompleteOffer": 2540,
+            "modeledCost": 2033,
+            "frameCost": [
+              590,
+              590
+            ],
+            "payloadAndCaptionsCost": [
+              1443,
+              1443
+            ],
+            "originalRequiredCodeCharacters": 107,
+            "rawSourceCharacters": 1498,
+            "positions": [
+              25
+            ],
+            "ranges": [
+              [
+                4574,
+                5127
+              ],
+              [
+                9139,
+                10084
+              ]
+            ],
+            "requested": [
+              [
+                [
+                  9466,
+                  9978
+                ]
+              ]
+            ],
+            "requirements": [
+              [
+                [
+                  9139,
+                  10084
+                ],
+                [
+                  4574,
+                  5127
+                ]
+              ]
+            ]
+          },
+          {
+            "name": "frontend-job-construction",
+            "owner": "v11731249417270010951",
+            "family": 62,
+            "minCompleteOffer": 2688,
+            "modeledCost": 1560,
+            "frameCost": [
+              625,
+              625
+            ],
+            "payloadAndCaptionsCost": [
+              935,
+              935
+            ],
+            "originalRequiredCodeCharacters": 65,
+            "rawSourceCharacters": 1022,
+            "positions": [
+              13
+            ],
+            "ranges": [
+              [
+                4471,
+                5493
+              ]
+            ],
+            "requested": [
+              [
+                [
+                  4856,
+                  5367
+                ]
+              ]
+            ],
+            "requirements": [
+              [
+                [
+                  4471,
+                  5493
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    ],
+    "scope": "Minimum singleton complete original source offers already in the frozen candidate. Character/cost diagnostics, not token savings or alternative delivery."
+  },
+  "selectedRoles": {
+    "rows": [
+      {
+        "stage": 1,
+        "auditSha256": "5aa987247fa43260374b626ae61b3dfb3768374678c15829a05854bbdb19024a",
+        "selectedUnitsByInventoryKind": {
+          "observation": 66
+        },
+        "selectedOwnersByInventoryKind": {
+          "observation": [
+            "v11688441620330750236",
+            "v13041622778011058903",
+            "v13168123294867106979",
+            "v15256267109356037303",
+            "v16748591830955464422",
+            "v18406153573121058748",
+            "v4206057792067474670",
+            "v4462512152088567747",
+            "v7659665108875631513",
+            "v805640469707250045"
+          ]
+        }
+      },
+      {
+        "stage": 6,
+        "auditSha256": "282f90a86665505af58d46a675a014ebc445bc05eb41e3e96487ed84ecb99926",
+        "selectedUnitsByInventoryKind": {
+          "observation": 53
+        },
+        "selectedOwnersByInventoryKind": {
+          "observation": [
+            "v10600833252250082589",
+            "v13168123294867106979",
+            "v15256267109356037303",
+            "v16748591830955464422",
+            "v18406153573121058748",
+            "v2153691105308173654",
+            "v7659665108875631513",
+            "v9756138358688687787"
+          ]
+        }
+      }
+    ],
+    "documents": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage6/documents.json",
+    "documentsSha256": "efbb9d40ff4ed710ca9ee8e47b67dc56b3de5fe7dc19451ca92b1d0b4d86e599",
+    "scope": "Frozen source inventory categories, not an independent native authority classification or proof"
+  },
+  "graphDistances": {
+    "rows": [
+      {
+        "stage": 1,
+        "missing": [
+          {
+            "name": "trailing-language-warning",
+            "owner": "v15256267109356037303",
+            "paths": [
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "stage": 6,
+        "missing": [
+          {
+            "name": "syntax-only-compile-cutoff",
+            "owner": "v9756138358688687787",
+            "paths": [
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "name": "syntax-only-compile-cutoff",
+            "owner": "v16748591830955464422",
+            "paths": [
+              [
+                3,
+                1
+              ]
+            ]
+          },
+          {
+            "name": "syntax-only-no-output-action",
+            "owner": "v11960447802706886118",
+            "paths": [
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          {
+            "name": "frontend-job-construction",
+            "owner": "v11731249417270010951",
+            "paths": [
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        ]
+      }
+    ],
+    "scope": "Original admitted All graph; no new relation, no selector or authority change"
+  },
+  "captureLimitations": [
+    "Initial direct diagnostic preserved bodies but inner provider stderr was discarded. Its run/result.json remains a successful selection-only trace.",
+    "The first exec-wrapper attempt failed during warm because warm requires the builtin numerical provider. No hook or model was dispatched in that attempt.",
+    "The successful wrapper run warms with the builtin provider, then captures only provider stderr; binary, stdout protocol and numerical/selection behavior are unchanged.",
+    "Body-only numerical views can alias distinct operations. Ambiguous view ranks are retained as intervals; they do not prove Work identity or grant authority.",
+    "The initial analysis rejected ambiguous views. The final analysis preserves ambiguity and exactly reproduces native selection and required-code acceptance."
+  ],
+  "guards": [
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/analysis-alias-guard.json",
+      "sha256": "dcadb3de9aa39bee6faa5dd7c2cd34eaf291da2090ab287245263d3bbd98dd34",
+      "guardPid": 25676,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 113456,
+      "samples": 9,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/window_priority_audit.py",
+        "--root",
+        "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022",
+        "--reference",
+        "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022",
+        "--output",
+        "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/analysis.json"
+      ],
+      "childPid": 25690,
+      "exitCode": 0,
+      "elapsedSeconds": 1.181288457941264
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/analysis-final-guard.json",
+      "sha256": "c62f9b7037999b10ef74711fb479f73c28be8c9856f614bc503522610f0ee54b",
+      "guardPid": 50165,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 112096,
+      "samples": 9,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/window_priority_audit.py",
+        "--root",
+        "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022",
+        "--reference",
+        "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022",
+        "--output",
+        "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/analysis-final.json"
+      ],
+      "childPid": 50166,
+      "exitCode": 0,
+      "elapsedSeconds": 1.180605333764106
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/analysis-guard.json",
+      "sha256": "12413a50330bf5bf822f7bbb57894f13ecae6561b80d8a21e04446eb676c6b2d",
+      "guardPid": 25541,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 28624,
+      "samples": 3,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [],
+      "childCommand": [
+        "python3",
+        "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/window_priority_audit.py",
+        "--root",
+        "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022",
+        "--reference",
+        "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022",
+        "--output",
+        "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/analysis.json"
+      ],
+      "childPid": 25542,
+      "exitCode": 1,
+      "elapsedSeconds": 0.3218918750062585
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/build-domain-guard.json",
+      "sha256": "b1a421a1de79cab552a6f1339ab8e0d7608f5ce3572f27c4256d2ad5fa9b5c3c",
+      "guardPid": 80833,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1593184,
+      "samples": 77,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [],
+      "childCommand": [
+        "python3",
+        "build-domain.py"
+      ],
+      "childPid": 80835,
+      "exitCode": 0,
+      "elapsedSeconds": 11.037278291769326
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/build-guard.json",
+      "sha256": "3f9059d0ff97faaced79c09ff21809d1b120d7b641b9f791cc7c2124fc4260f6",
+      "guardPid": 79683,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2938304,
+      "samples": 320,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [],
+      "childCommand": [
+        "python3",
+        "build.py"
+      ],
+      "childPid": 79684,
+      "exitCode": 0,
+      "elapsedSeconds": 45.83691424969584
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/captured-run-guard.json",
+      "sha256": "d646089e2884dbe05035617d9c2d77fa01afa7c8e072fe88c157200200ef3b7a",
+      "guardPid": 22816,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 53152,
+      "samples": 5,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-captured"
+      ],
+      "childCommand": [
+        "python3",
+        "run-captured.py"
+      ],
+      "childPid": 22818,
+      "exitCode": 1,
+      "elapsedSeconds": 0.5891571668908
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/logged-run-guard.json",
+      "sha256": "ae41fecfc40491da7e5601c92222069bca7c3473f6bcb1c3473dbc5516c8c080",
+      "guardPid": 23530,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1442928,
+      "samples": 296,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-logged"
+      ],
+      "childCommand": [
+        "python3",
+        "run-logged.py"
+      ],
+      "childPid": 23532,
+      "exitCode": 0,
+      "elapsedSeconds": 41.374606541823596
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run-guard.json",
+      "sha256": "cff2a0da432f238b4ece362f79a3ca51ee6f9790aa8dfed2256d78c1cf765d00",
+      "guardPid": 7516,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1441200,
+      "samples": 316,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/run"
+      ],
+      "childCommand": [
+        "python3",
+        "run.py"
+      ],
+      "childPid": 7521,
+      "exitCode": 0,
+      "elapsedSeconds": 45.51015975000337
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/storage-guard.json",
+      "sha256": "e1b7fcffb94f7f31807f832771779e7732ab63c1a2495a9fbdd935f1aeb5ff8a",
+      "guardPid": 93850,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 524288,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 57024,
+      "samples": 118,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [],
+      "childCommand": [
+        "python3",
+        "compact_retired_builds.py"
+      ],
+      "childPid": 93852,
+      "exitCode": 0,
+      "elapsedSeconds": 17.094139916822314
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/storage-second-guard.json",
+      "sha256": "fe6d54b4345ae57f9558c0092e389c5808f2f90bd358549c0928416185fe85fb",
+      "guardPid": 2519,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 524288,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 54032,
+      "samples": 92,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [],
+      "childCommand": [
+        "python3",
+        "compact_retired_more.py"
+      ],
+      "childPid": 2521,
+      "exitCode": 0,
+      "elapsedSeconds": 13.031131749972701
+    }
+  ],
+  "maximumAggregateRssKiB": 2938304,
+  "storage": [
+    {
+      "purpose": "Lossless archival of terminal rejected/diagnostic build outputs only; protect current and baseline runtimes, publication auditor, DBs, vectors and all raw logs.",
+      "freeBeforeBytes": 2851479552,
+      "protected": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/checkout/.lake/build/bin/eggshell",
+          "sha256": "f2cd231b3ace76a7308c77abf50a29f87a98ebdc071acc857ba680f51f06eaad"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022/checkout/.lake/build/bin/eggshell",
+          "sha256": "6db03cfb21625376e54d465e8147779f58a83136627990851abc779f7640bfd1"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/first-segment-control-20261020/construction-1/checkout/.lake/build/bin/publication_audit",
+          "sha256": "43c49cd72da29d9a1c0239d0fd0785d8d65452c4c83069398a5be78eae25e9f2"
+        }
+      ],
+      "files": [
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/bin/eggshell",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/bin/eggshell.gz",
+          "sha256": "3856c9756611e73376bcf15fa23d0b6945cd378d6e60b2a464cad0a64400ab73",
+          "originalBytes": 106639264,
+          "archiveBytes": 32246923,
+          "mode": 493,
+          "mtimeNs": 1792664983649605393,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.gz",
+          "sha256": "b707e301419f94b697258135d4f1322e322d20e6c26c465240a78f87ca5cf92b",
+          "originalBytes": 5315376,
+          "archiveBytes": 1753660,
+          "mode": 420,
+          "mtimeNs": 1792664967095851822,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir.gz",
+          "sha256": "1c8a254704b8fe2843f18bff64399a5a674970023a7d2593551003d9d2403447",
+          "originalBytes": 3514792,
+          "archiveBytes": 780758,
+          "mode": 420,
+          "mtimeNs": 1792664967594524596,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean.gz",
+          "sha256": "7ac42f5426219cae2883ef2476a2ba6162de8def9ce25fe633f60fa9b5e840f9",
+          "originalBytes": 1093688,
+          "archiveBytes": 188672,
+          "mode": 420,
+          "mtimeNs": 1792664967831658981,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private.gz",
+          "sha256": "ed836ff41036028f601023ccb612c4d9f99eaec1bfa32e0a888c05645f64b981",
+          "originalBytes": 13526128,
+          "archiveBytes": 3967338,
+          "mode": 420,
+          "mtimeNs": 1792664967461486469,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.gz",
+          "sha256": "9774399cf94a2369db412ccb4cce4de909eafb1e3dfa6eec4feb4075e138a34f",
+          "originalBytes": 5788335,
+          "archiveBytes": 734033,
+          "mode": 420,
+          "mtimeNs": 1792664967918296005,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/citation-closed-demands-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export.gz",
+          "sha256": "c4150e1bdcbd3e2863e0bea51a2788f8abafce5d47221f041c89148922b2467d",
+          "originalBytes": 2324008,
+          "archiveBytes": 656369,
+          "mode": 420,
+          "mtimeNs": 1792664977813399824,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/bin/eggshell",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/bin/eggshell.gz",
+          "sha256": "cc2af7fdaa8bb67ba67a604ac3f542339f47eca969bfca153dfcf58382d516c7",
+          "originalBytes": 106623552,
+          "archiveBytes": 32245228,
+          "mode": 493,
+          "mtimeNs": 1792666988662442422,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.gz",
+          "sha256": "fb97c92fbd65a04f69925e2c5c4b07f69b1544d80d275b72c1c7f60c724e511f",
+          "originalBytes": 5305376,
+          "archiveBytes": 1748396,
+          "mode": 420,
+          "mtimeNs": 1792666973041950633,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir.gz",
+          "sha256": "720acbb278a82fea89a2a5c4a8b35f9406aaf63931a00c48b14086c6d87b9e2e",
+          "originalBytes": 3496440,
+          "archiveBytes": 777483,
+          "mode": 420,
+          "mtimeNs": 1792666973502413988,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean.gz",
+          "sha256": "263aba5e6f5fc9641522accb29eb92781909a1b90078771cf64c9411fe7247b6",
+          "originalBytes": 1092087,
+          "archiveBytes": 188505,
+          "mode": 420,
+          "mtimeNs": 1792666973718070416,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private.gz",
+          "sha256": "d1c1952a43546556dcba2161657c8bc2d9c1f898441bea23096e4e359310f660",
+          "originalBytes": 13509456,
+          "archiveBytes": 3962784,
+          "mode": 420,
+          "mtimeNs": 1792666973382668067,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.gz",
+          "sha256": "aa9a3c7c346bec8d91f2f5c3f9b148f50b8a35a70aaebcb415927bd4cc066b87",
+          "originalBytes": 5758119,
+          "archiveBytes": 729934,
+          "mode": 420,
+          "mtimeNs": 1792666973800041204,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/source-concept-coverage-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export.gz",
+          "sha256": "3e33d97f15e4da6f0958d62e9b6e4a04269d4aa31ac1c22c8924c1f3822609ec",
+          "originalBytes": 2305360,
+          "archiveBytes": 649886,
+          "mode": 420,
+          "mtimeNs": 1792666983009310820,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/bin/eggshell",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/bin/eggshell.gz",
+          "sha256": "3e687b5170df08403b29ac2e818671e5c488e6b93b0e965897841fe3834f7d6c",
+          "originalBytes": 106600672,
+          "archiveBytes": 32237246,
+          "mode": 493,
+          "mtimeNs": 1792667412173812260,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.gz",
+          "sha256": "d4973ae60aec419787f5576718bb43da1efb8881cb93aad8e2a7f23929a5445e",
+          "originalBytes": 5250040,
+          "archiveBytes": 1730138,
+          "mode": 420,
+          "mtimeNs": 1792667396242339502,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir.gz",
+          "sha256": "32dcbbe1b41edabeacfb93e8f37daf9df3a29fe7432970e4561c65ebdfcc269e",
+          "originalBytes": 3425360,
+          "archiveBytes": 760331,
+          "mode": 420,
+          "mtimeNs": 1792667396740324903,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean.gz",
+          "sha256": "634409b6b93405a68311b4ee3ea4fbde9a6278275ca60a6bd24d403de0ef09db",
+          "originalBytes": 1075150,
+          "archiveBytes": 185914,
+          "mode": 420,
+          "mtimeNs": 1792667396967451053,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private.gz",
+          "sha256": "917b9890cf6b0e3d663112d38f38e437f9b9fc73d8cbef41cfb0ece991861fe3",
+          "originalBytes": 13282696,
+          "archiveBytes": 3901144,
+          "mode": 420,
+          "mtimeNs": 1792667396613405161,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.gz",
+          "sha256": "471d1c01877238e4d464214b3d04509612b604d819936025f6772b77b9433030",
+          "originalBytes": 5636786,
+          "archiveBytes": 713768,
+          "mode": 420,
+          "mtimeNs": 1792667397047383600,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/cue-piece-count-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export.gz",
+          "sha256": "dfa2941305fb32e611bbc6596881396452ec54c1c5ffcb91872719d517d92be2",
+          "originalBytes": 2260864,
+          "archiveBytes": 638040,
+          "mode": 420,
+          "mtimeNs": 1792667406416370657,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/checkout/.lake/build/bin/eggshell",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-envelope-audit-20261022/checkout/.lake/build/bin/eggshell.gz",
+          "sha256": "debdbc80a1119add2c459e923ead5af8fa5e4c9a3b11b0ab03b68590cd355ed4",
+          "originalBytes": 106620464,
+          "archiveBytes": 32237289,
+          "mode": 493,
+          "mtimeNs": 1792651359027726003,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-budget-witness-20261022/checkout/.lake/build/bin/eggshell",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-budget-witness-20261022/checkout/.lake/build/bin/eggshell.gz",
+          "sha256": "1b817fbeb5f32149869c7451d7196b55a6af7f37ba0f6d19218a9110bcac112f",
+          "originalBytes": 106606672,
+          "archiveBytes": 32236231,
+          "mode": 493,
+          "mtimeNs": 1792655717340243073,
+          "verifiedRoundtrip": true
+        }
+      ],
+      "freeAfterBytes": 3152142336,
+      "protectedUnchanged": true,
+      "completed": true
+    },
+    {
+      "purpose": "Lossless archival of terminal rejected/diagnostic build outputs only; protect current and baseline runtimes, publication auditor, DBs, vectors and all raw logs.",
+      "freeBeforeBytes": 3146543104,
+      "protected": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/current-selection-scores-20261022/checkout/.lake/build/bin/eggshell",
+          "sha256": "f2cd231b3ace76a7308c77abf50a29f87a98ebdc071acc857ba680f51f06eaad"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/citation-range-priority-20261022/checkout/.lake/build/bin/eggshell",
+          "sha256": "6db03cfb21625376e54d465e8147779f58a83136627990851abc779f7640bfd1"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/first-segment-control-20261020/construction-1/checkout/.lake/build/bin/publication_audit",
+          "sha256": "43c49cd72da29d9a1c0239d0fd0785d8d65452c4c83069398a5be78eae25e9f2"
+        }
+      ],
+      "files": [
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/bin/eggshell",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/bin/eggshell.gz",
+          "sha256": "4736accf662765004157963037c1b4152db0c369c19a195cb86f4dee7a502dc4",
+          "originalBytes": 106600400,
+          "archiveBytes": 32232616,
+          "mode": 493,
+          "mtimeNs": 1792649332971985468,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.gz",
+          "sha256": "e38fd470c28484038b7d8f5632dbaaa76f79036a68d8b77a97e9188b36bc1bf2",
+          "originalBytes": 5196760,
+          "archiveBytes": 1710686,
+          "mode": 420,
+          "mtimeNs": 1792649222937609778,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir.gz",
+          "sha256": "b1b027545ed3d5eb4942e1bd0da2ab3229e031c4f952a1be024dea27070932c1",
+          "originalBytes": 3347616,
+          "archiveBytes": 744468,
+          "mode": 420,
+          "mtimeNs": 1792649223373476729,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean.gz",
+          "sha256": "702b728d6b1afd5e5b8b6dc771766e7a167b1345618752d54799e5ba6d06506a",
+          "originalBytes": 1063527,
+          "archiveBytes": 183923,
+          "mode": 420,
+          "mtimeNs": 1792649223576980142,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private.gz",
+          "sha256": "fc3af50bdd8673b416f2749552dd950491ee8a793e996f2e6b2350d572020252",
+          "originalBytes": 13066216,
+          "archiveBytes": 3844496,
+          "mode": 420,
+          "mtimeNs": 1792649223258072897,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.gz",
+          "sha256": "d570769206cba1adf9ed8ddfe1bdcb5df467601e0a15dc5e675ca202fba8f46f",
+          "originalBytes": 5510809,
+          "archiveBytes": 698079,
+          "mode": 420,
+          "mtimeNs": 1792649223642968088,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-source-identity-probe-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export.gz",
+          "sha256": "db2250c123a7177e8f9fba841381545ac6e5f8de7c1f2f22f7d0f1b476b0451f",
+          "originalBytes": 2214728,
+          "archiveBytes": 623854,
+          "mode": 420,
+          "mtimeNs": 1792649330476478504,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/bin/eggshell",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/bin/eggshell.gz",
+          "sha256": "ec1f35ba3169f724018a317654ec454e68a72c2e72bbfc667a1c38d535f46054",
+          "originalBytes": 106605184,
+          "archiveBytes": 32237476,
+          "mode": 493,
+          "mtimeNs": 1792644355348808994,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.gz",
+          "sha256": "226887ab928ee4bcbaa029131b1550d44c9923c532ca42f00ad887d4f1d1b121",
+          "originalBytes": 5189848,
+          "archiveBytes": 1708321,
+          "mode": 420,
+          "mtimeNs": 1792644305351239506,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir.gz",
+          "sha256": "cf681de79c3f2478e559c468f393c4fc31149fb8ede1fb640c2b80c838583979",
+          "originalBytes": 3352304,
+          "archiveBytes": 745676,
+          "mode": 420,
+          "mtimeNs": 1792644305824831630,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean.gz",
+          "sha256": "cf3cbdcdf02920fa7241c1f5a19c7668caf5b7c1e7c2678236546afba374a3bb",
+          "originalBytes": 1060769,
+          "archiveBytes": 183435,
+          "mode": 420,
+          "mtimeNs": 1792644306051882892,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private.gz",
+          "sha256": "1cbfc34b052c86110509fd0d090d905664e4e4c415d8ded3a44012803ab4f243",
+          "originalBytes": 13050536,
+          "archiveBytes": 3836876,
+          "mode": 420,
+          "mtimeNs": 1792644305696415745,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.gz",
+          "sha256": "2f271813fdced78270a48126d327d99f1ec5d0ed04f3b833753a449bdbfffe29",
+          "originalBytes": 5525806,
+          "archiveBytes": 699730,
+          "mode": 420,
+          "mtimeNs": 1792644306130511791,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-conserved-mass-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export.gz",
+          "sha256": "bcf915cc09c503c137312e0062e2ba8931a792db3e4c0b1b2c3d381f29013a8f",
+          "originalBytes": 2220824,
+          "archiveBytes": 626733,
+          "mode": 420,
+          "mtimeNs": 1792644352768029322,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/bin/eggshell",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/bin/eggshell.gz",
+          "sha256": "91b84a160cb927f831a23aec40f102fc961399b15f9742c490987d628c047054",
+          "originalBytes": 106609056,
+          "archiveBytes": 32236287,
+          "mode": 493,
+          "mtimeNs": 1792650334250950441,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.gz",
+          "sha256": "121746c376e05664d4b864ef1e181ec64fd2327b5c5afa6703a7bc667744df63",
+          "originalBytes": 5211216,
+          "archiveBytes": 1716081,
+          "mode": 420,
+          "mtimeNs": 1792650207274336171,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ir.gz",
+          "sha256": "deaa354969d8f5f5be16f581a246157134e574256a5cd16ca9c0776d182e2c81",
+          "originalBytes": 3383440,
+          "archiveBytes": 753342,
+          "mode": 420,
+          "mtimeNs": 1792650207801544856,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.ilean.gz",
+          "sha256": "9f93df367095fa9571e243b674420b6cb84ba51aeb480c26d9f6e9ef9648142f",
+          "originalBytes": 1071683,
+          "archiveBytes": 185135,
+          "mode": 420,
+          "mtimeNs": 1792650208032298052,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/lib/lean/Eggshell/Handoff.olean.private.gz",
+          "sha256": "97c01ee03cf80b685a060156d80c5347a00b2726d90e10fcdc82ca6db8834b18",
+          "originalBytes": 13174960,
+          "archiveBytes": 3874034,
+          "mode": 420,
+          "mtimeNs": 1792650207660387465,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.gz",
+          "sha256": "ae5e676d9fed301b176f58c32ba98d82b57c8a9abf50b78945ec107f7bf678bc",
+          "originalBytes": 5585363,
+          "archiveBytes": 706547,
+          "mode": 420,
+          "mtimeNs": 1792650208231465012,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-selection-audit-20261022/checkout/.lake/build/ir/Eggshell/Handoff.c.o.export.gz",
+          "sha256": "21f558a2583c47956ba6fd4e91cdc0e52f02f0e4df100546495f4294f3d468ae",
+          "originalBytes": 2242776,
+          "archiveBytes": 632769,
+          "mode": 420,
+          "mtimeNs": 1792650229027138795,
+          "verifiedRoundtrip": true
+        },
+        {
+          "original": "/Users/ovm/.codex/experiments/eggshell/shared-range-score-trace-20261022/checkout/.lake/build/bin/eggshell",
+          "archive": "/Users/ovm/.codex/experiments/eggshell/shared-range-score-trace-20261022/checkout/.lake/build/bin/eggshell.gz",
+          "sha256": "99640246a516c51e48900799cb186c5c5a3d4f41239c9188958a9e75f881cf9d",
+          "originalBytes": 106602288,
+          "archiveBytes": 32231344,
+          "mode": 493,
+          "mtimeNs": 1792645677604828810,
+          "verifiedRoundtrip": true
+        }
+      ],
+      "freeAfterBytes": 3304271872,
+      "protectedUnchanged": true,
+      "completed": true
+    }
+  ],
+  "initialRunStartRefusedForDiskSpace": true,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "alternativeSelectorExecuted": false,
+  "productionAdoption": false,
+  "readmeResultsChanged": false,
+  "next": "Keep citation dependencies even when global MiniLM ranks are low. Work on original source range units and their necessary closure; do not repeat whole-answer caps, global numerical-rank replacement, hop-distance weighting or the rejected value-only ablations without new evidence.",
+  "scriptSha256": "073183317bfbb9d7cc0e669b1f45f22833035d3579eff5a30f3085ca9df9d810"
+}

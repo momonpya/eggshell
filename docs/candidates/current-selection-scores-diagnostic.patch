@@ -1,0 +1,121 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5194,7 +5194,11 @@
+     let requested := (rankedContextRanges source (work.length+1) [position]).filterMap aligned
+     let dependencies := requested ++ structural.map Prod.snd
+     let requirements := cueRequiredRanges records heads scopedHeads dependencies
+-    let some required := prepareRequiredCueViewsUsing records heads scopedHeads decoded dependencies | continue
++    let some required := prepareRequiredCueViewsUsing records heads scopedHeads decoded dependencies |
++      dbg_trace ("EGGSHELL_RANGE_REJECT " ++ (Json.mkObj [
++        ("owner",toJson (relationKey family.owner.relation)),("position",toJson position),
++        ("reason",toJson "required-closure-unavailable")]).compress)
++      continue
+     let richer := prepareCueViewsUsing records heads scopedHeads decoded dependencies
+     for views in [required,required ++ richer] do
+       let limit := (views.map fun view => view.range.stop-view.range.start).sum
+@@ -5207,6 +5211,14 @@
+         decoded := match view with | .decoded _ => true | .original _ => false} : DeliveryFragment)
+       let ranges := fragmentRanges fragments
+       let demanded := requested.filterMap fun range => aligned (recordContextRange records range)
++      dbg_trace ("EGGSHELL_RANGE_UNIT " ++ (Json.mkObj [
++        ("owner",toJson (relationKey family.owner.relation)),("position",toJson position),
++        ("requested",toJson (requested.map fun range => (range.start,range.stop))),
++        ("requirements",toJson (requirements.map fun range => (range.start,range.stop))),
++        ("ranges",toJson ranges),
++        ("demanded",toJson (demanded.map fun range => (range.start,range.stop))),
++        ("demandedCovered",toJson (demanded.all fun range => covers ranges range.start range.stop)),
++        ("requirementsCovered",toJson (requirements.all fun range => covers ranges range.start range.stop))]).compress)
+       if ranges.isEmpty || demanded.isEmpty ||
+           !demanded.all (fun range => covers ranges range.start range.stop) ||
+           !requirements.all (fun range => covers ranges range.start range.stop) then continue
+@@ -5355,6 +5367,35 @@
+     let chosen ← SharedCoverage.choose? p
+     let selected ← materialize units.toArray (chosen.selected.map (·.val))
+     let result := mandatory ++ selected
++    dbg_trace ("EGGSHELL_RANGE_SELECTION " ++ (Json.mkObj [
++      ("fixed",toJson fixed),("limit",toJson ceiling),
++      ("mandatoryPacketCost",toJson (cost mandatory)),
++      ("mandatoryDataCost",toJson fixedData),
++      ("singletonPacketCosts",toJson (families.map fun family => cost (mandatory ++ [family.template]))),
++      ("templateDataCosts",toJson (families.map fun family => (family.template.text.length+1,family.template.text.utf8ByteSize+1))),
++      ("materializedDataCost",toJson (result.foldl (fun total slice => (total.1+slice.text.length+1,total.2+slice.text.utf8ByteSize+1)) (0,0))),
++      ("families",toJson (families.map fun family => Json.mkObj [
++        ("owner",toJson (relationKey family.owner.relation)),
++        ("outcome",toJson (relationKey family.owner.outcome)),
++        ("sourceSha256",toJson (Sha256.hex ((Matcher.atomText? family.owner.outcome).getD "").toUTF8)),
++        ("workChars",toJson ((Matcher.atomText? family.owner.work).getD "").length),
++        ("sourceChars",toJson ((Matcher.atomText? family.owner.outcome).getD "").length),
++        ("windows",toJson family.windows),("references",toJson family.references),("referenceRanks",toJson family.referenceRanks),
++        ("context",toJson family.template.context.isSome)])),
++      ("units",toJson (units.map fun unit => Json.mkObj [
++        ("family",toJson unit.family),("ranges",toJson unit.ranges),
++        ("cost",toJson (unit.slice.text.length,unit.slice.text.utf8ByteSize))])),
++      ("pieces",toJson (pieces.map fun piece => Json.mkObj [
++        ("family",toJson piece.family),("first",toJson piece.first),
++        ("last",toJson piece.last),("weight",toJson piece.weight)])),
++      ("nodeCosts",toJson p.costs.toList),
++      ("offers",toJson (p.offers.toList.map fun offer => Json.mkObj [
++        ("closure",toJson (offer.closure.map (·.val))),
++        ("covers",toJson (offer.covers.map (·.val)))])),
++      ("chosen",toJson (chosen.selected.map (·.val))),
++      ("modeledCost",toJson (SharedCoverage.cost p chosen.selected)),
++      ("realCost",toJson (cost result)),
++      ("benefit",toJson (SharedCoverage.benefit p chosen.selected))]).compress)
+     if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
+       some ⟨result,fits.1,fits.2,⟨selected,rfl⟩⟩
+     else none
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -624,6 +624,11 @@
+     let elapsed := (← IO.monoMsNow) - started
+     sink.state.modify fun state => {state with
+       scoreMs := state.scoreMs + elapsed, scoredWindows := state.scoredWindows + batch.size}
++  dbg_trace ("EGGSHELL_WINDOW_SCORES " ++ (Json.mkObj [
++    ("purpose",(options.metrics.map (fun sink => sink.corpus.getObjValD "purpose")).getD Json.null),
++    ("queryVectorSha256",toJson (Sha256.hex queries.compress.toUTF8)),
++    ("scores",toJson ((scores.toList.zip batch.toList).map fun (value,window) =>
++      Json.mkObj [("document",toJson window.document),("position",toJson window.position),("score",value)]))]).compress)
+   let mut totals := totals
+   for (value, window) in scores.toList.zip batch.toList do
+     let score ← IO.ofExcept (number value)
+@@ -656,6 +661,11 @@
+   let anchors ← IO.ofExcept (request.getObjValAs? (List Nat) "anchors")
+   let mut scored : List (Float × Nat) := []
+   let mut evidence : List (Nat × List Nat) := []
++  dbg_trace ("EGGSHELL_WINDOW_DOMAIN " ++ (Json.mkObj [
++    ("purpose",(options.metrics.map (fun sink => sink.corpus.getObjValD "purpose")).getD Json.null),
++    ("querySha256",toJson (Sha256.hex query.toUTF8)),
++    ("documents",toJson (candidates.toList.map fun candidate => Json.mkObj [
++      ("id",candidate.getObjValD "id"),("windows",candidate.getObjValD "windows")]))]).compress)
+   if let some child := child then
+     -- Questions belong to the user, independently of every shared source DB.
+     let prepared ← IO.mkRef ({} : Std.HashMap String Options)
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -10,7 +10,7 @@
+
+ open Lean
+
+-abbrev Child := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .null }
++abbrev Child := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .inherit }
+
+ structure Slot where
+   gate : Std.Mutex Unit
+@@ -29,7 +29,7 @@
+ def killGroup {cfg : IO.Process.StdioConfig} (child : IO.Process.Child cfg) : IO Unit := do
+   let killer ← IO.Process.spawn {
+     cmd := "/bin/kill", args := #["-KILL", "--", "-" ++ toString child.pid]
+-    stdin := .null, stdout := .null, stderr := .null }
++    stdin := .null, stdout := .null, stderr := .inherit }
+   let _ ← killer.wait
+   try child.kill catch _ => pure ()
+
+@@ -285,7 +285,7 @@
+       | none =>
+           let child ← IO.Process.spawn {
+             cmd := (← IO.appPath).toString, args := #["codex-worker", role]
+-            stdin := .piped, stdout := .piped, stderr := .null, setsid := true }
++            stdin := .piped, stdout := .piped, stderr := .inherit, setsid := true }
+           set (some child)
+           pure child
+     try
