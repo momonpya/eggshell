@@ -22,11 +22,12 @@
     {"name":"clang-cl-pass-through-reparse","topics":[2],"path":"clang/lib/Driver/Driver.cpp","first":1479,"last":1497,"anchors":["ParseArgStrings(CLModePassThroughArgList, /*UseDriverMode=*/false"]},
     {"name":"dumpmachine-reports-toolchain-triple","topics":[2],"path":"clang/lib/Driver/Driver.cpp","first":2570,"last":2573,"anchors":["C.getDefaultToolChain().getTripleString()"]},
     {"name":"last-target-value","topics":[3],"path":"clang/lib/Driver/Driver.cpp","first":1598,"last":1599,"anchors":["Args.getLastArg(options::OPT_target)","TargetTriple = A->getValue();"]},
-    {"name":"default-toolchain-selection","topics":[2,3],"path":"clang/lib/Driver/Driver.cpp","first":1698,"last":1700,"anchors":["getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));"]},
+    {"name":"default-toolchain-selection","topics":[2,3],"requiredOriginalForTopics":[3],"path":"clang/lib/Driver/Driver.cpp","first":1699,"last":1700,"anchors":["getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));"]},
     {"name":"syntax-only-final-phase","topics":[3],"path":"clang/lib/Driver/Driver.cpp","first":350,"last":392,"anchors":["PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)","FinalPhase = phases::Compile;"]},
+    {"name":"syntax-only-compile-cutoff","topics":[3],"requiredOriginalForTopics":[3],"path":"clang/lib/Driver/Driver.cpp","first":360,"last":371,"anchors":["PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)","FinalPhase = phases::Compile;"]},
     {"name":"trailing-language-warning","topics":[3],"requiredOriginalForTopics":[3],"path":"clang/lib/Driver/Driver.cpp","first":3131,"last":3135,"anchors":["LastInputArg->getIndex() < LastXArg->getIndex()","warn_drv_unused_x"]},
-    {"name":"syntax-only-no-output-action","topics":[3],"path":"clang/lib/Driver/Driver.cpp","first":5326,"last":5328,"anchors":["return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);"]},
-    {"name":"frontend-job-construction","topics":[3],"path":"clang/lib/Driver/Driver.cpp","first":6382,"last":6382,"anchors":["T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);"]},
+    {"name":"syntax-only-no-output-action","topics":[3],"requiredOriginalForTopics":[3],"path":"clang/lib/Driver/Driver.cpp","first":5327,"last":5328,"anchors":["Args.hasArg(options::OPT_fsyntax_only)","return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);"]},
+    {"name":"frontend-job-construction","topics":[3],"requiredOriginalForTopics":[3],"path":"clang/lib/Driver/Driver.cpp","first":6382,"last":6382,"anchors":["T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);"]},
     {"name":"trailing-language-existing-test","topics":[3],"path":"clang/test/Driver/x-args.c","first":1,"last":9,"anchors":["// CHECK: '-x c++' after last input file has no effect"]}
   ]
 }

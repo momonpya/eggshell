@@ -1,0 +1,665 @@
+{
+  "scope": "Additional source-based question review of the frozen write-profile candidate, after twelve native hooks completed",
+  "adoptionCriterion": "Appropriate original DB history actually delivered; answer quality or token variance alone cannot reject it",
+  "nativeResult": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-result.json",
+  "nativeResultSha256": "d59fc5ce50ef6d6d617e25117cc1431b335f794200bbe99edaecdb95b9389c53",
+  "spec": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/benchmarks/readme-memory-facts.json",
+  "specSha256": "ce88b5260251b30eecfb6313bb15dd19427aa8f9ef6d344e2f25c272323f6112",
+  "scriptSha256": "bf649140bea249bf5750286e0080024b5a949c81eee313aaedee42504d921289",
+  "rows": [
+    {
+      "stage": 1,
+      "topic": 1,
+      "session": "prepare-stage1-native-0",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage1-native/native-0/body.txt",
+      "bodySha256": "3bdfb5a1078b28fd2a861be4506183d1c594ca361277f7e8e9a849058e4ce032",
+      "checks": [],
+      "missingStoredRequiredCode": [],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 1,
+      "topic": 1,
+      "session": "prepare-stage1-native-1",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage1-native/native-1/body.txt",
+      "bodySha256": "3bdfb5a1078b28fd2a861be4506183d1c594ca361277f7e8e9a849058e4ce032",
+      "checks": [],
+      "missingStoredRequiredCode": [],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "session": "prepare-stage2-native-0",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage2-native/native-0/body.txt",
+      "bodySha256": "343c503f52f66789a786159f6afa1573fbe71c1f735487c44e4f439fc568cc46",
+      "checks": [],
+      "missingStoredRequiredCode": [],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 2,
+      "topic": 2,
+      "session": "prepare-stage2-native-1",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage2-native/native-1/body.txt",
+      "bodySha256": "343c503f52f66789a786159f6afa1573fbe71c1f735487c44e4f439fc568cc46",
+      "checks": [],
+      "missingStoredRequiredCode": [],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "session": "prepare-stage3-native-after-capacity-0",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage3-native-after-capacity/native-0/body.txt",
+      "bodySha256": "c311921588a1143bd9caef0ea9bdfd8c72d33493c588a4957a72005272ca77be",
+      "checks": [
+        {
+          "name": "toolchain-cache-key",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422"
+          ],
+          "deliveredOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            7101,
+            7106
+          ],
+          "originalExcerpt": "const ToolChain &Driver::getToolChain(const ArgList &Args,\n                                      const llvm::Triple &Target) const {\n\n  auto &TC = ToolChains[Target.str()];\n  if (!TC) {\n    switch (Target.getOS()) {",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422"
+          ],
+          "deliveredOwners": [
+            "v18406153573121058748"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            7244,
+            7252
+          ],
+          "originalExcerpt": "    case llvm::Triple::Vulkan:\n    case llvm::Triple::ShaderModel:\n      if ((Target.getArch() == llvm::Triple::spirv32 ||\n           Target.getArch() == llvm::Triple::spirv64) &&\n          !usesInput(Args, types::isHLSL))\n        TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);\n      else\n        TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);\n      break;",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "default-toolchain-selection",
+          "status": "fail-required-original-omitted",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422"
+          ],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            1699,
+            1700
+          ],
+          "originalExcerpt": "  const ToolChain &TC =\n      getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "syntax-only-compile-cutoff",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v16748591830955464422"
+          ],
+          "deliveredOwners": [
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            360,
+            371
+          ],
+          "originalExcerpt": "  } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||\n             (PhaseArg =\n                  DAL.getLastArg(options::OPT_print_enabled_extensions)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_emit_cir)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {\n    FinalPhase = phases::Compile;",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "trailing-language-warning",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v15256267109356037303"
+          ],
+          "deliveredOwners": [
+            "v15256267109356037303"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            3131,
+            3135
+          ],
+          "originalExcerpt": "    Arg *LastXArg = Args.getLastArgNoClaim(options::OPT_x);\n    Arg *LastInputArg = Args.getLastArgNoClaim(options::OPT_INPUT);\n    if (LastXArg && LastInputArg &&\n        LastInputArg->getIndex() < LastXArg->getIndex())\n      Diag(clang::diag::warn_drv_unused_x) << LastXArg->getValue();",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "syntax-only-no-output-action",
+          "status": "not-stored-additional-investigation",
+          "storedOwners": [],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            5327,
+            5328
+          ],
+          "originalExcerpt": "    if (Args.hasArg(options::OPT_fsyntax_only))\n      return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "frontend-job-construction",
+          "status": "not-stored-additional-investigation",
+          "storedOwners": [],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            6382,
+            6382
+          ],
+          "originalExcerpt": "      T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        }
+      ],
+      "missingStoredRequiredCode": [
+        "default-toolchain-selection"
+      ],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 3,
+      "topic": 3,
+      "session": "prepare-stage3-native-after-capacity-1",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage3-native-after-capacity/native-1/body.txt",
+      "bodySha256": "c311921588a1143bd9caef0ea9bdfd8c72d33493c588a4957a72005272ca77be",
+      "checks": [
+        {
+          "name": "toolchain-cache-key",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422"
+          ],
+          "deliveredOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            7101,
+            7106
+          ],
+          "originalExcerpt": "const ToolChain &Driver::getToolChain(const ArgList &Args,\n                                      const llvm::Triple &Target) const {\n\n  auto &TC = ToolChains[Target.str()];\n  if (!TC) {\n    switch (Target.getOS()) {",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422"
+          ],
+          "deliveredOwners": [
+            "v18406153573121058748"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            7244,
+            7252
+          ],
+          "originalExcerpt": "    case llvm::Triple::Vulkan:\n    case llvm::Triple::ShaderModel:\n      if ((Target.getArch() == llvm::Triple::spirv32 ||\n           Target.getArch() == llvm::Triple::spirv64) &&\n          !usesInput(Args, types::isHLSL))\n        TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);\n      else\n        TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);\n      break;",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "default-toolchain-selection",
+          "status": "fail-required-original-omitted",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422"
+          ],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            1699,
+            1700
+          ],
+          "originalExcerpt": "  const ToolChain &TC =\n      getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "syntax-only-compile-cutoff",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v16748591830955464422"
+          ],
+          "deliveredOwners": [
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            360,
+            371
+          ],
+          "originalExcerpt": "  } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||\n             (PhaseArg =\n                  DAL.getLastArg(options::OPT_print_enabled_extensions)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_emit_cir)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {\n    FinalPhase = phases::Compile;",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "trailing-language-warning",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v15256267109356037303"
+          ],
+          "deliveredOwners": [
+            "v15256267109356037303"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            3131,
+            3135
+          ],
+          "originalExcerpt": "    Arg *LastXArg = Args.getLastArgNoClaim(options::OPT_x);\n    Arg *LastInputArg = Args.getLastArgNoClaim(options::OPT_INPUT);\n    if (LastXArg && LastInputArg &&\n        LastInputArg->getIndex() < LastXArg->getIndex())\n      Diag(clang::diag::warn_drv_unused_x) << LastXArg->getValue();",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "syntax-only-no-output-action",
+          "status": "not-stored-additional-investigation",
+          "storedOwners": [],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            5327,
+            5328
+          ],
+          "originalExcerpt": "    if (Args.hasArg(options::OPT_fsyntax_only))\n      return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "frontend-job-construction",
+          "status": "not-stored-additional-investigation",
+          "storedOwners": [],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            6382,
+            6382
+          ],
+          "originalExcerpt": "      T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        }
+      ],
+      "missingStoredRequiredCode": [
+        "default-toolchain-selection"
+      ],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "session": "prepare-stage4-native-0",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage4-native/native-0/body.txt",
+      "bodySha256": "3caad373a3766e5f9f2a7045333b3203113a7356cde33f64dbc90965529ea3cb",
+      "checks": [],
+      "missingStoredRequiredCode": [],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 4,
+      "topic": 1,
+      "session": "prepare-stage4-native-1",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage4-native/native-1/body.txt",
+      "bodySha256": "3caad373a3766e5f9f2a7045333b3203113a7356cde33f64dbc90965529ea3cb",
+      "checks": [],
+      "missingStoredRequiredCode": [],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "session": "prepare-stage5-native-0",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage5-native/native-0/body.txt",
+      "bodySha256": "c41e5f758fa691c50c490b5283038731ccc2ad28d8888371076dba3d8bbf719c",
+      "checks": [],
+      "missingStoredRequiredCode": [],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 5,
+      "topic": 2,
+      "session": "prepare-stage5-native-1",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage5-native/native-1/body.txt",
+      "bodySha256": "c41e5f758fa691c50c490b5283038731ccc2ad28d8888371076dba3d8bbf719c",
+      "checks": [],
+      "missingStoredRequiredCode": [],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "session": "prepare-stage6-native-0",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage6-native/native-0/body.txt",
+      "bodySha256": "3a9266009fce52866a19f59f38c48d2669541ce559c4c10c576ba99806d5ff53",
+      "checks": [
+        {
+          "name": "toolchain-cache-key",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "deliveredOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            7101,
+            7106
+          ],
+          "originalExcerpt": "const ToolChain &Driver::getToolChain(const ArgList &Args,\n                                      const llvm::Triple &Target) const {\n\n  auto &TC = ToolChains[Target.str()];\n  if (!TC) {\n    switch (Target.getOS()) {",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "deliveredOwners": [
+            "v18406153573121058748"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            7244,
+            7252
+          ],
+          "originalExcerpt": "    case llvm::Triple::Vulkan:\n    case llvm::Triple::ShaderModel:\n      if ((Target.getArch() == llvm::Triple::spirv32 ||\n           Target.getArch() == llvm::Triple::spirv64) &&\n          !usesInput(Args, types::isHLSL))\n        TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);\n      else\n        TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);\n      break;",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "default-toolchain-selection",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "deliveredOwners": [
+            "v13168123294867106979",
+            "v9756138358688687787",
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            1699,
+            1700
+          ],
+          "originalExcerpt": "  const ToolChain &TC =\n      getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "syntax-only-compile-cutoff",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "deliveredOwners": [
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            360,
+            371
+          ],
+          "originalExcerpt": "  } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||\n             (PhaseArg =\n                  DAL.getLastArg(options::OPT_print_enabled_extensions)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_emit_cir)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {\n    FinalPhase = phases::Compile;",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "trailing-language-warning",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "deliveredOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            3131,
+            3135
+          ],
+          "originalExcerpt": "    Arg *LastXArg = Args.getLastArgNoClaim(options::OPT_x);\n    Arg *LastInputArg = Args.getLastArgNoClaim(options::OPT_INPUT);\n    if (LastXArg && LastInputArg &&\n        LastInputArg->getIndex() < LastXArg->getIndex())\n      Diag(clang::diag::warn_drv_unused_x) << LastXArg->getValue();",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "syntax-only-no-output-action",
+          "status": "fail-required-original-omitted",
+          "storedOwners": [
+            "v11960447802706886118"
+          ],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            5327,
+            5328
+          ],
+          "originalExcerpt": "    if (Args.hasArg(options::OPT_fsyntax_only))\n      return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "frontend-job-construction",
+          "status": "fail-required-original-omitted",
+          "storedOwners": [
+            "v11731249417270010951"
+          ],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            6382,
+            6382
+          ],
+          "originalExcerpt": "      T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        }
+      ],
+      "missingStoredRequiredCode": [
+        "syntax-only-no-output-action",
+        "frontend-job-construction"
+      ],
+      "questionLevelReviewComplete": false
+    },
+    {
+      "stage": 6,
+      "topic": 3,
+      "session": "prepare-stage6-native-1",
+      "body": "/Users/ovm/.codex/experiments/eggshell/scope-context-20261021/source-context-basis-20261022/native-all/prepared/stage6-native/native-1/body.txt",
+      "bodySha256": "3a9266009fce52866a19f59f38c48d2669541ce559c4c10c576ba99806d5ff53",
+      "checks": [
+        {
+          "name": "toolchain-cache-key",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "deliveredOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            7101,
+            7106
+          ],
+          "originalExcerpt": "const ToolChain &Driver::getToolChain(const ArgList &Args,\n                                      const llvm::Triple &Target) const {\n\n  auto &TC = ToolChains[Target.str()];\n  if (!TC) {\n    switch (Target.getOS()) {",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v18406153573121058748",
+            "v16748591830955464422",
+            "v10600833252250082589"
+          ],
+          "deliveredOwners": [
+            "v18406153573121058748"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            7244,
+            7252
+          ],
+          "originalExcerpt": "    case llvm::Triple::Vulkan:\n    case llvm::Triple::ShaderModel:\n      if ((Target.getArch() == llvm::Triple::spirv32 ||\n           Target.getArch() == llvm::Triple::spirv64) &&\n          !usesInput(Args, types::isHLSL))\n        TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);\n      else\n        TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);\n      break;",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "default-toolchain-selection",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v13168123294867106979",
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "deliveredOwners": [
+            "v13168123294867106979",
+            "v9756138358688687787",
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            1699,
+            1700
+          ],
+          "originalExcerpt": "  const ToolChain &TC =\n      getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "syntax-only-compile-cutoff",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v16748591830955464422",
+            "v9756138358688687787"
+          ],
+          "deliveredOwners": [
+            "v16748591830955464422"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            360,
+            371
+          ],
+          "originalExcerpt": "  } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||\n             (PhaseArg =\n                  DAL.getLastArg(options::OPT_print_enabled_extensions)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_emit_cir)) ||\n             (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {\n    FinalPhase = phases::Compile;",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "trailing-language-warning",
+          "status": "pass-reviewed-block",
+          "storedOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "deliveredOwners": [
+            "v15256267109356037303",
+            "v14863864136040263094"
+          ],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            3131,
+            3135
+          ],
+          "originalExcerpt": "    Arg *LastXArg = Args.getLastArgNoClaim(options::OPT_x);\n    Arg *LastInputArg = Args.getLastArgNoClaim(options::OPT_INPUT);\n    if (LastXArg && LastInputArg &&\n        LastInputArg->getIndex() < LastXArg->getIndex())\n      Diag(clang::diag::warn_drv_unused_x) << LastXArg->getValue();",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "syntax-only-no-output-action",
+          "status": "fail-required-original-omitted",
+          "storedOwners": [
+            "v11960447802706886118"
+          ],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            5327,
+            5328
+          ],
+          "originalExcerpt": "    if (Args.hasArg(options::OPT_fsyntax_only))\n      return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        },
+        {
+          "name": "frontend-job-construction",
+          "status": "fail-required-original-omitted",
+          "storedOwners": [
+            "v11731249417270010951"
+          ],
+          "deliveredOwners": [],
+          "sourceFile": "clang/lib/Driver/Driver.cpp",
+          "sourceFileSha256": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+          "sourceLines": [
+            6382,
+            6382
+          ],
+          "originalExcerpt": "      T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);",
+          "reason": "The question explicitly asks for this target-selection, final-phase or job-construction boundary; only its short condition/result or call is required."
+        }
+      ],
+      "missingStoredRequiredCode": [
+        "syntax-only-no-output-action",
+        "frontend-job-construction"
+      ],
+      "questionLevelReviewComplete": false
+    }
+  ],
+  "deliveryAccepted": false,
+  "failureReason": "Stored short original code explicitly needed by topic three is missing, not a token or quality threshold",
+  "answeringModelCalls": 0,
+  "seedAcquisitions": 0,
+  "runtimeChangedForReview": false,
+  "limitations": [
+    "Topics one and two still need question-level review; an empty required list does not establish delivery adequacy.",
+    "Do not demand code absent from that stage DB; report additional investigation separately.",
+    "Full function/file/previous-answer delivery and incidental examples are not required.",
+    "The three earlier omissions were fixed in both laps; that narrower result is preserved.",
+    "A new answering study must freeze this specification and start at topic one; do not resume or reuse retired calls."
+  ]
+}
