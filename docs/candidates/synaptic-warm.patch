@@ -1,0 +1,48 @@
+diff --git a/Eggshell/Warm.lean b/Eggshell/Warm.lean
+index b635900..c70a7ba 100644
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -2,6 +2,7 @@ module
+
+ public import Eggshell.PluginModel
+ public import Eggshell.SearchProvider
++public import Eggshell.SynapseBuild
+
+ @[expose] public section
+
+@@ -134,6 +135,8 @@ missing original windows, in bounded batches, and require exact ACKs. A failed
+ batch leaves its completed cache writes available to a subsequent invocation. -/
+ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : IO Result := do
+   let started ← IO.monoMsNow
++  -- Each derived producer takes its own non-waiting claim; never nest them.
++  let _ ← Synapses.Build.refresh snapshot target.storage
+   let settings ← options snapshot target.command target.storage
+   let before ← inspect snapshot settings
+   if before.needed.isEmpty then
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index 8be5d8b..50761d1 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -399,6 +399,8 @@ def search (request : Search) : IO (Option Handoff) := do
+     retains every ticket; indexing never republishes or locks the graph writer. -/
+ def indexQueued (target : IndexTarget) (paths : List System.FilePath) : IO Nat := do
+   let pinned ← target.owner.pin
++  -- A failed native update must leave every numerical ticket replayable.
++  let _ ← Synapses.Build.refresh pinned target.storage
+   let directory ← target.indexes pinned
+   DB.Sidecar.withIndexClaim target.owner (fun _ => indexOwned pinned directory) target.storage
+ where
+diff --git a/Eggshell/PluginHooks.lean b/Eggshell/PluginHooks.lean
+index e6f2924..9bce6e1 100644
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -229,7 +229,8 @@ def drainIndexTarget (session : String) (deadline : Nat)
+   let entries := (entries.toList.filter (·.fileName.endsWith ".json"))
+     |>.mergeSort (fun a b => a.fileName ≤ b.fileName)
+   let warm ← Warm.required target snapshot
+-  if entries.isEmpty && !warm then return
++  let synapses ← Synapses.Build.required snapshot target.storage
++  if entries.isEmpty && !warm && !synapses then return
+   let payload := Json.mkObj [("target", toJson target), ("warm", toJson warm),
+     ("paths", toJson (entries.take 8 |>.map (·.path.toString)))]
+   if let some result ← Worker.exchange session "index" payload deadline then

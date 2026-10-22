@@ -27,7 +27,7 @@ def implementation : String :=
   Blake3.hex (Blake3.digest "eggshell.synaptic-index".toUTF8 [
     (include_str "Synapses.lean").toUTF8, (include_str "SynapseExtraction.lean").toUTF8,
     (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
-    (include_str "SynapseIndex.lean").toUTF8])
+    (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8])
 
 inductive Key where
   | owner (database owner : String)

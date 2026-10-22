@@ -89,6 +89,10 @@ egglogランタイムを導入したわけでもない。Leanの`Eggshell.Synaps
 
 ### B. DB所有の派生索引として接続する
 
+2026-10-23：Leanの保存・逆引きとDB直読の増分構築はネイティブ検証済み。
+warm/背景workerへの接続は隔離パッチで検証済み。本体適用、実Pre/Postからの継続入力と配送は未完了。
+最新の実装境界・測定は`synaptic-build.md`を参照する。以下は完了まで維持する要件である。
+
 - save時に増分を採取し、索引チケットで背景更新する。hook内で全履歴を再走査しない。
 - `DB.Sidecar`の既存のread-only/private overlay規則を使う。
 - 参照ノードの表、consumer→producer、range→claim/answer、query→利用eventの隣接表を集約ファイルに持つ。

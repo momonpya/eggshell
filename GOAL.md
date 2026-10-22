@@ -43,6 +43,15 @@ docs/synaptic-index.mdとdocs/candidates/synaptic-index-review.jsonに範囲と�
 容量不足によるビルド開始拒否も記録し、終了済み旧実行ファイル11本を7つのSHA検証済みgzipへ可逆圧縮した。
 復元表はsynaptic-index-20261023/terminal-runtime-storage.json。DB/埋込み/生ログ/リンク用オブジェクトと最良DIR実行体は保持した。
 
+2026-10-23 DB出版からの自動抽出をLeanのSynapseBuildに実装した。初回構築後は完全な親headの鎖から変更対象を求め、
+観測・回答・All・出典証明書の追加/撤回に対応する。保持する支持の非依存と共有索引への利用記録混入の拒否を証明した。
+実seedから144関係（読み取り44/支持34/共引用66）を234msで抽出し、以前のLean抽出結果と原文座標まで完全一致した。
+別プロセスの準備済み再実行は本文0件・索引追記0・1ms。時系列がないDBから消費辺は生成しない。
+隔離パッチでWarm.runTarget・背景indexQueued・フックの準備状態確認へ接続し、ネイティブ試験が成功した。
+明示warmの検証は窓0件のプロバイダ不起動経路、背景索引の検証は実seedの私有領域への144関係構築である。
+実Pre/Postからの消費/利用event更新、推薦候補・実配送への接続、全6段階、モデル比較、最終採用は未完了。
+本体のWarm/Worker/PluginHooksとinstalled実行体へは未適用。docs/synaptic-build.mdとcandidates/synaptic-build-review.jsonを参照する。
+
 2026-10-22 シナプス結合の開始：推薦専用の導出/共引用/利用の核・抽出器・実DBの読み出しを実装した。
 核6試験とadapter3試験が成功。既存seed31コマンド中、15元観測を保存されたExactなsession/turn/use IDで結び付けた。
 候補13実行では、同指紋の未配送範囲の後続再読16、配送後引用54、欠落と断定できない再読46を記録した。

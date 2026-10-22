@@ -17,8 +17,13 @@ extern_lib storage_sync pkg := do
 target embeddingSource pkg : System.FilePath :=
   inputFile (pkg.dir / "runtime" / "embedding.py") true
 
+-- The index embeds its producer's bytes without importing that producer.
+-- Track the file explicitly so a normal build cannot retain an old key.
+target synapseBuildSource pkg : System.FilePath :=
+  inputFile (pkg.dir / "Eggshell" / "SynapseBuild.lean") true
+
 lean_lib Eggshell where
-  extraDepTargets := #[`embeddingSource]
+  extraDepTargets := #[`embeddingSource, `synapseBuildSource]
 
 lean_lib PageDBTestSupport where
   roots := #[`tests.PageDBTests, `tests.FullSearchOracle, `tests.SearchMemo, `tests.CorpusCache,
@@ -78,3 +83,9 @@ lean_exe synapse_index_tests where
 
 lean_exe synapse_index_probe where
   root := `tools.SynapseIndexProbe
+
+lean_exe synapse_build_tests where
+  root := `tests.SynapseBuildTests
+
+lean_exe synapse_warm where
+  root := `tools.SynapseWarm
