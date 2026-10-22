@@ -68,6 +68,16 @@ docs/synaptic-index.mdとdocs/candidates/synaptic-index-review.jsonに範囲と�
 抽出・辺生成のPython実装0、今回の回答モデル/seed追加0。推薦・実配送統合、全6段階と総トークン比較、最終採用は未完了。
 docs/synaptic-portable.mdとcandidates/synaptic-portable-review.jsonに適用範囲・凍結依存・全guardを固定する。
 
+2026-10-23 3種の関係をLeanのSynapseRecommend/Transportから原文選択器へ接続した隔離候補を検査した。
+実際の推薦根だけから、期限/件数/バイト上限付きで支持・消費・共引用と私有利用を読む。
+指紋と保存行を検査して元座標へ戻し、根拠種類ごとの実本文配送を受領記録へ残す。索引はメモの入力とともに固定する。
+実Pre/Post/Stopと新規チャットのUserPromptSubmitのstdoutで全3種からの原文を確認し、既存の認定/省略は不変だった。
+通常再読を欠落と呼ぶfixtureの誤り、focus warmとworker/期限処理の接続差分を修正し、失敗記録も保持した。
+固定した6snapshot/6問をLeanのゲートで各2チャット実行し、全12hookが30秒以内・段階内本文一致だった。
+必要な保存済み原文の未配送は1/0/1/1/0/3、最大28584ms。未配送を修正済み・改善済みとは扱わない。
+旧DBに順序来歴と私有利用がないことを確認し、同じ6問での重み調整は再開しない。
+回答モデル/seed追加0。総トークン・品質比較と最終採用は未完了。詳細はdocs/synaptic-delivery.md。
+
 2026-10-22 シナプス結合の開始：推薦専用の導出/共引用/利用の核・抽出器・実DBの読み出しを実装した。
 核6試験とadapter3試験が成功。既存seed31コマンド中、15元観測を保存されたExactなsession/turn/use IDで結び付けた。
 候補13実行では、同指紋の未配送範囲の後続再読16、配送後引用54、欠落と断定できない再読46を記録した。

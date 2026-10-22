@@ -301,6 +301,7 @@ structure Lookup (key : Key) where
   complete : Bool
   postingPages : Nat
   index : PageMap.Head
+  payloadBytes : Nat := 0
 
 def Lookup.facts (lookup : Lookup key) : Array Fact := lookup.checked.map (·.fact)
 
@@ -312,13 +313,15 @@ theorem Lookup.returned_bound (lookup : Lookup key) (fact : Fact)
   subst fact
   exact ⟨checked.valid, checked.bound⟩
 
-def Reader.lookup (reader : Reader) (key : Key) (limit deadline : Nat) : IO (Lookup key) := do
+def Reader.lookup (reader : Reader) (key : Key) (limit deadline : Nat)
+    (byteLimit : Option Nat := none) : IO (Lookup key) := do
   let name := postingPrefix key
   let scanned ← match reader.index.head.root with
     | none => pure ({} : Scan)
     | some root => scanAt reader.index root ⟨name, "lookup:" ++ contentKey key ++ ";"⟩ limit deadline {}
   let mut facts := #[]
   let mut complete := scanned.complete
+  let mut payloadBytes := 0
   for posting in scanned.postings do
     if (← IO.monoMsNow) ≥ deadline then
       complete := false
@@ -326,6 +329,9 @@ def Reader.lookup (reader : Reader) (key : Key) (limit deadline : Nat) : IO (Loo
     unless posting.key == key do throw (IO.userError "ambiguous synaptic key digest")
     let some bytes ← reader.index.get ("fact:" ++ posting.fact) |
       throw (IO.userError "dangling synaptic posting")
+    if byteLimit.any (payloadBytes+bytes.size > ·) then
+      complete := false
+      break
     let fact ← decode (α := Fact) bytes
     unless fact.valid && reader.manifest.scope.accepts fact && belongs reader.manifest.source.identity fact &&
         contentKey fact == posting.fact && (addresses fact).contains key do
@@ -333,6 +339,7 @@ def Reader.lookup (reader : Reader) (key : Key) (limit deadline : Nat) : IO (Loo
     let some checked := CheckedFact.check? key fact |
       throw (IO.userError "unbound advisory index result")
     facts := facts.push checked
-  return ⟨facts, complete, scanned.pages, reader.index.head⟩
+    payloadBytes := payloadBytes+bytes.size
+  return ⟨facts, complete, scanned.pages, reader.index.head, payloadBytes⟩
 
 end Eggshell.Synapses.Index

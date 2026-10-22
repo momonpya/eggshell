@@ -1,0 +1,503 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -22,0 +23 @@
++public import Eggshell.SynapseTransport
+@@ -299,0 +301 @@
++  synapticComplete : Bool := true
+@@ -5140,0 +5143 @@
++  synapticRanges : List (Nat × Nat × Nat) := []
+@@ -5226 +5229 @@
+-  if positions.isEmpty then return ([],[])
++  if positions.isEmpty && family.synapticRanges.isEmpty then return ([],[])
+@@ -5280 +5283 @@
+-    for (_,spans) in family.referenceRanges do
++    for (_,spans) in family.referenceRanges ++ family.synapticRanges.map (fun (priority,a,b) => (priority,[(a,b)])) do
+@@ -5337 +5340 @@
+-    (focus ++ references).filterMap fun (position,priority) =>
++    ((focus ++ references).filterMap fun (position,priority) =>
+@@ -5339 +5342,2 @@
+-        {priority,first := context.span.start,last := context.span.stop}
++        {priority,first := context.span.start,last := context.span.stop}) ++
++      family.synapticRanges.map (fun (priority,first,last) => {priority,first,last})
+@@ -5493 +5497 @@
+-      family.referenceRanges.flatMap (·.2)
++      family.referenceRanges.flatMap (·.2) ++ family.synapticRanges.map (fun (_,a,b) => (a,b))
+@@ -5570 +5574,2 @@
+-    (referenceRanges : List (Value × List (Nat × List (Nat × Nat))) := []) : Option Handoff :=
++    (referenceRanges : List (Value × List (Nat × List (Nat × Nat))) := [])
++    (synapticRanges : List (Value × List (Nat × Nat × Nat)) := []) : Option Handoff :=
+@@ -5756,0 +5762 @@
++            synapticRanges := (synapticRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+@@ -6518,0 +6525,8 @@
++def synapticRoots (ranking : List Value) (nominated : List OutcomeEdge) : List (Value × Nat) :=
++  ranking.zipIdx.filter fun (owner, _) => nominated.any (·.relation == owner)
++
++theorem synaptic_roots_are_nominated (ranking : List Value) (nominated : List OutcomeEdge)
++    (root : Value × Nat) (present : root ∈ synapticRoots ranking nominated) :
++    nominated.any (·.relation == root.1) = true :=
++  (List.mem_filter.mp present).2
++
+@@ -6519,0 +6534 @@
++  synaptic : Array Synapses.Recommend.Prepared := #[]
+@@ -6744 +6759,2 @@
+-            if let some reused ← reuseSemantic owners then return reused
++            if source.synaptic.all (·.shared.isNone) then
++              if let some reused ← reuseSemantic owners then return reused
+@@ -7074,0 +7091,14 @@
++  let mut synapticOwners := #[]
++  for item in focusDomain do
++    for position in ← source.advisoryPositions item.owner.relation do
++      let original : Synapses.Transport.Owner := {
++        database := position.frontier.identity
++        original := item.owner
++        provenance := item.provenance}
++      synapticOwners := synapticOwners.push original
++  let synaptic ← if recommendation && evidence.isNone then
++    Synapses.Transport.build source.synaptic
++      ((synapticRoots nominationRanking nominatedOwners).toArray.map fun (owner,priority) =>
++        (relationKey owner,priority))
++      synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) ((← IO.monoMsNow)+500)
++    else pure ({} : Synapses.Transport.Plan)
+@@ -7104 +7134,2 @@
+-    if let some reused ← reuseSemantic observed then return reused
++    if synaptic.complete then
++      if let some reused ← reuseSemantic observed then return reused
+@@ -7133,0 +7165,3 @@
++    (synapticRanges := synaptic.ranges)
++  let rendered := rendered.map fun handoff => {handoff with synapticComplete := synaptic.complete}
++  Receipt.observe source.receipt "synaptic-delivery" (synaptic.receipt ((rendered.map (·.text)).getD ""))
+@@ -7168 +7202 @@
+-    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) :
++    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[]) :
+@@ -7187 +7221,2 @@
+-        if let some reused ← reuseSemantic nominated then return some reused
++        if synaptic.all (·.shared.isNone) then
++          if let some reused ← reuseSemantic nominated then return some reused
+@@ -7198,0 +7234 @@
++    synaptic
+@@ -7339 +7375 @@
+-    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) :
++    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[]) :
+@@ -7347,0 +7384 @@
++    synaptic
+@@ -7467 +7504 @@
+-    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) : IO (Option Handoff) := do
++    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[]) : IO (Option Handoff) := do
+@@ -7477 +7514 @@
+-        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady then return result
++        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic then return result
+@@ -7479 +7516 @@
+-      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady
++      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic
+@@ -7519 +7556 @@
+-        if found.all (fun h => h.reason != "search-incomplete") && accepts found then
++        if found.all (fun h => h.reason != "search-incomplete" && h.synapticComplete) && accepts found then
+@@ -7555,0 +7593,5 @@
++  let synaptic ← (snapshots.filterMap id).toArray.mapM fun snapshot => do
++    let writable := selection.write.any (fun target => target.path.normalize == snapshot.directory.normalize)
++    try Synapses.Recommend.prepare snapshot writable
++    catch _ => pure ({source := snapshot.head, shared := none, usage := none} : Synapses.Recommend.Prepared)
++  let synapticIdentity := (toJson (synaptic.map Synapses.Recommend.Prepared.identity)).compress
+@@ -7574 +7616 @@
+-        staged stagedVisible enableLocalUnion sourceContext.isSome meaningQuery))
++        staged stagedVisible enableLocalUnion sourceContext.isSome meaningQuery ++ "\nsynaptic-input=" ++ synapticIdentity))
+@@ -7613 +7655 @@
+-    (sourceContext.map (·.onSemanticReady) |>.getD (pure ()))
++    (sourceContext.map (·.onSemanticReady) |>.getD (pure ())) (synaptic := synaptic)
+@@ -7623 +7665 @@
+-      (sourceContext.map (·.onSemanticReady) |>.getD (pure ()))
++      (sourceContext.map (·.onSemanticReady) |>.getD (pure ())) (synaptic := synaptic)
+@@ -7627 +7669 @@
+-          result.all (fun h => h.reason != "search-incomplete") then
++          result.all (fun h => h.reason != "search-incomplete" && h.synapticComplete) then
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -5,0 +6,2 @@
++public import tools.FocusWindows
++public import tools.RetrievalIndex
+@@ -17,0 +20,2 @@
++  encoderContract : String
++  focusContract : String
+@@ -22 +26 @@
+-    ← Persistence.Store.getNat snapshot.get "roots", ← Persistence.Store.getNat snapshot.get "candidates"⟩
++    ← Persistence.Store.getNat snapshot.get "roots", ← Persistence.Store.getNat snapshot.get "candidates", SearchProvider.encoderContract, Plugin.focusWindowContract⟩
+@@ -28 +32,2 @@
+-    previous.roots == current.roots && previous.candidates == current.candidates
++    previous.roots == current.roots && previous.candidates == current.candidates &&
++    previous.encoderContract == current.encoderContract && previous.focusContract == current.focusContract
+@@ -34,0 +40,8 @@
++def lexicalOnly (command : List String) : Bool :=
++  match command with
++  | _ :: "search-provider" :: args =>
++    match SearchProvider.parse {cache := .mk ".", models := .mk "."} args with
++    | .ok options => options.mode == "lexical"
++    | .error _ => false
++  | _ => false
++
+@@ -35,0 +49,2 @@
++  unless ← RetrievalResearch.Index.ready snapshot do return true
++  if lexicalOnly target.command then return false
+@@ -55 +70,2 @@
+-      (old.database == value.database && old.provider == value.provider && old.revision > value.revision)) then return
++      (old.database == value.database && old.provider == value.provider &&
++        old.encoderContract == value.encoderContract && old.focusContract == value.focusContract && old.revision > value.revision)) then return
+@@ -61,0 +78 @@
++  start : Nat
+@@ -62,0 +80,20 @@
++inductive InputState where
++  | missing
++  | invalid
++  | valid (coverage : SearchProvider.EncodingCoverage)
++
++structure WindowCoverage where
++  windows : Nat := 0
++  valid : Nat := 0
++  missing : Nat := 0
++  invalid : Nat := 0
++  input : SearchProvider.InputTotals := {}
++  deriving ToJson
++
++def WindowCoverage.observe (counts : WindowCoverage) (state : InputState) : WindowCoverage :=
++  let counts := {counts with windows := counts.windows + 1}
++  match state with
++  | .missing => {counts with missing := counts.missing + 1}
++  | .invalid => {counts with invalid := counts.invalid + 1}
++  | .valid coverage => {counts with valid := counts.valid + 1, input := counts.input.add coverage}
++
+@@ -70,0 +108,5 @@
++  encoderContract : String
++  input : SearchProvider.InputTotals
++  focusContract : String
++  discovery : WindowCoverage
++  focus : WindowCoverage
+@@ -94,8 +136,14 @@
+-/-- Each live window key is counted once per owning DB. Stale cache records
+-and query vectors do not enter the denominator. No source body is read. -/
+-def inspect (snapshot : DB.PageMap.Snapshot) (options : SearchProvider.Options) : IO Inspection := do
+-  let mut seen : Std.HashSet String := {}
+-  let mut needed := []
+-  let mut valid := 0
+-  let mut missing := 0
+-  let mut invalid := 0
++def inspectInput (options : SearchProvider.Options) (key : String) : IO InputState := do
++  let paths := SearchProvider.vectorPaths options (SearchProvider.windowCacheKey options.model key)
++  if ← paths.allM (fun path => return (← FileSystem.symlinkMetadata? path).isNone) then return .missing
++  try
++    let cached ← SearchProvider.indexedWindow options key
++    pure (.valid cached.coverage)
++  catch _ => pure .invalid
++
++/-- Only prefixes intersecting Work need an original bounded read. The rest
++reuse their original key and position. No whole Outcome is hydrated. -/
++def planWindows (snapshot : DB.PageMap.Snapshot) : IO (List Window × List Window) := do
++  let reader ← Persistence.Store.NodeReader.new snapshot
++  let mut discovery : Array Window := #[]
++  let mut focus : Array Window := #[]
+@@ -102,0 +151,2 @@
++    let work ← reader.read document.work
++    let some text := Matcher.atomText? work | throw (IO.userError "warm Work is not indexed text")
+@@ -104,15 +154,34 @@
+-      if seen.contains key then continue
+-      seen := seen.insert key
+-      let paths := SearchProvider.vectorPaths options (SearchProvider.windowCacheKey options.model key)
+-      if ← paths.allM (fun path => return (← FileSystem.symlinkMetadata? path).isNone) then
+-        missing := missing + 1
+-        needed := ⟨document, index, key⟩ :: needed
+-      else
+-        let usable ← try
+-          let _ ← SearchProvider.indexedVectors options [key]
+-          pure true
+-        catch _ => pure false
+-        if usable then valid := valid + 1
+-        else
+-          invalid := invalid + 1
+-          needed := ⟨document, index, key⟩ :: needed
++      let original : Window := ⟨document, index, key, 0⟩
++      discovery := discovery.push original
++      let start := Plugin.evidenceWindowStart text.length index
++      if start == 0 then focus := focus.push original else
++        let originalText ← Persistence.Store.readSearchWindow snapshot document index
++        let view := Plugin.evidenceWindowText text.length index originalText
++        focus := focus.push ⟨document, index, Persistence.Store.windowKey view, start⟩
++  pure (discovery.toList, focus.toList)
++
++def viewCoverage (known : Std.HashMap String InputState) (windows : List Window) : IO WindowCoverage := do
++  let mut seen : Std.HashSet String := {}
++  let mut result : WindowCoverage := {}
++  for window in windows do
++    unless seen.contains window.key do
++      seen := seen.insert window.key
++      let some state := known[window.key]? | throw (IO.userError "warm input coverage lost a planned key")
++      result := result.observe state
++  pure result
++
++/-- All original and focus-view keys are inspected once. Query vectors and
++retired keys do not enter either live-view denominator. -/
++def inspect (snapshot : DB.PageMap.Snapshot) (options : SearchProvider.Options) : IO Inspection := do
++  let (discovery, focus) ← planWindows snapshot
++  let mut known : Std.HashMap String InputState := {}
++  let mut needed : Array Window := #[]
++  let mut union : WindowCoverage := {}
++  for window in discovery ++ focus do
++    unless known.contains window.key do
++      let state ← inspectInput options window.key
++      known := known.insert window.key state
++      union := union.observe state
++      match state with
++      | .valid _ => pure ()
++      | _ => needed := needed.push window
+@@ -122,2 +191,5 @@
+-      model := options.model, windows := seen.size, valid, missing, invalid }
+-    needed := needed.reverse }
++      model := options.model, windows := union.windows, valid := union.valid
++      missing := union.missing, invalid := union.invalid, input := union.input
++      encoderContract := SearchProvider.encoderContract, focusContract := Plugin.focusWindowContract
++      discovery := ← viewCoverage known discovery, focus := ← viewCoverage known focus }
++    needed := needed.toList }
+@@ -124,0 +197 @@
++
+@@ -130,0 +204 @@
++  lexical : RetrievalResearch.Index.Result
+@@ -138,2 +212,10 @@
+-  -- Each derived producer takes its own non-waiting claim; never nest them.
+-  let _ ← Synapses.Journal.refresh snapshot target.storage ((← IO.monoMsNow) + 60000)
++  let _ ← Synapses.Journal.refresh snapshot target.storage ((← IO.monoMsNow)+60000)
++  let lexical ← RetrievalResearch.Index.warm snapshot target.storage
++  if lexicalOnly target.command then
++    let empty : Coverage := {
++      database := DB.Sidecar.Owner.ofSnapshot snapshot
++      revision := snapshot.head.revision, model := "lexical-only", windows := 0
++      valid := 0, missing := 0, invalid := 0
++      encoderContract := SearchProvider.encoderContract, input := {}
++      focusContract := Plugin.focusWindowContract, discovery := {}, focus := {}}
++    return ⟨empty, empty, 0, 0, (← IO.monoMsNow) - started, lexical⟩
+@@ -144 +226 @@
+-    return ⟨before.coverage, before.coverage, 0, 0, (← IO.monoMsNow) - started⟩
++    return ⟨before.coverage, before.coverage, 0, 0, (← IO.monoMsNow) - started, lexical⟩
+@@ -156 +238,4 @@
+-            let text ← Persistence.Store.readSearchWindow snapshot window.document window.index
++            let original ← Persistence.Store.readSearchWindow snapshot window.document window.index
++            let text := (original.drop window.start).copy
++            unless Persistence.Store.windowKey text == window.key do
++              throw (IO.userError "warm input disagrees with its pinned original suffix")
+@@ -164 +249 @@
+-    pure ⟨before.coverage, after.coverage, current.needed.length, batches, (← IO.monoMsNow) - started⟩) target.storage
++    pure ⟨before.coverage, after.coverage, current.needed.length, batches, (← IO.monoMsNow) - started, lexical⟩) target.storage
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -84,0 +85,86 @@
++
++structure Search where
++  pending : PendingTurn
++  state : ThreadState
++  work : String
++  enforce : Bool
++  evidence : Option String := none
++  staged : Bool := false
++  deadline : Nat := 0
++  route : SearchRoute := .configured
++  receipt : Option String := none
++  deriving ToJson, FromJson
++
++/-- Every search frame belongs to one native invocation, including its original
++deadline. Progress changes scheduling only; it has no Handoff payload. -/
++structure SearchIdentity where
++  turn : String
++  epoch : Nat
++  deadline : Nat
++  receipt : Option String
++  deriving BEq, Repr, ToJson, FromJson
++
++inductive SearchFrame where
++  | ready (identity : SearchIdentity)
++  | reply (identity : SearchIdentity) (handoff : Option Handoff)
++  deriving ToJson, FromJson
++
++structure SearchPolicy where
++  identity : SearchIdentity
++  finishReady : Bool := false
++  onReady : Nat → IO Unit := fun _ => pure ()
++
++def Search.identity (request : Search) : SearchIdentity :=
++  { turn := request.pending.turnId, epoch := request.state.epoch,
++    deadline := request.deadline, receipt := request.receipt }
++
++def readyDeadline (expected actual : SearchIdentity) (finishReady : Bool)
++    (cutoff arrived : Nat) : Nat :=
++  min expected.deadline (if finishReady && expected == actual && arrived < cutoff then
++    expected.deadline else cutoff)
++
++theorem ready_preserves_upstream (expected actual : SearchIdentity) (finishReady : Bool)
++    (cutoff arrived : Nat) :
++    readyDeadline expected actual finishReady cutoff arrived ≤ expected.deadline :=
++  Nat.min_le_left _ _
++
++theorem unready_preserves_cutoff (expected actual : SearchIdentity) (cutoff arrived : Nat) :
++    readyDeadline expected actual false cutoff arrived ≤ cutoff := by
++  simpa [readyDeadline] using (Nat.min_le_right expected.deadline cutoff)
++
++theorem late_ready_preserves_cutoff (expected actual : SearchIdentity) (finishReady : Bool)
++    (cutoff arrived : Nat) (late : cutoff ≤ arrived) :
++    readyDeadline expected actual finishReady cutoff arrived ≤ cutoff := by
++  simpa [readyDeadline, Nat.not_lt.mpr late] using (Nat.min_le_right expected.deadline cutoff)
++
++theorem foreign_ready_preserves_cutoff (expected actual : SearchIdentity) (finishReady : Bool)
++    (cutoff arrived : Nat) (foreign : (expected == actual) = false) :
++    readyDeadline expected actual finishReady cutoff arrived ≤ cutoff := by
++  simpa [readyDeadline, foreign] using (Nat.min_le_right expected.deadline cutoff)
++
++/-- One optional ready frame followed by one final reply. Repeated, foreign or
++late progress cannot restart or extend the upstream deadline. -/
++def readSearchReply (input : IO.FS.Handle) (policy : SearchPolicy)
++    (window : Std.Mutex Nat) : IO Json := do
++  let readFrame : IO SearchFrame := do
++    IO.ofExcept (Json.parse (← input.getLine) >>= fromJson? (α := SearchFrame))
++  let frame ← readFrame
++  let reply ← match frame with
++    | .ready identity => do
++        let arrived ← window.atomically do
++          let cutoff ← get
++          let arrived ← IO.monoMsNow
++          unless identity == policy.identity && arrived < cutoff do
++            throw (IO.userError "foreign or expired search progress")
++          set (readyDeadline policy.identity identity policy.finishReady cutoff arrived)
++          pure arrived
++        policy.onReady arrived
++        readFrame
++    | other => pure other
++  match reply with
++  | .reply identity result =>
++      unless identity == policy.identity do throw (IO.userError "foreign search reply")
++      unless (← IO.monoMsNow) < (← window.atomically get) do
++        throw (IO.userError "expired search reply")
++      return toJson result
++  | .ready _ => throw (IO.userError "repeated search progress")
+@@ -85,0 +172,9 @@
++partial def awaitSearch (task : Task (Except IO.Error α)) (window : Std.Mutex Nat) : IO (Option α) := do
++  if ← IO.hasFinished task then
++    match ← IO.wait task with
++    | .ok value => return some value
++    | .error error => throw error
++  if (← IO.monoMsNow) ≥ (← window.atomically get) then return none
++  IO.sleep 5
++  awaitSearch task window
++
+@@ -176 +271,10 @@
+-def exchange (session role : String) (payload : Json) (deadline : Nat) : IO (Option Json) := do
++def exchange (session role : String) (payload : Json) (deadline : Nat)
++    (searchPolicy : Option SearchPolicy := none) : IO (Option Json) := do
++  let searchPolicy ← if role == "search" then
++      match searchPolicy with
++      | some policy => pure (some policy)
++      | none => do
++          let request ← IO.ofExcept (fromJson? payload : Except String Search)
++          pure (some {identity := request.identity})
++    else pure none
++  let deadline := searchPolicy.map (fun policy => min deadline policy.identity.deadline) |>.getD deadline
+@@ -187,0 +292 @@
++      let window ← Std.Mutex.new deadline
+@@ -191,2 +296,3 @@
+-        let line ← child.stdout.getLine
+-        IO.ofExcept (Json.parse line)) .dedicated
++        match searchPolicy with
++        | some policy => readSearchReply child.stdout policy window
++        | none => IO.ofExcept (Json.parse (← child.stdout.getLine))) .dedicated
+@@ -196,0 +303 @@
++        else if searchPolicy.isSome then awaitSearch task window
+@@ -308,12 +414,0 @@
+-structure Search where
+-  pending : PendingTurn
+-  state : ThreadState
+-  work : String
+-  enforce : Bool
+-  evidence : Option String := none
+-  staged : Bool := false
+-  deadline : Nat := 0
+-  route : SearchRoute := .configured
+-  receipt : Option String := none
+-  deriving ToJson, FromJson
+-
+@@ -345 +440 @@
+-def search (request : Search) : IO (Option Handoff) := do
++def search (request : Search) (onSemanticReady : IO Unit := pure ()) : IO (Option Handoff) := do
+@@ -393,0 +489 @@
++          onSemanticReady
+@@ -402,2 +498,2 @@
+-  -- A failed native update must leave every numerical ticket replayable.
+-  let _ ← Synapses.Journal.refresh pinned target.storage ((← IO.monoMsNow) + 60000)
++  let _ ← Synapses.Journal.refresh pinned target.storage ((← IO.monoMsNow)+60000)
++  let _ ← RetrievalResearch.Index.warm pinned target.storage
+@@ -447 +543,7 @@
+-        pure (toJson (← search request))
++        let announced ← IO.mkRef false
++        let ready := do
++          unless ← announced.get do
++            announced.set true
++            output.putStrLn (toJson (SearchFrame.ready request.identity)).compress
++            output.flush
++        pure (toJson (SearchFrame.reply request.identity (← search request ready)))
+@@ -463,4 +565,4 @@
+-            if let some command := pending.semanticMatcher then
+-              -- Persist the ticket before consuming the replayable save job.
+-              -- The writer never waits for model initialization or encoding.
+-              queueIndex target command promotion
++            let command := pending.semanticMatcher.getD
++              [(← IO.appPath).toString, "search-provider", "--mode", "lexical"]
++            -- Lexical maintenance also survives a saving chat without an encoder.
++            queueIndex target command promotion
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -364 +364 @@
+-def semanticSearchBudgetMs : Nat := 4500
++def semanticSearchBudgetMs : Nat := 15000
+@@ -368,0 +369,21 @@
++theorem semantic_deadline_preserves_upstream (now deadline : Nat) :
++    semanticSearchDeadline now deadline ≤ deadline := Nat.min_le_left _ _
++
++theorem semantic_deadline_reserves_fallback (now deadline : Nat) :
++    semanticSearchDeadline now deadline ≤ now + (deadline - now) / 2 := by
++  exact Nat.le_trans (Nat.min_le_right _ _) (Nat.add_le_add_left (Nat.min_le_right _ _) _)
++
++
++/-- Once checked nominations are ready, status uses the same overall deadline
++as the transport. A later pending result is not a discovery timeout. -/
++def configuredSearchDeadline (finishReady ready : Bool) (phaseDeadline deadline : Nat) : Nat :=
++  if finishReady && ready then deadline else min phaseDeadline deadline
++
++theorem configured_deadline_preserves_upstream (finishReady ready : Bool)
++    (phaseDeadline deadline : Nat) :
++    configuredSearchDeadline finishReady ready phaseDeadline deadline ≤ deadline := by
++  unfold configuredSearchDeadline
++  split
++  · exact Nat.le_refl _
++  · exact Nat.min_le_right _ _
++
+@@ -411,0 +433,2 @@
++    if pending.projection == .none || pending.read.isEmpty then return none
++    writeJson files.state {state with searchStarted := true}
+@@ -414 +436,0 @@
+-  if pending.projection == .none || pending.read.isEmpty then return none
+@@ -422 +444,7 @@
+-  let first ← Worker.exchange session "search" (toJson {query with deadline := firstDeadline}) firstDeadline
++  let readyAt ← IO.mkRef (none : Option Nat)
++  let policy : Worker.SearchPolicy := {
++    identity := query.identity
++    finishReady := semantic
++    onReady := fun now => do
++      if (← readyAt.get).isNone then readyAt.set (some now) }
++  let first ← Worker.exchange session "search" (toJson query) firstDeadline (some policy)
+@@ -423,0 +452 @@
++  let finishDeadline := configuredSearchDeadline policy.finishReady (← readyAt.get).isSome firstDeadline deadline
+@@ -429,0 +459 @@
++        (some {identity := lexical.identity})
+@@ -431 +461 @@
+-        semantic := incompleteSemanticStatus first observed firstDeadline, route := .lexical
++        semantic := incompleteSemanticStatus first observed finishDeadline, route := .lexical
+@@ -476 +506,6 @@
+-    ("deadlineMs", toJson deadline), ("trace", toJson trace), ("disposition", toJson disposition),
++    ("deadlineMs", toJson deadline), ("initialSearch", toJson (!initial.searchStarted)),
++    ("semanticDeadlineMs", toJson firstDeadline), ("searchStartedMs", toJson started),
++    ("semanticReadyMs", toJson (← readyAt.get)),
++    ("semanticFinishDeadlineMs", toJson finishDeadline),
++    ("finishReadyWithinHook", toJson policy.finishReady),
++    ("trace", toJson trace), ("disposition", toJson disposition),
