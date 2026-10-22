@@ -1,0 +1,526 @@
+{
+  "status": "lean-extraction-and-evidence-core-verified-native-index-delivery-integration-pending",
+  "language": "Lean 4.33.0; no Python implementation of the synapse core or extractors",
+  "sourceArchive": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-verified-source",
+  "hashes": [
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/Synapses.lean",
+      "sha256": "413a9dac0e7e7bbd904f15cbf8db5bc96d53b0caec72cd1d9c81aebe777fef1a"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseExtraction.lean",
+      "sha256": "0bfcddf054be781397a237284f1de5598263e62e1a1bf9f1bf5a78cf6ca864ab"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseSource.lean",
+      "sha256": "6db200afbdacd5fc9a9e5aa35df91dad4b5b250f2c1f89c7bbbd4d90bc4e8a28"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseUsage.lean",
+      "sha256": "8b253904dc2a018a69162e8e7c8da179e9d1c426a1dbf37dc3c19960c513d9cd"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseArchive.lean",
+      "sha256": "dca1210c61206b5c8099873de907a4ecab678a66b19399f15e0bc0dbc70eb9ef"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tests/SynapseTests.lean",
+      "sha256": "101ea14c3e2fe839e23e31ea162b58d6fe9c97f8c1ded41124e783265204f66d"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tests/SynapseExtractionTests.lean",
+      "sha256": "4d1001d9e6d153dd10cc1e82f74a5f2c5747b312f70750389bb78615bc16ed53"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/SynapseExtract.lean",
+      "sha256": "33cee9c8d5411f98b982ad0879bb1dfc470815a86f3fe9bc841d6954fdd5c687"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/SynapseReplay.lean",
+      "sha256": "f65e4350f409b23d088f3de5d94a4d8e5193243ef85b9c8069eac15da328d782"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/lakefile.lean",
+      "sha256": "4b2b2ac10383336dc9c55758f54799ce897d5193e35fec7391d6f7f9e8341325"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/seed-export-native-identified/stdout",
+      "sha256": "1f2158683e77212594ed08c9a82347145d256ea1d438f2d5ec6ecbe6589bd4a4"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/readme-luna-20261020/attempts/seed-3/rpc/exchange.jsonl",
+      "sha256": "051345fefc1848b134f4ab78feefeda97d60520a0ae0cdd73237d52bfd79f059"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/exports-identified/input-stage3/stdout",
+      "sha256": "a41c1d595570ea2401dcb7388e9ea94b1ec58654863147a8043c4b8b0c220a64"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/exports-identified/stage3-candidate-r0/stdout",
+      "sha256": "6ca377d25301a4cedaba16317e07dabb1b543b4cbb2b7940834487fc6a22050b"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/exports-identified/input-stage2/stdout",
+      "sha256": "b7ab1848cbae8887696f94cd244f957162132ab79b5dbb9e33aed6b9144e579d"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/exports-identified/stage2-candidate-r0/stdout",
+      "sha256": "a41c1d595570ea2401dcb7388e9ea94b1ec58654863147a8043c4b8b0c220a64"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage2-candidate-r0/rpc/exchange.jsonl",
+      "sha256": "8abcee073c3854b2171ed9c780d9d8b836c71c00942feb3f56fcff4f08b2d440"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage2-candidate-r0/answer.txt",
+      "sha256": "1ce7727654fa710b30a424453047fce473c7c110c5569a50a3254564d5022334"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage2-candidate-r0/prompt.txt",
+      "sha256": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage3-candidate-r0/rpc/exchange.jsonl",
+      "sha256": "8b5bc5e19760d9673a161a3e2397cded9ee0e5ac07953b2df4384075acb2e047"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage3-candidate-r0/answer.txt",
+      "sha256": "a8339eb54fcd455d345b90ba7ba18ae5a91670684ef4213b3213a0eb924e5b53"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/candidate/attempts/stage3-candidate-r0/prompt.txt",
+      "sha256": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147"
+    }
+  ],
+  "removedPython": [
+    "tools/research/synapse_graph.py",
+    "tools/research/build_synapses.py",
+    "tools/research/synapse_feedback.py",
+    "tools/research/test_synapse_graph.py",
+    "tools/research/test_synapse_feedback.py"
+  ],
+  "proofs": [
+    "Range.contains_self",
+    "Support.checked_covers",
+    "Consumption.checked_before",
+    "evidenceJoin_idempotent",
+    "evidenceJoin_commutative",
+    "evidenceJoin_associative",
+    "omitted_requires_checked",
+    "omitted_requires_stored",
+    "Extraction.project_has_witness"
+  ],
+  "checks": {
+    "warningAsError": true,
+    "coreTests": "lean-final-core-tests-guard.json",
+    "extractionTests": "lean-final-precise-tests-fixed-guard.json"
+  },
+  "seed": {
+    "record": "lean-final-seed-guard.json",
+    "documents": 37,
+    "completedCalls": 31,
+    "boundNumberedReadObservations": 13,
+    "storedReadChunks": 44,
+    "sourceRangeNodes": 176,
+    "supportFacts": 34,
+    "coquotationIncidence": 66,
+    "consumptionWitnesses": 464,
+    "evidenceFacts": 608
+  },
+  "usageReplays": [
+    {
+      "stage": 3,
+      "repetition": 0,
+      "record": "lean-final-usage-exact-answer-guard.json",
+      "omitted_then_read": 16,
+      "reread": 31,
+      "delivered_then_cited": 0
+    },
+    {
+      "stage": 2,
+      "repetition": 0,
+      "record": "lean-usage-no-tools-guard.json",
+      "omitted_then_read": 0,
+      "reread": 0,
+      "delivered_then_cited": 6,
+      "toolCalls": 0
+    }
+  ],
+  "guards": [
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-archive-check-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.726171042304486,
+      "sampledPeakRssKiB": 1006080,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-core-check-fixed-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 7.814383709337562,
+      "sampledPeakRssKiB": 1079712,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-core-check-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 7.704664499964565,
+      "sampledPeakRssKiB": 1056128,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-core-check-lawful-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 7.403468540869653,
+      "sampledPeakRssKiB": 1116880,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-core-inhabited-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 7.462791541125625,
+      "sampledPeakRssKiB": 1091664,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-core-precise-binding-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 2.1378600830212235,
+      "sampledPeakRssKiB": 1128064,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-extraction-check-fixed-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 6.788141292054206,
+      "sampledPeakRssKiB": 1010304,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-extraction-check-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 6.511956249829382,
+      "sampledPeakRssKiB": 1003008,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-extraction-precise-binding-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.8676220420747995,
+      "sampledPeakRssKiB": 1016176,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-extraction-tests-fixed-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.7334750830195844,
+      "sampledPeakRssKiB": 1164880,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-extraction-tests-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 0.8652100833132863,
+      "sampledPeakRssKiB": 1187296,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-archive-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.7416082499548793,
+      "sampledPeakRssKiB": 1004432,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-core-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 2.4207578329369426,
+      "sampledPeakRssKiB": 1135504,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-core-tests-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.7412757501006126,
+      "sampledPeakRssKiB": 1176768,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-extraction-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.8757619578391314,
+      "sampledPeakRssKiB": 1017728,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-extraction-tests-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.7292213751934469,
+      "sampledPeakRssKiB": 1180816,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-precise-tests-fixed-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.765138624701649,
+      "sampledPeakRssKiB": 1171248,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-precise-tests-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 0.7452988750301301,
+      "sampledPeakRssKiB": 1171024,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-seed-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 2.9805721659213305,
+      "sampledPeakRssKiB": 1206960,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-source-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 1.0187255418859422,
+      "sampledPeakRssKiB": 1025056,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-usage-exact-answer-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 4.4078291254118085,
+      "sampledPeakRssKiB": 1212816,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-usage-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.8833841667510569,
+      "sampledPeakRssKiB": 1023104,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-final-usage-stage3-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 4.506506791803986,
+      "sampledPeakRssKiB": 1212144,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-native-tests-fixed-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.8688227091915905,
+      "sampledPeakRssKiB": 1183312,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-native-tests-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 6.871301208157092,
+      "sampledPeakRssKiB": 1173984,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-seed-complete-source-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 2.9468946252018213,
+      "sampledPeakRssKiB": 1210944,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-seed-extraction-fixed-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 8.400251457933336,
+      "sampledPeakRssKiB": 1210352,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-seed-extraction-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 5.33602854097262,
+      "sampledPeakRssKiB": 1178960,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-source-check-accepted-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 0.8755339160561562,
+      "sampledPeakRssKiB": 1015808,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-source-check-compiled-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 6.610698499716818,
+      "sampledPeakRssKiB": 1012960,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-source-check-fixed-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 0.9926851247437298,
+      "sampledPeakRssKiB": 1023696,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-source-check-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "elapsedSeconds": 0.86340874992311,
+      "sampledPeakRssKiB": 1011392,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-source-chunks-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 1.026108750142157,
+      "sampledPeakRssKiB": 1021776,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-source-percent-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 1.0179099580273032,
+      "sampledPeakRssKiB": 1024304,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-source-recorded-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 1.0145302503369749,
+      "sampledPeakRssKiB": 1021376,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-source-with-rows-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 6.574551959056407,
+      "sampledPeakRssKiB": 1016928,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-usage-check-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.7207886660471559,
+      "sampledPeakRssKiB": 1000992,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-usage-compact-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 0.8971843747422099,
+      "sampledPeakRssKiB": 1012016,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-usage-no-tools-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 1.4424344580620527,
+      "sampledPeakRssKiB": 1207008,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-links-20261022/lean-usage-stage3-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "elapsedSeconds": 4.520771416835487,
+      "sampledPeakRssKiB": 1212032,
+      "guardTriggered": false,
+      "reason": null
+    }
+  ],
+  "maximumObservedRssKiB": 1212816,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "nativeRuntimeIntegrated": false,
+  "tokenImprovementMeasured": false,
+  "productionAdoption": false,
+  "limitations": [
+    "Only two completed model-trial logs were replayed with Lean; the earlier aggregate of thirteen remains historical Python evidence.",
+    "String consumption is heuristic advisory evidence, not proof of causal necessity or operation equivalence.",
+    "Unmapped output witnesses remain unlocated; entire ancestor reads are not substituted.",
+    "Canonical recommendation source keys include relative path, recorded fingerprint, byte length and closed line interval; different file paths remain distinct.",
+    "Synaptic evidence creates no native Match, Union or completion authority.",
+    "DB-owned incremental indexing, publication-bound native loading and integration into actual delivery are unfinished.",
+    "Existing MiniLM FastEmbed/NumPy numerical boundary and offline measurement tooling are outside the removed semantic Python implementation."
+  ]
+}

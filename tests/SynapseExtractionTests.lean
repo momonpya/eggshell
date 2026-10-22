@@ -1,0 +1,94 @@
+import Eggshell.SynapseUsage
+
+open Lean Eggshell.Synapses Eggshell.Synapses.Extraction
+
+private def check (condition : Bool) (message : String) : IO Unit :=
+  unless condition do throw (IO.userError message)
+
+private def file : File := ⟨"src/日本語.cpp", String.ofList (List.replicate 64 'a'), 100⟩
+private def query : String := String.ofList (List.replicate 64 'b')
+private def occurrence (name : String) : Occurrence := ⟨"session", "turn", name⟩
+private def command := "nl -ba src/日本語.cpp | sed -n '10,12p'"
+private def output := "    10\t日本語 α\n    11\tbeta\n    12\tgamma\n"
+
+private def doc : Document := {
+  owner := "observation", work := "work", workText := some ("shell\n" ++
+    (Json.mkObj [("command", toJson command)]).compress)
+  source := some (toJson output).compress
+  native := true, occurrences := #[occurrence "read"], files := #[file] }
+
+private def checkSource : IO (Array Read × Presentation) := do
+  let trace : Trace := {}
+  let trace ← IO.ofExcept (trace.start (occurrence "read") 0 command)
+  let trace ← IO.ofExcept (trace.finish (occurrence "read") 1 output)
+  let reads ← IO.ofExcept (locateReads "database" doc trace)
+  let some firstRead := reads[0]? | throw (IO.userError "no located read")
+  check (reads.size == 1 && firstRead.read.source.first == 10 &&
+    firstRead.read.source.last == 12) "contiguous read did not retain its original rows"
+  let rows ← IO.ofExcept (recordedRows "database" doc)
+  check (rows.size == 3) "stored scalar rows missing"
+  let first := rows[0]!
+  let packet := "\nWORK GRAPH observation\n  GROUNDED OUTCOME\n  ORIGINAL CHARS [" ++
+    toString first.binding.first ++ "," ++ toString first.binding.limit ++
+    ") decoded\n  DECODED JSON STRING DATA\n    10\t日本語 α\n  TRACE\n"
+  let presented := presented packet #[doc] rows
+  check (presented.ranges == #[first.source] && presented.uncertain.isEmpty)
+    "Unicode or JSON escape coordinates changed during delivery verification"
+  let bad := Extraction.presented (packet.replace "日本語 α" "wrong text") #[doc] rows
+  check (bad.uncertain.contains file && bad.ranges.isEmpty) "tampered packet became missing evidence"
+  let some range := citation "日本語.cpp:10–12" "src/%E6%97%A5%E6%9C%AC%E8%AA%9E.cpp:10" #[file] |
+    throw (IO.userError "citation missing")
+  check (range.first == 10 && range.last == 12) "citation end line lost"
+  check ((citation "日本語.cpp:10–12" "src/日本語.cpp:11" #[file]).isNone) "conflicting citation admitted"
+  let answer := {doc with
+    owner := "answer"
+    native := false
+    source := some "[日本語.cpp:11](src/日本語.cpp:11)"}
+  let supported ← IO.ofExcept (addAnswer "database" answer reads Graph.empty)
+  let supports := supported.snapshot.filterMap fun fact =>
+    match fact with | .supports value => some value | _ => none
+  let some precise := supports[0]? | throw (IO.userError "single-line support missing")
+  check (precise.binding.first == rows[1]!.binding.first &&
+    precise.binding.limit == rows[1]!.binding.limit)
+    "citation retained the whole ancestor read instead of its exact original row"
+  return (rows, presented)
+
+private def checkFeedback (rows : Array Read) (packet : Presentation) : IO Unit := do
+  let requested := #[rows[0]!.source]
+  let feedback : Feedback := {}
+  let feedback := feedback.start (occurrence "before-packet")
+  let feedback := feedback.present packet
+  let feedback ← IO.ofExcept (feedback.completedRead (occurrence "before-packet") query requested requested)
+  check ((feedback.graph.usageCounts requested[0]!).omittedThenRead == 1)
+    "later pre-tool context retroactively removed an earlier omission"
+  let feedback := feedback.start (occurrence "after-packet")
+  let feedback ← IO.ofExcept (feedback.completedRead (occurrence "after-packet") query requested requested)
+  check ((feedback.graph.usageCounts requested[0]!).reread == 1)
+    "ordinary reread rewarded as an omission"
+  let uncertain := feedback.present {uncertain := ({} : Std.HashSet File).insert file}
+  let uncertain := uncertain.start (occurrence "uncertain")
+  let uncertain ← IO.ofExcept (uncertain.completedRead (occurrence "uncertain") query requested requested)
+  check ((uncertain.graph.usageCounts requested[0]!).omittedThenRead == 1)
+    "unknown delivery was labelled missing"
+  let cited ← IO.ofExcept (feedback.answer (occurrence "answer") query
+    "[日本語.cpp:10](src/日本語.cpp:10)")
+  check ((cited.graph.usageCounts requested[0]!).deliveredThenCited == 1) "delivered citation not recorded"
+
+private def checkTrace : IO Unit := do
+  let trace : Trace := {}
+  let trace ← IO.ofExcept (trace.start (occurrence "A") 0 "search")
+  let trace ← IO.ofExcept (trace.start (occurrence "B") 1 "src/a.cpp:10")
+  let trace ← IO.ofExcept (trace.finish (occurrence "A") 2 "src/a.cpp:10")
+  let trace ← IO.ofExcept (trace.finish (occurrence "B") 3 "done")
+  check (trace.graph.evidenceCount == 0) "parallel call consumed a future output"
+  let trace ← IO.ofExcept (trace.start (occurrence "C") 4 "src/a.cpp:10")
+  let trace ← IO.ofExcept (trace.finish (occurrence "C") 5 "done")
+  check (trace.graph.evidenceCount == 2) "finished path and path-line witnesses were lost"
+  let duplicate ← IO.ofExcept (trace.finish (occurrence "C") 6 "done")
+  check (duplicate.graph.snapshot == trace.graph.snapshot) "duplicate notification increased weight"
+
+def main : IO Unit := do
+  let (rows, packet) ← checkSource
+  checkFeedback rows packet
+  checkTrace
+  IO.println "Lean extraction checks passed: literal reads/citations, exact IDs, original Unicode coordinates, actual proposal order and usage labels"

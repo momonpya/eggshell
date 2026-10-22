@@ -60,3 +60,15 @@ lean_exe proof_fixture_tests where
 
 lean_exe memo_replay_tests where
   root := `tests.MemoReplayMain
+
+lean_exe synapse_tests where
+  root := `tests.SynapseTests
+
+lean_exe synapse_extraction_tests where
+  root := `tests.SynapseExtractionTests
+
+lean_exe synapse_extract where
+  root := `tools.SynapseExtract
+
+lean_exe synapse_replay where
+  root := `tools.SynapseReplay
