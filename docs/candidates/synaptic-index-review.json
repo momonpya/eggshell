@@ -1,0 +1,431 @@
+{
+  "status": "lean-native-db-owned-storage-and-bounded-reader-verified-production-hooks-not-integrated",
+  "implementation": "Eggshell/SynapseIndex.lean",
+  "compiledCheckoutDependencySourcesMatchRoot": true,
+  "dependencySourceHashes": [
+  {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/GraphStore.lean",
+    "sha256": "a933bc83a62c9bf370a9c25326207d14358eaf9322af5de42fb432c215eaab5e"
+  },
+  {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/DB/PageMap.lean",
+    "sha256": "d47bb04ca2dacf626b79ad819a2208a5a23170ec6ef0049829d458939b89df13"
+  },
+  {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/DB/Sidecar.lean",
+    "sha256": "b3648466ca04fe8145d274ce60aaab0a4045c17fdb64e86db1f1233cbc6142ed"
+  },
+  {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SourceEvidence.lean",
+    "sha256": "fc087f4bdd058a47b35a5c01c847711bf46e576f7af3c6038fd5758194f41ce1"
+  },
+  {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/Synapses.lean",
+    "sha256": "413a9dac0e7e7bbd904f15cbf8db5bc96d53b0caec72cd1d9c81aebe777fef1a"
+  },
+  {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseExtraction.lean",
+    "sha256": "0bfcddf054be781397a237284f1de5598263e62e1a1bf9f1bf5a78cf6ca864ab"
+  },
+  {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseSource.lean",
+    "sha256": "6db200afbdacd5fc9a9e5aa35df91dad4b5b250f2c1f89c7bbbd4d90bc4e8a28"
+  },
+  {
+    "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseUsage.lean",
+    "sha256": "8b253904dc2a018a69162e8e7c8da179e9d1c426a1dbf37dc3c19960c513d9cd"
+  }
+],
+  "sourcesAndArtifacts": [
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/Eggshell/SynapseIndex.lean",
+      "sha256": "225972483373d78ac15b4c437746192e568ba0944cc958526241c20fab9c7292"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tests/SynapseIndexTests.lean",
+      "sha256": "bec4272a3292aca3431bedad0004119f208f39de49d8a28b840e058a91d774ff"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/SynapseIndexProbe.lean",
+      "sha256": "00ea1c5f6bc979cd155dc5bdfcfbfcc35d6b4d9225e422ae16260f0f9c17a860"
+    },
+    {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/lakefile.lean",
+      "sha256": "4fbf7c98b003be19af0b8057c2256971ba2bcf260a8b74a8e943cfb5cc515d62"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/synapse_index_tests",
+      "sha256": "caca3db0ba21437602180ec048c38a66e677f9d9c0f4e9d1ff62bc309b4481ca"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/synapse_index_probe",
+      "sha256": "68f9cfb232b87680e03880698c1b7fcf63236a6a73535a55d6bb54e37591403f"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/typed-native-tests-guard.stdout",
+      "sha256": "524dbe87d76ce66c557ca990c75d8db6f439a2b8ea597591341551deff1031da"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/final-shared-persistence-guard.stdout",
+      "sha256": "876d5fc87d87ab08f171117500285f7814ab147db7dfa43da89164d49c982835"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/final-usage-persistence-guard.stdout",
+      "sha256": "36e6f9233c91911e243426c7d1fa37adb0dcfb8d7ea359fbc6ae9badf64cf77b"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/fresh-process-answer-guard.stdout",
+      "sha256": "d65f7ccc5bf73b6c456490dc1c893a2d857a6e02076f375af57dca0517a26c01"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/fresh-process-query-guard.stdout",
+      "sha256": "42dfc0a9e243cbf54dd9501dc1f170dd79126c1ac9ae497c3116c11c122fc4fd"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/probe-source-before.sha256",
+      "sha256": "ad70935ceb81aaff8368180ad01ddeea54fe3003fef51a3740f6addb78b8bfcd"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/final-probe-source-after.sha256",
+      "sha256": "ad70935ceb81aaff8368180ad01ddeea54fe3003fef51a3740f6addb78b8bfcd"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/terminal-runtime-storage.json",
+      "sha256": "b396043251bbf35e1a801f71d383f39ec1c664656d62ba500454950b35d25ca7"
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/build-incremental-native.sh",
+      "sha256": "95f3c43f828e4f52aea733ea569572df21b29bd73000c35826888067cefaa6a3"
+    }
+  ],
+  "frozenSourceArchive": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/verified-typed-source",
+  "nativeFixtureTests": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/typed-native-tests-guard.json",
+  "testedProperties": [
+    "atomic fact/inverse-posting/manifest publication",
+    "idempotent repeated warm on identical frozen inputs",
+    "incremental insertion and retirement",
+    "foreign DB and obsolete-source rejection",
+    "bounded posting traversal and zero-page expiry",
+    "private usage scope with no shared DB preparation",
+    "immutable usage labels across deltas, retire/add and full replace",
+    "private fallback on an actually filesystem-readonly DB",
+    "no index construction from the reader path",
+    "proof-carrying actual inverse-key membership"
+  ],
+  "proofs": [
+    "Index.shared_rejects_usage",
+    "Index.Lookup.returned_bound"
+  ],
+  "realDbPersistence": {
+    "sharedFacts": 608,
+    "privateUsageFacts": 47,
+    "records": [
+      "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/final-shared-persistence-guard.json",
+      "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/final-usage-persistence-guard.json"
+    ],
+    "sameFrozenFactsRepeatedAppend": false,
+    "originalHeadAndPagesSha256Unchanged": true
+  },
+  "freshProcessReads": [
+    {
+      "scope": "shared",
+      "facts": 34,
+      "complete": true,
+      "postingScanPages": 5,
+      "readerMs": 4,
+      "lookupMs": 29,
+      "elapsedMs": 33,
+      "indexWrites": 0,
+      "frozenFactFileRead": false,
+      "indexHead": {
+        "authority": "advisory:e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d:recommendations",
+        "bytes": 748359,
+        "identity": "39bfdb806b120cd2040c977abb742f1645cffd5fc3bb6109506e6d3684665cbc",
+        "revision": 2,
+        "root": {
+          "bytes": 1069,
+          "checksum": "f55180be53e2f97b698a6cc540eaf614261ed02cd5a4285a2e0a16bcdb42a03d",
+          "first": "fact:0015d8381100ac28c5be740bd26766d9ec61be2cf561186d4086f1246aabba6b",
+          "height": 2,
+          "last": "manifest",
+          "offset": 747290,
+          "rows": 1395
+        }
+      }
+    },
+    {
+      "scope": "usage",
+      "facts": 47,
+      "complete": true,
+      "postingScanPages": 4,
+      "readerMs": 3,
+      "lookupMs": 9,
+      "elapsedMs": 12,
+      "indexWrites": 0,
+      "frozenFactFileRead": false,
+      "indexHead": {
+        "authority": "advisory:e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d:usage",
+        "bytes": 99377,
+        "identity": "87c562415cac4b1af6120454651eff81f40bbc6c0454227c4f0a66ab4521aee8",
+        "revision": 2,
+        "root": {
+          "bytes": 3675,
+          "checksum": "7761063be70529223875fe4ebf757f367555060910bbfd5d9984d9a03f895b2d",
+          "first": "event:0593906bc1da209edda3dcc8f1e368217168565d2a905f87a8e1cd5aeb5f4fc8",
+          "height": 1,
+          "last": "manifest",
+          "offset": 95702,
+          "rows": 189
+        }
+      }
+    }
+  ],
+  "measurements": {
+    "boundedPostingWalk": {
+      "facts": 7,
+      "pages": 3
+    },
+    "fullPostingWalk": {
+      "facts": 1000,
+      "pages": 91
+    },
+    "pageMetricScope": "Only posting traversal, excludes fact point lookups and metadata. Timings begin inside main; no process startup or production hook claim."
+  },
+  "guards": [
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/archive-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 36224,
+      "elapsedSeconds": 9.435466332826763,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/clone-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 27520,
+      "elapsedSeconds": 1.4195618340745568,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/final-shared-persistence-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 68688,
+      "elapsedSeconds": 0.8787521249614656,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/final-usage-persistence-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 30352,
+      "elapsedSeconds": 0.31565841706469655,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/fresh-process-answer-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 25504,
+      "elapsedSeconds": 1.976999667007476,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/fresh-process-query-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 28480,
+      "elapsedSeconds": 0.31399150006473064,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/incremental-native-build-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1514304,
+      "elapsedSeconds": 16.98137199971825,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/index-elaboration-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 852016,
+      "elapsedSeconds": 7.211320291738957,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/index-elaboration-with-imports-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1151264,
+      "elapsedSeconds": 8.086881250143051,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/lookup-probe-build-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1510480,
+      "elapsedSeconds": 11.87000787537545,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/native-build-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 2421856,
+      "elapsedSeconds": 21.371837875340134,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/native-current-tests-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 115984,
+      "elapsedSeconds": 2.3239138340577483,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/native-index-tests-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 127504,
+      "elapsedSeconds": 2.6375857079401612,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/native-link-fixed-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 2683616,
+      "elapsedSeconds": 9.060254749841988,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/native-test-link-guard.json",
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 2551920,
+      "elapsedSeconds": 10.666648333892226,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/real-db-shared-probe-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 95984,
+      "elapsedSeconds": 2.44253704091534,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/real-db-usage-probe-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 28688,
+      "elapsedSeconds": 0.321083958260715,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/typed-incremental-native-build-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1538032,
+      "elapsedSeconds": 18.124313292093575,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/typed-index-elaboration-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1165072,
+      "elapsedSeconds": 9.174224833026528,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/typed-native-tests-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 105904,
+      "elapsedSeconds": 2.845678832847625,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/typed-real-db-shared-probe-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 69312,
+      "elapsedSeconds": 2.304005874786526,
+      "guardTriggered": false,
+      "reason": null
+    },
+    {
+      "file": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/typed-real-db-usage-probe-guard.json",
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 32992,
+      "elapsedSeconds": 0.30850345781072974,
+      "guardTriggered": false,
+      "reason": null
+    }
+  ],
+  "maximumObservedAggregateRssKiB": 2683616,
+  "diskRefusalsBeforeChildStart": [
+    {
+      "record": "native-current-build-guard.json",
+      "requiredMiB": 3072
+    },
+    {
+      "record": "typed-native-build-guard.json",
+      "requiredMiB": 2048
+    }
+  ],
+  "incrementalResourcePolicy": [
+    "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/incremental-build-scope.json",
+    "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/typed-incremental-build-scope.json"
+  ],
+  "archive": {
+    "manifest": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/terminal-runtime-storage.json",
+    "terminalPaths": 11,
+    "distinctVerifiedGzipBodies": 7,
+    "dbEmbeddingRawLogsPreserved": true,
+    "currentBestDirectCitationExecutablePreserved": true
+  },
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "autoExtractionIntegrated": false,
+  "warmTicketIntegrated": false,
+  "productionHooksIntegrated": false,
+  "tokenImprovementMeasured": false,
+  "productionAdoption": false,
+  "remaining": [
+    "DB publication to automatic Lean extraction and incremental extraction scheduling",
+    "actual native hook time/receipt capture for all three signals",
+    "integration with DB tickets and egg warm",
+    "mapping indexed advisory ranges into original certified source owners and actual delivery",
+    "six-stage native delivery audit and matched model/token/quality repetitions",
+    "larger scale, holdout, certified reuse rules and paper requirements"
+  ]
+}

@@ -72,3 +72,9 @@ lean_exe synapse_extract where
 
 lean_exe synapse_replay where
   root := `tools.SynapseReplay
+
+lean_exe synapse_index_tests where
+  root := `tests.SynapseIndexTests
+
+lean_exe synapse_index_probe where
+  root := `tools.SynapseIndexProbe
