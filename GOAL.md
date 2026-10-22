@@ -78,6 +78,19 @@ docs/synaptic-portable.mdとcandidates/synaptic-portable-review.jsonに適用範
 旧DBに順序来歴と私有利用がないことを確認し、同じ6問での重み調整は再開しない。
 回答モデル/seed追加0。総トークン・品質比較と最終採用は未完了。詳細はdocs/synaptic-delivery.md。
 
+2026-10-23 実ログの時系列移行と任意索引の失敗処理もLeanで実装・証明した。
+SynapseImportはnativeの観測ID/呼び出し/出力全文と保存済みの実測monotonic_nsが合う場合だけ来歴を結び付ける。
+seed31コマンド中26が厳密一致、出力不一致5は不明のまま残した。DB列挙順や未来の利用ラベルは使わない。
+元6snapshotのコピーだけを移行し、原文行を根拠に持つ消費事実227件を各段階で復元した。
+元グラフ/認定行・既存ページ・canonical sourceのSHAは不変、再送・競合・時刻・曖昧性・DB単体復元のLean試験が成功。
+任意索引のopen/read例外は未完了・理由付きとして候補を捨て、途中I/Oの計数はnullにする。
+実フックで任意索引を破損させても通常配送の本文とバイト一致し、completed/操作省略は不変だった。
+凍結した候補・入力・計測器で題材1から全6段階を各2チャット再監査し、未配送は1/0/3/1/0/3、計8件。
+全12hookが30秒以内（最大27177ms）、段階内本文一致、未確認の原文座標0。導出辺から実際に原文が届いたが配送改善は未達。
+同じ6問で重みの調整を再開せず、不採用の結果を保持する。回答モデル/seed追加0、総トークン/品質比較と最終採用は未完了。
+最大aggregate RSS2570128KiB、全guard終了。新規Python意味処理0、runtime/installed/README実績への適用0。
+詳細はdocs/synaptic-evidence.mdとcandidates/synaptic-evidence-review.json。
+
 2026-10-22 シナプス結合の開始：推薦専用の導出/共引用/利用の核・抽出器・実DBの読み出しを実装した。
 核6試験とadapter3試験が成功。既存seed31コマンド中、15元観測を保存されたExactなsession/turn/use IDで結び付けた。
 候補13実行では、同指紋の未配送範囲の後続再読16、配送後引用54、欠落と断定できない再読46を記録した。

@@ -157,6 +157,19 @@ def main (args : List String) : IO Unit := do
             deliveredKinds := deliveredKinds.insert kind
     check (["support", "consumption", "coquotation", "omitted_then_read"].all deliveredKinds.contains)
       "actual stdout receipt did not account for all three relation types"
+    let optional ← Index.prepare source .user .shared
+    let facts ← Index.allFacts optional
+    let some damaged := facts.find? (fun fact => match fact with | .supports _ => true | _ => false) |
+      throw (IO.userError "no optional support to damage")
+    let _ ← DB.PageMap.withWriter optional fun writer => writer.put (Index.factName damaged) none
+    let fallbackReceipt ← Receipt.fresh
+    let some fallback ← Plugin.automaticHandoff selection question [] false
+        (sourceContext := some {context with receipt := some fallbackReceipt}) (publishMemo := false) |
+      throw (IO.userError "failed optional index discarded the original packet")
+    IO.FS.writeFile (root / "fallback.json") (toJson fallback).compress
+    check (fallback.text == baseline.text && fallback.completed == baseline.completed &&
+      fallback.blocksCurrent == baseline.blocksCurrent && !fallback.synapticComplete)
+      "failed optional index changed the original packet or completion/control result"
     check ((← IO.FS.readBinFile (source.directory / "head")) == originalHead &&
       (← IO.FS.readBinFile (DB.PageMap.dataPath source.directory source.head)) == originalPages)
       "read-only planning changed the source DB"
@@ -164,6 +177,7 @@ def main (args : List String) : IO Unit := do
       ("deliveredSignalKinds", toJson ["support", "consumption", "coquotation", "omitted_then_read"]),
       ("completed", toJson result.completed), ("baselineCompleted", toJson baseline.completed),
       ("actualUserPromptStdout", toJson true), ("blocksCurrent", toJson result.blocksCurrent),
+      ("corruptOptionalIndexKeepsBaselineBytes", toJson true),
       ("answeringModelCalls", toJson (0 : Nat))]).compress
   finally
     let _ ← IO.Process.output {cmd := binary.toString, args := #["codex-daemon", "shutdown"]}

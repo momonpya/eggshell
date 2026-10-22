@@ -95,6 +95,18 @@ private def scenario (root : System.FilePath) : IO Unit := do
   check (sharedReader.index.head == oldHead && (← DB.PageMap.pin source.directory).head == source.head)
     "recommendation planning wrote the source graph"
   IO.FS.writeFile (root / "receipt.json") (plan.receipt "").compress
+  -- A dangling optional posting is an unavailable recommendation, not an
+  -- exception that may discard the independently computed original packet.
+  let _ ← DB.PageMap.withWriter sharedReader.index fun writer =>
+    writer.put (Index.factName (.supports support)) none
+  let damaged ← Recommend.prepare source true
+  let failed ← damaged.collect #[("answer", 0)] query ((← IO.monoMsNow)+3000)
+  check (!failed.complete && failed.failure.isSome && failed.admitted.isEmpty &&
+    (failed.receipt.getObjVal? "requests").toOption == some Json.null)
+    "broken optional evidence escaped as success, zero reads, or an exception"
+  let noProjection ← Transport.build #[damaged] #[("answer", 0)] owners query ((← IO.monoMsNow)+3000)
+  check (!noProjection.complete && noProjection.ranges.isEmpty && noProjection.rows.isEmpty)
+    "failed optional evidence caused original-body hydration or transport"
   IO.println s!"Lean recommendation tests passed: offers={result.offers.size} requests={result.requests} bytes={result.bytes}; three relations, omitted feedback, original rows, private index pinning, bounds and no graph mutation"
 
 def main (args : List String) : IO Unit := do

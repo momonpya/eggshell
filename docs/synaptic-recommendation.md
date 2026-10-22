@@ -4,6 +4,10 @@
 導出・共起・利用の3種類をすべて実装する。LLMによるラベル生成は行わない。
 抽出器を含む実装・検証・証明はLeanで行う。旧Python実装の5ファイルは撤去し、凍結ソースと過去記録は実験履歴として保存する。
 
+2026-10-23の実フック接続は[synaptic-delivery.md](synaptic-delivery.md)、
+厳密な実ログ移行・破損した任意索引への対処は[synaptic-evidence.md](synaptic-evidence.md)を参照する。
+以下の初期診断や未接続の記録と、現在の隔離候補の適用範囲を区別する。
+
 現行の`Value.Operator`はall/outcome/occurrence/inquiry/receiptの5種である。
 既存の包含・認定グラフに、ツール出力の消費・引用の支持範囲・再利用のフィードバックを表す推薦用の関係を加える。
 演算子が5種類であることだけを根拠にグラフ全体を否定せず、既存のExact・union・合同・鮮度検査を維持する。

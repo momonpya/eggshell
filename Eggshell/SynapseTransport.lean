@@ -49,6 +49,7 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
   for source in prepared do
     plan := {plan with results := plan.results.push (← source.collect answers query deadline)}
   let offers := plan.results.flatMap (·.admitted)
+  if offers.isEmpty then return plan
   for owner in owners do
     let .ok document := owner.document | plan := {plan with unsupported := plan.unsupported+1}; continue
     let .ok rows := recordedRows owner.database document | plan := {plan with unsupported := plan.unsupported+1}; continue

@@ -76,19 +76,28 @@ structure Result where
   available : Bool := true
   index : Option PageMap.Head := none
   usage : Option PageMap.Head := none
+  failure : Option String := none
 
 /-- A partial walk never changes the original packet. Its receipt still
 reports incompleteness rather than presenting an empty successful search. -/
 def Result.admitted (result : Result) : Array Offer :=
-  if result.complete && result.available then result.offers else #[]
+  if result.complete && result.available && result.failure.isNone then result.offers else #[]
 
 theorem Result.incomplete_not_admitted (result : Result) (incomplete : result.complete = false) :
     result.admitted = #[] := by simp [admitted, incomplete]
 
+theorem Result.failed_not_admitted (result : Result) (failed : result.failure.isSome = true) :
+    result.admitted = #[] := by
+  cases found : result.failure <;> simp_all [admitted]
+
 def Result.receipt (result : Result) : Json := Json.mkObj [
   ("available", toJson result.available), ("complete", toJson result.complete),
-  ("requests", toJson result.requests), ("facts", toJson result.facts),
-  ("bytes", toJson result.bytes),
+  -- An exception can occur after successful reads. Do not report those
+  -- interrupted counters as zero observed operations.
+  ("requests", if result.failure.isSome then Json.null else toJson result.requests),
+  ("facts", if result.failure.isSome then Json.null else toJson result.facts),
+  ("bytes", if result.failure.isSome then Json.null else toJson result.bytes),
+  ("failure", toJson result.failure),
   ("index", toJson result.index), ("usage", toJson result.usage),
   ("offers", toJson (result.admitted.map Offer.json))]
 
@@ -176,31 +185,32 @@ def collect (shared : Index.Reader) (usage : Option Index.Reader)
     | .used value => value.kind != .deliveredThenCited || !missing.contains offer.source
     | _ => true}
 
-def read (source : PageMap.Snapshot) (writable : Bool) (answers : Array (String × Nat))
-    (initial : Array Range) (query : String) (deadline : Nat) (limits : Limits := {}) : IO Result := do
-  let (storage, _) ← Sidecar.destination (Sidecar.Owner.ofSnapshot source) writable
-  let some shared ← Index.open? source storage .shared | return {available := false}
-  collect shared (← Index.open? source .user .usage) answers initial query deadline limits
-
 /-- Pin optional index publications once for both memo identity and planning.
 An advancing background worker cannot silently change the input mid-request. -/
 structure Prepared where
   source : PageMap.Head
   shared : Option Index.Reader
   usage : Option Index.Reader
+  failure : Option String := none
 
 def prepare (source : PageMap.Snapshot) (writable : Bool) : IO Prepared := do
-  let (storage, _) ← Sidecar.destination (Sidecar.Owner.ofSnapshot source) writable
-  return ⟨source.head, ← Index.open? source storage .shared, ← Index.open? source .user .usage⟩
+  try
+    let (storage, _) ← Sidecar.destination (Sidecar.Owner.ofSnapshot source) writable
+    return ⟨source.head, ← Index.open? source storage .shared, ← Index.open? source .user .usage, none⟩
+  catch error => return ⟨source.head, none, none, some s!"index-open: {error}"⟩
 
 def Prepared.identity (prepared : Prepared) : Json :=
   toJson (prepared.source.identity, prepared.source.authority,
-    prepared.shared.map (·.index.head), prepared.usage.map (·.index.head))
+    prepared.shared.map (·.index.head), prepared.usage.map (·.index.head), prepared.failure)
 
 def Prepared.collect (prepared : Prepared) (answers : Array (String × Nat)) (query : String)
     (deadline : Nat) (limits : Limits := {}) : IO Result := do
+  if prepared.failure.isSome then return {complete := false, available := false, failure := prepared.failure}
   let some shared := prepared.shared | return {available := false}
-  _root_.Eggshell.Synapses.Recommend.collect shared prepared.usage answers #[] query deadline limits
+  try _root_.Eggshell.Synapses.Recommend.collect shared prepared.usage answers #[] query deadline limits
+  catch error => return {
+    complete := false, index := some shared.index.head, usage := prepared.usage.map (·.index.head)
+    failure := some s!"index-read: {error}"}
 
 /-- Locate a recommendation only inside an already hydrated original owner.
 Fingerprint/range matching never creates a new owner or a control Match. -/
