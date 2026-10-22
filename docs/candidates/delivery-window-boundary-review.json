@@ -1,0 +1,102 @@
+{
+  "scope": "Recorded numerical provider focus before later lexical refocus and packet planning",
+  "graphSha256": "cb0285beea64599f17adf8326f03bdc226e86db074e72c24e4d8a1882f72ef8b",
+  "documentsSha256": "efbb9d40ff4ed710ca9ee8e47b67dc56b3de5fe7dc19451ca92b1d0b4d86e599",
+  "traceSha256": "ec6c42c30ddcb0b8e4131c682462b0508945008040070465c4c4aefa486038ef",
+  "bodySha256": "3a9266009fce52866a19f59f38c48d2669541ce559c4c10c576ba99806d5ff53",
+  "specSha256": "ce88b5260251b30eecfb6313bb15dd19427aa8f9ef6d344e2f25c272323f6112",
+  "scriptSha256": "cbad245ec685b1904f3bb296fcb68e70dcc54f4ac0be007c7b63844327b3ffe8",
+  "rows": [
+    {
+      "owner": "v11960447802706886118",
+      "fact": "syntax-only-no-output-action",
+      "sourceLines": [
+        5327,
+        5328
+      ],
+      "originalEncodedRange": [
+        9878,
+        10021
+      ],
+      "indexedRange": [
+        10012,
+        10155
+      ],
+      "providerFocusPositions": [
+        12,
+        4,
+        6,
+        15,
+        2,
+        19,
+        20,
+        22,
+        5,
+        11,
+        7,
+        16,
+        17,
+        25,
+        26,
+        24
+      ],
+      "providerWindowsIntersecting": [
+        25,
+        26
+      ],
+      "fullyCoveredAtProviderBoundary": true,
+      "providerFocusOwnerRank": 68,
+      "requiredAnchors": [
+        "Args.hasArg(options::OPT_fsyntax_only)",
+        "return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);"
+      ]
+    },
+    {
+      "owner": "v11731249417270010951",
+      "fact": "frontend-job-construction",
+      "sourceLines": [
+        6382,
+        6382
+      ],
+      "originalEncodedRange": [
+        5084,
+        5167
+      ],
+      "indexedRange": [
+        5220,
+        5303
+      ],
+      "providerFocusPositions": [
+        14,
+        4,
+        10,
+        3,
+        9,
+        13,
+        11,
+        0,
+        6,
+        5,
+        8,
+        7,
+        1,
+        2,
+        12,
+        15
+      ],
+      "providerWindowsIntersecting": [
+        13
+      ],
+      "fullyCoveredAtProviderBoundary": true,
+      "providerFocusOwnerRank": 78,
+      "requiredAnchors": [
+        "T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);"
+      ]
+    }
+  ],
+  "answeringModelCalls": 0,
+  "runtimeChanged": false,
+  "conclusion": "Both missing short code spans were covered at the numerical provider boundary.",
+  "unresolved": "The later refocus/anchor, candidate-plan and packet-fitting boundary still needs exact instrumentation; raw focus rank does not locate the loss.",
+  "productionAdoption": false
+}

@@ -1,0 +1,309 @@
+{
+  "scope": "Saved stage-six exact numbered-line redundancy diagnostic",
+  "scriptSha256": "37e5522ec4122fac91edc6d8c96d992a7dc027ebd8d2f43819ed0044b037223d",
+  "graphSha256": "cb0285beea64599f17adf8326f03bdc226e86db074e72c24e4d8a1882f72ef8b",
+  "documentsSha256": "efbb9d40ff4ed710ca9ee8e47b67dc56b3de5fe7dc19451ca92b1d0b4d86e599",
+  "bodySha256": "3a9266009fce52866a19f59f38c48d2669541ce559c4c10c576ba99806d5ff53",
+  "bodyChars": 117641,
+  "sourceFiles": {
+    "clang/lib/Driver/Driver.cpp": "ac4f7456ec2da4e699a6a75f87c15cf34c941e920c0acaa85981796a47a28c8c",
+    "clang/include/clang/Driver/ToolChain.h": "98d1c8963c66319a5a5f1e1fc6a21759fe07f665fecd918019e2295c5050ff1c",
+    "clang/lib/Driver/ToolChain.cpp": "70e74e06c2346109199ccf394440d809a9ba973e2bebc9ecc2a2906cf1236991",
+    "clang/include/clang/Driver/Driver.h": "7e740cf054fbb071a3a126b5f64866c58c9ea96768ffe8fed0f556e45ffb63b8",
+    "clang/lib/Driver/ToolChains/Gnu.cpp": "9be1631cb95566836d9c2afd6ad168e91b658741436d3d6327291ff862a1cf77",
+    "clang/lib/Driver/ToolChains/Linux.cpp": "13d49152e1276a66e210a928aba54928520dc0e62fe81dbb29879064cdf9d142",
+    "clang/lib/Driver/ToolChains/BareMetal.cpp": "679ab956c77a3b81b0be61ac8a20e814c14f4baf920a873c078f6e10f41fe2e1",
+    "clang/lib/Driver/ToolChains/MSVC.cpp": "7ea2dcb40d61059508ff264e9167f597349ee01bdcb24fb1d2a055ee23e9e441",
+    "clang/lib/Driver/ToolChains/MinGW.cpp": "00bd5fe28df70761d33153a7c54cfacf6a71cecebc23c6369c829831bb8d1e88",
+    "clang/lib/Driver/ToolChains/Darwin.cpp": "34c2f98147c9fea29f584a003c473256acbd1047f5ef5c2703a96ee1c8fedbed",
+    "clang/test/Driver/cl-options.c": "25f368fda77cfff8f779e731c115263cb0d00b54cb17feb9831a769a54df2bc5",
+    "clang/test/Driver/cl.c": "9684eda54285ec340ced36af690e6ad72214644a568b9b81ccb32f59fffb6836",
+    "clang/test/Driver/config-file3.c": "dd815d7d92c263ff6d7fc94712806c0f6791d604c863c9da4b6fcbc8e5d75605",
+    "clang/test/Driver/parse-progname.c": "94f48afbe330046fe89d3c583a484dbce5247b3aa412b8e694a52489501073ed",
+    "clang/lib/Driver/ToolChains/Gnu.h": "0ddbad0ef29be6fe9b71034753f6fb4ffd46638f44f1b509bd1913a81c05e663",
+    "clang/test/Driver/bindings.c": "bbd787410d9cc2f9c55b7b2346f07ed66ca8b18d51d4851f64b699b4ed39ec30",
+    "clang/test/Driver/dumpmachine.c": "6ebacc0e711ea6471a86f734255f5207d002af39637e091f39817e19abd23de6",
+    "clang/test/Driver/msvc-link.c": "6d468eb78ab2c6cb6b7c5ae3388009ef0b94e8c01ca6b1bfc660c8ecb016cc40",
+    "clang/test/Driver/windows-cross.c": "24d609bf0a856a0155c467c97dc35eb073971fb5537c9969ea1185de1a62298e",
+    "clang/test/Driver/default-toolchain.c": "a39b0667420d795e420b934f3982d57e24e65f3dcb4f22be2a8ce9d5f927bc8c",
+    "clang/test/Driver/gcc-toolchain.cpp": "f47ecae071a7f7c700abf945a09ef739c38aa2399c88b9ab4a91974867f0e405",
+    "clang/test/Driver/offload-target.c": "59d5b21321af79f3aad10f0ce51a2ec3e581cb28f59ba4e4fdc7efbd9b16cc12",
+    "clang/test/Driver/hip-binding.hip": "cab2fba140d2b58eaf08d8232b7f6ef2d51defa587994f631342248ee3847f45",
+    "clang/test/Driver/hlsl-lang-targets-spirv.hlsl": "12a437dcb091ed6497b9f6a1f3cd122f6818b0ebf957dc59b32795d2fb747aa5",
+    "clang/test/Driver/spirv-amd-toolchain.c": "b1c45d2823247342bc21fbc8f5f7acbb1a4902df8766305115e5d261b79e9149",
+    "clang/lib/Driver/ToolChains/Clang.cpp": "46f95d77d79decd5aeb6c0de0f4f0df6818a82acb48cb499d77b403777b9c890",
+    "clang/test/Driver/hip-inputs.hip": "4021ff28a945bb41601e616d49242f1b8e723836c53e5577e27c75b1940b29e6",
+    "clang/test/Driver/hlsl-lang-targets.hlsl": "437b40166a84f554c0b9eb0d8713a16ca38d887d36b8b5359e3c6d6ba378eadd",
+    "clang/include/clang/Driver/Compilation.h": "7e410ab435371741f0306ac89ea607998fb43196853ff1c6ebe60588d796ba38",
+    "clang/lib/Driver/Compilation.cpp": "0fcf6673cc9d271e6ee0de957e162fedf69e069a6e3671bec633524bd774359d",
+    "clang/lib/Driver/ToolChains/SPIRV.cpp": "2e1a82c395d23963dabd1d4aaa117db5cceba76ca7f86b1c67dcde37df6e38a7",
+    "clang/lib/Driver/ToolChains/SPIRV.h": "6148551167f7c2763fee2012860b853edf6407c47df78e14529a9afd6332a862",
+    "clang/lib/Driver/ToolChains/HLSL.cpp": "1cf144ba4588bedb4e7bc9c8eaabb3474c4d762ade3995e15ddf6220705529c9",
+    "clang/lib/Driver/ToolChains/HLSL.h": "385d206234cc1593b3b4e3eb19850b48ed69e6271ed0557c613d6d73f7130bcd",
+    "clang/test/Driver/x-args.c": "3851677a502cbae40fc3aa3c2a62254ac0851057796feb9a0a5770324cef44c4"
+  },
+  "database": {
+    "matchedOccurrences": 11099,
+    "uniqueSourceLines": 8592,
+    "sourcePayloadChars": 456825,
+    "uniqueSourcePayloadChars": 351788,
+    "duplicateSourcePayloadChars": 105037,
+    "duplicateAcrossOwnersChars": 105035,
+    "ambiguousLinesExcluded": 173,
+    "unmatchedOrTruncatedLinesExcluded": 762,
+    "duplicateSourcePayloadFraction": 0.2299283095277185,
+    "repeatedRegions": [
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1440,
+        "occurrences": 2,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1441,
+        "occurrences": 2,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1442,
+        "occurrences": 2,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1443,
+        "occurrences": 2,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1444,
+        "occurrences": 3,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1445,
+        "occurrences": 3,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1446,
+        "occurrences": 3,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1447,
+        "occurrences": 3,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1448,
+        "occurrences": 3,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1449,
+        "occurrences": 3,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1450,
+        "occurrences": 3,
+        "owners": [
+          "v11688441620330750236",
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 1451,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      }
+    ]
+  },
+  "delivered": {
+    "matchedOccurrences": 1063,
+    "uniqueSourceLines": 924,
+    "sourcePayloadChars": 44014,
+    "uniqueSourcePayloadChars": 38625,
+    "duplicateSourcePayloadChars": 5389,
+    "duplicateAcrossOwnersChars": 5389,
+    "ambiguousLinesExcluded": 9,
+    "unmatchedOrTruncatedLinesExcluded": 0,
+    "duplicateSourcePayloadFraction": 0.12243831508156496,
+    "repeatedRegions": [
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 350,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 351,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 352,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 353,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 354,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 355,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 356,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 357,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 358,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 359,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 360,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      },
+      {
+        "path": "clang/lib/Driver/Driver.cpp",
+        "line": 361,
+        "occurrences": 2,
+        "owners": [
+          "v16748591830955464422",
+          "v9756138358688687787"
+        ]
+      }
+    ]
+  },
+  "deliveredOwnerCount": 12,
+  "requiredOmittedOwnersPresent": {
+    "v11960447802706886118": false,
+    "v11731249417270010951": false
+  },
+  "answeringModelCalls": 0,
+  "seedAcquisitions": 0,
+  "runtimeChanged": false,
+  "limitations": [
+    "Character redundancy is not a token-reduction measurement.",
+    "Counts exclude metadata, frames, unnumbered text, ambiguous lines and truncated lines.",
+    "Sharing display text does not merge DB owners or grant equality/completion authority.",
+    "Source file fingerprints/coordinates would need explicit validation in a runtime implementation.",
+    "Redundancy alone does not prove the cause of a particular omitted owner or that a replacement allocator succeeds."
+  ]
+}
