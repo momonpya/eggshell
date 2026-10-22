@@ -1,0 +1,429 @@
+{
+  "scope": "Native citation producer trace and a research-only input adapter; not a new automatic delivery result",
+  "rows": [
+    {
+      "stage": 1,
+      "citations": 38,
+      "projected": 39,
+      "completeCitations": 34,
+      "boundHints": 222,
+      "distinctHintUnits": 184,
+      "parents": [
+        {
+          "owner": "v1311888273957667032",
+          "priority": 0,
+          "reachableObservations": 37,
+          "citations": 38
+        }
+      ],
+      "issues": {
+        "invalid-literal-command": 1,
+        "unsupported-read-sequence": 17,
+        "no-literal-command": 4
+      },
+      "blocks": [
+        {
+          "name": "toolchain-cache-key",
+          "currentDelivered": true,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 6,
+          "producerPriorities": [
+            0
+          ]
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "currentDelivered": true,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 4,
+          "producerPriorities": [
+            0
+          ]
+        },
+        {
+          "name": "default-toolchain-selection",
+          "currentDelivered": true,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 8,
+          "producerPriorities": [
+            0
+          ]
+        },
+        {
+          "name": "trailing-language-warning",
+          "currentDelivered": false,
+          "hintReachesCompleteOriginalOffer": false,
+          "hintCount": 0,
+          "producerPriorities": []
+        }
+      ],
+      "projectionSha256": "b9accae28a283bf05ed8b062ecdb49a3b4114838d128d6858e6ac0e1e58444c6",
+      "offeredProblemUnchanged": true
+    },
+    {
+      "stage": 6,
+      "citations": 61,
+      "projected": 60,
+      "completeCitations": 51,
+      "boundHints": 429,
+      "distinctHintUnits": 387,
+      "parents": [
+        {
+          "owner": "v14872548599824763592",
+          "priority": 0,
+          "reachableObservations": 38,
+          "citations": 21
+        },
+        {
+          "owner": "v16368256707592180605",
+          "priority": 1,
+          "reachableObservations": 2,
+          "citations": 0
+        },
+        {
+          "owner": "v10827018069933719135",
+          "priority": 2,
+          "reachableObservations": 2,
+          "citations": 0
+        },
+        {
+          "owner": "v1311888273957667032",
+          "priority": 3,
+          "reachableObservations": 37,
+          "citations": 38
+        },
+        {
+          "owner": "v13876844999117342090",
+          "priority": 4,
+          "reachableObservations": 18,
+          "citations": 2
+        },
+        {
+          "owner": "v10577488982924616092",
+          "priority": 5,
+          "reachableObservations": 18,
+          "citations": 0
+        }
+      ],
+      "issues": {
+        "invalid-literal-command": 6,
+        "unsupported-read-sequence": 43,
+        "no-literal-command": 7,
+        "unrecorded-or-ambiguous-destination": 56
+      },
+      "blocks": [
+        {
+          "name": "toolchain-cache-key",
+          "currentDelivered": true,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 8,
+          "producerPriorities": [
+            0,
+            3
+          ]
+        },
+        {
+          "name": "complete-hlsl-branch-scope",
+          "currentDelivered": false,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 7,
+          "producerPriorities": [
+            0,
+            3
+          ]
+        },
+        {
+          "name": "default-toolchain-selection",
+          "currentDelivered": true,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 12,
+          "producerPriorities": [
+            0,
+            3
+          ]
+        },
+        {
+          "name": "syntax-only-compile-cutoff",
+          "currentDelivered": false,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 1,
+          "producerPriorities": [
+            0
+          ]
+        },
+        {
+          "name": "trailing-language-warning",
+          "currentDelivered": false,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 4,
+          "producerPriorities": [
+            0
+          ]
+        },
+        {
+          "name": "syntax-only-no-output-action",
+          "currentDelivered": false,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 4,
+          "producerPriorities": [
+            0
+          ]
+        },
+        {
+          "name": "frontend-job-construction",
+          "currentDelivered": false,
+          "hintReachesCompleteOriginalOffer": true,
+          "hintCount": 2,
+          "producerPriorities": [
+            0
+          ]
+        }
+      ],
+      "projectionSha256": "a36e3ea0f2678eadfb57b58d1595cb3df6aa6ffc4fc9f0c88076bde622487ce5",
+      "offeredProblemUnchanged": true
+    }
+  ],
+  "source": [
+    {
+      "path": "tools/research/citation_bridge.py",
+      "sha256": "977e96f2509f4d46ec0d6c5b17cbcb378e895e9cd0931a5e9729b08e58801c22"
+    },
+    {
+      "path": "tools/research/project_citations.py",
+      "sha256": "069de02e5f33185963ae5e4858c069d809c477fb9af59eac51a7d76b2fa1c934"
+    },
+    {
+      "path": "tools/research/test_citation_bridge.py",
+      "sha256": "86e6bab9c9d9846b2b68a13d8ef2e6cb421635acc499c1b41fb92269b87823d4"
+    },
+    {
+      "path": "tools/research/test_project_citations.py",
+      "sha256": "93a466cb4d2fb1fe881c01e54c03c0c703331d39e116b75769331245eeaa6d2b"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/build.py",
+      "sha256": "8cf7d36628a06f05ccc01878179b8c1db4e6b9e15f209387f2503f722fb73a0b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/frozen-inputs.json",
+      "sha256": "cd33b08329f2fff2074cb0dee1396d13036d1a94c493ba4d597796b97ee002a8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/build-result.json",
+      "sha256": "e7c9426d2b5da1ecfd7153793f26aac8a1399321d7ba65c2f98cdfd549010795"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/build-guard.json",
+      "sha256": "32502f588bc6a5d7da99967bd708efc4ea21d25cd0a24f2622ef05a25c297997"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/run.py",
+      "sha256": "8454db8df375f1af60fa47a5cdfc63473de887e144d02da25215065b9d77b15d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/native-guard.json",
+      "sha256": "fe4a6d84cc415e7582c26115096947b4f5099edfc6ac76ace1dfdcf8974c8934"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/run/result.json",
+      "sha256": "ad0683a140a22343d80502460d8c54310a9fbc7cc7b677f0f8cd69f8950237fb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/projection-stage1-guard.json",
+      "sha256": "32f85b3374c00419ffc5a85959ae1da7f660959a8db9f958524037135d35897d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/projection-stage6-guard.json",
+      "sha256": "549d837de74a334920bf4f8f2d1fb460b59d1b1b4ec1f51b1a4d20e88356b666"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/projection-bound-stage1-guard.json",
+      "sha256": "fcffa93948a60b8f7d5188a45a0797fec030fd9fbfe82d800eaf965a8a92cd27"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/projection-bound-stage6-guard.json",
+      "sha256": "c2b27ba9b321c5a0cbbf0daaa1d427f336a44bf3060879cffc37b5e8f148e9bc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/stage1-projection.json",
+      "sha256": "9f2891f946ed65bb6f79cddf95a76ba0741c457309d2d6d83f0b011a3991362b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/stage6-projection.json",
+      "sha256": "50e7b67f248c627e42596029c31c81d79518418809a40ba138b3061afc12b6d6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/stage1-bound-projection.json",
+      "sha256": "b9accae28a283bf05ed8b062ecdb49a3b4114838d128d6858e6ac0e1e58444c6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/stage6-bound-projection.json",
+      "sha256": "a36e3ea0f2678eadfb57b58d1595cb3df6aa6ffc4fc9f0c88076bde622487ce5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/projection-evaluation.json",
+      "sha256": "8c1a03a4b2d22600883e7764f0639a20049c32d5b2674c6be96cf8b02259434e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/bound-evaluation.json",
+      "sha256": "327e84965824cf8d727c118f3eb0dba274398984a80fb0a0deae22110ce93682"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/bridge-tests-guard.json",
+      "sha256": "7e85e358340268768ef275d9b120663d1ae3594e1d2f9a60bf6e1cc8eed54bb7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/bridge-integration-guard.json",
+      "sha256": "c2cef9378ace466ca939ccb44a154afe16515cfc4a4a4012fe48ab6b96d6b605"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/citation-input-diagnostic.patch",
+      "sha256": "349306d6632189e54a1a51d673a6871380310d71e02cbc209573dab7746c1c94"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/bridge-before-payload-check.py",
+      "sha256": "8014cecad0bcf71389ad634d046f05e5d207c560b9e3f736232551f11707c44c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/final-tests-guard.json",
+      "sha256": "36fea5ebf8cead9a6bfaf489fa49861f5094b09058b85aec2fc651681332a389"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/final-projection-stage1-guard.json",
+      "sha256": "7aaa9ff9cbc21f1d3d0fb12b7b7de4bd4dc9cdaf77a6ac8269bc354a18f01544"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/final-projection-stage6-guard.json",
+      "sha256": "197c4d46aa67d284c4ae7a4264ce47044a2664a9e5c7ee9524715b7d49dd66b6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/stage1-final-projection.json",
+      "sha256": "d67d12de9458a8ac216377f525815f6df6a70c3116f7d1e47f6fda4efb0c1b30"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/stage6-final-projection.json",
+      "sha256": "4f7c1bdd125137ce288db7ceecb62b5b30c2bd372df4c64bf4269bec73460ffb"
+    }
+  ],
+  "native": {
+    "diagnosticOnly": true,
+    "rows": [
+      {
+        "stage": 1,
+        "elapsedMs": 11577.990125,
+        "bodySha256": "40e80c7de464f8d36fbffdd904223ea7aac073bfbea232d75013d2200e276575",
+        "referenceSha256": "40e80c7de464f8d36fbffdd904223ea7aac073bfbea232d75013d2200e276575",
+        "sameBody": true,
+        "audit": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/run/stage1/audit.json",
+        "auditSha256": "3d038ec1d12e8445492b1de187d37a37e2e59827aba69ab7c05a31a74fb0eabf",
+        "sourceUnchanged": true,
+        "sourceSnapshot": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/readme-matched-20261021/checkpoints/stage1/work.egg",
+          "files": {
+            "head": "733a50e14a1e6a54cae54a7b2e89b2ef9c67726f569c3414b652eb85c39cc2af",
+            "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "26bbde5e4b37b88b84744046cd00f58b1214367810dad085b15f0c0b212d9e51"
+          }
+        }
+      },
+      {
+        "stage": 6,
+        "elapsedMs": 18397.267833,
+        "bodySha256": "9e358d171b9195cbde449b3dbd848c0b4e3d5c2b65636937b9f391465f4d57bc",
+        "referenceSha256": "9e358d171b9195cbde449b3dbd848c0b4e3d5c2b65636937b9f391465f4d57bc",
+        "sameBody": true,
+        "audit": "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/run/stage6/audit.json",
+        "auditSha256": "dbdca58dea736cb72291417acf136a953c1e4327f2bb4037ce2ba54b981f2a0e",
+        "sourceUnchanged": true,
+        "sourceSnapshot": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage6/work.egg",
+          "files": {
+            "head": "3c45c01e9768a49cb1d4a09e88ce2c3dd1b52bc0466b2ad0efa93057429fefea",
+            "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "7447e519c91ce6b6686e3e356938af1c643e92de6c0fd6eb551d2a786cc6f657"
+          }
+        }
+      }
+    ],
+    "runtimeSha256": "0d0fb955e122eb32bcf36c381069eb09b419986d67b768d1dcb048928d5daeb6",
+    "sourceManifestSha256": "cd33b08329f2fff2074cb0dee1396d13036d1a94c493ba4d597796b97ee002a8",
+    "answeringModelCalls": 0,
+    "productionAdoption": false,
+    "scriptSha256": "8454db8df375f1af60fa47a5cdfc63473de887e144d02da25215065b9d77b15d"
+  },
+  "buildGuard": {
+    "guardPid": 30513,
+    "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+    "state": "finished",
+    "limitRssKiB": 3145728,
+    "userCeilingRssKiB": 4194304,
+    "sampledPeakRssKiB": 2800288,
+    "samples": 256,
+    "guardTriggered": false,
+    "reason": null,
+    "ownedPrefixes": [],
+    "childCommand": [
+      "python3",
+      "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/build.py"
+    ],
+    "childPid": 30525,
+    "exitCode": 0,
+    "elapsedSeconds": 37.60777866560966
+  },
+  "nativeGuard": {
+    "guardPid": 41379,
+    "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+    "state": "finished",
+    "limitRssKiB": 3145728,
+    "userCeilingRssKiB": 4194304,
+    "sampledPeakRssKiB": 1413840,
+    "samples": 277,
+    "guardTriggered": false,
+    "reason": null,
+    "ownedPrefixes": [
+      "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022"
+    ],
+    "childCommand": [
+      "python3",
+      "/Users/ovm/.codex/experiments/eggshell/citation-plan-input-20261022/run.py"
+    ],
+    "childPid": 41391,
+    "exitCode": 0,
+    "elapsedSeconds": 40.70153433363885
+  },
+  "testGuard": {
+    "guardPid": 60371,
+    "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+    "state": "finished",
+    "limitRssKiB": 3145728,
+    "userCeilingRssKiB": 4194304,
+    "sampledPeakRssKiB": 29248,
+    "samples": 3,
+    "guardTriggered": false,
+    "reason": null,
+    "ownedPrefixes": [],
+    "childCommand": [
+      "python3",
+      "-m",
+      "unittest",
+      "test_citation_bridge",
+      "test_project_citations",
+      "test_evidence_plan_reference"
+    ],
+    "childPid": 60383,
+    "exitCode": 0,
+    "elapsedSeconds": 0.3376951673999429
+  },
+  "testsPassed": 15,
+  "originalCodeOracleReadByAdapter": false,
+  "citedSourceFilesRead": false,
+  "runtimeSelectionChanged": false,
+  "newDeliveryVerified": false,
+  "answeringModelCalls": 0,
+  "seedAcquisitions": 0,
+  "productionAdoption": false,
+  "finalProjectionReproduced": true,
+  "repair": "Unsupported JSON command arrays are explicit gaps; both actual projections remain identical apart from bridge source SHA."
+}
