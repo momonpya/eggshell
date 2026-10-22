@@ -1,0 +1,191 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -3611 +3611 @@
+-def cueViewCandidates (records : List (ContextSpan source))
++def cueContextChoices (records : List (ContextSpan source))
+@@ -3613,2 +3613,2 @@
+-    List (EvidenceRange source) :=
+-  let candidates := ranges.map fun range =>
++    List (EvidenceRange source × EvidenceRange source × EvidenceRange source) :=
++  ranges.map fun range =>
+@@ -3630,0 +3631,10 @@
++
++def cueRequiredRanges (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (ranges : List (EvidenceRange source)) :
++    List (EvidenceRange source) :=
++  (cueContextChoices records heads scopedHeads ranges).map fun (_,required,_) => required
++
++def cueViewCandidates (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (ranges : List (EvidenceRange source)) :
++    List (EvidenceRange source) :=
++  let candidates := cueContextChoices records heads scopedHeads ranges
+@@ -3642,0 +3653,15 @@
++
++theorem required_cue_is_legacy_candidate (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (ranges : List (EvidenceRange source))
++    (range : EvidenceRange source) (required : range ∈ cueRequiredRanges records heads scopedHeads ranges) :
++    range ∈ cueViewCandidates records heads scopedHeads ranges := by
++  apply List.mem_append_left
++  apply List.mem_append_left
++  exact required
++
++def prepareRequiredCueViewsUsing (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (decoded : Option (DecodedLayout source))
++    (ranges : List (EvidenceRange source)) : Option (List (EvidenceView source)) :=
++  (cueRequiredRanges records heads scopedHeads ranges).mapM fun candidate => match decoded with
++    | none => some (.original candidate)
++    | some layout => (decodedEvidenceUsing? layout candidate).map EvidenceView.decoded
+@@ -4993,0 +5019,25 @@
++/-- Reservation protects actual native-control connections. Intrinsic advisory
++Matches retain ordinary eligibility; provenance alone does not create control. -/
++def mandatorySlices (slices : List TransportSlice) : List TransportSlice :=
++  slices.filter fun slice => slice.members.any (·.blocks)
++
++theorem control_is_reserved (slices : List TransportSlice) (slice : TransportSlice)
++    (present : slice ∈ slices) (member : Selected) (belongs : member ∈ slice.members)
++    (controls : member.blocks = true) : slice ∈ mandatorySlices slices := by
++  apply List.mem_filter.mpr
++  exact ⟨present, List.any_eq_true.mpr ⟨member,belongs,controls⟩⟩
++
++theorem advisory_is_not_reserved (slice : TransportSlice)
++    (advisory : ∀ member ∈ slice.members, member.applicability = .advisory) :
++    slice.members.any (·.blocks) = false := by
++  apply List.any_eq_false.mpr
++  intro member present
++  simp [Selected.advisory_never_blocks (advisory member present)]
++
++theorem advisory_reservation_is_empty (slices : List TransportSlice)
++    (advisory : ∀ slice ∈ slices, ∀ member ∈ slice.members,
++      member.applicability = .advisory) : mandatorySlices slices = [] := by
++  apply List.filter_eq_nil_iff.mpr
++  intro slice present
++  simp [advisory_is_not_reserved slice (advisory slice present)]
++
+@@ -5047,22 +5097,26 @@
+-    let views := prepareCueViewsUsing records heads scopedHeads decoded dependencies
+-    let limit := (views.map fun view => view.range.stop-view.range.start).sum
+-    let selected := views.foldl (fun selected view =>
+-      offerContextView selected family.owner decoded view)
+-      (ContextSelection.empty : ContextSelection source limit)
+-    let fragments := (sourceOrderedEvidence selected.views).map fun view => ({
+-      first := view.range.start
+-      original := original.slice view.range.start (view.range.stop-view.range.start)
+-      decoded := match view with | .decoded _ => true | .original _ => false} : DeliveryFragment)
+-    let ranges := fragmentRanges fragments
+-    let demanded := requested.filterMap fun range => aligned (recordContextRange records range)
+-    if ranges.isEmpty || demanded.isEmpty ||
+-        !demanded.all (fun range => covers ranges range.start range.stop) then continue
+-    if seen.contains ranges then continue
+-    seen := seen.insert ranges
+-    let selectedCues := cues.flatMap fun (a,b) => ranges.filterMap fun (c,d) =>
+-      let first := max a c
+-      let last := min b d
+-      if first < last then some (first,last) else none
+-    let context := {envelope with fragments,cues := selectedCues}
+-    let slice := {family.template with context := some context,keys := context.keys,text := context.render}
+-    units := units ++ [{family := familyIndex,slice,ranges}]
++    let requirements := cueRequiredRanges records heads scopedHeads dependencies
++    let some required := prepareRequiredCueViewsUsing records heads scopedHeads decoded dependencies | continue
++    let richer := prepareCueViewsUsing records heads scopedHeads decoded dependencies
++    for views in [required,required ++ richer] do
++      let limit := (views.map fun view => view.range.stop-view.range.start).sum
++      let selected := views.foldl (fun selected view =>
++        offerContextView selected family.owner decoded view)
++        (ContextSelection.empty : ContextSelection source limit)
++      let fragments := (sourceOrderedEvidence selected.views).map fun view => ({
++        first := view.range.start
++        original := original.slice view.range.start (view.range.stop-view.range.start)
++        decoded := match view with | .decoded _ => true | .original _ => false} : DeliveryFragment)
++      let ranges := fragmentRanges fragments
++      let demanded := requested.filterMap fun range => aligned (recordContextRange records range)
++      if ranges.isEmpty || demanded.isEmpty ||
++          !demanded.all (fun range => covers ranges range.start range.stop) ||
++          !requirements.all (fun range => covers ranges range.start range.stop) then continue
++      if seen.contains ranges then continue
++      seen := seen.insert ranges
++      let selectedCues := cues.flatMap fun (a,b) => ranges.filterMap fun (c,d) =>
++        let first := max a c
++        let last := min b d
++        if first < last then some (first,last) else none
++      let context := {envelope with fragments,cues := selectedCues}
++      let slice := {family.template with context := some context,keys := context.keys,text := context.render}
++      units := units ++ [{family := familyIndex,slice,ranges}]
+@@ -5101,3 +5155,19 @@
+-  let costs := (frames ++ units.map (fun (unit : UnitPlan) =>
+-    let frame := frames[unit.family]?.getD (0,0)
+-    (unit.slice.text.length-frame.1+1,unit.slice.text.utf8ByteSize-frame.2+1))).toArray
++  let mut costs := frames.toArray
++  let mut payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
++  let mut closures : List (List Nat) := []
++  for unit in units do
++    let parts := match unit.slice.context with
++      | none => [(none,unit.slice.text)]
++      | some context => context.fragments.map fun (fragment : DeliveryFragment) =>
++          (some (fragment.first,fragment.original,fragment.decoded),
++            fragment.render context.compactCaptions)
++    let mut closure := [unit.family]
++    for (fragment,text) in parts do
++      let key := (unit.family,fragment)
++      let index := payloads[key]?.getD costs.size
++      if index == costs.size then
++        costs := costs.push (text.length+1,text.utf8ByteSize+1)
++        payloads := payloads.insert key index
++      closure := closure ++ [index]
++    closures := closures ++ [closure]
++
+@@ -5106 +5176 @@
+-    let closure ← [unit.family,families.length+index].mapM fun id =>
++    let closure ← (closures[index]?.getD []).mapM fun id =>
+@@ -5133 +5203,2 @@
+-        (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2} := do
++        (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
++        ∃ suffix, slices = mandatory ++ suffix} := do
+@@ -5153 +5224 @@
+-      some ⟨result,fits⟩
++      some ⟨result,fits.1,fits.2,⟨selected,rfl⟩⟩
+@@ -5392,3 +5463 @@
+-      let mandatory := choices.filterMap fun choice =>
+-        if choice.2.1.members.any (fun member => member.blocks || !member.matched.retrieved)
+-        then some choice.2.1 else none
++      let mandatory := SharedRangeAdapter.mandatorySlices (choices.map (·.2.1))
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -27,0 +28,4 @@
++      ``Eggshell.Plugin.required_cue_is_legacy_candidate,
++      ``Eggshell.Plugin.SharedRangeAdapter.control_is_reserved,
++      ``Eggshell.Plugin.SharedRangeAdapter.advisory_is_not_reserved,
++      ``Eggshell.Plugin.SharedRangeAdapter.advisory_reservation_is_empty,
+@@ -1649,0 +1654,11 @@
++
++run_meta do
++  let environment ← getEnv
++  for (caller, required) in #[( ``Eggshell.Plugin.renderAutomatic,
++      ``Eggshell.Plugin.SharedRangeAdapter.mandatorySlices),
++      (``Eggshell.Plugin.SharedRangeAdapter.mandatorySlices, ``Eggshell.Plugin.Selected.blocks)] do
++    let some declaration := environment.find? caller | throwError "Missing native-control reservation caller"
++    let some body := declaration.value? | throwError "Missing native-control reservation implementation"
++    unless body.getUsedConstants.contains required do
++      throwError "Reservation bypasses actual native control: {caller}, {required}"
++  logInfo "Audited reservation of actual native control and ordinary advisory eligibility"
+--- a/tools/SharedRangeTests.lean
++++ b/tools/SharedRangeTests.lean
+@@ -79,0 +80,6 @@
++  let extent := fun (unit : SharedRangeAdapter.UnitPlan) =>
++    (unit.ranges.map fun (a,b) => b-a).sum
++  requireRange (units.any fun smaller => units.any fun larger =>
++    extent smaller < extent larger && smaller.ranges.all (fun (a,b) =>
++      SharedRangeAdapter.covers larger.ranges a b))
++    "required context and optional surroundings were fused into one mandatory offer"
+@@ -83,0 +90,12 @@
++  let some basis := SharedRangeAdapter.problem [family] units pieces (0,0) (120000,128000) |
++    throw (IO.userError "original payload basis failed")
++  let some duplicateBasis := SharedRangeAdapter.problem [family] (units ++ units) pieces (0,0) (120000,128000) |
++    throw (IO.userError "duplicate payload basis failed")
++  requireRange (basis.costs == duplicateBasis.costs &&
++      duplicateBasis.offers.size == 2*basis.offers.size)
++    "a repeated complete offer allocated or charged another copy of its original payload"
++  let first := (List.finRange duplicateBasis.offers.size).filter (fun i => i.val == 0)
++  let repeated := (List.finRange duplicateBasis.offers.size).filter (fun i =>
++    i.val == 0 || i.val == units.length)
++  requireRange (SharedCoverage.cost duplicateBasis first == SharedCoverage.cost duplicateBasis repeated)
++    "shared original fragment was charged twice across complete closures"

@@ -140,8 +140,15 @@ local Unionの実際の生成Matchとretrieved=falseを必須証明として運�
 永続DB入力か非検索由来のlocal生成へ分類する定理と、両producerのContractAuditが通った。
 本番native_decideは0を維持。原文座標・cue閉包・UTF-8二重予算・native control非追加の
 アダプタIO試験、test support、TestMain全体のelaborationが成功した。全native IO suiteの実行ではない。
-最大RSSは2,980,112 KiBで3GiB停止値未満。実フックの全6段階・回答モデル・新seedは0。
-空き約2.1GiBでnative準備3GiB/モデル投入4GiBの容量条件に未達。旧copied binaryは隔離版から除去した。
+最大RSSは2,980,112 KiBで3GiB停止値未満。この時点では実フック・回答モデル・新seedは0だった。
+閉じたコンパイラ中間物の回収でnative準備の容量条件を満たし、実際のバイナリをビルドした。
+統合版とnative control予約修正版は題材1で必要原文が欠落し、モデル投入前に拒否した。
+範囲の代替候補を誤って結合していた箇所を分離し、同一原文断片を候補間で共有した隔離版を、
+題材1→2→3→2周目1→2→3の各2新規チャットで実行した。
+全12本文は段階ごとにバイト一致し16.8〜28.6秒で完了、数値ソースの欠落/使用不能/再埋め込み0。
+ただし必要な保存済みコードは全6段階で一部欠落し、モデル投入は拒否した。
+ビルド最大RSS3,002,432 KiB、実行最大1,422,864 KiB。3GiB停止/4GiB上限と容量条件は維持した。
+docs/candidates/shared-range-closures-review.jsonに本文SHA・欠落項目・隔離差分を保存した。
 全6段階の実配送が確認できるまでモデルを投入せず、最初は新候補r0だけを既存fresh r0と比べる。
 fresh全13件は条件一致と会計を確認して再利用し、3反復への不足5件だけ後で補う。
 別repo serde_jsonはcommitと質問を予約した段階で、oracle凍結/保留評価完了とは扱わない。
