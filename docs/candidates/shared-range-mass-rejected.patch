@@ -1,0 +1,197 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -10,0 +11 @@
++public import tools.RankMass
+@@ -5164 +5165,13 @@
+-        pure {family := familyIndex, first := first, last := last, weight := (last-first)*(scale/(61+familyIndex)+scale/(61+cue.priority))}
++        pure {family := familyIndex, first := first, last := last, weight := (last-first)*(scale/(61+cue.priority))}
++
++/-- An owner's total retrieval mass is independent of source length. Original
++geometry, all candidates and native authority remain unchanged. -/
++def normalizedCuePieces (pieces : List CuePiece) : List CuePiece :=
++  let values := RankMass.normalized (pieces.map fun piece =>
++    ({rank := piece.family,value := piece.weight} : RankMass.Part))
++  (pieces.zip values).map fun (piece,value) => {piece with weight := value}
++
++theorem normalized_cue_count (pieces : List CuePiece) :
++    (normalizedCuePieces pieces).length = pieces.length := by
++  simp [normalizedCuePieces,RankMass.normalized_length]
++
+@@ -5235 +5248 @@
+-    let pieces := cuePieces scale families units
++    let pieces := normalizedCuePieces (cuePieces scale families units)
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -27,0 +28,4 @@
++      ``RankMass.mass_conserved,
++      ``RankMass.scale_pos,
++      ``RankMass.normalized_cached_compiled,
++      ``Eggshell.Plugin.SharedRangeAdapter.normalized_cue_count,
+--- a/lakefile.lean
++++ b/lakefile.lean
+@@ -65 +65 @@
+-  roots := #[`tools.BudgetPlan, `tools.DirectoryReads, `tools.ExactLazyMemo, `tools.ExactMemo, `tools.FirstIndex, `tools.FocusWindows, `tools.IdentifierParts, `tools.IndexedCharacters, `tools.KeyedOverride, `tools.OwnedRows, `tools.OwnerProjection, `tools.PairDecisions, `tools.QueryLiterals, `tools.RetrievalCategories, `tools.RetrievalGrams, `tools.RetrievalIndex, `tools.SharedCoverage, `tools.WindowCentroid]
++  roots := #[`tools.BudgetPlan, `tools.DirectoryReads, `tools.ExactLazyMemo, `tools.ExactMemo, `tools.FirstIndex, `tools.FocusWindows, `tools.IdentifierParts, `tools.IndexedCharacters, `tools.KeyedOverride, `tools.OwnedRows, `tools.OwnerProjection, `tools.PairDecisions, `tools.QueryLiterals, `tools.RetrievalCategories, `tools.RetrievalGrams, `tools.RetrievalIndex, `tools.SharedCoverage, `tools.RankMass, `tools.WindowCentroid]
+--- a/tools/SharedRangeTests.lean
++++ b/tools/SharedRangeTests.lean
+@@ -50,0 +51,16 @@
++  let small : List RankMass.Part := [{rank := 0,value := 1},{rank := 1,value := 1}]
++  let long : List RankMass.Part := [{rank := 0,value := 1000000},{rank := 1,value := 1}]
++  let split : List RankMass.Part := [{rank := 0,value := 300000},{rank := 0,value := 700000},{rank := 1,value := 1}]
++  let mass := fun (parts : List RankMass.Part) rank =>
++    ((parts.zip (RankMass.normalized parts)).filterMap fun (part,value) =>
++      if part.rank == rank then some value else none).sum
++  requireRange (mass small 0 * RankMass.commonScale long == mass long 0 * RankMass.commonScale small)
++    "one long source gained more total relevance solely from its length"
++  requireRange (mass long 0 * RankMass.commonScale split == mass split 0 * RankMass.commonScale long)
++    "splitting the same source mass increased its total rank share"
++  requireRange (mass long 0 > mass long 1 && mass split 0 > mass split 1)
++    "source length overrode the existing owner rank"
++  requireRange (RankMass.normalized (small ++ [{rank := 2,value := 0}]) == [62,61,0])
++    "a zero cue destroyed another source's positive relevance"
++  requireRange ((RankMass.normalized split).all (0 < ·))
++    "integer rounding silently discarded a positive original cue"
+--- /dev/null
++++ b/tools/RankMass.lean
+@@ -0,0 +1,141 @@
++module
++public import Std
++@[expose] public section
++namespace RankMass
++
++/-- The key is an existing retrieval rank, not a source identity or authority. -/
++structure Part where
++  rank : Nat
++  value : Nat
++  deriving BEq
++
++def total (parts : List Part) (rank : Nat) : Nat :=
++  ((parts.filter (·.rank == rank)).map (·.value)).sum
++
++def denominator (parts : List Part) (rank : Nat) : Nat :=
++  (61+rank) * total parts rank
++
++def ranks (parts : List Part) : List Nat :=
++  ((parts.filter (fun part => 0 < part.value)).map (·.rank)).eraseDups
++
++def commonScale (parts : List Part) : Nat :=
++  ((ranks parts).map (denominator parts)).foldl Nat.lcm 1
++
++/-- Preserve the existing reciprocal-rank mass exactly; integer rounding does
++not decide between owners. Splitting a cue cannot increase its owner's mass. -/
++def normalized (parts : List Part) : List Nat :=
++  let scale := commonScale parts
++  parts.map fun part => part.value * (scale / denominator parts part.rank)
++
++theorem start_divides_fold (values : List Nat) (start : Nat) :
++    start ∣ values.foldl Nat.lcm start := by
++  induction values generalizing start with
++  | nil => exact Nat.dvd_refl _
++  | cons first rest ih =>
++    exact Nat.dvd_trans (Nat.dvd_lcm_left start first) (ih _)
++
++theorem divides_fold (values : List Nat) (start value : Nat) (present : value ∈ values) :
++    value ∣ values.foldl Nat.lcm start := by
++  induction values generalizing start with
++  | nil => simp at present
++  | cons first rest ih =>
++    simp only [List.foldl_cons]
++    rcases List.mem_cons.mp present with rfl | later
++    · exact Nat.dvd_trans (Nat.dvd_lcm_right start value) (start_divides_fold rest _)
++    · exact ih _ later
++
++theorem denominator_divides (parts : List Part) (rank : Nat)
++    (present : rank ∈ ranks parts) : denominator parts rank ∣ commonScale parts := by
++  apply divides_fold
++  exact List.mem_map.mpr ⟨rank,present,rfl⟩
++
++theorem sum_scaled (items : List α) (value : α → Nat) (scale : Nat) :
++    (items.map (fun item => value item * scale)).sum = (items.map value).sum * scale := by
++  induction items with
++  | nil => simp
++  | cons first rest ih => simp [ih,Nat.add_mul]
++
++/-- Each owner keeps its reciprocal-rank mass independently of text length
++or the number/partition of its cues. This does not establish relevance. -/
++theorem mass_conserved (parts : List Part) (rank : Nat)
++    (present : rank ∈ ranks parts) :
++    (((parts.filter (·.rank == rank)).map fun part =>
++      part.value * (commonScale parts / denominator parts part.rank)).sum) * (61+rank) =
++        commonScale parts := by
++  have constant : ((parts.filter (·.rank == rank)).map fun part =>
++      part.value * (commonScale parts / denominator parts part.rank)) =
++      (parts.filter (·.rank == rank)).map (fun part =>
++        part.value * (commonScale parts / denominator parts rank)) := by
++    apply List.map_congr_left
++    intro part member
++    have same : part.rank = rank := by simpa using (List.mem_filter.mp member).2
++    rw [same]
++  rw [constant, sum_scaled]
++  change (total parts rank * (commonScale parts / denominator parts rank)) * (61+rank) = _
++  calc
++    _ = ((61+rank) * total parts rank) * (commonScale parts / denominator parts rank) := by ac_rfl
++    _ = commonScale parts := Nat.mul_div_cancel' (denominator_divides parts rank present)
++
++
++theorem rank_total_pos (parts : List Part) (rank : Nat) (present : rank ∈ ranks parts) :
++    0 < total parts rank := by
++  simp only [ranks,List.mem_eraseDups,List.mem_map] at present
++  obtain ⟨part,member,same⟩ := present
++  have positive : 0 < part.value := by simpa using (List.mem_filter.mp member).2
++  apply List.sum_pos_iff_exists_pos_nat.mpr
++  refine ⟨part.value,List.mem_map.mpr ⟨part,?_,rfl⟩,positive⟩
++  exact List.mem_filter.mpr ⟨(List.mem_filter.mp member).1,by simp [same]⟩
++
++theorem scale_pos (parts : List Part) : 0 < commonScale parts := by
++  have fold_positive : ∀ (values : List Nat) (start : Nat),
++      0 < start → (∀ value ∈ values, 0 < value) → 0 < values.foldl Nat.lcm start := by
++    intro values
++    induction values with
++    | nil => intro start positive _; exact positive
++    | cons head tail ih =>
++      intro start positive all
++      exact ih _ (Nat.lcm_pos positive (all head (by simp)))
++        (by intro value member; exact all value (by simp [member]))
++  apply fold_positive _ _ (by decide)
++  intro value member
++  obtain ⟨rank,present,rfl⟩ := List.mem_map.mp member
++  exact Nat.mul_pos (by omega) (rank_total_pos parts rank present)
++
++theorem normalized_length (parts : List Part) : (normalized parts).length = parts.length := by
++  simp [normalized]
++
++theorem find_mapped_key (keys : List Nat) (value : Nat → Nat) (key : Nat)
++    (present : key ∈ keys) :
++    ((keys.map fun rank => (rank,value rank)).find? (fun row => row.1 == key)).map Prod.snd =
++      some (value key) := by
++  induction keys with
++  | nil => simp at present
++  | cons first rest ih =>
++    by_cases same : first = key
++    · simp [same]
++    · have later : key ∈ rest := by
++        rcases List.mem_cons.mp present with equal | later
++        · exact False.elim (same equal.symm)
++        · exact later
++      simpa [same] using ih later
++
++def normalizedCached (parts : List Part) : List Nat :=
++  let scale := commonScale parts
++  let factors := (ranks parts).map fun rank => (rank,scale / denominator parts rank)
++  parts.map fun part => if part.value == 0 then 0 else
++    part.value * (((factors.find? (fun row => row.1 == part.rank)).map Prod.snd).getD 0)
++
++@[csimp] theorem normalized_cached_compiled : normalized = normalizedCached := by
++  funext parts
++  unfold normalized normalizedCached
++  apply List.map_congr_left
++  intro part member
++  by_cases zero : part.value = 0
++  · simp [zero]
++  · have present : part.rank ∈ ranks parts := by
++      apply List.mem_eraseDups.mpr
++      exact List.mem_map.mpr ⟨part,List.mem_filter.mpr ⟨member,by simpa using (Nat.pos_of_ne_zero zero)⟩,rfl⟩
++    rw [find_mapped_key _ _ _ present]
++    simp [zero]
++
++end RankMass

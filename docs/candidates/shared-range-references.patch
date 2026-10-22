@@ -1,0 +1,68 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5047,0 +5048 @@
++  references : List Nat := []
+@@ -5076 +5077,2 @@
+-  if family.windows.isEmpty then return ([],[])
++  let positions := (family.windows ++ family.references).eraseDups
++  if positions.isEmpty then return ([],[])
+@@ -5085 +5087 @@
+-  let cues := (rankedContextRanges source (work.length+1) family.windows).filterMap fun range =>
++  let cues := (rankedContextRanges source (work.length+1) positions).filterMap fun range =>
+@@ -5092 +5094 @@
+-  for position in family.windows do
++  for position in positions do
+@@ -5141 +5143,3 @@
+-def numericalCues (family : Family) : List RankedCue :=
++/-- Vector focus and admitted graph citations are independent hints into the
++same original source. Neither hint can create a Match or completion authority. -/
++def rankedCues (family : Family) : List RankedCue :=
+@@ -5143,3 +5147,5 @@
+-  | some source,some work => family.windows.zipIdx.filterMap fun (position,priority) =>
+-      (meaningContext? source (work.length+1) position priority).map fun context =>
+-        {priority,first := context.span.start,last := context.span.stop}
++  | some source,some work =>
++    [family.windows,family.references].flatMap fun positions =>
++      positions.zipIdx.filterMap fun (position,priority) =>
++        (meaningContext? source (work.length+1) position priority).map fun context =>
++          {priority,first := context.span.start,last := context.span.stop}
+@@ -5149 +5155,5 @@
+-  cues.find? fun cue => cue.first ≤ first && last ≤ cue.last
++  cues.foldl (fun found cue =>
++    if cue.first ≤ first && last ≤ cue.last then match found with
++      | none => some cue
++      | some previous => if cue.priority < previous.priority then some cue else found
++    else found) none
+@@ -5157 +5167 @@
+-    let ownerCues := numericalCues family
++    let ownerCues := rankedCues family
+@@ -5233 +5243 @@
+-    let depth := max families.length (families.foldl (fun n family => max n family.windows.length) 0)
++    let depth := max families.length (families.foldl (fun n family => max n (max family.windows.length family.references.length)) 0)
+@@ -5488 +5498 @@
+-          pure ({owner,template := choice.2.1,windows := hint.windows} : SharedRangeAdapter.Family)
++          pure ({owner,template := choice.2.1,windows := hint.windows,references := referenced} : SharedRangeAdapter.Family)
+--- a/tools/SharedRangeTests.lean
++++ b/tools/SharedRangeTests.lean
+@@ -86 +86 @@
+-  let numeric := SharedRangeAdapter.numericalCues family
++  let numeric := SharedRangeAdapter.rankedCues family
+@@ -99,0 +100,18 @@
++  let referenced : SharedRangeAdapter.Family := {family with windows := [],references := [25]}
++  let (referenceUnits,referenceCues) := SharedRangeAdapter.prepare 0 referenced
++  requireRange (!referenceUnits.isEmpty && !referenceCues.isEmpty)
++    "an admitted graph citation vanished without a numerical hint"
++  requireRange ((SharedRangeAdapter.rankedCues referenced).all fun cue =>
++      referenceUnits.any fun unit => SharedRangeAdapter.covers unit.ranges
++        ((cue.first+cue.last)/2) ((cue.first+cue.last)/2+1))
++    "graph-referenced original positions were discarded while rebuilding source units"
++  let both : SharedRangeAdapter.Family := {family with references := positions}
++  let (bothUnits,_) := SharedRangeAdapter.prepare 0 both
++  let bothPieces := SharedRangeAdapter.cuePieces 100 [both] bothUnits
++  let onePieces := SharedRangeAdapter.cuePieces 100 [family] units
++  requireRange (bothUnits.length == units.length &&
++      bothPieces.map (fun piece => (piece.family,piece.first,piece.last,piece.weight)) ==
++        onePieces.map (fun piece => (piece.family,piece.first,piece.last,piece.weight)))
++    "the same original hint acquired a second coverage vote through a graph citation"
++  requireRange ((SharedRangeAdapter.coveringCue? overlapping.reverse 384 512).map (·.priority) == some 0)
++    "hint channel order overrode the best original rank"

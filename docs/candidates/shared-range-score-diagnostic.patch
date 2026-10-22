@@ -1,0 +1,11 @@
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -535 +535 @@
+-    ("candidate_ids", .arr (candidates.map (·.getObjValD "id"))),
++    ("candidate_ids", .arr (candidates.map (fun (candidate : Json) => candidate.getObjValD "id"))),
+@@ -704,0 +705,5 @@
++    if options.trace.isSome then
++      trace options (Json.mkObj [("query",toJson query),
++        ("scored_windows",toJson (totals.toList.zipIdx.map fun (result,index) =>
++          (candidates[index]?.map (fun (candidate : Json) => candidate.getObjValD "id") |>.getD Json.null,
++            candidates[index]?.map (fun (candidate : Json) => candidate.getObjValD "windows") |>.getD Json.null,result.positions)))])
