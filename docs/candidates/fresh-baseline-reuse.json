@@ -1,0 +1,533 @@
+{
+  "scope": "Reuse all 13 completed fresh slots; no selection by token count or answer quality",
+  "userInstruction": "freshは別に旧版使えばいいしょ",
+  "model": "gpt-5.6-luna",
+  "effort": "xhigh",
+  "sourceWorkspace": "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project",
+  "sourceCommit": "6dfe1677ab8dffbc6ec13d53a1e0215d75147689",
+  "sourceTrackedClean": true,
+  "code": {
+    "runnerSha256": {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/readme_benchmark.py",
+      "sha256": "5c13ed88c1f77b0ce951c16fa0643895d3b70eed6da87299d31253ad043be519"
+    },
+    "transportSha256": {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/pilot_server.py",
+      "sha256": "7d841b948b5bb23b92cc37ab960b3c4a5ddc83e0738502fe19ab8117cc3b643d"
+    },
+    "trialGateSha256": {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/readme_trial.py",
+      "sha256": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+    },
+    "memoryGuardSha256": {
+      "file": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/memory_guard.py",
+      "sha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3"
+    }
+  },
+  "configurationSha256": "2d3d7bc5d1d4dbb90d5484fd6b7ba992145d01b8cce7eb5575d3b32f149b5465",
+  "environmentSha256": "a931ce247a07944a4631dd0027446b37e6ac4d50477131139900232388af65fb",
+  "existingFresh": [
+    {
+      "label": "stage1-fresh-r0",
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 0,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage1-fresh-r0",
+      "files": {
+        "protocol.json": "f8f742a57e65d43bf76850180188683d5be10233003729903e61a246e26d5efc",
+        "invocation.json": "901ac522361da56e584b8b1e09a33ce76995715987c91b1227717315d8540528",
+        "prepared-trial.json": "a25a68cb29bc2e2e4e9649e972a35fb21c1b753bfb1ba9eae93f91df0607115e",
+        "prompt.txt": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+        "answer.txt": "aa776651e49087a2d658cbb294f88d028b80655208c89f6663bde5455a5a2b6c",
+        "result.json": "03558fc3e2dd97f53a641ff85048750e7a12dbd661976bf87a7ed627ed9c518d",
+        "usage.json": "51972fa0dd13e7e465bbc65e90aa45537ca995161616f1789754f01d9293751c",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 2241019,
+        "inputTokens": 2225806,
+        "cachedInputTokens": 2034688,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 15213,
+        "reasoningOutputTokens": 6814
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/readme-matched-20261021/checkpoints/stage1/work.egg",
+        "files": {
+          "head": "733a50e14a1e6a54cae54a7b2e89b2ef9c67726f569c3414b652eb85c39cc2af",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "26bbde5e4b37b88b84744046cd00f58b1214367810dad085b15f0c0b212d9e51"
+        }
+      }
+    },
+    {
+      "label": "stage2-fresh-r0",
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 0,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage2-fresh-r0",
+      "files": {
+        "protocol.json": "ab5a40baf00c5d3f927ff84307fd117e99d265e1db984fa83e0c1552f0b6c8ef",
+        "invocation.json": "0e460d69213910f8324f26cae94edf586cccd6414171ea29b5a8852075d9dd51",
+        "prepared-trial.json": "296ab0b21166fb438548db4775e121fa7168f2dd5b726797c7a0e2fc047e427b",
+        "prompt.txt": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+        "answer.txt": "8cf93da37bafdbf4a1a5cde2413179c02f0bedfb0384bfd05e3edd3d51536e88",
+        "result.json": "2350fac299bebf952041d63739e612b9ab11cb3565ebbba552b6ff7825f2c1ef",
+        "usage.json": "d2e6ba694359e5424a2cc5f5d572dfcb5d880d9e1fda8f78a57215376d3d5eff",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 4870992,
+        "inputTokens": 4852849,
+        "cachedInputTokens": 4615936,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 18143,
+        "reasoningOutputTokens": 8994
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage2/work.egg",
+        "files": {
+          "head": "40503e7b5a15b5ae30d1bc12d7562c5dd9743fe1c73109b52d802f07d0069eea",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "37bb5593ce83ff12322dcc483179be4db4a3d5a4b9967d0d33fe84cddb61f086"
+        }
+      }
+    },
+    {
+      "label": "stage3-fresh-r0",
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 0,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage3-fresh-r0",
+      "files": {
+        "protocol.json": "d673d54da6e087ae9ba5ccaddd2968307f02fb5b3634b29372502ed0248cde4f",
+        "invocation.json": "3ca6dc11e64319be7bfa19354f3e1eb8d055c2b08d0f7c0b5ff3bba0a487be65",
+        "prepared-trial.json": "c73bec69ead9205ac6f3486f2c82c4311258a2e9dd5b6b671670e2c7aa9ee515",
+        "prompt.txt": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+        "answer.txt": "73543c5b563c2c3b7f4cf3c9cf4ecf6dccdf97cc647543b454d1b032d05bc471",
+        "result.json": "1926de56488b7a3e55af784988b8ff9b156e46cef38a2d4c8a1b74db94cb3d7d",
+        "usage.json": "97d27a3371ebb8fbebe7ef1101c656e66e19d4bc887dbf224e94765311b99988",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 5171855,
+        "inputTokens": 5152802,
+        "cachedInputTokens": 4926208,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 19053,
+        "reasoningOutputTokens": 10863
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage3/work.egg",
+        "files": {
+          "head": "6b9eb0927f8ba4d736d76b3b93520ff498cde1235b65e6dde1409c838452cd3d",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "9f6e2eb0085538d93ec9f3e8014830434916706a7660bd263d630d3fc22e039f"
+        }
+      }
+    },
+    {
+      "label": "stage4-fresh-r0",
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 0,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage4-fresh-r0",
+      "files": {
+        "protocol.json": "175ff62814287e7f95045fb0b538dea3fe3097ca611a453f56a487a1d846c12a",
+        "invocation.json": "468565a208d8a94368db3ccb9c92d9763d54ad0440a74f6da3d051e70d9a7eaf",
+        "prepared-trial.json": "3efd431852ef277e4db89456f63b9997c56f1b04b5bb12083cda7e443e6816fa",
+        "prompt.txt": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+        "answer.txt": "6ea19df7543eca48c3aeb9ffedfbc18374730017c6765e589ec7ba6ab4ef57ec",
+        "result.json": "c4869129495e31fcdb602d83d9c5d59106855e65ca29fbd5ec4752deabdc6f4d",
+        "usage.json": "f679b91346648bf22bca95599e28e19b3f0a2aa664f3bdaedeea940374ac4ecd",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 2919043,
+        "inputTokens": 2898348,
+        "cachedInputTokens": 2736384,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 20695,
+        "reasoningOutputTokens": 13175
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage4/work.egg",
+        "files": {
+          "head": "29bd7cc425b83904cbb4152e1b2a3d7266272d29e797b1487d9d2c72563d4286",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "43cf5a30b4f3f6d1f167af17b728f51b99129d1a405bbfc5ac6cc6bbfac266b3"
+        }
+      }
+    },
+    {
+      "label": "stage5-fresh-r0",
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 0,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage5-fresh-r0",
+      "files": {
+        "protocol.json": "ba75852d76b74ff2fef6efc42c5c480649cac1b7a42174b04b3d895fc6309789",
+        "invocation.json": "ef97eba0651d229143379d7a8c11052777914a76bf05500aaf5266b0c39ca472",
+        "prepared-trial.json": "7cd4a50380c1bbc3e904c867e9d91866085bbf076b056a035135ad5195e5766f",
+        "prompt.txt": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+        "answer.txt": "29ece2879c3a7072feb0307c3b2249c6091dbe1a9d4634b05c482f8803a566b9",
+        "result.json": "dcb336f98f5b4d8e1c8a88f07ec18df6136c22e2c9b7c15e1f21bb2c2fc2539c",
+        "usage.json": "ffd3053c03a7d48e0b2375231575733cd167388c78455dc67527a1e5f812f6e1",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 2929755,
+        "inputTokens": 2913462,
+        "cachedInputTokens": 2715392,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 16293,
+        "reasoningOutputTokens": 6221
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage5/work.egg",
+        "files": {
+          "head": "64c6d3d0aa864b1a2dc170b4d967d51d161e485848cc10518a1074250920f636",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "c4b5bbcb2420ae76261d7e48dd4f7383715799be134662e452033925d1381ab9"
+        }
+      }
+    },
+    {
+      "label": "stage6-fresh-r0",
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 0,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage6-fresh-r0",
+      "files": {
+        "protocol.json": "1dfbbcbc908655276042f9e19d5a933532d39a75b130a050c24cb17d5b73d986",
+        "invocation.json": "52f98c8162aa98c57c35cdcf09361b33fae438c953bcbbee0dafbae83f6138e6",
+        "prepared-trial.json": "d15342a63dffc3b8f4ee05ad4b2a902cc552cbf3e178313e7d488da1fbdbff9c",
+        "prompt.txt": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+        "answer.txt": "03ad35e6e1fadfb6460f9756476df08a2200fd10484d1008dec353ddd16179ae",
+        "result.json": "06d308a2e5d4fffe21fa1a281883e4329d8101b07675d5edb3567be79a5b8ed3",
+        "usage.json": "11da20ba38001d8efa4de3381b4e2c1833ea44298582c33663997951eabce87d",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 5538028,
+        "inputTokens": 5516863,
+        "cachedInputTokens": 5288192,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 21165,
+        "reasoningOutputTokens": 11423
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage6/work.egg",
+        "files": {
+          "head": "3c45c01e9768a49cb1d4a09e88ce2c3dd1b52bc0466b2ad0efa93057429fefea",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "7447e519c91ce6b6686e3e356938af1c643e92de6c0fd6eb551d2a786cc6f657"
+        }
+      }
+    },
+    {
+      "label": "stage1-fresh-r1",
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 1,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage1-fresh-r1",
+      "files": {
+        "protocol.json": "765700e1bb7a173db46323d628db3acee933a77a020c9e972c10b70b07802600",
+        "invocation.json": "222eb0b46e874e3b2d16cc8fc2ae30496a088e6647eed7164ba1cfa3114f68fb",
+        "prepared-trial.json": "ab2b3749bb6657ccbfede6f8183b0658f77504b2ec8704447b6257e4131d9f5b",
+        "prompt.txt": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+        "answer.txt": "3f4ed3bdc933f0a68f004942a38e4a4e71d6db921e287175c2bd87b5326fd161",
+        "result.json": "ea5320742df86ea7b65045c27867036c2e78f35ca948572cf36ac176e1df1898",
+        "usage.json": "2f593297e3b83cb7e1d12368a495dfa17c0551dfbdcc13c7d5b9e40a0fa39f09",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 3096987,
+        "inputTokens": 3079172,
+        "cachedInputTokens": 2862848,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 17815,
+        "reasoningOutputTokens": 8368
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/readme-matched-20261021/checkpoints/stage1/work.egg",
+        "files": {
+          "head": "733a50e14a1e6a54cae54a7b2e89b2ef9c67726f569c3414b652eb85c39cc2af",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "26bbde5e4b37b88b84744046cd00f58b1214367810dad085b15f0c0b212d9e51"
+        }
+      }
+    },
+    {
+      "label": "stage2-fresh-r1",
+      "stage": 2,
+      "topic": 2,
+      "lap": 1,
+      "repetition": 1,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage2-fresh-r1",
+      "files": {
+        "protocol.json": "a7f5ca22476ac7ef61bdd1b4e7f5c186cd5b81234b2f18da62437f38aa81ee3d",
+        "invocation.json": "4adaa6e17e49d249ba2bb736e0446bdb8141e345028d80550c3ac012e513f65d",
+        "prepared-trial.json": "3abe045d154aa4115596a72ac2c6248ef166038098a84001d9e36d2b1ead6667",
+        "prompt.txt": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+        "answer.txt": "1fc8ffda447cced389003203ea8121f365ebb30034fb6a7504c88f5c3b569526",
+        "result.json": "d0489073fb3b0b1fdcbfacfb8e5b234ea8bad8b67841f5f718e6970baed1587f",
+        "usage.json": "5b62a09fb882137e9fe4c3c1ee4543b1b14adc5723d57700d9060ae78f9571da",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 4188873,
+        "inputTokens": 4171245,
+        "cachedInputTokens": 3944960,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 17628,
+        "reasoningOutputTokens": 9490
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage2/work.egg",
+        "files": {
+          "head": "40503e7b5a15b5ae30d1bc12d7562c5dd9743fe1c73109b52d802f07d0069eea",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "37bb5593ce83ff12322dcc483179be4db4a3d5a4b9967d0d33fe84cddb61f086"
+        }
+      }
+    },
+    {
+      "label": "stage3-fresh-r1",
+      "stage": 3,
+      "topic": 3,
+      "lap": 1,
+      "repetition": 1,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage3-fresh-r1",
+      "files": {
+        "protocol.json": "b455f49ed3763b8702bfeaaad13a6f7acf9785e163b083bbc3c9b532c8efc600",
+        "invocation.json": "cc4a62d5c5ba3db863f6aca778ac421401e790ee56ccf10ae26ec9c981d0b644",
+        "prepared-trial.json": "d830f9cc79cf502e2d2bf459dcdac46856787acb0345b9da9534029080a192cb",
+        "prompt.txt": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+        "answer.txt": "ae6662c1f92b61039ba522109cb3953014a009ef51dc6a60d41760f903bb7924",
+        "result.json": "6b423df97ddbd6cbe8902fb7a54cf939f8dc2f7f17fa0567a65b0cab7ff34c45",
+        "usage.json": "c0fec28dae9efc0ca1e7a35439f37e586298fe7796b0d61302a83b96f75355b7",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 3777870,
+        "inputTokens": 3759447,
+        "cachedInputTokens": 3503872,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 18423,
+        "reasoningOutputTokens": 7112
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage3/work.egg",
+        "files": {
+          "head": "6b9eb0927f8ba4d736d76b3b93520ff498cde1235b65e6dde1409c838452cd3d",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "9f6e2eb0085538d93ec9f3e8014830434916706a7660bd263d630d3fc22e039f"
+        }
+      }
+    },
+    {
+      "label": "stage4-fresh-r1",
+      "stage": 4,
+      "topic": 1,
+      "lap": 2,
+      "repetition": 1,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage4-fresh-r1",
+      "files": {
+        "protocol.json": "1b9a2b6a0f66a5a78b3a59659331944b2f51efe098805bcb3b54d91146553001",
+        "invocation.json": "fc9cacb435c469ace0fb193a2091c8a07981d7a934d9192ee11e519341d22284",
+        "prepared-trial.json": "e4af06c8ef72341cdeb4a7ce60cbbf90ceeae960e9fffb7dbd8fd1f91598af5b",
+        "prompt.txt": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+        "answer.txt": "a3e815d1ebef9ccfe18d59d57da183673d8e29e8207d57e44c9f0cdec5d44c81",
+        "result.json": "04e1b85d7b366e1f70d054571797f6762a040c84033a928447fa3d7c93981bf0",
+        "usage.json": "fd091f26f44660a16847680ade7aa01d4723770028edfae89cff387cbc0d522b",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 1826778,
+        "inputTokens": 1809552,
+        "cachedInputTokens": 1651328,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 17226,
+        "reasoningOutputTokens": 7833
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage4/work.egg",
+        "files": {
+          "head": "29bd7cc425b83904cbb4152e1b2a3d7266272d29e797b1487d9d2c72563d4286",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "43cf5a30b4f3f6d1f167af17b728f51b99129d1a405bbfc5ac6cc6bbfac266b3"
+        }
+      }
+    },
+    {
+      "label": "stage5-fresh-r1",
+      "stage": 5,
+      "topic": 2,
+      "lap": 2,
+      "repetition": 1,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage5-fresh-r1",
+      "files": {
+        "protocol.json": "796bae51eaf08041476ba6e78a4bee8621e6344ed1c8b2327db78529b72315d4",
+        "invocation.json": "6e5b1f46d100b0ad2cdb6f7369a49336cbfe02455a6790ae6aca1f3c7c016715",
+        "prepared-trial.json": "1a381731ed9e0c7be98f2c302f054e9636f9e091a1c85196f74f442efbbc0fa8",
+        "prompt.txt": "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+        "answer.txt": "9e8b02bb324dc160e2e34075b592bcc2bf59e6e04474c12dc7dd79228095d102",
+        "result.json": "41af753f7585a7e2a0f274209b34805f4ee2512f43d5ac3a3b74448ce2cfb59f",
+        "usage.json": "48a8fcb88f694ba15b5494fddaaecb3fbac60921e02bd95405c0e9f19b8c1fc7",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 3345698,
+        "inputTokens": 3335793,
+        "cachedInputTokens": 3088256,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 9905,
+        "reasoningOutputTokens": 2858
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage5/work.egg",
+        "files": {
+          "head": "64c6d3d0aa864b1a2dc170b4d967d51d161e485848cc10518a1074250920f636",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "c4b5bbcb2420ae76261d7e48dd4f7383715799be134662e452033925d1381ab9"
+        }
+      }
+    },
+    {
+      "label": "stage6-fresh-r1",
+      "stage": 6,
+      "topic": 3,
+      "lap": 2,
+      "repetition": 1,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage6-fresh-r1",
+      "files": {
+        "protocol.json": "d49970c8268d2de6b0d539306b6f5828724ef32316be1dcbae0e0a239292018b",
+        "invocation.json": "a95528dd234af62d2fd00cadab12e5b65a4bc13495da0fdd9143489d7650ee2c",
+        "prepared-trial.json": "874db625f44ea5aea380ebc3dc9bfd907afc03aff59c0f5e46a25a41c48e482f",
+        "prompt.txt": "231e27df6de52d10fe33aa0a44b051177a9baa5c99afe3cce77e7d3a2a666147",
+        "answer.txt": "bd6b0c9662863db5de8bb7a69df6d906a321e1549dfa883e39a50e57a1e19ca0",
+        "result.json": "b43d15f5de320d3759bfd172b0e99dc57cb2c2a95a48fb088fa9cf3668f3d188",
+        "usage.json": "63edc62f46d48814b1b808ec718c7c885a7fb0a134c60eda402fc0671bb4f697",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 2467326,
+        "inputTokens": 2451371,
+        "cachedInputTokens": 2264448,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 15955,
+        "reasoningOutputTokens": 5553
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/checkpoints/stage6/work.egg",
+        "files": {
+          "head": "3c45c01e9768a49cb1d4a09e88ce2c3dd1b52bc0466b2ad0efa93057429fefea",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "7447e519c91ce6b6686e3e356938af1c643e92de6c0fd6eb551d2a786cc6f657"
+        }
+      }
+    },
+    {
+      "label": "stage1-fresh-r2",
+      "stage": 1,
+      "topic": 1,
+      "lap": 1,
+      "repetition": 2,
+      "directory": "/Users/ovm/.codex/experiments/eggshell/query-anchor-tokens-20261022/fresh/attempts/stage1-fresh-r2",
+      "files": {
+        "protocol.json": "36c3019b2b3b8c0533847b2a02d5f1862e7ab57fb7553bf1a40e6df02ab956d8",
+        "invocation.json": "8ab311397feac4a5ef68f08785222788bc0f1124907b1831c9311a4453a8d8cd",
+        "prepared-trial.json": "4cd75bc2aea9c47103e06077d168625e4eaab2b58c5d47c1f88b1d75ee8faffe",
+        "prompt.txt": "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+        "answer.txt": "1a99ac2a386460898776b36a496fc2b5cde23ea327b620db87f1114d5445215f",
+        "result.json": "4cdfa224f89edc70643f97cfefd25e0e6cd346808d5f6eca711f139f0ed4e21c",
+        "usage.json": "5d79c5e4217ddc23d38195e44372de44df5f0e633f87c7ffa0e0e95d5d4c3eda",
+        "delivered-packets.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "trial-gate.py": "144b234a97d241e2d4fd0a9aaed692bc7b4d441a9141caadf6abfdca8f43ef7a"
+      },
+      "usage": {
+        "totalTokens": 6124915,
+        "inputTokens": 6098767,
+        "cachedInputTokens": 5876992,
+        "cacheWriteInputTokens": 0,
+        "outputTokens": 26148,
+        "reasoningOutputTokens": 16436
+      },
+      "completed": true,
+      "memoryPackets": 0,
+      "sourceSnapshot": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/readme-matched-20261021/checkpoints/stage1/work.egg",
+        "files": {
+          "head": "733a50e14a1e6a54cae54a7b2e89b2ef9c67726f569c3414b652eb85c39cc2af",
+          "writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "e41c6af21d84edc1e1d2c8ebd338af8e7640395d340915d28feea19b227a125d.pages": "26bbde5e4b37b88b84744046cd00f58b1214367810dad085b15f0c0b212d9e51"
+        }
+      }
+    }
+  ],
+  "missingFresh": [
+    "stage2-fresh-r2",
+    "stage3-fresh-r2",
+    "stage4-fresh-r2",
+    "stage5-fresh-r2",
+    "stage6-fresh-r2"
+  ],
+  "repetitionsPerStage": 3,
+  "existingFreshTotalTokens": 48499139,
+  "knownFailures": 0,
+  "unknownUsage": 0,
+  "newModelCalls": 0,
+  "newSeedCalls": 0,
+  "candidateOldResultsReused": false,
+  "candidatePolicy": "Freeze final runtime; start stage1-r0 and run 1,2,3,4,5,6 with three fixed repetitions. Reuse no retired candidate results.",
+  "comparisonPolicy": "Match source snapshots, prompts, model, effort and execution harness. Inclusive input+output including cached input and failed attempts; seed separately.",
+  "limitations": [
+    "Fresh is a historical control, not a contemporaneous paired trial. Model service variation remains a limitation.",
+    "No new candidate token reduction or adoption result is established by this audit."
+  ],
+  "scriptSha256": "b20a75303c5971e0ae36b4822bcc9028a17156e90ea7bebe11ae4800dd06fd6f"
+}

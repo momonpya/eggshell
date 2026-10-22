@@ -1,0 +1,35 @@
+{
+  "repository": "https://github.com/serde-rs/json",
+  "sourceCommit": "8c535a260ce561eaab4111aafc29038eb9f77ff3",
+  "role": "Untouched holdout reserved outside the LLVM development questions",
+  "stages": [
+    {
+      "topic": 1,
+      "task": "Trace borrowing versus owned JSON string deserialization, including escaped text, invalid UTF-8, and from_str/from_slice entry points. Distinguish observations, invariants and execution evidence."
+    },
+    {
+      "topic": 2,
+      "task": "Trace StreamDeserializer byte_offset and EOF/error behavior for complete values, partial final input and malformed following input. Identify which saved observations apply and which new evidence is required."
+    },
+    {
+      "topic": 3,
+      "task": "Audit RawValue validation and serialization versus ordinary Value/string paths. Include feature gates, invalid raw input and public API callers; distinguish certified reuse from recommendations."
+    }
+  ],
+  "sourceFilesRead": false,
+  "oracleFrozen": false,
+  "candidateRuntimeFrozen": false,
+  "firstHoldoutDeliveryObserved": false,
+  "evaluationStarted": false,
+  "modelCalls": 0,
+  "newSeedCalls": 0,
+  "ordering": [
+    "Finish the generic runtime using development data and freeze its full source/executable/embedding/prompt/harness hashes.",
+    "Prepare the holdout source, executable test environment and seed independently of candidate delivery. Freeze prompts, source fingerprints, question-level required original evidence and applicability oracle before any hook body is observed.",
+    "Execute one predeclared holdout evaluation campaign. No threshold/range selection or oracle changes are allowed after observing a body.",
+    "Report every outcome, including absent-in-DB evidence, delivery omissions, invalid certification, recommendation-only answer errors, actual tests and inclusive token use."
+  ],
+  "failurePolicy": "If holdout feedback changes the algorithm, this set becomes development data. Do not retune on it and call a later run an untouched holdout.",
+  "scopeLimit": "Reserving a repository and task descriptions is not freezing the full oracle, producing an unseen-source result, or satisfying the paper experiment.",
+  "scriptSha256": "00d0bb2702557f85efdbe5a06166df375a798539a5c7dde3377d6db4d44f9f9e"
+}
