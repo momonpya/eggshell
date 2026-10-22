@@ -1,0 +1,177 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -27,0 +28,2 @@
++      ``SourceWindow.projected_covers_iff,
++      ``Eggshell.Plugin.meaning_context_covers_exactly,
+@@ -1667,0 +1670,13 @@
++
++run_meta do
++  let environment ← getEnv
++  for (caller,required) in #[
++      (``Eggshell.Plugin.meaningContext?, ``SourceWindow.project),
++      (``Eggshell.Plugin.SharedRangeAdapter.rankedCues, ``Eggshell.Plugin.meaningContext?),
++      (``Eggshell.Plugin.rankedContextRanges, ``Eggshell.Plugin.meaningContext?),
++      (``Eggshell.Plugin.meaningContextGroups, ``Eggshell.Plugin.meaningContext?),
++      (``Eggshell.Plugin.SharedRangeAdapter.prepare, ``Eggshell.Plugin.rankedContextRanges)] do
++    let some declaration := environment.find? caller | throwError "Missing source-window caller"
++    let some body := declaration.value? | throwError "Missing source-window implementation"
++    unless body.getUsedConstants.contains required do
++      throwError "Source-window caller bypasses the checked projection: {caller}, {required}"
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -11,0 +12 @@
++public import tools.SourceWindow
+@@ -2608,8 +2609,15 @@
+-  let position := index * 384 + 256
+-  if position ≤ workChars then none else
+-    let center := position - workChars
+-    let start := min (center - 256) (source.length - 512)
+-    let stop := min source.length (start + 512)
+-    if valid : start < stop ∧ stop ≤ source.length then
+-      some ⟨⟨start, stop, valid.1, valid.2⟩, priority⟩
+-    else none
++  (SourceWindow.project source.length workChars index).map fun span =>
++    ⟨⟨span.first,span.last,span.ordered,span.within⟩,priority⟩
++
++/-- These coordinates describe the real searched source slice, not a
++larger presentation neighborhood. Work characters never become source cues. -/
++theorem meaning_context_covers_exactly (source : String) (workChars index priority position : Nat) :
++    (∃ cue, meaningContext? source workChars index priority = some cue ∧
++      cue.span.covers position) ↔
++    position < source.length ∧ index*384 ≤ workChars+position ∧
++      workChars+position < index*384+512 := by
++  rw [← SourceWindow.projected_covers_iff source.length workChars index position]
++  unfold meaningContext?
++  cases original : SourceWindow.project source.length workChars index with
++  | none => simp
++  | some span => simp [ContextSpan.covers]
+@@ -5087,2 +5095,2 @@
+-  let cues := (rankedContextRanges source (work.length+1) positions).filterMap fun range =>
+-    (aligned (recordContextRange records range)).map fun cue => (cue.start,cue.stop)
++  let cues := (rankedContextRanges source (work.length+1) positions).map fun range =>
++    (range.start,range.stop)
+@@ -5095,4 +5103,7 @@
+-    let structural := completeStructureContexts records
+-      (structureContextRanges source (work.length+1) [position] heads)
+-    let requested := rankedContextRanges source (work.length+1) [position]
+-    let dependencies := prerequisiteCueRanges source (work.length+1) [position] structural
++    let structural := (completeStructureContexts records
++      (structureContextRanges source (work.length+1) [position] heads)).filterMap fun (priority,range) =>
++        (aligned range).map fun original => (priority,original)
++    -- Decode-safe data coordinates precede context expansion. JSON framing
++    -- quotes and partial escapes are not mandatory presented source records.
++    let requested := (rankedContextRanges source (work.length+1) [position]).filterMap aligned
++    let dependencies := requested ++ structural.map Prod.snd
+--- a/lakefile.lean
++++ b/lakefile.lean
+@@ -65 +65,4 @@
+-  roots := #[`tools.BudgetPlan, `tools.DirectoryReads, `tools.ExactLazyMemo, `tools.ExactMemo, `tools.FirstIndex, `tools.FocusWindows, `tools.IdentifierParts, `tools.IndexedCharacters, `tools.KeyedOverride, `tools.OwnedRows, `tools.OwnerProjection, `tools.PairDecisions, `tools.QueryLiterals, `tools.RetrievalCategories, `tools.RetrievalGrams, `tools.RetrievalIndex, `tools.SharedCoverage, `tools.WindowCentroid]
++  roots := #[`tools.BudgetPlan, `tools.DirectoryReads, `tools.ExactLazyMemo, `tools.ExactMemo, `tools.FirstIndex, `tools.FocusWindows, `tools.SourceWindow, `tools.IdentifierParts, `tools.IndexedCharacters, `tools.KeyedOverride, `tools.OwnedRows, `tools.OwnerProjection, `tools.PairDecisions, `tools.QueryLiterals, `tools.RetrievalCategories, `tools.RetrievalGrams, `tools.RetrievalIndex, `tools.SharedCoverage, `tools.WindowCentroid]
++
++lean_exe source_window_io_tests where
++  root := `tools.SourceWindowIoTests
+--- a/tools/SharedRangeTests.lean
++++ b/tools/SharedRangeTests.lean
+@@ -50,0 +51,17 @@
++  let mut boundaryCases := 0
++  for sourceChars in [0,1,127,128,233,280,384,511,512,513,1000] do
++    for prefixChars in [1,2,383,384,511,512,700,1000,1100] do
++      for unicode in [false,true] do
++        let source := String.ofList ((List.range sourceChars).map fun i =>
++          if unicode then (#['界','🧪','\n','\t'])[i%4]! else 'x')
++        let work := String.ofList (List.replicate (prefixChars-1) 'w')
++        let windows := SearchRank.windows (work ++ "\n" ++ source)
++        for index in List.range (windows.length+3) do
++          let window := windows[index]?.getD ""
++          let expected := evidenceWindowText work.length index window
++          match meaningContext? source prefixChars index 0 with
++          | none => requireRange expected.isEmpty "a searched source intersection disappeared at the Work boundary"
++          | some cue =>
++            requireRange (((source.drop cue.span.start).take (cue.span.stop-cue.span.start)).copy == expected) "context outside the searched source slice received a numerical cue"
++          boundaryCases := boundaryCases+1
++  IO.println s!"exact source-window boundaries: {boundaryCases}"
+@@ -65,0 +83,12 @@
++  let longWork := String.ofList (List.replicate 1099 'w')
++  let boundaryOwner := OutcomeEdge.make (.text longWork) (.text source) [] (by simp) (by simp)
++  let boundaryOriginal := {original with owner := some boundaryOwner.relation}
++  let some boundaryPart := (prepareContextualOwnerPlan [] [2] boundaryOwner
++      "original prefix-boundary source" [] boundaryOriginal).eval 120000 |
++    throw (IO.userError "legacy source-envelope preparation lost the real Work-boundary intersection")
++  let boundaryFamily : SharedRangeAdapter.Family := {
++    owner := boundaryOwner,windows := [2],
++    template := {boundaryOriginal with text := boundaryPart.text,keys := boundaryPart.keys,context := boundaryPart.context}}
++  let (boundaryUnits,_) := SharedRangeAdapter.prepare 0 boundaryFamily
++  requireRange (!boundaryUnits.isEmpty && boundaryUnits.any (fun unit => SharedRangeAdapter.covers unit.ranges 50 51))
++    "a prefix-boundary source cue was rejected after JSON framing and prerequisite alignment"
+--- /dev/null
++++ b/tools/SourceWindow.lean
+@@ -0,0 +1,49 @@
++module
++public import Std
++@[expose] public section
++namespace SourceWindow
++
++/-- Scalar coordinates of the actual source intersection of one search window.
++Context expansion belongs to the renderer and is not represented here. -/
++structure Slice (sourceLength : Nat) where
++  first : Nat
++  last : Nat
++  ordered : first < last
++  within : last ≤ sourceLength
++  bounded : last-first ≤ 512
++
++def project (sourceLength prefixChars index : Nat) : Option (Slice sourceLength) :=
++  let first := index*384-prefixChars
++  let last := min sourceLength (index*384+512-prefixChars)
++  if ordered : first < last then
++    some ⟨first,last,ordered,Nat.min_le_left _ _,by
++      have upper := Nat.min_le_right sourceLength (index*384+512-prefixChars)
++      omega⟩
++  else none
++
++/-- A source character is scored exactly when its global coordinate occurs
++in the producer's original window. A window center has no role in this test. -/
++theorem projected_covers_iff (sourceLength prefixChars index position : Nat) :
++    (∃ span, project sourceLength prefixChars index = some span ∧
++      span.first ≤ position ∧ position < span.last) ↔
++    position < sourceLength ∧ index*384 ≤ prefixChars+position ∧
++      prefixChars+position < index*384+512 := by
++  unfold project
++  dsimp only
++  split
++  · simp only [Option.some.injEq]
++    constructor
++    · rintro ⟨span,equal,first,last⟩
++      cases equal
++      dsimp only at first last
++      omega
++    · intro covered
++      refine ⟨_,rfl,?_,?_⟩ <;> (dsimp only; omega)
++  · constructor
++    · rintro ⟨span,equal,_⟩
++      cases equal
++    · intro covered
++      exfalso
++      omega
++
++end SourceWindow
+--- /dev/null
++++ b/tools/SourceWindowIoTests.lean
+@@ -0,0 +1,17 @@
++module
++public import tests.SemanticDeadlineTests
++public import tests.WarmTests
++@[expose] public section
++
++def main (arguments : List String) : IO UInt32 := do
++  match arguments with
++  | ["semantic-deadline-provider",mode,root] =>
++      Eggshell.SemanticDeadlineTests.provider mode (.mk root)
++  | ["warm"] =>
++      Eggshell.WarmTests.run
++      pure 0
++  | ["deadline"] =>
++      Eggshell.SemanticDeadlineTests.run
++      Eggshell.Plugin.Worker.shutdown
++      pure 0
++  | _ => throw (IO.userError "expected warm or deadline fixture")

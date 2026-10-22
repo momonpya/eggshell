@@ -1,0 +1,66 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -27,0 +28 @@
++      ``Eggshell.Plugin.SharedRangeAdapter.atomic_payload,
+@@ -1678 +1679,2 @@
+-      (``Eggshell.Plugin.SharedRangeAdapter.prepare, ``Eggshell.Plugin.rankedContextRanges)] do
++      (``Eggshell.Plugin.SharedRangeAdapter.prepare, ``Eggshell.Plugin.rankedContextRanges),
++      (``Eggshell.Plugin.SharedRangeAdapter.prepare, ``Eggshell.Plugin.SharedRangeAdapter.atomicUnit)] do
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5078,0 +5079,9 @@
++/-- A previously admitted complete projection stays atomic. This copies its
++payload and native-control fields exactly; an owner nomination is not a
++fabricated numerical source position. -/
++def atomicUnit (familyIndex sourceChars : Nat) (family : Family) : UnitPlan :=
++  {family := familyIndex,slice := family.template,ranges := [(0,sourceChars)]}
++
++theorem atomic_payload (familyIndex sourceChars : Nat) (family : Family) :
++    (atomicUnit familyIndex sourceChars family).slice = family.template := rfl
++
+@@ -5083,0 +5093,2 @@
++  if family.template.context.isNone then
++    return ([atomicUnit familyIndex source.length family],[])
+@@ -5172,3 +5183,3 @@
+-/-- Disjoint original-position cells receive the best producer window rank
+-covering that cell. Source context and coalesced display spans carry no vote.
+-Overlapping numerical windows cannot vote for an original position twice. -/
++/-- Complete projections receive one owner-level demand. Disjoint original
++position cells receive the best producer window rank covering that cell.
++Context expansion and overlapping windows cannot create duplicate votes. -/
+@@ -5177,0 +5189,9 @@
++    -- A complete projection has one owner-level demand, independent of
++    -- its length and of absent numerical positions. No cue is added to the
++    -- transported metadata. Context fragments retain positioned demands.
++    if family.template.context.isNone then
++      match Matcher.atomText? family.owner.outcome with
++      | some source => if source.isEmpty then [] else
++          [{family := familyIndex,first := 0,last := source.length,weight := scale/(61+familyIndex)}]
++      | none => []
++    else
+--- a/tools/SharedRangeTests.lean
++++ b/tools/SharedRangeTests.lean
+@@ -67,0 +68,23 @@
++  let atomicOwner := OutcomeEdge.make (.text "unpositioned prior investigation")
++    (.text "ATOMIC_ORIGINAL_RESULT") [] (by simp) (by simp)
++  let atomicSlice : TransportSlice := {
++    owner := some atomicOwner.relation,keys := ["atomic-original"],
++    text := "framed: ATOMIC_ORIGINAL_RESULT",members := [],visibleKeys := []}
++  let atomicFamily : SharedRangeAdapter.Family := {
++    owner := atomicOwner,template := atomicSlice,windows := []}
++  let (atomicUnits,atomicCues) := SharedRangeAdapter.prepare 0 atomicFamily
++  requireRange (atomicUnits.length == 1 && (atomicUnits.head?.map (·.slice.text)) == some atomicSlice.text && atomicCues.isEmpty &&
++    (SharedRangeAdapter.rankedCues atomicFamily).isEmpty)
++    "an admitted complete projection vanished or acquired a fabricated numerical position"
++  let atomicCost := fun (slices : List TransportSlice) =>
++    ((slices.map (fun slice => slice.text.length+1)).sum,(slices.map (fun slice => slice.text.utf8ByteSize+1)).sum)
++  let some atomicFit := SharedRangeAdapter.fit (1000,1000) atomicCost [atomicFamily] |
++    throw (IO.userError "unpositioned complete projection could not fit")
++  requireRange (atomicFit.val.map (·.text) == [atomicSlice.text] &&
++    atomicFit.val.all (fun slice => slice.members.isEmpty && slice.visibleKeys.isEmpty && slice.context.isNone))
++    "the atomic offer changed its admitted payload or invented native control/source cues"
++  let noRoomCost := fun (slices : List TransportSlice) =>
++    (100+(slices.map (fun slice => slice.text.length+1)).sum,100+(slices.map (fun slice => slice.text.utf8ByteSize+1)).sum)
++  let some noRoom := SharedRangeAdapter.fit (100,100) noRoomCost [atomicFamily] |
++    throw (IO.userError "empty affordable atomic selection vanished")
++  requireRange noRoom.val.isEmpty "a whole projection bypassed the packet budget"

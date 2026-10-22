@@ -1,0 +1,27 @@
+--- a/tests/SemanticDeadlineTests.lean
++++ b/tests/SemanticDeadlineTests.lean
+@@ -75 +75,2 @@
+-    cmd := binary.toString, args := #["codex-hook"], env := environment runtime } (some (input.compress ++ "\n"))
++    cmd := binary.toString, args := #["codex-hook"],
++    env := environment runtime ++ #[("EGGSHELL_CONFIG", some config.toString)] } (some (input.compress ++ "\n"))
+@@ -104,0 +106,2 @@
++  let mut nonemptyComparisons := 0
++  let mut emptyComparisons := 0
+@@ -111,0 +115,3 @@
++    -- The corpus uses the current compiled term representation, including
++    -- primary/auxiliary lanes; these tests compare full scan with postings.
++    let original := original.map fun terms => SearchRank.terms (" ".intercalate terms)
+@@ -129,0 +136,2 @@
++        if expected.isEmpty then emptyComparisons := emptyComparisons+1
++        else nonemptyComparisons := nonemptyComparisons+1
+@@ -130,0 +139,3 @@
++  check (nonemptyComparisons > 0 && emptyComparisons > 0)
++    "lexical comparison oracle became vacuous"
++  IO.println s!"lexical nonempty/empty comparisons: {nonemptyComparisons}/{emptyComparisons}"
+@@ -156,0 +168,4 @@
++  -- This fixture varies numerical readiness; the DB lexical fallback must
++  -- already be usable, as it is after ordinary explicit preparation.
++  let _ ← RetrievalResearch.Index.warm snapshot .database
++  check (← RetrievalResearch.Index.ready snapshot) "fixture lexical preparation did not publish readiness"
+@@ -157,0 +173 @@
++  let rows := rows.map fun terms => SearchRank.terms (" ".intercalate terms)
