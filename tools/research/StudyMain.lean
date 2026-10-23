@@ -3,6 +3,7 @@ import tools.research.StudyAccounting
 import tools.research.StudyTrial
 import tools.research.StudyPrepare
 import tools.research.StudyAdmissionChecks
+import tools.research.StudyAcquire
 
 open Lean Eggshell.Research
 
@@ -16,8 +17,12 @@ def main (args : List String) : IO UInt32 := do
     | "audit" :: rest => NativeTrialAudit.cliMain rest; return 0
     | "replay" :: rest => StudyAccounting.cliMain rest
     | ["trial",input,digest] => StudyTrial.run input digest
+    | ["acquire",input,digest] => StudyAcquire.run input digest
     | ["prepare",input,directory] =>
         let _ ← StudyPrepare.prepare input directory
+        return 0
+    | ["prepare-live",input,directory] =>
+        let _ ← StudyPrepare.prepare input directory true
         return 0
     | ["test-admission",input,directory] =>
         StudyAdmissionChecks.run input directory

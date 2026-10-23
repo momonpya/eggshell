@@ -121,6 +121,10 @@ def consume (scope : Scope) (state : State) (record : Json) : Except String Stat
     state := {state with packets := state.packets.push packet}
   return state
 
+def generationFinished (state : State) : Bool :=
+  state.terminal == some "completed" && state.lastUsage.isSome && state.issues.isEmpty &&
+  state.answer.isSome && state.errors.isEmpty && state.reroutes.isEmpty && state.hookFailures.isEmpty
+
 def report (scope : Scope) (state : State) : Json := Id.run do
   let finalKnown := state.terminal == some "completed" && state.lastUsage.isSome && state.issues.isEmpty
   let initialMatched := state.packets.any fun packet =>
@@ -134,8 +138,34 @@ def report (scope : Scope) (state : State) : Json := Id.run do
     ("packets",toJson state.packets),("initialBodyMatched",toJson initialMatched),
     ("answerSha256",toJson (state.answer.map (Sha256.hex ·.toUTF8))),
     ("errors",toJson state.errors),("reroutes",toJson state.reroutes),("issues",toJson state.issues),
-    ("protocolPassed",toJson (finalKnown && initialMatched && state.answer.isSome &&
-      state.errors.isEmpty && state.reroutes.isEmpty && state.hookFailures.isEmpty))]
+    ("protocolPassed",toJson (generationFinished state && initialMatched))]
+
+inductive Acquisition where
+  | seed | fresh
+  deriving BEq
+
+/-- A seed starts with no saved memory but must run its prompt hook. A fresh
+control runs no hooks. Neither policy weakens the completed-generation gate. -/
+def acquisitionContext (kind : Acquisition) (observedPromptHook : Bool) (state : State) : Bool :=
+  match kind with
+  | .seed => observedPromptHook && state.packets.all (fun packet =>
+      packet.event != "userPromptSubmit" || packet.bytes == 0)
+  | .fresh => state.hookCount == 0 && state.packets.isEmpty
+
+def acquisitionAccepted (kind : Acquisition) (observedPromptHook : Bool) (state : State) : Bool :=
+  generationFinished state && acquisitionContext kind observedPromptHook state
+
+theorem acquisition_requires_completed (kind : Acquisition) (observedPromptHook : Bool) (state : State)
+    (accepted : acquisitionAccepted kind observedPromptHook state = true) : generationFinished state = true := by
+  simp only [acquisitionAccepted, Bool.and_eq_true] at accepted
+  exact accepted.1
+
+def acquisitionReport (scope : Scope) (state : State) (kind : Acquisition) (observedPromptHook : Bool) : Json :=
+  report scope state
+    |>.setObjVal! "initialContextPolicy" (toJson (if kind == .seed then "empty-seed" else "fresh-no-hooks"))
+    |>.setObjVal! "initialBodyMatched" (toJson (acquisitionContext kind observedPromptHook state))
+    |>.setObjVal! "observedPromptHook" (toJson observedPromptHook)
+    |>.setObjVal! "protocolPassed" (toJson (acquisitionAccepted kind observedPromptHook state))
 
 def replay (scope : Scope) (path : System.FilePath) : IO State := do
   unless (← path.metadata).byteSize ≤ 256 * 1024 * 1024 do

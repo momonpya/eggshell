@@ -19,7 +19,7 @@ private def write (path : System.FilePath) (json : Json) : IO Unit :=
 
 /-- Source-only restore, explicit off-hook warming, two independent native
 chats and exact-source audit. No App Server turn or answering model is invoked. -/
-def prepare (templatePath directory : String) : IO StudyAdmission.Plan := do
+def prepare (templatePath directory : String) (live : Bool := false) : IO StudyAdmission.Plan := do
   let template ← IO.ofExcept (fromJson? (α := StudyAdmission.Plan) (← StudyAdmission.readJson templatePath))
   let root := System.FilePath.mk directory
   check (root.isAbsolute && !(← root.pathExists)) "keep the existing preparation"
@@ -28,22 +28,32 @@ def prepare (templatePath directory : String) : IO StudyAdmission.Plan := do
   let original ← StudyRuntime.files (.mk template.sourceSnapshot)
   check (original == template.sourceFiles.qsort (fun a b => a.1 < b.1)) "source snapshot changed before preparation"
   IO.FS.createDir root
-  let data := root / "data"
-  let config := root / "config.toml"
-  IO.FS.createDir data
+  let data := if live then System.FilePath.mk template.dataRoot else root / "data"
+  let config := if live then System.FilePath.mk template.configuration.path else root / "config.toml"
   for path in #[template.runtime.path,template.database] do
     check (!(path.contains '"') && !(path.contains '\\') && !(path.contains '\n')) "unsupported TOML path quoting"
   let source := "default = \"work\"\nsemantic_matcher = " ++
     (toJson #[template.runtime.path,"search-provider"]).compress ++ "\n[eggs]\nwork = " ++
     (toJson template.database).compress ++
     "\n[profiles.work]\nread = [\"work\"]\nwrite = \"work\"\nhandoff_chars = 120000\n"
-  IO.FS.writeFile config source
+  if live then
+    StudyAdmission.verifyArtifact template.configuration
+    check (data.isAbsolute && (← data.pathExists) && (← IO.FS.readFile config) == source)
+      "live preparation requires the sealed study configuration and existing private history"
+    check ((← StudyRuntime.files (.mk template.database)) == original)
+      "live database differs from the frozen source checkpoint"
+    let privateFiles ← StudyAdmission.tree data
+    check (!privateFiles.any (fun row => row.1.endsWith "/daemon.json"))
+      "a live daemon still owns the persistent private history"
+  else
+    IO.FS.createDir data
+    IO.FS.writeFile config source
   let environment := setEnv template.environment #[
     ("EGGSHELL_CONFIG",some config.toString),("EGGSHELL_DATA_ROOT",some data.toString),
     ("EGGSHELL_PROFILE",some "work"),("PLUGIN_ROOT",some template.pluginRoot),
     ("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),
     ("MKL_NUM_THREADS",some "1"),("TOKENIZERS_PARALLELISM",some "false"),("HF_HUB_OFFLINE",some "1")]
-  StudyRuntime.restore (.mk template.sourceSnapshot) (.mk template.database)
+  if !live then StudyRuntime.restore (.mk template.sourceSnapshot) (.mk template.database)
   let warm ← StudyCommand.run template.runtime.path #["egg","warm","work"] environment template.workspace "" (root / "warm") 240000
   check (warm.exitCode == 0) "explicit source warm failed"
   let warmed ← IO.ofExcept (Json.parse warm.stdout >>= (·.getObjValAs? (Array Json) "databases"))
@@ -119,6 +129,9 @@ def prepare (templatePath directory : String) : IO StudyAdmission.Plan := do
     configuration := ← artifact config,dataRoot := data.toString,environment
     databaseFiles := ← StudyRuntime.files (.mk template.database),privateFiles := ← StudyAdmission.tree data,preparation := p}
   write (root / "plan.json") (toJson plan)
+  write (root / "preparation-mode.json") (Json.mkObj [
+    ("mode",toJson (if live then "persistent-private-history" else "source-only-portability")),
+    ("dataRoot",toJson data.toString),("restoredDatabase",toJson (!live))])
   return plan
 
 end Eggshell.Research.StudyPrepare

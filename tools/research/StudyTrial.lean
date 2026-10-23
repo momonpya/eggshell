@@ -14,13 +14,13 @@ private def save (directory : System.FilePath) (name : String) (json : Json) : I
   check (!(← path.pathExists)) "keep the previous trial evidence"
   IO.FS.writeFile path (json.compress ++ "\n")
 
-private partial def guard (plan : StudyAdmission.Plan) (deadline : Nat) : IO Json := do
-  let path := System.FilePath.mk plan.guardRecord
+partial def guard (runner : StudyAdmission.Artifact) (recordPath : String) (deadline : Nat) : IO Json := do
+  let path := System.FilePath.mk recordPath
   if !(← path.pathExists) then
     check ((← IO.monoMsNow) < deadline) "native resource monitor did not publish its record"
     IO.sleep 5
-    return ← guard plan deadline
-  let record ← StudyAdmission.readJson plan.guardRecord
+    return ← guard runner recordPath deadline
+  let record ← StudyAdmission.readJson recordPath
   let pid := (← IO.Process.getPID).toNat
   let rows ← ResourceGuard.processes
   let ancestors := ResourceGuard.ancestors rows pid
@@ -28,7 +28,7 @@ private partial def guard (plan : StudyAdmission.Plan) (deadline : Nat) : IO Jso
   let settings ← IO.ofExcept (record.getObjVal? "settings")
   check ((record.getObjValAs? String "state").toOption == some "running" &&
     (record.getObjValAs? Nat "childPid").toOption == some pid && ancestors.contains guardPid &&
-    (record.getObjValAs? String "guardSha256").toOption == some plan.runner.sha256 &&
+    (record.getObjValAs? String "guardSha256").toOption == some runner.sha256 &&
     (record.getObjValAs? Nat "limitRssKiB").toOption.any (fun n => 0 < n && n ≤ 3145728) &&
     (settings.getObjValAs? Nat "minFreeKiB").toOption.any (· ≥ 524288))
     "trial is not directly owned by the frozen native resource monitor"
@@ -67,7 +67,7 @@ def run (input digest : String) : IO UInt32 := do
   let plan := admitted.plan
   check ((← IO.FS.realPath (← IO.appPath)) == (← IO.FS.realPath (.mk plan.runner.path)))
     "running controller differs from the sealed harness"
-  let guardRecord ← guard plan ((← IO.monoMsNow) + 3000)
+  let guardRecord ← guard plan.runner plan.guardRecord ((← IO.monoMsNow) + 3000)
   let directory := System.FilePath.mk plan.output
   IO.FS.createDir directory
   save directory "plan.json" (toJson plan)
