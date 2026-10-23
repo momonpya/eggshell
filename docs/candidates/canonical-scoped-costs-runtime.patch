@@ -1,0 +1,122 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -11,0 +12 @@
++public import tools.ScopedCosts
+@@ -1069,0 +1071,12 @@
++def ownerStatusRowCost (owner : String) : Nat × Nat :=
++  let yes := ownerStatusDescription owner true
++  let no := ownerStatusDescription owner false
++  let changed := ownerStatusDescription owner false true
++  (max yes.length (max no.length changed.length),
++    max yes.utf8ByteSize (max no.utf8ByteSize changed.utf8ByteSize))
++
++theorem owner_status_row_bounded (owner : String) (verified changed : Bool) :
++    (ownerStatusDescription owner verified changed).length ≤ (ownerStatusRowCost owner).1 ∧
++      (ownerStatusDescription owner verified changed).utf8ByteSize ≤ (ownerStatusRowCost owner).2 := by
++  cases verified <;> cases changed <;> simp [ownerStatusRowCost,ownerStatusDescription] <;> omega
++
+@@ -1071,6 +1084 @@
+-  let rows := owners.eraseDups.map fun owner =>
+-    let yes := ownerStatusDescription owner true
+-    let no := ownerStatusDescription owner false
+-    let changed := ownerStatusDescription owner false true
+-    (max yes.length (max no.length changed.length),
+-      max yes.utf8ByteSize (max no.utf8ByteSize changed.utf8ByteSize))
++  let rows := owners.eraseDups.map ownerStatusRowCost
+@@ -5122,0 +5131,6 @@
++
++/-- Contributors describe metadata only. The real packet remains subject to
++the original byte and character checks after source selection. -/
++structure FrameCosts where
++  scope : List TransportSlice → ScopedCosts.Scope
++  render : ScopedCosts.Scope → List ScopedCosts.Charge
+@@ -5164,0 +5179,8 @@
++
++def scopedProblem (p : SharedCoverage.Problem) (mandatory templates : List TransportSlice)
++    (units : List UnitPlan) (frames : Option FrameCosts) : Option SharedCoverage.Problem :=
++  match frames with
++  | none => some p
++  | some model =>
++      (ScopedCosts.prepare? p (model.scope mandatory) (model.scope templates)
++        (units.toArray.map fun unit => model.scope (mandatory ++ [unit.slice])) model.render).map (·.problem)
+@@ -5722 +5744 @@
+-    (bundles : Array Synapses.Bundles.Projected := #[]) : Option
++    (bundles : Array Synapses.Bundles.Projected := #[]) (frames : Option FrameCosts := none) : Option
+@@ -5742,0 +5765 @@
++    let p ← scopedProblem p mandatory templates units frames
+@@ -5764 +5787 @@
+-    (bundles : Array Synapses.Bundles.Projected := #[]) : Option
++    (bundles : Array Synapses.Bundles.Projected := #[]) (frames : Option FrameCosts := none) : Option
+@@ -5785,0 +5809 @@
++    let p ← scopedProblem p mandatory templates units frames
+@@ -6104,8 +6128,7 @@
+-    let visibleFor := fun (fitted : List TransportSlice) =>
+-      let keys := fitted.flatMap (·.visibleKeys)
+-      let shared := fitted.flatMap fun slice => (slice.shared.map (·.owners)).getD []
+-      visibility.filterMap fun (selected,known,key) =>
+-        if known || keys.contains key || (selected.applicability == .advisory &&
+-          shared.contains (relationKey selected.matched.edge.relation)) then some selected else none
+-    let supportFor := fun (fitted : List TransportSlice) =>
+-      let keys := fitted.flatMap (·.keys) |>.eraseDups
++    let visibleActors := ScopedCosts.annotate visibility fun row =>
++      relationKey row.1.matched.edge.relation
++    let supportActors := ScopedCosts.annotate sourceKeys fun row =>
++      relationKey row.1.owner.relation
++    let scopeFor := fun (fitted : List TransportSlice) =>
++      let visibleKeys := fitted.flatMap (·.visibleKeys)
++      let keys := hashDistinct (fitted.flatMap (·.keys))
+@@ -6113,3 +6136,12 @@
+-      sourceKeys.filterMap fun (source,whole,prefixKey) =>
+-        if keys.contains whole || keys.any (·.startsWith prefixKey) ||
+-            shared.contains (relationKey source.owner.relation) then some source else none
++      let visible := ScopedCosts.active visibleActors fun (selected,known,key) owner =>
++        if known || visibleKeys.contains key || (selected.applicability == .advisory &&
++          shared.contains owner) then true else false
++      let support := ScopedCosts.active supportActors fun (_,whole,prefixKey) owner =>
++        keys.contains whole || keys.any (·.startsWith prefixKey) || shared.contains owner
++      (visible,support)
++    let visibleAt := fun (scope : ScopedCosts.Scope) =>
++      scope.1.filterMap fun index => (visibility[index]?).map (·.1)
++    let supportAt := fun (scope : ScopedCosts.Scope) =>
++      scope.2.filterMap fun index => (sourceKeys[index]?).map (·.1)
++    let visibleFor := fun fitted => visibleAt (scopeFor fitted)
++    let supportFor := fun fitted => supportAt (scopeFor fitted)
+@@ -6149,0 +6182,17 @@
++    let sourceTextFor := fun (scope : ScopedCosts.Scope) =>
++      let visible := visibleAt scope
++      let support := supportAt scope
++      let owners := (visible.map (·.matched.edge) ++ support.map (·.owner)).eraseDups
++      renderSourceNeighborhood sourceAll sourceUnions nominated owners
++        (support.flatMap (·.route.works)) true
++    let scopedFrames : SharedRangeAdapter.FrameCosts := {
++      scope := scopeFor
++      render := fun scope =>
++        let visible := visibleAt scope
++        let support := supportAt scope
++        let graph := if meaningSelected then ScopedCosts.lines "source-graph:" (sourceTextFor scope) else []
++        let owners := (visible.map ownerKey ++ support.map (fun item => relationKey item.owner.relation)).eraseDups
++        let status := if refreshSources then owners.map (fun owner =>
++          let cost := ownerStatusRowCost owner
++          ({key := "source-status:" ++ owner,chars := cost.1,bytes := cost.2} : ScopedCosts.Charge)) else []
++        graph ++ status }
+@@ -6163,2 +6212 @@
+-      let sourceText := renderSourceNeighborhood sourceAll sourceUnions nominated owners
+-        (support.flatMap (·.route.works)) true
++      let sourceText := sourceTextFor (scopeFor fitted)
+@@ -6176,3 +6224,5 @@
+-      let status := if refreshSources then ownerStatusReserve
+-        ((visible.map ownerKey ++ support.map (fun item => relationKey item.owner.relation)).eraseDups)
+-        else (0, 0)
++      let status := if refreshSources then
++        let owners := ownerStatusReserve
++          ((visible.map ownerKey ++ support.map (fun item => relationKey item.owner.relation)).eraseDups)
++        (owners.1+sourceStatusReserve,owners.2+sourceStatusByteReserve)
++        else (0,0)
+@@ -6198 +6248 @@
+-      match SharedRangeAdapter.fit (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles with
++      match SharedRangeAdapter.fit (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles (some scopedFrames) with
+--- a/Eggshell/CanonicalSourceDelivery.lean
++++ b/Eggshell/CanonicalSourceDelivery.lean
+@@ -11 +11 @@
+-  (include_str "CanonicalSourceRecords.lean").toUTF8])
++  (include_str "CanonicalSourceRecords.lean").toUTF8,(include_str "../tools/ScopedCosts.lean").toUTF8])

@@ -1,0 +1,33 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -6127,0 +6128,4 @@
++    let visibleActors := ScopedCosts.annotate visibility fun row =>
++      relationKey row.1.matched.edge.relation
++    let supportActors := ScopedCosts.annotate sourceKeys fun row =>
++      relationKey row.1.owner.relation
+@@ -6132 +6136 @@
+-      let visible := visibility.zipIdx.filterMap fun ((selected,known,key),index) =>
++      let visible := ScopedCosts.active visibleActors fun (selected,known,key) owner =>
+@@ -6134,4 +6138,3 @@
+-          shared.contains (relationKey selected.matched.edge.relation)) then some index else none
+-      let support := sourceKeys.zipIdx.filterMap fun ((source,whole,prefixKey),index) =>
+-        if keys.contains whole || keys.any (·.startsWith prefixKey) ||
+-            shared.contains (relationKey source.owner.relation) then some index else none
++          shared.contains owner) then true else false
++      let support := ScopedCosts.active supportActors fun (_,whole,prefixKey) owner =>
++        keys.contains whole || keys.any (·.startsWith prefixKey) || shared.contains owner
+--- a/tools/ScopedCosts.lean
++++ b/tools/ScopedCosts.lean
+@@ -16,0 +17,12 @@
++def annotate (rows : List α) (key : α → β) : List (α × β) :=
++  rows.map fun row => (row,key row)
++
++def active (rows : List (α × β)) (keep : α → β → Bool) : List Nat :=
++  rows.zipIdx.filterMap fun ((row,key),index) => if keep row key then some index else none
++
++theorem active_annotated_exact (rows : List α) (key : α → β) (keep : α → β → Bool) :
++    active (annotate rows key) keep =
++      rows.zipIdx.filterMap (fun (row,index) => if keep row (key row) then some index else none) := by
++  simp only [active,annotate,List.zipIdx_map,List.filterMap_map]
++  rfl
++
