@@ -3,6 +3,8 @@ import tools.research.StudyAccounting
 
 open Lean Eggshell.Research.StudyTransport
 
+namespace Eggshell.Research.StudyTransportChecks
+
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -15,11 +17,27 @@ private def settings (fixture root mode : String) : Settings := {
   responseBytes := if mode == "oversized" then 1024 else 32*1024*1024
   transcriptBytes := if mode == "trace-limit" then 512 else 256*1024*1024 }
 
-def main (args : List String) : IO UInt32 := do
+def cliMain (args : List String) : IO UInt32 := do
   try
     let [fixture,root] := args | throw (IO.userError "StudyTransportChecks FIXTURE OUTPUT")
     check (!(← (System.FilePath.mk root).pathExists)) "keep existing transport test evidence"
     IO.FS.createDirAll (.mk root)
+    let scratch := System.FilePath.mk root / "temporary"
+    let temporary := {settings fixture root "scratch" with environment := #[("TMPDIR",some scratch.toString)]}
+    withClient .inspect temporary fun client => do
+      let _ ← handshake client "fixture"
+      pure ()
+    check ((← scratch.isDir) && (← scratch.readDir).isEmpty) "transport did not prepare or clean native scratch"
+    let invalidScratch := System.FilePath.mk root / "scratch-file"
+    IO.FS.writeFile invalidScratch "keep"
+    let invalid := {settings fixture root "scratch-rejected" with
+      command := #[fixture,"scratch"],environment := #[("TMPDIR",some invalidScratch.toString)]}
+    let scratchRejected ← try
+      withClient .inspect invalid fun _ => pure ()
+      pure false
+      catch _ => pure true
+    check (scratchRejected && !(← (System.FilePath.mk invalid.output).pathExists) &&
+      (← IO.FS.readFile invalidScratch) == "keep") "transport launched with invalid scratch"
     let successful := settings fixture root "normal"
     withClient .generate successful fun client => do
       let _ ← handshake client "fixture"
@@ -92,6 +110,7 @@ def main (args : List String) : IO UInt32 := do
         s!"reader/writer task remained live after {mode}"
       rejected := rejected.push mode
     let result := Json.mkObj [("normalLifecycle",toJson true),("bodyUsageAnswerReplayed",toJson true),
+      ("scratchPreparedBeforeSpawn",toJson true),("invalidScratchRejectedBeforeSpawn",toJson scratchRejected),
       ("existingTranscriptPreserved",toJson true),
       ("detachedHelperStopped",toJson true),
       ("burstNotifications",toJson (300 : Nat)),("rejected",toJson rejected),
@@ -103,3 +122,5 @@ def main (args : List String) : IO UInt32 := do
   catch error =>
     IO.eprintln error.toString
     return 1
+
+end Eggshell.Research.StudyTransportChecks

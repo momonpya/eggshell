@@ -2,6 +2,8 @@ import tools.research.StudyPrepare
 
 open Lean Eggshell Eggshell.Research
 
+namespace Eggshell.Research.PrepareMatchedSource
+
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -10,7 +12,7 @@ private def save (path : System.FilePath) (value : Json) : IO Unit :=
 
 /-- Freeze stored-source availability before the first diagnostic handoff.
 Stage zero and purpose compatibility cannot pass model-trial admission. -/
-def main (args : List String) : IO Unit := do
+def cliMain (args : List String) : IO Unit := do
   let [templatePath,auditPath,definitions,output,currentPrefix,candidatePrefix] := args |
     throw (IO.userError "PrepareMatchedSource TEMPLATE NATIVE-SOURCE-AUDIT DEFINITIONS NEW-DIRECTORY CURRENT-PREFIX CANDIDATE-PREFIX")
   let root := System.FilePath.mk output
@@ -24,6 +26,7 @@ def main (args : List String) : IO Unit := do
   check ((← StudyRuntime.files (.mk publication)) == files &&
     (audit.getObjValAs? Bool "sourceFactsUnchanged").toOption == some true &&
     (audit.getObjValAs? Bool "nativeJournalComplete").toOption == some true &&
+    (audit.getObjValAs? Bool "seedAccepted").toOption == some true &&
     (audit.getObjValAs? Nat "handoffBodiesRead").toOption == some 0)
     "source publication or native audit is incomplete"
   check ((audit.getObjValAs? String "taskDefinitionsSha256").toOption == some (← ArtifactHash.hex (.mk definitions)))
@@ -68,3 +71,5 @@ def main (args : List String) : IO Unit := do
       environment := template.environment.filter (fun row => !updates.any (·.1 == row.1)) ++ updates
       preparation := {template.preparation with auditInput := ← StudyPrepare.artifact prototype}}
     save (root / (label ++ "-template.json")) (toJson plan)
+
+end Eggshell.Research.PrepareMatchedSource

@@ -3,6 +3,8 @@ import tools.research.StudyPrepare
 
 open Lean Eggshell Eggshell.Research
 
+namespace Eggshell.Research.StudySeal
+
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -17,7 +19,7 @@ private def setEnv (original updates : Array (String × Option String)) :=
 /-- Freeze independent empty-seed plans without starting a thread or a turn.
 The acquisition controller still rechecks its native gate and actual model,
 hooks, source, usage and process exits immediately before/after generation. -/
-def main (args : List String) : IO Unit := do
+def cliMain (args : List String) : IO Unit := do
   let [oldPlan,newTemplate,gateDirectory,studyDirectory,runnerPath,guardPath,repository] := args |
     throw (IO.userError "StudySeal OLD-PLAN QUALIFIED-TEMPLATE GATE STUDY RUNNER GUARD REPOSITORY")
   let old ← IO.ofExcept (fromJson? (α := StudyAcquire.Plan) (← StudyAdmission.readJson oldPlan))
@@ -39,15 +41,15 @@ def main (args : List String) : IO Unit := do
   let source := study / "harness-source"
   check (!(← source.pathExists)) "keep the existing harness snapshot"
   IO.FS.createDirAll source
-  let mut names : Std.HashSet String := {}
   let mut harness := #[]
-  let extra : Array String := #["NativeSeedAudit.lean","NativeSeedFinalize.lean","StudySeal.lean","ArtifactHash.lean"]
-  let paths := old.harness.map (fun row => System.FilePath.mk row.path) ++
-    extra.map (fun name => repo / "tools/research" / System.FilePath.mk name)
-  for path in paths do
-    let some name := path.fileName | throw (IO.userError "harness source without a filename")
-    check (!names.contains name) "ambiguous harness snapshot filename"
-    names := names.insert name
+  let extra : Array String := #["NativeSeedAudit.lean","NativeSeedFinalize.lean","StudySeal.lean","ArtifactHash.lean",
+    "StudyEnvironment.lean","StudyEnvironmentChecks.lean","StudyCommandChecks.lean","PrepareMatchedSource.lean"]
+  let previousNames ← old.harness.mapM fun artifact => do
+    let some name := (System.FilePath.mk artifact.path).fileName |
+      throw (IO.userError "harness source without a filename")
+    return name
+  for name in (previousNames ++ extra).toList.eraseDups do
+    let path := repo / "tools/research" / name
     let target := source / name
     IO.FS.writeBinFile target (← IO.FS.readBinFile path)
     harness := harness.push (← StudyPrepare.artifact target)
@@ -70,6 +72,7 @@ def main (args : List String) : IO Unit := do
     ("TMPDIR",some temporary.toString),
     ("PLUGIN_ROOT",some template.pluginRoot),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none),
     ("EGGSHELL_CONFIG",none),("EGGSHELL_DATA_ROOT",none)]
+  StudyEnvironment.prepare environment
   let mut plans := #[]
   for index in [:3] do
     let label := s!"seed-{index+1}"
@@ -108,3 +111,5 @@ def main (args : List String) : IO Unit := do
     ("stopRssKiB",toJson (3145728 : Nat)),("maxUserRssKiB",toJson (4194304 : Nat)),
     ("historicalFreshReused",toJson false),("seedCostsSeparate",toJson true)])
   pure ()
+
+end Eggshell.Research.StudySeal

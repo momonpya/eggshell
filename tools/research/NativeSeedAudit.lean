@@ -4,6 +4,8 @@ import Eggshell.SynapseLive
 open Lean Eggshell Eggshell.Synapses Eggshell.Synapses.Extraction
 open Eggshell.Research
 
+namespace Eggshell.Research.NativeSeedAudit
+
 private structure Requirement where
   name : String
   path : String
@@ -70,7 +72,7 @@ private def rpcCommands (path : System.FilePath) (session turn : String) : IO (A
 
 /-- Read only the saved seed, native event journal and source code. This
 auditor neither opens a handoff body nor calls Handoff, warm or a model. -/
-def main (args : List String) : IO Unit := do
+def cliMain (args : List String) : IO Unit := do
   let [acquisition,definitions,publication,output] := args |
     throw (IO.userError "NativeSeedAudit ACQUISITION TASK-DEFINITIONS PUBLICATION NEW-REPORT")
   let root := System.FilePath.mk acquisition
@@ -107,6 +109,7 @@ def main (args : List String) : IO Unit := do
   let mut commandAudit := #[]
   let mut missingNativeStarts := 0
   let mut missingNativeFinishes := 0
+  let mut missingPortableOrigins := 0
   for command in commands do
     let id ← IO.ofExcept (command.getObjValAs? String "id")
     let occurrence : Occurrence := ⟨session,turn,id⟩
@@ -133,6 +136,7 @@ def main (args : List String) : IO Unit := do
       (hook.getObjValAs? String "status").toOption == some "completed"
     if preCompleted && pres.isEmpty then missingNativeStarts := missingNativeStarts+1
     if postCompleted && posts.isEmpty then missingNativeFinishes := missingNativeFinishes+1
+    if postCompleted && original.isEmpty then missingPortableOrigins := missingPortableOrigins+1
     let reason := if pres.isEmpty then "missing-native-pre-or-unmatched-rpc-id"
       else if posts.isEmpty && postCompleted then "completed-post-hook-without-native-journal-finish"
       else if posts.isEmpty then "missing-native-post"
@@ -174,9 +178,16 @@ def main (args : List String) : IO Unit := do
     ("rpcCommands",toJson commands.size),("nativeStarts",toJson starts.size),("nativeFinishes",toJson finishes.size),
     ("portableOrigins",toJson origins.size),("unaccountedCommands",toJson unaccounted.size),
     ("missingNativeStarts",toJson missingNativeStarts),("missingNativeFinishes",toJson missingNativeFinishes),
+    ("missingPortableOrigins",toJson missingPortableOrigins),
     ("nativeJournalComplete",toJson (missingNativeStarts == 0 && missingNativeFinishes == 0)),
+    ("portableOriginsComplete",toJson (missingPortableOrigins == 0)),
+    ("seedAccepted",toJson (missingNativeStarts == 0 && missingNativeFinishes == 0 && missingPortableOrigins == 0)),
     ("ignoredOrigins",toJson derived.ignored),("reconstructedConsumption",toJson consumed.size),
     ("indexAvailable",toJson shared.isSome),("commandAudit",toJson commandAudit),("availability",toJson availability)]
   IO.FS.writeFile (.mk output) (report.compress ++ "\n")
   check (missingNativeStarts == 0 && missingNativeFinishes == 0)
     "completed native hooks lost journal events; do not freeze an accepted seed or start topic delivery"
+  check (missingPortableOrigins == 0)
+    "completed native tools lack portable original observations; drain durable saves before accepting the seed"
+
+end Eggshell.Research.NativeSeedAudit

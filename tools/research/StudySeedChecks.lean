@@ -169,9 +169,7 @@ def run (templatePath directory : String) : IO Unit := do
     ("supports",toJson (recovered.filter supported).size),
     ("coquoted",toJson (recovered.filter coquoted).size)])
 
-end Eggshell.Research.StudySeedChecks
-
-def main (args : List String) : IO UInt32 := do
+def cliMain (args : List String) : IO UInt32 := do
   try
     let [template,directory] := args | throw (IO.userError "StudySeedChecks TEMPLATE NEW-DIRECTORY")
     Eggshell.Research.StudySeedChecks.run template directory
@@ -179,3 +177,5 @@ def main (args : List String) : IO UInt32 := do
   catch error =>
     IO.eprintln error.toString
     return 1
+
+end Eggshell.Research.StudySeedChecks

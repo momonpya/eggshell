@@ -1,5 +1,6 @@
 import Eggshell.Worker
 import Eggshell.Sha256
+import tools.research.StudyEnvironment
 
 open Lean Eggshell
 
@@ -25,6 +26,7 @@ private def readBounded (handle : IO.FS.Handle) : IO String := do
 def run (binary : String) (args : Array String) (environment : Array (String × Option String))
     (cwd : String) (input : String) (directory : System.FilePath) (timeoutMs : Nat) : IO Result := do
   unless !(← directory.pathExists) do throw (IO.userError "keep the previous native command evidence")
+  StudyEnvironment.prepare environment
   IO.FS.createDir directory
   IO.FS.writeFile (directory / "stdin") input
   let spawned ← IO.Process.spawn {

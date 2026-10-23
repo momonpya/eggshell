@@ -4,6 +4,14 @@ import tools.research.StudyTrial
 import tools.research.StudyPrepare
 import tools.research.StudyAdmissionChecks
 import tools.research.StudyAcquire
+import tools.research.NativeSeedAudit
+import tools.research.NativeSeedFinalize
+import tools.research.StudySeedChecks
+import tools.research.StudySeal
+import tools.research.StudyCommandChecks
+import tools.research.StudyEnvironmentChecks
+import tools.research.StudyTransportChecks
+import tools.research.PrepareMatchedSource
 
 open Lean Eggshell.Research
 
@@ -21,6 +29,14 @@ def main (args : List String) : IO UInt32 := do
         return 0
     | ["trial",input,digest] => StudyTrial.run input digest
     | ["acquire",input,digest] => StudyAcquire.run input digest
+    | "seed-checks" :: rest => StudySeedChecks.cliMain rest
+    | "seed-audit" :: rest => NativeSeedAudit.cliMain rest; return 0
+    | "seed-finalize" :: rest => NativeSeedFinalize.cliMain rest
+    | "seal" :: rest => StudySeal.cliMain rest; return 0
+    | "test-environment" :: rest => StudyEnvironmentChecks.cliMain rest; return 0
+    | "test-command" :: rest => StudyCommandChecks.cliMain rest; return 0
+    | "test-transport" :: rest => StudyTransportChecks.cliMain rest
+    | "prepare-matched-source" :: rest => PrepareMatchedSource.cliMain rest; return 0
     | ["prepare",input,directory] =>
         let _ ← StudyPrepare.prepare input directory
         return 0

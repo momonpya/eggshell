@@ -2,6 +2,7 @@ import Lean.Data.Json
 import Std.Sync.Mutex
 import Init.Data.Queue
 import tools.research.ResourceGuard
+import tools.research.StudyEnvironment
 
 open Lean
 
@@ -162,6 +163,7 @@ def start (access : Access) (settings : Settings) : IO (Client access) := do
     throw (IO.userError "invalid App Server command, deadline, or capture bounds")
   let output := System.FilePath.mk settings.output
   unless output.isAbsolute && !(← output.pathExists) do throw (IO.userError "keep the existing transport evidence")
+  StudyEnvironment.prepare settings.environment
   -- Reserve this run atomically; concurrent clients must not truncate each
   -- other's transcript after both pass the existence check above.
   IO.FS.createDir output

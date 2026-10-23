@@ -68,8 +68,12 @@
 終了欠落0件だけで合格とせず、元seedへイベントを後付けしない。候補修正と競合試験は[hook-session-admission.md](hook-session-admission.md)。
 生成費用は入力2,527,739＋出力14,486＝総2,542,225トークン。cached input 2,266,240を含み、reasoning 6,548は出力に含まれる。
 これは不合格seedの取得費用であり、利用時の削減率へ含めたり成功seedへ置き換えたりしない。
-別に最終warmが486msで`offset 0: unexpected end of input`となった。元DBと私有記録を保持し、独立コピーで診断している。
-開始欠落とwarmの確認が終わるまで、seed2・題材の回答モデル・比較実験を投入しない。
+別に最終warmが486msで`offset 0: unexpected end of input`となった。計画にある`TMPDIR`を作っていなかったことが原因で、独立コピーで再現し、同じ環境での修正後のwarmまで確認した。
+新制御器は一時領域を実IOで検査し、保存のdrain→開始・終了・永続来歴の監査→warmの順で進める。
+制御器のSHAは`a0d1cbef…`。修正候補`f6454448…`は実フック9/9件・永続来歴4件・source-only回復・実CLIの候補8本/fresh0本の資格確認を通した。
+新しい計画は`/Users/ovm/.codex/experiments/eggshell/ingress-qualified-20261024/study/`。2GiBの開始容量検査を満たしたうえで、新しい空DBのseed1へ戻る。
+seed1の保存・監査・warmを通るまで、seed2・題材の回答モデル・比較実験を投入しない。
+詳細は[warm-temporary-root.md](warm-temporary-root.md)。
 直前のdfbb310b…の取得はディスク監視で停止し、観測386,241トークン・最終消費不明を保持した。
 容量を回収し、開始前の2GiB検査を加えて別の計画へ固定し直した。停止したseedを再開・上書きしていない。
 同じ保存DBで比較側6818f093…と候補のwarm・新規2チャットの診断は済んでいるが、これは変更後runtimeで取得した新seedの代用ではない。

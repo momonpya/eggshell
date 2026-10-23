@@ -2,6 +2,8 @@ import tools.research.StudyAcquire
 
 open Lean Eggshell Eggshell.Research
 
+namespace Eggshell.Research.NativeSeedFinalize
+
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -19,8 +21,11 @@ private def queued (directory : System.FilePath) : IO (Array String) := do
 
 /-- Finish the actual frozen runtime's durable work, without an answering
 model or reconstructed hook events. Only that executable may write the DB. -/
-def main (args : List String) : IO UInt32 := do
+def cliMain (args : List String) : IO UInt32 := do
   try
+    let (drainOnly,args) := match args with
+      | "--drain-only" :: rest => (true,rest)
+      | _ => (false,args)
     let [acquisition,directory] := args |
       throw (IO.userError "NativeSeedFinalize ACQUISITION NEW-REPORT-DIRECTORY")
     let root := System.FilePath.mk acquisition
@@ -55,6 +60,13 @@ def main (args : List String) : IO UInt32 := do
       finally StudyRuntime.stopManaged managed (output / "shutdown.json")
     let after ← queued files
     check after.isEmpty "queued source work remains after owned daemon exit"
+    if drainOnly then
+      let publication ← StudyRuntime.checkpoint (root / "work.egg") (output / "drained.egg")
+      IO.FS.writeFile (output / "result.json") ((Json.mkObj [
+        ("mode",toJson "drain-only"),("runtime",toJson plan.runtime),("sourceFiles",toJson publication),
+        ("queuedBefore",toJson before.size),("queuedAfter",toJson after.size),
+        ("answeringModelCalls",toJson (0 : Nat)),("numericalProviderStarted",toJson false)]).compress ++ "\n")
+      return 0
     -- Warm after the save/index child has exited: there is only one writer.
     let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment
       plan.workspace "" (output / "warm") 240000
@@ -81,3 +93,5 @@ def main (args : List String) : IO UInt32 := do
   catch error =>
     IO.eprintln error.toString
     return 1
+
+end Eggshell.Research.NativeSeedFinalize

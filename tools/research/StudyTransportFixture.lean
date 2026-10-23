@@ -18,6 +18,11 @@ private def notice (method : String) (fields : List (String × Json)) : IO Unit 
 The detached mode spawns only its bounded helper. Counters are fixture data. -/
 def main (args : List String) : IO UInt32 := do
   let [mode] := args | return 1
+  if mode == "scratch" || mode == "scratch-check" then
+    IO.FS.withTempDir fun directory => do
+      unless ← directory.isDir do throw (IO.userError "temporary directory was not created")
+      if mode == "scratch-check" then emit (Json.mkObj [("temporaryDirectoryCreated",toJson true)])
+    if mode == "scratch-check" then return 0
   if mode == "helper" then
     IO.sleep 20000
     return 0
