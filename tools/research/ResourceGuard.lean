@@ -206,9 +206,7 @@ def run (settings : Settings) : IO UInt32 := do
   snapshot path (report "finished" (some code.toNat) peak samples reason failure activeIds ((← IO.monoMsNow)-started))
   return if reason.isSome then 2 else code
 
-end Eggshell.Research.ResourceGuard
-
-def main (args : List String) : IO UInt32 := do
+def cliMain (args : List String) : IO UInt32 := do
   try
     let [input] := args | throw (IO.userError "ResourceGuard SETTINGS.json")
     let json ← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk input)))
@@ -217,3 +215,5 @@ def main (args : List String) : IO UInt32 := do
   catch error =>
     IO.eprintln error.toString
     return 1
+
+end Eggshell.Research.ResourceGuard

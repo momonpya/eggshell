@@ -156,9 +156,7 @@ def replay (scope : Scope) (path : System.FilePath) : IO State := do
     | .error error => state := {state with issues := state.issues.push s!"line {lineNumber}: {error}"}
   return state
 
-end Eggshell.Research.StudyAccounting
-
-def main (args : List String) : IO UInt32 := do
+def cliMain (args : List String) : IO UInt32 := do
   try
     let [specification,exchange,output] := args |
       throw (IO.userError "StudyAccounting SCOPE.json EXCHANGE.jsonl REPORT.json")
@@ -173,3 +171,5 @@ def main (args : List String) : IO UInt32 := do
   catch error =>
     IO.eprintln error.toString
     return 1
+
+end Eggshell.Research.StudyAccounting
