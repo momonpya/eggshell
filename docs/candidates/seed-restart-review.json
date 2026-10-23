@@ -1,0 +1,272 @@
+{
+  "status": "seed reset complete; full goal and model/adoption comparisons remain incomplete",
+  "userAuthorizedDbDeletion": true,
+  "scope": "/Users/ovm/.codex/experiments/eggshell",
+  "deletedDatabaseDirectories": 8701,
+  "nestedMatchedDatabases": 11221,
+  "deletedCacheDirectories": 1417,
+  "retained": "Protected source-only seed, development code, raw model transcripts/usage, hook bodies and receipts",
+  "historicalDbPrerequisites": "Deleted; old frozen model slots must not resume",
+  "seed": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/seed.egg",
+  "activeDatabase": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/active/work.egg",
+  "configuration": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/config.toml",
+  "beforeAvailableKiB": 3005088,
+  "afterAvailableKiB": 10481948,
+  "seedBytes": 4143198,
+  "warm": {
+    "requested": 1956,
+    "valid": 1956,
+    "missing": 0,
+    "invalid": 0,
+    "elapsedMs": 94695
+  },
+  "newChatChecks": {
+    "sessions": [
+      {
+        "session": "restart-seed-1",
+        "elapsedMs": 12330,
+        "bodySha256": "694310e04e3a086194331b508460fd478b6dd1781f18ca359cbea5d899adf082",
+        "ack": {
+          "offerAccepted": true,
+          "rpcCompleted": true
+        },
+        "nativeAudit": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/new-chat-1/evidence.json"
+      },
+      {
+        "session": "restart-seed-2",
+        "elapsedMs": 12654,
+        "bodySha256": "694310e04e3a086194331b508460fd478b6dd1781f18ca359cbea5d899adf082",
+        "ack": {
+          "offerAccepted": true,
+          "rpcCompleted": true
+        },
+        "nativeAudit": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/new-chat-2/evidence.json"
+      }
+    ],
+    "sameIndependentBodies": true,
+    "databaseCopiesMade": 0,
+    "answeringModelCalls": 0,
+    "fullGoalComplete": false
+  },
+  "guards": [
+    {
+      "guardPid": 5995,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 1256256,
+      "samples": 601,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-record-ack-20261023/eggshell"
+      ],
+      "childCommand": [
+        "env",
+        "EGGSHELL_CONFIG=/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/config.toml",
+        "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/data",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-record-ack-20261023/eggshell",
+        "egg",
+        "warm",
+        "work"
+      ],
+      "childPid": 6008,
+      "exitCode": 0,
+      "elapsedSeconds": 95.21865425026044
+    },
+    {
+      "guardPid": 10617,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 70624,
+      "samples": 9,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-record-ack-20261023/eggshell"
+      ],
+      "childCommand": [
+        "env",
+        "EGGSHELL_CONFIG=/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/config.toml",
+        "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/data",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-record-ack-20261023/eggshell",
+        "egg",
+        "doctor"
+      ],
+      "childPid": 10629,
+      "exitCode": 0,
+      "elapsedSeconds": 1.1630263337865472
+    },
+    {
+      "guardPid": 18751,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 351568,
+      "samples": 210,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-record-ack-20261023/eggshell"
+      ],
+      "childCommand": [
+        "ruby",
+        "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/check_restart_reaped.rb"
+      ],
+      "childPid": 18763,
+      "exitCode": 0,
+      "elapsedSeconds": 29.011171416845173
+    },
+    {
+      "guardPid": 26535,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 102416,
+      "samples": 9,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+
+      ],
+      "childCommand": [
+        "ruby",
+        "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/check_auditor.rb"
+      ],
+      "childPid": 26559,
+      "exitCode": 0,
+      "elapsedSeconds": 1.1626985841430724
+    }
+  ],
+  "artifacts": {
+    "seed-manifest.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/seed-manifest.json",
+      "sha256": "80e51271e672fa687d538389eab4ca40542dcc7a11b5e297eb0e3ea7ff0335f8",
+      "bytes": 876
+    },
+    "cleanup-plan.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/cleanup-plan.json",
+      "sha256": "9a0ee39356908bae5556b446da3d43ed18c380b6d4a4843a65430f289826f34e",
+      "bytes": 2708603
+    },
+    "cleanup-progress.jsonl": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/cleanup-progress.jsonl",
+      "sha256": "beb28c48497bb9d5914977d6ce55a1149b7ed8e6ccc4a1937601d21613b347d3",
+      "bytes": 2482249
+    },
+    "cleanup-failure.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/cleanup-failure.json",
+      "sha256": "5176c254a5a20a329df124fa68c173313b29551b01bfaf7285a7eeafb43c5439",
+      "bytes": 230
+    },
+    "cleanup-state.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/cleanup-state.json",
+      "sha256": "d6174ce412a8d15f1f8c4970f6842fa88208c2c052e1e6d3fdece3ed63930a33",
+      "bytes": 381
+    },
+    "cache-cleanup.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/cache-cleanup.json",
+      "sha256": "89894121c8e9662b2b068777f0338415b8f3578de3a7b4de487bd87cc38fac51",
+      "bytes": 181424
+    },
+    "cache-cleanup-result.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/cache-cleanup-result.json",
+      "sha256": "6ee18f984ef9f7da9babf9ad26cb6ddb5a4f168b708c4fd7b0835c535c73f2c8",
+      "bytes": 43
+    },
+    "cleanup-summary.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/cleanup-summary.json",
+      "sha256": "79429704a42f95616752fc273494a88ed4d0bfab3ee6c0f5d0ffaabb5e858acc",
+      "bytes": 431
+    },
+    "warm-guard.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/warm-guard.json",
+      "sha256": "e46124110c2087e5664838e9b712b13e984a6d45e4cfc91dd6a76d9e02d353c6",
+      "bytes": 881
+    },
+    "warm-guard.stdout": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/warm-guard.stdout",
+      "sha256": "ab8080123e59f540ae31a8a070dc99b0fff4d82731a2b7f03a914d57e0f728f2",
+      "bytes": 2549
+    },
+    "doctor-guard.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/doctor-guard.json",
+      "sha256": "33f6a32f2a658051b959c07d2efe6e337163d5bcceacde4c895b2d225e200817",
+      "bytes": 870
+    },
+    "doctor-guard.stdout": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/doctor-guard.stdout",
+      "sha256": "af1f140926278cfa44002be562419f82d3028633a9967c97f60ff9993a2ac96a",
+      "bytes": 1623
+    },
+    "new-chat-guard.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/new-chat-guard.json",
+      "sha256": "4c7db48981bd80c16c90c78e4a81730bc8106ece212e2ac337e8fce10f90b5c1",
+      "bytes": 662
+    },
+    "shutdown-harness-correction.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/shutdown-harness-correction.json",
+      "sha256": "a336da9fe98a9f9e306da3da21e373fe0cd7647e023c7df8dd9b9237cb967cef",
+      "bytes": 424
+    },
+    "new-chat-reaped-guard.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/new-chat-reaped-guard.json",
+      "sha256": "513d3bcf3d0aa1c18b9e256f3f9833594843910a367dff35821ec817fa5877d7",
+      "bytes": 668
+    },
+    "new-chat-reaped-result.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/new-chat-reaped-result.json",
+      "sha256": "80fe2907cd7c1d4a3aceacff73ffebf09abab3ffd545a784e40f1947ec760580",
+      "bytes": 850
+    },
+    "audit-negative-guard.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/audit-negative-guard.json",
+      "sha256": "7e8d9dd05c7c1bff1117ad9a74cd856ff35ac9f275bdf4025928f20d7a06e671",
+      "bytes": 504
+    },
+    "audit-negative-result.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/audit-negative-result.json",
+      "sha256": "81a877ae3a69455cbbe3ce1cf2edd1b8d0ad693e2f5d4ec3686308f5c4d2f949",
+      "bytes": 129
+    },
+    "removed-restored-auditors.json": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/removed-restored-auditors.json",
+      "sha256": "66ba279861e55d5710a4602667bc70b9cc30eade11ac82e9a8424fdb9a7500b9",
+      "bytes": 527
+    }
+  },
+  "nativeEvidenceAuditor": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/native-trial-gate-20261023/NativeTrialAudit",
+    "sha256": "5db2b59a6e208912e1706a570e8031186ab69fe5cd6024ab7b626b25c58ff218",
+    "bytes": 101749072
+  },
+  "nativeEvidenceSource": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/NativeTrialAudit.lean",
+    "sha256": "bcdf54866b70ad424fa1346134ee45e0c525100e2b14c9e4274768846f121b2f",
+    "bytes": 5746
+  },
+  "sourceAuditReports": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/new-chat-1/evidence.json",
+      "sha256": "eddad6ed5487eab35c61de569d2802eaf64e52408d88a8f38d08edf1443c79c3",
+      "bytes": 1219
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/new-chat-2/evidence.json",
+      "sha256": "59b73796dce33c1978fc69586d575ab662aef093d08469a8b712c01405cdc783",
+      "bytes": 1219
+    }
+  ],
+  "newAnsweringCalls": 0,
+  "newSeedAcquisitionCalls": 0,
+  "ordinaryRuntimeChanged": false,
+  "productionAdoption": false
+}
