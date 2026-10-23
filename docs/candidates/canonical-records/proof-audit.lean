@@ -1,0 +1,6 @@
+import Eggshell.Handoff
+#print axioms Eggshell.Synapses.CanonicalSource.Records.requested_retained
+#print axioms Eggshell.Synapses.CanonicalSource.Records.complete_record_retained
+#print axioms Eggshell.Synapses.CanonicalSource.Records.closed_row_is_original
+#print axioms Eggshell.Plugin.SharedRangeAdapter.shared_source_unit_has_no_control
+#print axioms SharedCoverage.Deferred.choose_deferred_compiled

@@ -1,0 +1,44 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9,6 +9,7 @@
+ public import tools.BudgetPlan
+ public import tools.SharedCoverage
+ public import tools.DeferredCoverage
++public import Eggshell.CanonicalSourceRecords
+ public import tools.ClosedCoverage
+ public import tools.FocusWindows
+ public import tools.SourceWindow
+@@ -5243,6 +5244,7 @@
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   let some work := Matcher.atomText? family.owner.work | return ([],[])
+   let owner := relationKey family.owner.relation
++  let records := Synapses.CanonicalSource.Records.prepare family.cached
+   let focused := (family.windows ++ family.references).eraseDups.filterMap fun position =>
+     (meaningContext? source (work.length+1) position 0).map fun view => (view.span.start,view.span.stop)
+   let groups := focused.map (fun span => [span]) ++ family.referenceRanges.map Prod.snd ++
+@@ -5250,9 +5252,11 @@
+   let mut seen : Std.HashSet (List (Nat × Nat)) := {}
+   let mut units := []
+   for spans in groups do
+-    let rows := family.cached.filter fun row => row.origins.any fun origin =>
+-      origin.binding.owner == owner && spans.any fun (a,b) =>
++    let requested := (List.finRange family.cached.size).filter fun index =>
++      let row := family.cached[index]
++      row.origins.any fun origin => origin.binding.owner == owner && spans.any fun (a,b) =>
+         a < origin.binding.limit && origin.binding.first < b
++    let rows := Synapses.CanonicalSource.Records.close family.cached records requested
+     if rows.isEmpty then continue
+     let ranges := cachedBindings owner rows
+     if seen.contains ranges then continue
+--- a/Eggshell/CanonicalSourceDelivery.lean
++++ b/Eggshell/CanonicalSourceDelivery.lean
+@@ -7,7 +7,8 @@
+ 
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.shared-source-delivery".toUTF8 [
+   (include_str "CanonicalSourceDelivery.lean").toUTF8,(include_str "CanonicalSourcePacket.lean").toUTF8,
+-  (include_str "Handoff.lean").toUTF8,(include_str "../tools/DeferredCoverage.lean").toUTF8])
++  (include_str "Handoff.lean").toUTF8,(include_str "../tools/DeferredCoverage.lean").toUTF8,
++  (include_str "CanonicalSourceRecords.lean").toUTF8])
+ 
+ def rowKey (key : Key) : String := "c:" ++ Index.contentKey key.file ++ ":" ++ toString key.line
+ 
