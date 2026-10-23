@@ -70,6 +70,8 @@
 終了済みの旧実行体14本を可逆圧縮し、復元SHA一致と約2.2GiBの開始容量を確認した。
 元質問・5.6-luna/xhigh・AGENTS無効・空DB・新規チャットのseed1を開始し、実threadのmodel/effort/providerとinstructionSources=[]を確認した。
 保存・全件監査・明示warmを通るまでseed2と題材生成は進めない。
+この実seed1は終了0・残存0で完了し、70コマンド全件の開始/終了/永続来歴の欠落0、warm2,192窓の欠け/無効0、元出版不変を確認した。
+総3,519,905トークンは取得費用へ分離する。残るseed2/3と全6段階の同条件比較は未実行である。
 旧seedを新runtimeのseedへ改名したり、失敗費用を取り除いたりしない。詳細は[numerical-shutdown-investigation.md](numerical-shutdown-investigation.md)。
 
 以下は前のruntimeでの取得と調査。

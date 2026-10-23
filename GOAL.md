@@ -1,5 +1,11 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-24 新runtime efb9a11d…の実seed1が回答・保存・実終了まで成功した。daemon終了0・88ms、guard終了0・残存0、147フックは全件完了・最大3,877ms。
+保存待ち0の確認後、生RPCの70コマンド全件と日誌の開始/終了各72件・永続来歴70件を照合し、各欠落0・未説明0、消費辺1,749件、原文8,553行を確認した。
+明示warmも2,192窓のmissing/invalid=0、元出版のhead/pages不変。最大RSSは取得3,103,104 KiB、warm1,744,560 KiBで、全後処理guardも終了0・残存0。
+最終既知3,519,905トークン（入力3,504,400＋出力15,505、cached 3,284,864は入力の内数）をseed費用へ分離する。利用時の削減率・全題材/両周の比較・採用は未確認。
+残る独立seed2/3も同じruntimeで取得し、保存済み原文と私有履歴を固定してから全6段階の同条件比較へ進む。証拠はdocs/candidates/numerical-lifecycle/real-seed-review.json。
+
 2026-10-24 数値サービスの終了原因を特定：サービス本体が終了0を返しても未所有の通信taskが残り、Leanのtask manager終了で待ち続けていた。
 `finally`が`let mut clients/exclusive`のtry前の値を参照することを最小例で確認し、所有状態をIO.Refへ移した隔離候補efb9a11d…を作った。
 未完フレームの終了20回（最大19ms）、所有者消失5回（最大12ms）、分割フレーム、ContractAuditが成功した。
