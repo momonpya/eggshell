@@ -83,6 +83,10 @@ theorem retry_keeps_first_observation (previous next accepted : Entry)
   unfold retainFirst at result
   split at result <;> simp_all
 
+theorem retry_keeps_observed_time (previous next accepted : Entry)
+    (result : retainFirst previous next = .ok accepted) : accepted.clock = previous.clock := by
+  rw [retry_keeps_first_observation previous next accepted result]
+
 def completeKnowledge (known : Knowledge) (indexed : Bool) : Bool := !known.uncertain && indexed
 
 theorem complete_knowledge_is_confirmed (known : Knowledge) (indexed : Bool)
@@ -104,15 +108,35 @@ def open? (source : PageMap.Snapshot) : IO (Option PageMap.Snapshot) := do
     throw (IO.userError "foreign synaptic event journal")
   return some journal
 
-def prepare (source : PageMap.Snapshot) : IO PageMap.Snapshot := do
+/-- Pin only after acquiring the journal's publication claim. Native ingress
+and background checkpoints share this claim; neither can invalidate the
+other's snapshot between its duplicate probe and its B-tree transaction.
+The claim also serializes first creation. No source DB or index lock is held. -/
+opaque withPublication (source : PageMap.Snapshot)
+    (action : PageMap.Snapshot → IO α) : IO α := do
   let sidecar ← Sidecar.prepare (Sidecar.Owner.ofSnapshot source) .user
   let parent ← Sidecar.childDirectory sidecar.directory "synapses"
-  let path := parent / "events"
-  if let some journal ← PageMap.open? path then
+  let claim := parent / "events.guard"
+  FileSystem.immutableExistingBytes claim ByteArray.empty
+  let guard ← FileSystem.openRead claim.toString
+  let deadline := (← IO.monoMsNow)+5000
+  repeat
+    unless (← IO.monoMsNow) < deadline do
+      throw (IO.userError "synaptic event publication is busy")
+    if ← FileSystem.tryReadLock guard true then break
+    IO.sleep 5
+  try
+    let path := parent / "events"
+    let journal ← match ← PageMap.open? path with
+      | some journal => pure journal
+      | none => PageMap.create path ("private-synaptic-events:" ++ source.head.identity)
     unless journal.head.authority == "private-synaptic-events:" ++ source.head.identity do
       throw (IO.userError "foreign synaptic event journal")
-    return journal
-  PageMap.create path ("private-synaptic-events:" ++ source.head.identity)
+    action journal
+  finally FileSystem.unlockRead guard
+
+def prepare (source : PageMap.Snapshot) : IO PageMap.Snapshot :=
+  withPublication source pure
 
 def maxBytes : Nat := 8 * 1024 * 1024
 
@@ -133,24 +157,24 @@ def append (source : PageMap.Snapshot) (value : Entry) : IO Bool := do
     throw (IO.userError "invalid synaptic event identity")
   let bytes := (toJson value).compress.toUTF8
   unless bytes.size ≤ maxBytes do throw (IO.userError "synaptic event exceeds its byte bound")
-  let journal ← prepare source
-  let name := "event:" ++ value.name
-  if let some previous ← journal.get name then
-    let ordinal ← IO.ofExcept (payloadSize (some previous))
-    let saved ← entry journal ordinal
-    unless saved.name == value.name do throw (IO.userError "ambiguous event digest")
-    let _ ← IO.ofExcept (retainFirst saved value)
-    return false
-  let (_, _, _) ← PageMap.withWriter journal fun writer => do
-    let ordinal ← getNat writer.get "count"
-    putChunks writer "entry" ordinal bytes
-    putNat writer name ordinal
-    putNat writer "count" (ordinal+1)
-    let turn := value.turn
-    writer.put ("turn:" ++ turn.name) (some ((toJson turn).compress.toUTF8))
-    putNat writer (key ("posting:" ++ turn.name) ordinal) ordinal
-    putNat writer ("latest:" ++ turn.name) (ordinal+1)
-  return true
+  withPublication source fun journal => do
+    let name := "event:" ++ value.name
+    if let some previous ← journal.get name then
+      let ordinal ← IO.ofExcept (payloadSize (some previous))
+      let saved ← entry journal ordinal
+      unless saved.name == value.name do throw (IO.userError "ambiguous event digest")
+      let _ ← IO.ofExcept (retainFirst saved value)
+      return false
+    let (_, _, _) ← PageMap.withWriter journal fun writer => do
+      let ordinal ← getNat writer.get "count"
+      putChunks writer "entry" ordinal bytes
+      putNat writer name ordinal
+      putNat writer "count" (ordinal+1)
+      let turn := value.turn
+      writer.put ("turn:" ++ turn.name) (some ((toJson turn).compress.toUTF8))
+      putNat writer (key ("posting:" ++ turn.name) ordinal) ordinal
+      putNat writer ("latest:" ++ turn.name) (ordinal+1)
+    return true
 
 def turnEntries (journal : PageMap.Snapshot) (turn : Turn) : IO (Array Entry) := do
   let mut values := #[]
@@ -339,10 +363,10 @@ def Checkpoint.sameInput (previous : Checkpoint) (source : PageMap.Snapshot)
   Index.sameSources source previous.source limit
 
 def mark (source : PageMap.Snapshot) (name : String) (checkpoint : Checkpoint) : IO Unit := do
-  let journal ← prepare source
   let bytes ← Index.checkedBytes checkpoint
-  let _ ← PageMap.withWriter journal fun writer => do
-    if (← writer.get name) != some bytes then writer.put name (some bytes)
+  withPublication source fun journal => do
+    let _ ← PageMap.withWriter journal fun writer => do
+      if (← writer.get name) != some bytes then writer.put name (some bytes)
 
 /-- Constant metadata probe; no journal entries or original bodies are read. -/
 def required (source : PageMap.Snapshot) (storage : Sidecar.Storage := .database) : IO Bool := do

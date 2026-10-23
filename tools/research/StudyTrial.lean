@@ -94,15 +94,19 @@ def run (input digest : String) : IO UInt32 := do
       save directory "models.json" models
       let hooks ← StudyTransport.request client (.read .hooks) (Json.mkObj [("cwds",toJson #[plan.workspace])])
       save directory "hooks.json" hooks
+      let mut activeHooks := 0
       for group in ← IO.ofExcept (hooks.getObjValAs? (Array Json) "data") do
         for key in #["errors","warnings"] do
           check ((group.getObjValAs? (Array Json) key).toOption.any (·.isEmpty)) "hook discovery has errors or warnings"
         let found ← IO.ofExcept (group.getObjValAs? (Array Json) "hooks")
         check (!found.isEmpty) "memory trial has no plugin hooks"
         for hook in found do
+          if (hook.getObjValAs? Bool "enabled").toOption == some false then continue
+          activeHooks := activeHooks+1
           check ((hook.getObjValAs? String "trustStatus").toOption == some "trusted" &&
             (hook.getObjValAs? String "sourcePath").toOption == some (plan.pluginRoot ++ "/hooks/hooks.json"))
             "untrusted or unexpected hook bundle"
+      check (activeHooks == 8) "memory trial must run exactly the sealed eight hooks"
       let executables ← StudyTransport.executables client
       check (executables.contains (← IO.FS.realPath (.mk plan.nativeCli.path)).toString)
         "App Server is running another native CLI behind its launcher"

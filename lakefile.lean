@@ -96,6 +96,9 @@ lean_exe synapse_warm where
 lean_exe synapse_journal_tests where
   root := `tests.SynapseJournalTests
 
+lean_exe synapse_journal_concurrency_tests where
+  root := `tests.SynapseJournalConcurrencyTests
+
 lean_exe synapse_provenance_tests where
   root := `tests.SynapseProvenanceTests
 

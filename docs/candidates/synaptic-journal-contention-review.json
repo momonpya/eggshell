@@ -1,0 +1,124 @@
+{
+  "status": "isolated journal concurrency fix qualified; generation remains disabled",
+  "productionAdoption": false,
+  "fullGoalComplete": false,
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/environment/prefix/libexec/eggshell",
+    "sha256": "86dd6f6defd55204c2f48ba5fa64d492709807aa7490f738e8265bd26aaff137",
+    "bytes": 113716288
+  },
+  "sources": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/source-freeze/Eggshell/SynapseJournal.lean",
+      "sha256": "03d3a3d80e533f7d77138194cdb696bd72a5abbcc11871ee929a58d33ed1f793",
+      "bytes": 25013
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/source-freeze/tests/SynapseJournalConcurrencyTests.lean",
+      "sha256": "9a4484aafac759d3f6d8c5c2ffb1612fa25f93daeb60b9e88352cc899d60ab0e",
+      "bytes": 4872
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/source-freeze/tools/research/NativeSeedAudit.lean",
+      "sha256": "9919f9d42bd254c3a808a60d56b17c1081bdaef40e48a2cf984d0685c6cc1a5d",
+      "bytes": 11666
+    }
+  ],
+  "evidence": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/frozen-inputs.json",
+      "sha256": "af1b6563cadc055de39b483eded3ca35343cc068d98db4b31729aebee4e0755e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/old-parallel.guard.json",
+      "sha256": "cf893de7ae1ca0ea0c0000268327e05f64ac13d9c0c84bd70c724fe0021006b3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/old-parallel.stderr",
+      "sha256": "b4c8db591691a4d607fdc7f2a41e872a18aa09d8370e7da6394a462348cae3e9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/checks.guard.json",
+      "sha256": "2e0fd69fc4e2d031a24a3dced988fa13c63d521056d510fe0f41e090343e0437"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/new-parallel.stdout",
+      "sha256": "c91eb355fa3769413495410b9b16614bd5eb27eaa8e05aeab8cd348d5967c5e9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/new-creation.stdout",
+      "sha256": "c91eb355fa3769413495410b9b16614bd5eb27eaa8e05aeab8cd348d5967c5e9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/candidate/build-publication.guard.json",
+      "sha256": "925b9f20295fb9bcffeb7a61dd580749844324d9658f16173af5a84f0a7eefa2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/native-synthetic.guard.json",
+      "sha256": "e89c33b22206dab1009977b1b9f29a86ac77366353a1af558308b11aca1c81e6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/native-synthetic/result.json",
+      "sha256": "59c9eaa3c77a2a182e6d594072e368c6c636f9c3568ffca1fe71fb9bfde1cf85"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/native-synthetic/shutdown.json",
+      "sha256": "38ca73490aabe7b255872d6d263c38a29a3077527a88bb5cff062d277dbe6de7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/native-synthetic/recovery.json",
+      "sha256": "1a5b41681647c2b909930a0ef4be7f04af881aabb16e72d7a93e028ba9d55c5d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/reject-incomplete-seed.guard.json",
+      "sha256": "91feec583d02e1cf27587a3369aef0dc59a467ca3747d1326a50f63d619e6e7a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/journal-contention-20261023/reject-incomplete-seed.json",
+      "sha256": "27707f6a0dcec502c4c61d106c92afbaefc6037dd3b8e37c585136f4622002fd"
+    }
+  ],
+  "oldCounterexample": {
+    "processes": 4,
+    "failedProcesses": 3,
+    "reason": "DB writer is busy"
+  },
+  "corrected": {
+    "existingJournalEvents": 128,
+    "concurrentCreationEvents": 128,
+    "identicalRetriesPerCase": 128,
+    "backgroundCheckpointWritesPerCase": 128,
+    "sourceUnchanged": true,
+    "nativeHookEvents": 9,
+    "portableOrigins": 4,
+    "consumed": 1,
+    "supports": 3,
+    "coquoted": 4,
+    "newPrivateRootRecovery": true,
+    "actualOwnedDaemonExit": 0
+  },
+  "incompleteSeedAudit": {
+    "expectedExit": 1,
+    "missingNativeFinishes": 1,
+    "sourceUnchanged": true
+  },
+  "resourcePeaksKiB": {
+    "parallelAndExisting": 445632,
+    "nativeHooks": 1833024
+  },
+  "answeringModelCallsForThisFix": 0,
+  "newPython": 0,
+  "subagentsUsed": false,
+  "retiredAcquisition": {
+    "seed1InclusiveTokens": 2916373,
+    "seed2ObservedInclusiveTokens": 17572,
+    "seed2FinalUsageUnknown": true
+  },
+  "generationAllowed": false,
+  "remaining": [
+    "qualify bounded resources with parallel native hooks before model resubmission",
+    "freeze one runtime and harness, then acquire three independent empty DB seeds from seed1",
+    "same-seed current compatibility and contemporaneous fresh plus matched six stages",
+    "token quality deadline repetitions and remaining Phases0-6"
+  ]
+}

@@ -35,7 +35,7 @@ def main (_args : List String) : IO UInt32 := do
     else if method == "hooks/list" then
       let hook := Json.mkObj [("trustStatus",toJson "trusted"),("sourcePath",toJson (plan.pluginRoot ++ "/hooks/hooks.json"))]
       reply id (Json.mkObj [("data",toJson #[Json.mkObj [("errors",toJson (#[] : Array Json)),
-        ("warnings",toJson (#[] : Array Json)),("hooks",toJson #[hook])]])])
+        ("warnings",toJson (#[] : Array Json)),("hooks",toJson (Array.replicate 8 hook))]])])
     else if method == "thread/start" then
       reply id (Json.mkObj [("thread",Json.mkObj [("id",toJson thread)]),("model",toJson plan.model),
         ("modelProvider",toJson "synthetic"),("reasoningEffort",toJson plan.effort),
