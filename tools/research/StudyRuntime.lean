@@ -1,5 +1,6 @@
 import Eggshell.Daemon
 import Eggshell.SynapseBuild
+import tools.research.ArtifactHash
 
 open Lean Eggshell
 
@@ -23,7 +24,7 @@ def files (directory : System.FilePath) : IO (Array (String × String)) := do
     let metadata ← entry.path.symlinkMetadata
     if metadata.type == .dir then continue
     check (metadata.type == .file) "a publication file must be a regular file"
-    result := result.push (entry.fileName, Sha256.hex (← IO.FS.readBinFile entry.path))
+    result := result.push (entry.fileName,← ArtifactHash.hex entry.path)
   return result.qsort (fun a b => a.1 < b.1)
 
 def inside (parent child : System.FilePath) : Bool :=

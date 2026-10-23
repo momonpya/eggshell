@@ -9,7 +9,7 @@ private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
 def artifact (path : System.FilePath) : IO StudyAdmission.Artifact :=
-  return ⟨path.toString,Sha256.hex (← IO.FS.readBinFile path)⟩
+  return ⟨path.toString,← ArtifactHash.hex path⟩
 
 private def setEnv (original updates : Array (String × Option String)) : Array (String × Option String) :=
   original.filter (fun row => !updates.any (·.1 == row.1)) ++ updates

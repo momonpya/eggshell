@@ -2,6 +2,7 @@ import tools.research.NativeTrialAudit
 import tools.research.StudyRuntime
 import tools.research.StudyTransport
 import tools.research.StudyCommand
+import tools.research.ArtifactHash
 
 open Lean Eggshell
 
@@ -80,15 +81,7 @@ across hashing. Credentials are not experiment artifacts. -/
 def verifyArtifact (artifact : Artifact) : IO Unit := do
   let path := System.FilePath.mk artifact.path
   check (path.isAbsolute && path.fileName != some "auth.json") "invalid experiment artifact path"
-  let resolved ← IO.FS.realPath path
-  let handle ← FileSystem.openRead resolved.toString
-  let before ← FileSystem.readVersion handle
-  let bytes ← IO.FS.readBinFile resolved
-  let after ← FileSystem.readVersion handle
-  let current ← FileSystem.readVersion (← FileSystem.openRead resolved.toString)
-  check (FileSystem.stableRead before after current bytes.size && (← IO.FS.realPath path) == resolved)
-    s!"artifact changed while inspecting {path}"
-  check (Sha256.hex bytes == artifact.sha256) s!"sealed artifact changed: {path}"
+  check ((← ArtifactHash.hex path) == artifact.sha256) s!"sealed artifact changed: {path}"
 
 private def sorted (files : Array (String × String)) := files.qsort (fun a b => a.1 < b.1)
 
@@ -100,7 +93,7 @@ partial def tree (root : System.FilePath) (relative : String := "") : IO (Array 
     if metadata.type == .dir then result := result ++ (← tree root name)
     else
       check (metadata.type == .file && entry.fileName != "daemon.json") "private preparation has a symlink or live daemon"
-      result := result.push (name,Sha256.hex (← IO.FS.readBinFile entry.path))
+      result := result.push (name,← ArtifactHash.hex entry.path)
   return sorted result
 
 def env (plan : Plan) (name : String) : Option String :=

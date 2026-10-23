@@ -41,7 +41,7 @@ def main (args : List String) : IO Unit := do
   IO.FS.createDirAll source
   let mut names : Std.HashSet String := {}
   let mut harness := #[]
-  let extra : Array String := #["NativeSeedAudit.lean","NativeSeedFinalize.lean","StudySeal.lean"]
+  let extra : Array String := #["NativeSeedAudit.lean","NativeSeedFinalize.lean","StudySeal.lean","ArtifactHash.lean"]
   let paths := old.harness.map (fun row => System.FilePath.mk row.path) ++
     extra.map (fun name => repo / "tools/research" / System.FilePath.mk name)
   for path in paths do

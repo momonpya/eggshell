@@ -1,5 +1,6 @@
 import Eggshell.SynapseBuild
 import Eggshell.SynapseUsage
+import tools.research.ArtifactHash
 
 open Lean Eggshell Eggshell.Synapses
 
@@ -57,7 +58,7 @@ def inspect (input : String) : IO Json := do
     check (!requirement.path.isEmpty && 0 < requirement.first && requirement.first ≤ requirement.last)
       "invalid reference source range"
   for (name,expected) in specification.files do
-    check (Sha256.hex (← IO.FS.readBinFile (System.FilePath.mk specification.source / name)) == expected)
+    check ((← ArtifactHash.hex (System.FilePath.mk specification.source / name)) == expected)
       "immutable source bytes changed"
   let request ← readJson trial.request
   check ((request.getObjValAs? String "hook_event_name").toOption == some "UserPromptSubmit" &&

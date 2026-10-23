@@ -1,4 +1,4 @@
-import Eggshell.Sha256
+import tools.research.ArtifactHash
 import Lean.Data.Json.FromToJson
 import Lean.Data.Json.Parser
 import Std.Data.HashMap
@@ -131,7 +131,7 @@ def run (settings : Settings) : IO UInt32 := do
     throw (IO.userError "not enough disk space to start this guarded execution")
   let monitor := (← IO.Process.getPID).toNat
   let started ← IO.monoMsNow
-  let binarySha := Eggshell.Sha256.hex (← IO.FS.readBinFile (← IO.appPath))
+  let binarySha ← Eggshell.Research.ArtifactHash.hex (← IO.appPath)
   let child ← IO.Process.spawn {
     cmd := settings.command[0]!, args := settings.command.extract 1 settings.command.size
     cwd := some (.mk settings.cwd), setsid := true
@@ -215,6 +215,17 @@ def run (settings : Settings) : IO UInt32 := do
   let code ← match ← poll child exit with
     | some code => pure code
     | none => child.wait
+  -- The recorded set describes actual survivors after cleanup, rather than
+  -- the last sample taken before the owned processes were signalled.
+  let cleanupDeadline := (← IO.monoMsNow)+2000
+  repeat
+    let rows ← processes
+    activeIds := (owned rows (ancestors rows monitor) child.pid.toNat known settings.ownedPrefixes).map (·.process.pid)
+    if activeIds.isEmpty || (← IO.monoMsNow) ≥ cleanupDeadline then break
+    IO.sleep 5
+  if !activeIds.isEmpty then
+    failure := some "owned processes survived resource cleanup"
+    if reason.isNone then reason := some "leftover-processes"
   snapshot path (report "finished" (some code.toNat) peak samples reason failure activeIds ((← IO.monoMsNow)-started) peakProcesses)
   return if reason.isSome then 2 else code
 
