@@ -1,0 +1,263 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 6cf3d86..8fc261b 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -8,6 +8,7 @@ public import tools.PairDecisions
+ public import tools.IndexedCharacters
+ public import tools.BudgetPlan
+ public import tools.SharedCoverage
++public import tools.ClosedCoverage
+ public import tools.FocusWindows
+ public import tools.SourceWindow
+ public import Eggshell.AdvisoryFrontier
+@@ -21,6 +22,7 @@ public import Eggshell.FederatedSearch
+ public import Eggshell.SelectionAudit
+ public import Eggshell.CompletedAuthority
+ public import Eggshell.SynapseTransport
++public import Eggshell.SynapseBundles
+ public import tools.RetrievalIndex
+ 
+ public import tools.QueryLiterals
+@@ -5141,6 +5143,7 @@ structure Family where
+   referenceRanks : List (Nat × Nat) := []
+   referenceRanges : List (Nat × List (Nat × Nat)) := []
+   synapticRanges : List (Nat × Nat × Nat) := []
++  synapticUnits : List (List (Nat × Nat)) := []
+   provenance : List SourceEvidence.Record := []
+ 
+ structure UnitPlan where
+@@ -5153,6 +5156,7 @@ structure CuePiece where
+   first : Nat
+   last : Nat
+   weight : Nat
++  baseWeight : Nat := weight
+ 
+ def fragmentRanges (fragments : List DeliveryFragment) : List (Nat × Nat) :=
+   fragments.map fun part => (part.first,part.first+part.original.length)
+@@ -5235,8 +5239,8 @@ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat 
+   let aligned := fun range => match decoded with
+     | none => some range
+     | some layout => (decodedEvidenceUsing? layout range).map (·.original)
+-  let cues := (rankedContextRanges source (work.length+1) positions).map fun range =>
+-    (range.start,range.stop)
++  let cues := ((rankedContextRanges source (work.length+1) positions).map fun range =>
++    (range.start,range.stop)) ++ family.synapticRanges.map (fun (_,a,b) => (a,b))
+   if cues.isEmpty then return ([],[])
+   let some envelope := family.template.context |
+     return ([{family := familyIndex,slice := family.template,ranges := [(0,source.length)]}],cues)
+@@ -5280,7 +5284,8 @@ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat 
+   -- intersect them. Offer that exact bounded data with its original scope;
+   -- the unchanged selector still decides its value against current focus.
+   if Matcher.nativeOutcome family.owner then
+-    for (_,spans) in family.referenceRanges ++ family.synapticRanges.map (fun (priority,a,b) => (priority,[(a,b)])) do
++    for (_,spans) in family.referenceRanges ++ family.synapticRanges.map (fun (priority,a,b) => (priority,[(a,b)])) ++
++        family.synapticUnits.map (fun spans => (0,spans)) do
+       let some quoted := citationRecordRanges source spans | continue
+       let requested := quoted.filterMap aligned
+       if requested.length != quoted.length || requested.isEmpty then continue
+@@ -5366,13 +5371,17 @@ def cuePieces (scale : Nat) (families : List Family)
+       | none => []
+     else
+     let ownerCues := rankedCues family
++    let baseCues := rankedCues {family with synapticRanges := []}
+     let endpoints := ((units.filter (·.family == familyIndex)).flatMap (fun unit =>
+         unit.ranges.flatMap fun (a,b) => [a,b]) ++
+       ownerCues.flatMap (fun cue => [cue.first,cue.last])).eraseDups.mergeSort (· ≤ ·)
+     (endpoints.zip (endpoints.drop 1)).filterMap fun (first,last) => do
+       if first ≥ last then none else do
+         let cue ← coveringCue? ownerCues first last
+-        pure {family := familyIndex, first := first, last := last, weight := (last-first)*(scale/(61+familyIndex)+scale/(61+cue.priority))}
++        let baseWeight := (coveringCue? baseCues first last).map (fun hint =>
++          (last-first)*(scale/(61+familyIndex)+scale/(61+hint.priority))) |>.getD 0
++        let graphWeight := (last-first)*(scale/(61+familyIndex)+scale/(61+cue.priority))
++        pure {family := familyIndex,first,last,weight := max baseWeight graphWeight,baseWeight}
+ 
+ def problem (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
+     (fixed ceiling : Nat × Nat) : Option SharedCoverage.Problem := do
+@@ -5400,16 +5409,72 @@ def problem (families : List Family) (units : List UnitPlan) (pieces : List CueP
+       closure := closure ++ [index]
+     closures := closures ++ [closure]
+ 
+-  let weights := (pieces.map (·.weight)).toArray
++  let weights := (pieces.flatMap fun piece => [piece.baseWeight,piece.weight-piece.baseWeight]).toArray
+   let offers ← units.zipIdx.mapM fun (unit,index) => do
+     let closure ← (closures[index]?.getD []).mapM fun id =>
+       if h : id < costs.size then some (⟨id,h⟩ : Fin costs.size) else none
+-    let covers ← (pieces.zipIdx.filter fun (piece,_) => piece.family == unit.family &&
++    let covers ← (pieces.zipIdx.filter fun (piece,_) => piece.baseWeight > 0 && piece.family == unit.family &&
+         unit.ranges.any (fun (a,b) => a ≤ piece.first && piece.last ≤ b)).mapM fun (_,id) =>
+-      if h : id < weights.size then some (⟨id,h⟩ : Fin weights.size) else none
++      if h : id*2 < weights.size then some (⟨id*2,h⟩ : Fin weights.size) else none
+     pure ({closure,covers} : SharedCoverage.Offer costs.size weights.size)
+   pure {costs,weights,offers := offers.toArray,fixed,limit := ceiling}
+ 
++def memberCovered (keys : Array String) (units : Array UnitPlan)
++    (indices : List (Fin units.size)) (member : Synapses.Bundles.Member) : Bool :=
++  indices.any fun index =>
++    let unit := units[index]
++    member.choices.any fun bound => keys[unit.family]? == some bound.owner &&
++      bound.spans.all (fun (a,b) => covers unit.ranges a b)
++
++structure BundlePlan (keys : Array String) (units : Array UnitPlan) where
++  projected : Synapses.Bundles.Projected
++  indices : List (Fin units.size)
++  complete : projected.members.all (memberCovered keys units indices) = true
++
++theorem BundlePlan.members_kept (plan : BundlePlan keys units)
++    (member : Synapses.Bundles.Member) (present : member ∈ plan.projected.members) :
++    memberCovered keys units plan.indices member = true := by
++  exact (Array.all_eq_true'.mp plan.complete) member present
++
++def unitCharge (p : SharedCoverage.Problem) (known : Std.HashSet (Fin p.costs.size))
++    (index : Nat) : Nat :=
++  let atoms := (p.offers[index]?).map (·.closure) |>.getD []
++  let fresh := atoms.eraseDups.filter (!known.contains ·)
++  let cost := fresh.foldl (fun total atom =>
++    (total.1+p.costs[atom].1,total.2+p.costs[atom].2)) (0,0)
++  max (cost.1*p.limit.2) (cost.2*p.limit.1)
++
++/-- Every member has a complete original binding. Choose among its original
++unit alternatives using the actual shared marginal wire cost, never gold. -/
++def bundlePlan? (keys : Array String) (units : Array UnitPlan) (p : SharedCoverage.Problem)
++    (candidates : Std.HashMap Synapses.Range (List (Fin units.size)))
++    (projected : Synapses.Bundles.Projected) : Option (BundlePlan keys units) := do
++  let mut indices := []
++  let mut known : Std.HashSet (Fin p.costs.size) := {}
++  for member in projected.members do
++    let choices := candidates[member.source]?.getD []
++    let chosen ← choices.foldl (fun found index => match found with
++      | none => some index
++      | some previous => if unitCharge p known index.val < unitCharge p known previous.val then some index else found) none
++    indices := indices ++ [chosen]
++    for atom in (p.offers[chosen.val]?).map (·.closure) |>.getD [] do known := known.insert atom
++  let selected := indices.eraseDups
++  if complete : projected.members.all (memberCovered keys units selected) = true then
++    some ⟨projected,selected,complete⟩ else none
++
++def bundleRecipe? (keys : Array String) (units : Array UnitPlan) (pieces : List CuePiece)
++    (p : SharedCoverage.Problem) (plan : BundlePlan keys units) : Option (ClosedCoverage.Recipe p) := do
++  let parts ← plan.indices.mapM fun index =>
++    if h : index.val < p.offers.size then some (⟨index.val,h⟩ : Fin p.offers.size) else none
++  let bonus ← (pieces.zipIdx.filter fun (piece,_) => piece.baseWeight < piece.weight &&
++    plan.indices.any fun index =>
++      let unit := units[index]
++      unit.family == piece.family && covers unit.ranges piece.first piece.last &&
++        plan.projected.members.any fun member => member.choices.any fun bound =>
++          keys[unit.family]? == some bound.owner && covers bound.spans piece.first piece.last).mapM fun (_,id) =>
++    if h : id*2+1 < p.weights.size then some (⟨id*2+1,h⟩ : Fin p.weights.size) else none
++  pure {parts,bonus}
++
+ def materialize (units : Array UnitPlan) (indices : List Nat) : Option (List TransportSlice) := do
+   let mut rows : List (Nat × TransportSlice) := []
+   for index in indices do
+@@ -5427,7 +5492,8 @@ carried unchanged outside this selector. The real final packet is checked.
+ The node-cost model is an admission aid, never permission to exceed the wire.
+ -/
+ def fit (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+-    (families : List Family) (mandatory : List TransportSlice := []) : Option
++    (families : List Family) (mandatory : List TransportSlice := [])
++    (bundles : Array Synapses.Bundles.Projected := #[]) : Option
+       {slices : List TransportSlice //
+         (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
+         ∃ suffix, slices = mandatory ++ suffix} := do
+@@ -5445,8 +5511,20 @@ def fit (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+     let scale := (List.range depth).foldl (fun value rank => Nat.lcm value (61+rank)) 1
+     let pieces := cuePieces scale families units
+     let p ← problem families units pieces fixed ceiling
+-    let chosen ← SharedCoverage.choose? p
+-    let selected ← materialize units.toArray (chosen.selected.map (·.val))
++    let keys := (families.map fun family => relationKey family.owner.relation).toArray
++    let mut candidates : Std.HashMap Synapses.Range (List (Fin units.toArray.size)) := {}
++    for projected in bundles do
++      for member in projected.members do
++        if candidates.contains member.source then continue
++        let choices := (List.finRange units.toArray.size).filter fun index =>
++          memberCovered keys units.toArray [index] member
++        candidates := candidates.insert member.source choices
++    let recipes := ClosedCoverage.original p ++ (bundles.filterMap fun projected =>
++      (bundlePlan? keys units.toArray p candidates projected).bind (bundleRecipe? keys units.toArray pieces p))
++    let compiled := ClosedCoverage.compile p recipes
++    let chosen ← SharedCoverage.choose? compiled
++    let expanded := (ClosedCoverage.expand p recipes chosen.selected).map (·.val) |>.eraseDups
++    let selected ← materialize units.toArray expanded
+     let result := mandatory ++ selected
+     if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
+       some ⟨result,fits.1,fits.2,⟨selected,rfl⟩⟩
+@@ -5572,7 +5650,8 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+     (referencePriorities : List (Value × Nat) := [])
+     (referenceRanks : List (Value × List (Nat × Nat)) := [])
+     (referenceRanges : List (Value × List (Nat × List (Nat × Nat))) := [])
+-    (synapticRanges : List (Value × List (Nat × Nat × Nat)) := []) : Option Handoff :=
++    (synapticRanges : List (Value × List (Nat × Nat × Nat)) := [])
++    (synapticBundles : Array Synapses.Bundles.Projected := #[]) : Option Handoff :=
+   let extraction := prepared.val
+   let attach := fun selected : Selected => {
+     selected with
+@@ -5752,6 +5831,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+             (evidenceSearchWindows owner) (sourceContextWindows positions referenced)
+           let ranks := (referenceRanks.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+           let ranges := (referenceRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
++          let originalKey := relationKey owner.relation
+           pure ({
+             owner := owner
+             template := choice.2.1
+@@ -5760,6 +5840,9 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+             referenceRanks := ranks
+             referenceRanges := ranges
+             synapticRanges := (synapticRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
++            synapticUnits := synapticBundles.toList.flatMap fun bundle =>
++              bundle.members.toList.flatMap fun member => member.choices.toList.filterMap fun bound =>
++                if bound.owner == originalKey then some bound.spans else none
+             provenance := (contextRows.find? (·.1.relation == owner.relation)).map Prod.snd |>.getD []} : SharedRangeAdapter.Family) else []
+     let locations := SharedRangeAdapter.RangeLocators.combine
+       (families.flatMap SharedRangeAdapter.RangeLocators.prepare)
+@@ -5814,7 +5897,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+     let reservedBytes := fixedHeader.utf8ByteSize + maximalTree.utf8ByteSize +
+       maximalSource.utf8ByteSize + footer.utf8ByteSize + statusReserve.2
+     let fittedSlices := if meaningSelected && !enforce then
+-      match SharedRangeAdapter.fit (budget,byteBudget.getD (budget*4)) packetCost families mandatory with
++      match SharedRangeAdapter.fit (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles with
+       | some fitted => fitted.val
+       | none => []
+       else if meaningSelected then
+@@ -7102,6 +7185,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+         (relationKey owner,priority))
+       synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) ((← IO.monoMsNow)+500)
+     else pure ({} : Synapses.Transport.Plan)
++  let synapticBundles := Synapses.Bundles.project synaptic
+   -- The focused provider is an independent observation. Include its exact
+   -- durable owner/order/window reply before asking the memo to reuse a packet.
+   -- An unchanged first nomination alone cannot certify an unchanged focus.
+@@ -7163,8 +7247,10 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+     (referenceRanks := referenceRanks)
+     (referenceRanges := referenceRanges)
+     (synapticRanges := synaptic.ranges)
++    (synapticBundles := synapticBundles)
+   let rendered := rendered.map fun handoff => {handoff with synapticComplete := synaptic.complete}
+-  Receipt.observe source.receipt "synaptic-delivery" (synaptic.receipt ((rendered.map (·.text)).getD ""))
++  Receipt.observe source.receipt "synaptic-delivery"
++    (Synapses.Bundles.receipt synaptic synapticBundles ((rendered.map (·.text)).getD ""))
+   let rendered := rendered.map fun handoff =>
+     if recommendation && handoff.packet.isSome then
+       {handoff with deliveredGraphs := (handoff.deliveredGraphs ++
+diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
+index 020cc5c..9142de9 100644
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -160,6 +160,7 @@ def collect (shared : Index.Reader) (usage : Option Index.Reader)
+       match task.key, fact with
+       | .answer .., .supports support =>
+         result := addOffer result support.source task.priority fact identity
++        queue := queue.push ⟨.group (.claim support.claim), task.priority⟩
+         queue := queue.push ⟨.consumer support.read.occurrence, task.priority⟩
+         queue := queue.push ⟨.quoted support.source, task.priority⟩
+       | .consumer _, .consumed edge =>
+@@ -168,7 +169,7 @@ def collect (shared : Index.Reader) (usage : Option Index.Reader)
+           queue := queue.push ⟨.quoted source, task.priority⟩
+         queue := queue.push ⟨.consumer edge.producer, task.priority⟩
+       | .quoted _, .coquoted group _ =>
+-        if let .answer .. := group then queue := queue.push ⟨.group group, task.priority⟩
++        queue := queue.push ⟨.group group, task.priority⟩
+       | .group _, .coquoted _ source =>
+         result := addOffer result source task.priority fact identity
+       | .query _, .used value =>

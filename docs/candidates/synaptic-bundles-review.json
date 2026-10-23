@@ -1,0 +1,458 @@
+{
+  "status": "rejected: 6 of 12 hooks returned incomplete notices; no token or quality adoption",
+  "sourceBaselineCommit": "d390adf51fc286979cd3c09ff531cee393a0b4b3",
+  "ordinaryRuntimeChanged": false,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "newPythonSemanticImplementations": 0,
+  "frozenInputs": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/frozen-inputs.json",
+    "sha256": "c2fce965db1af202d790ec8277397577fae01e68fa42984d22cbce13db330f18",
+    "bytes": 43505
+  },
+  "runtimePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/synaptic-bundles-runtime.patch",
+    "sha256": "14205b49a355ce1bdf48de1b5d822d052c7ab1856fce343a49c8559f920b33f1",
+    "bytes": 16218
+  },
+  "dependencyCorePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/synaptic-intervals-core.patch",
+    "sha256": "8e52adb0f53464b41f314bbd0515964d08d29a03f1754082442cb642672ade5d",
+    "bytes": 14043
+  },
+  "sixStageSummary": [
+    {
+      "stage": 1,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 22232,
+          "incomplete": false,
+          "bodySha256": "81b36606ff4237dac723f59cd88e3b32df2b4b751754d20710b3a39acd096859",
+          "storedMissing": [
+            "trailing-language-warning"
+          ],
+          "notDeliveredIncomplete": [
+
+          ],
+          "absent": [
+
+          ]
+        },
+        {
+          "elapsedMs": 18808,
+          "incomplete": false,
+          "bodySha256": "81b36606ff4237dac723f59cd88e3b32df2b4b751754d20710b3a39acd096859",
+          "storedMissing": [
+            "trailing-language-warning"
+          ],
+          "notDeliveredIncomplete": [
+
+          ],
+          "absent": [
+
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 24140,
+          "incomplete": false,
+          "bodySha256": "5002321fe7208486a433a914045f9167da899c804fd505e69c2916ab4ecdf9cb",
+          "storedMissing": [
+            "toolchain-cache-key"
+          ],
+          "notDeliveredIncomplete": [
+
+          ],
+          "absent": [
+
+          ]
+        },
+        {
+          "elapsedMs": 19498,
+          "incomplete": false,
+          "bodySha256": "5002321fe7208486a433a914045f9167da899c804fd505e69c2916ab4ecdf9cb",
+          "storedMissing": [
+            "toolchain-cache-key"
+          ],
+          "notDeliveredIncomplete": [
+
+          ],
+          "absent": [
+
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 3,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 22173,
+          "incomplete": false,
+          "bodySha256": "eb74c0b5cc3ca2a25ca1f23554e4c47c922ae7ebc19a8e1075b7711ae8a085e6",
+          "storedMissing": [
+            "syntax-only-compile-cutoff"
+          ],
+          "notDeliveredIncomplete": [
+
+          ],
+          "absent": [
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ]
+        },
+        {
+          "elapsedMs": 20325,
+          "incomplete": false,
+          "bodySha256": "eb74c0b5cc3ca2a25ca1f23554e4c47c922ae7ebc19a8e1075b7711ae8a085e6",
+          "storedMissing": [
+            "syntax-only-compile-cutoff"
+          ],
+          "notDeliveredIncomplete": [
+
+          ],
+          "absent": [
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 4,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 28845,
+          "incomplete": true,
+          "bodySha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+          "storedMissing": null,
+          "notDeliveredIncomplete": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "trailing-language-warning"
+          ],
+          "absent": [
+
+          ]
+        },
+        {
+          "elapsedMs": 28840,
+          "incomplete": true,
+          "bodySha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+          "storedMissing": null,
+          "notDeliveredIncomplete": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "trailing-language-warning"
+          ],
+          "absent": [
+
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 5,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 28841,
+          "incomplete": true,
+          "bodySha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+          "storedMissing": null,
+          "notDeliveredIncomplete": [
+            "toolchain-cache-key",
+            "mode-before-parse-and-config",
+            "default-toolchain-selection"
+          ],
+          "absent": [
+
+          ]
+        },
+        {
+          "elapsedMs": 28840,
+          "incomplete": true,
+          "bodySha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+          "storedMissing": null,
+          "notDeliveredIncomplete": [
+            "toolchain-cache-key",
+            "mode-before-parse-and-config",
+            "default-toolchain-selection"
+          ],
+          "absent": [
+
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 6,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 28854,
+          "incomplete": true,
+          "bodySha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+          "storedMissing": null,
+          "notDeliveredIncomplete": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "syntax-only-compile-cutoff",
+            "trailing-language-warning",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ],
+          "absent": [
+
+          ]
+        },
+        {
+          "elapsedMs": 28844,
+          "incomplete": true,
+          "bodySha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+          "storedMissing": null,
+          "notDeliveredIncomplete": [
+            "toolchain-cache-key",
+            "complete-hlsl-branch-scope",
+            "default-toolchain-selection",
+            "syntax-only-compile-cutoff",
+            "trailing-language-warning",
+            "syntax-only-no-output-action",
+            "frontend-job-construction"
+          ],
+          "absent": [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "guards": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/types7-guard.json",
+      "sha256": "34a2db21d1251d8c8a3ebc0c2812cc7924c7cb97c4fa43d6ea5757594605dd3f",
+      "bytes": 500,
+      "record": {
+        "guardPid": 40964,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1138800,
+        "samples": 60,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "/bin/bash",
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/types.sh"
+        ],
+        "childPid": 40989,
+        "exitCode": 0,
+        "elapsedSeconds": 9.584745125
+      }
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/handoff2-guard.json",
+      "sha256": "1aeb995303ad60ed62d233e09bd3ad70d173d3a9b684a11fad93cf208b62f232",
+      "bytes": 678,
+      "record": {
+        "guardPid": 59654,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 2459824,
+        "samples": 176,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "lake",
+          "env",
+          "lean",
+          "-j1",
+          "-DwarningAsError=true",
+          "-o",
+          ".lake/build/lib/lean/Eggshell/Handoff.olean",
+          "-c",
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/native/candidate-Handoff.c",
+          "Eggshell/Handoff.lean"
+        ],
+        "childPid": 59666,
+        "exitCode": 0,
+        "elapsedSeconds": 28.329011417
+      }
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/build-guard.json",
+      "sha256": "cf56720f9a8f499af987ea498de24e6caca11156ebacb2cba108f805d6d10403",
+      "bytes": 585,
+      "record": {
+        "guardPid": 80469,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1557376,
+        "samples": 257,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/eggshell"
+        ],
+        "childCommand": [
+          "/bin/bash",
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/build.sh"
+        ],
+        "childPid": 80483,
+        "exitCode": 1,
+        "elapsedSeconds": 41.154565209
+      }
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/tests-guard.json",
+      "sha256": "d05b667c41ab6f9c20e1b78a64f75e9764fae4fe96e3d14758cc66e73054ef07",
+      "bytes": 582,
+      "record": {
+        "guardPid": 92545,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1538160,
+        "samples": 386,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/eggshell"
+        ],
+        "childCommand": [
+          "/bin/bash",
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/tests.sh"
+        ],
+        "childPid": 92559,
+        "exitCode": 0,
+        "elapsedSeconds": 63.451142
+      }
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/gate-test-guard.json",
+      "sha256": "e10af13482edb6aeee3e281c0184b517ba4743eaded15aa5c3509c8145332d58",
+      "bytes": 506,
+      "record": {
+        "guardPid": 11907,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1435184,
+        "samples": 116,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "/bin/bash",
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/gate-test.sh"
+        ],
+        "childPid": 11950,
+        "exitCode": 0,
+        "elapsedSeconds": 18.855998209
+      }
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/six-native-guard.json",
+      "sha256": "1a316b8fe6c3f3251d7344a1814732515f228aa991381333ab1b1c88a0defe5c",
+      "bytes": 855,
+      "record": {
+        "guardPid": 32953,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 2326304,
+        "samples": 2077,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/eggshell"
+        ],
+        "childCommand": [
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-named-witnesses-20261023/SynapseSixGate",
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/six-native",
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/eggshell",
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-evidence-20261023/imported-sources/frozen-spec.json"
+        ],
+        "childPid": 33021,
+        "exitCode": 0,
+        "elapsedSeconds": 331.811195417
+      }
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/profile-guard.json",
+      "sha256": "70707e6ebf54882a65244a9f7973746bf7dc24013238b3d6edbbd7e31cb04ec0",
+      "bytes": 595,
+      "record": {
+        "guardPid": 4095,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 452576,
+        "samples": 181,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/eggshell"
+        ],
+        "childCommand": [
+          "/usr/bin/ruby",
+          "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/profile-stage6.rb"
+        ],
+        "childPid": 4121,
+        "exitCode": 0,
+        "elapsedSeconds": 29.352470416
+      }
+    }
+  ],
+  "profile": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/profile-stage6/sample-16-4173.txt",
+      "sha256": "6a4af7f349425fce1c56680b7d81212d1177b844e72be328a9208d6ca49ff3bc",
+      "bytes": 907091
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/profile-stage6/sample-24-4173.txt",
+      "sha256": "b1fd451fa8affdd5c577411d102cb5e5d9f0899dcfd71628462af469cc5f9fde",
+      "bytes": 483607
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/profile-stage6/sample-8-4173.txt",
+      "sha256": "e8938f0dbc3203fdb01b29b27099244ef6b94ab9248d8e4e50fc0a3e4f9e6ba8",
+      "bytes": 524410
+    }
+  ],
+  "trace": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-bundles-20261023/profile-stage6/trace.txt",
+    "sha256": "a5cf36c747925c62c3f0ee564306bfa42475f750ecb1da770e1da0de6cd670a4",
+    "bytes": 132
+  },
+  "archiveScope": "Completed native executables and copied derived lexical pages have verified gzip archives. Source snapshots, hook bodies, logs and original database bytes remain preserved; restore derived .pages archives before opening those copied caches."
+}

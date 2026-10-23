@@ -1,0 +1,14 @@
+import Eggshell.CanonicalSourceCache
+import Eggshell.CanonicalSourceLinks
+import Eggshell.CanonicalSourcePacket
+#print axioms Eggshell.Synapses.CanonicalSource.existing_payload_kept
+#print axioms Eggshell.Synapses.CanonicalSource.changed_fingerprint_separates
+#print axioms Eggshell.Synapses.CanonicalSource.replay_does_not_add_origin
+#print axioms Eggshell.Synapses.CanonicalSource.resolved_original
+#print axioms Eggshell.Synapses.CanonicalSource.Links.connected_has_original_payload
+#print axioms Eggshell.Synapses.CanonicalSource.Links.connected_covers_complete_dependency
+#print axioms Eggshell.Synapses.CanonicalSource.Links.witness_join_idempotent
+#print axioms Eggshell.Synapses.CanonicalSource.Packet.selected_row_is_original
+#print axioms Eggshell.Synapses.CanonicalSource.Packet.output_within_wire_limits
+#print axioms Eggshell.Synapses.CanonicalSource.Packet.physical_payload_charged_once
+#print axioms Eggshell.Synapses.CanonicalSource.Packet.source_key_identifies_one_payload
