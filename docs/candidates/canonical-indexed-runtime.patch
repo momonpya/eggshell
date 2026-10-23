@@ -1,0 +1,137 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5519,12 +5519,76 @@
+     let closure ← (closures[index]?.getD []).mapM fun id =>
+       if h : id < costs.size then some (⟨id,h⟩ : Fin costs.size) else none
+     let covers ← (pieces.zipIdx.filter fun (piece,_) => piece.baseWeight > 0 && piece.family == unit.family &&
++        unit.ranges.any (fun (a,b) => a ≤ piece.first && piece.last ≤ b)).mapM fun (_,id) => do
++      let cue ← directory.1[id]?
++      if h : cue*2 < weights.size then some (⟨cue*2,h⟩ : Fin weights.size) else none
++    pure ({closure,covers} : SharedCoverage.Offer costs.size weights.size)
++  pure {costs,weights,offers := offers.toArray,fixed,limit := ceiling}
++
++def problemHoisted (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
++    (fixed ceiling : Nat × Nat) : Option SharedCoverage.Problem := do
++  let frames : List (Nat × Nat) := families.map fun family => match family.template.context with
++    | none => (0,0)
++    | some context =>
++      let text := context.leading ++ context.sourceNotice ++ context.trailing
++      (text.length,text.utf8ByteSize)
++  let mut costs := frames.toArray
++  let mut payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
++  let allRows ← (Synapses.CanonicalSource.Delivery.merge
++    (families.toArray.flatMap (·.cached))).toOption
++  let mut sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat := {}
++  let mut fileIds : Std.HashMap Synapses.File Nat := {}
++  for row in allRows do
++    unless fileIds.contains row.key.file do
++      let frame := Synapses.CanonicalSource.Packet.fileFrame row.key.file
++        (allRows.filter (·.key.file == row.key.file))
++      let text := frame.leading ++ frame.trailing
++      fileIds := fileIds.insert row.key.file costs.size
++      costs := costs.push (text.length,text.utf8ByteSize)
++    let text := Synapses.CanonicalSource.Packet.rowText row
++    sourceIds := sourceIds.insert row.key costs.size
++    costs := costs.push (text.length,text.utf8ByteSize)
++  let mut closures : List (List Nat) := []
++  for unit in units do
++    if let some shared := unit.slice.shared then
++      let mut closure := [unit.family]
++      for row in shared.rows do
++        let file ← fileIds[row.key.file]?
++        let payload ← sourceIds[row.key]?
++        closure := file :: payload :: closure
++      closures := closures ++ [closure]
++      continue
++    let parts := match unit.slice.context with
++      | none => [(none,unit.slice.text)]
++      | some context => context.fragments.map fun (fragment : DeliveryFragment) =>
++          (some (fragment.first,fragment.original,fragment.decoded),
++            fragment.render context.compactCaptions)
++    let mut closure := [unit.family]
++    for (fragment,text) in parts do
++      let key := (unit.family,fragment)
++      let index := payloads[key]?.getD costs.size
++      if index == costs.size then
++        costs := costs.push (text.length+1,text.utf8ByteSize+1)
++        payloads := payloads.insert key index
++      closure := closure ++ [index]
++    closures := closures ++ [closure]
++
++  let directory := cueDirectory pieces
++  let weights := directory.2.flatMap fun (base,total) => #[base,total-base]
++  let indexedPieces := pieces.zipIdx
++  let offers ← units.zipIdx.mapM fun (unit,index) => do
++    let closure ← (closures[index]?.getD []).mapM fun id =>
++      if h : id < costs.size then some (⟨id,h⟩ : Fin costs.size) else none
++    let covers ← (indexedPieces.filter fun (piece,_) => piece.baseWeight > 0 && piece.family == unit.family &&
+         unit.ranges.any (fun (a,b) => a ≤ piece.first && piece.last ≤ b)).mapM fun (_,id) => do
+       let cue ← directory.1[id]?
+       if h : cue*2 < weights.size then some (⟨cue*2,h⟩ : Fin weights.size) else none
+     pure ({closure,covers} : SharedCoverage.Offer costs.size weights.size)
+   pure {costs,weights,offers := offers.toArray,fixed,limit := ceiling}
+ 
++@[csimp] theorem problem_hoisted_compiled : @problem = @problemHoisted := by
++  rfl
++
+ def memberCovered (keys : Array String) (units : Array UnitPlan)
+     (indices : List (Fin units.size)) (member : Synapses.Bundles.Member) : Bool :=
+   indices.any fun index =>
+@@ -5644,11 +5708,57 @@
+     let chosen ← SharedCoverage.choose? compiled
+     let expanded := (ClosedCoverage.expand p recipes chosen.selected).map (·.val) |>.eraseDups
+     let selected ← materialize units.toArray expanded
++    let result := mandatory ++ selected
++    if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
++      some ⟨result,fits.1,fits.2,⟨selected,rfl⟩⟩
++    else none
++
++def fitHoisted (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
++    (families : List Family) (mandatory : List TransportSlice := [])
++    (bundles : Array Synapses.Bundles.Projected := #[]) : Option
++      {slices : List TransportSlice //
++        (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
++        ∃ suffix, slices = mandatory ++ suffix} := do
++  let templates := families.map (·.template) ++ mandatory
++  let allCost := cost templates
++  let dataCost := templates.foldl (fun total slice =>
++    (total.1+slice.text.length+1,total.2+slice.text.utf8ByteSize+1)) (0,0)
++  if allCost.1 < dataCost.1 || allCost.2 < dataCost.2 then none else do
++    let fixedData := mandatory.foldl (fun total slice =>
++      (total.1+slice.text.length+1,total.2+slice.text.utf8ByteSize+1)) (0,0)
++    let sharedFrame := if families.any (fun family => !family.cached.isEmpty) then
++      Synapses.CanonicalSource.Packet.wrapper ++ Synapses.CanonicalSource.Packet.footer ++ "\n" else ""
++    let fixed := (allCost.1-dataCost.1+fixedData.1+sharedFrame.length,
++      allCost.2-dataCost.2+fixedData.2+sharedFrame.utf8ByteSize)
++    let prepared := families.zipIdx.map fun (family,index) => prepare index family
++    let units := prepared.flatMap (·.1)
++    let unitArray := units.toArray
++    let depth := max families.length (families.foldl (fun n family => max n (max family.windows.length family.references.length)) 0)
++    let scale := (List.range depth).foldl (fun value rank => Nat.lcm value (61+rank)) 1
++    let pieces := cuePieces scale families units
++    let p ← problem families units pieces fixed ceiling
++    let keys := (families.map fun family => relationKey family.owner.relation).toArray
++    let mut candidates : Std.HashMap Synapses.Range (List (Fin unitArray.size)) := {}
++    for projected in bundles do
++      for member in projected.members do
++        if candidates.contains member.source then continue
++        let choices := (List.finRange unitArray.size).filter fun index =>
++          memberCovered keys unitArray [index] member
++        candidates := candidates.insert member.source choices
++    let recipes := ClosedCoverage.original p ++ (bundles.filterMap fun projected =>
++      (bundlePlan? keys unitArray p candidates projected).bind (bundleRecipe? keys unitArray pieces p))
++    let compiled := ClosedCoverage.compile p recipes
++    let chosen ← SharedCoverage.choose? compiled
++    let expanded := (ClosedCoverage.expand p recipes chosen.selected).map (·.val) |>.eraseDups
++    let selected ← materialize unitArray expanded
+     let result := mandatory ++ selected
+     if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
+       some ⟨result,fits.1,fits.2,⟨selected,rfl⟩⟩
+     else none
+ 
++@[csimp] theorem fit_hoisted_compiled : @fit = @fitHoisted := by
++  rfl
++
+ namespace RangeLocators
+ 
+ /-- A location is advisory metadata into an already admitted observation.

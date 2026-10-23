@@ -1,0 +1,310 @@
+{
+  "status": "isolated exact loop-invariant optimization compiled and native adapter passed; six-stage rerun not started because disk is below the heavy guard floor; not adopted",
+  "previousMilestone": "7c8dde393b576923f4d4d526284d175b2b9d5377",
+  "ordinaryRuntimeChanged": false,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "frozenInputs": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/frozen-inputs.json",
+    "sha256": "623dd6e46ce81ed772d87f169f1c87f394eb213283793d3a88ec267648833ee9",
+    "bytes": 44154
+  },
+  "source": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/source-freeze/Eggshell/Handoff.lean",
+    "sha256": "6a1e442bbd6c0cdabe710fceb56cb1a1b6a771cce916a92d84a31b32f80566ea",
+    "bytes": 460204,
+    "compiledSource": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Handoff.lean"
+  },
+  "producerAndSolverLocks": [
+    {
+      "name": "Eggshell/SearchProvider.lean",
+      "sha256": "375d739788c47d15e7249b2833dc5a15d85a02014bc3a81211c5c0c32714116c",
+      "unchanged": true
+    },
+    {
+      "name": "tools/WindowCentroid.lean",
+      "sha256": "9350d1e5af7f76d8ed1d62bfcbcd0476239b3e0ee34c1c230c30e1454aff6ce3",
+      "unchanged": true
+    },
+    {
+      "name": "tools/SharedCoverage.lean",
+      "sha256": "018b3105291254b495fe3157e014a01b549346fa5ddab9226c71b86b05991038",
+      "unchanged": true
+    },
+    {
+      "name": "tools/ClosedCoverage.lean",
+      "sha256": "787b6a514e65a2fc2eff6f457c1d41e8ed5d1b0bd746efd2bf6d158b046feaf1",
+      "unchanged": true
+    }
+  ],
+  "proofs": {
+    "entireProblemFunctionEqual": "Eggshell.Plugin.SharedRangeAdapter.problem_hoisted_compiled",
+    "entireFitFunctionEqual": "Eggshell.Plugin.SharedRangeAdapter.fit_hoisted_compiled",
+    "method": "rfl; csimp replaces only by checked function equality",
+    "compileGuard": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/hoist-proof-guard.json",
+      "sha256": "fa1628a40e14bf90c1837f7b835eb44b4bff136143d8f79987388a178da97a32",
+      "bytes": 675
+    }
+  },
+  "nativeAdapter": {
+    "passed": true,
+    "guard": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/adapter-guard.json",
+      "sha256": "ea7baca0ad322fd07b6ae8867da86769bf59cc8be151c17c72adcd87022f0964",
+      "bytes": 498
+    },
+    "output": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/adapter-guard.stdout",
+      "sha256": "2ca95aa5b8542ec6b4dbd290254b2c24ddf380ac66ddc7400782921b0823da70",
+      "bytes": 143
+    }
+  },
+  "generatedNative": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/native/Handoff.c",
+    "sha256": "29347560cad7013d1efe571e4fe9d9c521a4da8a63bd67ecf47e2552a865b15c",
+    "bytes": 6433951
+  },
+  "assemblyEvidence": "The original per-unit filter calls lean_array_mk; the compiled fitHoisted filter receives unitArray and does not recreate the full array per predicate. renderAutomatic calls fitHoisted.",
+  "actualSixGate": "not started on this runtime",
+  "bodyByteComparison": "pending; prior stage1/2/3 full bodies retained as fixed reference",
+  "previousGate": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-hook-20261023/six-native/progress.json",
+    "sha256": "4081029593b36282edcf27196c8d0d80a6e46d77db611261fcc98caf3a2f8686",
+    "bytes": 10855
+  },
+  "previousGateScope": "Previous candidate only: stored missing 0/0/1 in initial lap and all retained-lap hooks incomplete. These are not results of the new compiled runtime.",
+  "resource": {
+    "availableKiB": 781760,
+    "heavyDiskFloorKiB": 1048576,
+    "rssStopKiB": 3145728,
+    "userRssCeilingKiB": 4194304,
+    "note": "Heavy disk floor was not reduced. The full build stopped at that floor; native adapter was run successfully after safe cleanup. Full ContractAudit and all6 rerun on the final runtime remain pending."
+  },
+  "archiveCatalogs": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/terminal-test-archives.json",
+      "sha256": "31028be87672eaec314f27b3ae25c61ea1236b1c429937916d0ba68aa412f024",
+      "bytes": 1337
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/generated-c-archives.json",
+      "sha256": "066a9f1436a5f825417ccbb987ab9a10b611a38c819d073eede23898fdfce4f9",
+      "bytes": 73581
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/unused-object-archives.json",
+      "sha256": "abbe3f9f3393824a23c0e83ce2ef13937e63cce9550cd04e4d6a1011029fd78a",
+      "bytes": 78355
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/compact-retired-archives.json",
+      "sha256": "eb0de05b93001554e027934f1ead55cb652790eb925c1dfc4695d6f16cd0cd88",
+      "bytes": 4143
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/failed-repack-preserved.json",
+      "sha256": "e405bff9f48844b01d1c914f5c9543cb6f17a679129724b1e746dcab28370e28",
+      "bytes": 1038
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/discarded-unpublished-compaction.json",
+      "sha256": "2c8059f69b84dae7e89444c698c80533b8de994293681c05b643ba7b6364ced5",
+      "bytes": 378
+    }
+  ],
+  "archiveNotes": "Exact payload SHA was verified before generated C and unused objects were removed. Live link inputs, original source DBs and frozen source facts were excluded. Five retired gzip wrappers were compacted only after original payload and exact former gzip-byte reconstruction both passed. Other failed temporary compactions were discarded with their originals retained.",
+  "allAttemptGuards": [
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/adapter-guard.json",
+        "sha256": "ea7baca0ad322fd07b6ae8867da86769bf59cc8be151c17c72adcd87022f0964",
+        "bytes": 498
+      },
+      "result": {
+        "state": "finished",
+        "sampledPeakRssKiB": 25648,
+        "guardTriggered": false,
+        "reason": null,
+        "childCommand": [
+          "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/CanonicalHookTests"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.3249297090806067
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/archive-adapter-guard.json",
+        "sha256": "c4751da438ee539459fda1d0732d3dde6e8d0eff099d7ff1882ac363a0821733",
+        "bytes": 727
+      },
+      "result": {
+        "state": "finished",
+        "sampledPeakRssKiB": 84032,
+        "guardTriggered": false,
+        "reason": null,
+        "childCommand": [
+          "bash",
+          "-c",
+          "EGGSHELL_ARCHIVE_MANIFEST=/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/terminal-test-archives.json ruby /Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/archive-one.rb /Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/CanonicalHookTests"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 3.3334013340063393
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/archive-baseline-guard.json",
+        "sha256": "4faddd862a3ce29bb9be0556647d517f5e42dfec269b9a22e5c86004ca29fd99",
+        "bytes": 826
+      },
+      "result": {
+        "state": "finished",
+        "sampledPeakRssKiB": 105008,
+        "guardTriggered": false,
+        "reason": null,
+        "childCommand": [
+          "bash",
+          "-c",
+          "set -euo pipefail; task_out=/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023; export EGGSHELL_ARCHIVE_MANIFEST=\"$task_out/terminal-test-archives.json\"; ruby \"$task_out/archive-one.rb\" /Users/ovm/.codex/experiments/eggshell/canonical-hook-20261023/eggshell; ruby \"$task_out/archive-one.rb\" /Users/ovm/.codex/experiments/eggshell/canonical-hook-20261023/SynapseSixGate"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 6.121503000147641
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/archive-generated-guard.json",
+        "sha256": "01f1d26ccca5480d64853fb4ed2cbac9e31027dbecd63f8a2d17583e8847675f",
+        "bytes": 513
+      },
+      "result": {
+        "state": "finished",
+        "sampledPeakRssKiB": 72656,
+        "guardTriggered": false,
+        "reason": null,
+        "childCommand": [
+          "ruby",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/archive-generated.rb"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 2.4213127503171563
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/archive-unused-objects-guard.json",
+        "sha256": "c46a4e333e53c7c402b8c1f475f24faa491c4400fedb1e8cdd79cef5aed255bf",
+        "bytes": 517
+      },
+      "result": {
+        "state": "finished",
+        "sampledPeakRssKiB": 76768,
+        "guardTriggered": false,
+        "reason": null,
+        "childCommand": [
+          "ruby",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/archive-unused-objects.rb"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 4.308160833083093
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/build-guard.json",
+        "sha256": "b27c3776d2fcd08f5c5f3e08f815193e15ce47f90c65a8784b7aafadc0432464",
+        "bytes": 513
+      },
+      "result": {
+        "state": "finished",
+        "sampledPeakRssKiB": 2475520,
+        "guardTriggered": true,
+        "reason": "disk-space",
+        "childCommand": [
+          "bash",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/build.sh"
+        ],
+        "exitCode": -15,
+        "elapsedSeconds": 58.455202125012875
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/compact-retired-guard.json",
+        "sha256": "98936dc4706597313b870ef54fff8af5c98f8013499a83c948663de8c6038e37",
+        "bytes": 522
+      },
+      "result": {
+        "state": "finished",
+        "sampledPeakRssKiB": 250496,
+        "guardTriggered": false,
+        "reason": null,
+        "childCommand": [
+          "ruby",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/compact-retired-archives.rb"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 24.733543041627854
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/hoist-proof-guard.json",
+        "sha256": "fa1628a40e14bf90c1837f7b835eb44b4bff136143d8f79987388a178da97a32",
+        "bytes": 675
+      },
+      "result": {
+        "state": "finished",
+        "sampledPeakRssKiB": 2593952,
+        "guardTriggered": false,
+        "reason": null,
+        "childCommand": [
+          "lake",
+          "env",
+          "lean",
+          "-j1",
+          "-DwarningAsError=true",
+          "-o",
+          ".lake/build/lib/lean/Eggshell/Handoff.olean",
+          "-c",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/native/Handoff.c",
+          "Eggshell/Handoff.lean"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 26.541792624630034
+      }
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/repack-archives-guard.json",
+        "sha256": "f3cbfa7288e45750a74bb2fe2a175317ba4109db967de9078c66bc52e86a17b3",
+        "bytes": 511
+      },
+      "result": {
+        "state": "finished",
+        "sampledPeakRssKiB": 138608,
+        "guardTriggered": false,
+        "reason": null,
+        "childCommand": [
+          "ruby",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/repack-archives.rb"
+        ],
+        "exitCode": 1,
+        "elapsedSeconds": 9.670787082985044
+      }
+    }
+  ],
+  "protocol": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/canonical-indexed.md",
+    "sha256": "4eb33b9201743b03dd65b154f755b92d935afc014086e32fd5b2f1466ab3501a",
+    "bytes": 1579
+  },
+  "runtimePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/canonical-indexed-runtime.patch",
+    "sha256": "8d3d624782eb4912436b901fe43848b9a736b370d449e2d64b1ef61d5cab313f",
+    "bytes": 7636
+  },
+  "adoption": "No latency, source-coverage, answer-quality or total-token improvement claimed for this runtime. No installation, README result or release change. Full goal remains active."
+}
