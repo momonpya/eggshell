@@ -2,6 +2,10 @@
 
 2026-10-23。候補実装の不具合修正であり、採用済みの実績ではない。
 
+2026-10-24追記：日誌修正とnative ingressのロック待ち修正を含む固定runtimeで、空DB・新規チャットのseed1を取り直した。
+新しい生RPCとの照合では開始・終了が各38件あり、35コマンド全件の開始・終了・永続来歴の欠落は0だった。
+旧seedは不合格のまま保持し、監査による停止条件も維持する。新seedの保存・監査・warmの証拠は[hook-session-admission.md](hook-session-admission.md)を参照。
+
 新規seedの実RPCでは、ToolChain.cppの650–910行を読むコマンドが正常終了し、PostToolUseも完了していた。
 ツール出力の保存はあるが、同じoccurrenceのシナプス日誌にはPreしかなく、終了記録・永続来歴がなかった。
 同じ実行のstderrには`stale DB writer snapshot`による未知ingressが1件あった。

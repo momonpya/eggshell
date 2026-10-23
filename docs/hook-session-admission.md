@@ -49,3 +49,22 @@
 合成試験は新しい実seedの成功やトークン削減の実績を意味しない。
 次の実runtime・ハーネス・フックを再固定し、空DB・新規チャットから作ったseedで開始と終了の全件照合を通すまで、次段階へ進まない。
 修正候補の採用には、AGENTS.mdの同一入力・同一モデル・複数回の総トークン比較、品質、期限の確認が別に必要である。
+
+## 新しく取得した実seedでの照合
+
+同じ候補runtime `f6454448…`、統合Lean制御器 `a0d1cbef…` を固定し、空DB・新規チャットからseed1を取得し直した。
+実threadは `gpt-5.6-luna / xhigh / openai`、`instructionSources=[]`。実行領域は
+`/Users/ovm/.codex/experiments/eggshell/ingress-qualified-20261024/study`。
+終了記録が欠けた以前のseedや、開始・永続来歴が欠けた親runtimeのseedは代用していない。
+
+取得後、同じ制御器で保存待ちの解消、厳密監査、明示warmを順に実行した。新たな回答モデル呼び出しや、人工的なイベント・関係の追加はしていない。
+
+- 生RPCの79フックがすべて完了。Pre/Postは各38件、最大フック時間6,589ms。
+- 日誌の開始・終了は各38件。生RPCの35コマンドは全件に開始・終了・永続来歴があり、各欠落数と未説明コマンド数はすべて0。
+- `seed-1-audit.json` は `seedAccepted=true`、終了0。消費辺1,260件を保存済みの来歴から再構成した。
+- warmとdoctorも終了0。1,856窓のmissing/invalidはともに0で、保存待ち0、監査・warm前後の元出版のhead/pagesは一致した。
+- 取得、保存待ち確認、監査、warmの全guardが終了0、終了後の所有プロセス0。取得時の合計RSS最大2,415,760 KiB。
+
+取得の最終総トークンは4,546,958（入力4,530,659＋出力16,299、cached inputは入力の内数）。seed取得費用として別記し、トークン削減率へ混ぜない。
+今回の確認は記録欠落の修正候補についての実証であり、全3seed・題材1〜3両周・比較・採用の完了とはしない。
+詳細の固定値と生記録のSHAは `docs/candidates/session-ingress/real-seed-audit.json` に残す。
