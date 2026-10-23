@@ -1844,3 +1844,16 @@ unitごとのcue番号付けの再生成を確認した。二つを一度だけ�
 題材3の必要原文の欠落と2周目の期限切れが解決したという証拠も、まだない。
 候補と検証範囲・復元用の資源catalogはdocs/canonical-indexed.mdに保存する。
 本体・README実績・リリース変更0、回答モデル呼出し0、採用0。全目標はactiveのままである。
+
+## 2026-10-23：保護境界の見直しと実stdoutの再監査
+
+1GiBのdisk stopはエージェントの設定であり、利用者の4GiBメモリ条件とは別だった。
+元6snapshotの全入力SHAを保ってready公開cacheだけをcloneし、追加書き込みを抑えて再開した。
+512MiBの空きを残すdisk stopと従来の3GiB RSS stopを記録し、最終ContractAuditも通った。
+同じ固定harnessを題材1から実行し、最初の3段階の全6本文は前候補とバイト一致した。
+初回は欠落0/0/1、2周目題材1は1件、題材2は0件。
+2周目題材3は一方がincomplete、もう一方は必要7項目全てをstdoutに含むが、受領未確定と終了失敗がある。
+このgateを合格・採用とせず、別のLean監査で全12実stdoutと全6元publicationの不変性を確認した。
+全実行・失敗・監査はdocs/canonical-indexed.mdと同gate-review.jsonに保存する。
+次のnative profileは、cueごとの係数を行ごとに再計算する大きな整数の除算と、greedyの不採用候補での
+選択済みリスト走査・複製を指していた。値と選択結果を保つ修正を続ける。

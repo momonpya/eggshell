@@ -1,0 +1,1188 @@
+{
+  "status": "isolated actual six-stage attempt failed: last stage incomplete or late unconfirmed publication and failed daemon shutdown; not adopted",
+  "ordinaryRuntimeChanged": false,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "gateInputs": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/gate-frozen-inputs.json",
+    "sha256": "9100afda153785c61d1fa7a03fba48acb33beb3e76ea2a8c93f152bfd704fc73",
+    "bytes": 1867
+  },
+  "preparation": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/warm-source-preparation.json",
+    "sha256": "6443bff644f10ce69b4ac26892a95eb0aba3f4a1d6a79ff7eb687f023e3df8b4",
+    "bytes": 5774
+  },
+  "actualGateGuard": {
+    "record": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache-guard.json",
+      "sha256": "609ef2aa0556d54d4f9fed1187194552897c64b14653554eba4f269c48f0bd97",
+      "bytes": 953
+    },
+    "result": {
+      "guardPid": 93829,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2397280,
+      "samples": 2266,
+      "guardTriggered": true,
+      "reason": "leftover-processes",
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/eggshell",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache"
+      ],
+      "childCommand": [
+        "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/SynapseSixGate",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/eggshell",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/warm-source-spec.json"
+      ],
+      "childPid": 93847,
+      "exitCode": 1,
+      "elapsedSeconds": 309.95657308306545
+    }
+  },
+  "actualSix": [
+    {
+      "stage": 1,
+      "sourceFactsUnchanged": true,
+      "pagePrefixUnchanged": true,
+      "frozenSourceFilesExact": true,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "b7243ab8aad20a8e856cd2994abe5eef69b250fd294c64552d63119ac22ac7df",
+          "elapsedMs": 20314,
+          "incomplete": false,
+          "session": 0,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+
+          ],
+          "storedMissingCount": 0,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage1/native-0/body.txt",
+            "sha256": "b7243ab8aad20a8e856cd2994abe5eef69b250fd294c64552d63119ac22ac7df",
+            "bytes": 112717
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage1/native-0/prompt/stdout",
+            "sha256": "3b4cda182898f09cdb241f889f676a17406d079bfb8e1b55bd92b2f8577fb8e6",
+            "bytes": 126396
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage1/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage1/native-0/shutdown/record.json",
+            "sha256": "0905c6125fd52d8f1fed59f96a5002b11666e1a0bf8e86bea30e49a36d1f1024",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "b7243ab8aad20a8e856cd2994abe5eef69b250fd294c64552d63119ac22ac7df",
+          "elapsedMs": 18032,
+          "incomplete": false,
+          "session": 1,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+
+          ],
+          "storedMissingCount": 0,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage1/native-1/body.txt",
+            "sha256": "b7243ab8aad20a8e856cd2994abe5eef69b250fd294c64552d63119ac22ac7df",
+            "bytes": 112717
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage1/native-1/prompt/stdout",
+            "sha256": "3b4cda182898f09cdb241f889f676a17406d079bfb8e1b55bd92b2f8577fb8e6",
+            "bytes": 126396
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage1/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage1/native-1/shutdown/record.json",
+            "sha256": "0905c6125fd52d8f1fed59f96a5002b11666e1a0bf8e86bea30e49a36d1f1024",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "sourceFactsUnchanged": true,
+      "pagePrefixUnchanged": true,
+      "frozenSourceFilesExact": true,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "d4d20909c3e871a42688410b0d37efa8e4f8241bbd8a793404a2e3ae627547bb",
+          "elapsedMs": 20108,
+          "incomplete": false,
+          "session": 0,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+
+          ],
+          "storedMissingCount": 0,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage2/native-0/body.txt",
+            "sha256": "d4d20909c3e871a42688410b0d37efa8e4f8241bbd8a793404a2e3ae627547bb",
+            "bytes": 111020
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage2/native-0/prompt/stdout",
+            "sha256": "6bba0f8614f05837463ca86e7b36b31336516730f862bd2063d07fcb1e1098a9",
+            "bytes": 124511
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage2/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage2/native-0/shutdown/record.json",
+            "sha256": "0905c6125fd52d8f1fed59f96a5002b11666e1a0bf8e86bea30e49a36d1f1024",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "mode-before-parse-and-config",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "d4d20909c3e871a42688410b0d37efa8e4f8241bbd8a793404a2e3ae627547bb",
+          "elapsedMs": 18331,
+          "incomplete": false,
+          "session": 1,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+
+          ],
+          "storedMissingCount": 0,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage2/native-1/body.txt",
+            "sha256": "d4d20909c3e871a42688410b0d37efa8e4f8241bbd8a793404a2e3ae627547bb",
+            "bytes": 111020
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage2/native-1/prompt/stdout",
+            "sha256": "6bba0f8614f05837463ca86e7b36b31336516730f862bd2063d07fcb1e1098a9",
+            "bytes": 124511
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage2/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage2/native-1/shutdown/record.json",
+            "sha256": "965131c4339944d8b84743de3c22aeafea708d3fb8cdbe47b77831ee1d9e1c6d",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "mode-before-parse-and-config",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 3,
+      "sourceFactsUnchanged": true,
+      "pagePrefixUnchanged": true,
+      "frozenSourceFilesExact": true,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "d708f4acf7895553f5c27ee1cfc15b7fe056057bab424257afb4afba1b08c262",
+          "elapsedMs": 21585,
+          "incomplete": false,
+          "session": 0,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+            "syntax-only-compile-cutoff"
+          ],
+          "storedMissingCount": 1,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage3/native-0/body.txt",
+            "sha256": "d708f4acf7895553f5c27ee1cfc15b7fe056057bab424257afb4afba1b08c262",
+            "bytes": 111222
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage3/native-0/prompt/stdout",
+            "sha256": "9b49b0f6dbea5e38bf23ba3f3e1664cf4b08e2a68ebc1545290fc74e7c7ed451",
+            "bytes": 124666
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage3/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage3/native-0/shutdown/record.json",
+            "sha256": "4879074cf1783329d7c2bc71f52e9021a582e3965c96eb1d298ff9e69fd656de",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-compile-cutoff",
+              "stored": true,
+              "storedOwners": [
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-no-output-action",
+              "stored": false,
+              "storedOwners": [
+
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "frontend-job-construction",
+              "stored": false,
+              "storedOwners": [
+
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "d708f4acf7895553f5c27ee1cfc15b7fe056057bab424257afb4afba1b08c262",
+          "elapsedMs": 19715,
+          "incomplete": false,
+          "session": 1,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+            "syntax-only-compile-cutoff"
+          ],
+          "storedMissingCount": 1,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage3/native-1/body.txt",
+            "sha256": "d708f4acf7895553f5c27ee1cfc15b7fe056057bab424257afb4afba1b08c262",
+            "bytes": 111222
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage3/native-1/prompt/stdout",
+            "sha256": "9b49b0f6dbea5e38bf23ba3f3e1664cf4b08e2a68ebc1545290fc74e7c7ed451",
+            "bytes": 124666
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage3/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage3/native-1/shutdown/record.json",
+            "sha256": "e692aebc35c2d1453ede3c8db18e330a941b2cee0769cbd577510d98ad0e2ebb",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-compile-cutoff",
+              "stored": true,
+              "storedOwners": [
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-no-output-action",
+              "stored": false,
+              "storedOwners": [
+
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "frontend-job-construction",
+              "stored": false,
+              "storedOwners": [
+
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 4,
+      "sourceFactsUnchanged": true,
+      "pagePrefixUnchanged": true,
+      "frozenSourceFilesExact": true,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "2fd83f5e30a406a228984e43d372b9e33a731a845ea002be1cf288c9f5a85693",
+          "elapsedMs": 27351,
+          "incomplete": false,
+          "session": 0,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+            "trailing-language-warning"
+          ],
+          "storedMissingCount": 1,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage4/native-0/body.txt",
+            "sha256": "2fd83f5e30a406a228984e43d372b9e33a731a845ea002be1cf288c9f5a85693",
+            "bytes": 103123
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage4/native-0/prompt/stdout",
+            "sha256": "b391c3486d6849461a845abb6b1bc44d8d2fcd1d6aad34aa46ebd29137796442",
+            "bytes": 115487
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage4/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage4/native-0/shutdown/record.json",
+            "sha256": "0905c6125fd52d8f1fed59f96a5002b11666e1a0bf8e86bea30e49a36d1f1024",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "2fd83f5e30a406a228984e43d372b9e33a731a845ea002be1cf288c9f5a85693",
+          "elapsedMs": 24864,
+          "incomplete": false,
+          "session": 1,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+            "trailing-language-warning"
+          ],
+          "storedMissingCount": 1,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage4/native-1/body.txt",
+            "sha256": "2fd83f5e30a406a228984e43d372b9e33a731a845ea002be1cf288c9f5a85693",
+            "bytes": 103123
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage4/native-1/prompt/stdout",
+            "sha256": "b391c3486d6849461a845abb6b1bc44d8d2fcd1d6aad34aa46ebd29137796442",
+            "bytes": 115487
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage4/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage4/native-1/shutdown/record.json",
+            "sha256": "0905c6125fd52d8f1fed59f96a5002b11666e1a0bf8e86bea30e49a36d1f1024",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 5,
+      "sourceFactsUnchanged": true,
+      "pagePrefixUnchanged": true,
+      "frozenSourceFilesExact": true,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "83f69f998f06646e90631c725a19e4ab17917caa8f860bf5bc89c395892f0530",
+          "elapsedMs": 25657,
+          "incomplete": false,
+          "session": 0,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+
+          ],
+          "storedMissingCount": 0,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage5/native-0/body.txt",
+            "sha256": "83f69f998f06646e90631c725a19e4ab17917caa8f860bf5bc89c395892f0530",
+            "bytes": 98218
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage5/native-0/prompt/stdout",
+            "sha256": "5fc1818923b3f49858f736fef88a952bee3ef314c2b764119415ee51641e042b",
+            "bytes": 109247
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage5/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage5/native-0/shutdown/record.json",
+            "sha256": "e692aebc35c2d1453ede3c8db18e330a941b2cee0769cbd577510d98ad0e2ebb",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "mode-before-parse-and-config",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "83f69f998f06646e90631c725a19e4ab17917caa8f860bf5bc89c395892f0530",
+          "elapsedMs": 23596,
+          "incomplete": false,
+          "session": 1,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+
+          ],
+          "storedMissingCount": 0,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage5/native-1/body.txt",
+            "sha256": "83f69f998f06646e90631c725a19e4ab17917caa8f860bf5bc89c395892f0530",
+            "bytes": 98218
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage5/native-1/prompt/stdout",
+            "sha256": "5fc1818923b3f49858f736fef88a952bee3ef314c2b764119415ee51641e042b",
+            "bytes": 109247
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage5/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage5/native-1/shutdown/record.json",
+            "sha256": "e692aebc35c2d1453ede3c8db18e330a941b2cee0769cbd577510d98ad0e2ebb",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "mode-before-parse-and-config",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 6,
+      "sourceFactsUnchanged": true,
+      "pagePrefixUnchanged": true,
+      "frozenSourceFilesExact": true,
+      "sameIndependentBodies": false,
+      "sessions": [
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+          "elapsedMs": 28918,
+          "incomplete": true,
+          "session": 0,
+          "sourceBodyPresent": false,
+          "storedMissing": null,
+          "storedMissingCount": null,
+          "publicationUnconfirmed": false,
+          "hookFailureLogged": true,
+          "shutdownExitCode": 0,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage6/native-0/body.txt",
+            "sha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+            "bytes": 356
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage6/native-0/prompt/stdout",
+            "sha256": "c20205d3fd5c865d354d970ccc2dc209f7fef704c3eac3637de279ee957c6a67",
+            "bytes": 442
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage6/native-0/prompt/stderr",
+            "sha256": "dcef5e5cf1adb5353bda6135cbcf0d17e9b2a3e3e9ac30258ec9c519e2dd6b9f",
+            "bytes": 59
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage6/native-0/shutdown/record.json",
+            "sha256": "0905c6125fd52d8f1fed59f96a5002b11666e1a0bf8e86bea30e49a36d1f1024",
+            "bytes": 111
+          },
+          "requirements": [
+            {
+              "bodyDelivered": false,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-compile-cutoff",
+              "stored": true,
+              "storedOwners": [
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-no-output-action",
+              "stored": true,
+              "storedOwners": [
+                "v11960447802706886118"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "frontend-job-construction",
+              "stored": true,
+              "storedOwners": [
+                "v11731249417270010951"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "actualStdoutBound": true,
+          "bodySha256": "da6c04bafd332876efb3c981d043e5ec2a4478918dd91a554904cc6e9223e3ab",
+          "elapsedMs": 29079,
+          "incomplete": false,
+          "session": 1,
+          "sourceBodyPresent": true,
+          "storedMissing": [
+
+          ],
+          "storedMissingCount": 0,
+          "publicationUnconfirmed": true,
+          "hookFailureLogged": false,
+          "shutdownExitCode": 1,
+          "bodyArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage6/native-1/body.txt",
+            "sha256": "da6c04bafd332876efb3c981d043e5ec2a4478918dd91a554904cc6e9223e3ab",
+            "bytes": 99681
+          },
+          "stdoutArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage6/native-1/prompt/stdout",
+            "sha256": "ebab50b5508062daddf92a30d60efaca4df52f8386216d5238351ac0ec1e20e8",
+            "bytes": 111702
+          },
+          "stderrArtifact": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage6/native-1/prompt/stderr",
+            "sha256": "cd38f8d4ec106419cb4894d76068d99a2ae952964b032d381e08ad616d55ea08",
+            "bytes": 113
+          },
+          "shutdownRecord": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/six-ready-cache/stage6/native-1/shutdown/record.json",
+            "sha256": "59251731f5d43a43fa4d84433ac301a751f87a7a1efd64237db89d90896ec65f",
+            "bytes": 113
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "syntax-only-compile-cutoff",
+              "stored": true,
+              "storedOwners": [
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "syntax-only-no-output-action",
+              "stored": true,
+              "storedOwners": [
+                "v11960447802706886118"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "frontend-job-construction",
+              "stored": true,
+              "storedOwners": [
+                "v11731249417270010951"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sourceBodies": 11,
+  "initialBodiesByteEqual": true,
+  "bodyEquality": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/initial-body-equality.json",
+    "sha256": "8d012eb2581f84af46eb03be251c50780dc315383d684c192f6c56e4c83c7806",
+    "bytes": 1407
+  },
+  "terminalSourceAndStdoutAudit": {
+    "record": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/terminal-publication-audit.json",
+      "sha256": "cf45025ecb3e7f63c78ace36a25c509d3bad2429d6cb27619def547c3c28775b",
+      "bytes": 9623
+    },
+    "guard": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/audit-terminal2-guard.json",
+      "sha256": "233f0eb84950c88342c2cd769eb3b95b5f87af6ba08ccbbbcd2def4a7f1a950f",
+      "bytes": 512
+    }
+  },
+  "terminalOriginalCodeAudit": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/terminal-body-audit.json",
+    "sha256": "e47a31f8af86e3b783e0b5c29cbaf262bbf6f0b680612a2e7a93f105f48ae703",
+    "bytes": 8856
+  },
+  "note": "The original driver stopped in the last shutdown finally block before writing stage6 result.json. The separate Lean audit binds all12 stdout bodies and checks all6 source publications after termination. It does not turn the failed driver into a pass.",
+  "profile": {
+    "trace": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/profile-stage6/trace.txt",
+      "sha256": "6eada38fc181a31926db0fe4d11534032b824cbcd6a48b5ad97b9677e482adf3",
+      "bytes": 132
+    },
+    "record": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/profile-stage6/result.json",
+      "sha256": "bc8adda8b54ea43ef550f684cb4a00457f4b348dd0bc52d5dda6a0005f6d72cf",
+      "bytes": 638
+    },
+    "guard": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/profile-current-guard.json",
+      "sha256": "37f98e82d18736d79a4e12a1b49d27e7aec72d0f28b104e7e841ca038a1cc2c1",
+      "bytes": 596
+    },
+    "findings": [
+      "16s: cachedCuePieces repeatedly divides large rank-normalization integers for rows/cues, even at zero overlap.",
+      "24s: greedy evaluation repeatedly scans and appends the selected list while testing losing candidates."
+    ],
+    "samples": [
+      {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/profile-stage6/sample-16-44124.txt",
+        "sha256": "2cb6587371b5f7b225b0831bc6eb4e3913d9c48e04912de0cac25432c58f731c",
+        "bytes": 252921
+      },
+      {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/profile-stage6/sample-24-44124.txt",
+        "sha256": "0b923cec88906482c01ac8fda49e6435bbc3388589ce6c677f6227d38d98f3e3",
+        "bytes": 501428
+      },
+      {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/profile-stage6/sample-8-44124.txt",
+        "sha256": "0d68ae1d2b91b224c2eddcd4bcddc04466a87fdf761e58df25747248ee84ef62",
+        "bytes": 658692
+      }
+    ]
+  },
+  "finalBuild": {
+    "guard": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/finish-build-measured-reserve-guard.json",
+      "sha256": "b534d374615b7c529501c42b420c15499704a7aff46147c05447f100ae711093",
+      "bytes": 511
+    },
+    "output": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/finish-build-measured-reserve-guard.stdout",
+      "sha256": "93e604eb97548d77f8a701e0418bd59fc0b2a9eed1e05ebbe73dcc7b23f48f57",
+      "bytes": 73581
+    }
+  },
+  "memory": "3072MiB stop retained below4096MiB user ceiling; heavy jobs serialized; no subagents",
+  "disk": "Original1GiB reserve was agent-selected. Ready derived caches were APFS-cloned and exact original source SHA retained. Measured run used512MiB remaining-space stop; no user memory bound changed.",
+  "privateUsageScope": "Fresh private roots per stage: private usage/query/session state was not copied. This DB-only six-stage gate does not measure learning from prior private usage. Full three-edge native ingress is covered by the separate existing fixture.",
+  "adoption": "No answer-model, token improvement, quality, installed binary, README or release claim. Goal remains active."
+}

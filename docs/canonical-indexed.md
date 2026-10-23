@@ -50,3 +50,39 @@ Leanソースと固定DBを保ち、生成物と終了済みアーカイブを�
 凍結した39ソース・107 link input・候補実行ファイル、全guardと資源処理は
 `candidates/canonical-indexed-review.json`に記録した。回答モデル・seed取得の新規呼出しは0件。
 総トークン・品質の同条件複数反復を含むAGENTS.mdの採用条件と、全Phases0–6は維持する。
+
+## 後続の固定6段階検査
+
+上の停止記録の後、1GiBのディスク境界がエージェント自身の設定だったことを明確にした。
+元の6snapshotをAPFS cloneし、公開の温め済み派生cacheだけを付けた。
+head/pages/出典のSHAは元入力と全6段階で一致し、私有の質問・利用・session状態はコピーしていない。
+追加容量を抑え、512MiBを残すdisk stopと、従来の3GiB RSS stopを使った。
+メモリの4GiB上限は維持した。候補と同じ最終runtimeのContractAudit・追加公理監査も通った。
+凍結手順は`candidates/canonical-indexed-gate.md`に保存する。
+
+| 段階 | 実stdoutの原文欠落 | フックms |
+| --- | --- | --- |
+| 1周目・題材1 | 0 / 0 | 20314 / 18032 |
+| 1周目・題材2 | 0 / 0 | 20108 / 18331 |
+| 1周目・題材3 | Compile境界1 / 1 | 21585 / 19715 |
+| 2周目・題材1 | 末尾-x警告1 / 1 | 27351 / 24864 |
+| 2周目・題材2 | 0 / 0 | 25657 / 23596 |
+| 2周目・題材3 | 未完了通知 / 必要7項目すべて本文あり・受領未確定 | 28918 / 29079 |
+
+最初の3段階・全6本文は、前候補の同じsnapshot/質問の実本文とバイト一致した。
+最後の段階は、一方がincomplete、もう一方は必要な原文7項目が全てstdoutにあるが、
+ackでdaemon receive deadline expiredとなり、daemon終了確認も失敗した。
+**本文11/12を観測したことと、実行全体の成功は区別する。このgateは不合格・未採用。**
+最後のshutdown finally内で元driverが終了したため、stage6のresult.jsonは生成されていない。
+
+終了後に別のLean監査を行い、全12件の本文が実stdoutと保存済みSHAに結び付くことと、
+全6件の元事実・公開済みpages prefix・凍結入力SHAの不変性を確認した。
+同じLean原文照合器で、最後の2本文の必要コードも再監査した。driverの失敗を成功へ読み替えていない。
+別のnative profileでは、16秒時点にcachedCuePieces内の大きな整数の反復除算、
+24秒時点にgreedyが不採用候補のためにも選択済みリストを走査・複製する時間を確認した。
+次はこれらの同じ計算の共有を扱い、係数や順位の再調整は行わない。
+
+このDB-only検査は各段階が新しい私有rootなので、過去の私有利用から学ぶ第3辺の効果は測っていない。
+3辺の実Pre/Post/Stopによる生成・新規chat配送の証拠は、既存の別fixtureと区別する。
+結果・raw stdout・終了失敗・追加監査・profileのSHAは`candidates/canonical-indexed-gate-review.json`に保存する。
+新規回答モデル呼出し0。本体・README実績・リリース・採用は0のままである。
