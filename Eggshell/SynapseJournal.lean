@@ -262,7 +262,7 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
   let mut result : Replay := {}
   let mut trace : Trace := {}
   let mut domain := ""
-  let mut starts : Std.HashMap Occurrence (String × Knowledge) := {}
+  let mut starts : Std.HashMap Occurrence (String × Knowledge × String) := {}
   let mut locations : Std.HashMap Occurrence (Array OutputRow) := {}
   let mut usage : Graph := .empty
   for value in values do
@@ -276,16 +276,22 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       continue
     match value.payload with
     | .start occurrence work query known =>
-      let .ok command := workCommand work | result := {result with unknown := result.unknown+1}; continue
+      let .ok command := invocationInput work | result := {result with unknown := result.unknown+1}; continue
+      if let some (_,_,original) := starts[occurrence]? then
+        unless original == work do throw (IO.userError "native start changed its complete invocation")
       trace ← IO.ofExcept (trace.start occurrence value.clock.nanos command)
-      starts := starts.insert occurrence (query, known)
+      starts := starts.insert occurrence (query, known, work)
       result := {result with consumers := result.consumers.push occurrence}
     | .finish occurrence name input response archive =>
       if !trace.starts.contains occurrence then result := {result with unknown := result.unknown+1}; continue
       let tool : Plugin.ToolEvent := ⟨name, occurrence.useId, input, response, none⟩
       let some started := trace.starts[occurrence]? | throw (IO.userError "missing observed start")
-      let .ok command := workCommand (Plugin.canonicalToolWork tool) |
-        throw (IO.userError "native finish has no literal invocation")
+      let work := Plugin.canonicalToolWork tool
+      let some (_,_,original) := starts[occurrence]? |
+        throw (IO.userError "native finish has no complete invocation")
+      unless work == original do throw (IO.userError "native finish changed its complete invocation")
+      let .ok command := invocationInput work |
+        throw (IO.userError "native finish has no structured invocation")
       unless command == started.command do
         throw (IO.userError "native finish changed its observed invocation")
       let expected := (Plugin.compileOperationOutcomes (.text occurrence.session) (.text occurrence.turn) tool).2
@@ -317,7 +323,7 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       trace := acceptPublishedOutput localId trace completed
       if let .ok reads := locateReads recorded.head.identity doc completed then
         if currentOriginal then locations := locations.insert occurrence (reads.flatMap (·.rows))
-        if let some (query, known) := starts[occurrence]? then
+        if let some (query, known, _) := starts[occurrence]? then
           let storedIndex ← indexAt? source known
           let mut stored := #[]
           if let some index := storedIndex then

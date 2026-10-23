@@ -23,11 +23,13 @@ def layout (raw : String) : Except String Layout := do
       unless json.compress == raw do throw "noncanonical native response"
       let outputs := (["output", "aggregatedOutput", "stdout"].filterMap fun key =>
         (json.getObjValAs? String key).toOption).eraseDups
-      let [text] := outputs | throw "no unambiguous native text output"
-      let fragment := (toJson text).compress
-      let [before, _] := raw.splitOn fragment | throw "ambiguous native output position"
-      pure (some (fragment, before.length))
-    | .ok (.arr _) => throw "unsupported native output array"
+      match outputs with
+      | [text] =>
+        let fragment := (toJson text).compress
+        match raw.splitOn fragment with
+        | [before, _] => pure (some (fragment, before.length))
+        | _ => pure none
+      | _ => pure none
     | _ => pure none
   let encoded := projected.isSome
   let fragment := projected.map (·.1) |>.getD raw
@@ -114,10 +116,32 @@ def unwrap (command : String) : String :=
     | _ => command
   | .error _ => command
 
-def workCommand (work : String) : Except String String := do
+def workInput (work : String) : Except String Json := do
   let parts := work.splitOn "\n"
   unless 2 ≤ parts.length do throw "no native work command"
-  let payload ← Json.parse ("\n".intercalate parts.tail)
+  Json.parse ("\n".intercalate parts.tail)
+
+/-- Tool argument values, including nested MCP arguments. Object keys and
+tool names are identity, not evidence that a prior result was consumed. -/
+partial def argumentText : Json → String
+  | .str value => value
+  | .arr values => "\n".intercalate (values.toList.map argumentText)
+  | .obj values => "\n".intercalate (values.toArray.toList.map (fun (_,value) => argumentText value))
+  | value => value.compress
+
+/-- Every native invocation participates in data-flow extraction. Shell text
+keeps its literal coordinates; other tools use their structured argument values.
+The complete original Work remains the invocation identity. -/
+def invocationInput (work : String) : Except String String := do
+  let payload ← workInput work
+  match (payload.getObjValAs? String "command").toOption.orElse
+      (fun _ => (payload.getObjValAs? String "cmd").toOption) with
+  | some command => return unwrap command
+  | none => return argumentText payload
+
+/-- A source-reader decoder, never a gate for recording or general data flow. -/
+def workCommand (work : String) : Except String String := do
+  let payload ← workInput work
   match payload.getObjValAs? String "command" with
   | .ok value => return unwrap value
   | .error _ => return unwrap (← payload.getObjValAs? String "cmd")
