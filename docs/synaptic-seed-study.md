@@ -6,7 +6,8 @@
 
 ## 固定する条件
 
-- seed取得と候補の全6段階は同じruntimeを使用する。直近の取得runtimeは`9790087fafa394a1daf73b8010555d9491237b6ee2e8f00cfe1984cc588ee1a3`、制御器は`b6c131614207d17e0b6c819b06830310dbd84d99fb7efdccbc8b3c7085f0294d`。固定計画`read-forms/study-capacity`は開始記録の欠落で不合格とし、生成を禁止した。次のruntimeはまだ固定していない。
+- seed取得と候補の全6段階は同じruntimeを使用する。直近の取得runtimeは`f6454448be340aa29230d425cd968321cbb9d1b92d53cdb29ec03b653d645781`、制御器は`a0d1cbef22f315e7b95124c77a1a405af176e5be3ae054495cbec634a2442710`。固定計画`ingress-qualified-20261024/study`はseed2の数値サービス終了失敗で生成を禁止した。次のruntimeはまだ固定していない。
+  `9790087f…`の固定計画`read-forms/study-capacity`も開始記録の欠落で不合格・生成禁止のまま保持する。
   `d1370cc5…`は日誌の欠落、`e7beec69…`は省略表示と原文行の衝突で取得を停止した。旧計画を再開しない。
 - 元のseed質問をそのまま使い、LLVMの同じcommit、gpt-5.6-luna/xhigh、AGENTS無効、モデルfallbackなしを固定する。
 - native CLI・実行計画・Leanハーネス・hook bundle・設定と実行体のSHAも、モデル投入前に凍結する。
@@ -61,6 +62,15 @@
 失敗時も生RPC・usage・本文・元出版の照合に必要な証拠は保持する。
 
 ## 現在地
+
+2026-10-24。f6454448…のseed1は生RPCとの開始・終了・永続来歴の照合で欠落0、明示warmのmissing/invalid=0だった。
+同じ固定runtimeで空DB・新規チャットのseed2を取得したが、数値サービスの終了失敗で不合格となり、seed3と題材のモデル投入を止めた。
+seed1の4,546,958とseed2の5,668,219は取得費用として保持し、削減率へ混ぜない。
+終了判定と未完通信のモデルなし試験を追加したが、隔離修正は連続条件で失敗するため採用しない。
+詳細は[numerical-shutdown-investigation.md](numerical-shutdown-investigation.md)。
+共通の元出版と私有利用履歴を両条件へ分岐する処理は[matched-private-history.md](matched-private-history.md)。
+
+以下はその前の取得と修正の記録。
 
 2026-10-24。9790087f…と新制御器で空DB・新規チャットのseed1の生成は終了したが、日誌監査で不合格になった。
 生RPCの42コマンドに対し、日誌の開始41件・終了42件・永続来歴41件。完了したPreToolUseの開始記録が1件欠けていた。

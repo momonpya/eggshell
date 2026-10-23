@@ -1,0 +1,104 @@
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -49,14 +49,27 @@
+
+ initialize ownedServices : IO.Ref (Array Service) ← IO.mkRef #[]
+
++/-- A process that has exited may remain visible until its parent reaps it.
++Such a process cannot own a live service or model. -/
++def processStateLive (state : String) : Bool :=
++  match state.toList with
++  | [] => false
++  | 'Z' :: _ => false
++  | 'X' :: _ => false
++  | _ => true
++
++theorem defunct_process_is_not_live (suffix : String) :
++    processStateLive ("Z" ++ suffix) = false := by
++  simp [processStateLive, String.toList_append]
++
+ def alive (pid : Nat) : IO Bool := do
+   for child in ← ownedServices.get do
+     if child.pid.toNat == pid then
+       if (← child.tryWait).isSome then
+         ownedServices.modify (·.filter (·.pid.toNat != pid))
+         return false
+-  let status ← IO.Process.output {cmd := "/bin/kill",args := #["-0",toString pid],stdin := .null}
+-  return status.exitCode == 0
++  let status ← IO.Process.output {cmd := "/bin/ps",args := #["-o","stat=","-p",toString pid],stdin := .null}
++  return status.exitCode == 0 && processStateLive status.stdout.trimAscii.copy
+
+ def endpoint? (config : Config) : IO (Option Endpoint) := do
+   Plugin.readJson? ((← directory config) / "endpoint.json") endpointJsonDefaults
+@@ -141,9 +154,12 @@
+   let _ ← child.wait
+   pure ()
+
+-def awaitLine (child : Kernel) (deadline : Nat) : IO String := do
++def awaitLine (child : Kernel) (deadline : Nat) (cancelled : IO Bool := pure false) : IO String := do
+   let reading ← IO.asTask child.stdout.getLine .dedicated
+   repeat
++    if ← cancelled then
++      child.kill
++      throw (IO.userError "numerical kernel request cancelled during shutdown")
+     if ← IO.hasFinished reading then
+       let result ← IO.ofExcept ((← IO.wait reading).mapError IO.Error.toString)
+       unless !result.isEmpty do throw (IO.userError "numerical kernel closed its response")
+@@ -166,6 +182,26 @@
+   child : IO.Ref (Option Kernel)
+   starts : IO.Ref Nat
+   stopping : IO.Ref Bool
++
++/-- Preserve partially received bytes while polling the service lifetime.
++An unfinished client frame cannot keep shutdown waiting for its request budget. -/
++partial def receiveLive (backend : Backend) (client : Socket.Client)
++    (remaining deadline : Nat) (received : ByteArray := ByteArray.empty) : IO ByteArray := do
++  if remaining == 0 then return received
++  let now ← IO.monoMsNow
++  unless !(← backend.stopping.get) && now < deadline do
++    throw (IO.userError "numerical frame is no longer live")
++  let chunk : Option (Option ByteArray) ← (do
++    let timer ← Selector.sleep (.ofNat (min 5 (deadline-now)))
++    Selectable.one #[
++      .case (client.recvSelector remaining.toUInt64) (fun bytes => pure (some bytes)),
++      .case timer (fun _ => pure none)]).block
++  match chunk with
++  | none => receiveLive backend client remaining deadline received
++  | some none => throw (IO.userError "numerical client closed an incomplete frame")
++  | some (some bytes) =>
++      unless !bytes.isEmpty do throw (IO.userError "numerical client returned an empty frame")
++      receiveLive backend client (remaining-bytes.size) deadline (received.append bytes)
+
+ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client)
+     (body : String) (deadline : Nat) : IO String := do
+@@ -188,7 +224,7 @@
+       try
+         child.stdin.putStr body
+         child.stdin.flush
+-        awaitLine child deadline
++        awaitLine child deadline backend.stopping.get
+       catch error =>
+         backend.stopping.set true
+         throw error
+@@ -198,7 +234,10 @@
+ def serveClient (backend : Backend) (config : Config) (secret : String) (client : Socket.Client) : IO Unit := do
+   let deadline := (← IO.monoMsNow)+24000
+   let reply ← try
+-    let bytes ← receiveFrameBefore client deadline
++    let header ← receiveLive backend client 4 deadline
++    let length := decodeLength header
++    unless length ≤ maxFrameBytes do throw (IO.userError "numerical frame exceeds the transport bound")
++    let bytes ← receiveLive backend client length deadline
+     let some text := String.fromUTF8? bytes | throw (IO.userError "invalid numerical frame encoding")
+     let request ← IO.ofExcept (Json.parse text)
+     unless (request.getObjValAs? String "secret").toOption == some secret do
+@@ -250,7 +289,8 @@
+     return 0
+   finally
+     backend.stopping.set true
+-    if let some child ← backend.child.get then stopKernel child
++    backend.gate.atomically do
++      if let some child ← backend.child.get then stopKernel child
+     for task in clients do let _ ← IO.wait task; pure ()
+     if let some current ← endpoint? config then
+       if current.pid == endpoint.pid && current.secret == endpoint.secret then IO.FS.removeFile (root / "endpoint.json")
