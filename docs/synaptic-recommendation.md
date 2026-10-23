@@ -10,6 +10,8 @@
 辺の抽出・原文区間・数値窓なしの候補化の接続不良は[synaptic-intervals.md](synaptic-intervals.md)で検査する。
 複数所有者の閉包候補の期限切れは[synaptic-bundles.md](synaptic-bundles.md)、
 原文の物理共有を選択・描画へ通す隔離基盤は[canonical-source.md](canonical-source.md)に記録する。
+その実フック接続は[canonical-hook.md](canonical-hook.md)。小さな実フックでは3辺と認定境界の検査が通ったが、
+固定6段階は1周目0/0/1件の欠落、後半3段階は期限切れで、まだ未採用である。
 以下の初期診断や未接続の記録と、現在の隔離候補の適用範囲を区別する。
 
 現行の`Value.Operator`はall/outcome/occurrence/inquiry/receiptの5種である。

@@ -1,0 +1,534 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -23,6 +23,7 @@
+ public import Eggshell.CompletedAuthority
+ public import Eggshell.SynapseTransport
+ public import Eggshell.SynapseBundles
++public import Eggshell.CanonicalSourceDelivery
+ public import tools.RetrievalIndex
+ 
+ public import tools.QueryLiterals
+@@ -127,6 +128,7 @@
+   keys : List String
+   text : String
+   context : Option ContextDelivery := none
++  shared : Option Synapses.CanonicalSource.Delivery.Part := none
+   deriving ToJson, FromJson
+ 
+ structure DeliveryFrame where
+@@ -149,6 +151,7 @@
+ 
+ def DeliveryPart.owners (part : DeliveryPart) : List String :=
+   (part.context.map (fun context => [context.owner])).getD [] ++
++  (part.shared.map (·.owners)).getD [] ++
+     part.keys.filterMap fun key => match key.splitOn ":" with
+       | "g" :: owner :: _ | "e" :: owner :: _ => some owner
+       | _ => none
+@@ -1965,6 +1968,7 @@
+   context : Option ContextDelivery := none
+   /-- Actual current-question anchor windows; planning metadata, never authority. -/
+   anchors : List Nat := []
++  shared : Option Synapses.CanonicalSource.Delivery.Part := none
+ 
+ def rawSlice (staged : List Value) (whole : Bool := false) :
+     (String × List Selected) → Option TransportSlice
+@@ -3882,7 +3886,12 @@
+ 
+ def DeliveryPart.remaining (part : DeliveryPart) (delivered : List String) : Option DeliveryPart :=
+   match part.context with
+-  | none => if part.keys.any (!delivered.contains ·) then some part else none
++  | none => match part.shared with
++    | none => if part.keys.any (!delivered.contains ·) then some part else none
++    | some shared =>
++      if part.keys != shared.keys || part.text != shared.render then none else do
++        let remaining ← shared.remaining delivered
++        some {keys := remaining.keys,text := remaining.render,shared := some remaining}
+   | some context =>
+       if part.text != context.render || part.keys != context.keys ||
+           !context.fragments.all (fun fragment => 0 < fragment.original.length &&
+@@ -5145,6 +5154,7 @@
+   synapticRanges : List (Nat × Nat × Nat) := []
+   synapticUnits : List (List (Nat × Nat)) := []
+   provenance : List SourceEvidence.Record := []
++  cached : Array Synapses.CanonicalSource.StoredRow := #[]
+ 
+ structure UnitPlan where
+   family : Nat
+@@ -5157,6 +5167,7 @@
+   last : Nat
+   weight : Nat
+   baseWeight : Nat := weight
++  sourceKey : Option Synapses.CanonicalSource.Key := none
+ 
+ def fragmentRanges (fragments : List DeliveryFragment) : List (Nat × Nat) :=
+   fragments.map fun part => (part.first,part.first+part.original.length)
+@@ -5220,11 +5231,48 @@
+     if valid : first < last ∧ last ≤ source.length ∧ last-first ≤ 2048 then
+       some (⟨first,last,valid.1,valid.2.1,valid.2.2⟩ : EvidenceRange source)
+     else none
++
++/-- Cached original rows carry their scalar bindings only as provenance. The
++payload is the shared file/line key, never an owner-local decoded fragment. -/
++def cachedBindings (owner : String) (rows : Array Synapses.CanonicalSource.StoredRow) : List (Nat × Nat) :=
++  hashDistinct (rows.toList.flatMap fun row => row.origins.toList.filterMap fun origin =>
++    if origin.binding.owner == owner then some (origin.binding.first,origin.binding.limit) else none)
++
++def prepareCached (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
++  let some source := Matcher.atomText? family.owner.outcome | return ([],[])
++  let some work := Matcher.atomText? family.owner.work | return ([],[])
++  let owner := relationKey family.owner.relation
++  let focused := (family.windows ++ family.references).eraseDups.filterMap fun position =>
++    (meaningContext? source (work.length+1) position 0).map fun view => (view.span.start,view.span.stop)
++  let groups := focused.map (fun span => [span]) ++ family.referenceRanges.map Prod.snd ++
++    family.synapticRanges.map (fun (_,a,b) => [(a,b)]) ++ family.synapticUnits
++  let mut seen : Std.HashSet (List (Nat × Nat)) := {}
++  let mut units := []
++  for spans in groups do
++    let rows := family.cached.filter fun row => row.origins.any fun origin =>
++      origin.binding.owner == owner && spans.any fun (a,b) =>
++        a < origin.binding.limit && origin.binding.first < b
++    if rows.isEmpty then continue
++    let ranges := cachedBindings owner rows
++    if seen.contains ranges then continue
++    seen := seen.insert ranges
++    let shared : Synapses.CanonicalSource.Delivery.Part := {rows}
++    let slice : TransportSlice := {
++      owner := some family.owner.relation,keys := shared.keys,text := "",shared := some shared
++      members := [],visibleKeys := []}
++    units := units ++ [{family := familyIndex,slice,ranges}]
++  return (units,focused ++ family.synapticRanges.map fun (_,a,b) => (a,b))
+ 
++theorem shared_source_unit_has_no_control (family : Nat)
++    (part : Synapses.CanonicalSource.Delivery.Part) :
++    ({family,slice := {owner := none,keys := part.keys,text := "",shared := some part,members := [],visibleKeys := []},ranges := []} :
++      UnitPlan).slice.members = [] := rfl
++
+ /-- Prepare the immutable record/structure index once per owner. Each query
+ window gets its own complete local dependency closure, not a prefix of the
+ other windows of this owner. This creates no control Match. -/
+ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
++  if !family.cached.isEmpty then return prepareCached familyIndex family
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   if family.template.context.isNone then
+     return ([atomicUnit familyIndex source.length family],[])
+@@ -5355,12 +5403,28 @@
+       | some previous => if cue.priority < previous.priority then some cue else found
+     else found) none
+ 
++def cachedCuePieces (scale familyIndex : Nat) (family : Family) : List CuePiece :=
++  let owner := relationKey family.owner.relation
++  let base := rankedCues {family with synapticRanges := []}
++  let all := rankedCues family
++  family.cached.toList.flatMap fun row =>
++    let ranges := cachedBindings owner #[row]
++    ranges.filterMap fun (first,last) =>
++      let value := fun cues => cues.foldl (fun weight (cue : RankedCue) =>
++        let overlap := min last cue.last - max first cue.first
++        max weight (overlap*(scale/(61+familyIndex)+scale/(61+cue.priority)))) 0
++      let baseWeight := value base
++      let weight := max baseWeight (value all)
++      if weight == 0 then none else
++        some {family := familyIndex,first,last,weight,baseWeight,sourceKey := some row.key}
++
+ /-- Complete projections receive one owner-level demand. Disjoint original
+ position cells receive the best producer window rank covering that cell.
+ Context expansion and overlapping windows cannot create duplicate votes. -/
+ def cuePieces (scale : Nat) (families : List Family)
+     (units : List UnitPlan) : List CuePiece :=
+   families.zipIdx.flatMap fun (family,familyIndex) =>
++    if !family.cached.isEmpty then cachedCuePieces scale familyIndex family else
+     -- A complete projection has one owner-level demand, independent of
+     -- its length and of absent numerical positions. No cue is added to the
+     -- transported metadata. Context fragments retain positioned demands.
+@@ -5383,6 +5447,24 @@
+         let graphWeight := (last-first)*(scale/(61+familyIndex)+scale/(61+cue.priority))
+         pure {family := familyIndex,first,last,weight := max baseWeight graphWeight,baseWeight}
+ 
++/-- Multiple original witnesses of one source row share one relevance cell.
++The strongest existing producer weight survives; duplicating an observation
++does not manufacture another vote. -/
++def cueDirectory (pieces : List CuePiece) : Array Nat × Array (Nat × Nat) := Id.run do
++  let mut sources : Std.HashMap Synapses.CanonicalSource.Key Nat := {}
++  let mut ids := #[]
++  let mut weights : Array (Nat × Nat) := #[]
++  for piece in pieces do
++    let index := piece.sourceKey.bind (sources[·]?) |>.getD weights.size
++    if index == weights.size then
++      weights := weights.push (piece.baseWeight,piece.weight)
++      if let some key := piece.sourceKey then sources := sources.insert key index
++    else
++      weights := weights.modify index fun previous =>
++        (max previous.1 piece.baseWeight,max previous.2 piece.weight)
++    ids := ids.push index
++  return (ids,weights)
++
+ def problem (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
+     (fixed ceiling : Nat × Nat) : Option SharedCoverage.Problem := do
+   let frames : List (Nat × Nat) := families.map fun family => match family.template.context with
+@@ -5392,8 +5474,30 @@
+       (text.length,text.utf8ByteSize)
+   let mut costs := frames.toArray
+   let mut payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
++  let allRows ← (Synapses.CanonicalSource.Delivery.merge
++    (families.toArray.flatMap (·.cached))).toOption
++  let mut sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat := {}
++  let mut fileIds : Std.HashMap Synapses.File Nat := {}
++  for row in allRows do
++    unless fileIds.contains row.key.file do
++      let frame := Synapses.CanonicalSource.Packet.fileFrame row.key.file
++        (allRows.filter (·.key.file == row.key.file))
++      let text := frame.leading ++ frame.trailing
++      fileIds := fileIds.insert row.key.file costs.size
++      costs := costs.push (text.length,text.utf8ByteSize)
++    let text := Synapses.CanonicalSource.Packet.rowText row
++    sourceIds := sourceIds.insert row.key costs.size
++    costs := costs.push (text.length,text.utf8ByteSize)
+   let mut closures : List (List Nat) := []
+   for unit in units do
++    if let some shared := unit.slice.shared then
++      let mut closure := [unit.family]
++      for row in shared.rows do
++        let file ← fileIds[row.key.file]?
++        let payload ← sourceIds[row.key]?
++        closure := file :: payload :: closure
++      closures := closures ++ [closure]
++      continue
+     let parts := match unit.slice.context with
+       | none => [(none,unit.slice.text)]
+       | some context => context.fragments.map fun (fragment : DeliveryFragment) =>
+@@ -5409,13 +5513,15 @@
+       closure := closure ++ [index]
+     closures := closures ++ [closure]
+ 
+-  let weights := (pieces.flatMap fun piece => [piece.baseWeight,piece.weight-piece.baseWeight]).toArray
++  let directory := cueDirectory pieces
++  let weights := directory.2.flatMap fun (base,total) => #[base,total-base]
+   let offers ← units.zipIdx.mapM fun (unit,index) => do
+     let closure ← (closures[index]?.getD []).mapM fun id =>
+       if h : id < costs.size then some (⟨id,h⟩ : Fin costs.size) else none
+     let covers ← (pieces.zipIdx.filter fun (piece,_) => piece.baseWeight > 0 && piece.family == unit.family &&
+-        unit.ranges.any (fun (a,b) => a ≤ piece.first && piece.last ≤ b)).mapM fun (_,id) =>
+-      if h : id*2 < weights.size then some (⟨id*2,h⟩ : Fin weights.size) else none
++        unit.ranges.any (fun (a,b) => a ≤ piece.first && piece.last ≤ b)).mapM fun (_,id) => do
++      let cue ← directory.1[id]?
++      if h : cue*2 < weights.size then some (⟨cue*2,h⟩ : Fin weights.size) else none
+     pure ({closure,covers} : SharedCoverage.Offer costs.size weights.size)
+   pure {costs,weights,offers := offers.toArray,fixed,limit := ceiling}
+ 
+@@ -5466,25 +5572,35 @@
+     (p : SharedCoverage.Problem) (plan : BundlePlan keys units) : Option (ClosedCoverage.Recipe p) := do
+   let parts ← plan.indices.mapM fun index =>
+     if h : index.val < p.offers.size then some (⟨index.val,h⟩ : Fin p.offers.size) else none
++  let directory := cueDirectory pieces
+   let bonus ← (pieces.zipIdx.filter fun (piece,_) => piece.baseWeight < piece.weight &&
+     plan.indices.any fun index =>
+       let unit := units[index]
+       unit.family == piece.family && covers unit.ranges piece.first piece.last &&
+         plan.projected.members.any fun member => member.choices.any fun bound =>
+-          keys[unit.family]? == some bound.owner && covers bound.spans piece.first piece.last).mapM fun (_,id) =>
+-    if h : id*2+1 < p.weights.size then some (⟨id*2+1,h⟩ : Fin p.weights.size) else none
++          keys[unit.family]? == some bound.owner && covers bound.spans piece.first piece.last).mapM fun (_,id) => do
++    let cue ← directory.1[id]?
++    if h : cue*2+1 < p.weights.size then some (⟨cue*2+1,h⟩ : Fin p.weights.size) else none
+   pure {parts,bonus}
+ 
+ def materialize (units : Array UnitPlan) (indices : List Nat) : Option (List TransportSlice) := do
+   let mut rows : List (Nat × TransportSlice) := []
++  let mut sharedRows := #[]
+   for index in indices do
+     let unit ← units[index]?
++    if let some shared := unit.slice.shared then
++      sharedRows := sharedRows ++ shared.rows
++      continue
+     match rows.find? (·.1 == unit.family) with
+     | none => rows := rows ++ [(unit.family,unit.slice)]
+     | some (_,prior) =>
+       let merged ← join prior unit.slice
+       rows := rows.map fun row => if row.1 == unit.family then (row.1,merged) else row
+-  pure ((rows.mergeSort fun a b => a.1 ≤ b.1).map Prod.snd)
++  let legacy := (rows.mergeSort fun a b => a.1 ≤ b.1).map Prod.snd
++  if sharedRows.isEmpty then return legacy
++  let mergedRows ← (Synapses.CanonicalSource.Delivery.merge sharedRows).toOption
++  let shared : Synapses.CanonicalSource.Delivery.Part := {rows := mergedRows}
++  return legacy ++ [{owner := none,keys := shared.keys,text := shared.render,shared := some shared,members := [],visibleKeys := []}]
+ 
+ /-- The serialized graph frame and all source-status rows are reserved once.
+ Source ranges and their owner frames compete globally. Intrinsic control is
+@@ -5504,7 +5620,10 @@
+   if allCost.1 < dataCost.1 || allCost.2 < dataCost.2 then none else do
+     let fixedData := mandatory.foldl (fun total slice =>
+       (total.1+slice.text.length+1,total.2+slice.text.utf8ByteSize+1)) (0,0)
+-    let fixed := (allCost.1-dataCost.1+fixedData.1,allCost.2-dataCost.2+fixedData.2)
++    let sharedFrame := if families.any (fun family => !family.cached.isEmpty) then
++      Synapses.CanonicalSource.Packet.wrapper ++ Synapses.CanonicalSource.Packet.footer ++ "\n" else ""
++    let fixed := (allCost.1-dataCost.1+fixedData.1+sharedFrame.length,
++      allCost.2-dataCost.2+fixedData.2+sharedFrame.utf8ByteSize)
+     let prepared := families.zipIdx.map fun (family,index) => prepare index family
+     let units := prepared.flatMap (·.1)
+     let depth := max families.length (families.foldl (fun n family => max n (max family.windows.length family.references.length)) 0)
+@@ -5651,7 +5770,8 @@
+     (referenceRanks : List (Value × List (Nat × Nat)) := [])
+     (referenceRanges : List (Value × List (Nat × List (Nat × Nat))) := [])
+     (synapticRanges : List (Value × List (Nat × Nat × Nat)) := [])
+-    (synapticBundles : Array Synapses.Bundles.Projected := #[]) : Option Handoff :=
++    (synapticBundles : Array Synapses.Bundles.Projected := #[])
++    (canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {}) : Option Handoff :=
+   let extraction := prepared.val
+   let attach := fun selected : Selected => {
+     selected with
+@@ -5741,6 +5861,10 @@
+       let windows := hint.windows
+       let anchors := hint.anchors
+       if !lookupContextAllowed (enforce && requestQuestion.isSome) meaningSelected first.blocks positions then none else do
++      if meaningSelected && first.applicability == .advisory then
++        if let some rows := canonicalRows[relationKey first.matched.edge.relation]? then
++          let shared : Synapses.CanonicalSource.Delivery.Part := {rows}
++          return ({slice with keys := [],text := "",context := none,shared := some shared},[])
+       let prepared := prepareContextualSlicePlan planningReceipts windows slice anchors
+       let render := fun amount => (prepared.eval amount).map fun slice => {slice with anchors}
+       let levels := ownerContextLevels first.matched.edge windows anchors share allowance
+@@ -5764,6 +5888,13 @@
+       let windows := hint.windows
+       let anchors := hint.anchors
+       if !lookupContextAllowed (enforce && requestQuestion.isSome) meaningSelected false positions then none else do
++      if meaningSelected then
++        if let some rows := canonicalRows[relationKey source.owner.relation]? then
++          let shared : Synapses.CanonicalSource.Delivery.Part := {rows}
++          let slice : TransportSlice := {
++            owner := some source.owner.relation,keys := [],text := "",shared := some shared
++            members := [],visibleKeys := []}
++          return (source.owner.relation,(slice,[]))
+       let prepared := prepareContextualSupportPlan planningReceipts windows source anchors
+       let render := fun amount => (prepared.eval amount).map fun slice => {slice with anchors}
+       let levels := ownerContextLevels source.owner windows anchors share allowance
+@@ -5816,11 +5947,16 @@
+       (source, "g:" ++ owner ++ ":" ++ outcome, "e:" ++ owner ++ ":" ++ outcome ++ ":")
+     let visibleFor := fun (fitted : List TransportSlice) =>
+       let keys := fitted.flatMap (·.visibleKeys)
+-      selectPreparedKeys visibility fun (known, key) => known || keys.contains key
++      let shared := fitted.flatMap fun slice => (slice.shared.map (·.owners)).getD []
++      visibility.filterMap fun (selected,known,key) =>
++        if known || keys.contains key || (selected.applicability == .advisory &&
++          shared.contains (relationKey selected.matched.edge.relation)) then some selected else none
+     let supportFor := fun (fitted : List TransportSlice) =>
+       let keys := fitted.flatMap (·.keys) |>.eraseDups
+-      selectPreparedKeys sourceKeys fun (whole, prefixKey) =>
+-        keys.contains whole || keys.any (·.startsWith prefixKey)
++      let shared := fitted.flatMap fun slice => (slice.shared.map (·.owners)).getD []
++      sourceKeys.filterMap fun (source,whole,prefixKey) =>
++        if keys.contains whole || keys.any (·.startsWith prefixKey) ||
++            shared.contains (relationKey source.owner.relation) then some source else none
+     let mandatory := SharedRangeAdapter.mandatorySlices (choices.map (·.2.1))
+     let families := if meaningSelected && !enforce then choices.filterMap fun choice => do
+         if mandatory.any (fun slice => slice.owner == choice.2.1.owner) then none else do
+@@ -5843,10 +5979,16 @@
+             synapticUnits := synapticBundles.toList.flatMap fun bundle =>
+               bundle.members.toList.flatMap fun member => member.choices.toList.filterMap fun bound =>
+                 if bound.owner == originalKey then some bound.spans else none
+-            provenance := (contextRows.find? (·.1.relation == owner.relation)).map Prod.snd |>.getD []} : SharedRangeAdapter.Family) else []
++            provenance := (contextRows.find? (·.1.relation == owner.relation)).map Prod.snd |>.getD []
++            cached := canonicalRows[originalKey]?.getD #[]} : SharedRangeAdapter.Family) else []
+     let locations := SharedRangeAdapter.RangeLocators.combine
+-      (families.flatMap SharedRangeAdapter.RangeLocators.prepare)
+-    let locationText := SharedRangeAdapter.RangeLocators.render locations
++      ((families.filter (·.cached.isEmpty)).flatMap SharedRangeAdapter.RangeLocators.prepare)
++    let sharedDomain := (Synapses.CanonicalSource.Delivery.merge
++      (families.toArray.flatMap (·.cached))).toOption.getD #[]
++    let sharedLocations := Synapses.CanonicalSource.Delivery.locators sharedDomain
++    let locationText := SharedRangeAdapter.RangeLocators.render locations ++ sharedLocations
++    let sharedPlan := "p:shared:" ++ Synapses.Index.contentKey
++      (requestQuestion.getD current,sharedDomain.map (·.key))
+     let locationKey := "f:locations:" ++ relationKey (.text locationText)
+     let locationFrame : DeliveryFrame := {key := locationKey,text := locationText}
+     let framesFor := fun (fitted : List TransportSlice) =>
+@@ -6006,7 +6148,11 @@
+           let cost := fun slice => ((slice.text ++ "\n").length, (slice.text ++ "\n").utf8ByteSize)
+           (boundedDualSlices (budget - reserved) (bytes - reservedBytes) cost alternatives).val
+     let fittedSlices := fittedSlices.map fun slice => match slice.context with
+-      | none => slice
++      | none => match slice.shared with
++        | none => slice
++        | some original =>
++          let shared := {original with plan := sharedPlan}
++          {slice with shared := some shared,keys := shared.keys,text := shared.render}
+       | some context =>
+           let question := contextPlanQuestion (requestQuestion.getD current) current enforce
+             (slice.members.any (·.blocks))
+@@ -6018,7 +6164,7 @@
+     let newlyCovered := checkpointed.filter (graphVisibleFor fittedSlices)
+     let visibleSupport := supportFor fittedSlices
+     let remainingLocations := SharedRangeAdapter.RangeLocators.render
+-      (SharedRangeAdapter.RangeLocators.remaining locations fittedSlices)
++      (SharedRangeAdapter.RangeLocators.remaining locations fittedSlices) ++ sharedLocations
+     let frames := (framesFor fittedSlices).filter (·.key != locationKey)
+     let frames := frames ++ if remainingLocations.isEmpty then [] else
+       [{locationFrame with text := remainingLocations}]
+@@ -6070,7 +6216,8 @@
+         blocksCurrent
+         packet := if fittedSlices.isEmpty then none else some {
+           header := "", footer, frames
+-          parts := fittedSlices.map (fun slice => {keys := slice.keys, text := slice.text, context := slice.context})}
++          parts := fittedSlices.map (fun slice => {
++            keys := slice.keys,text := slice.text,context := slice.context,shared := slice.shared})}
+         sourceRecords := records
+         sourceUses := visible.map (·.sourceUse records) ++ visibleSupport.map (fun item =>
+           {owner := relationKey item.owner.relation, references := sourceReferences records item.provenance,
+@@ -7186,6 +7333,20 @@
+       synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) ((← IO.monoMsNow)+500)
+     else pure ({} : Synapses.Transport.Plan)
+   let synapticBundles := Synapses.Bundles.project synaptic
++  let allowed := synapticOwners.foldl (fun found owner =>
++    found.insert (owner.database,relationKey owner.original.relation))
++    ({} : Std.HashSet (String × String))
++  let mut canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {}
++  if recommendation && evidence.isNone && synaptic.complete then
++    for prepared in source.synaptic do
++      if let some ready := prepared.canonical then
++        let rows := Synapses.CanonicalSource.Delivery.byOwner ready.registry allowed
++        for (owner,part) in rows do
++          match Synapses.CanonicalSource.Delivery.merge (canonicalRows[owner]?.getD #[] ++ part) with
++          | .ok merged => canonicalRows := canonicalRows.insert owner merged
++          | .error _ => canonicalRows := canonicalRows.erase owner
++  Receipt.observe source.receipt "canonical-source-input" (toJson (source.synaptic.map fun prepared =>
++    (prepared.source.identity,prepared.canonical.map (fun ready => ready.metadata.rows),prepared.canonicalFailure)))
+   -- The focused provider is an independent observation. Include its exact
+   -- durable owner/order/window reply before asking the memo to reuse a packet.
+   -- An unchanged first nomination alone cannot certify an unchanged focus.
+@@ -7248,6 +7409,7 @@
+     (referenceRanges := referenceRanges)
+     (synapticRanges := synaptic.ranges)
+     (synapticBundles := synapticBundles)
++    (canonicalRows := canonicalRows)
+   let rendered := rendered.map fun handoff => {handoff with synapticComplete := synaptic.complete}
+   Receipt.observe source.receipt "synaptic-delivery"
+     (Synapses.Bundles.receipt synaptic synapticBundles ((rendered.map (·.text)).getD ""))
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -2,6 +2,8 @@
+ 
+ public import Eggshell.SynapseIndex
+ public import Eggshell.SynapseUsage
++public import Eggshell.CanonicalSourceCache
++public import Eggshell.CanonicalSourceDelivery
+ 
+ @[expose] public section
+ 
+@@ -193,16 +195,25 @@
+   shared : Option Index.Reader
+   usage : Option Index.Reader
+   failure : Option String := none
++  canonical : Option CanonicalSource.Cache.Ready := none
++  canonicalFailure : Option String := none
+ 
+ def prepare (source : PageMap.Snapshot) (writable : Bool) : IO Prepared := do
+   try
+     let (storage, _) ← Sidecar.destination (Sidecar.Owner.ofSnapshot source) writable
+-    return ⟨source.head, ← Index.open? source storage .shared, ← Index.open? source .user .usage, none⟩
+-  catch error => return ⟨source.head, none, none, some s!"index-open: {error}"⟩
++    let (canonical,canonicalFailure) ← try
++      pure (← CanonicalSource.Cache.open? source storage,none)
++      catch error => pure (none,some s!"canonical-open: {error}")
++    return {
++      source := source.head,shared := ← Index.open? source storage .shared
++      usage := ← Index.open? source .user .usage,canonical,canonicalFailure}
++  catch error => return {
++    source := source.head,shared := none,usage := none,failure := some s!"index-open: {error}"}
+ 
+ def Prepared.identity (prepared : Prepared) : Json :=
+   toJson (prepared.source.identity, prepared.source.authority,
+-    prepared.shared.map (·.index.head), prepared.usage.map (·.index.head), prepared.failure)
++    prepared.shared.map (·.index.head), prepared.usage.map (·.index.head), prepared.failure,
++    prepared.canonical.map (·.metadata),prepared.canonicalFailure,CanonicalSource.Delivery.implementation)
+ 
+ def Prepared.collect (prepared : Prepared) (answers : Array (String × Nat)) (query : String)
+     (deadline : Nat) (limits : Limits := {}) : IO Result := do
+--- a/Eggshell/SynapseUsage.lean
++++ b/Eggshell/SynapseUsage.lean
+@@ -25,9 +25,48 @@
+   if first < limit && limit ≤ raw.length then
+     some (String.ofList ((raw.toList.drop first).take (limit-first))) else none
+ 
++/-- Shared source rows count as delivered only when their full fingerprint,
++line and literal code match an original native observation. Position metadata
++alone never supplies a delivered range. Decode each original scalar once. -/
++def presentedShared (body : String) (docs : Array Document) (reads : Array Read) : Presentation := Id.run do
++  if (body.splitOn "EGGSHELL SHARED SOURCE DATA\n").length ≤ 1 then return {}
++  let grouped := reads.foldl (fun found row => found.insert row.binding.owner
++    (found[row.binding.owner]?.getD #[] |>.push row))
++    ({} : Std.HashMap String (Array Read))
++  let mut originals : Std.HashMap (File × Nat) (Std.HashSet String) := {}
++  for doc in docs do
++    if !doc.native then continue
++    let some raw := doc.source | continue
++    let .ok decoded := layout raw | continue
++    let rows := grouped[doc.owner]?.getD #[]
++    let bindings := rows.foldl (fun found row => found.insert
++      (row.binding.first,row.binding.limit) row.source) ({} : Std.HashMap (Nat × Nat) Range)
++    for line in textLines decoded.text do
++      let some (number,code) := numbered line.text | continue
++      let some first := decoded.offsets[line.first]? | continue
++      let some limit := decoded.offsets[line.limit]? | continue
++      let some source := bindings[(first,limit)]? | continue
++      if source.first != number || source.last != number then continue
++      let key := (source.file,number)
++      originals := originals.insert key ((originals[key]?).getD {} |>.insert code)
++  let mut result : Presentation := {}
++  for packet in (body.splitOn "EGGSHELL SHARED SOURCE DATA\n").drop 1 do
++    let content := (packet.splitOn "END EGGSHELL SHARED SOURCE DATA\n").head!
++    for block in (content.splitOn "\nSOURCE ").drop 1 do
++      let some encoded := (block.splitOn "\n").head? | continue
++      let .ok file := Json.parse encoded >>= fromJson? (α := File) | continue
++      let some code := (block.splitOn "\nCODE\n")[1]? | continue
++      let code := (code.splitOn "END SOURCE\n").head!
++      for line in textLines code do
++        let some (number,text) := numbered line.text | continue
++        if (originals[(file,number)]?).any (·.contains text) then
++          result := {result with ranges := result.ranges.push ⟨file,number,number⟩}
++        else result := {result with uncertain := result.uncertain.insert file}
++  return result
++
+ /-- Verify actual packet bytes against immutable raw coordinates before labelling. -/
+ def presented (body : String) (docs : Array Document) (reads : Array Read) : Presentation := Id.run do
+-  let mut result : Presentation := {}
++  let mut result := presentedShared body docs reads
+   for part in body.splitOn "\nWORK GRAPH " do
+     let some owner := (part.splitOn "\n").head? | continue
+     let some doc := docs.find? (·.owner == owner) | continue
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -1,4 +1,5 @@
+ module
++public import Eggshell.CanonicalSourceCache
+ 
+ public import Eggshell.PluginModel
+ public import Eggshell.SearchProvider
+@@ -210,6 +211,7 @@
+ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : IO Result := do
+   let started ← IO.monoMsNow
+   let _ ← Synapses.Journal.refresh snapshot target.storage ((← IO.monoMsNow)+60000)
++  let _ ← Synapses.CanonicalSource.Cache.refresh snapshot target.storage
+   let lexical ← RetrievalResearch.Index.warm snapshot target.storage
+   if lexicalOnly target.command then
+     let empty : Coverage := {
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -496,6 +496,7 @@
+ def indexQueued (target : IndexTarget) (paths : List System.FilePath) : IO Nat := do
+   let pinned ← target.owner.pin
+   let _ ← Synapses.Journal.refresh pinned target.storage ((← IO.monoMsNow)+60000)
++  let _ ← Synapses.CanonicalSource.Cache.refresh pinned target.storage
+   let _ ← RetrievalResearch.Index.warm pinned target.storage
+   let directory ← target.indexes pinned
+   DB.Sidecar.withIndexClaim target.owner (fun _ => indexOwned pinned directory) target.storage
+@@ -574,7 +575,10 @@
+       else if role == "index" then
+         if (json.getObjValAs? String "kind").toOption == some "synapses" then
+           let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := Synapses.Journal.Target))
+-          pure (toJson (← Synapses.Journal.refresh (← target.owner.pin) target.storage ((← IO.monoMsNow)+60000)))
++          let pinned ← target.owner.pin
++          let indexed ← Synapses.Journal.refresh pinned target.storage ((← IO.monoMsNow)+60000)
++          let _ ← Synapses.CanonicalSource.Cache.refresh pinned target.storage
++          pure (toJson indexed)
+         else
+           let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := IndexTarget))
+           let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")

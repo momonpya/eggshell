@@ -1,0 +1,6 @@
+import Eggshell.Handoff
+#print axioms Eggshell.Synapses.CanonicalSource.Delivery.acknowledged_plan_cannot_refill
+#print axioms Eggshell.Synapses.CanonicalSource.Delivery.remaining_row_was_planned
+#print axioms Eggshell.Plugin.SharedRangeAdapter.shared_source_unit_has_no_control
+#print axioms Eggshell.Synapses.CanonicalSource.Packet.source_key_identifies_one_payload
+#print axioms Eggshell.Synapses.CanonicalSource.Packet.selected_row_is_original

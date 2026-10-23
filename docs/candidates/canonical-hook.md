@@ -1,0 +1,9 @@
+# Canonical original source in the actual native hook
+
+This isolated candidate connects immutable canonical rows, shared by full file identity and line, to the existing SharedCoverage planner. Keep MiniLM producer/ranking and existing RRF constants unchanged. Retain the ordinary non-numbered observations, interpretations, source freshness and exact native-control path. The three recommendation edge kinds can join original row witnesses, but cannot manufacture a Match, Union, completed operation or tool suppression.
+
+The candidate changes payload identity, shared setup cost and row rendering. Duplicate source cues use max rather than adding a vote for each original observation. Complete dependency recipes remain complete; independent numerical cues remain usable. One file/fingerprint/line has one literal payload with all admitted original witnesses. Position metadata does not count as delivered code. Actual stdout is verified against the frozen original source bytes, not selected keys or position entries.
+
+No further weighting, quota or gold-specific changes. First run meaningful native checks for original byte verification, shared cost, origin retention, absent fingerprint separation, acknowledged no-refill and unchanged exact control. Freeze sources and link inputs. Then run the six frozen stages in order, two independent native chats each, on cloned copies of the same DB publications, after explicit warm. Audit original required code, stored-vs-absent distinction, elapsed time and 30s deadline, immutable source facts/pages, and byte-identical independent bodies. Restart from stage1 after any runtime change.
+
+This gate uses no answering model. Passing it is not adoption, proof of token improvement or answer quality. The later fixed matched Luna/xhigh initial+retained three-topic multiple-repetition experiment remains necessary under AGENTS.md.
