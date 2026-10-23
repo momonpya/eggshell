@@ -57,12 +57,27 @@ def textLines (text : String) : Array TextLine := Id.run do
     position := limit
   return lines
 
+/-- Terminal elision joins unrelated source fragments. Such a display row
+has original observation bytes, but no complete file-line payload. -/
+def outputElision (text : String) : Bool :=
+  ["…", "..."].any fun delimiter =>
+    ((text.splitOn delimiter).drop 1 |>.dropLast).any fun payload =>
+      match (payload.trimAscii.toString.splitOn " ").filter (!·.isEmpty) with
+      | [count,unit,"truncated"] => count.toNat?.any (0 < ·) &&
+          ["tokens","chars","bytes","lines"].contains unit
+      | _ => false
+
 def numbered (text : String) : Option (Nat × String) := do
-  let parts := text.splitOn "\t"
-  let first ← parts.head?
-  let number ← first.trimAscii.copy.toNat?
-  if number == 0 || parts.length < 2 then none
-  else some (number, "\t".intercalate parts.tail)
+  if outputElision text then none else do
+    let parts := text.splitOn "\t"
+    let first ← parts.head?
+    let number ← first.trimAscii.copy.toNat?
+    if number == 0 || parts.length < 2 then none
+    else some (number, "\t".intercalate parts.tail)
+
+theorem elided_row_not_numbered (text : String) (elided : outputElision text = true) :
+    numbered text = none := by
+  simp [numbered,elided]
 
 /-- Literal shell lexer; unsupported syntax stays unsupported and is never run. -/
 def shellWords (text : String) : Except String (Array String) := do

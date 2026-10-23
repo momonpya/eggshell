@@ -6,7 +6,8 @@
 
 ## 固定する条件
 
-- seed取得と候補の全6段階は同じruntimeを使用する。対象はcanonical-record-ackの`d1370cc5c718ed43e92152013dd1eba65ba4cbd01b150e5dcb3652571fb4cdd2`。
+- seed取得と候補の全6段階は同じruntimeを使用する。現在の修正候補は`3fd62382a4414375cc556fc542fa136014e73e23e813f5f9ca37e6c2163f6189`。新しい取得計画は再固定後に作る。
+  `d1370cc5…`は日誌の欠落、`e7beec69…`は省略表示と原文行の衝突で取得を停止した。旧計画を再開しない。
 - 元のseed質問をそのまま使い、LLVMの同じcommit、gpt-5.6-luna/xhigh、AGENTS無効、モデルfallbackなしを固定する。
 - native CLI・実行計画・Leanハーネス・hook bundle・設定と実行体のSHAも、モデル投入前に凍結する。
 - remote plugin同期はCLIで無効にし、固定した候補フックだけを実行する。実threadのinstructionSourcesは空であることを確認する。
@@ -47,6 +48,24 @@
 失敗時も生RPC・usage・本文・元出版の照合に必要な証拠は保持する。
 
 ## 現在地
+
+e7beec69…の新seed1は索引の衝突を検出して停止した。観測済み2,499,584トークン、最終usage不明、成功seedではない。
+省略された出力を完全なコード行と誤認した共通抽出器を修正し、実データ・別seed・source-only warm・実Pre/Post/Stopで検証した。
+詳細は[elided-source-rows.md](elided-source-rows.md)。回答モデルの生成は再度禁止し、新しいruntime・ハーネスを再固定してから空DBのseed1へ戻る。
+
+以下は停止前の計画固定と実行の記録。
+
+2026-10-24。日誌競合修正と並行フックの資源ゲートを通し、3本の新しい空DB取得計画を
+`/Users/ovm/.codex/experiments/eggshell/synaptic-reseed-20261024/sealed/`へ固定した。
+runtimeは`e7beec69…`、統合したLean制御器と監視器は同じ`3eb945b7…`を使う。
+`StudySeal.lean`は元質問のSHA・3つの独立計画・ハーネス29ファイル・設定・実行体・hook bundleを固定し、モデルを呼ばない。
+監視器は取得器と同じ固定実行体であることを要求し、合計RSSは3GiBで停止する。
+実CLIの検査では候補の有効・信頼済みフック8本だけ、freshのフック0本、モデル一覧の5.6-luna/xhighを確認した。
+seed1の実threadも5.6-luna/xhigh/openai・instructionSources=[]を確認して生成を開始した。
+seed1の終了・保存・warm・日誌と原文の監査が終わるまで、seed2を投入しない。
+この取得の総トークンと題材の削減率はまだ確定していない。題材配送の生成許可は引き続きfalseである。
+
+以下は退役した取得の記録。
 
 実seed1は新しい空DB・新規チャットから生成されたが、Postフック完了に対する日誌の終了記録が1件欠けていた。
 そのまま次へ進めた判断を取り消し、このruntimeでの計画は生成禁止にした。

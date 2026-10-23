@@ -1,0 +1,89 @@
+{
+  "status": "isolated-source-and-native-regression-qualified",
+  "productionAdoption": false,
+  "modelGenerationAllowed": false,
+  "evidenceRoot": "/Users/ovm/.codex/experiments/eggshell/synaptic-reseed-20261024",
+  "failedRuntimeSha256": "e7beec6970fe4bc0797dc766aa806eb1ada13d0f69ffe360147d82e6df8804ac",
+  "candidateRuntimeSha256": "3fd62382a4414375cc556fc542fa136014e73e23e813f5f9ca37e6c2163f6189",
+  "interruptedSeed": {
+    "failure": "sealed/seed-1/failure.json",
+    "resourceRecord": "sealed/seed-1.guard.json",
+    "interrupt": "SIGINT sent to owned native App Server PID 82039 after repeated canonical row errors",
+    "model": "gpt-5.6-luna",
+    "effort": "xhigh",
+    "provider": "openai",
+    "instructionSources": [],
+    "observedInclusiveTokens": 2499584,
+    "finalUsageKnown": false,
+    "peakRssKiB": 1915776,
+    "ownedPids": [],
+    "acceptedSeed": false,
+    "seed2Started": false,
+    "seed3Started": false,
+    "topicGenerationStarted": false
+  },
+  "cause": "A tool elision spliced fragments of different source lines; the line-number decoder admitted the display as one complete source line, conflicting with a subsequent intact read.",
+  "runtimeChange": "Reject known terminal elision rows from original numbered-line decoding; retain intact neighbours, raw observations, and subsequent intact reads. No topic/path/count-specific rule.",
+  "ordinaryLeanTheorem": "Eggshell.Synapses.Extraction.elided_row_not_numbered",
+  "newPythonImplementation": false,
+  "numericalAdapterModified": false,
+  "rankingOrBudgetModified": false,
+  "unitChecks": {
+    "elisionGrammarCases": 96,
+    "inputEnvelopes": ["plain", "JSON string", "JSON output object"],
+    "sourceExtraction": "elision/direct-compiler.stdout",
+    "canonicalAndContractAudit": "elision/checks.stdout",
+    "canonicalTestPatch": "docs/candidates/elided-source-canonical-tests.patch"
+  },
+  "recordedSourceRegression": {
+    "before": "canonical-conflicts.json",
+    "after": "elision/canonical-after.json",
+    "guard": "elision/recovered-probe.guard.json",
+    "beforeRows": 3985,
+    "afterRows": 3984,
+    "beforeConflictingKeys": 1,
+    "afterConflictingKeys": 0,
+    "intactConflictingLineRecovered": true,
+    "publicationUnchanged": true
+  },
+  "previousSeedRegression": {
+    "before": "elision/previous-seed-before.json",
+    "after": "elision/previous-seed-after.json",
+    "guard": "elision/previous-seed.guard.json",
+    "beforeRows": 6216,
+    "afterRows": 6216,
+    "conflictingKeys": 0,
+    "publicationUnchanged": true
+  },
+  "sourceOnlyWarm": {
+    "guard": "elision/warm.guard.json",
+    "windows": 1442,
+    "missing": 0,
+    "invalid": 0,
+    "doctorPassed": true,
+    "sourceFilesCheck": "elision/replay-files-check.stdout",
+    "peakRssKiB": 1947456,
+    "ownedPids": []
+  },
+  "nativeHooks": {
+    "guard": "elision/native-synthetic.guard.json",
+    "events": 9,
+    "portableOrigins": 4,
+    "consumptionWitnesses": 1,
+    "supports": 3,
+    "coquoted": 4,
+    "privateUsage": 4,
+    "sourceOnlyRecoveryPassed": true,
+    "daemonExitCode": 0,
+    "peakRssKiB": 2079712,
+    "ownedPids": []
+  },
+  "remaining": [
+    "freeze a research controller and source audit linked to the repaired source decoder",
+    "freeze the next three empty-DB/new-chat seed plans under the repaired runtime",
+    "acquire and audit independent seeds without reusing the interrupted seed as accepted input",
+    "freeze stored-code oracles before topic handoff",
+    "qualify the recorded current comparator on the same saved source",
+    "matched and balanced current/candidate/fresh comparisons across all topics and both laps"
+  ]
+}

@@ -1,0 +1,17 @@
+--- a/tests/CanonicalSourceTests.lean
++++ b/tests/CanonicalSourceTests.lean
+@@ -54,6 +54,14 @@
+     "overlapping reads with different Work ranges duplicated their common row"
+   let conflict ← IO.ofExcept (original "conflict" (sourceText.replace "return" "throw")).document
+   check ((addDocument shared statistics "database" conflict).toOption.isNone) "conflicting code silently merged"
++  let elided ← IO.ofExcept (original "elided" "  7\tleft…2486 tokens truncated…other line\n  8\t}\n").document
++  let (intact,_) ← IO.ofExcept (addDocument {} {} "database" elided)
++  check (intact.atoms.size == 1 && !(intact.atoms.contains ⟨file,7⟩))
++    "a truncated display manufactured a complete canonical row"
++  let (recovered,_) ← IO.ofExcept (addDocument intact {} "database" a)
++  check (recovered.atoms.size == 2 && (recovered.atoms[Key.mk file 7]?).any
++    (fun row => row.code == "\treturn \"日本語\";" && row.origins.size == 1))
++    "a later intact observation could not recover the real row independently of the damaged display"
+   let changed := {b with files := #[{file with fingerprint := String.ofList (List.replicate 64 'b')}]}
+   let (separate,_) ← IO.ofExcept (addDocument shared statistics "database" changed)
+   check (separate.atoms.size == 4) "changed file fingerprint reused stale rows"

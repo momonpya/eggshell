@@ -53,6 +53,31 @@ private def checkSource : IO (Array Read × Presentation) := do
     "citation retained the whole ancestor read instead of its exact original row"
   return (rows, presented)
 
+private def checkElidedReads : IO Unit := do
+  for delimiter in ["…","..."] do
+    for unit in ["tokens","chars","bytes","lines"] do
+      for count in [1,12,2486,1000000] do
+        let marker := delimiter ++ toString count ++ " " ++ unit ++ " truncated" ++ delimiter
+        for body in [marker ++ "tail","prefix" ++ marker ++ "tail","prefix" ++ marker] do
+          check ((numbered ("    11\t" ++ body)).isNone) "elided fragments became one original source row"
+  check (numbered "    11\t// tokens truncated" == some (11,"// tokens truncated") &&
+    numbered "    11\treturn x…y;" == some (11,"return x…y;"))
+    "ordinary code containing words or ellipsis was discarded"
+  let elided := "    10\t日本語 α\n    11\tleft…2486 tokens truncated…unrelated tail\n    12\tgamma\n"
+  for raw in [elided,(toJson elided).compress,(Json.mkObj [("output",toJson elided)]).compress] do
+    let damaged := {doc with source := some raw}
+    let rows ← IO.ofExcept (recordedRows "database" damaged)
+    check (rows.map (·.source.first) == #[10,12]) "elision lost intact neighbours or invented the missing row"
+    let reads ← IO.ofExcept (recordedReads "database" damaged)
+    check (reads.size == 2 && reads.all (fun row => row.read.source.first == row.read.source.last))
+      "a source range crossed the elision gap"
+    let trace : Trace := {}
+    let trace ← IO.ofExcept (trace.start (occurrence "read") 0 command)
+    let trace ← IO.ofExcept (trace.finish (occurrence "read") 1 elided)
+    let located ← IO.ofExcept (locateReads "database" damaged trace)
+    check (located.size == 2 && located.all (fun row => row.read.source.first != 11))
+      "native derivation attached an original row to an elided display"
+
 private def checkFeedback (rows : Array Read) (packet : Presentation) : IO Unit := do
   let requested := #[rows[0]!.source]
   let feedback : Feedback := {}
@@ -130,6 +155,7 @@ private def checkKinds : IO Unit := do
   check (trace.graph.snapshot.isEmpty) "numeric literals or delimiters created a consumption relation"
 
 def main : IO Unit := do
+  checkElidedReads
   let (rows, packet) ← checkSource
   checkFeedback rows packet
   checkTrace
