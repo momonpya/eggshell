@@ -1,0 +1,180 @@
+diff --git a/Eggshell/Persistence.lean b/Eggshell/Persistence.lean
+index a52b4c5..713750d 100644
+--- a/Eggshell/Persistence.lean
++++ b/Eggshell/Persistence.lean
+@@ -76,7 +76,8 @@ def acquireLock (handle : IO.FS.Handle) (path : System.FilePath) : Nat → IO Un
+         IO.sleep 5
+         acquireLock handle path retries
+ 
+-def withLockWithin (path : System.FilePath) (waitMs : Nat) (action : IO α) : IO α := do
++def withLockAcquisition (path : System.FilePath)
++    (acquire : IO.FS.Handle → IO Unit) (action : IO α) : IO α := do
+   rejectSymlinkAncestors path
+   -- A kernel-owned lock is released even if its owner is killed. Never unlink
+   -- this file: doing so would create two independent lock inodes.
+@@ -86,12 +87,29 @@ def withLockWithin (path : System.FilePath) (waitMs : Nat) (action : IO α) : IO
+     if !(← parent.pathExists) then privateDirectory parent
+   let handle ← IO.FS.Handle.mk guard .append
+   privateFile guard
+-  acquireLock handle path (waitMs / 5 + 1)
++  acquire handle
+   try
+     action
+   finally
+     handle.unlock
+ 
++def withLockWithin (path : System.FilePath) (waitMs : Nat) (action : IO α) : IO α :=
++  withLockAcquisition path (fun handle => acquireLock handle path (waitMs / 5 + 1)) action
++
++/-- A native request spends its existing absolute deadline while waiting for
++metadata. A busy sibling must not turn a 100ms admission cutoff into lost
++ingress. An expired request cannot start its protected action. -/
++partial def acquireLockUntil (handle : IO.FS.Handle) (path : System.FilePath)
++    (deadline : Nat) : IO Unit := do
++  let now ← IO.monoMsNow
++  unless now < deadline do throw (IO.userError s!"timed out waiting for {lockPath path}")
++  if ← handle.tryLock then return
++  IO.sleep (UInt32.ofNat (min 5 (deadline-now)))
++  acquireLockUntil handle path deadline
++
++def withLockUntil (path : System.FilePath) (deadline : Nat) (action : IO α) : IO α :=
++  withLockAcquisition path (fun handle => acquireLockUntil handle path deadline) action
++
+ def withLock (path : System.FilePath) (action : IO α) : IO α :=
+   withLockWithin path 1000 action
+ 
+diff --git a/Eggshell/PluginHooks.lean b/Eggshell/PluginHooks.lean
+index e6f2924..728c1df 100644
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -123,6 +123,14 @@ def hookDeadline (input : Json) (budget : Nat := 29000) : IO Nat := do
+   pure <| boundedHookDeadline now budget
+     (input.getObjValAs? Nat "_eggshell_deadline").toOption
+ 
++/-- Native ingress and delivery publication share the hook's absolute deadline.
++Background polling retains its short, independently retryable admission. -/
++def withHookSession (input : Json) (session : String)
++    (action : SessionFiles → IO α) : IO α := do
++  let files ← sessionFiles session
++  Persistence.privateDirectory files.directory
++  Persistence.withLockUntil files.lock (← hookDeadline input) (action files)
++
+ /-- Closing with no message cannot erase a final answer already received. -/
+ def sealPending (pending : PendingTurn) (message : Option String) : PendingTurn :=
+   { pending with finalMessage := message.or pending.finalMessage, closed := true, inFlight := [] }
+@@ -280,14 +288,14 @@ def sessionStart (input : Json) : IO String := do
+   let session ← IO.ofExcept (requiredString input "session_id")
+   if optionalString input "source" = some "compact" then
+     Worker.cancel session "search"
+-    withSession session fun files => do
++    withHookSession input session fun files => do
+       if let some state ← readState? files then
+         if state.enabled then writeJson files.state (compactState state)
+     return emptyHook
+   else
+     let cwd := System.FilePath.mk ((optionalString input "cwd").getD ".")
+     let config ← configFromHook input cwd
+-    let state ← withSession session fun files => do
++    let state ← withHookSession input session fun files => do
+       let state ← readState? files
+       if state.isNone then
+         if let some config := config then
+@@ -377,7 +385,7 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
+     IO (Option Handoff) := do
+   let session := pending.sessionId
+   let deadline ← hookDeadline input
+-  let snapshot ← withSession session fun files => do
++  let snapshot ← withHookSession input session fun files => do
+     let some state ← readState? files | return none
+     let some current ← readPendingBase? files | return none
+     if !state.enabled || current.turnId != pending.turnId || (current.closed || current.finalMessage.isSome) then
+@@ -411,7 +419,7 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
+         semanticMs := if semantic then observed - started else 0
+         lexicalMs := if semantic then 0 else observed - started }
+       pure (first, trace)
+-  let (handoff, disposition) ← withSession session fun files => do
++  let (handoff, disposition) ← withHookSession input session fun files => do
+     let some state ← readState? files | return (none, "missing-state")
+     let some current ← readPendingBase? files | return (none, "missing-turn")
+     let now ← IO.monoMsNow
+@@ -460,7 +468,7 @@ def userPromptSubmit (input : Json) : IO String := do
+   let cwd := System.FilePath.mk (← IO.ofExcept (requiredString input "cwd"))
+   let prompt ← IO.ofExcept (requiredString input "prompt")
+   let some config ← configFromHook input cwd | return emptyHook
+-  let prepared ← withSession session fun files => do
++  let prepared ← withHookSession input session fun files => do
+     let mut state := (← readState? files).getD (defaultState config)
+     if !state.enabled then return none
+     if let some pending ← readPendingBase? files then
+@@ -545,7 +553,7 @@ def preToolUse (input : Json) : IO String := do
+       | none => pure none
+     catch _ => pure none
+   let tool := {initial with source := captured.map (·.2)}
+-  let preflight ← withSession session fun files => do
++  let preflight ← withHookSession input session fun files => do
+     let some state ← readState? files |
+       pure PreToolState.ignore
+     if !state.enabled then
+@@ -570,7 +578,7 @@ def preToolUse (input : Json) : IO String := do
+         let handoff ← deliverForWork input pending
+           (canonicalToolWork tool) true none true
+         if handoff.any (·.blocksCurrent) then
+-          withSession session fun files => do
++          withHookSession input session fun files => do
+             if let some current ← readPendingBase? files then
+               if current.turnId = turn then
+                 writeJson files.pending (cancelTool current tool.useId)
+@@ -596,7 +604,7 @@ def preToolUse (input : Json) : IO String := do
+           let text := handoff.map (·.text) |>.getD ""
+           pure <| withSearchNotice handoff (if text = "" then emptyHook else hookContext "PreToolUse" text)
+       catch error =>
+-        withSession session fun files => do
++        withHookSession input session fun files => do
+           if let some current ← readPendingBase? files then
+             if current.turnId = turn then
+               writeJson files.pending (cancelTool current tool.useId)
+@@ -662,7 +670,7 @@ def postToolUse (input : Json) : IO String := do
+   let initial ← IO.ofExcept (toolFromHook input true)
+   let files ← sessionFiles session
+   let tool := (← recordedTool? files turn initial).getD initial
+-  let postflight ← withSession session fun files => do
++  let postflight ← withHookSession input session fun files => do
+     let some state ← readState? files |
+       pure PostToolState.ignore
+     if !state.enabled then
+@@ -697,7 +705,7 @@ def postToolUse (input : Json) : IO String := do
+ 
+ def postCompact (input : Json) : IO String := do
+   let session ← IO.ofExcept (requiredString input "session_id")
+-  withSession session fun files => do
++  withHookSession input session fun files => do
+     if let some state ← readState? files then
+       if state.enabled then writeJson files.state (compactState state)
+   Worker.cancel session "search"
+@@ -707,7 +715,7 @@ def stop (input : Json) : IO String := do
+   let session ← IO.ofExcept (requiredString input "session_id")
+   let turn := optionalString input "turn_id"
+   let finalMessage := optionalString input "last_assistant_message"
+-  let current ← withSession session fun files => do
++  let current ← withHookSession input session fun files => do
+     let some state ← readState? files | return false
+     if !state.enabled then return false
+     let active ← readPendingBase? files
+@@ -730,7 +738,7 @@ def stop (input : Json) : IO String := do
+ 
+ def interrupt (input : Json) : IO String := do
+   let session ← IO.ofExcept (requiredString input "session_id")
+-  withSession session fun files => do
++  withHookSession input session fun files => do
+     if let some state ← readState? files then
+       writeJson files.state { state with epoch := state.epoch + 1, offers := [] }
+   Worker.cancel session "search"
+@@ -738,7 +746,7 @@ def interrupt (input : Json) : IO String := do
+ 
+ def sessionEnd (input : Json) : IO String := do
+   let session ← IO.ofExcept (requiredString input "session_id")
+-  withSession session fun files => do
++  withHookSession input session fun files => do
+     if let some pending ← readPendingBase? files then deferPending files pending
+     if let some state ← readState? files then
+       writeJson files.state { state with epoch := state.epoch + 1, offers := [] }
