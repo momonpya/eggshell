@@ -30,4 +30,7 @@ private def check (condition : Bool) (message : String) : IO Unit :=
     "ps field parsing regressed"
   check ((parseProcess "broken").isNone && (parseProcess "-1 2 3 S Fri Oct 23 12:34:56 2026 x").isNone)
     "malformed process rows were admitted"
+  check (validStopRss 3145728 && validStopRss 3670016 &&
+    !validStopRss 0 && !validStopRss 3670017 && !validStopRss 4194304)
+    "RSS admission lost the half-GiB reserve"
   IO.println "ResourceGuard ownership checks passed"

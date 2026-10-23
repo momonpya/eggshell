@@ -97,6 +97,17 @@ structure Settings where
   minFreeKiB : Nat := 524288
   deriving FromJson, ToJson
 
+/-- Keep half a GiB below the user's four-GiB ceiling for sampling and
+shutdown. Three GiB remains the default, rather than the maximum allowed. -/
+def maximumStopRssKiB : Nat := 3670016
+
+def validStopRss (limit : Nat) : Bool := decide (0 < limit ∧ limit ≤ maximumStopRssKiB)
+
+theorem valid_stop_reserves_headroom {limit : Nat} (valid : validStopRss limit = true) :
+    limit + 524288 ≤ 4194304 := by
+  have bound := (of_decide_eq_true valid).2
+  exact Nat.add_le_add_right bound 524288
+
 def diskFreeKiB (directory : System.FilePath) : IO Nat := do
   let output ← IO.Process.output {cmd := "/bin/df", args := #["-Pk",directory.toString]}
   let rows := (output.stdout.splitOn "\n").filter (! ·.isEmpty)
@@ -132,8 +143,8 @@ private def snapshot (path : System.FilePath) (json : Json) : IO Unit := do
   IO.FS.rename pending path
 
 def run (settings : Settings) : IO UInt32 := do
-  unless !settings.command.isEmpty && 0 < settings.limitRssKiB && settings.limitRssKiB ≤ 3145728 do
-    throw (IO.userError "guard needs a command and an RSS stop threshold at most 3 GiB")
+  unless !settings.command.isEmpty && validStopRss settings.limitRssKiB do
+    throw (IO.userError "guard needs a command and an RSS stop threshold at most 3.5 GiB")
   let path := System.FilePath.mk settings.record
   unless path.isAbsolute && !(← path.pathExists) do
     throw (IO.userError "keep the existing guard record; use a new absolute path")
@@ -230,11 +241,31 @@ def run (settings : Settings) : IO UInt32 := do
   -- The recorded set describes actual survivors after cleanup, rather than
   -- the last sample taken before the owned processes were signalled.
   let cleanupDeadline := (← IO.monoMsNow)+2000
+  let mut emptySince : Option Nat := none
   repeat
     let rows ← processes
-    activeIds := (owned rows (ancestors rows monitor) child.pid.toNat known settings.ownedPrefixes).map (·.process.pid)
-    if activeIds.isEmpty || (← IO.monoMsNow) ≥ cleanupDeadline then break
+    let active := owned rows (ancestors rows monitor) child.pid.toNat known settings.ownedPrefixes
+    activeIds := active.map (·.process.pid)
+    for target in active do
+      known := known.insert target.process.pid target.process.identity
+    let now ← IO.monoMsNow
+    if activeIds.isEmpty then
+      if let some since := emptySince then
+        if now ≥ since+100 then break
+      else emptySince := some now
+    else
+      emptySince := none
+      -- A hook can finish spawning its daemon after the first kill sweep.
+      -- Reacquire proof-bearing ownership rows on every sweep, including
+      -- newly discovered children, and retain their identities if reparented.
+      if reason.isSome then
+        for target in active do
+          let _ ← IO.Process.output {cmd := "/bin/kill",args := #["-KILL",toString target.process.pid]}
+          pure ()
+    if now ≥ cleanupDeadline then break
     IO.sleep 5
+  let finalRows ← processes
+  activeIds := (owned finalRows (ancestors finalRows monitor) child.pid.toNat known settings.ownedPrefixes).map (·.process.pid)
   if !activeIds.isEmpty then
     failure := some "owned processes survived resource cleanup"
     if reason.isNone then reason := some "leftover-processes"

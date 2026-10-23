@@ -1,0 +1,76 @@
+{
+  "status": "research monitor qualified; replacement seed2 started; product candidate remains unadopted",
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/prefix/libexec/eggshell",
+    "sha256": "efb9a11d413b3ed2339413e4e6833b55497f05c6bdb5375098402d481c31ba2d",
+    "unchanged": true
+  },
+  "runner": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/study-resources-20261024/controller/StudyMain",
+    "sha256": "b0802f5a81ec86052854bc0e0acbc16a7add9b3e148b1869174ead73e004cd61"
+  },
+  "rssKiB": {
+    "defaultStop": 3145728,
+    "maximumAllowedStop": 3670016,
+    "userCeiling": 4194304,
+    "reservedHeadroom": 524288
+  },
+  "interruptedSeed2": {
+    "guard": "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/study/seed-2.guard.json",
+    "sampledPeakRssKiB": 3146720,
+    "excessAboveConservativeStopKiB": 992,
+    "observedInclusiveTokens": 148913,
+    "finalUsageKnown": false,
+    "cost": "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/study/seed-2-observed-cost.json",
+    "recovery": "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/study/seed-2-recovery.guard.json",
+    "ownedProcessesAfterRecovery": [],
+    "acceptedAsSeed": false
+  },
+  "lateChildChecks": {
+    "old": "/Users/ovm/.codex/experiments/eggshell/study-resources-20261024/controller/old-race-2/result.json",
+    "oldReportedOwnedProcesses": [],
+    "oldLateChildActuallyAlive": true,
+    "newResultPattern": "/Users/ovm/.codex/experiments/eggshell/study-resources-20261024/controller/new-race-N/result.json",
+    "newCases": 10,
+    "newPassed": 10,
+    "newLateChildrenAlive": 0,
+    "buildAndTestsGuard": "/Users/ovm/.codex/experiments/eggshell/study-resources-20261024/controller/build-8.guard.json",
+    "guardExitCode": 0,
+    "sampledPeakRssKiB": 1598928,
+    "ownedProcessesAfter": [],
+    "answeringModelCalls": 0
+  },
+  "boundaryChecks": {
+    "guard": "/Users/ovm/.codex/experiments/eggshell/study-resources-20261024/controller/smoke.guard.json",
+    "exitCode": 0,
+    "sampledPeakRssKiB": 249600,
+    "ownedProcessesAfter": [],
+    "invalidTemporaryRootsRejected": 7,
+    "invalidTransportCasesRejected": 9,
+    "burstNotifications": 300,
+    "answeringModelCalls": 0
+  },
+  "plans": {
+    "guard": "/Users/ovm/.codex/experiments/eggshell/study-resources-20261024/seal.guard.json",
+    "exitCode": 0,
+    "ownedProcessesAfter": [],
+    "retainedSeed1": "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/study/seed-1",
+    "retainedSeed1HasOriginalStricterGuard": true,
+    "remainingSeeds": "/Users/ovm/.codex/experiments/eggshell/study-resources-20261024/study",
+    "allDownstreamArmsUseAmendedRunner": true,
+    "answeringModelCallsDuringSealing": 0
+  },
+  "replacementSeed2": {
+    "directory": "/Users/ovm/.codex/experiments/eggshell/study-resources-20261024/study/seed-2",
+    "thread": "01a16ae6-2f41-7bf1-ac36-fc8624b614ce",
+    "model": "gpt-5.6-luna",
+    "effort": "xhigh",
+    "provider": "openai",
+    "instructionSources": [],
+    "emptyDatabaseAndNewChat": true,
+    "acceptedAsSeed": false
+  },
+  "productionAdoption": false,
+  "tokenReductionMeasured": false,
+  "goalComplete": false
+}

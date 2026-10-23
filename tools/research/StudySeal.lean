@@ -16,10 +16,96 @@ private def save (path : System.FilePath) (json : Json) : IO StudyAdmission.Arti
 private def setEnv (original updates : Array (String × Option String)) :=
   original.filter (fun row => !updates.any (·.1 == row.1)) ++ updates
 
+/-- Resource-monitor amendments retain a completed seed's actual provenance.
+They never relabel the interrupted seed, change the product runtime, or
+resubmit into a used output directory. All later comparisons use this runner. -/
+private def amendResources (args : List String) : IO Unit := do
+  let [previousPath,newPath,checksPath] := args |
+    throw (IO.userError "StudySeal resources PREVIOUS-STUDY NEW-STUDY CLEANUP-CHECKS")
+  let previous := System.FilePath.mk previousPath
+  let root := System.FilePath.mk newPath
+  let checks := System.FilePath.mk checksPath
+  check (previous.isAbsolute && root.isAbsolute && checks.isAbsolute && !(← root.pathExists))
+    "new absolute resource amendment directory required"
+  let seed := previous / "seed-1"
+  let completed ← StudyAdmission.readJson (seed / "result.json").toString
+  let audit ← StudyAdmission.readJson (previous / "seed-1-audit.json").toString
+  let ready ← StudyAdmission.readJson (previous / "seed-1-ready/result.json").toString
+  let guard ← StudyAdmission.readJson (previous / "seed-1.guard.json").toString
+  let first ← IO.ofExcept (fromJson? (α := StudyAcquire.Plan)
+    (← StudyAdmission.readJson (seed / "plan.json").toString))
+  check ((completed.getObjValAs? Bool "completed").toOption == some true &&
+    (audit.getObjValAs? Bool "seedAccepted").toOption == some true &&
+    (audit.getObjValAs? Bool "nativeJournalComplete").toOption == some true &&
+    (audit.getObjValAs? Bool "sourceFactsUnchanged").toOption == some true &&
+    (guard.getObjValAs? Nat "exitCode").toOption == some 0 &&
+    (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[])
+    "only the independently completed and fully audited seed1 may be retained"
+  let coverage ← IO.ofExcept (ready.getObjVal? "coverage")
+  check ((coverage.getObjValAs? Nat "missing").toOption == some 0 &&
+    (coverage.getObjValAs? Nat "invalid").toOption == some 0 &&
+    (ready.getObjVal? "runtime").toOption == some (toJson first.runtime)) "retained seed warm differs"
+  StudyAdmission.verifyArtifact first.runtime
+  let publication ← IO.ofExcept (ready.getObjValAs? String "publication")
+  check ((ready.getObjValAs? (Array (String × String)) "sourceFiles").toOption ==
+    some (← StudyRuntime.files (.mk publication))) "retained seed source changed"
+  let runner ← StudyPrepare.artifact (← IO.appPath)
+  for iteration in [:10] do
+    let path := checks / s!"new-race-{iteration+1}" / "guard.json"
+    let report ← StudyAdmission.readJson path.toString
+    check ((report.getObjValAs? String "guardSha256").toOption == some runner.sha256 &&
+      (report.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] &&
+      (report.getObjVal? "error").toOption == some .null)
+      "new monitor has not closed ten actual late-child races"
+  IO.FS.createDir root
+  let source := (← IO.appPath).parent.getD root / "source"
+  let mut plans := #[]
+  for index in [2:4] do
+    let original ← IO.ofExcept (fromJson? (α := StudyAcquire.Plan)
+      (← StudyAdmission.readJson (previous / s!"seed-{index}.plan.json").toString))
+    check (toJson original.runtime == toJson first.runtime && toJson original.prompt == toJson first.prompt &&
+      original.model == first.model && original.effort == first.effort &&
+      original.provider == first.provider && original.sourceCommit == first.sourceCommit &&
+      original.environment == first.environment && toJson original.pluginFiles == toJson first.pluginFiles)
+      "resource amendment changed frozen acquisition inputs"
+    let harness ← original.harness.mapM fun artifact => do
+      let some name := (System.FilePath.mk artifact.path).fileName |
+        throw (IO.userError "unnamed harness artifact")
+      StudyPrepare.artifact (source / name)
+    let output := root / s!"seed-{index}"
+    let plan : StudyAcquire.Plan := {original with
+      runner := runner,harness := harness
+      output := output.toString,guardRecord := output.toString ++ ".guard.json"}
+    let artifact ← save (.mk (output.toString ++ ".plan.json")) (toJson plan)
+    let installRoot := ((System.FilePath.mk plan.runtime.path).parent.getD "").parent.getD ""
+    let settings : ResourceGuard.Settings := {
+      record := plan.guardRecord,cwd := plan.workspace,
+      command := #[runner.path,"acquire",artifact.path,artifact.sha256],
+      ownedPrefixes := #[output.toString,installRoot.toString,runner.path],
+      limitRssKiB := ResourceGuard.maximumStopRssKiB,minFreeKiB := 524288}
+    let settings ← save (.mk (output.toString ++ ".settings.json")) (toJson settings)
+    plans := plans.push (Json.mkObj [("plan",toJson artifact),("settings",toJson settings)])
+  let _ ← save (root / "protocol.json") (Json.mkObj [
+    ("runtime",toJson first.runtime),("runner",toJson runner),("guard",toJson runner),
+    ("retainedSeed1",toJson (← StudyPrepare.artifact (seed / "plan.json"))),
+    ("retainedSeed1Audit",toJson (← StudyPrepare.artifact (previous / "seed-1-audit.json"))),
+    ("retainedSeed1Ready",toJson (← StudyPrepare.artifact (previous / "seed-1-ready/result.json"))),
+    ("interruptedSeed2Guard",toJson (← StudyPrepare.artifact (previous / "seed-2.guard.json"))),
+    ("seedPlans",toJson plans),("seedGenerationAllowed",toJson false),
+    ("downstreamGenerationAllowed",toJson false),("noAutomaticResubmission",toJson true),
+    ("stopRssKiB",toJson ResourceGuard.maximumStopRssKiB),("maxUserRssKiB",toJson (4194304 : Nat)),
+    ("sameProductRuntime",toJson true),("allDownstreamArmsUseAmendedRunner",toJson true),
+    ("state",toJson "resource amendment sealed; seed1 retained with stricter monitor; interrupted seed2 retained separately"),
+    ("answeringModelCalls",toJson (0 : Nat)),("productionAdoption",toJson false)])
+  pure ()
+
 /-- Freeze independent empty-seed plans without starting a thread or a turn.
 The acquisition controller still rechecks its native gate and actual model,
 hooks, source, usage and process exits immediately before/after generation. -/
 def cliMain (args : List String) : IO Unit := do
+  if args.head? == some "resources" then
+    amendResources (args.drop 1)
+    return
   let [oldPlan,newTemplate,gateDirectory,studyDirectory,runnerPath,guardPath,repository] := args |
     throw (IO.userError "StudySeal OLD-PLAN QUALIFIED-TEMPLATE GATE STUDY RUNNER GUARD REPOSITORY")
   let old ← IO.ofExcept (fromJson? (α := StudyAcquire.Plan) (← StudyAdmission.readJson oldPlan))

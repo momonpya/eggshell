@@ -29,7 +29,7 @@ partial def guard (runner : StudyAdmission.Artifact) (recordPath : String) (dead
   check ((record.getObjValAs? String "state").toOption == some "running" &&
     (record.getObjValAs? Nat "childPid").toOption == some pid && ancestors.contains guardPid &&
     (record.getObjValAs? String "guardSha256").toOption == some runner.sha256 &&
-    (record.getObjValAs? Nat "limitRssKiB").toOption.any (fun n => 0 < n && n ≤ 3145728) &&
+    (record.getObjValAs? Nat "limitRssKiB").toOption.any ResourceGuard.validStopRss &&
     (settings.getObjValAs? Nat "minFreeKiB").toOption.any (· ≥ 524288))
     "trial is not directly owned by the frozen native resource monitor"
   return record
