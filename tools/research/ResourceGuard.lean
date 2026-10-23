@@ -146,15 +146,18 @@ def run (settings : Settings) : IO UInt32 := do
   let mut reason : Option String := none
   let mut failure : Option String := none
   let mut activeIds := #[]
+  let mut peakProcesses : Array Json := #[]
   let mut lastDisk := 0
   let report := fun (state : String) (code : Option Nat) (peak samples : Nat)
-      (reason failure : Option String) (activeIds : Array Nat) (elapsed : Nat) => Json.mkObj [
+      (reason failure : Option String) (activeIds : Array Nat) (elapsed : Nat)
+      (peakProcesses : Array Json) => Json.mkObj [
     ("state",toJson state),("guardPid",toJson monitor),("childPid",toJson child.pid.toNat),
     ("guardSha256",toJson binarySha),("limitRssKiB",toJson settings.limitRssKiB),
     ("userCeilingRssKiB",toJson (4194304 : Nat)),("sampledPeakRssKiB",toJson peak),
     ("samples",toJson samples),("reason",toJson reason),("error",toJson failure),
     ("guardTriggered",toJson reason.isSome),("exitCode",toJson code),
-    ("ownedPids",toJson activeIds),("elapsedMs",toJson elapsed),("settings",toJson settings)]
+    ("ownedPids",toJson activeIds),("peakProcesses",toJson peakProcesses),
+    ("elapsedMs",toJson elapsed),("settings",toJson settings)]
   try
     repeat
       let rows ← processes
@@ -164,7 +167,16 @@ def run (settings : Settings) : IO UInt32 := do
       for row in active do known := known.insert row.process.pid row.process.identity
       let rss := active.foldl (fun total row => total + row.process.rssKiB)
         (rows[monitor]?.map (·.rssKiB) |>.getD 0)
-      peak := max peak rss
+      if peak < rss then
+        peak := rss
+        let peakRows := (active.map (·.process)) ++ (rows[monitor]?).toArray
+        peakProcesses := peakRows.map fun row =>
+          let role := row.command[1]?.filter (#["codex-worker","codex-daemon","codex-hook",
+            "search-provider","app-server","guard"].contains ·)
+          let lane := if role == some "codex-worker" then
+            row.command[2]?.filter (#["save","search","index"].contains ·) else none
+          Json.mkObj [("pid",toJson row.pid),("parent",toJson row.parent),("rssKiB",toJson row.rssKiB),
+            ("program",toJson (row.command[0]?.getD "")),("role",toJson role),("lane",toJson lane)]
       samples := samples + 1
       let now ← IO.monoMsNow
       if rss ≥ settings.limitRssKiB then reason := some "aggregate-rss"
@@ -181,7 +193,7 @@ def run (settings : Settings) : IO UInt32 := do
         if !remaining.isEmpty then reason := some "leftover-processes"
         break
       if samples % 10 == 1 then
-        snapshot path (report "running" (none : Option Nat) peak samples reason failure activeIds (now-started))
+        snapshot path (report "running" (none : Option Nat) peak samples reason failure activeIds (now-started) peakProcesses)
       IO.sleep 100
   catch error =>
     reason := some "monitor-error"
@@ -203,7 +215,7 @@ def run (settings : Settings) : IO UInt32 := do
   let code ← match ← poll child exit with
     | some code => pure code
     | none => child.wait
-  snapshot path (report "finished" (some code.toNat) peak samples reason failure activeIds ((← IO.monoMsNow)-started))
+  snapshot path (report "finished" (some code.toNat) peak samples reason failure activeIds ((← IO.monoMsNow)-started) peakProcesses)
   return if reason.isSome then 2 else code
 
 def cliMain (args : List String) : IO UInt32 := do

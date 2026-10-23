@@ -138,29 +138,34 @@ def queryOptions (options : Options) : IO Options := do
 
 abbrev Encoder := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .inherit }
 
-def spawnEncoder (options : Options) (python lease : System.FilePath)
-    (lane : String) : IO Encoder :=
-  IO.Process.spawn {
-    cmd := python.toString
-    args := #["-c", MiniLM.embeddingSource, options.model, options.models.toString,
-      "4", lease.toString, lane]
-    stdin := .piped, stdout := .piped, stderr := .inherit }
-
 def encoder (options : Options) : IO Encoder := do
   let layout := MiniLM.layout (← Paths.installRoot)
-  let some python ← MiniLM.runtimePython? layout | throw (IO.userError "MiniLM runtime is not installed")
-  let reservation ← SemanticMatcher.lanePath options.lane
-  let lease := reservation.withFileName ("model-" ++ reservation.fileName.getD "lane.guard")
-  Persistence.rejectSymlinkAncestors lease
-  let _ ← IO.FS.Handle.mk lease .append
-  Persistence.privateFile lease
-  -- The numerical process owns this second lease throughout model lifetime.
-  -- It survives a killed caller until that process actually exits.
-  let lane : String := match options.lane with | .index => "index" | .search => "search"
-  spawnEncoder options python lease lane
+  let python ← (MiniLM.runtimePython? layout) >>= fun
+    | some python => pure python
+    | none => throw (IO.userError "MiniLM runtime is not installed")
+  let binary ← IO.appPath
+  IO.Process.spawn {
+    cmd := binary.toString
+    args := #["codex-numerical-client",options.model,options.models.toString,python.toString]
+    stdin := .piped,stdout := .piped,stderr := .inherit }
+
+def stopEncoder (child : Encoder) : IO Unit := do
+  child.stdin.putStr "C\n"
+  child.stdin.flush
+  let deadline := (← IO.monoMsNow)+10000
+  repeat
+    if let some code ← child.tryWait then
+      unless code == 0 do throw (IO.userError "numerical client exited unsuccessfully")
+      return
+    unless (← IO.monoMsNow) < deadline do
+      child.kill
+      let _ ← child.wait
+      throw (IO.userError "numerical client did not close")
+    IO.sleep 5
 
 def exchange (child : Encoder) (input : Json)
     (observe : Json → IO Unit := fun _ => pure ()) : IO Json := do
+  child.stdin.putStr (if (input.getObjVal? "texts").isOk then "E" else "S")
   child.stdin.putStrLn input.compress
   child.stdin.flush
   let result ← IO.ofExcept (Json.parse (← child.stdout.getLine))
@@ -708,8 +713,6 @@ def run (args : List String) : IO UInt32 := IO.FS.withTempDir fun scratch => do
     pure 0
   finally
     if let some child := child then
-      child.kill
-      let _ ← child.wait
-      pure ()
+      stopEncoder child
 
 end Eggshell.SearchProvider
