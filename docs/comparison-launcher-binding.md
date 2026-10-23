@@ -49,6 +49,18 @@ Leanのreplayで入力383,672＋出力2,569＝観測総386,241トークンを回
 
 原文DB・生RPC・本文・受領記録・失敗費用は保持する。退役した計測実行体だけを可逆圧縮し、展開後SHAを検査している。
 診断キャッシュの強制再帰削除は自動承認レビューに拒否され、実行されていない。
+32本の退役実行体の元3,273,921,840 bytesを、185,482,264 bytesの単一圧縮streamへまとめた。
+全元バイト列と復元streamのSHAは`cc87fa6ff89d2c591574e775ec9dc49b78d0ef46a046c7e54315e429f4b98f2b`で一致した。
+`packed-retired-executables/index.json`に各実行体の元パス・長さ・offset・SHAを保持する。最後の実行体もoffsetから個別に復元してSHA一致を検査した。
+圧縮streamのSHAは`6428c1b08505f762082c02ce1c6fb2b4e0ef76e1118ccda1d153e69a0d87c77b`。旧個別gzipを使う場合は、このindexから元実行体を復元する。
+圧縮の合計RSS最大1,422,528 KiB、終了0・残存0。新しい制御器の構築後もディスク空きは約2.29GiBである。
+
+`ResourceGuard.requireGenerationSpace`を取得と試行の両入口へ追加し、開始前の2GiBをコードで検査する。
+`generation_space_bound`は受理した値の下限を普通のLean証明で示す。これは空き容量が実行中も減らない保証ではない。
+実行中の512MiB停止は変更しない。`StudyMain generation-space`は空き0の/devで拒否し、空きを確保した作業領域で通過した。
+新しい制御器SHAは`b6c131614207d17e0b6c819b06830310dbd84d99fb7efdccbc8b3c7085f0294d`。
+`study-capacity`へruntime9790087f…と元の質問で独立3seedを固定し直し、実CLIで信頼済み8フック/fresh0を再確認した。
+新しい取得を旧停止ディレクトリへ再投入せず、まだモデル生成を許可していない。
 新しいパイロットの全6段階・同時期fresh・比較側との同条件の複数反復、品質と総トークンの採用判断は残っている。
 
 証拠の基点は`/Users/ovm/.codex/experiments/eggshell/synaptic-reseed-20261024/elision/read-forms/`。

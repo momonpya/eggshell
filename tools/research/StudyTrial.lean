@@ -65,6 +65,7 @@ def run (input digest : String) : IO UInt32 := do
   let started ← IO.monoMsNow
   let admitted ← StudyAdmission.admit input digest
   let plan := admitted.plan
+  ResourceGuard.requireGenerationSpace (.mk plan.dataRoot)
   check ((← IO.FS.realPath (← IO.appPath)) == (← IO.FS.realPath (.mk plan.runner.path)))
     "running controller differs from the sealed harness"
   let guardRecord ← guard plan.runner plan.guardRecord ((← IO.monoMsNow) + 3000)

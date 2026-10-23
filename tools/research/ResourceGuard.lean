@@ -106,6 +106,18 @@ def diskFreeKiB (directory : System.FilePath) : IO Nat := do
   unless output.exitCode == 0 do throw (IO.userError "cannot inspect free disk space")
   return free
 
+/-- Generation has temporary disk costs beyond its persisted trial directory.
+The continuous stop floor stays separate from this startup headroom. -/
+def generationSpaceReady (availableKiB : Nat) : Bool := decide (2097152 ≤ availableKiB)
+
+theorem generation_space_bound {availableKiB : Nat}
+    (ready : generationSpaceReady availableKiB = true) : 2097152 ≤ availableKiB :=
+  of_decide_eq_true ready
+
+def requireGenerationSpace (directory : System.FilePath) : IO Unit := do
+  unless generationSpaceReady (← diskFreeKiB directory) do
+    throw (IO.userError "generation requires at least 2 GiB free before starting; keep the 512 MiB continuous stop floor")
+
 private abbrev Child := IO.Process.Child {stdin := .inherit, stdout := .inherit, stderr := .inherit}
 
 private def poll (child : Child) (exit : IO.Ref (Option UInt32)) : IO (Option UInt32) := do

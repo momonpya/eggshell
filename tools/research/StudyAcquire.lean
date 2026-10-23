@@ -118,6 +118,7 @@ def run (input digest : String) : IO UInt32 := do
   let guard ← StudyTrial.guard plan.runner plan.guardRecord ((← IO.monoMsNow)+3000)
   let root := System.FilePath.mk plan.output
   check (root.isAbsolute && !(← root.pathExists)) "new absolute acquisition directory required"
+  ResourceGuard.requireGenerationSpace (root.parent.getD (.mk plan.workspace))
   Persistence.rejectSymlinkAncestors root
   IO.FS.createDir root
   save root "plan.json" (toJson plan)

@@ -16,6 +16,9 @@ def main (args : List String) : IO UInt32 := do
     | "runtime" :: rest => StudyRuntime.cliMain rest
     | "audit" :: rest => NativeTrialAudit.cliMain rest; return 0
     | "replay" :: rest => StudyAccounting.cliMain rest
+    | ["generation-space",directory] =>
+        ResourceGuard.requireGenerationSpace (.mk directory)
+        return 0
     | ["trial",input,digest] => StudyTrial.run input digest
     | ["acquire",input,digest] => StudyAcquire.run input digest
     | ["prepare",input,directory] =>
