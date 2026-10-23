@@ -82,7 +82,30 @@ ID不一致、逆向き要求、破損/途中切断、受信/記録の上限、�
 `StudyAccounting.lean`は他のLean制御器から利用できるようにし、CLIの入口を`StudyAccountingMain.lean`へ分けた。
 従来の2試行の再生結果を新しい入口でも照合する。これによって失敗した試行を成功へ変更しない。
 
-出版・質問・設定・warm状態のモデル実行前検査、所有daemon/keepを含む一連の実験制御、新しいLean部品の実モデル計測への統合はまだ終わっていない。
+## 一連の準備と試行
+
+`StudyMain.lean`はguard/runtime/audit/replay/probe/prepare/admit/trialの入口を1つにまとめる。
+`StudyPrepare`はsource-only restore、明示的なwarm/doctor、独立した2チャットの実フック、daemon終了、原文監査を行う。
+元seedの5,265行と題材1の必要4項目を実際に確認し、2チャットの本文SHAは一致、UserPromptSubmitは13,896/12,096msだった。
+これは合成試行用のDBでの準備結果で、実モデルの題材1〜3と両周の終了を意味しない。
+
+`StudyAdmission`は固定した計画と全artifact、実装/設定、ソースcommit/未変更、保存出版、私有状態、実stdout/ACK、元事実と原文、
+discovery/focusのsource hit・欠け/無効0・フック内source encode0を確認する。モデルは5.6-luna、推論設定はxhighの等式を保持する。
+CLIはNodeランチャーと実ネイティブ実行体の両方を固定し、試行時には実プロセスから後者も照合する。
+さらにその時点の実doctorを呼ぶ。以前のwarm記録だけでcoldなDBを通さない。
+実sidecarを一時退避した試験ではcoldを拒否し、復元するとwarmへ戻った。元出版のSHAは不変だった。
+モデル・推論設定・段階の変更も、回答モデルに到達する前に拒否した。
+
+`StudyTrial`は自分を直接所有する固定済みのnative guardを要求し、実モデル/推論設定/指示の返値、実行中CLI、実hook bundleを照合する。
+1試行ごとに実stdoutの本文を保存し、初回本文の一致と全hookの期限を検査して実keepを呼ぶ。
+App Server終了後に所有daemonへ終了要求を送り、応答・実終了・endpoint削除を確認する。
+終了失敗でも、生RPC・観測済みusage・本文・回答・保存DBを残す。turn/start応答が失われた場合もusage通知から一意のscopeを回収する。
+不明な最終消費は0にしない。keepや他のnative commandにも出力容量と期限を設ける。
+
+合成相手で一連の試行が成功した。相手はHTTP/認証/推論プロバイダを使わず、実runtimeのSessionStart/UserPromptSubmit/Stopを呼ぶ。
+実際の原文本文、実keep（392ms）、daemon終了（14ms）、次の出版保存と終了後の子孫0を確認した。
+usage110は明示した合成値であり、Lunaの消費・削減率に含めない。追加のseed生成もない。
+次は固定した6段階の実Lunaパイロットである。現行対候補の同条件・複数反復、品質・総トークン改善・最終採用は未完了。
 既存のPython計測器や数値ランタイムが残っているため、「Pythonを使っていない」とは言えない。
 撤回したPython制御で追加のLuna試行は実行しない。
 MiniLMの既存外部ランタイムは、検索・抽出・グラフをPythonへ置く理由とは区別する。

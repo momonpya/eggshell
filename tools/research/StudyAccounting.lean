@@ -156,6 +156,51 @@ def replay (scope : Scope) (path : System.FilePath) : IO State := do
     | .error error => state := {state with issues := state.issues.push s!"line {lineNumber}: {error}"}
   return state
 
+/-- Recover a turn identity even when the turn/start response was lost.
+Ambiguous traces stay ambiguous; the trial controller must not guess. -/
+def discover (path : System.FilePath) : IO (Array (String × String)) := do
+  unless (← path.metadata).byteSize ≤ 256*1024*1024 do
+    throw (IO.userError "exchange exceeds the research trace bound")
+  let file ← IO.FS.Handle.mk path .read
+  let mut result := #[]
+  repeat
+    let line ← file.getLine
+    if line.isEmpty then break
+    let .ok row := Json.parse line | continue
+    if (row.getObjValAs? String "direction").toOption != some "server" then continue
+    let .ok message := row.getObjVal? "message" | continue
+    if (message.getObjValAs? String "method").toOption != some "thread/tokenUsage/updated" then continue
+    let .ok params := message.getObjVal? "params" | continue
+    let .ok thread := params.getObjValAs? String "threadId" | continue
+    let .ok turn := params.getObjValAs? String "turnId" | continue
+    if !result.contains (thread,turn) then result := result.push (thread,turn)
+  return result
+
+def savePackets (scope : Scope) (path directory : System.FilePath) : IO Unit := do
+  let file ← IO.FS.Handle.mk path .read
+  let mut index := 0
+  let mut seen : Std.HashSet String := {}
+  repeat
+    let line ← file.getLine
+    if line.isEmpty then break
+    let .ok row := Json.parse line | continue
+    if (row.getObjValAs? String "direction").toOption != some "server" then continue
+    let .ok message := row.getObjVal? "message" | continue
+    if (message.getObjValAs? String "method").toOption != some "hook/completed" then continue
+    let .ok params := message.getObjVal? "params" | continue
+    if !sameScope scope params then continue
+    let .ok run := params.getObjVal? "run" | continue
+    let .ok id := run.getObjValAs? String "id" | continue
+    if seen.contains id then continue
+    seen := seen.insert id
+    for entry in (run.getObjValAs? (Array Json) "entries").toOption.getD #[] do
+      if (entry.getObjValAs? String "kind").toOption != some "context" then continue
+      let text ← IO.ofExcept (entry.getObjValAs? String "text")
+      let target := directory / s!"packet-{index}.txt"
+      if ← target.pathExists then throw (IO.userError "keep the previous delivered body")
+      IO.FS.writeFile target text
+      index := index + 1
+
 def cliMain (args : List String) : IO UInt32 := do
   try
     let [specification,exchange,output] := args |

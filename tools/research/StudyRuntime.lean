@@ -89,54 +89,78 @@ private partial def stopped (child : Child) (exit : IO.Ref (Option UInt32)) (dea
   IO.sleep 5
   stopped child exit deadline
 
-/-- This process owns and reaps the real daemon. The controller sends one
-shutdown command; acknowledgement is checked independently of actual exit.
-No global shutdown, endpoint replacement, or timeout-text fallback is used. -/
-def supervise (binary plugin : System.FilePath) (session : String) (report : System.FilePath) : IO UInt32 := do
+structure Managed where
+  private child : Child
+  private exit : IO.Ref (Option UInt32)
+  private endpoint : Plugin.Daemon.Endpoint
+  private path : System.FilePath
+
+def startManaged (binary plugin : System.FilePath) (session : String) (path : System.FilePath)
+    (environment : Array (String × Option String)) : IO Managed := do
   let _ ← IO.ofExcept (Plugin.safeSession session)
-  check (!(← report.pathExists)) "keep the existing supervisor result"
   check (← (plugin / "bin/eggshelld").pathExists) "missing reviewed plugin launcher"
-  let path ← Plugin.Daemon.endpointPath session
   check (!(← path.pathExists)) "a daemon already owns this session"
   let child ← IO.Process.spawn {
     cmd := binary.toString, args := #["codex-daemon",session]
-    env := #[("PLUGIN_ROOT",some plugin.toString)]
+    env := environment.push ("PLUGIN_ROOT",some plugin.toString)
     stdin := .null, stdout := .inherit, stderr := .inherit, setsid := true}
   let exit ← IO.mkRef none
-  let started ← IO.monoMsNow
   try
-    let endpoint ← ready child session path exit (started + 10000)
-    let stdout ← IO.getStdout
-    stdout.putStr ((Json.mkObj [("phase",toJson "ready"),("pid",toJson endpoint.pid)]).compress ++ "\n")
-    stdout.flush
-    let command ← IO.ofExcept (Json.parse (← (← IO.getStdin).getLine))
-    check ((command.getObjValAs? String "command").toOption == some "shutdown") "expected supervisor shutdown"
-    let current ← IO.ofExcept (fromJson? (α := Plugin.Daemon.Endpoint) (← readJson path))
-    check (current.pid == endpoint.pid && current.secret == endpoint.secret) "owned daemon was replaced"
-    let acknowledged ← Plugin.Daemon.exchange endpoint "shutdown" (budget := 500)
+    let endpoint ← ready child session path exit ((← IO.monoMsNow) + 10000)
+    return {child,exit,endpoint,path}
+  catch error =>
+    if (← poll child exit).isNone then
+      Plugin.Worker.killGroup child
+      let _ ← child.wait
+      pure ()
+    throw error
+
+def abort (managed : Managed) : IO Unit := do
+  if (← poll managed.child managed.exit).isNone then
+    Plugin.Worker.killGroup managed.child
+    let code ← managed.child.wait
+    managed.exit.set (some code)
+
+def pid (managed : Managed) : Nat := managed.endpoint.pid
+
+/-- Acknowledgement and actual owned-child exit are separate conditions. -/
+def stopManaged (managed : Managed) (report : System.FilePath) : IO Unit := do
+  check (!(← report.pathExists)) "keep the existing supervisor result"
+  try
+    let current ← IO.ofExcept (fromJson? (α := Plugin.Daemon.Endpoint) (← readJson managed.path))
+    check (current.pid == managed.endpoint.pid && current.secret == managed.endpoint.secret) "owned daemon was replaced"
+    let acknowledged ← Plugin.Daemon.exchange managed.endpoint "shutdown" (budget := 500)
     check (acknowledged == "") "daemon rejected shutdown"
     let stopStarted ← IO.monoMsNow
-    let code ← stopped child exit (stopStarted + 15000)
-    let removed := !(← path.pathExists)
-    let result := Json.mkObj [("phase",toJson "stopped"),("pid",toJson endpoint.pid),
+    let code ← stopped managed.child managed.exit (stopStarted + 15000)
+    let removed := !(← managed.path.pathExists)
+    let result := Json.mkObj [("phase",toJson "stopped"),("pid",toJson managed.endpoint.pid),
       ("daemonExitCode",toJson code.toNat),("endpointRemoved",toJson removed),
       ("stopElapsedMs",toJson ((← IO.monoMsNow)-stopStarted)),("acknowledged",toJson true)]
     writeJson report result
     check (code == 0 && removed) "owned daemon did not stop cleanly"
-    return 0
   catch error =>
     if !(← report.pathExists) then
       writeJson report (Json.mkObj [("phase",toJson "failed"),("error",toJson error.toString)])
     throw error
   finally
-    if (← poll child exit).isNone then
-      Plugin.Worker.killGroup child
-      let _ ← child.wait
-      pure ()
+    abort managed
 
-end Eggshell.Research.StudyRuntime
+def supervise (binary plugin : System.FilePath) (session : String) (report : System.FilePath) : IO UInt32 := do
+  check (!(← report.pathExists)) "keep the existing supervisor result"
+  let path ← Plugin.Daemon.endpointPath session
+  let managed ← startManaged binary plugin session path #[]
+  try
+    let stdout ← IO.getStdout
+    stdout.putStr ((Json.mkObj [("phase",toJson "ready"),("pid",toJson (pid managed))]).compress ++ "\n")
+    stdout.flush
+    let command ← IO.ofExcept (Json.parse (← (← IO.getStdin).getLine))
+    check ((command.getObjValAs? String "command").toOption == some "shutdown") "expected supervisor shutdown"
+    stopManaged managed report
+    return 0
+  finally abort managed
 
-def main (args : List String) : IO UInt32 := do
+def cliMain (args : List String) : IO UInt32 := do
   try
     match args with
     | ["checkpoint",source,target,report] =>
@@ -153,3 +177,5 @@ def main (args : List String) : IO UInt32 := do
   catch error =>
     IO.eprintln error.toString
     return 1
+
+end Eggshell.Research.StudyRuntime

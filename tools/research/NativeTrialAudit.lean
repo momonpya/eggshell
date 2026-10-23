@@ -3,6 +3,8 @@ import Eggshell.SynapseUsage
 
 open Lean Eggshell Eggshell.Synapses
 
+namespace Eggshell.Research.NativeTrialAudit
+
 private structure Requirement where
   name : String
   path : String
@@ -46,7 +48,7 @@ private def originals (source : DB.PageMap.Snapshot) :
     if let .ok found := Extraction.recordedRows source.head.identity doc then rows := rows ++ found
   return (documents,rows)
 
-private def inspect (input : String) : IO Json := do
+def inspect (input : String) : IO Json := do
   let bytes ← IO.FS.readBinFile (.mk input)
   let some text := String.fromUTF8? bytes | throw (IO.userError "trial input encoding")
   let trial ← IO.ofExcept (Json.parse text >>= fromJson? (α := Trial))
@@ -98,7 +100,7 @@ private def inspect (input : String) : IO Json := do
 
 /-- Source extraction and literal code/fingerprint comparison stay in Lean.
 The orchestrator can seal the report, then replay it without trusting labels. -/
-def main (args : List String) : IO Unit := do
+def cliMain (args : List String) : IO Unit := do
   let [mode,input,output] := args | throw (IO.userError "NativeTrialAudit emit|check INPUT REPORT")
   let report ← inspect input
   if mode == "emit" then
@@ -108,3 +110,5 @@ def main (args : List String) : IO Unit := do
     check (report == (← readJson output)) "sealed native evidence report differs from replay"
   else throw (IO.userError "expected emit or check")
   IO.println s!"native evidence audit {mode} completed"
+
+end Eggshell.Research.NativeTrialAudit

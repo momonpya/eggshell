@@ -278,6 +278,9 @@ private def familySummary (process : ResourceGuard.Process) : Json :=
   Json.mkObj [("pid",toJson process.pid),("parent",toJson process.parent),
     ("birth",toJson process.identity),("executable",toJson (process.command[0]?.getD ""))]
 
+def executables (client : Client access) : IO (Array String) := do
+  return (← familyMembers client).map (fun process => process.command[0]?.getD "")
+
 private def stopFamily (client : Client access) : IO Unit := do
   let rows ← ResourceGuard.processes
   let excluded := ResourceGuard.ancestors rows client.monitor
@@ -367,5 +370,13 @@ def withClient (access : Access) (settings : Settings) (action : Client access �
           (cleanup.getObjVal? "transportError").toOption == some .null do
         throw (IO.userError "App Server did not close cleanly; retain process.json")
       return value
+
+def probe (settings : Settings) : IO Unit :=
+  withClient .inspect settings fun client => do
+    let hello ← handshake client "0.145.0"
+    let models ← request client (.read .models) (Json.mkObj [("includeHidden",toJson true)])
+    let hooks ← request client (.read .hooks) (Json.mkObj [("cwds",toJson #[settings.cwd])])
+    for (name,value) in #[("initialize",hello),("models",models),("hooks",hooks)] do
+      IO.FS.writeFile (.mk settings.output / (name ++ ".json")) (value.compress ++ "\n")
 
 end Eggshell.Research.StudyTransport
