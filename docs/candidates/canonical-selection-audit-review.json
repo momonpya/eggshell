@@ -1,0 +1,713 @@
+{
+  "status": "read-only diagnostics, actual native bodies reproduced exactly, no runtime adoption",
+  "ordinaryRuntimeChanged": false,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "summary": [
+    {
+      "stage": 3,
+      "fixed": [
+        27879,
+        27879
+      ],
+      "modeledCost": [
+        119987,
+        119991
+      ],
+      "actualBodyChars": 111218,
+      "limit": [
+        120000,
+        128000
+      ],
+      "units": 2669,
+      "recipes": 2682,
+      "requirement": {
+        "candidateUnionCoversRange": false,
+        "completeCandidateCount": 0,
+        "completeCandidates": [
+
+        ],
+        "graphRecipes": [
+
+        ],
+        "name": "syntax-only-compile-cutoff",
+        "originalFilesInAdmittedDomain": [
+          {
+            "bytes": 303314,
+            "fingerprint": "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+            "relative": "clang/lib/Driver/Driver.cpp"
+          }
+        ],
+        "positiveBasePieces": 5,
+        "positiveGraphPieces": 0,
+        "selected": false,
+        "sourceCuePieces": 5
+      }
+    },
+    {
+      "stage": 4,
+      "fixed": [
+        42224,
+        42224
+      ],
+      "modeledCost": [
+        120000,
+        120004
+      ],
+      "actualBodyChars": 103119,
+      "limit": [
+        120000,
+        128000
+      ],
+      "units": 4907,
+      "recipes": 4926,
+      "requirement": {
+        "candidateUnionCoversRange": true,
+        "completeCandidateCount": 4,
+        "completeCandidates": [
+          {
+            "additionalCost": [
+              459,
+              459
+            ],
+            "aloneCost": [
+              47790,
+              47790
+            ],
+            "family": 17,
+            "fitsAfterSelection": false,
+            "index": 2145,
+            "selected": false
+          },
+          {
+            "additionalCost": [
+              1595,
+              1595
+            ],
+            "aloneCost": [
+              49105,
+              49105
+            ],
+            "family": 17,
+            "fitsAfterSelection": false,
+            "index": 2295,
+            "selected": false
+          },
+          {
+            "additionalCost": [
+              459,
+              459
+            ],
+            "aloneCost": [
+              47790,
+              47790
+            ],
+            "family": 34,
+            "fitsAfterSelection": false,
+            "index": 3713,
+            "selected": false
+          },
+          {
+            "additionalCost": [
+              1595,
+              1595
+            ],
+            "aloneCost": [
+              49105,
+              49105
+            ],
+            "family": 34,
+            "fitsAfterSelection": false,
+            "index": 3727,
+            "selected": false
+          }
+        ],
+        "graphRecipes": [
+          {
+            "additionalCost": [
+              20137,
+              20137
+            ],
+            "aloneCost": [
+              84669,
+              84669
+            ],
+            "bonusCues": 385,
+            "completeRequiredRange": true,
+            "fitsAlone": true,
+            "index": 4909,
+            "parts": [
+              929,
+              3971,
+              2352,
+              4544,
+              3428,
+              930,
+              4010,
+              4853,
+              1382,
+              1210,
+              3728,
+              931,
+              932,
+              4220,
+              933,
+              1212,
+              2295,
+              934
+            ],
+            "selected": false
+          },
+          {
+            "additionalCost": [
+              2140,
+              2140
+            ],
+            "aloneCost": [
+              49692,
+              49692
+            ],
+            "bonusCues": 40,
+            "completeRequiredRange": true,
+            "fitsAlone": true,
+            "index": 4911,
+            "parts": [
+              2295,
+              3971
+            ],
+            "selected": false
+          }
+        ],
+        "name": "trailing-language-warning",
+        "originalFilesInAdmittedDomain": [
+          {
+            "bytes": 303314,
+            "fingerprint": "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+            "relative": "clang/lib/Driver/Driver.cpp"
+          }
+        ],
+        "positiveBasePieces": 10,
+        "positiveGraphPieces": 5,
+        "selected": false,
+        "sourceCuePieces": 10
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/path-audit.json",
+      "sha256": "b4bbfc1a7917246c6874634f616b03dddcae6720334d0e9599abc5bab383820b",
+      "bytes": 818159
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/selection-analysis.json",
+      "sha256": "7cd461de0dbed39f3dc0688d2f4b51a028135f37dbd861cbad1c6f23c29a5f07",
+      "bytes": 24886
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-results.json",
+      "sha256": "7db04393daf5b58f8d85f20bfff409c7e2529e063370318ecdd8a5cc98daf988",
+      "bytes": 1277
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-publication-audit.json",
+      "sha256": "4e6d4303032c5fa7640d8b5fb1055ff76d9579dc32e884a6fb8d44bb893d0fc8",
+      "bytes": 2715
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/frozen-spec.json",
+      "sha256": "586356dec7c9ba417f001078b57d3f9e5336393fe72d73983de0265245558ff9",
+      "bytes": 13904
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/CanonicalSelectionProbe.rsp",
+      "sha256": "b960a1e9503fab9be18080360b712dcf748dcb83b6c15d69dead16dbc6c217bd",
+      "bytes": 13012
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/SynapsePathAudit.rsp",
+      "sha256": "1c7243723851ee6de495d1aa965198b3ae16d51dfe37778c93923b4d9634a368",
+      "bytes": 12993
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/CanonicalProbePublicationAudit.rsp",
+      "sha256": "d665589d557e38ce284ecee9ffd7c9ad4adba22edf375dabae42343ac7df5d21",
+      "bytes": 13007
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/archived-reference-runtime.json",
+      "sha256": "86f36b6efea5f8817628a1618f456f4c4bb0dc7f61113a8377d24b85b77d8eea",
+      "bytes": 443
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/terminal-archives.json",
+      "sha256": "0f03f893788e403059a35399c6241eefc17897b8e2b8d322c0afea2af5986dcf",
+      "bytes": 473
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/terminal-archives2.json",
+      "sha256": "50700491f681738723c30d46a5eae963b49938a691f562bc5d9f8c2fe51419fc",
+      "bytes": 501
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/removed-recovered-provider.json",
+      "sha256": "355024c6d955c15480858c85cc9a6fdb24a129ef26c35b7c821a7ef977a81121",
+      "bytes": 314
+    }
+  ],
+  "raw": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage3/selection.json",
+      "sha256": "9a51ca043726354eb73e11e51be8bab82021fa78e749a5ee8159719ba035fa13",
+      "bytes": 7059880
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage3/result.json",
+      "sha256": "c90aaefc9ea6e685213e2fc40850f5e14c781513b75c059e5e2d3b92c13367dc",
+      "bytes": 1674805
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage3/body.txt",
+      "sha256": "d708f4acf7895553f5c27ee1cfc15b7fe056057bab424257afb4afba1b08c262",
+      "bytes": 111222
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage3/stderr",
+      "sha256": "bab25a8e93720902d8f6c73b7264caa10ef1fa613610d5e086f8f7bcb95dd906",
+      "bytes": 7059900
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage3/record.json",
+      "sha256": "ec045290964b93f1a54755fcf9dda54572375f21d60808b3d10cebaa84404a56",
+      "bytes": 586
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage4/selection.json",
+      "sha256": "df9d435510e798b587898aa6bbf4a092337cfc8159472509d924885ba43f35fc",
+      "bytes": 13651270
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage4/result.json",
+      "sha256": "72b252e6e51a7a2096656ded2e3516d18ae77b32fe7eadd3025c2812c689dc09",
+      "bytes": 1466819
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage4/body.txt",
+      "sha256": "2fd83f5e30a406a228984e43d372b9e33a731a845ea002be1cf288c9f5a85693",
+      "bytes": 103123
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage4/stderr",
+      "sha256": "2dd425ff0a84ab5ca4043c74af1fb2859bc592afa1c4414d6421f636726d323e",
+      "bytes": 13651290
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-stage4/record.json",
+      "sha256": "c844f9e1bf6230595c7568786ebe6245865f940bae74b0d4ef93b2c3081da69a",
+      "bytes": 586
+    }
+  ],
+  "sources": [
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/canonical-selection-audit/selection-snapshot.lean",
+      "sha256": "34ce569302262c4ea3e71d6c4ec337f31be84c547078f9a6169c1499ae783572",
+      "bytes": 1658
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/canonical-selection-audit/CanonicalSelectionAnalysis.lean",
+      "sha256": "1fd47fab6a4b92b0a6e143900bc1bd4ff8c4c5bd5a38798955a8e0fd564ef17f",
+      "bytes": 8094
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/canonical-selection-audit/CanonicalSelectionProbe.lean",
+      "sha256": "ffe6d647200ad9641c6013d244ffe14005aeb788660bde994acab2f4fbd5ef47",
+      "bytes": 1081
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/canonical-selection-audit/SynapsePathAudit.lean",
+      "sha256": "4af2e820d4a53a23c6703e32d0ae1ff0494570d752eb9dfcb444c82fd1894d22",
+      "bytes": 6489
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/canonical-selection-audit/CanonicalProbePublicationAudit.lean",
+      "sha256": "2153ce01f886d7d206781cca1e59be520acb41dfbdcdf0eeccc45052c104fe65",
+      "bytes": 2596
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Handoff.lean",
+      "sha256": "42e9fde52ae3e716c9e118fb0114f790693fce9fae7023e8ef3e77840e06a7d9",
+      "bytes": 462437
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-Handoff.lean",
+      "sha256": "91d4c98bde2451f2d32c79751c039b2fb765244bdb18e8cef5a04ced0614cb84",
+      "bytes": 464388
+    }
+  ],
+  "allAttempts": [
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/archive-guard.json",
+        "sha256": "49fc5cd3baa1f6c55b408cdb1ec838952cf5f50eaf7dd7c69724e64858a0cec8",
+        "bytes": 589
+      },
+      "result": {
+        "guardPid": 20731,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 99152,
+        "samples": 26,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "ruby",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/archive-one.rb",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/eggshell"
+        ],
+        "childPid": 20762,
+        "exitCode": 0,
+        "elapsedSeconds": 3.494121165946126
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/housekeeping-guard.json",
+        "sha256": "266afccb0b7107222707139c700000c8f9dd4e3eb8d92353b8c69cf76f37815f",
+        "bytes": 518
+      },
+      "result": {
+        "guardPid": 59535,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 30224,
+        "samples": 3,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "ruby",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/reclaim-retired.rb"
+        ],
+        "childPid": 59572,
+        "exitCode": 0,
+        "elapsedSeconds": 0.3080989997833967
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/path-audit-guard.json",
+        "sha256": "4c5fdfdffc556ae80a72c5dbebea7f8a9379d88e5631d539e2c2876937903ca1",
+        "bytes": 510
+      },
+      "result": {
+        "guardPid": 24108,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 710864,
+        "samples": 51,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "bash",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/build.sh"
+        ],
+        "childPid": 24133,
+        "exitCode": 1,
+        "elapsedSeconds": 7.0198602909222245
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/path-audit2-guard.json",
+        "sha256": "56caa02e7b8f8c513445d2457ced047c3755a59d79818829d3349c2c819aa297",
+        "bytes": 512
+      },
+      "result": {
+        "guardPid": 30593,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1540976,
+        "samples": 186,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "bash",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/build.sh"
+        ],
+        "childPid": 30622,
+        "exitCode": 0,
+        "elapsedSeconds": 26.131675207987428
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-build-guard.json",
+        "sha256": "434976d36e85b2de28964970f26ef97fcfe2fa99ca4a40f65b7fa89096b28326",
+        "bytes": 515
+      },
+      "result": {
+        "guardPid": 36740,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 2581808,
+        "samples": 321,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "bash",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-build.sh"
+        ],
+        "childPid": 36766,
+        "exitCode": 0,
+        "elapsedSeconds": 44.702818042133
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-run-guard.json",
+        "sha256": "78926722295547a30b455ccf3443aa01a18abf7951a6111f8ce9f38d862dc393",
+        "bytes": 516
+      },
+      "result": {
+        "guardPid": 37171,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1281568,
+        "samples": 163,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "ruby",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-run.rb"
+        ],
+        "childPid": 37183,
+        "exitCode": 1,
+        "elapsedSeconds": 23.378858875017613
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-run-recover2-guard.json",
+        "sha256": "1518bb9c5e015f0ad3e93a45b828b409d888cf37f80f1b9182687b8d7f6b1391",
+        "bytes": 512
+      },
+      "result": {
+        "guardPid": 61554,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 56672,
+        "samples": 7,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "ruby",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-run.rb"
+        ],
+        "childPid": 61597,
+        "exitCode": 1,
+        "elapsedSeconds": 0.8510660831816494
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-run-recover3-guard.json",
+        "sha256": "52583ca95056edbfce448c2a93506e86820e21f43021151193850352c667c6fd",
+        "bytes": 516
+      },
+      "result": {
+        "guardPid": 66536,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1366608,
+        "samples": 175,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "ruby",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/probe-run.rb"
+        ],
+        "childPid": 66591,
+        "exitCode": 0,
+        "elapsedSeconds": 24.295295665971935
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/publication-guard.json",
+        "sha256": "7c55b244c90fd7e44e02a559149c464b028ec3d6423f1e06aa9a00fcb5d63ee5",
+        "bytes": 523
+      },
+      "result": {
+        "guardPid": 90366,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1554672,
+        "samples": 98,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "bash",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/publication-build.sh"
+        ],
+        "childPid": 90379,
+        "exitCode": 0,
+        "elapsedSeconds": 15.010598542168736
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/selection-analysis-guard.json",
+        "sha256": "ce190d005077564cc22b42dc3907ffce9bf466f008759e3a9b04a274e0352736",
+        "bytes": 834
+      },
+      "result": {
+        "guardPid": 76766,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1999376,
+        "samples": 109,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "lake",
+          "env",
+          "lean",
+          "-j1",
+          "-DwarningAsError=true",
+          "--run",
+          "tools/research/CanonicalSelectionAnalysis.lean",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/frozen-spec.json",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/selection-analysis.json"
+        ],
+        "childPid": 76791,
+        "exitCode": 1,
+        "elapsedSeconds": 15.1811801251024
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/selection-analysis2-guard.json",
+        "sha256": "66a704d616d263531ac9d381b2a2504d01bc028fea28206d18f79791f58f361f",
+        "bytes": 834
+      },
+      "result": {
+        "guardPid": 85342,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1999984,
+        "samples": 70,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "lake",
+          "env",
+          "lean",
+          "-j1",
+          "-DwarningAsError=true",
+          "--run",
+          "tools/research/CanonicalSelectionAnalysis.lean",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/frozen-spec.json",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/selection-analysis.json"
+        ],
+        "childPid": 85372,
+        "exitCode": 1,
+        "elapsedSeconds": 9.873106583021581
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/selection-analysis3-guard.json",
+        "sha256": "35289570594fc50bccdf0cc7c2133a5ff70367ea8c18796d71e470e61e949f8a",
+        "bytes": 835
+      },
+      "result": {
+        "guardPid": 93635,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 2135088,
+        "samples": 123,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "lake",
+          "env",
+          "lean",
+          "-j1",
+          "-DwarningAsError=true",
+          "--run",
+          "tools/research/CanonicalSelectionAnalysis.lean",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/frozen-spec.json",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-selection-audit-20261023/selection-analysis.json"
+        ],
+        "childPid": 93659,
+        "exitCode": 0,
+        "elapsedSeconds": 16.96954891597852
+      }
+    }
+  ],
+  "recovery": "The first probe completed successfully; a Ruby2.6 filter_map error stopped its postprocessing. Recover the existing result, do not rerun stage3. The resume initially rejected a derived head/pages advance; the independent Lean publication audit verifies unchanged original source facts and page prefix. All failed build/wrapper attempts remain recorded.",
+  "disk": "Normal native/build/evaluation disk stop512MiB. One low-write reclamation preflight used64MiB but archived zero retired files because external free space had recovered; no heavy computation used that threshold. Only byte-verified duplicate provider recovery was removed; its original gzip/payload hash catalog remains.",
+  "scope": "Human requirements enter only the final read-only analyses. Snapshot capture and first-request producer never receive requirements. Instrumented Handoff source and olean were restored; no model/token/quality/adoption claim. Full goal active."
+}
