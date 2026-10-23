@@ -80,7 +80,10 @@ def run (input digest : String) : IO UInt32 := do
   let mut runError : Option String := none
   let mut cleanupError : Option String := none
   let settings : StudyTransport.Settings := {
-    command := #[plan.cliWrapper.path,"--strict-config","app-server","--listen","stdio://"]
+    -- Remote plugin state can change between calls despite the local plugin
+    -- table. Keep the study's sealed local hooks as the only plugin source.
+    command := #[plan.cliWrapper.path,"--strict-config","-c","features.remote_plugin=false",
+      "app-server","--listen","stdio://"]
     cwd := plan.workspace,environment := plan.environment,output := (directory / "rpc").toString
     timeoutMs := 900000,responseBytes := 32*1024*1024,transcriptBytes := 256*1024*1024 }
   try
