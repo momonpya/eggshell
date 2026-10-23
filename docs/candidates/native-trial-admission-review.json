@@ -1,5 +1,5 @@
 {
-  "status": "Lean native utilities verified; full measurement migration and all phases incomplete",
+  "status": "Lean source/checkpoint/supervision/resource/accounting utilities verified; live experiment controller and all phases incomplete",
   "latestLanguagePolicy": "Lean unless Python is necessary",
   "newPythonOrchestrationWithdrawn": true,
   "ordinaryRuntimeChanged": false,
@@ -15,6 +15,31 @@
       "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyRuntime.lean",
       "sha256": "6c977d8638dd906e7b07ba4f8fd276ea8bcea0367424c1d940153956621925d1",
       "bytes": 7806
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/ResourceGuard.lean",
+      "sha256": "e5515898153d70741aa0cc459d01956a5668b94c5d95e42dac203c72bb42822b",
+      "bytes": 9988
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/ResourceGuardChecks.lean",
+      "sha256": "8652049051ff3b4c37b8681ebd3fc40f16efb15955fc8f5ec1c234e0a21209df",
+      "bytes": 1638
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/ResourceGuardFixture.lean",
+      "sha256": "4ff75e88a8c9069d3655b8def1c1bb49c924fb09042673a1469e4cd8376d0ec1",
+      "bytes": 947
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyAccounting.lean",
+      "sha256": "7837b897edee728eda0ccfeea9d264083e97366a7aaf6826b279400e5592a3d3",
+      "bytes": 8411
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyAccountingChecks.lean",
+      "sha256": "92f7d1a3ed673aca296bac059bc3854d9c59a751e9cbb44f9ff0e30841e08122",
+      "bytes": 3787
     }
   ],
   "binaries": [
@@ -27,6 +52,21 @@
       "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/StudyRuntime",
       "sha256": "15ad9644ae206375a3f4676c871d09a06cc4b59d44745bda76a1fa7cd6480e11",
       "bytes": 102129760
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/ResourceGuard",
+      "sha256": "b299b018bc954f222c316325717fccd05be15baebd96e9e4a487c6ea06b410b8",
+      "bytes": 100329520
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/ResourceGuardFixture",
+      "sha256": "96a27fcef70ca188626dd73ac2a76494ab382f6946de2dc49820720a827805e8",
+      "bytes": 2365184
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/StudyAccounting",
+      "sha256": "f2e6112917e46f219e128f14f062189ef132d3170ec099d0a85bc3e5071226c9",
+      "bytes": 100286000
     }
   ],
   "linkInputs": [
@@ -39,6 +79,16 @@
       "path": "/Users/ovm/.codex/experiments/eggshell/canonical-record-ack-20261023/frozen-inputs.json",
       "sha256": "401e0279e7b37c7bb96667cd3cb4ccdea8b7fc8757acb236fac3a7abe1bfe03e",
       "bytes": 87970
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/ResourceGuard.rsp",
+      "sha256": "8510ce3b41aa9b0a63379cbc7ac92a1817fef9a98e0095cf7549442ffae5c578",
+      "bytes": 683
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/StudyAccounting.rsp",
+      "sha256": "43b48c75e3f05f601314cfbb0438267d944f0a337629ce4fc32d01fa8b20e795",
+      "bytes": 685
     }
   ],
   "guards": [
@@ -61,6 +111,51 @@
       "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/lean-runtime-source-guards.json",
       "sha256": "281fb2b5fd3663e3c313d36fbed2bcb36cef0e585837f364d1ded16576d7f45d",
       "bytes": 992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/lean-resource-guard-parser-build.json",
+      "sha256": "ac5cf1af9c332c781d3be9be84b73a8afac030eca73995f516e4c7ff3d4cdab2",
+      "bytes": 644
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/lean-resource-guard-link.json",
+      "sha256": "36fda1264fbe63dd99143d659e108d36f445f405eb423abdae7671a2209bc44e",
+      "bytes": 813
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/resource-guard-group-build.json",
+      "sha256": "e5cf9aa716936f018544b134feafa2252eecb628e0adfdeaecb1fa22f7e36b07",
+      "bytes": 1467
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/lean-accounting-layout-build.json",
+      "sha256": "121bb88ce89b9cbe1b6de4682300811b03ad5c97a26a80c0bc96208a17a94d76",
+      "bytes": 1484
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/lean-accounting-checks-except.json",
+      "sha256": "aa0222601a5389735c7d5fc24db633757f895818f8b009bbe93fcbb528a5ac34",
+      "bytes": 791
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/resource-guard-checks/compile-full.json",
+      "sha256": "0207f12574542d26b531bdc66226f7bc4fa4421128f8995f68b2af14c342e8e5",
+      "bytes": 925
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/resource-guard-checks/checks-build-typed.json",
+      "sha256": "86fa63b0da4ba1c762dbfbe6909a30f5090e65da8130e75e3c2ea462bc9e43bd",
+      "bytes": 1389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/accounting-checks/replay-guard.json",
+      "sha256": "587a006326ebe5b03f049ae731a26db6d0279ed2b717a66480856a709aa27b1a",
+      "bytes": 1514
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/accounting-checks/negative-replay-guard.json",
+      "sha256": "24cacfbda9822d187a3adfcdd58ec8d9b1d7318b0e174c917356eff493b4d855",
+      "bytes": 1889
     }
   ],
   "nativeSourceAudit": {
@@ -129,10 +224,9 @@
   "remainingLeanMigration": [
     "model admission metadata",
     "App Server trial controller",
-    "resource monitor",
-    "cost aggregation"
+    "integrate native monitor and accounting into model trial lifecycle"
   ],
-  "existingPythonBoundary": "MiniLM numerical runtime plus legacy measurement tools; do not resume withdrawn Python model plan",
+  "existingPythonBoundary": "MiniLM/FastEmbed/NumPy numerical runtime; legacy measurement tools remain but withdrawn model plan is not resumed",
   "bootstrapMonitor": {
     "language": "Python",
     "scope": "existing external verification monitor while Lean monitor is unfinished; not adopted runtime implementation",
@@ -140,6 +234,56 @@
       "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/withdrawn-python/tools/memory_guard.py",
       "sha256": "08d4c4688b69a13a2888fd9639b0c4cf7ad19b3d64bff1e74804ee509bd3e5d6",
       "bytes": 8688
+    },
+    "status": "retired after native ResourceGuard bootstrap; later builds used Lean",
+    "lastGuard": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/lean-resource-guard-link.json",
+      "sha256": "36fda1264fbe63dd99143d659e108d36f445f405eb423abdae7671a2209bc44e",
+      "bytes": 813
     }
-  }
+  },
+  "nativeResourceChecks": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/resource-guard-final-checks/result.json",
+    "sha256": "a4c572562beb4f5ca49e6e096886abdeca2c069c2fb8fabf70ae7e9a027e73f2",
+    "bytes": 353
+  },
+  "nativeAccountingChecks": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/accounting-checks/result.json",
+    "sha256": "d09a2c1e2c9b16cb571dc0074e057315d90ebb94706434fb42d0b60b5400f7cb",
+    "bytes": 392
+  },
+  "nativeAccountingReplays": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/accounting-checks/seed-r0-stage1.json",
+      "sha256": "0b6a37d31950d1a16f667a874cc0d6a11b23de433845e17c4fa3b30d500e97cd",
+      "bytes": 4120
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/accounting-checks/resident-r0-stage1.json",
+      "sha256": "2775ece74fe50d85e8ed97a7fe47c06c6a733168f0a619bdb2491651dd566018",
+      "bytes": 1276
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/accounting-checks/unfinished.json",
+      "sha256": "858c3eff3b7ba14827e276ba2d8253793943a7e73564d5f0d4fedc400d7b6149",
+      "bytes": 1270
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/accounting-checks/malformed.json",
+      "sha256": "7a03c98bd6013ebba698c163c3226451941ca14722c09317753832918f4ed3ff",
+      "bytes": 1315
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/accounting-checks/failed.json",
+      "sha256": "b00238be7d3258b739ef00da48f9ce33a1eb6697063a3ccf5068cfb73d66685e",
+      "bytes": 1274
+    }
+  ],
+  "nativeMonitor": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/ResourceGuard",
+    "sha256": "b299b018bc954f222c316325717fccd05be15baebd96e9e4a487c6ea06b410b8",
+    "bytes": 100329520
+  },
+  "newAnsweringModelCallsThisChange": 0,
+  "externalTestDrivers": "Ruby assertions/orchestration outside the repository; tested runtime operations are Lean; no new Python implementation"
 }
