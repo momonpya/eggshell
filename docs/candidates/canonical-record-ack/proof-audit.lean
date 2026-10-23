@@ -1,0 +1,7 @@
+import Eggshell.PluginHooks
+import Eggshell.ContractAudit
+#print axioms Eggshell.Plugin.replace_source_status_compiled
+#print axioms Eggshell.Plugin.replace_source_status_preserves_other_keys
+#print axioms Eggshell.Plugin.add_delivered_preserves_other_keys
+#print axioms Eggshell.Plugin.rejected_offer_changes_nothing
+#print axioms Eggshell.Plugin.disabled_memory_rejects_delivery

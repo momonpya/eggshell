@@ -1,0 +1,18 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -7,0 +8 @@
++public import Eggshell.HashDistinct
+@@ -65,0 +67,13 @@
++
++/-- Preserve the ordered delivery ledger while avoiding a quadratic scan for
++every prefix of a large source packet. Hashes nominate; full strings decide. -/
++def replaceSourceStatusFast (keys : List String) (key : String) : List String :=
++  match SourceEvidence.deliveryScope? key with
++  | none => hashDistinct (keys ++ [key])
++  | some scope =>
++      hashDistinct (keys.filter (fun old => SourceEvidence.deliveryScope? old != some scope) ++ [key])
++
++@[csimp] theorem replace_source_status_compiled :
++    replaceSourceStatus = replaceSourceStatusFast := by
++  funext keys key
++  simp only [replaceSourceStatus, replaceSourceStatusFast, HashDistinct.reference]
