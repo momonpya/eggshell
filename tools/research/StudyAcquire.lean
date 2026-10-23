@@ -61,6 +61,7 @@ private def verify (plan : Plan) : IO StudyAccounting.Acquisition := do
   for artifact in #[plan.runtime,plan.runner,plan.cliWrapper,plan.nativeCli,plan.accountConfiguration,plan.prompt,
       plan.gate.report,plan.gate.guard,plan.gate.shutdown,plan.gate.recovery] ++ plan.pluginFiles ++ plan.harness do
     StudyAdmission.verifyArtifact artifact
+  StudyAdmission.verifyPluginRuntime plan.runtime plan.pluginRoot
   let gate ← StudyAdmission.readJson plan.gate.report.path
   let guard ← StudyAdmission.readJson plan.gate.guard.path
   let shutdown ← StudyAdmission.readJson plan.gate.shutdown.path

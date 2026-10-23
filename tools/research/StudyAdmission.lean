@@ -3,6 +3,7 @@ import tools.research.StudyRuntime
 import tools.research.StudyTransport
 import tools.research.StudyCommand
 import tools.research.ArtifactHash
+import Eggshell.Install
 
 open Lean Eggshell
 
@@ -83,6 +84,20 @@ def verifyArtifact (artifact : Artifact) : IO Unit := do
   check (path.isAbsolute && path.fileName != some "auth.json") "invalid experiment artifact path"
   check ((← ArtifactHash.hex path) == artifact.sha256) s!"sealed artifact changed: {path}"
 
+/-- A copied bundle may keep valid hashes while still launching its old
+prefix. Bind both installed entry points to the exact frozen runtime. -/
+def verifyPluginRuntime (runtime : Artifact) (pluginRoot : String) : IO Unit := do
+  let executable := System.FilePath.mk runtime.path
+  let directory := executable.parent.getD ""
+  let installRoot := directory.parent.getD ""
+  check (executable.isAbsolute && executable.fileName == some "eggshell" &&
+    directory.fileName == some "libexec" && installRoot.isAbsolute) "runtime is outside an installed prefix"
+  let expected := Install.pluginLauncher installRoot
+  for name in #["egg","eggshelld"] do
+    let path := System.FilePath.mk pluginRoot / "bin" / name
+    check ((← FileSystem.boundedBytes path 16384) == expected.toUTF8)
+      s!"plugin launcher does not target the frozen runtime: {path}"
+
 private def sorted (files : Array (String × String)) := files.qsort (fun a b => a.1 < b.1)
 
 partial def tree (root : System.FilePath) (relative : String := "") : IO (Array (String × String)) := do
@@ -144,6 +159,7 @@ def admit (path expectedSha256 : String) : IO Admitted := do
     plan.accountConfiguration,plan.configuration,p.input,p.stdout,p.timing,p.body,p.state,p.shutdown,
     p.search,p.auditInput,p.auditReport] ++ plan.harness ++ plan.pluginFiles ++ p.numerical
   for artifact in artifacts do verifyArtifact artifact
+  verifyPluginRuntime plan.runtime plan.pluginRoot
   check (!plan.harness.isEmpty && !plan.pluginFiles.isEmpty &&
     plan.pluginFiles.any (·.path == plan.pluginRoot ++ "/bin/eggshelld")) "unsealed harness or plugin launcher"
   let environmentNames := (plan.environment.map (·.1)).toList
