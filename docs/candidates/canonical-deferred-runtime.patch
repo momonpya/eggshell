@@ -1,0 +1,21 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -8,6 +8,7 @@
+ public import tools.IndexedCharacters
+ public import tools.BudgetPlan
+ public import tools.SharedCoverage
++public import tools.DeferredCoverage
+ public import tools.ClosedCoverage
+ public import tools.FocusWindows
+ public import tools.SourceWindow
+--- a/Eggshell/CanonicalSourceDelivery.lean
++++ b/Eggshell/CanonicalSourceDelivery.lean
+@@ -7,7 +7,7 @@
+ 
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.shared-source-delivery".toUTF8 [
+   (include_str "CanonicalSourceDelivery.lean").toUTF8,(include_str "CanonicalSourcePacket.lean").toUTF8,
+-  (include_str "Handoff.lean").toUTF8])
++  (include_str "Handoff.lean").toUTF8,(include_str "../tools/DeferredCoverage.lean").toUTF8])
+ 
+ def rowKey (key : Key) : String := "c:" ++ Index.contentKey key.file ++ ":" ++ toString key.line
+ 

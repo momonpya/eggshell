@@ -1,0 +1,6 @@
+import Eggshell.Handoff
+#print axioms Eggshell.Plugin.SharedRangeAdapter.evaluateCoefficients_exact
+#print axioms Eggshell.Plugin.SharedRangeAdapter.cached_cue_coefficients_compiled
+#print axioms Eggshell.Plugin.SharedRangeAdapter.problem_hoisted_compiled
+#print axioms Eggshell.Plugin.SharedRangeAdapter.fit_hoisted_compiled
+#print axioms Eggshell.Plugin.SharedRangeAdapter.shared_source_unit_has_no_control

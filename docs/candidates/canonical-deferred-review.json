@@ -1,0 +1,1375 @@
+{
+  "status": "isolated exact selector optimization; all native hooks delivered and acknowledged within30s, two stored source omissions remain; not adopted",
+  "ordinaryRuntimeChanged": false,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "gateInputs": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/gate-frozen-inputs.json",
+    "sha256": "1de08038503f777371cfc1787eeefdf4f47208d5be76de8828976915693e4723",
+    "bytes": 1712
+  },
+  "sources": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/frozen-inputs.json",
+    "sha256": "cd009bf88e57beea23ec4ab031b15f54bca65ee121d51297243db4400287ca17",
+    "bytes": 45175
+  },
+  "build": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/build-guard.json",
+    "sha256": "f522a89d3031375be088b20767dc6140964d9629e71f78c8fb1b40bf3c96f85a",
+    "bytes": 504
+  },
+  "buildOutput": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/build-guard.stdout",
+    "sha256": "99e7f4aa979d43384898306a8992642ca095673b05b74c9e419fc9f77ffd52c0",
+    "bytes": 74272
+  },
+  "actualGuard": {
+    "artifact": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache-guard.json",
+      "sha256": "9ba42b2d17e8c9c7cdf749662850b217a86eeb5823a8166595f8e6e65f21ce39",
+      "bytes": 943
+    },
+    "result": {
+      "guardPid": 82658,
+      "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+      "state": "finished",
+      "limitRssKiB": 3145728,
+      "userCeilingRssKiB": 4194304,
+      "sampledPeakRssKiB": 2396592,
+      "samples": 2024,
+      "guardTriggered": false,
+      "reason": null,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/eggshell",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache"
+      ],
+      "childCommand": [
+        "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/SynapseSixGate",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/eggshell",
+        "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/warm-source-spec.json"
+      ],
+      "childPid": 82691,
+      "exitCode": 0,
+      "elapsedSeconds": 275.72715437505394
+    }
+  },
+  "actualSix": [
+    {
+      "stage": 1,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 19436,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/native-0/body.txt",
+            "sha256": "b7243ab8aad20a8e856cd2994abe5eef69b250fd294c64552d63119ac22ac7df",
+            "bytes": 112717
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/native-0/prompt/record.json",
+            "sha256": "18440cbaba50b7aaa2f0244ee7bbd9b36badc845ff241740062739757dd1d562",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 1,
+            "session": 0,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/data/receipts/e55b1ffd6623289794988b47b197b212294c037088fb0422a5ad920e7b4661da/request.json",
+            "requestSha256": "a34da9f0a375e1890ec28db0925ab3f2a1936a4ca79dddd1e22c5800af9626cd",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/data/receipts/e55b1ffd6623289794988b47b197b212294c037088fb0422a5ad920e7b4661da/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "583be4557e7defbc7d108bd9b7d66a650f7574d30bdeb7e35defae0071c7c1f0"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "elapsedMs": 17568,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/native-1/body.txt",
+            "sha256": "b7243ab8aad20a8e856cd2994abe5eef69b250fd294c64552d63119ac22ac7df",
+            "bytes": 112717
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/native-1/prompt/record.json",
+            "sha256": "da7fc6206fd49b8fcedb3f796a1755c2655b387a171db5893b21b1bd28482d69",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 1,
+            "session": 1,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/data/receipts/3ac380828dada2f29e431345283d83ab413362829bb9dfbb7c90625237dac144/request.json",
+            "requestSha256": "d83c1329eb24f718f37fc0e8a10b9d0bb293e9fff1187ef87982f3028df34278",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/data/receipts/3ac380828dada2f29e431345283d83ab413362829bb9dfbb7c90625237dac144/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "c41b076ece1bedac6a221e3d112f27e87c29e064f3ac30cd539859d6d6386d4a"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ],
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage1/result.json",
+        "sha256": "0f64494ebc59cc6a96bdc5a109381ba291c1c8f95fff7b11ce33c5e341c0cf11",
+        "bytes": 1545
+      }
+    },
+    {
+      "stage": 2,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 19162,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/native-0/body.txt",
+            "sha256": "d4d20909c3e871a42688410b0d37efa8e4f8241bbd8a793404a2e3ae627547bb",
+            "bytes": 111020
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/native-0/prompt/record.json",
+            "sha256": "dfbc9e4d2eaf283fee92e8545a2baff48c323c40c2da2b7aa3b97ff339c14504",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 2,
+            "session": 0,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/data/receipts/244c0290c6a5dd82e5b386b4d4bbcd1c661b98982665e9c05146e41e29b72701/request.json",
+            "requestSha256": "9f1c42eededba2409a68610f7ea811e4dcfd0ed0313bb8c034ca5516773cc087",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/data/receipts/244c0290c6a5dd82e5b386b4d4bbcd1c661b98982665e9c05146e41e29b72701/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "faef56f1402c3b6f55acafa00bc35fc3f1e85bd2529ae8ef30cc5fce3300959c"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "mode-before-parse-and-config",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "elapsedMs": 17945,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/native-1/body.txt",
+            "sha256": "d4d20909c3e871a42688410b0d37efa8e4f8241bbd8a793404a2e3ae627547bb",
+            "bytes": 111020
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/native-1/prompt/record.json",
+            "sha256": "7e20beb46100f2fa5e68877b8c77dfd6a6bc11351aa33fdd5aa00ed436ef3a9f",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 2,
+            "session": 1,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/data/receipts/67e79deb6f4b76abe7496f7f293d7762954f6b2eb6ba5b53078205c3abf75a92/request.json",
+            "requestSha256": "8dd04918a1d8d0ca8bc493698f4010a7d4075e6f05b26f67c2a3bf0419f1af6c",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/data/receipts/67e79deb6f4b76abe7496f7f293d7762954f6b2eb6ba5b53078205c3abf75a92/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "e1eb8693d545a07e32a7e1b3cb8c7967ac6749b496ae3582b2130e5cdb5de06b"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "mode-before-parse-and-config",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ],
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage2/result.json",
+        "sha256": "76f695b7f1094c9d2940b5059e97cc3ba21b988c27afbb0a09533e2a056e5232",
+        "bytes": 1287
+      }
+    },
+    {
+      "stage": 3,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 20194,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+            "syntax-only-compile-cutoff"
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/native-0/body.txt",
+            "sha256": "d708f4acf7895553f5c27ee1cfc15b7fe056057bab424257afb4afba1b08c262",
+            "bytes": 111222
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/native-0/prompt/record.json",
+            "sha256": "00ed4669451901aa93f14befe883afab1f1b7addf67bbae3becdbbe8507ef1d5",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 3,
+            "session": 0,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/data/receipts/5f80f5f439f32105efaf50a45dfb7928166c2d3da2ebbd60d8c4a3798502d779/request.json",
+            "requestSha256": "dc65fed96dda109268bc7b565bfc141b5f636ed344a3b8a72c9758f7179eb476",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/data/receipts/5f80f5f439f32105efaf50a45dfb7928166c2d3da2ebbd60d8c4a3798502d779/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "878c0a4156be13cbf2a55c1858eb879d3be14a8208f260789ab980101cd8b6f6"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-compile-cutoff",
+              "stored": true,
+              "storedOwners": [
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-no-output-action",
+              "stored": false,
+              "storedOwners": [
+
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "frontend-job-construction",
+              "stored": false,
+              "storedOwners": [
+
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "elapsedMs": 18053,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+            "syntax-only-compile-cutoff"
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/native-1/body.txt",
+            "sha256": "d708f4acf7895553f5c27ee1cfc15b7fe056057bab424257afb4afba1b08c262",
+            "bytes": 111222
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/native-1/prompt/record.json",
+            "sha256": "eb1ec2875f159c06dfe06187d4c0d5ea05deb4f38869312d67939e033ff6fc88",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 3,
+            "session": 1,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/data/receipts/7383eb368f6847fc89ebf84b448185fc945fce67b7e84b24d22e74f94c68a138/request.json",
+            "requestSha256": "cfabc73141a995a313986fa1cad36946390a4c4c745cbca72d5c5305180483fd",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/data/receipts/7383eb368f6847fc89ebf84b448185fc945fce67b7e84b24d22e74f94c68a138/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "c5420350fbd60e4da51d4c6df43f5f9903d6daaf3a2be54915ad2b217333f471"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-compile-cutoff",
+              "stored": true,
+              "storedOwners": [
+                "v16748591830955464422"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "syntax-only-no-output-action",
+              "stored": false,
+              "storedOwners": [
+
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "frontend-job-construction",
+              "stored": false,
+              "storedOwners": [
+
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ],
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage3/result.json",
+        "sha256": "a9fee1b3771da2abf7a0190dfe7ed29dadcfbbc2a9d0d127cf3c6d89216e6224",
+        "bytes": 2257
+      }
+    },
+    {
+      "stage": 4,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 22816,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+            "trailing-language-warning"
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/native-0/body.txt",
+            "sha256": "2fd83f5e30a406a228984e43d372b9e33a731a845ea002be1cf288c9f5a85693",
+            "bytes": 103123
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/native-0/prompt/record.json",
+            "sha256": "f9621b38a0a97c21739e6e1bfc48a29f3813b74ae2ac158750c0eebf1d9fb35f",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 4,
+            "session": 0,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/data/receipts/5b71216932c65bbba2ccaa5f747413ead8dd3e1d9169e36ed9109f8873cbee08/request.json",
+            "requestSha256": "df0d97a448fe520195443ba4d7190ce01ab88092bc628480daa700dabb62e3d1",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/data/receipts/5b71216932c65bbba2ccaa5f747413ead8dd3e1d9169e36ed9109f8873cbee08/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "0bda22350cf190a306199f725be771c5c58324bc10331e80ac39c8166dc1e593"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "elapsedMs": 20780,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+            "trailing-language-warning"
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/native-1/body.txt",
+            "sha256": "2fd83f5e30a406a228984e43d372b9e33a731a845ea002be1cf288c9f5a85693",
+            "bytes": 103123
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/native-1/prompt/record.json",
+            "sha256": "5f2369898af748091158b91ae94b5b74f2d1b077b436e3f61dde303d8c87d9b1",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 4,
+            "session": 1,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/data/receipts/6b5b240cc6d624e9bcaca391060ecc901e01fd5e27f0eadd33b7a947bd479af4/request.json",
+            "requestSha256": "b70ef345282d620fe76dceacfaf8aa9520eb2c0efdab859b521e4ca0f6882927",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/data/receipts/6b5b240cc6d624e9bcaca391060ecc901e01fd5e27f0eadd33b7a947bd479af4/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "7d71ea0afde6b807a26a6bb515d5218f4db1662b105a193be021030ed4b170db"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": false,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ],
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage4/result.json",
+        "sha256": "be6dbb073e488a738025869b19e93179ff71e12447659f7298a43c301d7a9c0b",
+        "bytes": 1737
+      }
+    },
+    {
+      "stage": 5,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 20793,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/native-0/body.txt",
+            "sha256": "83f69f998f06646e90631c725a19e4ab17917caa8f860bf5bc89c395892f0530",
+            "bytes": 98218
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/native-0/prompt/record.json",
+            "sha256": "e467b546aa8a4cf826ffbfb426c989b286a1b7f0e7539d3fee1280e68cf1042b",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 5,
+            "session": 0,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/data/receipts/783eb14a65eec3c8d546a306ea0d41e970ecf9b68dc57a154da7a48b47c5b230/request.json",
+            "requestSha256": "66ba962baab23f02b0a07eddad06e1af2a53b4ca185137bbcf190abcb3245630",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/data/receipts/783eb14a65eec3c8d546a306ea0d41e970ecf9b68dc57a154da7a48b47c5b230/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "3e2de03e19a26e98c67b8d07fe21ae1432e3fbd51df7b08469ffafc23fb7d922"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "mode-before-parse-and-config",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "elapsedMs": 19396,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/native-1/body.txt",
+            "sha256": "83f69f998f06646e90631c725a19e4ab17917caa8f860bf5bc89c395892f0530",
+            "bytes": 98218
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/native-1/prompt/record.json",
+            "sha256": "d8e670db8da4c10a88fda46d339ee6421281280275e533f067afe3a1656e72da",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 5,
+            "session": 1,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/data/receipts/ca47d50dae5079eccf433dab47b46ceff63d611d6344e918746e9cd3f522fa36/request.json",
+            "requestSha256": "44ffe3fdfd9ad9176ee596fef572d1c6c1268a7823449ac2785e1ef46bc04cbe",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/data/receipts/ca47d50dae5079eccf433dab47b46ceff63d611d6344e918746e9cd3f522fa36/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "0525fd26176cdb0f27491449c3eac510d5b82239b7602b00c54c28a19d61ff5c"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "mode-before-parse-and-config",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ],
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage5/result.json",
+        "sha256": "ce2f4dcd7f7b61cdc1d7ca9ce4b47fa5dce5688ce04e867813f82191d1fa4127",
+        "bytes": 1427
+      }
+    },
+    {
+      "stage": 6,
+      "sameIndependentBodies": true,
+      "sessions": [
+        {
+          "elapsedMs": 25330,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/native-0/body.txt",
+            "sha256": "da6c04bafd332876efb3c981d043e5ec2a4478918dd91a554904cc6e9223e3ab",
+            "bytes": 99681
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/native-0/prompt/record.json",
+            "sha256": "b7fc25b91b38b8e5a4a23fbfb5f3cbd1336a6a976ea2142586929ea91e154579",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/native-0/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 6,
+            "session": 0,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/data/receipts/45ad1e979fa48fa39fee45c1c584fe669a06a9737b7d2dc04f6483e35e01af65/request.json",
+            "requestSha256": "4429531d5dc57be59c495a8e0e2188f12c103acaed5b848b9ea2898f2872f903",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/data/receipts/45ad1e979fa48fa39fee45c1c584fe669a06a9737b7d2dc04f6483e35e01af65/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "983d303899eb1d5fd20274438d6de89e48056a8295f54ad025d9643d8c7fceb5"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "syntax-only-compile-cutoff",
+              "stored": true,
+              "storedOwners": [
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "syntax-only-no-output-action",
+              "stored": true,
+              "storedOwners": [
+                "v11960447802706886118"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "frontend-job-construction",
+              "stored": true,
+              "storedOwners": [
+                "v11731249417270010951"
+              ],
+              "unlocated": false
+            }
+          ]
+        },
+        {
+          "elapsedMs": 23706,
+          "incomplete": false,
+          "publicationConfirmed": true,
+          "shutdownExitCode": 0,
+          "storedMissing": [
+
+          ],
+          "body": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/native-1/body.txt",
+            "sha256": "da6c04bafd332876efb3c981d043e5ec2a4478918dd91a554904cc6e9223e3ab",
+            "bytes": 99681
+          },
+          "prompt": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/native-1/prompt/record.json",
+            "sha256": "39cc659a1ee9d3e35e1a198233f0b27b1db59749e206581f3dc6646c0359fd71",
+            "bytes": 114
+          },
+          "stderr": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/native-1/prompt/stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0
+          },
+          "ack": {
+            "stage": 6,
+            "session": 1,
+            "request": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/data/receipts/f4a5fb6c98dee251cd47a359443a9e021ab226209ac7191aa0bcb9f266f59abd/request.json",
+            "requestSha256": "c0ba713963b48cd505d351f7fd2ddbe6117f2480346680a45bffadf1e1a572aa",
+            "ack": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/data/receipts/f4a5fb6c98dee251cd47a359443a9e021ab226209ac7191aa0bcb9f266f59abd/ack.json",
+            "ackData": {
+              "offerAccepted": true,
+              "rpcCompleted": true
+            },
+            "ackSha256": "899b217c06cf2c465a32f88bde9737f34f8994f4088e9e5e2fb10d45362c4271"
+          },
+          "requirements": [
+            {
+              "bodyDelivered": true,
+              "name": "toolchain-cache-key",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "complete-hlsl-branch-scope",
+              "stored": true,
+              "storedOwners": [
+                "v18406153573121058748",
+                "v16748591830955464422",
+                "v10600833252250082589"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "default-toolchain-selection",
+              "stored": true,
+              "storedOwners": [
+                "v13168123294867106979",
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "syntax-only-compile-cutoff",
+              "stored": true,
+              "storedOwners": [
+                "v16748591830955464422",
+                "v9756138358688687787"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "trailing-language-warning",
+              "stored": true,
+              "storedOwners": [
+                "v15256267109356037303",
+                "v14863864136040263094"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "syntax-only-no-output-action",
+              "stored": true,
+              "storedOwners": [
+                "v11960447802706886118"
+              ],
+              "unlocated": false
+            },
+            {
+              "bodyDelivered": true,
+              "name": "frontend-job-construction",
+              "stored": true,
+              "storedOwners": [
+                "v11731249417270010951"
+              ],
+              "unlocated": false
+            }
+          ]
+        }
+      ],
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache/stage6/result.json",
+        "sha256": "7320a697b7cc950f6b9955260daa690c91a3e7a631aa8af7a52c8157807a97c3",
+        "bytes": 2575
+      }
+    }
+  ],
+  "confirmedPublications": 12,
+  "allWithinDeadline": true,
+  "allShutdownClean": true,
+  "allFullBodiesEqualToPrior": true,
+  "bodyEquality": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/body-equality.json",
+    "sha256": "a263e4d06e034bb8419d64737ded5b664d9a737d89c2728efc02b30f4fb60eb9",
+    "bytes": 7051
+  },
+  "storedOmissionsPerStage": [
+    [
+
+    ],
+    [
+
+    ],
+    [
+      "syntax-only-compile-cutoff"
+    ],
+    [
+      "trailing-language-warning"
+    ],
+    [
+
+    ],
+    [
+
+    ]
+  ],
+  "originalSourceAssertions": "Unchanged SynapseSixGate completed all six original source head/pages/provenance digest, source fact and published page-prefix assertions.",
+  "proof": "Full choose? equality preserves candidate order, stable ties, exact Nat scores and costs, complete dependency closures, bounds and singleton comparison; checked membership plus deferred construction only.",
+  "allAttempts": [
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/archive-reference-runtimes-guard.json",
+        "sha256": "59a7a6513ecfc0972b504d7da7029dd21342ef70ed1e8ee94a9bc2c93a348fad",
+        "bytes": 869
+      },
+      "result": {
+        "guardPid": 51721,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 98880,
+        "samples": 50,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "bash",
+          "-c",
+          "set -euo pipefail; export EGGSHELL_ARCHIVE_MANIFEST=/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/retired-runtimes.json; task_archive=/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/archive-one.rb; ruby \"$task_archive\" /Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/eggshell; ruby \"$task_archive\" /Users/ovm/.codex/experiments/eggshell/canonical-weights-20261023/eggshell"
+        ],
+        "childPid": 51745,
+        "exitCode": 0,
+        "elapsedSeconds": 6.729384125210345
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/build-guard.json",
+        "sha256": "f522a89d3031375be088b20767dc6140964d9629e71f78c8fb1b40bf3c96f85a",
+        "bytes": 504
+      },
+      "result": {
+        "guardPid": 62886,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 2612656,
+        "samples": 628,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "bash",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/build.sh"
+        ],
+        "childPid": 62916,
+        "exitCode": 0,
+        "elapsedSeconds": 87.28198345797136
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/deferred-proof-guard.json",
+        "sha256": "729e4577c04ec7350f11438c586b1a61aecd7e43878dfb997647ae222b2e42dd",
+        "bytes": 695
+      },
+      "result": {
+        "guardPid": 80583,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1106800,
+        "samples": 52,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "lake",
+          "env",
+          "lean",
+          "-j1",
+          "-DwarningAsError=true",
+          "-o",
+          ".lake/build/lib/lean/tools/DeferredCoverage.olean",
+          "-c",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/native/DeferredCoverage.c",
+          "tools/DeferredCoverage.lean"
+        ],
+        "childPid": 80599,
+        "exitCode": 1,
+        "elapsedSeconds": 7.013408833183348
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/deferred-proof2-guard.json",
+        "sha256": "3987f6bcbbfe7e8c38f57345088e8ce799f07095c6a08ae5e74556d9698d82c6",
+        "bytes": 694
+      },
+      "result": {
+        "guardPid": 95957,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1106080,
+        "samples": 51,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "lake",
+          "env",
+          "lean",
+          "-j1",
+          "-DwarningAsError=true",
+          "-o",
+          ".lake/build/lib/lean/tools/DeferredCoverage.olean",
+          "-c",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/native/DeferredCoverage.c",
+          "tools/DeferredCoverage.lean"
+        ],
+        "childPid": 95970,
+        "exitCode": 1,
+        "elapsedSeconds": 6.95826212503016
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/deferred-proof3-live-guard.json",
+        "sha256": "2900f9597fca6fff93a934610b39a293a128b47bd674bb0127ff1070a5635bbb",
+        "bytes": 695
+      },
+      "result": {
+        "guardPid": 20424,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 1099376,
+        "samples": 56,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+
+        ],
+        "childCommand": [
+          "lake",
+          "env",
+          "lean",
+          "-j1",
+          "-DwarningAsError=true",
+          "-o",
+          ".lake/build/lib/lean/tools/DeferredCoverage.olean",
+          "-c",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/native/DeferredCoverage.c",
+          "tools/DeferredCoverage.lean"
+        ],
+        "childPid": 20439,
+        "exitCode": 0,
+        "elapsedSeconds": 7.814936415757984
+      }
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache-guard.json",
+        "sha256": "9ba42b2d17e8c9c7cdf749662850b217a86eeb5823a8166595f8e6e65f21ce39",
+        "bytes": 943
+      },
+      "result": {
+        "guardPid": 82658,
+        "guardSha256": "8db17287d0af0316a54e463e43a249c733b935507ae79af41828b26611532bb3",
+        "state": "finished",
+        "limitRssKiB": 3145728,
+        "userCeilingRssKiB": 4194304,
+        "sampledPeakRssKiB": 2396592,
+        "samples": 2024,
+        "guardTriggered": false,
+        "reason": null,
+        "ownedPrefixes": [
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/eggshell",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache"
+        ],
+        "childCommand": [
+          "/Users/ovm/.codex/experiments/eggshell/canonical-indexed-20261023/SynapseSixGate",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/six-ready-cache",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/eggshell",
+          "/Users/ovm/.codex/experiments/eggshell/canonical-deferred-20261023/warm-source-spec.json"
+        ],
+        "childPid": 82691,
+        "exitCode": 0,
+        "elapsedSeconds": 275.72715437505394
+      }
+    }
+  ],
+  "scope": "Two independent new chats per stage, fresh private roots, only public ready caches copied. All6 native stages are not an answering-model token/quality comparison. Full goal remains active."
+}

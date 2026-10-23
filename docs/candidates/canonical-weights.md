@@ -1,0 +1,7 @@
+# Shared exact cue coefficients
+
+Change only evaluation of existing cached source cue weights. Prepare the same owner/producer rank coefficients once per family and cue, skip multiplication at zero original-range overlap, and retain exactly the same Nat value. Lean proves equality of the complete cachedCuePieces function and compiles by that equation. Keep the earlier proved loop-invariant sharing, MiniLM producer, centroid, thresholds, RRF coefficients, payload, cost and authority rules unchanged.
+
+Use the unchanged native SynapseSixGate executable from canonical-indexed with the same original head/pages/provenance SHAs and its prepared public-ready cache sources. Each stage still clones the source, executes explicit warm and gets a fresh private root. Copy no private query/usage/session state. Freeze sources, link inputs, both executables, prepared input, harness and protocol before running. RSS stop3072MiB below4096MiB user ceiling, residual disk stop512MiB, heavy jobs serial.
+
+Run all six stages from stage1, two independent chats each. Audit literal original code in actual stdout, ACK and shutdown, source fact/page/input invariance,30s elapsed deadline, and independent body equality. Compare first five stage bodies to the same previous completed bodies; compare both last-stage bodies to the previous late full body only as a payload reference, not as a successfully acknowledged run. Restart all6 after any runtime change. No answering/seed model call or adoption claim from this native gate.
