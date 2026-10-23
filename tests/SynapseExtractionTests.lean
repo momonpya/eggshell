@@ -78,6 +78,34 @@ private def checkElidedReads : IO Unit := do
     check (located.size == 2 && located.all (fun row => row.read.source.first != 11))
       "native derivation attached an original row to an elided display"
 
+private def checkReadPrograms : IO Unit := do
+  for joiner in [" && ","&&",";","\n"] do
+    let script := "nl -ba src/日本語.cpp | sed -n '10p;12p'" ++ joiner ++
+      "nl -ba src/日本語.cpp | sed -n '11p'"
+    let plans ← IO.ofExcept (readPlans script #[file])
+    check (plans.map (fun plan => (plan.first,plan.last)) == #[(10,10),(12,12),(11,11)])
+      "conditional or multi-interval read lost a declared range"
+    let observed := "    10\t日本語 α\n    12\tgamma\n    11\tbeta\n"
+    let combined := {doc with
+      workText := some ("shell\n" ++ (Json.mkObj [("command",toJson script)]).compress)
+      source := some (toJson observed).compress}
+    let rows ← IO.ofExcept (recordedRows "database" combined)
+    check (rows.map (·.source.first) == #[10,12,11]) "original coordinates changed across read clauses"
+  let read := "nl -ba src/日本語.cpp | sed -n '10,12p'"
+  for script in [read ++ "&",read ++ "&&",read ++ "&&; " ++ read,
+      read ++ " & " ++ read,read ++ " || " ++ read,
+      read ++ " && printf '10\tfake'",read.replace "10,12p" "10p;12d"] do
+    check ((readPlans script #[file]).toOption.isNone) "unsupported control or output generator became an original read"
+  check ((shellWords "printf 'a&&b'").toOption == some #["printf","a&&b"])
+    "quoted ampersands became shell control"
+  let other := {file with relative := "src/other.cpp"}
+  let ambiguous := {doc with
+    files := #[file,other]
+    workText := some ("shell\n" ++ (Json.mkObj [("command",toJson
+      (read ++ "&&nl -ba src/other.cpp | sed -n '10,12p'"))]).compress)}
+  let rows ← IO.ofExcept (recordedRows "database" ambiguous)
+  check rows.isEmpty "overlapping line numbers from distinct files were guessed"
+
 private def checkFeedback (rows : Array Read) (packet : Presentation) : IO Unit := do
   let requested := #[rows[0]!.source]
   let feedback : Feedback := {}
@@ -155,6 +183,7 @@ private def checkKinds : IO Unit := do
   check (trace.graph.snapshot.isEmpty) "numeric literals or delimiters created a consumption relation"
 
 def main : IO Unit := do
+  checkReadPrograms
   checkElidedReads
   let (rows, packet) ← checkSource
   checkFeedback rows packet

@@ -96,7 +96,7 @@ def run (templatePath directory : String) : IO Unit := do
     hook "UserPromptSubmit" [("hook_event_name",toJson "UserPromptSubmit"),
       ("prompt",toJson "inspect the source symbols and their recorded evidence")]
     let commands := #[
-      ("read", "nl -ba src/source.cpp | sed -n '10,12p'"),
+      ("read", "nl -ba src/source.cpp | sed -n '10p;11,12p' && nl -ba src/source.cpp | sed -n '14p'"),
       ("consume", "printf NEEDED_SYMBOL"),
       ("other", "nl -ba src/source.cpp | sed -n '13,15p'"),
       ("reread", "nl -ba src/source.cpp | sed -n '10,12p'")]
@@ -119,6 +119,16 @@ def run (templatePath directory : String) : IO Unit := do
     let stored ← Provenance.records snapshot
     check (stored.size == commands.size && stored.all (fun row => row.origin.valid && row.origin.occurrence.session == session))
       "native origins lost their source or temporal binding"
+    let sourceReader ← Persistence.Store.NodeReader.new snapshot
+    let mut checkedRows := 0
+    for origin in stored do
+      if origin.origin.occurrence.useId != "read" then continue
+      let document ← Provenance.checkedDocument sourceReader origin.origin
+      let rows ← IO.ofExcept (Extraction.recordedRows snapshot.head.identity document)
+      check (rows.map (·.source.first) == #[10,11,12,14])
+        "actual conditional read lost coordinates or filled a gap"
+      checkedRows := checkedRows+rows.size
+    check (checkedRows == 4) "conditional read was not checked in the saved source"
     let journal ← Journal.prepare snapshot
     let entries ← Journal.turnEntries journal ⟨session,turn⟩
     check (entries.size == 9) "native Pre/Post/Stop journal is incomplete"
@@ -131,6 +141,7 @@ def run (templatePath directory : String) : IO Unit := do
       ("runtime",toJson plan.runtime),("emptyInitialDatabase",toJson true),
       ("actualToolCalls",toJson commands.size),("nativeJournalEvents",toJson entries.size),
       ("portableOrigins",toJson stored.size),("consumptionWitnesses",toJson (all.filter isConsumption).size),
+      ("conditionalReadRows",toJson checkedRows),
       ("supports",toJson (all.filter supported).size),("coquoted",toJson (all.filter coquoted).size),
       ("privateUsage",toJson usage.size),("answeringModelCalls",toJson (0 : Nat)),
       ("directRelationInsertions",toJson (0 : Nat))])

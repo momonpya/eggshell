@@ -1,6 +1,7 @@
 module
 
 public import Eggshell.SynapseExtraction
+public import Eggshell.SourceEvidence
 public import Lean.Data.Json.Parser
 
 @[expose] public section
@@ -145,25 +146,20 @@ def parseBounds (text : String) : Option (Nat × Nat) := do
   if 0 < first && first ≤ last then some (first, last) else none
 
 def readPlans (command : String) (files : Array File) : Except String (Array Range) := do
-  let words ← shellWords command
-  let mut segments : Array (Array String) := #[]
-  let mut segment := #[]
-  for word in words do
-    if word == ";" || word == "\n" then
-      if !segment.isEmpty then segments := segments.push segment
-      segment := #[]
-    else segment := segment.push word
-  if !segment.isEmpty then segments := segments.push segment
+  let some segments := SourceEvidence.sequenceSegments? command | throw "unsupported read sequence"
   let mut plans := #[]
-  for clause in segments do
-    let ["nl", "-ba", path, "|", "sed", "-n", program] := clause.toList |
+  for segment in segments do
+    let ["nl", "-ba", path, "|", "sed", "-n", program] := (← shellWords segment).toList |
       throw "unsupported literal read sequence"
     if path.toList.any (fun c => "$\x60*?{}".contains c) then throw "nonliteral read path"
     let candidates := files.filter (fun f => path == f.relative || path.endsWith ("/" ++ f.relative))
-    unless candidates.size == 1 && program.endsWith "p" do throw "ambiguous or unsupported read"
-    let bounds := ((program.dropEnd 1).copy.replace "," "-")
-    let some (first, last) := parseBounds bounds | throw "invalid read interval"
-    plans := plans.push ⟨candidates[0]!, first, last⟩
+    unless candidates.size == 1 do throw "ambiguous read path"
+    for statement in program.splitOn ";" do
+      let statement := statement.trimAscii.toString
+      unless statement.endsWith "p" do throw "unsupported read program"
+      let bounds := ((statement.dropEnd 1).copy.replace "," "-")
+      let some (first, last) := parseBounds bounds | throw "invalid read interval"
+      plans := plans.push ⟨candidates[0]!, first, last⟩
   if plans.isEmpty then throw "no numbered read"
   return plans
 
