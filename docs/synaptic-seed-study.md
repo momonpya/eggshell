@@ -6,7 +6,8 @@
 
 ## 固定する条件
 
-- seed取得と候補の全6段階は同じruntimeを使用する。直近の取得runtimeは`f6454448be340aa29230d425cd968321cbb9d1b92d53cdb29ec03b653d645781`、制御器は`a0d1cbef22f315e7b95124c77a1a405af176e5be3ae054495cbec634a2442710`。固定計画`ingress-qualified-20261024/study`はseed2の数値サービス終了失敗で生成を禁止した。次のruntimeはまだ固定していない。
+- seed取得と候補の全6段階は同じruntimeを使用する。次の固定runtimeは`efb9a11d413b3ed2339413e4e6833b55497f05c6bdb5375098402d481c31ba2d`、制御器は`a0d1cbef22f315e7b95124c77a1a405af176e5be3ae054495cbec634a2442710`。計画は`numerical-owned-20261024/study`。
+  直前のf6454448…の固定計画`ingress-qualified-20261024/study`はseed2の数値サービス終了失敗で生成禁止のまま保持する。
   `9790087f…`の固定計画`read-forms/study-capacity`も開始記録の欠落で不合格・生成禁止のまま保持する。
   `d1370cc5…`は日誌の欠落、`e7beec69…`は省略表示と原文行の衝突で取得を停止した。旧計画を再開しない。
 - 元のseed質問をそのまま使い、LLVMの同じcommit、gpt-5.6-luna/xhigh、AGENTS無効、モデルfallbackなしを固定する。
@@ -62,6 +63,16 @@
 失敗時も生RPC・usage・本文・元出版の照合に必要な証拠は保持する。
 
 ## 現在地
+
+2026-10-24。数値サービスが受け付けたtaskをfinallyで取り落としていた問題を特定し、所有状態を参照で保持する修正候補を検査した。
+未完通信20回・所有者消失5回・分割通信、実MiniLM数値一致、実native/並行フック・source-only回復が成功し、残存プロセスは0だった。
+新runtime efb9a11d…と同じ制御器で独立3seedの計画を`numerical-owned-20261024/study`へ固定し、候補8信頼済みフック/fresh0も確認した。
+終了済みの旧実行体14本を可逆圧縮し、復元SHA一致と約2.2GiBの開始容量を確認した。
+元質問・5.6-luna/xhigh・AGENTS無効・空DB・新規チャットのseed1を開始し、実threadのmodel/effort/providerとinstructionSources=[]を確認した。
+保存・全件監査・明示warmを通るまでseed2と題材生成は進めない。
+旧seedを新runtimeのseedへ改名したり、失敗費用を取り除いたりしない。詳細は[numerical-shutdown-investigation.md](numerical-shutdown-investigation.md)。
+
+以下は前のruntimeでの取得と調査。
 
 2026-10-24。f6454448…のseed1は生RPCとの開始・終了・永続来歴の照合で欠落0、明示warmのmissing/invalid=0だった。
 同じ固定runtimeで空DB・新規チャットのseed2を取得したが、数値サービスの終了失敗で不合格となり、seed3と題材のモデル投入を止めた。
