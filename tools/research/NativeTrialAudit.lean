@@ -8,7 +8,6 @@ private structure Requirement where
   path : String
   first : Nat
   last : Nat
-  originalOwners : Array String
   deriving FromJson
 
 private structure Source where
@@ -34,20 +33,17 @@ private def check (condition : Bool) (message : String) : IO Unit :=
 private def readJson (path : String) : IO Json := do
   IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path)))
 
-private def originals (source : DB.PageMap.Snapshot) (requirements : Array Requirement) :
+private def originals (source : DB.PageMap.Snapshot) :
     IO (Array Extraction.Document × Array Read) := do
   let reader ← Persistence.Store.NodeReader.new source
-  let mut seen : Std.HashSet String := {}
   let mut documents := #[]
   let mut rows := #[]
-  for requirement in requirements do
-    for owner in requirement.originalOwners do
-      if seen.contains owner then continue
-      seen := seen.insert owner
-      let some id ← Build.ownerId? source owner | throw (IO.userError "required original owner is missing")
-      let doc ← Build.document reader id
-      documents := documents.push doc
-      if let .ok found := Extraction.recordedRows source.head.identity doc then rows := rows ++ found
+  -- Discover original owners from this publication, including newly accumulated
+  -- observations. Human reference requirements never choose the source owners.
+  for entry in ← Build.entries source do
+    let doc ← Build.document reader entry.id
+    documents := documents.push doc
+    if let .ok found := Extraction.recordedRows source.head.identity doc then rows := rows ++ found
   return (documents,rows)
 
 private def inspect (input : String) : IO Json := do
@@ -55,6 +51,9 @@ private def inspect (input : String) : IO Json := do
   let some text := String.fromUTF8? bytes | throw (IO.userError "trial input encoding")
   let trial ← IO.ofExcept (Json.parse text >>= fromJson? (α := Trial))
   let specification := trial.source
+  for requirement in specification.required do
+    check (!requirement.path.isEmpty && 0 < requirement.first && requirement.first ≤ requirement.last)
+      "invalid reference source range"
   for (name,expected) in specification.files do
     check (Sha256.hex (← IO.FS.readBinFile (System.FilePath.mk specification.source / name)) == expected)
       "immutable source bytes changed"
@@ -65,7 +64,7 @@ private def inspect (input : String) : IO Json := do
   let stdout ← IO.FS.readFile (.mk trial.stdout)
   let timing ← readJson trial.timing
   check ((timing.getObjValAs? Nat "exitCode").toOption == some 0 &&
-    (timing.getObjValAs? Nat "elapsedMs").toOption.any (fun ms => 0 < ms && ms < 30000) &&
+    (timing.getObjValAs? Float "elapsedMs").toOption.any (fun ms => 0 < ms && ms < 30000) &&
     (timing.getObjValAs? String "stdoutSha256").toOption == some (Sha256.hex stdout.toUTF8))
     "native preflight failed, expired or has different stdout"
   let reply ← IO.ofExcept (Json.parse stdout)
@@ -78,21 +77,22 @@ private def inspect (input : String) : IO Json := do
   let current ← IO.FS.readBinFile (DB.PageMap.dataPath after.directory after.head)
   let prefixExact := original.extract 0 before.head.bytes == current.extract 0 before.head.bytes
   check (same && prefixExact) "preparation changed original source facts or pages"
-  let (documents,rows) ← originals before specification.required
+  let (documents,rows) ← originals before
   let shown := Extraction.presented body documents rows
   let requirements := specification.required.map fun requirement =>
-    let candidates := rows.filter fun row => requirement.originalOwners.contains row.binding.owner &&
-      row.source.file.relative == requirement.path
+    let candidates := rows.filter fun row => row.source.file.relative == requirement.path &&
+      row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
     let files := candidates.foldl (fun found row => found.insert row.source.file) ({} : Std.HashSet File)
     let stored := files.toArray.any fun file => covered ⟨file,requirement.first,requirement.last⟩
       (candidates.map (·.source))
     let delivered := files.toArray.any fun file => covered ⟨file,requirement.first,requirement.last⟩ shown.ranges
     Json.mkObj [("name",toJson requirement.name),("stored",toJson stored),
-      ("storedOwners",toJson requirement.originalOwners),("bodyDelivered",toJson delivered),
-      ("unlocated",toJson (!requirement.originalOwners.isEmpty && !stored))]
+      ("storedOwners",toJson ((candidates.map (·.binding.owner)).toList.eraseDups.toArray)),
+      ("bodyDelivered",toJson delivered),("unlocated",toJson (!stored))]
   return Json.mkObj [("specSha256",toJson (Sha256.hex bytes)),
     ("sourceGraphFiles",Json.mkObj (specification.files.toList.map fun (name,digest) => (name,toJson digest))),
     ("sameSourceFacts",toJson same),("samePublishedPagePrefix",toJson prefixExact),
+    ("originalDocuments",toJson documents.size),("originalRows",toJson rows.size),
     ("stdoutSha256",toJson (Sha256.hex stdout.toUTF8)),("bodySha256",toJson (Sha256.hex body.toUTF8)),
     ("requirements",toJson requirements)]
 

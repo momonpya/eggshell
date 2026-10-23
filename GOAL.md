@@ -1,5 +1,21 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-23 最新の言語方針：必然性がない実装は、実験制御を含めLeanで行う。
+このターンにPythonで追加した計測ゲート/DB checkpoint/daemon制御/監視/実行計画は未採用として撤回した。
+変更前後のソース・失敗した実行・消費はnative-admission-20261023/withdrawn-python等に履歴として保持する。
+元からあったtools/source_readiness_probe.py等の未コミット変更は勝手に取り消していない。
+原文の抽出と配送照合はNativeTrialAudit.lean、checkpoint/復元/所有daemonの起動と終了待ちはStudyRuntime.leanへ実装した。
+NativeTrialAuditは所有者IDを正解から受け取らず、固定出版に実在する元観測をLeanで列挙する。
+モデル投入前のJSONメタデータ検査、App Serverの計測制御、資源監視、費用集計のLeanへの移行はまだ未完了。
+移行を済ませるまで、撤回したPython計測器でLunaを追加実行しない。
+MiniLMの既存Python数値ランタイムは外部ライブラリ境界として残っている。検索/抽出/グラフのPython実装を許す根拠にはしない。
+今回の回答モデルは5.6-luna/xhighで2件が回答と保存まで完了したが、どちらも終了管理が失敗した。
+総消費は816,012+858,683=1,674,695トークンで、失敗分も保持する。全6段階・品質・比較・採用の完了とは扱わない。
+最初の試行は監視自身の祖先を所有対象に入れる不具合もあった。次の監視は正常に最終記録を残した。
+daemonの実行体識別に加え、汎用shutdownの3秒待ちでは所有子の5.9秒後の正常終了を捉えられなかった。
+StudyRuntimeは既存のLean RPCで終了を要求し、所有する子の実終了を直接待つ。一般CLIの時間切れを成功扱いするfallbackは入れない。
+候補の検索・順位・配送・認定経路、installed、READMEの実績は変更していない。全Phases0–6は未完了のまま継続する。
+
 2026-10-23 最新のユーザー指示：Macの空き容量確保を優先し、蓄積した実験DBを削除してseedからやり直す。
 再開元は`/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/seed.egg`。
 初回の保存済み入力からhead/pages/writerだけを独立コピーし、全バイトのSHAを確認した約4MiBのDBである。

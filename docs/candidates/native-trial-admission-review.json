@@ -1,0 +1,145 @@
+{
+  "status": "Lean native utilities verified; full measurement migration and all phases incomplete",
+  "latestLanguagePolicy": "Lean unless Python is necessary",
+  "newPythonOrchestrationWithdrawn": true,
+  "ordinaryRuntimeChanged": false,
+  "productionAdoption": false,
+  "fullGoalComplete": false,
+  "source": [
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/NativeTrialAudit.lean",
+      "sha256": "50780d2e8099a03c42e0399f2fe26f7b2d09473c10d3da7f7f276c5f58ce14ce",
+      "bytes": 5847
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyRuntime.lean",
+      "sha256": "6c977d8638dd906e7b07ba4f8fd276ea8bcea0367424c1d940153956621925d1",
+      "bytes": 7806
+    }
+  ],
+  "binaries": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/NativeTrialAudit",
+      "sha256": "f3eabe02535472f5ba860cf3a2008c12674dc828fe6d4fea7f5699409fd9e522",
+      "bytes": 101749888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/StudyRuntime",
+      "sha256": "15ad9644ae206375a3f4676c871d09a06cc4b59d44745bda76a1fa7cd6480e11",
+      "bytes": 102129760
+    }
+  ],
+  "linkInputs": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/StudyRuntime.rsp",
+      "sha256": "0d643c02fc718cd7c7620e84a53605a17c5159974b6ce8a6a0faf5d2a3bbfc6c",
+      "bytes": 20386
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-record-ack-20261023/frozen-inputs.json",
+      "sha256": "401e0279e7b37c7bb96667cd3cb4ccdea8b7fc8757acb236fac3a7abe1bfe03e",
+      "bytes": 87970
+    }
+  ],
+  "guards": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/range-owner-build-guard.json",
+      "sha256": "ee7ab4eca6fdeab344e8eb89d4f4c5541d23b3d24abbe4cc77d89de7af21a17b",
+      "bytes": 1009
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/range-owner-audit-guard.json",
+      "sha256": "690ebed5bbc2e5ec6e7c6d1192afd41f9b05b051e0fc5be7d3e957e113613214",
+      "bytes": 513
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/lean-runtime-cached-wait-guard.json",
+      "sha256": "10d6f791afe29cdc34a89e1be6eda38bb9127c47accff19a99882d65df310c35",
+      "bytes": 992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/lean-runtime-source-guards.json",
+      "sha256": "281fb2b5fd3663e3c313d36fbed2bcb36cef0e585837f364d1ded16576d7f45d",
+      "bytes": 992
+    }
+  ],
+  "nativeSourceAudit": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/range-owner-check/native-result.json",
+    "sha256": "840771843b602680ea21ff7cd2b13a6b9ac2655aa69644d0469165fee65f6246",
+    "bytes": 3812
+  },
+  "nativeRuntimeChecks": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/lean-runtime-protected/result.json",
+    "sha256": "8ac7b5ca4eb9f9af3786941e40315fcea7a8c8c47c7efd827eed9a3c64003eed",
+    "bytes": 457
+  },
+  "withdrawal": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/withdrawn-python/manifest.json",
+    "sha256": "7953ef76cc90f11aa374fe150f3676a0a2e8929f56cd1d27d41f37cd381fc074",
+    "bytes": 1991
+  },
+  "withdrawnPatch": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/withdrawn-python/changes.patch",
+    "sha256": "37114b8a5d343ab41a1e791a4a7f0840b02492a0efa40c05002cc1a08ff090f9",
+    "bytes": 37365
+  },
+  "failedModels": [
+    {
+      "label": "seed-r0-stage1",
+      "usage": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/attempts/seed-r0-stage1/usage.json",
+        "sha256": "017af037e60e09dd74f273f601b0e3a0e0dca03819dcb1b770f3693bb5f6c69d",
+        "bytes": 371
+      },
+      "cleanup": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/attempts/seed-r0-stage1/cleanup-failure.json",
+        "sha256": "66677b0421a84b888932943b06ed747071d415bbba588944a35d031212b86265",
+        "bytes": 216
+      },
+      "retained": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/attempts/seed-r0-stage1/retained-failure.json",
+        "sha256": "09661c1d591da3fb3c7e402f489f2409de7ae178b50bcc99bf0147ea377d4f57",
+        "bytes": 775
+      },
+      "accepted": false
+    },
+    {
+      "label": "resident-r0-stage1",
+      "usage": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/attempts/resident-r0-stage1/usage.json",
+        "sha256": "d991459bb175979543718b01ca66cd2fed95b1dfe2a1d753641f75afcd063780",
+        "bytes": 369
+      },
+      "cleanup": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/attempts/resident-r0-stage1/cleanup-failure.json",
+        "sha256": "c8c5533bcfdaf6a27bd2695b24164ba53188b5b1118f9131bba7180f50063d60",
+        "bytes": 220
+      },
+      "retained": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/restart-seed-20261023/attempts/resident-r0-stage1/retained-failure.json",
+        "sha256": "a9a689e9eab87c0ac2ec12ac21871599190f2df441c6c5b1ce9c1108fac3609b",
+        "bytes": 733
+      },
+      "accepted": false
+    }
+  ],
+  "inclusiveFailedModelTokens": 1674695,
+  "answeringModelCalls": 2,
+  "answeringModelCallsAfterLeanInstruction": 0,
+  "remainingLeanMigration": [
+    "model admission metadata",
+    "App Server trial controller",
+    "resource monitor",
+    "cost aggregation"
+  ],
+  "existingPythonBoundary": "MiniLM numerical runtime plus legacy measurement tools; do not resume withdrawn Python model plan",
+  "bootstrapMonitor": {
+    "language": "Python",
+    "scope": "existing external verification monitor while Lean monitor is unfinished; not adopted runtime implementation",
+    "source": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/native-admission-20261023/withdrawn-python/tools/memory_guard.py",
+      "sha256": "08d4c4688b69a13a2888fd9639b0c4cf7ad19b3d64bff1e74804ee509bd3e5d6",
+      "bytes": 8688
+    }
+  }
+}
