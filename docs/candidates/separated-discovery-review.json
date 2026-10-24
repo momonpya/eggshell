@@ -1,0 +1,1593 @@
+{
+  "candidate": "separated-work-discovery",
+  "baseCommit": "212afbcc6e9b90814bc7d6c3d2b56b80ec58d91f",
+  "branch": "hook-ingress-supervisor",
+  "parentCandidate": "structural-work",
+  "adopted": false,
+  "phases0Through6": "active-unfinished",
+  "implementation": "Lean 4.33.0",
+  "answeringModelCalls": 0,
+  "seedCalls": 0,
+  "inclusiveTokenComparison": null,
+  "qualityQualification": null,
+  "p99Qualification": null,
+  "native50000Qualification": false,
+  "scope": {
+    "originalClassRecognitionUncapped": true,
+    "nominationsIntrinsicallyAdvisory": true,
+    "noCoverageForNomination": true,
+    "noUnionFromNominationEvenFlagChanged": true,
+    "partialTextHeuristicUnionInferenceReplaced": true,
+    "fullOldFixpointEquivalence": false,
+    "originalChildAndFreshnessBoundariesRetained": true,
+    "vectorModelAndThreeSynapticEdgesUnchanged": true
+  },
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/eggshell",
+    "bytes": 115355520,
+    "sha256": "35662f41c21057d13d0f216b97e7c524a4d4c60bc9ec9dddfeb5df594cf85396"
+  },
+  "referenceRuntime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/structural-work-20261025/eggshell",
+    "bytes": 115921344,
+    "sha256": "d8442da28bca1488f96af54e9557a1f3880fe23041b75788091c466deb3e73cd"
+  },
+  "runtimeInputs": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/runtime-inputs.json",
+    "bytes": 70695,
+    "sha256": "50c0c88541ada18c868e9b46482daafb86f9400d01c1beb821a32372317ee134"
+  },
+  "linkResponse": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/runtime.rsp",
+    "bytes": 21204,
+    "sha256": "5fe0783802d884d714154fad28c4227bc34b90b1a7a96f0fcccf6c0efce3ba42"
+  },
+  "patch": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/runtime.patch",
+    "bytes": 37448,
+    "sha256": "810b756351756dad4903288dbe4196a2bc6ce3ba3c5e024f005c5e1503fb1000"
+  },
+  "patchForwardAndReverseExact": true,
+  "changedSources": [
+    {
+      "name": "Eggshell/Matcher.lean",
+      "parent": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/structural-work-20261025/checkout/Eggshell/Matcher.lean",
+        "bytes": 189634,
+        "sha256": "cb5f15b5ab24bfd66ced41d4c00a05bb8c1ec4fd2facd85e348aab75fcd55bb9"
+      },
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/checkout/Eggshell/Matcher.lean",
+        "bytes": 191104,
+        "sha256": "e04682b9ff065560c7bc486d9ef315d58ef58ed6ff5fe80e57d38da4ee7b9a15"
+      }
+    },
+    {
+      "name": "Eggshell/Handoff.lean",
+      "parent": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/structural-work-20261025/checkout/Eggshell/Handoff.lean",
+        "bytes": 483363,
+        "sha256": "cfd82bdce6f5035be7e3868ac6ac51c9f32618ee993db3d93f731417699aefea"
+      },
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/checkout/Eggshell/Handoff.lean",
+        "bytes": 472281,
+        "sha256": "0cca10b5fa10dcffcf3e7aef5345f1b04037431abb4173f6f5526f55cf13adfc"
+      }
+    },
+    {
+      "name": "Eggshell/ContractAudit.lean",
+      "parent": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/structural-work-20261025/checkout/Eggshell/ContractAudit.lean",
+        "bytes": 107941,
+        "sha256": "a04a92358bc18befb47299bf356bcc97ded25737089e1043669c0eeb70e5f54d"
+      },
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/checkout/Eggshell/ContractAudit.lean",
+        "bytes": 108915,
+        "sha256": "459881086646d873325a3fdba527798faee923008c6e0d4ae2446d92f6166d4c"
+      }
+    }
+  ],
+  "helpers": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/checkout/tools/research/DeferredWorkAudit.lean",
+      "bytes": 8808,
+      "sha256": "465ba2db7ab468f5094e31e2eac678e195cbfad8fa46db8742b1886f4ddd85c1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/checkout/tools/research/SeparatedContract.lean",
+      "bytes": 1399,
+      "sha256": "15f18f8fb6059555243a02b63c6f7da675ec6b3434b5563eb5b583d13264d82a"
+    }
+  ],
+  "finalProof": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-stable.log",
+    "bytes": 77895,
+    "sha256": "1727a92d0e56bb930f16187601b2b9e4164f441e18eb18e7e240ff75851430ca"
+  },
+  "finalProofGuard": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-stable.guard.json",
+  "allowedProofAxioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "api": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/functional-stable/result.json",
+    "bytes": 87000,
+    "sha256": "601636770e2c4dfba864a0a363be1d57ad56b353f69f397c5eee91368bec2632"
+  },
+  "modelFreeFinalGuard": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/model-free-stable.guard.json",
+  "controlled": {
+    "cases": 32,
+    "maximumLocalUnions": 0,
+    "completed": 3,
+    "blockingCases": 3,
+    "fullHandoffDifferences": [
+      {
+        "name": "broad-union-first",
+        "fields": [
+          "text",
+          "reason",
+          "packet",
+          "localUnions"
+        ]
+      },
+      {
+        "name": "broad-retrieval-first",
+        "fields": [
+          "text",
+          "sourceUses",
+          "reason",
+          "packet",
+          "advisory"
+        ]
+      },
+      {
+        "name": "alpha-union-first",
+        "fields": [
+          "text",
+          "reason",
+          "packet"
+        ]
+      },
+      {
+        "name": "alpha-retrieval-first",
+        "fields": [
+          "text",
+          "sourceUses",
+          "reason",
+          "packet",
+          "advisory"
+        ]
+      },
+      {
+        "name": "native-union-first",
+        "fields": [
+          "text",
+          "sourceUses",
+          "sourceCheckpoints",
+          "reason",
+          "packet",
+          "deliveredGraphs",
+          "controlDeltaChars",
+          "completed"
+        ]
+      },
+      {
+        "name": "native-retrieval-first",
+        "fields": [
+          "text",
+          "reason",
+          "packet"
+        ]
+      },
+      {
+        "name": "native-quote-union-first",
+        "fields": [
+          "text",
+          "sourceUses",
+          "sourceCheckpoints",
+          "reason",
+          "packet",
+          "localUnions",
+          "deliveredGraphs",
+          "coveredFragments",
+          "controlDeltaChars",
+          "completed",
+          "blocksCurrent"
+        ]
+      },
+      {
+        "name": "native-quote-retrieval-first",
+        "fields": [
+          "text",
+          "reason",
+          "packet"
+        ]
+      },
+      {
+        "name": "clause-union-first",
+        "fields": [
+          "text",
+          "sourceUses",
+          "sourceCheckpoints",
+          "reason",
+          "packet",
+          "deliveredGraphs",
+          "coveredFragments",
+          "controlDeltaChars",
+          "completed",
+          "blocksCurrent"
+        ]
+      },
+      {
+        "name": "clause-retrieval-first",
+        "fields": [
+          "text",
+          "reason",
+          "packet"
+        ]
+      },
+      {
+        "name": "staged-union-first",
+        "fields": [
+          "reason"
+        ]
+      },
+      {
+        "name": "staged-retrieval-first",
+        "fields": [
+          "text",
+          "reason",
+          "packet"
+        ]
+      },
+      {
+        "name": "alias-union-first",
+        "fields": [
+          "text",
+          "packet"
+        ]
+      },
+      {
+        "name": "alias-retrieval-first",
+        "fields": [
+          "text",
+          "sourceUses",
+          "reason",
+          "packet",
+          "advisory"
+        ]
+      }
+    ],
+    "bodyDifferenceCount": 13,
+    "equalWholeCases": 18,
+    "raw": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/controlled-stable-difference.json",
+      "bytes": 50879,
+      "sha256": "4126c9fbd9b1a0217abe7d825dad0f03040ff613b83e3aa4df53eb96e49fed2d"
+    },
+    "largeCases": [
+      {
+        "uniqueOwners": 8,
+        "ownerCalls": 24,
+        "localUnions": 0,
+        "elapsedMs": 125,
+        "deliveredGraphs": [
+          "p:[\"v2085411762329551623\",\"v3499892562356160898\",\"Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 1.\"]",
+          "f:outcome:v2085411762329551623:v3499892562356160898",
+          "e:v2085411762329551623:v3499892562356160898:0:595",
+          "e:v2085411762329551623:v3499892562356160898:595:1882",
+          "e:v2085411762329551623:v3499892562356160898:1882:2570",
+          "e:v2085411762329551623:v3499892562356160898:2570:3516",
+          "e:v2085411762329551623:v3499892562356160898:3516:3860",
+          "e:v2085411762329551623:v3499892562356160898:3860:4118",
+          "e:v2085411762329551623:v3499892562356160898:4118:5064",
+          "e:v2085411762329551623:v3499892562356160898:5064:5322",
+          "e:v2085411762329551623:v3499892562356160898:5322:6268",
+          "e:v2085411762329551623:v3499892562356160898:6268:6440",
+          "e:v2085411762329551623:v3499892562356160898:6440:7386",
+          "e:v2085411762329551623:v3499892562356160898:7386:7558",
+          "e:v2085411762329551623:v3499892562356160898:7558:8504",
+          "e:v2085411762329551623:v3499892562356160898:8504:8764",
+          "e:v2085411762329551623:v3499892562356160898:8764:9721",
+          "e:v2085411762329551623:v3499892562356160898:9721:9895",
+          "e:v2085411762329551623:v3499892562356160898:9895:10852",
+          "e:v2085411762329551623:v3499892562356160898:10852:11026",
+          "e:v2085411762329551623:v3499892562356160898:11026:11983",
+          "e:v2085411762329551623:v3499892562356160898:11983:12196",
+          "g:v9871671682397385387:v1446602726246388293",
+          "g:v1433142151603923218:v1416427916934192331",
+          "g:v9870318320832583925:v17112764808777394153",
+          "g:v2053786083943253683:v17672158125054608093",
+          "g:v9583480778779464598:v8327009408143824654",
+          "g:v3896482934710455823:v16137863835501158831",
+          "g:v6022481910050194280:v5372613960386926538",
+          "f:request:v9606391366126199650",
+          "f:links:v6780843620749402690"
+        ],
+        "completed": 0,
+        "case": "broad-union-first",
+        "bodySha256": "8b21d19c557960a15942250dc3561faa7fe3793f46213b258ea5f23d324759d4",
+        "bodyBytes": 21432,
+        "blocksCurrent": false,
+        "advisory": 8
+      },
+      {
+        "uniqueOwners": 8,
+        "ownerCalls": 24,
+        "localUnions": 0,
+        "elapsedMs": 102,
+        "deliveredGraphs": [
+
+        ],
+        "completed": 0,
+        "case": "broad-union-continued",
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0,
+        "blocksCurrent": false,
+        "advisory": 0
+      },
+      {
+        "uniqueOwners": 8,
+        "ownerCalls": 24,
+        "localUnions": 0,
+        "elapsedMs": 102,
+        "deliveredGraphs": [
+          "p:[\"v2085411762329551623\",\"v3499892562356160898\",\"Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 1.\"]",
+          "f:outcome:v2085411762329551623:v3499892562356160898",
+          "e:v2085411762329551623:v3499892562356160898:0:595",
+          "e:v2085411762329551623:v3499892562356160898:595:1882",
+          "e:v2085411762329551623:v3499892562356160898:1882:2570",
+          "e:v2085411762329551623:v3499892562356160898:2570:3516",
+          "e:v2085411762329551623:v3499892562356160898:3516:3860",
+          "e:v2085411762329551623:v3499892562356160898:3860:4118",
+          "e:v2085411762329551623:v3499892562356160898:4118:5064",
+          "e:v2085411762329551623:v3499892562356160898:5064:5322",
+          "e:v2085411762329551623:v3499892562356160898:5322:6268",
+          "e:v2085411762329551623:v3499892562356160898:6268:6440",
+          "e:v2085411762329551623:v3499892562356160898:6440:7386",
+          "e:v2085411762329551623:v3499892562356160898:7386:7558",
+          "e:v2085411762329551623:v3499892562356160898:7558:8504",
+          "e:v2085411762329551623:v3499892562356160898:8504:8764",
+          "e:v2085411762329551623:v3499892562356160898:8764:9721",
+          "e:v2085411762329551623:v3499892562356160898:9721:9895",
+          "e:v2085411762329551623:v3499892562356160898:9895:10852",
+          "e:v2085411762329551623:v3499892562356160898:10852:11026",
+          "e:v2085411762329551623:v3499892562356160898:11026:11983",
+          "e:v2085411762329551623:v3499892562356160898:11983:12196",
+          "g:v9871671682397385387:v1446602726246388293",
+          "g:v1433142151603923218:v1416427916934192331",
+          "g:v9870318320832583925:v17112764808777394153",
+          "g:v2053786083943253683:v17672158125054608093",
+          "g:v9583480778779464598:v8327009408143824654",
+          "g:v3896482934710455823:v16137863835501158831",
+          "g:v6022481910050194280:v5372613960386926538",
+          "f:request:v9606391366126199650",
+          "f:links:v6780843620749402690"
+        ],
+        "completed": 0,
+        "case": "broad-retrieval-first",
+        "bodySha256": "8b21d19c557960a15942250dc3561faa7fe3793f46213b258ea5f23d324759d4",
+        "bodyBytes": 21432,
+        "blocksCurrent": false,
+        "advisory": 8
+      },
+      {
+        "uniqueOwners": 8,
+        "ownerCalls": 24,
+        "localUnions": 0,
+        "elapsedMs": 101,
+        "deliveredGraphs": [
+
+        ],
+        "completed": 0,
+        "case": "broad-retrieval-continued",
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0,
+        "blocksCurrent": false,
+        "advisory": 0
+      }
+    ],
+    "largeRaw": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/controlled-stable-10000/result.json",
+      "bytes": 5617,
+      "sha256": "42fed945759c2ce7ee2b8ce8d32dc076da898e2f7d88093465788a17b0f29d47"
+    },
+    "forbiddenCallbacks": [
+      "individual Work view",
+      "Work surface postings",
+      "Work inference frequencies"
+    ]
+  },
+  "nativePoint": [
+    {
+      "name": "native-known",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-known/result.json",
+        "bytes": 12226,
+        "sha256": "434006e3509ae1169e42e018a70e65f6cf3e4b230457fc4ee72a0e125f980995"
+      },
+      "runtimeSha256": "5a432ac4a7839f673ed0ec09624ec2017a2b691b436c3494b0c71370d5a38206",
+      "scope": "before final publication-order-only correction; actual protocol/freshness checks, not final scale performance",
+      "cases": [
+        {
+          "case": "fresh",
+          "preMs": 394,
+          "publishedExactly": true,
+          "offerAccepted": true,
+          "permissionDecision": "deny"
+        },
+        {
+          "case": "changed",
+          "preMs": 393,
+          "publishedExactly": true,
+          "offerAccepted": null,
+          "permissionDecision": null
+        }
+      ]
+    },
+    {
+      "name": "native-provider",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-provider/result.json",
+        "bytes": 13266,
+        "sha256": "10d2498b163563efcba07ab8cf79d1f159c71f28dc2c020aab4c84de35b917b9"
+      },
+      "runtimeSha256": "5a432ac4a7839f673ed0ec09624ec2017a2b691b436c3494b0c71370d5a38206",
+      "scope": "before final publication-order-only correction; actual protocol/freshness checks, not final scale performance",
+      "cases": [
+        {
+          "case": "fresh",
+          "preMs": 386,
+          "publishedExactly": true,
+          "offerAccepted": true,
+          "permissionDecision": "deny"
+        },
+        {
+          "case": "changed",
+          "preMs": 380,
+          "publishedExactly": true,
+          "offerAccepted": true,
+          "permissionDecision": null
+        }
+      ]
+    }
+  ],
+  "scale": [
+    {
+      "windows": 10000,
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-10000/summary.json",
+        "bytes": 29120,
+        "sha256": "847635ea0aabed3f0c7c24e64fe7c13941060f2b31d86cbf867f9dc2d3c7277a"
+      },
+      "warm": [
+        {
+          "kind": "private",
+          "raw": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-10000/private-warm.stdout.json",
+            "bytes": 3801,
+            "sha256": "cd45ec5f46dba1698dff680cd4dc424e7de55dc32be8bc9f483b6f9c117d59bf"
+          },
+          "requestedSourceEmbeddings": 0,
+          "elapsedMs": 21574,
+          "coverage": {
+            "database": {
+              "database": "ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154",
+              "directory": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg"
+            },
+            "discovery": {
+              "input": {
+                "characters": 1866983,
+                "embeddedCharacters": 1655769,
+                "tokenizerMappedCharacters": 1655769,
+                "tokens": 570272,
+                "vectors": 10032,
+                "visibleCharacters": 1655769,
+                "windows": 10000
+              },
+              "invalid": 0,
+              "missing": 0,
+              "valid": 10000,
+              "windows": 10000
+            },
+            "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+            "focus": {
+              "input": {
+                "characters": 921038,
+                "embeddedCharacters": 829452,
+                "tokenizerMappedCharacters": 829452,
+                "tokens": 321706,
+                "vectors": 10032,
+                "visibleCharacters": 829452,
+                "windows": 10000
+              },
+              "invalid": 0,
+              "missing": 0,
+              "valid": 10000,
+              "windows": 10000
+            },
+            "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+            "input": {
+              "characters": 2772277,
+              "embeddedCharacters": 2471302,
+              "tokenizerMappedCharacters": 2471302,
+              "tokens": 886301,
+              "vectors": 20002,
+              "visibleCharacters": 2471302,
+              "windows": 19969
+            },
+            "invalid": 0,
+            "missing": 0,
+            "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            "revision": 3,
+            "valid": 19969,
+            "windows": 19969
+          },
+          "projection": {
+            "added": 0,
+            "bytes": 61344768,
+            "elapsedMs": 10405,
+            "mode": "warm",
+            "produced": 0,
+            "requested": 19969,
+            "reused": 19969,
+            "rows": 19969,
+            "writtenBytes": 0
+          }
+        },
+        {
+          "kind": "repeat",
+          "raw": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-10000/repeat-warm.stdout.json",
+            "bytes": 3800,
+            "sha256": "11620b1c21438e5f92616abb50682907cf6ed3ac9e64c3661f30df99ed67143e"
+          },
+          "requestedSourceEmbeddings": 0,
+          "elapsedMs": 20231,
+          "coverage": {
+            "database": {
+              "database": "ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154",
+              "directory": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg"
+            },
+            "discovery": {
+              "input": {
+                "characters": 1866983,
+                "embeddedCharacters": 1655769,
+                "tokenizerMappedCharacters": 1655769,
+                "tokens": 570272,
+                "vectors": 10032,
+                "visibleCharacters": 1655769,
+                "windows": 10000
+              },
+              "invalid": 0,
+              "missing": 0,
+              "valid": 10000,
+              "windows": 10000
+            },
+            "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+            "focus": {
+              "input": {
+                "characters": 921038,
+                "embeddedCharacters": 829452,
+                "tokenizerMappedCharacters": 829452,
+                "tokens": 321706,
+                "vectors": 10032,
+                "visibleCharacters": 829452,
+                "windows": 10000
+              },
+              "invalid": 0,
+              "missing": 0,
+              "valid": 10000,
+              "windows": 10000
+            },
+            "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+            "input": {
+              "characters": 2772277,
+              "embeddedCharacters": 2471302,
+              "tokenizerMappedCharacters": 2471302,
+              "tokens": 886301,
+              "vectors": 20002,
+              "visibleCharacters": 2471302,
+              "windows": 19969
+            },
+            "invalid": 0,
+            "missing": 0,
+            "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            "revision": 3,
+            "valid": 19969,
+            "windows": 19969
+          },
+          "projection": {
+            "added": 0,
+            "bytes": 61344768,
+            "elapsedMs": 9882,
+            "mode": "warm",
+            "produced": 0,
+            "requested": 19969,
+            "reused": 19969,
+            "rows": 19969,
+            "writtenBytes": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "phase": "first",
+          "totalMs": 10485,
+          "hookMs": 10368,
+          "startupMs": 117,
+          "historyBefore": 0,
+          "validStratum": true,
+          "originalBody": true,
+          "bodyBytes": 17803,
+          "bodySha256": "5c7a5f72c607710135747e78c438e89e9eb86351fb1fbf8df43772277a8cb264",
+          "acknowledgedHistory": 23,
+          "currentSearch": {
+            "turn": "pair-0-first",
+            "trace": {
+              "warmRequests": 0,
+              "warmMs": 0,
+              "semanticMs": 9988,
+              "semantic": "completed",
+              "route": "configured",
+              "lexicalMs": 0
+            },
+            "semanticReadyMs": 2723214282,
+            "semanticFinishDeadlineMs": 2723233459,
+            "semanticDeadlineMs": 2723219144,
+            "searchStartedMs": 2723204830,
+            "reason": "selected=8 visible=8 new-roots=8 completed=0 advisory=8 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=historical",
+            "localUnions": 0,
+            "initialSearch": true,
+            "finishReadyWithinHook": true,
+            "equalityOrigin": null,
+            "epoch": 1,
+            "disposition": "offered",
+            "deadlineMs": 2723233459,
+            "completed": 0
+          },
+          "publication": {
+            "sha256": "439687478242a4d77d155c30d4607fd2eece1a6760fb2f13e5b3fa5757aa619d",
+            "replyComplete": true,
+            "bytes": 18137
+          },
+          "ack": {
+            "stage": "ack",
+            "receipt": "ee2e66597ec4319407eabe984dea321c5a59328512f6bf886c16e50697bd9aff",
+            "pid": 98358,
+            "observedMs": 2723214952,
+            "data": {
+              "rpcCompleted": true,
+              "offerAccepted": true
+            }
+          },
+          "raw": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-10000/pair-0-first/result.json",
+            "bytes": 23445,
+            "sha256": "714b047d39a89403e6581393ab3538de596030f03ce2f27366821d0820f6cafb"
+          }
+        },
+        {
+          "phase": "continued",
+          "totalMs": 8783,
+          "hookMs": 8783,
+          "startupMs": 117,
+          "historyBefore": 23,
+          "validStratum": true,
+          "originalBody": false,
+          "bodyBytes": 0,
+          "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "acknowledgedHistory": 23,
+          "currentSearch": {
+            "turn": "pair-0-continued",
+            "trace": {
+              "warmRequests": 0,
+              "warmMs": 0,
+              "semanticMs": 8409,
+              "semantic": "completed",
+              "route": "configured",
+              "lexicalMs": 0
+            },
+            "semanticReadyMs": 2723223110,
+            "semanticFinishDeadlineMs": 2723243837,
+            "semanticDeadlineMs": 2723229523,
+            "searchStartedMs": 2723215209,
+            "reason": null,
+            "localUnions": null,
+            "initialSearch": false,
+            "finishReadyWithinHook": true,
+            "equalityOrigin": null,
+            "epoch": 2,
+            "disposition": "empty",
+            "deadlineMs": 2723243837,
+            "completed": null
+          },
+          "publication": {
+            "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+            "replyComplete": true,
+            "bytes": 3
+          },
+          "ack": null,
+          "raw": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-10000/pair-0-continued/result.json",
+            "bytes": 4269,
+            "sha256": "0d4b464d620db3f0aff01d7993918bddef21b7ce7312f5356b0bfd5d96695d81"
+          }
+        }
+      ],
+      "shutdown": {
+        "acknowledged": true,
+        "daemonExitCode": 0,
+        "endpointRemoved": true,
+        "phase": "stopped",
+        "pid": 97153,
+        "stopElapsedMs": 39
+      }
+    },
+    {
+      "windows": 50000,
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-50000/summary.json",
+        "bytes": 33740,
+        "sha256": "043da45681639c90b9c019e985da7015934609136773ffb9ebae0ff3dff16266"
+      },
+      "warm": [
+        {
+          "kind": "private",
+          "raw": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-50000/private-warm.stdout.json",
+            "bytes": 3854,
+            "sha256": "9c86ab3524792a1642b9c7a4d227b6e9abccad0af90c2321275481e41cf161c9"
+          },
+          "requestedSourceEmbeddings": 0,
+          "elapsedMs": 170347,
+          "coverage": {
+            "database": {
+              "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+              "directory": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg"
+            },
+            "discovery": {
+              "input": {
+                "characters": 9426890,
+                "embeddedCharacters": 8375676,
+                "tokenizerMappedCharacters": 8375676,
+                "tokens": 2871291,
+                "vectors": 50032,
+                "visibleCharacters": 8375676,
+                "windows": 50000
+              },
+              "invalid": 0,
+              "missing": 0,
+              "valid": 50000,
+              "windows": 50000
+            },
+            "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+            "focus": {
+              "input": {
+                "characters": 4640976,
+                "embeddedCharacters": 4189390,
+                "tokenizerMappedCharacters": 4189390,
+                "tokens": 1613654,
+                "vectors": 50032,
+                "visibleCharacters": 4189390,
+                "windows": 50000
+              },
+              "invalid": 0,
+              "missing": 0,
+              "valid": 50000,
+              "windows": 50000
+            },
+            "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+            "input": {
+              "characters": 14052122,
+              "embeddedCharacters": 12551147,
+              "tokenizerMappedCharacters": 12551147,
+              "tokens": 4479268,
+              "vectors": 100002,
+              "visibleCharacters": 12551147,
+              "windows": 99969
+            },
+            "invalid": 0,
+            "missing": 0,
+            "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            "revision": 13,
+            "valid": 99969,
+            "windows": 99969
+          },
+          "projection": {
+            "added": 99969,
+            "bytes": 307104768,
+            "elapsedMs": 96449,
+            "mode": "prepared",
+            "produced": 99969,
+            "requested": 99969,
+            "reused": 0,
+            "rows": 99969,
+            "writtenBytes": 343002034
+          }
+        },
+        {
+          "kind": "repeat",
+          "raw": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-50000/repeat-warm.stdout.json",
+            "bytes": 3838,
+            "sha256": "563035bdf418a9594eeec6d51c7a3f91df585de06632c24de8ca500029b8d524"
+          },
+          "requestedSourceEmbeddings": 0,
+          "elapsedMs": 142424,
+          "coverage": {
+            "database": {
+              "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+              "directory": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg"
+            },
+            "discovery": {
+              "input": {
+                "characters": 9426890,
+                "embeddedCharacters": 8375676,
+                "tokenizerMappedCharacters": 8375676,
+                "tokens": 2871291,
+                "vectors": 50032,
+                "visibleCharacters": 8375676,
+                "windows": 50000
+              },
+              "invalid": 0,
+              "missing": 0,
+              "valid": 50000,
+              "windows": 50000
+            },
+            "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+            "focus": {
+              "input": {
+                "characters": 4640976,
+                "embeddedCharacters": 4189390,
+                "tokenizerMappedCharacters": 4189390,
+                "tokens": 1613654,
+                "vectors": 50032,
+                "visibleCharacters": 4189390,
+                "windows": 50000
+              },
+              "invalid": 0,
+              "missing": 0,
+              "valid": 50000,
+              "windows": 50000
+            },
+            "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+            "input": {
+              "characters": 14052122,
+              "embeddedCharacters": 12551147,
+              "tokenizerMappedCharacters": 12551147,
+              "tokens": 4479268,
+              "vectors": 100002,
+              "visibleCharacters": 12551147,
+              "windows": 99969
+            },
+            "invalid": 0,
+            "missing": 0,
+            "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+            "revision": 13,
+            "valid": 99969,
+            "windows": 99969
+          },
+          "projection": {
+            "added": 0,
+            "bytes": 307104768,
+            "elapsedMs": 66803,
+            "mode": "warm",
+            "produced": 0,
+            "requested": 99969,
+            "reused": 99969,
+            "rows": 99969,
+            "writtenBytes": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "phase": "first",
+          "totalMs": 28206,
+          "hookMs": 28088,
+          "startupMs": 118,
+          "historyBefore": 0,
+          "validStratum": true,
+          "originalBody": true,
+          "bodyBytes": 21346,
+          "bodySha256": "47bdaf76f09ee91dbe8bf7f8a2e6fa519451a0c83cfb04f447a7483b19755db2",
+          "acknowledgedHistory": 12,
+          "currentSearch": {
+            "turn": "pair-0-first",
+            "trace": {
+              "warmRequests": 1,
+              "warmMs": 1,
+              "semanticMs": 14330,
+              "semantic": "timedOut",
+              "route": "lexical",
+              "lexicalMs": 13366
+            },
+            "semanticReadyMs": null,
+            "semanticFinishDeadlineMs": 2723652671,
+            "semanticDeadlineMs": 2723652671,
+            "searchStartedMs": 2723638357,
+            "reason": "selected=8 visible=8 new-roots=8 completed=0 advisory=8 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=historical",
+            "localUnions": 0,
+            "initialSearch": true,
+            "finishReadyWithinHook": true,
+            "equalityOrigin": null,
+            "epoch": 1,
+            "disposition": "offered",
+            "deadlineMs": 2723666985,
+            "completed": 0
+          },
+          "publication": {
+            "sha256": "6f9cdc116de5ec6a2200149c8e215fda589d6dec124e8fce9a8bb8103cfd10a3",
+            "replyComplete": true,
+            "bytes": 21805
+          },
+          "ack": {
+            "stage": "ack",
+            "receipt": "1b5d353ca58567753379b83993fd1a910cfc74b9337e8bd4747ddadd8bbb32e8",
+            "pid": 22463,
+            "observedMs": 2723666191,
+            "data": {
+              "rpcCompleted": true,
+              "offerAccepted": true
+            }
+          },
+          "raw": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-50000/pair-0-first/result.json",
+            "bytes": 27134,
+            "sha256": "243f8b490b474fbd7bc85fec9b2509753bccfd162f16d3c69a8121c3d4f85ea0"
+          }
+        },
+        {
+          "phase": "continued",
+          "totalMs": 28355,
+          "hookMs": 28355,
+          "startupMs": 118,
+          "historyBefore": 12,
+          "validStratum": true,
+          "originalBody": false,
+          "bodyBytes": 356,
+          "bodySha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+          "acknowledgedHistory": 12,
+          "currentSearch": {
+            "turn": "pair-0-continued",
+            "trace": {
+              "warmRequests": 1,
+              "warmMs": 1,
+              "semanticMs": 14332,
+              "semantic": "timedOut",
+              "route": "lexical",
+              "lexicalMs": 13632
+            },
+            "semanticReadyMs": null,
+            "semanticFinishDeadlineMs": 2723680768,
+            "semanticDeadlineMs": 2723680768,
+            "searchStartedMs": 2723666455,
+            "reason": "search-incomplete",
+            "localUnions": 0,
+            "initialSearch": false,
+            "finishReadyWithinHook": true,
+            "equalityOrigin": null,
+            "epoch": 2,
+            "disposition": "empty",
+            "deadlineMs": 2723695082,
+            "completed": 0
+          },
+          "publication": {
+            "sha256": "8155bb0468ec3f1cacd3f71ad1f5eddf82fe5d867dc19972b5cc319646573549",
+            "replyComplete": true,
+            "bytes": 536
+          },
+          "ack": {
+            "stage": "ack",
+            "receipt": "63db35de9243f7e7307a4c463d2b1a2950e273a37a3b603f7fa732640d6fedd5",
+            "pid": 26764,
+            "observedMs": 2723694554,
+            "data": {
+              "rpcCompleted": true,
+              "offerAccepted": false
+            }
+          },
+          "raw": {
+            "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-50000/pair-0-continued/result.json",
+            "bytes": 5174,
+            "sha256": "3937bf0ef5db698cf8a629d19c46e6ad621fa39b804bdff9efd6fb549007001a"
+          }
+        }
+      ],
+      "shutdown": {
+        "acknowledged": true,
+        "daemonExitCode": 0,
+        "endpointRemoved": true,
+        "phase": "stopped",
+        "pid": 18919,
+        "stopElapsedMs": 53
+      }
+    }
+  ],
+  "storedBodyComparison": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-10000-comparison.json",
+    "bytes": 1178,
+    "sha256": "c518a9e03d8144e63c477b38088863e2c6241b2daaa7b5cfafa8f0ce3a41b894"
+  },
+  "unnecessaryOrderChange": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-10000-order-audit.json",
+    "bytes": 690,
+    "sha256": "1634eb1dcdba7a41a062efbe6306fd9b0697d873ae358ebc51ef40ebcaf04cc6"
+  },
+  "originalSourceFiles": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-source-after.json",
+    "bytes": 1533,
+    "sha256": "8235b8e583aa04d471d6aacae1869b2e46318689ebbd1bd1e14e54b89082eca1"
+  },
+  "guards": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-2.guard.json",
+      "sha256": "ab3f8942a15e1eb3f0c0d4d3f19aae3c74639aca32f116e55b6d30a6c714140d",
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 2797072,
+      "elapsedMs": 55915,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-3.guard.json",
+      "sha256": "d68efc82bef4445c83ff02c2f4bd6b9beffa6236946c298d2a69da5453413e1c",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 2876000,
+      "elapsedMs": 67105,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-4.guard.json",
+      "sha256": "ae236392dcc004da1877254b51bfa2bc669cc49b49492c9272f0d6b66a21c035",
+      "state": "running",
+      "exitCode": null,
+      "reason": null,
+      "ownedPids": [
+        39024,
+        39052,
+        38192,
+        32064,
+        38592,
+        38621,
+        37706,
+        37727
+      ],
+      "aggregatePeakRssKiB": 2994624,
+      "elapsedMs": 63207,
+      "terminalException": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/overlap-incident.json"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-5.guard.json",
+      "sha256": "d3a662b2d0d258fcb034a03b5a74ffc0b10197f612c5bc78a79e0d6db6ed4a35",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 2881120,
+      "elapsedMs": 71468,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-6.guard.json",
+      "sha256": "afc4f0b283ec1f21cf46f5bb3807dc752e9bb6806a44d25a594e2dc8b8aadba6",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 2883744,
+      "elapsedMs": 74931,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-final.guard.json",
+      "sha256": "aac47e34d18728cee7d169814f389372aaa7c175c483c054d48b6a3166ea92db",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 2129360,
+      "elapsedMs": 62093,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build.guard.json",
+      "sha256": "53abc110429d9fc014d9fa955d1ecf42b9030a376534a9286c9dceeab5ccc989",
+      "state": "finished",
+      "exitCode": 137,
+      "reason": "disk-space",
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 1372480,
+      "elapsedMs": 16233,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/matcher.guard.json",
+      "sha256": "f8825a2fc4950fcb62f36480dd46c86bf608c927c5930d0f12ed3d39a5df9c2a",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 1350624,
+      "elapsedMs": 14450,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/model-free-final.guard.json",
+      "sha256": "5fa5b41c024136335bb5b11dcdd979cc5a9674e83d1e959ba0fb31cd51b99d7c",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 2124336,
+      "elapsedMs": 28557,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/model-free-stable.guard.json",
+      "sha256": "3b8bd9b5f4c82c5de4b7e476231c09ea976b20e82ead560e4e427c519a7f2685",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 1448272,
+      "elapsedMs": 26650,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/model-free.guard.json",
+      "sha256": "3bd3fffb03cb82582bd6b51402735a3a46202948e2bcca693ff759823860bde2",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 2123792,
+      "elapsedMs": 28779,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-phase.guard.json",
+      "sha256": "9894a6556bc806038d078aff35877022c866fcc1bad4776ab77f62e97f280ff7",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 2130800,
+      "elapsedMs": 35325,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-2.guard.json",
+      "sha256": "95adb1577115c2e43bf9a6aec5d8d1e07f3c7c06c3436f3bdaae47415784c815",
+      "state": "finished",
+      "exitCode": 1,
+      "reason": "leftover-processes",
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 3018208,
+      "elapsedMs": 12131,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-3.guard.json",
+      "sha256": "2ade12a57d03d08d868f60a3c9a524642cafffd680391e333f5976327f0e727f",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 1607152,
+      "elapsedMs": 15168,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-build.guard.json",
+      "sha256": "fc88e12561fc9964d3588fadeeeababad2d2bbd203160d43519e8b580bc43895",
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 1606512,
+      "elapsedMs": 10799,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-final.guard.json",
+      "sha256": "6f43626e99e842e992ed02255b58751ac678b1157f6c761401902d95ce2fd0cf",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 1580032,
+      "elapsedMs": 15771,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-stable.guard.json",
+      "sha256": "fe877b48c5e28c59f2fe20d450dd3a90023a1713a51c021c0daa68e02b49e62f",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 1378592,
+      "elapsedMs": 15158,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-10000.guard.json",
+      "sha256": "af1458ed502aa4535f2863801789ed7a7893d31f7ace7863ed0293856462dc63",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 1761808,
+      "elapsedMs": 88622,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-50000.guard.json",
+      "sha256": "cc79be46d59edbec69d5b67f50a8367692e88db1e000c47426954d1a67504eab",
+      "state": "finished",
+      "exitCode": 137,
+      "reason": "disk-space",
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 800464,
+      "elapsedMs": 206512,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-stable-10000.guard.json",
+      "sha256": "fa2bd16349599b8e8eea9fe12f55a65e5ce8d02dd5613160801e7638dc6105d9",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 1766864,
+      "elapsedMs": 73684,
+      "terminalException": null
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-stable-50000.guard.json",
+      "sha256": "f5f1b3c8c9794e7d9a170aa5d64d9e442d3433c4bfcf215cada4240564731022",
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "aggregatePeakRssKiB": 2244544,
+      "elapsedMs": 380430,
+      "terminalException": null
+    }
+  ],
+  "maximumAggregateRssKiB": 3018208,
+  "limitRssKiB": 3670016,
+  "userCeilingRssKiB": 4194304,
+  "failures": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build.guard.json",
+      "cause": "disk-space guard before complete executable"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-2.guard.json",
+      "cause": "Handoff demand atom proof and mutable binding compile errors"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-build.guard.json",
+      "cause": "old contract checks still required removed inference"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-2.guard.json",
+      "cause": "audit syntax failure; erroneous overlap caused peer cleanup to kill build guard"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/overlap-incident.json",
+      "cause": "premature launch without fail-fast; build session terminal 137, stale running guard preserved; excludes this run from serial-success claims"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/model-free.guard.json",
+      "cause": "preliminary checks revealed staged global-child omission, then strengthened and corrected"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-50000.guard.json",
+      "cause": "disk-stopped first numerical projection preparation; no hook began"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-stable-50000/pair-0-continued/result.json",
+      "cause": "semantic timeout followed by incomplete lexical continuation; publication complete is not successful search"
+    }
+  ],
+  "nextAction": [
+    "Remove unused WorkPostings.openShared from the new controller setup",
+    "Reuse original owner checks and their ordinal witnesses within one pinned lexical request; reject contradictory ordinal duplicates",
+    "Measure actual numerical critical path and reserve a bounded fallback interval instead of the 15s/half split",
+    "Retest final native first/ACK-history cohorts before p99, MCP privacy, scale routing and matched token adoption"
+  ],
+  "limitations": [
+    "Prepared domain metadata and full numerical scans remain O(N)",
+    "Normal federation still constructs its full catalogue",
+    "Large same-Work classes and many generators not qualified",
+    "Phase4 tool rewrite semantics, live MCP, private capture policy and all matched topic/lap/quality/token experiments unfinished",
+    "Flag-only similarity ablation no longer promotes nominated evidence and must be redesigned"
+  ],
+  "retirements": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/retired-compiler-trees.json",
+      "bytes": 542790,
+      "sha256": "1a5e018de37aca843996c765e6dbfc293c118cc4f0da63da6329eec51fcaac74"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/older-tools-retired.json",
+      "bytes": 1244,
+      "sha256": "845c2f2909e51e2cbfcd92cb566fb6cf8f4327a86a4252c45d57bdd4fdcc92d5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/older-proof-caches-retired.json",
+      "bytes": 401987,
+      "sha256": "e108a6d30e4543b9199f45421d1f6b09c3fd8da303167fc8113bc997ae0004c6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-helper-retired.json",
+      "bytes": 299,
+      "sha256": "ad7ccd8c5786d550c432600e1ed2e7bddad5067bf4ca552776f907db5a2eda25"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/aborted-projection-retired.json",
+      "bytes": 2046,
+      "sha256": "2975c42e4ad4c7ed22f17a8f5adafa6e245ef6b6e3c57273207adfafff995b14"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/preliminary-launcher-retired.json",
+      "bytes": 271,
+      "sha256": "7afe01fca5aa549de8f17c0c84dceb3b31e0b0293a853fd3f28ff887b5623c7e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/small-helpers-retired.json",
+      "bytes": 493,
+      "sha256": "75f5f9f04829057e9133182e6c9488d6e5abef119357f57634f83cd9dc8cdf91"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/api-helper-retired.json",
+      "bytes": 270,
+      "sha256": "f4f954e20def4b8d5b47e3632ce52b9d2880286ac8e280450d8916033c673202"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/api-final-helper-retired.json",
+      "bytes": 270,
+      "sha256": "65ef909c016aafefbefaf9bbd4a1bdb992ada2074493920616e8f84623a3e96d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/api-stable-helper-retired.json",
+      "bytes": 270,
+      "sha256": "4ee90fa5887712bd1b1bfd8b869f9fa615374736b5c35a01d34a20e16e5fb453"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/controlled-preliminary-helper-retired.json",
+      "bytes": 338,
+      "sha256": "25858a23d40f4e248e2bf01ad7f759a0fe54d86146a745ef6e9f03c6c8e76b7b"
+    }
+  ],
+  "archivesCreated": false,
+  "reproduction": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-2.settings.json",
+      "bytes": 499,
+      "sha256": "aae955369222fe7090226055d4a0408adb33b2366c91a8bb9b492b2168deb5a8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-3.settings.json",
+      "bytes": 492,
+      "sha256": "9295667303c972229fa719979025e03770c3499b594ecaab1f2dfad99d459dc2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-4.settings.json",
+      "bytes": 492,
+      "sha256": "7aed8bf12df112b3b0d2c67103c8cc51c5a036ec09b8dd9cb7240cdb7ee07614"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-5.settings.json",
+      "bytes": 492,
+      "sha256": "8182a94025f3b7aa0e5d18d1cf092fe665818f122a6cfd4e5bf3e54fa5ede82a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-6.settings.json",
+      "bytes": 492,
+      "sha256": "e26cab0d7af2644ef6de05feae54f9d6bc8b1ac17ba88344b175a346e5d8ca9c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-direct.rb",
+      "bytes": 1501,
+      "sha256": "8b62f200688a2b69b3675cbcbee1c2409c05e5c18d209d39e9860b488d37c6f4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-final.settings.json",
+      "bytes": 503,
+      "sha256": "6561abf9eda95c48fb04ffaedc8a0e73f350632bc1dc4222c5f3e8b18f8c4fa4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build-plan.rb",
+      "bytes": 2144,
+      "sha256": "b5fcf333516d38dea29c9638d29347c266f22ea1affa97d7b01dba078c3a1bfe"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build.rb",
+      "bytes": 1242,
+      "sha256": "111b6508aea53379bd5d7bbcb0aa5eb7a92d4bbe566ac00d83decdaafedb8837"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/build.settings.json",
+      "bytes": 466,
+      "sha256": "e1bf9bc87caea97d6a978e7c047810d3cc9ef56b3af60e78e5021a3b32f4870e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/lean-path.txt",
+      "bytes": 163,
+      "sha256": "5e11ff8a2ef05a8208467825846efa9c8999bfc55ce691b8decf5e7ac9650b19"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/matcher.settings.json",
+      "bytes": 654,
+      "sha256": "2a41b047eeeb9250abec49b53b2ba2c0539ad8e1b13bc18e5ef137a3eddc50a2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/model-free-final.settings.json",
+      "bytes": 484,
+      "sha256": "cca07711321451c2cdba3b8ae31e914597ac4886f2d04c7403fefeb0f13ec4ce"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/model-free-stable.settings.json",
+      "bytes": 486,
+      "sha256": "40d86fda4fec5ef605a22a46395ba0f2404d38db7204b30bb68c62a3d717183d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/model-free-stable.sh",
+      "bytes": 2204,
+      "sha256": "6b30da75e74632a0677123486f3f7a4e0d6cfec8d4bb1eaaca9e4b1ecf6efa4f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/model-free.settings.json",
+      "bytes": 472,
+      "sha256": "8f74590b4a44978cc6bea352c6b6faafaef230d736ef8344257cab5efb78be3a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-build.settings.json",
+      "bytes": 476,
+      "sha256": "56c3574da3585309d3a916d552261cbdcd4134b03586574c3eab119e028e8cbd"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-build.sh",
+      "bytes": 1136,
+      "sha256": "e5acd24098d22549d8b6b5697f3b02d54347e43728685a1f3512132339213f8e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-entry-build.sh",
+      "bytes": 423,
+      "sha256": "1a75801f3bc36cf65f8c1e0d3eadb476fe815fb27b2e03c2e427bb676995bed6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-phase.settings.json",
+      "bytes": 476,
+      "sha256": "5fea3c3f1640278a58afabb530ed3cb38839877a0d1913e9d2d346d018d0ef82"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/native-phase.sh",
+      "bytes": 1549,
+      "sha256": "3596b0b6a110266815409610e2f022895ab0c5c481fa987121fa63eb7aba1725"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-2.settings.json",
+      "bytes": 474,
+      "sha256": "57c049fb85d645ca0db728d38328ce2985802efdf0b16dba8f01e4d0653b7445"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-3.settings.json",
+      "bytes": 474,
+      "sha256": "5b5cac79765bb5e9f7305a7ac15c7d79ac5435bd376b771aeddf47e2b059dcae"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-build.rb",
+      "bytes": 476,
+      "sha256": "c5bb5771e8aa5b0742c2df91e5cb3bdd8a120924678267a1be15c21363b96a91"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-build.settings.json",
+      "bytes": 478,
+      "sha256": "26ff8ff0dcb37628165a0917bc8d61a6cf2bdcb575f32a51088fc99e1580423b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-final.settings.json",
+      "bytes": 478,
+      "sha256": "7004a1b4c93464064a7cc395ea166d00c58a0a7cd38ffdfb42503938fa82b565"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-stable.rb",
+      "bytes": 840,
+      "sha256": "0c3af92c70d92f5b703e564a0d4afc75c80984360daebb2406b4b57e97d5b460"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/proof-stable.settings.json",
+      "bytes": 480,
+      "sha256": "1dfa6f582cea43db02d14a17db64465c19cf7bd227551bf3d7c7b2aa26bcd463"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-10000.settings.json",
+      "bytes": 1114,
+      "sha256": "b1d74fd66dce139f34fd3c0e1e8816dfc2ae91ee3b6ece693dd44fb9783cb0d1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-50000.settings.json",
+      "bytes": 1114,
+      "sha256": "1ed0a2ab5a3eff22686c080188daeb7df65f614921687484a7b1c1718ce52d59"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-stable-10000.settings.json",
+      "bytes": 1134,
+      "sha256": "eaf8172ec32a289ac3163db111c19e892e0486126a8184acba0f18408ceb35e8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/scale-stable-50000.settings.json",
+      "bytes": 1134,
+      "sha256": "1d204d66f376be4a91f241be634f63c66fd6c4c16000950d1686d9ca9c302819"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/test-build-direct.sh",
+      "bytes": 1081,
+      "sha256": "f9b8c6611167efec8be7f43eced3d0bf5396a4bf61b338b83e6966f6ae5a923d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/test-build.settings.json",
+      "bytes": 472,
+      "sha256": "c73466a0bcf82d88e4f8ef4a9b4948acfe02be2dacca7127cc70b6e9e9d5e68a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/separated-discovery-20261025/test-build.sh",
+      "bytes": 748,
+      "sha256": "7ca3cee773738b468be75601684418e2816fa3986bd18d055fe9138be75775b3"
+    }
+  ]
+}

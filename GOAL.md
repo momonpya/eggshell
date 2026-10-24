@@ -1,5 +1,10 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 indexed discoveryの全Work部分文字列推論を、生成済みe-class認定と原記録の推薦に分離したLean候補を隔離実装。nominatedはCoverage/等価性を持たず、旧retrievedフラグを変更してもcompleted/Unionへ昇格できない。元クラスの全所有者・DB/未保存観測の所属・鮮度・抽出・3辺は保持し、認定を推薦K件で切らない。文字列由来の局所Union推論は意図的に置換し、その完全fixedpointとの同値は主張しない。
+最終proof/ContractAudit・強い推薦境界・API・32固定比較・実native小4例を確認。固定10kは全Work読出し/表層postings/頻度を呼ぶと失敗する条件で8原所有者から約0.1秒で配送。実MiniLM/10kは初回10,485ms・継続8,783ms、17,803bytes/ACK後空本文が保存済み対照とバイト一致。初期の不要な一覧順序変化と未保存観測の大域子所属漏れを直した。旧32例の14初回は意図した分類変更、18例は全体一致、raw completed/blockは7/5→3/3。未検証MCPは鮮度境界で解除する。
+実50kの初回は28,206msで意味期限切れ後の字句原文21,346bytesを配送したが、継続28,355msは未完了通知でACK offer不受理。全体合格ではない。意味予算が約14.3秒、字句約13.4秒で、9語の399,753 posting rowsに1,199,259点キーを検証していた。次は不要Work索引open、同一pinned照会内の重複所有者検証/順序読出しを除き、意味窓の単純半分割を改める。元検証を落として速くしない。
+新seed/回答モデル/総トークン比較0、候補未採用。広域数値走査/通常federation/大クラス/MCP私有capture/p99/全題材比較は残る。RSS guard3.5GiBを保持し、最終直接build2,129,360KiB・50k2,244,544KiB。起動順ミスによる重複試行は3,018,208KiBで回収し、成功扱いしない。初回50k準備のdisk停止も保持し、空き確保後のwarmと全所有process終了/元DB hash不変を確認。旧compiler cache/実行体/失敗link一時物はhash後に削除・archiveなし。docs/separated-discovery.md参照、全Phases0–6 active。
+
 2026-10-25 構造的Work認定をLeanで隔離接続した。Matchの証拠を文字列Coverageと生成済み等価性に分け、異なる字面のCoverageを捏造せず、原Outcome/所属/鮮度/抽出を保持する。e-class→原Work所有者索引を実discoveryとnative正認定の入口へ接続。複数DBの元所属も照会できる。等価性は推薦扱いにせず、推薦からUnionを生成しない。
 最終ContractAudit/証明依存/Matcher fixturesと固定32例が成功し、旧文字列laneの本文・全Handoffが一致。実UserPromptSubmit→PreToolUseの小6例で直接producerを確認し、Preは371–440ms、同指紋のみ停止・変更後は停止しない。stdout/出版SHA/実ACK/manager終了を確認。外部providerが使えなくても正認定は進むが、初回の未完了通知は配送成功に数えない。合成の明示Unionでありcat/sedの自動意味規則ではない。
 新seed/回答モデル/総トークン比較0、候補未採用。広い質問で全Workを復元する経路、通常federationの全体表、5万窓UserPromptSubmitの未完了は残る。次は推薦をvector/シナプス、認定を完全な原典付きクラス照会へ整理し、この全件依存を置換する。局所認定の成功を大規模配送の完成としない。最大合計RSS2,887,568KiB・全guard終了/所有process残存0、失敗試行も保持。終了済み旧実行体/再構築可能cache/helpersはhash後に削除しアーカイブなし。docs/structural-work.md参照、全Phases0–6 active。

@@ -54,6 +54,16 @@ architecture targets; do not enlarge the fixture instead of changing them.
 
 ## Priority and current evidence
 
+The later [separated controller](separated-discovery.md) removes indexed
+discovery's all-Work partial-string inference and gives nominations an evidence
+constructor which cannot complete Work or generate Union. Actual 10k first/
+continued hooks finish in 10.5/8.8 seconds and their bodies match the stored
+reference. At 50k the first hook now delivers lexical original data in 28.2
+seconds, but the continuation still emits an incomplete notice after 28.4
+seconds. This remains unqualified. Repeated lexical owner validation, unused
+Work-index opening and the half-window semantic budget are concrete next costs.
+Full numerical scans, normal federation, privacy and token/quality gates remain.
+
 The [structural Work candidate](structural-work.md) now consumes proof-carrying
 identity directly, without inventing textual Coverage. It reaches original
 owners/children across pinned sources and uses the existing freshness/extraction
