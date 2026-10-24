@@ -1,6 +1,6 @@
 {
-  "status": "isolated automatic native derivation, explicit quotation/coquotation, incremental and DB-only reconstruction with canonical original-byte delivery tested; generic usage and external freshness validators remain incomplete; unadopted",
-  "previousMilestone": "937f2c9",
+  "status": "isolated original-byte native delivery, bounded file verification and per-record freshness outcomes tested with source regressions and ContractAudit; generic usage, observation age and external validators remain incomplete; unadopted",
+  "previousMilestone": "d39e12e",
   "answeringModelCalls": 0,
   "newSeedCalls": 0,
   "ordinaryRuntimeChanged": false,
@@ -11,8 +11,8 @@
   },
   "patch": {
     "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/native-observation-runtime.patch",
-    "sha256": "75527d9cda5d9dc7938ee86f6f129cc98788035eb73a472826d4bd3536c08543",
-    "bytes": 128642
+    "sha256": "af6a8acbb579377f73c7e3f008b4ca37fc9595f17ff0fdcef402398ef87fde97",
+    "bytes": 152187
   },
   "patchPreimages": [
     {
@@ -128,8 +128,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Handoff.lean",
-        "sha256": "45956fe553d896747bf2ced1e8dba3fe7fc9c57268bd5815d8ab469f72d43ea6",
-        "bytes": 467602
+        "sha256": "42f50baa5bae329cce1223cd2aa6a3734fea52fd1f8ada1bbfbc94c020db493e",
+        "bytes": 468531
       }
     },
     {
@@ -245,6 +245,85 @@
         "sha256": "8057bf26e0ae276577b6670af23ee18fb7f39a5347c2dbf9072ca88f590ffbb5",
         "bytes": 10500
       }
+    },
+    {
+      "name": "Eggshell/Deadline.lean",
+      "before": null,
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Deadline.lean",
+        "sha256": "17e2d24f3e86dd9d319e727cb529d25e75e9de82d7c6863e048962e4afd84260",
+        "bytes": 1160
+      }
+    },
+    {
+      "name": "tests/FreshnessDeadlineTests.lean",
+      "before": null,
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/FreshnessDeadlineTests.lean",
+        "sha256": "54e5edfbc6c264760be3df8fe7ab97e7309f438a2be0b823862e9121b963c0d3",
+        "bytes": 5767
+      }
+    },
+    {
+      "name": "Eggshell/SourceEvidence.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/source-freeze/Eggshell/SourceEvidence.lean",
+        "sha256": "fc087f4bdd058a47b35a5c01c847711bf46e576f7af3c6038fd5758194f41ce1",
+        "bytes": 30646
+      },
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SourceEvidence.lean",
+        "sha256": "72708767179d01e63d1ce70badd3b700afa2d877cde14aa8f78ed5855a7428ed",
+        "bytes": 33657
+      }
+    },
+    {
+      "name": "Eggshell/ContractAudit.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ContractAudit.pre-freshness.lean",
+        "sha256": "e7e254edb0d01d82ca14e7f96f2fa438688e9372d685ebf09e8a9cb69d7c1df0",
+        "bytes": 102297
+      },
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/ContractAudit.lean",
+        "sha256": "c60500e1f570fe51c092be958fc164df60b525582fa473ec51d58223ec3cbf2a",
+        "bytes": 102678
+      }
+    },
+    {
+      "name": "tests/SourceEvidenceTests.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceEvidenceTests.pre-freshness.lean",
+        "sha256": "dfd85e2af6e8ac43312d08a6d30419ef7e4a390a97168c686ed8ebef13d40d56",
+        "bytes": 41705
+      },
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SourceEvidenceTests.lean",
+        "sha256": "ac6cea08e96a28f10485520c13a15f9ac5a41cdf28f81569c219da337858ecac",
+        "bytes": 42940
+      }
+    },
+    {
+      "name": "tests/SourceObservationTests.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceObservationTests.pre-freshness.lean",
+        "sha256": "9b78abdd7130528c6693ed6dfc65297b602e4a326beb95072f70ac523477c9cb",
+        "bytes": 16822
+      },
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SourceObservationTests.lean",
+        "sha256": "4b1596da2cee13ecf6d99362ebc784098df7cc31c58f0f53a7aaf0051d79a399",
+        "bytes": 16846
+      }
+    },
+    {
+      "name": "tools/research/FreshnessSourceAudit.lean",
+      "before": null,
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tools/research/FreshnessSourceAudit.lean",
+        "sha256": "a3ffd282a2e59fb0c2da71e160c82f704351bbddec6a3e8d02efb78d62a6708c",
+        "bytes": 853
+      }
     }
   ],
   "tests": [
@@ -256,15 +335,15 @@
         "bytes": 4739
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.freshness-margin-result.txt",
         "sha256": "7821a9518163bedf77afd41fb2fc3486ad0b64006e409d5c9bd6c03fe45790a8",
         "bytes": 139
       },
       "stdout": "structured value checks passed: typed IDs, key exclusion, original Unicode coordinates, checked ancestor paths and 4096-leaf binary lookup",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.rsp",
-        "sha256": "bf25f5b0c59460d7d44f4b48233fc469f839f239da049596039c234507d03636",
-        "bytes": 22503
+        "sha256": "e234a9452ee3f4abfa83191351503e5cf60d79f2e493d14fe1f6c46c0f7f796a",
+        "bytes": 22564
       }
     },
     {
@@ -275,15 +354,15 @@
         "bytes": 4676
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.freshness-margin-result.txt",
         "sha256": "40d1862a6b20808db0be9835c41192c5a9e2c35c0e74eaeb39156cd6b7c18493",
         "bytes": 110
       },
       "stdout": "MCP invocation checks passed: nested arguments, structured results, exact producer/consumer and tool identity",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.rsp",
-        "sha256": "cd0823e79045d355e33dc1aab625872b81e37e62ca82bcfa9d6fe023bd2dd9ae",
-        "bytes": 22510
+        "sha256": "38161d24392655dfd303609f37a424477d222ca555c6acec80d0a3d78023b640",
+        "bytes": 22571
       }
     },
     {
@@ -294,15 +373,15 @@
         "bytes": 6827
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.freshness-margin-result.txt",
         "sha256": "c235b1007c58b71829e9abe5ad6df9c3ed396b523a33f07ca7cc28748e48c97f",
         "bytes": 125
       },
       "stdout": "generic observation checks passed: JSON context, Unicode offsets, literal/origin validation, byte receipts and MCP transport",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.rsp",
-        "sha256": "1bc05cc07d5cbcda00c4e367f55f7d3a6121da998c30f150d7c2b3581b79ac07",
-        "bytes": 22511
+        "sha256": "5b4c76c177c855c7afc24d6d104d760d8d3656963948ba20810703e7ecbb3d82",
+        "bytes": 22572
       }
     },
     {
@@ -313,15 +392,15 @@
         "bytes": 7951
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.freshness-margin-result.txt",
         "sha256": "1e3d143c259a706cdbb6053f2e413456c60d74869a42a67cf7799c0e5d990499",
         "bytes": 169
       },
       "stdout": "Lean recommendation tests passed: offers=6 requests=10 bytes=4543; three relations, omitted feedback, original rows, private index pinning, bounds and no graph mutation",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.rsp",
-        "sha256": "a2030b5bb733917a0ee40c356c1bf309e78dfc0081a43c35429b6f8c31dc2334",
-        "bytes": 22509
+        "sha256": "804562afab8918e20b43b33bfd86416137cf1cfd1941a871c0909067b7f2ef45",
+        "bytes": 22570
       }
     },
     {
@@ -332,15 +411,15 @@
         "bytes": 14540
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournalTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournalTests.freshness-margin-result.txt",
         "sha256": "c0bf295c58520a76f950a0b5bbde27287495837b1cd6561dd051b1c17dc8f02c",
         "bytes": 188
       },
       "stdout": "native journal checks passed: missing=1 partial=2 consumption=4; immutable retries, deferred publication, exact JSON coordinates, ACK knowledge, uncertainty, repeat and temporal isolation",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournalTests.rsp",
-        "sha256": "b886910ca98b7d04816e8e4b9c6aab086988c9ba7785bc8bd88bdc48b59aa130",
-        "bytes": 22507
+        "sha256": "9e2b4701c4a1d9af24f3b432c93c22572839c0b3c81f3888ff5484773c76e21b",
+        "bytes": 22568
       }
     },
     {
@@ -351,15 +430,15 @@
         "bytes": 12518
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.freshness-margin-result.txt",
         "sha256": "5eca99bc23a69279ba5bb4d4afc2043b03e40c746f3c86f4b2c20d98dd34a462",
         "bytes": 136
       },
       "stdout": "Lean extraction checks passed: literal reads/citations, exact IDs, original Unicode coordinates, actual proposal order and usage labels",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.rsp",
-        "sha256": "ebc7e26c1be923409c52caa69418bfa70bc825557e1ee09b81ab338bb832aa83",
-        "bytes": 22510
+        "sha256": "73b382288460530215e19ce2d01ce194fdb2a597c969df8f7ce17f7ea8e07249",
+        "bytes": 22571
       }
     },
     {
@@ -370,15 +449,15 @@
         "bytes": 9069
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.freshness-margin-result.txt",
         "sha256": "889d446b74051014e3f191f7999cb14f7902c6e1513e63ee5c42bc9c6e06dce3",
         "bytes": 174
       },
       "stdout": "native MCP delivery passed: exact field selection without large sibling data, checked ancestor paths, long requested values, receipts, atomic budgets and unchanged authority",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.rsp",
-        "sha256": "c19359a05cde6e50e11488932d214435ea4217e5d8d75b349598833c0fcc1df9",
-        "bytes": 22514
+        "sha256": "04e0b513dfb66994664fa0a8c9d8bb13919b55cbe781659fa32329388e771b92",
+        "bytes": 22575
       }
     },
     {
@@ -389,15 +468,15 @@
         "bytes": 5279
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.freshness-margin-result.txt",
         "sha256": "39db80b1251dfda5f19fd14427a1e4350628f5b65cb71f17c433849ddbeb5cd1",
         "bytes": 161
       },
       "stdout": "Lean production bundle gate passed: complete two-owner relation, no partial graph bonus, independent numerical base, duplicate relation and exact expansion cost",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.rsp",
-        "sha256": "7c416addef40396ab3725c8d359b71e457b71256fede488b07c7bbe26da994ef",
-        "bytes": 22510
+        "sha256": "0691d82c9df550bd78b09971b602023a42904e8e924e520e0b7afc3c0e17d834",
+        "bytes": 22571
       }
     },
     {
@@ -408,15 +487,15 @@
         "bytes": 5770
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTests.freshness-margin-result.txt",
         "sha256": "7f42b8e4ab706e4e6bef7ce68fbdbe462009d276c6a44f39b779068c04fc441a",
         "bytes": 117
       },
       "stdout": "Lean synapse checks passed: cross-session join, immutable events, source boundaries, reverse derivation, coquotation",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTests.rsp",
-        "sha256": "60976faefdbaa4282463ab285cd51c9eb06f7c5aa50c69382b66d1702393bc55",
-        "bytes": 22500
+        "sha256": "36c421d14c57bf6d113de1f89b2ce82b873a4758a2006231b3d8cbc4e0d19bc5",
+        "bytes": 22561
       }
     },
     {
@@ -427,15 +506,15 @@
         "bytes": 9804
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndexTests.native-automatic-verified-result.txt",
-        "sha256": "cf94552396cb5bc5909512bd0153934fa76b6dc91e5783a72e0b2d3b450ea228",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndexTests.freshness-margin-result.txt",
+        "sha256": "524dbe87d76ce66c557ca990c75d8db6f439a2b8ea597591341551deff1031da",
         "bytes": 192
       },
-      "stdout": "bounded posting scan pages=3; full posting scan pages=90\nnative synaptic index checks passed: atomic delta, idempotence, bounded reads, source invalidation, private usage and cross-chat reuse",
+      "stdout": "bounded posting scan pages=3; full posting scan pages=91\nnative synaptic index checks passed: atomic delta, idempotence, bounded reads, source invalidation, private usage and cross-chat reuse",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndexTests.rsp",
-        "sha256": "27facc674e84f5deb16786a1d622eec82b175a0f579e12c381ea8a53a5756ba0",
-        "bytes": 22505
+        "sha256": "498b76378a4dff03834ba70258502485925e5fe13ba87d848e054f4ff1b5d0c2",
+        "bytes": 22566
       }
     },
     {
@@ -446,15 +525,15 @@
         "bytes": 7835
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuildTests.native-automatic-verified-result.txt",
-        "sha256": "972554fdadda526ac955def41d6477479dd7bcce2e1517dd040571941012bb51",
-        "bytes": 96
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuildTests.freshness-margin-result.txt",
+        "sha256": "484358ae3d044da76afc0375b6a6ac5aba51ef7ad1d4f08d05224791b95afa29",
+        "bytes": 95
       },
-      "stdout": "native builder checks passed: rebuild=10ms warm=1ms added=8ms cited=12ms late=15ms retired=19ms",
+      "stdout": "native builder checks passed: rebuild=9ms warm=1ms added=8ms cited=12ms late=14ms retired=18ms",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuildTests.rsp",
-        "sha256": "ca1f3bb4039a9d022620b2f07d38f9defb66ca2472dcb760f6cc59f26f6e3f6c",
-        "bytes": 22505
+        "sha256": "042f668d2824239f6ed2f0c4e5129954e459f202d1cdc731f990000a75d02ff5",
+        "bytes": 22566
       }
     },
     {
@@ -465,15 +544,15 @@
         "bytes": 7994
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSubjectTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSubjectTests.freshness-margin-result.txt",
         "sha256": "c2b2f54e8a05c8c7742d1e6d67c8ba39ab66d548a7359f64a1503dc856b98ce7",
         "bytes": 167
       },
       "stdout": "native subject checks passed: one data class across sessions, real origins, three persistent relations, private feedback, canonical delivery and no authority mutation",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSubjectTests.rsp",
-        "sha256": "bee5cd81126fdbd8eab1fc6473621039765b72b46edfa5158025c790c53620a5",
-        "bytes": 22507
+        "sha256": "dc0f1996934de7cdded803137bb88bfc618622a2586fbfc89fff8426503f752d",
+        "bytes": 22568
       }
     },
     {
@@ -484,15 +563,34 @@
         "bytes": 11778
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseNativeRebuildTests.native-automatic-verified-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseNativeRebuildTests.freshness-margin-result.txt",
         "sha256": "b18c3d10f3323c8c9795b4a3bdfabea205592fad914829fa54ec3c1ac5e6bbfe",
         "bytes": 149
       },
       "stdout": "automatic native rebuild passed: 2 consumption edges, 3 quote supports, canonical origins, incremental and DB-only equality, fragment recommendation",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseNativeRebuildTests.rsp",
-        "sha256": "136b33d81324b16ec966fc4d78e3b13c5b6070d3b35c443b22ad8728f5f02522",
-        "bytes": 22513
+        "sha256": "7bc04e2f0000ab7921480e8efe78ec3b42c32ddf67a3bfce92fa3ebec52975ea",
+        "bytes": 22574
+      }
+    },
+    {
+      "name": "FreshnessDeadlineTests",
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/FreshnessDeadlineTests.lean",
+        "sha256": "54e5edfbc6c264760be3df8fe7ab97e7309f438a2be0b823862e9121b963c0d3",
+        "bytes": 5767
+      },
+      "result": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/FreshnessDeadlineTests.freshness-margin-result.txt",
+        "sha256": "535b1168b3887bffc82b55dd70a34d26cba7c002a465a748d24bbf22a1064a78",
+        "bytes": 191
+      },
+      "stdout": "freshness deadline passed: remaining-time reserve, original historical body after expiry/change, per-record states, shared probes, no authority from unknown/external, distinct receipt stages",
+      "linkResponse": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/FreshnessDeadlineTests.rsp",
+        "sha256": "75f47ef9af2946f0e4bb63910350d67f91b54174076094d07bf3f5ba633544dc",
+        "bytes": 22571
       }
     }
   ],
@@ -505,13 +603,13 @@
     },
     "linkResponse": {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.rsp",
-      "sha256": "578e025a267d1f115fdb3e76d3aacfdf8dbfe4c686f41b3b2a4cdc03579ba904",
-      "bytes": 22510
+      "sha256": "e6867c12ec44d383443181831a7059c41c8222d658357eea6be7b9055112fd59",
+      "bytes": 22571
     },
     "results": [
       {
         "result": {
-          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.native-portable-create-result.txt",
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.freshness-portable-create-result.txt",
           "sha256": "7635e2af8ba24cc1c13c9822b000c6dce8a201ba4faedaa359dbdd17fa0596d9",
           "bytes": 113
         },
@@ -519,15 +617,7 @@
       },
       {
         "result": {
-          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.native-portable-copy-result.txt",
-          "sha256": "cb3b9e60b66d35135ce4f494219215ce03b7ecf7b6149da7889cd0402780d8d4",
-          "bytes": 74
-        },
-        "stdout": "independent DB-only readonly reader passed: facts=4 rebuild=12ms warm=1ms"
-      },
-      {
-        "result": {
-          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.native-portable-independent-result.txt",
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.freshness-portable-copy-result.txt",
           "sha256": "cb3b9e60b66d35135ce4f494219215ce03b7ecf7b6149da7889cd0402780d8d4",
           "bytes": 74
         },
@@ -537,30 +627,268 @@
     "guards": [
       {
         "record": {
-          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-native-portable-verified.guard.json",
-          "sha256": "c34296bc70655bb821803157baa2606e0b517afba38a4a7f13c8ac222f6afc32",
-          "bytes": 1580
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-provenance-freshness.guard.json",
+          "sha256": "5efaa629443979c9ee6238eaaa478f962eae994dbd775e77e8a4da219cc94dcf",
+          "bytes": 1579
         },
-        "sampledPeakRssKiB": 1619648,
-        "exitCode": 0,
-        "ownedPids": [
-
-        ]
-      },
-      {
-        "record": {
-          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-native-portable-private.guard.json",
-          "sha256": "c00cf8a3b469f578847f41c7504f64b84b8aa895128ce44afc9172975dfbec41",
-          "bytes": 1577
-        },
-        "sampledPeakRssKiB": 1543824,
+        "sampledPeakRssKiB": 1549328,
         "exitCode": 0,
         "ownedPids": [
 
         ]
       }
     ],
-    "scope": "Original file provenance, immutable clock/order/retraction checks and a DB-only chmod readonly copy reconstructed in another process, including a fresh explicit EGGSHELL_DATA_ROOT. The first subprocess set XDG_DATA_HOME, which Eggshell does not use; the independent subprocess explicitly fixes the actual data root."
+    "scope": "Original file provenance, immutable clock/order/retraction checks and a DB-only chmod readonly copy reconstructed in another process, including a fresh explicit EGGSHELL_DATA_ROOT for the separate read-only process."
+  },
+  "sourceAudit": {
+    "harness": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tools/research/FreshnessSourceAudit.lean",
+      "sha256": "a3ffd282a2e59fb0c2da71e160c82f704351bbddec6a3e8d02efb78d62a6708c",
+      "bytes": 853
+    },
+    "linkResponse": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/FreshnessSourceAudit.rsp",
+      "sha256": "2d2d7cf3f2630a8bfb719824960915669bf866a0af59fee5bff91eac509d3c96",
+      "bytes": 22750
+    },
+    "guard": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-freshness-source-audit-checked.guard.json",
+      "sha256": "3ece5fc7839687a2ee17e4a9ccb0264276e01df26194931bbeb5bb5d6160c30f",
+      "bytes": 1611
+    },
+    "regressions": [
+      {
+        "name": "SourceEvidenceTests",
+        "source": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SourceEvidenceTests.lean",
+          "sha256": "ac6cea08e96a28f10485520c13a15f9ac5a41cdf28f81569c219da337858ecac",
+          "bytes": 42940
+        },
+        "result": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceEvidenceTests.freshness-checked-result.txt",
+          "sha256": "0e8fedd3dd082befeb57423c350bf4d0d36aa5ed4fc928375b6c242fa4c49021",
+          "bytes": 406
+        },
+        "stdout": "{\"file_bytes\":348160,\"kind\":\"native_bash_source_capture\",\"pre_post_ns\":31017292}\n{\"referenced_result_bytes\":1048576,\"source_certificate_read_bytes\":14227}\nPASS portable sources: streamed fingerprints, relocation, edit/delete/absence, unknown URI, exact owner, immutable native receipt, late indexed certificate, demand-memo freshness and retraction, query-independent freshness with scoped native controls"
+      },
+      {
+        "name": "SourceObservationTests",
+        "source": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SourceObservationTests.lean",
+          "sha256": "4b1596da2cee13ecf6d99362ebc784098df7cc31c58f0f53a7aaf0051d79a399",
+          "bytes": 16846
+        },
+        "result": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceObservationTests.freshness-checked-result.txt",
+          "sha256": "a44a4fababd95ae402552ec02e1da3e91950b3438f22ddfd9fbd30b34bda43a1",
+          "bytes": 305
+        },
+        "stdout": "{\"kind\":\"related_source_observation\",\"observation_ready_ms\":129,\"observations\":1,\"terminal_capture_ms\":1}\nPASS related-source observations: resumable streamed scans, changed ranges/context, command-read freshness, opaque/failed writes, unchanged replay, immutable evidence/certificates and DB publication"
+      }
+    ],
+    "contractSource": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/ContractAudit.lean",
+      "sha256": "c60500e1f570fe51c092be958fc164df60b525582fa473ec51d58223ec3cbf2a",
+      "bytes": 102678
+    },
+    "contractResult": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ContractAudit.freshness-margin-result.txt",
+      "sha256": "2a4aa66266793d75d78b7a5ce0ef3b4467e4aa679c2453d002f6916e3419a001",
+      "bytes": 73682
+    }
+  },
+  "freshnessEvidence": {
+    "report": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-FreshnessDeadlineTests/observation.json",
+      "sha256": "5354403c796358d6a6b16fcc1e991507d2ab372e5c67818714004a492eb0d001",
+      "bytes": 1295
+    },
+    "stages": [
+      {
+        "record": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-FreshnessDeadlineTests-private/receipts/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff/freshness-2660978824912916.json",
+          "sha256": "064c1ba34c05bf12cd512d642499d980a9b1e8a24ada681f8e755b81070b1ddd",
+          "bytes": 903
+        },
+        "data": {
+          "completedAfter": 0,
+          "completedBefore": 1,
+          "hookDeadlineMs": 0,
+          "observation": {
+            "deadlineMs": 0,
+            "elapsedMs": 0,
+            "files": [
+              {
+                "relative": "evidence.txt",
+                "status": "timedOut"
+              }
+            ],
+            "finishedMs": 2660978824,
+            "records": [
+              {
+                "ordinal": 0,
+                "status": "timedOut"
+              }
+            ],
+            "startedMs": 2660978824
+          },
+          "remainingForDeliveryMs": 0,
+          "sourceRecords": [
+            {
+              "closed": true,
+              "complete": true,
+              "files": [
+                {
+                  "content": {
+                    "bytes": 18,
+                    "root": "32d78616090f763f40b9687c58e0e01183a0d2fa7b14028fee5f0fd8b51803e7"
+                  },
+                  "relative": "evidence.txt"
+                }
+              ],
+              "uris": [
+
+              ],
+              "workspace": "freshness-margin-FreshnessDeadlineTests"
+            }
+          ],
+          "sourceUses": [
+            {
+              "completed": true,
+              "owner": "owner",
+              "references": [
+                0
+              ]
+            }
+          ],
+          "verificationDeadlineMs": 0,
+          "workspace": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-FreshnessDeadlineTests"
+        }
+      },
+      {
+        "record": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-FreshnessDeadlineTests-private/receipts/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff/freshness-2660978825761500.json",
+          "sha256": "0705e020fde4d76838354ca40db4c97a138f657263e6fa0e48e0e948f38c284c",
+          "bytes": 931
+        },
+        "data": {
+          "completedAfter": 1,
+          "completedBefore": 1,
+          "hookDeadlineMs": 2660983825,
+          "observation": {
+            "deadlineMs": 2660981325,
+            "elapsedMs": 0,
+            "files": [
+              {
+                "relative": "evidence.txt",
+                "status": "checked"
+              }
+            ],
+            "finishedMs": 2660978825,
+            "records": [
+              {
+                "ordinal": 0,
+                "status": "matched"
+              }
+            ],
+            "startedMs": 2660978825
+          },
+          "remainingForDeliveryMs": 5000,
+          "sourceRecords": [
+            {
+              "closed": true,
+              "complete": true,
+              "files": [
+                {
+                  "content": {
+                    "bytes": 18,
+                    "root": "32d78616090f763f40b9687c58e0e01183a0d2fa7b14028fee5f0fd8b51803e7"
+                  },
+                  "relative": "evidence.txt"
+                }
+              ],
+              "uris": [
+
+              ],
+              "workspace": "freshness-margin-FreshnessDeadlineTests"
+            }
+          ],
+          "sourceUses": [
+            {
+              "completed": true,
+              "owner": "owner",
+              "references": [
+                0
+              ]
+            }
+          ],
+          "verificationDeadlineMs": 2660981325,
+          "workspace": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-FreshnessDeadlineTests"
+        }
+      },
+      {
+        "record": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-FreshnessDeadlineTests-private/receipts/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff/freshness-2660978826683625.json",
+          "sha256": "f66b6aa32982a31423c005e526405c7c072a39016c41714f92816b2232b94258",
+          "bytes": 931
+        },
+        "data": {
+          "completedAfter": 0,
+          "completedBefore": 1,
+          "hookDeadlineMs": 2660983826,
+          "observation": {
+            "deadlineMs": 2660981326,
+            "elapsedMs": 0,
+            "files": [
+              {
+                "relative": "evidence.txt",
+                "status": "checked"
+              }
+            ],
+            "finishedMs": 2660978826,
+            "records": [
+              {
+                "ordinal": 0,
+                "status": "changed"
+              }
+            ],
+            "startedMs": 2660978826
+          },
+          "remainingForDeliveryMs": 5000,
+          "sourceRecords": [
+            {
+              "closed": true,
+              "complete": true,
+              "files": [
+                {
+                  "content": {
+                    "bytes": 18,
+                    "root": "32d78616090f763f40b9687c58e0e01183a0d2fa7b14028fee5f0fd8b51803e7"
+                  },
+                  "relative": "evidence.txt"
+                }
+              ],
+              "uris": [
+
+              ],
+              "workspace": "freshness-margin-FreshnessDeadlineTests"
+            }
+          ],
+          "sourceUses": [
+            {
+              "completed": true,
+              "owner": "owner",
+              "references": [
+                0
+              ]
+            }
+          ],
+          "verificationDeadlineMs": 2660981326,
+          "workspace": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-FreshnessDeadlineTests"
+        }
+      }
+    ],
+    "syntheticHandoffScope": "The carrier starts with a constructed completed/control suffix to isolate the source gate. This test does not establish an Exact equality or claim semantic correctness."
   },
   "linkInputs": [
     {
@@ -809,9 +1137,9 @@
       "bytes": 72816
     },
     {
-      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SourceEvidence.o",
-      "sha256": "0ad7375538c7306ca2bfdb4f8fb98223c992fbbc80a1a9cd428421490fc1f6a1",
-      "bytes": 560808
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceEvidence.o",
+      "sha256": "bd350e759a1fef68bc61c15512e8551d791e56bf96986bfa27b631aef204d2c1",
+      "bytes": 637320
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_GraphStore.o",
@@ -940,8 +1268,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndex.o",
-      "sha256": "3640ec22c26d52d0de02d7a91c3165326db2a6ea383d68c0da1ace115948b175",
-      "bytes": 688880
+      "sha256": "39ad1945bd6a86adc0f741f0ea57bbdc9927db82f13089272ee5e263a2603875",
+      "bytes": 691904
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuild.o",
@@ -1085,8 +1413,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/CanonicalSourceDelivery.o",
-      "sha256": "153f837609b37dceff68c241d73a8b65008e142f7a151e24f4ab23739a463801",
-      "bytes": 738456
+      "sha256": "0a298ffd5195e2b4b7967173b2057247fc9e9e09b4dd42177d45d46c47336325",
+      "bytes": 739384
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommend.o",
@@ -1115,8 +1443,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Handoff.o",
-      "sha256": "7dc6f33a94fc8ec449c2864cddc2e86221050f8eb83e187e63020e375ced00af",
-      "bytes": 4963432
+      "sha256": "264ada903992943dcb843a114f2550b445b1e786251a1ffed4cb37da46eea389",
+      "bytes": 4970944
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_MiniLM.o",
@@ -1589,6 +1917,11 @@
       "bytes": 17240
     },
     {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Deadline.o",
+      "sha256": "3bfff434979e7b78915dff0517ee783577066b8e90c299dd539eeabc88c55339",
+      "bytes": 3920
+    },
+    {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.o",
       "sha256": "933f5ab7d8092945b1ed75e64c29bc207f3e47a80d4e925780db8d054192ef2b",
       "bytes": 85568
@@ -1615,13 +1948,13 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.o",
-      "sha256": "291422bc6a18f873c497415352c6136e8fbc729fbfdf28542baacbf3418a8c57",
-      "bytes": 124808
+      "sha256": "f167ee28727313741478a74949c8cb3f95f94a3302293c8ca9582c3271e93b44",
+      "bytes": 123184
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.o",
-      "sha256": "d77d29e1dae543300220f213669add5eaa0eeb4da79d83cb450f4c82b66eb45f",
-      "bytes": 77776
+      "sha256": "a0b2df24c30367b3b94ce48c5978751dcf01739e1983147d5b0686c8a86b2c60",
+      "bytes": 76640
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTests.o",
@@ -1640,18 +1973,38 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSubjectTests.o",
-      "sha256": "21fbea257c8a6a8331dfbb5b71f2a19a538c604f302c8026f6a49525a8c2d820",
-      "bytes": 110848
+      "sha256": "9ff2d83ea11142930b6fb495159bbdf5dbb7780dfbe83348836b606c9c044c04",
+      "bytes": 109320
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseNativeRebuildTests.o",
-      "sha256": "346f381eba0f766792c7aec5f9793ff3d4b80adb81572fc81001b7e0f6b45d41",
-      "bytes": 193992
+      "sha256": "ff2676df625b0fd5f75629df8e50dd0e06b9478013814ad3640fcf7dea97febf",
+      "bytes": 189592
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/FreshnessDeadlineTests.o",
+      "sha256": "317d2a86dd19c3cde7b1d500eaad995d580409497adee6b3709c698055962413",
+      "bytes": 77528
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.o",
       "sha256": "a773192cbe7a25eb466f1ad7b98227a98ee197369ff66dcf4cb53b841d16f584",
       "bytes": 135048
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/FreshnessSourceAudit.o",
+      "sha256": "80631a0843ab29132c8f199120df16ce11b2b475c622307256f39c80f45eb645",
+      "bytes": 15928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceEvidenceTests.o",
+      "sha256": "054d081424604af670c2dfb87a652b550d176e55991899955afec65094b49f16",
+      "bytes": 511992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceObservationTests.o",
+      "sha256": "a60bc29af0b8a080a9b86cedf29d1fb04db07770c76e458a2775e0867d0bdf70",
+      "bytes": 222192
     }
   ],
   "guards": [
@@ -1966,18 +2319,187 @@
       "ownedPids": [
 
       ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-freshness-core.guard.json",
+        "sha256": "407e002217ac50df0577391fda3a55de9909520fd8cec968a1aee5c978e4f93c",
+        "bytes": 1273
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1280048,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-freshness-observation.guard.json",
+        "sha256": "8c396f7f31856c7ffce8056dd4e1125ca6b5f6f366354d6bf84090b7af4af2a4",
+        "bytes": 1197
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 2167664,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-freshness-complete.guard.json",
+        "sha256": "ee056d0bd1886ad3604420283559fae020814da9f4d103d2c07d4f03f220f573",
+        "bytes": 1226
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 2168912,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-freshness-observation.guard.json",
+        "sha256": "60d3de6e55aa728a83ed979130ede9dab4fe592e65e8b8b4cfb10ff2fdab4896",
+        "bytes": 1600
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1624144,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-freshness-receipt.guard.json",
+        "sha256": "7f131693b51c8e268c064ffd2f1e07eb67ead9b0c076a5b6394de81d4002bcc1",
+        "bytes": 1193
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 2173072,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-freshness-audit.guard.json",
+        "sha256": "8dfb3e788db62c6c0e35ab769de67e93790c47036e6bac1f0d6db4f333d9e4af",
+        "bytes": 1274
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1419408,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-freshness-audit-depth.guard.json",
+        "sha256": "3349b87fb62f080360a9bd3d7c47ee56566409980d6bc354ffd9e98a17762571",
+        "bytes": 1273
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 2070944,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-freshness-final.guard.json",
+        "sha256": "ce12508a8570eeb8c9a9d1637217b299f6ea629c5815ee8a5685224210838534",
+        "bytes": 1588
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1621936,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-freshness-source-audit.guard.json",
+        "sha256": "34554e062500ddaf3ef9156b2d321b801b491961a40f616f9b0ff192a65eb102",
+        "bytes": 1583
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1600304,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-freshness-audit-request.guard.json",
+        "sha256": "ec6598f0523d4308a03a71326fd9702f2121cdf4e3738a4a5159acc3523a6430",
+        "bytes": 1282
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1549104,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-freshness-audit-request-checked.guard.json",
+        "sha256": "3154bd3ce558c29e68a9c4119c91ddfcd65f53bb051deafeadc5b5bb2bccd02e",
+        "bytes": 1295
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 2106144,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-freshness-margin.guard.json",
+        "sha256": "5016407836ccf4e3470f8148cf62acc98a239f7a5ba972508e53818aa8fb7772",
+        "bytes": 1282
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 2178352,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-freshness-margin.guard.json",
+        "sha256": "cd066aabcfeb0ad105b54a05af476fdb8597b87ab64b69d7346a317e8986a37c",
+        "bytes": 1590
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1627104,
+      "ownedPids": [
+
+      ]
     }
   ],
   "deliveries": [
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/irrelevant-large.egg.delivery.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseOutputDeliveryTests/irrelevant-large.egg.delivery.txt",
         "sha256": "5721cf36830e662829490437745bf6da3249fdeba38a9694637817aa2d2204a4",
         "bytes": 368
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/irrelevant-large.egg.receipt.json",
-        "sha256": "0d3c399e3c991cff9662e182ce25305942ea48fe9b3d70f526e122ebd2be1264",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseOutputDeliveryTests/irrelevant-large.egg.receipt.json",
+        "sha256": "ce3582cd85f6bfba0b2bf2483eca0761660ec9965dd4dd48c1d9e750bd0153e5",
         "bytes": 1816
       },
       "offers": [
@@ -2013,7 +2535,7 @@
             "owner": "v8632617076027875263",
             "limit": 5035,
             "first": 5019,
-            "database": "87fa87e84a4d12a49b7a238fab6e6139a212b82c06486b725c6fa2ceeabffae1"
+            "database": "97a93202a14950d9c708fe8504df59f668c8af77faedec507fd08615c51e36ee"
           },
           "addressDelivered": true
         }
@@ -2021,13 +2543,13 @@
     },
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/selected-large.egg.delivery.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseOutputDeliveryTests/selected-large.egg.delivery.txt",
         "sha256": "a24a988cd42c598a9c0dcb974e76b8da703f72969c13d0a1a967540c12910eec",
         "bytes": 5494
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/selected-large.egg.receipt.json",
-        "sha256": "1b91c13c18d3a426996059acf5856aa5ca954dd0613bb57b39bd8e9a0bf2bbd4",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseOutputDeliveryTests/selected-large.egg.receipt.json",
+        "sha256": "8eda8b5a603da5d608933b634f0247a92bd40756f837540ce22be0e46922e90f",
         "bytes": 1823
       },
       "offers": [
@@ -2063,7 +2585,7 @@
             "owner": "v8632617076027875263",
             "limit": 5018,
             "first": 2,
-            "database": "91e8cfceba954fcfad346d7e79cd0a11503bde1fc8a2e19e4559a40bf1e6a5e6"
+            "database": "427b23d2e3fcf22b411bdf66f8959bf234299d3d935b4be3e0ab8fb71c00a737"
           },
           "addressDelivered": true
         }
@@ -2071,13 +2593,13 @@
     },
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/small.egg.delivery.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseOutputDeliveryTests/small.egg.delivery.txt",
         "sha256": "617896de33b8a8b30be868838b7d8dc22e87e4dcbb02d717aaafb7128e9006c1",
         "bytes": 365
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/small.egg.receipt.json",
-        "sha256": "e015fa68484eb25e3ee0826d7297df50f4d33fa75847ecae951935041e82dd31",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseOutputDeliveryTests/small.egg.receipt.json",
+        "sha256": "08f7fd5381476411f047cf605b10b5dc0bb21cc6eac8a145fc88d3f3e26a261a",
         "bytes": 1812
       },
       "offers": [
@@ -2113,7 +2635,7 @@
             "owner": "v5582376009483042294",
             "limit": 51,
             "first": 35,
-            "database": "5ea95324aa4db933a956155170580db5524487a84c6e6c41bd40f4559501f820"
+            "database": "3ea172f61a91165e5b31fabe2482c630e26c8635594f48e02a0314e4d455d427"
           },
           "addressDelivered": true
         }
@@ -2121,13 +2643,13 @@
     },
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/two-fields.egg.delivery.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseOutputDeliveryTests/two-fields.egg.delivery.txt",
         "sha256": "8b76d601eed452a85d29c691491b68e60e318fd02054d6ba2a124facf7bff4a1",
         "bytes": 456
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/two-fields.egg.receipt.json",
-        "sha256": "afedf465f4c47dcf63733868f0fc4e6774c8bb03e09edec5710699128375491e",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseOutputDeliveryTests/two-fields.egg.receipt.json",
+        "sha256": "7cd03d0c8716b6c4b84e14a80f9b11f3813146cc4ad86cd42256d52edaca2fe7",
         "bytes": 2792
       },
       "offers": [
@@ -2181,7 +2703,7 @@
             "owner": "v5582376009483042294",
             "limit": 51,
             "first": 35,
-            "database": "394b9316fa33e521b647d433a70826dcea0b7d129857a88280b19243c2ea216b"
+            "database": "af71e0fedd9ebafab9c92956492eebc4ccd3e656aa38fdc6025540d9bee62c1d"
           },
           "addressDelivered": true
         },
@@ -2197,7 +2719,7 @@
             "owner": "v5582376009483042294",
             "limit": 34,
             "first": 2,
-            "database": "394b9316fa33e521b647d433a70826dcea0b7d129857a88280b19243c2ea216b"
+            "database": "af71e0fedd9ebafab9c92956492eebc4ccd3e656aa38fdc6025540d9bee62c1d"
           },
           "addressDelivered": true
         }
@@ -2206,13 +2728,13 @@
   ],
   "canonicalNative": {
     "body": {
-      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseSubjectTests.delivery.txt",
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseSubjectTests.delivery.txt",
       "sha256": "6c14cef898af3dfd356224cc748f3959c6bf4a683879d8d2cde74f51198ea85c",
       "bytes": 798
     },
     "receipt": {
-      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseSubjectTests.receipt.json",
-      "sha256": "f29df5723a8103a2057b8b47b6a62916e78f82802fbdd638565f336756a54633",
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseSubjectTests.receipt.json",
+      "sha256": "a48ec828d46b01d1eb743be39716db5c59aaa6c9ae92b5c02c69dfe961244611",
       "bytes": 16592
     },
     "references": [
@@ -2236,7 +2758,7 @@
             "owner": "v3138673491690376928",
             "limit": 22,
             "first": 1,
-            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
+            "database": "435a0e510b32213fa0c9acf7654e00e3832110ce286f6d2118b2377cc5be585f"
           }
         ],
         "bodyDelivered": true
@@ -2261,14 +2783,14 @@
             "owner": "v14061174050173540260",
             "limit": 37,
             "first": 18,
-            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
+            "database": "435a0e510b32213fa0c9acf7654e00e3832110ce286f6d2118b2377cc5be585f"
           },
           {
             "work": "v5370592181706687029",
             "owner": "v14892146687930449293",
             "limit": 37,
             "first": 18,
-            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
+            "database": "435a0e510b32213fa0c9acf7654e00e3832110ce286f6d2118b2377cc5be585f"
           }
         ],
         "bodyDelivered": true
@@ -2293,14 +2815,14 @@
             "owner": "v14061174050173540260",
             "limit": 17,
             "first": 1,
-            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
+            "database": "435a0e510b32213fa0c9acf7654e00e3832110ce286f6d2118b2377cc5be585f"
           },
           {
             "work": "v5370592181706687029",
             "owner": "v14892146687930449293",
             "limit": 17,
             "first": 1,
-            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
+            "database": "435a0e510b32213fa0c9acf7654e00e3832110ce286f6d2118b2377cc5be585f"
           }
         ],
         "bodyDelivered": true
@@ -2341,7 +2863,7 @@
           },
           "priority": 0,
           "kind": "support",
-          "evidence": "54afae1d01ee5f56f42552a8bcb1ff1883f5673b1ab923c63b0867866815d0e6"
+          "evidence": "6c12d3bbea937cd379d157834238027c2cf2109a28c2919227bfcc6445833ba0"
         },
         "bodyDelivered": true
       },
@@ -2379,7 +2901,7 @@
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "1db0e5ccb3f53d0d585d26053601f14a93b9acec060e9cc749e8b1e27cf2dc53"
+          "evidence": "2b763ae96ef8e776d933dbf0d2db9dd94bdd87ecdee60dc29e1b150023e45c0d"
         },
         "bodyDelivered": true
       },
@@ -2417,7 +2939,7 @@
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "28e169b4e106afedc9aed833c5826b7dcfc787a3e6ae92ebdbec8e6b6bd1d186"
+          "evidence": "2d826da6dd6375ddcab73fc510b0aa12d162639e6752c8c5a19260931f6fca14"
         },
         "bodyDelivered": true
       },
@@ -2455,7 +2977,7 @@
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "983da9d317853b9b4d60a92321691ac0e4d9b48b3cf9131f4f0b9cef435f2914"
+          "evidence": "64030fe202f175e726576958db70991677178f46185e1da592290f587d123169"
         },
         "bodyDelivered": true
       },
@@ -2531,45 +3053,7 @@
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "1c07fc8352f182c0ab2088382b1d78cd4d2f93fa5ee2cdf9131519e77c941344"
-        },
-        "bodyDelivered": true
-      },
-      {
-        "offer": {
-          "target": {
-            "range": {
-              "source": {
-                "subject": {
-                  "original": {
-                    "original": {
-                      "work": "v5370592181706687029",
-                      "content": "ab01f8744a8bf4d70b3adb667540f9c396551e529e858c8a8d675e14f7f51a16",
-                      "chars": 38
-                    }
-                  }
-                },
-                "last": 37,
-                "first": 19
-              }
-            }
-          },
-          "source": {
-            "subject": {
-              "original": {
-                "original": {
-                  "work": "v5370592181706687029",
-                  "content": "ab01f8744a8bf4d70b3adb667540f9c396551e529e858c8a8d675e14f7f51a16",
-                  "chars": 38
-                }
-              }
-            },
-            "last": 37,
-            "first": 19
-          },
-          "priority": 0,
-          "kind": "coquotation",
-          "evidence": "4f055417e97eea17a20b3b1cca06dcea93aca16b6427e632eef0b7c393210977"
+          "evidence": "2b7db79882a858b86c60493e2377c548e3d2adfb6e57885154bb895c3aa417c6"
         },
         "bodyDelivered": true
       },
@@ -2607,7 +3091,45 @@
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "a71bbfa5ce5e47722f7d51b305838cbf0d634b7475c9d84675edb603cf0d3e51"
+          "evidence": "88e1f09d22498481dccd45e3b27efbfa4ffac5d1cecd317358001a7e34dffcfa"
+        },
+        "bodyDelivered": true
+      },
+      {
+        "offer": {
+          "target": {
+            "range": {
+              "source": {
+                "subject": {
+                  "original": {
+                    "original": {
+                      "work": "v5370592181706687029",
+                      "content": "ab01f8744a8bf4d70b3adb667540f9c396551e529e858c8a8d675e14f7f51a16",
+                      "chars": 38
+                    }
+                  }
+                },
+                "last": 37,
+                "first": 19
+              }
+            }
+          },
+          "source": {
+            "subject": {
+              "original": {
+                "original": {
+                  "work": "v5370592181706687029",
+                  "content": "ab01f8744a8bf4d70b3adb667540f9c396551e529e858c8a8d675e14f7f51a16",
+                  "chars": 38
+                }
+              }
+            },
+            "last": 37,
+            "first": 19
+          },
+          "priority": 0,
+          "kind": "coquotation",
+          "evidence": "e6a0d0a49da59a8d67547b951abdf3c1a2ebbf529df95e07a686b49c48052b3a"
         },
         "bodyDelivered": true
       },
@@ -2653,18 +3175,18 @@
   },
   "automaticNative": {
     "report": {
-      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseNativeRebuildTests/rebuild.json",
-      "sha256": "78d2c2549047d1400d0cdd14cee9d86146617dea069b32b31a872fcdb3c1dfc9",
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseNativeRebuildTests/rebuild.json",
+      "sha256": "5ffc45e25678b64eef9368b0a22c230f71cda75a9eb3e746310d8762ad6dcd48",
       "bytes": 29483
     },
     "body": {
-      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseNativeRebuildTests/delivery.txt",
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseNativeRebuildTests/delivery.txt",
       "sha256": "863acc5ffbf60a0735b8c6e12144f11c5291a23ae41359c88fa7bb8a0ba13c30",
       "bytes": 805
     },
     "receipt": {
-      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseNativeRebuildTests/receipt.json",
-      "sha256": "619e78917ddbfea53c333c97270c22b4b41dd385b7162323cf49b14732f32d7d",
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/freshness-margin-SynapseNativeRebuildTests/receipt.json",
+      "sha256": "0edd679f65a800bd0c482c705524059cc0f2d80b052031ced9e22b5289bad682",
       "bytes": 17729
     },
     "consumption": [
@@ -2787,13 +3309,13 @@
             "owner": "v15926828530724936875",
             "limit": 5049,
             "first": 5030,
-            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+            "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
           }
         },
         "claim": {
           "limit": 52,
           "first": 0,
-          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c",
           "answer": "v10761280368815418375"
         },
         "cited": {
@@ -2814,80 +3336,7 @@
           "owner": "v15926828530724936875",
           "limit": 5049,
           "first": 5030,
-          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
-        }
-      },
-      {
-        "source": {
-          "subject": {
-            "original": {
-              "original": {
-                "work": "v4024735067636115870",
-                "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
-                "chars": 79
-              }
-            }
-          },
-          "last": 22,
-          "first": 2
-        },
-        "read": {
-          "source": {
-            "subject": {
-              "original": {
-                "original": {
-                  "work": "v4024735067636115870",
-                  "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
-                  "chars": 79
-                }
-              }
-            },
-            "last": 22,
-            "first": 2
-          },
-          "quotations": [
-            "f9bc95b237492a4b9b3c464513f4f545d9252a28ebf64f460031dc66e2ffe976",
-            "a5f9eba9fce6910e4f2d942cf1de9c214dbd4e6b9268c290da39273854a13e9c",
-            "1cdb4b5e3ccd0240e78bcd93e4c453acfee3fba59a65937821a2c4ec9b99a23c"
-          ],
-          "occurrence": {
-            "useId": "inspect",
-            "turn": "turn",
-            "session": "first"
-          },
-          "binding": {
-            "work": "v4024735067636115870",
-            "owner": "v7280590681570043269",
-            "limit": 22,
-            "first": 1,
-            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
-          }
-        },
-        "claim": {
-          "limit": 52,
-          "first": 0,
-          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
-          "answer": "v10761280368815418375"
-        },
-        "cited": {
-          "subject": {
-            "original": {
-              "original": {
-                "work": "v4024735067636115870",
-                "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
-                "chars": 79
-              }
-            }
-          },
-          "last": 22,
-          "first": 2
-        },
-        "binding": {
-          "work": "v4024735067636115870",
-          "owner": "v7280590681570043269",
-          "limit": 22,
-          "first": 1,
-          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
         }
       },
       {
@@ -2933,13 +3382,13 @@
             "owner": "v12429964538136669636",
             "limit": 5049,
             "first": 5030,
-            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+            "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
           }
         },
         "claim": {
           "limit": 52,
           "first": 0,
-          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c",
           "answer": "v10761280368815418375"
         },
         "cited": {
@@ -2960,7 +3409,80 @@
           "owner": "v12429964538136669636",
           "limit": 5049,
           "first": 5030,
-          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
+        }
+      },
+      {
+        "source": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v4024735067636115870",
+                "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
+                "chars": 79
+              }
+            }
+          },
+          "last": 22,
+          "first": 2
+        },
+        "read": {
+          "source": {
+            "subject": {
+              "original": {
+                "original": {
+                  "work": "v4024735067636115870",
+                  "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
+                  "chars": 79
+                }
+              }
+            },
+            "last": 22,
+            "first": 2
+          },
+          "quotations": [
+            "f9bc95b237492a4b9b3c464513f4f545d9252a28ebf64f460031dc66e2ffe976",
+            "a5f9eba9fce6910e4f2d942cf1de9c214dbd4e6b9268c290da39273854a13e9c",
+            "1cdb4b5e3ccd0240e78bcd93e4c453acfee3fba59a65937821a2c4ec9b99a23c"
+          ],
+          "occurrence": {
+            "useId": "inspect",
+            "turn": "turn",
+            "session": "first"
+          },
+          "binding": {
+            "work": "v4024735067636115870",
+            "owner": "v7280590681570043269",
+            "limit": 22,
+            "first": 1,
+            "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
+          }
+        },
+        "claim": {
+          "limit": 52,
+          "first": 0,
+          "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c",
+          "answer": "v10761280368815418375"
+        },
+        "cited": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v4024735067636115870",
+                "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
+                "chars": 79
+              }
+            }
+          },
+          "last": 22,
+          "first": 2
+        },
+        "binding": {
+          "work": "v4024735067636115870",
+          "owner": "v7280590681570043269",
+          "limit": 22,
+          "first": 1,
+          "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
         }
       }
     ],
@@ -2974,11 +3496,11 @@
             "last": "workSurfaces:9:0",
             "height": 1,
             "first": "all:0",
-            "checksum": "3cf4e25f6f4074c5e5db179391ed34b69ba476565041e1067787124f946c5299",
+            "checksum": "6987e22966ce10d2cb7c4eeb17706a0636ed7e3f89b82ec752631f02fc1a73ad",
             "bytes": 395
           },
           "revision": 2,
-          "identity": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "identity": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c",
           "bytes": 50314,
           "authority": "native-rebuild"
         },
@@ -2991,18 +3513,18 @@
             "offset": 50627,
             "last": "provenance",
             "height": 1,
-            "first": "fact:05872fa5c32710e5e759e03e6d652c8660703a92390924093d6690876c6e8ac0",
-            "checksum": "b5017f7cb2296f9393026b818ccb95226bf7af7fb0f752c23a9a8eb2b44f067a",
+            "first": "fact:0a6b8fd6c9df048f0e7620044294aeec011f313e5fa80aa8b7db5a0ecf76828c",
+            "checksum": "b713b0ad06bb8305d64eb2609f51ccdf2fc1b0f2525789c9e1a1418a99cad32f",
             "bytes": 2884
           },
           "revision": 1,
-          "identity": "f5e9c0d7af88a82a22d3152b295805ec283eb6a7f080f76855eeb3cd5babc0ec",
+          "identity": "d038021f49aa79ed272509b9152bb92031a8eeefb29e192a722fb9350e94a5ca",
           "bytes": 53511,
-          "authority": "advisory:93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8:recommendations"
+          "authority": "advisory:421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c:recommendations"
         },
         "hydrated": 6,
         "facts": 22,
-        "elapsedMs": 52,
+        "elapsedMs": 48,
         "consumptionRebuilt": true,
         "candidates": 6,
         "answers": 1
@@ -3016,11 +3538,11 @@
             "last": "workSurfaces:9:0",
             "height": 1,
             "first": "all:0",
-            "checksum": "0001509611415b6f9f57a09d09ebc6e2a7cd9d0e9dd9dd3ac7d5ac70e666efba",
+            "checksum": "02714f0fc10a4ca082bde9fe544dc4a53c060ccb2a0bbf3b1065cf34b94e5176",
             "bytes": 519
           },
           "revision": 4,
-          "identity": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "identity": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c",
           "bytes": 107166,
           "authority": "native-rebuild"
         },
@@ -3030,21 +3552,21 @@
         "index": {
           "root": {
             "rows": 131,
-            "offset": 104298,
+            "offset": 109880,
             "last": "provenance",
             "height": 1,
-            "first": "fact:05872fa5c32710e5e759e03e6d652c8660703a92390924093d6690876c6e8ac0",
-            "checksum": "a23f4133ed231329bb90ce7586a88180b1bfbeecf29bdbdfea7c43192a34567b",
-            "bytes": 3101
+            "first": "fact:0a6b8fd6c9df048f0e7620044294aeec011f313e5fa80aa8b7db5a0ecf76828c",
+            "checksum": "68f593cd478bdbe64eda0d14d6e1afd16965579a6ea8b313a3dfcc062361470d",
+            "bytes": 2889
           },
           "revision": 3,
-          "identity": "f5e9c0d7af88a82a22d3152b295805ec283eb6a7f080f76855eeb3cd5babc0ec",
-          "bytes": 107399,
-          "authority": "advisory:93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8:recommendations"
+          "identity": "d038021f49aa79ed272509b9152bb92031a8eeefb29e192a722fb9350e94a5ca",
+          "bytes": 112769,
+          "authority": "advisory:421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c:recommendations"
         },
         "hydrated": 3,
         "facts": 26,
-        "elapsedMs": 33,
+        "elapsedMs": 34,
         "consumptionRebuilt": false,
         "candidates": 8,
         "answers": 1
@@ -3058,11 +3580,11 @@
             "last": "workSurfaces:9:0",
             "height": 1,
             "first": "all:0",
-            "checksum": "0001509611415b6f9f57a09d09ebc6e2a7cd9d0e9dd9dd3ac7d5ac70e666efba",
+            "checksum": "02714f0fc10a4ca082bde9fe544dc4a53c060ccb2a0bbf3b1065cf34b94e5176",
             "bytes": 519
           },
           "revision": 4,
-          "identity": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "identity": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c",
           "bytes": 107166,
           "authority": "native-rebuild"
         },
@@ -3075,18 +3597,18 @@
             "offset": 58352,
             "last": "provenance",
             "height": 1,
-            "first": "fact:05872fa5c32710e5e759e03e6d652c8660703a92390924093d6690876c6e8ac0",
-            "checksum": "cd18bed6357c0b680ff6c793f89ea9c83bf304612615fa1accfd041a73107fc8",
+            "first": "fact:0a6b8fd6c9df048f0e7620044294aeec011f313e5fa80aa8b7db5a0ecf76828c",
+            "checksum": "94cf4e6aa8bb648e8b83b5726e7031932e924144a87262604f58dabfac1ebfbf",
             "bytes": 2885
           },
           "revision": 1,
-          "identity": "f3a2cb273fe1bcc0bf971ae04faff878f3759a9918fd7d8b90624f271998d296",
+          "identity": "2266c3352ca13170c746ac9325a19d95e707300e922ae4e77bcf6e01889c02f4",
           "bytes": 61237,
-          "authority": "advisory:93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8:recommendations"
+          "authority": "advisory:421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c:recommendations"
         },
         "hydrated": 8,
         "facts": 26,
-        "elapsedMs": 58,
+        "elapsedMs": 55,
         "consumptionRebuilt": true,
         "candidates": 8,
         "answers": 3
@@ -3100,11 +3622,11 @@
             "last": "workSurfaces:9:0",
             "height": 1,
             "first": "all:0",
-            "checksum": "0001509611415b6f9f57a09d09ebc6e2a7cd9d0e9dd9dd3ac7d5ac70e666efba",
+            "checksum": "02714f0fc10a4ca082bde9fe544dc4a53c060ccb2a0bbf3b1065cf34b94e5176",
             "bytes": 519
           },
           "revision": 4,
-          "identity": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "identity": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c",
           "bytes": 107166,
           "authority": "native-rebuild"
         },
@@ -3117,18 +3639,18 @@
             "offset": 58352,
             "last": "provenance",
             "height": 1,
-            "first": "fact:05872fa5c32710e5e759e03e6d652c8660703a92390924093d6690876c6e8ac0",
-            "checksum": "cd18bed6357c0b680ff6c793f89ea9c83bf304612615fa1accfd041a73107fc8",
+            "first": "fact:0a6b8fd6c9df048f0e7620044294aeec011f313e5fa80aa8b7db5a0ecf76828c",
+            "checksum": "94cf4e6aa8bb648e8b83b5726e7031932e924144a87262604f58dabfac1ebfbf",
             "bytes": 2885
           },
           "revision": 1,
-          "identity": "52e438d34e640538ab26d7e2b2e991b13d809b658bd3d98696931d9fbfe812f2",
+          "identity": "991773f36d2c89e5ea11ffbde5efb7df1b10cecdc66876e6a679406ce73ef87e",
           "bytes": 61237,
-          "authority": "advisory:93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8:recommendations"
+          "authority": "advisory:421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c:recommendations"
         },
         "hydrated": 8,
         "facts": 26,
-        "elapsedMs": 54,
+        "elapsedMs": 52,
         "consumptionRebuilt": true,
         "candidates": 8,
         "answers": 3
@@ -3155,14 +3677,14 @@
             "owner": "v12429964538136669636",
             "limit": 5049,
             "first": 5030,
-            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+            "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
           },
           {
             "work": "v9983747746511472433",
             "owner": "v15926828530724936875",
             "limit": 5049,
             "first": 5030,
-            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+            "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
           }
         ],
         "bodyDelivered": true
@@ -3187,7 +3709,7 @@
             "owner": "v7280590681570043269",
             "limit": 22,
             "first": 1,
-            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+            "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
           }
         ],
         "bodyDelivered": true
@@ -3212,14 +3734,14 @@
             "owner": "v12429964538136669636",
             "limit": 5029,
             "first": 5013,
-            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+            "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
           },
           {
             "work": "v9983747746511472433",
             "owner": "v15926828530724936875",
             "limit": 5029,
             "first": 5013,
-            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+            "database": "421c1800f01f2c391ebaf1e9319e882255c7a31fc3a1292ea9e0b51430c68e8c"
           }
         ],
         "bodyDelivered": true
@@ -3231,7 +3753,7 @@
   "pending": [
     "Automatic general-data usage producers with immutable pre-event knowledge, actual consumed spans and verified ACKs",
     "Location postings for changed Work/file subjects instead of exact snapshot-only lookup",
-    "Cancelable external freshness validator adapters, scoped evidence and residual-deadline allocation",
+    "Cancelable external freshness adapters, scoped evidence and persisted wall-clock observation times; 30-day advisory update scheduling is not connected",
     "Evidence strength, fan-out normalization and idempotence",
     "Command-independent optional source alignment and narrow references",
     "Full product runtime qualification and fixed-runtime new-chat acquisition",
@@ -3239,18 +3761,22 @@
   ],
   "scope": "The original canonical-subject fixture uses checked manual support/coquotation/usage APIs. The new independent fixture stores native MCP observations, actual call intervals, answers and All relations, then automatically derives consumption and explicit quote/coquotation facts, compares incremental and DB-only rebuilds and warms the private read-only index. Actual original-projection selection and original-byte receipts are checked, including exclusion of an irrelevant 5000-character sibling. No external MCP server, answering model, new seed or complete product hook lifecycle is invoked. Journal missing=1/partial=2 are intentional negative fixtures.",
   "failures": [
-    "Earlier canonical-subject build failures and their raw guards remain recorded.",
-    "The projection proof initially did not reduce Id.run/pure; rewritten as a pure let-expression.",
-    "A test indexed a transient quotation with the partial-array accessor; replaced by explicit checked lookup.",
-    "A new selector fixture needed Lean record indentation and a concrete slice type.",
-    "The first automatic delivery test opened the read-only user lane after warming only the database lane. The diagnostic receipt proved available=false with no index. Added the missing private warm and checks that its facts equal the same frozen publication; both failures retained."
+    "Earlier canonical-subject and automatic reconstruction failures remain in their raw guards and preceding committed review.",
+    "The existing long source test required maxRecDepth=2048 for elaboration; the failing build is retained.",
+    "A source regression reconstructed an old demand request without the current synaptic identity. Physical memo rows existed. The fixture now validates production-published request/response/source/dependency records instead of inventing a partial key.",
+    "The new test helper initially compared Except values without a BEq instance; corrected through checked Option values."
   ],
   "freshness": {
     "externalValidatorImplemented": false,
+    "externalCancellationImplemented": false,
+    "residualDeadlineImplemented": true,
+    "fileOutcomesRecorded": true,
     "snapshotHashAuthorizesFreshness": false,
     "ttlAuthorizesCompletion": false,
     "policyPromptRestrictsNoRecheckToMatched": true,
-    "deadlinePolicy": "Fixed overall hook deadline; future external validators must receive a bounded remaining-time deadline, preserve delivery margin and leave unknown observations advisory.",
+    "deadlinePolicy": "Verification keeps the existing absolute hook deadline, leaves at least half the remaining interval and a 250 ms delivery floor when available, and skips new probes inside that floor. Arithmetic and file IO paths are tested; arbitrary external/OS IO completion is not proved.",
+    "advisoryUpdateDays": 30,
+    "advisoryUpdateStatus": "planned; wall-clock acquisition times, notification invalidation and re-fetch adapters remain unimplemented",
     "source": "https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching"
   },
   "proofs": [
@@ -3262,7 +3788,13 @@
     "JsonScalars.address_literal_is_original",
     "ObservationContext.fragment_is_original",
     "ObservationContext.fragment_has_native_origin",
-    "SharedRangeAdapter.output_context_preserves_control"
+    "SharedRangeAdapter.output_context_preserves_control",
+    "Deadline.never_extends",
+    "Deadline.reserves_delivery",
+    "Deadline.reserves_minimum",
+    "Deadline.expired_stays_expired",
+    "SourceEvidence.matched_status_has_checked_dependencies",
+    "SourceEvidence.external_status_never_matches"
   ],
   "tokenImprovementMeasured": false
 }

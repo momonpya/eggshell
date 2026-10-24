@@ -73,7 +73,7 @@ def scanTests (root workspace : System.FilePath) : IO Unit := do
   require (!(← SourceEvidence.verify workspace old.record (← deadline)) &&
       (← SourceEvidence.verify workspace observation.capture.record (← deadline)))
     "old content was refreshed or new content was unverified"
-  let ledger ← SourceEvidence.observeRecords workspace [old.record, observation.capture.record] (← deadline)
+  let ledger := (← SourceEvidence.observeRecords workspace [old.record, observation.capture.record] (← deadline)).ledger
   require ((authorize? [old.record, observation.capture.record] ledger).isNone &&
       (authorize? [observation.capture.record] ledger).isSome)
     "a new file observation refreshed an old dependent conclusion"
@@ -90,8 +90,8 @@ def scanTests (root workspace : System.FilePath) : IO Unit := do
       !(← SourceEvidence.verify workspace observation.capture.record (← deadline)) &&
       (← SourceEvidence.verify workspace restoration.capture.record (← deadline)))
     "restored bytes did not restore old freshness or incorrectly refreshed changed evidence"
-  let restoredLedger ← SourceEvidence.observeRecords workspace
-    [old.record, observation.capture.record, restoration.capture.record] (← deadline)
+  let restoredLedger := (← SourceEvidence.observeRecords workspace
+    [old.record, observation.capture.record, restoration.capture.record] (← deadline)).ledger
   require ((authorize? [old.record] restoredLedger).isSome &&
       (authorize? [observation.capture.record] restoredLedger).isNone)
     "restoration gave current authority to the wrong historical observation"

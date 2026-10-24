@@ -15,7 +15,12 @@ open Lean
 reads use the same decoding/assembly implementation with their own read
 capability; no alternate body representation or compatibility lane exists. -/
 run_meta do
-  for theoremName in #[``Eggshell.Plugin.DemandMemo.requested_record_rejects_another_request,
+  for theoremName in #[``Eggshell.Deadline.never_extends,
+      ``Eggshell.Deadline.reserves_delivery, ``Eggshell.Deadline.reserves_minimum,
+      ``Eggshell.Deadline.expired_stays_expired,
+      ``Eggshell.SourceEvidence.matched_status_has_checked_dependencies,
+      ``Eggshell.SourceEvidence.external_status_never_matches,
+      ``Eggshell.Plugin.DemandMemo.requested_record_rejects_another_request,
       ``Eggshell.Plugin.DemandMemo.observed_record_has_current_request,
       ``Eggshell.Plugin.DemandMemo.captured_decode_keeps_origin,
       ``Eggshell.Plugin.changed_memo_payload_rejected,
@@ -197,6 +202,7 @@ run_meta do
         #[``Eggshell.Plugin.Handoff.checkSources, ``Eggshell.Persistence.Store.NodeReader.sources], #[]),
       (``Eggshell.Plugin.Handoff.checkSources,
         #[``Eggshell.Plugin.Handoff.withCheckedSources, ``Eggshell.SourceEvidence.observeRecords,
+          ``Eggshell.Deadline.verification, ``Eggshell.Receipt.observe,
           ``Eggshell.Plugin.checkSourceUse?, ``Eggshell.Plugin.sourceRefreshText], #[]),
       (``Eggshell.Plugin.Handoff.checkedCheckpoints,
         #[``Eggshell.Plugin.checkApplicableSourceUse?], #[]),

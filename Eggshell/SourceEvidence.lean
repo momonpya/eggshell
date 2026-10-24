@@ -673,11 +673,70 @@ theorem authorization_has_current_dependencies (authorization : Authorization re
       refine ⟨current, rfl, ?_⟩
       simpa [recordAgrees, observed, agrees] using accepted
 
-/-- Request-local observation is shared by all selected owners. Even a failed
-probe is done once; it cannot be converted to a permanent negative result. -/
+inductive ProbeStatus where
+  | checked | unverified | timedOut
+  deriving BEq, ToJson
+
+inductive RecordStatus where
+  | matched | changed | unverified | timedOut | external
+  deriving BEq, ToJson
+
+structure FileCheck where
+  relative : String
+  status : ProbeStatus
+  deriving ToJson
+
+structure RecordCheck where
+  ordinal : Nat
+  status : RecordStatus
+  deriving ToJson
+
+structure Observation where
+  ledger : Ledger
+  files : Array FileCheck
+  records : Array RecordCheck
+  startedMs : Nat
+  finishedMs : Nat
+  deadlineMs : Nat
+
+def Observation.receipt (observation : Observation) : Json := Json.mkObj [
+  ("startedMs",toJson observation.startedMs),("finishedMs",toJson observation.finishedMs),
+  ("deadlineMs",toJson observation.deadlineMs),
+  ("elapsedMs",toJson (observation.finishedMs-observation.startedMs)),
+  ("files",toJson observation.files),("records",toJson observation.records)]
+
+def recordStatus (ledger : Ledger) (failures : Std.HashMap String ProbeStatus) (record : Record) : RecordStatus :=
+  if !record.uris.isEmpty then .external
+  else if !record.valid then .unverified
+  else if recordAgrees ledger record then .matched
+  else if record.files.any (fun file => (ledger[file.relative]?).join.any (· != file)) then .changed
+  else if record.files.any (fun file => failures[file.relative]? == some .timedOut) then .timedOut
+  else .unverified
+
+theorem matched_status_has_checked_dependencies (ledger : Ledger)
+    (failures : Std.HashMap String ProbeStatus) (record : Record)
+    (matched : recordStatus ledger failures record = .matched) : recordAgrees ledger record = true := by
+  unfold recordStatus at matched
+  split at matched <;> try contradiction
+  split at matched <;> try contradiction
+  split at matched
+  · assumption
+  · split at matched <;> try contradiction
+    split at matched <;> contradiction
+
+theorem external_status_never_matches (ledger : Ledger)
+    (failures : Std.HashMap String ProbeStatus) (record : Record)
+    (external : record.uris.isEmpty = false) : recordStatus ledger failures record = .external := by
+  simp [recordStatus,external]
+
+/-- Request-local observation is shared by all selected owners. A failed or
+expired probe stays unknown, independently of a definite changed fingerprint.
+The diagnostic states never populate the authorization ledger. -/
 def observeRecords (workspace : System.FilePath) (records : List Record) (deadline : Nat) :
-    IO Ledger := do
+    IO Observation := do
+  let startedMs ← IO.monoMsNow
   let mut observations : Std.HashMap String (Option Probe) := {}
+  let mut failures : Std.HashMap String ProbeStatus := {}
   for record in records do
     if !record.valid then continue
     for file in record.files do
@@ -685,10 +744,20 @@ def observeRecords (workspace : System.FilePath) (records : List Record) (deadli
       let some relative := Relative.check? file.relative | continue
       let observed ← probe workspace relative deadline
       observations := observations.insert file.relative observed
+      if observed.isNone then
+        failures := failures.insert file.relative (if (← IO.monoMsNow) ≥ deadline then .timedOut else .unverified)
   let mut ledger : Ledger := {}
   for (relative, observed) in observations.toList do
-    ledger := ledger.insert relative (← checkedProbeFile workspace observed deadline)
-  pure ledger
+    let checked ← checkedProbeFile workspace observed deadline
+    ledger := ledger.insert relative checked
+    if checked.isNone && !failures.contains relative then
+      failures := failures.insert relative (if (← IO.monoMsNow) ≥ deadline then .timedOut else .unverified)
+  let files := ledger.toArray.map fun (relative,current) =>
+    ({relative,status := if current.isSome then .checked else failures[relative]?.getD .unverified} : FileCheck)
+  return {
+    ledger,files := files.qsort (fun a b => a.relative < b.relative)
+    records := records.toArray.mapIdx (fun ordinal record => ⟨ordinal,recordStatus ledger failures record⟩)
+    startedMs,finishedMs := ← IO.monoMsNow,deadlineMs := deadline}
 
 /-- Delivery status replaces the previous observation for the same selected
 source scope. Graph delivery and completion keys use separate namespaces. -/

@@ -1160,7 +1160,16 @@ diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
 diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
 --- a/Eggshell/Handoff.lean
 +++ b/Eggshell/Handoff.lean
-@@ -104,6 +104,7 @@
+@@ -1,5 +1,8 @@
+ module
+ 
++public import Eggshell.Deadline
++public import Eggshell.Receipt
++
+ public import Std.Data.HashSet.Lemmas
+ public import Std.Data.TreeMap.Lemmas
+ public import Eggshell.PluginModel
+@@ -104,6 +107,7 @@
    first : Nat
    original : String
    decoded : Bool := false
@@ -1168,7 +1177,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
    deriving ToJson, FromJson
  
  structure ContextDelivery where
-@@ -262,7 +263,8 @@
+@@ -262,7 +266,8 @@
          (if body.2 then " decoded\n" else "\n")
      else s!"  ORIGINAL CHARS [{fragment.first},{fragment.first + fragment.original.length})\n" ++
        (if body.2 then "  DECODED JSON STRING DATA\n" else "")
@@ -1178,7 +1187,34 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
  
  theorem fragment_render_preserves_presented_data (fragment : DeliveryFragment) :
      ∃ label, fragment.render = label ++ fragment.presentation.1 := by
-@@ -5154,9 +5156,53 @@
+@@ -1300,11 +1305,23 @@
+ 
+ def Handoff.checkSources (handoff : Handoff) (context : SourceContext) : IO Handoff := do
+   if !handoff.controlSuffixValid then return pendingSearch
+-  let ledger ← SourceEvidence.observeRecords context.workspace handoff.sourceRecords context.deadline
+-  try context.onDependencies (handoff.sourceRecords.filter (·.valid) |>.flatMap (·.files) |>.eraseDups)
+-  catch error => IO.eprintln s!"Eggshell retained source history; observation scheduling unavailable: {error}"
++  let started ← IO.monoMsNow
++  let verificationDeadline := Deadline.verification started context.deadline
++  let observation ← SourceEvidence.observeRecords context.workspace handoff.sourceRecords verificationDeadline
++  let ledger := observation.ledger
+   let authorization := SourceEvidence.authorize? handoff.sourceRecords ledger
+   let checked := handoff.withCheckedSources context ledger
++  -- Distinct checks within a semantic/fallback request must not overwrite
++  -- each other's observations. Diagnostics never contribute source authority.
++  Receipt.observe context.receipt ("freshness-" ++ toString (← IO.monoNanosNow)) (Json.mkObj [
++    ("hookDeadlineMs",toJson context.deadline),("verificationDeadlineMs",toJson verificationDeadline),
++    ("remainingForDeliveryMs",toJson (context.deadline-(← IO.monoMsNow))),
++    ("workspace",toJson context.workspace.toString),
++    ("sourceRecords",toJson handoff.sourceRecords),("sourceUses",toJson handoff.sourceUses),
++    ("completedBefore",toJson handoff.completed),("completedAfter",toJson checked.completed),
++    ("observation",observation.receipt)])
++  try context.onDependencies (handoff.sourceRecords.filter (·.valid) |>.flatMap (·.files) |>.eraseDups)
++  catch error => IO.eprintln s!"Eggshell retained source history; observation scheduling unavailable: {error}"
+   let mixed := !authorization.isSome && handoff.sourceUses.any fun use =>
+     (checkSourceUse? handoff.sourceRecords use ledger).isSome
+   let notice := if mixed then mixedSourceStatusText else sourceStatusText authorization.isSome
+@@ -5154,10 +5171,54 @@
    referenceRanks : List (Nat × Nat) := []
    referenceRanges : List (Nat × List (Nat × Nat)) := []
    synapticRanges : List (Nat × Nat × Nat) := []
@@ -1218,7 +1254,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
 +        "\n  [Original tool excerpts; unselected data remains in memory.]\n"
 +      trailing := "\n  TRACE\n" ++ "\n".intercalate (family.owner.observations.map renderObservation) ++
 +        provenance ++ "\nEND WORK GRAPH\n"}
-+
+ 
 +def Family.contextualOutputs (family : Family) : Family :=
 +  match family.outputEnvelope? with
 +  | none => family
@@ -1229,10 +1265,11 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
 +    family.contextualOutputs.template.members = family.template.members ∧
 +      family.contextualOutputs.template.visibleKeys = family.template.visibleKeys := by
 +  cases found : family.outputEnvelope? <;> simp [Family.contextualOutputs,found]
- 
++
  structure UnitPlan where
    family : Nat
-@@ -5272,18 +5318,45 @@
+   slice : TransportSlice
+@@ -5272,18 +5333,45 @@
      (part : Synapses.CanonicalSource.Delivery.Part) :
      ({family,slice := {owner := none,keys := part.keys,text := "",shared := some part,members := [],visibleKeys := []},ranges := []} :
        UnitPlan).slice.members = [] := rfl
@@ -1280,7 +1317,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
    let decoded := (decodedToolText? source).map DecodedLayout.make
    let original := decoded.map (·.original) |>.getD (IndexedCharacters.make source)
    let records := contextRecordSpans source decoded
-@@ -5293,11 +5366,11 @@
+@@ -5293,11 +5381,11 @@
      | none => some range
      | some layout => (decodedEvidenceUsing? layout range).map (·.original)
    let cues := ((rankedContextRanges source (work.length+1) positions).map fun range =>
@@ -1294,7 +1331,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
    let mut seen : Std.HashSet (List (Nat × Nat)) := {}
    for position in positions do
      let structural := (completeStructureContexts records
-@@ -5398,7 +5471,7 @@
+@@ -5398,7 +5486,7 @@
      ((focus ++ references).filterMap fun (position,priority) =>
        (meaningContext? source (work.length+1) position priority).map fun context =>
          {priority,first := context.span.start,last := context.span.stop}) ++
@@ -1303,7 +1340,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
    | _,_ => []
  
  def coveringCue? (cues : List RankedCue) (first last : Nat) : Option RankedCue :=
-@@ -5723,6 +5796,7 @@
+@@ -5723,6 +5811,7 @@
        {slices : List TransportSlice //
          (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
          ∃ suffix, slices = mandatory ++ suffix} := do
@@ -1311,7 +1348,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
    let templates := families.map (·.template) ++ mandatory
    let allCost := cost templates
    let dataCost := templates.foldl (fun total slice =>
-@@ -5765,6 +5839,7 @@
+@@ -5765,6 +5854,7 @@
        {slices : List TransportSlice //
          (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
          ∃ suffix, slices = mandatory ++ suffix} := do
@@ -1319,7 +1356,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
    let templates := families.map (·.template) ++ mandatory
    let allCost := cost templates
    let dataCost := templates.foldl (fun total slice =>
-@@ -5926,6 +6001,7 @@
+@@ -5926,6 +6016,7 @@
      (referenceRanks : List (Value × List (Nat × Nat)) := [])
      (referenceRanges : List (Value × List (Nat × List (Nat × Nat))) := [])
      (synapticRanges : List (Value × List (Nat × Nat × Nat)) := [])
@@ -1327,7 +1364,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
      (synapticBundles : Array Synapses.Bundles.Projected := #[])
      (canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {}) : Option Handoff :=
    let extraction := prepared.val
-@@ -5982,8 +6058,10 @@
+@@ -5982,8 +6073,10 @@
        "exceptions and contrasting results relevant to the current request. A simpler " ++
        "recorded example does not make a delivered exception irrelevant. Do not turn " ++
        "conditional observations into unconditional rules. " ++
@@ -1340,7 +1377,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
        "Follow each observation's newest source status; superseded contents remain history. " ++
        "Obtaining necessary undelivered evidence or executing a requested test is separate " ++
        "from reconfirming delivered evidence. " ++
-@@ -6132,6 +6210,7 @@
+@@ -6132,6 +6225,7 @@
              referenceRanks := ranks
              referenceRanges := ranges
              synapticRanges := (synapticRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
@@ -1348,7 +1385,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
              synapticUnits := synapticBundles.toList.flatMap fun bundle =>
                bundle.members.toList.flatMap fun member => member.choices.toList.filterMap fun bound =>
                  if bound.owner == originalKey then some bound.spans else none
-@@ -7564,6 +7643,7 @@
+@@ -7564,6 +7658,7 @@
      (referenceRanks := referenceRanks)
      (referenceRanges := referenceRanges)
      (synapticRanges := synaptic.ranges)
@@ -2393,3 +2430,379 @@ diff --git a/Eggshell/SynapseProvenance.lean b/Eggshell/SynapseProvenance.lean
    let located ← IO.ofExcept (trace.locate locations)
    return {result with graph := ← IO.ofExcept (result.graph.merge located.graph)}
  
+diff --git a/Eggshell/Deadline.lean b/Eggshell/Deadline.lean
+--- a/Eggshell/Deadline.lean
++++ b/Eggshell/Deadline.lean
+@@ -0,0 +1,35 @@
++module
++
++public import Lean
++
++@[expose] public section
++
++namespace Eggshell.Deadline
++
++def minimumDeliveryMs : Nat := 250
++
++/-- Verification shares the existing absolute deadline. Reserve at least half
++of the remaining interval and, when available, a small publication floor.
++When only that floor remains, do not start another verification probe. -/
++def verification (now deadline : Nat) : Nat :=
++  min deadline (now + min ((deadline-now)/2) (deadline-now-minimumDeliveryMs))
++
++theorem never_extends (now deadline : Nat) : verification now deadline ≤ deadline :=
++  Nat.min_le_left _ _
++
++theorem reserves_delivery (now deadline : Nat) (live : now ≤ deadline) :
++    (deadline-now)/2 ≤ deadline-verification now deadline := by
++  simp only [verification]
++  omega
++
++theorem reserves_minimum (now deadline : Nat) (live : now ≤ deadline) :
++    min minimumDeliveryMs (deadline-now) ≤ deadline-verification now deadline := by
++  simp only [verification,minimumDeliveryMs]
++  omega
++
++theorem expired_stays_expired (now deadline : Nat) (expired : deadline ≤ now) :
++    verification now deadline = deadline := by
++  simp only [verification]
++  omega
++
++end Eggshell.Deadline
+diff --git a/tests/FreshnessDeadlineTests.lean b/tests/FreshnessDeadlineTests.lean
+--- a/tests/FreshnessDeadlineTests.lean
++++ b/tests/FreshnessDeadlineTests.lean
+@@ -0,0 +1,89 @@
++import Eggshell.Handoff
++
++open Lean Eggshell Eggshell.Plugin
++
++private def check (ok : Bool) (message : String) : IO Unit :=
++  unless ok do throw (IO.userError message)
++
++private def handoff (record : SourceEvidence.Record) : Handoff := Id.run do
++  let use : SourceUse := {owner := "owner",references := [0],completed := true}
++  let checkpoint : SourceCheckpoint := {
++    use,key := "d:owner",fragment := none
++    connection := "GRAPH owner\n  COVERED WORK\n    MATCH CURRENT owner"}
++  let delta := renderDeltaFrames [checkpoint.connection]
++  return {
++    text := "ORIGINAL HISTORICAL EVIDENCE\n\n" ++ delta,reason := "freshness-fixture"
++    completed := 1,advisory := 0,localUnions := 1,blocksCurrent := true
++    coveredFragments := ["owner"],deliveredGraphs := ["g:owner",checkpoint.key]
++    sourceRecords := [record],sourceUses := [use],sourceCheckpoints := [checkpoint]
++    controlDeltaChars := delta.length+2}
++
++private def scenario (root : System.FilePath) : IO Unit := do
++  IO.FS.createDirAll root
++  let file := root / "evidence.txt"
++  IO.FS.writeFile file "original evidence\n"
++  let capture ← SourceEvidence.capture root
++    (Json.mkObj [("command",toJson "cat evidence.txt")]) ((← IO.monoMsNow)+5000)
++  check capture.record.valid "fixture could not capture a file dependency"
++  let prior := handoff capture.record
++  check prior.controlSuffixValid "fixture control suffix is not exact"
++  let table := [capture.record,capture.record,SourceEvidence.unverified,
++    {capture.record with uris := ["mcp://fixture/current-state"]}]
++  let observation ← SourceEvidence.observeRecords root table ((← IO.monoMsNow)+5000)
++  check (observation.files.size == 1 && observation.files.all (·.status == .checked) &&
++      observation.records.map (·.status) == #[.matched,.matched,.unverified,.external])
++    "shared file checks or external/unknown classifications changed"
++  check ((SourceEvidence.authorize? [capture.record] observation.ledger).isSome &&
++      (SourceEvidence.authorize? table observation.ledger).isNone)
++    "diagnostic states acquired source authority"
++  let id := String.ofList (List.replicate 64 'f')
++  let expired ← prior.checkSources {workspace := root,deadline := 0,receipt := some id}
++  check (expired.text.contains "ORIGINAL HISTORICAL EVIDENCE" && expired.completed == 0 &&
++      !expired.blocksCurrent && expired.localUnions == 0 && expired.coveredFragments.isEmpty &&
++      !expired.deliveredGraphs.contains "d:owner")
++    "freshness expiry discarded historical body or retained completion authority"
++  let expiredObservation ← SourceEvidence.observeRecords root [capture.record] 0
++  check (expiredObservation.records.map (·.status) == #[.timedOut] &&
++      expiredObservation.files.all (·.status == .timedOut) &&
++      (SourceEvidence.authorize? [capture.record] expiredObservation.ledger).isNone)
++    "timeout was mistaken for a definite source change or a successful check"
++  let verified ← prior.checkSources {
++    workspace := root,deadline := (← IO.monoMsNow)+5000,receipt := some id}
++  check (verified.completed == 1 && verified.blocksCurrent && verified.text.contains "ORIGINAL HISTORICAL EVIDENCE")
++    "bounded verification lost a matched source or original evidence"
++  IO.FS.writeFile file "changed evidence\n"
++  let changed ← SourceEvidence.observeRecords root [capture.record] ((← IO.monoMsNow)+5000)
++  check (changed.records.map (·.status) == #[.changed] && changed.files.all (·.status == .checked))
++    "a changed file was conflated with timeout or I/O uncertainty"
++  let checked ← prior.checkSources {workspace := root,deadline := (← IO.monoMsNow)+5000,receipt := some id}
++  check (checked.completed == 0 && !checked.blocksCurrent && checked.text.contains "ORIGINAL HISTORICAL EVIDENCE")
++    "changed source retained authority or lost history"
++  let receipts := (← Paths.dataRoot) / "receipts" / id
++  let mut count := 0
++  for entry in ← receipts.readDir do
++    if !entry.fileName.startsWith "freshness-" then continue
++    let record ← IO.ofExcept (Json.parse (← IO.FS.readFile entry.path))
++    let data := record.getObjValD "data"
++    let hook ← IO.ofExcept (data.getObjValAs? Nat "hookDeadlineMs")
++    let verification ← IO.ofExcept (data.getObjValAs? Nat "verificationDeadlineMs")
++    check (verification ≤ hook && data.getObjValD "observation" != Json.null &&
++        data.getObjValD "sourceUses" != Json.null && data.getObjValD "completedAfter" != Json.null)
++      "freshness receipt extended the parent deadline or lost its source states"
++    count := count+1
++  check (count == 3) "successive freshness checks overwrote the same receipt stage"
++  IO.FS.writeFile (root / "observation.json") (Json.mkObj [
++    ("matched",observation.receipt),("expired",expiredObservation.receipt),("changed",changed.receipt),
++    ("historicalBody",toJson expired.text),("receiptStages",toJson count)]).pretty
++  IO.println "freshness deadline passed: remaining-time reserve, original historical body after expiry/change, per-record states, shared probes, no authority from unknown/external, distinct receipt stages"
++
++def main (args : List String) : IO Unit := do
++  let [path] := args | throw (IO.userError "FreshnessDeadlineTests NEW-DIRECTORY")
++  let root := System.FilePath.mk path
++  check (root.isAbsolute && !(← root.pathExists)) "new absolute fixture required"
++  for now in [0,1,2,100,29000,30000,1000000000] do
++    for deadline in [0,1,2,3,100,29000,30000,1000000000] do
++      let stop := Deadline.verification now deadline
++      check (stop ≤ deadline && (now > deadline ||
++        ((deadline-now)/2 ≤ deadline-stop && min Deadline.minimumDeliveryMs (deadline-now) ≤ deadline-stop)))
++        "deadline arithmetic did not preserve the existing budget and delivery reserve"
++  scenario root
+diff --git a/Eggshell/SourceEvidence.lean b/Eggshell/SourceEvidence.lean
+--- a/Eggshell/SourceEvidence.lean
++++ b/Eggshell/SourceEvidence.lean
+@@ -673,11 +673,70 @@
+       refine ⟨current, rfl, ?_⟩
+       simpa [recordAgrees, observed, agrees] using accepted
+ 
+-/-- Request-local observation is shared by all selected owners. Even a failed
+-probe is done once; it cannot be converted to a permanent negative result. -/
+-def observeRecords (workspace : System.FilePath) (records : List Record) (deadline : Nat) :
+-    IO Ledger := do
++inductive ProbeStatus where
++  | checked | unverified | timedOut
++  deriving BEq, ToJson
++
++inductive RecordStatus where
++  | matched | changed | unverified | timedOut | external
++  deriving BEq, ToJson
++
++structure FileCheck where
++  relative : String
++  status : ProbeStatus
++  deriving ToJson
++
++structure RecordCheck where
++  ordinal : Nat
++  status : RecordStatus
++  deriving ToJson
++
++structure Observation where
++  ledger : Ledger
++  files : Array FileCheck
++  records : Array RecordCheck
++  startedMs : Nat
++  finishedMs : Nat
++  deadlineMs : Nat
++
++def Observation.receipt (observation : Observation) : Json := Json.mkObj [
++  ("startedMs",toJson observation.startedMs),("finishedMs",toJson observation.finishedMs),
++  ("deadlineMs",toJson observation.deadlineMs),
++  ("elapsedMs",toJson (observation.finishedMs-observation.startedMs)),
++  ("files",toJson observation.files),("records",toJson observation.records)]
++
++def recordStatus (ledger : Ledger) (failures : Std.HashMap String ProbeStatus) (record : Record) : RecordStatus :=
++  if !record.uris.isEmpty then .external
++  else if !record.valid then .unverified
++  else if recordAgrees ledger record then .matched
++  else if record.files.any (fun file => (ledger[file.relative]?).join.any (· != file)) then .changed
++  else if record.files.any (fun file => failures[file.relative]? == some .timedOut) then .timedOut
++  else .unverified
++
++theorem matched_status_has_checked_dependencies (ledger : Ledger)
++    (failures : Std.HashMap String ProbeStatus) (record : Record)
++    (matched : recordStatus ledger failures record = .matched) : recordAgrees ledger record = true := by
++  unfold recordStatus at matched
++  split at matched <;> try contradiction
++  split at matched <;> try contradiction
++  split at matched
++  · assumption
++  · split at matched <;> try contradiction
++    split at matched <;> contradiction
++
++theorem external_status_never_matches (ledger : Ledger)
++    (failures : Std.HashMap String ProbeStatus) (record : Record)
++    (external : record.uris.isEmpty = false) : recordStatus ledger failures record = .external := by
++  simp [recordStatus,external]
++
++/-- Request-local observation is shared by all selected owners. A failed or
++expired probe stays unknown, independently of a definite changed fingerprint.
++The diagnostic states never populate the authorization ledger. -/
++def observeRecords (workspace : System.FilePath) (records : List Record) (deadline : Nat) :
++    IO Observation := do
++  let startedMs ← IO.monoMsNow
+   let mut observations : Std.HashMap String (Option Probe) := {}
++  let mut failures : Std.HashMap String ProbeStatus := {}
+   for record in records do
+     if !record.valid then continue
+     for file in record.files do
+@@ -685,10 +744,20 @@
+       let some relative := Relative.check? file.relative | continue
+       let observed ← probe workspace relative deadline
+       observations := observations.insert file.relative observed
++      if observed.isNone then
++        failures := failures.insert file.relative (if (← IO.monoMsNow) ≥ deadline then .timedOut else .unverified)
+   let mut ledger : Ledger := {}
+   for (relative, observed) in observations.toList do
+-    ledger := ledger.insert relative (← checkedProbeFile workspace observed deadline)
+-  pure ledger
++    let checked ← checkedProbeFile workspace observed deadline
++    ledger := ledger.insert relative checked
++    if checked.isNone && !failures.contains relative then
++      failures := failures.insert relative (if (← IO.monoMsNow) ≥ deadline then .timedOut else .unverified)
++  let files := ledger.toArray.map fun (relative,current) =>
++    ({relative,status := if current.isSome then .checked else failures[relative]?.getD .unverified} : FileCheck)
++  return {
++    ledger,files := files.qsort (fun a b => a.relative < b.relative)
++    records := records.toArray.mapIdx (fun ordinal record => ⟨ordinal,recordStatus ledger failures record⟩)
++    startedMs,finishedMs := ← IO.monoMsNow,deadlineMs := deadline}
+ 
+ /-- Delivery status replaces the previous observation for the same selected
+ source scope. Graph delivery and completion keys use separate namespaces. -/
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -16,7 +16,12 @@
+ reads use the same decoding/assembly implementation with their own read
+ capability; no alternate body representation or compatibility lane exists. -/
+ run_meta do
+-  for theoremName in #[``Eggshell.Plugin.DemandMemo.requested_record_rejects_another_request,
++  for theoremName in #[``Eggshell.Deadline.never_extends,
++      ``Eggshell.Deadline.reserves_delivery, ``Eggshell.Deadline.reserves_minimum,
++      ``Eggshell.Deadline.expired_stays_expired,
++      ``Eggshell.SourceEvidence.matched_status_has_checked_dependencies,
++      ``Eggshell.SourceEvidence.external_status_never_matches,
++      ``Eggshell.Plugin.DemandMemo.requested_record_rejects_another_request,
+       ``Eggshell.Plugin.DemandMemo.observed_record_has_current_request,
+       ``Eggshell.Plugin.DemandMemo.captured_decode_keeps_origin,
+       ``Eggshell.Plugin.changed_memo_payload_rejected,
+@@ -240,6 +245,7 @@
+         #[``Eggshell.Plugin.Handoff.checkSources, ``Eggshell.Persistence.Store.NodeReader.sources], #[]),
+       (``Eggshell.Plugin.Handoff.checkSources,
+         #[``Eggshell.Plugin.Handoff.withCheckedSources, ``Eggshell.SourceEvidence.observeRecords,
++          ``Eggshell.Deadline.verification, ``Eggshell.Receipt.observe,
+           ``Eggshell.Plugin.checkSourceUse?, ``Eggshell.Plugin.sourceRefreshText], #[]),
+       (``Eggshell.Plugin.Handoff.checkedCheckpoints,
+         #[``Eggshell.Plugin.checkApplicableSourceUse?], #[]),
+diff --git a/tests/SourceEvidenceTests.lean b/tests/SourceEvidenceTests.lean
+--- a/tests/SourceEvidenceTests.lean
++++ b/tests/SourceEvidenceTests.lean
+@@ -129,7 +129,7 @@
+   let table := [SourceEvidence.unverified, earlier.record,
+     {current.record with closed := false}, current.record, independent.record]
+   let use : SourceUse := {owner := "immutable-result", references := [0, 1, 2, 3], completed := true}
+-  let ledger ← SourceEvidence.observeRecords workspace table (← deadline)
++  let ledger := (← SourceEvidence.observeRecords workspace table (← deadline)).ledger
+   let some checked := checkSourceUse? table use ledger |
+     throw (IO.userError "older receipts revoked the same result's current observation")
+   require (checked.records == [{current.record with closed := false}] &&
+@@ -149,7 +149,7 @@
+       targets := some ["src/product.cc", "src/independent.cc"]} ledger).isNone)
+     "separate observations were combined to invent complete operation coverage"
+   IO.FS.removeFile (workspace / "src/product.cc")
+-  let deleted ← SourceEvidence.observeRecords workspace table (← deadline)
++  let deleted := (← SourceEvidence.observeRecords workspace table (← deadline)).ledger
+   require ((checkSourceUse? table use deleted).isNone)
+     "an independent observation ignored deletion of its dependency"
+   IO.FS.writeFile (workspace / "src/product.cc") body
+@@ -187,6 +187,28 @@
+   require (toJson reused.equalitySelection == toJson matching.equalitySelection)
+     "demand-memo reuse attributed an old extraction to a new computation"
+ 
++/-- Inspect a production-published memo, not a partial reconstruction of the
++request format. Derived inputs such as synaptic publications belong to the
++producer's request; they are not synthesized by this source-freshness test. -/
++def publishedMemo (snapshot : PageMap.Snapshot) (work : String) (source : SourceEvidence.Record) :
++    IO DemandMemo.Record := do
++  for slot in [:DemandMemo.slots] do
++    let tag := "memo:handoff:" ++ toString slot
++    if (← snapshot.get tag).isNone then continue
++    let size ← Store.getNat snapshot.get tag
++    if size > DemandMemo.allowance then continue
++    let bytes ← Store.readChunks snapshot snapshot.get tag 0
++    let .ok (record,[]) := DemandMemo.codec.decode bytes.toList | continue
++    if DemandMemo.row record.request != tag then continue
++    let some checked ← DemandMemo.read snapshot record.request | continue
++    let some first := (record.request.splitOn "\n").head? | continue
++    let some request := (Json.parse first).toOption | continue
++    if (request.getArrVal? 2).toOption != some (toJson work) then continue
++    let .ok payload := Json.parse checked.response >>= fromJson? (α := Option Handoff) | continue
++    if !payload.any (·.sourceRecords.contains source) then continue
++    if ← DemandMemo.dependenciesAgree checked [snapshot.directory] [some snapshot] then return checked
++  throw (IO.userError "freshness fixture has no production memo with current source dependencies")
++
+ def run : IO Unit := do
+   let root ← PageMap.absolute ".lake/portable-source-tests"
+   if ← root.pathExists then IO.FS.removeDirAll root
+@@ -299,7 +321,7 @@
+       !checkedMixed.text.contains "GRAPH unknown:" &&
+       !checkedMixed.text.contains "GRAPH invalid-index:")
+     "mixed source display lost confirmed observations or invented an unchecked-source verdict"
+-  let ledger ← SourceEvidence.observeRecords first mixedHandoff.sourceRecords (← deadline)
++  let ledger := (← SourceEvidence.observeRecords first mixedHandoff.sourceRecords (← deadline)).ledger
+   let conflicting := {mixedHandoff with sourceUses := uses ++
+     [{owner := "result-A", references := [2], completed := false}]}
+   require ((checkedOwnerSources? conflicting.sourceRecords (ownerSourceUses conflicting "result-A")
+@@ -435,10 +457,7 @@
+   require (matching.reason.endsWith "sources=matched" && matching.text.length ≤ selection.handoffChars)
+     "late certificate did not invalidate missing source dependency or exceeded budget"
+   let cachedSnapshot ← PageMap.pin (root / "authority")
+-  let engine ← FileSystem.readVersion (← FileSystem.openRead (← IO.appPath).toString)
+-  let request := demandRequest engine selection
+-    (canonicalToolWork tool) [] false none [] true true true
+-  let some memo ← DemandMemo.read cachedSnapshot request | throw (IO.userError "freshness fixture has no durable demand memo")
++  let memo ← publishedMemo cachedSnapshot (canonicalToolWork tool) current.record
+   require (← DemandMemo.dependenciesAgree memo [root / "authority"] [some cachedSnapshot])
+     "freshness fixture does not exercise a reusable memo"
+   testSelectedMemo (root / "selection-memo") tool current.record {context with deadline := ← deadline}
+diff --git a/tests/SourceObservationTests.lean b/tests/SourceObservationTests.lean
+--- a/tests/SourceObservationTests.lean
++++ b/tests/SourceObservationTests.lean
+@@ -73,7 +73,7 @@
+   require (!(← SourceEvidence.verify workspace old.record (← deadline)) &&
+       (← SourceEvidence.verify workspace observation.capture.record (← deadline)))
+     "old content was refreshed or new content was unverified"
+-  let ledger ← SourceEvidence.observeRecords workspace [old.record, observation.capture.record] (← deadline)
++  let ledger := (← SourceEvidence.observeRecords workspace [old.record, observation.capture.record] (← deadline)).ledger
+   require ((authorize? [old.record, observation.capture.record] ledger).isNone &&
+       (authorize? [observation.capture.record] ledger).isSome)
+     "a new file observation refreshed an old dependent conclusion"
+@@ -90,8 +90,8 @@
+       !(← SourceEvidence.verify workspace observation.capture.record (← deadline)) &&
+       (← SourceEvidence.verify workspace restoration.capture.record (← deadline)))
+     "restored bytes did not restore old freshness or incorrectly refreshed changed evidence"
+-  let restoredLedger ← SourceEvidence.observeRecords workspace
+-    [old.record, observation.capture.record, restoration.capture.record] (← deadline)
++  let restoredLedger := (← SourceEvidence.observeRecords workspace
++    [old.record, observation.capture.record, restoration.capture.record] (← deadline)).ledger
+   require ((authorize? [old.record] restoredLedger).isSome &&
+       (authorize? [observation.capture.record] restoredLedger).isNone)
+     "restoration gave current authority to the wrong historical observation"
+diff --git a/tools/research/FreshnessSourceAudit.lean b/tools/research/FreshnessSourceAudit.lean
+--- a/tools/research/FreshnessSourceAudit.lean
++++ b/tools/research/FreshnessSourceAudit.lean
+@@ -0,0 +1,20 @@
++import tests.SourceEvidenceTests
++import tests.SourceObservationTests
++import Eggshell.Daemon
++
++/-- Existing source tests exercise native workers. Child modes must dispatch
++to the product worker rather than recursively running the test harness. -/
++def main (args : List String) : IO UInt32 := do
++  match args with
++  | ["codex-worker",role] => Eggshell.Plugin.Worker.run role
++  | ["codex-daemon","shutdown"] => Eggshell.Plugin.Daemon.shutdown; return 0
++  | ["codex-daemon",session] => Eggshell.Plugin.Daemon.run session
++  | ["sources"] | ["observations"] =>
++    try
++      if args == ["sources"] then Eggshell.SourceEvidenceTests.run
++      else Eggshell.SourceObservationTests.run
++      return 0
++    finally
++      Eggshell.Plugin.Worker.shutdown
++      Eggshell.Plugin.Daemon.shutdown
++  | _ => throw (IO.userError "FreshnessSourceAudit sources|observations")

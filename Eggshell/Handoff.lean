@@ -1,5 +1,8 @@
 module
 
+public import Eggshell.Deadline
+public import Eggshell.Receipt
+
 public import Eggshell.PluginModel
 public import Eggshell.AdvisoryFrontier
 public import Eggshell.SemanticMatcher
@@ -1238,11 +1241,23 @@ theorem source_refresh_overhead_bounded :
 
 def Handoff.checkSources (handoff : Handoff) (context : SourceContext) : IO Handoff := do
   if !handoff.controlSuffixValid then return pendingSearch
-  let ledger ← SourceEvidence.observeRecords context.workspace handoff.sourceRecords context.deadline
-  try context.onDependencies (handoff.sourceRecords.filter (·.valid) |>.flatMap (·.files) |>.eraseDups)
-  catch error => IO.eprintln s!"Eggshell retained source history; observation scheduling unavailable: {error}"
+  let started ← IO.monoMsNow
+  let verificationDeadline := Deadline.verification started context.deadline
+  let observation ← SourceEvidence.observeRecords context.workspace handoff.sourceRecords verificationDeadline
+  let ledger := observation.ledger
   let authorization := SourceEvidence.authorize? handoff.sourceRecords ledger
   let checked := handoff.withCheckedSources context ledger
+  -- Distinct checks within a semantic/fallback request must not overwrite
+  -- each other's observations. Diagnostics never contribute source authority.
+  Receipt.observe context.receipt ("freshness-" ++ toString (← IO.monoNanosNow)) (Json.mkObj [
+    ("hookDeadlineMs",toJson context.deadline),("verificationDeadlineMs",toJson verificationDeadline),
+    ("remainingForDeliveryMs",toJson (context.deadline-(← IO.monoMsNow))),
+    ("workspace",toJson context.workspace.toString),
+    ("sourceRecords",toJson handoff.sourceRecords),("sourceUses",toJson handoff.sourceUses),
+    ("completedBefore",toJson handoff.completed),("completedAfter",toJson checked.completed),
+    ("observation",observation.receipt)])
+  try context.onDependencies (handoff.sourceRecords.filter (·.valid) |>.flatMap (·.files) |>.eraseDups)
+  catch error => IO.eprintln s!"Eggshell retained source history; observation scheduling unavailable: {error}"
   let mixed := !authorization.isSome && handoff.sourceUses.any fun use =>
     (checkSourceUse? handoff.sourceRecords use ledger).isSome
   let notice := if mixed then mixedSourceStatusText else sourceStatusText authorization.isSome

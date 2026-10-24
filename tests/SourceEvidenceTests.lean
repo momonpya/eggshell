@@ -129,7 +129,7 @@ def testIndependentObservations (workspace : System.FilePath) (body : String) : 
   let table := [SourceEvidence.unverified, earlier.record,
     {current.record with closed := false}, current.record, independent.record]
   let use : SourceUse := {owner := "immutable-result", references := [0, 1, 2, 3], completed := true}
-  let ledger ← SourceEvidence.observeRecords workspace table (← deadline)
+  let ledger := (← SourceEvidence.observeRecords workspace table (← deadline)).ledger
   let some checked := checkSourceUse? table use ledger |
     throw (IO.userError "older receipts revoked the same result's current observation")
   require (checked.records == [{current.record with closed := false}] &&
@@ -149,7 +149,7 @@ def testIndependentObservations (workspace : System.FilePath) (body : String) : 
       targets := some ["src/product.cc", "src/independent.cc"]} ledger).isNone)
     "separate observations were combined to invent complete operation coverage"
   IO.FS.removeFile (workspace / "src/product.cc")
-  let deleted ← SourceEvidence.observeRecords workspace table (← deadline)
+  let deleted := (← SourceEvidence.observeRecords workspace table (← deadline)).ledger
   require ((checkSourceUse? table use deleted).isNone)
     "an independent observation ignored deletion of its dependency"
   IO.FS.writeFile (workspace / "src/product.cc") body
@@ -186,6 +186,28 @@ def testSelectedMemo (path : System.FilePath) (tool : ToolEvent)
     throw (IO.userError "receipt-bearing demand memo lost its handoff")
   require (toJson reused.equalitySelection == toJson matching.equalitySelection)
     "demand-memo reuse attributed an old extraction to a new computation"
+
+/-- Inspect a production-published memo, not a partial reconstruction of the
+request format. Derived inputs such as synaptic publications belong to the
+producer's request; they are not synthesized by this source-freshness test. -/
+def publishedMemo (snapshot : PageMap.Snapshot) (work : String) (source : SourceEvidence.Record) :
+    IO DemandMemo.Record := do
+  for slot in [:DemandMemo.slots] do
+    let tag := "memo:handoff:" ++ toString slot
+    if (← snapshot.get tag).isNone then continue
+    let size ← Store.getNat snapshot.get tag
+    if size > DemandMemo.allowance then continue
+    let bytes ← Store.readChunks snapshot snapshot.get tag 0
+    let .ok (record,[]) := DemandMemo.codec.decode bytes.toList | continue
+    if DemandMemo.row record.request != tag then continue
+    let some checked ← DemandMemo.read snapshot record.request | continue
+    let some first := (record.request.splitOn "\n").head? | continue
+    let some request := (Json.parse first).toOption | continue
+    if (request.getArrVal? 2).toOption != some (toJson work) then continue
+    let .ok payload := Json.parse checked.response >>= fromJson? (α := Option Handoff) | continue
+    if !payload.any (·.sourceRecords.contains source) then continue
+    if ← DemandMemo.dependenciesAgree checked [snapshot.directory] [some snapshot] then return checked
+  throw (IO.userError "freshness fixture has no production memo with current source dependencies")
 
 def run : IO Unit := do
   let root ← PageMap.absolute ".lake/portable-source-tests"
@@ -299,7 +321,7 @@ def run : IO Unit := do
       !checkedMixed.text.contains "GRAPH unknown:" &&
       !checkedMixed.text.contains "GRAPH invalid-index:")
     "mixed source display lost confirmed observations or invented an unchecked-source verdict"
-  let ledger ← SourceEvidence.observeRecords first mixedHandoff.sourceRecords (← deadline)
+  let ledger := (← SourceEvidence.observeRecords first mixedHandoff.sourceRecords (← deadline)).ledger
   let conflicting := {mixedHandoff with sourceUses := uses ++
     [{owner := "result-A", references := [2], completed := false}]}
   require ((checkedOwnerSources? conflicting.sourceRecords (ownerSourceUses conflicting "result-A")
@@ -435,10 +457,7 @@ def run : IO Unit := do
   require (matching.reason.endsWith "sources=matched" && matching.text.length ≤ selection.handoffChars)
     "late certificate did not invalidate missing source dependency or exceeded budget"
   let cachedSnapshot ← PageMap.pin (root / "authority")
-  let engine ← FileSystem.readVersion (← FileSystem.openRead (← IO.appPath).toString)
-  let request := demandRequest engine selection
-    (canonicalToolWork tool) [] false none [] true true true
-  let some memo ← DemandMemo.read cachedSnapshot request | throw (IO.userError "freshness fixture has no durable demand memo")
+  let memo ← publishedMemo cachedSnapshot (canonicalToolWork tool) current.record
   require (← DemandMemo.dependenciesAgree memo [root / "authority"] [some cachedSnapshot])
     "freshness fixture does not exercise a reusable memo"
   testSelectedMemo (root / "selection-memo") tool current.record {context with deadline := ← deadline}

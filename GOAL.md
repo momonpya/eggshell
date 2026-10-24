@@ -2217,3 +2217,38 @@ location投稿、伝播強度・fan-out、追加ソース座標と狭い位置�
 全製品hook lifecycleの検証、固定runtimeでの新seedと全題材・両周の同条件比較は未完了。
 記録と全差分はdocs/synaptic-observation-domain.mdとdocs/candidates/native-observation-review.jsonへ保存した。
 回答モデル・追加seed呼出し0、総トークン・品質未測定、製品runtime・README・release採用0。全Phases0–6 active。
+
+## 2026-10-24：鮮度確認に配送の時間を残し、結果を受領へ結び付ける
+
+ファイルの鮮度確認がフック全体の締切まで使える状態を改めた。
+`Deadline.verification` は既存の絶対締切を延長せず、検証開始時の残り時間の少なくとも半分と、
+可能なら最低250 msを本文の整形・出版・stdoutへ残す。残りが250 ms以下なら新しいprobeを始めない。
+期限切れを延長しないこと、残り時間と最低枠を確保することを通常のLeanで証明し、
+実際の`Handoff.checkSources`からその関数を通ることをContractAuditで検査した。
+
+`observeRecords` は認定に使う実観測のledgerと、診断の結果を分けて返す。
+記録をmatched / changed / unverified / timedOut / externalへ分類し、
+タイムアウトを変更・不在・一致と誤認しない。matchedには実際の依存一致が必要なことも証明した。
+フック内の各確認には別々のfreshness受領段階を作り、親・検証の期限、所要時間、配送の残時間、
+元のsource tableとowner参照、確認前後のcompleted件数を結び付ける。
+期限切れ・変更時も元の履歴本文が残り、省略の権限だけが外れることを実配送関数で確認した。
+
+主なLean検査14本、既存のソース変更・欠損・再観測の2本、ファイル来歴の1本、
+ContractAuditが成功した。最終build最大2,178,352 KiB、主検査1,627,104 KiB。
+別プロセス・空の私有data rootで書き込み権限を外したDBコピーの再構築も再検証し、全所有プロセスは終了済み。
+既存の大きな回帰検査はmaxRecDepth=2048でelaborateした。これはテスト用の構築上限である。
+同検査が古い部分的な依頼キーを手作りしてメモなしと判定した失敗を、実際に存在したメモ行と照合した。
+本番が出版した完全な依頼・応答・対象Work・出典・現在の依存関係を検査する方式へ直し、回帰検査は通った。
+失敗したbuild・検査の記録も保持する。
+
+MCP履歴の更新は標準30日を目安にし、失効後も履歴として配送する方針を記録した。
+現在の状態が質問に必要な場合や既知の変更がある場合は、30日以内でも確認する。
+これは30日間の不変の証明やcompletedの根拠ではなく、全件の定期再取得も行わない。
+実際の取得日時・権限の文脈・通知失効・再取得アダプターはまだ未接続であり、30日の自動判定は未実装。
+導出に使う単調時計を保存日とみなさず、取得日不明の旧DBをwarm時刻で新しい観測にしない。
+
+外部MCP検証器と強制中断できる通信、一般観測の利用ラベル、location投稿、伝播強度・fan-out、
+追加ソース座標と狭い位置参照、全製品hook lifecycle、固定runtimeでの新seedと全題材・両周の比較は残る。
+今回の期限算術は、任意のOS/外部IOの完了時間の証明ではない。製品runtimeはefb9a11d…のままである。
+詳細・全差分・SHA・受領はdocs/synaptic-observation-domain.mdとdocs/candidates/native-observation-review.jsonへ保存した。
+回答モデル・追加seed呼出し0、総トークン・品質未測定、製品runtime・README・release採用0。全Phases0–6 active。
