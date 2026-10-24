@@ -1,0 +1,253 @@
+--- a/Eggshell/LexicalReads.lean
++++ b/Eggshell/LexicalReads.lean
+@@ -114,15 +114,62 @@
+   postingCalls : Nat := 0
+   postingRows : Nat := 0
+   postingMs : Nat := 0
++  validatedOwners : Nat := 0
++  validationHits : Nat := 0
++  ordinalHits : Nat := 0
+   deriving ToJson
+ 
++/-- The ordinary source-counter decoder, factored without changing its
++missing-value or malformed-tail behavior. -/
++def counterValue (data : Option ByteArray) : Except String Nat := do
++  let some bytes := data | return 0
++  let (value,tail) ← Wire.natural.decode bytes.toList
++  unless tail.isEmpty do throw "trailing bytes in DB counter"
++  return value
++
++/-- These are the actual retained bytes of all three original checks. A
++request-local entry cannot merely assert an ordinal or a live-owner flag. -/
++structure OwnerWitness where
++  ordinal : Nat
++  indexed : Option ByteArray
++  member : Option ByteArray
++  candidate : Option ByteArray
++  indexedExact : payloadSize indexed = .ok ordinal
++  memberExact : payloadSize member = .ok ordinal
++  candidateExact : counterValue candidate = .ok 1
++
++def OwnerWitness.check? (ordinal : Nat) (indexed member candidate : Option ByteArray) :
++    Option OwnerWitness := do
++  match indexedExact : payloadSize indexed with
++  | .error _ => none
++  | .ok original =>
++    if same : original = ordinal then
++      match memberExact : payloadSize member with
++      | .error _ => none
++      | .ok current =>
++        if sameMember : current = ordinal then
++          match candidateExact : counterValue candidate with
++          | .ok 1 => some ⟨ordinal,indexed,member,candidate,
++              by simpa only [same] using indexedExact,
++              by simpa only [sameMember] using memberExact,candidateExact⟩
++          | _ => none
++        else none
++    else none
++
++theorem OwnerWitness.original_checks (witness : OwnerWitness) :
++    payloadSize witness.indexed = .ok witness.ordinal ∧
++    payloadSize witness.member = .ok witness.ordinal ∧
++    counterValue witness.candidate = .ok 1 :=
++  ⟨witness.indexedExact,witness.memberExact,witness.candidateExact⟩
++
+ def observe (source : PageMap.Snapshot) (receipt : Option String) (metrics : Metrics) : IO Unit :=
+   Receipt.observe receipt ("lexical-reads-" ++ source.head.identity) (toJson metrics)
+ 
+ /-- Every check from Reader.posting remains, on original pinned values. Only
+ requested posting owners are batched; results are consumed in original order.
+ This creates no Work, Match, Union or completed authority. -/
+-def posting (reader : RetrievalResearch.Index.Reader source)
++def postingWith (reader : RetrievalResearch.Index.Reader source)
++    (known : IO.Ref (Std.HashMap Nat OwnerWitness))
+     (metrics : IO.Ref Metrics)
+     (receipt : Option String) (unit : String) : IO (List Nat × Nat) := do
+   let started ← IO.monoMsNow
+@@ -134,9 +181,11 @@
+   while !remaining.isEmpty do
+     let selected := remaining.take (batchLimit / 2)
+     remaining := remaining.drop (batchLimit / 2)
++    let captured ← known.get
++    let missing := selected.filter (fun (_,owner) => !captured.contains owner)
+     let begin ← IO.monoMsNow
+-    let indexed ← load reader.index (selected.map fun (_,owner) => key "owner" owner)
+-    let live ← load source (selected.flatMap fun (_,owner) => [key "member" owner,key "candidate" owner])
++    let indexed ← load reader.index (missing.map fun (_,owner) => key "owner" owner)
++    let live ← load source (missing.flatMap fun (_,owner) => [key "member" owner,key "candidate" owner])
+     let elapsed := (← IO.monoMsNow)-begin
+     metrics.modify fun before => {before with
+       preparationMs := before.preparationMs+elapsed
+@@ -144,11 +193,29 @@
+       requestedKeys := before.requestedKeys+indexed.names.length+live.names.length
+       largestBatch := max before.largestBatch (max indexed.names.length live.names.length)}
+     for (ordinal,owner) in selected do
+-      let indexed ← IO.ofExcept (payloadSize (← indexed.read (key "owner" owner)))
+-      let member ← IO.ofExcept (payloadSize (← live.read (key "member" owner)))
+-      unless indexed == ordinal && member == ordinal &&
+-          (← getNat live.read (key "candidate" owner)) == 1 do
+-        throw (IO.userError "lexical posting names a different live source owner")
++      if let some previous := (← known.get)[owner]? then
++        -- Replay the original logical reads, even after a trace reset. A
++        -- conflicting posting still observes all three points before its
++        -- Boolean rejection, exactly as the original monadic reader does.
++        reader.index.observe (.point (key "owner" owner) previous.indexed)
++        source.observe (.point (key "member" owner) previous.member)
++        source.observe (.point (key "candidate" owner) previous.candidate)
++        unless previous.ordinal == ordinal do
++          throw (IO.userError "lexical posting names a different live source owner")
++        metrics.modify fun before => {before with validationHits := before.validationHits+1}
++      else
++        let indexBytes ← indexed.read (key "owner" owner)
++        let indexValue ← IO.ofExcept (payloadSize indexBytes)
++        let memberBytes ← live.read (key "member" owner)
++        let memberValue ← IO.ofExcept (payloadSize memberBytes)
++        let candidateBytes ← live.read (key "candidate" owner)
++        let candidateValue ← getNat (fun _ => pure candidateBytes) (key "candidate" owner)
++        unless indexValue == ordinal && memberValue == ordinal && candidateValue == 1 do
++          throw (IO.userError "lexical posting names a different live source owner")
++        let some checked := OwnerWitness.check? ordinal indexBytes memberBytes candidateBytes |
++          throw (IO.userError "lexical owner witness disagrees with its validated bytes")
++        known.modify (·.insert owner checked)
++        metrics.modify fun before => {before with validatedOwners := before.validatedOwners+1}
+   let elapsed := (← IO.monoMsNow)-started
+   metrics.modify fun before => {before with
+     postingCalls := before.postingCalls+1
+@@ -157,9 +224,34 @@
+   observe source receipt (← metrics.get)
+   return (rows.map Prod.snd,count)
+ 
++def posting (reader : RetrievalResearch.Index.Reader source) (metrics : IO.Ref Metrics)
++    (receipt : Option String) (unit : String) : IO (List Nat × Nat) := do
++  postingWith reader (← IO.mkRef {}) metrics receipt unit
++
++structure Query where
++  posting : String → IO (List Nat × Nat)
++  ordinal : Nat → IO Nat
++  report : IO Unit := pure ()
++
++/-- One immutable source/index pair owns this cache. It never crosses a
++request boundary. Ranking reuses the member bytes already checked above. -/
++def query (reader : RetrievalResearch.Index.Reader source) (receipt : Option String := none) :
++    IO Query := do
++  let known ← IO.mkRef ({} : Std.HashMap Nat OwnerWitness)
++  let metrics ← IO.mkRef ({} : Metrics)
++  return {
++    posting := postingWith reader known metrics receipt
++    ordinal := fun owner => do
++      let some checked := (← known.get)[owner]? |
++        throw (IO.userError "lexical ordinal was not validated by this request")
++      source.observe (.point (key "member" owner) checked.member)
++      metrics.modify fun before => {before with ordinalHits := before.ordinalHits+1}
++      return checked.ordinal
++    report := do observe source receipt (← metrics.get) }
++
+ def make (reader : RetrievalResearch.Index.Reader source) (receipt : Option String := none) :
+     IO (String → IO (List Nat × Nat)) := do
+-  return posting reader (← IO.mkRef {}) receipt
++  return (← query reader receipt).posting
+ 
+ def strictLookup (source : PageMap.Snapshot) (receipt : Option String := none) :
+     IO (String → IO (List Nat × Nat)) := do
+@@ -168,10 +260,16 @@
+     throw (IO.userError "dictionary-free lexical index is pending explicit/background warm")
+   make reader receipt
+ 
++def coarseQuery (source : PageMap.Snapshot) (receipt : Option String := none) : IO Query := do
++  if (← getNat source.get "candidates") == 0 then
++    return {posting := fun _ => pure ([],0),ordinal := fun _ => throw (IO.userError "empty lexical domain")}
++  if let some reader ← RetrievalResearch.Index.open? source then return ← query reader receipt
++  return {
++    posting := ← RetrievalResearch.Index.coarseLookup source receipt
++    ordinal := fun owner => getNat source.get (key "member" owner) }
++
+ def coarseLookup (source : PageMap.Snapshot) (receipt : Option String := none) :
+     IO (String → IO (List Nat × Nat)) := do
+-  if (← getNat source.get "candidates") == 0 then return fun _ => pure ([],0)
+-  if let some reader ← RetrievalResearch.Index.open? source then return ← make reader receipt
+-  RetrievalResearch.Index.coarseLookup source receipt
++  return (← coarseQuery source receipt).posting
+ 
+ end Eggshell.LexicalReads
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -7774,9 +7774,6 @@
+   -- cannot turn an otherwise sparse pinned request into an archive read.
+   let allCount := some (← Persistence.Store.getNat snapshot.get "alls")
+   let unions ← reader.unions (← Persistence.Store.authority snapshot)
+-  let workPostings ← match preparedDomain with
+-    | some domain => WorkPostings.openShared? snapshot domain
+-    | none => pure none
+   let source : IndexedContext := {
+     synaptic
+     receipt, onSemanticReady
+@@ -7820,9 +7817,10 @@
+         if let some nominated := preparedSemantic.join then return some nominated
+       indexedSemanticNominations snapshot all command query candidates receipt preparedDomain
+     lexical := fun current staged => do
+-      let posting ← LexicalReads.coarseLookup snapshot receipt
+-      lexicalNominations population posting
+-        (fun id => Persistence.Store.getNat snapshot.get (Persistence.Store.key "member" id)) current staged
++      let query ← LexicalReads.coarseQuery snapshot receipt
++      let nominations ← lexicalNominations population query.posting query.ordinal current staged
++      query.report
++      return nominations
+     ordinal := fun id => do
+       IO.ofExcept (Persistence.Store.payloadSize (← snapshot.get (Persistence.Store.key "member" id)))
+     readWork := fun id => do
+@@ -7833,9 +7831,7 @@
+     readOwner := fun id => do
+       reader.outcome (← reader.locateOutcome id)
+     readSources := reader.sources
+-    surfaces := match workPostings with
+-      | some postings => WorkPostings.candidates postings
+-      | none => Persistence.Store.workSurfaceCandidates snapshot
++    surfaces := Persistence.Store.workSurfaceCandidates snapshot
+     frequencies := Persistence.Store.frequencies snapshot
+     liveOwner := fun value => (·.map Prod.snd) <$> Persistence.Store.liveRoot? snapshot value }
+   let alreadyObserved := preparedSemantic.join.any (fun owners => !owners.hasSourcePositions)
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -19,6 +19,7 @@
+ capability; no alternate body representation or compatibility lane exists. -/
+ run_meta do
+   for theoremName in #[``Eggshell.CandidateDomain.packed_roundtrip,
++      ``Eggshell.LexicalReads.OwnerWitness.original_checks,
+       ``Eggshell.Persistence.Store.Change.neutral_keeps_marker,
+       ``Eggshell.Persistence.Store.Change.changed_advances_marker,
+       ``Eggshell.Synapses.Extraction.consumed_source_has_witness,
+@@ -122,8 +123,34 @@
+         throwError "Demand proof uses an unapproved axiom: {theoremName}: {axiomName}"
+     logInfo m!"Audited {theoremName}: {axioms}"
+ 
++/- Reuse only evidence bound to one immutable reader pair. A cache hit must
++replay the original observations, including the later ordinal lookup. -/
+ run_meta do
+   let environment ← getEnv
++  for (caller, required, forbidden) in #[
++      (``Eggshell.LexicalReads.query,
++        #[``IO.mkRef, ``Eggshell.LexicalReads.postingWith,
++          ``Eggshell.DB.PageMap.Snapshot.observe], #[]),
++      (``Eggshell.LexicalReads.postingWith,
++        #[``Eggshell.LexicalReads.OwnerWitness.check?,
++          ``Eggshell.Persistence.Store.getNat,
++          ``Eggshell.DB.PageMap.Snapshot.observe,
++          ``Eggshell.LexicalReads.Batch.read], #[]),
++      (``Eggshell.Plugin.indexedDiscovery,
++        #[``Eggshell.LexicalReads.coarseQuery, ``Eggshell.Plugin.lexicalNominations],
++        #[``Eggshell.WorkPostings.openShared?])] do
++    let some declaration := environment.find? caller | throwError "Missing lexical witness caller: {caller}"
++    let some body := declaration.value? | throwError "Missing lexical witness body: {caller}"
++    for name in required do
++      unless body.getUsedConstants.contains name do
++        throwError "Lexical witness bypasses original checks or observations: {caller}, {name}"
++    for name in forbidden do
++      if body.getUsedConstants.contains name then
++        throwError "Indexed discovery opens unused Work spelling index: {caller}, {name}"
++  logInfo "Audited request-local lexical witnesses, original observations and deferred Work surfaces"
++
++run_meta do
++  let environment ← getEnv
+   for (caller, required) in #[
+       (``Eggshell.Persistence.Store.NodeReader.read, ``Eggshell.DB.PageMap.Snapshot.readPayload),
+       (``Eggshell.DB.PageMap.Snapshot.readPayload, ``Eggshell.DB.PageMap.Snapshot.readPayloadUsing),

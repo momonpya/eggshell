@@ -60,9 +60,12 @@ every owner later preserves the dominant cost. Requiring the recommender's whole
 ranking to remain identical has also constrained changes that could avoid scans.
 Neither requirement is inherent to the separation of recommendation and authority.
 
-The latest actual 50k run still delivers only an incomplete notice; its next
-request is resource-stopped. No million-window capacity or token improvement is
-established. Do not generate larger DBs on the same failed architecture.
+The [latest actual 50k pair](lexical-witness.md) delivers original evidence on
+the first request, but the numerical lane still times out and continuation
+converts a valid empty lexical reply into an incomplete notice. The earlier
+resource-stopped run remains recorded. No million-window capacity or token
+improvement is established. Do not generate larger DBs on the same unqualified
+architecture.
 
 ## Simplify around Eggshell's actual unit of reuse
 

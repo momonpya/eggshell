@@ -113,3 +113,8 @@ caller objects, raw records, failures and scopes. No answering-model calls, new
 seeds, inclusive-token or quality comparisons occurred. AGENTS.md adoption gates
 for topics 1/2/3, both laps and equal predeclared repetitions still apply.
 Phases 0–6 remain active and unfinished.
+
+The following [original lexical witness candidate](lexical-witness.md) removes
+the repeated original point checks and unused Work-index open described above.
+It preserves all four stored native bodies, including the 50k continued notice,
+and identifies the latter's valid-empty-to-incomplete controller conversion.

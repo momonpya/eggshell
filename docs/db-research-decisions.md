@@ -14,7 +14,7 @@ Python index engine or manual format version is introduced by this decision.
 | --- | --- | --- |
 | [Databricks: NEAREST BY Join](https://www.databricks.com/blog/nearest-join-scaling-vector-search-databricks-runtime), 2026-10-05, engineering article | IVF groups vectors by centroid; files are pruned before reading. Transactional incremental refresh has a compensation branch for additions since refresh. | Prototype clustered vector segments with a small routing directory; merge routed base candidates with every eligible prepared addition since the indexed boundary. |
 | [Databricks: Automatic Liquid Clustering](https://www.databricks.com/blog/announcing-automatic-liquid-clustering), 2025-03-05, engineering article | Layout follows observed query patterns and optimization weighs benefit against cost. | Keep stable original identities while changing physical grouping. First record bytes/read amplification and update cost; defer automatic layout tuning until a fixed simple layout has a measured limitation. |
-| [Snowflake: Pruning in Snowflake](https://arxiv.org/html/2504.11540v1), 2025-04-15, SIGMOD Companion paper | Partition metadata supports filter pruning and top-k pruning against a running boundary. | Scope/key/term summaries and proved score bounds skip blocks before owner or original-body loading. A centroid's similarity alone is not a conservative upper bound. |
+| [Snowflake: Pruning in Snowflake](https://arxiv.org/abs/2504.11540), submitted 2025-04-15, revised 2025-05-27, SIGMOD Companion paper | Partition metadata supports filter pruning and top-k pruning against a running boundary. | Scope/key/term summaries and proved score bounds skip blocks before owner or original-body loading. A centroid's similarity alone is not a conservative upper bound. |
 | [Redshift: Predicate Caching](https://cdn.amazon.science/11/0e/3a9288554485b616fa0c99fe4067/predicate-caching-query-driven-secondary-indexing-for-cloud-data-warehouses.pdf), 2024, SIGMOD Companion paper, sections 4.2–4.4 | Cache qualifying row ranges, check visibility during use, scan additions after the cached boundary; physical rewrites invalidate positional entries. | Cache reusable exact-filter/adjacency selection over immutable segment identities. Recheck original membership, source freshness and visibility; handle new facts through a delta rather than invalidating all unchanged work. |
 | [LSM-VEC](https://arxiv.org/html/2505.17152v2), initially 2025-05-22, revised 2026-05-16, arXiv preprint | Distributes the proximity graph across LSM levels and uses out-of-place updates and locality-aware reordering without global reconstruction. | Separate immutable vector payload from lexical/synaptic/routing metadata. Reuse existing PageMap append extents and bounded compaction. Add a second graph ANN only if the simpler access path fails measured recall/cost. |
 | [DynamoDB architecture](https://assets.amazon.science/33/9d/b77f13fe49a798ece85cf3f9be6d/amazon-dynamodb-a-scalable-predictably-performant-and-fully-managed-nosql-database-service.pdf), ATC 2022, and [operating lessons](https://www.amazon.science/blog/lessons-learned-from-10-years-of-dynamodb), 2022 | Routing metadata and partition management handle growth/skew; cache misses must not create a surge of backend work. | Separate logical region identity from placement, split overloaded regions, coalesce maintenance and budget cache-miss work. Retain the reader's publication while background work proceeds. |
@@ -167,6 +167,9 @@ Complete journal-producer refinement, all-view incremental maintenance, routed
 query deltas, compaction and clustering are unfinished.
 The full-read regression remains and these candidates are unadopted. Conservative
 skip proofs and the complete shared/federated hook lifecycle are not implemented.
-The last
-actual 50k native hook still fails useful delivery. No answering-model calls or
-new seeds were made for this review, and no token improvement is established.
+The [latest actual 50k pair](lexical-witness.md) supplies original evidence on
+the first request but still times out numerically; continuation converts a
+valid empty lexical result into an incomplete notice. That controller bug and
+full-scan cost remain separate from the layout research. No answering-model
+calls or new seeds were made for this review, and no token improvement is
+established.

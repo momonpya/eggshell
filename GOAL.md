@@ -1,5 +1,10 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 同じpinned字句照会内で元の3点検証の実バイト/証明を共有し、既に検証したordinalで順位付けするLean候補を隔離実装。使われないWork表層索引openも除去。10k/50k各24語の順序/件数/エラー/完全論理trace、全9,969/49,969 ownerの順位値とtraceが元のscalar readerに一致した。矛盾ordinal、trace reset、後続出版、10種の無効状態、1,024key/破損検査、通常Lean証明/ContractAuditが成功。初期の失敗（矛盾member拒否前のcandidate観測漏れ）を元のmonadic順に直し、失敗も保持した。
+実nativeは10k初回9,812ms/継続7,944ms、50k初回22,897ms/継続22,584ms。全4本文は直前候補の保存済み対照と一致し、新規paired速度比較とはしない。50kは399,753 posting rowsの点要求が1,199,259→149,907、検証再利用349,784回、順位再利用49,969回。意味窓約14.3秒は未変更で、初回は字句原文21,346bytesを配送、継続は通知356bytesのままなので未合格。
+継続の直接原因は受領記録のdisposition=empty：Workerが期限内の有効な空結果を返しても、PluginHooksが字句routeだけでpendingSearchへ変換していた。残時間不足と混同せず、次は意味timeoutのtraceを保持したまま、有効な空配送と欠損/不正/期限外応答を区別する。読出し候補ではこの制御変更をまだ行っていない。
+新seed/回答モデル/総トークン比較0、候補未採用。明示warm/再warmは10k約21秒、50k約147秒で、追加埋込/投影生成/行列追記0。元DB/元字句索引hash不変、全guard終了/残存0、最大合計RSS2,180,944KiB。旧試験実行体/終了済helperはhash後に削除、archiveなし。数値全走査/通常federation/大規模語postings/私有MCP capture/共有並行/p99/全題材比較は残る。docs/lexical-witness.md参照、全Phases0–6 active。
+
 2026-10-25 indexed discoveryの全Work部分文字列推論を、生成済みe-class認定と原記録の推薦に分離したLean候補を隔離実装。nominatedはCoverage/等価性を持たず、旧retrievedフラグを変更してもcompleted/Unionへ昇格できない。元クラスの全所有者・DB/未保存観測の所属・鮮度・抽出・3辺は保持し、認定を推薦K件で切らない。文字列由来の局所Union推論は意図的に置換し、その完全fixedpointとの同値は主張しない。
 最終proof/ContractAudit・強い推薦境界・API・32固定比較・実native小4例を確認。固定10kは全Work読出し/表層postings/頻度を呼ぶと失敗する条件で8原所有者から約0.1秒で配送。実MiniLM/10kは初回10,485ms・継続8,783ms、17,803bytes/ACK後空本文が保存済み対照とバイト一致。初期の不要な一覧順序変化と未保存観測の大域子所属漏れを直した。旧32例の14初回は意図した分類変更、18例は全体一致、raw completed/blockは7/5→3/3。未検証MCPは鮮度境界で解除する。
 実50kの初回は28,206msで意味期限切れ後の字句原文21,346bytesを配送したが、継続28,355msは未完了通知でACK offer不受理。全体合格ではない。意味予算が約14.3秒、字句約13.4秒で、9語の399,753 posting rowsに1,199,259点キーを検証していた。次は不要Work索引open、同一pinned照会内の重複所有者検証/順序読出しを除き、意味窓の単純半分割を改める。元検証を落として速くしない。
