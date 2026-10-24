@@ -1,0 +1,883 @@
+{
+  "candidate": "incremental-original-window-owners",
+  "baseCommit": "ab59573bb81bf1456917fc14ec3d597a6f286d1a",
+  "branch": "hook-ingress-supervisor",
+  "parentCheckout": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/checkout",
+  "implementation": "Lean 4.33.0",
+  "productRuntimeChanged": false,
+  "integrated": false,
+  "adopted": false,
+  "phases0Through6": "active-unfinished",
+  "answeringModelCalls": 0,
+  "seedCalls": 0,
+  "queryEmbeddingCalls": 0,
+  "sourceEmbeddingCalls": 0,
+  "newPythonImplementation": false,
+  "inclusiveTokenComparison": null,
+  "answerQualityQualification": null,
+  "requiredOriginalDeliveryQualification": null,
+  "p99Qualification": null,
+  "sources": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/Eggshell/WindowOwners.lean",
+      "bytes": 13871,
+      "sha256": "cf5015b5106d7585cd9f959c282dce0a673ad1d5abe6566dd920ff119fbfef96"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/tools/research/WindowOwnersAudit.lean",
+      "bytes": 14871,
+      "sha256": "23aaf908219df7b3489fdf1705bd157372211ef7b59294b549b8260a74a46316"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/tools/research/WindowOwnerProofs.lean",
+      "bytes": 1686,
+      "sha256": "9a47712abad4867984ca9f603811b351f5a8c6bef5d146efcf45ba298e040f63"
+    }
+  ],
+  "dependencies": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/Eggshell/GraphStore.lean",
+      "bytes": 122533,
+      "sha256": "09ea0a32a186e5735350437d4e4cd5fecc1586a6ef378c6827ae2eb56cd9b4ba"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/Eggshell/SourceDelta.lean",
+      "bytes": 4636,
+      "sha256": "82ffc9cff5a4f0112de38091099f4da1f5a8fbfaeccea5e825ea3c9ff4106bf6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/Eggshell/CandidateDomain.lean",
+      "bytes": 9804,
+      "sha256": "e1c2dd498f918c8683416fe648fd0760004ac2f6c5d9beda3cf942cefc5017b8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/Eggshell/VectorMatrix.lean",
+      "bytes": 12251,
+      "sha256": "a34e0d946e2146d2616b0c8d6c5954f414c339050f8fb4eb75cc62e9a37b9285"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/Eggshell/DB/PageMap.lean",
+      "bytes": 61294,
+      "sha256": "d47bb04ca2dacf626b79ad819a2208a5a23170ec6ef0049829d458939b89df13"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/Eggshell/DB/Sidecar.lean",
+      "bytes": 7619,
+      "sha256": "b3648466ca04fe8145d274ce60aaab0a4045c17fdb64e86db1f1233cbc6142ed"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/checkout/Eggshell/SearchRank.lean",
+      "bytes": 11476,
+      "sha256": "9cfb0fed65b0fc34a9f3f04e3e33eda2a5e2642c6195cf45ccba6c7da2392742"
+    }
+  ],
+  "generated": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/WindowOwnerProofs.c",
+      "bytes": 1490,
+      "sha256": "4ce70a5108f8881808437044df167951de55e7be3a92da884ce9785c17ae00f0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/WindowOwnerProofs.o",
+      "bytes": 1536,
+      "sha256": "dd288d077247775bc0a41e11beb8a3b656173fad697a2e534d7505423198b8ac"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/WindowOwners.c",
+      "bytes": 596332,
+      "sha256": "9e96e0f7a98906c08daaeb6a3be1e106094cf34b6a9a28deaf0c0dcaa25b9108"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/WindowOwners.o",
+      "bytes": 466680,
+      "sha256": "6dee9e6fbba901282e41706baa93c537629d46fbcbbb04cc351f11aae0eb7c4a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/WindowOwnersAudit.c",
+      "bytes": 409903,
+      "sha256": "5132d20f727face40efba6c7c77f56f9e43459effb9b6abc3d248cc69f2b03de"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/WindowOwnersAudit.o",
+      "bytes": 180152,
+      "sha256": "b0d6d8d33e479a0776b6e2a659cefbc2b0d138384bc60d57282b73794571b124"
+    }
+  ],
+  "linkedInputs": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/linked-inputs.json",
+    "bytes": 46956,
+    "sha256": "1dffb76baace9594c02770cdf24a3dcf8dd47cb9826dbd4d5191f7fb7080d363"
+  },
+  "referenceRuntime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/empty-search-20261025/eggshell",
+    "bytes": 115357680,
+    "sha256": "b48919cbad67ccdc82470d46e5b826d0d5ddea3c5e5a6802352e7c4167774f0c"
+  },
+  "policy": {
+    "oneDbOwnedReverseIndex": true,
+    "sourceTextCopied": false,
+    "originalCoordinatesRetained": true,
+    "manualFormatVersion": false,
+    "deltaFromActualPublicationLineage": true,
+    "retractionReadsOldPinnedSource": true,
+    "atomicManifestAndPostings": true,
+    "originalGraphWrites": false,
+    "readOnlySourceUsesPrivateOverlay": true,
+    "sourceProfileRoutingIntegrated": false,
+    "maxQueryKeys": 4096,
+    "maxPhysicalRows": 8192,
+    "tombstonesSpendQuota": true,
+    "partialCoverageExplicit": true,
+    "fanoutContinuationImplemented": false,
+    "coldOrChangedIsNotCompletedEmpty": true,
+    "originalResolverChecksOwnerWorkOrdinalAndWindow": true,
+    "externalFreshnessClaim": false,
+    "noReuseAuthorityReturned": true,
+    "allEClassRecognitionAndSynapsesUnchanged": true,
+    "filesystemIoRefinementProven": false
+  },
+  "preparation": {
+    "raw": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/prepare-50000.json",
+      "bytes": 1382,
+      "sha256": "e04b79871a6b27b18cc6d88ff2fcfe61d5d7dc6e991a2040943c899c95440117"
+    },
+    "prepared": {
+      "writtenBytes": 4568129,
+      "removed": 0,
+      "occurrences": 50000,
+      "mode": "full-source",
+      "elapsedMs": 14221,
+      "changedOwners": 49969,
+      "added": 50000
+    },
+    "repeated": {
+      "writtenBytes": 0,
+      "removed": 0,
+      "occurrences": 50000,
+      "mode": "warm",
+      "elapsedMs": 4,
+      "changedOwners": 0,
+      "added": 0
+    },
+    "manifest": {
+      "root": {
+        "rows": 50001,
+        "offset": 4562572,
+        "last": "w:ffffc09eda982fd6492f7072c1c9c89b29ca43c125e46bab5af5c4e18fff8742:13670:0",
+        "height": 2,
+        "first": "manifest",
+        "checksum": "66e7d6c55e7765695fed8f035c0be9a5c7bad8043708f9de3c45969eccfcfd99",
+        "bytes": 5572
+      },
+      "revision": 1,
+      "identity": "e7fea623287c181975b4a313267eed8de4d7d48efa533ed1cacd15a2fc21974f",
+      "bytes": 4568144,
+      "authority": "eggshell.window-owners:eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971:056a2699f2b3853c00eee810b3412e1a0e386272f4c7f2ffc81825c7dd3da6fc"
+    },
+    "head": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/indexes/window-owners/056a2699f2b3853c00eee810b3412e1a0e386272f4c7f2ffc81825c7dd3da6fc/head",
+      "bytes": 519,
+      "sha256": "0b0d52a307fb3cf77077ee98f060be8470504ce9a567fe5beb9bfbd4bd35960a"
+    },
+    "pages": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/indexes/window-owners/056a2699f2b3853c00eee810b3412e1a0e386272f4c7f2ffc81825c7dd3da6fc/e7fea623287c181975b4a313267eed8de4d7d48efa533ed1cacd15a2fc21974f.pages",
+      "bytes": 4568144,
+      "sha256": "eed887b61638c5d3df98a9c2e89682c45d87b996a2bc8cef812118c866f9da5e"
+    },
+    "scope": "full preparation uses original catalogue and O(N) sort state, outside the foreground"
+  },
+  "fullIndexAudit": {
+    "raw": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/full-check-50000.json",
+      "bytes": 801,
+      "sha256": "598e948621151c0712cf08cb3538df4e6fba19592ee102be84e2b8dd1328f564"
+    },
+    "occurrences": 50000,
+    "batches": 25,
+    "lookupMs": 1021,
+    "originalDigest": "cb995bd6fc1b2ddfc0bec98496f35f8265e54ed2ec46159410270ed6ef5f3941",
+    "indexDigest": "cb995bd6fc1b2ddfc0bec98496f35f8265e54ed2ec46159410270ed6ef5f3941",
+    "allOriginalOccurrencesEqual": true,
+    "scope": "offline full-index audit, not foreground/native"
+  },
+  "fixture": {
+    "raw": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture-proven/result.json",
+      "bytes": 848,
+      "sha256": "c181dfa5ae7f0b03333551e471ef25e7e315aaa90f4582145ab54d664c6fffda"
+    },
+    "result": {
+      "unpublishedAndWithdrawnPositionsRejected": true,
+      "retraction": {
+        "writtenBytes": 6554,
+        "removed": 3,
+        "occurrences": 211,
+        "mode": "publication-delta",
+        "elapsedMs": 9,
+        "changedOwners": 1,
+        "added": 0
+      },
+      "physicalFanoutBound": true,
+      "otherDatabaseIndependent": true,
+      "originalOwners": 70,
+      "originalOccurrences": 210,
+      "oldPinnedIndexPreserved": true,
+      "neutral": {
+        "writtenBytes": 6486,
+        "removed": 0,
+        "occurrences": 210,
+        "mode": "publication-delta",
+        "elapsedMs": 4,
+        "changedOwners": 0,
+        "added": 0
+      },
+      "malformedPostingRejected": true,
+      "limitedPageReads": 2,
+      "fullOriginalOracleEqual": true,
+      "emptyDistinctFromUnavailable": true,
+      "busyWriterRejected": true,
+      "addition": {
+        "writtenBytes": 11937,
+        "removed": 0,
+        "occurrences": 214,
+        "mode": "publication-delta",
+        "elapsedMs": 10,
+        "changedOwners": 1,
+        "added": 4
+      }
+    }
+  },
+  "queries": [
+    {
+      "repetition": 1,
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-segmented-50000-1.json",
+        "bytes": 481721,
+        "sha256": "68b8fc2bcef1ce1a32a7a59a33ad39cfab0886e678ea30bba34bc68d79e6824e"
+      },
+      "keys": 3125,
+      "resolvedOwners": 3125,
+      "indexOpenMs": 11,
+      "lookupMs": 580,
+      "originalValidationMs": 2437,
+      "totalMs": 3028,
+      "partialKeys": [
+
+      ],
+      "physicalRows": 3125,
+      "originalReads": 15943,
+      "indexReads": 796,
+      "unsegmentedTraceComplete": false,
+      "separateTraceAuditOwners": 3125,
+      "largestOwnerTraceBytes": 547,
+      "separateTraceAuditMs": 889,
+      "noOriginalCatalogueScan": true
+    },
+    {
+      "repetition": 2,
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-segmented-50000-2.json",
+        "bytes": 481720,
+        "sha256": "0c2a1d443b1cb7fffe6303ad1548076451eac3261b248dec6b507e090c416b58"
+      },
+      "keys": 3125,
+      "resolvedOwners": 3125,
+      "indexOpenMs": 9,
+      "lookupMs": 583,
+      "originalValidationMs": 2347,
+      "totalMs": 2939,
+      "partialKeys": [
+
+      ],
+      "physicalRows": 3125,
+      "originalReads": 15943,
+      "indexReads": 796,
+      "unsegmentedTraceComplete": false,
+      "separateTraceAuditOwners": 3125,
+      "largestOwnerTraceBytes": 547,
+      "separateTraceAuditMs": 886,
+      "noOriginalCatalogueScan": true
+    },
+    {
+      "repetition": 3,
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-segmented-50000-3.json",
+        "bytes": 481720,
+        "sha256": "dd17caea71ea2c5527c064252349c79a10c0913213de462357b24af10f21097b"
+      },
+      "keys": 3125,
+      "resolvedOwners": 3125,
+      "indexOpenMs": 7,
+      "lookupMs": 521,
+      "originalValidationMs": 1972,
+      "totalMs": 2500,
+      "partialKeys": [
+
+      ],
+      "physicalRows": 3125,
+      "originalReads": 15943,
+      "indexReads": 796,
+      "unsegmentedTraceComplete": false,
+      "separateTraceAuditOwners": 3125,
+      "largestOwnerTraceBytes": 547,
+      "separateTraceAuditMs": 889,
+      "noOriginalCatalogueScan": true
+    }
+  ],
+  "queryPlan": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-plan-final.json",
+    "bytes": 427,
+    "sha256": "50b85d65c72ad1ad12035a4671b1373129eaa35c889acd6f0b9400f3d5a96ef2"
+  },
+  "queryScope": "same 3125 frozen discovery keys, three fresh processes, OS caches not flushed; reverse lookup and all nominated-original validation only, not routing/embedding/scoring/native/model tokens",
+  "originals": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/originals-after.json",
+    "bytes": 3930,
+    "sha256": "bd53b24afdc71c0ada2ef9901f85b85b953c56f265f222804be98d15d9da1aef"
+  },
+  "guards": [
+    {
+      "name": "audit-build-final",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-final.guard.json",
+        "bytes": 1190,
+        "sha256": "3b3797d5dd899f7ef5d78f1a48d01511f434432df40b2e377b38fd639ee50f9e"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 8137,
+      "rssKiB": 1433104
+    },
+    {
+      "name": "audit-build-scoped-final",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-scoped-final.guard.json",
+        "bytes": 1197,
+        "sha256": "71126be85f95ca85c2af2a68d93cc73d6f8df6921b9f465bcda1edf545cce5d8"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 8139,
+      "rssKiB": 1443392
+    },
+    {
+      "name": "audit-build-second",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-second.guard.json",
+        "bytes": 1191,
+        "sha256": "cbadf829fc3f7e91fa8772f1a0a22befa14e887133d7acecd403a86fb765b877"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 14263,
+      "rssKiB": 1393168
+    },
+    {
+      "name": "audit-build-segmented",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-segmented.guard.json",
+        "bytes": 1196,
+        "sha256": "5dcb4eaff2378c4e52ab439ccb1ac2f5f6e94231d3cc357720e904dc33451727"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 16572,
+      "rssKiB": 1437136
+    },
+    {
+      "name": "audit-build-third",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-third.guard.json",
+        "bytes": 1189,
+        "sha256": "b18b709193a84fb02925cc55d5a70b8639a38413cec228088f337ff5cd6521b8"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 4439,
+      "rssKiB": 1431120
+    },
+    {
+      "name": "audit-build",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build.guard.json",
+        "bytes": 1182,
+        "sha256": "74e543b9133e40d1b2e33aa67e92d8530731d2a8b287f834966028cc78652d61"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 5638,
+      "rssKiB": 248672
+    },
+    {
+      "name": "build-second",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/build-second.guard.json",
+        "bytes": 1083,
+        "sha256": "66778bd1551fa7e9fe2bc620a1ff2ffe9b1c2b632c3bd9c344ffe766381ba127"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 7830,
+      "rssKiB": 515424
+    },
+    {
+      "name": "build-third",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/build-third.guard.json",
+        "bytes": 1089,
+        "sha256": "0e38bad49114792e9c64b1ed567362db198a47fb0ba52629bcbffdae0d22dd72"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 5447,
+      "rssKiB": 529680
+    },
+    {
+      "name": "build-verified",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/build-verified.guard.json",
+        "bytes": 1213,
+        "sha256": "186eb7d2e6f4d7714e6a6a57b13dbdac485a5bfd82606f6e0683f5715ceedea7"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 20417,
+      "rssKiB": 1434960
+    },
+    {
+      "name": "build",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/build.guard.json",
+        "bytes": 1141,
+        "sha256": "1341bcef2f518252887775a219b99a93074a7a1d5e2549aa7a3b7d947d0dd853"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 7694,
+      "rssKiB": 509872
+    },
+    {
+      "name": "fixture-final",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture-final.guard.json",
+        "bytes": 1257,
+        "sha256": "31e7813c941023cd99ba8360dd3c0a94b628ab7a5877e4181207442cbbd6d66b"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 5907,
+      "rssKiB": 90368
+    },
+    {
+      "name": "fixture-proven",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture-proven.guard.json",
+        "bytes": 1258,
+        "sha256": "4354a75a09ff7d7f44c4051c86b7229654343aee22dba388525dd476b1e70d63"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 3896,
+      "rssKiB": 91584
+    },
+    {
+      "name": "fixture-scoped",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture-scoped.guard.json",
+        "bytes": 1258,
+        "sha256": "2a817ec63df120609f5bcd9cab86ae9afb7c0622b618b430527ad0f3debe7fd8"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 3714,
+      "rssKiB": 90016
+    },
+    {
+      "name": "fixture",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture.guard.json",
+        "bytes": 1245,
+        "sha256": "8348c526d16052173754abc64153caf6bc482443cc56f5750166e33092ffa95e"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 6129,
+      "rssKiB": 90336
+    },
+    {
+      "name": "full-check-50000",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/full-check-50000.guard.json",
+        "bytes": 1359,
+        "sha256": "9513cb6f3d34032c0f2555e98969a7e5903043d88a66a95600ec6f73ac6f1ee8"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 19936,
+      "rssKiB": 227904
+    },
+    {
+      "name": "prepare-50000",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/prepare-50000.guard.json",
+        "bytes": 1350,
+        "sha256": "7914f51d04b6cf1626bfbcb963d46dc861d99e9e4c4ec12de4f87077cbd698b1"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 17687,
+      "rssKiB": 206992
+    },
+    {
+      "name": "proofs",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/proofs.guard.json",
+        "bytes": 1179,
+        "sha256": "19821e6c26381e6824153069fbbee7fc630047e8ced738d25d0944f4edb393cc"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 16812,
+      "rssKiB": 1337600
+    },
+    {
+      "name": "query-50000-1",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-50000-1.guard.json",
+        "bytes": 1447,
+        "sha256": "e0f998be6601b8e6af16d0e6dd0f3d99de37990209850548f902d8e7bab82a16"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 6728,
+      "rssKiB": 172352
+    },
+    {
+      "name": "query-segmented-50000-1",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-segmented-50000-1.guard.json",
+        "bytes": 1467,
+        "sha256": "5f46e058683fea59195a4fef0e4c29a8805cbab373e29cd25fdd3d2c044eb4f2"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 9414,
+      "rssKiB": 175200
+    },
+    {
+      "name": "query-segmented-50000-2",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-segmented-50000-2.guard.json",
+        "bytes": 1467,
+        "sha256": "5dbe56d67c4d11bbf75fe0b66db676865590108cba3d283e88dcea79d320578d"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 7358,
+      "rssKiB": 175104
+    },
+    {
+      "name": "query-segmented-50000-3",
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-segmented-50000-3.guard.json",
+        "bytes": 1467,
+        "sha256": "7dcfe3b393ad0edd94858d382757ec2dbe98bc0a0d9466e754f97c710443e196"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 6777,
+      "rssKiB": 174992
+    }
+  ],
+  "finalExecutions": [
+    "build-verified",
+    "audit-build-scoped-final",
+    "proofs",
+    "prepare-50000",
+    "fixture-proven",
+    "full-check-50000",
+    "query-segmented-50000-1",
+    "query-segmented-50000-2",
+    "query-segmented-50000-3"
+  ],
+  "maximumAggregateRssKiB": 1443392,
+  "limitRssKiB": 3670016,
+  "userCeilingRssKiB": 4194304,
+  "failures": {
+    "compilerAndLinkAttemptsRetained": true,
+    "initialHelper": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/initial-helper.json",
+      "bytes": 249,
+      "sha256": "030f4d5a930a2b098e2a990e0a368ba0a5d5c5a82697d9697274c2a07c2fc39a"
+    },
+    "overflowingTraceAttempt": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-50000-1.guard.json",
+      "bytes": 1447,
+      "sha256": "e0f998be6601b8e6af16d0e6dd0f3d99de37990209850548f902d8e7bab82a16"
+    },
+    "traceDiagnosis": "64 KiB memo trace overflow was incorrectly classified as catalogue enumeration; final timed call reports that overflow explicitly and an untimed segmented audit checks every owner without enlarging the limit",
+    "staleBinaryFixture": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture-scoped-stale-binary.json",
+      "bytes": 166,
+      "sha256": "ab7587e6bde10799da97d49a91282a33b8030c363c8f2c4ed8417f6d82859bac"
+    },
+    "staleBinaryFixtureRaw": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture-scoped.guard.json",
+      "bytes": 1258,
+      "sha256": "2a817ec63df120609f5bcd9cab86ae9afb7c0622b618b430527ad0f3debe7fd8"
+    },
+    "staleBinaryExcludedFromFinalEvidence": true
+  },
+  "retirements": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/helper-retired.json",
+    "bytes": 335,
+    "sha256": "276c0baac402207a353f9c5c6cb7c01d31f60f97581139a9265ea77930d9dcff"
+  },
+  "archivesCreated": false,
+  "nextAction": [
+    "Connect one closed DB-scoped keyed request to numerical provider and native producer; do not send all document metadata",
+    "Validate original records only when consumed; retain lexical/synaptic nominations and independent complete e-class authority",
+    "Integrate source-delta preparation, matrix delta compensation and atomic routing replacement",
+    "Qualify held-out needed-original delivery, all native lifecycle hooks, shared use and fixed matched topic/lap/repetition inclusive-token/quality comparisons"
+  ],
+  "limitations": [
+    "Reverse index component only; Warm and wire/native producer are not connected",
+    "No new rank, similarity quality, required-original delivery or token result; prior router top-eight overlap zero remains unchanged",
+    "Full initial preparation enumerates and sorts the original population in memory",
+    "Journal limits can require a full background rebuild; hot-key truncation has no continuation API yet",
+    "Complete source coordinates are not external-file/MCP freshness or reuse authority",
+    "No million-scale, p99, production shared concurrency, capture privacy, Phase4 or paper qualification"
+  ],
+  "reproduction": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-final.settings.json",
+      "bytes": 481,
+      "sha256": "7974194529c149fa3bc48f1664210660cceeb952b61f3e0d778676b7c7ff161b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-scoped-final.settings.json",
+      "bytes": 488,
+      "sha256": "e3f2c02874bbb0200b5bb36e896aab655e5eb5dd40ba2fdd69e9943e3ab68466"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-second.settings.json",
+      "bytes": 482,
+      "sha256": "cc7a13b5539f9617f9d7d3b45be8846d7386211b0c30e1b5136e04a92e549de8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-segmented.settings.json",
+      "bytes": 485,
+      "sha256": "584b9736e786720d9d1b72d9d442f07c0048e25fda8d6bd596496034e6397af8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build-third.settings.json",
+      "bytes": 481,
+      "sha256": "cf9e19e4ac677ff1c5896e5c204b4eb6eca2110eb3965984e460018e48837ac4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/audit-build.settings.json",
+      "bytes": 475,
+      "sha256": "d45876e27c0cfd0d6194248c22e92ca5a8a4f05171d389f02f3c2dac4fe79760"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/build-second.settings.json",
+      "bytes": 436,
+      "sha256": "9d8e1a44e51d5f6f61e20911f5e2aacaffbed032942afb241db90347c66e0db4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/build-third.settings.json",
+      "bytes": 435,
+      "sha256": "398041eb2a0ff9fa4dd833e5373f066ba8d3f8444ab4649b5c291f88f6428ccc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/build-verified.settings.json",
+      "bytes": 507,
+      "sha256": "8332c9cae67bb6684c6844ea35c14839ead817c5e04535f66577e1fa5bccd3fe"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/build.rb",
+      "bytes": 1097,
+      "sha256": "e2eedd8c6983c12201d5bdfdba640d84009eff6c5d3049b062c6e82334ca0527"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/build.settings.json",
+      "bytes": 429,
+      "sha256": "bab68a34a30e817efecd448fe609696e15095b276a606a14da6dab0a5773a125"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/check-review.rb",
+      "bytes": 4248,
+      "sha256": "8e46a974a8358619e4dd3886a63d49e91f11207cecfae0d7c9204a4a882a9fff"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture-final.settings.json",
+      "bytes": 642,
+      "sha256": "ae06a8d6ad7b8244c0f4378ea80f0719b13ed73a1ee4f941129f8fa27c4e931f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture-proven.settings.json",
+      "bytes": 644,
+      "sha256": "5501f878a34b214bedf02b638908d6f6f9bdfee143d19726ff6247c361f8791a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture-scoped.settings.json",
+      "bytes": 644,
+      "sha256": "2ceab408aea1d8fbb13efd8aae412b78da15e08f37c7c69e4c13fe35c6671c9d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/fixture.settings.json",
+      "bytes": 630,
+      "sha256": "931e4b90217159f3314955a322a7a79e196a170b0131ae1a79ffdf9e67587cf1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/full-check-50000.settings.json",
+      "bytes": 745,
+      "sha256": "64a748ecfa693b7feafd8d1d00a1f9ac3a548ccb993c10befcd3767cf67aa7a7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/lean-path.txt",
+      "bytes": 156,
+      "sha256": "ba6d26cdf5dc760f8a31eeb556e75263a40bf5ea80d1be58803c0a2f0f65c3b6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/plan.json",
+      "bytes": 325,
+      "sha256": "6e6758261430d0fad049d80465e48ef5fa4da2b8be105cfb67ff7006ced8c70d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/prepare-50000.settings.json",
+      "bytes": 736,
+      "sha256": "d83515e822a59907388c60f6f8c13bdaab9020b15dbd0e2f14ff78b443d3e8b9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/proofs.settings.json",
+      "bytes": 470,
+      "sha256": "fccdacb5604bfd18032c1fd1beab3d79045543bf444b1a0f732f98885fd1cbef"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-50000-1.settings.json",
+      "bytes": 840,
+      "sha256": "0677f483027fbe116e3daab90393fffa736aac054f5275028cf8590fbb604c88"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-50000-2.settings.json",
+      "bytes": 840,
+      "sha256": "3be42286ec74a3f5741e80acd07e628aa907146cc1fd1bdcbbe14310ab1a91a8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-50000-3.settings.json",
+      "bytes": 840,
+      "sha256": "1c751fdf1fd20888828d2725c397e5f6bfd493c0be8af9e047e188efd99d4075"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-segmented-50000-1.settings.json",
+      "bytes": 860,
+      "sha256": "0e9ffddcb37dd569f56edb011050a7bc0797a53fc2451029d57c714f678b15e2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-segmented-50000-2.settings.json",
+      "bytes": 860,
+      "sha256": "a755dc28d538ebfd76fb25c5dbeeb793609298c0e7296095bd0812227a860976"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/query-segmented-50000-3.settings.json",
+      "bytes": 860,
+      "sha256": "e35b1b8ff104cfd707ba5342dabfcf3342a24a76cde8c9d41c12ddbc9a4a05ca"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/run-final.rb",
+      "bytes": 625,
+      "sha256": "1133f83bb43f20b9f62aba18381deff1e08d6b733456dd5302e1317ea709c6ae"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/keyed-advice-20261025/write-review.rb",
+      "bytes": 8335,
+      "sha256": "1d6294eddb58e0d7af347ded57356b470181e04bf36a08ed6abcf8a4195ff5ce"
+    }
+  ]
+}

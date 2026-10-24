@@ -1,5 +1,11 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 窓keyから元owner/Work/所属ordinal/窓位置を直接引くDB所有の逆引き索引をLeanで隔離実装。本文やチャットIDは複製せず、同一内容の別位置を保持する。既存の認証済み出版日誌から変更ownerだけを取り、保存済み旧headと現在headの窓で撤回/追加するため、別のowner逆索引も全domain再生成も増やさない。manifestとpostingsは同一PageMap headで原子的に出版する。cold/変更/系譜不一致は有効な空結果と区別し、foregroundで修復しない。
+照会は最大4,096key/8,192物理posting行で実際に走査を止め、tombstoneも課金し、未訪問/打切りkeyをpartialKeysに残す。通常Leanで元位置への健全性/完全性、同内容の別位置、codec、葉の行数保存とchecked全体quotaを確認。IO全体の詳細化証明ではない。70ownerの完全oracle、追加1owner/撤回1owner/neutral、旧固定reader、不正位置/withdrawn/corrupt/重複/過大要求、writer競合拒否と別DB claim独立の検査が成功した。
+既存readonly 50kの49,969owner/50,000窓を14,221ms・4,568,129bytes書込で準備し、再実行4ms/追加書込0。元の全50,000座標と25batchの保存索引照会が一致（digest cb995bd6…3941）。固定3,125窓の事前指定3反復は、索引open/逆引き/全元照合の合計3,028/2,939/2,500ms、逆引きだけ580/583/521ms。新processだがOS cacheはflushせず、routing/採点/native速度比較とはしない。
+最初の照会監査は64KiB memo traceのoverflowを全件列挙と誤判定して停止した。上限を増やさず、最終timed実行のoverflowを明記し、別のuntimed監査で全3,125ownerを各547bytes以下のcompleteなpoint/blob traceとして検査した。helper compile失敗後に旧binaryで誤dispatchしたfixtureも残し、最終根拠から除外した。新seed/回答モデル/query埋込/元埋込/総トークン比較0、候補未採用。元DB/字句hash不変、全final guard終了/残存0、最大合計RSS1,443,392KiB。終了helperのみhash後削除・archiveなし。
+Warm/DB別keyed protocol/通常hookは未接続で、旧routerの上位8重なり0という診断も変わっていない。次は全documents転送を廃止し、原記録の検証を実際の配送候補まで遅らせる。字句/3シナプス/完全e-class認定/元鮮度を保つ。初期sortのO(N)準備heap、journal上限時の全再構築、hot keyの続き取得、matrix/router差分、共有並行/私有MCP/大規模p99/題材1–3・両周・同条件総トークン/品質・論文は未完了。docs/window-owner-routing.md参照、全Phases0–6 active。
+
 2026-10-25 数値アクセスを元readerとの全値照合で分解：既存50k discovery行のscalar読出し55,715ms、同値な計測版54,911ms。点索引23.25秒、元chunk検証19.10秒、16進化10.56秒が大半で、採点前に30秒を超えていた。snapshot変更/追加warm/埋込なし。1候補ずつ全件を具体化する経路を置換する必要がある。
 全99,969投影を32件以下の葉に分けるページ化推薦routerをLeanで隔離実装。全入力のpermutation・codec往復を通常Leanで証明し、照会はleaf≤128/keys≤4,096/node上限を型付きで検査。12の元座標bit順序を使い、実際の採点は元の完全ベクトル。99,969件の構築35,472ms（入力列挙別）、4 source-vector照会の3,124候補を41–43msで取得し、元データ読出し/検証2,094–2,768ms。全同座標65件、重複/過大quota/後続matrix/不正node拒否、pinned旧readerを確認した。
 固定した合成自然言語1問の数値経路だけを比較し、元provider 60,694ms対、router37ms＋絞込後3,915ms。上位8 ownerの重なり0件を保持。元full-vectorの独立Lean cosineは元0.9008–0.9034、候補0.8919–0.8992。順位差は観測事実だが必要原文の欠落/品質/総トークンの正解ではないため、これだけで採否や効果を断定せず、質問へ再調整もしない。回答モデル/seed/元窓埋込0、query埋込のみ既存MiniLMを使い、policy/骨格はLean・追加Pythonなし。
