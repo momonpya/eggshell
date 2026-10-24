@@ -1,0 +1,569 @@
+--- a/Eggshell/VectorMatrix.lean
++++ b/Eggshell/VectorMatrix.lean
+@@ -13,2 +13,2 @@
+-/-- Rebuildable numerical hints only. Keys remain original window digests;
+-neither a matrix row nor its coverage can establish source/Work authority. -/
++/-- A bounded original projection. Its key remains the original window hash;
++this metadata cannot establish source, Work, Match or completion authority. -/
+@@ -16 +15,0 @@
+-  key : String
+@@ -18 +16,0 @@
+-  offset : Nat
+@@ -20,2 +18 @@
+-  digest : String
+-  deriving BEq
++  chunks : List PageMap.Blob
+@@ -23,5 +20,4 @@
+-def rowCodec := (Wire.text.product (Wire.text.product
+-  (Wire.natural.product (Wire.natural.product Wire.text)))).iso
+-    (fun row : Row => (row.key,row.coverage,row.offset,row.bytes,row.digest))
+-    (fun (key,coverage,offset,bytes,digest) => Row.mk key coverage offset bytes digest)
+-    (by intro row; cases row; rfl)
++def rowCodec := (Wire.text.product (Wire.natural.product (Wire.list PageMap.blobCodec))).iso
++  (fun row : Row => (row.coverage,row.bytes,row.chunks))
++  (fun (coverage,bytes,chunks) => Row.mk coverage bytes chunks)
++  (by intro row; cases row; rfl)
+@@ -29 +25,2 @@
+-def codec := Wire.list rowCodec
++theorem row_roundtrip (row : Row) (tail : List UInt8) :
++    rowCodec.decode (rowCodec.encode row ++ tail) = .ok (row,tail) := rowCodec.roundtrip row tail
+@@ -31,4 +27,0 @@
+-theorem directory_roundtrip (rows : List Row) (tail : List UInt8) :
+-    codec.decode (codec.encode rows ++ tail) = .ok (rows,tail) :=
+-  codec.roundtrip rows tail
+-
+@@ -38,2 +31 @@
+-def maxDataBytes : Nat := 512 * 1024 * 1024
+-def maxDirectoryBytes : Nat := 64 * 1024 * 1024
++def maxRowBytes : Nat := 4096*8
+@@ -40,0 +33,3 @@
++def authority (model encoder : String) :=
++  "eggshell.projected-matrix:" ++ Sha256.hex (toJson [model,encoder,implementation]).compress.toUTF8
++
+@@ -44,0 +40,2 @@
++  generation : String
++  head : PageMap.Head
+@@ -47,2 +43,0 @@
+-  directoryBytes : Nat
+-  directoryDigest : String
+@@ -53,4 +48 @@
+-  rows : Array Row
+-  index : Std.HashMap String Row
+-  handle : FileSystem.ReadHandle
+-  version : FileSystem.ReadVersion
++  snapshot : PageMap.Snapshot
+@@ -58 +50 @@
+-def folder (root : System.FilePath) := root / "matrix"
++def folder (root : System.FilePath) := root / "matrix-tree"
+@@ -60 +52,12 @@
+-/-- Scheduling hint only; search checks the actual directory and every row. -/
++def manifest (root : System.FilePath) : IO Manifest := do
++  let bytes ← FileSystem.boundedBytes (folder root / "ready.json") 16384
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid numerical matrix readiness")
++  IO.ofExcept (Json.parse text >>= fromJson?)
++
++def validManifest (record : Manifest) (model encoder : String) : Bool :=
++  record.model == model && record.encoder == encoder && record.implementation == implementation &&
++    Receipt.validId record.generation && 0 < record.rows && 0 < record.bytes &&
++    record.head.authority == authority model encoder && record.head.root.any (·.rows == record.rows)
++
++/-- Scheduling hint only. The actual open pins the committed tree, and every
++consumed page/blob is authenticated against that immutable root. -/
+@@ -62,6 +65 @@
+-  try
+-    let bytes ← FileSystem.boundedBytes (folder root / "ready.json") 65536
+-    let record ← IO.ofExcept (Json.parse ((String.fromUTF8? bytes).getD "") >>= fromJson? (α := Manifest))
+-    return record.model == model && record.encoder == encoder && record.implementation == implementation &&
+-      0 < record.rows && record.bytes ≤ maxDataBytes && record.directoryBytes ≤ maxDirectoryBytes
+-  catch _ => return false
++  try return validManifest (← manifest root) model encoder catch _ => return false
+@@ -68,0 +67,2 @@
++/-- Constant-size readiness and root opening. No complete row directory or
++projected data file is decoded or materialized here. -/
+@@ -70,23 +70,7 @@
+-  let path := folder root
+-  let bytes ← FileSystem.boundedBytes (path / "ready.json") 65536
+-  let record ← IO.ofExcept (Json.parse ((String.fromUTF8? bytes).getD "") >>= fromJson? (α := Manifest))
+-  unless record.model == model && record.encoder == encoder && record.implementation == implementation &&
+-      0 < record.rows && record.bytes ≤ maxDataBytes && record.directoryBytes ≤ maxDirectoryBytes do return none
+-  let bytes ← FileSystem.boundedBytes (path / "directory") maxDirectoryBytes
+-  unless bytes.size == record.directoryBytes && Sha256.hex bytes == record.directoryDigest do
+-    throw (IO.userError "numerical matrix directory digest disagrees")
+-  let (rows,tail) ← IO.ofExcept (codec.decode bytes.toList)
+-  unless tail.isEmpty && rows.length == record.rows do throw (IO.userError "invalid numerical matrix directory")
+-  let mut index : Std.HashMap String Row := {}
+-  let mut offset := 0
+-  for row in rows do
+-    unless Receipt.validId row.key && Receipt.validId row.digest && !index.contains row.key &&
+-        row.offset == offset && 0 < row.bytes && row.bytes ≤ 4096*8 && row.bytes % 8 == 0 &&
+-        row.coverage.utf8ByteSize ≤ 4096 do throw (IO.userError "invalid numerical matrix row")
+-    offset := offset + row.bytes
+-    index := index.insert row.key row
+-  unless offset == record.bytes do throw (IO.userError "numerical matrix length disagrees")
+-  let handle ← FileSystem.openRead (path / "rows").toString
+-  let version ← FileSystem.readVersion handle
+-  unless version.bytes == record.bytes do throw (IO.userError "numerical matrix file length disagrees")
+-  return some ⟨record,rows.toArray,index,handle,version⟩
++  let record ← manifest root
++  unless validManifest record model encoder do return none
++  let snapshot ← PageMap.pin (folder root / record.generation)
++  unless snapshot.head == record.head do throw (IO.userError "numerical matrix publication disagrees")
++  let version ← FileSystem.readVersion snapshot.handle
++  unless version.bytes == snapshot.head.bytes do throw (IO.userError "numerical matrix extent disagrees")
++  return some ⟨record,snapshot⟩
+@@ -94,2 +78,2 @@
+-/-- One descriptor serves all window rows. Read only bounded pages and verify
+-the original directory row digest; replacement/mutation is a cache miss. -/
++/-- Original point paths and blob extents, rather than an in-memory copy of
++all directory rows. A changed file is unusable; no repair/encoding occurs. -/
+@@ -97,3 +81,10 @@
+-  let some row := ready.index[key]? | return none
+-  unless (← FileSystem.readVersion ready.handle) == ready.version do
+-    throw (IO.userError "numerical matrix mutated before read")
++  unless Receipt.validId key do throw (IO.userError "invalid numerical matrix key")
++  let before ← FileSystem.readVersion ready.snapshot.handle
++  unless before.bytes == ready.snapshot.head.bytes do
++    throw (IO.userError "numerical matrix extent changed before read")
++  let some encoded ← ready.snapshot.get ("row:" ++ key) | return none
++  let (row,tail) ← IO.ofExcept (rowCodec.decode encoded.toList)
++  unless tail.isEmpty && (rowCodec.encode row).toByteArray == encoded &&
++      0 < row.bytes && row.bytes ≤ maxRowBytes && row.bytes % 8 == 0 &&
++      row.coverage.utf8ByteSize ≤ 4096 && row.chunks.length == (row.bytes+4095)/4096 do
++    throw (IO.userError "invalid numerical matrix row")
+@@ -101,8 +92,6 @@
+-  while bytes.size < row.bytes do
+-    let count := min 4096 (row.bytes - bytes.size)
+-    let part ← FileSystem.readPage ready.handle (row.offset + bytes.size).toUInt64
+-      ⟨count,Nat.min_le_left _ _⟩
+-    unless part.size == count do throw (IO.userError "truncated numerical matrix row")
+-    bytes := bytes ++ part
+-  unless (← FileSystem.readVersion ready.handle) == ready.version && Sha256.hex bytes == row.digest do
+-    throw (IO.userError "numerical matrix row digest disagrees")
++  for chunk in row.chunks do
++    unless chunk.bytes == min 4096 (row.bytes-bytes.size) do
++      throw (IO.userError "invalid numerical matrix chunk shape")
++    bytes := bytes ++ (← ready.snapshot.readBlob chunk)
++  unless bytes.size == row.bytes && (← FileSystem.readVersion ready.snapshot.handle) == before do
++    throw (IO.userError "numerical matrix changed during read")
+@@ -113 +102 @@
+-  unless 0 < input.size && input.size % 16 == 0 && input.size ≤ 4096*16 do
++  unless 0 < input.size && input.size % 16 == 0 && input.size ≤ maxRowBytes*2 do
+@@ -134,4 +123,74 @@
+-/-- Called only under the DB maintenance claim, never by a search. Atomic
+-replacement keeps storage bounded. In-flight readers retain their descriptor;
+-mixed directory/data generations fail their row digests and use original hints. -/
+-def write (root : System.FilePath) (model encoder : String) (entries : Array Entry) : IO Result := do
++/-- Each level buffers at most 31 refs. A full group is appended once, then
++carried upward; construction does not copy a root path per row or publication. -/
++structure Level where
++  refs : List PageMap.Ref
++  bounded : refs.length < 32
++
++def buffered (levels : List Level) : Nat := (levels.map (·.refs.length)).sum
++
++theorem buffered_bound (levels : List Level) : buffered levels ≤ 31*levels.length := by
++  induction levels with
++  | nil => simp [buffered]
++  | cons level rest ih =>
++      have := level.bounded
++      simp only [buffered,List.map_cons,List.sum_cons,List.length_cons] at *
++      omega
++
++def carry (writer : PageMap.Writer) (ref : PageMap.Ref) : List Level → IO (List Level)
++  | [] => return [⟨[ref],by simp⟩]
++  | level :: rest => do
++      if fits : level.refs.length < 31 then
++        return ⟨ref :: level.refs,by simp; omega⟩ :: rest
++      else
++        let parent ← writer.appendPage (.branch (ref :: level.refs).reverse)
++        return ⟨[],by simp⟩ :: (← carry writer parent rest)
++
++def flushLeaves (writer : PageMap.Writer) (rows : List PageMap.Row)
++    (levels : List Level) : IO (List Level) := do
++  if rows.isEmpty then return levels
++  let mut levels := levels
++  for ref in ← writer.leaves rows.reverse do levels ← carry writer ref levels
++  return levels
++
++/-- Close the partial suffix in chronological order, sharing its boundary
++with the next level. Only one directory path and the bounded frontier live. -/
++def finish (writer : PageMap.Writer) (levels : List Level) : IO PageMap.Ref := do
++  let mut pending : Option PageMap.Ref := none
++  for (level,index) in levels.zipIdx do
++    let children := (pending.toList ++ level.refs).reverse
++    if index+1 == levels.length then return ← writer.finishRoots children
++    if !children.isEmpty then pending := some (← writer.appendPage (.branch children))
++  throw (IO.userError "empty numerical matrix")
++
++def appendRow (writer : PageMap.Writer) (entry : Entry) : IO (PageMap.Row × Nat) := do
++  unless Receipt.validId entry.key && entry.coverage.utf8ByteSize ≤ 4096 do
++    throw (IO.userError "invalid numerical matrix entry")
++  let bytes ← IO.ofExcept (decodeHex entry.projected)
++  unless (← writer.extent.get)+bytes.size+65536 < 2^63 do
++    throw (IO.userError "numerical matrix exceeds filesystem extent")
++  let mut chunks := []
++  let mut offset := 0
++  while offset < bytes.size do
++    let part := bytes.extract offset (min bytes.size (offset+4096))
++    if valid : 0 < part.size ∧ part.size ≤ 4096 then
++      chunks := (← writer.appendBlob part valid.1 valid.2) :: chunks
++    else throw (IO.userError "invalid projected numerical chunk")
++    offset := offset+part.size
++  let row : Row := ⟨entry.coverage,bytes.size,chunks.reverse⟩
++  return (("row:" ++ entry.key,some (rowCodec.encode row).toByteArray),bytes.size)
++
++/-- This private directory contains rebuildable generations only. Exclusive
++maintenance ownership precedes reclamation, including interrupted producers.
++Open readers retain their original file descriptors; they need no old path. -/
++private def retireOthers (path : System.FilePath) (keep : Option String) : IO Unit := do
++  for entry in ← path.readDir do
++    if Receipt.validId entry.fileName && keep != some entry.fileName then
++      FileSystem.rejectSymlinkAncestors entry.path
++      while !(← FileSystem.pruneDirectory entry.path.toString ⟨128,by decide⟩) do pure ()
++
++/-- Source-only streaming preparation, under the DB maintenance claim. The
++producer owns one projection at a time. Atomically publish a sealed generation
++only after its root is durable; replace/remove only our previous generation.
++Existing pinned readers may retain old bytes or miss, never receive a mix. -/
++private def writeClaimed (root : System.FilePath) (model encoder : String) (keys : List String)
++    (produce : String → IO Entry) : IO Result := do
+@@ -139,21 +198,41 @@
+-  let mut rows := #[]
+-  let mut data := ByteArray.empty
+-  let mut seen : Std.HashSet String := {}
+-  for entry in entries do
+-    unless Receipt.validId entry.key && !seen.contains entry.key do
+-      throw (IO.userError "duplicate or invalid numerical matrix key")
+-    seen := seen.insert entry.key
+-    let bytes ← IO.ofExcept (decodeHex entry.projected)
+-    unless data.size + bytes.size ≤ maxDataBytes do throw (IO.userError "numerical matrix exceeds byte budget")
+-    rows := rows.push (Row.mk entry.key entry.coverage data.size bytes.size (Sha256.hex bytes))
+-    data := data ++ bytes
+-  unless !rows.isEmpty do throw (IO.userError "empty numerical matrix")
+-  let directory := (codec.encode rows.toList).toByteArray
+-  unless directory.size ≤ maxDirectoryBytes do throw (IO.userError "numerical matrix directory exceeds byte budget")
+-  let record : Manifest := ⟨model,encoder,implementation,rows.size,data.size,
+-    directory.size,Sha256.hex directory⟩
+-  let path ← Sidecar.childDirectory root "matrix"
+-  FileSystem.atomicExistingBytes (path / "rows") data
+-  FileSystem.atomicExistingBytes (path / "directory") directory
+-  FileSystem.atomicExistingBytes (path / "ready.json") (toJson record).compress.toUTF8
+-  return ⟨"prepared",rows.size,data.size,(← IO.monoMsNow)-started⟩
++  unless !keys.isEmpty do throw (IO.userError "empty numerical matrix")
++  let path ← Sidecar.childDirectory root "matrix-tree"
++  let previous ← try some <$> manifest root catch _ => pure none
++  retireOthers path (previous.map (·.generation))
++  let generation ← Receipt.fresh
++  let directory := path / generation
++  let initial ← PageMap.create directory (authority model encoder)
++  let published ← IO.mkRef false
++  try
++    let (bytes,head,_) ← PageMap.withWriter initial fun writer => do
++      let mut levels := []
++      let mut rows := []
++      let mut total := 0
++      let mut count := 0
++      let mut previous : Option String := none
++      for key in keys.mergeSort do
++        unless Receipt.validId key && previous.all (· < key) do
++          throw (IO.userError "duplicate or invalid numerical matrix key")
++        let entry ← produce key
++        unless entry.key == key do throw (IO.userError "numerical producer returned a different key")
++        let (row,bytes) ← appendRow writer entry
++        rows := row :: rows
++        total := total+bytes
++        count := count+1
++        previous := some key
++        if count % 64 == 0 then
++          levels ← flushLeaves writer rows levels
++          rows := []
++      levels ← flushLeaves writer rows levels
++      writer.root.set (some (← finish writer levels))
++      return total
++    let record : Manifest := ⟨model,encoder,implementation,generation,head,keys.length,bytes⟩
++    unless validManifest record model encoder do throw (IO.userError "numerical matrix root count disagrees")
++    IO.setAccessRights (PageMap.dataPath directory head) {user := {read := true},group := {},other := {}}
++    FileSystem.atomicExistingBytes (path / "ready.json") (toJson record).compress.toUTF8
++    published.set true
++    retireOthers path (some generation)
++    return ⟨"prepared",keys.length,bytes,(← IO.monoMsNow)-started⟩
++  finally
++    if !(← published.get) && (← FileSystem.symlinkMetadata? directory).isSome then
++      IO.FS.removeDirAll directory
+@@ -160,0 +240,13 @@
++/-- Different DB roots have independent claims. Competing preparers of the
++same root fail before producing any row. Readers never acquire this lock. -/
++opaque writeUsing (root : System.FilePath) (model encoder : String) (keys : List String)
++    (produce : String → IO Entry) : IO Result := do
++  let path ← Sidecar.childDirectory root "matrix-tree"
++  let lock := path / "writer"
++  FileSystem.immutableExistingBytes lock ByteArray.empty
++  let guard ← FileSystem.openRead lock.toString
++  unless ← FileSystem.tryReadLock guard true do
++    throw (IO.userError "numerical matrix preparer is busy")
++  try writeClaimed root model encoder keys produce
++  finally FileSystem.unlockRead guard
++
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -513,3 +513,2 @@
+-    if valid then return ⟨"warm",ready.rows.size,ready.metadata.bytes,(← IO.monoMsNow)-started⟩
+-  let mut entries := #[]
+-  for key in keys do
++    if valid then return ⟨"warm",ready.metadata.rows,ready.metadata.bytes,(← IO.monoMsNow)-started⟩
++  VectorMatrix.writeUsing options.cache options.model encoderContract keys fun key => do
+@@ -519,2 +518 @@
+-    entries := entries.push ⟨key,(toJson cached.coverage).compress,pooled⟩
+-  VectorMatrix.write options.cache options.model encoderContract entries
++    return ⟨key,(toJson cached.coverage).compress,pooled⟩
+--- /dev/null
++++ b/tools/research/PagedMatrixSmoke.lean
+@@ -0,0 +1,129 @@
++import Eggshell.Warm
++
++open Lean Eggshell
++
++private def check (condition : Bool) (message : String) : IO Unit :=
++  unless condition do throw (IO.userError message)
++
++private def key (index : Nat) := Sha256.hex (toString index).toUTF8
++private def value (index : Nat) := if index % 2 == 0 then "000000000000f03f" else "0000000000000040"
++private def coverage (name : String) := (Json.mkObj [("fixture",toJson name)]).compress
++
++private def produce (name : String) : IO VectorMatrix.Entry := do
++  return ⟨name,coverage name,value name.toUTF8[0]!.toNat⟩
++
++private def failed (action : IO α) : IO Bool := do
++  try let _ ← action; return false catch _ => return true
++
++private def generationCount (root : System.FilePath) : IO Nat := do
++  return ((← (VectorMatrix.folder root).readDir).filter (fun entry => Receipt.validId entry.fileName)).size
++
++private def smoke (output : System.FilePath) : IO Unit := do
++  let mut records := #[]
++  for count in [1,63,64,65,1023,1024,1025,2049] do
++    let root := output / toString count
++    FileSystem.privateDirectory root
++    let keys := (List.range count).map key
++    let prepared ← VectorMatrix.writeUsing root "fixture-model" "fixture-encoder" keys produce
++    let some ready ← VectorMatrix.open? root "fixture-model" "fixture-encoder" |
++      throw (IO.userError "published paged matrix missing")
++    check (ready.metadata.rows == count && ready.snapshot.head.root.any (·.rows == count)) "root population differs"
++    for name in keys do
++      let expected ← produce name
++      check ((← VectorMatrix.read ready name) == some (expected.coverage,expected.projected)) "matrix changed a projected row"
++    check ((← VectorMatrix.read ready (key (count+10000))).isNone) "matrix invented an absent row"
++    check ((← generationCount root) == 1) "published generation removed or redundant generation retained"
++    records := records.push (Json.mkObj [("rows",toJson count),("result",toJson prepared),
++      ("head",toJson ready.snapshot.head),("allProjectedBitsEqual",toJson true)])
++  let root := output / "replacement"
++  FileSystem.privateDirectory root
++  let names := [key 1,key 2,key 3]
++  let _ ← VectorMatrix.writeUsing root "fixture-model" "fixture-encoder" names produce
++  let some before ← VectorMatrix.open? root "fixture-model" "fixture-encoder" | throw (IO.userError "missing original generation")
++  let original ← IO.FS.readFile (VectorMatrix.folder root / "ready.json")
++  check (← failed (VectorMatrix.writeUsing root "fixture-model" "fixture-encoder" [key 1,key 1] produce)) "duplicate key accepted"
++  check (← failed (VectorMatrix.writeUsing root "fixture-model" "fixture-encoder" [] produce)) "empty matrix accepted"
++  check (← failed (VectorMatrix.writeUsing root "fixture-model" "fixture-encoder" names fun _ => throw (IO.userError "producer stopped")))
++    "producer failure accepted"
++  check (← failed (VectorMatrix.writeUsing root "fixture-model" "fixture-encoder" names fun _ => pure ⟨key 99,"{}",value 0⟩))
++    "foreign producer key accepted"
++  check ((← IO.FS.readFile (VectorMatrix.folder root / "ready.json")) == original && (← generationCount root) == 1)
++    "failed write changed publication or left an unpublished generation"
++  check ((← VectorMatrix.open? root "foreign-model" "fixture-encoder").isNone) "foreign model accepted"
++  check ((← VectorMatrix.open? root "fixture-model" "foreign-encoder").isNone) "foreign encoder accepted"
++  let _ ← VectorMatrix.writeUsing root "fixture-model" "fixture-encoder" names fun name =>
++    pure ⟨name,"replacement",value 1⟩
++  let some after ← VectorMatrix.open? root "fixture-model" "fixture-encoder" | throw (IO.userError "replacement missing")
++  check (before.metadata.generation != after.metadata.generation && (← generationCount root) == 1)
++    "obsolete generation not retired"
++  let old ← try VectorMatrix.read before (key 1) catch _ => pure none
++  let expected ← produce (key 1)
++  check (old.isNone || old == some (expected.coverage,expected.projected)) "pinned reader observed mixed replacement"
++  check ((← VectorMatrix.read after (key 1)) == some ("replacement",value 1)) "replacement did not publish"
++  let some encoded ← after.snapshot.get ("row:" ++ key 1) | throw (IO.userError "missing row descriptor")
++  let (row,_) ← IO.ofExcept (VectorMatrix.rowCodec.decode encoded.toList)
++  let some chunk := row.chunks.head? | throw (IO.userError "missing projected chunk")
++  let path := DB.PageMap.dataPath after.snapshot.directory after.snapshot.head
++  let bytes ← IO.FS.readBinFile path
++  FileSystem.atomicExistingBytes path (bytes.set! chunk.offset (bytes[chunk.offset]! ^^^ 1))
++  let some damaged ← VectorMatrix.open? root "fixture-model" "fixture-encoder" | throw (IO.userError "corrupt fixture root unavailable")
++  check (← failed (VectorMatrix.read damaged (key 1))) "corrupt projected bytes accepted"
++  let wide := output / "wide"
++  FileSystem.privateDirectory wide
++  let projected := String.join (List.replicate 4096 (value 0))
++  let _ ← VectorMatrix.writeUsing wide "fixture-model" "fixture-encoder" [key 0] fun name => pure ⟨name,"{}",projected⟩
++  let some wideReady ← VectorMatrix.open? wide "fixture-model" "fixture-encoder" | throw (IO.userError "wide matrix missing")
++  check ((← VectorMatrix.read wideReady (key 0)) == some ("{}",projected)) "multi-chunk row changed bits"
++  let shared := output / "shared"
++  FileSystem.privateDirectory shared
++  let _ ← VectorMatrix.writeUsing shared "fixture-model" "fixture-encoder" names produce
++  let entered ← IO.mkRef false
++  let released ← IO.mkRef false
++  let writing ← IO.asTask (VectorMatrix.writeUsing shared "fixture-model" "fixture-encoder" names fun name => do
++    entered.set true
++    while !(← released.get) do IO.sleep 1
++    return ⟨name,"new-shared-generation",value 1⟩) .dedicated
++  try
++    let readyDeadline := (← IO.monoMsNow)+5000
++    while !(← entered.get) && (← IO.monoMsNow) < readyDeadline do IO.sleep 1
++    check (← entered.get) "shared writer did not acquire its claim"
++    let some concurrent ← VectorMatrix.open? shared "fixture-model" "fixture-encoder" |
++      throw (IO.userError "reader blocked behind unpublished generation")
++    check ((← VectorMatrix.read concurrent (key 1)) == some (expected.coverage,expected.projected))
++      "concurrent reader observed unpublished bytes"
++    let produced ← IO.mkRef false
++    check (← failed (VectorMatrix.writeUsing shared "fixture-model" "fixture-encoder" names fun name => do
++      produced.set true; produce name)) "competing preparer was not excluded"
++    check (!(← produced.get)) "excluded writer produced rows"
++    let independent := output / "independent-db"
++    FileSystem.privateDirectory independent
++    let _ ← VectorMatrix.writeUsing independent "fixture-model" "fixture-encoder" names fun name => pure ⟨name,"other-db",value 0⟩
++    let some other ← VectorMatrix.open? independent "fixture-model" "fixture-encoder" |
++      throw (IO.userError "independent DB blocked behind shared writer")
++    check ((← VectorMatrix.read other (key 1)) == some ("other-db",value 0)) "independent DB row collision"
++    released.set true
++    let _ ← IO.ofExcept ((← IO.wait writing).mapError (·.toString))
++    check ((← VectorMatrix.read concurrent (key 1)) == some (expected.coverage,expected.projected))
++      "pinned reader lost its original generation after retirement"
++  finally released.set true
++  -- A terminated producer can leave a sealed but unpublished generation.
++  -- Only our derived generations are reclaimed; the current root is retained.
++  let orphan := VectorMatrix.folder shared / (← Receipt.fresh)
++  let _ ← DB.PageMap.create orphan "interrupted matrix fixture"
++  let _ ← VectorMatrix.writeUsing shared "fixture-model" "fixture-encoder" names produce
++  check (!(← orphan.pathExists) && (← generationCount shared) == 1) "interrupted generation not reclaimed"
++  IO.FS.writeFile (output / "result.json") (Json.mkObj [
++    ("cases",toJson records),("replacementAndFailureAtomicity",toJson true),
++    ("foreignIdentityRejected",toJson true),("corruptionRejected",toJson true),
++    ("multiChunkRowEqual",toJson true),("obsoleteGenerationRemoved",toJson true),
++    ("sharedWriterExcluded",toJson true),("concurrentPinnedReaderPreserved",toJson true),
++    ("independentDbProceeds",toJson true),("interruptedGenerationReclaimed",toJson true),
++    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).pretty
++  IO.println "PASS bounded paged numerical matrix: rows, boundaries, replacement, failed producers, corruption, 32KiB rows"
++
++def main (args : List String) : IO Unit := do
++  let [output] := args | throw (IO.userError "PagedMatrixSmoke NEW-OUTPUT")
++  let output := System.FilePath.mk output
++  check (!(← output.pathExists)) "keep earlier paged matrix test"
++  IO.FS.createDirAll output
++  smoke output
+--- /dev/null
++++ b/tools/research/PagedMatrixAudit.lean
+@@ -0,0 +1,116 @@
++import Eggshell.SearchProvider
++
++open Lean Eggshell Eggshell.DB
++
++private def check (condition : Bool) (message : String) : IO Unit :=
++  unless condition do throw (IO.userError message)
++
++/-- Independent reader for the already audited flat reference artifact only.
++It is not a fallback or another format accepted by the product candidate. -/
++private structure FlatRow where
++  key : String
++  coverage : String
++  offset : Nat
++  bytes : Nat
++  digest : String
++
++private def flatRowCodec := (Wire.text.product (Wire.text.product
++  (Wire.natural.product (Wire.natural.product Wire.text)))).iso
++    (fun row : FlatRow => (row.key,row.coverage,row.offset,row.bytes,row.digest))
++    (fun (key,coverage,offset,bytes,digest) => FlatRow.mk key coverage offset bytes digest)
++    (by intro row; cases row; rfl)
++
++private structure FlatManifest where
++  model : String
++  encoder : String
++  implementation : String
++  rows : Nat
++  bytes : Nat
++  directoryBytes : Nat
++  directoryDigest : String
++  deriving FromJson
++
++private structure Flat where
++  manifest : FlatManifest
++  rows : List FlatRow
++  byKey : Std.HashMap String FlatRow
++  handle : FileSystem.ReadHandle
++  version : FileSystem.ReadVersion
++
++private def openFlat (root : System.FilePath) : IO Flat := do
++  let path := root / "matrix"
++  let metadata : FlatManifest ← IO.ofExcept (Json.parse (← IO.FS.readFile (path / "ready.json")) >>= fromJson?)
++  check (metadata.encoder == SearchProvider.encoderContract && metadata.directoryBytes ≤ 64*1024*1024)
++    "foreign or oversized reference matrix"
++  let directory ← FileSystem.boundedBytes (path / "directory") (64*1024*1024)
++  check (directory.size == metadata.directoryBytes && Sha256.hex directory == metadata.directoryDigest)
++    "reference directory changed"
++  let (rows,tail) ← IO.ofExcept ((Wire.list flatRowCodec).decode directory.toList)
++  check (tail.isEmpty && rows.length == metadata.rows) "invalid reference population"
++  let mut offset := 0
++  let mut index : Std.HashMap String FlatRow := {}
++  for row in rows do
++    check (Receipt.validId row.key && Receipt.validId row.digest && !index.contains row.key &&
++      row.offset == offset && 0 < row.bytes && row.bytes ≤ 32768 && row.bytes % 8 == 0 &&
++      row.coverage.utf8ByteSize ≤ 4096) "invalid reference row"
++    offset := offset+row.bytes
++    index := index.insert row.key row
++  check (offset == metadata.bytes) "reference extent differs"
++  let handle ← FileSystem.openRead (path / "rows").toString
++  let version ← FileSystem.readVersion handle
++  check (version.bytes == metadata.bytes) "reference data changed"
++  return ⟨metadata,rows,index,handle,version⟩
++
++private def Flat.read (flat : Flat) (row : FlatRow) : IO VectorMatrix.Entry := do
++  check ((← FileSystem.readVersion flat.handle) == flat.version) "reference changed before read"
++  let mut bytes := ByteArray.empty
++  while bytes.size < row.bytes do
++    let count := min 4096 (row.bytes-bytes.size)
++    let part ← FileSystem.readPage flat.handle (row.offset+bytes.size).toUInt64 ⟨count,Nat.min_le_left _ _⟩
++    check (part.size == count) "reference row truncated"
++    bytes := bytes ++ part
++  check ((← FileSystem.readVersion flat.handle) == flat.version && Sha256.hex bytes == row.digest)
++    "reference projected digest differs"
++  return ⟨row.key,row.coverage,Blake3.hex bytes⟩
++
++def main (args : List String) : IO Unit := do
++  let [directory,output] := args | throw (IO.userError "PagedMatrixAudit SEMANTIC-ROOT NEW-OUTPUT")
++  let root := System.FilePath.mk directory
++  let output := System.FilePath.mk output
++  check (!(← output.pathExists)) "keep earlier matrix audit"
++  IO.FS.createDirAll output
++  let started ← IO.monoMsNow
++  let flat ← openFlat root
++  let referenceOpenMs := (← IO.monoMsNow)-started
++  let prepared ← VectorMatrix.writeUsing root flat.manifest.model flat.manifest.encoder (flat.rows.map (·.key)) fun key => do
++    let some row := flat.byKey[key]? | throw (IO.userError "missing reference key")
++    flat.read row
++  let started ← IO.monoMsNow
++  let some ready ← VectorMatrix.open? root flat.manifest.model flat.manifest.encoder |
++    throw (IO.userError "paged matrix not published")
++  let openMs := (← IO.monoMsNow)-started
++  check ((← ready.snapshot.reads.get) == 0 && (← ready.snapshot.readBytes.get) == 0)
++    "matrix open materialized directory pages"
++  let mut originalMs := 0
++  let mut candidateMs := 0
++  let mut checked := 0
++  for row in flat.rows do
++    let started ← IO.monoMsNow
++    let expected ← flat.read row
++    originalMs := originalMs+((← IO.monoMsNow)-started)
++    let started ← IO.monoMsNow
++    let actual ← VectorMatrix.read ready row.key
++    candidateMs := candidateMs+((← IO.monoMsNow)-started)
++    check (actual == some (expected.coverage,expected.projected)) "paged matrix changed original bits or coverage"
++    checked := checked+1
++  check (ready.metadata.rows == flat.manifest.rows && ready.metadata.bytes == flat.manifest.bytes)
++    "paged population or projected byte count differs"
++  let report := Json.mkObj [("referenceDirectoryOpenMs",toJson referenceOpenMs),
++    ("prepared",toJson prepared),("openMs",toJson openMs),("checkedKeys",toJson checked),
++    ("originalMs",toJson originalMs),("candidateMs",toJson candidateMs),
++    ("head",toJson ready.snapshot.head),("physicalPageReads",toJson (← ready.snapshot.reads.get)),
++    ("physicalReadBytes",toJson (← ready.snapshot.readBytes.get)),
++    ("projectedBitsAndCoverageEqual",toJson true),("openDirectoryPageReads",toJson (0 : Nat)),
++    ("allProviderRanksChecked",toJson false),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]
++  IO.FS.writeFile (output / "result.json") report.pretty
++  IO.println report.compress

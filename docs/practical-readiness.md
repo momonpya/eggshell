@@ -4,6 +4,16 @@ The development candidate is not ready for ordinary MCP use or a paper pilot.
 Unit tests and original-byte delivery receipts do not establish these gates, and
 performance work remains isolated under the adoption conditions in AGENTS.md.
 
+The latest user authorization permits a breaking redesign, with multiple DBs
+and concurrent shared-DB use part of the core. See [the architecture decision](breaking-architecture.md).
+Complete ranking equality remains a reference diagnostic for equivalent reader
+changes; it is no longer an obligatory product invariant for intentional
+recommendation changes. Original authority, scope, freshness, measured recall
+differences and matched token/quality/deadline adoption remain required.
+The [DB research decisions](db-research-decisions.md) fix the next candidate's
+base/delta publication boundary, clustered routing and deferred original reads.
+Those are unimplemented targets; the paged component alone does not satisfy them.
+
 ## Priority and current evidence
 
 1. Remove repeated catalogue construction from hooks. The isolated single-source
@@ -33,8 +43,8 @@ performance work remains isolated under the adoption conditions in AGENTS.md.
 ## Prepared candidate domain
 
 Build the complete ordered owner/Work/window/topology domain during publication
-maintenance or explicit/background warm. Keep one bounded packed payload plus
-an atomic readiness record tied to source changes and the actual implementation
+maintenance or explicit/background warm. Target a paged, bounded-record directory
+and an atomic readiness record tied to source changes and the actual implementation
 bytes. A derived-only memo publication must not force a complete rebuild.
 Retraction, replacement and a different DB incarnation must invalidate it.
 Read-only shared DBs use the private DB-identity overlay.
@@ -42,13 +52,17 @@ Read-only shared DBs use the private DB-identity overlay.
 A hook opens and verifies the domain once and shares it between discovery,
 focus and fallback. It does not repair it, reopen a current head, enumerate all
 owners or decode all Work/Outcome payloads. Lexical nominations come from
-postings and retain original stable order. Numerical ranking keeps the complete
-ordered window population. Only admitted owners and delivered original ranges
+postings and retain original stable order. The full numerical scan remains a
+reference. A routed candidate records differences and required-evidence misses,
+with a separate branch for eligible prepared additions since its index boundary.
+Only admitted owners and delivered original ranges
 are hydrated from the pinned source. Cached nomination metadata cannot replace
 an original owner or confer Exact/Union authority.
 
-Before model calls, compare ordered candidates, Work/native views, topology,
-rankings and delivered bytes against the fixed-snapshot reference path. Record
+Before model calls, compare candidates, Work/native views, topology, rankings
+and delivered bytes against the fixed-snapshot reference path. Equivalent reader
+changes require equality; intentional routing changes report their differences.
+Do not equate a stale routing index with a complete search of recent additions. Record
 corrupt/partial/stale/read-only cases and actual DB read observations. A fast
 open microbenchmark is not a full-hook latency result.
 

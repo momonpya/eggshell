@@ -1,0 +1,716 @@
+{
+  "status": "isolated and unadopted; paged random-access storage component; full-read regression; no latest native-hook qualification",
+  "parentReview": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/lexical-reads-review.json",
+    "sha256": "88af938fd87c021ac1a617ee14c98391b1abedf04bbaaaaf5c571ce181f29ca0",
+    "bytes": 100927
+  },
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/eggshell",
+    "sha256": "376aaf6d25aa53ff06a6193e9b31a8550b45e4404723aa82f1ba4ac3e97d88a5",
+    "bytes": 115621440
+  },
+  "runtimePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/paged-matrix-runtime.patch",
+    "sha256": "95aa24895d58e026fc4e7ed1a1299903320a5bff8fa4ab385172795d50637917",
+    "bytes": 32431
+  },
+  "patchApplyArgs": [
+    "--unidiff-zero"
+  ],
+  "sources": [
+    {
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/preimages/VectorMatrix.lean",
+        "sha256": "8fb3647b1240c1f8007446f4a75129e009b194f6b83cf9f2f6bde27ec6ae3f66",
+        "bytes": 7323
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/VectorMatrix.lean",
+        "sha256": "531c5fefd2d959b2805284ad102b89b0aa719ec996420277c208c2cab7f7157d",
+        "bytes": 11806
+      }
+    },
+    {
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/preimages/SearchProvider.lean",
+        "sha256": "5f7bbe7e018866735ba126db050d6945385bd4cfee84b97b4ed4557bf57234ae",
+        "bytes": 43450
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SearchProvider.lean",
+        "sha256": "a581cd687fa2dd4daa0240bd3f95ad6dcd357015fe777ddaa3e695fa21c0ca2f",
+        "bytes": 43407
+      }
+    }
+  ],
+  "sourceCopies": [
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/paged-matrix/Eggshell/VectorMatrix.lean",
+      "sha256": "531c5fefd2d959b2805284ad102b89b0aa719ec996420277c208c2cab7f7157d",
+      "bytes": 11806
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/paged-matrix/README.md",
+      "sha256": "d151660d50f33bb0f31ba5d20abb0483a3030d5f23c245e79d528346af12169a",
+      "bytes": 830
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/paged-matrix/tools/research/PagedMatrixAudit.lean",
+      "sha256": "60a68bc071fd779d14e6feaf0c8d1cacbe292e7951195e37686fc1a1f0c572de",
+      "bytes": 5710
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/paged-matrix/tools/research/PagedMatrixSmoke.lean",
+      "sha256": "2b4817115a5046185b6f153458350e734d03cd68fd3660f6de8e38d2177be397",
+      "bytes": 8894
+    }
+  ],
+  "oldReferenceContract": "bdde8c5b51c9a9947ee8eccade87ef0437a794f398e1a18aa26159358a73ccb9",
+  "flatReferenceFiles": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/vector-matrix-20261024/clean-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/matrix/ready.json",
+      "sha256": "ff9710bb9f3a7ba2b9c1b35f7b8a6e3223b771ea5d258c725a8e034c5c3f8f6f",
+      "bytes": 372
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/vector-matrix-20261024/clean-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/matrix/directory",
+      "sha256": "9641fdc3bfa9884940b3d412cabf447678a00a916e8be2e636dd5764e043653f",
+      "bytes": 6669056
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/vector-matrix-20261024/clean-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/matrix/rows",
+      "sha256": "3eadf312528ef872bfff5e75c8a8dd12eba79a8840b86fcc501ca90e5a620ece",
+      "bytes": 61344768
+    }
+  ],
+  "referenceRows": {
+    "referenceDirectoryOpenMs": 387,
+    "projectedBitsAndCoverageEqual": true,
+    "prepared": {
+      "rows": 19969,
+      "mode": "prepared",
+      "elapsedMs": 14457,
+      "bytes": 61344768
+    },
+    "physicalReadBytes": 68509830,
+    "physicalPageReads": 21261,
+    "originalMs": 5981,
+    "openMs": 1,
+    "openDirectoryPageReads": 0,
+    "head": {
+      "root": {
+        "rows": 19969,
+        "offset": 68509416,
+        "last": "row:ffffc09eda982fd6492f7072c1c9c89b29ca43c125e46bab5af5c4e18fff8742",
+        "height": 3,
+        "first": "row:0006321e469ba6146f9e8b5184b47cf38e261d6f41b3b1bc47fc9d91eb37d4ad",
+        "checksum": "eae8ab01b19f4391aadc6e955063174cac99b244915c26d8d7499d6805660ad2",
+        "bytes": 429
+      },
+      "revision": 1,
+      "identity": "67bbd8d161c2687b1343c4d4923684cadbabe3427419c1455739c98a44fb7ab9",
+      "bytes": 68509845,
+      "authority": "eggshell.projected-matrix:6965ef0b460fac27f77eb7d2f3f22879f51f4e6973b02592e110b972f69d1fa2"
+    },
+    "checkedKeys": 19969,
+    "candidateMs": 11089,
+    "answeringModelCalls": 0,
+    "allProviderRanksChecked": false,
+    "adopted": false
+  },
+  "completeProviderOutput": {
+    "completeJsonAndOrderedArraysEqual": true,
+    "candidate": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/provider-10000.json",
+      "sha256": "97ca1c2b2abf7d5f66be4c4e886a74bc7a98cb5086aa033ed6b5902e06c60499",
+      "bytes": 366745
+    },
+    "reference": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/vector-matrix-20261024/audit-10000/reference.json",
+      "sha256": "0345bbac461d0dd012ed311c04c64c151b4c84fd21c6f151a2956b9ac2a08c0e",
+      "bytes": 366744
+    },
+    "note": "CLI framing newline only; this is not actual UserPromptSubmit or token comparison"
+  },
+  "sharedStorageTests": {
+    "sharedWriterExcluded": true,
+    "replacementAndFailureAtomicity": true,
+    "obsoleteGenerationRemoved": true,
+    "multiChunkRowEqual": true,
+    "interruptedGenerationReclaimed": true,
+    "independentDbProceeds": true,
+    "foreignIdentityRejected": true,
+    "corruptionRejected": true,
+    "concurrentPinnedReaderPreserved": true,
+    "answeringModelCalls": 0,
+    "adopted": false
+  },
+  "runtimeBuild": {
+    "coreLinked": true,
+    "combinedGuardExit": 1,
+    "combinedFailure": "new test reserved identifier; core already linked",
+    "finalTestAndContractGuardExit": 0
+  },
+  "boundaries": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/runtime/embedding.py",
+      "sha256": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "bytes": 22703
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Handoff.lean",
+      "sha256": "4c638c7f13b74d410594f5bdd04ccdfc954cc08f652bfb9329bedf22f0d89c37",
+      "bytes": 471876
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/LexicalReads.lean",
+      "sha256": "9b06e83a21d10e8ee91b9b7296a4919ca0a052619edd773e52498bc58e365488",
+      "bytes": 8500
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Matcher.lean",
+      "sha256": "292f2b8f2f1f0a8bf15f0bcff124ffbf5269f38ea44422c74477c6d597f13dc9",
+      "bytes": 180655
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tools/WindowCentroid.lean",
+      "sha256": "9350d1e5af7f76d8ed1d62bfcbcd0476239b3e0ee34c1c230c30e1454aff6ce3",
+      "bytes": 3314
+    }
+  ],
+  "linkInputs": {
+    "manifest": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/link-inputs.json",
+      "sha256": "fcc0d280b7da04ba9f70dd156344cbf34fa744737688eb4a6dc5a1ac497f9aba",
+      "bytes": 43246
+    },
+    "objects": 188
+  },
+  "guards": [
+    {
+      "name": "build",
+      "result": {
+        "exitCode": 0,
+        "guardTriggered": false,
+        "reason": null,
+        "sampledPeakRssKiB": 2849328,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-shared",
+      "result": {
+        "exitCode": 1,
+        "guardTriggered": false,
+        "reason": null,
+        "sampledPeakRssKiB": 1148208,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-shared-2",
+      "result": {
+        "exitCode": 1,
+        "guardTriggered": false,
+        "reason": null,
+        "sampledPeakRssKiB": 2727904,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-smoke",
+      "result": {
+        "exitCode": 0,
+        "guardTriggered": false,
+        "reason": null,
+        "sampledPeakRssKiB": 2092816,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-audit",
+      "result": {
+        "exitCode": 0,
+        "guardTriggered": false,
+        "reason": null,
+        "sampledPeakRssKiB": 1597136,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "smoke",
+      "result": {
+        "exitCode": 0,
+        "guardTriggered": false,
+        "reason": null,
+        "sampledPeakRssKiB": 85504,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "smoke-shared",
+      "result": {
+        "exitCode": 0,
+        "guardTriggered": false,
+        "reason": null,
+        "sampledPeakRssKiB": 85712,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "audit-10000",
+      "result": {
+        "exitCode": 0,
+        "guardTriggered": false,
+        "reason": null,
+        "sampledPeakRssKiB": 318560,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "provider-10000",
+      "result": {
+        "exitCode": 0,
+        "guardTriggered": false,
+        "reason": null,
+        "sampledPeakRssKiB": 225504,
+        "ownedPids": [
+
+        ]
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build.sh",
+      "sha256": "0c32b9536fd83815a3be149b447f751afbb4705daf9852a8f3a013e2289d279f",
+      "bytes": 1964
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build.settings.json",
+      "sha256": "e5ec9d30ae7b20225321b8f80280a28c2432f09b32f8006ba146daa907c68063",
+      "bytes": 436
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build.guard.json",
+      "sha256": "f9bf07c12665b2e36747eaa93133d34b645c575013d0145fc2dbd42d958b3ec0",
+      "bytes": 1233
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-shared.settings.json",
+      "sha256": "48ed70d8481562eec280d7aa68a0f7a4aafa3dcfc24c836d2ba555a7d04480b1",
+      "bytes": 443
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-shared.log",
+      "sha256": "038fd1de27bce729be92c7ccf2807254dd4cd9d5588a88507511fe06982830ab",
+      "bytes": 220
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-shared.guard.json",
+      "sha256": "54c88f6385ed81e23ef6b3f1565ec53b41de397b717eb3a2ab66254aae7d8c7a",
+      "bytes": 1238
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-shared-2.settings.json",
+      "sha256": "fc5ab62b93c29ec9080be6e2d8ed0c05eff08ed4ea71b2dcd8321647d76691cc",
+      "bytes": 445
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-shared-2.log",
+      "sha256": "f1e44443d34c1e97549bdfa57bd76ffeeadb808057469eb4b953d35ca0c22071",
+      "bytes": 127
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-shared-2.guard.json",
+      "sha256": "73d2fd482c95c4f6b208f7e73cd0f16f72f198456a58827434b4c5d80be3e74f",
+      "bytes": 1242
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-smoke.sh",
+      "sha256": "98526ac93682d7dcb9f944a742c56b769e61505cadea7c29f3b02f7c24484f62",
+      "bytes": 493
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-smoke.settings.json",
+      "sha256": "9bd0a7147c12f8ec31d8c2a030a122a6545d1dda0f302281f47ec88cffcd44dc",
+      "bytes": 448
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-smoke.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-smoke.guard.json",
+      "sha256": "61e11090f084fc01c048d7ee95265e1d146f5e1ccd3dd3570e47d3573f0a5f1c",
+      "bytes": 1244
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/contract-shared.log",
+      "sha256": "32b84c07a878eea576eda74e22ce7af3f88f467a0df17d6c65cb6eb2809f1a84",
+      "bytes": 75353
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-audit.sh",
+      "sha256": "04ca13266f0a0926a20bed8ffbd63a0e2b4f4edf0ac0e3e423e22172e8e1e921",
+      "bytes": 651
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-audit.settings.json",
+      "sha256": "7e221174b05c30ad5ae4bca1169778a5a9b933047bcebf46ed857f3ac02d02b6",
+      "bytes": 448
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-audit.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/build-audit.guard.json",
+      "sha256": "0286cd55ebc477d19fae111447b0281c266df076733501e55a701dfb8447e9fe",
+      "bytes": 1525
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/smoke.settings.json",
+      "sha256": "06c992c5ae168bb5c9064e498f2290733f1508b7b21944ee6ee50344c00b69d4",
+      "bytes": 490
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/smoke.guard.json",
+      "sha256": "8b86894e2065be451d5d67b8c52b592a4048fe75fc1f5bb33050efe25c77ca6c",
+      "bytes": 1119
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/smoke.log",
+      "sha256": "ec3893624591e2cdd98f9a4d1d857da4396f00830fcae57f89dc8135c73fca79",
+      "bytes": 109
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/smoke/result.json",
+      "sha256": "e6a4984299cd21ecad706c18192b2c7132472deae5f7e74f0768ae120104161a",
+      "bytes": 6189
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/smoke-shared.settings.json",
+      "sha256": "007a02d4d57fab27ef57b74df86defd434b81770721141b883e410a24c72dc18",
+      "bytes": 504
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/smoke-shared.guard.json",
+      "sha256": "b65cac046bd326a17e08466fff4329b09071e2b2bef201bf6139d2eb2da230c4",
+      "bytes": 1133
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/smoke-shared.log",
+      "sha256": "ec3893624591e2cdd98f9a4d1d857da4396f00830fcae57f89dc8135c73fca79",
+      "bytes": 109
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/smoke-shared/result.json",
+      "sha256": "b8210660baa726a8b5374e1b640294633f95d4e1903251c361bd7b995264c380",
+      "bytes": 6335
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/audit-10000.settings.json",
+      "sha256": "d08e6558da14feaabcc8e958f72d75713af8235039047c76d5ba29df61517ad6",
+      "bytes": 667
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/audit-10000.guard.json",
+      "sha256": "96383765799187359534cd3d168e6d6c876675a953f818a7741411583ac6cb35",
+      "bytes": 1295
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/audit-10000.log",
+      "sha256": "4b5b0f667100fa670e31693296e724eeb73265c9150aaf27d06a9edf0a8db467",
+      "bytes": 892
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/audit-10000/result.json",
+      "sha256": "b0cffe0e200da2f1f90883934d3081abcb81c94b8a4ec9faa1eb4b0c6fa198b5",
+      "bytes": 1003
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/provider-10000.settings.json",
+      "sha256": "2da887cf59ca89a2162d31038968beef2379ccde2695328af972eb4e9eceb0cc",
+      "bytes": 967
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/provider-10000.guard.json",
+      "sha256": "377864b9e38bd0b27015c2cbbf82fa0a0e08b463e8db855938a41c96f2cd2d1e",
+      "bytes": 1913
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/provider-10000.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/provider-10000.json",
+      "sha256": "97ca1c2b2abf7d5f66be4c4e886a74bc7a98cb5086aa033ed6b5902e06c60499",
+      "bytes": 366745
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/provider-10000-comparison.json",
+      "sha256": "85ab68ed60bc562ec931558b83dbd165c305159469c3ad2dd2fa77f12fc19351",
+      "bytes": 591
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/runtime.rsp",
+      "sha256": "8c03dfc7d39a7339031e8fb9862c98aac44542daf494e4c12702bf07c1fbbd58",
+      "bytes": 20587
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/smoke.rsp",
+      "sha256": "205142ebae5d56e4a1c5dca9ddcd728856a92b41b956a2dbec566940b12a233b",
+      "bytes": 20599
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/audit.rsp",
+      "sha256": "8e5a79993c0335fb358ccea44554a34ab81f987745c0f6a7417a1d0d501ecaab",
+      "bytes": 20599
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/patch-check.json",
+      "sha256": "0ea21885f3a6a7b06ebdc40ebbe75084c71a51bdc09a42221758e79e6039254c",
+      "bytes": 748
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/source-files-after.json",
+      "sha256": "ab6fb8291ee8e49ef1c6c84976ea39daf54413c8d6d3f5cdd198623c0361109a",
+      "bytes": 1156
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/link-inputs.json",
+      "sha256": "fcc0d280b7da04ba9f70dd156344cbf34fa744737688eb4a6dc5a1ac497f9aba",
+      "bytes": 43246
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/boundaries.json",
+      "sha256": "f3e2b9b50994823d677ee5d718597d6cc73ce7a3382684d4fe9aec7c42d7163f",
+      "bytes": 1106
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/retired-unlocked-tools.json",
+      "sha256": "51706a994741dcafd1790ec1586ee3f18307f2b9fb03b3bafd4011ee4ae99aff",
+      "bytes": 654
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/retired-completed-tools.json",
+      "sha256": "d0e640a15df85dfc12978b36d435210252a0a86d38ca176889ec33854c214eb1",
+      "bytes": 573
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/review.rb",
+      "sha256": "a6a5c5f7dea737167316cd0a94e96724ba43f763e764c27522d48c24f4e6ec20",
+      "bytes": 4675
+    }
+  ],
+  "retainedBuildProducts": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Daemon.c",
+      "sha256": "08047b0af257ef2642b0290ea473eb310fbad383cfdf84a34eaa54433fbb46b5",
+      "bytes": 406191
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Daemon.o",
+      "sha256": "d7437b14f013178c52567a94e0ab052810ed29b79d8a858492d6646a5a0e294d",
+      "bytes": 257312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Handoff.c",
+      "sha256": "72aed5e4ee6a5c001b6f91e65b90ac00858144f4e73198d49f05cadd2f843245",
+      "bytes": 6660173
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Handoff.o",
+      "sha256": "d74ad52484f82e964c91eb2f09909bbf2e72c7b35b1eb87466582a323d7273a5",
+      "bytes": 5037960
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Install.c",
+      "sha256": "18b30c46d18da80acfd322a3c7cad8317bfdbb5c3a65bd6b11f9bac7e396f90e",
+      "bytes": 272000
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Install.o",
+      "sha256": "37cb50fee91c8208b92eb68df6badea65472849ed8ec906eff2ad822a2527562",
+      "bytes": 167760
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Main.c",
+      "sha256": "b3af5b750ae6614226333c9c01c797a1eac2776b88d3b10f7d0c92d192cc1604",
+      "bytes": 96539
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Main.o",
+      "sha256": "6bf8adacb864b67b274189d2131f16ead83d6345fa2eb28e79448bfb9ffa9992",
+      "bytes": 55888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PagedMatrixAudit.c",
+      "sha256": "5ba73796e66c5e8c8f9fa778f8e129fe4094b0b7e21bf3ef608c22a1516a8e07",
+      "bytes": 173260
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PagedMatrixAudit.o",
+      "sha256": "54772159cb72f808ee19b42909e9e6d054eed5a8b3daf75c2edf949072d84eed",
+      "bytes": 107304
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PagedMatrixSmoke.c",
+      "sha256": "f22c14ca10ffebad45e8897b0c4ff3c4bdee79ce87a5136bebc9566cca9872f9",
+      "bytes": 234066
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PagedMatrixSmoke.o",
+      "sha256": "c361724f864ca4fc0faf3c7f5e761e12fbe99a8d69d8da9db2e1f6bd35900b2e",
+      "bytes": 116944
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PluginCli.c",
+      "sha256": "3470b85022297160e8efac363d2964273e06ccd264870946662e4b18f8b604e9",
+      "bytes": 448740
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PluginCli.o",
+      "sha256": "7113698ff9abaf951b0a7c4b253d19287baf338172571a6a630c7b4e9acb29e5",
+      "bytes": 256960
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PluginHooks.c",
+      "sha256": "f8dab3fe2035cb6367228aaf46116739dd7edcbac373ea48e1b7535ee52bfc86",
+      "bytes": 845136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PluginHooks.o",
+      "sha256": "1601ddfa2eab3d4e86ba22d312d9fbf3da5604da73483b4386cb433126f229f6",
+      "bytes": 607472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/SearchProvider.c",
+      "sha256": "01379f3e0102fd974a5e80dd0550f3d0758a3d68f71dc849d3018f27a8ca422d",
+      "bytes": 1201957
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/SearchProvider.o",
+      "sha256": "807b560bdbbf7465ec62927ef86c63f650870d94df2671a4cabbf0b47e4057d6",
+      "bytes": 883624
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Setup.c",
+      "sha256": "60372a5d1bedb9b865355810c3cb36af4090024e18339f03769a60d5aa042994",
+      "bytes": 48407
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Setup.o",
+      "sha256": "45e6696b984f36470983b440829f2127fa4fece643d53af367a243ff7cf84841",
+      "bytes": 30440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/VectorMatrix.c",
+      "sha256": "1a4bded779c43fb41baae4d7601803cda4e42b4de8f1d18f1e678a2cbf3d69a0",
+      "bytes": 319254
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/VectorMatrix.o",
+      "sha256": "a75df41483ca1c491fed1095e7b60c385defef34710dda03f933139d6a593a01",
+      "bytes": 228840
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Warm.c",
+      "sha256": "d7e3198fa931745dbe0d64863c076e725a6039dbf4f41ff71dd178b72b1fbc5d",
+      "bytes": 369443
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Warm.o",
+      "sha256": "800f32b69a2b5cd50336998a472750be37f92f4eddda78a8a444a5d048af1fe7",
+      "bytes": 265088
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Worker.c",
+      "sha256": "b77b2e301a1a15f918929012868933dcb4e28e38ccc3866393fa2bd052b2ed83",
+      "bytes": 628656
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/Worker.o",
+      "sha256": "611eea4c5ba70cd87ae5112c27ff6f515c6d53924287275c3f40c6e3228e5cce",
+      "bytes": 415040
+    }
+  ],
+  "retiredTools": [
+    {
+      "reason": "terminal prototype; replaced by internally serialized generations",
+      "source": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/preimages/VectorMatrix-unlocked.lean",
+      "tools": [
+        {
+          "retiredPath": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/eggshell",
+          "sha256": "f17bfe45e71a3b6be6ca8272dac1400525bada6c076c804fb2caedc50d6dc8f4",
+          "bytes": 115603200
+        },
+        {
+          "retiredPath": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PagedMatrixSmoke",
+          "sha256": "a731b2542f2bdd3c6dc00d1cd3af1180faf5625ec3f8b92d953d55fbcd284faf",
+          "bytes": 102047376
+        }
+      ]
+    },
+    {
+      "reason": "terminal component diagnostics; sources C objects and response files retained; no archive",
+      "tools": [
+        {
+          "retiredPath": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PagedMatrixAudit",
+          "sha256": "5c80017679bd2831508ba953117b604686d2a5d6b5c43c56b404f7da2c5b5c74",
+          "bytes": 101339808
+        },
+        {
+          "retiredPath": "/Users/ovm/.codex/experiments/eggshell/paged-matrix-20261024/PagedMatrixSmoke",
+          "sha256": "b8c3b6fe247f30ecf4a7e445cd423a8b5427970ec7f83aa667e83eb98a0f501d",
+          "bytes": 102063104
+        }
+      ]
+    }
+  ],
+  "proofScope": [
+    "row codec roundtrip",
+    "31 references per frontier level",
+    "no complete IO/recognition/recall proof"
+  ],
+  "notEstablished": [
+    "incremental source maintenance; one missing key still rebuilds generation",
+    "end-to-end bounded memory; key list remains materialized",
+    "routed or approximate recommendation",
+    "federated identity-table elimination",
+    "full shared/federated hook lifecycle",
+    "Bloom filters or bucket/target placement implementation",
+    "latest native 50k useful delivery or p99",
+    "matched model tokens/quality",
+    "private MCP capture"
+  ],
+  "answeringModelCalls": 0,
+  "newSeeds": 0,
+  "adopted": false
+}
