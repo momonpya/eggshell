@@ -156,6 +156,13 @@ rankings. Float32 packing alone does not prove ranking or score equality.
 Measure first mapping, resident reuse, invalidation and ownership within the
 aggregate memory ceiling. No packed numerical matrix is qualified yet.
 
+The isolated [binary64 row-matrix candidate](prepared-vector-matrix.md) now
+checks all 19,969/99,969 discovery and focus keys at 10k/50k against the original
+projected bits and coverage. Complete numerical provider outputs agree; the
+single 50k provider pair is 28,844/19,127 ms. This is not float32/mmap scoring,
+full-hook p99, matched token improvement or adoption. Original raw files remain
+for maintenance/recovery, and full Work admission/owner hydration remains.
+
 An authority index can separately store scoped canonical Work signatures and
 class use lists at publication time. A congruence step requires equal operators,
 ordered argument roles, identical Exact references and equivalent Semantic

@@ -1,0 +1,97 @@
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -10,0 +11 @@
++public import Eggshell.VectorMatrix
+@@ -90,0 +92,3 @@
++  matrixRows : Nat := 0
++  matrixOpens : Nat := 0
++  matrixOpenMs : Nat := 0
+@@ -123,0 +128 @@
++  matrices : Option (IO.Ref (Std.HashMap String (Option VectorMatrix.Ready))) := none
+@@ -461,0 +467,9 @@
++  let load := fun root => do
++    let started ← IO.monoMsNow
++    let ready ← try VectorMatrix.open? root options.model encoderContract catch _ => pure none
++    if let some sink := options.metrics then
++      let elapsed := (← IO.monoMsNow) - started
++      sink.state.modify fun state => {state with
++        matrixOpens := state.matrixOpens + 1
++        matrixOpenMs := state.matrixOpenMs + elapsed}
++    pure ready
+@@ -462,0 +477,21 @@
++    if options.owner.isSome then
++      for root in options.cache :: options.fallback.toList do
++        try
++          let ready ← match options.matrices with
++            | none => load root
++            | some known =>
++                match (← known.get)[root.toString]? with
++                | some ready => pure ready
++                | none => do
++                    let ready ← load root
++                    known.modify (·.insert root.toString ready)
++                    pure ready
++          if let some ready := ready then
++            if let some (metadata,pooled) ← VectorMatrix.read ready window then
++              let coverage ← IO.ofExcept (Json.parse metadata >>= fromJson? (α := EncodingCoverage))
++              unless coverage.valid && packedFinite pooled do throw (IO.userError "invalid projected numerical row")
++              observeInput options false coverage
++              if let some sink := options.metrics then
++                sink.state.modify fun state => {state with matrixRows := state.matrixRows + 1}
++              return #[Json.str pooled]
++        catch _ => pure ()
+@@ -469,0 +505,16 @@
++/-- Prepare source-only pooled hints after raw-cache coverage is checked.
++Questions remain private and do not enter this DB-owned matrix. -/
++def prepareMatrix (options : Options) (keys : List String) : IO VectorMatrix.Result := do
++  let started ← IO.monoMsNow
++  let keys := hashDistinct keys
++  if keys.isEmpty then return ⟨"empty",0,0,(← IO.monoMsNow)-started⟩
++  if let some ready ← try VectorMatrix.open? options.cache options.model encoderContract catch _ => pure none then
++    let valid ← try keys.allM fun key => return (← VectorMatrix.read ready key).isSome catch _ => pure false
++    if valid then return ⟨"warm",ready.rows.size,ready.metadata.bytes,(← IO.monoMsNow)-started⟩
++  let mut entries := #[]
++  for key in keys do
++    let cached ← indexedWindow options key
++    let pooled ← IO.ofExcept (Eggshell.WindowCentroid.project cached.vector
++      cached.coverage.sourceTokens (cached.coverage.contextTokens - 2) cached.coverage.overlapTokens)
++    entries := entries.push ⟨key,(toJson cached.coverage).compress,pooled⟩
++  VectorMatrix.write options.cache options.model encoderContract entries
+@@ -470,0 +522 @@
++
+@@ -618,2 +670,3 @@
+-/-- One bounded transport batch may cross owner boundaries. Every window
+-keeps its original document/position; no source or ranking domain is pruned. -/
++/-- Scoring transport is independent of the encoder's 32-segment inference
++batch. Every window keeps its original document/position, and NumPy still
++evaluates each original dot product independently in the same order. -/
+@@ -622 +675 @@
+-  unless !batch.isEmpty && batch.size ≤ 32 do throw (IO.userError "invalid numerical scoring batch")
++  unless !batch.isEmpty && batch.size ≤ 256 do throw (IO.userError "invalid numerical scoring batch")
+@@ -658 +711 @@
+-  let options := {options with directories := some (← DirectoryReads.new)}
++  let options := {options with directories := some (← DirectoryReads.new), matrices := some (← IO.mkRef {})}
+@@ -701 +754 @@
+-          if pending.size == 32 then
++          if pending.size == 256 then
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -59 +59,10 @@
+-    pure (!(previous.sameSources (← checkpoint target snapshot)))
++    unless previous.sameSources (← checkpoint target snapshot) do return true
++    -- An empty publication has no numerical rows to prepare. Its completed
++    -- checkpoint must not enqueue the same impossible matrix forever.
++    if previous.candidates == 0 then return false
++    let _ :: "search-provider" :: args := target.command | return false
++    let parsed ← IO.ofExcept (SearchProvider.parse {cache := .mk ".",models := .mk "."} args)
++    let primary := DB.Sidecar.ofSnapshot snapshot
++    let overlay ← DB.Sidecar.locate snapshot .user
++    return !((← VectorMatrix.ready primary.semantic parsed.model SearchProvider.encoderContract) ||
++      (← VectorMatrix.ready overlay.semantic parsed.model SearchProvider.encoderContract))
+@@ -239,0 +249,3 @@
++    let (discovery,focus) ← planWindows snapshot
++    let _ ← DB.Sidecar.withIndexClaim target.owner (fun _ =>
++      SearchProvider.prepareMatrix settings ((discovery ++ focus).map (·.key))) target.storage
+@@ -262,0 +275,2 @@
++    let (discovery,focus) ← planWindows snapshot
++    let _ ← SearchProvider.prepareMatrix settings ((discovery ++ focus).map (·.key))
