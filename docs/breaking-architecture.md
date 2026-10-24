@@ -40,6 +40,12 @@ fall to nine, but elapsed time does not improve: complete Work reconstruction
 and numerical row acquisition remain. Full fixpoint/indexed recognition and
 shared/federated qualification remain unfinished.
 
+The [admission-policy index](admission-policy-index.md) now makes already admitted
+judgment lookup exact without repeated list scans. This is request-local
+bookkeeping, not yet the canonical Work/affected-parent index. Its profiled
+remaining bottleneck is graph projection's repeated membership scan and list
+append; replace that before layering another cache or placement mechanism over it.
+
 ## Judgment
 
 The core is defensible. The current execution architecture is not ready for

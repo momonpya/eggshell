@@ -1,5 +1,9 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 入場済みMatchの判定照会をLeanの完全構造キー索引へ置換した。OutcomePolicy.admittedの先頭一致・重複・不在・completed/advisoryを全入力で保つ通常Lean証明とcsimpを追加し、元の論理policy/生成Match/Exact/Union証人は変更しない。表は各入場一覧について1回構築する。これはWorkクラスの出版時索引や完全fixedpointの証明を完成したものではない。
+小32例と固定10kの4条件で全Handoff/本文が一致。controlledのretrieval-onlyは35,293/35,475→30,307/30,306ms、通常は9,652/9,564→9,640/9,533ms。実MiniLM/nativeの同じ10k・質問・設定・新しい私有chatでは初回18,793→18,558ms、ACK後17,443→17,316msでstdout/本文/stratum/受領履歴が一致。1組だけなので通常速度改善/p99は未確認。Handoffの特殊化Cに旧探索が残った初回診断は除外し、呼出元再生成・実リンク後の結果を最終値にする。元source DBは不変、全guard終了/所有process残存0、最大合計RSS2,809,424KiB。
+別の処理スレッド2秒標本でprojectMatchesが993/1,341（約74%）、残りはtopology照会だった。全実行時間の割合ではなく、その区間の標本でありprofile試行の時間は比較から除外する。次はprojectMatchesの全件重複走査/逐次appendを、元の順序・base重複・出典payloadを保つ集合照会と一括追加にする。全Work復元/数値取得/認定の完全索引は残る。回答モデル/新seed/総トークン比較0、品質未測定、5万窓/共有複数DB/製品/README実績/release未採用。docs/admission-policy-index.md参照、全Phases0–6 active。
+
 2026-10-25 Work比較のOutcome遅延復元を実discoveryへLean隔離接続した。raw入場した全Work roots/所属/後続商での再評価を維持し、本文に依存しないinert判定と、元owner検証・Candidate生成済みの同じUnion対の証人を使う。推薦由来から認定は作らず、LocalUnionOriginsは実Match由来を保持。元Work/native向きはprepared textではなく原DBで検証する。小32例と同じ10kの4条件で全Handoff field/本文が参照と一致し、completed7件/block5件/正Unionも含む。完全fixedpoint証明ではない。
 実nativeの同じ10k DB・質問・MiniLM・設定で、初回/ACK後の継続を各1組比較した。warmを別childで終えて準備heapを測定中に保持しない。初回は参照17,652ms/候補18,917msで原文17,803bytesが一致、継続は16,603/17,163msで配送済み本文の重複抑制による空応答が一致。検索完了/正しいstratum/ACK/stdout SHA/manager終了を確認。候補owner読出しは9,969→9だが、Work全9,969件の復元・19,929照合とvector cache取得5,385msが残り、速度改善なし。controlled retrieval-onlyも遅延悪化を保持し、採用しない。
 最終build/ContractAudit/実フックguard終了0・残存0、途中失敗を含む最大合計RSS2,857,680KiB。失敗build直後の旧実行体比較は停止・除外し、成功build後の再実行を最終結果へ使用した。元DB全file不変、patch7fileの往復一致、回答モデル/新seed0。総トークン/品質/p99/5万窓/共有複数DBは未確認、製品/README実績/release未採用。次は全件Work復元を完全な認定/affected-parent索引へ置換し、数値の全窓取得を除く。大規模fixtureの追加は代用にしない。docs/deferred-work-discovery.md参照、全Phases0–6継続。

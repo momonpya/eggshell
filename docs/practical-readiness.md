@@ -34,6 +34,15 @@ versus reference 17.7/16.6 seconds. No speed gain or p99 is established. All Wor
 views and numerical rows are still acquired. This is not a token cohort or 50k
 qualification; the candidate remains unadopted.
 
+The later [admission-policy index](admission-policy-index.md) replaces repeated
+classification-list scans with an extensionally equal exact lookup. It does not
+remove original Work loading. Controlled retrieval-only time falls from about
+35.3 to 30.3 seconds; the normal native hook remains about 18.6/17.3 seconds with
+identical stdout/ACK behavior. One pair per arm establishes no p99 or token gain.
+A separate processing-thread sample identifies quadratic `projectMatches`
+membership/append work as the next target. Persistent canonical recognition,
+routing, privacy and full scale qualification remain unfinished.
+
 ## Priority and current evidence
 
 1. Remove repeated catalogue construction from hooks. The isolated single-source

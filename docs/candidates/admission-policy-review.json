@@ -1,0 +1,3541 @@
+{
+  "status": "isolated exact admission-policy lookup; universal pure refinement and actual native equivalence; unadopted",
+  "parentReview": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/deferred-work-review.json",
+    "sha256": "a36c98cd6d59b848562a198cd729fcb4c71af692a39ffb43bd89f990b375dfb3",
+    "bytes": 463930
+  },
+  "runtimePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/admission-policy-runtime.patch",
+    "sha256": "3cf9faa72c736c2f9f83bba4046eb84e9c34fa79a70922e433ebad6e7902a617",
+    "bytes": 11309
+  },
+  "patchBase": "retained deferred-discovery checkout",
+  "patchApplyArgs": [
+    "--unidiff-zero"
+  ],
+  "patchRoundtrip": true,
+  "changedSources": [
+    {
+      "name": "Eggshell/OutcomePolicyIndex.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/OutcomePolicyIndex.lean",
+        "sha256": "a7eec8e35fde4d534047455c749f05a7e16f752ba3d7b7e72c00ec02eed575ee",
+        "bytes": 2427
+      }
+    },
+    {
+      "name": "Eggshell/Matcher.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/checkout/Eggshell/Matcher.lean",
+        "sha256": "8713025e723ba3f7e88de858cbf98fd1afdcf3dbb8742f1a4d7e6f4beb6f39b9",
+        "bytes": 182544
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/Matcher.lean",
+        "sha256": "53e0f9c1544cc631375ca7c5c901f939f89d0ac9e41a42e16fa35482143c9537",
+        "bytes": 182586
+      }
+    },
+    {
+      "name": "Eggshell/ContractAudit.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/checkout/Eggshell/ContractAudit.lean",
+        "sha256": "1303fa051c9099e5c03b59af96e3d2a0b0092ccf969e1831c9312b2ed0fc2933",
+        "bytes": 106010
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/ContractAudit.lean",
+        "sha256": "eb38b41f01f4f2b1f44a4f185090823c735d8206646b7a0ae3dfa84c3918d910",
+        "bytes": 106166
+      }
+    },
+    {
+      "name": "tools/research/PolicyProfile.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/tools/research/PolicyProfile.lean",
+        "sha256": "6c1240323a5f36a09b257158f2d48dd0487d17f40ef7c342b405d0f785277f96",
+        "bytes": 7693
+      }
+    }
+  ],
+  "sourceInputs": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/OutcomePolicyIndex.lean",
+      "sha256": "a7eec8e35fde4d534047455c749f05a7e16f752ba3d7b7e72c00ec02eed575ee",
+      "bytes": 2427
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/Matcher.lean",
+      "sha256": "53e0f9c1544cc631375ca7c5c901f939f89d0ac9e41a42e16fa35482143c9537",
+      "bytes": 182586
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/Extract.lean",
+      "sha256": "b19f0295dd35db4b4ac74bee8d4282e35717f6cebf04a6483d59f5808ca18ef2",
+      "bytes": 53497
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/Value.lean",
+      "sha256": "542fd2db0ef6ec093a73b11f576620e415846942527dc1dac29a8f05b6155c21",
+      "bytes": 10803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/Graph.lean",
+      "sha256": "7e8052fd99930b16f72f830bf99641c55349fcb60b97438fe71f3d8556724e35",
+      "bytes": 8664
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/Handoff.lean",
+      "sha256": "4a59fe71c95065258a5a83a1ef1f1e9db4e9e933c65462e451158a04c0d5a930",
+      "bytes": 474610
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/ContractAudit.lean",
+      "sha256": "eb38b41f01f4f2b1f44a4f185090823c735d8206646b7a0ae3dfa84c3918d910",
+      "bytes": 106166
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/tools/research/PolicyProfile.lean",
+      "sha256": "6c1240323a5f36a09b257158f2d48dd0487d17f40ef7c342b405d0f785277f96",
+      "bytes": 7693
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/tools/research/DeferredWorkAudit.lean",
+      "sha256": "ee17a5a582b8ec059965fe47d2926572c0e5d33ec5ccea001c1cbaa6674e1f2b",
+      "bytes": 7752
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/tools/research/HookScaleRun.lean",
+      "sha256": "d1d768698c809c1e32eae4102fd37c0caaeff923253046b97a84f3df847ab4f9",
+      "bytes": 9939
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/tools/research/ArtifactHash.lean",
+      "sha256": "3d3aafbd5b07f8bd0b5d79148e2170f0731c967d3014d0dc176d93b3c73cf04c",
+      "bytes": 2496
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/tools/research/StudyRuntime.lean",
+      "sha256": "a69c15a000f7ffd0da5e457c211589f1a0c335f08743ec6dfd859ed297a8d9cb",
+      "bytes": 8712
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/lakefile.lean",
+      "sha256": "3bb596f8d09b6f3caf54b3f657c621eb1bc1588de06cfc100e904368528a5194",
+      "bytes": 2975
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/lean-toolchain",
+      "sha256": "302cd63c54178885b89e669f33b38f12f4dd7ae7e5cac537b3203e3768d8fb2b",
+      "bytes": 25
+    }
+  ],
+  "sourceCopies": [
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/admission-policy/Eggshell/OutcomePolicyIndex.lean",
+      "sha256": "a7eec8e35fde4d534047455c749f05a7e16f752ba3d7b7e72c00ec02eed575ee",
+      "bytes": 2427
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/admission-policy/tools/research/PolicyProfile.lean",
+      "sha256": "6c1240323a5f36a09b257158f2d48dd0487d17f40ef7c342b405d0f785277f96",
+      "bytes": 7693
+    }
+  ],
+  "generated": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/Handoff.c",
+      "sha256": "ccacd623d7125b99dbea3a4d4d3adf6490002ebf6238ac6008b4dba65ad231dd",
+      "bytes": 6709247
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/Handoff.o",
+      "sha256": "e3394614cf01ca9c0019c7c0a7807324bc197cdfac55e9495ae0cade0b27e22e",
+      "bytes": 5077936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/Matcher.c",
+      "sha256": "ad131ca5614213a8bf1aa01feda61e3054c3fa78833607acbdb09799656dfd77",
+      "bytes": 1193420
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/Matcher.o",
+      "sha256": "ec3a8da2d945ea4d969b3f3fd38f07ab39725ac6581b3c8ab633ae16dbc36ec1",
+      "bytes": 979696
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/OutcomePolicyIndex.c",
+      "sha256": "cba5d734baf1f9eee8ad5607fa65aa9ad27de96fae63470d0f8d403832cd9be6",
+      "bytes": 44332
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/OutcomePolicyIndex.o",
+      "sha256": "658db120a3d4ab395f0c26a72801ba9e8e9327abfd0a39f3877f0df34817c2f7",
+      "bytes": 37480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/PolicyProfile.c",
+      "sha256": "1705d72659fb7463203d205e5a8db554008c59263b5b8db9e6eb643b777744c8",
+      "bytes": 221742
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/PolicyProfile.o",
+      "sha256": "574e0ff29e81345720a5b7cfc3804e4a78e4d5dd433cce395b7509a1ccd3d6d8",
+      "bytes": 127808
+    }
+  ],
+  "linkResponses": [
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/audit-preintegration.rsp",
+        "sha256": "5fcadb7ce0fa33361b43f29e9a189a202d9c2ad203044d9d4321905d820ac3ea",
+        "bytes": 20929
+      },
+      "objectCount": 193
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/audit.rsp",
+        "sha256": "07fb1d82b48fed5e359bc749d14ad44ec1a8bf53bdb94f4ef9775d7973187aae",
+        "bytes": 20932
+      },
+      "objectCount": 193
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-preintegration.rsp",
+        "sha256": "2f63e4ca533bd331e3eb6fc827cf35658ea55dc16abd0e5ee7099161be988f2e",
+        "bytes": 21082
+      },
+      "objectCount": 195
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native.rsp",
+        "sha256": "36d1debecf872d464e2c40aa93ed9092a7cbb1d78195865edf5546720e8b3ea2",
+        "bytes": 21085
+      },
+      "objectCount": 195
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile.rsp",
+        "sha256": "72788fc6ce24fb2dd313bf82eaa097e51b6580eecd1de62ab8605d34c89c7f0a",
+        "bytes": 20931
+      },
+      "objectCount": 193
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/reference.rsp",
+        "sha256": "f4a40ab4c5a5178123c7c6d82fa9bfeeea349387f4ef61445e74f5e6b4f21d07",
+        "bytes": 20839
+      },
+      "objectCount": 192
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/runtime-preintegration.rsp",
+        "sha256": "916f23a072751d70f64af0fc4a5c8ae4257dfe6c68a228f78875ac66c92013e7",
+        "bytes": 20916
+      },
+      "objectCount": 193
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/runtime.rsp",
+        "sha256": "03385d25462d6814654304ab53cbf5a3ba49f2e41ef624477e0e64eecf3e86a4",
+        "bytes": 20919
+      },
+      "objectCount": 193
+    }
+  ],
+  "linkedObjects": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/Handoff.o",
+      "sha256": "e3394614cf01ca9c0019c7c0a7807324bc197cdfac55e9495ae0cade0b27e22e",
+      "bytes": 5077936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/Matcher.o",
+      "sha256": "ec3a8da2d945ea4d969b3f3fd38f07ab39725ac6581b3c8ab633ae16dbc36ec1",
+      "bytes": 979696
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/OutcomePolicyIndex.o",
+      "sha256": "658db120a3d4ab395f0c26a72801ba9e8e9327abfd0a39f3877f0df34817c2f7",
+      "bytes": 37480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/PolicyProfile.o",
+      "sha256": "574e0ff29e81345720a5b7cfc3804e4a78e4d5dd433cce395b7509a1ccd3d6d8",
+      "bytes": 127808
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_AdvisoryFrontier.o",
+      "sha256": "8cbca010ca0e500467f19631affd372e1fa65ba01aa1b901c31e637843b70211",
+      "bytes": 39784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_AtomQuotient.o",
+      "sha256": "d7c3becfdc72c1177c665c6af1153995c0e03b502a4a4ac64ba46bb82bd1ed3b",
+      "bytes": 8824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Blake3.o",
+      "sha256": "a200f2ce68660c99eb6659c03dfb57398d5ba86a4d1744aeca7025ba6e447b72",
+      "bytes": 77776
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CompletedAuthority.o",
+      "sha256": "7b0f831b34ff531607fbdc61712817d64668511f4ba5e1570597538b768877e1",
+      "bytes": 2648
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Config.o",
+      "sha256": "5d9e5a58b95e8eedf2db562d48043ed4cc1228721502c58a69edcd06a48c6712",
+      "bytes": 284704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CongruenceComplete.o",
+      "sha256": "cf85e4b0930b7e0fdaba0f4f2c66acdae82d3e7c18a0adc654f6ac87f6020b69",
+      "bytes": 69720
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CongruenceFixed.o",
+      "sha256": "1b91e9e3213b6bd53ab4a4eea8f54274434342821c3b85207d12bd79e761aea7",
+      "bytes": 2432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CongruenceSound.o",
+      "sha256": "23de0396f4f8c7f2f708d5df77a8a92ab2e93c0ced4fff60bb06524198fe2abe",
+      "bytes": 4040
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_CacheReclaim.o",
+      "sha256": "af61f59888222cfe6e73ed683d39b0e4fd009f2ac626aafc8bf3531c867d717c",
+      "bytes": 77904
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_PageMap.o",
+      "sha256": "05628d16dc1c8ec9dbd9b3f07579b8ca0feeda2d9dad8b0a81db8825aac59ac5",
+      "bytes": 789384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_Sidecar.o",
+      "sha256": "fcb0ccc2ac61c433da94341d38d3f0fd40c1a4c421849f5d30f70a707fc933de",
+      "bytes": 106344
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_Wire.o",
+      "sha256": "02492119c2d793fddcfbda340ebdb322eff36824f1cab01faa2b76b9bcec7609",
+      "bytes": 177336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DemandMemo.o",
+      "sha256": "aa428bdb6116963c44a8f0487cb77b5172c42a6c19005151dd31d73a302d371c",
+      "bytes": 125456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DiscoveryAudit.o",
+      "sha256": "ea4a2802e319278c159771c0966458e7dc9812b7b392ac02969195331210dea5",
+      "bytes": 237272
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DiscoveryMemo.o",
+      "sha256": "8ff34e553c970ff7c7654f8b7b21a189d3f8f14c8e94f151098053e6955700a5",
+      "bytes": 37024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_EqualityDependency.o",
+      "sha256": "5f748b29b136da90f66aae65e290814b381fb8fc03377ab6ba0c68cb178edb78",
+      "bytes": 18768
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_EvidenceReplay.o",
+      "sha256": "557c639ca193136ac6b2e7f5e01c6557be257d82991004b14cd7da56d356a93d",
+      "bytes": 121560
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Extract.o",
+      "sha256": "c51d952ec429406eca04b2575feb2e61aaea518ad734492cb41ead3896539f58",
+      "bytes": 192816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_FederatedSearch.o",
+      "sha256": "b9c840a2784f15f4f7990a9a74255b40f5483d6ba5774768d9b8f9b7e2df05b8",
+      "bytes": 338096
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_FileSystem.o",
+      "sha256": "f2f4efbcdde8b5c7ec413f064620c4dd7c5bba6876ffd50431b0ce6243e621b6",
+      "bytes": 140296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Frequency.o",
+      "sha256": "5f40e020afe1273ede2f582c6787d66aad1d0d794c24392ab1c5964898914f62",
+      "bytes": 67336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_GeometryMemo.o",
+      "sha256": "e16f7c4fbdd761a67f1718b7f4a266c6a638ce83e34d9133fd812eda592512cb",
+      "bytes": 291680
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Graph.o",
+      "sha256": "60dcc7b0b8011dadb29320d7a4ff1f063ba8508f3df1edf631192cf953c8e803",
+      "bytes": 51728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_GraphCodec.o",
+      "sha256": "e139e88c09d42e183551dfcd9f75fa5d3df8993dbb5b12d8be77378f9c92361c",
+      "bytes": 176968
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_HashDistinct.o",
+      "sha256": "6faa8c390b7f0a0279c144cdcce061d85eea9b1eb4644ad4ecc6392cd3b32c23",
+      "bytes": 15568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_IncrementalQuotient.o",
+      "sha256": "68e00bc57f9c3106ea5fe9d3e2b21802ee581ba187beb776cc69422e7c1a5096",
+      "bytes": 27136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Lifecycle.o",
+      "sha256": "52b657a49ffc504c950b4a5c6b15c6c1da8af3788b542db4fb2c4a5e2668b539",
+      "bytes": 34872
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_LogicalText.o",
+      "sha256": "51fb4e0003546dc615a46899db3ca5888e79d5f69bb085ef4cea9fa538841111",
+      "bytes": 268048
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_MiniLM.o",
+      "sha256": "a77f55a9cb21726fd0cb8e17117aeaab863ef96600f7bb70af4a8c09ba4adefd",
+      "bytes": 67208
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Partition.o",
+      "sha256": "d08ca7c01799a57d76485b6d40de68a18215cf898e4e451cfb926814ecc5681c",
+      "bytes": 10008
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_PartitionIndex.o",
+      "sha256": "6ea638029beb4cb18f53cb43e86ea2be32ff8f14aec1542ad3470df0d5f27fa8",
+      "bytes": 2424
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Paths.o",
+      "sha256": "fc787106ca943ba13f212da6dbbb45e811ebcd90884a922fe935c45065be637b",
+      "bytes": 20112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_PluginModel.o",
+      "sha256": "eeb1d3d1073c3a40597a76d8f5f501f20f77cb8067961042dfe6d6621cdd1e77",
+      "bytes": 883976
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Quotient.o",
+      "sha256": "50df9c880773e8991da31546b18976171120f75bf0152dcd1ccceaab132c0f84",
+      "bytes": 254144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_QuotientAuthority.o",
+      "sha256": "8b9705ed43310f6326f63a56d8fcdabfc0b4c7931ff6dee918cae90ff48c0b6e",
+      "bytes": 6728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_RankMemo.o",
+      "sha256": "28f50c6e102f235c62d9eb6c83192b7499c4c5627ebc6ab61879a3ca5a50ae6e",
+      "bytes": 189720
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Receipt.o",
+      "sha256": "ade97cc0f3aca4e97bdfa479d7f28af76e600e36de7464b4d651253388b58395",
+      "bytes": 21928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Relation.o",
+      "sha256": "ffcd6e41c32eef143239b4fa147c5cb91f38fc6c04bec814c08cb0fd68bfbb06",
+      "bytes": 80504
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SaturationMemo.o",
+      "sha256": "1fb61d52ce118d7db9420aefddb1a10f258d9300c3cc52ee3ecbc3e41f329ca9",
+      "bytes": 137600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SearchRank.o",
+      "sha256": "ba3133b3e85d9030bb328be68ab14ea0a6d222e250c0e700d3e5b488aca5c266",
+      "bytes": 124824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SearchUnicode.o",
+      "sha256": "e987a217c87886016eb8b3742a1f60b7198800e94f54f795038408e9e72f5748",
+      "bytes": 416984
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SelectionAudit.o",
+      "sha256": "a2bc037f2ded76563a5fbdc83e46510b94e9149a22e21d225328d44bf1ec9db4",
+      "bytes": 915880
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SelectionDependency.o",
+      "sha256": "c992862205cc429ebbfd17eb9a3873e82bb1070c303b61c0e34475a2cac60b4c",
+      "bytes": 79432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SelectionReplay.o",
+      "sha256": "5e62e96fcd85ff831174a714f7af2cd62dab6328d954d76467f2ed8f2bfd3b86",
+      "bytes": 47512
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SemanticMatcher.o",
+      "sha256": "8db8e27482be3b0988fe7013a84a6a85492e5523a629fac9e75a5c585bff799c",
+      "bytes": 324600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Sha256.o",
+      "sha256": "fa8879952b5b7c2f0a890196fe423105fcc9b6299897c58084c6ec6e729c9748",
+      "bytes": 72816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SourceObservation.o",
+      "sha256": "8e8a48f40b37c2ee88e4d7ec845e8cd0db414ef44ee137b7099ef08c27195107",
+      "bytes": 327848
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SurfaceJoin.o",
+      "sha256": "9bf4705cfc6d67f0186cc816c890f3b500ecea8d23d9799689cdb99677fcabf1",
+      "bytes": 71656
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_TextParts.o",
+      "sha256": "c8fa4e91dd4d9ce1058dd7337fd7775f889f5a215bab3858c1f0ca5653608242",
+      "bytes": 12248
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Union.o",
+      "sha256": "e2ccadf395c17bd33209a4614ae4914f17b9e91c572597e0f0c9a2f5b1a917eb",
+      "bytes": 24528
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Value.o",
+      "sha256": "6fddeaa56885f741031412156c55595c9a63fced61d605aabc4a8b18b6cdeb4e",
+      "bytes": 105816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_BudgetPlan.o",
+      "sha256": "a06e967b27896b72e927ff158d4476304b9a0d1089707a99f0c31a75371ee5e8",
+      "bytes": 11928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_ClosedCoverage.o",
+      "sha256": "2ee97f9cbf571780d71205f1e27baed118041db2df9bc118e8f2a269a4b9551f",
+      "bytes": 25600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_DeferredCoverage.o",
+      "sha256": "f06db3076bb0b869a52fc23cbce194f2499bbeafa4cad278516b2753151d0a49",
+      "bytes": 59720
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_DirectoryReads.o",
+      "sha256": "3a93e4b814a8407ef01ac73431e9c4567d028801d75b7b6c7cb2eb5ae6be71e5",
+      "bytes": 39664
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_ExactLazyMemo.o",
+      "sha256": "2645f66160dced12402fc74a0c6338bc537af1d97e35f3bf1c73a023f140681f",
+      "bytes": 21888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_ExactMemo.o",
+      "sha256": "f568eb6eef15f89d9eb16b2ff4d7c9b96d8bbfd51db80d770514b48f333c8a26",
+      "bytes": 14136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_FirstIndex.o",
+      "sha256": "ad4959a0bda29ae3334770f78febc84619006e6fb336fa7bf783ada94dc93b09",
+      "bytes": 30064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_FocusWindows.o",
+      "sha256": "73e697acb06f8eba996efdc6cdc918d4e3eff22b0e0c1dd745f32ec6db2ab518",
+      "bytes": 8128
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_IdentifierParts.o",
+      "sha256": "437fb6a304103af1cec5dcea22bf601fc81147c3521b1abbd9077f650e6a3c27",
+      "bytes": 17672
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_IndexedCharacters.o",
+      "sha256": "e1a1da777282f2f2b370e96f88b9d76ae0500f387a8cfa33a9ce8bbcb17f02c3",
+      "bytes": 7560
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_KeyedOverride.o",
+      "sha256": "0112bbc7d23386b51354841e4b444425c71ccd96d603e0f614418d24badbe72c",
+      "bytes": 22032
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_OwnedRows.o",
+      "sha256": "601fb19c819f90d077921a9ce3ec995a815bceaa9bba96521b84879fe2b1c268",
+      "bytes": 11736
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_OwnerProjection.o",
+      "sha256": "468fd274df5d8bb79fae9c3d6c468d79f727dc782145020020dc19ad9a32aa1a",
+      "bytes": 282400
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_PairDecisions.o",
+      "sha256": "665e21d233816017d8c9dd10031ea7fcdfcd77f1858e131403d53b359f85905b",
+      "bytes": 7376
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_QueryLiterals.o",
+      "sha256": "2495ba2b7d2d311f8e9a7388c8f5fff858aaf829c39d023166a55adc832dcdf6",
+      "bytes": 39592
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_RetrievalCategories.o",
+      "sha256": "43c223186e505bc757d0111161c2b0698fca388d9015a9a4aed0124315a19327",
+      "bytes": 259728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_RetrievalGrams.o",
+      "sha256": "a6f97ae2279a3e48df8d5bf8430c1e335c18cf35e866916921491319337b1cf7",
+      "bytes": 152296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_RetrievalIndex.o",
+      "sha256": "e8eb371ba95aaa8808aeca52afd4591e5948de864e8ce8d956e69f2aeabf3424",
+      "bytes": 393088
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_SharedCoverage.o",
+      "sha256": "595157eb7442b37f29b10d96462bf0712937fa5128af4d6a0e8c4912fa163595",
+      "bytes": 127016
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_SourceWindow.o",
+      "sha256": "41f03113e4e7ccbe08d836c9062c612a3a90188d0753a7dee8832375601cf94c",
+      "bytes": 4016
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_WindowCentroid.o",
+      "sha256": "59f0993f1ba187569bed7f390be7d89c001e91361152ef3f02dc65ea972b1dfa",
+      "bytes": 73432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/ArtifactHash.o",
+      "sha256": "6f6cb8b7abcd572388795c8dea63b37ad475fb1cad8c3367a2c03f7e1ddbfba8",
+      "bytes": 26624
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/CanonicalSourceDelivery.o",
+      "sha256": "8a1c7828ff1de28115839036a326927f389ebc40d07c9a494d439d8b5679ba4e",
+      "bytes": 745464
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Daemon.o",
+      "sha256": "d7437b14f013178c52567a94e0ab052810ed29b79d8a858492d6646a5a0e294d",
+      "bytes": 257312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/DeferredWorkAudit.o",
+      "sha256": "9612b99f9234ce48ca432e75ef472799c9dfdd12450d425db7134cf6238966f9",
+      "bytes": 128064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Handoff.o",
+      "sha256": "f8834bf1d07c5365f4b0f7d4390c9eae30219228c97c0502bad9090756cb4577",
+      "bytes": 5082160
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/HookScaleRun.o",
+      "sha256": "b04b81ae19e7422a40602539cba6b9d35228dd6b7c4df09f771474bb2266f4c6",
+      "bytes": 142552
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Install.o",
+      "sha256": "37cb50fee91c8208b92eb68df6badea65472849ed8ec906eff2ad822a2527562",
+      "bytes": 167760
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Main.o",
+      "sha256": "6bf8adacb864b67b274189d2131f16ead83d6345fa2eb28e79448bfb9ffa9992",
+      "bytes": 55888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/PluginCli.o",
+      "sha256": "7113698ff9abaf951b0a7c4b253d19287baf338172571a6a630c7b4e9acb29e5",
+      "bytes": 256960
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/PluginHooks.o",
+      "sha256": "213724a6297ef12fc097aed1001da1980eede5625bc8484881fe023cdb506d28",
+      "bytes": 606968
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Setup.o",
+      "sha256": "45e6696b984f36470983b440829f2127fa4fece643d53af367a243ff7cf84841",
+      "bytes": 30440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/StudyRuntime.o",
+      "sha256": "bf6ac25c5bda97cde5ea35832392b3c541c95ec929a4f5fcb52549ecaca82a37",
+      "bytes": 119592
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/SynapseLive.o",
+      "sha256": "bbad2d0d066ae0c2ec46d44ed51b84dfd5eb5b806a096ecf05939341d3056921",
+      "bytes": 59784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/SynapseRecommend.o",
+      "sha256": "3d5b4dc9087301451bd0f5a45bd4b3922531824906a2fb226901bca397f6e8d6",
+      "bytes": 340640
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Warm.o",
+      "sha256": "5fe10c9d3e0eddc861974097598086f62b5c77f872185e5ffe0ea9509c937493",
+      "bytes": 367312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/WorkInference.o",
+      "sha256": "52a830a2d4ad318afef358764398b9d634c68c7e65ce034afe96241aa9e236f4",
+      "bytes": 78392
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Worker.o",
+      "sha256": "372c51b2db36fafa10349178ba6fd1f4c86a9f60c1537281b7c35ccf7c82068d",
+      "bytes": 414936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched/WorkPostings.o",
+      "sha256": "dda2eca4003b1189a362f804de390c6977bda4a4c35fcc19ca2d22c34df1ddff",
+      "bytes": 212456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile/DiscoveryCounters.o",
+      "sha256": "12f5cd53c25071300b8e2d487e121cbcc14c858e0a3e4b6e5d4e5e8094d98b7f",
+      "bytes": 52896
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSource.o",
+      "sha256": "d9f11102cc22c3d923c1e0c9735aac8e0d3f5334308e17f4b05d2cfc2d7d2308",
+      "bytes": 381472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourceCache.o",
+      "sha256": "e3bcad22c26ca4fde65a2f338b70c096a964233e5e37806359fdfee682f7ca0e",
+      "bytes": 183408
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourcePacket.o",
+      "sha256": "d8103935844f5dad70e41410c8e1727819d3fd809a40a6a6cc1048f7598e9513",
+      "bytes": 246952
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourceRecords.o",
+      "sha256": "b6bfdbc4fa8d52a972537da604e3f70942a70c115b89d23ae29b06b87f0ba7f3",
+      "bytes": 138472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseBuild.o",
+      "sha256": "fe07a280834449f76c8b277a35890e2a8b5743568b7d54f76d46c5146b6c6639",
+      "bytes": 436512
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseBundles.o",
+      "sha256": "7d503c65f99985d67896dd3b0ac4367bc04881806b7ac51120ee30a1e53c5d92",
+      "bytes": 147928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseIndex.o",
+      "sha256": "b97483e7732a5ad01d9f2ed0f42473125337dd7e8eec0cc11028808d03a0d294",
+      "bytes": 709472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseJournal.o",
+      "sha256": "ddf8ba386e28076336f786bc7f66d920a5ec428dd2f7f3a6210d89eee2568945",
+      "bytes": 1084112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseProvenance.o",
+      "sha256": "5881603f5e34d5bd2a145609c39cb6d09d7ce047b008cc7342065fe4ce7c9489",
+      "bytes": 340480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseTransport.o",
+      "sha256": "46bc2ed810f23dd49da674495eb2b73b03d436e9c15370df96afc3b862e0419a",
+      "bytes": 298536
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseUsage.o",
+      "sha256": "2fd94a09df2668035ae2d2812fe5de0861f9c2a6ddaa5b0438d44d6b7edefaf0",
+      "bytes": 479688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-state-contention-20261024/Persistence.o",
+      "sha256": "d16d51089c3b1dfdd967adc68a0665b83edee1d934c6d2566ea20554517b3d09",
+      "bytes": 139072
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/VectorMatrix.o",
+      "sha256": "cc5f681580eca443da4ac6878ba16ae5912c46f13a03bfc49f5bc50ce73cda2b",
+      "bytes": 227296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/lexical-reads-20261024/LexicalReads.o",
+      "sha256": "eab8ff080ebe3d333587991982cced3d2a4b5dbc81fdb1fd409717f0b7ee9f52",
+      "bytes": 195584
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/numerical-lifecycle-20261024/OwnedNumerical.o",
+      "sha256": "1c1623e59bed64a3fbd0685b0158d452c4017a448445d069d9968a841b0ba3fe",
+      "bytes": 327672
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/AdvisoryFrontier.c.o.export",
+      "sha256": "33dbce99989b78d2bedce0a419b040b95323a60b1a2aa162393a25a2cb27d5ad",
+      "bytes": 25592
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/AtomQuotient.c.o.export",
+      "sha256": "5fb03b09bf4c0cac1cd3a85073a06a8d75ff3b4584e6d134ff5373f34ada6be0",
+      "bytes": 8296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Blake3.c.o.export",
+      "sha256": "2b74781c10d3a42ea5aa385c9e7d64ac3c274c3e92b574c2106bd3b7dda5e61d",
+      "bytes": 58280
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CompletedAuthority.c.o.export",
+      "sha256": "7fe76f834cc3385186399091614508c0e587f04d9d18dbeffba5a9a356e300d5",
+      "bytes": 2704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Config.c.o.export",
+      "sha256": "a7037acbc82d3e9ece758b6a81be56df567ba15e81a9320069e49eb67ef5b3d2",
+      "bytes": 149384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CongruenceComplete.c.o.export",
+      "sha256": "e748aa55a8ca69929899bb3ec1df5bfb013757d4c673892496b60556f172f186",
+      "bytes": 31392
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CongruenceFixed.c.o.export",
+      "sha256": "c221a57ce9f8705fec1ab8dfdba61068dcaea83ed7417b0e9f98940fd53d7013",
+      "bytes": 2480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CongruenceSound.c.o.export",
+      "sha256": "b4f2edc67e60deb3630779d4040183e27e7f0a69a1b2c7ca7761464179e5be43",
+      "bytes": 3392
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/CacheReclaim.c.o.export",
+      "sha256": "d6f1d01a0c425580fe5f16892c89c4539d3155af8f7a8da858c54942545ad6a1",
+      "bytes": 44384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/PageMap.c.o.export",
+      "sha256": "71410867c65a71122a1a1ae3d0af302e2079317bc49a1fe2540d3c144b1f67a9",
+      "bytes": 412360
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/Sidecar.c.o.export",
+      "sha256": "d0999220a7489649c3670087fb5b8039f0713022d3653a73ec434b8ef354f91d",
+      "bytes": 70256
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/Wire.c.o.export",
+      "sha256": "ee6d6091c1f1729c2a54803f848bd0004c615f70acc92c72b34b768a8d397f25",
+      "bytes": 97568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DemandMemo.c.o.export",
+      "sha256": "5399a0640b84cfeaebb61d4aff5b60352f770ca514bf793cdc30b7bc3cd56c67",
+      "bytes": 65144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DiscoveryAudit.c.o.export",
+      "sha256": "c79495d3b1c9b8f7a291f26ac9c1ade483c1aeea910091692f12f98617b32571",
+      "bytes": 139568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DiscoveryMemo.c.o.export",
+      "sha256": "afd473c6d694d6c2a12af288f290e1464f800fe17fe4a752d9f3bc09333b6af6",
+      "bytes": 17824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/EqualityDependency.c.o.export",
+      "sha256": "5b0442db84a57dec8bcb7f19b0c04cb6a982c1ac32c65e3adc33134056d8d8cc",
+      "bytes": 19088
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/EvidenceReplay.c.o.export",
+      "sha256": "407031589ef296e909756dda8dd61dc4c31a5eb647321c2b6c15ee7023921f82",
+      "bytes": 63952
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Extract.c.o.export",
+      "sha256": "00b0fbe7281754591f99d4e802278fe407a0744bd3c3710183a0e62cc5b9589a",
+      "bytes": 117656
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/FederatedSearch.c.o.export",
+      "sha256": "c8c5163789188f9a26d8e28f4db2bc39859a29d88d3ec47abc748e5e6a485e75",
+      "bytes": 181688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/FileSystem.c.o.export",
+      "sha256": "e64794a02ee6ea41ee5cde581a465909906ee58c95da2b568d7610d7e7c2e412",
+      "bytes": 104648
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Frequency.c.o.export",
+      "sha256": "fe69d31a15250f12b347c83ccba64300712fc306e3da6f10735f4e1565ce7bb6",
+      "bytes": 38696
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/GeometryMemo.c.o.export",
+      "sha256": "857f20aef5a1c7ae8da2c4b15b15a4afde76f250b8439c226c8082e6137e203f",
+      "bytes": 123704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Graph.c.o.export",
+      "sha256": "6673bc5677ae879786ddb433a5d89222dd16e58b0ddc95c5d2821196cd77c08f",
+      "bytes": 28256
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/GraphCodec.c.o.export",
+      "sha256": "ef352a69388827117d3edfb6c58ff3d3b441b2354d989f224fede6d900e985b1",
+      "bytes": 102080
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/HashDistinct.c.o.export",
+      "sha256": "6a9f581160b23397078c86f9f12f7fe4a249defa061d689d420db3f2a348edfb",
+      "bytes": 10624
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/IncrementalQuotient.c.o.export",
+      "sha256": "f755c551d88e06e98d89530725afb6a1770d655c9bc55c21f46dc0569b932198",
+      "bytes": 18024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Lifecycle.c.o.export",
+      "sha256": "76704ed414fe5d34a2732562809871bf3767151ec5a23e31c2baeda37dcde316",
+      "bytes": 24128
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/LogicalText.c.o.export",
+      "sha256": "208f47b6a91131c3e94cc3a0cc4d7839053a35cb069b1972199fedfc24ff94b9",
+      "bytes": 134536
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Matcher.c.o.export",
+      "sha256": "2e3038ae037ca87fc43e280019d2affcbe38816e8a8574810c079ae7cf75620e",
+      "bytes": 524624
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/MiniLM.c.o.export",
+      "sha256": "0dccff311203255c95d9f83a34a3b7e10c0441c0c6e74e5403f2892d11993973",
+      "bytes": 50504
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Partition.c.o.export",
+      "sha256": "6da18973f4e4d1775bc9b909fcb5df14c6f7f5ddf064487af5a5f64b36f11e0c",
+      "bytes": 5208
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/PartitionIndex.c.o.export",
+      "sha256": "06a8e4888b314ce42367fbe537608ab0f8a15c87fe7e12651f2917bb1aa5431c",
+      "bytes": 2472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Paths.c.o.export",
+      "sha256": "28ef4cc55cbc031f30fa90d10fc78244a0eabbdd48b9e46a284c5e249f8c8f8e",
+      "bytes": 10328
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Persistence.c.o.export",
+      "sha256": "adde938803e024553d94394004abe0e657d828d13c69bb2da444e5bfd0e8a862",
+      "bytes": 81136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/PluginModel.c.o.export",
+      "sha256": "a67e34540c8ad3f74c30ad602a12099ce2e6d86e4fcfabac2e7d37c5dfcc48ef",
+      "bytes": 556800
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Quotient.c.o.export",
+      "sha256": "28effa1547cfb45e90513cf8d6b48b0e3c3a5966466a84a4de193d12682ff245",
+      "bytes": 136104
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/QuotientAuthority.c.o.export",
+      "sha256": "10e0c7b212872e85ef0fce7ab26867ec8ef179ed327ee48e9be50b1ca5413137",
+      "bytes": 3976
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/RankMemo.c.o.export",
+      "sha256": "5d792d30b75209207f636702deb0aeae6d559f57a83d760f89aaf53d94b1f8b2",
+      "bytes": 98800
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Receipt.c.o.export",
+      "sha256": "90c691218e416a7f763393a5f0b1f6befa86800c61d7aff0796765e76f6cdb2d",
+      "bytes": 15416
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Relation.c.o.export",
+      "sha256": "9762de5c5c5a56d82edef95ea0590608f9ff44512423a8fa0fe6ccfb46b8aa4d",
+      "bytes": 41064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SaturationMemo.c.o.export",
+      "sha256": "47c56cb3ac96846c2e9e0be3698670cdb66c684482197be624a3bdf1885fb55e",
+      "bytes": 74464
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SearchProvider.c.o.export",
+      "sha256": "cde22538916262e5d2a5e3edbfb48c20a83c8177a71bf2c1a4192ebcfb20d17c",
+      "bytes": 446128
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SearchRank.c.o.export",
+      "sha256": "e5de5b469b6d00c613c64fed41178e96a4dd9f57637a4ddc5ae95712b6ef31ea",
+      "bytes": 75608
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SearchUnicode.c.o.export",
+      "sha256": "b035ac0f61f735d82ec39d6eea5e9c25095f34dd2573614c2fe85a984bf6ac89",
+      "bytes": 435896
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SelectionAudit.c.o.export",
+      "sha256": "0bc0a8c03101a8c403cbcff32746320515ed2381ef3412a0c4e7990b129fda7e",
+      "bytes": 581112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SelectionDependency.c.o.export",
+      "sha256": "11076b2a4ab0808f2f45e3f114e5ab7b4f0a1bf270c4151564036ef57a69a5e3",
+      "bytes": 43168
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SelectionReplay.c.o.export",
+      "sha256": "2ac3e317c8e35c60795595fa222f067f4ec025404a3efc84cb4d7053bf22aef2",
+      "bytes": 27344
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SemanticMatcher.c.o.export",
+      "sha256": "806217a08f55bc64ccc2fcfe2ac5d23134c52bb081460caeb4a6fd651e067790",
+      "bytes": 202968
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Sha256.c.o.export",
+      "sha256": "eadd3588e20d399f18808e9330ad40e20227884f11558df6bae41762e8e345be",
+      "bytes": 40552
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SourceObservation.c.o.export",
+      "sha256": "32bac949870d5e13ffd1bb465ae60c9d793b131e516c6f22847b15aee17a9ed4",
+      "bytes": 216312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SurfaceJoin.c.o.export",
+      "sha256": "56b40bc6ff1c3876374c77de8fc61f4a1b1d64c0c49d4eb44238c93b770a0027",
+      "bytes": 39096
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/TextParts.c.o.export",
+      "sha256": "70c26c26c2136e52ed4f9b2ce4ee6e77ea6ccbb620e527dd51b7a171026438ef",
+      "bytes": 10528
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Union.c.o.export",
+      "sha256": "863cd8fd36f65437db4fe481d35050e275e8a8ee669dc9849016f9dc9e2f0e28",
+      "bytes": 13024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Value.c.o.export",
+      "sha256": "be6d8f0467431c232abf4c0ce934587b8d33623d2c32e235a3aa981c7a55901a",
+      "bytes": 61464
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/BudgetPlan.c.o.export",
+      "sha256": "501f09d9ec43cd4b3876fe3a9c01b94654fc4e1f1a6e4eee06555323d7f6897d",
+      "bytes": 7440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/DirectoryReads.c.o.export",
+      "sha256": "2d3581a6b9543ff3f3c9b66cea2d70a85e79fd4031be447e52d67d2dc34d541b",
+      "bytes": 23080
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/ExactLazyMemo.c.o.export",
+      "sha256": "fee34e57bce9f8d7f4ed752e6297cd9881b22406fc4142b89f3728cf6d04c113",
+      "bytes": 15520
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/ExactMemo.c.o.export",
+      "sha256": "3fc968662f70e749c49b39b90d0f172141777bb0757170764ba3e63264ca121d",
+      "bytes": 9096
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/FirstIndex.c.o.export",
+      "sha256": "8741beb2b70b284c63d78ef93cd445ffeb592ac0e234b0c447143492f0563f6f",
+      "bytes": 20152
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/FocusWindows.c.o.export",
+      "sha256": "c584d9ff32ce10f62e3b5ac7e6168f928bf8ab93ddcdac2935a2385a2e06f9c7",
+      "bytes": 6608
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/IdentifierParts.c.o.export",
+      "sha256": "902c6498c386bfa9af572052543c9bb2f67e8645c18782ee243ac856fae2c63a",
+      "bytes": 11320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/IndexedCharacters.c.o.export",
+      "sha256": "c615b2bcf825ef3916947e9e8df7d6a1dd051eddddda52d901e6bb4228b3d0dd",
+      "bytes": 8008
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/KeyedOverride.c.o.export",
+      "sha256": "9f74c3df31418d803fb23c6f6529dfef67cbada85dc485c70cff37ec88af5afa",
+      "bytes": 13024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/OwnedRows.c.o.export",
+      "sha256": "5a449b999fc7cbe9174266d9c8dee0ba6bba6732c69d19279bfe96273253a339",
+      "bytes": 9256
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/OwnerProjection.c.o.export",
+      "sha256": "158cf9fe9486eb13fc54f7331e2853efcbbb136714044de10e94e6df4a84eefd",
+      "bytes": 107936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/PairDecisions.c.o.export",
+      "sha256": "78fb5c6833051ee5e4da446176a6e3958b5bfaa1c8e60d34f48b36ac0250fdde",
+      "bytes": 7784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/QueryLiterals.c.o.export",
+      "sha256": "5225a9a6f3a6fb72f669e73beb1345c19772ca7d213e9430e5aaa770968bc70d",
+      "bytes": 27992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/RetrievalCategories.c.o.export",
+      "sha256": "07823aabd5217b9d23638d05534ba158407693e5e3dad634b7c1a45b95f6aea8",
+      "bytes": 246512
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/RetrievalGrams.c.o.export",
+      "sha256": "cbb85bb14dbf6a51ac1d17554890a9ff7ff4d9371c7827fca93d90e51bfecd5e",
+      "bytes": 84176
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/RetrievalIndex.c.o.export",
+      "sha256": "0fb7c384728c6a8dbd580d144eaa95adbce1611e202f0e932a3baf293b59e49d",
+      "bytes": 269600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/SharedCoverage.c.o.export",
+      "sha256": "1fe467a5195343df8bbf74f52ccac66c60c219397c5657f2cddc0941d47fd302",
+      "bytes": 68064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/SourceWindow.c.o.export",
+      "sha256": "03d64ae14dc95e44c4c4cd5fce843ac4ebf6acebadf44ec257cfe2bd8f7a7303",
+      "bytes": 4104
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/WindowCentroid.c.o.export",
+      "sha256": "b3ddc5d4068698195e6d2efd3a36f4ee17c64629c6c90fe30faf9c2ae4191a50",
+      "bytes": 44152
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/lib/libstorage_sync.a",
+      "sha256": "261602862d9773ad01d379d0e01c4aa261be784907c31f45d039c658f27c9743",
+      "bytes": 27264
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/parallel-hook-resources-20261023/shared/native/DaemonWire.o",
+      "sha256": "7b92d8d4bea65115e9b84d6e4744a6d61b7fbe6de6dfc01c63321632a7444104",
+      "bytes": 98704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/prepared-domain-20261024/CandidateDomain.o",
+      "sha256": "ab359fdd1814e6902458eb6dae1e59ba5026baad31f2a7f44b247bec91e149b2",
+      "bytes": 446424
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/prepared-domain-20261024/GraphStore.o",
+      "sha256": "0978dc629bd3aaf70bdc16396f20252b6b9510a5f78af757581868d9c96c1c59",
+      "bytes": 1422136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/PreparationDebt.o",
+      "sha256": "b7bdfafa18c5d98fc8d647e068e9f8375163205e3f0559fada8f8c392a6603e2",
+      "bytes": 74016
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SearchProvider.o",
+      "sha256": "7085107a9bb0708908b44705a44c4cdb02d408f49ddcedf796bb95b11141e228",
+      "bytes": 878144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDelta.o",
+      "sha256": "c239a3f88e6fdc1fa5ae1934a9c975b329ea3eed500d9ebc35c5df543205a983",
+      "bytes": 69328
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Deadline.o",
+      "sha256": "3bfff434979e7b78915dff0517ee783577066b8e90c299dd539eeabc88c55339",
+      "bytes": 3920
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalars.o",
+      "sha256": "debeda2728178a0f65faca09fbdd361749136f7dcc8b7834b65d52c169f37a42",
+      "bytes": 138992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ObservationAge.o",
+      "sha256": "7bf1b87fe204fde7385128dda1ac08e69fbd8f866e74e8fa937de8400831f949",
+      "bytes": 60936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ObservationContext.o",
+      "sha256": "688c20e035e88bc582cfca9d04b3cbeb85432204e0983772fa7f5eaf628d3d33",
+      "bytes": 230328
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceEvidence.o",
+      "sha256": "bd350e759a1fef68bc61c15512e8551d791e56bf96986bfa27b631aef204d2c1",
+      "bytes": 637320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtraction.o",
+      "sha256": "82e35bffd0733b080d7084bb258abe7901f6b6c38a6d7fcfcd5fca28ce075d22",
+      "bytes": 353352
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseQuotes.o",
+      "sha256": "17d765ac9c2a542685de1768e04785fa256c1ca1a07eae718cfd37dc6769192d",
+      "bytes": 17240
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSource.o",
+      "sha256": "95f1066b64d890e151421faddda062182fcc4933ebb235fcac26f4f3b2d3cce2",
+      "bytes": 511336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Synapses.o",
+      "sha256": "5274cf19fe4c61fdecacf7f847c0be84bf601c1234c0c3a1dd2016ab3f953a6e",
+      "bytes": 1357928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/Matcher.o",
+      "sha256": "c2c862e1cac4d8b4015b79bb79f439cb189ebf180c3dafd209d5af4f82a38eba",
+      "bytes": 979752
+    }
+  ],
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/eggshell",
+    "sha256": "06240233e911e8ff5eafb8bb069c5026732b809485b2bed88361c3f5b08756dc",
+    "bytes": 115826032
+  },
+  "referenceRuntime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/eggshell",
+    "sha256": "20e30ce94b4941ff28d9569d9ece717237baae60f4113f31ff4a8862174c38f9",
+    "bytes": 115807968
+  },
+  "retiredHelpers": [
+    {
+      "formerPath": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/ReferencePolicyAudit",
+      "sha256": "20baae97975f9fd0050c5f45becc6d646b7102595c685a55e086274bd4461db3",
+      "bytes": 108449888,
+      "removed": true,
+      "reason": "owned terminal rebuildable audit helper; source/C/object/link inputs/raw evidence retained; no archive"
+    },
+    {
+      "formerPath": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/PolicyDiscoveryAudit",
+      "sha256": "c50a992f153992d3cd0e9bddb3d1a7b27b7debd03ea1e3daa88cf8cb1cd37184",
+      "bytes": 108469648,
+      "removed": true,
+      "reason": "owned terminal rebuildable audit helper; source/C/object/link inputs/raw evidence retained; no archive"
+    },
+    {
+      "formerPath": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/HookScaleRun",
+      "sha256": "ad2535c376b66d33e44fbe87347a4d5f386ee908fba53095a37e42284a32ba31",
+      "bytes": 102731456,
+      "removed": true,
+      "reason": "owned terminal rebuildable audit helper; source/C/object/link inputs/raw evidence retained; no archive"
+    },
+    {
+      "formerPath": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/PolicyProfile",
+      "sha256": "f6e4265884dace64ff9b2e0de633d1059921450728763d7d1516a6f2ee5dd28a",
+      "bytes": 108470288,
+      "removed": true,
+      "reason": "owned terminal rebuildable audit helper; source/C/object/link inputs/raw evidence retained; no archive"
+    }
+  ],
+  "callerCodeCheck": {
+    "linearClosurePresent": false,
+    "indexedPolicyPresent": true,
+    "oldCaller": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Handoff.c",
+    "newCaller": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/Handoff.c"
+  },
+  "controlled": {
+    "smallCases": 32,
+    "realCases": 4,
+    "allHandoffFieldsEqual": true,
+    "allBodiesEqual": true,
+    "completedSmall": 7,
+    "blockingSmall": 5,
+    "positiveLocalUnion": true,
+    "rows": [
+      {
+        "case": "broad-union-first",
+        "referenceMs": 9652,
+        "candidateMs": 9640
+      },
+      {
+        "case": "broad-union-continued",
+        "referenceMs": 9564,
+        "candidateMs": 9533
+      },
+      {
+        "case": "broad-retrieval-first",
+        "referenceMs": 35293,
+        "candidateMs": 30307
+      },
+      {
+        "case": "broad-retrieval-continued",
+        "referenceMs": 35475,
+        "candidateMs": 30306
+      }
+    ],
+    "referenceResults": "fresh reference run in this work, unchanged executable/snapshot/query; reused for final rebuilt-caller comparison; no p99 or matched-token adoption claim"
+  },
+  "native": {
+    "samePinnedSource": true,
+    "pairsPerArm": 1,
+    "cases": [
+      {
+        "phase": "first",
+        "checks": {
+          "sameQuestion": true,
+          "sameBody": true,
+          "sameStdout": true,
+          "validStrata": true,
+          "replyComplete": true,
+          "sameDisposition": true,
+          "sameAckCount": true,
+          "within30s": true
+        },
+        "referenceMs": 18793,
+        "candidateMs": 18558,
+        "bodyBytes": 17803
+      },
+      {
+        "phase": "continued",
+        "checks": {
+          "sameQuestion": true,
+          "sameBody": true,
+          "sameStdout": true,
+          "validStrata": true,
+          "replyComplete": true,
+          "sameDisposition": true,
+          "sameAckCount": true,
+          "within30s": true
+        },
+        "referenceMs": 17443,
+        "candidateMs": 17316,
+        "bodyBytes": 0
+      }
+    ],
+    "referenceRuntime": "20e30ce94b4941ff28d9569d9ece717237baae60f4113f31ff4a8862174c38f9",
+    "candidateRuntime": "06240233e911e8ff5eafb8bb069c5026732b809485b2bed88361c3f5b08756dc",
+    "p99Qualified": false,
+    "tokenReductionMeasured": false,
+    "continuedEmptyReason": "same query after confirmed ACK, not incomplete search"
+  },
+  "profile": {
+    "durationSeconds": 2,
+    "startedAboutSecondsAfterLaunch": 12,
+    "processingThreadSamples": 1341,
+    "projectMatchesSamples": 993,
+    "projectMatchesFraction": 0.7404921700223713,
+    "topologySamples": 348,
+    "scope": "sampled processing-thread window only, not total runtime fractions",
+    "profileHandoffEqual": true,
+    "profileTimingsExcluded": true,
+    "raw": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile-stacks.txt"
+  },
+  "excludedAttempt": {
+    "scope": "diagnostic, excluded from final optimization/performance results",
+    "reason": "Matcher was recompiled but the specialized Handoff caller still captured the old linear policy closure; discovered in generated C before native tests",
+    "controlledGuard": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled.guard.json",
+    "inputHashes": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled-inputs.json",
+    "bodyEquivalenceObserved": true
+  },
+  "originalSources": [
+    {
+      "source": "10000",
+      "unchanged": true,
+      "files": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.pages",
+          "sha256": "289a7fee99ca10399f0174ff6025e8a4ac347d5148b842f88387b441a7722556",
+          "bytes": 55931677
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/head",
+          "sha256": "c450dbdc6cbd5b051cce8a4cb5b1828599bf6beb7eb19119bb126d0a8872d1f7",
+          "bytes": 397
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/writer",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "source": "50000",
+      "unchanged": true,
+      "files": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.pages",
+          "sha256": "e3b84e42a71b4e993c4e306585c75059312d4ab8501b4b0a56c4e9840f9ee926",
+          "bytes": 432031994
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/head",
+          "sha256": "4888fa698fd0a44d78db7b57dd040accbce72ca2d97bc869f1c837a54a538d53",
+          "bytes": 401
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/writer",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ]
+    }
+  ],
+  "guards": [
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build-profile.guard.json",
+        "sha256": "d028ddb4eeda2adbc9ef9eaf80f663f437dea66d3cb43a73074f0b08eb5f0c7f",
+        "bytes": 1263
+      },
+      "exitCode": 0,
+      "peakRssKiB": 2119056,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build.guard.json",
+        "sha256": "fcc1a65c237e5f3779ea60a193313a81a8598064454e3b8e5cd856593346c943",
+        "bytes": 1542
+      },
+      "exitCode": 0,
+      "peakRssKiB": 1637008,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled-final.guard.json",
+        "sha256": "61455183bd8c58d14b24280e30c6acabf2157024e6c2ffc15d475e50d0951920",
+        "bytes": 1193
+      },
+      "exitCode": 0,
+      "peakRssKiB": 419168,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled.guard.json",
+        "sha256": "86b100ded834eee9d4fd593fa683998b161f4f294e8595e7f9efba34bf5277bc",
+        "bytes": 1176
+      },
+      "exitCode": 0,
+      "peakRssKiB": 419232,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate.guard.json",
+        "sha256": "e320b3ce3c0b6fc656d82e15c618b7d72ccc52701749d47299ae5574beba5770",
+        "bytes": 3482
+      },
+      "exitCode": 0,
+      "peakRssKiB": 1940288,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference.guard.json",
+        "sha256": "091e787a6e6837e82332138d7b04bde1c6fdfea011382bd07e188b616dee874d",
+        "bytes": 3455
+      },
+      "exitCode": 0,
+      "peakRssKiB": 1937904,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile.guard.json",
+        "sha256": "e3de3cf20f26b62c3f11d5700bc717046169895b4eb65a08964c5f252a870729",
+        "bytes": 1265
+      },
+      "exitCode": 0,
+      "peakRssKiB": 582208,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof-2.guard.json",
+        "sha256": "8d86a664d3191d772e53307c7c249f83b615b92cadcc4c28c4b423ae4f9c8c00",
+        "bytes": 1320
+      },
+      "exitCode": 1,
+      "peakRssKiB": 1086544,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof-3.guard.json",
+        "sha256": "ca6e0e5758b1c0c09ca8af2cbf326db1c723e03c46930574422c0f5ec4d62ecf",
+        "bytes": 1320
+      },
+      "exitCode": 0,
+      "peakRssKiB": 1091680,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof.guard.json",
+        "sha256": "79d591f78b3f99c4772ab78f36707e020c361e9b743928e4972723f785945d79",
+        "bytes": 1320
+      },
+      "exitCode": 1,
+      "peakRssKiB": 1111744,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/rebuild-handoff.guard.json",
+        "sha256": "dbfeb8fa412076d7d7b07e6c6783d1a3960af8505ae5c13c317157377297d49a",
+        "bytes": 1267
+      },
+      "exitCode": 0,
+      "peakRssKiB": 2809424,
+      "survivors": [
+
+      ],
+      "triggered": false
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build-profile.guard.json",
+      "sha256": "d028ddb4eeda2adbc9ef9eaf80f663f437dea66d3cb43a73074f0b08eb5f0c7f",
+      "bytes": 1263
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build-profile.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build-profile.settings.json",
+      "sha256": "2445b92b9725f524903e177b5403b7fbfa8a4cddd81689f6207ed850c6557875",
+      "bytes": 465
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build-profile.sh",
+      "sha256": "a565880d34689b33e5700614046b45f963f90d5db70b255319e8397a71dca28a",
+      "bytes": 728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build.guard.json",
+      "sha256": "fcc1a65c237e5f3779ea60a193313a81a8598064454e3b8e5cd856593346c943",
+      "bytes": 1542
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build.settings.json",
+      "sha256": "cec8a2d6a000f298aa3768de855b01de0451edabb14d9f8cd7655aa36246fccf",
+      "bytes": 449
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/build.sh",
+      "sha256": "5d7123258c66856c746620f1c6ca23ea6f0f429d3df45ad3cf0620e4e58d0138",
+      "bytes": 1605
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/caller-code-check.json",
+      "sha256": "f168509397a34f1691f84840f9addd64f889db0474f5eb47e04dff656c2c21ce",
+      "bytes": 250
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/contract-final.log",
+      "sha256": "32ac908f1cec5152ad4d66ec1cf37502ebdd777f1178cfdca46951ee28fb358e",
+      "bytes": 76756
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/contract.log",
+      "sha256": "32ac908f1cec5152ad4d66ec1cf37502ebdd777f1178cfdca46951ee28fb358e",
+      "bytes": 76756
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled-final.guard.json",
+      "sha256": "61455183bd8c58d14b24280e30c6acabf2157024e6c2ffc15d475e50d0951920",
+      "bytes": 1193
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled-final.log",
+      "sha256": "3f5e54ca29183e78e3738eb9f4874569debc8911c0fdcff26f4be80b3cf0ab16",
+      "bytes": 247
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled-final.settings.json",
+      "sha256": "3bb1e03abd1b531ccffbbc2bb8c696cda7062aba7f46be6a2593aa36d5b67543",
+      "bytes": 462
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled-final.sh",
+      "sha256": "c950944651cf32ff5fc537e1a672e349ba912c169fa9508fd57c53ecc757855c",
+      "bytes": 858
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled-inputs.json",
+      "sha256": "b75b5f5abb9ea3fe30dac90e405eef3d2eb40a36c96b46c61d5e2261c8e82ae4",
+      "bytes": 1708
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled.guard.json",
+      "sha256": "86b100ded834eee9d4fd593fa683998b161f4f294e8595e7f9efba34bf5277bc",
+      "bytes": 1176
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled.log",
+      "sha256": "3f5e54ca29183e78e3738eb9f4874569debc8911c0fdcff26f4be80b3cf0ab16",
+      "bytes": 247
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled.settings.json",
+      "sha256": "7f8bbb55ce1dc0048b6b926cb7dc7486bfa9ffcc15ab7f9e12bb868f73a34107",
+      "bytes": 450
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/controlled.sh",
+      "sha256": "caddf2adbd756df0a43a9b03e4ba9895faf724f53ff863f4f31f82c7af7afd00",
+      "bytes": 1065
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/final-inputs.json",
+      "sha256": "d3fac200e2290385330b46442a212d17a199a8764de7370ded115bf4f1199a1e",
+      "bytes": 2132
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/helper-retirement.json",
+      "sha256": "8e3d14ad7c545886d7f520cc07a2f3f9e5f60956299ba91b13da46f4a9262505",
+      "bytes": 1572
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/missed-profile-attempt.json",
+      "sha256": "9b9ee2d12e2ed8ca1f45a17b89f90c75b6ee49db64ab7d7861e859a9a028913a",
+      "bytes": 326
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-breakdown.json",
+      "sha256": "7605f49a2ba2e001ffab296956d00605c8b5f2683b015d47e9b67c9666f2df77",
+      "bytes": 17641
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/config.toml",
+      "sha256": "3c6b103ef1f3ab79f676bf6a0f9ab68cfdfca0258b0a53a1c7cf214fcae726ec",
+      "bytes": 297
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-continued/result.json",
+      "sha256": "2f4355c2a5df0aacfd19c6bf749f72906517514e598c54f911f326dad04d01ee",
+      "bytes": 4270
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-continued/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-continued/stdin.json",
+      "sha256": "98994a8b2cfee8c55d2b05a51ff99035251ce0a8ea9ee3cd33a088bd59d93873",
+      "bytes": 451
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-continued/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-first/body.txt",
+      "sha256": "5c7a5f72c607710135747e78c438e89e9eb86351fb1fbf8df43772277a8cb264",
+      "bytes": 17803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-first/result.json",
+      "sha256": "23b462476469ff60389ffea0fd9e4c7fc5c0013e1deb3d9b197d4d2feb0c8934",
+      "bytes": 23444
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-first/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-first/stdin.json",
+      "sha256": "32ed16b2c4470e36cbba959c9d8ab02a830539f53abd05d1bc8fda846cf6b0d6",
+      "bytes": 447
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-first/stdout.json",
+      "sha256": "439687478242a4d77d155c30d4607fd2eece1a6760fb2f13e5b3fa5757aa619d",
+      "bytes": 18137
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/pair-0-shutdown.json",
+      "sha256": "7598f070e3196bef2ac5afe7e2517198b143a85ec380745d546601c462c5d74b",
+      "bytes": 113
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/private-warm.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/private-warm.stdout.json",
+      "sha256": "7d8381a7ff52a4c9247753c7e28727c03b972d5638d3570968b9b73782f61823",
+      "bytes": 3799
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/repeat-warm.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/repeat-warm.stdout.json",
+      "sha256": "f8948b6c057f25a450db379ac7b657e0b29ffd6c63c1c0430f0302c97a73d5ef",
+      "bytes": 3799
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/results.json",
+      "sha256": "f337dd71ff31e45ff9f14ca0858ece9895feb27170ac75f719797539cdce5339",
+      "bytes": 28012
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-10000/summary.json",
+      "sha256": "b99e62a0b86f4c3102050ba4e4aae3170581909aead246735f75a6c29d371478",
+      "bytes": 29117
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/ack.json",
+      "sha256": "40d16457d633aa6fda18eba190221ce7fa45d3935806036777f61824029a02f4",
+      "bytes": 178
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "d8ff92340856279cd86acd6573af220e9d4876ff60ae5103969c0dff538ca4d6",
+      "bytes": 388
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/canonical-source-input.json",
+      "sha256": "b9679af551e5c6fabe8d2ad7d7324825ae376b94bb3f5c5281fec91164cf60ee",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/discovery-counters-2708144996525416.json",
+      "sha256": "28132f340d8abd3dc7788385655bd9bfa1c0dcdd060822922a317e33705e0394",
+      "bytes": 674
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/dispatch.json",
+      "sha256": "df8d55fbe5b66c7e06765d2f91c59c0c5fb924e6dbcb89964c7c610e9265d2bb",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/freshness-2708145523119958.json",
+      "sha256": "64baf89f5098eba2858f180651eb1b97c66ca7e29e4f090f4c04a8a21d0fd690",
+      "bytes": 1205
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/ingress.json",
+      "sha256": "8a6debe4666c9c1b2308bd21eada15fb5fe8b1e1b9f998b876fc57ec9e3b6fc9",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/lexical-reads-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "cab01b836b1a90add0acd5d15bff716673c39d455628a860040bf6b133841d9d",
+      "bytes": 343
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/numerical-62576-2708129089485041.json",
+      "sha256": "46e9d6c3b5a20232937d7160a9e96d42d6d7c111fd5c56a09bb094dee2a29199",
+      "bytes": 1133
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/numerical-64165-2708145182527333.json",
+      "sha256": "0f59ce1e5f6f5637bb67ca6e3c22195f4d6c6b0ba5438745d24ca369fb66c4c3",
+      "bytes": 1075
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/published.json",
+      "sha256": "52ad49730c5caa2932480cb355af0edbdbbb77e651a6a6b70e9a8ffb40bea689",
+      "bytes": 18735
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/request.json",
+      "sha256": "94c685ebdc0fcba08cd95f657cd9cf7d351e90479c1a99d8bc52ecc69dbaf4ad",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/search.json",
+      "sha256": "8863359b36f9199558da4c3afaa2bcb2c270d935fa1035d031799100ec3ca5b8",
+      "bytes": 727
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/synaptic-delivery.json",
+      "sha256": "970cffed54e3855120e0bf4acfd0b333c5817b2ccc96113d97c589fed0ba646a",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/419d38d211434d56cabd44c84353fb52b04484c959d88b6e6914766137106dfe/transport.json",
+      "sha256": "266f78794e9b9bbd15b16f7e433c4d717c05175b72055bd65aa9d896aa947b28",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "bb9156ffa3f90bf05420bf4255049751b1f7ec056e8e5c3e279417022aac7c3e",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/canonical-source-input.json",
+      "sha256": "f91acb60f336931b02cf0a2728349a00c05d3154286046153811393df99091ea",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/discovery-counters-2708162345909875.json",
+      "sha256": "a4203b5531a4fb385228a0a897b22971cc8b96696aafed8706db5583a6fa5b75",
+      "bytes": 674
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/dispatch.json",
+      "sha256": "bccc257e7a9a25ec75fc6e31f4e2fd1918cde0c5b0ed705f8ba7e837dd07498a",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/ingress.json",
+      "sha256": "b2702b899cc6764abf0d5066961a47a81446db3396d539110e979872e88b5058",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/lexical-reads-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "526e4e7ed6cca966951c56d50fb317aef8752053ff9f3c06a28f871581435138",
+      "bytes": 343
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/numerical-64460-2708147417057500.json",
+      "sha256": "0d8d5a9ac214c46aa08bf73005817a1e603dee77daff453a989e5a9b84ffee08",
+      "bytes": 1121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/numerical-66222-2708162530092125.json",
+      "sha256": "c382c440572acd4ac2a4f5084f04897e9760ae102991dc9660da097371e7b201",
+      "bytes": 1075
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/published.json",
+      "sha256": "573f3a74337d986c94902bde7b4ce5a863e0902e38db4c1f2ef4121b2beaf643",
+      "bytes": 336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/request.json",
+      "sha256": "ee09a3ef7bd246f2871762a9be299ed79f00c0e23ced90e96aa915a7e189e142",
+      "bytes": 279
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/search.json",
+      "sha256": "30e9ba49aaad6bf813e4b84ca9fa04269b27451bd865f9204b8a3083a0414e7c",
+      "bytes": 588
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/synaptic-delivery.json",
+      "sha256": "3131bdb6fa6f47a13486ad1ca39a49b3b8f3deb240af9cfdd69f681c8f49b2fc",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate-data/receipts/8cb8fd2ade91e1e9222adaadad56943f224e66ee0420a67dc13ea792e813b663/transport.json",
+      "sha256": "45b05658a6998b457c4d1f5cfca03bdfed6c33cd724d0a34bcec052a25be8c63",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate.guard.json",
+      "sha256": "e320b3ce3c0b6fc656d82e15c618b7d72ccc52701749d47299ae5574beba5770",
+      "bytes": 3482
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate.log",
+      "sha256": "27c6d929a44a787c4f253ea50d13c7b67f9dc45b357d090c0ae915ed4572e006",
+      "bytes": 133
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-candidate.settings.json",
+      "sha256": "886ef12eeef98fdfcafee01ce3bb1a3dc81fe538e20ae99273a9ad68acecb956",
+      "bytes": 1195
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-comparison.json",
+      "sha256": "a86574cf26fdce63e83767082f764e357523b6335e44a3553c8feb7862d6802b",
+      "bytes": 1147
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/config.toml",
+      "sha256": "009d4c766e3cf8afbe5e2597e906af2e36101f06009f783e036dc3d75bf8b46a",
+      "bytes": 294
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-continued/result.json",
+      "sha256": "bf5502d33edcdf7b95521ff7be12236a0e3c2a7c703d65342b465188d8bb8507",
+      "bytes": 4270
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-continued/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-continued/stdin.json",
+      "sha256": "cca5635cecbb71e70779632276aa3337e8c4e188df007b4997edd2a028f54620",
+      "bytes": 451
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-continued/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-first/body.txt",
+      "sha256": "5c7a5f72c607710135747e78c438e89e9eb86351fb1fbf8df43772277a8cb264",
+      "bytes": 17803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-first/result.json",
+      "sha256": "87773c712cc10b7fddf0a682b6f4fbe966d253c30ed60eb5538e78f2c8340fb2",
+      "bytes": 23444
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-first/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-first/stdin.json",
+      "sha256": "80e20b2ea32cd5baacc0c71136e4b0a545c593e6c6fb5425b24c4a49f67a5bca",
+      "bytes": 447
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-first/stdout.json",
+      "sha256": "439687478242a4d77d155c30d4607fd2eece1a6760fb2f13e5b3fa5757aa619d",
+      "bytes": 18137
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/pair-0-shutdown.json",
+      "sha256": "a3eee4ae78cf6c1edcc334032bee554c571932934830e9bcc787b501968a3fd4",
+      "bytes": 113
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/private-warm.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/private-warm.stdout.json",
+      "sha256": "77c2909ddfc8ab97dac6a5733ff99f63a70df103e2db4bb55159c580c916d534",
+      "bytes": 3800
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/repeat-warm.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/repeat-warm.stdout.json",
+      "sha256": "417917178f804662822344bfc09304989b65ea92d38d467e845a9615e5698c4e",
+      "bytes": 3800
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/results.json",
+      "sha256": "fe79943cab9e6ee985a45a2fb5ab72859cdcf4f03a2746991becd2d416d6622c",
+      "bytes": 28012
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-10000/summary.json",
+      "sha256": "01fc1fa69dc4882cacfd06cf2c548f6e0e804e8b54a94d286e07cc1c3254a5f8",
+      "bytes": 29114
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "ddb7c71157162512fb1a78a7e743d074476d4ea23fde808dd9294b9f094f08dc",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/canonical-source-input.json",
+      "sha256": "d92c9397709cd71d54cd9c985925987f2b4b6b2efa7c33e9ac567c5c6aaf6253",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/discovery-counters-2707992892260750.json",
+      "sha256": "b028521533875601980a3f54c8658dcd15fadc723c0cf18872f1055cfaf77e70",
+      "bytes": 674
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/dispatch.json",
+      "sha256": "1d1842a2e13f5f3ae9ff51ea0655aeb71e0570faa7ce709ea36ae8c9f5545016",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/ingress.json",
+      "sha256": "89b4c9cfa8386d3db80e5887535c442abc3347d7eb8e033e7bdfa6a7bfe51bd8",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/lexical-reads-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "10c19827690821ce005c1e82917b17ba494be22d7711d0467a9484e0f4c1df21",
+      "bytes": 343
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/numerical-61607-2707977899321833.json",
+      "sha256": "daff70344cc3c34e080f71b249f7e9a1d6fc3752defa5872bdfb58b7be2a06a6",
+      "bytes": 1121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/numerical-61763-2707993092194250.json",
+      "sha256": "8abb60bddbc672ca52a87019ecdcd5c2ebadd15c191e72afc617dbe62b43b97e",
+      "bytes": 1075
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/published.json",
+      "sha256": "933a2bf30771df39a475f2a948835433e5a05d1da197a5df30ca86f766396ed3",
+      "bytes": 336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/request.json",
+      "sha256": "2ef939f88f449ba82c39c6dd402525f1472029ba8238555ea2779fc95143fa8b",
+      "bytes": 279
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/search.json",
+      "sha256": "0c2c2b6d2ef21b7e7a32ee3fd7db83956c80c9cca095b620e4f438487bc5ad5a",
+      "bytes": 588
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/synaptic-delivery.json",
+      "sha256": "c808650293cd6c3d67161e7432152fbfdd63ddce637ac542c06d011a343c1d58",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/43c228e17f5bb4747d24c68c2d4295a1fb6ec0f340a9f0f0afa17d6d4b229f26/transport.json",
+      "sha256": "887ed6134750d81ad59c57c9ca211578a1770e01afe44a52540810572b9d5c2d",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/ack.json",
+      "sha256": "597fed95d4bdf7e928b62ef6ec831f86071dd40cb4de8dc89e0e2752cf0cd768",
+      "bytes": 178
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "4e4f4bc5a3fade1bdf7fc2912340958229fecb7e852d9612b4bae005a31a1a25",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/canonical-source-input.json",
+      "sha256": "f8231386f7432ff1024fc580f6c816cadafd27f4eb10044c45278d6293175eaa",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/discovery-counters-2707975435538375.json",
+      "sha256": "ba3a6227e28ceb49887755cf3d62482e687a7e5fe6ab236509b276f86ffe8202",
+      "bytes": 674
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/dispatch.json",
+      "sha256": "a57849c63d55e63e2b79706db8e97bde775409cf451a0f6d8d44f33a26f6139e",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/freshness-2707975975247416.json",
+      "sha256": "2deebbaba142610b11f8631cfc1e2ab5b7d763aef29b054caf4e71fed4e1d037",
+      "bytes": 1205
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/ingress.json",
+      "sha256": "04adeee062cd89139fea1b333fead9276f740f352f6e5645f078fd9864de0044",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/lexical-reads-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "1ad1d32e20ce3c2f81fbaef9e9c20f0009a1c5e2b52e145cf854631cbdbb4bcf",
+      "bytes": 343
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/numerical-61404-2707959314381708.json",
+      "sha256": "c7dd79da69722e0d39decdf9b6b811047e8d0368ad58f6d649dc6e58a5a5a11e",
+      "bytes": 1135
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/numerical-61578-2707975640327333.json",
+      "sha256": "67e448e3039d47f2d2af33c75a6146475ab4ac37bdd6a3f7ca907c8aae940789",
+      "bytes": 1075
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/published.json",
+      "sha256": "7c1e0a7b76582be3821a42aaaadcc5869cf51520bb5f528d0ebc9c8777579214",
+      "bytes": 18735
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/request.json",
+      "sha256": "2322bb9042a1355596c366e0d9153e9e212c8506bcd6f071151757c701f91a26",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/search.json",
+      "sha256": "88e93e542891b0a8fc936084bb15d3be0f68510929a978b20a06a1e58b1cfe52",
+      "bytes": 727
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/synaptic-delivery.json",
+      "sha256": "47e087638b03176d7b34b1a7cef14b8e36f6243fb1d2e2e2baa31bee97392bdf",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference-data/receipts/4731fb8fea5d2cabf69b8dbd1800ad800fd05c4f53cb08996e4d5f4abb710aac/transport.json",
+      "sha256": "8322d59690deebbcd084a81d9dd84aa6f0a7308148658692ca7046dc8b4f31b1",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference.guard.json",
+      "sha256": "091e787a6e6837e82332138d7b04bde1c6fdfea011382bd07e188b616dee874d",
+      "bytes": 3455
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference.log",
+      "sha256": "49dc143c22e20672c1b79ec6184fb43781c9472dbdb7d96c3ff7e0c2b4f0e0fa",
+      "bytes": 133
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/native-reference.settings.json",
+      "sha256": "f2f61a4d7d619ac58b60166dd32b437cd3c1f8232f8c17325df5cf36c0235b0d",
+      "bytes": 1192
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/preintegration-exclusion.json",
+      "sha256": "ff910b5e529544a1c028b47de2dac7e90b44d5b3a54c51e8b13a7f09500a8412",
+      "bytes": 500
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile-command.log",
+      "sha256": "17a00aceb409e6265504238c43383a5837d9a5ac690c88f95aae1ae5aab718f6",
+      "bytes": 259
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile-helper.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile-sample.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile-stacks.txt",
+      "sha256": "859505336035189948fdacb5b9384d4531eddea2539ac2b6f2815399e6aad899",
+      "bytes": 161994
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile-summary.json",
+      "sha256": "dab22ec96f24706a47b39a35b18ba4aad5bedb740acf65589f1f4bdeb67845c6",
+      "bytes": 450
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile.guard.json",
+      "sha256": "e3de3cf20f26b62c3f11d5700bc717046169895b4eb65a08964c5f252a870729",
+      "bytes": 1265
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile.pid",
+      "sha256": "d0c798dd2575040a8dcb2d6b2352ee137ede6241c5002b6f8975928f412da13b",
+      "bytes": 6
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile.settings.json",
+      "sha256": "93ca3e1b8619569b58febd96f618063bf6b8cda68eddba865ee94c75aa3fdd62",
+      "bytes": 444
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profile.sh",
+      "sha256": "d2269db415e36e7d3dc8e8e5e7635e74afc6b7c9d95c7760f4f5b310884e0d2b",
+      "bytes": 881
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profiled-retrieval/broad-retrieval-first/body.txt",
+      "sha256": "ef53b60345b59d4b9480e1282b9dd0fc148faf8e03408e7758c81084943a644b",
+      "bytes": 23121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profiled-retrieval/broad-retrieval-first/handoff.json",
+      "sha256": "f2ffccf900c13299934f6f876be199b5fbdcb3cb8491a593343aba256162c6b9",
+      "bytes": 70541
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profiled-retrieval/cases.json",
+      "sha256": "90a5438759725fd262462b53ffe2a4e7356648975c82fac2e5a7c58ee6fa18a9",
+      "bytes": 2161
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/profiled-retrieval/result.json",
+      "sha256": "41dc548f8fe77974b51ebe5143c0d292b89ca0dc18b88b8d1ccbe9b875b5244a",
+      "bytes": 2790
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof-2.guard.json",
+      "sha256": "8d86a664d3191d772e53307c7c249f83b615b92cadcc4c28c4b423ae4f9c8c00",
+      "bytes": 1320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof-2.log",
+      "sha256": "89cfc886936faaca57eefaff885eb3900f686f5bc6b64dcdc29f560b95deed19",
+      "bytes": 2621
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof-2.settings.json",
+      "sha256": "4c9eda9045e08ffa88d21ff09d6ad9c5dc4521c9a8efa7f1dfaa2cd6d7fad3bc",
+      "bytes": 665
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof-3.guard.json",
+      "sha256": "ca6e0e5758b1c0c09ca8af2cbf326db1c723e03c46930574422c0f5ec4d62ecf",
+      "bytes": 1320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof-3.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof-3.settings.json",
+      "sha256": "14a3efd3e4ade57f89cb40352f814d0fd33110229c21a2d7a1d5c641d6321378",
+      "bytes": 665
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof.guard.json",
+      "sha256": "79d591f78b3f99c4772ab78f36707e020c361e9b743928e4972723f785945d79",
+      "bytes": 1320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof.log",
+      "sha256": "ff829828cfc5be1b114f13b17c0f6f7cf7b8bc23cc895a4148e6c8fc6d7183a3",
+      "bytes": 2571
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/proof.settings.json",
+      "sha256": "9267c95dd99b760ed59e8d2f37a7e81bbefc6814e83333e21d96830c6a8cf910",
+      "bytes": 663
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/broad-retrieval-first/body.txt",
+      "sha256": "ef53b60345b59d4b9480e1282b9dd0fc148faf8e03408e7758c81084943a644b",
+      "bytes": 23121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/broad-retrieval-first/handoff.json",
+      "sha256": "f2ffccf900c13299934f6f876be199b5fbdcb3cb8491a593343aba256162c6b9",
+      "bytes": 70541
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/broad-union-first/body.txt",
+      "sha256": "8b21d19c557960a15942250dc3561faa7fe3793f46213b258ea5f23d324759d4",
+      "bytes": 21432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/broad-union-first/handoff.json",
+      "sha256": "5c3aea647b32ecca7126ac38c935b45ce75baa8567822a0a13504ff3b1a6f111",
+      "bytes": 66509
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/cases.json",
+      "sha256": "04a0c79b201db979a37461c0a0ed0be9295d98131b2252bbef34136dd5274103",
+      "bytes": 4938
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-candidate/result.json",
+      "sha256": "c2375487d1d0247916f2140ece34bc29ef31e70063a377e481c0b47b05074779",
+      "bytes": 5634
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-comparison.json",
+      "sha256": "85a11643677f1b7159f050c1f127cf7b95cd840c6761b605a645dc7cc9a81c23",
+      "bytes": 12226
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/broad-retrieval-first/body.txt",
+      "sha256": "ef53b60345b59d4b9480e1282b9dd0fc148faf8e03408e7758c81084943a644b",
+      "bytes": 23121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/broad-retrieval-first/handoff.json",
+      "sha256": "f2ffccf900c13299934f6f876be199b5fbdcb3cb8491a593343aba256162c6b9",
+      "bytes": 70541
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/broad-union-first/body.txt",
+      "sha256": "8b21d19c557960a15942250dc3561faa7fe3793f46213b258ea5f23d324759d4",
+      "bytes": 21432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/broad-union-first/handoff.json",
+      "sha256": "5c3aea647b32ecca7126ac38c935b45ce75baa8567822a0a13504ff3b1a6f111",
+      "bytes": 66509
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/cases.json",
+      "sha256": "688f894ac47187d254dd734a903b0591790ba15d7fb503967f2e3da52a653846",
+      "bytes": 4938
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-candidate/result.json",
+      "sha256": "6d0bd1ff2953082dce8485bf93e044a6667688108fdd1ae3a5b1cc658cc9bd73",
+      "bytes": 5634
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-final-comparison.json",
+      "sha256": "2a8dfa3f7b762d093f73e08040a85f295fb07a76d5ac796d70b7a4ffe53ecd01",
+      "bytes": 12226
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/broad-retrieval-first/body.txt",
+      "sha256": "ef53b60345b59d4b9480e1282b9dd0fc148faf8e03408e7758c81084943a644b",
+      "bytes": 23121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/broad-retrieval-first/handoff.json",
+      "sha256": "f2ffccf900c13299934f6f876be199b5fbdcb3cb8491a593343aba256162c6b9",
+      "bytes": 70541
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/broad-union-first/body.txt",
+      "sha256": "8b21d19c557960a15942250dc3561faa7fe3793f46213b258ea5f23d324759d4",
+      "bytes": 21432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/broad-union-first/handoff.json",
+      "sha256": "5c3aea647b32ecca7126ac38c935b45ce75baa8567822a0a13504ff3b1a6f111",
+      "bytes": 66509
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/cases.json",
+      "sha256": "8c1efc1bcb156ed9b4538b1d6b51ce81d1d39f9817ecdde9cb7d4d00eeb2ca57",
+      "bytes": 4938
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/real-reference/result.json",
+      "sha256": "093a21cfd701c95844584953d4202945039d4770df40bcdb2e9606f4612af1d2",
+      "bytes": 5634
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/rebuild-handoff.guard.json",
+      "sha256": "dbfeb8fa412076d7d7b07e6c6783d1a3960af8505ae5c13c317157377297d49a",
+      "bytes": 1267
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/rebuild-handoff.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/rebuild-handoff.settings.json",
+      "sha256": "9fd4171ad5d40939eefb1559ccec39f589fd6bd08d0220405bc64b902797607b",
+      "bytes": 469
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/rebuild-handoff.sh",
+      "sha256": "49dc06ed016e954584132b427443aa4013d09fd3484621d3123c7b9be5fede28",
+      "bytes": 1518
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/seal.rb",
+      "sha256": "7d2a1fd5af598ba84a41461a0861fd5c0f287c90baa2511b3fead3a105fc2289",
+      "bytes": 6412
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alias-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alias-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alias-retrieval-first/body.txt",
+      "sha256": "289d55f3240971edd030a2d9404422b1b24b1c26a8d5289ae773a76827e01c58",
+      "bytes": 7807
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alias-retrieval-first/handoff.json",
+      "sha256": "bee7c62442cd3c545e1ffb87ac8729b316f8ffdaebddb8aa6b7e504c4767b1e3",
+      "bytes": 19593
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alias-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alias-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alias-union-first/body.txt",
+      "sha256": "485b873d5b99adc4043c8c64cbd714af80e62fc35b0009cccff74622697cafda",
+      "bytes": 7059
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alias-union-first/handoff.json",
+      "sha256": "84193b9d73a3fb86edc7ea00b6e5151f9bfe7ea9294054d08f37f034d28d5932",
+      "bytes": 17435
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alpha-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alpha-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alpha-retrieval-first/body.txt",
+      "sha256": "782dd1c820d3e925cbf93b2484ef2992f46016fd35e25c92094c4c58ec416a2e",
+      "bytes": 8384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alpha-retrieval-first/handoff.json",
+      "sha256": "5ddd14db02a6463d80cd488dd7c8f6a1e36498ddb694ebbb0dd1fdaa840bc4d2",
+      "bytes": 20747
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alpha-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alpha-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alpha-union-first/body.txt",
+      "sha256": "38bf2fb4a4fb8db44b4d62a6b2b6581723f0e966aa770a4669fd6602a1793100",
+      "bytes": 7248
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/alpha-union-first/handoff.json",
+      "sha256": "6b8b998faf4ec7dd223d773c80fb699564cc6a51aa0805104163d64544745fde",
+      "bytes": 17811
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/broad-retrieval-first/body.txt",
+      "sha256": "2f233a6cc7f6ffa33604361fd28d46d3b2acc52754925ea12a257a43d8762253",
+      "bytes": 9362
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/broad-retrieval-first/handoff.json",
+      "sha256": "77345ba277140400a344f1a7a3a23d8c17a8692a30893ac900195065c332f822",
+      "bytes": 22703
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/broad-union-first/body.txt",
+      "sha256": "869c2a5a1e787c844a874de46fd6ec4a8a669a215d104375664e24b69c7c5565",
+      "bytes": 7824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/broad-union-first/handoff.json",
+      "sha256": "6003523dec1f42f41cbf8dd40f5224f3b6328fe5f94877da143cc6859c16ebad",
+      "bytes": 18963
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/cases.json",
+      "sha256": "4479735e2c0c580f5cec02f58c2e4e8531d7eb61da5359b8b11616c3aac8be2f",
+      "bytes": 18219
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/clause-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/clause-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/clause-retrieval-first/body.txt",
+      "sha256": "750011a006bfb19fab1ff0be23e1d0f369905a10a6330f8922af440b363003a7",
+      "bytes": 7280
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/clause-retrieval-first/handoff.json",
+      "sha256": "29b889ef66c1b5657f1bff3819acfb91e1714315095d9c9a038b7e6ffce399ab",
+      "bytes": 17909
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/clause-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/clause-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/clause-union-first/body.txt",
+      "sha256": "2a84dac1febf0bc22a13784479b7b69850fbf07b963237a90971b0843d753a29",
+      "bytes": 8108
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/clause-union-first/handoff.json",
+      "sha256": "a4b07b6f1f39a2deef08500bfc91ab43c41f01fa9ee910b9e2f96839959b371e",
+      "bytes": 19860
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/external-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/external-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/external-retrieval-first/body.txt",
+      "sha256": "9d55166bb036848e88e85ee4da02fa86beb3dbe2d765c4cfbaa6783584e7fc29",
+      "bytes": 7267
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/external-retrieval-first/handoff.json",
+      "sha256": "f9c41dae4decbc8a2454511f7b8b751d5c1bacad9cca4d5268ad84467c3af4e8",
+      "bytes": 17891
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/external-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/external-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/external-union-first/body.txt",
+      "sha256": "20f60e22f9164a5b43fc1714bb78aaaffc9d2df3971a5616206e62eb9010c31f",
+      "bytes": 8158
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/external-union-first/handoff.json",
+      "sha256": "c8c3b4bbe05bbdf15764a6ae09a8f0bf166d5d486f66bae255fad1d21c97156c",
+      "bytes": 20018
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-quote-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-quote-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-quote-retrieval-first/body.txt",
+      "sha256": "20780e302ce5efab6046b9a23246aa76e298fcf661e02dd255e91eaff82ee818",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-quote-retrieval-first/handoff.json",
+      "sha256": "4ca95868acda0919c0b9e273e937485ec2148d59d9521d54535101d189779599",
+      "bytes": 17933
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-quote-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-quote-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-quote-union-first/body.txt",
+      "sha256": "69a0139873bb23b3ce2808611194959eda1f7481b55b13a0f49c8b189308c540",
+      "bytes": 8743
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-quote-union-first/handoff.json",
+      "sha256": "ffba17c27c66674af22b7423c0a8b14c166c5a60086c2d166b43792c0217bdeb",
+      "bytes": 21780
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-retrieval-first/body.txt",
+      "sha256": "ae0caf8d813f2710fd8baeec7ba396ee2a43e131fe25ce4cc894f3a7da90b43b",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-retrieval-first/handoff.json",
+      "sha256": "b40eec93b74d2d97b7a74d9986f5d775edd8e25fbbdc9782aab74272a467f8c0",
+      "bytes": 17927
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-union-first/body.txt",
+      "sha256": "0362dafee62f07b501be02d8b861173d45d740815fd310143ce22cd1e48bfcd0",
+      "bytes": 8655
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/native-union-first/handoff.json",
+      "sha256": "0802a69247dc73f43f6e395f32cee624de49604492001b3aaec05eac47fa2505",
+      "bytes": 21568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/result.json",
+      "sha256": "9508d722f90ed5b22523edc0bfaf6b4a015a22222be54f6ae33070c9927eb273",
+      "bytes": 19360
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/staged-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/staged-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/staged-retrieval-first/body.txt",
+      "sha256": "a5a347289ba62b83bb53d908e7ccff423b7bfd6bd0845bf7f3446d95b5cfd300",
+      "bytes": 7290
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/staged-retrieval-first/handoff.json",
+      "sha256": "336d33a564685dce9e5de75f07d2532b9933256464813e6a18c7bf964b8f0cfa",
+      "bytes": 17931
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/staged-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/staged-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/staged-union-first/body.txt",
+      "sha256": "d9d48c444cfcb8f08c2efa60a540da87d78672efa671ebf3128d04bc8ebddad3",
+      "bytes": 7461
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-candidate/staged-union-first/handoff.json",
+      "sha256": "6c4e1046534b11f6312aa5125fbcb391c85514645bdcbe26d1e9d8d2d5d27a51",
+      "bytes": 18755
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-comparison.json",
+      "sha256": "80a7edd58ed72bbd7ee51db5415b955983fa29fda6dbc33e1d70b6a1f8edf031",
+      "bytes": 50082
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alias-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alias-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alias-retrieval-first/body.txt",
+      "sha256": "289d55f3240971edd030a2d9404422b1b24b1c26a8d5289ae773a76827e01c58",
+      "bytes": 7807
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alias-retrieval-first/handoff.json",
+      "sha256": "bee7c62442cd3c545e1ffb87ac8729b316f8ffdaebddb8aa6b7e504c4767b1e3",
+      "bytes": 19593
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alias-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alias-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alias-union-first/body.txt",
+      "sha256": "485b873d5b99adc4043c8c64cbd714af80e62fc35b0009cccff74622697cafda",
+      "bytes": 7059
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alias-union-first/handoff.json",
+      "sha256": "84193b9d73a3fb86edc7ea00b6e5151f9bfe7ea9294054d08f37f034d28d5932",
+      "bytes": 17435
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alpha-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alpha-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alpha-retrieval-first/body.txt",
+      "sha256": "782dd1c820d3e925cbf93b2484ef2992f46016fd35e25c92094c4c58ec416a2e",
+      "bytes": 8384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alpha-retrieval-first/handoff.json",
+      "sha256": "5ddd14db02a6463d80cd488dd7c8f6a1e36498ddb694ebbb0dd1fdaa840bc4d2",
+      "bytes": 20747
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alpha-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alpha-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alpha-union-first/body.txt",
+      "sha256": "38bf2fb4a4fb8db44b4d62a6b2b6581723f0e966aa770a4669fd6602a1793100",
+      "bytes": 7248
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/alpha-union-first/handoff.json",
+      "sha256": "6b8b998faf4ec7dd223d773c80fb699564cc6a51aa0805104163d64544745fde",
+      "bytes": 17811
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/broad-retrieval-first/body.txt",
+      "sha256": "2f233a6cc7f6ffa33604361fd28d46d3b2acc52754925ea12a257a43d8762253",
+      "bytes": 9362
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/broad-retrieval-first/handoff.json",
+      "sha256": "77345ba277140400a344f1a7a3a23d8c17a8692a30893ac900195065c332f822",
+      "bytes": 22703
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/broad-union-first/body.txt",
+      "sha256": "869c2a5a1e787c844a874de46fd6ec4a8a669a215d104375664e24b69c7c5565",
+      "bytes": 7824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/broad-union-first/handoff.json",
+      "sha256": "6003523dec1f42f41cbf8dd40f5224f3b6328fe5f94877da143cc6859c16ebad",
+      "bytes": 18963
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/cases.json",
+      "sha256": "2160e47abc75c58dab4fc90d447c4c9b82993fa73117a4b86bad0c106acfdb66",
+      "bytes": 18219
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/clause-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/clause-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/clause-retrieval-first/body.txt",
+      "sha256": "750011a006bfb19fab1ff0be23e1d0f369905a10a6330f8922af440b363003a7",
+      "bytes": 7280
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/clause-retrieval-first/handoff.json",
+      "sha256": "29b889ef66c1b5657f1bff3819acfb91e1714315095d9c9a038b7e6ffce399ab",
+      "bytes": 17909
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/clause-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/clause-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/clause-union-first/body.txt",
+      "sha256": "2a84dac1febf0bc22a13784479b7b69850fbf07b963237a90971b0843d753a29",
+      "bytes": 8108
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/clause-union-first/handoff.json",
+      "sha256": "a4b07b6f1f39a2deef08500bfc91ab43c41f01fa9ee910b9e2f96839959b371e",
+      "bytes": 19860
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/external-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/external-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/external-retrieval-first/body.txt",
+      "sha256": "9d55166bb036848e88e85ee4da02fa86beb3dbe2d765c4cfbaa6783584e7fc29",
+      "bytes": 7267
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/external-retrieval-first/handoff.json",
+      "sha256": "f9c41dae4decbc8a2454511f7b8b751d5c1bacad9cca4d5268ad84467c3af4e8",
+      "bytes": 17891
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/external-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/external-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/external-union-first/body.txt",
+      "sha256": "20f60e22f9164a5b43fc1714bb78aaaffc9d2df3971a5616206e62eb9010c31f",
+      "bytes": 8158
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/external-union-first/handoff.json",
+      "sha256": "c8c3b4bbe05bbdf15764a6ae09a8f0bf166d5d486f66bae255fad1d21c97156c",
+      "bytes": 20018
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-quote-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-quote-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-quote-retrieval-first/body.txt",
+      "sha256": "20780e302ce5efab6046b9a23246aa76e298fcf661e02dd255e91eaff82ee818",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-quote-retrieval-first/handoff.json",
+      "sha256": "4ca95868acda0919c0b9e273e937485ec2148d59d9521d54535101d189779599",
+      "bytes": 17933
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-quote-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-quote-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-quote-union-first/body.txt",
+      "sha256": "69a0139873bb23b3ce2808611194959eda1f7481b55b13a0f49c8b189308c540",
+      "bytes": 8743
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-quote-union-first/handoff.json",
+      "sha256": "ffba17c27c66674af22b7423c0a8b14c166c5a60086c2d166b43792c0217bdeb",
+      "bytes": 21780
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-retrieval-first/body.txt",
+      "sha256": "ae0caf8d813f2710fd8baeec7ba396ee2a43e131fe25ce4cc894f3a7da90b43b",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-retrieval-first/handoff.json",
+      "sha256": "b40eec93b74d2d97b7a74d9986f5d775edd8e25fbbdc9782aab74272a467f8c0",
+      "bytes": 17927
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-union-first/body.txt",
+      "sha256": "0362dafee62f07b501be02d8b861173d45d740815fd310143ce22cd1e48bfcd0",
+      "bytes": 8655
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/native-union-first/handoff.json",
+      "sha256": "0802a69247dc73f43f6e395f32cee624de49604492001b3aaec05eac47fa2505",
+      "bytes": 21568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/result.json",
+      "sha256": "5664a13fbab5638113c0039fd301626ae4f086274f5a171459705844f654fb5d",
+      "bytes": 19360
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/staged-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/staged-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/staged-retrieval-first/body.txt",
+      "sha256": "a5a347289ba62b83bb53d908e7ccff423b7bfd6bd0845bf7f3446d95b5cfd300",
+      "bytes": 7290
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/staged-retrieval-first/handoff.json",
+      "sha256": "336d33a564685dce9e5de75f07d2532b9933256464813e6a18c7bf964b8f0cfa",
+      "bytes": 17931
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/staged-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/staged-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/staged-union-first/body.txt",
+      "sha256": "d9d48c444cfcb8f08c2efa60a540da87d78672efa671ebf3128d04bc8ebddad3",
+      "bytes": 7461
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-candidate/staged-union-first/handoff.json",
+      "sha256": "6c4e1046534b11f6312aa5125fbcb391c85514645bdcbe26d1e9d8d2d5d27a51",
+      "bytes": 18755
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-final-comparison.json",
+      "sha256": "62f008bf64f058fd5d24938a9bed45734a49788560802e2b0498cfc39dbfdba9",
+      "bytes": 50082
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alias-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alias-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alias-retrieval-first/body.txt",
+      "sha256": "289d55f3240971edd030a2d9404422b1b24b1c26a8d5289ae773a76827e01c58",
+      "bytes": 7807
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alias-retrieval-first/handoff.json",
+      "sha256": "bee7c62442cd3c545e1ffb87ac8729b316f8ffdaebddb8aa6b7e504c4767b1e3",
+      "bytes": 19593
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alias-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alias-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alias-union-first/body.txt",
+      "sha256": "485b873d5b99adc4043c8c64cbd714af80e62fc35b0009cccff74622697cafda",
+      "bytes": 7059
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alias-union-first/handoff.json",
+      "sha256": "84193b9d73a3fb86edc7ea00b6e5151f9bfe7ea9294054d08f37f034d28d5932",
+      "bytes": 17435
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alpha-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alpha-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alpha-retrieval-first/body.txt",
+      "sha256": "782dd1c820d3e925cbf93b2484ef2992f46016fd35e25c92094c4c58ec416a2e",
+      "bytes": 8384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alpha-retrieval-first/handoff.json",
+      "sha256": "5ddd14db02a6463d80cd488dd7c8f6a1e36498ddb694ebbb0dd1fdaa840bc4d2",
+      "bytes": 20747
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alpha-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alpha-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alpha-union-first/body.txt",
+      "sha256": "38bf2fb4a4fb8db44b4d62a6b2b6581723f0e966aa770a4669fd6602a1793100",
+      "bytes": 7248
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/alpha-union-first/handoff.json",
+      "sha256": "6b8b998faf4ec7dd223d773c80fb699564cc6a51aa0805104163d64544745fde",
+      "bytes": 17811
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/broad-retrieval-first/body.txt",
+      "sha256": "2f233a6cc7f6ffa33604361fd28d46d3b2acc52754925ea12a257a43d8762253",
+      "bytes": 9362
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/broad-retrieval-first/handoff.json",
+      "sha256": "77345ba277140400a344f1a7a3a23d8c17a8692a30893ac900195065c332f822",
+      "bytes": 22703
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/broad-union-first/body.txt",
+      "sha256": "869c2a5a1e787c844a874de46fd6ec4a8a669a215d104375664e24b69c7c5565",
+      "bytes": 7824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/broad-union-first/handoff.json",
+      "sha256": "6003523dec1f42f41cbf8dd40f5224f3b6328fe5f94877da143cc6859c16ebad",
+      "bytes": 18963
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/cases.json",
+      "sha256": "26d971def97bbe40e9dbda3e544c6935c95ccc561cedb66f21b25c864b0b1f03",
+      "bytes": 18219
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/clause-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/clause-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/clause-retrieval-first/body.txt",
+      "sha256": "750011a006bfb19fab1ff0be23e1d0f369905a10a6330f8922af440b363003a7",
+      "bytes": 7280
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/clause-retrieval-first/handoff.json",
+      "sha256": "29b889ef66c1b5657f1bff3819acfb91e1714315095d9c9a038b7e6ffce399ab",
+      "bytes": 17909
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/clause-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/clause-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/clause-union-first/body.txt",
+      "sha256": "2a84dac1febf0bc22a13784479b7b69850fbf07b963237a90971b0843d753a29",
+      "bytes": 8108
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/clause-union-first/handoff.json",
+      "sha256": "a4b07b6f1f39a2deef08500bfc91ab43c41f01fa9ee910b9e2f96839959b371e",
+      "bytes": 19860
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/external-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/external-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/external-retrieval-first/body.txt",
+      "sha256": "9d55166bb036848e88e85ee4da02fa86beb3dbe2d765c4cfbaa6783584e7fc29",
+      "bytes": 7267
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/external-retrieval-first/handoff.json",
+      "sha256": "f9c41dae4decbc8a2454511f7b8b751d5c1bacad9cca4d5268ad84467c3af4e8",
+      "bytes": 17891
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/external-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/external-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/external-union-first/body.txt",
+      "sha256": "20f60e22f9164a5b43fc1714bb78aaaffc9d2df3971a5616206e62eb9010c31f",
+      "bytes": 8158
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/external-union-first/handoff.json",
+      "sha256": "c8c3b4bbe05bbdf15764a6ae09a8f0bf166d5d486f66bae255fad1d21c97156c",
+      "bytes": 20018
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-quote-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-quote-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-quote-retrieval-first/body.txt",
+      "sha256": "20780e302ce5efab6046b9a23246aa76e298fcf661e02dd255e91eaff82ee818",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-quote-retrieval-first/handoff.json",
+      "sha256": "4ca95868acda0919c0b9e273e937485ec2148d59d9521d54535101d189779599",
+      "bytes": 17933
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-quote-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-quote-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-quote-union-first/body.txt",
+      "sha256": "69a0139873bb23b3ce2808611194959eda1f7481b55b13a0f49c8b189308c540",
+      "bytes": 8743
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-quote-union-first/handoff.json",
+      "sha256": "ffba17c27c66674af22b7423c0a8b14c166c5a60086c2d166b43792c0217bdeb",
+      "bytes": 21780
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-retrieval-first/body.txt",
+      "sha256": "ae0caf8d813f2710fd8baeec7ba396ee2a43e131fe25ce4cc894f3a7da90b43b",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-retrieval-first/handoff.json",
+      "sha256": "b40eec93b74d2d97b7a74d9986f5d775edd8e25fbbdc9782aab74272a467f8c0",
+      "bytes": 17927
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-union-first/body.txt",
+      "sha256": "0362dafee62f07b501be02d8b861173d45d740815fd310143ce22cd1e48bfcd0",
+      "bytes": 8655
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/native-union-first/handoff.json",
+      "sha256": "0802a69247dc73f43f6e395f32cee624de49604492001b3aaec05eac47fa2505",
+      "bytes": 21568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/result.json",
+      "sha256": "8e9adbb73ad55b48e24556e6cf6a91a4effc64c580d25832566a0b4d65103c3d",
+      "bytes": 19360
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/staged-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/staged-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/staged-retrieval-first/body.txt",
+      "sha256": "a5a347289ba62b83bb53d908e7ccff423b7bfd6bd0845bf7f3446d95b5cfd300",
+      "bytes": 7290
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/staged-retrieval-first/handoff.json",
+      "sha256": "336d33a564685dce9e5de75f07d2532b9933256464813e6a18c7bf964b8f0cfa",
+      "bytes": 17931
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/staged-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/staged-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/staged-union-first/body.txt",
+      "sha256": "d9d48c444cfcb8f08c2efa60a540da87d78672efa671ebf3128d04bc8ebddad3",
+      "bytes": 7461
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/small-reference/staged-union-first/handoff.json",
+      "sha256": "6c4e1046534b11f6312aa5125fbcb391c85514645bdcbe26d1e9d8d2d5d27a51",
+      "bytes": 18755
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/source-files-after.json",
+      "sha256": "c9ade1f8a14eff64d8a01a8ab7da05d77c29c0f875926b9f1c42dba4aa22938c",
+      "bytes": 1688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/source-patch-check.json",
+      "sha256": "2eb29f8abf0f5ddecdd2beb4fbb6b03f5bcb94bb4a191beeb2ec15a89c8c6e0f",
+      "bytes": 2137
+    }
+  ],
+  "scope": {
+    "newImplementation": "Lean",
+    "newPython": false,
+    "existingMiniLMNumericalBoundaryUnchanged": true,
+    "answeringModelCalls": 0,
+    "newSeeds": 0,
+    "totalTokenGainMeasured": false,
+    "qualityMeasured": false,
+    "p99Qualified": false,
+    "scale50000Qualified": false,
+    "persistentCanonicalRecognitionIndexed": false,
+    "federatedSharedLifecycleQualified": false,
+    "productAdopted": false,
+    "readmeResultsChanged": false,
+    "releaseChanged": false
+  },
+  "next": [
+    "prove exact set-backed projectMatches preserving base duplicates, original first payload and append order",
+    "complete Work/canonical/affected-parent access independent of recommendation routing",
+    "numerical row acquisition, topology, scope/capture policy and full scale/native gates",
+    "matched inclusive-token/quality comparison before any product adoption"
+  ]
+}
