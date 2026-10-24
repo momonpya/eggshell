@@ -83,10 +83,11 @@ archive. Raw receipts, failure records, source and build inputs remain available
 
 The measured saving is avoided projection production/writes, not model tokens.
 The full `warm` caller still enumerates and validates the complete requested
-window population. Connect publication changes/explicit maintenance debt to
-delta keys instead of treating the 6 ms component sample as a fast full warm.
-Timeout-only `Warm.invalidate`, background resource competition and per-request
-owner/domain hydration also remain. No routed base/delta query, compaction,
+window population in this component. The subsequent isolated
+[source-delta preparation candidate](source-delta-warm.md) connects verified
+publication changes/private repair debt and removes timeout-only invalidation.
+Explicit full verification, background resource competition and per-request
+owner/domain hydration remain. No routed base/delta query, compaction,
 cross-DB projection sharing, complete federated recognition or latest 50k useful
 delivery is established by this component.
 

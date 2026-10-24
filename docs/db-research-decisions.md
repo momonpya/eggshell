@@ -158,9 +158,13 @@ The [paged projection component](paged-projection-store.md) and subsequent
 [incremental projection writer](incremental-projections.md) are implemented and
 checked in isolation. The latter reuses PageMap's immutable append extents/COW
 root, keeps old projections and publishes counts atomically with rows, without a
-new storage engine. It still verifies all keys supplied by its caller; source
-change coverage, routed query deltas, compaction and clustering are unfinished.
-The full-read regression remains and both candidates are unadopted. Conservative
+new storage engine. It still verifies all keys supplied by its caller.
+The [source-delta preparation candidate](source-delta-warm.md) now reuses the
+existing source journal to supply changed-owner keys in background numerical
+preparation. It also separates actual input-defect debt from search deadlines.
+Complete journal-producer refinement, all-view incremental maintenance, routed
+query deltas, compaction and clustering are unfinished.
+The full-read regression remains and these candidates are unadopted. Conservative
 skip proofs and the complete shared/federated hook lifecycle are not implemented.
 The last
 actual 50k native hook still fails useful delivery. No answering-model calls or

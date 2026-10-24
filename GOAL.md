@@ -1,5 +1,10 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-24 出版差分から背景の数値準備へ必要窓だけを渡すLean隔離候補45e866c6…を実装した。新しい日誌/保存エンジンは増やさず、元DBの親head鎖をサイズ確認まで当時のrootで検証する。追加/削除のlive ownerだけを点照会し、履歴欠損/別head/上限超過なら数値計画を全体検査へ戻す。元の日誌自体が壊れている場合、既存シナプス準備は拒否し、破損DBを準備済みとは扱わない。
+同じ10k DBの実revision2→3で、全19,969keyの計画2,631msに対し、変更1,777owner/3,554keyだけの計画710ms、全体計画の対応窓と一致。変更なしは7ms、差分matrix検証は2,697ms/生成0/追記0。全warm/実フック/トークンの改善とは区別する。
+期限切れだけのWarm.invalidate経路を除去し、実際の数値input欠損だけを型付きの私有修復eventへ記録する。修復中の新eventを消さないこと、実検索の欠損→背景修復、同populationの置換、別head/逆candidate不整合の拒否が成功。明示warm/doctorは全体検査を維持する。通常Lean証明はlineageとack除外の範囲であり、日誌producer完全性/IO全体の証明ではない。
+最終build/ContractAudit/native試験成功、最大合計RSSはbuild2,849,568KiB・実試験1,402,320KiB、guard終了0/残存0。新しい回答モデル/seed/トークン比較0、候補は未採用。全owner復元の除去・routing/query delta・完全認定索引・MCP私有capture・5万窓の有用配送・全Phases0–6は未完了。docs/source-delta-warm.md参照。
+
 2026-10-24 増分投影をLeanで隔離実装した。既存PageMapの追記blob/COW索引/単一headを使い、別の保存基盤やreadyの二重出版を増やさず、prepareMatrixの全投影再生成を置換した。実10kの19,969投影では不足1行だけを生成・36,581bytes追記し、全bit/被覆と旧prefix/旧参照が一致。再実行の生成/追記は0。合成4096行の差分1keyは6msだが、実DBへ全keyを渡す上流は確認に9.3秒残る。完全読出しもflat5.5秒対候補9.5秒の悪化を保持し、フック高速化と混同しない。
 更新中のreader・同root writer排他・別DB独立・64行追記後の子process強制停止/回復・32KiB行・破損1行だけの修復が成功。通常Leanのcodec/frontier/append時の旧chunk保存の証明とContractAudit成功、IO全体は未証明。最大合計RSSは実監査536,080KiB、guard終了0・残存0。数値providerも全返却順が参照一致し、新matrixから10,000窓を取得、再埋込0。原DB/rootとMiniLM数値境界は不変。
 候補5a4dbe36…は未採用。新しい回答モデル/seed/トークン比較0。次は出版差分/型付き保守負債から必要keyだけを渡す上流、timeout一律失効の除去、全owner復元を除く推薦/認定索引の接続。5万窓の有用配送と全Phases0–6は未完了。docs/incremental-projections.md参照。

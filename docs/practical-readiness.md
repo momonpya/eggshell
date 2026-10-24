@@ -12,12 +12,17 @@ recommendation changes. Original authority, scope, freshness, measured recall
 differences and matched token/quality/deadline adoption remain required.
 The [DB research decisions](db-research-decisions.md) fix the next candidate's
 base/delta publication boundary, clustered routing and deferred original reads.
-Those are unimplemented targets; the paged component alone does not satisfy them.
+Routed query compensation and deferred owner reads remain unimplemented targets;
+the paged component alone does not satisfy them.
 The [incremental projection component](incremental-projections.md) now retains
 old numerical rows and writes only new/damaged projections with one atomic head.
-Full-key warm validation still takes 9.3 seconds on the 10k source, and owner
-loading/routed query coverage remain unfinished. This is not native-hook or
-token qualification.
+Full-key validation still takes 9.3 seconds in that component's 10k audit.
+The subsequent [source-delta preparation candidate](source-delta-warm.md) now
+supplies only verified changed-owner keys during background numerical preparation;
+deadline-only registration preserves readiness, and actual unavailable inputs
+create private repair debt. Explicit warm still verifies the full source. Other
+derived refreshes, owner loading and routed query coverage remain unfinished.
+These are not native-hook or token qualification.
 
 ## Priority and current evidence
 

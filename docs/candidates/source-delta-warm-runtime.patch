@@ -1,0 +1,730 @@
+diff --git a/Eggshell/PreparationDebt.lean b/Eggshell/PreparationDebt.lean
+new file mode 100644
+--- /dev/null
++++ b/Eggshell/PreparationDebt.lean
+@@ -0,0 +1,75 @@
++module
++public import Eggshell.DB.Sidecar
++public import Eggshell.Receipt
++
++@[expose] public section
++namespace Eggshell.PreparationDebt
++open Lean DB
++
++/-- Actual cache observations only; a search deadline is not repair debt. -/
++inductive Reason where
++  | unavailableInput
++  deriving BEq, ToJson, FromJson
++
++structure Event where
++  database : String
++  model : String
++  encoder : String
++  reason : Reason
++  windows : Nat
++  deriving ToJson, FromJson
++
++def directory (owner : Sidecar.Owner) (model encoder : String) : IO System.FilePath := do
++  unless Receipt.validId owner.database do throw (IO.userError "invalid repair owner")
++  return (← Paths.dataRoot) / "repair" / owner.database /
++    Sha256.hex (toJson [model,encoder]).compress.toUTF8
++
++/-- Each immutable event has a unique id. Acknowledge only captured ids, so
++an event arriving during repair cannot be erased with the old requests.
++No query, tool arguments, output text or original path is persisted here. -/
++def record (owner : Sidecar.Owner) (model encoder : String) (reason : Reason)
++    (windows : Nat) : IO Unit := do
++  if windows == 0 then return
++  let path ← directory owner model encoder
++  FileSystem.privateDirectory path
++  let event : Event := ⟨owner.database,model,encoder,reason,windows⟩
++  FileSystem.immutableExistingBytes (path / (← Receipt.fresh)) (toJson event).compress.toUTF8
++
++def pending (owner : Sidecar.Owner) (model encoder : String) : IO Bool := do
++  let path ← directory owner model encoder
++  FileSystem.rejectSymlinkAncestors path
++  if (← FileSystem.symlinkMetadata? path).isNone then return false
++  return !(← path.readDir).isEmpty
++
++def capture (owner : Sidecar.Owner) (model encoder : String) : IO (List String) := do
++  let path ← directory owner model encoder
++  FileSystem.rejectSymlinkAncestors path
++  if (← FileSystem.symlinkMetadata? path).isNone then return []
++  let entries ← path.readDir
++  let mut ids := []
++  for entry in entries.toList.take 4096 do
++    unless Receipt.validId entry.fileName do throw (IO.userError "invalid repair event identity")
++    let bytes ← FileSystem.boundedBytes entry.path 2048
++    let some text := String.fromUTF8? bytes | throw (IO.userError "invalid repair event encoding")
++    let event : Event ← IO.ofExcept (Json.parse text >>= fromJson?)
++    unless event.database == owner.database && event.model == model && event.encoder == encoder &&
++        event.windows > 0 do throw (IO.userError "foreign or empty repair event")
++    ids := entry.fileName :: ids
++  return ids
++
++def acknowledge (owner : Sidecar.Owner) (model encoder : String) (ids : List String) : IO Unit := do
++  let path ← directory owner model encoder
++  for id in ids do
++    unless Receipt.validId id do throw (IO.userError "invalid acknowledged repair event")
++    let file := path / id
++    FileSystem.rejectSymlinkAncestors file
++    if (← FileSystem.symlinkMetadata? file).isSome then IO.FS.removeFile file
++  if !ids.isEmpty then FileSystem.syncPath path.toString true
++
++theorem different_event_not_acknowledged (captured : List String) (newEvent : String)
++    (fresh : newEvent ∉ captured) : captured.contains newEvent = false := by
++  apply Bool.eq_false_iff.mpr
++  intro present
++  exact fresh (List.contains_iff_mem.mp present)
++
++end Eggshell.PreparationDebt
+diff --git a/Eggshell/SourceDelta.lean b/Eggshell/SourceDelta.lean
+new file mode 100644
+--- /dev/null
++++ b/Eggshell/SourceDelta.lean
+@@ -0,0 +1,92 @@
++module
++public import Eggshell.GraphStore
++
++@[expose] public section
++namespace Eggshell.SourceDelta
++open DB Persistence.Store
++
++def linked (parent child : PageMap.Head) : Bool :=
++  parent.identity == child.identity && parent.authority == child.authority &&
++    parent.revision+1 == child.revision && parent.bytes < child.bytes
++
++inductive Lineage : PageMap.Head → PageMap.Head → Prop where
++  | same (head) : Lineage head head
++  | step {first parent child} : Lineage first parent → linked parent child = true → Lineage first child
++
++theorem Lineage.same_identity (chain : Lineage first last) : first.identity = last.identity := by
++  induction chain with
++  | same => rfl
++  | step _ link ih =>
++    simp only [linked, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at link
++    exact ih.trans link.1.1.1
++
++theorem Lineage.revision_le (chain : Lineage first last) : first.revision ≤ last.revision := by
++  induction chain with
++  | same => omega
++  | step _ link ih =>
++    simp only [linked, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at link
++    omega
++
++structure Delta (first last : PageMap.Head) where
++  owners : List Nat
++  records : Nat
++  bytes : Nat
++  lineage : Lineage first last
++
++/-- The pinned target authenticates every publication. Replay follows actual
++parent heads back to the exact saved head, not just matching revision numbers.
++Bounds apply before decoding each journal payload. Failure is a full-plan
++decision, never a claim that there were no source changes. -/
++private def walk (source : PageMap.Snapshot) (first current : PageMap.Head)
++    (remaining : Nat) (byteBudget : Nat) : IO (Option (Delta first current)) := do
++  if same : first = current then return some ⟨[],0,0,by rw [← same]; exact .same first⟩
++  match remaining with
++  | 0 => return none
++  | remaining+1 =>
++    if current.revision ≤ first.revision then return none
++    let historical := {source with head := current}
++    let bytes ← IO.ofExcept (payloadSize (← historical.get (key "change" current.revision)))
++    if bytes > byteBudget then return none
++    -- Read this record through its own child head. A later revision must not
++    -- replace an older journal entry and thereby rewrite the replayed past.
++    let publication ← readPublication historical current.revision
++    if publication.change.added.length + publication.change.removed.length > 8192 then return none
++    if valid : linked publication.parent current = true then
++      let some previous ← walk source first publication.parent remaining (byteBudget-bytes) | return none
++      let owners := hashDistinct (publication.change.added ++ publication.change.removed ++ previous.owners)
++      if owners.length > 4096 then return none
++      return some ⟨owners,previous.records+1,previous.bytes+bytes,.step previous.lineage valid⟩
++    else return none
++
++opaque read? (source : PageMap.Snapshot) (basis : PageMap.Head) : IO (Option (Delta basis source.head)) := do
++  try
++    unless basis.identity == source.head.identity && basis.authority == source.head.authority &&
++        basis.revision ≤ source.head.revision && basis.bytes ≤ source.head.bytes do return none
++    let result ← walk source basis source.head 4096 (8*1024*1024)
++    let nodes ← getNat source.get "nodes"
++    if result.any (fun delta => !delta.owners.all (· < nodes)) then return none
++    return result
++  catch _ => return none
++
++/-- Only nominated live candidates are read; no directory of all owners and
++no complete candidate-domain payload is opened by this path. -/
++def documents (source : PageMap.Snapshot) (owners : List Nat) : IO (List SearchDocument) := do
++  let mut rows := []
++  for owner in owners do
++    let candidate ← source.get (key "candidate" owner)
++    if candidate.isNone then continue
++    unless (← IO.ofExcept (payloadSize candidate)) == 1 do
++      throw (IO.userError "invalid changed search candidate")
++    let located ← locateOutcome source owner
++    let ordinal ← getNat source.get (key "member" owner)
++    unless (← IO.ofExcept (payloadSize (← source.get (key "searchCandidate" ordinal)))) == owner do
++      throw (IO.userError "changed search candidate disagrees with its reverse directory")
++    let encoded ← readChunks source source.get "searchWindows" owner
++    let (windows,tail) ← IO.ofExcept (windowCodec.decode encoded.toList)
++    unless tail.isEmpty && !windows.isEmpty &&
++        windows.all (fun value => PageMap.validIdentity value) do
++      throw (IO.userError "invalid changed window directory")
++    rows := ⟨owner,located.header.work,windows,some (Sidecar.Owner.ofSnapshot source)⟩ :: rows
++  return rows.reverse
++
++end Eggshell.SourceDelta
+diff --git a/Eggshell/Warm.lean b/Eggshell/Warm.lean
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -4,0 +5 @@ public import Eggshell.WorkPostings
++public import Eggshell.SourceDelta
+@@ -16,0 +18,3 @@ open Lean
++def planningContract := Sha256.hex ((include_str "Warm.lean").toUTF8 ++
++  (include_str "SourceDelta.lean").toUTF8)
++
+@@ -18,3 +22,2 @@ structure Checkpoint where
+-  database : String
+-  provider : String
+-  revision : Nat
++  source : DB.PageMap.Head
++  change : Nat
+@@ -22,0 +26 @@ structure Checkpoint where
++  model : String
+@@ -24,0 +29,3 @@ structure Checkpoint where
++  projectionContract : String
++  planningContract : String
++  projection : Option DB.PageMap.Head
+@@ -26,0 +34,5 @@ structure Checkpoint where
++def model (command : List String) : IO String := do
++  let _ :: "search-provider" :: args := command | throw (IO.userError "unsupported warm provider")
++  let parsed ← IO.ofExcept (SearchProvider.parse {cache := .mk ".", models := .mk "."} args)
++  return parsed.model
++
+@@ -28,2 +40,20 @@ def checkpoint (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) :
+-  pure ⟨snapshot.head.identity, Plugin.indexProviderKey target.command, snapshot.head.revision,
+-    ← Persistence.Store.getNat snapshot.get "roots", ← Persistence.Store.getNat snapshot.get "candidates", SearchProvider.encoderContract, Plugin.focusWindowContract⟩
++  let model ← model target.command
++  let sidecar ← DB.Sidecar.locate snapshot target.storage
++  let projection ← try VectorMatrix.open? sidecar.semantic model SearchProvider.encoderContract catch _ => pure none
++  return {
++    source := snapshot.head
++    change := ← Persistence.Store.getNat snapshot.get "sourceChange"
++    roots := ← Persistence.Store.getNat snapshot.get "roots"
++    candidates := ← Persistence.Store.getNat snapshot.get "candidates"
++    model := model
++    encoderContract := SearchProvider.encoderContract
++    focusContract := Plugin.focusWindowContract
++    projectionContract := VectorMatrix.implementation
++    planningContract := planningContract
++    projection := projection.map (·.snapshot.head) }
++
++def Checkpoint.sameContract (previous current : Checkpoint) : Bool :=
++  previous.source.identity == current.source.identity && previous.source.authority == current.source.authority &&
++    previous.model == current.model && previous.encoderContract == current.encoderContract &&
++    previous.focusContract == current.focusContract && previous.projectionContract == current.projectionContract &&
++    previous.planningContract == current.planningContract
+@@ -34,3 +64,10 @@ def Checkpoint.sameSources (previous current : Checkpoint) : Bool :=
+-  previous.database == current.database && previous.provider == current.provider &&
+-    previous.roots == current.roots && previous.candidates == current.candidates &&
+-    previous.encoderContract == current.encoderContract && previous.focusContract == current.focusContract
++  previous.sameContract current && previous.change == current.change &&
++    previous.roots == current.roots && previous.candidates == current.candidates
++
++def Checkpoint.retainsProjection (previous current : Checkpoint) : Bool :=
++  match previous.projection, current.projection with
++  | some before, some after =>
++    before.identity == after.identity && before.authority == after.authority &&
++      before.revision ≤ after.revision && before.bytes ≤ after.bytes
++  | none, _ => previous.candidates == 0
++  | _, _ => false
+@@ -39 +76,3 @@ def checkpointPath (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot
+-  pure ((← target.indexes snapshot) / "warm")
++  let key := Sha256.hex (toJson [← model target.command, SearchProvider.encoderContract,
++    Plugin.focusWindowContract, VectorMatrix.implementation, planningContract]).compress.toUTF8
++  return (← DB.Sidecar.locate snapshot target.storage).indexes / "warm" / key
+@@ -41,2 +79,0 @@ def checkpointPath (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot
+-/-- A rebuildable scheduling hint only. Every numerical search still validates
+-its actual cache records; a cold search invalidates this hint. -/
+@@ -50,0 +88,2 @@ def lexicalOnly (command : List String) : Bool :=
++/-- A rebuildable scheduling hint only. Actual numerical reads validate their
++inputs and record private repair events; search deadlines leave it intact. -/
+@@ -59 +98,6 @@ def required (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO
+-    unless previous.sameSources (← checkpoint target snapshot) do return true
++    let current ← checkpoint target snapshot
++    unless previous.sameSources current && previous.retainsProjection current do return true
++    if previous.source != current.source then
++      let some delta ← SourceDelta.read? snapshot previous.source | return true
++      unless delta.owners.isEmpty do return true
++    if ← PreparationDebt.pending target.owner current.model SearchProvider.encoderContract then return true
+@@ -63,6 +107 @@ def required (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO
+-    let _ :: "search-provider" :: args := target.command | return false
+-    let parsed ← IO.ofExcept (SearchProvider.parse {cache := .mk ".",models := .mk "."} args)
+-    let primary := DB.Sidecar.ofSnapshot snapshot
+-    let overlay ← DB.Sidecar.locate snapshot .user
+-    return !((← VectorMatrix.ready primary.semantic parsed.model SearchProvider.encoderContract) ||
+-      (← VectorMatrix.ready overlay.semantic parsed.model SearchProvider.encoderContract))
++    return current.projection.isNone
+@@ -71,6 +109,0 @@ def required (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO
+-def invalidate (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Unit := do
+-  let path ← checkpointPath target snapshot
+-  if ← path.pathExists then
+-    IO.FS.removeFile path
+-    FileSystem.syncPath (path.parent.getD snapshot.directory).toString true
+-
+@@ -79,2 +112,2 @@ def mark (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Uni
+-  let directory ← DB.Sidecar.childDirectory sidecar.indexes (Plugin.indexProviderKey target.command)
+-  let path := directory / "warm"
++  let _ ← DB.Sidecar.childDirectory sidecar.indexes "warm"
++  let path ← checkpointPath target snapshot
+@@ -81,0 +115,2 @@ def mark (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Uni
++  unless value.candidates == 0 || value.projection.isSome do
++    throw (IO.userError "cannot mark unprepared projections")
+@@ -83,3 +118,2 @@ def mark (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Uni
+-  if previous.any (fun old => old.sameSources value ||
+-      (old.database == value.database && old.provider == value.provider &&
+-        old.encoderContract == value.encoderContract && old.focusContract == value.focusContract && old.revision > value.revision)) then return
++  if previous.any (fun old => (old.source == value.source && old.sameSources value && old.retainsProjection value) ||
++      (old.sameContract value && old.source.revision > value.source.revision)) then return
+@@ -158,8 +192,2 @@ def inspectInput (options : SearchProvider.Options) (key : String) : IO InputSta
+-/-- Only prefixes intersecting Work need an original bounded read. The rest
+-reuse their original key and position. No whole Outcome is hydrated. -/
+-def planWindows (snapshot : DB.PageMap.Snapshot) : IO (List Window × List Window) := do
+-  let reader ← Persistence.Store.NodeReader.new snapshot
+-  let domain ← CandidateDomain.openShared? snapshot
+-  let documents ← match domain with
+-    | some ready => pure ready.documents
+-    | none => Persistence.Store.searchDocuments snapshot
++def planDocuments (snapshot : DB.PageMap.Snapshot) (documents : List Persistence.Store.SearchDocument)
++    (work : Persistence.Store.SearchDocument → IO Value) : IO (List Window × List Window) := do
+@@ -169,4 +197 @@ def planWindows (snapshot : DB.PageMap.Snapshot) : IO (List Window × List Windo
+-    let work ← match domain.bind (fun ready => ready.owners[document.owner]?) with
+-      | some row => pure row.origin.work
+-      | none => reader.read document.work
+-    let some text := Matcher.atomText? work | throw (IO.userError "warm Work is not indexed text")
++    let some text := Matcher.atomText? (← work document) | throw (IO.userError "warm Work is not indexed text")
+@@ -182,0 +208,51 @@ def planWindows (snapshot : DB.PageMap.Snapshot) : IO (List Window × List Windo
++/-- Only prefixes intersecting Work need an original bounded read. -/
++def planWindows (snapshot : DB.PageMap.Snapshot) (cached : Bool := true) : IO (List Window × List Window) := do
++  let reader ← Persistence.Store.NodeReader.new snapshot
++  let domain ← if cached then CandidateDomain.openShared? snapshot else pure none
++  let documents ← match domain with
++    | some ready => pure ready.documents
++    | none => Persistence.Store.searchDocuments snapshot
++  planDocuments snapshot documents fun document =>
++    match domain.bind (fun ready => ready.owners[document.owner]?) with
++    | some row => pure row.origin.work
++    | none => reader.read document.work
++
++structure Plan where
++  scope : String
++  reason : String
++  publications : Nat := 0
++  owners : Nat := 0
++  windows : List Window × List Window
++
++/-- Reuse requires the same source/storage/encoding contract and retained
++projection incarnation. A discontinuous journal always selects full planning. -/
++def plan (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
++    (verify : Bool) (repair : Bool) : IO Plan := do
++  let current ← checkpoint target snapshot
++  let previous ← try some <$> (Plugin.readBoundedJson (← checkpointPath target snapshot) 65536 : IO Checkpoint)
++    catch _ => pure none
++  if !verify && !repair then
++    if let some previous := previous then
++      if previous.sameContract current && previous.retainsProjection current then
++        if previous.source == current.source && previous.sameSources current then
++          return {scope := "publication-delta",reason := "source-unchanged",windows := ([],[])}
++        if let some delta ← SourceDelta.read? snapshot previous.source then
++          let some history ← DB.PageMap.HistoryReader.make? snapshot previous.source |
++            throw (IO.userError "verified warm history was not retained")
++          if previous.roots == (← Persistence.Store.getNat history.snapshot.get "roots") &&
++              previous.candidates == (← Persistence.Store.getNat history.snapshot.get "candidates") &&
++              previous.change == (← Persistence.Store.getNat history.snapshot.get "sourceChange") then
++            let documents ← SourceDelta.documents snapshot delta.owners
++            let reader ← Persistence.Store.NodeReader.new snapshot
++            let windows ← planDocuments snapshot documents fun document => reader.read document.work
++            return {
++              scope := "publication-delta"
++              reason := "verified-source-history"
++              publications := delta.records
++              owners := documents.length
++              windows := windows }
++  return {
++    scope := "full-source"
++    reason := if verify then "explicit-verification" else if repair then "observed-unavailable-input" else "no-usable-history"
++    windows := ← planWindows snapshot false }
++
+@@ -195,2 +271,2 @@ retired keys do not enter either live-view denominator. -/
+-def inspect (snapshot : DB.PageMap.Snapshot) (options : SearchProvider.Options) : IO Inspection := do
+-  let (discovery, focus) ← planWindows snapshot
++def inspectWindows (snapshot : DB.PageMap.Snapshot) (options : SearchProvider.Options)
++    (discovery focus : List Window) : IO Inspection := do
+@@ -216,0 +293,4 @@ def inspect (snapshot : DB.PageMap.Snapshot) (options : SearchProvider.Options)
++def inspect (snapshot : DB.PageMap.Snapshot) (options : SearchProvider.Options) : IO Inspection := do
++  let (discovery,focus) ← planWindows snapshot
++  inspectWindows snapshot options discovery focus
++
+@@ -225,0 +306,5 @@ structure Result where
++  scope : String := "full-source"
++  planReason : String := "full-source"
++  changedOwners : Nat := 0
++  publications : Nat := 0
++  projections : Option VectorMatrix.Result := none
+@@ -228,4 +313,6 @@ structure Result where
+-/-- Explicit CLI work, never called by a cold search hook. Hydrate only the
+-missing original windows, in bounded batches, and require exact ACKs. A failed
+-batch leaves its completed cache writes available to a subsequent invocation. -/
+-def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : IO Result := do
++/-- Background preparation uses verified publication deltas; explicit CLI work
++also verifies the complete source. Neither runs inside a cold search hook.
++Hydrate missing original windows in bounded batches and require exact ACKs. A
++failed batch leaves completed cache writes for a subsequent invocation. -/
++def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
++    (verify : Bool := false) : IO Result := do
+@@ -245 +332,9 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : I
+-    return ⟨empty, empty, 0, 0, (← IO.monoMsNow) - started, lexical, domain⟩
++    return {
++      before := empty
++      after := empty
++      requested := 0
++      batches := 0
++      elapsedMs := (← IO.monoMsNow)-started
++      lexical := lexical
++      domain := domain
++      scope := "lexical-only" }
+@@ -247,7 +341,0 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : I
+-  let before ← inspect snapshot settings
+-  if before.needed.isEmpty then
+-    let (discovery,focus) ← planWindows snapshot
+-    let _ ← DB.Sidecar.withIndexClaim target.owner (fun _ =>
+-      SearchProvider.prepareMatrix settings ((discovery ++ focus).map (·.key))) target.storage
+-    mark target snapshot
+-    return ⟨before.coverage, before.coverage, 0, 0, (← IO.monoMsNow) - started, lexical, domain⟩
+@@ -255,3 +343,5 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : I
+-    -- Another indexer may have filled the difference before this claim.
+-    let current ← inspect snapshot settings
+-    let batches ← if current.needed.isEmpty then pure 0 else
++    let debt ← PreparationDebt.capture target.owner settings.model SearchProvider.encoderContract
++    let selected ← plan snapshot target verify (!debt.isEmpty)
++    let (discovery,focus) := selected.windows
++    let before ← inspectWindows snapshot settings discovery focus
++    let batches ← if before.needed.isEmpty then pure 0 else
+@@ -259 +349 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : I
+-        let mut remaining := current.needed
++        let mut remaining := before.needed
+@@ -273 +363 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : I
+-    let after ← inspect snapshot settings
++    let after ← if before.needed.isEmpty then pure before else inspectWindows snapshot settings discovery focus
+@@ -275,2 +365 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : I
+-    let (discovery,focus) ← planWindows snapshot
+-    let _ ← SearchProvider.prepareMatrix settings ((discovery ++ focus).map (·.key))
++    let projections ← SearchProvider.prepareMatrix settings ((discovery ++ focus).map (·.key))
+@@ -278 +367,14 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget) : I
+-    pure ⟨before.coverage, after.coverage, current.needed.length, batches, (← IO.monoMsNow) - started, lexical, domain⟩) target.storage
++    PreparationDebt.acknowledge target.owner settings.model SearchProvider.encoderContract debt
++    return {
++      before := before.coverage
++      after := after.coverage
++      requested := before.needed.length
++      batches := batches
++      elapsedMs := (← IO.monoMsNow)-started
++      lexical := lexical
++      domain := domain
++      scope := selected.scope
++      planReason := selected.reason
++      changedOwners := selected.owners
++      publications := selected.publications
++      projections := some projections }) target.storage
+@@ -282 +384 @@ def run (snapshot : DB.PageMap.Snapshot) (command : List String) (writable : Boo
+-  runTarget snapshot target
++  runTarget snapshot target true
+diff --git a/Eggshell/SearchProvider.lean b/Eggshell/SearchProvider.lean
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -1,0 +2 @@ module
++public import Eggshell.PreparationDebt
+@@ -535,0 +537,2 @@ def repairBatch (options : Options) (child : Encoder) (document offset : Nat)
++    if let some owner := options.owner then
++      PreparationDebt.record owner options.model encoderContract .unavailableInput missing.length
+diff --git a/Eggshell/PluginHooks.lean b/Eggshell/PluginHooks.lean
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -429 +429,2 @@ def incompleteSemanticStatus (reply : Option Json) (now deadline : Nat) : Semant
+-The installation registry and invalidated DB checkpoint persist the warm debt. -/
++The registry retains unavailable indexes. Actual numerical cache observations
++persist typed private repair debt; a deadline never invalidates a checkpoint. -/
+@@ -438,2 +439,3 @@ def requestBackgroundWarm (pending : PendingTurn) (deadline : Nat) : IO Nat := d
+-        let target ← registerIndexTarget snapshot command (pending.write == some path)
+-        Warm.invalidate target snapshot
++        let _ ← registerIndexTarget snapshot command (pending.write == some path)
++        -- Retain a background re-evaluation request. Do not inspect complete
++        -- prepared domains or invalidate a checkpoint on the foreground path.
+diff --git a/tools/research/SourceDeltaWarmSmoke.lean b/tools/research/SourceDeltaWarmSmoke.lean
+new file mode 100644
+--- /dev/null
++++ b/tools/research/SourceDeltaWarmSmoke.lean
+@@ -0,0 +1,175 @@
++import Eggshell.Warm
++import Eggshell.PluginHooks
++
++open Lean Eggshell Eggshell.Persistence.Store
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def failed (action : IO α) : IO Bool := do
++  try let _ ← action; return false catch _ => return true
++
++private def outcome (name : String) : IO Value :=
++  IO.ofExcept (Plugin.relation? .outcome [
++    .semantic (.text ("kernel timer question "++name)),
++    .semantic (.text ("original timer observation "++name++" "++String.ofList (List.replicate 620 'x')))])
++
++private def publish (source : DB.PageMap.Snapshot) (values : List Value)
++    (removed : List Nat := []) : IO DB.PageMap.Snapshot := do
++  let _ ← DB.PageMap.withWriter source fun writer => do
++    for id in removed do removeRoot writer id
++    let intern : Intern := ⟨writer,← IO.mkRef {}⟩
++    let ids ← values.mapM intern.root
++    writeChange writer ⟨ids,removed,false⟩
++  DB.PageMap.pin source.directory
++
++private def signatures (windows : List Warm.Window) :=
++  windows.map fun row => (row.document.owner,row.key,row.start)
++
++private def historicalRewrite (root : System.FilePath) : IO Unit := do
++  let initial ← DB.PageMap.create (root / "history.egg") "history-authority"
++  let first ← publish initial [← outcome "history-first"]
++  let second ← publish first [← outcome "history-second"]
++  let _ ← DB.PageMap.withWriter second fun writer => do
++    -- Deliberately damage an old size descriptor in a later root. Both the
++    -- budget check and replay must use that record's original child root.
++    putNat writer (key "change" first.head.revision) (8*1024*1024+1)
++    putChunks writer "change" (second.head.revision+1)
++      (publicationCodec.encode ⟨second.head,⟨[],[],false⟩⟩).toByteArray
++  let latest ← DB.PageMap.pin initial.directory
++  let some delta ← SourceDelta.read? latest initial.head |
++    throw (IO.userError "later journal rewrite changed historical replay")
++  check (delta.records == 3 && delta.owners.length == 2)
++    "historical journal replay lost source changes"
++
++private def scenario (root : System.FilePath) : IO Unit := do
++  let initial ← DB.PageMap.create (root / "source.egg") (Persistence.valueToJson (.text "authority")).compress
++  let values ← (List.range 8).mapM fun i => outcome (toString i)
++  let source ← publish initial values
++  let binary := (← IO.appPath).withFileName "eggshell"
++  let command := [binary.toString,"search-provider"]
++  let target ← Plugin.registerIndexTarget source command true
++  let originalHead := source.head
++  let first ← Warm.runTarget source target true
++  check (first.scope == "full-source" && first.requested > 0 && first.after.missing == 0 &&
++    first.after.invalid == 0 && (← DB.PageMap.pin source.directory).head == originalHead)
++    "full preparation failed or changed original facts"
++  let repeated ← Warm.runTarget source target
++  check (repeated.scope == "publication-delta" && repeated.before.windows == 0 &&
++    repeated.requested == 0 && repeated.projections.any (·.requested == 0)) "unchanged source was rescanned"
++  let path ← Warm.checkpointPath target source
++  let checkpointBytes ← IO.FS.readBinFile path
++  let pending : Plugin.PendingTurn := {
++    sessionId := "deadline-observation"
++    turnId := "deadline-observation"
++    cwd := root.toString
++    prompt := "kernel timer"
++    profile := "work"
++    handoffChars := 120000
++    projection := .automatic
++    read := [source.directory.toString]
++    write := some source.directory.toString
++    semanticMatcher := some command }
++  let registrations ← Plugin.requestBackgroundWarm pending ((← IO.monoMsNow)+5000)
++  check (registrations == 1 && (← IO.FS.readBinFile path) == checkpointBytes && !(← Warm.required target source))
++    "deadline registration invalidated or forced preparation"
++  let alternate := {target with command := "/unavailable-provider-path" :: command.tail}
++  check ((← Warm.checkpointPath alternate source) == path && !(← Warm.required alternate source))
++    "executable placement created a different semantic checkpoint"
++  let _ ← DB.PageMap.withWriter source fun writer => do
++    writer.put "memo:delta-warm" (some "derived".toUTF8)
++    writeChange writer ⟨[],[],false⟩
++  let memo ← DB.PageMap.pin source.directory
++  let memoWarm ← Warm.runTarget memo target
++  check (memoWarm.scope == "publication-delta" && memoWarm.publications == 1 &&
++    memoWarm.changedOwners == 0 && memoWarm.before.windows == 0) "neutral journal required old windows"
++  let addedValue ← outcome "new-owner"
++  let appended ← publish memo [addedValue]
++  let some addedId ← findNode? appended addedValue | throw (IO.userError "new owner missing")
++  appended.trace.set (some {})
++  let selected ← Warm.plan appended target false false
++  let traced ← appended.trace.get
++  check (selected.scope == "publication-delta" && selected.owners == 1 &&
++    traced.any (fun trace => trace.complete && trace.operations.all (fun operation => match operation with
++      | .range .. => false
++      | _ => true))) "delta plan scanned complete source directories"
++  appended.trace.set none
++  let (allDiscovery,allFocus) ← Warm.planWindows appended false
++  check (signatures selected.windows.1 == signatures (allDiscovery.filter (·.document.owner == addedId)) &&
++    signatures selected.windows.2 == signatures (allFocus.filter (·.document.owner == addedId)))
++    "changed owner windows differ from full source planning"
++  let updated ← Warm.runTarget appended target
++  check (updated.scope == "publication-delta" && updated.changedOwners == 1 &&
++    updated.before.windows == (hashDistinct ((selected.windows.1++selected.windows.2).map (·.key))).length &&
++    updated.projections.any (fun result => result.requested == updated.before.windows))
++    "warm did not pass only changed window keys"
++  let replacement ← outcome "replacement"
++  let replaced ← publish appended [replacement] [addedId]
++  let replacementWarm ← Warm.runTarget replaced target
++  check (replacementWarm.scope == "publication-delta" && replacementWarm.changedOwners == 1)
++    "remove/add replacement reused the old counter-only checkpoint"
++  let gap := replaced
++  let saved : Warm.Checkpoint ← IO.ofExcept (Json.parse (← IO.FS.readFile path) >>= fromJson?)
++  let invalid := {saved with source := {saved.source with bytes := saved.source.bytes+1}}
++  FileSystem.atomicExistingBytes path (toJson invalid).compress.toUTF8
++  check ((← Warm.plan gap target false false).scope == "full-source" && (← Warm.required target gap))
++    "a different head with the same counters bypassed history validation"
++  FileSystem.atomicExistingBytes path (toJson saved).compress.toUTF8
++  let settings ← Warm.options gap command
++  PreparationDebt.record target.owner settings.model SearchProvider.encoderContract .unavailableInput 1
++  let captured ← PreparationDebt.capture target.owner settings.model SearchProvider.encoderContract
++  PreparationDebt.record target.owner settings.model SearchProvider.encoderContract .unavailableInput 1
++  PreparationDebt.acknowledge target.owner settings.model SearchProvider.encoderContract captured
++  check (← PreparationDebt.pending target.owner settings.model SearchProvider.encoderContract)
++    "repair acknowledgement erased a newer event"
++  let debtWarm ← Warm.runTarget gap target
++  check (debtWarm.scope == "full-source" && debtWarm.planReason == "observed-unavailable-input" &&
++    !(← PreparationDebt.pending target.owner settings.model SearchProvider.encoderContract))
++    "observed repair debt did not force and finish verification"
++  let docs ← searchDocuments gap
++  let some doc := docs.head? | throw (IO.userError "missing source document")
++  let some window := doc.windows.head? | throw (IO.userError "missing source window")
++  IO.FS.removeDirAll (VectorMatrix.folder settings.cache settings.model SearchProvider.encoderContract)
++  IO.FS.writeFile (settings.cache / "vectors" /
++    (SearchProvider.windowCacheKey settings.model window ++ ".json")) "damaged fixture input"
++  let result ← SemanticMatcher.nominateIndexed command "kernel timer" docs [] []
++    (fun document index => readSearchWindow gap document index.val)
++  check (result.isNone && (← PreparationDebt.pending target.owner settings.model SearchProvider.encoderContract))
++    "actual unavailable-input search did not retain repair debt"
++  let repaired ← Warm.runTarget gap target
++  check (repaired.scope == "full-source" && repaired.requested == 1 &&
++    !(← PreparationDebt.pending target.owner settings.model SearchProvider.encoderContract) &&
++    !(← Warm.required target gap)) "actual source hint repair did not complete"
++  let _ ← DB.PageMap.withWriter gap fun writer => writer.put "memo:no-journal" (some "derived".toUTF8)
++  let discontinuousSource ← DB.PageMap.pin source.directory
++  let discontinuous ← Warm.plan discontinuousSource target false false
++  check (discontinuous.scope == "full-source") "journal gap was treated as no source work"
++  check (← failed (Warm.runTarget discontinuousSource target))
++    "full preparation silently accepted a broken original journal"
++  let ordinal ← getNat discontinuousSource.get (key "member" doc.owner)
++  let _ ← DB.PageMap.withWriter discontinuousSource fun writer =>
++    writer.put (key "searchCandidate" ordinal) none
++  let inconsistent ← DB.PageMap.pin source.directory
++  check (← failed (SourceDelta.documents inconsistent [doc.owner]))
++    "delta planning accepted an inconsistent reverse candidate directory"
++  historicalRewrite root
++  let report := Json.mkObj [
++    ("first",toJson first),("unchanged",toJson repeated),("memo",toJson memoWarm),
++    ("addition",toJson updated),("replacement",toJson replacementWarm),
++    ("journalGapPlan",toJson discontinuous.scope),("brokenSourceJournalRejected",toJson true),
++    ("inconsistentCandidateRejected",toJson true),
++    ("historicalJournalRewriteIgnored",toJson true),
++    ("debtVerification",toJson debtWarm),("actualUnavailableRepair",toJson repaired),
++    ("deadlinePreservesCheckpoint",toJson true),("providerPathIndependent",toJson true),
++    ("deltaTraceNoCatalogueScan",toJson true),("changedWindowsEqualFullPlan",toJson true),
++    ("newDebtSurvivesAcknowledgement",toJson true),("differentHeadRejected",toJson true),
++    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]
++  IO.FS.writeFile (root / "result.json") report.pretty
++  IO.println report.compress
++
++def main (args : List String) : IO Unit := do
++  let [output] := args | throw (IO.userError "SourceDeltaWarmSmoke NEW-OUTPUT")
++  let root := System.FilePath.mk output
++  check (!(← root.pathExists)) "preserve previous warm tests"
++  FileSystem.privateDirectory root
++  scenario root
+diff --git a/tools/research/SourceDeltaWarmAudit.lean b/tools/research/SourceDeltaWarmAudit.lean
+new file mode 100644
+--- /dev/null
++++ b/tools/research/SourceDeltaWarmAudit.lean
+@@ -0,0 +1,82 @@
++import Eggshell.Warm
++
++open Lean Eggshell Eggshell.Persistence.Store
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def signature (rows : List Warm.Window) : List String :=
++  (rows.map fun row => (toJson (row.document.owner,row.index,row.key,row.start)).compress).mergeSort (· ≤ ·)
++
++def main (args : List String) : IO Unit := do
++  let [database,output] := args | throw (IO.userError "SourceDeltaWarmAudit SOURCE NEW-OUTPUT")
++  let output := System.FilePath.mk output
++  check (!(← output.pathExists)) "preserve previous source-delta audit"
++  FileSystem.privateDirectory output
++  let source ← DB.PageMap.pin (.mk database)
++  let original := source.head
++  let mut current := source.head
++  let mut basis := source.head
++  let mut found := false
++  for _ in [:min 64 source.head.revision] do
++    let publication ← readPublication {source with head := current} current.revision
++    let changed ← SourceDelta.documents source publication.change.added
++    if !changed.isEmpty then
++      basis := publication.parent
++      found := true
++      break
++    current := publication.parent
++  check found "no bounded real publication with live added owners"
++  let some history ← DB.PageMap.HistoryReader.make? source basis |
++    throw (IO.userError "real source history not retained")
++  let command := [(← IO.appPath).withFileName "eggshell" |>.toString,"search-provider"]
++  let target : Plugin.IndexTarget := {
++    owner := DB.Sidecar.Owner.ofSnapshot source
++    command := command
++    storage := .user }
++  let settings ← Warm.options source command .user
++  let (baseDiscovery,baseFocus) ← Warm.planWindows history.snapshot false
++  let validatedBase ← SearchProvider.prepareMatrix settings ((baseDiscovery++baseFocus).map (·.key))
++  check (validatedBase.produced == 0) "prepared superset does not cover the historical source"
++  Warm.mark target history.snapshot
++  let started ← IO.monoMsNow
++  let (fullDiscovery,fullFocus) ← Warm.planWindows source false
++  let fullPlanMs := (← IO.monoMsNow)-started
++  source.cache.set {}
++  source.reads.set 0
++  source.readBytes.set 0
++  let started ← IO.monoMsNow
++  let selected ← Warm.plan source target false false
++  let deltaPlanMs := (← IO.monoMsNow)-started
++  let deltaPageReads ← source.reads.get
++  let deltaReadBytes ← source.readBytes.get
++  check (selected.scope == "publication-delta" && selected.owners > 0) "real history selected full planning"
++  let owners := hashDistinct (selected.windows.1.map (·.document.owner))
++  check (signature selected.windows.1 == signature (fullDiscovery.filter (fun row => owners.contains row.document.owner)) &&
++    signature selected.windows.2 == signature (fullFocus.filter (fun row => owners.contains row.document.owner)))
++    "real delta windows differ from full planning for the changed owners"
++  let inspected ← Warm.inspectWindows source settings selected.windows.1 selected.windows.2
++  check (inspected.needed.isEmpty) "real selected inputs are not already prepared"
++  let projected ← SearchProvider.prepareMatrix settings ((selected.windows.1++selected.windows.2).map (·.key))
++  check (projected.produced == 0 && projected.requested == inspected.coverage.windows &&
++    projected.requested < (hashDistinct ((fullDiscovery++fullFocus).map (·.key))).length)
++    "numerical preparation still received the entire real corpus"
++  Warm.mark target source
++  let started ← IO.monoMsNow
++  let repeated ← Warm.plan source target false false
++  let repeatedMs := (← IO.monoMsNow)-started
++  check (repeated.windows.1.isEmpty && repeated.windows.2.isEmpty &&
++    (← DB.PageMap.pin source.directory).head == original) "unchanged planning read windows or changed source"
++  let report := Json.mkObj [
++    ("source",toJson source.head),("basis",toJson basis),
++    ("validatedPreparedBase",toJson validatedBase),
++    ("fullDistinctKeys",toJson (hashDistinct ((fullDiscovery++fullFocus).map (·.key))).length),
++    ("fullPlanMs",toJson fullPlanMs),("deltaPlanMs",toJson deltaPlanMs),
++    ("changedOwners",toJson selected.owners),("publications",toJson selected.publications),
++    ("deltaPhysicalPageReads",toJson deltaPageReads),("deltaPhysicalReadBytes",toJson deltaReadBytes),
++    ("deltaInputCoverage",toJson inspected.coverage),("deltaProjections",toJson projected),
++    ("unchangedPlanMs",toJson repeatedMs),("changedWindowsEqualFullPlan",toJson true),
++    ("originalSourceUnchanged",toJson true),("fullWarmMeasured",toJson false),
++    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]
++  IO.FS.writeFile (output / "result.json") report.pretty
++  IO.println report.compress

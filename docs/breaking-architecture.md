@@ -16,14 +16,18 @@ serve that model; they are not additional stores or services to install.
 The [recent DB research decisions](db-research-decisions.md) map verified
 Databricks, Snowflake, Redshift, DynamoDB and arXiv mechanisms to the execution
 plan. Immutable stored extents and explicit source-change coverage precede
-clustered recommendation and deferred original loading. The full source-change
-and routed-query mechanisms remain design targets.
+clustered recommendation and deferred original loading. A bounded source-change
+consumer now drives numerical background preparation in isolation; routed-query
+compensation and unified maintenance of all views remain design targets.
 
 The [incremental projection component](incremental-projections.md) now implements
 the first storage step using immutable appended extents and existing COW roots,
-without another segment-catalog engine. It removes full projection reproduction;
-the full-key warm caller, routed query compensation, compaction and owner-loading
-replacement are still unfinished. Its complete-read regression remains recorded.
+without another segment-catalog engine. It removes full projection reproduction.
+The [source-delta preparation candidate](source-delta-warm.md) now passes only
+verified changed-owner windows to numerical preparation and keeps deadline-only
+events from invalidating readiness. Explicit full verification, routed query
+compensation, compaction and owner-loading replacement remain separate costs.
+The complete-read regression remains recorded.
 
 ## Judgment
 
@@ -85,20 +89,20 @@ gate, not a deduction from this cost model or a novelty claim about these ideas.
   document and Work tables. Accepted owners are then hydrated by discovery.
 - The flat `VectorMatrix.open?` decodes the complete directory and builds a
   second index; preparation retains every projected string and contiguous data.
-- `PluginHooks.deliverForWork` invokes `requestBackgroundWarm` for any incomplete
-  semantic result. That function unconditionally calls `Warm.invalidate` after
-  registration, even without an observed cache defect. Timeout is not evidence
-  that embeddings or source indexes are missing. This can schedule unnecessary
-  maintenance; its exact share of the measured delay is not yet isolated.
+- The reference `requestBackgroundWarm` unconditionally invalidates numerical
+  readiness after an incomplete semantic result. The isolated source-delta
+  candidate removes that call and entry point, records actual unavailable-input
+  repair debt privately, and leaves background re-evaluation to the worker.
+  Its share of total native-hook delay is not yet isolated.
 - The ready-frame path can extend semantic processing to the upstream deadline.
   Remaining lexical, packing and publication work does not then have a guaranteed
   usable reserve. A transport that emits a notice in time does not solve delivery.
 - The scale harness holds its prepared Snapshot/cache while measuring hooks.
   Its own RSS reaches 1,265,360 KiB in the failed run, concurrently with index,
   search and provider processes. Preparation should finish in another process.
-- Provider command paths participate in index-target/checkpoint identity. Storage
-  contract identity and the executable currently serving it should be distinct.
-  Obsolete registered executables are not separate semantic caches to maintain.
+- Provider command paths still participate in target registration. The isolated
+  source-delta checkpoint now uses model/actual contracts rather than executable
+  placement. Obsolete target-registry cleanup remains unfinished.
 
 These are observed structures and control flow. They do not prove a single
 exclusive cause of the complete timeout or memory failure.

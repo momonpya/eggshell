@@ -1,0 +1,2434 @@
+{
+  "status": "isolated unadopted source-delta numerical preparation and private observed-input debt",
+  "parentReview": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/incremental-projections-review.json",
+    "sha256": "19028f54bfe0e04175ce20fb3f0ea073e1546ff7aecfdd3b5136213c486f0258",
+    "bytes": 39642
+  },
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/eggshell",
+    "sha256": "45e866c66f42d6ce6864aceb2a8397824ab9d6ff692ffba3d8ebc44661a41cef",
+    "bytes": 115753568
+  },
+  "runtimePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/source-delta-warm-runtime.patch",
+    "sha256": "aa9ecaef72334706a4fe20f3555bac016ed5fb76b7974e9656f9d7f1c539ee66",
+    "bytes": 42287
+  },
+  "patchApplyArgs": [
+    "--unidiff-zero"
+  ],
+  "sources": [
+    {
+      "name": "Eggshell/PreparationDebt.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/PreparationDebt.lean",
+        "sha256": "0bb2114bf2affc02d9158a6f5467a1a3b310c2345f85704d48cf7e0c4233d5ac",
+        "bytes": 3268
+      }
+    },
+    {
+      "name": "Eggshell/SourceDelta.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/SourceDelta.lean",
+        "sha256": "82ffc9cff5a4f0112de38091099f4da1f5a8fbfaeccea5e825ea3c9ff4106bf6",
+        "bytes": 4636
+      }
+    },
+    {
+      "name": "Eggshell/Warm.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/preimages/Warm.lean",
+        "sha256": "ad7680747d1f5b9be41ccf4ab64481e8f9343e3983afc2fd90890bea30aef378",
+        "bytes": 13826
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/Warm.lean",
+        "sha256": "dd7d29461260c135e690501cfcccd6148da6b7140c23bce5e68916dfd0b0d2e4",
+        "bytes": 18599
+      }
+    },
+    {
+      "name": "Eggshell/SearchProvider.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/preimages/SearchProvider.lean",
+        "sha256": "e4571343ca8e10e656194cc0277f97ae287352ba606b90541b2a1672566e18df",
+        "bytes": 42966
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/SearchProvider.lean",
+        "sha256": "d92c24f0bda85d450a6fba6e139128636aee446cc309bd603a568edc0593539e",
+        "bytes": 43147
+      }
+    },
+    {
+      "name": "Eggshell/PluginHooks.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/preimages/PluginHooks.lean",
+        "sha256": "d13c201fa37306f183cce3fefab53ecf976e0d85dcbae0c924202d3f350c6418",
+        "bytes": 44144
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/PluginHooks.lean",
+        "sha256": "933bf672852430345b6dcdb04993bfb533a0df2ac8242056fdc86bec266f4dee",
+        "bytes": 44333
+      }
+    },
+    {
+      "name": "tools/research/SourceDeltaWarmSmoke.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/tools/research/SourceDeltaWarmSmoke.lean",
+        "sha256": "6888cfdd0abd46d9ad6f41658e2d1a5b3005a47daac2037753269ec34b71fd6b",
+        "bytes": 10752
+      }
+    },
+    {
+      "name": "tools/research/SourceDeltaWarmAudit.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/tools/research/SourceDeltaWarmAudit.lean",
+        "sha256": "751aa19caff2ce5c9b0f46368c996f6f27570a42c29ab778341859531202c039",
+        "bytes": 4666
+      }
+    }
+  ],
+  "sourceCopies": [
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-delta-warm/Eggshell/PreparationDebt.lean",
+      "sha256": "0bb2114bf2affc02d9158a6f5467a1a3b310c2345f85704d48cf7e0c4233d5ac",
+      "bytes": 3268
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-delta-warm/Eggshell/SourceDelta.lean",
+      "sha256": "82ffc9cff5a4f0112de38091099f4da1f5a8fbfaeccea5e825ea3c9ff4106bf6",
+      "bytes": 4636
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-delta-warm/Eggshell/Warm.lean",
+      "sha256": "dd7d29461260c135e690501cfcccd6148da6b7140c23bce5e68916dfd0b0d2e4",
+      "bytes": 18599
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-delta-warm/README.md",
+      "sha256": "4a9e1d401d765a5efc62ed94edb82c626f718957729abac9f119e3c5fdb32bfa",
+      "bytes": 1115
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-delta-warm/tools/research/SourceDeltaWarmAudit.lean",
+      "sha256": "751aa19caff2ce5c9b0f46368c996f6f27570a42c29ab778341859531202c039",
+      "bytes": 4666
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-delta-warm/tools/research/SourceDeltaWarmSmoke.lean",
+      "sha256": "6888cfdd0abd46d9ad6f41658e2d1a5b3005a47daac2037753269ec34b71fd6b",
+      "bytes": 10752
+    }
+  ],
+  "artifactPins": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/audit-2.guard.json",
+      "sha256": "d3ea25333226082b7d3ee965b0744918812505d5b25a64450c6682b0b8d72fde",
+      "bytes": 1447
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/audit-2.log",
+      "sha256": "999b714c1fcd924541a31466f9f5fe75174b882d1360af83d996f689a9670978",
+      "bytes": 2581
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/audit-2.settings.json",
+      "sha256": "86eba38d0d26bde9b720f10cc06f44ef43acde11c5ea23039f973522d6c5191a",
+      "bytes": 824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/audit-2/result.json",
+      "sha256": "7224c9e6e833ddde54474aff87de5725c0800743c66770334cb653053324fbfc",
+      "bytes": 3039
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/audit.guard.json",
+      "sha256": "d5d1c2ffa53e0605c0b820042dd332d997a33b7f4dfc4cecc7e6ffa4cebcbfe7",
+      "bytes": 1443
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/audit.log",
+      "sha256": "edd870e7bca851e453c1f8df3c780d2834a906a5c21215672fbb52f0bcd87841",
+      "bytes": 2581
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/audit.rsp",
+      "sha256": "47cb69dee84b745bc0af1b9a4a5f2dd3a704b0573c07f2b21b50ec8034334114",
+      "bytes": 20832
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/audit.settings.json",
+      "sha256": "f70c43afc33e3a5dde20a0536b9d233f72cd983e2af5580900147cbef7b73236",
+      "bytes": 821
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/audit/result.json",
+      "sha256": "7cf571c90c1e87464a6a6772c4c18ec994209c93bb2e97cb96681c48a5099e26",
+      "bytes": 3039
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-2.guard.json",
+      "sha256": "372f0b91e39558350ee7c8420198e0bcb8ab9a77e8a5d45d10de2beb7fa63d29",
+      "bytes": 1253
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-2.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-2.settings.json",
+      "sha256": "8846d68c31ca922ddd06351eb4511dd218ae18778264caaaab1eebd7d67d91a4",
+      "bytes": 456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-3.guard.json",
+      "sha256": "29cd84bb3489f50a9c43d480c93aed6b84cf38d2411844fd955d3f2bab913791",
+      "bytes": 1253
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-3.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-3.settings.json",
+      "sha256": "52f0ef33b54c9b06e29c963118dca53c33f661da0e59220ad0db91c376900e38",
+      "bytes": 456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-4.guard.json",
+      "sha256": "7bea8ab6e1872cad6a18d3b56f3a1719c6bef1ae5953037baa19ce653f5bb924",
+      "bytes": 1253
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-4.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-4.settings.json",
+      "sha256": "18cd8f9315d6ddaf29deb7305616c876d234be06ef991524e5f2e1587aacf959",
+      "bytes": 456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-5.guard.json",
+      "sha256": "a0d023107d53c7597e411c52eee9092823b30a29e3fa4bc87d1e33521b990fdc",
+      "bytes": 1253
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-5.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-5.settings.json",
+      "sha256": "8579233c360a19af47ec2c26ac0032be5b11007ac1ae037febd9590ff627cf55",
+      "bytes": 455
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit-2.guard.json",
+      "sha256": "b1b83377fb7235394cfeba150abf6739ce18fc59dda1441f4cea40065095a83e",
+      "bytes": 1265
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit-2.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit-2.settings.json",
+      "sha256": "351e247d3d6934c11128ebbd05e4f3487573bab6fd3a0336c8fb8c672ceb111d",
+      "bytes": 468
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit-3.guard.json",
+      "sha256": "78820daa14f01c291ab5290ab3aa9c0b8387f73bfa5526980c106e26d26fd7ca",
+      "bytes": 1265
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit-3.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit-3.settings.json",
+      "sha256": "5b899d531ac63380565d5d29d30d762891929ca1cf3ede0780a964f90764ab20",
+      "bytes": 467
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit.guard.json",
+      "sha256": "961aa38ac1d3d3f59b1a3cf17a39d6978854f7b6d0f1013330051cd9415ae68c",
+      "bytes": 1263
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit.settings.json",
+      "sha256": "92acef5a982ae6563beae6812916eb62fe0989ef1b459f68bef1f3336e99c043",
+      "bytes": 466
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build-audit.sh",
+      "sha256": "7bd874063614f2d39a432b6e0cf9ee5753283901a44fc9a95eb90546c21a75ef",
+      "bytes": 685
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build.guard.json",
+      "sha256": "d1e6fc81a74cec0cefeb0aab946293e4379030ca4b172fd119d5f5b6483c15d6",
+      "bytes": 1251
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build.log",
+      "sha256": "819fdd3f0f88c3e3636f78595655afbb71cefad728cce11b51c77dacea93dfb1",
+      "bytes": 324
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build.settings.json",
+      "sha256": "8a17eba8e6c56f89aa6293401ce0370e2d13081c34fa34fd7f0feba4add2b3e3",
+      "bytes": 454
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/build.sh",
+      "sha256": "b046956e103658cf0c3ef4146466c25ba8278027e45db055775c6f7e37ec278d",
+      "bytes": 1896
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check-2.guard.json",
+      "sha256": "aeb1207a435c6cecdf98ad5c02a24785877b48152201961f44da4b3363d62a44",
+      "bytes": 1241
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check-2.log",
+      "sha256": "c8d67a4fac50e6b587e41200a5a6ccb9f7bfd91b787d408d069b9b424997408a",
+      "bytes": 196
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check-2.settings.json",
+      "sha256": "718aa3239cf62233d0dac6f17e8a419c9d9bd4d8c5e9ca2411a0cffd8de5cdc1",
+      "bytes": 456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check-3.guard.json",
+      "sha256": "7c58381b2221b8dfba106609dc3a43e363dd9214b3c61f3b3761fc4291106f60",
+      "bytes": 1240
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check-3.log",
+      "sha256": "f137edd83849afe065fa29e532db988cc3a35cc7f1a921183d9f124aa71d4a28",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check-3.settings.json",
+      "sha256": "2ca42b6e3d6e10efb28c1bcc9961737fc75bd37e0e88f5dd0ce8eb030234fde9",
+      "bytes": 456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check-4.guard.json",
+      "sha256": "e6a47501dfa86cd52d9360ff2470d89253b6abacbab8847bcc3f7cfdbef43209",
+      "bytes": 1251
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check-4.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check-4.settings.json",
+      "sha256": "8360f13189c9b6009d87a2143f9e260291a3c15be753d5e7139177b52df31ec1",
+      "bytes": 456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check.guard.json",
+      "sha256": "b58bee641c2312d84188c9c61365d139d0160502f18ea6d6bd37b158d71e71cd",
+      "bytes": 1239
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check.log",
+      "sha256": "4370a43a855629d186f0f60024680a81ed06f23162047aaebeb0038f63734e28",
+      "bytes": 113
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check.settings.json",
+      "sha256": "93d05987e2ecb77047a45b8edc99a31c10da32ac7c4de5713f83384a672fee32",
+      "bytes": 454
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/check.sh",
+      "sha256": "d76cbf646d2b92acab5cfd72a6122e4f900cec446163eb46764f6277603c6ef4",
+      "bytes": 421
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/contract.log",
+      "sha256": "32b84c07a878eea576eda74e22ce7af3f88f467a0df17d6c65cb6eb2809f1a84",
+      "bytes": 75353
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/link-inputs.json",
+      "sha256": "524a0481b3b711d9689f0120ef12d46735a0d2e32c157eb550b00eec3b957b0d",
+      "bytes": 43721
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/patch-check.json",
+      "sha256": "23efde25cccf45250a6887fe604ef6c2de0686acfa2bde4deb8f5e29898e5283",
+      "bytes": 1232
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/preimages/PluginHooks.lean",
+      "sha256": "d13c201fa37306f183cce3fefab53ecf976e0d85dcbae0c924202d3f350c6418",
+      "bytes": 44144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/preimages/SearchProvider.lean",
+      "sha256": "e4571343ca8e10e656194cc0277f97ae287352ba606b90541b2a1672566e18df",
+      "bytes": 42966
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/preimages/SourceDeltaWarmSmoke-gap-failure.lean",
+      "sha256": "c7fd9c322e6d8351dc9c79f13ea300a6b98f17ad1d5d07a54cc0b9322e7bb7df",
+      "bytes": 9036
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/preimages/Warm.lean",
+      "sha256": "ad7680747d1f5b9be41ccf4ab64481e8f9343e3983afc2fd90890bea30aef378",
+      "bytes": 13826
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/retired-helpers.json",
+      "sha256": "82db60c0020b6f507edc30df26a7059dca040de94ea08899a50c957387a7e87d",
+      "bytes": 657
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/runtime.rsp",
+      "sha256": "b120f73ec8ae585f882d0287712321d8dc57fd2017571643afd35c26ec84cc36",
+      "bytes": 20816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/seal.log",
+      "sha256": "ebe51db7c438258f0f472d67e446640da8e6a7a0bc6abcb74480eed96705ed64",
+      "bytes": 166
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/seal.rb",
+      "sha256": "9a29d39e3e6a95f0aa192f487af611cdb284f84b1763665c5425deb5ccc38f3e",
+      "bytes": 7132
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-2.guard.json",
+      "sha256": "5fda3ccdcc1aa3c009382982c488bac083244a20a54145d002d41aa27055db80",
+      "bytes": 2049
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-2.log",
+      "sha256": "fb0962e597499f5a2b91fd3a86af4cdd93c2c5a59b9ae16ce3c5bb45303a53fc",
+      "bytes": 24996
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-2.settings.json",
+      "sha256": "35f9fc7a557ee2ec2a019536744f620a75633034fd278f1d76c268486d595320",
+      "bytes": 737
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-2/result.json",
+      "sha256": "9ac87385f1d63e4c519afb2ad345e9072d14b29c547df043a766b7c642e73d2a",
+      "bytes": 31186
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-3.guard.json",
+      "sha256": "e09d1d290a62414411de0d25cae17eb6c1036fc261e4f9afc25ac519a88136d3",
+      "bytes": 2049
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-3.log",
+      "sha256": "b0585b1dd51a9defb1ba37bf951521210a36a8a5e1563978c414c2d4f6545f42",
+      "bytes": 25033
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-3.settings.json",
+      "sha256": "68c613ca39dd35b0efc5415873767fdedc163565ea100ea8f2358cc89e47c259",
+      "bytes": 737
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-3/result.json",
+      "sha256": "580567ad42a1e92cafa08271a25912b029905d4ac934fcb696f46b1ddf38393e",
+      "bytes": 31226
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4.guard.json",
+      "sha256": "c69eedbd529b3d72148f3c54fac86213c5a1323910d384ff3a0eac8cb84b8da0",
+      "bytes": 2049
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4.log",
+      "sha256": "7b61d121469d8bb3adcb69726d540c994fe73b79c86be80dd2fba76f0ebdc017",
+      "bytes": 25072
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4.settings.json",
+      "sha256": "8b3d084d52558a71deb2e57fb47f792f695bd2492bc7fade88c418495b38ed54",
+      "bytes": 736
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/result.json",
+      "sha256": "ebe1f6852dcf925a3af68054daba1bb27365f8e966e10df16575aef4945af8b3",
+      "bytes": 31268
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke.guard.json",
+      "sha256": "11077defdddffe2d5451f7df560aca6c94e890800af910c93a64dc0aaf13be30",
+      "bytes": 2042
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke.log",
+      "sha256": "27a805f351b1b9036544c8fb7810eab0a9f5df6e631add1e30fe4e6d3bfd4e84",
+      "bytes": 68
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke.rsp",
+      "sha256": "208f42aae4e540bcf5995287b105f6d1b58d900a74a03f30d201af05beb68a0d",
+      "bytes": 20832
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke.settings.json",
+      "sha256": "5ec88225088cba0e044fd25fa1cbd8d1cac13b9a27bbf7af939f5d771230ca63",
+      "bytes": 731
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/source-files-after.json",
+      "sha256": "be46d1935b4a9b0b622a28a43954d794778bfbe35845f495323d95ac190a96e1",
+      "bytes": 1660
+    }
+  ],
+  "linkInputs": {
+    "manifest": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/link-inputs.json",
+      "sha256": "524a0481b3b711d9689f0120ef12d46735a0d2e32c157eb550b00eec3b957b0d",
+      "bytes": 43721
+    },
+    "objects": 190
+  },
+  "retainedBuildProducts": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Daemon.c",
+      "sha256": "08047b0af257ef2642b0290ea473eb310fbad383cfdf84a34eaa54433fbb46b5",
+      "bytes": 406191
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Daemon.o",
+      "sha256": "d7437b14f013178c52567a94e0ab052810ed29b79d8a858492d6646a5a0e294d",
+      "bytes": 257312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Handoff.c",
+      "sha256": "72aed5e4ee6a5c001b6f91e65b90ac00858144f4e73198d49f05cadd2f843245",
+      "bytes": 6660173
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Handoff.o",
+      "sha256": "d74ad52484f82e964c91eb2f09909bbf2e72c7b35b1eb87466582a323d7273a5",
+      "bytes": 5037960
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Install.c",
+      "sha256": "18b30c46d18da80acfd322a3c7cad8317bfdbb5c3a65bd6b11f9bac7e396f90e",
+      "bytes": 272000
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Install.o",
+      "sha256": "37cb50fee91c8208b92eb68df6badea65472849ed8ec906eff2ad822a2527562",
+      "bytes": 167760
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Main.c",
+      "sha256": "b3af5b750ae6614226333c9c01c797a1eac2776b88d3b10f7d0c92d192cc1604",
+      "bytes": 96539
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Main.o",
+      "sha256": "6bf8adacb864b67b274189d2131f16ead83d6345fa2eb28e79448bfb9ffa9992",
+      "bytes": 55888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/PluginCli.c",
+      "sha256": "3470b85022297160e8efac363d2964273e06ccd264870946662e4b18f8b604e9",
+      "bytes": 448740
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/PluginCli.o",
+      "sha256": "7113698ff9abaf951b0a7c4b253d19287baf338172571a6a630c7b4e9acb29e5",
+      "bytes": 256960
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/PluginHooks.c",
+      "sha256": "8e48967b0c6d2d98432811c800ab5a5b638ac361e275e098f90ee4ccba8e5ecb",
+      "bytes": 844634
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/PluginHooks.o",
+      "sha256": "213724a6297ef12fc097aed1001da1980eede5625bc8484881fe023cdb506d28",
+      "bytes": 606968
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/PreparationDebt.c",
+      "sha256": "4afb1adc0230710e81d2643b6c057b89d6428e5027d403f85d7dacf21594828a",
+      "bytes": 118795
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/PreparationDebt.o",
+      "sha256": "b7bdfafa18c5d98fc8d647e068e9f8375163205e3f0559fada8f8c392a6603e2",
+      "bytes": 74016
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SearchProvider.c",
+      "sha256": "31a85c772e04f6cd74d11c18dd87450950b656d0fa54e477f88c4f5270080a25",
+      "bytes": 1191521
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SearchProvider.o",
+      "sha256": "7085107a9bb0708908b44705a44c4cdb02d408f49ddcedf796bb95b11141e228",
+      "bytes": 878144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Setup.c",
+      "sha256": "60372a5d1bedb9b865355810c3cb36af4090024e18339f03769a60d5aa042994",
+      "bytes": 48407
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Setup.o",
+      "sha256": "45e6696b984f36470983b440829f2127fa4fece643d53af367a243ff7cf84841",
+      "bytes": 30440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDelta.c",
+      "sha256": "6db8f6b9c799f11dc635f7ac25091d44a0e6ac60584a80b1f6605973821dc16f",
+      "bytes": 103043
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDelta.o",
+      "sha256": "c239a3f88e6fdc1fa5ae1934a9c975b329ea3eed500d9ebc35c5df543205a983",
+      "bytes": 69328
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDeltaWarmAudit.c",
+      "sha256": "c113979807aeb064f28008ca15cee03dda4e49dcd887694fa824ed01f8cd9717",
+      "bytes": 104831
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDeltaWarmAudit.o",
+      "sha256": "955e5ff4231d68df4b7c69feb25399ea11d4f3d5a8bf8ad210367f8cb32b346b",
+      "bytes": 66712
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDeltaWarmSmoke.c",
+      "sha256": "65ddb53e142f6049dd7d6880ac30b98306251eae7dfda3901cdabc662b1982ff",
+      "bytes": 272284
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDeltaWarmSmoke.o",
+      "sha256": "257ed4b9071321fa7158899343efb3ad82028f2fd1bf552fa4c6bb6ddbac195b",
+      "bytes": 119184
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Warm.c",
+      "sha256": "b6681aa465bfabc98efb82494cf8df931606ee9bb9288ecb9088855ab8617324",
+      "bytes": 498220
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Warm.o",
+      "sha256": "5fe10c9d3e0eddc861974097598086f62b5c77f872185e5ffe0ea9509c937493",
+      "bytes": 367312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Worker.c",
+      "sha256": "6f55c409f5fc8fb41e5cff886628343044866f1abc0c15765889e2513b47c49f",
+      "bytes": 628753
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/Worker.o",
+      "sha256": "372c51b2db36fafa10349178ba6fd1f4c86a9f60c1537281b7c35ccf7c82068d",
+      "bytes": 414936
+    }
+  ],
+  "originalFiles": {
+    "10000": {
+      "unchanged": true,
+      "files": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.pages",
+          "sha256": "289a7fee99ca10399f0174ff6025e8a4ac347d5148b842f88387b441a7722556",
+          "bytes": 55931677
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/head",
+          "sha256": "c450dbdc6cbd5b051cce8a4cb5b1828599bf6beb7eb19119bb126d0a8872d1f7",
+          "bytes": 397
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/writer",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ]
+    },
+    "50000": {
+      "unchanged": true,
+      "files": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.pages",
+          "sha256": "e3b84e42a71b4e993c4e306585c75059312d4ab8501b4b0a56c4e9840f9ee926",
+          "bytes": 432031994
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/head",
+          "sha256": "4888fa698fd0a44d78db7b57dd040accbce72ca2d97bc869f1c837a54a538d53",
+          "bytes": 401
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/writer",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ]
+    }
+  },
+  "unchangedBoundaries": [
+    {
+      "name": "Eggshell/GraphStore.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/GraphStore.lean",
+        "sha256": "09ea0a32a186e5735350437d4e4cd5fecc1586a6ef378c6827ae2eb56cd9b4ba",
+        "bytes": 122533
+      }
+    },
+    {
+      "name": "Eggshell/DB/PageMap.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/DB/PageMap.lean",
+        "sha256": "d47bb04ca2dacf626b79ad819a2208a5a23170ec6ef0049829d458939b89df13",
+        "bytes": 61294
+      }
+    },
+    {
+      "name": "Eggshell/VectorMatrix.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/VectorMatrix.lean",
+        "sha256": "a34e0d946e2146d2616b0c8d6c5954f414c339050f8fb4eb75cc62e9a37b9285",
+        "bytes": 12251
+      }
+    },
+    {
+      "name": "Eggshell/MiniLM.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/MiniLM.lean",
+        "sha256": "15fe872280a9819f39c12a360235523b23ada07ed5f2967d34b16634112a71e7",
+        "bytes": 3859
+      }
+    },
+    {
+      "name": "runtime/embedding.py",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/runtime/embedding.py",
+        "sha256": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "bytes": 22703
+      }
+    },
+    {
+      "name": "tools/WindowCentroid.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/tools/WindowCentroid.lean",
+        "sha256": "9350d1e5af7f76d8ed1d62bfcbcd0476239b3e0ee34c1c230c30e1454aff6ce3",
+        "bytes": 3314
+      }
+    },
+    {
+      "name": "Eggshell/Handoff.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/Handoff.lean",
+        "sha256": "4c638c7f13b74d410594f5bdd04ccdfc954cc08f652bfb9329bedf22f0d89c37",
+        "bytes": 471876
+      }
+    },
+    {
+      "name": "Eggshell/SemanticMatcher.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/SemanticMatcher.lean",
+        "sha256": "a12a773dd78ce009a2af348a0486c0eef35ea6d5d95d9989263f23835f42e3c5",
+        "bytes": 25849
+      }
+    },
+    {
+      "name": "Eggshell/Matcher.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/Matcher.lean",
+        "sha256": "292f2b8f2f1f0a8bf15f0bcff124ffbf5269f38ea44422c74477c6d597f13dc9",
+        "bytes": 180655
+      }
+    },
+    {
+      "name": "Eggshell/ContractAudit.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/checkout/Eggshell/ContractAudit.lean",
+        "sha256": "85e3b308e46b740478150d0aa16c622ee214f600273f4fd041ce4bdb87319c57",
+        "bytes": 104808
+      }
+    }
+  ],
+  "currentCache": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/real-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/indexes/warm/4710a90264c4d065f18409ccb9f75df345b1bf865fb86de0a6bc43599c7793f9",
+      "sha256": "50eb51290b382e2c9dbff194be627a9b7526ee95ca5b614af2685fbd4c41283c",
+      "bytes": 1325
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/real-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/indexes/warm/9cab0cb1293c38cafe6dde11afc77df5ce1dc151193a9050b51737b02fa46c7b",
+      "sha256": "85cf15bfe7b3945b03261fa5d2d38dd6f9f03329b8111d891f58678de22b3c4f",
+      "bytes": 1325
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/real-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/owners/503e3afb1389a55919aa618a0263d5707eaf419bb7c32153e0a88ddf6dd11bc4.json",
+      "sha256": "7c9ae5609ac7cb6a8cb07c0d95641602fc94b7da67e5b7e534c99e01d70d8ee4",
+      "bytes": 177
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/real-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/real-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/9e3d16d56513fd44fb8986ceaa5f0e43d759471e0485d64f6c09b3e50619adde.pages",
+      "sha256": "1be206cadd0efff1ea441ea93edf64e8a35fbdba9cb9ad9689d21ad9761a9ded",
+      "bytes": 68556636
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/real-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+      "sha256": "4ca49478e834f9e1f03cc25ffeef10fa0ab8550325f5ae29c0a9010574c7197c",
+      "bytes": 449
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/real-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "guards": [
+    {
+      "name": "audit-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 24536,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 144864,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "audit.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 24660,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 145280,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 66632,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2763024,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-3.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 76934,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2856656,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-4.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 65740,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2852384,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-5.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 80086,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2849568,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-audit-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 20846,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2090768,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-audit-3.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 20741,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2088592,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-audit.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 18524,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2087696,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 71261,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2723952,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "check-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 10797,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1125136,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "check-3.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 5374,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1147440,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "check-4.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 14038,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1420688,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "check.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 10684,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1129072,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "smoke-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 27332,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1402256,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "smoke-3.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 27166,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1431744,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "smoke-4.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 28072,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1402320,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "smoke.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 12156,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1401088,
+        "ownedPids": [
+
+        ]
+      }
+    }
+  ],
+  "actualAudit": {
+    "validatedPreparedBase": {
+      "writtenBytes": 0,
+      "rows": 19969,
+      "reused": 16415,
+      "requested": 16415,
+      "produced": 0,
+      "mode": "warm",
+      "elapsedMs": 8358,
+      "bytes": 61344768,
+      "added": 0
+    },
+    "unchangedPlanMs": 7,
+    "source": {
+      "root": {
+        "rows": 1286459,
+        "offset": 55930208,
+        "last": "workSurfaces:9998:0",
+        "height": 3,
+        "first": "body:0",
+        "checksum": "72c84fc143241ddf288a0130bf0951d4e6705562e629fc3bc12c7034bf526831",
+        "bytes": 1469
+      },
+      "revision": 3,
+      "identity": "ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154",
+      "bytes": 55931677,
+      "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,49,48,48,48,48]]"
+    },
+    "publications": 1,
+    "originalSourceUnchanged": true,
+    "fullWarmMeasured": false,
+    "fullPlanMs": 2631,
+    "fullDistinctKeys": 19969,
+    "deltaProjections": {
+      "writtenBytes": 0,
+      "rows": 19969,
+      "reused": 3554,
+      "requested": 3554,
+      "produced": 0,
+      "mode": "warm",
+      "elapsedMs": 2697,
+      "bytes": 61344768,
+      "added": 0
+    },
+    "deltaPlanMs": 710,
+    "deltaPhysicalReadBytes": 2661515,
+    "deltaPhysicalPageReads": 16312,
+    "deltaInputCoverage": {
+      "windows": 3554,
+      "valid": 3554,
+      "revision": 3,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "missing": 0,
+      "invalid": 0,
+      "input": {
+        "windows": 3554,
+        "visibleCharacters": 438919,
+        "vectors": 3554,
+        "tokens": 157727,
+        "tokenizerMappedCharacters": 438919,
+        "embeddedCharacters": 438919,
+        "characters": 492229
+      },
+      "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+      "focus": {
+        "windows": 1777,
+        "valid": 1777,
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 1777,
+          "visibleCharacters": 145714,
+          "vectors": 1777,
+          "tokens": 56654,
+          "tokenizerMappedCharacters": 145714,
+          "embeddedCharacters": 145714,
+          "characters": 161707
+        }
+      },
+      "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "discovery": {
+        "windows": 1777,
+        "valid": 1777,
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 1777,
+          "visibleCharacters": 293205,
+          "vectors": 1777,
+          "tokens": 101073,
+          "tokenizerMappedCharacters": 293205,
+          "embeddedCharacters": 293205,
+          "characters": 330522
+        }
+      },
+      "database": {
+        "directory": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg",
+        "database": "ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154"
+      }
+    },
+    "changedWindowsEqualFullPlan": true,
+    "changedOwners": 1777,
+    "basis": {
+      "root": {
+        "rows": 1057223,
+        "offset": 41882794,
+        "last": "workSurfaces:9998:0",
+        "height": 3,
+        "first": "body:0",
+        "checksum": "ec610ac8a0ed2e85a9c90d305ad2b17ae9535a2d0d5b33d8e7acb37f53b6680b",
+        "bytes": 918
+      },
+      "revision": 2,
+      "identity": "ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154",
+      "bytes": 41883712,
+      "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,49,48,48,48,48]]"
+    },
+    "answeringModelCalls": 0,
+    "adopted": false
+  },
+  "component": {
+    "unchanged": {
+      "scope": "publication-delta",
+      "requested": 0,
+      "publications": 0,
+      "projections": {
+        "writtenBytes": 0,
+        "rows": 0,
+        "reused": 0,
+        "requested": 0,
+        "produced": 0,
+        "mode": "empty",
+        "elapsedMs": 0,
+        "bytes": 0,
+        "added": 0
+      },
+      "planReason": "source-unchanged",
+      "lexical": {
+        "stamp": {
+          "roots": 8,
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+          "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+          "candidates": 8,
+          "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+        },
+        "removed": 0,
+        "hydrated": 0,
+        "batches": 0,
+        "added": 0
+      },
+      "elapsedMs": 6,
+      "domain": {
+        "mode": "warm",
+        "metadata": {
+          "windows": 16,
+          "stamp": {
+            "roots": 8,
+            "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "change": 1,
+            "candidates": 8,
+            "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+          },
+          "source": {
+            "root": {
+              "rows": 666,
+              "offset": 28009,
+              "last": "workSurfaces:8:0",
+              "height": 1,
+              "first": "body:0",
+              "checksum": "f0961b3c97ddeb76e8e915217b40748895eff145d79a845a70ddd94db4b7051d",
+              "bytes": 397
+            },
+            "revision": 1,
+            "identity": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "bytes": 28406,
+            "authority": "[\"atom\",[97,117,116,104,111,114,105,116,121]]"
+          },
+          "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+          "digest": "aa77da4b6e029fa05d4edc7ff87bc206e38bfbc589fcf7554eb685ecc2dc880a",
+          "bytes": 1298
+        },
+        "elapsedMs": 0
+      },
+      "changedOwners": 0,
+      "before": {
+        "windows": 0,
+        "valid": 0,
+        "revision": 1,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 0,
+          "visibleCharacters": 0,
+          "vectors": 0,
+          "tokens": 0,
+          "tokenizerMappedCharacters": 0,
+          "embeddedCharacters": 0,
+          "characters": 0
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 0,
+          "valid": 0,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 0,
+          "valid": 0,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      },
+      "batches": 0,
+      "after": {
+        "windows": 0,
+        "valid": 0,
+        "revision": 1,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 0,
+          "visibleCharacters": 0,
+          "vectors": 0,
+          "tokens": 0,
+          "tokenizerMappedCharacters": 0,
+          "embeddedCharacters": 0,
+          "characters": 0
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 0,
+          "valid": 0,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 0,
+          "valid": 0,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      }
+    },
+    "replacement": {
+      "scope": "publication-delta",
+      "requested": 3,
+      "publications": 1,
+      "projections": {
+        "writtenBytes": 17204,
+        "rows": 23,
+        "reused": 0,
+        "requested": 3,
+        "produced": 3,
+        "mode": "incremental",
+        "elapsedMs": 6,
+        "bytes": 70656,
+        "added": 3
+      },
+      "planReason": "verified-source-history",
+      "lexical": {
+        "stamp": {
+          "roots": 10,
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+          "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+          "candidates": 9,
+          "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+        },
+        "removed": 1,
+        "hydrated": 1,
+        "batches": 2,
+        "added": 1
+      },
+      "elapsedMs": 1395,
+      "domain": {
+        "mode": "prepared",
+        "metadata": {
+          "windows": 18,
+          "stamp": {
+            "roots": 10,
+            "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "change": 4,
+            "candidates": 9,
+            "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+          },
+          "source": {
+            "root": {
+              "rows": 836,
+              "offset": 83687,
+              "last": "workSurfaces:8:0",
+              "height": 1,
+              "first": "body:0",
+              "checksum": "fcfe1b5827fc3d7d70131ae781542a614b4ac69a41b197a1f23e013ac66ab439",
+              "bytes": 399
+            },
+            "revision": 4,
+            "identity": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "bytes": 84086,
+            "authority": "[\"atom\",[97,117,116,104,111,114,105,116,121]]"
+          },
+          "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+          "digest": "c434a8396cbf6e7331ab550345a7a19cdcaea90d5c18328f278644827b6aab8c",
+          "bytes": 1470
+        },
+        "elapsedMs": 8
+      },
+      "changedOwners": 1,
+      "before": {
+        "windows": 3,
+        "valid": 0,
+        "revision": 4,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 3,
+        "invalid": 0,
+        "input": {
+          "windows": 0,
+          "visibleCharacters": 0,
+          "vectors": 0,
+          "tokens": 0,
+          "tokenizerMappedCharacters": 0,
+          "embeddedCharacters": 0,
+          "characters": 0
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 2,
+          "valid": 0,
+          "missing": 2,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 2,
+          "valid": 0,
+          "missing": 2,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      },
+      "batches": 1,
+      "after": {
+        "windows": 3,
+        "valid": 3,
+        "revision": 4,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 3,
+          "visibleCharacters": 1287,
+          "vectors": 5,
+          "tokens": 413,
+          "tokenizerMappedCharacters": 1287,
+          "embeddedCharacters": 1287,
+          "characters": 1299
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 2,
+          "valid": 2,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 2,
+            "visibleCharacters": 783,
+            "vectors": 3,
+            "tokens": 255,
+            "tokenizerMappedCharacters": 783,
+            "embeddedCharacters": 783,
+            "characters": 787
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 2,
+          "valid": 2,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 2,
+            "visibleCharacters": 813,
+            "vectors": 3,
+            "tokens": 261,
+            "tokenizerMappedCharacters": 813,
+            "embeddedCharacters": 813,
+            "characters": 821
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      }
+    },
+    "providerPathIndependent": true,
+    "newDebtSurvivesAcknowledgement": true,
+    "memo": {
+      "scope": "publication-delta",
+      "requested": 0,
+      "publications": 1,
+      "projections": {
+        "writtenBytes": 0,
+        "rows": 0,
+        "reused": 0,
+        "requested": 0,
+        "produced": 0,
+        "mode": "empty",
+        "elapsedMs": 0,
+        "bytes": 0,
+        "added": 0
+      },
+      "planReason": "verified-source-history",
+      "lexical": {
+        "stamp": {
+          "roots": 8,
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+          "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+          "candidates": 8,
+          "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+        },
+        "removed": 0,
+        "hydrated": 0,
+        "batches": 0,
+        "added": 0
+      },
+      "elapsedMs": 8,
+      "domain": {
+        "mode": "warm",
+        "metadata": {
+          "windows": 16,
+          "stamp": {
+            "roots": 8,
+            "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "change": 1,
+            "candidates": 8,
+            "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+          },
+          "source": {
+            "root": {
+              "rows": 666,
+              "offset": 28009,
+              "last": "workSurfaces:8:0",
+              "height": 1,
+              "first": "body:0",
+              "checksum": "f0961b3c97ddeb76e8e915217b40748895eff145d79a845a70ddd94db4b7051d",
+              "bytes": 397
+            },
+            "revision": 1,
+            "identity": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "bytes": 28406,
+            "authority": "[\"atom\",[97,117,116,104,111,114,105,116,121]]"
+          },
+          "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+          "digest": "aa77da4b6e029fa05d4edc7ff87bc206e38bfbc589fcf7554eb685ecc2dc880a",
+          "bytes": 1298
+        },
+        "elapsedMs": 2
+      },
+      "changedOwners": 0,
+      "before": {
+        "windows": 0,
+        "valid": 0,
+        "revision": 2,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 0,
+          "visibleCharacters": 0,
+          "vectors": 0,
+          "tokens": 0,
+          "tokenizerMappedCharacters": 0,
+          "embeddedCharacters": 0,
+          "characters": 0
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 0,
+          "valid": 0,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 0,
+          "valid": 0,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      },
+      "batches": 0,
+      "after": {
+        "windows": 0,
+        "valid": 0,
+        "revision": 2,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 0,
+          "visibleCharacters": 0,
+          "vectors": 0,
+          "tokens": 0,
+          "tokenizerMappedCharacters": 0,
+          "embeddedCharacters": 0,
+          "characters": 0
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 0,
+          "valid": 0,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 0,
+          "valid": 0,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      }
+    },
+    "journalGapPlan": "full-source",
+    "inconsistentCandidateRejected": true,
+    "historicalJournalRewriteIgnored": true,
+    "first": {
+      "scope": "full-source",
+      "requested": 17,
+      "publications": 0,
+      "projections": {
+        "writtenBytes": 64023,
+        "rows": 17,
+        "reused": 0,
+        "requested": 17,
+        "produced": 17,
+        "mode": "prepared",
+        "elapsedMs": 24,
+        "bytes": 52224,
+        "added": 17
+      },
+      "planReason": "explicit-verification",
+      "lexical": {
+        "stamp": {
+          "roots": 8,
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+          "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+          "candidates": 8,
+          "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+        },
+        "removed": 0,
+        "hydrated": 8,
+        "batches": 1,
+        "added": 8
+      },
+      "elapsedMs": 4381,
+      "domain": {
+        "mode": "prepared",
+        "metadata": {
+          "windows": 16,
+          "stamp": {
+            "roots": 8,
+            "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "change": 1,
+            "candidates": 8,
+            "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+          },
+          "source": {
+            "root": {
+              "rows": 666,
+              "offset": 28009,
+              "last": "workSurfaces:8:0",
+              "height": 1,
+              "first": "body:0",
+              "checksum": "f0961b3c97ddeb76e8e915217b40748895eff145d79a845a70ddd94db4b7051d",
+              "bytes": 397
+            },
+            "revision": 1,
+            "identity": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "bytes": 28406,
+            "authority": "[\"atom\",[97,117,116,104,111,114,105,116,121]]"
+          },
+          "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+          "digest": "aa77da4b6e029fa05d4edc7ff87bc206e38bfbc589fcf7554eb685ecc2dc880a",
+          "bytes": 1298
+        },
+        "elapsedMs": 6
+      },
+      "changedOwners": 0,
+      "before": {
+        "windows": 17,
+        "valid": 0,
+        "revision": 1,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 17,
+        "invalid": 0,
+        "input": {
+          "windows": 0,
+          "visibleCharacters": 0,
+          "vectors": 0,
+          "tokens": 0,
+          "tokenizerMappedCharacters": 0,
+          "embeddedCharacters": 0,
+          "characters": 0
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 9,
+          "valid": 0,
+          "missing": 9,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 9,
+          "valid": 0,
+          "missing": 9,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      },
+      "batches": 1,
+      "after": {
+        "windows": 17,
+        "valid": 17,
+        "revision": 1,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 17,
+          "visibleCharacters": 8193,
+          "vectors": 33,
+          "tokens": 2649,
+          "tokenizerMappedCharacters": 8193,
+          "embeddedCharacters": 8193,
+          "characters": 8289
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 9,
+          "valid": 9,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 9,
+            "visibleCharacters": 4161,
+            "vectors": 17,
+            "tokens": 1353,
+            "tokenizerMappedCharacters": 4161,
+            "embeddedCharacters": 4161,
+            "characters": 4193
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 9,
+          "valid": 9,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 9,
+            "visibleCharacters": 4321,
+            "vectors": 17,
+            "tokens": 1393,
+            "tokenizerMappedCharacters": 4321,
+            "embeddedCharacters": 4321,
+            "characters": 4385
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      }
+    },
+    "differentHeadRejected": true,
+    "deltaTraceNoCatalogueScan": true,
+    "debtVerification": {
+      "scope": "full-source",
+      "requested": 0,
+      "publications": 0,
+      "projections": {
+        "writtenBytes": 0,
+        "rows": 23,
+        "reused": 20,
+        "requested": 20,
+        "produced": 0,
+        "mode": "warm",
+        "elapsedMs": 10,
+        "bytes": 70656,
+        "added": 0
+      },
+      "planReason": "observed-unavailable-input",
+      "lexical": {
+        "stamp": {
+          "roots": 10,
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+          "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+          "candidates": 9,
+          "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+        },
+        "removed": 0,
+        "hydrated": 0,
+        "batches": 0,
+        "added": 0
+      },
+      "elapsedMs": 22,
+      "domain": {
+        "mode": "warm",
+        "metadata": {
+          "windows": 18,
+          "stamp": {
+            "roots": 10,
+            "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "change": 4,
+            "candidates": 9,
+            "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+          },
+          "source": {
+            "root": {
+              "rows": 836,
+              "offset": 83687,
+              "last": "workSurfaces:8:0",
+              "height": 1,
+              "first": "body:0",
+              "checksum": "fcfe1b5827fc3d7d70131ae781542a614b4ac69a41b197a1f23e013ac66ab439",
+              "bytes": 399
+            },
+            "revision": 4,
+            "identity": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "bytes": 84086,
+            "authority": "[\"atom\",[97,117,116,104,111,114,105,116,121]]"
+          },
+          "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+          "digest": "c434a8396cbf6e7331ab550345a7a19cdcaea90d5c18328f278644827b6aab8c",
+          "bytes": 1470
+        },
+        "elapsedMs": 1
+      },
+      "changedOwners": 0,
+      "before": {
+        "windows": 20,
+        "valid": 20,
+        "revision": 4,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 20,
+          "visibleCharacters": 9480,
+          "vectors": 38,
+          "tokens": 3062,
+          "tokenizerMappedCharacters": 9480,
+          "embeddedCharacters": 9480,
+          "characters": 9588
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 11,
+          "valid": 11,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 11,
+            "visibleCharacters": 4944,
+            "vectors": 20,
+            "tokens": 1608,
+            "tokenizerMappedCharacters": 4944,
+            "embeddedCharacters": 4944,
+            "characters": 4980
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 11,
+          "valid": 11,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 11,
+            "visibleCharacters": 5134,
+            "vectors": 20,
+            "tokens": 1654,
+            "tokenizerMappedCharacters": 5134,
+            "embeddedCharacters": 5134,
+            "characters": 5206
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      },
+      "batches": 0,
+      "after": {
+        "windows": 20,
+        "valid": 20,
+        "revision": 4,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 20,
+          "visibleCharacters": 9480,
+          "vectors": 38,
+          "tokens": 3062,
+          "tokenizerMappedCharacters": 9480,
+          "embeddedCharacters": 9480,
+          "characters": 9588
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 11,
+          "valid": 11,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 11,
+            "visibleCharacters": 4944,
+            "vectors": 20,
+            "tokens": 1608,
+            "tokenizerMappedCharacters": 4944,
+            "embeddedCharacters": 4944,
+            "characters": 4980
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 11,
+          "valid": 11,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 11,
+            "visibleCharacters": 5134,
+            "vectors": 20,
+            "tokens": 1654,
+            "tokenizerMappedCharacters": 5134,
+            "embeddedCharacters": 5134,
+            "characters": 5206
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      }
+    },
+    "deadlinePreservesCheckpoint": true,
+    "changedWindowsEqualFullPlan": true,
+    "brokenSourceJournalRejected": true,
+    "answeringModelCalls": 0,
+    "adopted": false,
+    "addition": {
+      "scope": "publication-delta",
+      "requested": 3,
+      "publications": 1,
+      "projections": {
+        "writtenBytes": 16163,
+        "rows": 20,
+        "reused": 0,
+        "requested": 3,
+        "produced": 3,
+        "mode": "incremental",
+        "elapsedMs": 6,
+        "bytes": 61440,
+        "added": 3
+      },
+      "planReason": "verified-source-history",
+      "lexical": {
+        "stamp": {
+          "roots": 9,
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+          "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+          "candidates": 9,
+          "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+        },
+        "removed": 0,
+        "hydrated": 1,
+        "batches": 1,
+        "added": 1
+      },
+      "elapsedMs": 1369,
+      "domain": {
+        "mode": "prepared",
+        "metadata": {
+          "windows": 18,
+          "stamp": {
+            "roots": 9,
+            "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "change": 3,
+            "candidates": 9,
+            "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+          },
+          "source": {
+            "root": {
+              "rows": 758,
+              "offset": 57923,
+              "last": "workSurfaces:8:0",
+              "height": 1,
+              "first": "body:0",
+              "checksum": "4a43ad247501cd64004135f9812df6f2a8797226e7c903ce4dd00834f27be163",
+              "bytes": 399
+            },
+            "revision": 3,
+            "identity": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "bytes": 58322,
+            "authority": "[\"atom\",[97,117,116,104,111,114,105,116,121]]"
+          },
+          "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+          "digest": "4fcb37d842a4d53ad4d986eebd24a6ae9cc4507c2f676edcbce5f543a798d1da",
+          "bytes": 1468
+        },
+        "elapsedMs": 8
+      },
+      "changedOwners": 1,
+      "before": {
+        "windows": 3,
+        "valid": 0,
+        "revision": 3,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 3,
+        "invalid": 0,
+        "input": {
+          "windows": 0,
+          "visibleCharacters": 0,
+          "vectors": 0,
+          "tokens": 0,
+          "tokenizerMappedCharacters": 0,
+          "embeddedCharacters": 0,
+          "characters": 0
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 2,
+          "valid": 0,
+          "missing": 2,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 2,
+          "valid": 0,
+          "missing": 2,
+          "invalid": 0,
+          "input": {
+            "windows": 0,
+            "visibleCharacters": 0,
+            "vectors": 0,
+            "tokens": 0,
+            "tokenizerMappedCharacters": 0,
+            "embeddedCharacters": 0,
+            "characters": 0
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      },
+      "batches": 1,
+      "after": {
+        "windows": 3,
+        "valid": 3,
+        "revision": 3,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 3,
+          "visibleCharacters": 1285,
+          "vectors": 5,
+          "tokens": 420,
+          "tokenizerMappedCharacters": 1285,
+          "embeddedCharacters": 1285,
+          "characters": 1297
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 2,
+          "valid": 2,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 2,
+            "visibleCharacters": 781,
+            "vectors": 3,
+            "tokens": 257,
+            "tokenizerMappedCharacters": 781,
+            "embeddedCharacters": 781,
+            "characters": 785
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 2,
+          "valid": 2,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 2,
+            "visibleCharacters": 809,
+            "vectors": 3,
+            "tokens": 265,
+            "tokenizerMappedCharacters": 809,
+            "embeddedCharacters": 809,
+            "characters": 817
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      }
+    },
+    "actualUnavailableRepair": {
+      "scope": "full-source",
+      "requested": 1,
+      "publications": 0,
+      "projections": {
+        "writtenBytes": 75321,
+        "rows": 20,
+        "reused": 0,
+        "requested": 20,
+        "produced": 20,
+        "mode": "prepared",
+        "elapsedMs": 27,
+        "bytes": 61440,
+        "added": 20
+      },
+      "planReason": "observed-unavailable-input",
+      "lexical": {
+        "stamp": {
+          "roots": 10,
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+          "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+          "candidates": 9,
+          "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+        },
+        "removed": 0,
+        "hydrated": 0,
+        "batches": 0,
+        "added": 0
+      },
+      "elapsedMs": 1455,
+      "domain": {
+        "mode": "warm",
+        "metadata": {
+          "windows": 18,
+          "stamp": {
+            "roots": 10,
+            "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "change": 4,
+            "candidates": 9,
+            "authority": "f8e318c074a2f8687dd7ee303e73c6858ac3abc1bbf07803bf6a59e7b549635a"
+          },
+          "source": {
+            "root": {
+              "rows": 836,
+              "offset": 83687,
+              "last": "workSurfaces:8:0",
+              "height": 1,
+              "first": "body:0",
+              "checksum": "fcfe1b5827fc3d7d70131ae781542a614b4ac69a41b197a1f23e013ac66ab439",
+              "bytes": 399
+            },
+            "revision": 4,
+            "identity": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343",
+            "bytes": 84086,
+            "authority": "[\"atom\",[97,117,116,104,111,114,105,116,121]]"
+          },
+          "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+          "digest": "c434a8396cbf6e7331ab550345a7a19cdcaea90d5c18328f278644827b6aab8c",
+          "bytes": 1470
+        },
+        "elapsedMs": 0
+      },
+      "changedOwners": 0,
+      "before": {
+        "windows": 20,
+        "valid": 19,
+        "revision": 4,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 1,
+        "input": {
+          "windows": 19,
+          "visibleCharacters": 8976,
+          "vectors": 36,
+          "tokens": 2900,
+          "tokenizerMappedCharacters": 8976,
+          "embeddedCharacters": 8976,
+          "characters": 9076
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 11,
+          "valid": 11,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 11,
+            "visibleCharacters": 4944,
+            "vectors": 20,
+            "tokens": 1608,
+            "tokenizerMappedCharacters": 4944,
+            "embeddedCharacters": 4944,
+            "characters": 4980
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 11,
+          "valid": 10,
+          "missing": 0,
+          "invalid": 1,
+          "input": {
+            "windows": 10,
+            "visibleCharacters": 4630,
+            "vectors": 18,
+            "tokens": 1492,
+            "tokenizerMappedCharacters": 4630,
+            "embeddedCharacters": 4630,
+            "characters": 4694
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      },
+      "batches": 1,
+      "after": {
+        "windows": 20,
+        "valid": 20,
+        "revision": 4,
+        "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "missing": 0,
+        "invalid": 0,
+        "input": {
+          "windows": 20,
+          "visibleCharacters": 9480,
+          "vectors": 38,
+          "tokens": 3062,
+          "tokenizerMappedCharacters": 9480,
+          "embeddedCharacters": 9480,
+          "characters": 9588
+        },
+        "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+        "focus": {
+          "windows": 11,
+          "valid": 11,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 11,
+            "visibleCharacters": 4944,
+            "vectors": 20,
+            "tokens": 1608,
+            "tokenizerMappedCharacters": 4944,
+            "embeddedCharacters": 4944,
+            "characters": 4980
+          }
+        },
+        "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "discovery": {
+          "windows": 11,
+          "valid": 11,
+          "missing": 0,
+          "invalid": 0,
+          "input": {
+            "windows": 11,
+            "visibleCharacters": 5134,
+            "vectors": 20,
+            "tokens": 1654,
+            "tokenizerMappedCharacters": 5134,
+            "embeddedCharacters": 5134,
+            "characters": 5206
+          }
+        },
+        "database": {
+          "directory": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/smoke-4/source.egg",
+          "database": "c728a1bc688e1b530c60817a889ef54f825a9d3d9e795dc79d880a386c874343"
+        }
+      }
+    }
+  },
+  "retired": [
+    {
+      "retiredPath": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDeltaWarmSmoke",
+      "sha256": "0e7dba00dad3f5cbda4b21e2e4e7226199b051a503c33dce3e72878487b2d4dd",
+      "bytes": 106884064,
+      "reason": "terminal rebuildable native helper; raw logs, source/C/object/RSP retained; no archive"
+    },
+    {
+      "retiredPath": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDeltaWarmAudit",
+      "sha256": "cbe932e90cd646d4aa993270f953ab3ca95e0ff363feb356adf0ccc3abc3132b",
+      "bytes": 102760864,
+      "reason": "terminal rebuildable native helper; raw logs, source/C/object/RSP retained; no archive"
+    }
+  ],
+  "proofScope": [
+    "lineage identity and monotone revision",
+    "fresh repair event excluded from captured acknowledgement",
+    "trusted journal producer completeness remains a premise; arbitrary IO and recall are not proved"
+  ],
+  "notEstablished": [
+    "all-view incremental preparation",
+    "routed recommendation with complete prepared additions",
+    "whole-owner hydration removal",
+    "general private capture/MCP storage policy",
+    "cross-DB projection sharing",
+    "complete independent indexed recognition",
+    "full shared/federated lifecycle",
+    "latest 50k useful native delivery/p99",
+    "compaction and capacity hierarchy",
+    "matched model total-token/quality improvement"
+  ],
+  "answeringModelCalls": 0,
+  "newSeeds": 0,
+  "adopted": false
+}
