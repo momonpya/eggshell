@@ -76,6 +76,12 @@ builds/checks passed. The failure is retained.
 
 ## Integration limit
 
+This section records this component's original boundary. The subsequent
+[structural Work candidate](structural-work.md) now connects generated identity
+to normal discovery and a positive native entry, with original owner, child,
+freshness and extraction checks. Broad all-Work inference and the 50k hook
+failure remain unresolved.
+
 The component executes against original DBs but is not connected to normal
 discovery. That controller combines structural equality with query-dependent
 partial-text Union inference and still restores broad Work postings.

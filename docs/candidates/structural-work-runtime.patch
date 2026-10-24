@@ -1,0 +1,776 @@
+--- a/Eggshell/Matcher.lean
++++ b/Eggshell/Matcher.lean
+@@ -1127,18 +1127,94 @@
+   /-- Exact source lines carrying the matched Outcome evidence, never new authority. -/
+   outcomeFragment : Option Value := none
+   alreadyVisible : Bool := false
++
++/-- Text alignment and generated whole-Work identity are different evidence.
++An identity carries its actual generators, not invented lexical Coverage.
++Extraction checks it again against the current generated quotient. -/
++inductive WorkEvidence (demand : Value) (owner : OutcomeEdge) where
++  | aligned (value : WorkAlignment)
++  | identified (generators : List UnionEdge)
++      (generated : Equivalent generators demand owner.work) (subwork : Bool)
++
++namespace WorkEvidence
++
++instance : Coe WorkAlignment (WorkEvidence demand owner) := ⟨.aligned⟩
++
++def alignment? : WorkEvidence demand owner → Option WorkAlignment
++  | .aligned value => some value
++  | .identified .. => none
++
++def isIdentity : WorkEvidence demand owner → Bool
++  | .aligned _ => false
++  | .identified .. => true
++
++def subwork : WorkEvidence demand owner → Bool
++  | .aligned value => value.subwork
++  | .identified _ _ child => child
++
++def wholeWorkIdentity : WorkEvidence demand owner → Bool
++  | .aligned value => value.wholeWorkIdentity
++  | .identified .. => true
++
++def fragmentIdentity : WorkEvidence demand owner → Bool
++  | .aligned value => value.fragmentIdentity
++  | .identified .. => true
++
++def pastWholeWork : WorkEvidence demand owner → Bool
++  | .aligned value => value.pastWholeWork
++  | .identified .. => true
++
++def currentFragment : WorkEvidence demand owner → Value
++  | .aligned value => value.currentFragment
++  | .identified .. => demand
++
++def pastFragment : WorkEvidence demand owner → Value
++  | .aligned value => value.pastFragment
++  | .identified .. => owner.work
++
++def priorCoverage (work : WorkEvidence demand owner) : Option Coverage :=
++  work.alignment?.map (·.priorInDemand)
++
++def demandCoverage (work : WorkEvidence demand owner) : Option Coverage :=
++  work.alignment?.map (·.demandInPrior)
++
++def priorComplete (work : WorkEvidence demand owner) : Bool :=
++  work.priorCoverage.any (·.complete)
++
++def demandComplete (work : WorkEvidence demand owner) : Bool :=
++  work.demandCoverage.any (·.complete)
+ 
++def priorAnchors (work : WorkEvidence demand owner) : Nat :=
++  (work.priorCoverage.map (·.distinctiveAnchors)).getD 0
++
++def demandAnchors (work : WorkEvidence demand owner) : Nat :=
++  (work.demandCoverage.map (·.distinctiveAnchors)).getD 0
++
++def completionBasis (work : WorkEvidence demand owner) (grounded : Bool) : Prop :=
++  match work with
++  | .aligned value =>
++      (value.pastWholeWork = true ∧ value.priorInDemand.complete = true) ∨
++      (grounded = true ∧
++        (value.priorInDemand.complete = true ∨ value.demandInPrior.complete = true))
++  | .identified generators _ _ => Equivalent generators demand owner.work
++
++end WorkEvidence
++
+ /-- One Outcome owner with independent Work-identity and positive-result lanes. -/
+ structure Match where
+   demand : Value
+   edge : OutcomeEdge
+-  work : WorkAlignment
++  work : WorkEvidence demand edge
+   context : Option ContextAlignment := none
+   /-- External relatedness is deliverable context, never equality authority. -/
+   retrieved : Bool := false
+ 
+ namespace Match
+ 
++def identified (demand : Value) (edge : OutcomeEdge) (generators : List UnionEdge)
++    (generated : Equivalent generators demand edge.work) (subwork : Bool) : Match :=
++  {demand, edge, work := .identified generators generated subwork}
++
+ def groundedContext (matched : Match) : Bool :=
+   matched.context.any fun context =>
+     context.demandInOutcome.coveredWeight != 0
+@@ -1164,9 +1240,11 @@
+       context.outcomeFragment.isSome
+ 
+ def workJudgment (matched : Match) : ApplicabilityJudgment :=
+-  fragmentJudgment matched.work.priorInDemand matched.work.demandInPrior
+-    matched.work.fragmentIdentity matched.work.subwork matched.work.pastWholeWork
+-    matched.groundedOutcomeFragment
++  match matched.work with
++  | .aligned value => fragmentJudgment value.priorInDemand value.demandInPrior
++      value.fragmentIdentity value.subwork value.pastWholeWork matched.groundedOutcomeFragment
++  | .identified _ _ child =>
++      {direction := .pastWorkInsideCurrentDemand, reusableOutcome := child}
+ 
+ def judgment (matched : Match) : ApplicabilityJudgment :=
+   if matched.retrieved then
+@@ -1201,7 +1279,7 @@
+   -/
+   if matched.retrieved || !matched.work.subwork || matched.work.wholeWorkIdentity ||
+       (matched.workJudgment.delivery = .completed &&
+-        matched.work.pastWholeWork && matched.work.priorInDemand.complete) then
++        matched.work.pastWholeWork && matched.work.priorComplete) then
+     matched.edge.outcome
+   else
+     (matched.context.bind (·.outcomeFragment)).getD matched.edge.outcome
+@@ -1242,6 +1320,7 @@
+ derived edge neither invents an outcome nor becomes persistent authority.
+ -/
+ def projectedEdge (matched : Match) : OutcomeEdge :=
++  if matched.work.isIdentity then matched.edge else
+   if matched.projectionWork == matched.edge.work &&
+       matched.projectionOutcome == matched.edge.outcome then matched.edge else
+     .make matched.projectionWork matched.projectionOutcome [matched.edge.relation]
+@@ -1250,12 +1329,17 @@
+ @[simp]
+ theorem projectedEdge_outcome (matched : Match) :
+     matched.projectedEdge.outcome = matched.projectionOutcome := by
+-  unfold projectedEdge
+-  split
+-  · rename_i accepted
+-    simp only [Bool.and_eq_true, beq_iff_eq] at accepted
+-    exact accepted.2.symm
+-  · rfl
++  cases work : matched.work with
++  | identified generators generated child =>
++      simp [projectedEdge, projectionOutcome, work, WorkEvidence.isIdentity,
++        WorkEvidence.wholeWorkIdentity, Bool.or_true]
++  | aligned aligned =>
++      simp only [projectedEdge, work, WorkEvidence.isIdentity, Bool.false_eq_true, ↓reduceIte]
++      split
++      · rename_i accepted
++        simp only [Bool.and_eq_true, beq_iff_eq] at accepted
++        exact accepted.2.symm
++      · rfl
+ 
+ /-- A fragment projection either is its durable owner or cites that owner exactly. -/
+ theorem projectedEdge_has_owner_provenance (matched : Match) :
+@@ -1264,10 +1348,12 @@
+   unfold projectedEdge
+   split
+   · exact Or.inl rfl
+-  · exact Or.inr (by simp [OutcomeEdge.make])
++  · split
++    · exact Or.inl rfl
++    · exact Or.inr (by simp [OutcomeEdge.make])
+ 
+ def demandCoverage (matched : Match) : Option Coverage :=
+-  some matched.work.demandInPrior
++  matched.work.demandCoverage
+ 
+ /--
+ Work identity nominates automatic handoff. Outcome text never creates Union;
+@@ -1275,6 +1361,7 @@
+ -/
+ def automatic (matched : Match) : Bool :=
+   if matched.retrieved then true else
++  if matched.work.isIdentity then true else
+   /-
+   Completion and delivery are separate. A complete subwork may control one
+   replan; one positive-weight result match may still connect fallible advice.
+@@ -1285,10 +1372,10 @@
+       (matched.workJudgment.delivery = .completed ||
+         matched.transportGroundedContext ||
+         (matched.groundedContext &&
+-          (matched.work.priorInDemand.complete ||
+-            matched.work.demandInPrior.complete ||
+-            matched.work.priorInDemand.distinctiveAnchors != 0 ||
+-            matched.work.demandInPrior.distinctiveAnchors != 0)))
++          (matched.work.priorComplete ||
++            matched.work.demandComplete ||
++            matched.work.priorAnchors != 0 ||
++            matched.work.demandAnchors != 0)))
+   else
+     /-
+     A parent Turn is never completed by this lane. Intent verbs normally do
+@@ -1299,16 +1386,16 @@
+     -/
+     matched.work.wholeWorkIdentity ||
+       (matched.work.fragmentIdentity && matched.groundedContext &&
+-        (matched.work.priorInDemand.distinctiveAnchors > 1 ||
+-          matched.work.demandInPrior.distinctiveAnchors > 1))
++        (matched.work.priorAnchors > 1 ||
++          matched.work.demandAnchors > 1))
+ 
+ /-- Grounded parent synthesis is deliverable advice without becoming Work completion. -/
+ theorem grounded_parent_context_is_automatic (matched : Match)
+     (parent : matched.work.subwork = false)
+     (identity : matched.work.fragmentIdentity = true)
+     (grounded : matched.groundedContext = true)
+-    (anchors : matched.work.priorInDemand.distinctiveAnchors > 1 ∨
+-      matched.work.demandInPrior.distinctiveAnchors > 1) :
++    (anchors : matched.work.priorAnchors > 1 ∨
++      matched.work.demandAnchors > 1) :
+     matched.automatic = true := by
+   simp [automatic, parent, identity, grounded, anchors]
+ 
+@@ -1319,10 +1406,16 @@
+     (advisory : matched.workJudgment.delivery ≠ .completed)
+     (automatic : matched.automatic = true) :
+   matched.groundedContext = true := by
+-  simp [Match.automatic, intrinsic, subwork, advisory] at automatic
+-  rcases automatic.2 with transported | grounded
+-  · exact transportGroundedContext_is_grounded transported
+-  · exact grounded.1
++  cases work : matched.work with
++  | identified generators generated child =>
++      simp [work, WorkEvidence.subwork] at subwork
++      simp [workJudgment, work, subwork, ApplicabilityJudgment.delivery] at advisory
++  | aligned aligned =>
++      have notIdentity : matched.work.isIdentity = false := by simp [work, WorkEvidence.isIdentity]
++      simp [Match.automatic, intrinsic, notIdentity, subwork, advisory] at automatic
++      rcases automatic.2 with transported | grounded
++      · exact transportGroundedContext_is_grounded transported
++      · exact grounded.1
+ 
+ end Match
+ 
+@@ -2789,32 +2882,51 @@
+ 
+ def localUnion? (quotient : Quotient) (inquiry : Value)
+     (matched : Match) : Option UnionEdge :=
+-  matched.work.localUnion? quotient inquiry matched.retrieved
++  match matched.work with
++  | .aligned value => value.localUnion? quotient inquiry matched.retrieved
++  | .identified .. => none
+ 
+ theorem localUnion_work_only (quotient : Quotient) (inquiry : Value) (matched : Match) :
+     localUnion? quotient inquiry matched =
+-      matched.work.localUnion? quotient inquiry matched.retrieved := rfl
++      matched.work.alignment?.bind (fun value => value.localUnion? quotient inquiry matched.retrieved) := by
++  cases work : matched.work <;> simp [localUnion?, work, WorkEvidence.alignment?]
+ 
++theorem identified_never_unions (quotient : Quotient) (inquiry demand : Value)
++    (edge : OutcomeEdge) (generators : List UnionEdge)
++    (generated : Equivalent generators demand edge.work) (child : Bool) :
++    localUnion? quotient inquiry (Match.identified demand edge generators generated child) = none := rfl
++
++theorem identified_keeps_original_owner (demand : Value) (edge : OutcomeEdge)
++    (generators : List UnionEdge) (generated : Equivalent generators demand edge.work) (child : Bool) :
++    (Match.identified demand edge generators generated child).projectedEdge = edge := rfl
++
++theorem identified_has_no_lexical_coverage (demand : Value) (edge : OutcomeEdge)
++    (generators : List UnionEdge) (generated : Equivalent generators demand edge.work) (child : Bool) :
++    (Match.identified demand edge generators generated child).demandCoverage = none := rfl
++
+ /-- A matcher nomination can only produce reversible Inquiry-local equality. -/
+ theorem localUnion_is_run_scoped {quotient : Quotient} {inquiry : Value}
+     {matched : Match} {edge : UnionEdge}
+     (created : localUnion? quotient inquiry matched = some edge) :
+     edge.scope = .run inquiry := by
+-  simp only [localUnion?, WorkAlignment.localUnion?] at created
+-  split at created <;> try contradiction
+-  split at created <;> try contradiction
+-  split at created <;> try contradiction
+-  split at created <;> try contradiction
+-  next =>
+-    have equality := Option.some.inj created
+-    subst edge
+-    rfl
++  cases work : matched.work with
++  | identified generators generated child => simp [localUnion?, work] at created
++  | aligned aligned =>
++    simp only [localUnion?, work, WorkAlignment.localUnion?] at created
++    split at created <;> try contradiction
++    split at created <;> try contradiction
++    split at created <;> try contradiction
++    split at created <;> try contradiction
++    next =>
++      have equality := Option.some.inj created
++      subst edge
++      rfl
+ 
+ /-- Broad semantic retrieval can expose an Outcome but cannot assert identity. -/
+ theorem retrieved_never_unions (quotient : Quotient) (inquiry : Value)
+     (matched : Match) (retrieved : matched.retrieved = true) :
+     localUnion? quotient inquiry matched = none := by
+-  simp [localUnion?, WorkAlignment.localUnion?, retrieved]
++  cases work : matched.work <;> simp [localUnion?, work, WorkAlignment.localUnion?, retrieved]
+ 
+ /-- The actual Local Union constructor cannot have used a retrieval-only Match. -/
+ theorem localUnion_not_retrieved {quotient : Quotient} {inquiry : Value}
+@@ -2852,7 +2964,7 @@
+ /-- Transport-only overlap cannot nominate fragment identity. -/
+ theorem no_complete_or_informative_fragment_no_local_union {quotient : Quotient}
+     {inquiry : Value} {matched : Match} {aligned : WorkAlignment}
+-    (work : matched.work = aligned)
++    (work : matched.work = .aligned aligned)
+     (pastIncomplete : aligned.priorInDemand.complete = false)
+     (currentIncomplete : aligned.demandInPrior.complete = false)
+     (past : aligned.priorInDemand.coveredWeight = 0)
+@@ -2865,7 +2977,7 @@
+     (matched : Match) :
+     localUnion? quotient inquiry { matched with context := none } =
+       localUnion? quotient inquiry matched := by
+-  rfl
++  cases work : matched.work <;> simp [localUnion?, work]
+ 
+ def distinctLocalUnions (edges : List UnionEdge) : List UnionEdge :=
+   edges.foldl (fun accepted edge =>
+@@ -3647,20 +3759,27 @@
+ theorem completed_match_has_local_subwork {matched : Match}
+     (completed : matched.judgment.delivery = .completed) :
+     matched.work.fragmentIdentity = true ∧ matched.work.subwork = true ∧
+-      ((matched.work.pastWholeWork = true ∧
+-          matched.work.priorInDemand.complete = true) ∨
+-        (matched.groundedOutcomeFragment = true ∧
+-          (matched.work.priorInDemand.complete = true ∨
+-            matched.work.demandInPrior.complete = true))) ∧
++      matched.work.completionBasis matched.groundedOutcomeFragment ∧
+       (matched.projectedEdge = matched.edge ∨
+         matched.edge.relation ∈ matched.projectedEdge.observations) := by
+   unfold Match.judgment at completed
+   split at completed
+   · simp [ApplicabilityJudgment.delivery] at completed
+-  · unfold Match.workJudgment at completed
+-    have reusable := fragment_completion_requires_local_identity _ _ _ _ _ _ completed
+-    exact ⟨reusable.1, reusable.2.1, reusable.2.2,
+-      Match.projectedEdge_has_owner_provenance matched⟩
++  · cases work : matched.work with
++    | aligned aligned =>
++        have completed := completed
++        simp only [Match.workJudgment, work] at completed
++        have reusable := fragment_completion_requires_local_identity _ _ _ _ _ _ completed
++        simp only [WorkEvidence.fragmentIdentity, WorkEvidence.subwork,
++          WorkEvidence.completionBasis]
++        exact ⟨reusable.1, reusable.2.1, reusable.2.2,
++          Match.projectedEdge_has_owner_provenance matched⟩
++    | identified generators generated child =>
++        have childTrue : child = true := by
++          simpa [Match.workJudgment, work, ApplicabilityJudgment.delivery] using completed
++        simp only [WorkEvidence.fragmentIdentity, WorkEvidence.subwork,
++          WorkEvidence.completionBasis]
++        exact ⟨trivial, childTrue, generated, Match.projectedEdge_has_owner_provenance matched⟩
+ 
+ /--
+ End-to-end connection theorem: every Work erased by Matcher→Extract comes from
+@@ -3678,11 +3797,7 @@
+       matched.judgment.reusableOutcome = true ∧
+       matched.work.fragmentIdentity = true ∧
+       matched.work.subwork = true ∧
+-      ((matched.work.pastWholeWork = true ∧
+-          matched.work.priorInDemand.complete = true) ∨
+-        (matched.groundedOutcomeFragment = true ∧
+-          (matched.work.priorInDemand.complete = true ∨
+-            matched.work.demandInPrior.complete = true))) ∧
++      matched.work.completionBasis matched.groundedOutcomeFragment ∧
+       (matched.projectedEdge = matched.edge ∨
+         matched.edge.relation ∈ matched.projectedEdge.observations) ∧
+       edge.outcome ∈ (extraction discovery).priorOutcomes := by
+--- a/Eggshell/SelectionAudit.lean
++++ b/Eggshell/SelectionAudit.lean
+@@ -138,6 +138,7 @@
+     let admission ← nominated[GeneratorKey.ofEdge edge]?
+     unless admission.runLocal.length ≤ index do none
+     let matched := admission.matched
++    let aligned ← matched.work.alignment?
+     pure {
+       generator := index, localCount := admission.runLocal.length
+       inquiry := Persistence.valueToJson admission.inquiry
+@@ -147,10 +148,10 @@
+       pastFragment := Persistence.valueToJson matched.work.pastFragment
+       wholeIdentity := matched.work.wholeWorkIdentity
+       fragmentIdentity := matched.work.fragmentIdentity
+-      priorComplete := matched.work.priorInDemand.complete
+-      demandComplete := matched.work.demandInPrior.complete
+-      priorWeight := matched.work.priorInDemand.coveredWeight
+-      demandWeight := matched.work.demandInPrior.coveredWeight
++      priorComplete := aligned.priorInDemand.complete
++      demandComplete := aligned.demandInPrior.complete
++      priorWeight := aligned.priorInDemand.coveredWeight
++      demandWeight := aligned.demandInPrior.coveredWeight
+       retrieved := matched.retrieved, schedule := admission.schedule }
+ 
+ structure AdmissionSnapshot where
+@@ -164,8 +165,9 @@
+   wholeIdentity : Bool
+   fragmentIdentity : Bool
+   subwork : Bool
+-  priorComplete : Bool
+-  demandComplete : Bool
++  classIdentity : Bool
++  priorComplete : Option Bool
++  demandComplete : Option Bool
+   pastWhole : Bool
+   groundedFragment : Bool
+   retrieved : Bool
+@@ -191,8 +193,9 @@
+     wholeIdentity := matched.work.wholeWorkIdentity
+     fragmentIdentity := matched.work.fragmentIdentity
+     subwork := matched.work.subwork
+-    priorComplete := matched.work.priorInDemand.complete
+-    demandComplete := matched.work.demandInPrior.complete
++    classIdentity := matched.work.isIdentity
++    priorComplete := matched.work.priorCoverage.map (·.complete)
++    demandComplete := matched.work.demandCoverage.map (·.complete)
+     pastWhole := matched.work.pastWholeWork
+     groundedFragment := matched.groundedOutcomeFragment
+     retrieved := matched.retrieved
+@@ -348,24 +351,34 @@
+   let work ← Persistence.valueFromJson 4096 admission.work
+   let current ← Persistence.valueFromJson 4096 admission.currentFragment
+   let past ← Persistence.valueFromJson 4096 admission.pastFragment
+-  unless !admission.retrieved && admission.subwork && admission.fragmentIdentity &&
+-      ((admission.pastWhole && admission.priorComplete) ||
+-        (admission.groundedFragment && (admission.priorComplete || admission.demandComplete))) do
++  let basis := if admission.classIdentity then
++      admission.wholeIdentity && admission.pastWhole &&
++        admission.priorComplete.isNone && admission.demandComplete.isNone &&
++        current == demand && past == work
++    else match admission.priorComplete, admission.demandComplete with
++      | some prior, some present => (admission.pastWhole && prior) ||
++          (admission.groundedFragment && (prior || present))
++      | _, _ => false
++  unless !admission.retrieved && admission.subwork && admission.fragmentIdentity && basis do
+     throw "recorded Match did not pass the completed admission gate"
+   for position in admission.branches do
+     let some branch := branches[position]? | throw "admission branch is outside the selection"
+     unless branch.owner == admission.owner do throw "admission crossed source owners"
+     let value ← Persistence.valueFromJson 4096 branch.projectedOutcome
+     let some edge := OutcomeEdge.fromValue? value | throw "admission branch is not an Outcome"
+-    unless edge.work == current && branch.demand == admission.currentFragment do
++    let originalWork := if admission.classIdentity then work else current
++    unless edge.work == originalWork && branch.demand == admission.currentFragment do
+       throw "admission changed the projected Work fragment or admitted demand"
+   let child ← admissionChild admission.child
++  if admission.classIdentity && child.isNone then
++    throw "class identity completion has no original child witness"
+   let pairs := [("wholeWorkIdentity", demand, work, admission.wholeIdentity),
+     ("fragmentIdentity", current, past, admission.fragmentIdentity)] ++
+     (child.toList.flatMap fun (requested, original) =>
+       [("subworkAlias", work, requested, true), ("originalChildAlias", requested, original, true)])
+   let comparisons ← replayComparisons persistent runLocal admission.localCount pairs
+   pure (Json.mkObj [("owner", toJson admission.owner), ("branches", toJson admission.branches),
++    ("classIdentity", toJson admission.classIdentity),
+     ("localCount", toJson admission.localCount), ("status", toJson "replayed"),
+     ("sourceChild", toJson (if child.isSome then "recorded-source-boundary" else "untracked")),
+     ("childEvidence", admission.child), ("comparisons", toJson comparisons),
+--- a/Eggshell/WorkInference.lean
++++ b/Eggshell/WorkInference.lean
+@@ -74,7 +74,10 @@
+     cases nomination : row.retrieved <;> cases child : row.work.subwork <;>
+       cases whole : row.work.wholeWorkIdentity <;>
+       simp_all [Prepared.inert, Prepared.inertWith, Prepared.contextInert,
+-        Prepared.propose, Matcher.Match.automatic, Matcher.localUnion?]
++        Prepared.propose, Matcher.Match.automatic, Matcher.localUnion?, WorkEvidence.isIdentity,
++        WorkEvidence.subwork, WorkEvidence.wholeWorkIdentity, WorkEvidence.fragmentIdentity,
++        WorkEvidence.priorAnchors, WorkEvidence.demandAnchors, WorkEvidence.priorCoverage,
++        WorkEvidence.demandCoverage, WorkEvidence.alignment?]
+ 
+ theorem Prepared.covered_effects (row : Prepared α) (quotient : Quotient) (inquiry : Value)
+     (covered : UnionEdge → Bool) (matched : Match)
+@@ -86,7 +89,10 @@
+   have automatic : matched.automatic = false := by
+     cases nomination : row.retrieved <;> cases child : row.work.subwork <;>
+       cases whole : row.work.wholeWorkIdentity <;>
+-      simp_all [Prepared.contextInert, Matcher.Match.automatic]
++      simp_all [Prepared.contextInert, Matcher.Match.automatic, WorkEvidence.isIdentity,
++        WorkEvidence.subwork, WorkEvidence.wholeWorkIdentity, WorkEvidence.fragmentIdentity,
++        WorkEvidence.priorAnchors, WorkEvidence.demandAnchors, WorkEvidence.priorCoverage,
++        WorkEvidence.demandCoverage, WorkEvidence.alignment?]
+   refine ⟨automatic,?_⟩
+   intro edge generated
+   have same : row.propose quotient inquiry = some edge := by
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5,6 +5,7 @@
+ public import Eggshell.DiscoveryCounters
+ public import Eggshell.WorkPostings
+ public import Eggshell.WorkInference
++public import Eggshell.WorkClassLookup
+ public import Eggshell.LexicalReads
+ public import Eggshell.Receipt
+ 
+@@ -6615,6 +6616,82 @@
+   let trail : DiscoveryAudit.Trail := {current := some 0, schedules := [DiscoveryAudit.Schedule.terminal terminal]}
+   pure (some (← auditRenderedSelection receipt discovery prepared rendered observed trail))
+ 
++/-- A positive whole-Work child can be reused before lexical or numerical
++discovery. Negative child reads are not a complete global miss: they fall
++through, including structured aliases absent from the finite edge domain. -/
++def indexedIdentifiedRoot (selection : Config.Selection)
++    (snapshots : List (Option Persistence.Store.Snapshot)) (current : String)
++    (delivered : List String) (refreshSources : Bool := false)
++    (receipt : Option String := none) (staged : List Value := []) (stagedVisible : Bool := true) :
++    IO (Option (Option Handoff)) := do
++  let started ← IO.monoMsNow
++  let sources := (snapshots.filterMap id).toArray
++  if sources.isEmpty then return none
++  let readers ← Persistence.Store.NodeReaders.new sources
++  let mut persistent : List UnionEdge := []
++  for source in List.finRange sources.size do
++    let edges ← (readers.at source).unions (← Persistence.Store.authority sources[source])
++    persistent := persistent ++ edges.map (·.edge)
++  let some classes := WorkClassLookup.prepare? persistent [] |
++    throw (IO.userError "current original Work class is invalid")
++  let originals ← readers.classOwners classes current.toUTF8
++  if originals.isEmpty then return none
++  let currentValue := Value.text current
++  let emptyView : RunView := {graph := {}, quotient := classes.checked.quotient, localUnions := []}
++  let children ← IO.mkRef ({} : Std.HashMap Value Persistence.Store.ChildObservation)
++  let lookups ← (List.finRange sources.size).mapM fun source => do
++    let demand ← Persistence.Store.DemandTopology.new (readers.at source)
++    demand.childLookup emptyView (some fun observed => children.modify (·.insert observed.requested observed))
++  let mut hits : List Matcher.Match := []
++  let mut provenance : List (Value × List SourceEvidence.Record) := []
++  let mut observed : List SelectionAudit.Admission := []
++  for (source, original) in originals do
++    let mut child := false
++    for lookup in lookups do
++      if ← lookup original.edge.work then
++        child := true
++        break
++    unless child do continue
++    let matched := Matcher.Match.identified currentValue original.edge persistent
++      (by simpa only [currentValue, Value.text, List.append_nil] using original.generated) true
++    hits := hits ++ [matched]
++    let some childObservation := (← children.get)[original.edge.work]? |
++      throw (IO.userError "recognized child has no original indexed witness")
++    let admission : SelectionAudit.Admission := {
++      matched
++      runLocal := []
++      child := childObservation.encode
++      inquiry := currentValue
++      nomination := none
++      schedule := some 0}
++    observed := admission :: observed
++    let some id ← Persistence.Store.findNode? sources[source] original.edge.relation |
++      throw (IO.userError "recognized owner lost its original source")
++    let records ← (readers.at source).sources id
++    let records := if records.isEmpty then [SourceEvidence.unverified] else records
++    let previous := (provenance.find? (·.1 == original.edge.relation)).map Prod.snd |>.getD []
++    provenance := (original.edge.relation, (previous ++ records).eraseDups) ::
++      provenance.filter (·.1 != original.edge.relation)
++  if hits.isEmpty then return none
++  let graph : WorkGraph := {outcomes := hits.map (·.edge)}
++  let view : RunView := {graph, quotient := classes.checked.quotient, localUnions := []}
++  let some terminal := Matcher.TerminalRoot.check? view currentValue current hits | return none
++  let discovery := terminal.discovery persistent classes.checked.generated Matcher.LocalUnionOrigins.empty
++  let prepared : {extraction : Extraction // extraction = Matcher.extraction discovery} :=
++    ⟨Matcher.extraction discovery, rfl⟩
++  let rendered := renderAutomatic staged selection.handoffChars current delivered true stagedVisible discovery prepared
++    (provenance := provenance) (refreshSources := refreshSources) (byteBudget := selection.handoffBytes)
++  let rendered := rendered.map fun handoff => {handoff with reason := handoff.reason ++ " producer=work-class"}
++  let trail : DiscoveryAudit.Trail := {current := some 0, schedules := [DiscoveryAudit.Schedule.terminal terminal]}
++  let result ← auditRenderedSelection receipt discovery prepared rendered observed trail
++  Receipt.observe receipt "work-class-root" (Json.mkObj [
++    ("sourceCount",toJson sources.size),("originalOwners",toJson originals.length),
++    ("recognizedChildren",toJson hits.length),("semanticRequested",toJson false),
++    ("elapsedMs",toJson ((← IO.monoMsNow)-started)),
++    ("completed",toJson (result.map (·.completed) |>.getD 0)),
++    ("blocksBeforeFreshness",toJson (result.any (·.blocksCurrent)))])
++  return some result
++
+ /-- A loaded row carries the production compiler certificate with its owner.
+ There is no second map which can omit or substitute the row's candidate. -/
+ structure IndexedOwner where
+@@ -7044,6 +7121,9 @@
+   onSemanticReady : IO Unit := pure ()
+   all : List AllEdge
+   persistent : List UnionEdge
++  identityOwners : Option ((runLocal : List UnionEdge) →
++    (prepared : WorkClassLookup.Prepared persistent runLocal) → (query : ByteArray) →
++      IO (List (WorkClassLookup.Owner prepared query))) := none
+   outcomeCount : Nat
+   population : Nat
+   semanticPopulation : Nat
+@@ -7353,10 +7433,51 @@
+       let answer ← lookup work
+       membershipCache.modify (·.insert work answer)
+       return answer
++    let classes ← if source.identityOwners.isSome && evidence.isNone then
++        match WorkClassLookup.prepare? persistent view.localUnions with
++        | some prepared => pure (some prepared)
++        | none => throw (IO.userError "current generated Work class is invalid")
++      else pure none
+     for task in tasks do
+       let some text := Matcher.atomText? task | continue
+       let taskNative := task == currentValue && native
+       let query := Matcher.CompiledDemand.make LogicalText.logicalNormalizer text taskNative
++      let mut identities : List Matcher.Match := []
++      if let some classes := classes then
++        if let some read := source.identityOwners then
++          match task with
++          | .apply _ _ => pure ()
++          | .atom bytes =>
++            let originals ← DiscoveryCounters.timed counters "work-class-owners" (read view.localUnions classes bytes)
++            for original in originals do
++              match compiled : Matcher.Corpus.compileWorkCandidate LogicalText.logicalNormalizer original.edge with
++              | none => throw (IO.userError "class owner has no textual Work")
++              | some candidate =>
++                  have ownerSame := Matcher.Corpus.compileWorkCandidate_owner compiled
++                  state := state.retain original.ordinal candidate (by rw [ownerSame]; exact compiled)
++              let child ← match membership with
++                | some lookup => lookup original.edge.work
++                | none => pure ((corpusSubworks state).any (view.quotient.toEquality.same original.edge.work))
++              if child && !state.subworks.contains original.edge.work then
++                state := {state with subworks := original.edge.work :: state.subworks}
++              let identified := Matcher.Match.identified (.atom bytes) original.edge
++                (persistent ++ view.localUnions) original.generated child
++              let identified := if enableLocalUnion then identified else {identified with retrieved := true}
++              identities := identities ++ [identified]
++              if let some audit := admissionAudit then
++                let observedChildren ← children.get
++                let schedule := ((← traceAudit.mapM (·.get)).getD {}).current
++                let corpus : Matcher.Corpus := {
++                  candidates := state.candidates, population,
++                  frequency := fun unit => state.frequencies.getD unit 0,
++                  subworks := corpusSubworks state, parents := sourceAll state}
++                let frame := SelectionAudit.Admission.observe view currentValue corpus observedChildren identified
++                audit.modify ({frame with schedule} :: ·)
++      -- A certified whole operation already closes this demand. Do not ask
++      -- partial text inference to rediscover its identity or create more work.
++      if identities.any (fun matched => matched.judgment.delivery == .completed) then
++        hits := hits ++ identities
++        continue
+       let ids ← countedSurfaces query.pattern.surfaces.toList
+       let requestedIds := hashDistinct (ids ++ if task == currentValue then matchingIds else [])
+       -- Fetch the same original document frequencies once per demand rather
+@@ -7479,7 +7600,7 @@
+           intro unit member
+           change read.table.getD unit 0 + _ = contextRead.table.getD unit 0 + _
+           rw [contextRead.preserves unit (read.complete unit member)]⟩
+-      hits := hits ++ found.val
++      hits := hits ++ found.val ++ identities
+       if let some audit := admissionAudit then
+         let children ← children.get
+         let schedule := ((← traceAudit.mapM (·.get)).getD {}).current
+@@ -7823,6 +7944,7 @@
+     synaptic
+     receipt, onSemanticReady
+     all := [], persistent := unions.map (·.edge), outcomeCount
++    identityOwners := some fun _ prepared query => reader.classOwners prepared query
+     advisoryFrontiers := [frontier]
+     advisoryPositions := fun owner => do
+       let some (ordinal, _) ← Persistence.Store.liveRoot? snapshot owner | return []
+@@ -7995,6 +8117,17 @@
+         else throw (IO.userError "federated advisory root exceeds its pinned publication")
+       pure found
+     persistent := catalogue.unions
++    identityOwners := some fun _ prepared query => do
++      let mut found := []
++      for source in List.finRange sources.size do
++        for original in ← (readers.at source).classOwners prepared query do
++          let some id ← Persistence.Store.findNode? sources[source] original.edge.relation |
++            throw (IO.userError "class owner lost its original source identity")
++          let canonical ← catalogue.identity.lookup source id
++          let some ordinal := catalogue.orders[canonical]? |
++            throw (IO.userError "class owner lost its global source order")
++          found := {original with ordinal} :: found
++      pure (found.mergeSort fun left right => left.ordinal ≤ right.ordinal)
+     focusSupport := some fun works command question => do
+       let mut wanted : Std.HashSet Nat := {}
+       for work in works do
+@@ -8104,6 +8237,10 @@
+   unless selection.read.length == snapshots.length do
+     throw (IO.userError "source snapshot arity mismatch")
+   try
++    if enforce && evidenceText.isNone && enableLocalUnion then
++      if let some result ← indexedIdentifiedRoot selection snapshots current deliveredGraphs refreshSources receipt
++          staged stagedVisible then
++        return result
+     if staged.isEmpty && (enforce || evidenceText.isSome) &&
+         (selection.semanticMatcher.isNone || evidenceText.isSome) then
+       if let some result ← indexedTerminalRoot selection snapshots current deliveredGraphs
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -45,6 +45,9 @@
+       ``Eggshell.Matcher.completed_authority,
+       ``Eggshell.Matcher.extraction_comparisons_generated,
+       ``Eggshell.Matcher.completed_not_retrieved,
++      ``Eggshell.Matcher.identified_never_unions,
++      ``Eggshell.Matcher.identified_keeps_original_owner,
++      ``Eggshell.Matcher.identified_has_no_lexical_coverage,
+       ``Eggshell.Plugin.SharedRangeAdapter.atomic_payload,
+       ``SourceWindow.projected_covers_iff,
+       ``Eggshell.Plugin.meaning_context_covers_exactly,
+@@ -1568,7 +1571,13 @@
+   for (root, required) in #[
+       (``Eggshell.Matcher.discoverUsingM?, ``Eggshell.IncrementalQuotient.ProducedView.certified),
+       (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.IncrementalQuotient.certifyExplicit?),
+-      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.Matcher.TerminalRoot.discovery)] do
++      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.Matcher.TerminalRoot.discovery),
++      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.WorkClassLookup.prepare?),
++      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.Persistence.Store.NodeReaders.classOwners),
++      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.Matcher.Match.identified),
++      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.Matcher.TerminalRoot.discovery),
++      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.Plugin.auditRenderedSelection),
++      (``Eggshell.Plugin.computeAutomaticHandoff, ``Eggshell.Plugin.indexedIdentifiedRoot)] do
+     let mut seen : Std.HashSet Name := {}
+     let mut pending := [root]
+     while let name :: tail := pending do
+@@ -1596,7 +1605,24 @@
+     throwError "Discovery lost the local generator ancestry field"
+   unless origins.type.getUsedConstants.contains ``Eggshell.Matcher.LocalUnionOrigins do
+     throwError "Discovery ancestry is detached from local constructor calls"
+-  logInfo "Audited generated authority and non-retrieved local origins in both producers and actual delivery"
++  logInfo "Audited generated authority and non-retrieved local origins in discovery, terminal and class producers"
++
++run_meta do
++  let environment ← getEnv
++  let forbidden := #[``Eggshell.Persistence.Store.searchDocuments,
++    ``Eggshell.Persistence.Store.NodeReader.readTopology,
++    ``Eggshell.Persistence.Store.Federated.prepare]
++  let mut seen : Std.HashSet Name := {}
++  let mut pending := [``Eggshell.Plugin.indexedIdentifiedRoot]
++  while let name :: rest := pending do
++    pending := rest
++    if seen.contains name then continue
++    seen := seen.insert name
++    if forbidden.contains name then throwError "Work-class root restored a full catalogue: {name}"
++    if name.toString.startsWith "Eggshell." then
++      if let some declaration := environment.find? name then
++        if let some body := declaration.value? then pending := body.getUsedConstants.toList ++ pending
++  logInfo "Audited class root without source-window, full-topology or federated catalogue restoration"
+ 
+ /- A memo is the captured calculation under the exact request and observation;
+ its replay keeps bytes and the origin locator without asserting complete ancestry. -/
+--- a/tests/MatcherFixtures.lean
++++ b/tests/MatcherFixtures.lean
+@@ -219,8 +219,8 @@
+       "Bash rg n vdso timekeeping tsc clocksource").bind
+       (fun discovery => discovery.hits.head?.map fun matched =>
+         let extraction := Matcher.extraction discovery
+-        (matched.work.priorInDemand.complete,
+-          matched.work.demandInPrior.complete,
++        (matched.work.priorComplete,
++          matched.work.demandComplete,
+           matched.applicability,
+           extraction.priorOutcomes.contains forwardResult,
+           extraction.residual.length)) =
+@@ -241,7 +241,7 @@
+       "Bash rg n vdso timekeeping tsc clocksource").bind
+       (fun discovery => discovery.hits.head?.map fun matched =>
+         let extraction := Matcher.extraction discovery
+-        (matched.work.priorInDemand.complete,
++        (matched.work.priorComplete,
+           matched.applicability,
+           extraction.priorOutcomes.contains opaqueForwardResult,
+           extraction.residual.length)) =
+@@ -260,8 +260,8 @@
+       "Bash rg n vdso timekeeping").bind
+       (fun discovery => discovery.hits.head?.map fun matched =>
+         let extraction := Matcher.extraction discovery
+-        (matched.work.priorInDemand.complete,
+-          matched.work.demandInPrior.complete,
++        (matched.work.priorComplete,
++          matched.work.demandComplete,
+           matched.applicability,
+           extraction.priorOutcomes.contains reverseResult,
+           extraction.advisoryOutcomes.contains reverseResult)) =
+@@ -836,7 +836,7 @@
+         (discovery.view.localUnions.length,
+           extraction.priorOutcomes.contains flagVariantResult,
+           discovery.hits.any fun matched =>
+-            matched.work.demandInPrior.complete,
++            matched.work.demandComplete,
+           extraction.residual.length)) =
+       some (0, true, false, 1) := by
+   native_decide

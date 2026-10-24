@@ -54,6 +54,15 @@ architecture targets; do not enlarge the fixture instead of changing them.
 
 ## Priority and current evidence
 
+The [structural Work candidate](structural-work.md) now consumes proof-carrying
+identity directly, without inventing textual Coverage. It reaches original
+owners/children across pinned sources and uses the existing freshness/extraction
+boundary. Six small real native PreToolUse cases enter the direct producer in
+371–440 ms overall, retain control only for unchanged verified sources, and
+preserve stdout/publication/ACK agreement. These are one-owner fixtures, not
+large-scale, p99 or token qualification. Broad queries still restore all Work;
+the 50k UserPromptSubmit failure and normal federation's full catalogue remain.
+
 The subsequent [Work-class query](work-class-lookup.md) composes rootless
 generated equality with original Work-owner buckets. Lean proves its ordered
 selection agrees with the full corpus-rooted equality filter. All 120 original

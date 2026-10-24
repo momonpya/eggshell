@@ -1,5 +1,9 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 構造的Work認定をLeanで隔離接続した。Matchの証拠を文字列Coverageと生成済み等価性に分け、異なる字面のCoverageを捏造せず、原Outcome/所属/鮮度/抽出を保持する。e-class→原Work所有者索引を実discoveryとnative正認定の入口へ接続。複数DBの元所属も照会できる。等価性は推薦扱いにせず、推薦からUnionを生成しない。
+最終ContractAudit/証明依存/Matcher fixturesと固定32例が成功し、旧文字列laneの本文・全Handoffが一致。実UserPromptSubmit→PreToolUseの小6例で直接producerを確認し、Preは371–440ms、同指紋のみ停止・変更後は停止しない。stdout/出版SHA/実ACK/manager終了を確認。外部providerが使えなくても正認定は進むが、初回の未完了通知は配送成功に数えない。合成の明示Unionでありcat/sedの自動意味規則ではない。
+新seed/回答モデル/総トークン比較0、候補未採用。広い質問で全Workを復元する経路、通常federationの全体表、5万窓UserPromptSubmitの未完了は残る。次は推薦をvector/シナプス、認定を完全な原典付きクラス照会へ整理し、この全件依存を置換する。局所認定の成功を大規模配送の完成としない。最大合計RSS2,887,568KiB・全guard終了/所有process残存0、失敗試行も保持。終了済み旧実行体/再構築可能cache/helpersはhash後に削除しアーカイブなし。docs/structural-work.md参照、全Phases0–6 active。
+
 2026-10-25 Work e-classから原Work所有者索引を直接引くLean照会を隔離実装した。全Work rootsなしでも、現在のUnion/合同から得るテキストWorkの全クラスと全件走査の選択が一致することを証明。mixed Atom/Apply、元ownerの順序/重複、Exact足跡を保ち、推薦top-Kで認定候補を切らない。複数の固定DBもソース番号付きで直接照会し、全semantic membershipの共通表は作らない。
 小13検査と、既存1万/5万窓DB各60照会が完全oracleと一致した。positive中央値は約25/29ms、最大29.395/39.332ms、返却は1 ownerで51/67ページ読出し。陰性は約4/5ms。これは同じreaderの再利用ではないがOS cacheはflushせず、oracleは先に全件復元した。全hook/p99/大きな等価クラス/大量Unionの成績ではない。通常discoveryには未接続で、5万窓の未完了問題は未解決。
 現行入口は字面共有か外部推薦であり、等価性だけでは入場できない（findIn_no_surface_admissions）。partial-text Union推論とも混在している。次は構造的等価性の証人を直接消費するproducerを分け、元所属/鮮度/抽出を保って接続する。異なる字面のCoverageを捏造しない。最大合計RSS2,022,464KiB、全guard終了/所有process残存0、元DB hash不変。初回proofのimplicit binder失敗も保持。回答モデル/新seed/総トークン比較0、候補未採用。docs/work-class-lookup.md参照、全Phases0–6 active。
