@@ -121,23 +121,13 @@ def workInput (work : String) : Except String Json := do
   unless 2 ≤ parts.length do throw "no native work command"
   Json.parse ("\n".intercalate parts.tail)
 
-/-- Tool argument values, including nested MCP arguments. Object keys and
-tool names are identity, not evidence that a prior result was consumed. -/
-partial def argumentText : Json → String
-  | .str value => value
-  | .arr values => "\n".intercalate (values.toList.map argumentText)
-  | .obj values => "\n".intercalate (values.toArray.toList.map (fun (_,value) => argumentText value))
-  | value => value.compress
-
-/-- Every native invocation participates in data-flow extraction. Shell text
-keeps its literal coordinates; other tools use their structured argument values.
-The complete original Work remains the invocation identity. -/
-def invocationInput (work : String) : Except String String := do
+/-- All fields of the original native invocation participate. Field names
+cannot identify the tool's semantics or discard the other argument values. -/
+def invocationData (work : String) : Except String (String × DataFormat) := do
   let payload ← workInput work
-  match (payload.getObjValAs? String "command").toOption.orElse
-      (fun _ => (payload.getObjValAs? String "cmd").toOption) with
-  | some command => return unwrap command
-  | none => return argumentText payload
+  return (payload.compress,.json)
+
+def invocationInput (work : String) : Except String String := (invocationData work).map (·.1)
 
 /-- A source-reader decoder, never a gate for recording or general data flow. -/
 def workCommand (work : String) : Except String String := do
@@ -254,6 +244,7 @@ def locateReads (database : String) (doc : Document) (trace : Trace) : Except St
   let some raw := doc.source | throw "no original observation"
   let some work := doc.workText | throw "no original work"
   let command ← workCommand work
+  let (input,format) ← invocationData work
   let plans ← readPlans command doc.files
   let decoded ← layout raw
   let original := (textLines decoded.text).filterMap fun line => do
@@ -267,8 +258,12 @@ def locateReads (database : String) (doc : Document) (trace : Trace) : Except St
   for occurrence in doc.occurrences do
     let some start := trace.starts[occurrence]? | continue
     let some output := trace.finished[occurrence]? | continue
-    if unwrap start.command != command then continue
-    let actual := (textLines output).filterMap fun line => do
+    let sameInput := match start.format with
+      | .json => start.command == input && start.format == format
+      | .text => unwrap start.command == command
+    if !sameInput then continue
+    let actualLayout ← layout output
+    let actual := (textLines actualLayout.text).filterMap fun line => do
       let (number, body) ← numbered line.text
       some (line, number, body)
     if !original.all (fun (_, number, body, _) => actual.any (fun (_, n, b) => n == number && b == body)) then continue
@@ -279,7 +274,9 @@ def locateReads (database : String) (doc : Document) (trace : Trace) : Except St
       let limit := decoded.offsets[line.limit]!
       let binding : Binding := ⟨database, doc.owner, doc.work, first, limit⟩
       let rows := actual.filterMap fun (actualLine, n, b) =>
-        if n == number && b == body then some (OutputRow.mk source actualLine.first actualLine.limit) else none
+        if n == number && b == body then
+          some (OutputRow.mk source actualLayout.offsets[actualLine.first]! actualLayout.offsets[actualLine.limit]!)
+        else none
       let recorded : Read := ⟨occurrence, source, binding⟩
       let located : LocatedRead := ⟨recorded, rows, #[recorded], line.text⟩
       if let some previous := chunks.back? then

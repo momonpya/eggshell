@@ -63,7 +63,7 @@ private def scenario (root : System.FilePath) : IO Unit := do
     result.offers.any (·.kind == "omitted_then_read") && result.offers.any (·.kind == "delivered_then_cited"))
     "one of the three recommendation relations was not used"
   check (result.offers.all (fun offer => offer.kind != "reread" && offer.kind != "source_changed") &&
-    !(result.offers.any (fun offer => offer.source == d.source && offer.kind == "delivered_then_cited")))
+    !(result.offers.any (fun offer => offer.target == .file d.source && offer.kind == "delivered_then_cited")))
     "ordinary reread or positive exposure overrode checked omission"
   check (result.offers.all (fun offer => match offer.fact with
     | .used _ => true | _ => offer.priority == 7)) "original nomination priority was lost"
@@ -75,7 +75,7 @@ private def scenario (root : System.FilePath) : IO Unit := do
   check (plan.complete && plan.owners.all (fun original => !original.located.isEmpty))
     "recommendations were not projected onto all original owner rows"
   let wrong := {d.source with file := {d.source.file with fingerprint := String.ofList (List.replicate 64 'd')}}
-  let some offer := Recommend.Offer.check? wrong 0 (usage "wrong-fingerprint" wrong .omittedThenRead)
+  let some offer := Recommend.Offer.check? (.file wrong) 0 (usage "wrong-fingerprint" wrong .omittedThenRead)
       ⟨Index.contentKey (usage "wrong-fingerprint" wrong .omittedThenRead), rfl⟩ |
     throw (IO.userError "invalid alternate fingerprint fixture")
   check ((Recommend.locate #[offer] #[d]).isEmpty) "a changed fingerprint acquired old source coordinates"
@@ -87,10 +87,10 @@ private def scenario (root : System.FilePath) : IO Unit := do
   let fresh ← Recommend.prepare source true
   check (fresh.identity != oldIdentity) "private feedback did not invalidate packet memo input"
   let pinned ← prepared.collect #[("answer", 7)] query ((← IO.monoMsNow)+3000)
-  check (!(pinned.offers.any (fun offer => offer.source == c.source && offer.kind == "omitted_then_read")))
+  check (!(pinned.offers.any (fun offer => offer.target == .file c.source && offer.kind == "omitted_then_read")))
     "a fixed request observed a later private index"
   let latest ← fresh.collect #[("answer", 7)] query ((← IO.monoMsNow)+3000)
-  check (latest.offers.any (fun offer => offer.source == c.source && offer.kind == "omitted_then_read"))
+  check (latest.offers.any (fun offer => offer.target == .file c.source && offer.kind == "omitted_then_read"))
     "the next request did not observe new feedback"
   check (sharedReader.index.head == oldHead && (← DB.PageMap.pin source.directory).head == source.head)
     "recommendation planning wrote the source graph"

@@ -29,6 +29,7 @@ def implementation : String :=
     (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
     (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
     (include_str "SynapseProvenance.lean").toUTF8,
+    (include_str "JsonScalars.lean").toUTF8,
     (include_str "SourceEvidence.lean").toUTF8,
     (include_str "SearchUnicode.lean").toUTF8,
     (include_str "../tools/RetrievalCategories.lean").toUTF8])

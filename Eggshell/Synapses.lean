@@ -113,7 +113,11 @@ theorem Support.checked_covers {read : Read} {source : Range} {claim : Claim}
   next => contradiction
 
 inductive WitnessKind where
-  | pathLine | path | identifier
+  | value | pathLine | path | identifier
+  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+
+inductive DataFormat where
+  | text | json
   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
 
 structure Consumption where
@@ -127,6 +131,8 @@ structure Consumption where
   inputLimit : Nat
   outputFirst : Nat
   outputLimit : Nat
+  inputFormat : DataFormat := .text
+  outputFormat : DataFormat := .text
   /-- Only rows located in the actual producer output, never its entire read. -/
   rows : Array Range := #[]
   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson

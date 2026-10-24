@@ -276,10 +276,10 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       continue
     match value.payload with
     | .start occurrence work query known =>
-      let .ok command := invocationInput work | result := {result with unknown := result.unknown+1}; continue
+      let .ok (command,format) := invocationData work | result := {result with unknown := result.unknown+1}; continue
       if let some (_,_,original) := starts[occurrence]? then
         unless original == work do throw (IO.userError "native start changed its complete invocation")
-      trace ← IO.ofExcept (trace.start occurrence value.clock.nanos command)
+      trace ← IO.ofExcept (trace.start occurrence value.clock.nanos command format)
       starts := starts.insert occurrence (query, known, work)
       result := {result with consumers := result.consumers.push occurrence}
     | .finish occurrence name input response archive =>
@@ -290,9 +290,9 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       let some (_,_,original) := starts[occurrence]? |
         throw (IO.userError "native finish has no complete invocation")
       unless work == original do throw (IO.userError "native finish changed its complete invocation")
-      let .ok command := invocationInput work |
+      let .ok (command,format) := invocationData work |
         throw (IO.userError "native finish has no structured invocation")
-      unless command == started.command do
+      unless command == started.command && format == started.format do
         throw (IO.userError "native finish changed its observed invocation")
       let expected := (Plugin.compileOperationOutcomes (.text occurrence.session) (.text occurrence.turn) tool).2
       let localId ← findNode? source expected
@@ -316,8 +316,8 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       unless doc.occurrences.contains occurrence && doc.workText == some (Plugin.canonicalToolWork tool) do
         throw (IO.userError "native synaptic observation changed its exact occurrence")
       let some raw := doc.source | result := {result with unknown := result.unknown+1}; continue
-      let .ok output := layout raw | result := {result with unknown := result.unknown+1}; continue
-      let completed ← IO.ofExcept (trace.finish occurrence value.clock.nanos output.text)
+      let outputFormat := if (Json.parse raw).isOk then DataFormat.json else .text
+      let completed ← IO.ofExcept (trace.finish occurrence value.clock.nanos raw outputFormat)
       -- Foreign private work can label usage of this DB's memory, but cannot
       -- publish its terms or consumption edges into the shared DB lane.
       trace := acceptPublishedOutput localId trace completed

@@ -29,9 +29,16 @@ def main (args : List String) : IO Unit := do
     (Json.mkObj [("request",Json.mkObj [("record",toJson "RECORD_42")])])
     (Json.mkObj [("record",toJson "RECORD_42"),("size",toJson (17 : Nat))])
   let work := Plugin.canonicalToolWork consumer
-  check ((← IO.ofExcept (invocationInput work)) == "RECORD_42")
-    "MCP invocation was rejected or object keys became argument witnesses"
+  check ((← IO.ofExcept (invocationInput work)) == consumer.input)
+    "MCP invocation lost its complete structured arguments"
+  let values ← IO.ofExcept (payloadOccurrences .json consumer.input)
+  check (values.all (fun term => term.text != "record" && term.text != "request"))
+    "object keys became argument witnesses"
   check ((workCommand work).toOption.isNone) "non-shell fixture unexpectedly became a source-reader command"
+  let withCommand := {consumer with input := (Json.mkObj [
+    ("command",toJson "server-side operation"),("cursor",toJson (73 : Nat))]).compress}
+  check ((← IO.ofExcept (invocationInput (Plugin.canonicalToolWork withCommand))) == withCommand.input)
+    "a command field discarded the other MCP arguments"
   for response in [producer.response,consumer.response,"null","42","true"] do
     let view ← IO.ofExcept (layout response)
     check (view.text == response && view.original == response &&
@@ -50,7 +57,8 @@ def main (args : List String) : IO Unit := do
     "MCP calls did not retain their complete native provenance"
   let edges := result.consumed.filterMap fun fact => match fact with
     | .consumed edge => some edge | _ => none
-  check (edges.size == 1 && edges.all (fun edge => edge.term == "RECORD_42" && edge.rows.isEmpty &&
+  check (edges.size == 1 && edges.all (fun edge => edge.kind == .value &&
+    edge.term == (toJson "RECORD_42").compress && edge.rows.isEmpty &&
     edge.producer == occurrence producer && edge.consumer == occurrence consumer))
     "structured MCP output did not produce its exact argument-consumption witness"
   let altered := {consumer with name := "mcp__different_server__inspect"}

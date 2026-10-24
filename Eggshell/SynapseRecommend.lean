@@ -2,50 +2,75 @@ module
 
 public import Eggshell.SynapseIndex
 public import Eggshell.SynapseUsage
+public import Eggshell.ObservationContext
 
 @[expose] public section
 
 namespace Eggshell.Synapses.Recommend
 open Lean DB
 
+def implementation : String := Blake3.hex (Blake3.digest "eggshell.observation-recommendation".toUTF8 [
+  (include_str "SynapseRecommend.lean").toUTF8,(include_str "ObservationContext.lean").toUTF8,
+  (include_str "JsonScalars.lean").toUTF8,(include_str "SynapseTransport.lean").toUTF8,
+  (include_str "SynapseUsage.lean").toUTF8])
+
+/-- Output identity is native occurrence identity. File coordinates are an
+additional addressing scheme, never a prerequisite for recommending data. -/
+inductive Target where
+  | file (source : Range)
+  | output (producer : Occurrence)
+  deriving DecidableEq, BEq, ToJson
+
+def Target.source? : Target → Option Range
+  | .file source => some source
+  | .output _ => none
+
 /-- A recommendation names data actually carried by its advisory witness.
 Ordinary rereads and changed sources do not reward a candidate. -/
-def carries (fact : Fact) (source : Range) : Bool :=
-  match fact with
-  | .supports support => support.source == source
-  | .consumed edge => edge.rows.contains source
-  | .coquoted _ quoted => quoted == source
-  | .used usage => usage.source == source &&
-      (usage.kind == .omittedThenRead || usage.kind == .deliveredThenCited)
-  | .read _ => false
+def carries (fact : Fact) : Target → Bool
+  | .output producer => match fact with
+    | .consumed edge => edge.producer == producer
+    | _ => false
+  | .file source => match fact with
+    | .supports support => support.source == source
+    | .consumed edge => edge.rows.contains source
+    | .coquoted _ quoted => quoted == source
+    | .used usage => usage.source == source &&
+        (usage.kind == .omittedThenRead || usage.kind == .deliveredThenCited)
+    | .read _ => false
 
 structure Offer where
-  source : Range
+  target : Target
   priority : Nat
   fact : Fact
   identity : String
   identity_exact : identity = Index.contentKey fact
   valid : fact.valid = true
-  witness : carries fact source = true
+  witness : carries fact target = true
 
-def Offer.check? (source : Range) (priority : Nat) (fact : Fact)
+def Offer.check? (target : Target) (priority : Nat) (fact : Fact)
     (identity : {value : String // value = Index.contentKey fact}) : Option Offer :=
   if valid : fact.valid = true then
-    if witness : carries fact source = true then
-      some ⟨source, priority, fact, identity.val, identity.property, valid, witness⟩ else none
+    if witness : carries fact target = true then
+      some ⟨target, priority, fact, identity.val, identity.property, valid, witness⟩ else none
   else none
 
-theorem Offer.consumption_row (offer : Offer) (edge : Consumption) (kind : offer.fact = .consumed edge) :
-    offer.source ∈ edge.rows := by
+theorem Offer.consumption_row (offer : Offer) (edge : Consumption) (kind : offer.fact = .consumed edge)
+    (source : Range) (target : offer.target = .file source) : source ∈ edge.rows := by
   have witness := offer.witness
-  rw [kind] at witness
+  rw [kind,target] at witness
   exact Array.mem_of_contains_eq_true witness
 
 theorem Offer.usage_is_evidence (offer : Offer) (usage : Usage) (kind : offer.fact = .used usage) :
     usage.kind = .omittedThenRead ∨ usage.kind = .deliveredThenCited := by
   have witness := offer.witness
-  simp only [kind, carries, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq] at witness
-  exact witness.2
+  cases target : offer.target <;> simp_all [carries, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq]
+
+theorem Offer.output_has_producer (offer : Offer) (producer : Occurrence)
+    (target : offer.target = .output producer) :
+    ∃ edge, offer.fact = .consumed edge ∧ edge.producer = producer := by
+  have witness := offer.witness
+  cases kind : offer.fact <;> simp_all [carries,beq_iff_eq]
 
 def Offer.kind (offer : Offer) : String := match offer.fact with
   | .supports _ => "support"
@@ -55,7 +80,7 @@ def Offer.kind (offer : Offer) : String := match offer.fact with
   | .read _ => "unavailable"
 
 def Offer.json (offer : Offer) : Json := Json.mkObj [
-  ("source", toJson offer.source), ("priority", toJson offer.priority),
+  ("target", toJson offer.target), ("source", toJson offer.target.source?), ("priority", toJson offer.priority),
   ("kind", toJson offer.kind), ("evidence", toJson offer.identity)]
 
 structure Limits where
@@ -103,9 +128,9 @@ def Result.receipt (result : Result) : Json := Json.mkObj [
 
 def Result.stamp (result : Result) : String := Index.contentKey result.receipt
 
-def addOffer (result : Result) (source : Range) (priority : Nat) (fact : Fact)
+def addOffer (result : Result) (target : Target) (priority : Nat) (fact : Fact)
     (identity : {value : String // value = Index.contentKey fact}) : Result :=
-  match Offer.check? source priority fact identity with
+  match Offer.check? target priority fact identity with
   | none => result
   | some offer => {result with offers := result.offers.push offer}
 
@@ -114,10 +139,11 @@ one incidence hop; only reverse consumption is recursive. No score fitting,
 whole-producer fallback, graph mutation or certification occurs here. -/
 def collect (shared : Index.Reader) (usage : Option Index.Reader)
     (answers : Array (String × Nat)) (initial : Array Range) (query : String)
-    (deadline : Nat) (limits : Limits := {}) : IO Result := do
+    (deadline : Nat) (limits : Limits := {}) (consumers : Array (Occurrence × Nat) := #[]) : IO Result := do
   let database := shared.manifest.source.identity
   let mut roots := answers.map fun (answer, priority) => ({key := .answer database answer, priority} : Task)
   roots := roots ++ initial.map (fun source => ⟨.quoted source, 0⟩)
+  roots := roots ++ consumers.map (fun (consumer,priority) => ⟨.consumer consumer,priority⟩)
   if usage.isSome && digest query then roots := roots.push ⟨.query query, 0⟩
   roots := roots.qsort fun a b =>
     if a.priority == b.priority then (toJson a.key).compress < (toJson b.key).compress
@@ -159,30 +185,33 @@ def collect (shared : Index.Reader) (usage : Option Index.Reader)
       let identity : {value : String // value = Index.contentKey fact} := ⟨Index.contentKey fact, rfl⟩
       match task.key, fact with
       | .answer .., .supports support =>
-        result := addOffer result support.source task.priority fact identity
+        result := addOffer result (.file support.source) task.priority fact identity
+        queue := queue.push ⟨.group (.claim support.claim), task.priority⟩
         queue := queue.push ⟨.consumer support.read.occurrence, task.priority⟩
         queue := queue.push ⟨.quoted support.source, task.priority⟩
       | .consumer _, .consumed edge =>
+        if edge.rows.isEmpty then
+          result := addOffer result (.output edge.producer) task.priority fact identity
         for source in edge.rows do
-          result := addOffer result source task.priority fact identity
+          result := addOffer result (.file source) task.priority fact identity
           queue := queue.push ⟨.quoted source, task.priority⟩
         queue := queue.push ⟨.consumer edge.producer, task.priority⟩
       | .quoted _, .coquoted group _ =>
-        if let .answer .. := group then queue := queue.push ⟨.group group, task.priority⟩
+        queue := queue.push ⟨.group group, task.priority⟩
       | .group _, .coquoted _ source =>
-        result := addOffer result source task.priority fact identity
+        result := addOffer result (.file source) task.priority fact identity
       | .query _, .used value =>
         if value.kind == .omittedThenRead || value.kind == .deliveredThenCited then
-          result := addOffer result value.source task.priority fact identity
+          result := addOffer result (.file value.source) task.priority fact identity
           queue := queue.push ⟨.quoted value.source, task.priority⟩
       | _, _ => pure ()
   -- A checked omission is the more direct observation. Positive citation
   -- remains useful only where no omission of that same range was observed.
   let missing := result.offers.foldl (fun ranges offer => match offer.fact with
-    | .used value => if value.kind == .omittedThenRead then ranges.insert offer.source else ranges
+    | .used value => if value.kind == .omittedThenRead then ranges.insert value.source else ranges
     | _ => ranges) ({} : Std.HashSet Range)
   return {result with offers := result.offers.filter fun offer => match offer.fact with
-    | .used value => value.kind != .deliveredThenCited || !missing.contains offer.source
+    | .used value => value.kind != .deliveredThenCited || !missing.contains value.source
     | _ => true}
 
 /-- Pin optional index publications once for both memo identity and planning.
@@ -200,14 +229,14 @@ def prepare (source : PageMap.Snapshot) (writable : Bool) : IO Prepared := do
   catch error => return ⟨source.head, none, none, some s!"index-open: {error}"⟩
 
 def Prepared.identity (prepared : Prepared) : Json :=
-  toJson (prepared.source.identity, prepared.source.authority,
+  toJson (implementation,prepared.source.identity, prepared.source.authority,
     prepared.shared.map (·.index.head), prepared.usage.map (·.index.head), prepared.failure)
 
 def Prepared.collect (prepared : Prepared) (answers : Array (String × Nat)) (query : String)
-    (deadline : Nat) (limits : Limits := {}) : IO Result := do
+    (deadline : Nat) (limits : Limits := {}) (consumers : Array (Occurrence × Nat) := #[]) : IO Result := do
   if prepared.failure.isSome then return {complete := false, available := false, failure := prepared.failure}
   let some shared := prepared.shared | return {available := false}
-  try _root_.Eggshell.Synapses.Recommend.collect shared prepared.usage answers #[] query deadline limits
+  try _root_.Eggshell.Synapses.Recommend.collect shared prepared.usage answers #[] query deadline limits consumers
   catch error => return {
     complete := false, index := some shared.index.head, usage := prepared.usage.map (·.index.head)
     failure := some s!"index-read: {error}"}
@@ -216,22 +245,39 @@ def Prepared.collect (prepared : Prepared) (answers : Array (String × Nat)) (qu
 Fingerprint/range matching never creates a new owner or a control Match. -/
 structure Located where
   offer : Offer
+  source : Range
+  target : offer.target = .file source
   row : Read
-  within : offer.source.contains row.source = true
+  within : source.contains row.source = true
 
 def locate (offers : Array Offer) (rows : Array Read) : Array Located := Id.run do
   let mut found := #[]
   for offer in offers do
-    let matching := rows.filter (offer.source.contains ·.source)
-    unless covered offer.source (matching.map (·.source)) do continue
-    for row in matching do
-      if within : offer.source.contains row.source = true then found := found.push ⟨offer, row, within⟩
+    let .file source := offer.target | continue
+    if target : offer.target = .file source then
+      let matching := rows.filter (source.contains ·.source)
+      unless covered source (matching.map (·.source)) do continue
+      for row in matching do
+        if within : source.contains row.source = true then found := found.push ⟨offer,source,target,row,within⟩
   return found
 
 theorem Located.same_fingerprint (located : Located) :
-    located.offer.source.file = located.row.source.file := by
+    located.source.file = located.row.source.file := by
   have within := located.within
   simp only [Range.contains, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at within
   exact within.1.1
+
+structure LocatedOutput (doc : Extraction.Document) where
+  offer : Offer
+  fragment : ObservationContext.Fragment doc
+  target : offer.target = .output fragment.occurrence
+
+def locateOutputs (offers : Array Offer) (database : String) (doc : Extraction.Document) : Array (LocatedOutput doc) := Id.run do
+  let some prepared := ObservationContext.prepare? doc | return #[]
+  return offers.filterMap fun offer => do
+    let .output _ := offer.target | none
+    let .consumed edge := offer.fact | none
+    let fragment ← prepared.locate? database edge
+    if target : offer.target = .output fragment.occurrence then some ⟨offer,fragment,target⟩ else none
 
 end Eggshell.Synapses.Recommend

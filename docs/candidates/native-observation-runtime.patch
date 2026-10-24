@@ -1,0 +1,1129 @@
+diff --git a/Eggshell/Synapses.lean b/Eggshell/Synapses.lean
+--- a/Eggshell/Synapses.lean
++++ b/Eggshell/Synapses.lean
+@@ -146,7 +146,11 @@
+   next => contradiction
+ 
+ inductive WitnessKind where
+-  | pathLine | path | identifier
++  | value | pathLine | path | identifier
++  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
++
++inductive DataFormat where
++  | text | json
+   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+ 
+ structure Consumption where
+@@ -160,6 +164,8 @@
+   inputLimit : Nat
+   outputFirst : Nat
+   outputLimit : Nat
++  inputFormat : DataFormat := .text
++  outputFormat : DataFormat := .text
+   /-- Only rows located in the actual producer output, never its entire read. -/
+   rows : Array Range := #[]
+   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+diff --git a/Eggshell/SynapseExtraction.lean b/Eggshell/SynapseExtraction.lean
+--- a/Eggshell/SynapseExtraction.lean
++++ b/Eggshell/SynapseExtraction.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.Synapses
+ public import Eggshell.SearchUnicode
++public import Eggshell.JsonScalars
+ public import tools.RetrievalCategories
+ 
+ @[expose] public section
+@@ -109,12 +110,34 @@
+   finished : Nat
+   term : Term
+   source : Array Char
++  format : DataFormat := .text
+   deriving Repr
+ 
+ def literal (source : Array Char) (first limit : Nat) (term : String) : Bool :=
+   first < limit && limit ≤ source.size &&
+     String.ofList (source.extract first limit).toList == term
+ 
++/-- Structured values retain their JSON type and raw literal coordinates.
++Lexical hints are extracted only inside string values, never object keys. -/
++def payloadOccurrences (format : DataFormat) (text : String) : Except String (Array Term) := do
++  if format == .text then return termOccurrences text
++  let raw := text.toList.toArray
++  let mut terms := #[]
++  for scalar in ← JsonScalars.values text do
++    terms := terms.push ⟨.value,scalar.literal,scalar.first,scalar.limit⟩
++    if let some value := scalar.text then
++      for term in termOccurrences value do
++        let some first := scalar.offsets[term.first]? | continue
++        let some limit := scalar.offsets[term.limit]? | continue
++        if literal raw first limit term.text then
++          terms := terms.push {term with first,limit}
++  return terms
++
++def witnessTerm (edge : Consumption) : Bool :=
++  if edge.kind == .value then edge.inputFormat == .json && edge.outputFormat == .json &&
++    JsonScalars.scalarLiteral edge.term
++  else termKind? edge.term == some edge.kind
++
+ /-- A pending link carries checked literal positions in both actual texts.
+ The output array is shared by all witnesses from one immutable completion. -/
+ structure Pending where
+@@ -122,13 +145,13 @@
+   input : Array Char
+   output : Array Char
+   valid : edge.valid = true
+-  classified : termKind? edge.term = some edge.kind
++  classified : witnessTerm edge = true
+   inputExact : literal input edge.inputFirst edge.inputLimit edge.term = true
+   outputExact : literal output edge.outputFirst edge.outputLimit edge.term = true
+ 
+ def Pending.check? (edge : Consumption) (input output : Array Char) : Option Pending :=
+   if valid : edge.valid = true then
+-    if classified : termKind? edge.term = some edge.kind then
++    if classified : witnessTerm edge = true then
+       if inputExact : literal input edge.inputFirst edge.inputLimit edge.term = true then
+         if outputExact : literal output edge.outputFirst edge.outputLimit edge.term = true then
+           some ⟨edge, input, output, valid, classified, inputExact, outputExact⟩ else none
+@@ -160,26 +183,27 @@
+   Consumption.checked_before (edge := pending.edge) (accepted := pending.edge)
+     (by simp [Consumption.checked, pending.valid])
+ 
+-theorem Pending.non_numeric (pending : Pending) :
++theorem Pending.non_numeric (pending : Pending) (unstructured : pending.edge.kind ≠ .value) :
+     pending.edge.term.toList.all SearchUnicode.isDigit = false := by
+   cases numeric : pending.edge.term.toList.all SearchUnicode.isDigit with
+   | false => rfl
+   | true =>
+     have rejected := numeric_not_a_witness pending.edge.term numeric
+     have accepted := pending.classified
+-    rw [rejected] at accepted
+-    contradiction
++    simp [witnessTerm,unstructured,beq_iff_eq,rejected] at accepted
+ 
+ structure Started where
+   command : String
+   ordinal : Nat
+   pending : Array Pending
++  format : DataFormat := .text
+ 
+ structure Trace where
+   graph : Graph := .empty
+   outputs : Std.HashMap (WitnessKind × String) (Std.HashMap Occurrence (Array Produced)) := {}
+   starts : Std.HashMap Occurrence Started := {}
+   finished : Std.HashMap Occurrence String := {}
++  finishedFormats : Std.HashMap Occurrence DataFormat := {}
+   rows : Std.HashMap Occurrence (Array OutputRow) := {}
+   lastOrdinal : Option Nat := none
+ 
+@@ -187,16 +211,25 @@
+   if trace.lastOrdinal.any (ordinal < ·) then throw "RPC trace is not in observed order"
+   return {trace with lastOrdinal := some ordinal}
+ 
+-def Trace.start (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (command : String) :
++def Trace.start (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (command : String)
++    (format : DataFormat := .text) :
+     Except String Trace := do
+   let trace ← trace.advance ordinal
+   unless occurrence.valid do throw "missing exact session/turn/tool-use identity"
+   if let some previous := trace.starts[occurrence]? then
+-    unless previous.command == command do throw "one occurrence changed its input"
++    unless previous.command == command && previous.format == format do throw "one occurrence changed its input"
+     return trace
+   let mut pending := #[]
+   let input := command.toList.toArray
+-  for term in terms command do
++  let candidates ← payloadOccurrences format command
++  let strong := candidates.filter fun term => term.kind == .value &&
++    (trace.outputs[(term.kind,term.text)]?.getD {}).any (fun _ producers =>
++      producers.any (fun producer => producer.finished < ordinal))
++  let mut seen : Std.HashSet (WitnessKind × String) := {}
++  for term in candidates do
++    if term.kind != .value && strong.any (fun value => value.first ≤ term.first && term.limit ≤ value.limit) then continue
++    if seen.contains (term.kind,term.text) then continue
++    seen := seen.insert (term.kind,term.text)
+     for (_, producers) in trace.outputs[(term.kind, term.text)]?.getD {} do
+       for producer in producers do
+         if ordinal ≤ producer.finished then continue
+@@ -206,29 +239,34 @@
+           kind := term.kind, term := term.text
+           inputFirst := term.first, inputLimit := term.limit
+           outputFirst := producer.term.first, outputLimit := producer.term.limit
++          inputFormat := format,outputFormat := producer.format
+           rows := project (trace.rows[producer.occurrence]?.getD {}) producer.term.first producer.term.limit }
+         if let some checked := Pending.check? edge input producer.source then
+           pending := pending.push checked
+-  return {trace with starts := trace.starts.insert occurrence ⟨command, ordinal, pending⟩}
++  return {trace with starts := trace.starts.insert occurrence ⟨command, ordinal, pending,format⟩}
+ 
+-def Trace.finish (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (output : String) :
++def Trace.finish (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (output : String)
++    (format : DataFormat := .text) :
+     Except String Trace := do
+   let trace ← trace.advance ordinal
+   let some started := trace.starts[occurrence]? | throw "output has no observed start"
+   if let some previous := trace.finished[occurrence]? then
+-    unless previous == output do throw "one occurrence changed its output"
++    unless previous == output && trace.finishedFormats[occurrence]? == some format do throw "one occurrence changed its output"
+     return trace
+   unless started.ordinal < ordinal do throw "output predates call start"
+   let mut graph := trace.graph
+   for pending in started.pending do graph ← graph.insert (.consumed pending.edge)
+   let mut outputs := trace.outputs
+   let source := output.toList.toArray
+-  for term in termOccurrences output do
++  for term in ← payloadOccurrences format output do
+     let previous := outputs[(term.kind, term.text)]?.getD {}
+     let positions := previous[occurrence]?.getD #[]
+     outputs := outputs.insert (term.kind, term.text)
+-      (previous.insert occurrence (positions.push ⟨occurrence, ordinal, term, source⟩))
+-  return {trace with graph, outputs, finished := trace.finished.insert occurrence output}
++      (previous.insert occurrence (positions.push ⟨occurrence, ordinal, term, source,format⟩))
++  return {trace with
++    graph, outputs
++    finished := trace.finished.insert occurrence output
++    finishedFormats := trace.finishedFormats.insert occurrence format}
+ 
+ /-- Attach verified row locations after exact native occurrence binding. -/
+ def Trace.locate (trace : Trace) (rows : Std.HashMap Occurrence (Array OutputRow)) :
+diff --git a/Eggshell/SynapseIndex.lean b/Eggshell/SynapseIndex.lean
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -29,6 +29,7 @@
+     (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
+     (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
+     (include_str "SynapseProvenance.lean").toUTF8,
++    (include_str "JsonScalars.lean").toUTF8,
+     (include_str "SourceEvidence.lean").toUTF8,
+     (include_str "SearchUnicode.lean").toUTF8,
+     (include_str "../tools/RetrievalCategories.lean").toUTF8])
+diff --git a/Eggshell/SynapseSource.lean b/Eggshell/SynapseSource.lean
+--- a/Eggshell/SynapseSource.lean
++++ b/Eggshell/SynapseSource.lean
+@@ -23,11 +23,13 @@
+       unless json.compress == raw do throw "noncanonical native response"
+       let outputs := (["output", "aggregatedOutput", "stdout"].filterMap fun key =>
+         (json.getObjValAs? String key).toOption).eraseDups
+-      let [text] := outputs | throw "no unambiguous native text output"
+-      let fragment := (toJson text).compress
+-      let [before, _] := raw.splitOn fragment | throw "ambiguous native output position"
+-      pure (some (fragment, before.length))
+-    | .ok (.arr _) => throw "unsupported native output array"
++      match outputs with
++      | [text] =>
++        let fragment := (toJson text).compress
++        match raw.splitOn fragment with
++        | [before, _] => pure (some (fragment, before.length))
++        | _ => pure none
++      | _ => pure none
+     | _ => pure none
+   let encoded := projected.isSome
+   let fragment := projected.map (·.1) |>.getD raw
+@@ -114,10 +116,22 @@
+     | _ => command
+   | .error _ => command
+ 
+-def workCommand (work : String) : Except String String := do
++def workInput (work : String) : Except String Json := do
+   let parts := work.splitOn "\n"
+   unless 2 ≤ parts.length do throw "no native work command"
+-  let payload ← Json.parse ("\n".intercalate parts.tail)
++  Json.parse ("\n".intercalate parts.tail)
++
++/-- All fields of the original native invocation participate. Field names
++cannot identify the tool's semantics or discard the other argument values. -/
++def invocationData (work : String) : Except String (String × DataFormat) := do
++  let payload ← workInput work
++  return (payload.compress,.json)
++
++def invocationInput (work : String) : Except String String := (invocationData work).map (·.1)
++
++/-- A source-reader decoder, never a gate for recording or general data flow. -/
++def workCommand (work : String) : Except String String := do
++  let payload ← workInput work
+   match payload.getObjValAs? String "command" with
+   | .ok value => return unwrap value
+   | .error _ => return unwrap (← payload.getObjValAs? String "cmd")
+@@ -230,6 +244,7 @@
+   let some raw := doc.source | throw "no original observation"
+   let some work := doc.workText | throw "no original work"
+   let command ← workCommand work
++  let (input,format) ← invocationData work
+   let plans ← readPlans command doc.files
+   let decoded ← layout raw
+   let original := (textLines decoded.text).filterMap fun line => do
+@@ -243,8 +258,12 @@
+   for occurrence in doc.occurrences do
+     let some start := trace.starts[occurrence]? | continue
+     let some output := trace.finished[occurrence]? | continue
+-    if unwrap start.command != command then continue
+-    let actual := (textLines output).filterMap fun line => do
++    let sameInput := match start.format with
++      | .json => start.command == input && start.format == format
++      | .text => unwrap start.command == command
++    if !sameInput then continue
++    let actualLayout ← layout output
++    let actual := (textLines actualLayout.text).filterMap fun line => do
+       let (number, body) ← numbered line.text
+       some (line, number, body)
+     if !original.all (fun (_, number, body, _) => actual.any (fun (_, n, b) => n == number && b == body)) then continue
+@@ -255,7 +274,9 @@
+       let limit := decoded.offsets[line.limit]!
+       let binding : Binding := ⟨database, doc.owner, doc.work, first, limit⟩
+       let rows := actual.filterMap fun (actualLine, n, b) =>
+-        if n == number && b == body then some (OutputRow.mk source actualLine.first actualLine.limit) else none
++        if n == number && b == body then
++          some (OutputRow.mk source actualLayout.offsets[actualLine.first]! actualLayout.offsets[actualLine.limit]!)
++        else none
+       let recorded : Read := ⟨occurrence, source, binding⟩
+       let located : LocatedRead := ⟨recorded, rows, #[recorded], line.text⟩
+       if let some previous := chunks.back? then
+diff --git a/Eggshell/SynapseUsage.lean b/Eggshell/SynapseUsage.lean
+--- a/Eggshell/SynapseUsage.lean
++++ b/Eggshell/SynapseUsage.lean
+@@ -10,6 +10,8 @@
+ structure Presentation where
+   ranges : Array Range := #[]
+   uncertain : Std.HashSet File := {}
++  bindings : Array (String × Nat × Nat) := #[]
++  uncertainOwners : Std.HashSet String := {}
+ 
+ def caption (text : String) : Option (Nat × Nat × Bool) := do
+   if !text.startsWith "  ORIGINAL CHARS [" && !text.startsWith "  CHARS [" then none else do
+@@ -25,48 +27,9 @@
+   if first < limit && limit ≤ raw.length then
+     some (String.ofList ((raw.toList.drop first).take (limit-first))) else none
+ 
+-/-- Shared source rows count as delivered only when their full fingerprint,
+-line and literal code match an original native observation. Position metadata
+-alone never supplies a delivered range. Decode each original scalar once. -/
+-def presentedShared (body : String) (docs : Array Document) (reads : Array Read) : Presentation := Id.run do
+-  if (body.splitOn "EGGSHELL SHARED SOURCE DATA\n").length ≤ 1 then return {}
+-  let grouped := reads.foldl (fun found row => found.insert row.binding.owner
+-    (found[row.binding.owner]?.getD #[] |>.push row))
+-    ({} : Std.HashMap String (Array Read))
+-  let mut originals : Std.HashMap (File × Nat) (Std.HashSet String) := {}
+-  for doc in docs do
+-    if !doc.native then continue
+-    let some raw := doc.source | continue
+-    let .ok decoded := layout raw | continue
+-    let rows := grouped[doc.owner]?.getD #[]
+-    let bindings := rows.foldl (fun found row => found.insert
+-      (row.binding.first,row.binding.limit) row.source) ({} : Std.HashMap (Nat × Nat) Range)
+-    for line in textLines decoded.text do
+-      let some (number,code) := numbered line.text | continue
+-      let some first := decoded.offsets[line.first]? | continue
+-      let some limit := decoded.offsets[line.limit]? | continue
+-      let some source := bindings[(first,limit)]? | continue
+-      if source.first != number || source.last != number then continue
+-      let key := (source.file,number)
+-      originals := originals.insert key ((originals[key]?).getD {} |>.insert code)
+-  let mut result : Presentation := {}
+-  for packet in (body.splitOn "EGGSHELL SHARED SOURCE DATA\n").drop 1 do
+-    let content := (packet.splitOn "END EGGSHELL SHARED SOURCE DATA\n").head!
+-    for block in (content.splitOn "\nSOURCE ").drop 1 do
+-      let some encoded := (block.splitOn "\n").head? | continue
+-      let .ok file := Json.parse encoded >>= fromJson? (α := File) | continue
+-      let some code := (block.splitOn "\nCODE\n")[1]? | continue
+-      let code := (code.splitOn "END SOURCE\n").head!
+-      for line in textLines code do
+-        let some (number,text) := numbered line.text | continue
+-        if (originals[(file,number)]?).any (·.contains text) then
+-          result := {result with ranges := result.ranges.push ⟨file,number,number⟩}
+-        else result := {result with uncertain := result.uncertain.insert file}
+-  return result
+-
+ /-- Verify actual packet bytes against immutable raw coordinates before labelling. -/
+ def presented (body : String) (docs : Array Document) (reads : Array Read) : Presentation := Id.run do
+-  let mut result := presentedShared body docs reads
++  let mut result : Presentation := {}
+   for part in body.splitOn "\nWORK GRAPH " do
+     let some owner := (part.splitOn "\n").head? | continue
+     let some doc := docs.find? (·.owner == owner) | continue
+@@ -96,13 +59,25 @@
+         spans := #[(0, raw.length)]
+       else bad := true
+     if bad then
++      result := {result with uncertainOwners := result.uncertainOwners.insert owner}
+       for file in doc.files do result := {result with uncertain := result.uncertain.insert file}
++    else
++      result := {result with bindings := result.bindings ++ spans.map (fun (a,b) => (owner,a,b))}
+     for row in reads do
+       if row.binding.owner == owner && spans.any (fun (first, limit) =>
+           first ≤ row.binding.first && row.binding.limit ≤ limit) then
+         result := {result with ranges := result.ranges.push row.source}
+   return result
+ 
++def Presentation.coversBinding (shown : Presentation) (binding : Binding) : Bool := Id.run do
++  if shown.uncertainOwners.contains binding.owner then return false
++  let spans := shown.bindings.filterMap fun (owner,first,limit) =>
++    if owner == binding.owner then some (first,limit) else none
++  let spans := spans.qsort fun a b => a.1 < b.1
++  let covered := spans.foldl (fun position (first,limit) =>
++    if first ≤ position then max position limit else position) binding.first
++  return binding.first < binding.limit && binding.limit ≤ covered
++
+ def compactRanges (ranges : Array Range) : Array Range := Id.run do
+   let mut files : Std.HashMap File (Array Range) := {}
+   for range in ranges do files := files.insert range.file (files[range.file]?.getD #[] |>.push range)
+@@ -146,7 +121,9 @@
+ def Feedback.present (feedback : Feedback) (packet : Presentation) : Feedback :=
+   {feedback with delivered := {
+     ranges := feedback.delivered.ranges ++ packet.ranges
+-    uncertain := feedback.delivered.uncertain.union packet.uncertain }}
++    uncertain := feedback.delivered.uncertain.union packet.uncertain
++    bindings := feedback.delivered.bindings ++ packet.bindings
++    uncertainOwners := feedback.delivered.uncertainOwners.union packet.uncertainOwners }}
+ 
+ /-- A PreToolUse packet arriving after proposal cannot rewrite what was known. -/
+ def Feedback.start (feedback : Feedback) (occurrence : Occurrence) : Feedback :=
+diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.SynapseIndex
+ public import Eggshell.SynapseUsage
++public import Eggshell.ObservationContext
+ public import Eggshell.CanonicalSourceCache
+ public import Eggshell.CanonicalSourceDelivery
+ 
+@@ -10,45 +11,69 @@
+ namespace Eggshell.Synapses.Recommend
+ open Lean DB
+ 
++def implementation : String := Blake3.hex (Blake3.digest "eggshell.observation-recommendation".toUTF8 [
++  (include_str "SynapseRecommend.lean").toUTF8,(include_str "ObservationContext.lean").toUTF8,
++  (include_str "JsonScalars.lean").toUTF8,(include_str "SynapseTransport.lean").toUTF8,
++  (include_str "SynapseUsage.lean").toUTF8])
++
++/-- Output identity is native occurrence identity. File coordinates are an
++additional addressing scheme, never a prerequisite for recommending data. -/
++inductive Target where
++  | file (source : Range)
++  | output (producer : Occurrence)
++  deriving DecidableEq, BEq, ToJson
++
++def Target.source? : Target → Option Range
++  | .file source => some source
++  | .output _ => none
++
+ /-- A recommendation names data actually carried by its advisory witness.
+ Ordinary rereads and changed sources do not reward a candidate. -/
+-def carries (fact : Fact) (source : Range) : Bool :=
+-  match fact with
+-  | .supports support => support.source == source
+-  | .consumed edge => edge.rows.contains source
+-  | .coquoted _ quoted => quoted == source
+-  | .used usage => usage.source == source &&
+-      (usage.kind == .omittedThenRead || usage.kind == .deliveredThenCited)
+-  | .read _ => false
++def carries (fact : Fact) : Target → Bool
++  | .output producer => match fact with
++    | .consumed edge => edge.producer == producer
++    | _ => false
++  | .file source => match fact with
++    | .supports support => support.source == source
++    | .consumed edge => edge.rows.contains source
++    | .coquoted _ quoted => quoted == source
++    | .used usage => usage.source == source &&
++        (usage.kind == .omittedThenRead || usage.kind == .deliveredThenCited)
++    | .read _ => false
+ 
+ structure Offer where
+-  source : Range
++  target : Target
+   priority : Nat
+   fact : Fact
+   identity : String
+   identity_exact : identity = Index.contentKey fact
+   valid : fact.valid = true
+-  witness : carries fact source = true
++  witness : carries fact target = true
+ 
+-def Offer.check? (source : Range) (priority : Nat) (fact : Fact)
++def Offer.check? (target : Target) (priority : Nat) (fact : Fact)
+     (identity : {value : String // value = Index.contentKey fact}) : Option Offer :=
+   if valid : fact.valid = true then
+-    if witness : carries fact source = true then
+-      some ⟨source, priority, fact, identity.val, identity.property, valid, witness⟩ else none
++    if witness : carries fact target = true then
++      some ⟨target, priority, fact, identity.val, identity.property, valid, witness⟩ else none
+   else none
+ 
+-theorem Offer.consumption_row (offer : Offer) (edge : Consumption) (kind : offer.fact = .consumed edge) :
+-    offer.source ∈ edge.rows := by
++theorem Offer.consumption_row (offer : Offer) (edge : Consumption) (kind : offer.fact = .consumed edge)
++    (source : Range) (target : offer.target = .file source) : source ∈ edge.rows := by
+   have witness := offer.witness
+-  rw [kind] at witness
++  rw [kind,target] at witness
+   exact Array.mem_of_contains_eq_true witness
+ 
+ theorem Offer.usage_is_evidence (offer : Offer) (usage : Usage) (kind : offer.fact = .used usage) :
+     usage.kind = .omittedThenRead ∨ usage.kind = .deliveredThenCited := by
+   have witness := offer.witness
+-  simp only [kind, carries, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq] at witness
+-  exact witness.2
++  cases target : offer.target <;> simp_all [carries, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq]
+ 
++theorem Offer.output_has_producer (offer : Offer) (producer : Occurrence)
++    (target : offer.target = .output producer) :
++    ∃ edge, offer.fact = .consumed edge ∧ edge.producer = producer := by
++  have witness := offer.witness
++  cases kind : offer.fact <;> simp_all [carries,beq_iff_eq]
++
+ def Offer.kind (offer : Offer) : String := match offer.fact with
+   | .supports _ => "support"
+   | .consumed _ => "consumption"
+@@ -57,7 +82,7 @@
+   | .read _ => "unavailable"
+ 
+ def Offer.json (offer : Offer) : Json := Json.mkObj [
+-  ("source", toJson offer.source), ("priority", toJson offer.priority),
++  ("target", toJson offer.target), ("source", toJson offer.target.source?), ("priority", toJson offer.priority),
+   ("kind", toJson offer.kind), ("evidence", toJson offer.identity)]
+ 
+ structure Limits where
+@@ -105,9 +130,9 @@
+ 
+ def Result.stamp (result : Result) : String := Index.contentKey result.receipt
+ 
+-def addOffer (result : Result) (source : Range) (priority : Nat) (fact : Fact)
++def addOffer (result : Result) (target : Target) (priority : Nat) (fact : Fact)
+     (identity : {value : String // value = Index.contentKey fact}) : Result :=
+-  match Offer.check? source priority fact identity with
++  match Offer.check? target priority fact identity with
+   | none => result
+   | some offer => {result with offers := result.offers.push offer}
+ 
+@@ -116,10 +141,11 @@
+ whole-producer fallback, graph mutation or certification occurs here. -/
+ def collect (shared : Index.Reader) (usage : Option Index.Reader)
+     (answers : Array (String × Nat)) (initial : Array Range) (query : String)
+-    (deadline : Nat) (limits : Limits := {}) : IO Result := do
++    (deadline : Nat) (limits : Limits := {}) (consumers : Array (Occurrence × Nat) := #[]) : IO Result := do
+   let database := shared.manifest.source.identity
+   let mut roots := answers.map fun (answer, priority) => ({key := .answer database answer, priority} : Task)
+   roots := roots ++ initial.map (fun source => ⟨.quoted source, 0⟩)
++  roots := roots ++ consumers.map (fun (consumer,priority) => ⟨.consumer consumer,priority⟩)
+   if usage.isSome && digest query then roots := roots.push ⟨.query query, 0⟩
+   roots := roots.qsort fun a b =>
+     if a.priority == b.priority then (toJson a.key).compress < (toJson b.key).compress
+@@ -161,31 +187,33 @@
+       let identity : {value : String // value = Index.contentKey fact} := ⟨Index.contentKey fact, rfl⟩
+       match task.key, fact with
+       | .answer .., .supports support =>
+-        result := addOffer result support.source task.priority fact identity
++        result := addOffer result (.file support.source) task.priority fact identity
+         queue := queue.push ⟨.group (.claim support.claim), task.priority⟩
+         queue := queue.push ⟨.consumer support.read.occurrence, task.priority⟩
+         queue := queue.push ⟨.quoted support.source, task.priority⟩
+       | .consumer _, .consumed edge =>
++        if edge.rows.isEmpty then
++          result := addOffer result (.output edge.producer) task.priority fact identity
+         for source in edge.rows do
+-          result := addOffer result source task.priority fact identity
++          result := addOffer result (.file source) task.priority fact identity
+           queue := queue.push ⟨.quoted source, task.priority⟩
+         queue := queue.push ⟨.consumer edge.producer, task.priority⟩
+       | .quoted _, .coquoted group _ =>
+         queue := queue.push ⟨.group group, task.priority⟩
+       | .group _, .coquoted _ source =>
+-        result := addOffer result source task.priority fact identity
++        result := addOffer result (.file source) task.priority fact identity
+       | .query _, .used value =>
+         if value.kind == .omittedThenRead || value.kind == .deliveredThenCited then
+-          result := addOffer result value.source task.priority fact identity
++          result := addOffer result (.file value.source) task.priority fact identity
+           queue := queue.push ⟨.quoted value.source, task.priority⟩
+       | _, _ => pure ()
+   -- A checked omission is the more direct observation. Positive citation
+   -- remains useful only where no omission of that same range was observed.
+   let missing := result.offers.foldl (fun ranges offer => match offer.fact with
+-    | .used value => if value.kind == .omittedThenRead then ranges.insert offer.source else ranges
++    | .used value => if value.kind == .omittedThenRead then ranges.insert value.source else ranges
+     | _ => ranges) ({} : Std.HashSet Range)
+   return {result with offers := result.offers.filter fun offer => match offer.fact with
+-    | .used value => value.kind != .deliveredThenCited || !missing.contains offer.source
++    | .used value => value.kind != .deliveredThenCited || !missing.contains value.source
+     | _ => true}
+ 
+ /-- Pin optional index publications once for both memo identity and planning.
+@@ -211,15 +239,15 @@
+     source := source.head,shared := none,usage := none,failure := some s!"index-open: {error}"}
+ 
+ def Prepared.identity (prepared : Prepared) : Json :=
+-  toJson (prepared.source.identity, prepared.source.authority,
++  toJson (implementation,prepared.source.identity, prepared.source.authority,
+     prepared.shared.map (·.index.head), prepared.usage.map (·.index.head), prepared.failure,
+     prepared.canonical.map (·.metadata),prepared.canonicalFailure,CanonicalSource.Delivery.implementation)
+ 
+ def Prepared.collect (prepared : Prepared) (answers : Array (String × Nat)) (query : String)
+-    (deadline : Nat) (limits : Limits := {}) : IO Result := do
++    (deadline : Nat) (limits : Limits := {}) (consumers : Array (Occurrence × Nat) := #[]) : IO Result := do
+   if prepared.failure.isSome then return {complete := false, available := false, failure := prepared.failure}
+   let some shared := prepared.shared | return {available := false}
+-  try _root_.Eggshell.Synapses.Recommend.collect shared prepared.usage answers #[] query deadline limits
++  try _root_.Eggshell.Synapses.Recommend.collect shared prepared.usage answers #[] query deadline limits consumers
+   catch error => return {
+     complete := false, index := some shared.index.head, usage := prepared.usage.map (·.index.head)
+     failure := some s!"index-read: {error}"}
+@@ -228,22 +256,39 @@
+ Fingerprint/range matching never creates a new owner or a control Match. -/
+ structure Located where
+   offer : Offer
++  source : Range
++  target : offer.target = .file source
+   row : Read
+-  within : offer.source.contains row.source = true
++  within : source.contains row.source = true
+ 
+ def locate (offers : Array Offer) (rows : Array Read) : Array Located := Id.run do
+   let mut found := #[]
+   for offer in offers do
+-    let matching := rows.filter (offer.source.contains ·.source)
+-    unless covered offer.source (matching.map (·.source)) do continue
+-    for row in matching do
+-      if within : offer.source.contains row.source = true then found := found.push ⟨offer, row, within⟩
++    let .file source := offer.target | continue
++    if target : offer.target = .file source then
++      let matching := rows.filter (source.contains ·.source)
++      unless covered source (matching.map (·.source)) do continue
++      for row in matching do
++        if within : source.contains row.source = true then found := found.push ⟨offer,source,target,row,within⟩
+   return found
+ 
+ theorem Located.same_fingerprint (located : Located) :
+-    located.offer.source.file = located.row.source.file := by
++    located.source.file = located.row.source.file := by
+   have within := located.within
+   simp only [Range.contains, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at within
+   exact within.1.1
+ 
++structure LocatedOutput (doc : Extraction.Document) where
++  offer : Offer
++  fragment : ObservationContext.Fragment doc
++  target : offer.target = .output fragment.occurrence
++
++def locateOutputs (offers : Array Offer) (database : String) (doc : Extraction.Document) : Array (LocatedOutput doc) := Id.run do
++  let some prepared := ObservationContext.prepare? doc | return #[]
++  return offers.filterMap fun offer => do
++    let .output _ := offer.target | none
++    let .consumed edge := offer.fact | none
++    let fragment ← prepared.locate? database edge
++    if target : offer.target = .output fragment.occurrence then some ⟨offer,fragment,target⟩ else none
++
+ end Eggshell.Synapses.Recommend
+diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -25,7 +25,9 @@
+ 
+ structure LocatedOwner where
+   owner : OutcomeEdge
++  document : Document
+   located : Array Located
++  outputs : Array (LocatedOutput document)
+ 
+ structure Plan where
+   results : Array Recommend.Result := #[]
+@@ -33,6 +35,7 @@
+   documents : Array Document := #[]
+   rows : Array Read := #[]
+   unsupported : Nat := 0
++  unlocatedFileOwners : Nat := 0
+ 
+ def Plan.complete (plan : Plan) : Bool := plan.results.all (·.complete)
+ 
+@@ -41,30 +44,50 @@
+     (owner.owner.relation, (owner.located.toList.map fun located =>
+       (located.offer.priority, located.row.binding.first, located.row.binding.limit)).eraseDups)
+ 
++def Plan.outputRanges (plan : Plan) : List (Value × List (Nat × Nat × Nat)) :=
++  plan.owners.toList.map fun owner =>
++    (owner.owner.relation, (owner.outputs.toList.map fun located =>
++      (located.offer.priority,located.fragment.binding.first,located.fragment.binding.limit)).eraseDups)
++
+ /-- Stored original rows are the only source of transport coordinates.
+ Neither a graph hint nor its priority may invent a range or an owner. -/
+ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat))
+     (owners : Array Owner) (query : String) (deadline : Nat) : IO Plan := do
+   let mut plan : Plan := {}
+   for source in prepared do
+-    plan := {plan with results := plan.results.push (← source.collect answers query deadline)}
++    let consumers := owners.flatMap fun owner =>
++      if owner.database != source.source.identity then #[] else
++      let priorities := answers.filterMap fun (key,priority) =>
++        if key == Persistence.selectionKey owner.original.relation then some priority else none
++      (Provenance.identities owner.original).flatMap fun occurrence =>
++        priorities.map fun priority => (occurrence,priority)
++    plan := {plan with results := plan.results.push (← source.collect answers query deadline {} consumers)}
+   let offers := plan.results.flatMap (·.admitted)
+   if offers.isEmpty then return plan
+   for owner in owners do
+     let .ok document := owner.document | plan := {plan with unsupported := plan.unsupported+1}; continue
+-    let .ok rows := recordedRows owner.database document | plan := {plan with unsupported := plan.unsupported+1}; continue
++    let recorded := recordedRows owner.database document
++    let rows := recorded.toOption.getD #[]
+     plan := {plan with
+       documents := plan.documents.push document
+       rows := plan.rows ++ rows
+-      owners := plan.owners.push ⟨owner.original, Recommend.locate offers rows⟩}
++      unlocatedFileOwners := plan.unlocatedFileOwners +
++        if !document.files.isEmpty && recorded.toOption.isNone then 1 else 0
++      owners := plan.owners.push ⟨owner.original,document,Recommend.locate offers rows,
++        Recommend.locateOutputs offers owner.database document⟩}
+   return plan
+ 
+ def Plan.receipt (plan : Plan) (text : String) : Json :=
+   let delivery := Extraction.presented text plan.documents plan.rows
+   Json.mkObj [
+     ("complete", toJson plan.complete), ("unsupportedOwners", toJson plan.unsupported),
++    ("unlocatedFileOwners",toJson plan.unlocatedFileOwners),
+     ("inputs", toJson (plan.results.map Recommend.Result.receipt)),
+     ("offers", toJson (plan.results.flatMap fun result => result.admitted.map fun offer =>
+-      Json.mkObj [("offer", offer.json), ("bodyDelivered", toJson (covered offer.source delivery.ranges))]))]
++      let delivered := match offer.target with
++        | .file source => covered source delivery.ranges
++        | .output _ => plan.owners.any fun owner => owner.outputs.any fun located =>
++            located.offer.identity == offer.identity && delivery.coversBinding located.fragment.binding
++      Json.mkObj [("offer", offer.json), ("bodyDelivered", toJson delivered)]))]
+ 
+ end Eggshell.Synapses.Transport
+diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -262,7 +262,7 @@
+   let mut result : Replay := {}
+   let mut trace : Trace := {}
+   let mut domain := ""
+-  let mut starts : Std.HashMap Occurrence (String × Knowledge) := {}
++  let mut starts : Std.HashMap Occurrence (String × Knowledge × String) := {}
+   let mut locations : Std.HashMap Occurrence (Array OutputRow) := {}
+   let mut usage : Graph := .empty
+   for value in values do
+@@ -276,17 +276,23 @@
+       continue
+     match value.payload with
+     | .start occurrence work query known =>
+-      let .ok command := workCommand work | result := {result with unknown := result.unknown+1}; continue
+-      trace ← IO.ofExcept (trace.start occurrence value.clock.nanos command)
+-      starts := starts.insert occurrence (query, known)
++      let .ok (command,format) := invocationData work | result := {result with unknown := result.unknown+1}; continue
++      if let some (_,_,original) := starts[occurrence]? then
++        unless original == work do throw (IO.userError "native start changed its complete invocation")
++      trace ← IO.ofExcept (trace.start occurrence value.clock.nanos command format)
++      starts := starts.insert occurrence (query, known, work)
+       result := {result with consumers := result.consumers.push occurrence}
+     | .finish occurrence name input response archive =>
+       if !trace.starts.contains occurrence then result := {result with unknown := result.unknown+1}; continue
+       let tool : Plugin.ToolEvent := ⟨name, occurrence.useId, input, response, none⟩
+       let some started := trace.starts[occurrence]? | throw (IO.userError "missing observed start")
+-      let .ok command := workCommand (Plugin.canonicalToolWork tool) |
+-        throw (IO.userError "native finish has no literal invocation")
+-      unless command == started.command do
++      let work := Plugin.canonicalToolWork tool
++      let some (_,_,original) := starts[occurrence]? |
++        throw (IO.userError "native finish has no complete invocation")
++      unless work == original do throw (IO.userError "native finish changed its complete invocation")
++      let .ok (command,format) := invocationData work |
++        throw (IO.userError "native finish has no structured invocation")
++      unless command == started.command && format == started.format do
+         throw (IO.userError "native finish changed its observed invocation")
+       let expected := (Plugin.compileOperationOutcomes (.text occurrence.session) (.text occurrence.turn) tool).2
+       let localId ← findNode? source expected
+@@ -310,14 +316,14 @@
+       unless doc.occurrences.contains occurrence && doc.workText == some (Plugin.canonicalToolWork tool) do
+         throw (IO.userError "native synaptic observation changed its exact occurrence")
+       let some raw := doc.source | result := {result with unknown := result.unknown+1}; continue
+-      let .ok output := layout raw | result := {result with unknown := result.unknown+1}; continue
+-      let completed ← IO.ofExcept (trace.finish occurrence value.clock.nanos output.text)
++      let outputFormat := if (Json.parse raw).isOk then DataFormat.json else .text
++      let completed ← IO.ofExcept (trace.finish occurrence value.clock.nanos raw outputFormat)
+       -- Foreign private work can label usage of this DB's memory, but cannot
+       -- publish its terms or consumption edges into the shared DB lane.
+       trace := acceptPublishedOutput localId trace completed
+       if let .ok reads := locateReads recorded.head.identity doc completed then
+         if currentOriginal then locations := locations.insert occurrence (reads.flatMap (·.rows))
+-        if let some (query, known) := starts[occurrence]? then
++        if let some (query, known, _) := starts[occurrence]? then
+           let storedIndex ← indexAt? source known
+           let mut stored := #[]
+           if let some index := storedIndex then
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5154,6 +5154,7 @@
+   referenceRanks : List (Nat × Nat) := []
+   referenceRanges : List (Nat × List (Nat × Nat)) := []
+   synapticRanges : List (Nat × Nat × Nat) := []
++  outputRanges : List (Nat × Nat × Nat) := []
+   synapticUnits : List (List (Nat × Nat)) := []
+   provenance : List SourceEvidence.Record := []
+   cached : Array Synapses.CanonicalSource.StoredRow := #[]
+@@ -5273,17 +5274,42 @@
+     ({family,slice := {owner := none,keys := part.keys,text := "",shared := some part,members := [],visibleKeys := []},ranges := []} :
+       UnitPlan).slice.members = [] := rfl
+ 
++/-- Original output fragments are already bounded by their native data-flow
++witness. They do not require source records, a file or a shell decoder. -/
++def prepareOutputs (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
++  if !Matcher.nativeOutcome family.owner then return ([],[])
++  let some source := Matcher.atomText? family.owner.outcome | return ([],[])
++  let some envelope := family.template.context | return ([],[])
++  let original := IndexedCharacters.make source
++  let mut units := []
++  let mut cues := []
++  for (_,first,last) in family.outputRanges do
++    if valid : first < last ∧ last ≤ source.length then
++      let span : ContextSpan source := ⟨first,last,valid.1,valid.2⟩
++      let fragments := span.ranges.map fun range => ({
++        first := range.start
++        original := original.slice range.start (range.stop-range.start)
++        decoded := false} : DeliveryFragment)
++      let context := {envelope with fragments,cues := [(first,last)]}
++      let slice := {family.template with context := some context,keys := context.keys,text := context.render}
++      units := units ++ [{family := familyIndex,slice,ranges := [(first,last)]}]
++      cues := cues ++ [(first,last)]
++  return (units,cues)
++
+ /-- Prepare the immutable record/structure index once per owner. Each query
+ window gets its own complete local dependency closure, not a prefix of the
+ other windows of this owner. This creates no control Match. -/
+ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
+-  if !family.cached.isEmpty then return prepareCached familyIndex family
++  let outputs := prepareOutputs familyIndex family
++  if !family.cached.isEmpty then
++    let source := prepareCached familyIndex family
++    return (source.1 ++ outputs.1,source.2 ++ outputs.2)
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   if family.template.context.isNone then
+     return ([atomicUnit familyIndex source.length family],[])
+   let some work := Matcher.atomText? family.owner.work | return ([],[])
+   let positions := (family.windows ++ family.references).eraseDups
+-  if positions.isEmpty && family.synapticRanges.isEmpty then return ([],[])
++  if positions.isEmpty && family.synapticRanges.isEmpty && family.outputRanges.isEmpty then return ([],[])
+   let decoded := (decodedToolText? source).map DecodedLayout.make
+   let original := decoded.map (·.original) |>.getD (IndexedCharacters.make source)
+   let records := contextRecordSpans source decoded
+@@ -5293,11 +5319,11 @@
+     | none => some range
+     | some layout => (decodedEvidenceUsing? layout range).map (·.original)
+   let cues := ((rankedContextRanges source (work.length+1) positions).map fun range =>
+-    (range.start,range.stop)) ++ family.synapticRanges.map (fun (_,a,b) => (a,b))
++    (range.start,range.stop)) ++ (family.synapticRanges ++ family.outputRanges).map (fun (_,a,b) => (a,b))
+   if cues.isEmpty then return ([],[])
+   let some envelope := family.template.context |
+     return ([{family := familyIndex,slice := family.template,ranges := [(0,source.length)]}],cues)
+-  let mut units := []
++  let mut units := outputs.1
+   let mut seen : Std.HashSet (List (Nat × Nat)) := {}
+   for position in positions do
+     let structural := (completeStructureContexts records
+@@ -5398,7 +5424,7 @@
+     ((focus ++ references).filterMap fun (position,priority) =>
+       (meaningContext? source (work.length+1) position priority).map fun context =>
+         {priority,first := context.span.start,last := context.span.stop}) ++
+-      family.synapticRanges.map (fun (priority,first,last) => {priority,first,last})
++      (family.synapticRanges ++ family.outputRanges).map (fun (priority,first,last) => {priority,first,last})
+   | _,_ => []
+ 
+ def coveringCue? (cues : List RankedCue) (first last : Nat) : Option RankedCue :=
+@@ -5926,6 +5952,7 @@
+     (referenceRanks : List (Value × List (Nat × Nat)) := [])
+     (referenceRanges : List (Value × List (Nat × List (Nat × Nat))) := [])
+     (synapticRanges : List (Value × List (Nat × Nat × Nat)) := [])
++    (outputRanges : List (Value × List (Nat × Nat × Nat)) := [])
+     (synapticBundles : Array Synapses.Bundles.Projected := #[])
+     (canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {}) : Option Handoff :=
+   let extraction := prepared.val
+@@ -6132,6 +6159,7 @@
+             referenceRanks := ranks
+             referenceRanges := ranges
+             synapticRanges := (synapticRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
++            outputRanges := (outputRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+             synapticUnits := synapticBundles.toList.flatMap fun bundle =>
+               bundle.members.toList.flatMap fun member => member.choices.toList.filterMap fun bound =>
+                 if bound.owner == originalKey then some bound.spans else none
+@@ -7564,6 +7592,7 @@
+     (referenceRanks := referenceRanks)
+     (referenceRanges := referenceRanges)
+     (synapticRanges := synaptic.ranges)
++    (outputRanges := synaptic.outputRanges)
+     (synapticBundles := synapticBundles)
+     (canonicalRows := canonicalRows)
+   let rendered := rendered.map fun handoff => {handoff with synapticComplete := synaptic.complete}
+diff --git a/Eggshell/SynapseBundles.lean b/Eggshell/SynapseBundles.lean
+--- a/Eggshell/SynapseBundles.lean
++++ b/Eggshell/SynapseBundles.lean
+@@ -22,16 +22,19 @@
+   reason : Reason
+   offers : Array Offer
+   nonempty : offers.isEmpty = false
++  sourcesOnly : offers.all (fun offer => offer.target.source?.isSome) = true
+   same : offers.all (fun offer => reason? offer.fact == some reason) = true
+ 
+ def Demand.check? (reason : Reason) (offers : Array Offer) : Option Demand :=
+   if nonempty : offers.isEmpty = false then
+-    if same : offers.all (fun offer => reason? offer.fact == some reason) = true then
+-      some ⟨reason,offers,nonempty,same⟩ else none
++    if sourcesOnly : offers.all (fun offer => offer.target.source?.isSome) = true then
++      if same : offers.all (fun offer => reason? offer.fact == some reason) = true then
++        some ⟨reason,offers,nonempty,sourcesOnly,same⟩ else none
++    else none
+   else none
+ 
+ def Demand.sources (demand : Demand) : Array Range :=
+-  (demand.offers.toList.map (·.source)).eraseDups.toArray
++  (demand.offers.toList.filterMap (·.target.source?)).eraseDups.toArray
+ 
+ def Demand.priority (demand : Demand) : Nat :=
+   demand.offers.foldl (fun priority offer => min priority offer.priority)
+@@ -48,6 +51,7 @@
+ def demands (plan : Transport.Plan) : Array Demand := Id.run do
+   let mut groups : Std.HashMap Reason (Array Offer) := {}
+   for offer in plan.results.flatMap (·.admitted) do
++    if offer.target.source?.isNone then continue
+     let some reason := reason? offer.fact | continue
+     groups := groups.insert reason (groups[reason]?.getD #[] |>.push offer)
+   return (groups.toArray.filterMap fun (reason,offers) => Demand.check? reason offers).qsort fun a b =>
+@@ -85,7 +89,7 @@
+ 
+ def bind? (source : Range) (owner : OwnerRows) : Option (Bound source) :=
+   let rows := (owner.original.located.toList.filterMap fun located =>
+-    if located.offer.source == source then some located.row else none).eraseDups.toArray
++    if located.source == source then some located.row else none).eraseDups.toArray
+   if valid : rows.all Read.valid = true then
+     if inside : rows.all (fun row => source.contains row.source) = true then
+       if owned : rows.all (fun row => row.binding.owner == owner.key) = true then
+diff --git a/Eggshell/JsonScalars.lean b/Eggshell/JsonScalars.lean
+--- /dev/null
++++ b/Eggshell/JsonScalars.lean
+@@ -0,0 +1,72 @@
++module
++
++public import Lean.Data.Json.Parser
++public import Lean.Data.Json.FromToJson
++
++@[expose] public section
++
++namespace Eggshell.JsonScalars
++open Lean
++
++structure Scalar where
++  first : Nat
++  limit : Nat
++  literal : String
++  text : Option String
++  offsets : Array Nat
++
++def primitive : Json → Bool
++  | .arr _ | .obj _ => false
++  | _ => true
++
++def scalarLiteral (text : String) : Bool :=
++  (Json.parse text).toOption.any fun value => primitive value && value.compress == text
++
++/-- Canonical JSON is scanned once. A string followed by a colon is a key,
++not an observed argument/result value. Positions refer to the original text. -/
++def values (raw : String) : Except String (Array Scalar) := do
++  let json ← Json.parse raw
++  unless json.compress == raw do throw "noncanonical structured observation"
++  let chars := raw.toList.toArray
++  let mut position := 0
++  let mut result := #[]
++  while position < chars.size do
++    let char := chars[position]!
++    if char.isWhitespace || "{}[],:".contains char then
++      position := position+1
++    else if char == '"' then
++      let first := position
++      position := position+1
++      let mut escaped := false
++      let mut closed := false
++      while position < chars.size do
++        let char := chars[position]!
++        position := position+1
++        if escaped then escaped := false
++        else if char == '\\' then escaped := true
++        else if char == '"' then closed := true; break
++      unless closed do throw "unfinished structured string"
++      let limit := position
++      let mut following := position
++      while following < chars.size && chars[following]!.isWhitespace do following := following+1
++      if chars[following]? == some ':' then continue
++      let literal := String.ofList (chars.extract first limit).toList
++      let text ← Json.parse literal >>= Json.getStr?
++      let mut offsets := #[]
++      let mut original := first+1
++      for char in text.toList do
++        offsets := offsets.push original
++        original := original+(toJson (String.singleton char)).compress.length-2
++      offsets := offsets.push original
++      unless original+1 == limit do throw "structured scalar coordinates differ"
++      result := result.push ⟨first,limit,literal,some text,offsets⟩
++    else
++      let first := position
++      while position < chars.size && !chars[position]!.isWhitespace &&
++          !("{}[],:".contains chars[position]!) do position := position+1
++      let literal := String.ofList (chars.extract first position).toList
++      unless scalarLiteral literal do throw "invalid structured scalar"
++      result := result.push ⟨first,position,literal,none,#[]⟩
++  return result
++
++end Eggshell.JsonScalars
+diff --git a/Eggshell/ObservationContext.lean b/Eggshell/ObservationContext.lean
+--- /dev/null
++++ b/Eggshell/ObservationContext.lean
+@@ -0,0 +1,131 @@
++module
++
++public import Eggshell.SynapseSource
++
++@[expose] public section
++
++namespace Eggshell.Synapses.ObservationContext
++open Lean Extraction
++
++/-- Container coordinates in the actual serialized value. Quoted braces and
++escaped quotes never introduce a container. No tool names are interpreted. -/
++def containers (text : String) : Array (Nat × Nat) := Id.run do
++  match Json.parse text with
++  | .ok (.obj _) | .ok (.arr _) => pure ()
++  | _ => return #[]
++  let mut stack : Array (Nat × Char) := #[]
++  let mut found := #[]
++  let mut quoted := false
++  let mut escaped := false
++  let mut position := 0
++  for char in text.toList do
++    if escaped then escaped := false
++    else if quoted then
++      if char == '\\' then escaped := true
++      else if char == '"' then quoted := false
++    else if char == '"' then quoted := true
++    else if char == '{' || char == '[' then stack := stack.push (position,char)
++    else if char == '}' || char == ']' then
++      let some (first,opening) := stack.back? | return #[]
++      if (opening == '{' && char != '}') || (opening == '[' && char != ']') then return #[]
++      found := found.push (first,position+1)
++      stack := stack.pop
++    position := position+1
++  return found
++
++/-- A complete smallest JSON container, or the original text row containing
++the witness. This is display context, never a claim about tool semantics. -/
++def bounds (structured : Array (Nat × Nat)) (lines : Array TextLine) (first limit : Nat) : Nat × Nat :=
++  let containing := structured.filter fun (a,b) => a ≤ first && limit ≤ b
++  match (containing.qsort fun a b => a.2-a.1 < b.2-b.1)[0]? with
++  | some result => result
++  | none =>
++    match lines.find? (fun line => line.first ≤ first && limit ≤ line.limit) with
++    | some line => (line.first,line.limit)
++    | none => (first,limit)
++
++structure Prepared (doc : Document) where
++  raw : String
++  original : doc.source = some raw
++  view : Layout
++  mapped : layout raw = .ok view
++  structured : Array (Nat × Nat)
++  lines : Array TextLine
++  rawStructured : Array (Nat × Nat)
++  rawLines : Array TextLine
++  scalars : Array JsonScalars.Scalar
++
++def prepare? (doc : Document) : Option (Prepared doc) := do
++  let raw ← doc.source
++  if original : doc.source = some raw then
++    match mapped : layout raw with
++    | .error _ => none
++    | .ok view => some ⟨raw,original,view,mapped,containers view.text,textLines view.text,
++        containers raw,textLines raw,(JsonScalars.values raw).toOption.getD #[]⟩
++  else none
++
++def Prepared.rawBounds (prepared : Prepared doc) (edge : Consumption) : Nat × Nat := Id.run do
++  if edge.kind != .value then
++    for scalar in prepared.scalars do
++      let some text := scalar.text | continue
++      if !text.contains '\n' then continue
++      let some first := scalar.offsets.findIdx? (· == edge.outputFirst) | continue
++      let some limit := scalar.offsets.findIdx? (· == edge.outputLimit) | continue
++      let (first,limit) := bounds #[] (textLines text) first limit
++      let some first := scalar.offsets[first]? | continue
++      let some limit := scalar.offsets[limit]? | continue
++      return (first,limit)
++  return bounds prepared.rawStructured prepared.rawLines edge.outputFirst edge.outputLimit
++
++structure Fragment (doc : Document) where
++  occurrence : Occurrence
++  binding : Binding
++  raw : String
++  payload : String
++  native : doc.native = true
++  origin : doc.occurrences.contains occurrence = true
++  original : doc.source = some raw
++  owner : binding.owner = doc.owner
++  work : binding.work = doc.work
++  valid : binding.valid = true
++  within : binding.first < binding.limit ∧ binding.limit ≤ raw.length
++  exact : payload = String.ofList ((raw.toList.drop binding.first).take (binding.limit-binding.first))
++
++/-- Resolve only an actual producer and a literal saved output witness. Source
++files, shell syntax and line numbers are not prerequisites. -/
++def Prepared.locate? (prepared : Prepared doc) (database : String) (edge : Consumption) : Option (Fragment doc) := do
++  if native : doc.native = true then
++    if origin : doc.occurrences.contains edge.producer = true then
++        let raw := prepared.raw
++        let view := if edge.outputFormat == .json then raw else prepared.view.text
++        if !(literal view.toList.toArray edge.outputFirst edge.outputLimit edge.term) then none else do
++          let (first,limit) := if edge.outputFormat == .json then prepared.rawBounds edge
++            else bounds prepared.structured prepared.lines edge.outputFirst edge.outputLimit
++          if !(first ≤ edge.outputFirst && edge.outputLimit ≤ limit) then none else do
++            let first ← if edge.outputFormat == .json then some first else prepared.view.offsets[first]?
++            let limit ← if edge.outputFormat == .json then some limit else prepared.view.offsets[limit]?
++            let binding : Binding := ⟨database,doc.owner,doc.work,first,limit⟩
++            if valid : binding.valid = true then
++              if within : binding.first < binding.limit ∧ binding.limit ≤ raw.length then
++                some ⟨edge.producer,binding,raw,
++                  String.ofList ((raw.toList.drop binding.first).take (binding.limit-binding.first)),
++                  native,origin,prepared.original,rfl,rfl,valid,within,rfl⟩
++              else none
++            else none
++    else none
++  else none
++
++def locate? (database : String) (doc : Document) (edge : Consumption) : Option (Fragment doc) := do
++  let prepared ← prepare? doc
++  prepared.locate? database edge
++
++theorem fragment_is_original (fragment : Fragment doc) :
++    doc.source = some fragment.raw ∧
++    fragment.payload = String.ofList ((fragment.raw.toList.drop fragment.binding.first).take
++      (fragment.binding.limit-fragment.binding.first)) := ⟨fragment.original,fragment.exact⟩
++
++theorem fragment_has_native_origin (fragment : Fragment doc) :
++    doc.native = true ∧ doc.occurrences.contains fragment.occurrence = true :=
++  ⟨fragment.native,fragment.origin⟩
++
++end Eggshell.Synapses.ObservationContext
+diff --git a/tests/SynapseBundleGateTests.lean b/tests/SynapseBundleGateTests.lean
+--- a/tests/SynapseBundleGateTests.lean
++++ b/tests/SynapseBundleGateTests.lean
+@@ -31,12 +31,13 @@
+   let mut offers := #[]
+   for support in #[aSupport,bSupport] do
+     let fact := Fact.supports support
+-    let some offer := Recommend.Offer.check? support.source 0 fact ⟨Index.contentKey fact,rfl⟩ |
++    let some offer := Recommend.Offer.check? (.file support.source) 0 fact ⟨Index.contentKey fact,rfl⟩ |
+       throw (IO.userError "invalid fixture support")
+     offers := offers.push offer
+   let plan : Transport.Plan := {
+     results := #[{offers}]
+-    owners := #[⟨a.original,Recommend.locate offers aRows⟩,⟨b.original,Recommend.locate offers bRows⟩]}
++    owners := #[⟨a.original,aDoc,Recommend.locate offers aRows,#[]⟩,
++      ⟨b.original,bDoc,Recommend.locate offers bRows,#[]⟩]}
+   let some joint := (Bundles.project plan)[0]? | throw (IO.userError "no two-owner dependency")
+   return joint
+ 

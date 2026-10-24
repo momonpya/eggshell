@@ -10,6 +10,8 @@ open Lean
 structure Presentation where
   ranges : Array Range := #[]
   uncertain : Std.HashSet File := {}
+  bindings : Array (String × Nat × Nat) := #[]
+  uncertainOwners : Std.HashSet String := {}
 
 def caption (text : String) : Option (Nat × Nat × Bool) := do
   if !text.startsWith "  ORIGINAL CHARS [" && !text.startsWith "  CHARS [" then none else do
@@ -57,12 +59,24 @@ def presented (body : String) (docs : Array Document) (reads : Array Read) : Pre
         spans := #[(0, raw.length)]
       else bad := true
     if bad then
+      result := {result with uncertainOwners := result.uncertainOwners.insert owner}
       for file in doc.files do result := {result with uncertain := result.uncertain.insert file}
+    else
+      result := {result with bindings := result.bindings ++ spans.map (fun (a,b) => (owner,a,b))}
     for row in reads do
       if row.binding.owner == owner && spans.any (fun (first, limit) =>
           first ≤ row.binding.first && row.binding.limit ≤ limit) then
         result := {result with ranges := result.ranges.push row.source}
   return result
+
+def Presentation.coversBinding (shown : Presentation) (binding : Binding) : Bool := Id.run do
+  if shown.uncertainOwners.contains binding.owner then return false
+  let spans := shown.bindings.filterMap fun (owner,first,limit) =>
+    if owner == binding.owner then some (first,limit) else none
+  let spans := spans.qsort fun a b => a.1 < b.1
+  let covered := spans.foldl (fun position (first,limit) =>
+    if first ≤ position then max position limit else position) binding.first
+  return binding.first < binding.limit && binding.limit ≤ covered
 
 def compactRanges (ranges : Array Range) : Array Range := Id.run do
   let mut files : Std.HashMap File (Array Range) := {}
@@ -107,7 +121,9 @@ structure Feedback where
 def Feedback.present (feedback : Feedback) (packet : Presentation) : Feedback :=
   {feedback with delivered := {
     ranges := feedback.delivered.ranges ++ packet.ranges
-    uncertain := feedback.delivered.uncertain.union packet.uncertain }}
+    uncertain := feedback.delivered.uncertain.union packet.uncertain
+    bindings := feedback.delivered.bindings ++ packet.bindings
+    uncertainOwners := feedback.delivered.uncertainOwners.union packet.uncertainOwners }}
 
 /-- A PreToolUse packet arriving after proposal cannot rewrite what was known. -/
 def Feedback.start (feedback : Feedback) (occurrence : Occurrence) : Feedback :=

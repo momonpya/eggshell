@@ -2,6 +2,7 @@ module
 
 public import Eggshell.Synapses
 public import Eggshell.SearchUnicode
+public import Eggshell.JsonScalars
 public import tools.RetrievalCategories
 
 @[expose] public section
@@ -109,11 +110,33 @@ structure Produced where
   finished : Nat
   term : Term
   source : Array Char
+  format : DataFormat := .text
   deriving Repr
 
 def literal (source : Array Char) (first limit : Nat) (term : String) : Bool :=
   first < limit && limit ≤ source.size &&
     String.ofList (source.extract first limit).toList == term
+
+/-- Structured values retain their JSON type and raw literal coordinates.
+Lexical hints are extracted only inside string values, never object keys. -/
+def payloadOccurrences (format : DataFormat) (text : String) : Except String (Array Term) := do
+  if format == .text then return termOccurrences text
+  let raw := text.toList.toArray
+  let mut terms := #[]
+  for scalar in ← JsonScalars.values text do
+    terms := terms.push ⟨.value,scalar.literal,scalar.first,scalar.limit⟩
+    if let some value := scalar.text then
+      for term in termOccurrences value do
+        let some first := scalar.offsets[term.first]? | continue
+        let some limit := scalar.offsets[term.limit]? | continue
+        if literal raw first limit term.text then
+          terms := terms.push {term with first,limit}
+  return terms
+
+def witnessTerm (edge : Consumption) : Bool :=
+  if edge.kind == .value then edge.inputFormat == .json && edge.outputFormat == .json &&
+    JsonScalars.scalarLiteral edge.term
+  else termKind? edge.term == some edge.kind
 
 /-- A pending link carries checked literal positions in both actual texts.
 The output array is shared by all witnesses from one immutable completion. -/
@@ -122,13 +145,13 @@ structure Pending where
   input : Array Char
   output : Array Char
   valid : edge.valid = true
-  classified : termKind? edge.term = some edge.kind
+  classified : witnessTerm edge = true
   inputExact : literal input edge.inputFirst edge.inputLimit edge.term = true
   outputExact : literal output edge.outputFirst edge.outputLimit edge.term = true
 
 def Pending.check? (edge : Consumption) (input output : Array Char) : Option Pending :=
   if valid : edge.valid = true then
-    if classified : termKind? edge.term = some edge.kind then
+    if classified : witnessTerm edge = true then
       if inputExact : literal input edge.inputFirst edge.inputLimit edge.term = true then
         if outputExact : literal output edge.outputFirst edge.outputLimit edge.term = true then
           some ⟨edge, input, output, valid, classified, inputExact, outputExact⟩ else none
@@ -160,26 +183,27 @@ theorem Pending.before (pending : Pending) : pending.edge.producerFinish < pendi
   Consumption.checked_before (edge := pending.edge) (accepted := pending.edge)
     (by simp [Consumption.checked, pending.valid])
 
-theorem Pending.non_numeric (pending : Pending) :
+theorem Pending.non_numeric (pending : Pending) (unstructured : pending.edge.kind ≠ .value) :
     pending.edge.term.toList.all SearchUnicode.isDigit = false := by
   cases numeric : pending.edge.term.toList.all SearchUnicode.isDigit with
   | false => rfl
   | true =>
     have rejected := numeric_not_a_witness pending.edge.term numeric
     have accepted := pending.classified
-    rw [rejected] at accepted
-    contradiction
+    simp [witnessTerm,unstructured,beq_iff_eq,rejected] at accepted
 
 structure Started where
   command : String
   ordinal : Nat
   pending : Array Pending
+  format : DataFormat := .text
 
 structure Trace where
   graph : Graph := .empty
   outputs : Std.HashMap (WitnessKind × String) (Std.HashMap Occurrence (Array Produced)) := {}
   starts : Std.HashMap Occurrence Started := {}
   finished : Std.HashMap Occurrence String := {}
+  finishedFormats : Std.HashMap Occurrence DataFormat := {}
   rows : Std.HashMap Occurrence (Array OutputRow) := {}
   lastOrdinal : Option Nat := none
 
@@ -187,16 +211,25 @@ def Trace.advance (trace : Trace) (ordinal : Nat) : Except String Trace := do
   if trace.lastOrdinal.any (ordinal < ·) then throw "RPC trace is not in observed order"
   return {trace with lastOrdinal := some ordinal}
 
-def Trace.start (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (command : String) :
+def Trace.start (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (command : String)
+    (format : DataFormat := .text) :
     Except String Trace := do
   let trace ← trace.advance ordinal
   unless occurrence.valid do throw "missing exact session/turn/tool-use identity"
   if let some previous := trace.starts[occurrence]? then
-    unless previous.command == command do throw "one occurrence changed its input"
+    unless previous.command == command && previous.format == format do throw "one occurrence changed its input"
     return trace
   let mut pending := #[]
   let input := command.toList.toArray
-  for term in terms command do
+  let candidates ← payloadOccurrences format command
+  let strong := candidates.filter fun term => term.kind == .value &&
+    (trace.outputs[(term.kind,term.text)]?.getD {}).any (fun _ producers =>
+      producers.any (fun producer => producer.finished < ordinal))
+  let mut seen : Std.HashSet (WitnessKind × String) := {}
+  for term in candidates do
+    if term.kind != .value && strong.any (fun value => value.first ≤ term.first && term.limit ≤ value.limit) then continue
+    if seen.contains (term.kind,term.text) then continue
+    seen := seen.insert (term.kind,term.text)
     for (_, producers) in trace.outputs[(term.kind, term.text)]?.getD {} do
       for producer in producers do
         if ordinal ≤ producer.finished then continue
@@ -206,29 +239,34 @@ def Trace.start (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (comma
           kind := term.kind, term := term.text
           inputFirst := term.first, inputLimit := term.limit
           outputFirst := producer.term.first, outputLimit := producer.term.limit
+          inputFormat := format,outputFormat := producer.format
           rows := project (trace.rows[producer.occurrence]?.getD {}) producer.term.first producer.term.limit }
         if let some checked := Pending.check? edge input producer.source then
           pending := pending.push checked
-  return {trace with starts := trace.starts.insert occurrence ⟨command, ordinal, pending⟩}
+  return {trace with starts := trace.starts.insert occurrence ⟨command, ordinal, pending,format⟩}
 
-def Trace.finish (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (output : String) :
+def Trace.finish (trace : Trace) (occurrence : Occurrence) (ordinal : Nat) (output : String)
+    (format : DataFormat := .text) :
     Except String Trace := do
   let trace ← trace.advance ordinal
   let some started := trace.starts[occurrence]? | throw "output has no observed start"
   if let some previous := trace.finished[occurrence]? then
-    unless previous == output do throw "one occurrence changed its output"
+    unless previous == output && trace.finishedFormats[occurrence]? == some format do throw "one occurrence changed its output"
     return trace
   unless started.ordinal < ordinal do throw "output predates call start"
   let mut graph := trace.graph
   for pending in started.pending do graph ← graph.insert (.consumed pending.edge)
   let mut outputs := trace.outputs
   let source := output.toList.toArray
-  for term in termOccurrences output do
+  for term in ← payloadOccurrences format output do
     let previous := outputs[(term.kind, term.text)]?.getD {}
     let positions := previous[occurrence]?.getD #[]
     outputs := outputs.insert (term.kind, term.text)
-      (previous.insert occurrence (positions.push ⟨occurrence, ordinal, term, source⟩))
-  return {trace with graph, outputs, finished := trace.finished.insert occurrence output}
+      (previous.insert occurrence (positions.push ⟨occurrence, ordinal, term, source,format⟩))
+  return {trace with
+    graph, outputs
+    finished := trace.finished.insert occurrence output
+    finishedFormats := trace.finishedFormats.insert occurrence format}
 
 /-- Attach verified row locations after exact native occurrence binding. -/
 def Trace.locate (trace : Trace) (rows : Std.HashMap Occurrence (Array OutputRow)) :
