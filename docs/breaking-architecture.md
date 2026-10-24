@@ -20,6 +20,14 @@ clustered recommendation and deferred original loading. A bounded source-change
 consumer now drives numerical background preparation in isolation; routed-query
 compensation and unified maintenance of all views remain design targets.
 
+The [bounded numerical read-router prototype](vector-read-routing.md) now builds
+an exact partition of a pinned matrix and visits paged leaves under a checked
+read quota. One standalone query drops provider work from about 60.7 to 3.9 s,
+but changes its original top eight and is not connected to normal discovery.
+Required-original recall and matched tokens remain unqualified. Its next
+protocol must join window keys to original owners without the full-document
+transfer, rather than reintroducing that catalogue before routing.
+
 The [incremental projection component](incremental-projections.md) now implements
 the first storage step using immutable appended extents and existing COW roots,
 without another segment-catalog engine. It removes full projection reproduction.

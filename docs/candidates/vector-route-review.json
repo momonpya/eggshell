@@ -1,0 +1,994 @@
+{
+  "candidate": "numerical-access-and-bounded-route",
+  "baseCommit": "f664252a92acb3f12cae0da57693dae2cc876735",
+  "branch": "hook-ingress-supervisor",
+  "parentCandidate": "accepted-empty-search",
+  "implementation": "Lean 4.33.0",
+  "productRuntimeChanged": false,
+  "integrated": false,
+  "adopted": false,
+  "phases0Through6": "active-unfinished",
+  "answeringModelCalls": 0,
+  "seedCalls": 0,
+  "sourceEmbeddingCalls": 0,
+  "newPythonImplementation": false,
+  "inclusiveTokenComparison": null,
+  "answerQualityQualification": null,
+  "requiredOriginalCoverageQualification": null,
+  "p99Qualification": null,
+  "referenceRuntime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/empty-search-20261025/eggshell",
+    "bytes": 115357680,
+    "sha256": "b48919cbad67ccdc82470d46e5b826d0d5ddea3c5e5a6802352e7c4167774f0c"
+  },
+  "sources": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/checkout/Eggshell/VectorRoute.lean",
+      "bytes": 11980,
+      "sha256": "7b85bb87f11e4fa3cbe6c743b5e148c51582c9939fa28a969ffa78e579df57fc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/checkout/tools/research/MatrixAccessProbe.lean",
+      "bytes": 5881,
+      "sha256": "30e1fe2eb0816f1d83ddb887adbb57cb2bfcb58594a9cd94f82201d1dd1ab2de"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/checkout/tools/research/VectorRouteAudit.lean",
+      "bytes": 8345,
+      "sha256": "d277c8999276d09e472e98b50c6d01d738c6e6d703335a1d069acdc88cf776cb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/checkout/tools/research/RouteQueryAudit.lean",
+      "bytes": 5583,
+      "sha256": "4b152ff693ed6ddb8076decd5624e346a362fe959fc9fc71604a10bb83bc9509"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/checkout/tools/research/RouteScoreGap.lean",
+      "bytes": 2892,
+      "sha256": "6881012f2780172c385a441e1b6a4f2dc4e6a426324b72aa8f2fcd2e91512a46"
+    }
+  ],
+  "generated": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/MatrixAccessProbe.c",
+      "bytes": 189852,
+      "sha256": "66517dcae25f7067e830bc23b4add540c3eda3b4eb6aa086359832efc6731005"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/MatrixAccessProbe.o",
+      "bytes": 156120,
+      "sha256": "1cdc5a94baf0d4df7af3ac11e268d5f0faa7b9f4a4b7e4b5a6111ab6a0d8812e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/RouteQueryAudit.c",
+      "bytes": 145566,
+      "sha256": "d8a940141a1057dffe976a36d61be05d9d872bac2df5152690f56f1a6b0594bf"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/RouteQueryAudit.o",
+      "bytes": 84504,
+      "sha256": "14856ce8d65b3d5dd378e05f57bab607f8a00de63fa91341214c21a98151b9d7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/RouteScoreGap.c",
+      "bytes": 93346,
+      "sha256": "a8c5ecf158d0047027dbc684270c9f1689d423cc2bdb2f201db4215a0014b3b6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/RouteScoreGap.o",
+      "bytes": 64224,
+      "sha256": "8ac6ff67938d22f00093cd08a4df6d699804b468300d6efe5f72836ebbf72088"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/VectorRoute.c",
+      "bytes": 296710,
+      "sha256": "41eec587d8f92598f93d3101c7e20d1d5f2746cfd56403968234e8acfa237fcf"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/VectorRoute.o",
+      "bytes": 229024,
+      "sha256": "0ba52900e23b31eefa60cfc152031e94cb661187646bb8fc22428d32f1a0e949"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/VectorRouteAudit.c",
+      "bytes": 226328,
+      "sha256": "ef4827b6cab980df84eb3f268c3982ece3cde03c0c29a4a1ee9c4634fde8c08c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/VectorRouteAudit.o",
+      "bytes": 105944,
+      "sha256": "c18375a73d2ffa2c994b20044d95ae192d713127ac0edbc1fcd059c1a6cd0134"
+    }
+  ],
+  "linkedInputs": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/linked-inputs.json",
+    "bytes": 138389,
+    "sha256": "826c90f7b049141969aded946919efee948470935fbe83513b3f01ddfab9cc49"
+  },
+  "policy": {
+    "axes": 12,
+    "leafLimit": 32,
+    "maxLeavesPerQuery": 128,
+    "maxNominatedKeys": 4096,
+    "exactOriginalPartitionProven": true,
+    "nodeCodecRoundtripProven": true,
+    "checkedQueryQuota": true,
+    "approximateNominations": true,
+    "fullRankingEqualityClaim": false,
+    "noWorkAuthorityReturned": true,
+    "retunedToFixedQuestion": false,
+    "completeMatrixKeySetRequired": true,
+    "changedMatrixMakesRouteUnavailable": true,
+    "deltaCompensationImplemented": false,
+    "externalMemoryBuilder": false,
+    "filesystemRefinementProven": false
+  },
+  "profiles": [
+    {
+      "count": 4096,
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/profile-4096.json",
+        "bytes": 1871,
+        "sha256": "1757d865c38c7d69ad8e1d946f3dfa56dbd805a62a656601dfcdce8c2274e590"
+      },
+      "originalMs": 5619,
+      "profiledMs": 5274,
+      "stagesNs": {
+        "lookupNs": 2678648905,
+        "hexNs": 741725368,
+        "frameNs": 32207957,
+        "finiteNs": 61012742,
+        "descriptorNs": 40227186,
+        "coverageNs": 9811879,
+        "blobNs": 1683061302,
+        "beforeNs": 4819594,
+        "afterNs": 4309934
+      },
+      "allOriginalRowsEqual": true,
+      "originalReads": 7339,
+      "profiledReads": 7339,
+      "readBytes": 30743154
+    },
+    {
+      "count": 50000,
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/profile-50000.json",
+        "bytes": 1890,
+        "sha256": "e5f5ca2a8b288b247526feec62262780336054ee6c1e01ce31d7d0bda35933ce"
+      },
+      "originalMs": 55715,
+      "profiledMs": 54911,
+      "stagesNs": {
+        "lookupNs": 23248737999,
+        "hexNs": 10563215532,
+        "frameNs": 363286701,
+        "finiteNs": 745763738,
+        "descriptorNs": 503466336,
+        "coverageNs": 124711844,
+        "blobNs": 19095076645,
+        "beforeNs": 59336212,
+        "afterNs": 55795745
+      },
+      "allOriginalRowsEqual": true,
+      "originalReads": 81466,
+      "profiledReads": 81466,
+      "readBytes": 327716035
+    }
+  ],
+  "route": {
+    "raw": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-50000/result.json",
+      "bytes": 982274,
+      "sha256": "49bfb8aefb0cb8ddd52d6bfdb6fa92e7364f8e6bae682ae83bcbcfdc23daecfd"
+    },
+    "fixture": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-fixture/result.json",
+      "bytes": 252,
+      "sha256": "9e6dd2452aac21b92fa656dd98e86469c32cb824b69629ea82420f2e81e0b9c9"
+    },
+    "projectionKeys": 99969,
+    "sourceDiscoveryWindows": 50000,
+    "prepareMs": 35472,
+    "preparationExcludesDomainAndKeyEnumeration": true,
+    "manifest": {
+      "root": 8190,
+      "points": 99969,
+      "nodes": 8191,
+      "matrix": {
+        "root": {
+          "rows": 99970,
+          "offset": 343000610,
+          "last": "stats",
+          "height": 3,
+          "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+          "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+          "bytes": 1439
+        },
+        "revision": 1,
+        "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+        "bytes": 343002049,
+        "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+      },
+      "leaves": 4096
+    },
+    "header": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-50000/routing/routing/1409e344bb253d381d2d0dc9f81fd4798bfd893a38ddaafb0fd50461f5bdae03/head",
+      "bytes": 380,
+      "sha256": "13091ac47687ae46a16f8c10ad6630c82265167127928ffc23e12ca7ad6fe780"
+    },
+    "pages": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-50000/routing/routing/1409e344bb253d381d2d0dc9f81fd4798bfd893a38ddaafb0fd50461f5bdae03/bb534e425e2ba6447d7fe4321d98d716c3b44f0d83efb986c1a3b3b8dae1ee32.pages",
+      "bytes": 7179039,
+      "sha256": "fab538505d15e4856a948fe49cf92a9b326f7383cd8109d0dca39a9b6ffa0b91"
+    },
+    "queries": [
+      {
+        "sourceOffset": 0,
+        "quota": 1,
+        "routingMs": 6,
+        "readAndValidateOriginalMs": 0,
+        "keys": 25,
+        "visitedLeaves": 1,
+        "visitedNodes": 13,
+        "packedBytes": 0,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 0,
+        "quota": 8,
+        "routingMs": 7,
+        "readAndValidateOriginalMs": 0,
+        "keys": 195,
+        "visitedLeaves": 8,
+        "visitedNodes": 24,
+        "packedBytes": 0,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 0,
+        "quota": 128,
+        "routingMs": 42,
+        "readAndValidateOriginalMs": 2768,
+        "keys": 3124,
+        "visitedLeaves": 128,
+        "visitedNodes": 260,
+        "packedBytes": 19193856,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 16666,
+        "quota": 1,
+        "routingMs": 8,
+        "readAndValidateOriginalMs": 0,
+        "keys": 24,
+        "visitedLeaves": 1,
+        "visitedNodes": 13,
+        "packedBytes": 0,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 16666,
+        "quota": 8,
+        "routingMs": 9,
+        "readAndValidateOriginalMs": 0,
+        "keys": 196,
+        "visitedLeaves": 8,
+        "visitedNodes": 24,
+        "packedBytes": 0,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 16666,
+        "quota": 128,
+        "routingMs": 42,
+        "readAndValidateOriginalMs": 2094,
+        "keys": 3124,
+        "visitedLeaves": 128,
+        "visitedNodes": 260,
+        "packedBytes": 19193856,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 25000,
+        "quota": 1,
+        "routingMs": 8,
+        "readAndValidateOriginalMs": 0,
+        "keys": 25,
+        "visitedLeaves": 1,
+        "visitedNodes": 13,
+        "packedBytes": 0,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 25000,
+        "quota": 8,
+        "routingMs": 7,
+        "readAndValidateOriginalMs": 0,
+        "keys": 195,
+        "visitedLeaves": 8,
+        "visitedNodes": 24,
+        "packedBytes": 0,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 25000,
+        "quota": 128,
+        "routingMs": 43,
+        "readAndValidateOriginalMs": 2750,
+        "keys": 3124,
+        "visitedLeaves": 128,
+        "visitedNodes": 260,
+        "packedBytes": 19193856,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 49999,
+        "quota": 1,
+        "routingMs": 3,
+        "readAndValidateOriginalMs": 0,
+        "keys": 25,
+        "visitedLeaves": 1,
+        "visitedNodes": 13,
+        "packedBytes": 0,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 49999,
+        "quota": 8,
+        "routingMs": 4,
+        "readAndValidateOriginalMs": 0,
+        "keys": 195,
+        "visitedLeaves": 8,
+        "visitedNodes": 24,
+        "packedBytes": 0,
+        "selfFound": true,
+        "originalKeysOnly": true
+      },
+      {
+        "sourceOffset": 49999,
+        "quota": 128,
+        "routingMs": 41,
+        "readAndValidateOriginalMs": 2748,
+        "keys": 3124,
+        "visitedLeaves": 128,
+        "visitedNodes": 260,
+        "packedBytes": 19193856,
+        "selfFound": true,
+        "originalKeysOnly": true
+      }
+    ],
+    "naturalLanguageRecallClaim": false
+  },
+  "naturalQuery": {
+    "raw": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-comparison/result.json",
+      "bytes": 1845,
+      "sha256": "9e1d19041fd3adda5406d14bb803e4b1c5ccb925d2cf6ea9ed277dcb5590b7df"
+    },
+    "referenceRequest": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-comparison/reference-request.json",
+      "bytes": 13906622,
+      "sha256": "fbb9b488f7dd4ae1985e354f179c03e6152dd313a3a295eb273437aa572dc7e9"
+    },
+    "referenceResponse": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-comparison/reference.json",
+      "bytes": 2376443,
+      "sha256": "c7f9c08e53f6af7ef38e188ac68e49843df44610065fe1e967d982405bcd366d"
+    },
+    "routedRequest": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-comparison/routed-request.json",
+      "bytes": 870970,
+      "sha256": "86d6e78dad63bd2aaa1679e7e0ec36bc4a61aa435dae6ac1364930ccbfa99641"
+    },
+    "routedResponse": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-comparison/routed.json",
+      "bytes": 141608,
+      "sha256": "2b751acef6a68b83b69af3f3042dff067f7546aaa2dea62f2e19f83d284d4ab1"
+    },
+    "referenceProviderMs": 60694,
+    "routedProviderMs": 3915,
+    "routingMs": 37,
+    "referenceDocuments": 49969,
+    "routedDocuments": 3125,
+    "routedDiscoveryWindows": 3125,
+    "referenceRelatedRoots": [
+      3515,
+      3485,
+      4145,
+      3455,
+      35927,
+      4055,
+      35864,
+      35831
+    ],
+    "routedRelatedRoots": [
+      36020,
+      65555,
+      35849,
+      72545,
+      995,
+      32075,
+      54581,
+      125051
+    ],
+    "retainedReferenceRoots": [
+
+    ],
+    "missedReferenceRoots": [
+      3515,
+      3485,
+      4145,
+      3455,
+      35927,
+      4055,
+      35864,
+      35831
+    ],
+    "scope": "single frozen synthetic natural-language question; no lexical/anchor additions, no required-source/answer-quality truth labels; reference goes first and creates private query embedding; not a paired native-hook speedup"
+  },
+  "scoreGap": {
+    "raw": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/score-gap.json",
+      "bytes": 971,
+      "sha256": "666ecc0b56d491ff21ff461f375a44e53c64880b52d5647cad86b5818d7de71b"
+    },
+    "groups": [
+      {
+        "set": "referenceRelatedRoots",
+        "rows": [
+          {
+            "root": 3515,
+            "cosine": 0.90336
+          },
+          {
+            "root": 3485,
+            "cosine": 0.902811
+          },
+          {
+            "root": 4145,
+            "cosine": 0.9024
+          },
+          {
+            "root": 3455,
+            "cosine": 0.901733
+          },
+          {
+            "root": 35927,
+            "cosine": 0.901609
+          },
+          {
+            "root": 4055,
+            "cosine": 0.901179
+          },
+          {
+            "root": 35864,
+            "cosine": 0.900771
+          },
+          {
+            "root": 35831,
+            "cosine": 0.900751
+          }
+        ]
+      },
+      {
+        "set": "routedRelatedRoots",
+        "rows": [
+          {
+            "root": 36020,
+            "cosine": 0.899229
+          },
+          {
+            "root": 65555,
+            "cosine": 0.89484
+          },
+          {
+            "root": 35849,
+            "cosine": 0.894678
+          },
+          {
+            "root": 72545,
+            "cosine": 0.894572
+          },
+          {
+            "root": 995,
+            "cosine": 0.893689
+          },
+          {
+            "root": 32075,
+            "cosine": 0.893124
+          },
+          {
+            "root": 54581,
+            "cosine": 0.892189
+          },
+          {
+            "root": 125051,
+            "cosine": 0.891888
+          }
+        ]
+      }
+    ],
+    "independentLeanCosine": true,
+    "bitwiseNumPyEquivalenceClaim": false,
+    "newEmbeddingCalls": 0
+  },
+  "originals": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/originals-after.json",
+    "bytes": 3930,
+    "sha256": "bd53b24afdc71c0ada2ef9901f85b85b953c56f265f222804be98d15d9da1aef"
+  },
+  "guards": [
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/gap-build-final.guard.json",
+        "bytes": 1455,
+        "sha256": "5aaed75297882044c39075983575950cd9020aafa669329538da8bf3727d9e77"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 7833,
+      "rssKiB": 915280
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/gap-build.guard.json",
+        "bytes": 1450,
+        "sha256": "4d9d31a0d1707cc9423091b2afd41e885932096dbf3c02cf74caa2baddf3f71e"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 12964,
+      "rssKiB": 941728
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/probe-build-final.guard.json",
+        "bytes": 1459,
+        "sha256": "5b7f4804f951b646b9c7ec04882ada1099f7c1a98effd19f61151d936b212d11"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 7840,
+      "rssKiB": 959152
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/probe-build.guard.json",
+        "bytes": 1158,
+        "sha256": "d259f273baeefda3fb7a04a6c3e484dbdc3ed5a719d92cad14468f859b5badcb"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 10210,
+      "rssKiB": 779600
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/profile-4096.guard.json",
+        "bytes": 1408,
+        "sha256": "5508a3b64009d64378f693566c9466b8f0f7de5c1fd2b79918f37ee6896a01af"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 17056,
+      "rssKiB": 376944
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/profile-50000.guard.json",
+        "bytes": 1412,
+        "sha256": "392831112a32ddd574ab495350d47f6c5ae838aea82caf11d8354136806f41f9"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 114918,
+      "rssKiB": 545648
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-build.guard.json",
+        "bytes": 1161,
+        "sha256": "5cf4661fa5a3cf834e3707a69c809162f1dd9a93c093548b2afb50ccab1b0a0f"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 19391,
+      "rssKiB": 1433920
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-comparison.guard.json",
+        "bytes": 2684,
+        "sha256": "c44a1748d0d05b0053460fb07962daa68b1f289c4c5b58160ee8c17f85329295"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 70484,
+      "rssKiB": 1911408
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-50000.guard.json",
+        "bytes": 1400,
+        "sha256": "d42a805748b19f9422fca9baa797d0cb0f60559c9a1e64b36c48d8aa2341ce7d"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 55041,
+      "rssKiB": 401024
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-build-final.guard.json",
+        "bytes": 1165,
+        "sha256": "27cf7d860b31dc10524109d35d8eeafbf9f2c7bc06a03b08b3b5bb10935380a3"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 5128,
+      "rssKiB": 1415792
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-build-stable.guard.json",
+        "bytes": 1166,
+        "sha256": "4d458c35efb8c2694f8a4e8e58571cd977ca1f75d218eb0bb74769d024b2f5be"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 7993,
+      "rssKiB": 1425264
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-build.guard.json",
+        "bytes": 1160,
+        "sha256": "5fead0cefd37bf45beb39e2d848796b23ea93cab065a56c6275f8a006b0383b8"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 18352,
+      "rssKiB": 1394064
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-compile-2.guard.json",
+        "bytes": 1163,
+        "sha256": "74772cf95ea13a05f28a1ccfaf776629b39055b6908a39c16a880559938d07ba"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 7449,
+      "rssKiB": 497984
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-compile.guard.json",
+        "bytes": 1161,
+        "sha256": "5942e197d887015ff4d62051548dfb72cea457a6b25248d9dc17e255655a39bb"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 7222,
+      "rssKiB": 496656
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-fixture.guard.json",
+        "bytes": 1151,
+        "sha256": "b67b7cab4e594ebc4bd87988bcf12acd778b504f35a4a2fe8dfca63d58ab3ef8"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 5119,
+      "rssKiB": 64784
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/score-gap-final.guard.json",
+        "bytes": 1651,
+        "sha256": "af4b983b73a6821a12b7af33121a6a6a463f089b33439d23c9619268d9eb0fee"
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 5536,
+      "rssKiB": 368784
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/score-gap.guard.json",
+        "bytes": 1643,
+        "sha256": "d89363e3e9fe3471913328bfa15d51570ea726aec5e04c6ac7502fb97b976da2"
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "reason": null,
+      "ownedPids": [
+
+      ],
+      "elapsedMs": 5207,
+      "rssKiB": 80576
+    }
+  ],
+  "finalExecutions": [
+    "probe-build-final",
+    "profile-4096",
+    "profile-50000",
+    "route-build-stable",
+    "route-fixture",
+    "route-50000",
+    "query-build",
+    "query-comparison",
+    "gap-build-final",
+    "score-gap-final"
+  ],
+  "maximumAggregateRssKiB": 1911408,
+  "limitRssKiB": 3670016,
+  "userCeilingRssKiB": 4194304,
+  "failures": [
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/probe-build.guard.json",
+        "bytes": 1158,
+        "sha256": "d259f273baeefda3fb7a04a6c3e484dbdc3ed5a719d92cad14468f859b5badcb"
+      },
+      "cause": "Probe helper name collided with Lean measure; renamed timedStage before execution"
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-compile.guard.json",
+        "bytes": 1161,
+        "sha256": "5942e197d887015ff4d62051548dfb72cea457a6b25248d9dc17e255655a39bb"
+      },
+      "cause": "Codec layout, unavailable Option.toExcept, and public/private caller visibility; corrected before tests"
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-build-final.guard.json",
+        "bytes": 1165,
+        "sha256": "27cf7d860b31dc10524109d35d8eeafbf9f2c7bc06a03b08b3b5bb10935380a3"
+      },
+      "cause": "Audit range consumer had wrong arity; corrected before native component run"
+    },
+    {
+      "raw": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/score-gap.guard.json",
+        "bytes": 1643,
+        "sha256": "d89363e3e9fe3471913328bfa15d51570ea726aec5e04c6ac7502fb97b976da2"
+      },
+      "cause": "Helper linked an old response file and rejected CLI arguments before any scoring; corrected link target for final run"
+    }
+  ],
+  "retirements": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/helpers-retired.json",
+      "bytes": 1026,
+      "sha256": "c93038c66040e74eed89f5556a7b20e1da00cb29d27ad2a6f9869144073d575d"
+    }
+  ],
+  "archivesCreated": false,
+  "nextAction": [
+    "Connect a coverage-reporting routed advisory producer to original window-key/owner postings without transferring all document metadata",
+    "Keep lexical/synaptic nominations and uncapped generated class recognition independent; retain original owner/freshness/extraction checks",
+    "Implement source-change/delta compensation and atomic routing replacement before growing shared use",
+    "Freeze held-out required-original checks before native lifecycle and matched topic/lap/repetition total-token/quality comparisons"
+  ],
+  "limitations": [
+    "Component only; actual 50k native reference still times out numerically",
+    "Exact top-eight overlap is zero on one diagnostic; score/relevance/required-history/token acceptance are separate and unqualified",
+    "Routing sketches hold twelve original coordinates and are approximate; no similarity-pruning theorem",
+    "Current immutable router requires an exact matrix head; no incremental delta maintenance or replacement",
+    "Preparation enumerates all keys and retains coordinate rows; multi-DB/shared concurrency, capture privacy, Phase4 tool semantics and paper remain unfinished"
+  ],
+  "reproduction": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/check-review.rb",
+      "bytes": 3402,
+      "sha256": "2d40eceb3a61441f1fc2341d7a371d851215ed3c7ee1eede2a8670f2080bcfba"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/gap-build-final.settings.json",
+      "bytes": 446,
+      "sha256": "3db97ff5e496bcaa1eee51eb3e685aba51a0332b63e6e4bbcf828892b28c8a6a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/gap-build.rb",
+      "bytes": 893,
+      "sha256": "8822349b7976f593ae8f5cf8522f904f37ae1144189c12edc8d389cdbfc4272b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/gap-build.settings.json",
+      "bytes": 440,
+      "sha256": "3459b82449f6a23b538e859f446200305d6005efe3c91dac10e82201e3beb044"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/lean-path.txt",
+      "bytes": 157,
+      "sha256": "ca15209bade26c8f7eb9c5e32de207c1a3d671ff9dd139bdf5aa71b41d47c2b6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/plan.json",
+      "bytes": 1494,
+      "sha256": "a9e824c41b6d315f801b607a5aa97c3af8797254106a3cc29fac6b49de828638"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/probe-build-final.settings.json",
+      "bytes": 450,
+      "sha256": "4aaecce400a17be662df3e988dffa26b4f6c5cc3e221786b3717c088dec58955"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/probe-build.rb",
+      "bytes": 887,
+      "sha256": "bd3c7883f98a0c7452ee74d86022b7a8994eb2ff0153580a58fbd98fc3b88794"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/probe-build.settings.json",
+      "bytes": 444,
+      "sha256": "a4855a109eaa5e393da00e39fd9901007dabb2f78c598b08c3d6567a9f39aa60"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/profile-4096.settings.json",
+      "bytes": 787,
+      "sha256": "ec7583ab78fc59b77a9e0c8ac6f13f051b0f50fd52a5d4c719f2b1f33d4ef860"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/profile-50000.settings.json",
+      "bytes": 790,
+      "sha256": "1b4d2e109a209b433affcc6f1cbe757bc1f2b94d86bfa9c0e18877f83a602292"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-build.rb",
+      "bytes": 909,
+      "sha256": "17a400b830708588ee6207e33a2481e8d40db04eb36356d674d8108e012c432e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-build.settings.json",
+      "bytes": 444,
+      "sha256": "d03a6ed615f9ce07b10060a82b7a4d826069cdb8208bdc1b8bb27d4e551c8f74"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-comparison.settings.json",
+      "bytes": 1213,
+      "sha256": "c026d29cdc3e9fa1f83874395beaab7f3b27cab75829ec7beadf1a9f2da50edf"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-4096.settings.json",
+      "bytes": 777,
+      "sha256": "6c0b6d01b4b89f358fd903e024d70b6287f87d88ccd8859e8bb159b1b96a13bf"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-50000.settings.json",
+      "bytes": 780,
+      "sha256": "224ce20068c16109c3ea6dac74ee3b37efb373433e57c096802ab74e975f730f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-build-final.settings.json",
+      "bytes": 450,
+      "sha256": "2970b90fff078e4d053276bd99d7114703b404f271ae95b084fd3359e1d65a5a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-build-stable.settings.json",
+      "bytes": 451,
+      "sha256": "fb7ed3c9e074509b8a12284ebaa75d6deffc2cf98738d8641ae75034dbcc5aff"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-build.rb",
+      "bytes": 1001,
+      "sha256": "5ebf312b8977a39cffa6619b2d69bc80e24de2e0cf15dfa5c2a306480d88a5f6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-build.settings.json",
+      "bytes": 444,
+      "sha256": "259766fc7ca55402017bdaf79d8f496b896b2099ba2f1e4c7cf81294fbae3d28"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-compile-2.settings.json",
+      "bytes": 450,
+      "sha256": "cf4437496c60baafb7cd363dc20ae03300f8e9dffd38d13cb367045d7cdb1e75"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-compile.rb",
+      "bytes": 348,
+      "sha256": "4477ca9ce63e2247e1ffce98c39ce485bf190944758e9a3a000c5d0aec53e709"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-compile.settings.json",
+      "bytes": 448,
+      "sha256": "ca20df644b4f5c13ed94b964a96323ecd84c4b3872ebc40451fdcf1c053a8b1f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/route-fixture.settings.json",
+      "bytes": 525,
+      "sha256": "26b5d80c010e78803303f52553ba705ca86be422090fa16b8e7aaafc0b7d916e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/score-gap-final.settings.json",
+      "bytes": 1051,
+      "sha256": "8f95924f59dcdc012cfbcb2023bcb6af10248e02c6616f9f0359a39e88105ef6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/score-gap.settings.json",
+      "bytes": 1045,
+      "sha256": "e6e1e9f7215ed1e3f8d09deaaeda2e6489fea018a262eda97fb9f59a8bafab5b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/write-review.rb",
+      "bytes": 8341,
+      "sha256": "7ef6d1e4cb2f722d8bc1fecb0312ee0a775117d4444d775eb469b071e712ebed"
+    }
+  ]
+}

@@ -1,5 +1,10 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 数値アクセスを元readerとの全値照合で分解：既存50k discovery行のscalar読出し55,715ms、同値な計測版54,911ms。点索引23.25秒、元chunk検証19.10秒、16進化10.56秒が大半で、採点前に30秒を超えていた。snapshot変更/追加warm/埋込なし。1候補ずつ全件を具体化する経路を置換する必要がある。
+全99,969投影を32件以下の葉に分けるページ化推薦routerをLeanで隔離実装。全入力のpermutation・codec往復を通常Leanで証明し、照会はleaf≤128/keys≤4,096/node上限を型付きで検査。12の元座標bit順序を使い、実際の採点は元の完全ベクトル。99,969件の構築35,472ms（入力列挙別）、4 source-vector照会の3,124候補を41–43msで取得し、元データ読出し/検証2,094–2,768ms。全同座標65件、重複/過大quota/後続matrix/不正node拒否、pinned旧readerを確認した。
+固定した合成自然言語1問の数値経路だけを比較し、元provider 60,694ms対、router37ms＋絞込後3,915ms。上位8 ownerの重なり0件を保持。元full-vectorの独立Lean cosineは元0.9008–0.9034、候補0.8919–0.8992。順位差は観測事実だが必要原文の欠落/品質/総トークンの正解ではないため、これだけで採否や効果を断定せず、質問へ再調整もしない。回答モデル/seed/元窓埋込0、query埋込のみ既存MiniLMを使い、policy/骨格はLean・追加Pythonなし。
+routerはまだWarm/通常hookへ未接続・未採用。既存の実nativeは前候補の意味timeoutのまま。次は全documents転送をwindowkey→元owner照会へ変えるcoverage付き推薦protocolとし、字句/3シナプス/完全e-class認定/元鮮度を保持する。matrix差分補償/原子的置換/共有並行/私有MCP capture/p99/全題材・両周・総トークン比較/論文は未完了。全final guard終了/残存0、元DB/字句hash不変、最大合計RSS1,911,408KiB、終了helperはhash後削除・archiveなし。docs/vector-read-routing.md参照、全Phases0–6 active。
+
 2026-10-25 有効な空Worker応答を未完了へ変換していた制御をLeanで隔離修正。既存SearchDelivery.emptyの現在stamp受理/JSON復号を通った場合だけ、本文/配送履歴/認定権限を持たない状態metadataを返す。欠損・不正・期限外・旧turn/epoch・サイズ超過・実pendingは別のまま、意味timeoutのtrace/表示を保持する。通常Lean証明/ContractAuditと10 route/status＋無効応答の検査が成功。helperのExcept.isError API不存在だけをtoOptionへ直し、失敗も保持した。
 実nativeの10k初回9,600ms/継続7,901ms、50k初回22,735ms/継続22,047ms。初回原文は両方前候補とバイト一致し、10k継続も空本文一致。50k継続の誤った未完了本文356bytesが0になり、disposition=empty/reason=no-new-memory/completed=0、記憶offer不受理/履歴12維持を確認。意味検索は約14.3秒でtimeoutのままなので完全数値順位の成功とはしない。時間延長/採点/選択/MiniLM/3辺/認定/鮮度は変更していない。
 新seed/回答モデル/総トークン比較0、候補未採用。明示warm/再warmの追加埋込/投影生成/行列追記0、元DB/字句索引hash不変、全final guard終了/所有process残存0、最大合計RSS2,114,880KiB。終了helperはhash後に削除しarchiveなし。次は行単位の数値読出し・検証・転送を測り、全件metadata/materialization依存を減らす。大規模共有/通常federation/私有MCP capture/Phase4規則/p99/全題材比較/論文は未完了。docs/empty-search.md参照、全Phases0–6 active。

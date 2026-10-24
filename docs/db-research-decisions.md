@@ -173,3 +173,10 @@ lane still times out. Fixing the false-incomplete controller conversion does
 not remove full-scan cost or qualify the layout research. No answering-model
 calls or new seeds were made for this review, and no token improvement is
 established.
+
+The [numerical read-router component](vector-read-routing.md) now provides an
+isolated bounded-page access path over original projection keys. It is a small
+balanced view in the existing PageMap, not a new ANN service. Its full input
+partition and query quotas are proven, while online nominations are approximate.
+The one-query ranking change is recorded; useful-original and token qualification,
+source-change compensation and the key-first production protocol remain open.
