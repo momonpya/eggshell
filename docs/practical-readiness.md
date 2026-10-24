@@ -12,8 +12,9 @@ recommendation changes. Original authority, scope, freshness, measured recall
 differences and matched token/quality/deadline adoption remain required.
 The [DB research decisions](db-research-decisions.md) fix the next candidate's
 base/delta publication boundary, clustered routing and deferred original reads.
-Routed query compensation and deferred owner reads remain unimplemented targets;
-the paged component alone does not satisfy them.
+Routed query compensation remains unimplemented. The later deferred discovery
+candidate suppresses inert owner reads, but complete Work reconstruction remains;
+the paged component alone does not satisfy this target.
 The [incremental projection component](incremental-projections.md) now retains
 old numerical rows and writes only new/damaged projections with one atomic head.
 Full-key validation still takes 9.3 seconds in that component's 10k audit.
@@ -25,10 +26,13 @@ derived refreshes, owner loading and routed query coverage remain unfinished.
 These are not native-hook or token qualification.
 
 The [Work-only inference component](work-only-inference.md) proves the complete
-fixed-pass Work/Union boundary and identifies comparisons that no result context
-can make deliverable. It does not yet remove all-owner hydration from native
-hooks: quotient roots, later demands and original authority must survive the
-integration. Its 10k audit is not a new hook qualification or token cohort.
+fixed-pass Work/Union boundary. The [discovery integration](deferred-work-discovery.md)
+now preserves quotient roots, later demands and original witnesses while
+deferring inert Outcomes. In actual 10k hooks, owner reads fall to nine and the
+body/ACK behavior agrees, but first/continued elapsed times are 18.9/17.2 seconds
+versus reference 17.7/16.6 seconds. No speed gain or p99 is established. All Work
+views and numerical rows are still acquired. This is not a token cohort or 50k
+qualification; the candidate remains unadopted.
 
 ## Priority and current evidence
 

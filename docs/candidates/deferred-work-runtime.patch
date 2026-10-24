@@ -1,0 +1,658 @@
+diff --git a/Eggshell/Matcher.lean b/Eggshell/Matcher.lean
+index 74ed40f..ce2b3f6 100644
+--- a/Eggshell/Matcher.lean
++++ b/Eggshell/Matcher.lean
+@@ -2221 +2221 @@ normalizing its Outcome. It is also the producer of the exact context query. -/
+-def Candidate.prepareWork (candidate : Candidate) (quotient : Quotient) (corpus : Corpus)
++def WorkView.prepare (candidate : WorkView) (quotient : Quotient) (corpus : Corpus)
+@@ -2223 +2222,0 @@ def Candidate.prepareWork (candidate : Candidate) (quotient : Quotient) (corpus
+-  let edge := candidate.edge
+@@ -2244,2 +2243,2 @@ def Candidate.prepareWork (candidate : Candidate) (quotient : Quotient) (corpus
+-  let subwork := corpus.subworks.any (quotient.toEquality.same edge.work)
+-  let wholeWorkIdentity := quotient.toEquality.same current edge.work
++  let subwork := corpus.subworks.any (quotient.toEquality.same candidate.value)
++  let wholeWorkIdentity := quotient.toEquality.same current candidate.value
+@@ -2259,0 +2259,4 @@ def Candidate.prepareWork (candidate : Candidate) (quotient : Quotient) (corpus
++def Candidate.prepareWork (candidate : Candidate) (quotient : Quotient) (corpus : Corpus)
++    (current : Value) (alignment : PatternPair × Coverage × Coverage) : Option WorkAlignment :=
++  candidate.workView.prepare quotient corpus current alignment
++
+@@ -2270,2 +2273,2 @@ theorem Candidate.prepareWork_subworks_exact (candidate : Candidate) (quotient :
+-  unfold prepareWork
+-  simp only [same]
++  unfold prepareWork WorkView.prepare
++  simp only [Candidate.workView, same]
+@@ -2349,0 +2353,8 @@ def Candidate.groundContext (candidate : Candidate) (normalize : Normalizer)
++def WorkView.preparedWorks (candidate : WorkView) (cover : CoverageProvider)
++    (quotient : Quotient) (corpus : Corpus) (current : Value)
++    (pattern : Pattern) (patterns : List WorkPattern) (retrieved native : Bool) :
++    List (WorkAlignment × Bool) :=
++  (candidate.alignments cover quotient corpus current pattern patterns retrieved native).filterMap
++    fun alignment => (candidate.prepare quotient corpus current alignment).map
++      fun work => (work, alignment.1.retrieved)
++
+@@ -2357,0 +2369,9 @@ def Candidate.preparedWorks (candidate : Candidate) (cover : CoverageProvider)
++/-- Every ordered Work comparison, not only a score, is independent of the
++result payload. Native clauses, Exact footprints and subwork membership remain. -/
++theorem Candidate.preparedWorks_work_only (candidate : Candidate) (cover : CoverageProvider)
++    (quotient : Quotient) (corpus : Corpus) (current : Value) (pattern : Pattern)
++    (patterns : List WorkPattern) (semantic : SemanticNominations) (native : Bool) :
++    candidate.preparedWorks cover quotient corpus current pattern patterns semantic native =
++      candidate.workView.preparedWorks cover quotient corpus current pattern patterns
++        (externallyNominated semantic.related candidate) native := rfl
++
+@@ -2541 +2561 @@ theorem prepareInUsing_frequency_congr (normalize : Normalizer) (cover : Coverag
+-    unfold Candidate.prepareWork
++    unfold Candidate.prepareWork WorkView.prepare
+@@ -2745,4 +2765,3 @@ def find (normalize : Normalizer) (quotient : Quotient)
+-def localUnion? (quotient : Quotient) (inquiry : Value)
+-    (matched : Match) : Option UnionEdge := do
+-  if matched.retrieved then none
+-  let aligned := matched.work
++def WorkAlignment.localUnion? (aligned : WorkAlignment) (quotient : Quotient) (inquiry : Value)
++    (retrieved : Bool) : Option UnionEdge := do
++  if retrieved then none
+@@ -2768,0 +2788,8 @@ def localUnion? (quotient : Quotient) (inquiry : Value)
++def localUnion? (quotient : Quotient) (inquiry : Value)
++    (matched : Match) : Option UnionEdge :=
++  matched.work.localUnion? quotient inquiry matched.retrieved
++
++theorem localUnion_work_only (quotient : Quotient) (inquiry : Value) (matched : Match) :
++    localUnion? quotient inquiry matched =
++      matched.work.localUnion? quotient inquiry matched.retrieved := rfl
++
+@@ -2774 +2801 @@ theorem localUnion_is_run_scoped {quotient : Quotient} {inquiry : Value}
+-  simp only [localUnion?] at created
++  simp only [localUnion?, WorkAlignment.localUnion?] at created
+@@ -2788 +2815 @@ theorem retrieved_never_unions (quotient : Quotient) (inquiry : Value)
+-  simp [localUnion?, retrieved]
++  simp [localUnion?, WorkAlignment.localUnion?, retrieved]
+@@ -2832 +2859 @@ theorem no_complete_or_informative_fragment_no_local_union {quotient : Quotient}
+-  simp [localUnion?, work, pastIncomplete, currentIncomplete, past, current]
++  simp [localUnion?, WorkAlignment.localUnion?, work, pastIncomplete, currentIncomplete, past, current]
+diff --git a/Eggshell/WorkInference.lean b/Eggshell/WorkInference.lean
+new file mode 100644
+index 0000000..af3f28b
+--- /dev/null
++++ b/Eggshell/WorkInference.lean
+@@ -0,0 +1,225 @@
++module
++public import Eggshell.GraphStore
++public import Eggshell.Matcher
++
++@[expose] public section
++namespace Eggshell.WorkInference
++open Matcher Persistence.Store
++
++/-- Opaque source references carry identity/provenance; they contain no invented
++Outcome payload. Recommendation membership is an independent Boolean lane. -/
++structure Input (α : Type) where
++  source : α
++  view : WorkView
++  retrieved : Bool
++
++structure Prepared (α : Type) where
++  source : α
++  work : WorkAlignment
++  retrieved : Bool
++
++def prepareAlignments (input : Input α) (quotient : Quotient) (corpus : Corpus) (current : Value)
++    (alignments : List (PatternPair × Coverage × Coverage)) : List (Prepared α) :=
++  (alignments.filterMap fun alignment =>
++    (input.view.prepare quotient corpus current alignment).map fun work => (work,alignment.1.retrieved)).map
++    fun (work,retrieved) => ⟨input.source,work,retrieved⟩
++
++def prepare (input : Input α) (cover : CoverageProvider) (quotient : Quotient)
++    (corpus : Corpus) (current : Value) (pattern : Pattern) (patterns : List WorkPattern)
++    (native : Bool) : List (Prepared α) :=
++  prepareAlignments input quotient corpus current
++    (input.view.alignments cover quotient corpus current pattern patterns input.retrieved native)
++
++def pass (inputs : List (Input α)) (cover : CoverageProvider) (quotient : Quotient)
++    (corpus : Corpus) (current : Value) (pattern : Pattern) (patterns : List WorkPattern)
++    (native : Bool) : List (Prepared α) :=
++  (inputs.filter fun input => Matcher.sharesSurface pattern input.view.pattern || input.retrieved).flatMap
++    fun input => prepare input cover quotient corpus current pattern patterns native
++
++/-- The Work pass needs global weights and membership, but carries no candidate
++Outcome payloads even inside its corpus argument. -/
++theorem pass_candidates_irrelevant (inputs : List (Input α)) (cover : CoverageProvider)
++    (quotient : Quotient) (corpus : Corpus) (candidates : List Candidate) (current : Value)
++    (pattern : Pattern) (patterns : List WorkPattern) (native : Bool) :
++    pass inputs cover quotient {corpus with candidates := candidates} current pattern patterns native =
++      pass inputs cover quotient corpus current pattern patterns native := rfl
++
++def Prepared.propose (row : Prepared α) (quotient : Quotient) (inquiry : Value) : Option UnionEdge :=
++  row.work.localUnion? quotient inquiry row.retrieved
++
++/-- A sufficient zero-effect test using the production delivery conditions,
++not a relevance threshold. Children are retained for result-grounded reuse. -/
++def Prepared.contextInert (row : Prepared α) : Bool :=
++  !row.retrieved && !row.work.subwork && !row.work.wholeWorkIdentity &&
++    !(row.work.priorInDemand.distinctiveAnchors > 1 || row.work.demandInPrior.distinctiveAnchors > 1)
++
++def Prepared.inertWith (row : Prepared α) (quotient : Quotient) (inquiry : Value)
++    (covered : UnionEdge → Bool) : Bool :=
++  row.contextInert && match row.propose quotient inquiry with
++    | none => true
++    | some edge => covered edge
++
++def Prepared.inert (row : Prepared α) (quotient : Quotient) (inquiry : Value) : Bool :=
++  row.inertWith quotient inquiry (fun _ => false)
++
++/-- No possible result context can turn an inert Work comparison into delivery
++or Union authority. This does not itself prove scheduler/quotient-domain pruning. -/
++theorem Prepared.inert_effects (row : Prepared α) (quotient : Quotient) (inquiry : Value)
++    (matched : Match) (work : matched.work = row.work) (retrieved : matched.retrieved = row.retrieved)
++    (inert : row.inert quotient inquiry = true) :
++    matched.automatic = false ∧ Matcher.localUnion? quotient inquiry matched = none := by
++  cases proposal : row.propose quotient inquiry with
++  | some edge => simp [Prepared.inert,Prepared.inertWith,proposal] at inert
++  | none =>
++    cases nomination : row.retrieved <;> cases child : row.work.subwork <;>
++      cases whole : row.work.wholeWorkIdentity <;>
++      simp_all [Prepared.inert, Prepared.inertWith, Prepared.contextInert,
++        Prepared.propose, Matcher.Match.automatic, Matcher.localUnion?]
++
++theorem Prepared.covered_effects (row : Prepared α) (quotient : Quotient) (inquiry : Value)
++    (covered : UnionEdge → Bool) (matched : Match)
++    (work : matched.work = row.work) (retrieved : matched.retrieved = row.retrieved)
++    (inert : row.inertWith quotient inquiry covered = true) :
++    matched.automatic = false ∧
++      ∀ edge, Matcher.localUnion? quotient inquiry matched = some edge → covered edge = true := by
++  have context := (Bool.and_eq_true_iff.mp inert).1
++  have automatic : matched.automatic = false := by
++    cases nomination : row.retrieved <;> cases child : row.work.subwork <;>
++      cases whole : row.work.wholeWorkIdentity <;>
++      simp_all [Prepared.contextInert, Matcher.Match.automatic]
++  refine ⟨automatic,?_⟩
++  intro edge generated
++  have same : row.propose quotient inquiry = some edge := by
++    simpa only [Matcher.localUnion?, work, retrieved, Prepared.propose] using generated
++  simpa only [Prepared.inertWith, same, Bool.and_eq_true, context, true_and] using inert
++
++inductive Decision where
++  | reject
++  | defer
++  | hydrate (proposals : List UnionEdge)
++
++/-- Keep raw-admitted Work roots even if all their prepared comparisons are
++inert. The contrast arm that makes every hit retrieved keeps its original IO. -/
++def decide (input : Input α) (cover : CoverageProvider) (quotient : Quotient)
++    (corpus : Corpus) (current inquiry : Value) (pattern : Pattern) (patterns : List WorkPattern)
++    (native : Bool) (enableLocalUnion : Bool) (covered : UnionEdge → Bool := fun _ => false) : Decision :=
++  let raw := input.view.alignments cover quotient corpus current pattern patterns input.retrieved native
++  if raw.isEmpty then .reject
++  else if !enableLocalUnion then .hydrate []
++  else
++    let prepared := prepareAlignments input quotient corpus current raw
++    if prepared.all (·.inertWith quotient inquiry covered) then .defer
++    else .hydrate (prepared.filterMap (·.propose quotient inquiry))
++
++theorem deferred_covered (input : Input α) (cover : CoverageProvider) (quotient : Quotient)
++    (corpus : Corpus) (current inquiry : Value) (pattern : Pattern) (patterns : List WorkPattern)
++    (native enableLocalUnion : Bool) (covered : UnionEdge → Bool)
++    (deferred : decide input cover quotient corpus current inquiry pattern patterns native enableLocalUnion covered = .defer)
++    (row : Prepared α) (present : row ∈ prepare input cover quotient corpus current pattern patterns native) :
++    row.inertWith quotient inquiry covered = true := by
++  unfold decide at deferred
++  dsimp only at deferred
++  split at deferred <;> try contradiction
++  split at deferred <;> try contradiction
++  split at deferred <;> try contradiction
++  next inert => exact List.all_eq_true.mp inert row present
++
++theorem deferred_inert (input : Input α) (cover : CoverageProvider) (quotient : Quotient)
++    (corpus : Corpus) (current inquiry : Value) (pattern : Pattern) (patterns : List WorkPattern)
++    (native enableLocalUnion : Bool)
++    (deferred : decide input cover quotient corpus current inquiry pattern patterns native enableLocalUnion = .defer)
++    (row : Prepared α) (present : row ∈ prepare input cover quotient corpus current pattern patterns native) :
++    row.inert quotient inquiry = true :=
++  deferred_covered input cover quotient corpus current inquiry pattern patterns native enableLocalUnion
++    (fun _ => false) deferred row present
++
++abbrev Covered := Std.HashSet (Value × Value)
++
++def Covered.has (known : Covered) (edge : UnionEdge) : Bool :=
++  known.contains (edge.left,edge.right) || known.contains (edge.right,edge.left)
++
++def Covered.add (known : Covered) (proposals : List UnionEdge) : Covered :=
++  proposals.foldl (fun set edge => set.insert (edge.left,edge.right)) known
++
++def unions (rows : List (Prepared α)) (quotient : Quotient) (inquiry : Value) : List UnionEdge :=
++  Matcher.distinctLocalUnions (rows.filterMap (fun row => row.propose quotient inquiry))
++
++theorem Prepared.retrieved_never_proposes (row : Prepared α) (quotient : Quotient)
++    (inquiry : Value) (retrieved : row.retrieved = true) :
++    row.propose quotient inquiry = none := by
++  simp [propose, WorkAlignment.localUnion?, retrieved]
++
++theorem Prepared.proposed_scope (row : Prepared α) (quotient : Quotient) (inquiry : Value)
++    (edge : UnionEdge) (created : row.propose quotient inquiry = some edge) :
++    edge.scope = .run inquiry := by
++  simp only [propose, WorkAlignment.localUnion?] at created
++  split at created <;> try contradiction
++  split at created <;> try contradiction
++  split at created <;> try contradiction
++  split at created <;> try contradiction
++  next exactSafe =>
++    have same := Option.some.inj created
++    subst edge
++    rfl
++
++def ofCandidate (source : α) (candidate : Candidate) (semantic : SemanticNominations) : Input α :=
++  ⟨source,candidate.workView,Matcher.externallyNominated semantic.related candidate⟩
++
++/-- For the same admitted candidates and fixed quotient, every ordered proposal
++equals the result of the actual matcher after full Outcome grounding. There is
++no top-K premise and no dependence on result bytes or evidence text. This is a
++single-pass refinement, not a theorem about the discovery scheduler's fixpoint. -/
++theorem complete_pass_exact (sources : List (α × Candidate)) (normalize : LogicalText.Normalizer)
++    (cover : CoverageProvider) (view : RunView) (corpus : Corpus) (current : Value)
++    (text : String) (native : Bool) (query : CompiledDemand normalize text native)
++    (semantic : SemanticNominations) (evidence : Option String) (inquiry : Value) :
++    unions (sources.flatMap fun (source,candidate) =>
++      prepare (ofCandidate source candidate semantic) cover view.quotient corpus current
++        query.pattern query.workPatterns native) view.quotient inquiry =
++      Matcher.newLocalUnions view inquiry (sources.flatMap fun (_,candidate) =>
++        candidate.findMatches normalize cover view.quotient corpus current text native query evidence semantic) := by
++  unfold unions Matcher.newLocalUnions prepare prepareAlignments ofCandidate Candidate.findMatches
++  simp only [Candidate.preparedWorks_work_only, WorkView.preparedWorks, List.filterMap_flatMap, List.filterMap_map]
++  rfl
++
++theorem complete_admitted_pass_exact (sources : List (α × Candidate))
++    (normalize : LogicalText.Normalizer) (cover : CoverageProvider) (view : RunView)
++    (corpus : Corpus) (current : Value) (text : String) (native : Bool)
++    (query : CompiledDemand normalize text native) (semantic : SemanticNominations)
++    (evidence : Option String) (inquiry : Value) :
++    unions (pass (sources.map fun (source,candidate) => ofCandidate source candidate semantic)
++      cover view.quotient corpus current query.pattern query.workPatterns native) view.quotient inquiry =
++      Matcher.newLocalUnions view inquiry
++        (Matcher.findInUsing normalize (Matcher.demandProvider normalize text native query) cover
++          view.quotient {corpus with candidates := sources.map Prod.snd} current text evidence semantic native) := by
++  have demand : Matcher.demandProvider normalize text native query text native = query := by
++    simp [Matcher.demandProvider]
++  unfold pass unions prepare prepareAlignments ofCandidate Matcher.newLocalUnions Matcher.findInUsing
++    Matcher.admittedCandidates Matcher.nominated Matcher.SemanticNominations.contains
++    Candidate.findMatches
++  rw [demand]
++  simp only [Candidate.preparedWorks_work_only, WorkView.preparedWorks,
++    List.filter_map, List.flatMap_map, List.filterMap_flatMap, List.filterMap_map]
++  rfl
++
++/-- A reference remains scoped to the full source head. A local numeric id is
++never a global/federated identity or a proof that another DB has the same Work. -/
++structure Address where
++  head : DB.PageMap.Head
++  owner : Nat
++  work : Nat
++  outcome : Nat
++
++/-- Reads original live membership, Work and occurrence structure, without
++calling NodeReader.outcome or fabricating an Outcome edge. These are the same
++source readers used by production Work admission; their IO is a trust boundary. -/
++def load (reader : NodeReader snapshot) (owner : Nat) (retrieved : Bool := false) :
++    IO (Input Address) := do
++  let located ← reader.locateOutcome owner
++  unless located.head == snapshot.head do throw (IO.userError "foreign Work inference origin")
++  let origin ← reader.workOrigin located
++  let some view := WorkView.compile LogicalText.logicalNormalizer origin.work origin.native |
++    throw (IO.userError "nontextual Work inference origin")
++  return ⟨⟨snapshot.head,owner,located.header.work,located.header.outcome⟩,view,retrieved⟩
++
++end Eggshell.WorkInference
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index a0b91c1..84420b1 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -6,0 +7 @@ public import Eggshell.WorkPostings
++public import Eggshell.WorkInference
+@@ -6624,0 +6626,3 @@ structure IndexedOwners where
++  /-- Every raw-admitted Work keeps its original ordinal even when its result
++  is deferred. This is the quotient/topology domain, not Outcome authority. -/
++  works : Std.TreeMap Nat Value := {}
+@@ -6646,0 +6651,2 @@ def IndexedOwners.candidates (owners : IndexedOwners) : List Matcher.Candidate :
++def IndexedOwners.workRoots (state : IndexedOwners) : List Value := state.works.values
++
+@@ -6695,0 +6702 @@ def IndexedOwners.retain (state : IndexedOwners) (ordinal : Nat) (work : Matcher
++    works := state.works.insert ordinal work.edge.work
+@@ -6713,0 +6721,5 @@ any Outcome authority; there is no fake edge or unchecked candidate flag. -/
++structure CompiledWork where
++  origin : Persistence.Store.WorkOrigin
++  view : Matcher.WorkView
++  compiled : Matcher.WorkView.compile LogicalText.logicalNormalizer origin.work origin.native = some view
++
+@@ -6715,2 +6727,4 @@ def IndexedOwners.loadWork (ordinalOf : Nat → IO Nat)
+-    (readWork : Nat → IO Persistence.Store.WorkOrigin) (readOwner : Nat → IO OutcomeEdge)
+-    (state : IndexedOwners) (id : Nat) (admit : Nat → Matcher.WorkView → IO Bool) :
++    (readWork : Nat → IO CompiledWork) (readOwner : Nat → IO OutcomeEdge)
++    (confirm : List UnionEdge → IO Unit)
++    (state : IndexedOwners) (id : Nat)
++    (admit : Nat → Matcher.WorkView → IO WorkInference.Decision) :
+@@ -6720,5 +6734,7 @@ def IndexedOwners.loadWork (ordinalOf : Nat → IO Nat)
+-  let origin ← readWork id
+-  match prepared : Matcher.WorkView.compile LogicalText.logicalNormalizer origin.work origin.native with
+-  | none => throw (IO.userError "indexed candidate has no textual Work")
+-  | some view =>
+-      unless (← admit ordinal view) do return state
++  let loaded ← readWork id
++  let origin := loaded.origin
++  let view := loaded.view
++  match ← admit ordinal view with
++  | .reject => return state
++  | .defer => return {state with works := state.works.insert ordinal origin.work}
++  | .hydrate proposals =>
+@@ -6730 +6746 @@ def IndexedOwners.loadWork (ordinalOf : Nat → IO Nat)
+-          exact prepared
++          exact loaded.compiled
+@@ -6736 +6752,3 @@ def IndexedOwners.loadWork (ordinalOf : Nat → IO Nat)
+-        pure (state.retain ordinal work accepted)
++        let retained := state.retain ordinal work accepted
++        confirm proposals
++        pure retained
+@@ -7215,0 +7234,10 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
++  let compiledWorks ← IO.mkRef ({} : Std.HashMap Nat CompiledWork)
++  let readCompiledWork := fun id => do
++    if let some known := (← compiledWorks.get)[id]? then return known
++    let origin ← countedWork id
++    match compiled : Matcher.WorkView.compile LogicalText.logicalNormalizer origin.work origin.native with
++    | none => throw (IO.userError "indexed candidate has no textual Work")
++    | some view =>
++      let value : CompiledWork := ⟨origin,view,compiled⟩
++      compiledWorks.modify (·.insert id value)
++      return value
+@@ -7294,0 +7323,2 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
++  let sourceWorkRoots := fun state : IndexedOwners =>
++    state.workRoots ++ stagedGraph.outcomes.map (·.work)
+@@ -7301 +7331 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-          (currentValue :: (sourceOutcomes state).map (·.work) ++
++          (currentValue :: sourceWorkRoots state ++
+@@ -7317 +7347,9 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-    let membership ← source.childMembership.mapM (fun prepare => prepare view observe)
++    let originalMembership ← source.childMembership.mapM (fun prepare => prepare view observe)
++    -- Negative answers are scoped to this immutable view only. The next
++    -- quotient rebuild allocates a fresh memo and can promote deferred Work.
++    let membershipCache ← IO.mkRef ({} : Std.HashMap Value Bool)
++    let membership : Option (Value → IO Bool) := originalMembership.map fun lookup => fun work => do
++      if let some known := (← membershipCache.get)[work]? then return known
++      let answer ← lookup work
++      membershipCache.modify (·.insert work answer)
++      return answer
+@@ -7334,4 +7372,2 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-          let origin ← countedWork id
+-          let some work := Matcher.WorkView.compile LogicalText.logicalNormalizer origin.work origin.native |
+-            throw (IO.userError "indexed candidate has no textual Work")
+-          terms := Matcher.Corpus.workScoringTerms work query ++ terms
++          let work ← readCompiledWork id
++          terms := Matcher.Corpus.workScoringTerms work.view query ++ terms
+@@ -7342,0 +7379,2 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
++      let knownSubworks ← IO.mkRef state.subworks
++      let witnessed ← IO.mkRef ({} : WorkInference.Covered)
+@@ -7346 +7384,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-        if task == currentValue && semanticOrdinals.contains ordinal then return true
++        if task == currentValue && semanticOrdinals.contains ordinal then return WorkInference.Decision.hydrate []
++        -- A source child can complete Work after result grounding. Establish
++        -- its global membership before deciding whether the result is inert.
++        if enableLocalUnion then
++          if let some lookup := membership then
++            if ← lookup work.value then
++              knownSubworks.modify fun known => if known.contains work.value then known else work.value :: known
+@@ -7354 +7398 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-          subworks := corpusSubworks state, parents := sourceAll state }
++          subworks := sourceSubworks (sourceAll state) ++ (← knownSubworks.get), parents := sourceAll state }
+@@ -7367,2 +7411,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-        pure (!(work.alignments (Matcher.GeometryMemo.provider coverage)
+-          view.quotient corpus task query.pattern query.workPatterns false taskNative).isEmpty)
++        let decision := WorkInference.decide ({source := ordinal,view := work,retrieved := false} : WorkInference.Input Nat)
++          (Matcher.GeometryMemo.provider coverage) view.quotient corpus task currentValue
++          query.pattern query.workPatterns taskNative enableLocalUnion (WorkInference.Covered.has (← witnessed.get))
++        match decision with
++        | .defer => DiscoveryCounters.timed counters "work-deferred" (pure ())
++        | _ => pure ()
++        pure decision
+@@ -7371 +7420,3 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-        state ← IndexedOwners.loadWork countedOrdinal countedWork countedOwner state id admit
++        state ← IndexedOwners.loadWork countedOrdinal readCompiledWork countedOwner
++          (fun proposals => witnessed.modify (fun known => WorkInference.Covered.add known proposals)) state id admit
++      state := {state with subworks := ← knownSubworks.get}
+@@ -7374,2 +7425,2 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-        let requested := membershipDemand state.candidates stagedCandidates
+-        for work in requested.works do
++        let requested := hashDistinct (state.workRoots ++ stagedCandidates.map (·.edge.work))
++        for work in requested do
+@@ -7448 +7499 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-      quotientWorkRoots (sourceAll state) (sourceOutcomes state) staged) depth evaluate
++      (sourceAll state).map (·.relation) ++ sourceWorkRoots state ++ staged) depth evaluate
+@@ -7817 +7867,0 @@ def indexedDiscovery (selection : Config.Selection)
+-      if let some row := preparedDomain.bind (fun domain => domain.owners[id]?) then return row.ordinal
+@@ -7820 +7870,3 @@ def indexedDiscovery (selection : Config.Selection)
+-      if let some row := preparedDomain.bind (fun domain => domain.owners[id]?) then return row.origin
++      -- A deferred result cannot perform the old hydrated-owner agreement
++      -- check. Obtain Work/native orientation from the original live frame;
++      -- the prepared domain remains nomination metadata only.
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 235884d..d0b1aeb 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -12,0 +13 @@ import tests.FullSearchOracle
++import Eggshell.WorkInference
+@@ -207,0 +209,8 @@ run_meta do
++      (``Eggshell.Matcher.Candidate.prepareWork,
++        #[``Eggshell.Matcher.WorkView.prepare], #[]),
++      (``Eggshell.Matcher.localUnion?,
++        #[``Eggshell.Matcher.WorkAlignment.localUnion?], #[]),
++      (``Eggshell.WorkInference.load,
++        #[``Eggshell.Persistence.Store.NodeReader.workOrigin,
++          ``Eggshell.Persistence.Store.NodeReader.locateOutcome],
++        #[``Eggshell.Persistence.Store.NodeReader.outcome, ``Eggshell.OutcomeEdge.make]),
+@@ -214 +223,2 @@ run_meta do
+-          ``Eggshell.DiscoveryAudit.Trail.observe],
++          ``Eggshell.DiscoveryAudit.Trail.observe, ``Eggshell.WorkInference.decide,
++          ``Eggshell.Plugin.IndexedOwners.workRoots, ``Eggshell.WorkInference.Covered.add],
+@@ -1378,0 +1389,11 @@ run_meta do
++    ``Eggshell.Matcher.Candidate.preparedWorks_work_only,
++    ``Eggshell.Matcher.localUnion_work_only,
++    ``Eggshell.WorkInference.complete_pass_exact,
++    ``Eggshell.WorkInference.complete_admitted_pass_exact,
++    ``Eggshell.WorkInference.pass_candidates_irrelevant,
++    ``Eggshell.WorkInference.Prepared.inert_effects,
++    ``Eggshell.WorkInference.deferred_inert,
++    ``Eggshell.WorkInference.Prepared.covered_effects,
++    ``Eggshell.WorkInference.deferred_covered,
++    ``Eggshell.WorkInference.Prepared.retrieved_never_proposes,
++    ``Eggshell.WorkInference.Prepared.proposed_scope,
+diff --git a/tests/FullSearchOracle.lean b/tests/FullSearchOracle.lean
+index b41f503..72760fb 100644
+--- a/tests/FullSearchOracle.lean
++++ b/tests/FullSearchOracle.lean
+@@ -588 +588 @@ theorem findInUsingBeforeWorkGate_exact (normalize : LogicalText.Normalizer)
+-    Matcher.Candidate.preparedWorks Matcher.Candidate.prepareWork Matcher.Candidate.groundContext
++    Matcher.Candidate.preparedWorks Matcher.Candidate.prepareWork Matcher.WorkView.prepare Matcher.Candidate.groundContext
+diff --git a/tools/research/DeferredWorkAudit.lean b/tools/research/DeferredWorkAudit.lean
+new file mode 100644
+index 0000000..7f7fee4
+--- /dev/null
++++ b/tools/research/DeferredWorkAudit.lean
+@@ -0,0 +1,141 @@
++import Eggshell.Handoff
++
++open Lean Eggshell Eggshell.Plugin Eggshell.Persistence.Store
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def nativeOwner (text body : String) : OutcomeEdge :=
++  let work := Value.text text
++  let outcome := Value.text body
++  OutcomeEdge.make work outcome [.applyList .occurrence [.semantic outcome,.semantic work]]
++    (by simp) (by simp [maxOutcomeObservations])
++
++private def prepare (path : System.FilePath) : IO Unit := do
++  check (!(← path.pathExists)) "preserve the saved comparison fixture"
++  let source ← DB.PageMap.create path (Persistence.valueToJson (.text "deferred-work-fixture")).compress
++  let native := nativeOwner "Bash\nprintf 'alpha clock'" "alpha clock\n"
++  let batched := nativeOwner "Bash\nprintf 'alpha clock'; printf beta" "alpha clock\nbeta\n"
++  let external := nativeOwner "mcp__notes__get\n{\"id\":42}" "{\"id\":42,\"title\":\"alpha clock\"}"
++  let stagedWork := Value.text "Bash\nprintf 'staged alpha'"
++  let values := (List.range 24).map (fun index =>
++    (OutcomeEdge.make (.text s!"inspect alpha clock source {index} trace observations")
++      (.text s!"ORIGINAL_{index}: alpha clock source {index} observed condition") [] (by simp) (by simp)).relation)
++  let all := Value.applyList .all [.semantic (.text "investigate alpha clock"),
++    .semantic native.work,.semantic batched.work,.semantic external.work,.semantic stagedWork]
++  let _ ← DB.PageMap.withWriter source fun writer => do
++    let intern : Intern := ⟨writer,← IO.mkRef {}⟩
++    let ids ← (values ++ [native.relation,batched.relation,external.relation,all]).mapM intern.root
++    let left := Value.text "ALPHA CLOCK"
++    let right := Value.text "alpha clock"
++    if same : Value.sameExactFootprint left right then
++      addUnions intern [⟨left,right,.workspace (.text "deferred-work-fixture"),Value.sameExactFootprint_sound same⟩]
++    else throw (IO.userError "fixture alias changes Exact footprint")
++    writeChange writer ⟨ids,[],true⟩
++  pure ()
++
++private def context (snapshot : DB.PageMap.Snapshot) (nominations : List Nat)
++    (reads : IO.Ref (List Nat)) : IO IndexedContext := do
++  let reader ← NodeReader.new snapshot
++  let demand ← DemandTopology.new reader
++  let documents ← searchDocuments snapshot
++  let persistent ← reader.unions (← authority snapshot)
++  pure {
++    all := []
++    persistent := persistent.map (·.edge)
++    outcomeCount := ← getNat snapshot.get "liveOutcomes"
++    population := ← getNat snapshot.get "candidates"
++    semanticPopulation := ← getNat snapshot.get "semanticPopulation"
++    allCount := some (← getNat snapshot.get "alls")
++    prepareTopology := some demand.read
++    childMembership := some (fun view observe => demand.childLookup view observe)
++    neighborhood := some demand.neighborhood
++    supportOwners := some fun works excluded allowance ranking families =>
++      reader.supportOwners works excluded allowance ranking families
++    focusSupport := some fun works _ _ => do
++      let entries ← supportWindowDocuments snapshot works
++      pure (some (entries.map (·.owner),entries.map fun doc => (doc.owner,List.range doc.windows.length)))
++    live := fun value => (·.isSome) <$> liveRoot? snapshot value
++    semanticPresent := fun value => do
++      let some id ← findNode? snapshot value | return false
++      pure ((← getNat snapshot.get (key "semanticUses" id)) > 0)
++    semantic := fun _ _ _ _ => pure (some {
++      durable := nominations
++      durableRanking := documents.map (·.owner)
++      presentationOrder := documents.map (fun doc => Sum.inl doc.owner) })
++    lexical := fun _ _ => pure {}
++    ordinal := fun id => getNat snapshot.get (key "member" id)
++    readWork := fun id => do reader.workOrigin (← reader.locateOutcome id)
++    readOwner := fun id => do
++      reads.modify (id :: ·)
++      reader.outcome (← reader.locateOutcome id)
++    readSources := reader.sources
++    surfaces := workSurfaceCandidates snapshot
++    frequencies := frequencies snapshot
++    liveOwner := fun value => (·.map Prod.snd) <$> liveRoot? snapshot value }
++
++private def run (database output : System.FilePath) : IO Unit := do
++  check (!(← output.pathExists)) "preserve prior discovery comparisons"
++  FileSystem.privateDirectory output
++  let original ← DB.PageMap.pin database
++  let docs ← searchDocuments original
++  let nominations := (docs.take 8).map (·.owner)
++  let allQueries := [
++    ("broad", "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 1.",false,[]),
++    ("alpha", "inspect alpha clock observations",false,[]),
++    ("native", "Bash\nprintf 'alpha clock'",true,[]),
++    ("native-quote", "Bash\nprintf \"alpha clock\"",true,[]),
++    ("clause", "Bash\nprintf beta",true,[]),
++    ("external", "mcp__notes__get\n{\"id\":42}",true,[]),
++    ("staged", "Bash\nprintf 'staged alpha'",true,
++      [(nativeOwner "Bash\nprintf 'staged alpha'" "staged alpha\n").relation]),
++    ("alias", "alpha clock",false,[])]
++  let queries := if docs.length > 128 then allQueries.take 1 else allQueries
++  let mut records := []
++  for (label,query,native,staged) in queries do
++    for enable in [true,false] do
++      let label := label ++ (if enable then "-union" else "-retrieval")
++      let mut delivered := []
++      for lap in ["first","continued"] do
++        let source ← DB.PageMap.pin database
++        let reads ← IO.mkRef []
++        let source ← context source nominations reads
++        let selection : Config.Selection := {
++          label := "fixed-snapshot"
++          semanticMatcher := some ["fixed-frozen-nominations"]
++          read := []
++          write := none
++          handoffChars := 120000 }
++        let started ← IO.monoMsNow
++        let result ← indexedDiscoveryUsing source selection query delivered native none enable
++          (staged := staged)
++        let elapsed := (← IO.monoMsNow)-started
++        let folder := output / (label++"-"++lap)
++        FileSystem.privateDirectory folder
++        IO.FS.writeFile (folder / "handoff.json") (toJson result).pretty
++        let body := result.map (·.text) |>.getD ""
++        IO.FS.writeFile (folder / "body.txt") body
++        let observed ← reads.get
++        let record := Json.mkObj [
++          ("case",toJson (label++"-"++lap)),("elapsedMs",toJson elapsed),
++          ("ownerCalls",toJson observed.length),("uniqueOwners",toJson (hashDistinct observed).length),
++          ("bodyBytes",toJson body.utf8ByteSize),("bodySha256",toJson (Sha256.hex body.toUTF8)),
++          ("completed",toJson (result.map (·.completed) |>.getD 0)),
++          ("advisory",toJson (result.map (·.advisory) |>.getD 0)),
++          ("localUnions",toJson (result.map (·.localUnions) |>.getD 0)),
++          ("blocksCurrent",toJson (result.any (·.blocksCurrent))),
++          ("deliveredGraphs",toJson (result.map (·.deliveredGraphs) |>.getD []))]
++        records := record :: records
++        delivered := result.map (·.deliveredGraphs) |>.getD delivered
++        IO.FS.writeFile (output / "cases.json") (toJson records.reverse).pretty
++  check ((← DB.PageMap.pin database).head == original.head) "discovery changed original facts"
++  IO.FS.writeFile (output / "result.json") (Json.mkObj [
++    ("source",toJson original.head),("cases",toJson records.reverse),
++    ("sourceUnchanged",toJson true),("answeringModelCalls",toJson (0 : Nat)),
++    ("nativeTransportMeasured",toJson false),("adopted",toJson false)]).pretty
++
++def main (args : List String) : IO Unit := do
++  match args with
++  | ["prepare",database] => prepare (.mk database)
++  | ["run",database,output] => run (.mk database) (.mk output)
++  | _ => throw (IO.userError "DeferredWorkAudit prepare NEW-DB | run DB NEW-OUTPUT")
+diff --git a/tools/research/HookScaleRun.lean b/tools/research/HookScaleRun.lean
+index b0988ac..a31fe28 100644
+--- a/tools/research/HookScaleRun.lean
++++ b/tools/research/HookScaleRun.lean
+@@ -56,0 +57,15 @@ private def receipt (root : System.FilePath) (previous : Array String) (stdout :
++/-- Preparation must release its allocator and source caches before measuring
++the foreground cohort. Invoke the same runtime/readonly config in a child. -/
++private def warmChild (binary database config output : System.FilePath) : IO Json := do
++  let result ← IO.Process.output {
++    cmd := binary.toString
++    args := #["egg","warm",database.toString]
++    env := #[("EGGSHELL_CONFIG",some config.toString)] }
++  IO.FS.writeFile (output.withExtension "stdout.json") result.stdout
++  IO.FS.writeFile (output.withExtension "stderr.txt") result.stderr
++  check (result.exitCode == 0) "preparation child failed"
++  let json ← IO.ofExcept (Json.parse result.stdout)
++  let rows ← IO.ofExcept (json.getObjValAs? (Array Json) "databases")
++  check (rows.size == 1) "expected one prepared source"
++  return rows[0]!
++
+@@ -70,3 +85,5 @@ def run (binary plugin database output : System.FilePath) (pairs : Nat) : IO Uni
+-  let warm ← Warm.run source [binary.toString,"search-provider"] false
+-  IO.FS.writeFile (output / "private-warm.json") (toJson warm).compress
+-  check (warm.after.missing == 0 && warm.after.invalid == 0 && warm.requested == 0)
++  let warm ← warmChild binary database config (output / "private-warm")
++  let after ← IO.ofExcept (warm.getObjVal? "after")
++  check ((after.getObjValAs? Nat "missing").toOption == some 0 &&
++    (after.getObjValAs? Nat "invalid").toOption == some 0 &&
++    (warm.getObjValAs? Nat "requested").toOption == some 0)
+@@ -74,4 +91,7 @@ def run (binary plugin database output : System.FilePath) (pairs : Nat) : IO Uni
+-  let repeated ← Warm.run source [binary.toString,"search-provider"] false
+-  IO.FS.writeFile (output / "repeat-warm.json") (toJson repeated).compress
+-  check (repeated.requested == 0 && repeated.lexical.added == 0 && repeated.lexical.hydrated == 0 &&
+-    repeated.domain.mode == "warm") "repeat warm was not ready"
++  let repeated ← warmChild binary database config (output / "repeat-warm")
++  let lexical ← IO.ofExcept (repeated.getObjVal? "lexical")
++  let domain ← IO.ofExcept (repeated.getObjVal? "domain")
++  check ((repeated.getObjValAs? Nat "requested").toOption == some 0 &&
++    (lexical.getObjValAs? Nat "added").toOption == some 0 &&
++    (lexical.getObjValAs? Nat "hydrated").toOption == some 0 &&
++    (domain.getObjValAs? String "mode").toOption == some "warm") "repeat warm was not ready"

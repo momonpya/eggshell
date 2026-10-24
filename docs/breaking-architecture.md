@@ -34,7 +34,11 @@ actual Matcher primitives and proves complete single-pass Union equality before
 result grounding. A fixed 10k diagnostic identifies 9,968 inert owners under its
 one-nomination/parent context. This supplies a semantic boundary for deferred
 Outcome reads, not permission to drop their Work roots or later scheduler
-consequences. Full fixpoint/indexed recognition and actual-hook integration remain.
+consequences. The [deferred discovery integration](deferred-work-discovery.md)
+now retains those roots and validated Union generators. Actual 10k owner reads
+fall to nine, but elapsed time does not improve: complete Work reconstruction
+and numerical row acquisition remain. Full fixpoint/indexed recognition and
+shared/federated qualification remain unfinished.
 
 ## Judgment
 

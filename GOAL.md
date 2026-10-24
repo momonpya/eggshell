@@ -1,5 +1,9 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 Work比較のOutcome遅延復元を実discoveryへLean隔離接続した。raw入場した全Work roots/所属/後続商での再評価を維持し、本文に依存しないinert判定と、元owner検証・Candidate生成済みの同じUnion対の証人を使う。推薦由来から認定は作らず、LocalUnionOriginsは実Match由来を保持。元Work/native向きはprepared textではなく原DBで検証する。小32例と同じ10kの4条件で全Handoff field/本文が参照と一致し、completed7件/block5件/正Unionも含む。完全fixedpoint証明ではない。
+実nativeの同じ10k DB・質問・MiniLM・設定で、初回/ACK後の継続を各1組比較した。warmを別childで終えて準備heapを測定中に保持しない。初回は参照17,652ms/候補18,917msで原文17,803bytesが一致、継続は16,603/17,163msで配送済み本文の重複抑制による空応答が一致。検索完了/正しいstratum/ACK/stdout SHA/manager終了を確認。候補owner読出しは9,969→9だが、Work全9,969件の復元・19,929照合とvector cache取得5,385msが残り、速度改善なし。controlled retrieval-onlyも遅延悪化を保持し、採用しない。
+最終build/ContractAudit/実フックguard終了0・残存0、途中失敗を含む最大合計RSS2,857,680KiB。失敗build直後の旧実行体比較は停止・除外し、成功build後の再実行を最終結果へ使用した。元DB全file不変、patch7fileの往復一致、回答モデル/新seed0。総トークン/品質/p99/5万窓/共有複数DBは未確認、製品/README実績/release未採用。次は全件Work復元を完全な認定/affected-parent索引へ置換し、数値の全窓取得を除く。大規模fixtureの追加は代用にしない。docs/deferred-work-discovery.md参照、全Phases0–6継続。
+
 2026-10-24 Work照合とOutcome復元の境界をLean隔離実装した。実MatcherのWorkAlignment生成とlocalUnion constructorを共通化し、同じ完全候補集合・商・大域頻度・所属なら、本文grounding後と全順序のUnion提案が一致することを通常Leanで証明。推薦由来はUnion不可・Exact足跡・run scopeを保持する。実比較の条件から、どの本文contextでも配送/Unionの効果を持てない比較をinertと判定する証明も追加した。
 既存10kの全9,969 Workを元の所属/occurrence検証から1,747msで取得し、このfixtureのOutcome本文payload読出し0。親所属・推薦1件の固定監査では9,970 alignmentの全field/提案が凍結した旧oracleと一致し、9,968所有者をinertと判定。20小例には正のUnion生成8件も含む。元Matcher fixtures/ContractAudit成功、最終build2,127,904KiB・実監査641,680KiB、guard終了0/残存0。
 これは一回の完全照合の証明であり全discovery fixedpointの証明ではない。inertでも後続Unionで有効になり得るためWork roots/topologyを捨てず再評価する接続が必要。全Work読出しO(N)と全体candidate domainは残る。実フックへの遅延復元接続・完全認定索引・複数DB/共有並行・5万窓配送・MCP policy・同条件総トークン改善は未完了。回答モデル/新seed0、製品未採用、全Phases0–6継続。docs/work-only-inference.md参照。

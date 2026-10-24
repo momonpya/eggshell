@@ -1,0 +1,141 @@
+import Eggshell.Handoff
+
+open Lean Eggshell Eggshell.Plugin Eggshell.Persistence.Store
+
+private def check (value : Bool) (message : String) : IO Unit :=
+  unless value do throw (IO.userError message)
+
+private def nativeOwner (text body : String) : OutcomeEdge :=
+  let work := Value.text text
+  let outcome := Value.text body
+  OutcomeEdge.make work outcome [.applyList .occurrence [.semantic outcome,.semantic work]]
+    (by simp) (by simp [maxOutcomeObservations])
+
+private def prepare (path : System.FilePath) : IO Unit := do
+  check (!(← path.pathExists)) "preserve the saved comparison fixture"
+  let source ← DB.PageMap.create path (Persistence.valueToJson (.text "deferred-work-fixture")).compress
+  let native := nativeOwner "Bash\nprintf 'alpha clock'" "alpha clock\n"
+  let batched := nativeOwner "Bash\nprintf 'alpha clock'; printf beta" "alpha clock\nbeta\n"
+  let external := nativeOwner "mcp__notes__get\n{\"id\":42}" "{\"id\":42,\"title\":\"alpha clock\"}"
+  let stagedWork := Value.text "Bash\nprintf 'staged alpha'"
+  let values := (List.range 24).map (fun index =>
+    (OutcomeEdge.make (.text s!"inspect alpha clock source {index} trace observations")
+      (.text s!"ORIGINAL_{index}: alpha clock source {index} observed condition") [] (by simp) (by simp)).relation)
+  let all := Value.applyList .all [.semantic (.text "investigate alpha clock"),
+    .semantic native.work,.semantic batched.work,.semantic external.work,.semantic stagedWork]
+  let _ ← DB.PageMap.withWriter source fun writer => do
+    let intern : Intern := ⟨writer,← IO.mkRef {}⟩
+    let ids ← (values ++ [native.relation,batched.relation,external.relation,all]).mapM intern.root
+    let left := Value.text "ALPHA CLOCK"
+    let right := Value.text "alpha clock"
+    if same : Value.sameExactFootprint left right then
+      addUnions intern [⟨left,right,.workspace (.text "deferred-work-fixture"),Value.sameExactFootprint_sound same⟩]
+    else throw (IO.userError "fixture alias changes Exact footprint")
+    writeChange writer ⟨ids,[],true⟩
+  pure ()
+
+private def context (snapshot : DB.PageMap.Snapshot) (nominations : List Nat)
+    (reads : IO.Ref (List Nat)) : IO IndexedContext := do
+  let reader ← NodeReader.new snapshot
+  let demand ← DemandTopology.new reader
+  let documents ← searchDocuments snapshot
+  let persistent ← reader.unions (← authority snapshot)
+  pure {
+    all := []
+    persistent := persistent.map (·.edge)
+    outcomeCount := ← getNat snapshot.get "liveOutcomes"
+    population := ← getNat snapshot.get "candidates"
+    semanticPopulation := ← getNat snapshot.get "semanticPopulation"
+    allCount := some (← getNat snapshot.get "alls")
+    prepareTopology := some demand.read
+    childMembership := some (fun view observe => demand.childLookup view observe)
+    neighborhood := some demand.neighborhood
+    supportOwners := some fun works excluded allowance ranking families =>
+      reader.supportOwners works excluded allowance ranking families
+    focusSupport := some fun works _ _ => do
+      let entries ← supportWindowDocuments snapshot works
+      pure (some (entries.map (·.owner),entries.map fun doc => (doc.owner,List.range doc.windows.length)))
+    live := fun value => (·.isSome) <$> liveRoot? snapshot value
+    semanticPresent := fun value => do
+      let some id ← findNode? snapshot value | return false
+      pure ((← getNat snapshot.get (key "semanticUses" id)) > 0)
+    semantic := fun _ _ _ _ => pure (some {
+      durable := nominations
+      durableRanking := documents.map (·.owner)
+      presentationOrder := documents.map (fun doc => Sum.inl doc.owner) })
+    lexical := fun _ _ => pure {}
+    ordinal := fun id => getNat snapshot.get (key "member" id)
+    readWork := fun id => do reader.workOrigin (← reader.locateOutcome id)
+    readOwner := fun id => do
+      reads.modify (id :: ·)
+      reader.outcome (← reader.locateOutcome id)
+    readSources := reader.sources
+    surfaces := workSurfaceCandidates snapshot
+    frequencies := frequencies snapshot
+    liveOwner := fun value => (·.map Prod.snd) <$> liveRoot? snapshot value }
+
+private def run (database output : System.FilePath) : IO Unit := do
+  check (!(← output.pathExists)) "preserve prior discovery comparisons"
+  FileSystem.privateDirectory output
+  let original ← DB.PageMap.pin database
+  let docs ← searchDocuments original
+  let nominations := (docs.take 8).map (·.owner)
+  let allQueries := [
+    ("broad", "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 1.",false,[]),
+    ("alpha", "inspect alpha clock observations",false,[]),
+    ("native", "Bash\nprintf 'alpha clock'",true,[]),
+    ("native-quote", "Bash\nprintf \"alpha clock\"",true,[]),
+    ("clause", "Bash\nprintf beta",true,[]),
+    ("external", "mcp__notes__get\n{\"id\":42}",true,[]),
+    ("staged", "Bash\nprintf 'staged alpha'",true,
+      [(nativeOwner "Bash\nprintf 'staged alpha'" "staged alpha\n").relation]),
+    ("alias", "alpha clock",false,[])]
+  let queries := if docs.length > 128 then allQueries.take 1 else allQueries
+  let mut records := []
+  for (label,query,native,staged) in queries do
+    for enable in [true,false] do
+      let label := label ++ (if enable then "-union" else "-retrieval")
+      let mut delivered := []
+      for lap in ["first","continued"] do
+        let source ← DB.PageMap.pin database
+        let reads ← IO.mkRef []
+        let source ← context source nominations reads
+        let selection : Config.Selection := {
+          label := "fixed-snapshot"
+          semanticMatcher := some ["fixed-frozen-nominations"]
+          read := []
+          write := none
+          handoffChars := 120000 }
+        let started ← IO.monoMsNow
+        let result ← indexedDiscoveryUsing source selection query delivered native none enable
+          (staged := staged)
+        let elapsed := (← IO.monoMsNow)-started
+        let folder := output / (label++"-"++lap)
+        FileSystem.privateDirectory folder
+        IO.FS.writeFile (folder / "handoff.json") (toJson result).pretty
+        let body := result.map (·.text) |>.getD ""
+        IO.FS.writeFile (folder / "body.txt") body
+        let observed ← reads.get
+        let record := Json.mkObj [
+          ("case",toJson (label++"-"++lap)),("elapsedMs",toJson elapsed),
+          ("ownerCalls",toJson observed.length),("uniqueOwners",toJson (hashDistinct observed).length),
+          ("bodyBytes",toJson body.utf8ByteSize),("bodySha256",toJson (Sha256.hex body.toUTF8)),
+          ("completed",toJson (result.map (·.completed) |>.getD 0)),
+          ("advisory",toJson (result.map (·.advisory) |>.getD 0)),
+          ("localUnions",toJson (result.map (·.localUnions) |>.getD 0)),
+          ("blocksCurrent",toJson (result.any (·.blocksCurrent))),
+          ("deliveredGraphs",toJson (result.map (·.deliveredGraphs) |>.getD []))]
+        records := record :: records
+        delivered := result.map (·.deliveredGraphs) |>.getD delivered
+        IO.FS.writeFile (output / "cases.json") (toJson records.reverse).pretty
+  check ((← DB.PageMap.pin database).head == original.head) "discovery changed original facts"
+  IO.FS.writeFile (output / "result.json") (Json.mkObj [
+    ("source",toJson original.head),("cases",toJson records.reverse),
+    ("sourceUnchanged",toJson true),("answeringModelCalls",toJson (0 : Nat)),
+    ("nativeTransportMeasured",toJson false),("adopted",toJson false)]).pretty
+
+def main (args : List String) : IO Unit := do
+  match args with
+  | ["prepare",database] => prepare (.mk database)
+  | ["run",database,output] => run (.mk database) (.mk output)
+  | _ => throw (IO.userError "DeferredWorkAudit prepare NEW-DB | run DB NEW-OUTPUT")
