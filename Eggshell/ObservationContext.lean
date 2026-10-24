@@ -1,6 +1,7 @@
 module
 
 public import Eggshell.SynapseSource
+public import Eggshell.Sha256
 
 @[expose] public section
 
@@ -20,6 +21,8 @@ def lineBounds (lines : Array TextLine) (first limit : Nat) : Nat × Nat := Id.r
   | some line => if line.first ≤ first && limit ≤ line.limit then (line.first,line.limit) else (first,limit)
   | none => (first,limit)
 
+def originalSubject (work raw : String) : Original := ⟨work,Sha256.hex raw.toUTF8,raw.length⟩
+
 structure Prepared (doc : Document) where
   raw : String
   original : doc.source = some raw
@@ -30,6 +33,8 @@ structure Prepared (doc : Document) where
   viewChars : Array Char
   viewCharsExact : viewChars = view.text.toList.toArray
   lines : Array TextLine
+  identity : Original
+  identityExact : identity = originalSubject doc.work raw
   json : Option (JsonScalars.Index raw)
 
 def prepare? (doc : Document) : Option (Prepared doc) := do
@@ -38,7 +43,7 @@ def prepare? (doc : Document) : Option (Prepared doc) := do
     match mapped : layout raw with
     | .error _ => none
     | .ok view => some ⟨raw,original,view,mapped,raw.toList.toArray,rfl,
-        view.text.toList.toArray,rfl,textLines view.text,JsonScalars.prepare? raw⟩
+        view.text.toList.toArray,rfl,textLines view.text,originalSubject doc.work raw,rfl,JsonScalars.prepare? raw⟩
   else none
 
 def Prepared.rawBounds (prepared : Prepared doc) (edge : Consumption) :
@@ -122,5 +127,26 @@ theorem fragment_is_original (fragment : Fragment doc) :
 theorem fragment_has_native_origin (fragment : Fragment doc) :
     doc.native = true ∧ doc.occurrences.contains fragment.occurrence = true :=
   ⟨fragment.native,fragment.origin⟩
+
+/-- Canonical data is independent of the occurrence that observed it. The
+actual origin remains in the binding and can never certify another Work. -/
+def Fragment.read? (fragment : Fragment doc) : Option {read : Read // read.valid = true} :=
+  let source := Range.original (originalSubject fragment.binding.work fragment.raw)
+    fragment.binding.first fragment.binding.limit
+  let read : Read := ⟨fragment.occurrence,source,fragment.binding⟩
+  if valid : read.valid = true then some ⟨read,valid⟩ else none
+
+/-- Resolve a stored canonical interval only against the same complete
+Work/output snapshot, then attach this observation's own native origin. -/
+def Prepared.bindSource? (prepared : Prepared doc) (database : String) (source : Range) : Option Read := do
+  let .original original := source.subject | none
+  if !doc.native || original != prepared.identity || !source.valid then none else do
+    let occurrence ← doc.occurrences[0]?
+    let read : Read := ⟨occurrence,source,⟨database,doc.owner,doc.work,source.first-1,source.last⟩⟩
+    if read.valid then some read else none
+
+def bindSource? (database : String) (doc : Document) (source : Range) : Option Read := do
+  let prepared ← prepare? doc
+  prepared.bindSource? database source
 
 end Eggshell.Synapses.ObservationContext

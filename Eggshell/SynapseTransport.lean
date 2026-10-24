@@ -41,7 +41,8 @@ def Plan.complete (plan : Plan) : Bool := plan.results.all (·.complete)
 
 def Plan.ranges (plan : Plan) : List (Value × List (Nat × Nat × Nat)) :=
   plan.owners.toList.map fun owner =>
-    (owner.owner.relation, (owner.located.toList.map fun located =>
+    (owner.owner.relation, (owner.located.toList.filterMap fun located =>
+      if located.source.file?.isNone then none else some
       (located.offer.priority, located.row.binding.first, located.row.binding.limit)).eraseDups)
 
 structure OutputRange where
@@ -51,11 +52,31 @@ structure OutputRange where
   path : Option (List JsonScalars.Segment)
   deriving BEq
 
-def Plan.outputRanges (plan : Plan) : List (Value × List OutputRange) :=
-  plan.owners.toList.map fun owner =>
-    (owner.owner.relation, (owner.outputs.toList.map fun located =>
+def LocatedOwner.originalRanges (owner : LocatedOwner) : Array (Range × OutputRange) := Id.run do
+  let raw := owner.document.source.getD ""
+  let json := JsonScalars.prepare? raw
+  return owner.located.filterMap fun located => do
+    let .original _ := located.source.subject | none
+    some (located.source,{
+      priority := located.offer.priority
+      first := located.row.binding.first
+      limit := located.row.binding.limit
+      path := (json.bind (·.cover? located.row.binding.first located.row.binding.limit)).map (·.path)})
+
+def Plan.outputRanges (plan : Plan) : List (Value × List OutputRange) := Id.run do
+  let mut originals : Std.HashMap Range (Value × OutputRange) := {}
+  for owner in plan.owners do
+    for (source,range) in owner.originalRanges do
+      if (originals[source]?).all (fun prior => range.priority < prior.2.priority) then
+        originals := originals.insert source (owner.owner.relation,range)
+  return plan.owners.toList.map fun owner =>
+    let shared := originals.toArray.filterMap fun (_,origin,range) =>
+      if origin == owner.owner.relation then some range else none
+    let shared := shared.qsort fun a b => if a.first == b.first then a.limit < b.limit else a.first < b.first
+    (owner.owner.relation, ((owner.outputs.toList.map fun located =>
       ({priority := located.offer.priority,first := located.fragment.binding.first
-        limit := located.fragment.binding.limit,path := located.fragment.address.map (·.path)} : OutputRange)).eraseDups)
+        limit := located.fragment.binding.limit,path := located.fragment.address.map (·.path)} : OutputRange)) ++
+      shared.toList).eraseDups)
 
 /-- Stored original rows are the only source of transport coordinates.
 Neither a graph hint nor its priority may invent a range or an owner. -/
@@ -75,22 +96,37 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
   for owner in owners do
     let .ok document := owner.document | plan := {plan with unsupported := plan.unsupported+1}; continue
     let recorded := recordedRows owner.database document
-    let rows := recorded.toOption.getD #[]
+    let context := ObservationContext.prepare? document
+    let wanted := (offers.toList.filterMap (·.target.source?)).eraseDups.toArray
+    let originalRows := wanted.filterMap fun source => context.bind (·.bindSource? owner.database source)
+    let rows := recorded.toOption.getD #[] ++ originalRows
     plan := {plan with
       documents := plan.documents.push document
       rows := plan.rows ++ rows
       unlocatedFileOwners := plan.unlocatedFileOwners +
         if !document.files.isEmpty && recorded.toOption.isNone then 1 else 0
       owners := plan.owners.push ⟨owner.original,document,Recommend.locate offers rows,
-        Recommend.locateOutputs offers owner.database document⟩}
+        context.map (Recommend.locateOutputsUsing offers owner.database) |>.getD #[]⟩}
   return plan
 
 def Plan.receipt (plan : Plan) (text : String) : Json :=
   let delivery := Extraction.presented text plan.documents plan.rows
+  let originals := ((plan.results.flatMap (·.admitted)).toList.filterMap fun offer => do
+    let source ← offer.target.source?
+    let .original _ := source.subject | none
+    some source).eraseDups.toArray
   Json.mkObj [
     ("complete", toJson plan.complete), ("unsupportedOwners", toJson plan.unsupported),
     ("unlocatedFileOwners",toJson plan.unlocatedFileOwners),
     ("inputs", toJson (plan.results.map Recommend.Result.receipt)),
+    ("originalReferences",toJson (originals.map fun source =>
+      let bindings := plan.owners.flatMap fun owner => owner.located.filterMap fun located =>
+        if located.source == source then some located.row.binding else none
+      let origins := bindings.foldl (fun known binding => known.insert binding) ({} : Std.HashSet Binding)
+      let origins := origins.toArray.qsort fun a b => (toJson a).compress < (toJson b).compress
+      Json.mkObj [
+      ("source",toJson source), ("bodyDelivered",toJson (covered source delivery.ranges)),
+      ("origins",toJson origins)])),
     ("originalOutputs",toJson (plan.owners.flatMap fun owner => owner.outputs.map fun located =>
       Json.mkObj [
         ("evidence",toJson located.offer.identity), ("binding",toJson located.fragment.binding),
@@ -100,7 +136,7 @@ def Plan.receipt (plan : Plan) (text : String) : Json :=
           delivery.coversAddress located.fragment.binding address.path)))])),
     ("offers", toJson (plan.results.flatMap fun result => result.admitted.map fun offer =>
       let delivered := match offer.target with
-        | .file source => covered source delivery.ranges
+        | .range source => covered source delivery.ranges
         | .output _ => plan.owners.any fun owner => owner.outputs.any fun located =>
             located.offer.identity == offer.identity && delivery.coversBinding located.fragment.binding
       Json.mkObj [("offer", offer.json), ("bodyDelivered", toJson delivered)]))]

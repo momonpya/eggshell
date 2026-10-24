@@ -106,8 +106,8 @@ def Presentation.coversAddress (shown : Presentation) (binding : Binding) (path 
   {shown with bindings}.coversBinding binding
 
 def compactRanges (ranges : Array Range) : Array Range := Id.run do
-  let mut files : Std.HashMap File (Array Range) := {}
-  for range in ranges do files := files.insert range.file (files[range.file]?.getD #[] |>.push range)
+  let mut files : Std.HashMap Subject (Array Range) := {}
+  for range in ranges do files := files.insert range.subject (files[range.subject]?.getD #[] |>.push range)
   let mut result := #[]
   for (_, spans) in files do
     let mut merged : Array Range := #[]
@@ -124,11 +124,11 @@ def compactRanges (ranges : Array Range) : Array Range := Id.run do
 def omittedRanges (requested : Range) (stored delivered : Array Range) : Array Range := Id.run do
   let mut result : Std.HashSet Range := {}
   for saved in compactRanges stored do
-    if saved.file != requested.file then continue
+    if saved.subject != requested.subject then continue
     let first := max saved.first requested.first
     let last := min saved.last requested.last
     if last < first then continue
-    let relevant := (delivered.filter (·.file == requested.file)).toList.mergeSort
+    let relevant := (delivered.filter (·.subject == requested.subject)).toList.mergeSort
       (fun a b => a.first ≤ b.first)
     let mut position := first
     for shown in relevant do
@@ -164,7 +164,9 @@ def Feedback.completedRead (feedback : Feedback) (occurrence : Occurrence) (quer
   let mut graph := feedback.graph
   let mut ordinal := 0
   for source in compactRanges requested do
-    let checked := !earlier.uncertain.contains source.file
+    let checked := match source.subject with
+      | .file file => !earlier.uncertain.contains file
+      | .original _ => earlier.uncertainOwners.isEmpty
     let gaps := if checked then omittedRanges source stored earlier.ranges else #[]
     for gap in if gaps.isEmpty then #[source] else gaps do
       graph ← graph.recordRead ⟨occurrence, ordinal⟩ query gap stored earlier.ranges checked
@@ -173,7 +175,8 @@ def Feedback.completedRead (feedback : Feedback) (occurrence : Occurrence) (quer
 
 def Feedback.answer (feedback : Feedback) (occurrence : Occurrence) (query text : String) :
     Except String Feedback := do
-  let files := feedback.delivered.ranges.foldl (fun files range => files.insert range.file) ({} : Std.HashSet File)
+  let files := feedback.delivered.ranges.foldl (fun files range =>
+    (range.file?.map files.insert).getD files) ({} : Std.HashSet File)
   let cited := paragraphCitations text files.toArray
   let mut graph := feedback.graph
   for index in [:cited.size] do

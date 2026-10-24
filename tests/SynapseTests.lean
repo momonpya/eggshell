@@ -6,7 +6,7 @@ private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
 private def source (first := 10) (last := 12) (fingerprint := String.ofList (List.replicate 64 'a')) : Range :=
-  {file := {relative := "src/日本語.cpp", fingerprint, bytes := 1000}, first, last}
+  {subject := .file {relative := "src/日本語.cpp", fingerprint, bytes := 1000}, first, last}
 
 private def occurrence (session : String) : Occurrence := ⟨session, "turn", "read"⟩
 

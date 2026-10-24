@@ -24,21 +24,77 @@ def digest (text : String) : Bool :=
 
 def File.valid (file : File) : Bool := safeRelative file.relative && digest file.fingerprint
 
-/-- Session-independent, structural identity; hashes only index these fields. -/
+/-- Exact immutable output identity. A Work hash and its entire saved payload
+identify data across sessions without equating operations or their authority. -/
+structure Original where
+  work : String
+  content : String
+  chars : Nat
+  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+
+def Original.valid (original : Original) : Bool :=
+  !original.work.isEmpty && digest original.content
+
+inductive Subject where
+  | file (file : File)
+  | original (original : Original)
+  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+
+instance : Coe File Subject := ⟨Subject.file⟩
+
+def Subject.valid : Subject → Bool
+  | .file data => data.valid
+  | .original data => data.valid
+
+def Subject.file? : Subject → Option File
+  | .file data => some data
+  | .original _ => none
+
+def Subject.sameLocation (left right : Subject) : Bool := match left,right with
+  | .file a,.file b => a.relative == b.relative
+  | .original a,.original b => a.work == b.work
+  | _,_ => false
+
+/-- Closed intervals over immutable subjects. File coordinates are line
+numbers; original-output coordinates are one-based character positions. -/
 structure Range where
-  file : File
+  subject : Subject
   first : Nat
   last : Nat
   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
 
 def Range.valid (range : Range) : Bool :=
-  range.file.valid && 0 < range.first && range.first ≤ range.last
+  range.subject.valid && 0 < range.first && range.first ≤ range.last &&
+    match range.subject with | .file _ => true | .original original => range.last ≤ original.chars
+
+def Range.file? (range : Range) : Option File := range.subject.file?
+
+def Range.original (original : Original) (first limit : Nat) : Range :=
+  ⟨.original original,first+1,limit⟩
 
 def Range.contains (outer inner : Range) : Bool :=
-  outer.file == inner.file && outer.first ≤ inner.first && inner.last ≤ outer.last
+  outer.subject == inner.subject && outer.first ≤ inner.first && inner.last ≤ outer.last
 
 theorem Range.contains_self (range : Range) : range.contains range = true := by
   simp [Range.contains]
+
+/-- A saved part of a citation must lie in both original intervals. The
+fingerprint is part of equality; a path match alone cannot make an overlap. -/
+def Range.intersection? (left right : Range) : Option Range :=
+  let source := {left with first := max left.first right.first, last := min left.last right.last}
+  if source.valid && left.contains source && right.contains source then some source else none
+
+theorem Range.intersection_within {left right source : Range}
+    (found : left.intersection? right = some source) :
+    source.valid = true ∧ left.contains source = true ∧ right.contains source = true := by
+  unfold intersection? at found
+  dsimp only at found
+  split at found
+  · rename_i valid
+    simp only [Option.some.injEq] at found
+    subst source
+    simpa only [Bool.and_eq_true, and_assoc] using valid
+  · contradiction
 
 structure Occurrence where
   session : String
@@ -68,7 +124,19 @@ structure Read where
   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
 
 def Read.valid (read : Read) : Bool :=
-  read.occurrence.valid && read.source.valid && read.binding.valid
+  read.occurrence.valid && read.source.valid && read.binding.valid &&
+    match read.source.subject with
+    | .file _ => true
+    | .original original => original.work == read.binding.work &&
+        read.source.first == read.binding.first+1 && read.source.last == read.binding.limit
+
+theorem original_read_binding (read : Read) (original : Original)
+    (kind : read.source.subject = .original original) (valid : read.valid = true) :
+    original.work = read.binding.work ∧ read.source.first = read.binding.first+1 ∧
+      read.source.last = read.binding.limit := by
+  have checked := valid
+  simp only [Read.valid,kind,Bool.and_eq_true,beq_iff_eq] at checked
+  simpa only [and_assoc] using checked.2
 
 structure Claim where
   database : String
@@ -85,6 +153,8 @@ structure Support where
   source : Range
   claim : Claim
   binding : Binding
+  /-- The original citation can be wider than the part present in this read. -/
+  cited : Range := source
   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
 
 def Support.valid (support : Support) : Bool :=
@@ -92,17 +162,18 @@ def Support.valid (support : Support) : Bool :=
     support.binding.valid && support.binding.database == support.read.binding.database &&
     support.binding.owner == support.read.binding.owner && support.binding.work == support.read.binding.work &&
     support.read.binding.first ≤ support.binding.first && support.binding.limit ≤ support.read.binding.limit &&
+    support.cited.valid && support.cited.contains support.source &&
     support.read.source.contains support.source
 
 /-- The constructor checks the exact saved read covers the cited source range. -/
 def Support.checked (read : Read) (source : Range) (claim : Claim)
-    (binding : Binding := read.binding) : Except String Support :=
-  let support := Support.mk read source claim binding
+    (binding : Binding := read.binding) (cited : Range := source) : Except String Support :=
+  let support := Support.mk read source claim binding cited
   if support.valid then .ok support else .error "citation is not covered by its recorded read"
 
 theorem Support.checked_covers {read : Read} {source : Range} {claim : Claim}
-    {binding : Binding} {support : Support}
-    (checked : Support.checked read source claim binding = .ok support) :
+    {binding : Binding} {cited : Range} {support : Support}
+    (checked : Support.checked read source claim binding cited = .ok support) :
     read.source.contains source = true := by
   unfold Support.checked at checked
   dsimp only at checked
@@ -110,6 +181,18 @@ theorem Support.checked_covers {read : Read} {source : Range} {claim : Claim}
   next valid =>
     simp only [Support.valid, Bool.and_eq_true] at valid
     exact valid.2
+  next => contradiction
+
+theorem Support.checked_within_citation {read : Read} {source : Range} {claim : Claim}
+    {binding : Binding} {cited : Range} {support : Support}
+    (checked : Support.checked read source claim binding cited = .ok support) :
+    cited.contains source = true := by
+  unfold Support.checked at checked
+  dsimp only at checked
+  split at checked
+  next valid =>
+    simp only [Support.valid, Bool.and_eq_true] at valid
+    exact valid.1.2
   next => contradiction
 
 inductive WitnessKind where
@@ -297,7 +380,7 @@ def Graph.sourceBindings (graph : Graph) (source : Range) : Array Binding :=
 
 /-- Closed interval union, bounded by observed intervals rather than line numbers. -/
 def covered (wanted : Range) (observed : Array Range) : Bool := Id.run do
-  let rows := (observed.filter (·.file == wanted.file)).toList.mergeSort (fun a b => a.first ≤ b.first)
+  let rows := (observed.filter (·.subject == wanted.subject)).toList.mergeSort (fun a b => a.first ≤ b.first)
   let mut position := wanted.first
   for row in rows do
     if position < row.first then return false
@@ -309,7 +392,7 @@ def readKind (requested : Range) (stored delivered : Array Range) (fingerprintCh
   if !fingerprintChecked then .reread
   else if covered requested stored then
     if covered requested delivered then .reread else .omittedThenRead
-  else if stored.any (fun range => range.file.relative == requested.file.relative && range.file != requested.file)
+  else if stored.any (fun range => range.subject.sameLocation requested.subject && range.subject != requested.subject)
     then .sourceChanged
   else .reread
 

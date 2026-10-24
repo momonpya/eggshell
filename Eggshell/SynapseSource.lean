@@ -213,7 +213,8 @@ def recordedRows (database : String) (doc : Document) : Except String (Array Rea
   for line in textLines decoded.text do
     let some (number, _) := numbered line.text | continue
     let files := plans.foldl (fun files range =>
-      if range.first ≤ number && number ≤ range.last then files.insert range.file else files)
+      if range.first ≤ number && number ≤ range.last then
+        (range.file?.map files.insert).getD files else files)
       ({} : Std.HashSet File)
     if files.size != 1 then continue
     let source : Range := ⟨files.toArray[0]!, number, number⟩
@@ -227,7 +228,7 @@ def recordedReads (database : String) (doc : Document) : Except String (Array Lo
   let mut chunks : Array LocatedRead := #[]
   for row in rows do
     if let some previous := chunks.back? then
-      if previous.read.source.file == row.source.file &&
+      if previous.read.source.subject == row.source.subject &&
           previous.read.source.last + 1 == row.source.first &&
           previous.read.binding.limit == row.binding.first then
         let merged := {previous with
@@ -250,7 +251,7 @@ def locateReads (database : String) (doc : Document) (trace : Trace) : Except St
   let original := (textLines decoded.text).filterMap fun line => do
     let (number, body) ← numbered line.text
     let files := plans.filter (fun range => range.first ≤ number && number ≤ range.last)
-    let unique := files.foldl (fun files range => files.insert range.file) ({} : Std.HashSet File)
+    let unique := files.foldl (fun files range => (range.file?.map files.insert).getD files) ({} : Std.HashSet File)
     if unique.size != 1 then none else
       some (line, number, body, unique.toArray[0]!)
   if original.isEmpty then throw "no unambiguous original numbered rows"
@@ -280,7 +281,7 @@ def locateReads (database : String) (doc : Document) (trace : Trace) : Except St
       let recorded : Read := ⟨occurrence, source, binding⟩
       let located : LocatedRead := ⟨recorded, rows, #[recorded], line.text⟩
       if let some previous := chunks.back? then
-        if previous.read.source.file == file && previous.read.source.last + 1 == number &&
+        if previous.read.source.subject == .file file && previous.read.source.last + 1 == number &&
             previous.read.binding.limit == first then
           let merged : LocatedRead := {
             read := {previous.read with
@@ -355,7 +356,8 @@ def addAnswer (database : String) (doc : Document) (reads : Array LocatedRead) (
     Except String Graph := do
   let some raw := doc.source | throw "answer has no original scalar"
   let decoded ← layout raw
-  let files := reads.foldl (fun files located => files.insert located.read.source.file) ({} : Std.HashSet File)
+  let files := reads.foldl (fun files located =>
+    (located.read.source.file?.map files.insert).getD files) ({} : Std.HashSet File)
   let mut graph := graph
   let mut position := 0
   for paragraph in decoded.text.splitOn "\n\n" do

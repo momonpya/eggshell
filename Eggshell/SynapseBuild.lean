@@ -210,7 +210,8 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Resul
     let doc ← documents.get entry.id
     let route := closure all #[entry.work]
     let available := reads.filter fun read => (workIds[read.binding.work]?).any route.contains
-    let files := available.foldl (fun files read => files.insert read.source.file) ({} : Std.HashSet File)
+    let files := available.foldl (fun files read =>
+      (read.source.file?.map files.insert).getD files) ({} : Std.HashSet File)
     let citations := ((layout (doc.source.getD "")).map fun decoded =>
       paragraphCitations decoded.text files.toArray).toOption.getD #[]
     let needed := available.filter fun read => citations.any (fun cited => read.source.contains cited)

@@ -327,9 +327,9 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
           let storedIndex ← indexAt? source known
           let mut stored := #[]
           if let some index := storedIndex then
-            let files := reads.foldl (fun files read => files.insert read.read.source.file) ({} : Std.HashSet File)
+            let files := reads.foldl (fun files read => files.insert read.read.source.subject) ({} : Std.HashSet Subject)
             for file in files do
-              let found ← index.lookup (.file file) 100000 deadline
+              let found ← index.lookup (.subject file) 100000 deadline
               unless found.complete do throw (IO.userError "incomplete stored-read evidence")
               stored := stored ++ found.facts.filterMap (fun fact => match fact with
                 | .read read => if read.occurrence != occurrence then some read.source else none

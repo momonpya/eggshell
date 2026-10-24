@@ -10,7 +10,7 @@ private def reject (action : IO α) (message : String) : IO Unit := do
   check failed message
 
 private def source (first := 10) (last := 12) : Range :=
-  ⟨⟨"src/source.cpp", String.ofList (List.replicate 64 'a'), 1000⟩, first, last⟩
+  ⟨.file ⟨"src/source.cpp", String.ofList (List.replicate 64 'a'), 1000⟩, first, last⟩
 
 private def occurrence (name : String) : Occurrence := ⟨"session", "turn", name⟩
 

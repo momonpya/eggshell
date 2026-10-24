@@ -17,12 +17,12 @@ def implementation : String := Blake3.hex (Blake3.digest "eggshell.observation-r
 /-- Output identity is native occurrence identity. File coordinates are an
 additional addressing scheme, never a prerequisite for recommending data. -/
 inductive Target where
-  | file (source : Range)
+  | range (source : Range)
   | output (producer : Occurrence)
   deriving DecidableEq, BEq, ToJson
 
 def Target.source? : Target → Option Range
-  | .file source => some source
+  | .range source => some source
   | .output _ => none
 
 /-- A recommendation names data actually carried by its advisory witness.
@@ -31,7 +31,7 @@ def carries (fact : Fact) : Target → Bool
   | .output producer => match fact with
     | .consumed edge => edge.producer == producer
     | _ => false
-  | .file source => match fact with
+  | .range source => match fact with
     | .supports support => support.source == source
     | .consumed edge => edge.rows.contains source
     | .coquoted _ quoted => quoted == source
@@ -56,7 +56,7 @@ def Offer.check? (target : Target) (priority : Nat) (fact : Fact)
   else none
 
 theorem Offer.consumption_row (offer : Offer) (edge : Consumption) (kind : offer.fact = .consumed edge)
-    (source : Range) (target : offer.target = .file source) : source ∈ edge.rows := by
+    (source : Range) (target : offer.target = .range source) : source ∈ edge.rows := by
   have witness := offer.witness
   rw [kind,target] at witness
   exact Array.mem_of_contains_eq_true witness
@@ -185,7 +185,7 @@ def collect (shared : Index.Reader) (usage : Option Index.Reader)
       let identity : {value : String // value = Index.contentKey fact} := ⟨Index.contentKey fact, rfl⟩
       match task.key, fact with
       | .answer .., .supports support =>
-        result := addOffer result (.file support.source) task.priority fact identity
+        result := addOffer result (.range support.source) task.priority fact identity
         queue := queue.push ⟨.group (.claim support.claim), task.priority⟩
         queue := queue.push ⟨.consumer support.read.occurrence, task.priority⟩
         queue := queue.push ⟨.quoted support.source, task.priority⟩
@@ -193,16 +193,16 @@ def collect (shared : Index.Reader) (usage : Option Index.Reader)
         if edge.rows.isEmpty then
           result := addOffer result (.output edge.producer) task.priority fact identity
         for source in edge.rows do
-          result := addOffer result (.file source) task.priority fact identity
+          result := addOffer result (.range source) task.priority fact identity
           queue := queue.push ⟨.quoted source, task.priority⟩
         queue := queue.push ⟨.consumer edge.producer, task.priority⟩
       | .quoted _, .coquoted group _ =>
         queue := queue.push ⟨.group group, task.priority⟩
       | .group _, .coquoted _ source =>
-        result := addOffer result (.file source) task.priority fact identity
+        result := addOffer result (.range source) task.priority fact identity
       | .query _, .used value =>
         if value.kind == .omittedThenRead || value.kind == .deliveredThenCited then
-          result := addOffer result (.file value.source) task.priority fact identity
+          result := addOffer result (.range value.source) task.priority fact identity
           queue := queue.push ⟨.quoted value.source, task.priority⟩
       | _, _ => pure ()
   -- A checked omission is the more direct observation. Positive citation
@@ -246,23 +246,23 @@ Fingerprint/range matching never creates a new owner or a control Match. -/
 structure Located where
   offer : Offer
   source : Range
-  target : offer.target = .file source
+  target : offer.target = .range source
   row : Read
   within : source.contains row.source = true
 
 def locate (offers : Array Offer) (rows : Array Read) : Array Located := Id.run do
   let mut found := #[]
   for offer in offers do
-    let .file source := offer.target | continue
-    if target : offer.target = .file source then
+    let .range source := offer.target | continue
+    if target : offer.target = .range source then
       let matching := rows.filter (source.contains ·.source)
       unless covered source (matching.map (·.source)) do continue
       for row in matching do
         if within : source.contains row.source = true then found := found.push ⟨offer,source,target,row,within⟩
   return found
 
-theorem Located.same_fingerprint (located : Located) :
-    located.source.file = located.row.source.file := by
+theorem Located.same_subject (located : Located) :
+    located.source.subject = located.row.source.subject := by
   have within := located.within
   simp only [Range.contains, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at within
   exact within.1.1
@@ -272,12 +272,15 @@ structure LocatedOutput (doc : Extraction.Document) where
   fragment : ObservationContext.Fragment doc
   target : offer.target = .output fragment.occurrence
 
-def locateOutputs (offers : Array Offer) (database : String) (doc : Extraction.Document) : Array (LocatedOutput doc) := Id.run do
-  let some prepared := ObservationContext.prepare? doc | return #[]
-  return offers.filterMap fun offer => do
+def locateOutputsUsing (offers : Array Offer) (database : String)
+    (prepared : ObservationContext.Prepared doc) : Array (LocatedOutput doc) :=
+  offers.filterMap fun offer => do
     let .output _ := offer.target | none
     let .consumed edge := offer.fact | none
     let fragment ← prepared.locate? database edge
     if target : offer.target = .output fragment.occurrence then some ⟨offer,fragment,target⟩ else none
+
+def locateOutputs (offers : Array Offer) (database : String) (doc : Extraction.Document) : Array (LocatedOutput doc) :=
+  (ObservationContext.prepare? doc).map (locateOutputsUsing offers database) |>.getD #[]
 
 end Eggshell.Synapses.Recommend
