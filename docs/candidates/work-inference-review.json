@@ -1,0 +1,1124 @@
+{
+  "status": "isolated Work-only complete-pass refinement and inert-effect proof; not integrated into native discovery",
+  "parentReview": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/source-delta-warm-review.json",
+    "sha256": "f553089fd762d197bdbd2169a5a26f6fa5cb1a2c5ad3170940242ffd4edcc75b",
+    "bytes": 84718
+  },
+  "retainedRuntime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/eggshell",
+    "sha256": "45e866c66f42d6ce6864aceb2a8397824ab9d6ff692ffba3d8ebc44661a41cef",
+    "bytes": 115753568
+  },
+  "newProductRuntimeBuilt": false,
+  "runtimePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/work-inference-runtime.patch",
+    "sha256": "9298dbbc287f1056d91eb2ca24b3497ffbf20be86228a82908cc7ef60b445d59",
+    "bytes": 24956
+  },
+  "patchApplyArgs": [
+    "--unidiff-zero"
+  ],
+  "sources": [
+    {
+      "name": "Eggshell/Matcher.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/preimages/Matcher.lean",
+        "sha256": "292f2b8f2f1f0a8bf15f0bcff124ffbf5269f38ea44422c74477c6d597f13dc9",
+        "bytes": 180655
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/Matcher.lean",
+        "sha256": "8713025e723ba3f7e88de858cbf98fd1afdcf3dbb8742f1a4d7e6f4beb6f39b9",
+        "bytes": 182544
+      }
+    },
+    {
+      "name": "Eggshell/WorkInference.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/WorkInference.lean",
+        "sha256": "9a9ebaf7e703035db6e465da9fbc7665b710d154162c9cdb6bf6c450ae802b59",
+        "bytes": 8103
+      }
+    },
+    {
+      "name": "Eggshell/ContractAudit.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/preimages/ContractAudit.lean",
+        "sha256": "85e3b308e46b740478150d0aa16c622ee214f600273f4fd041ce4bdb87319c57",
+        "bytes": 104808
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/ContractAudit.lean",
+        "sha256": "482ae0ca6c0e2ef491e0310f3644a272a41aa4cfcf1bee650b15f85245445e18",
+        "bytes": 105739
+      }
+    },
+    {
+      "name": "tests/FullSearchOracle.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/preimages/FullSearchOracle.lean",
+        "sha256": "e090d07de7956a383d462d739e33388664663225f57d81873453dba41a45fa90",
+        "bytes": 30502
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/tests/FullSearchOracle.lean",
+        "sha256": "f09fb6b17f87e9f8bb3c82af289175dd8612d4be3b5aed4b42bc4f76c309bec8",
+        "bytes": 30527
+      }
+    },
+    {
+      "name": "tools/research/WorkInferenceAudit.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/tools/research/WorkInferenceAudit.lean",
+        "sha256": "a113c7c09241f805da925672065bc3625057d535e176327ef2d5a300ec8a1657",
+        "bytes": 9941
+      }
+    }
+  ],
+  "sourceCopies": [
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/work-inference/Eggshell/WorkInference.lean",
+      "sha256": "9a9ebaf7e703035db6e465da9fbc7665b710d154162c9cdb6bf6c450ae802b59",
+      "bytes": 8103
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/work-inference/README.md",
+      "sha256": "78d1dfeb5fdaff4e1f34d4aa41083289f1331a4e063a6501f07d004de76b3e6e",
+      "bytes": 733
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/work-inference/tools/research/WorkInferenceAudit.lean",
+      "sha256": "a113c7c09241f805da925672065bc3625057d535e176327ef2d5a300ec8a1657",
+      "bytes": 9941
+    }
+  ],
+  "artifactPins": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit-2.guard.json",
+      "sha256": "bb55a5d24ff6c0f80d963c9ec78f053de8b95aa0a31e61d981e1a34581c47751",
+      "bytes": 1422
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit-2.log",
+      "sha256": "3a02eecd5e7a4bd4c684fcbb2a51be04ad64a8632b92e6c44b87fe00161cfc55",
+      "bytes": 7875
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit-2.settings.json",
+      "sha256": "47803389f91eeaf02c5a2b004eb7e179a398f535ce369f961548fa7c0c890809",
+      "bytes": 805
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit-2/result.json",
+      "sha256": "b2c972abccef4108d9b394621f0519af9d7f1881a5162a46c328671df198c0f1",
+      "bytes": 9608
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit.guard.json",
+      "sha256": "be4624727faf92ed31a0605bffbf4c75d00c2697c248226c90c024719e82179f",
+      "bytes": 1412
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit.log",
+      "sha256": "c4a6ddba85952d524b5f71ed3feb396e8de8f9a88dd983d328cbd3a35f135eb1",
+      "bytes": 4001
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit.rsp",
+      "sha256": "09038a0103193ed9e3a5e745270cc2c5973cb8455762b87678b4db5014bec1d8",
+      "bytes": 21130
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit.settings.json",
+      "sha256": "fd96ac29ff5f7f5bd5734b64a6f585a42df9dec518310df14205f9351497a3a8",
+      "bytes": 801
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit/result.json",
+      "sha256": "1e5a42a5fee618e6abd7a83f3fa8bc6278d7933e28171827305f634431507779",
+      "bytes": 4808
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/build-audit.guard.json",
+      "sha256": "0808e7dcab80e49aa55d1a0f50f9da4bc8668d68a83043cc993e7a58a4f3da43",
+      "bytes": 1253
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/build-audit.log",
+      "sha256": "f61fb1a67c9ac3a30d87d0a1e881b9e03666fc36a0645ac6bfbac15b23d7b60d",
+      "bytes": 298
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/build-audit.settings.json",
+      "sha256": "ee195add07b0450db26408d245ae1a9dacf16fe516f0683e811221de8c0b8171",
+      "bytes": 453
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/build-audit.sh",
+      "sha256": "5f457d573a57fa4fc5f7901caaf924e97b843625878facd6429ca494f372d4e9",
+      "bytes": 1655
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/check-2.guard.json",
+      "sha256": "3056c3d73899e98a8a4e8cdbbed837d4dc3205646345491cd2565593bda4793d",
+      "bytes": 1242
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/check-2.log",
+      "sha256": "5a2267115c1f6b17fd95c65e47d39446397b50b6aed6ea09f080c30ca9e3a19b",
+      "bytes": 8176
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/check-2.settings.json",
+      "sha256": "58121a0a7521aabd20e31a842b6875b1bc60cdb88d50279df29414c2abb72fca",
+      "bytes": 443
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/check-work.sh",
+      "sha256": "8864a114a608ea471bec4be6606fdf30868fe380c26d627b70029761be69ac86",
+      "bytes": 331
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/check.guard.json",
+      "sha256": "fb8fd92661eb5a68122ae2b399c77794777e2aa2c12bc6980db3cabb3bda138b",
+      "bytes": 1237
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/check.log",
+      "sha256": "3b6288843ad735dec9391ddbf9540d515556c74f6560b6acef24641c9cdaebb4",
+      "bytes": 17490
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/check.settings.json",
+      "sha256": "85c92f1270a75e79f0b364f8266192e1e42bc478eb7dadad32437a58d99550cf",
+      "bytes": 441
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/check.sh",
+      "sha256": "8260a1184e34a2a1248f1dc83a77792eccd9d21c1a362ada25da34279699efe6",
+      "bytes": 542
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/contract.log",
+      "sha256": "2229450ab98c064bbad1eda6286df30474f301f8998c8c19567c6aaa4f237678",
+      "bytes": 76225
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build-2.guard.json",
+      "sha256": "320439a5f5a061264ca0cb649297d0cd0bc18d27d33fefe7975c946b6aaebf7e",
+      "bytes": 1255
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build-2.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build-2.settings.json",
+      "sha256": "862b49b427d5ae0a51e51e14d02835687785149e634fd1a76458abf3aff649ba",
+      "bytes": 457
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build-3.guard.json",
+      "sha256": "57dff32408db6ca128d1abe6b8107974e80ced7c14e5ac1389fde204f17a467b",
+      "bytes": 1245
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build-3.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build-3.settings.json",
+      "sha256": "a0405291c6462c881e7875682f612840d4e5a69192c9d34042440e74e5fe0aed",
+      "bytes": 457
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build.guard.json",
+      "sha256": "4773798b3a9863fc5e00c34a5935191bc86a9261d142d42cec0c9c9b0c2a93e9",
+      "bytes": 1253
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build.log",
+      "sha256": "172d0fe4d0781145a8d7381306a6eaa661f722f722351ae0ed2d023393be1996",
+      "bytes": 98
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build.settings.json",
+      "sha256": "d1ca1f6750cdeb71e441a44f3af792cf8e578f0ae8c94aec26ee7ac49d8f8ebb",
+      "bytes": 455
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/finish-build.sh",
+      "sha256": "750f5fdca8240a98c3a62db11547affa07623152ebc303aa8ebc63e8902817aa",
+      "bytes": 1361
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/fixtures.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/link-inputs.json",
+      "sha256": "ee312065eaa2260ee00e30c95cb5e6aad50f50faf560bdb1375a138e95b9dafb",
+      "bytes": 44529
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/patch-check.json",
+      "sha256": "d88a1cafb9cceabbf8f5597869038ba9d945a7064937dbab75f9991235ca91f8",
+      "bytes": 897
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/preimages/ContractAudit.lean",
+      "sha256": "85e3b308e46b740478150d0aa16c622ee214f600273f4fd041ce4bdb87319c57",
+      "bytes": 104808
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/preimages/FullSearchOracle.lean",
+      "sha256": "e090d07de7956a383d462d739e33388664663225f57d81873453dba41a45fa90",
+      "bytes": 30502
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/preimages/Matcher.lean",
+      "sha256": "292f2b8f2f1f0a8bf15f0bcff124ffbf5269f38ea44422c74477c6d597f13dc9",
+      "bytes": 180655
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/retired-helper.json",
+      "sha256": "4cfe1633cd309387577b1ae38e08464c3119628fde09c87c5d031849e452fb70",
+      "bytes": 315
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/seal.rb",
+      "sha256": "65f49ea805caeecb8cc32b11763d1e58d1fb05bcb8658f9a7cd057b6a72e2e60",
+      "bytes": 7082
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/source-files-after.json",
+      "sha256": "be46d1935b4a9b0b622a28a43954d794778bfbe35845f495323d95ac190a96e1",
+      "bytes": 1660
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/work-check-2.guard.json",
+      "sha256": "2e385b2bb72eb7fbc6154c842cbd22add0a9253769fe7c3507e4438a70e55cc0",
+      "bytes": 1247
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/work-check-2.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/work-check-2.settings.json",
+      "sha256": "69b204736eec4d6d28e4dbcfe801a459b7e50b98a478c80eeba82cce5d7d2b7c",
+      "bytes": 453
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/work-check-3.guard.json",
+      "sha256": "c5b4d809347b6b26ae17da324f7d8a2396dd61a841cf52e6bd34916c1c2d4690",
+      "bytes": 1249
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/work-check-3.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/work-check-3.settings.json",
+      "sha256": "011950bef36aba1647cc831cff38b74543e9f430a90ee02a321e5a08dccd3dea",
+      "bytes": 453
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/work-check.guard.json",
+      "sha256": "5c40616835706e8338fe3a5cce5a0dd1173da1f70e5ea4a6fa54f5024145c055",
+      "bytes": 1245
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/work-check.log",
+      "sha256": "0a32ef6016a9c4c0c0bea7d9a8ee2e9e22363eca0709def3a7b6c9bc43028ffb",
+      "bytes": 439
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/work-check.settings.json",
+      "sha256": "6233561b00ae072d0bc915d24491e2cc0755df87701895044fc40162006a8c11",
+      "bytes": 451
+    }
+  ],
+  "linkInputs": {
+    "manifest": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/link-inputs.json",
+      "sha256": "ee312065eaa2260ee00e30c95cb5e6aad50f50faf560bdb1375a138e95b9dafb",
+      "bytes": 44529
+    },
+    "objects": 194,
+    "scope": "audit only; frozen oracle excluded from product"
+  },
+  "retainedBuildProducts": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/CorpusCache.c",
+      "sha256": "d4c2c54cb2ff9a54454c36f33aa293140ae4cb979e779e20a355439acbec8613",
+      "bytes": 85261
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/CorpusCache.o",
+      "sha256": "b6f15dc7325e92cb669c85dd4e9e85127cf14ae17f7887daa0837aecd6da2813",
+      "bytes": 78688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/FullSearchOracle.c",
+      "sha256": "96ffa20c7be4e2b39a38761c2278b28f5172a5fc0c04326d854cea2a0170fcb7",
+      "bytes": 663873
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/FullSearchOracle.o",
+      "sha256": "46496a62f4458bee72801145bac5a9ba21751666cab42cb77820f90bd9d8a192",
+      "bytes": 502488
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/Matcher.c",
+      "sha256": "1b12b67a174a5fde21af510eef522655d32a3c03d68abdb875c359af166d2f73",
+      "bytes": 1193271
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/Matcher.o",
+      "sha256": "c2c862e1cac4d8b4015b79bb79f439cb189ebf180c3dafd209d5af4f82a38eba",
+      "bytes": 979752
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/SearchMemo.c",
+      "sha256": "001ee969ede49023544bf4ab6d5416dbb3cb62788be3c8dbf9fe2645d9796bca",
+      "bytes": 43429
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/SearchMemo.o",
+      "sha256": "a8594b2579c4fae66fd64622f41e35741e257d1c5a9b0fcd67428cddb4eb6d52",
+      "bytes": 61792
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/WorkInference.c",
+      "sha256": "5013a664742422daa810a5a59a20b10482fc6c721d3279a9170028f6f696373e",
+      "bytes": 48382
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/WorkInference.o",
+      "sha256": "17f7750956a6ea5acccdcbf5b740bc0ba5b5bcf55a323b813884b9d99e80f21f",
+      "bytes": 39936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/WorkInferenceAudit.c",
+      "sha256": "3399ca206079a3632333a61c5f7c951e1a875b39a080d3cc85234d34ed8a6532",
+      "bytes": 286977
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/WorkInferenceAudit.o",
+      "sha256": "0f0acab4cc94e9eee3050d6674cd477ba9b0f140fbbfe40dcea42788d057896c",
+      "bytes": 192392
+    }
+  ],
+  "originalFiles": {
+    "10000": {
+      "unchanged": true,
+      "files": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.pages",
+          "sha256": "289a7fee99ca10399f0174ff6025e8a4ac347d5148b842f88387b441a7722556",
+          "bytes": 55931677
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/head",
+          "sha256": "c450dbdc6cbd5b051cce8a4cb5b1828599bf6beb7eb19119bb126d0a8872d1f7",
+          "bytes": 397
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/writer",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ]
+    },
+    "50000": {
+      "unchanged": true,
+      "files": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.pages",
+          "sha256": "e3b84e42a71b4e993c4e306585c75059312d4ab8501b4b0a56c4e9840f9ee926",
+          "bytes": 432031994
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/head",
+          "sha256": "4888fa698fd0a44d78db7b57dd040accbce72ca2d97bc869f1c837a54a538d53",
+          "bytes": 401
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/writer",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ]
+    }
+  },
+  "unchangedBoundaries": [
+    {
+      "name": "Eggshell/GraphStore.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/GraphStore.lean",
+        "sha256": "09ea0a32a186e5735350437d4e4cd5fecc1586a6ef378c6827ae2eb56cd9b4ba",
+        "bytes": 122533
+      }
+    },
+    {
+      "name": "Eggshell/Handoff.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/Handoff.lean",
+        "sha256": "4c638c7f13b74d410594f5bdd04ccdfc954cc08f652bfb9329bedf22f0d89c37",
+        "bytes": 471876
+      }
+    },
+    {
+      "name": "Eggshell/VectorMatrix.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/VectorMatrix.lean",
+        "sha256": "a34e0d946e2146d2616b0c8d6c5954f414c339050f8fb4eb75cc62e9a37b9285",
+        "bytes": 12251
+      }
+    },
+    {
+      "name": "Eggshell/MiniLM.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/MiniLM.lean",
+        "sha256": "15fe872280a9819f39c12a360235523b23ada07ed5f2967d34b16634112a71e7",
+        "bytes": 3859
+      }
+    },
+    {
+      "name": "runtime/embedding.py",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/runtime/embedding.py",
+        "sha256": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+        "bytes": 22703
+      }
+    },
+    {
+      "name": "Eggshell/SearchProvider.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/SearchProvider.lean",
+        "sha256": "d92c24f0bda85d450a6fba6e139128636aee446cc309bd603a568edc0593539e",
+        "bytes": 43147
+      }
+    },
+    {
+      "name": "Eggshell/Warm.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/Warm.lean",
+        "sha256": "dd7d29461260c135e690501cfcccd6148da6b7140c23bce5e68916dfd0b0d2e4",
+        "bytes": 18599
+      }
+    },
+    {
+      "name": "Eggshell/Extract.lean",
+      "unchanged": true,
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/checkout/Eggshell/Extract.lean",
+        "sha256": "b19f0295dd35db4b4ac74bee8d4282e35717f6cebf04a6483d59f5808ca18ef2",
+        "bytes": 53497
+      }
+    }
+  ],
+  "guards": [
+    {
+      "name": "audit-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 12051,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 641680,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "audit.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 15468,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 641616,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-audit.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 25705,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2115856,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "check-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 17850,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1351472,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "check.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 15009,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1295488,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "finish-build-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 22416,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2126976,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "finish-build-3.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 27548,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2127904,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "finish-build.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 18738,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2119200,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "work-check-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 4418,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1145440,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "work-check-3.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "elapsedMs": 12336,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1143296,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "work-check.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "elapsedMs": 4146,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1140752,
+        "ownedPids": [
+
+        ]
+      }
+    }
+  ],
+  "actualAudit": {
+    "workPhysicalReadBytes": 7483322,
+    "workPhysicalPageReads": 30861,
+    "sourceUnchanged": true,
+    "source": {
+      "root": {
+        "rows": 1286459,
+        "offset": 55930208,
+        "last": "workSurfaces:9998:0",
+        "height": 3,
+        "first": "body:0",
+        "checksum": "72c84fc143241ddf288a0130bf0951d4e6705562e629fc3bc12c7034bf526831",
+        "bytes": 1469
+      },
+      "revision": 3,
+      "identity": "ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154",
+      "bytes": 55931677,
+      "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,49,48,48,48,48]]"
+    },
+    "resultBodyPayloadReads": 0,
+    "owners": 9969,
+    "loadWorkMs": 1747,
+    "laterOutcomeHydrationMs": 607,
+    "fullHookMeasured": false,
+    "fixtures": [
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "alpha clock",
+        "proposals": 1,
+        "owners": 6,
+        "oracleAndComparisonMs": 1,
+        "native": false,
+        "inertOwners": 1,
+        "inertAlignments": 1,
+        "evidence": false,
+        "directedProposalPairs": 1,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "alpha clock",
+        "proposals": 1,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": false,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": false,
+        "directedProposalPairs": 1,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "alpha clock",
+        "proposals": 1,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": true,
+        "inertOwners": 1,
+        "inertAlignments": 1,
+        "evidence": true,
+        "directedProposalPairs": 1,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "alpha clock",
+        "proposals": 1,
+        "owners": 6,
+        "oracleAndComparisonMs": 1,
+        "native": true,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": true,
+        "directedProposalPairs": 1,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "inspect alpha clock kernel",
+        "proposals": 1,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": false,
+        "inertOwners": 1,
+        "inertAlignments": 1,
+        "evidence": false,
+        "directedProposalPairs": 1,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "inspect alpha clock kernel",
+        "proposals": 1,
+        "owners": 6,
+        "oracleAndComparisonMs": 1,
+        "native": false,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": false,
+        "directedProposalPairs": 1,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "inspect alpha clock kernel",
+        "proposals": 1,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": true,
+        "inertOwners": 1,
+        "inertAlignments": 1,
+        "evidence": true,
+        "directedProposalPairs": 1,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "inspect alpha clock kernel",
+        "proposals": 1,
+        "owners": 6,
+        "oracleAndComparisonMs": 1,
+        "native": true,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": true,
+        "directedProposalPairs": 1,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "no matching quantum",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": false,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": false,
+        "directedProposalPairs": 0,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 1
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "no matching quantum",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": false,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": false,
+        "directedProposalPairs": 0,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 1
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "no matching quantum",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": true,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": true,
+        "directedProposalPairs": 0,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 1
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "no matching quantum",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": true,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": true,
+        "directedProposalPairs": 0,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 1
+      },
+      {
+        "workPassMs": 1,
+        "retrievedAlignments": 1,
+        "query": "exec_command\n{\"cmd\":\"sed -n '1,5p' driver.c; rg clock driver.c\"}",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": false,
+        "inertOwners": 3,
+        "inertAlignments": 3,
+        "evidence": false,
+        "directedProposalPairs": 0,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "exec_command\n{\"cmd\":\"sed -n '1,5p' driver.c; rg clock driver.c\"}",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 1,
+        "native": false,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": false,
+        "directedProposalPairs": 0,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "exec_command\n{\"cmd\":\"sed -n '1,5p' driver.c; rg clock driver.c\"}",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": true,
+        "inertOwners": 3,
+        "inertAlignments": 3,
+        "evidence": true,
+        "directedProposalPairs": 0,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "exec_command\n{\"cmd\":\"sed -n '1,5p' driver.c; rg clock driver.c\"}",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 1,
+        "native": true,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": true,
+        "directedProposalPairs": 0,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 5
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "mcp__issues__get\n{\"issue\":42}",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": false,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": false,
+        "directedProposalPairs": 0,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 2
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "mcp__issues__get\n{\"issue\":42}",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": false,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": false,
+        "directedProposalPairs": 0,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 2
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "mcp__issues__get\n{\"issue\":42}",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 1,
+        "native": true,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": true,
+        "directedProposalPairs": 0,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 2
+      },
+      {
+        "workPassMs": 0,
+        "retrievedAlignments": 1,
+        "query": "mcp__issues__get\n{\"issue\":42}",
+        "proposals": 0,
+        "owners": 6,
+        "oracleAndComparisonMs": 0,
+        "native": true,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": true,
+        "directedProposalPairs": 0,
+        "children": true,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 2
+      }
+    ],
+    "completeDiscoveryFixpointProved": false,
+    "cases": [
+      {
+        "workPassMs": 362,
+        "retrievedAlignments": 1,
+        "query": "kernel realtime clock monotonic scheduling elapsed timers",
+        "proposals": 0,
+        "owners": 9969,
+        "oracleAndComparisonMs": 1506,
+        "native": false,
+        "inertOwners": 9968,
+        "inertAlignments": 9969,
+        "evidence": false,
+        "directedProposalPairs": 0,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 9970
+      },
+      {
+        "workPassMs": 7,
+        "retrievedAlignments": 1,
+        "query": "no matching quantum",
+        "proposals": 0,
+        "owners": 9969,
+        "oracleAndComparisonMs": 204,
+        "native": false,
+        "inertOwners": 0,
+        "inertAlignments": 0,
+        "evidence": false,
+        "directedProposalPairs": 0,
+        "children": false,
+        "allOrderedProposalsEqual": true,
+        "allOrderedAlignmentsEqual": true,
+        "alignments": 1
+      }
+    ],
+    "answeringModelCalls": 0,
+    "adopted": false
+  },
+  "earlierAudit": {
+    "result": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/audit/result.json",
+      "sha256": "1e5a42a5fee618e6abd7a83f3fa8bc6278d7933e28171827305f634431507779",
+      "bytes": 4808
+    },
+    "scope": "all-child membership diagnostic; not a matched timing comparison"
+  },
+  "retired": {
+    "retiredPath": "/Users/ovm/.codex/experiments/eggshell/work-inference-20261024/WorkInferenceAudit",
+    "sha256": "912484de27d0e4a98fc4e10903b537b5fbc70daf772170877d7bb43096589c11",
+    "bytes": 103257472,
+    "reason": "terminal rebuildable audit helper; source, object, RSP and raw evidence retained; no archive"
+  },
+  "frozenOracleAlgorithmUnchanged": true,
+  "proofScope": [
+    "complete fixed-pass ordered Union equality including native clauses/retrieved lanes",
+    "candidate Outcome payload irrelevance for Work pass",
+    "retrieved never proposes; inquiry scope; existing Exact field",
+    "inert comparisons cannot deliver/propose under any context at this fixed quotient",
+    "original-reader IO remains trusted; no complete discovery fixpoint or indexed completeness theorem"
+  ],
+  "notEstablished": [
+    "native-hook deferred hydration integration",
+    "preservation of later demands/Work roots under pruning",
+    "bounded indexed recognition at large scale",
+    "routed vector/base-delta query",
+    "shared/federated lifecycle",
+    "MCP storage policy",
+    "latest 50k useful native delivery/p99",
+    "matched model total-token/quality improvement"
+  ],
+  "previousGoalTurn": "progress: verified source-delta preparation committed and pushed",
+  "answeringModelCalls": 0,
+  "newSeeds": 0,
+  "adopted": false
+}

@@ -1,5 +1,9 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-24 Work照合とOutcome復元の境界をLean隔離実装した。実MatcherのWorkAlignment生成とlocalUnion constructorを共通化し、同じ完全候補集合・商・大域頻度・所属なら、本文grounding後と全順序のUnion提案が一致することを通常Leanで証明。推薦由来はUnion不可・Exact足跡・run scopeを保持する。実比較の条件から、どの本文contextでも配送/Unionの効果を持てない比較をinertと判定する証明も追加した。
+既存10kの全9,969 Workを元の所属/occurrence検証から1,747msで取得し、このfixtureのOutcome本文payload読出し0。親所属・推薦1件の固定監査では9,970 alignmentの全field/提案が凍結した旧oracleと一致し、9,968所有者をinertと判定。20小例には正のUnion生成8件も含む。元Matcher fixtures/ContractAudit成功、最終build2,127,904KiB・実監査641,680KiB、guard終了0/残存0。
+これは一回の完全照合の証明であり全discovery fixedpointの証明ではない。inertでも後続Unionで有効になり得るためWork roots/topologyを捨てず再評価する接続が必要。全Work読出しO(N)と全体candidate domainは残る。実フックへの遅延復元接続・完全認定索引・複数DB/共有並行・5万窓配送・MCP policy・同条件総トークン改善は未完了。回答モデル/新seed0、製品未採用、全Phases0–6継続。docs/work-only-inference.md参照。
+
 2026-10-24 出版差分から背景の数値準備へ必要窓だけを渡すLean隔離候補45e866c6…を実装した。新しい日誌/保存エンジンは増やさず、元DBの親head鎖をサイズ確認まで当時のrootで検証する。追加/削除のlive ownerだけを点照会し、履歴欠損/別head/上限超過なら数値計画を全体検査へ戻す。元の日誌自体が壊れている場合、既存シナプス準備は拒否し、破損DBを準備済みとは扱わない。
 同じ10k DBの実revision2→3で、全19,969keyの計画2,631msに対し、変更1,777owner/3,554keyだけの計画710ms、全体計画の対応窓と一致。変更なしは7ms、差分matrix検証は2,697ms/生成0/追記0。全warm/実フック/トークンの改善とは区別する。
 期限切れだけのWarm.invalidate経路を除去し、実際の数値input欠損だけを型付きの私有修復eventへ記録する。修復中の新eventを消さないこと、実検索の欠損→背景修復、同populationの置換、別head/逆candidate不整合の拒否が成功。明示warm/doctorは全体検査を維持する。通常Lean証明はlineageとack除外の範囲であり、日誌producer完全性/IO全体の証明ではない。

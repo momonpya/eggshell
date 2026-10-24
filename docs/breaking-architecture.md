@@ -29,6 +29,13 @@ events from invalidating readiness. Explicit full verification, routed query
 compensation, compaction and owner-loading replacement remain separate costs.
 The complete-read regression remains recorded.
 
+The [Work-only inference component](work-only-inference.md) now factors the
+actual Matcher primitives and proves complete single-pass Union equality before
+result grounding. A fixed 10k diagnostic identifies 9,968 inert owners under its
+one-nomination/parent context. This supplies a semantic boundary for deferred
+Outcome reads, not permission to drop their Work roots or later scheduler
+consequences. Full fixpoint/indexed recognition and actual-hook integration remain.
+
 ## Judgment
 
 The core is defensible. The current execution architecture is not ready for

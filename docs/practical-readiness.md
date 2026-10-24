@@ -24,6 +24,12 @@ create private repair debt. Explicit warm still verifies the full source. Other
 derived refreshes, owner loading and routed query coverage remain unfinished.
 These are not native-hook or token qualification.
 
+The [Work-only inference component](work-only-inference.md) proves the complete
+fixed-pass Work/Union boundary and identifies comparisons that no result context
+can make deliverable. It does not yet remove all-owner hydration from native
+hooks: quotient roots, later demands and original authority must survive the
+integration. Its 10k audit is not a new hook qualification or token cohort.
+
 ## Priority and current evidence
 
 1. Remove repeated catalogue construction from hooks. The isolated single-source
