@@ -1,0 +1,345 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -6,0 +7 @@
++public import Eggshell.LexicalReads
+@@ -6894 +6895 @@
+-  let lexicalPosting ← RetrievalResearch.Index.strictLookup snapshot
++  let lexicalPosting ← LexicalReads.strictLookup snapshot receipt
+@@ -7812 +7813 @@
+-      let posting ← RetrievalResearch.Index.coarseLookup snapshot receipt
++      let posting ← LexicalReads.coarseLookup snapshot receipt
+--- /dev/null
++++ b/Eggshell/LexicalReads.lean
+@@ -0,0 +1,177 @@
++module
++public import tools.RetrievalIndex
++public import Std.Data.HashMap.Lemmas
++
++@[expose] public section
++
++namespace Eggshell.LexicalReads
++open Lean DB Persistence.Store
++
++def firstTable (rows : List PageMap.Row) : Std.HashMap String (Option ByteArray) :=
++  rows.foldr (fun row table => table.insert row.1 row.2) {}
++
++theorem firstTable_exact (rows : List PageMap.Row) (name : String) :
++    (firstTable rows)[name]? = (rows.find? (fun row => row.1 == name)).map Prod.snd := by
++  induction rows with
++  | nil => simp [firstTable]
++  | cons row rest ih =>
++      change ((firstTable rest).insert row.1 row.2)[name]? = _
++      rw [Std.HashMap.getElem?_insert, List.find?_cons, ih]
++      cases row.1 == name <;> rfl
++
++/-- The sparse table retains the first original full-key value, including
++tombstones. Hashes do not replace key equality or original source values. -/
++structure View (rows : List PageMap.Row) where
++  table : Std.HashMap String (Option ByteArray)
++  exact : ∀ name, table[name]? = (rows.find? (fun row => row.1 == name)).map Prod.snd
++
++def View.make (rows : List PageMap.Row) : View rows := ⟨firstTable rows,firstTable_exact rows⟩
++
++def View.value (view : View rows) (name : String) : Option ByteArray := view.table[name]?.join
++
++theorem View.value_exact (view : View rows) (name : String) :
++    view.value name = (rows.find? (fun row => row.1 == name)).bind Prod.snd := by
++  unfold View.value
++  rw [view.exact]
++  cases rows.find? (fun row => row.1 == name) <;> rfl
++
++abbrev Captured := Std.HashMap String (Except IO.Error (Option ByteArray))
++
++def failed (names : List String) (error : IO.Error) : Captured :=
++  names.foldl (fun values name => values.insert name (.error error)) {}
++
++/-- Visit only the original point paths, sharing their checked page loads.
++As in getAt, load before testing fences, and use route even for gaps. Errors
++belong to individual keys: speculative IO must not change the first logical
++failure or bypass an earlier membership check. No source body is decoded. -/
++def getManyAt (snapshot : PageMap.Snapshot) (ref : PageMap.Ref)
++    (names : List String) : IO Captured := do
++  let loaded : Except IO.Error (PageMap.Loaded ref) ←
++    try pure (.ok (← snapshot.load ref)) catch error => pure (.error error)
++  match loaded with
++  | .error error => return failed names error
++  | .ok loaded =>
++      let (outside,inside) := names.partition fun name => name < ref.first || ref.last < name
++      let mut values : Captured := outside.foldl (fun values name => values.insert name (.ok none)) {}
++      match loaded.page with
++      | .leaf rows =>
++          let view := View.make rows
++          for name in inside do values := values.insert name (.ok (view.value name))
++      | .branch children =>
++          let mut groups : Std.HashMap Nat (PageMap.Ref × List String) := {}
++          for name in inside do
++            match PageMap.route children name with
++            | none => values := values.insert name (.error (IO.userError "empty branch"))
++            | some (ordinal,child) =>
++                let before := (groups[ordinal]?.map Prod.snd).getD []
++                groups := groups.insert ordinal (child,name :: before)
++          for (_,child,requested) in groups.toList do
++            if _smaller : child.height < ref.height then
++              let next ← getManyAt snapshot child requested
++              for (name,value) in next.toList do values := values.insert name value
++            else
++              for name in requested do
++                values := values.insert name (.error (IO.userError "index height did not decrease"))
++      return values
++termination_by ref.height
++
++def batchLimit : Nat := 1024
++
++structure Batch where
++  snapshot : PageMap.Snapshot
++  names : List String
++  bounded : names.length ≤ batchLimit
++  values : Captured
++
++/-- A batch is bounded independently of total DB size. It shares the immutable
++root, original page authentication and physical counters, without recording
++speculative reads as logical memo dependencies. No whole namespace is loaded. -/
++def load (snapshot : PageMap.Snapshot) (names : List String) : IO Batch := do
++  if bounded : names.length ≤ batchLimit then
++    let quiet ← PageMap.QuietReader.make snapshot
++    let values ← match snapshot.head.root with
++      | none => pure (names.foldl (fun values name => values.insert name (.ok none)) {})
++      | some root => getManyAt quiet.snapshot root names
++    return ⟨snapshot,names,bounded,values⟩
++  else throw (IO.userError "lexical point batch exceeds its key bound")
++
++def Batch.read (batch : Batch) (name : String) : IO (Option ByteArray) := do
++  let some captured := batch.values[name]? |
++    throw (IO.userError "lexical lookup escaped its requested point batch")
++  let value ← match captured with
++    | .error error => throw error
++    | .ok value => pure value
++  batch.snapshot.observe (.point name value)
++  return value
++
++theorem Batch.keys_bounded (batch : Batch) : batch.names.length ≤ batchLimit := batch.bounded
++
++structure Metrics where
++  preparationMs : Nat := 0
++  batches : Nat := 0
++  requestedKeys : Nat := 0
++  largestBatch : Nat := 0
++  postingCalls : Nat := 0
++  postingRows : Nat := 0
++  postingMs : Nat := 0
++  deriving ToJson
++
++def observe (source : PageMap.Snapshot) (receipt : Option String) (metrics : Metrics) : IO Unit :=
++  Receipt.observe receipt ("lexical-reads-" ++ source.head.identity) (toJson metrics)
++
++/-- Every check from Reader.posting remains, on original pinned values. Only
++requested posting owners are batched; results are consumed in original order.
++This creates no Work, Match, Union or completed authority. -/
++def posting (reader : RetrievalResearch.Index.Reader source)
++    (metrics : IO.Ref Metrics)
++    (receipt : Option String) (unit : String) : IO (List Nat × Nat) := do
++  let started ← IO.monoMsNow
++  let some term ← findTerm? reader.index reader.index.get unit | return ([],0)
++  let rows ← directory reader.index (key "posting" term.id)
++  let count ← getNat reader.index.get (key "frequency" term.id)
++  unless rows.length == count do throw (IO.userError "lexical posting frequency disagrees")
++  let mut remaining := rows
++  while !remaining.isEmpty do
++    let selected := remaining.take (batchLimit / 2)
++    remaining := remaining.drop (batchLimit / 2)
++    let begin ← IO.monoMsNow
++    let indexed ← load reader.index (selected.map fun (_,owner) => key "owner" owner)
++    let live ← load source (selected.flatMap fun (_,owner) => [key "member" owner,key "candidate" owner])
++    let elapsed := (← IO.monoMsNow)-begin
++    metrics.modify fun before => {before with
++      preparationMs := before.preparationMs+elapsed
++      batches := before.batches+2
++      requestedKeys := before.requestedKeys+indexed.names.length+live.names.length
++      largestBatch := max before.largestBatch (max indexed.names.length live.names.length)}
++    for (ordinal,owner) in selected do
++      let indexed ← IO.ofExcept (payloadSize (← indexed.read (key "owner" owner)))
++      let member ← IO.ofExcept (payloadSize (← live.read (key "member" owner)))
++      unless indexed == ordinal && member == ordinal &&
++          (← getNat live.read (key "candidate" owner)) == 1 do
++        throw (IO.userError "lexical posting names a different live source owner")
++  let elapsed := (← IO.monoMsNow)-started
++  metrics.modify fun before => {before with
++    postingCalls := before.postingCalls+1
++    postingRows := before.postingRows+rows.length
++    postingMs := before.postingMs+elapsed}
++  observe source receipt (← metrics.get)
++  return (rows.map Prod.snd,count)
++
++def make (reader : RetrievalResearch.Index.Reader source) (receipt : Option String := none) :
++    IO (String → IO (List Nat × Nat)) := do
++  return posting reader (← IO.mkRef {}) receipt
++
++def strictLookup (source : PageMap.Snapshot) (receipt : Option String := none) :
++    IO (String → IO (List Nat × Nat)) := do
++  if (← getNat source.get "candidates") == 0 then return fun _ => pure ([],0)
++  let some reader ← RetrievalResearch.Index.open? source |
++    throw (IO.userError "dictionary-free lexical index is pending explicit/background warm")
++  make reader receipt
++
++def coarseLookup (source : PageMap.Snapshot) (receipt : Option String := none) :
++    IO (String → IO (List Nat × Nat)) := do
++  if (← getNat source.get "candidates") == 0 then return fun _ => pure ([],0)
++  if let some reader ← RetrievalResearch.Index.open? source then return ← make reader receipt
++  RetrievalResearch.Index.coarseLookup source receipt
++
++end Eggshell.LexicalReads
+--- /dev/null
++++ b/tools/research/LexicalReadsAudit.lean
+@@ -0,0 +1,152 @@
++import Eggshell.LexicalReads
++import Eggshell.SearchRank
++
++open Lean Eggshell Eggshell.DB Eggshell.Persistence.Store
++
++private def check (condition : Bool) (message : String) : IO Unit :=
++  unless condition do throw (IO.userError message)
++
++private def capture (action : IO (List Nat × Nat)) : IO (Except String (List Nat × Nat)) := do
++  try return .ok (← action) catch error => return .error error.toString
++
++private structure Trace where
++  bytes : ByteArray
++  charged : Nat
++  complete : Bool
++  deriving BEq
++
++private def Trace.json (trace : Trace) : Json := Json.mkObj [
++  ("sha256",toJson (Sha256.hex trace.bytes)),("bytes",toJson trace.bytes.size),
++  ("chargedBytes",toJson trace.charged),("complete",toJson trace.complete)]
++
++private def trace (source : PageMap.Snapshot) : IO Trace := do
++  let some trace ← source.trace.get | throw (IO.userError "missing read trace")
++  return ⟨((Wire.list PageMap.readObservationCodec).encode trace.operations.reverse).toByteArray,
++    trace.encodedBytes,trace.complete⟩
++
++private def compare (reference : RetrievalResearch.Index.Reader source)
++    (actual : RetrievalResearch.Index.Reader other) (unit : String)
++    (lookup : String → IO (List Nat × Nat)) : IO (Json × Bool) := do
++  source.trace.set (some {})
++  other.trace.set (some {})
++  reference.index.trace.set (some {})
++  actual.index.trace.set (some {})
++  let started ← IO.monoMsNow
++  let expected ← capture (reference.posting unit)
++  let referenceMs := (← IO.monoMsNow)-started
++  let started ← IO.monoMsNow
++  let result ← capture (lookup unit)
++  let actualMs := (← IO.monoMsNow)-started
++  check (match result,expected with
++    | .ok a,.ok b => a == b
++    | .error a,.error b => a == b
++    | _,_ => false) "batched lexical posting changed original order/count/error"
++  check ((← trace source) == (← trace other)) "batch prefetch changed logical source dependencies"
++  check ((← trace reference.index) == (← trace actual.index)) "batch prefetch changed logical index dependencies"
++  return (Json.mkObj [("unit",toJson unit),("referenceMs",toJson referenceMs),
++    ("actualMs",toJson actualMs),("owners",toJson ((result.toOption.map (·.1.length)).getD 0)),
++    ("rejected",toJson (!result.isOk)),("sourceTrace",(← trace other).json)],!result.isOk)
++
++private def invalidCases (root : System.FilePath) : IO Json := do
++  IO.FS.createDirAll root
++  let source ← PageMap.create (root / "source.egg") "lexical source fixture"
++  let index ← PageMap.create (root / "index.egg") "lexical index fixture"
++  let unit := "wunique-fixture"
++  let _ ← PageMap.withWriter index fun writer => do
++    let intern : Intern := ⟨writer,← IO.mkRef {}⟩
++    let term ← intern.term unit
++    putNat writer (key (key "posting" term) 2) 7
++    putNat writer (key "frequency" term) 1
++    putNat writer (key "owner" 7) 2
++  let mut records := #[]
++  for mode in ["valid","wrong-member","not-candidate","missing-member","corrupt-member","wrong-index-owner"] do
++    let source ← PageMap.pin source.directory
++    let _ ← PageMap.withWriter source fun writer => do
++      putNat writer (key "member" 7) (if mode == "wrong-member" then 3 else 2)
++      putNat writer (key "candidate" 7) (if mode == "not-candidate" then 0 else 1)
++      if mode == "missing-member" then writer.put (key "member" 7) none
++      if mode == "corrupt-member" then writer.put (key "member" 7) (some ⟨#[255]⟩)
++    let index ← PageMap.pin index.directory
++    let _ ← PageMap.withWriter index fun writer =>
++      putNat writer (key "owner" 7) (if mode == "wrong-index-owner" then 3 else 2)
++    let first ← PageMap.pin source.directory
++    let second ← PageMap.pin source.directory
++    let firstReader : RetrievalResearch.Index.Reader first := ⟨← PageMap.pin index.directory,← RetrievalResearch.Index.stamp first⟩
++    let secondReader : RetrievalResearch.Index.Reader second := ⟨← PageMap.pin index.directory,← RetrievalResearch.Index.stamp second⟩
++    let (result,rejected) ← compare firstReader secondReader unit (← LexicalReads.make secondReader)
++    check (rejected == (mode != "valid")) "invalid lexical membership was not rejected"
++    records := records.push (result.setObjVal! "case" (toJson mode))
++  return toJson records
++
++private def pointCases (root : System.FilePath) : IO Json := do
++  IO.FS.createDirAll root
++  let source ← PageMap.create (root / "points.egg") "bounded point batch fixture"
++  let _ ← PageMap.withWriter source fun writer => do
++    for index in [:6000] do
++      if index % 11 != 0 then
++        writer.put (key "point" (100000+2*index)) (some ((Wire.natural.encode index).toByteArray))
++    writer.put (key "point" 100002) none
++  let reference ← PageMap.pin source.directory
++  let actual ← PageMap.pin source.directory
++  check (actual.head.root.any (fun root => root.height > 0)) "point audit requires multiple leaves"
++  let names := ["","point:","point:999999","zz"] ++
++    (List.range 1020).map (fun index => key "point" (100000+(index*37)%12000))
++  reference.trace.set (some {})
++  actual.trace.set (some {})
++  let batch ← LexicalReads.load actual names
++  check ((← trace actual).charged == 0) "speculative point batches recorded logical dependencies"
++  for name in names do
++    check ((← reference.get name) == (← batch.read name)) "point batch changed a present/absent value"
++  check ((← trace reference) == (← trace actual)) "point batch changed complete ordered dependencies"
++  let escaped ← try let _ ← batch.read "not-requested"; pure false catch _ => pure true
++  check escaped "batch invented an unrequested absent result"
++  let tooLarge ← try
++    let _ ← LexicalReads.load actual (List.replicate (LexicalReads.batchLimit+1) "point:100004")
++    pure false
++    catch _ => pure true
++  check tooLarge "batch accepted an unbounded request"
++  let empty ← LexicalReads.load actual []
++  check (empty.values.size == 0) "empty batch is not empty"
++  -- A descriptor is not evidence of absence. The underlying checksum must be
++  -- checked first even when the requested key lies outside the root fences.
++  let some root := actual.head.root | throw (IO.userError "missing point fixture root")
++  let bad := {root with checksum := "damaged-checksum"}
++  let broken := {actual with head := {actual.head with root := some bad},cache := ← IO.mkRef {}}
++  let referenceFailure ← try let _ ← broken.get "zz"; pure none catch error => pure (some error.toString)
++  let failedBatch ← LexicalReads.load broken ["zz"]
++  let batchFailure ← try let _ ← failedBatch.read "zz"; pure none catch error => pure (some error.toString)
++  check (referenceFailure.isSome && referenceFailure == batchFailure)
++    "batch converted unchecked out-of-fence corruption to absence"
++  return Json.mkObj [("keys",toJson names.length),("branchHeight",toJson root.height),
++    ("completeOrderedTraceEqual",toJson true),("keyBoundRejected",toJson true),
++    ("unknownKeyRejected",toJson true),("outOfFenceCorruptionRejected",toJson true)]
++
++def main (args : List String) : IO Unit := do
++  let [database,output] := args | throw (IO.userError "LexicalReadsAudit DB NEW-OUTPUT")
++  let output := System.FilePath.mk output
++  check (!(← output.pathExists)) "keep earlier lexical audit"
++  IO.FS.createDirAll output
++  let source ← PageMap.pin (.mk database)
++  let other ← PageMap.pin (.mk database)
++  let some reference ← RetrievalResearch.Index.open? source | throw (IO.userError "original lexical index not warm")
++  let some actual ← RetrievalResearch.Index.open? other | throw (IO.userError "same lexical index not warm")
++  check (reference.index.head == actual.index.head) "different saved lexical snapshots"
++  let lookup ← LexicalReads.make actual
++  let units := hashDistinct ((["kernel realtime clock monotonic scheduling elapsed timers", "source 0 1 9968 49968",
++    "no-such-quantum-xyz", "日本語 커널 café", "exec_command arbitrary.json"].flatMap SearchRank.terms))
++  let mut records := #[]
++  for unit in units do
++    let (result,rejected) ← compare reference actual unit lookup
++    check (!rejected) "valid published posting rejected"
++    records := records.push result
++  let invalid ← invalidCases (output / "invalid")
++  let points ← pointCases (output / "points")
++  check ((← PageMap.pin source.directory).head == source.head) "source publication changed"
++  check ((← PageMap.pin reference.index.directory).head == reference.index.head) "lexical index rewritten"
++  let report := Json.mkObj [("source",toJson source.head),("index",toJson reference.index.head),
++    ("queries",toJson records),("invalidCases",invalid),("pointCases",points),("completeOrderedPostingsEqual",toJson true),
++    ("originalLogicalReadTracesEqual",toJson true),("sourceAndIndexUnchanged",toJson true),
++    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]
++  IO.FS.writeFile (output / "result.json") report.pretty
++  IO.println (Json.mkObj [("queries",toJson records.size),("completeOrderedPostingsEqual",toJson true),
++    ("originalLogicalReadTracesEqual",toJson true),("sourceAndIndexUnchanged",toJson true)]).compress

@@ -62,6 +62,12 @@ receipt confirmation at the caller boundary. An incomplete notice alone is
 not useful delivery, even when it flushes in 29 seconds. A continuation can
 correctly return no new body when the original is already acknowledged.
 
+50k is the first regression point, not a maximum supported lifetime corpus.
+Collaborative investigation across large repositories and revisions can exceed
+one million windows. Follow the [growing shared-history plan](growing-shared-history.md)
+for paged storage, multiple DBs and larger measurements. Neither unrestricted
+30-second full scans nor million-window readiness has been established.
+
 Before the next qualification cohort, freeze 100 attempts per category at 2,
 1,024, 10,000 and 50,000 windows and a fixed real DB. Freeze runtime SHA, source
 snapshot, questions, provider, cache state and harness before measurement.
