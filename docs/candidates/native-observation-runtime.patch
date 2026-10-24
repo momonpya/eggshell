@@ -281,16 +281,17 @@ diff --git a/Eggshell/SynapseSource.lean b/Eggshell/SynapseSource.lean
 diff --git a/Eggshell/SynapseUsage.lean b/Eggshell/SynapseUsage.lean
 --- a/Eggshell/SynapseUsage.lean
 +++ b/Eggshell/SynapseUsage.lean
-@@ -10,6 +10,8 @@
+@@ -10,6 +10,9 @@
  structure Presentation where
    ranges : Array Range := #[]
    uncertain : Std.HashSet File := {}
 +  bindings : Array (String × Nat × Nat) := #[]
 +  uncertainOwners : Std.HashSet String := {}
++  addressed : Array (String × Nat × Nat × List JsonScalars.Segment) := #[]
  
  def caption (text : String) : Option (Nat × Nat × Bool) := do
    if !text.startsWith "  ORIGINAL CHARS [" && !text.startsWith "  CHARS [" then none else do
-@@ -25,48 +27,9 @@
+@@ -25,48 +28,9 @@
    if first < limit && limit ≤ raw.length then
      some (String.ofList ((raw.toList.drop first).take (limit-first))) else none
  
@@ -340,14 +341,62 @@ diff --git a/Eggshell/SynapseUsage.lean b/Eggshell/SynapseUsage.lean
    for part in body.splitOn "\nWORK GRAPH " do
      let some owner := (part.splitOn "\n").head? | continue
      let some doc := docs.find? (·.owner == owner) | continue
-@@ -96,13 +59,25 @@
+@@ -74,21 +38,40 @@
+     let blocks := part.splitOn "  GROUNDED OUTCOME\n"
+     let some evidence := blocks[1]? | continue
+     let evidence := (evidence.splitOn "  TRACE\n").head!
++    let json := JsonScalars.prepare? raw
++    let rawChars := match json with | some index => index.characters | none => raw.toList.toArray
++    let evidenceChars := evidence.toList.toArray
+     let mut spans := #[]
++    let mut addressed := #[]
++    let mut path : Option String := none
+     let mut bad := false
+     for line in textLines evidence do
++      if line.text.startsWith "  JSON PATH " then
++        path := some (String.ofList (line.text.toList.drop "  JSON PATH ".length))
++        continue
+       let some (first, limit, decoded) := caption line.text | continue
+-      let some segment := scalarSlice raw first limit | bad := true; continue
+-      let mut following := String.ofList (evidence.toList.drop line.limit)
++      let location := json.bind (·.cover? first limit)
++      let declared := path
++      path := none
++      if declared.isSome && !location.any (fun address => declared == some address.label) then
++        bad := true
++        continue
++      if !(first < limit && limit ≤ rawChars.size) then bad := true; continue
++      let segment := String.ofList (rawChars.extract first limit).toList
+       let marker := "  DECODED JSON STRING DATA\n"
+-      let marked := following.startsWith marker
+-      if marked then following := String.ofList (following.toList.drop marker.length)
++      let marked := literal evidenceChars line.limit (line.limit+marker.length) marker
+       let expected := if decoded || marked then
+           (Json.parse ("\"" ++ segment ++ "\"") >>= Json.getStr?).toOption
+         else some segment
+       let some expected := expected | bad := true; continue
+-      if !following.startsWith expected then bad := true; continue
++      let dataStart := line.limit + if marked then marker.length else 0
++      if dataStart+expected.length > evidenceChars.size ||
++          String.ofList (evidenceChars.extract dataStart (dataStart+expected.length)).toList != expected then
++        bad := true
++        continue
+       spans := spans.push (first, limit)
++      if let some address := location then
++        if declared == some address.label then addressed := addressed.push (owner,first,limit,address.path)
+     if spans.isEmpty then
+       let decoded := (layout raw).toOption.map (·.text)
+       if !raw.isEmpty && ((evidence.splitOn raw).length > 1 ||
+@@ -96,13 +79,32 @@
          spans := #[(0, raw.length)]
        else bad := true
      if bad then
 +      result := {result with uncertainOwners := result.uncertainOwners.insert owner}
        for file in doc.files do result := {result with uncertain := result.uncertain.insert file}
 +    else
-+      result := {result with bindings := result.bindings ++ spans.map (fun (a,b) => (owner,a,b))}
++      result := {result with
++        bindings := result.bindings ++ spans.map (fun (a,b) => (owner,a,b))
++        addressed := result.addressed ++ addressed}
      for row in reads do
        if row.binding.owner == owner && spans.any (fun (first, limit) =>
            first ≤ row.binding.first && row.binding.limit ≤ limit) then
@@ -363,16 +412,22 @@ diff --git a/Eggshell/SynapseUsage.lean b/Eggshell/SynapseUsage.lean
 +    if first ≤ position then max position limit else position) binding.first
 +  return binding.first < binding.limit && binding.limit ≤ covered
 +
++def Presentation.coversAddress (shown : Presentation) (binding : Binding) (path : List JsonScalars.Segment) : Bool :=
++  let bindings := shown.addressed.filterMap fun (owner,first,limit,actual) =>
++    if actual == path then some (owner,first,limit) else none
++  {shown with bindings}.coversBinding binding
++
  def compactRanges (ranges : Array Range) : Array Range := Id.run do
    let mut files : Std.HashMap File (Array Range) := {}
    for range in ranges do files := files.insert range.file (files[range.file]?.getD #[] |>.push range)
-@@ -146,7 +121,9 @@
+@@ -146,7 +148,10 @@
  def Feedback.present (feedback : Feedback) (packet : Presentation) : Feedback :=
    {feedback with delivered := {
      ranges := feedback.delivered.ranges ++ packet.ranges
 -    uncertain := feedback.delivered.uncertain.union packet.uncertain }}
 +    uncertain := feedback.delivered.uncertain.union packet.uncertain
 +    bindings := feedback.delivered.bindings ++ packet.bindings
++    addressed := feedback.delivered.addressed ++ packet.addressed
 +    uncertainOwners := feedback.delivered.uncertainOwners.union packet.uncertainOwners }}
  
  /-- A PreToolUse packet arriving after proposal cannot rewrite what was known. -/
@@ -636,14 +691,22 @@ diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
  
  def Plan.complete (plan : Plan) : Bool := plan.results.all (·.complete)
  
-@@ -41,30 +44,50 @@
+@@ -41,30 +44,65 @@
      (owner.owner.relation, (owner.located.toList.map fun located =>
        (located.offer.priority, located.row.binding.first, located.row.binding.limit)).eraseDups)
  
-+def Plan.outputRanges (plan : Plan) : List (Value × List (Nat × Nat × Nat)) :=
++structure OutputRange where
++  priority : Nat
++  first : Nat
++  limit : Nat
++  path : Option (List JsonScalars.Segment)
++  deriving BEq
++
++def Plan.outputRanges (plan : Plan) : List (Value × List OutputRange) :=
 +  plan.owners.toList.map fun owner =>
 +    (owner.owner.relation, (owner.outputs.toList.map fun located =>
-+      (located.offer.priority,located.fragment.binding.first,located.fragment.binding.limit)).eraseDups)
++      ({priority := located.offer.priority,first := located.fragment.binding.first
++        limit := located.fragment.binding.limit,path := located.fragment.address.map (·.path)} : OutputRange)).eraseDups)
 +
  /-- Stored original rows are the only source of transport coordinates.
  Neither a graph hint nor its priority may invent a range or an owner. -/
@@ -682,6 +745,13 @@ diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
      ("complete", toJson plan.complete), ("unsupportedOwners", toJson plan.unsupported),
 +    ("unlocatedFileOwners",toJson plan.unlocatedFileOwners),
      ("inputs", toJson (plan.results.map Recommend.Result.receipt)),
++    ("originalOutputs",toJson (plan.owners.flatMap fun owner => owner.outputs.map fun located =>
++      Json.mkObj [
++        ("evidence",toJson located.offer.identity), ("binding",toJson located.fragment.binding),
++        ("path",toJson (located.fragment.address.map (fun address => JsonScalars.pathJson address.path))),
++        ("bodyDelivered",toJson (delivery.coversBinding located.fragment.binding)),
++        ("addressDelivered",toJson (located.fragment.address.map (fun address =>
++          delivery.coversAddress located.fragment.binding address.path)))])),
      ("offers", toJson (plan.results.flatMap fun result => result.admitted.map fun offer =>
 -      Json.mkObj [("offer", offer.json), ("bodyDelivered", toJson (covered offer.source delivery.ranges))]))]
 +      let delivered := match offer.target with
@@ -754,18 +824,83 @@ diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
 diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
 --- a/Eggshell/Handoff.lean
 +++ b/Eggshell/Handoff.lean
-@@ -5154,6 +5154,7 @@
+@@ -104,6 +104,7 @@
+   first : Nat
+   original : String
+   decoded : Bool := false
++  path : Option (List JsonScalars.Segment) := none
+   deriving ToJson, FromJson
+ 
+ structure ContextDelivery where
+@@ -262,7 +263,8 @@
+         (if body.2 then " decoded\n" else "\n")
+     else s!"  ORIGINAL CHARS [{fragment.first},{fragment.first + fragment.original.length})\n" ++
+       (if body.2 then "  DECODED JSON STRING DATA\n" else "")
+-  label ++ body.1
++  let address := fragment.path.map (fun path => "  JSON PATH " ++ (JsonScalars.pathJson path).compress ++ "\n") |>.getD ""
++  (address ++ label) ++ body.1
+ 
+ theorem fragment_render_preserves_presented_data (fragment : DeliveryFragment) :
+     ∃ label, fragment.render = label ++ fragment.presentation.1 := by
+@@ -5154,9 +5156,53 @@
    referenceRanks : List (Nat × Nat) := []
    referenceRanges : List (Nat × List (Nat × Nat)) := []
    synapticRanges : List (Nat × Nat × Nat) := []
-+  outputRanges : List (Nat × Nat × Nat) := []
++  outputRanges : List Synapses.Transport.OutputRange := []
    synapticUnits : List (List (Nat × Nat)) := []
    provenance : List SourceEvidence.Record := []
    cached : Array Synapses.CanonicalSource.StoredRow := #[]
-@@ -5273,17 +5274,42 @@
++
++def Family.outputCues (family : Family) : List (Nat × Nat × Nat) :=
++  family.outputRanges.map fun range => (range.priority,range.first,range.limit)
++
++/-- Whole advisory projections also need an original envelope before their
++output fields can compete. Completed members and shared source packets keep
++their own typed transport. No display text is parsed to recover provenance. -/
++def Family.outputEnvelope? (family : Family) : Option ContextDelivery := do
++  if family.outputRanges.isEmpty || family.template.context.isSome ||
++      family.template.shared.isSome || !family.cached.isEmpty ||
++      !family.template.members.all (·.applicability == .advisory) ||
++      !Matcher.nativeOutcome family.owner then none else do
++    let source ← Matcher.atomText? family.owner.outcome
++    let work ← Matcher.atomText? family.owner.work
++    let owner := relationKey family.owner.relation
++    let outcome := relationKey family.owner.outcome
++    let connections := if family.template.members.isEmpty then
++      "  SUPPORT OUTCOME " ++ displayKey family.owner.relation ++ " -> EVIDENCE " ++ displayKey family.owner.outcome
++      else "\n".intercalate (family.template.members.map fun item =>
++        renderTransportConnection family.owner family.template.members item)
++    let provenance := if family.provenance.isEmpty then "" else
++      "\n  OBSERVED SOURCES\n" ++ "\n".intercalate (family.provenance.map fun record =>
++        "    workspace=" ++ record.workspace ++ " relative=" ++
++          ", ".intercalate (record.files.map (·.relative) ++ record.uris))
++    some {
++      owner,outcome,sourceChars := source.length,envelopeKey := "f:outcome:" ++ owner ++ ":" ++ outcome
++      cues := [],fragments := []
++      leading := "WORK GRAPH " ++ owner ++ "\n  WORK\n" ++ work ++ "\n" ++ connections ++
++        "\n  GROUNDED OUTCOME\n  EVIDENCE " ++ displayKey family.owner.outcome ++
++        "\n  [Original tool excerpts; unselected data remains in memory.]\n"
++      trailing := "\n  TRACE\n" ++ "\n".intercalate (family.owner.observations.map renderObservation) ++
++        provenance ++ "\nEND WORK GRAPH\n"}
++
++def Family.contextualOutputs (family : Family) : Family :=
++  match family.outputEnvelope? with
++  | none => family
++  | some context => {family with template := {family.template with
++      text := context.render,context := some context}}
++
++theorem output_context_preserves_control (family : Family) :
++    family.contextualOutputs.template.members = family.template.members ∧
++      family.contextualOutputs.template.visibleKeys = family.template.visibleKeys := by
++  cases found : family.outputEnvelope? <;> simp [Family.contextualOutputs,found]
+ 
+ structure UnitPlan where
+   family : Nat
+@@ -5272,18 +5318,45 @@
+     (part : Synapses.CanonicalSource.Delivery.Part) :
      ({family,slice := {owner := none,keys := part.keys,text := "",shared := some part,members := [],visibleKeys := []},ranges := []} :
        UnitPlan).slice.members = [] := rfl
- 
++
 +/-- Original output fragments are already bounded by their native data-flow
 +witness. They do not require source records, a file or a shell decoder. -/
 +def prepareOutputs (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
@@ -775,19 +910,21 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
 +  let original := IndexedCharacters.make source
 +  let mut units := []
 +  let mut cues := []
-+  for (_,first,last) in family.outputRanges do
++  for range in family.outputRanges do
++    let first := range.first
++    let last := range.limit
 +    if valid : first < last ∧ last ≤ source.length then
 +      let span : ContextSpan source := ⟨first,last,valid.1,valid.2⟩
-+      let fragments := span.ranges.map fun range => ({
-+        first := range.start
-+        original := original.slice range.start (range.stop-range.start)
-+        decoded := false} : DeliveryFragment)
++      let fragments := span.ranges.map fun part => ({
++        first := part.start
++        original := original.slice part.start (part.stop-part.start)
++        decoded := false,path := range.path} : DeliveryFragment)
 +      let context := {envelope with fragments,cues := [(first,last)]}
 +      let slice := {family.template with context := some context,keys := context.keys,text := context.render}
 +      units := units ++ [{family := familyIndex,slice,ranges := [(first,last)]}]
 +      cues := cues ++ [(first,last)]
 +  return (units,cues)
-+
+ 
  /-- Prepare the immutable record/structure index once per owner. Each query
  window gets its own complete local dependency closure, not a prefix of the
  other windows of this owner. This creates no control Match. -/
@@ -807,12 +944,12 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
    let decoded := (decodedToolText? source).map DecodedLayout.make
    let original := decoded.map (·.original) |>.getD (IndexedCharacters.make source)
    let records := contextRecordSpans source decoded
-@@ -5293,11 +5319,11 @@
+@@ -5293,11 +5366,11 @@
      | none => some range
      | some layout => (decodedEvidenceUsing? layout range).map (·.original)
    let cues := ((rankedContextRanges source (work.length+1) positions).map fun range =>
 -    (range.start,range.stop)) ++ family.synapticRanges.map (fun (_,a,b) => (a,b))
-+    (range.start,range.stop)) ++ (family.synapticRanges ++ family.outputRanges).map (fun (_,a,b) => (a,b))
++    (range.start,range.stop)) ++ (family.synapticRanges ++ family.outputCues).map (fun (_,a,b) => (a,b))
    if cues.isEmpty then return ([],[])
    let some envelope := family.template.context |
      return ([{family := familyIndex,slice := family.template,ranges := [(0,source.length)]}],cues)
@@ -821,24 +958,40 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
    let mut seen : Std.HashSet (List (Nat × Nat)) := {}
    for position in positions do
      let structural := (completeStructureContexts records
-@@ -5398,7 +5424,7 @@
+@@ -5398,7 +5471,7 @@
      ((focus ++ references).filterMap fun (position,priority) =>
        (meaningContext? source (work.length+1) position priority).map fun context =>
          {priority,first := context.span.start,last := context.span.stop}) ++
 -      family.synapticRanges.map (fun (priority,first,last) => {priority,first,last})
-+      (family.synapticRanges ++ family.outputRanges).map (fun (priority,first,last) => {priority,first,last})
++      (family.synapticRanges ++ family.outputCues).map (fun (priority,first,last) => {priority,first,last})
    | _,_ => []
  
  def coveringCue? (cues : List RankedCue) (first last : Nat) : Option RankedCue :=
-@@ -5926,6 +5952,7 @@
+@@ -5723,6 +5796,7 @@
+       {slices : List TransportSlice //
+         (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
+         ∃ suffix, slices = mandatory ++ suffix} := do
++  let families := families.map Family.contextualOutputs
+   let templates := families.map (·.template) ++ mandatory
+   let allCost := cost templates
+   let dataCost := templates.foldl (fun total slice =>
+@@ -5765,6 +5839,7 @@
+       {slices : List TransportSlice //
+         (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
+         ∃ suffix, slices = mandatory ++ suffix} := do
++  let families := families.map Family.contextualOutputs
+   let templates := families.map (·.template) ++ mandatory
+   let allCost := cost templates
+   let dataCost := templates.foldl (fun total slice =>
+@@ -5926,6 +6001,7 @@
      (referenceRanks : List (Value × List (Nat × Nat)) := [])
      (referenceRanges : List (Value × List (Nat × List (Nat × Nat))) := [])
      (synapticRanges : List (Value × List (Nat × Nat × Nat)) := [])
-+    (outputRanges : List (Value × List (Nat × Nat × Nat)) := [])
++    (outputRanges : List (Value × List Synapses.Transport.OutputRange) := [])
      (synapticBundles : Array Synapses.Bundles.Projected := #[])
      (canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {}) : Option Handoff :=
    let extraction := prepared.val
-@@ -6132,6 +6159,7 @@
+@@ -6132,6 +6208,7 @@
              referenceRanks := ranks
              referenceRanges := ranges
              synapticRanges := (synapticRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
@@ -846,7 +999,7 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
              synapticUnits := synapticBundles.toList.flatMap fun bundle =>
                bundle.members.toList.flatMap fun member => member.choices.toList.filterMap fun bound =>
                  if bound.owner == originalKey then some bound.spans else none
-@@ -7564,6 +7592,7 @@
+@@ -7564,6 +7641,7 @@
      (referenceRanks := referenceRanks)
      (referenceRanges := referenceRanges)
      (synapticRanges := synaptic.ranges)
@@ -900,7 +1053,7 @@ diff --git a/Eggshell/SynapseBundles.lean b/Eggshell/SynapseBundles.lean
 diff --git a/Eggshell/JsonScalars.lean b/Eggshell/JsonScalars.lean
 --- /dev/null
 +++ b/Eggshell/JsonScalars.lean
-@@ -0,0 +1,72 @@
+@@ -0,0 +1,211 @@
 +module
 +
 +public import Lean.Data.Json.Parser
@@ -911,12 +1064,45 @@ diff --git a/Eggshell/JsonScalars.lean b/Eggshell/JsonScalars.lean
 +namespace Eggshell.JsonScalars
 +open Lean
 +
++inductive Segment where
++  | key (name : String)
++  | index (position : Nat)
++  deriving DecidableEq, BEq, ToJson, FromJson
++
++def pathJson (path : List Segment) : Json :=
++  toJson (path.map fun part => match part with
++    | .key name => toJson name | .index position => toJson position)
++
++def resolve (value : Json) : List Segment → Except String Json
++  | [] => .ok value
++  | .key name :: rest => do resolve (← value.getObjVal? name) rest
++  | .index position :: rest => do resolve (← value.getArrVal? position) rest
++
 +structure Scalar where
 +  first : Nat
 +  limit : Nat
 +  literal : String
 +  text : Option String
 +  offsets : Array Nat
++  /-- Reversed paths share their ancestors instead of copying every prefix. -/
++  pathRev : List Segment
++  contextFirst : Nat
++
++structure Frame where
++  object : Bool
++  pathRev : List Segment
++  next : Nat := 0
++  key : Option (String × Nat) := none
++
++def place (frames : Array Frame) (first : Nat) :
++    Except String (List Segment × Nat × Array Frame) := do
++  let some frame := frames.back? | return ([],first,frames)
++  if frame.object then
++    let some (key,start) := frame.key | throw "structured object has no pending key"
++    return (.key key :: frame.pathRev,start,frames.pop.push {frame with key := none})
++  else
++    return (.index frame.next :: frame.pathRev,first,
++      frames.pop.push {frame with next := frame.next+1})
 +
 +def primitive : Json → Bool
 +  | .arr _ | .obj _ => false
@@ -925,17 +1111,24 @@ diff --git a/Eggshell/JsonScalars.lean b/Eggshell/JsonScalars.lean
 +def scalarLiteral (text : String) : Bool :=
 +  (Json.parse text).toOption.any fun value => primitive value && value.compress == text
 +
-+/-- Canonical JSON is scanned once. A string followed by a colon is a key,
-+not an observed argument/result value. Positions refer to the original text. -/
-+def values (raw : String) : Except String (Array Scalar) := do
-+  let json ← Json.parse raw
++/-- One canonical scan records literal coordinates, immediate member starts
++and shared ancestor paths. Keys provide context but never become witnesses. -/
++def scan (json : Json) (raw : String) : Except String (Array Scalar) := do
 +  unless json.compress == raw do throw "noncanonical structured observation"
 +  let chars := raw.toList.toArray
 +  let mut position := 0
 +  let mut result := #[]
++  let mut frames : Array Frame := #[]
 +  while position < chars.size do
 +    let char := chars[position]!
-+    if char.isWhitespace || "{}[],:".contains char then
++    if char == '{' || char == '[' then
++      let (path,_,next) ← place frames position
++      frames := next.push {object := char == '{',pathRev := path}
++      position := position+1
++    else if char == '}' || char == ']' then
++      frames := frames.pop
++      position := position+1
++    else if char.isWhitespace || ",:".contains char then
 +      position := position+1
 +    else if char == '"' then
 +      let first := position
@@ -952,9 +1145,15 @@ diff --git a/Eggshell/JsonScalars.lean b/Eggshell/JsonScalars.lean
 +      let limit := position
 +      let mut following := position
 +      while following < chars.size && chars[following]!.isWhitespace do following := following+1
-+      if chars[following]? == some ':' then continue
 +      let literal := String.ofList (chars.extract first limit).toList
 +      let text ← Json.parse literal >>= Json.getStr?
++      if chars[following]? == some ':' then
++        let some frame := frames.back? | throw "structured key has no object"
++        unless frame.object && frame.key.isNone do throw "structured key outside an object"
++        frames := frames.pop.push {frame with key := some (text,first)}
++        continue
++      let (path,contextFirst,next) ← place frames first
++      frames := next
 +      let mut offsets := #[]
 +      let mut original := first+1
 +      for char in text.toList do
@@ -962,21 +1161,114 @@ diff --git a/Eggshell/JsonScalars.lean b/Eggshell/JsonScalars.lean
 +        original := original+(toJson (String.singleton char)).compress.length-2
 +      offsets := offsets.push original
 +      unless original+1 == limit do throw "structured scalar coordinates differ"
-+      result := result.push ⟨first,limit,literal,some text,offsets⟩
++      result := result.push ⟨first,limit,literal,some text,offsets,path,contextFirst⟩
 +    else
 +      let first := position
 +      while position < chars.size && !chars[position]!.isWhitespace &&
 +          !("{}[],:".contains chars[position]!) do position := position+1
 +      let literal := String.ofList (chars.extract first position).toList
 +      unless scalarLiteral literal do throw "invalid structured scalar"
-+      result := result.push ⟨first,position,literal,none,#[]⟩
++      let (path,contextFirst,next) ← place frames first
++      frames := next
++      result := result.push ⟨first,position,literal,none,#[],path,contextFirst⟩
 +  return result
++
++def values (raw : String) : Except String (Array Scalar) := do scan (← Json.parse raw) raw
++
++def Scalar.prefixExact (scalar : Scalar) (raw : Array Char) : Bool :=
++  match scalar.pathRev.head? with
++  | some (.key name) =>
++      String.ofList (raw.extract scalar.contextFirst scalar.first).toList ==
++        (toJson name).compress ++ ":"
++  | _ => scalar.contextFirst == scalar.first
++
++/-- A displayed path is independently checked against the parsed original.
++Its member prefix and literal still refer to exact original characters. -/
++structure Checked (root : Json) (raw : Array Char) where
++  scalar : Scalar
++  value : Json
++  resolved : resolve root scalar.pathRev.reverse = .ok value
++  primitive : primitive value = true
++  spelling : value.compress = scalar.literal
++  bounds : scalar.contextFirst ≤ scalar.first ∧ scalar.first < scalar.limit ∧ scalar.limit ≤ raw.size
++  exact : String.ofList (raw.extract scalar.first scalar.limit).toList = scalar.literal
++  memberExact : scalar.prefixExact raw = true
++
++def Checked.check? (root : Json) (raw : Array Char) (scalar : Scalar) : Option (Checked root raw) :=
++  match resolved : resolve root scalar.pathRev.reverse with
++  | .error _ => none
++  | .ok value =>
++    if primitive : JsonScalars.primitive value = true then
++      if spelling : value.compress = scalar.literal then
++        if bounds : scalar.contextFirst ≤ scalar.first ∧ scalar.first < scalar.limit ∧ scalar.limit ≤ raw.size then
++          if exact : String.ofList (raw.extract scalar.first scalar.limit).toList = scalar.literal then
++            if memberExact : scalar.prefixExact raw = true then
++              some ⟨scalar,value,resolved,primitive,spelling,bounds,exact,memberExact⟩ else none
++          else none
++        else none
++      else none
++    else none
++
++structure Address (raw : String) where
++  root : Json
++  characters : Array Char
++  parsed : Json.parse raw = .ok root
++  charactersExact : characters = raw.toList.toArray
++  leaf : Checked root characters
++
++def Address.path (address : Address raw) : List Segment := address.leaf.scalar.pathRev.reverse
++
++def Address.label (address : Address raw) : String := (pathJson address.path).compress
++
++theorem address_resolves (address : Address raw) :
++    Json.parse raw = .ok address.root ∧ resolve address.root address.path = .ok address.leaf.value :=
++  ⟨address.parsed,address.leaf.resolved⟩
++
++theorem address_literal_is_original (address : Address raw) :
++    String.ofList (raw.toList.toArray.extract address.leaf.scalar.first address.leaf.scalar.limit).toList =
++      address.leaf.value.compress := by
++  rw [← address.charactersExact,address.leaf.spelling]
++  exact address.leaf.exact
++
++structure Index (raw : String) where
++  root : Json
++  characters : Array Char
++  parsed : Json.parse raw = .ok root
++  charactersExact : characters = raw.toList.toArray
++  leaves : Array (Checked root characters)
++
++def prepare? (raw : String) : Option (Index raw) := do
++  match parsed : Json.parse raw with
++  | .error _ => none
++  | .ok root =>
++    let scalars ← (scan root raw).toOption
++    let characters := raw.toList.toArray
++    let leaves ← scalars.mapM (Checked.check? root characters)
++    return ⟨root,characters,parsed,rfl,leaves⟩
++
++/-- Scalar limits are in original serialization order. Search once by the
++last position; ancestors and field names do not require a linear leaf scan. -/
++def Index.cover? (index : Index raw) (first limit : Nat) : Option (Address raw) := Id.run do
++  let mut lower := 0
++  let mut upper := index.leaves.size
++  while lower < upper do
++    let middle := (lower+upper)/2
++    let some leaf := index.leaves[middle]? | return none
++    if leaf.scalar.limit < limit then lower := middle+1 else upper := middle
++  let some leaf := index.leaves[lower]? | return none
++  if leaf.scalar.contextFirst ≤ first && first < limit && limit ≤ leaf.scalar.limit then
++    return some ⟨index.root,index.characters,index.parsed,index.charactersExact,leaf⟩
++  return none
++
++def Index.witness? (index : Index raw) (first limit : Nat) : Option (Address raw) := do
++  let address ← index.cover? first limit
++  if address.leaf.scalar.first ≤ first then some address else none
 +
 +end Eggshell.JsonScalars
 diff --git a/Eggshell/ObservationContext.lean b/Eggshell/ObservationContext.lean
 --- /dev/null
 +++ b/Eggshell/ObservationContext.lean
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,126 @@
 +module
 +
 +public import Eggshell.SynapseSource
@@ -986,81 +1278,65 @@ diff --git a/Eggshell/ObservationContext.lean b/Eggshell/ObservationContext.lean
 +namespace Eggshell.Synapses.ObservationContext
 +open Lean Extraction
 +
-+/-- Container coordinates in the actual serialized value. Quoted braces and
-+escaped quotes never introduce a container. No tool names are interpreted. -/
-+def containers (text : String) : Array (Nat × Nat) := Id.run do
-+  match Json.parse text with
-+  | .ok (.obj _) | .ok (.arr _) => pure ()
-+  | _ => return #[]
-+  let mut stack : Array (Nat × Char) := #[]
-+  let mut found := #[]
-+  let mut quoted := false
-+  let mut escaped := false
-+  let mut position := 0
-+  for char in text.toList do
-+    if escaped then escaped := false
-+    else if quoted then
-+      if char == '\\' then escaped := true
-+      else if char == '"' then quoted := false
-+    else if char == '"' then quoted := true
-+    else if char == '{' || char == '[' then stack := stack.push (position,char)
-+    else if char == '}' || char == ']' then
-+      let some (first,opening) := stack.back? | return #[]
-+      if (opening == '{' && char != '}') || (opening == '[' && char != ']') then return #[]
-+      found := found.push (first,position+1)
-+      stack := stack.pop
-+    position := position+1
-+  return found
-+
-+/-- A complete smallest JSON container, or the original text row containing
-+the witness. This is display context, never a claim about tool semantics. -/
-+def bounds (structured : Array (Nat × Nat)) (lines : Array TextLine) (first limit : Nat) : Nat × Nat :=
-+  let containing := structured.filter fun (a,b) => a ≤ first && limit ≤ b
-+  match (containing.qsort fun a b => a.2-a.1 < b.2-b.1)[0]? with
-+  | some result => result
-+  | none =>
-+    match lines.find? (fun line => line.first ≤ first && limit ≤ line.limit) with
-+    | some line => (line.first,line.limit)
-+    | none => (first,limit)
++/-- Plain text keeps its actual row. Structured data uses checked scalar
++members and ancestor paths, rather than copying the enclosing object. -/
++def lineBounds (lines : Array TextLine) (first limit : Nat) : Nat × Nat := Id.run do
++  let mut lower := 0
++  let mut upper := lines.size
++  while lower < upper do
++    let middle := (lower+upper)/2
++    let some line := lines[middle]? | return (first,limit)
++    if line.limit < limit then lower := middle+1 else upper := middle
++  match lines[lower]? with
++  | some line => if line.first ≤ first && limit ≤ line.limit then (line.first,line.limit) else (first,limit)
++  | none => (first,limit)
 +
 +structure Prepared (doc : Document) where
 +  raw : String
 +  original : doc.source = some raw
 +  view : Layout
 +  mapped : layout raw = .ok view
-+  structured : Array (Nat × Nat)
++  rawChars : Array Char
++  rawCharsExact : rawChars = raw.toList.toArray
++  viewChars : Array Char
++  viewCharsExact : viewChars = view.text.toList.toArray
 +  lines : Array TextLine
-+  rawStructured : Array (Nat × Nat)
-+  rawLines : Array TextLine
-+  scalars : Array JsonScalars.Scalar
++  json : Option (JsonScalars.Index raw)
 +
 +def prepare? (doc : Document) : Option (Prepared doc) := do
 +  let raw ← doc.source
 +  if original : doc.source = some raw then
 +    match mapped : layout raw with
 +    | .error _ => none
-+    | .ok view => some ⟨raw,original,view,mapped,containers view.text,textLines view.text,
-+        containers raw,textLines raw,(JsonScalars.values raw).toOption.getD #[]⟩
++    | .ok view => some ⟨raw,original,view,mapped,raw.toList.toArray,rfl,
++        view.text.toList.toArray,rfl,textLines view.text,JsonScalars.prepare? raw⟩
 +  else none
 +
-+def Prepared.rawBounds (prepared : Prepared doc) (edge : Consumption) : Nat × Nat := Id.run do
-+  if edge.kind != .value then
-+    for scalar in prepared.scalars do
-+      let some text := scalar.text | continue
-+      if !text.contains '\n' then continue
-+      let some first := scalar.offsets.findIdx? (· == edge.outputFirst) | continue
-+      let some limit := scalar.offsets.findIdx? (· == edge.outputLimit) | continue
-+      let (first,limit) := bounds #[] (textLines text) first limit
-+      let some first := scalar.offsets[first]? | continue
-+      let some limit := scalar.offsets[limit]? | continue
-+      return (first,limit)
-+  return bounds prepared.rawStructured prepared.rawLines edge.outputFirst edge.outputLimit
++def Prepared.rawBounds (prepared : Prepared doc) (edge : Consumption) :
++    Option (Nat × Nat × JsonScalars.Address prepared.raw) := do
++  let index ← prepared.json
++  let address ← index.witness? edge.outputFirst edge.outputLimit
++  let scalar := address.leaf.scalar
++  if edge.kind == .value then
++    if edge.outputFirst != scalar.first || edge.outputLimit != scalar.limit then none
++    else some (scalar.contextFirst,scalar.limit,address)
++  else if let some text := scalar.text then
++    if text.contains '\n' then do
++      let first ← scalar.offsets.findIdx? (· == edge.outputFirst)
++      let limit ← scalar.offsets.findIdx? (· == edge.outputLimit)
++      let (first,limit) := lineBounds (textLines text) first limit
++      let first ← scalar.offsets[first]?
++      let limit ← scalar.offsets[limit]?
++      some (first,limit,address)
++    else some (scalar.contextFirst,scalar.limit,address)
++  else some (scalar.contextFirst,scalar.limit,address)
 +
 +structure Fragment (doc : Document) where
 +  occurrence : Occurrence
 +  binding : Binding
 +  raw : String
 +  payload : String
++  address : Option (JsonScalars.Address raw)
 +  native : doc.native = true
 +  origin : doc.occurrences.contains occurrence = true
 +  original : doc.source = some raw
@@ -1076,19 +1352,30 @@ diff --git a/Eggshell/ObservationContext.lean b/Eggshell/ObservationContext.lean
 +  if native : doc.native = true then
 +    if origin : doc.occurrences.contains edge.producer = true then
 +        let raw := prepared.raw
-+        let view := if edge.outputFormat == .json then raw else prepared.view.text
-+        if !(literal view.toList.toArray edge.outputFirst edge.outputLimit edge.term) then none else do
-+          let (first,limit) := if edge.outputFormat == .json then prepared.rawBounds edge
-+            else bounds prepared.structured prepared.lines edge.outputFirst edge.outputLimit
-+          if !(first ≤ edge.outputFirst && edge.outputLimit ≤ limit) then none else do
-+            let first ← if edge.outputFormat == .json then some first else prepared.view.offsets[first]?
-+            let limit ← if edge.outputFormat == .json then some limit else prepared.view.offsets[limit]?
++        let view := if edge.outputFormat == .json then prepared.rawChars else prepared.viewChars
++        if !(literal view edge.outputFirst edge.outputLimit edge.term) then none else do
++          let (first,limit,address) ← if edge.outputFormat == .json then do
++              let (first,limit,address) ← prepared.rawBounds edge
++              if first ≤ edge.outputFirst && edge.outputLimit ≤ limit then some (first,limit,some address) else none
++            else do
++              let (first,limit) := lineBounds prepared.lines edge.outputFirst edge.outputLimit
++              if !(first ≤ edge.outputFirst && edge.outputLimit ≤ limit) then none else do
++                let first ← prepared.view.offsets[first]?
++                let limit ← prepared.view.offsets[limit]?
++                some (first,limit,prepared.json.bind (·.cover? first limit))
++          do
 +            let binding : Binding := ⟨database,doc.owner,doc.work,first,limit⟩
 +            if valid : binding.valid = true then
-+              if within : binding.first < binding.limit ∧ binding.limit ≤ raw.length then
++              if bounded : binding.first < binding.limit ∧ binding.limit ≤ prepared.rawChars.size then
++                have size : prepared.rawChars.size = raw.length := by
++                  simp [prepared.rawCharsExact,raw,String.length_toList]
++                have within : binding.first < binding.limit ∧ binding.limit ≤ raw.length := by
++                  simpa only [size] using bounded
++                let payload := String.ofList (prepared.rawChars.extract binding.first binding.limit).toList
++                have exact : payload = String.ofList ((raw.toList.drop binding.first).take (binding.limit-binding.first)) := by
++                  simp [payload,prepared.rawCharsExact,raw]
 +                some ⟨edge.producer,binding,raw,
-+                  String.ofList ((raw.toList.drop binding.first).take (binding.limit-binding.first)),
-+                  native,origin,prepared.original,rfl,rfl,valid,within,rfl⟩
++                  payload,address,native,origin,prepared.original,rfl,rfl,valid,within,exact⟩
 +              else none
 +            else none
 +    else none

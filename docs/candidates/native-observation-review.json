@@ -1,5 +1,6 @@
 {
-  "status": "isolated generic observation consumption, original output selection and receipts tested; unadopted",
+  "status": "isolated original JSON member selection with checked ancestor paths, real whole-projection branch and receipts tested; unadopted",
+  "previousMilestone": "056065f",
   "answeringModelCalls": 0,
   "newSeedCalls": 0,
   "ordinaryRuntimeChanged": false,
@@ -10,8 +11,8 @@
   },
   "patch": {
     "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/native-observation-runtime.patch",
-    "sha256": "1c8b1833eaed8b7a8bdd1af99bd4c22ca88a3af3f2060e1dcbd28420be32548c",
-    "bytes": 58361
+    "sha256": "41bf6aae6cb0d882c0b6c319556b0d8dd1b4e026b8495e52ff9ddc7dc39cd86d",
+    "bytes": 72913
   },
   "patchPreimages": [
     {
@@ -75,8 +76,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SynapseUsage.lean",
-        "sha256": "b22aac533f0600db3aae26ef8bb3b17967ca01d6768b09781158dad1cc9abf35",
-        "bytes": 7599
+        "sha256": "7249f7fcbda9eac50e3daee90a7ba426ea6f6ee7018eef5199d3cf4438473d8f",
+        "bytes": 9064
       }
     },
     {
@@ -101,8 +102,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SynapseTransport.lean",
-        "sha256": "97b52e2567f837059fbdf77540fffb366d9f832a95e2e594ba03544c66191984",
-        "bytes": 4296
+        "sha256": "7a02fee8df79dd498029dd5b1be75d03384377f17cb570f8718dc1a5b746082a",
+        "bytes": 5084
       }
     },
     {
@@ -127,8 +128,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Handoff.lean",
-        "sha256": "3dd78bdbfd1ccde869dbf6d32d8977befd627d57349df2fef39ccf1db47ef675",
-        "bytes": 464426
+        "sha256": "47c96fc8790cb6d23f4fab3b2de646481d6b1d041316241b41cec77f7d46b803",
+        "bytes": 467450
       }
     },
     {
@@ -149,8 +150,8 @@
       "before": null,
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/JsonScalars.lean",
-        "sha256": "ae2786478a542a836e4b4aa8b89b51bfa8bf1e0f3d788cdd8f423ad7134f9273",
-        "bytes": 2675
+        "sha256": "9430765b7cadb2556d8302e102d894fff2db7e06d063d443fdf2e64867cca31b",
+        "bytes": 8833
       }
     },
     {
@@ -158,8 +159,8 @@
       "before": null,
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/ObservationContext.lean",
-        "sha256": "c4a68c7361bcd8f3246bff0ded96eb06ce8d2f068e4dab107f929a1fef6c9935",
-        "bytes": 6006
+        "sha256": "718c5d5e7945f7524b7d8608742eb8de0ab524d6b165ddcbee20deb32803910a",
+        "bytes": 6016
       }
     },
     {
@@ -181,15 +182,15 @@
       "name": "JsonScalarTests",
       "source": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/JsonScalarTests.lean",
-        "sha256": "91184008336ec97ec028df97557bd36f94edc19bbd47ddc123f23338aad48e79",
-        "bytes": 3374
+        "sha256": "4f9e9f2ec65d5aa0c9f1bb3cb9cbe4b86731c2f8e54cbdd1bb981744c3df71cc",
+        "bytes": 4739
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.complete-native-result.txt",
-        "sha256": "e194f69b5e436351c100e5aa5642ac519d0020e739c5f9da2484d6fd9d461189",
-        "bytes": 115
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.original-member-contexts-result.txt",
+        "sha256": "7821a9518163bedf77afd41fb2fc3486ad0b64006e409d5c9bd6c03fe45790a8",
+        "bytes": 139
       },
-      "stdout": "structured value checks passed: typed IDs, key exclusion, exact Unicode coordinates and strongest literal evidence",
+      "stdout": "structured value checks passed: typed IDs, key exclusion, original Unicode coordinates, checked ancestor paths and 4096-leaf binary lookup",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.rsp",
         "sha256": "5a41c2f591dc0f8417c036140691ba6ec3bc13f1848a4ea7136c646113c4f514",
@@ -204,7 +205,7 @@
         "bytes": 4597
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.complete-native-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.original-member-contexts-result.txt",
         "sha256": "40d1862a6b20808db0be9835c41192c5a9e2c35c0e74eaeb39156cd6b7c18493",
         "bytes": 110
       },
@@ -219,11 +220,11 @@
       "name": "SynapseObservationTests",
       "source": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SynapseObservationTests.lean",
-        "sha256": "d0b6a15486f3f64bbbfb5b1c63f548195918b7a18b100b6c1fac76f447954a8f",
-        "bytes": 6456
+        "sha256": "53a8aa032f50bd7a003ceed3471caa17cc0db3925e6ce19d744a95392ff58140",
+        "bytes": 6827
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.complete-native-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.original-member-contexts-result.txt",
         "sha256": "c235b1007c58b71829e9abe5ad6df9c3ed396b523a33f07ca7cc28748e48c97f",
         "bytes": 125
       },
@@ -242,7 +243,7 @@
         "bytes": 7947
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.complete-native-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.original-member-contexts-result.txt",
         "sha256": "41471031ef1eb3f95ca23a5762216ae4895af09a4be775fd7d6a6e703f7fbe8d",
         "bytes": 169
       },
@@ -261,7 +262,7 @@
         "bytes": 14540
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournalTests.complete-native-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournalTests.original-member-contexts-result.txt",
         "sha256": "c0bf295c58520a76f950a0b5bbde27287495837b1cd6561dd051b1c17dc8f02c",
         "bytes": 188
       },
@@ -280,7 +281,7 @@
         "bytes": 12518
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.complete-native-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.original-member-contexts-result.txt",
         "sha256": "5eca99bc23a69279ba5bb4d4afc2043b03e40c746f3c86f4b2c20d98dd34a462",
         "bytes": 136
       },
@@ -295,15 +296,15 @@
       "name": "SynapseOutputDeliveryTests",
       "source": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SynapseOutputDeliveryTests.lean",
-        "sha256": "645b31c151b1fa7ca9b0fadc587fb9c3f1768acff73790b897ef614edba5a8ee",
-        "bytes": 6601
+        "sha256": "4e29b9aa268b870d007da981cb0d07fc1b266f0dcaf3e828e1d1fd94104486f6",
+        "bytes": 8560
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.complete-native-result.txt",
-        "sha256": "63dbbc6387662d03ea02bc935095739b16a939ac329ff8dc7c9fcbe1b2a58597",
-        "bytes": 162
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.original-member-contexts-result.txt",
+        "sha256": "889d446b74051014e3f191f7999cb14f7902c6e1513e63ee5c42bc9c6e06dce3",
+        "bytes": 174
       },
-      "stdout": "native MCP delivery passed: pre/post events, original JSON selection, exact receipts, long-output reconciliation, atomic budget admission and unchanged authority",
+      "stdout": "native MCP delivery passed: exact field selection without large sibling data, checked ancestor paths, long requested values, receipts, atomic budgets and unchanged authority",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.rsp",
         "sha256": "0511a0854630fe6b60720cbdd02dbc585b351f3714ff83b3e854ea0a6503554e",
@@ -318,7 +319,7 @@
         "bytes": 5278
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.complete-native-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.original-member-contexts-result.txt",
         "sha256": "39db80b1251dfda5f19fd14427a1e4350628f5b65cb71f17c433849ddbeb5cd1",
         "bytes": 161
       },
@@ -438,8 +439,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.o",
-      "sha256": "fdf8d7add7af8fb1fa6dc2b29e22e3c6f2fcc4556664320f4ef08c76e64ed652",
-      "bytes": 69592
+      "sha256": "958a1279e87fb0ee0cd6f661fec9f75279a90627cdd1ca5f1b9a2d5d833f2c15",
+      "bytes": 97256
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_Wire.o",
@@ -708,8 +709,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndex.o",
-      "sha256": "d10345914c0ef283f77aa1b7251c0261a06cbcd9c318b693a1aaf0f3e1fcd979",
-      "bytes": 652272
+      "sha256": "c82f04ae44b73f4577066edad06ebe88a5dc7e3540f66990cfd71bcf20aa9544",
+      "bytes": 659904
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuild.o",
@@ -838,8 +839,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseUsage.o",
-      "sha256": "9f48d8e1308c89f896fca1a380d7bd7982d1937dbfb4eb1e017ee278600d26c8",
-      "bytes": 298000
+      "sha256": "17cd99bc5d61b13b2d624f25ee923068814314fc82d5b4e190ce58bd0e097489",
+      "bytes": 327224
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/CanonicalSourceCache.o",
@@ -853,18 +854,18 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/CanonicalSourceDelivery.o",
-      "sha256": "2ebaaa434265f3a4b56bbcb7d8aeff00a0bf8b286a73591cb51ab81548784bbd",
-      "bytes": 735008
+      "sha256": "ad8d9aca3d9ca34e4a33abf0074affe89fa2d13c3a48ae63e56941c92bfb459d",
+      "bytes": 738032
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommend.o",
-      "sha256": "8a9e67360d84985d4e07203b5486b32f9fe640ee4a9d6b7a71dd88831df05527",
-      "bytes": 312856
+      "sha256": "634d0d4aa9c5e5191cfeed6d30fb028445ba93fd306b92d6d1ce71429857ae8d",
+      "bytes": 321288
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTransport.o",
-      "sha256": "1a6249776377242564bca18ca610f757cbec597b1003eb91ea16902f528a637e",
-      "bytes": 98800
+      "sha256": "a6e16d0765d2f494f7a102620bac879e1386c55afb34bd5cf13b63e1be4ec478",
+      "bytes": 126560
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundles.o",
@@ -883,8 +884,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Handoff.o",
-      "sha256": "3e5db06cdd9199cf50aa94def34a4ad3ed371d85bdc30b3342f462b1eeeb7e1a",
-      "bytes": 4912760
+      "sha256": "4124eb0c66560afd84318d36b7a1bff09d393bf1cf60c97467fc0856def34577",
+      "bytes": 4968856
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_MiniLM.o",
@@ -908,8 +909,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournal.o",
-      "sha256": "84ba624303dea6b648718bb9af3f1441b3e8bc5896418f1a545cc6628ab77ed5",
-      "bytes": 853872
+      "sha256": "1f36987df322b5a74a47a9b565d1d8ef046684ffa458ead47e641587775df0d3",
+      "bytes": 850888
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-reseed-20261024/elision/read-forms/native/Warm.o",
@@ -1343,13 +1344,13 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ObservationContext.o",
-      "sha256": "cb0cffa577a753edf7f20185505e80dfc8fc35592454b7bf9bffced6b5360faa",
-      "bytes": 94224
+      "sha256": "d233db1dcb738157fea4cf9115e281259059191922f4c099d6fc2cec71fc63dd",
+      "bytes": 66096
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalars.o",
-      "sha256": "945c02440d21ed4824828aa517fbf7a3afc935334e7a0c1b99e7c6f48bb2ccae",
-      "bytes": 54736
+      "sha256": "debeda2728178a0f65faca09fbdd361749136f7dcc8b7834b65d52c169f37a42",
+      "bytes": 138992
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.o",
@@ -1358,8 +1359,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.o",
-      "sha256": "b0b471c027c23a51311a2a253d9c4239d39bdb0e360733c56ba1253af96b3c6e",
-      "bytes": 100432
+      "sha256": "e12f67cffb4a4917e7eea4e247740887c27e15f82c0d64d1ba02f5604036221c",
+      "bytes": 106752
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.o",
@@ -1373,82 +1374,160 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.o",
-      "sha256": "9b15741728c09f0985b0d412fa13326a81b2c4e8aa2709fe0df5d1e702ef3fab",
-      "bytes": 236088
+      "sha256": "0c6e9beefa3b5c17396529e82574a2ac321cf970de622a3531a6c3284b414870",
+      "bytes": 236096
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.o",
-      "sha256": "732ae05f0ececd34f7eefe1f8e114059c59e5c4c36f053e63af16039e550506d",
-      "bytes": 86016
+      "sha256": "e32d2193df7acee0977dc228ca3dfcf8c15ba3a9b767a9c34f12453b9d29af1b",
+      "bytes": 113112
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.o",
-      "sha256": "0e9874860182d017e8e44046b67eb9d632b798864c8df5eee4d6f644a95eb16b",
+      "sha256": "d77d29e1dae543300220f213669add5eaa0eeb4da79d83cb450f4c82b66eb45f",
       "bytes": 77776
     }
   ],
   "guards": [
     {
       "record": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-output-delivery.guard.json",
-        "sha256": "62e0a44fce51028dac24c9cf1c76186d1a123c4a799c17fba1bf24be4b4ec069",
-        "bytes": 1277
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-address-core.guard.json",
+        "sha256": "7c2560be3fe741c79b0222af72b4f0c756d404491cb2ac06400e0f92cdc7cdb2",
+        "bytes": 1268
       },
       "state": "finished",
       "exitCode": 1,
-      "sampledPeakRssKiB": 2303328,
+      "sampledPeakRssKiB": 1023696,
       "ownedPids": [
 
       ]
     },
     {
       "record": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-structured-complete-input.guard.json",
-        "sha256": "20646eb198115671de8874fb49ffbbf5fee94183d3bc80b6fe67efe54d2cf89c",
-        "bytes": 1281
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-address-core-checked.guard.json",
+        "sha256": "38b8f5b743d7bcc723336a6224d92b43ae0297ae14db20846957ad582d4917c7",
+        "bytes": 1276
       },
       "state": "finished",
       "exitCode": 0,
-      "sampledPeakRssKiB": 1470512,
+      "sampledPeakRssKiB": 1132704,
       "ownedPids": [
 
       ]
     },
     {
       "record": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-output-delivery-direct.guard.json",
-        "sha256": "d4af9ab89e92e07191be904c32603fcd4f2c014aab992e0a830c612c234a3a34",
-        "bytes": 1198
-      },
-      "state": "finished",
-      "exitCode": 0,
-      "sampledPeakRssKiB": 1948496,
-      "ownedPids": [
-
-      ]
-    },
-    {
-      "record": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-complete-output.guard.json",
-        "sha256": "bbcd8e42630ce3397299cfc01f8cc875f6a935eda14e7ce13939e4279caf68e1",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-field-addresses.guard.json",
+        "sha256": "f7726750384bba5a6e092fcc639e24106958245e2ce2c2166667da6cdff0fb60",
         "bytes": 1280
       },
       "state": "finished",
-      "exitCode": 0,
-      "sampledPeakRssKiB": 1947120,
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1886656,
       "ownedPids": [
 
       ]
     },
     {
       "record": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-complete-output.guard.json",
-        "sha256": "21bd119c4cb9668271e6997ed0a592bf7b1f89ea4bb5d826ffae49b4c3839731",
-        "bytes": 1570
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-field-addresses-hook.guard.json",
+        "sha256": "2917d10334ce45caeace33ee8a7379d5392191b79dd93e6ace6a6358d1ec97e6",
+        "bytes": 1195
       },
       "state": "finished",
       "exitCode": 0,
-      "sampledPeakRssKiB": 1610128,
+      "sampledPeakRssKiB": 1953344,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-field-addresses.guard.json",
+        "sha256": "33c13f3f1c56eeb6d92d0c29a48294d8be04e60760fbc73273697433757a89d7",
+        "bytes": 1587
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1580400,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-field-addresses-final.guard.json",
+        "sha256": "5ed5be12551909f16a408cf7ce7078166da94a9bef1a738b373ce6015bc920c1",
+        "bytes": 1371
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1186720,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-field-addresses-complete.guard.json",
+        "sha256": "69b0813a20a651f5b5b8260dccdef261bdf1c9c8ea0ef005111e70280ad0e025",
+        "bytes": 1289
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1979488,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-member-contexts.guard.json",
+        "sha256": "1ec5d3b1ba5728051f04f78a2ca8eae1290f04bfdbbe0a5822574a83dffd32f1",
+        "bytes": 1588
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1616176,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-original-output-context.guard.json",
+        "sha256": "2f5b4bbc2a02942ff35f7b3f29d68443aeeadfbbe15af7637c01904bbc6c6e6e",
+        "bytes": 1199
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1943040,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-member-output-context.guard.json",
+        "sha256": "ea4a85aa04a5e81d882ec35350bbc80944c70e4b2716567e5f2cb9347ea52afa",
+        "bytes": 1197
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1972896,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-original-member-contexts.guard.json",
+        "sha256": "45bb485e2d389ca1be92038b2dc88158bc6d820cc8046ee06927ff53c5a98751",
+        "bytes": 1606
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1618672,
       "ownedPids": [
 
       ]
@@ -1457,14 +1536,14 @@
   "deliveries": [
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/complete-native-SynapseOutputDeliveryTests/large.egg.delivery.txt",
-        "sha256": "28e3e5d92e601e2d47619471bbf3ecb60cbd2a140bd5b14f4b76dde421828c20",
-        "bytes": 5217
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/original-member-contexts-SynapseOutputDeliveryTests/irrelevant-large.egg.delivery.txt",
+        "sha256": "5721cf36830e662829490437745bf6da3249fdeba38a9694637817aa2d2204a4",
+        "bytes": 368
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/complete-native-SynapseOutputDeliveryTests/large.egg.receipt.json",
-        "sha256": "1c47ea1ba7c97f7e3f7210f49302c36f16c0d748bb4f067a98d8d31290e915f8",
-        "bytes": 1386
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/original-member-contexts-SynapseOutputDeliveryTests/irrelevant-large.egg.receipt.json",
+        "sha256": "365fc6fcaf919dff19893fe6f31975cedf751e215d8438e60a963a266c69b7cf",
+        "bytes": 1785
       },
       "offers": [
         {
@@ -1481,22 +1560,40 @@
             "source": null,
             "priority": 0,
             "kind": "consumption",
-            "evidence": "c54da0bbc5e8689f3a4b3fedef1d836318553071c1a5433687b8d463939b633f"
+            "evidence": "111fa6407408239124ef509203a04e9f225644c0ae38c5a3833e2eaccb0e1ba5"
           },
           "bodyDelivered": true
+        }
+      ],
+      "originals": [
+        {
+          "path": [
+            0,
+            "id"
+          ],
+          "evidence": "111fa6407408239124ef509203a04e9f225644c0ae38c5a3833e2eaccb0e1ba5",
+          "bodyDelivered": true,
+          "binding": {
+            "work": "v9983747746511472433",
+            "owner": "v8632617076027875263",
+            "limit": 5035,
+            "first": 5019,
+            "database": "f077cdc34ccbd20ebdf0f99e610ad49d3119ee86168c249c2bd284f8cc2fd1ac"
+          },
+          "addressDelivered": true
         }
       ]
     },
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/complete-native-SynapseOutputDeliveryTests/small.egg.delivery.txt",
-        "sha256": "2739a853ea2d3d0eba73669f55f50e227c44cbfc988fcc623ba3599f600371b3",
-        "bytes": 175
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/original-member-contexts-SynapseOutputDeliveryTests/selected-large.egg.delivery.txt",
+        "sha256": "a24a988cd42c598a9c0dcb974e76b8da703f72969c13d0a1a967540c12910eec",
+        "bytes": 5494
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/complete-native-SynapseOutputDeliveryTests/small.egg.receipt.json",
-        "sha256": "51e68f2c980a15d4f87e8a605db853891d14f1e66818b65f48724e34e6c29c59",
-        "bytes": 1386
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/original-member-contexts-SynapseOutputDeliveryTests/selected-large.egg.receipt.json",
+        "sha256": "d9626c77bc26ae3bc9d7f817fe8a9a7e71d9ad1b6180ed893607814d276bf988",
+        "bytes": 1792
       },
       "offers": [
         {
@@ -1513,15 +1610,167 @@
             "source": null,
             "priority": 0,
             "kind": "consumption",
-            "evidence": "1beb743f0f590de048e3e26fdc2f36a9175a7ff55b8dbe663b6bb907049fd283"
+            "evidence": "73a800486e265eee9d7104e33873441401b530419082c41b395af17a1e296761"
           },
           "bodyDelivered": true
+        }
+      ],
+      "originals": [
+        {
+          "path": [
+            0,
+            "description"
+          ],
+          "evidence": "73a800486e265eee9d7104e33873441401b530419082c41b395af17a1e296761",
+          "bodyDelivered": true,
+          "binding": {
+            "work": "v9983747746511472433",
+            "owner": "v8632617076027875263",
+            "limit": 5018,
+            "first": 2,
+            "database": "12cc6095dd5455cc239eb0661f5b52ab357f218748dacb88199111fe4507f2c2"
+          },
+          "addressDelivered": true
+        }
+      ]
+    },
+    {
+      "body": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/original-member-contexts-SynapseOutputDeliveryTests/small.egg.delivery.txt",
+        "sha256": "617896de33b8a8b30be868838b7d8dc22e87e4dcbb02d717aaafb7128e9006c1",
+        "bytes": 365
+      },
+      "receipt": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/original-member-contexts-SynapseOutputDeliveryTests/small.egg.receipt.json",
+        "sha256": "74c1ba68d2af37daf664ac43f0cb5d207e9cae66cd16caa07bfe101c15ba47c0",
+        "bytes": 1781
+      },
+      "offers": [
+        {
+          "offer": {
+            "target": {
+              "output": {
+                "producer": {
+                  "useId": "producer",
+                  "turn": "turn",
+                  "session": "mcp-session"
+                }
+              }
+            },
+            "source": null,
+            "priority": 0,
+            "kind": "consumption",
+            "evidence": "6c79cc4128b7b6926ef7685e6d2205339a989801e08afd0c1fff7632f72de64c"
+          },
+          "bodyDelivered": true
+        }
+      ],
+      "originals": [
+        {
+          "path": [
+            0,
+            "id"
+          ],
+          "evidence": "6c79cc4128b7b6926ef7685e6d2205339a989801e08afd0c1fff7632f72de64c",
+          "bodyDelivered": true,
+          "binding": {
+            "work": "v9983747746511472433",
+            "owner": "v5582376009483042294",
+            "limit": 51,
+            "first": 35,
+            "database": "dfe2ef92ef303f5cc6f6172cc7b74eb2c059a24883c0ea77c7cb8624da8fedb2"
+          },
+          "addressDelivered": true
+        }
+      ]
+    },
+    {
+      "body": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/original-member-contexts-SynapseOutputDeliveryTests/two-fields.egg.delivery.txt",
+        "sha256": "8b76d601eed452a85d29c691491b68e60e318fd02054d6ba2a124facf7bff4a1",
+        "bytes": 456
+      },
+      "receipt": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/original-member-contexts-SynapseOutputDeliveryTests/two-fields.egg.receipt.json",
+        "sha256": "45cd58dc225c96c2e162f32218233327e40eedba7b18834a4c1196733af5b1a6",
+        "bytes": 2761
+      },
+      "offers": [
+        {
+          "offer": {
+            "target": {
+              "output": {
+                "producer": {
+                  "useId": "producer",
+                  "turn": "turn",
+                  "session": "mcp-session"
+                }
+              }
+            },
+            "source": null,
+            "priority": 0,
+            "kind": "consumption",
+            "evidence": "54410419c593015842425fcf38fa571fa79e0b0a7b59644eac0a0a2f68aab278"
+          },
+          "bodyDelivered": true
+        },
+        {
+          "offer": {
+            "target": {
+              "output": {
+                "producer": {
+                  "useId": "producer",
+                  "turn": "turn",
+                  "session": "mcp-session"
+                }
+              }
+            },
+            "source": null,
+            "priority": 0,
+            "kind": "consumption",
+            "evidence": "ebc7f316f3f1ad1b8fa5187df6782202f9f2d25674a0df3ab6a984f3b5aed06c"
+          },
+          "bodyDelivered": true
+        }
+      ],
+      "originals": [
+        {
+          "path": [
+            0,
+            "id"
+          ],
+          "evidence": "54410419c593015842425fcf38fa571fa79e0b0a7b59644eac0a0a2f68aab278",
+          "bodyDelivered": true,
+          "binding": {
+            "work": "v9983747746511472433",
+            "owner": "v5582376009483042294",
+            "limit": 51,
+            "first": 35,
+            "database": "69aaa97da145bacd95e0d28f1b1542d6f5d274af60009dec3e6d7408d0f137c4"
+          },
+          "addressDelivered": true
+        },
+        {
+          "path": [
+            0,
+            "description"
+          ],
+          "evidence": "ebc7f316f3f1ad1b8fa5187df6782202f9f2d25674a0df3ab6a984f3b5aed06c",
+          "bodyDelivered": true,
+          "binding": {
+            "work": "v9983747746511472433",
+            "owner": "v5582376009483042294",
+            "limit": 34,
+            "first": 2,
+            "database": "69aaa97da145bacd95e0d28f1b1542d6f5d274af60009dec3e6d7408d0f137c4"
+          },
+          "addressDelivered": true
         }
       ]
     }
   ],
   "transportTestIsNotFullDeliveryRequirement": true,
-  "currentSelectionLimitation": "Smallest JSON container can still contain large irrelevant fields. Long-span completeness is a transport capability test, not an adoption criterion or final context-selection policy.",
+  "currentSelectionLimitation": "Literal consumption identifies observed value use. It does not prove sufficient evidence for the current question. General non-file supports, coquotation and usage, and complete production hook eligibility and cross-chat behavior remain unqualified.",
   "pending": [
     "Non-file support, coquotation and usage feedback",
     "Evidence strength, fan-out normalization and idempotence",
@@ -1529,6 +1778,19 @@
     "Full product runtime qualification and fixed-runtime new-chat acquisition",
     "Matched inclusive input plus output token and quality comparisons for topics 1, 2, 3, both laps, predefined repetitions"
   ],
-  "scope": "Synthetic native journal events and actual compiled hook selector/receipt functions; no external MCP server or complete product hook lifecycle invoked. Source-native authority is unchanged.",
-  "compileFailure": "First actual Handoff compilation exceeded the internal 1536 MiB Lean cap. Successful final build invokes Lean directly with a 3072 MiB internal cap under the same aggregate 3.5 GiB guard. Failure record retained above."
+  "scope": "Synthetic native journal events, the production whole-output planner, actual compiled hook selector and receipt functions; no external MCP server or complete product hook lifecycle invoked. Journal missing=1/partial=2 are intentional negative fixtures, not missing seed events. Source-native authority is unchanged.",
+  "failures": [
+    "Initial core compilation exposed Lean visibility and namespace issues, then passed after correction.",
+    "The initial Handoff extension shadowed its outer range with an inner range; corrected.",
+    "A test link used old generated specializations after the receipt function changed. The build order now compiles all tests after the final product modules.",
+    "The cached character proof needed String.length_toList explicitly; corrected."
+  ],
+  "proofs": [
+    "JsonScalars.address_resolves",
+    "JsonScalars.address_literal_is_original",
+    "ObservationContext.fragment_is_original",
+    "ObservationContext.fragment_has_native_origin",
+    "SharedRangeAdapter.output_context_preserves_control"
+  ],
+  "tokenImprovementMeasured": false
 }

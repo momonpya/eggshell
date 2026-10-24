@@ -2131,3 +2131,28 @@ JSON型・Unicode座標・別フィールド・改変拒否・隣接断片と穴
 docs/synaptic-observation-domain.mdとdocs/candidates/native-observation-review.jsonへ保存する。
 回答モデル・追加seed呼出し0、製品runtime・README実績・release採用0。
 同条件の総トークン・品質比較と全Phases0–6は未完了。全目標active。
+
+## 2026-10-24：JSONの元メンバーと祖先位置を独立した配送単位にする
+
+最小JSONコンテナをコピーする候補は、消費されたIDと同じレコードの大きい説明まで配送していた。
+全量配送を必要条件にせず、元のキーと値の範囲に、配列添字と祖先キーの位置を付ける方式へ改めた。
+値の型・原文リテラル・元キーの接頭辞・解析済みJSON上の位置をLeanで検査する。
+`address_resolves` と `address_literal_is_original` を証明し、別の祖先の同値と混同しない。
+位置順の索引を二分探索し、原文断片と受領本文の文字配列も再利用する。
+
+短い出力や位置なしの出力が従来の全文projectionになっても、元のnative owner・Work・Traceと
+保存済みprovenanceから原文の枠を作り、同じ選択器へ通す。既存の計画キーを維持し、
+membersとvisibleKeysの保持をLeanで証明した。completed・共有ソースの型付き経路へ権限を追加しない。
+
+既存の全文plannerがcontextなしで返す分岐から、実際の選択器・wire費用・受領を検査した。
+5,000文字の無関係フィールドがあるレコードでも、IDの元16文字と祖先位置・出典だけを配送できた。
+長い値自体が消費された場合は元5,016文字が末尾まで届き、同じownerの2フィールドも統合できた。
+位置の改変を拒否し、位置だけを除いた場合は本文あり・位置の文脈なしとして別に記録した。
+4,096値の位置照合を含むLeanテスト8本が成功。最終build最大1,972,896 KiB、検査1,618,672 KiB。
+これらの文字数は輸送の検査であり、総トークンの削減量には代用しない。
+
+全差分・SHA・本文・受領・失敗をdocs/candidates/native-observation-review.jsonへ更新した。
+実MCPサーバー、製品runtime全体、新チャット間の検査は未実施。
+引用・共起・利用の非ファイル対応、伝播強度、追加ソース座標と狭い参照、
+固定runtimeでのseedと全題材・両周の同条件トークン/品質比較は残る。
+回答モデル・追加seed呼出し0、製品runtime・README実績・release採用0。全Phases0–6 active。

@@ -44,10 +44,18 @@ def Plan.ranges (plan : Plan) : List (Value × List (Nat × Nat × Nat)) :=
     (owner.owner.relation, (owner.located.toList.map fun located =>
       (located.offer.priority, located.row.binding.first, located.row.binding.limit)).eraseDups)
 
-def Plan.outputRanges (plan : Plan) : List (Value × List (Nat × Nat × Nat)) :=
+structure OutputRange where
+  priority : Nat
+  first : Nat
+  limit : Nat
+  path : Option (List JsonScalars.Segment)
+  deriving BEq
+
+def Plan.outputRanges (plan : Plan) : List (Value × List OutputRange) :=
   plan.owners.toList.map fun owner =>
     (owner.owner.relation, (owner.outputs.toList.map fun located =>
-      (located.offer.priority,located.fragment.binding.first,located.fragment.binding.limit)).eraseDups)
+      ({priority := located.offer.priority,first := located.fragment.binding.first
+        limit := located.fragment.binding.limit,path := located.fragment.address.map (·.path)} : OutputRange)).eraseDups)
 
 /-- Stored original rows are the only source of transport coordinates.
 Neither a graph hint nor its priority may invent a range or an owner. -/
@@ -83,6 +91,13 @@ def Plan.receipt (plan : Plan) (text : String) : Json :=
     ("complete", toJson plan.complete), ("unsupportedOwners", toJson plan.unsupported),
     ("unlocatedFileOwners",toJson plan.unlocatedFileOwners),
     ("inputs", toJson (plan.results.map Recommend.Result.receipt)),
+    ("originalOutputs",toJson (plan.owners.flatMap fun owner => owner.outputs.map fun located =>
+      Json.mkObj [
+        ("evidence",toJson located.offer.identity), ("binding",toJson located.fragment.binding),
+        ("path",toJson (located.fragment.address.map (fun address => JsonScalars.pathJson address.path))),
+        ("bodyDelivered",toJson (delivery.coversBinding located.fragment.binding)),
+        ("addressDelivered",toJson (located.fragment.address.map (fun address =>
+          delivery.coversAddress located.fragment.binding address.path)))])),
     ("offers", toJson (plan.results.flatMap fun result => result.admitted.map fun offer =>
       let delivered := match offer.target with
         | .file source => covered source delivery.ranges

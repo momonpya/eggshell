@@ -12,6 +12,7 @@ structure Presentation where
   uncertain : Std.HashSet File := {}
   bindings : Array (String × Nat × Nat) := #[]
   uncertainOwners : Std.HashSet String := {}
+  addressed : Array (String × Nat × Nat × List JsonScalars.Segment) := #[]
 
 def caption (text : String) : Option (Nat × Nat × Bool) := do
   if !text.startsWith "  ORIGINAL CHARS [" && !text.startsWith "  CHARS [" then none else do
@@ -37,21 +38,40 @@ def presented (body : String) (docs : Array Document) (reads : Array Read) : Pre
     let blocks := part.splitOn "  GROUNDED OUTCOME\n"
     let some evidence := blocks[1]? | continue
     let evidence := (evidence.splitOn "  TRACE\n").head!
+    let json := JsonScalars.prepare? raw
+    let rawChars := match json with | some index => index.characters | none => raw.toList.toArray
+    let evidenceChars := evidence.toList.toArray
     let mut spans := #[]
+    let mut addressed := #[]
+    let mut path : Option String := none
     let mut bad := false
     for line in textLines evidence do
+      if line.text.startsWith "  JSON PATH " then
+        path := some (String.ofList (line.text.toList.drop "  JSON PATH ".length))
+        continue
       let some (first, limit, decoded) := caption line.text | continue
-      let some segment := scalarSlice raw first limit | bad := true; continue
-      let mut following := String.ofList (evidence.toList.drop line.limit)
+      let location := json.bind (·.cover? first limit)
+      let declared := path
+      path := none
+      if declared.isSome && !location.any (fun address => declared == some address.label) then
+        bad := true
+        continue
+      if !(first < limit && limit ≤ rawChars.size) then bad := true; continue
+      let segment := String.ofList (rawChars.extract first limit).toList
       let marker := "  DECODED JSON STRING DATA\n"
-      let marked := following.startsWith marker
-      if marked then following := String.ofList (following.toList.drop marker.length)
+      let marked := literal evidenceChars line.limit (line.limit+marker.length) marker
       let expected := if decoded || marked then
           (Json.parse ("\"" ++ segment ++ "\"") >>= Json.getStr?).toOption
         else some segment
       let some expected := expected | bad := true; continue
-      if !following.startsWith expected then bad := true; continue
+      let dataStart := line.limit + if marked then marker.length else 0
+      if dataStart+expected.length > evidenceChars.size ||
+          String.ofList (evidenceChars.extract dataStart (dataStart+expected.length)).toList != expected then
+        bad := true
+        continue
       spans := spans.push (first, limit)
+      if let some address := location then
+        if declared == some address.label then addressed := addressed.push (owner,first,limit,address.path)
     if spans.isEmpty then
       let decoded := (layout raw).toOption.map (·.text)
       if !raw.isEmpty && ((evidence.splitOn raw).length > 1 ||
@@ -62,7 +82,9 @@ def presented (body : String) (docs : Array Document) (reads : Array Read) : Pre
       result := {result with uncertainOwners := result.uncertainOwners.insert owner}
       for file in doc.files do result := {result with uncertain := result.uncertain.insert file}
     else
-      result := {result with bindings := result.bindings ++ spans.map (fun (a,b) => (owner,a,b))}
+      result := {result with
+        bindings := result.bindings ++ spans.map (fun (a,b) => (owner,a,b))
+        addressed := result.addressed ++ addressed}
     for row in reads do
       if row.binding.owner == owner && spans.any (fun (first, limit) =>
           first ≤ row.binding.first && row.binding.limit ≤ limit) then
@@ -77,6 +99,11 @@ def Presentation.coversBinding (shown : Presentation) (binding : Binding) : Bool
   let covered := spans.foldl (fun position (first,limit) =>
     if first ≤ position then max position limit else position) binding.first
   return binding.first < binding.limit && binding.limit ≤ covered
+
+def Presentation.coversAddress (shown : Presentation) (binding : Binding) (path : List JsonScalars.Segment) : Bool :=
+  let bindings := shown.addressed.filterMap fun (owner,first,limit,actual) =>
+    if actual == path then some (owner,first,limit) else none
+  {shown with bindings}.coversBinding binding
 
 def compactRanges (ranges : Array Range) : Array Range := Id.run do
   let mut files : Std.HashMap File (Array Range) := {}
@@ -123,6 +150,7 @@ def Feedback.present (feedback : Feedback) (packet : Presentation) : Feedback :=
     ranges := feedback.delivered.ranges ++ packet.ranges
     uncertain := feedback.delivered.uncertain.union packet.uncertain
     bindings := feedback.delivered.bindings ++ packet.bindings
+    addressed := feedback.delivered.addressed ++ packet.addressed
     uncertainOwners := feedback.delivered.uncertainOwners.union packet.uncertainOwners }}
 
 /-- A PreToolUse packet arriving after proposal cannot rewrite what was known. -/

@@ -48,4 +48,26 @@ def main : IO Unit := do
   check ((complete.starts[occurrence "cursor-consumer"]?).any (fun row =>
     row.pending.size == 1 && row.pending.all (fun value => value.edge.term == "73")))
     "choosing a display-text field hid another structured result value"
-  IO.println "structured value checks passed: typed IDs, key exclusion, exact Unicode coordinates and strongest literal evidence"
+  for fixture in #[
+      Json.mkObj [("before",Json.mkObj [("status",toJson "same")]),
+        ("after",Json.mkObj [("status",toJson "same")])],
+      toJson #[Json.mkObj [("a/~\"東京",toJson #[toJson "🙂",toJson (73 : Nat)])],
+        Json.mkObj [("",toJson true),("0",Json.null)]],
+      toJson ((List.range 2048).map fun n => Json.mkObj [("index",toJson n),("value",toJson s!"item-{n}")])
+    ] do
+    let raw := fixture.compress
+    let some indexed := JsonScalars.prepare? raw | throw (IO.userError "valid JSON addresses were rejected")
+    for leaf in indexed.leaves do
+      let scalar := leaf.scalar
+      let some address := indexed.witness? scalar.first scalar.limit |
+        throw (IO.userError "binary lookup missed an original scalar")
+      check (address.leaf.scalar.pathRev == scalar.pathRev &&
+        address.leaf.scalar.contextFirst == scalar.contextFirst)
+        "equal values in different objects lost their distinct original addresses"
+      if scalar.contextFirst < scalar.first then
+        check ((indexed.witness? scalar.contextFirst scalar.first).isNone)
+          "a field name acquired a value witness"
+      let altered := {scalar with pathRev := [.key "absent"]}
+      check ((JsonScalars.Checked.check? indexed.root indexed.characters altered).isNone)
+        "a fabricated ancestor path was accepted"
+  IO.println "structured value checks passed: typed IDs, key exclusion, original Unicode coordinates, checked ancestor paths and 4096-leaf binary lookup"
