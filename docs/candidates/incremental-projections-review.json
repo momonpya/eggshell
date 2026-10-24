@@ -1,0 +1,1029 @@
+{
+  "status": "isolated unadopted incremental projection storage; full-key and scan costs remain",
+  "parentReview": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/paged-matrix-review.json",
+    "sha256": "c641b2afd8dd3aff725add9512e03e3eba0f3ffc3477a9c3be5d26b3cd329736",
+    "bytes": 27261
+  },
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/eggshell",
+    "sha256": "5a4dbe367fa4fdb3ed07d3b41e589d9c439a166ad726ddc3ceb844455cb0cd1b",
+    "bytes": 115596656
+  },
+  "runtimePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/incremental-projections-runtime.patch",
+    "sha256": "923b035ea0d58d9ced09fcc4f330c50ef9a7b99bac53a4048e464390e5cfb27c",
+    "bytes": 36486
+  },
+  "patchApplyArgs": [
+    "--unidiff-zero"
+  ],
+  "sources": [
+    {
+      "name": "Eggshell/VectorMatrix.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/preimages/VectorMatrix.lean",
+        "sha256": "531c5fefd2d959b2805284ad102b89b0aa719ec996420277c208c2cab7f7157d",
+        "bytes": 11806
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/checkout/Eggshell/VectorMatrix.lean",
+        "sha256": "a34e0d946e2146d2616b0c8d6c5954f414c339050f8fb4eb75cc62e9a37b9285",
+        "bytes": 12251
+      }
+    },
+    {
+      "name": "Eggshell/SearchProvider.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/preimages/SearchProvider.lean",
+        "sha256": "a581cd687fa2dd4daa0240bd3f95ad6dcd357015fe777ddaa3e695fa21c0ca2f",
+        "bytes": 43407
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/checkout/Eggshell/SearchProvider.lean",
+        "sha256": "e4571343ca8e10e656194cc0277f97ae287352ba606b90541b2a1672566e18df",
+        "bytes": 42966
+      }
+    },
+    {
+      "name": "tools/research/IncrementalMatrixSmoke.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/checkout/tools/research/IncrementalMatrixSmoke.lean",
+        "sha256": "2f5af83f5171c6400981a07ae65eb6c4584fcbdfd9b8c472d965b30404f4cbfc",
+        "bytes": 10051
+      }
+    },
+    {
+      "name": "tools/research/IncrementalMatrixAudit.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/checkout/tools/research/IncrementalMatrixAudit.lean",
+        "sha256": "0f717eaed6cfb41574b7b73d0303808b7fd354691260f97697247180b363c001",
+        "bytes": 7919
+      }
+    }
+  ],
+  "sourceCopies": [
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/incremental-projections/Eggshell/VectorMatrix.lean",
+      "sha256": "a34e0d946e2146d2616b0c8d6c5954f414c339050f8fb4eb75cc62e9a37b9285",
+      "bytes": 12251
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/incremental-projections/README.md",
+      "sha256": "003a1d470113fc9035245e19e3c86b3889206584dce70a3650a8b1463858efe2",
+      "bytes": 895
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/incremental-projections/tools/research/IncrementalMatrixAudit.lean",
+      "sha256": "0f717eaed6cfb41574b7b73d0303808b7fd354691260f97697247180b363c001",
+      "bytes": 7919
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/incremental-projections/tools/research/IncrementalMatrixSmoke.lean",
+      "sha256": "2f5af83f5171c6400981a07ae65eb6c4584fcbdfd9b8c472d965b30404f4cbfc",
+      "bytes": 10051
+    }
+  ],
+  "artifactPins": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/IncrementalMatrixAudit.rsp",
+      "sha256": "4f410d26fc11dd814573514042802104a78d76b9222941c962706f75b0cf704d",
+      "bytes": 20726
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/IncrementalMatrixSmoke.rsp",
+      "sha256": "8cc7df1738abfa92650a9ec2e2d987bb8e0fa4eb2a54241e75f635ece51819a8",
+      "bytes": 20726
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/audit-2.guard.json",
+      "sha256": "c500e2ef6e6b77a4343fda04eadcdba204701f026c268cbc6aaad9b6efdbfa4b",
+      "bytes": 1632
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/audit-2.log",
+      "sha256": "7d2dd5349e6728f91d3e18870b2e59eca4a91e8163da50254f95d0e102b5ea61",
+      "bytes": 1400
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/audit-2.settings.json",
+      "sha256": "6686753a487437445202ac3928768730532a0ca96dee15e07ca3bee7bf467a55",
+      "bytes": 997
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/audit.guard.json",
+      "sha256": "0be7f71fba22a80d6fc8e2942b302f34c48ba465ae79cc48fbb0f8a424bd5d61",
+      "bytes": 1460
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/audit.log",
+      "sha256": "1878bc9706aec2c951aea06bb63315784971048da8b7055cee2bb5a88687f08c",
+      "bytes": 58
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/audit.settings.json",
+      "sha256": "a1714b29c9710b7b22fe5f5e45387ec81ca6b47239c7098fe8e07db3e1cee928",
+      "bytes": 820
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/boundaries-after.json",
+      "sha256": "e8667fc19a858988d9554a93eabfebdbc7ecef88fef8e294c19f4b5c8ec7e98a",
+      "bytes": 2275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/boundaries-before.json",
+      "sha256": "e8667fc19a858988d9554a93eabfebdbc7ecef88fef8e294c19f4b5c8ec7e98a",
+      "bytes": 2275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build-2.guard.json",
+      "sha256": "e1ebc59c1469ab761a7eddccfc0f266dd380b698cca17ab8e9691d734da4db19",
+      "bytes": 1277
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build-2.log",
+      "sha256": "2434bdaaecd70275119bb74fca1536aa48cf5f0f861dda971338c492c1eb3e83",
+      "bytes": 320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build-2.settings.json",
+      "sha256": "c371272371f5a7938d562b375db645ede168275b35eae808ab34528694392506",
+      "bytes": 480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build-audit.guard.json",
+      "sha256": "2e233261bc8f2e8d603fe45dd9b65e9f557f8662e7ed0c71bb6e6e5768bfa291",
+      "bytes": 1581
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build-audit.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build-audit.settings.json",
+      "sha256": "ca89be39f5bac0eedcf4bbb3bb8cd6be897153d4bb126e5c2aaddd77b14f238e",
+      "bytes": 490
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build-audit.sh",
+      "sha256": "a82820cfbe805bc764430f4bd20bdc6339ea0fdcdbc176cee45c4cfb741b2bd1",
+      "bytes": 458
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build.guard.json",
+      "sha256": "0a9bc61be94443a6b41c7d59f9168edc15fb8e8b021bf5e14a3b494fcc2e552d",
+      "bytes": 1272
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build.log",
+      "sha256": "b57860e624b99802e73d0a0b3e84cbdf26f1c2e406f2c8b21ae26803c9caf8ff",
+      "bytes": 78
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build.settings.json",
+      "sha256": "fb12d2e9502efd14256a9e6d446f3be77ac42856fcb2bed97c1db43ab9a911ec",
+      "bytes": 478
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/build.sh",
+      "sha256": "38d5a43d37647cc550af163ef0a685be0bad5002ecabba899eaf72cbf25a59de",
+      "bytes": 1919
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/check.guard.json",
+      "sha256": "50639456b1ef1a68c4c2a8b5cca3d561d1f2668c2c3f84668af62afc7a44a001",
+      "bytes": 1273
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/check.log",
+      "sha256": "b57860e624b99802e73d0a0b3e84cbdf26f1c2e406f2c8b21ae26803c9caf8ff",
+      "bytes": 78
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/check.settings.json",
+      "sha256": "a03cb5f2041e34cfb2507e97dde2f80339ad3eda200c24f41e26ac1a71b9065a",
+      "bytes": 478
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/check.sh",
+      "sha256": "c9a827738042597e5bd8b807e943a8c93d8e1f1943e5b788f303de73ec689ac0",
+      "bytes": 359
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/contract.log",
+      "sha256": "32b84c07a878eea576eda74e22ce7af3f88f467a0df17d6c65cb6eb2809f1a84",
+      "bytes": 75353
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/failed-audit-helper.json",
+      "sha256": "70514b9b4f8b29b674188b0dcdb3263bdc11025b63a730b325ed973f3ab9b10c",
+      "bytes": 338
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build-2.guard.json",
+      "sha256": "d10ef7cf72d9fe93f94704528f150ead225d2229c0f3d47d11969b64755d4262",
+      "bytes": 1289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build-2.log",
+      "sha256": "7265e8f6b5a05a0453f5dc77c9ced0ff45cf5dc16065632817c218d04296d951",
+      "bytes": 260
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build-2.settings.json",
+      "sha256": "ae56d00051c8d5b8b0ec334e21b78580018f06e463d8a342a98be60f4e448d45",
+      "bytes": 494
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build-3.guard.json",
+      "sha256": "3bd046683604f4b8685064ea274c0ce96c20f719aabb3adf3f6e03c3feff42bd",
+      "bytes": 1586
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build-3.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build-3.settings.json",
+      "sha256": "a1a51b616c9652200b610c86b6a4c6db73ab10fd3e1d90621dd07eb6f4723951",
+      "bytes": 494
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build.guard.json",
+      "sha256": "5594821a2f81e1a43b16f064ff36666969e200fc71468b165922ed2bc013272d",
+      "bytes": 1285
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build.log",
+      "sha256": "d43368c6137bbead65eb793a7fec663400d84573fee9aada68c89149e9caf2fe",
+      "bytes": 93
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build.settings.json",
+      "sha256": "27b13d74529ceaf5e11f57639fb087325dc8ad6cf9a174f8b39f92fb8d9a9d25",
+      "bytes": 492
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/finish-build.sh",
+      "sha256": "6086cc79e106869742c787bf952b21f143127ea4b99edc39876376f51bbc4c86",
+      "bytes": 1414
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/link-inputs.json",
+      "sha256": "487d805d594b563800986adaab0866fa4bf420ab9399afeca206d58415398a8a",
+      "bytes": 43367
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/patch-check.json",
+      "sha256": "01673614c240290bd545e1aa5b3c6d67a734b4d6d7e0df82c5f2ea21f7408b6d",
+      "bytes": 760
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-comparison.json",
+      "sha256": "1c36a575d20153c0f23e5ca6b9efcdf83909120df4f964c40616f4f2339fa215",
+      "bytes": 2931
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-request.json",
+      "sha256": "51941a18ddc7a3902f9e22df89e91f4b91194e74bced36f41a76c614755e1507",
+      "bytes": 2770072
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider.guard.json",
+      "sha256": "9affa031486d58927e499bbcf68daa4715b79485c8708f6cfd097f5e86619b4e",
+      "bytes": 1934
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider.json",
+      "sha256": "97ca1c2b2abf7d5f66be4c4e886a74bc7a98cb5086aa033ed6b5902e06c60499",
+      "bytes": 366745
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider.settings.json",
+      "sha256": "f211a2a7ecb05849e786e50a633be3650b36175193885c010e5e5cff09891941",
+      "bytes": 961
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/retired-derived.json",
+      "sha256": "d978d2b208e5a5fbeaed587ca5ae4c3e0bc57c1d59315735dbc219ddc1212096",
+      "bytes": 3142
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/runtime.rsp",
+      "sha256": "1bc4b8191f8856ce10e6ea1bf9084cfd818f6d7469da1fb88f093fbd73783d74",
+      "bytes": 20708
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/seal.rb",
+      "sha256": "c44328d4a0aa8c54c4a720b7b730e104bbf7328659ef06b873e0f68c0abc037c",
+      "bytes": 5439
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/smoke.guard.json",
+      "sha256": "efeb4fde9d95f4851e1719ba212f652ec071f46d53f05f1bfed55a911609fdd8",
+      "bytes": 1307
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/smoke.log",
+      "sha256": "e682e2ec166acb3347483dbc5df21b5d4d8116d0cac1fee5d5d83e5f24c738bb",
+      "bytes": 1765
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/smoke.settings.json",
+      "sha256": "caadf123e2178044faccc0dd50cfe724f3e7866905f6f900759a6783d60b245d",
+      "bytes": 560
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/source-files-after.json",
+      "sha256": "ab6fb8291ee8e49ef1c6c84976ea39daf54413c8d6d3f5cdd198623c0361109a",
+      "bytes": 1156
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/audit-2/result.json",
+      "sha256": "28d5c8e1baed804a50faa21555769f2b61d1439be1afc26a404c2656a305dcc3",
+      "bytes": 1617
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/smoke/result.json",
+      "sha256": "4a34e8cfd42def9940d56010fd6d02977a9ab38b94911fe3d3953a9d1c96946e",
+      "bytes": 2226
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/preimages/IncrementalMatrixAudit-failed.lean",
+      "sha256": "d8dfdd7bb0907cea7574fe3f23ad11bd95bf7e4a3bfe292856e33847e68c6359",
+      "bytes": 7700
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/preimages/VectorMatrix.lean",
+      "sha256": "531c5fefd2d959b2805284ad102b89b0aa719ec996420277c208c2cab7f7157d",
+      "bytes": 11806
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/preimages/SearchProvider.lean",
+      "sha256": "a581cd687fa2dd4daa0240bd3f95ad6dcd357015fe777ddaa3e695fa21c0ca2f",
+      "bytes": 43407
+    }
+  ],
+  "linkInputs": {
+    "manifest": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/link-inputs.json",
+      "sha256": "487d805d594b563800986adaab0866fa4bf420ab9399afeca206d58415398a8a",
+      "bytes": 43367
+    },
+    "objects": 188
+  },
+  "retainedBuildProducts": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Daemon.c",
+      "sha256": "08047b0af257ef2642b0290ea473eb310fbad383cfdf84a34eaa54433fbb46b5",
+      "bytes": 406191
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Daemon.o",
+      "sha256": "d7437b14f013178c52567a94e0ab052810ed29b79d8a858492d6646a5a0e294d",
+      "bytes": 257312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Handoff.c",
+      "sha256": "72aed5e4ee6a5c001b6f91e65b90ac00858144f4e73198d49f05cadd2f843245",
+      "bytes": 6660173
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Handoff.o",
+      "sha256": "d74ad52484f82e964c91eb2f09909bbf2e72c7b35b1eb87466582a323d7273a5",
+      "bytes": 5037960
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/IncrementalMatrixAudit.c",
+      "sha256": "e8adce7eb3e277cde4364ebe10273e09ee88a0cec971c0573c7017dcab660dc4",
+      "bytes": 234840
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/IncrementalMatrixAudit.o",
+      "sha256": "6228f49b6b993b820156fa9adfeba64605f0edf178963d15c492a9dbccea3f08",
+      "bytes": 137272
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/IncrementalMatrixSmoke.c",
+      "sha256": "b9e51dbd89f4952615f54fd4f09f6f681b2662d3f3fe4ac16886692577153686",
+      "bytes": 309185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/IncrementalMatrixSmoke.o",
+      "sha256": "608818c2200daa8e2d58e45152f3613ffe2ed8ebe4d33a37cd9068c7f355a181",
+      "bytes": 146296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Install.c",
+      "sha256": "18b30c46d18da80acfd322a3c7cad8317bfdbb5c3a65bd6b11f9bac7e396f90e",
+      "bytes": 272000
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Install.o",
+      "sha256": "37cb50fee91c8208b92eb68df6badea65472849ed8ec906eff2ad822a2527562",
+      "bytes": 167760
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Main.c",
+      "sha256": "b3af5b750ae6614226333c9c01c797a1eac2776b88d3b10f7d0c92d192cc1604",
+      "bytes": 96539
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Main.o",
+      "sha256": "6bf8adacb864b67b274189d2131f16ead83d6345fa2eb28e79448bfb9ffa9992",
+      "bytes": 55888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/PluginCli.c",
+      "sha256": "3470b85022297160e8efac363d2964273e06ccd264870946662e4b18f8b604e9",
+      "bytes": 448740
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/PluginCli.o",
+      "sha256": "7113698ff9abaf951b0a7c4b253d19287baf338172571a6a630c7b4e9acb29e5",
+      "bytes": 256960
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/PluginHooks.c",
+      "sha256": "f8dab3fe2035cb6367228aaf46116739dd7edcbac373ea48e1b7535ee52bfc86",
+      "bytes": 845136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/PluginHooks.o",
+      "sha256": "1601ddfa2eab3d4e86ba22d312d9fbf3da5604da73483b4386cb433126f229f6",
+      "bytes": 607472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/SearchProvider.c",
+      "sha256": "5d07eae584009bfffa8b9b2a45f509ca7bc05f1d339b75d10092552c8359e06e",
+      "bytes": 1189129
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/SearchProvider.o",
+      "sha256": "db636dbf123245bb53480edd0d08e70b63cf4155b29ddb9b6dd549073941c715",
+      "bytes": 877064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Setup.c",
+      "sha256": "60372a5d1bedb9b865355810c3cb36af4090024e18339f03769a60d5aa042994",
+      "bytes": 48407
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Setup.o",
+      "sha256": "45e6696b984f36470983b440829f2127fa4fece643d53af367a243ff7cf84841",
+      "bytes": 30440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/VectorMatrix.c",
+      "sha256": "7d37a7b8eae1e582bbdc0f9f52d2fa6041476e3c4dd30e480d900ac7e764138b",
+      "bytes": 280871
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/VectorMatrix.o",
+      "sha256": "cc5f681580eca443da4ac6878ba16ae5912c46f13a03bfc49f5bc50ce73cda2b",
+      "bytes": 227296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Warm.c",
+      "sha256": "d7e3198fa931745dbe0d64863c076e725a6039dbf4f41ff71dd178b72b1fbc5d",
+      "bytes": 369443
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Warm.o",
+      "sha256": "800f32b69a2b5cd50336998a472750be37f92f4eddda78a8a444a5d048af1fe7",
+      "bytes": 265088
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Worker.c",
+      "sha256": "b77b2e301a1a15f918929012868933dcb4e28e38ccc3866393fa2bd052b2ed83",
+      "bytes": 628656
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/Worker.o",
+      "sha256": "611eea4c5ba70cd87ae5112c27ff6f515c6d53924287275c3f40c6e3228e5cce",
+      "bytes": 415040
+    }
+  ],
+  "currentCache": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/owners/503e3afb1389a55919aa618a0263d5707eaf419bb7c32153e0a88ddf6dd11bc4.json",
+      "sha256": "7c9ae5609ac7cb6a8cb07c0d95641602fc94b7da67e5b7e534c99e01d70d8ee4",
+      "bytes": 177
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/9e3d16d56513fd44fb8986ceaa5f0e43d759471e0485d64f6c09b3e50619adde.pages",
+      "sha256": "1be206cadd0efff1ea441ea93edf64e8a35fbdba9cb9ad9689d21ad9761a9ded",
+      "bytes": 68556636
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+      "sha256": "4ca49478e834f9e1f03cc25ffeef10fa0ab8550325f5ae29c0a9010574c7197c",
+      "bytes": 449
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "auditedRawInput": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/derived/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/vectors/b4115ab310d5a6acb83847eb9cab44a5305d043eee7248dbc27691ebb55eae01-a75b1ef2b922a7bea0b837b3e5d998f726194355ca6d7bd4cccae156d8eacdc8.json",
+    "sha256": "6ece467f81087e57188d158ebe1a7df39cddd1d17a56cf9ddbaaed5363cd8f33",
+    "bytes": 6588
+  },
+  "guards": [
+    {
+      "name": "audit-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 536080,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "audit.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 380096,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 2766544,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build-audit.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1522912,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "build.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1143472,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "check.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1148160,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "finish-build-2.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1411776,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "finish-build-3.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1618528,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "finish-build.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 1,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 1393088,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "provider.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 225776,
+        "ownedPids": [
+
+        ]
+      }
+    },
+    {
+      "name": "smoke.guard.json",
+      "result": {
+        "state": "finished",
+        "exitCode": 0,
+        "guardTriggered": false,
+        "sampledPeakRssKiB": 163472,
+        "ownedPids": [
+
+        ]
+      }
+    }
+  ],
+  "actualAudit": {
+    "unchangedViaSearchProvider": {
+      "writtenBytes": 0,
+      "rows": 19969,
+      "reused": 19969,
+      "requested": 19969,
+      "produced": 0,
+      "mode": "warm",
+      "elapsedMs": 9338,
+      "bytes": 61344768,
+      "added": 0
+    },
+    "resumedBaseAfterMissingRawCache": true,
+    "referenceDirectoryOpenMs": 357,
+    "projectedBitsAndCoverageEqual": true,
+    "prepared": {
+      "writtenBytes": 0,
+      "rows": 19968,
+      "reused": 19968,
+      "requested": 19968,
+      "produced": 0,
+      "mode": "warm",
+      "elapsedMs": 8610,
+      "bytes": 61341696,
+      "added": 0
+    },
+    "physicalReadBytes": 68509229,
+    "physicalPageReads": 21259,
+    "originalPrefixAndReferencesUnchanged": true,
+    "originalMs": 5522,
+    "openMs": 2,
+    "openDirectoryPageReads": 4,
+    "oneAdditionViaSearchProvider": {
+      "writtenBytes": 36581,
+      "rows": 19969,
+      "reused": 19968,
+      "requested": 19969,
+      "produced": 1,
+      "mode": "incremental",
+      "elapsedMs": 9264,
+      "bytes": 61344768,
+      "added": 1
+    },
+    "head": {
+      "root": {
+        "rows": 19970,
+        "offset": 68556270,
+        "last": "stats",
+        "height": 3,
+        "first": "row:0006321e469ba6146f9e8b5184b47cf38e261d6f41b3b1bc47fc9d91eb37d4ad",
+        "checksum": "c65c3874140b4cb9a2e93efe8206dda2cc268d8c502a52e3303eb9472231872d",
+        "bytes": 366
+      },
+      "revision": 2,
+      "identity": "9e3d16d56513fd44fb8986ceaa5f0e43d759471e0485d64f6c09b3e50619adde",
+      "bytes": 68556636,
+      "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+    },
+    "checkedKeys": 19969,
+    "candidateMs": 9522,
+    "answeringModelCalls": 0,
+    "allProviderRanksChecked": false,
+    "adopted": false,
+    "addedKey": "a75b1ef2b922a7bea0b837b3e5d998f726194355ca6d7bd4cccae156d8eacdc8"
+  },
+  "component": {
+    "unchanged": {
+      "writtenBytes": 0,
+      "rows": 4097,
+      "reused": 4097,
+      "requested": 4097,
+      "produced": 0,
+      "mode": "warm",
+      "elapsedMs": 1678,
+      "bytes": 12585984,
+      "added": 0
+    },
+    "sameRootWriterExcluded": true,
+    "repair": {
+      "writtenBytes": 3508,
+      "rows": 2,
+      "reused": 1,
+      "requested": 2,
+      "produced": 1,
+      "mode": "incremental",
+      "elapsedMs": 3,
+      "bytes": 6144,
+      "added": 0
+    },
+    "recovery": {
+      "writtenBytes": 31236,
+      "rows": 4099,
+      "reused": 0,
+      "requested": 1,
+      "produced": 1,
+      "mode": "incremental",
+      "elapsedMs": 9,
+      "bytes": 12592128,
+      "added": 1
+    },
+    "pinnedReaderAndIndependentDb": true,
+    "originalBitsEqual": true,
+    "oneAddition": {
+      "writtenBytes": 31216,
+      "rows": 4097,
+      "reused": 4096,
+      "requested": 4097,
+      "produced": 1,
+      "mode": "incremental",
+      "elapsedMs": 1672,
+      "bytes": 12585984,
+      "added": 1
+    },
+    "oldPrefixAndDescriptorsUnchanged": true,
+    "interruptedExit": 137,
+    "initialCases": [
+      {
+        "writtenBytes": 3508,
+        "rows": 1,
+        "reused": 0,
+        "requested": 1,
+        "produced": 1,
+        "mode": "prepared",
+        "elapsedMs": 5,
+        "bytes": 3072,
+        "added": 1
+      },
+      {
+        "writtenBytes": 214473,
+        "rows": 63,
+        "reused": 0,
+        "requested": 63,
+        "produced": 63,
+        "mode": "prepared",
+        "elapsedMs": 30,
+        "bytes": 193536,
+        "added": 63
+      },
+      {
+        "writtenBytes": 217757,
+        "rows": 64,
+        "reused": 0,
+        "requested": 64,
+        "produced": 64,
+        "mode": "prepared",
+        "elapsedMs": 27,
+        "bytes": 196608,
+        "added": 64
+      },
+      {
+        "writtenBytes": 214893,
+        "rows": 65,
+        "reused": 0,
+        "requested": 65,
+        "produced": 65,
+        "mode": "prepared",
+        "elapsedMs": 26,
+        "bytes": 199680,
+        "added": 65
+      },
+      {
+        "writtenBytes": 3374696,
+        "rows": 1025,
+        "reused": 0,
+        "requested": 1025,
+        "produced": 1025,
+        "mode": "prepared",
+        "elapsedMs": 374,
+        "bytes": 3148800,
+        "added": 1025
+      }
+    ],
+    "deltaOnly": {
+      "writtenBytes": 24450,
+      "rows": 4098,
+      "reused": 0,
+      "requested": 1,
+      "produced": 1,
+      "mode": "incremental",
+      "elapsedMs": 6,
+      "bytes": 12589056,
+      "added": 1
+    },
+    "base": {
+      "writtenBytes": 13497294,
+      "rows": 4096,
+      "reused": 0,
+      "requested": 4096,
+      "produced": 4096,
+      "mode": "prepared",
+      "elapsedMs": 1471,
+      "bytes": 12582912,
+      "added": 4096
+    },
+    "answeringModelCalls": 0,
+    "adopted": false
+  },
+  "numericalProvider": {
+    "parsedOutputEqual": true,
+    "allReturnedOrdersEqual": true,
+    "result": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider.json",
+      "sha256": "97ca1c2b2abf7d5f66be4c4e886a74bc7a98cb5086aa033ed6b5902e06c60499",
+      "bytes": 366745
+    },
+    "metrics": [
+      {
+        "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/receipts/6b53d9fa0b4a43ed2e55ff0a8af20eb343800cba44d82d9ebda32358f7fb716a/numerical-93149-2692199739221250.json",
+        "record": {
+          "data": {
+            "corpus": {
+              "documents": 9969,
+              "durableDocuments": 9969,
+              "numerical": true,
+              "purpose": null,
+              "windowReferences": 10000
+            },
+            "counters": {
+              "cacheMs": 6000,
+              "encoder": {
+                "initializeUs": 0,
+                "leaseUs": 0,
+                "modelLoaded": false,
+                "queryEncodeUs": 0,
+                "replies": 40,
+                "requestUs": 74176,
+                "scoreUs": 32981,
+                "sourceEncodeUs": 0,
+                "startupUs": 103993
+              },
+              "matrixOpenMs": 3,
+              "matrixOpens": 2,
+              "matrixRows": 10000,
+              "phase": "encoder-reply",
+              "query": {
+                "absent": 0,
+                "hit": 1,
+                "unusable": 0
+              },
+              "queryInput": {
+                "characters": 96,
+                "embeddedCharacters": 84,
+                "tokenizerMappedCharacters": 84,
+                "tokens": 24,
+                "vectors": 1,
+                "visibleCharacters": 84,
+                "windows": 1
+              },
+              "queryMs": 1,
+              "scoreMs": 729,
+              "scoredWindows": 10000,
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "source": {
+                "absent": 0,
+                "hit": 10000,
+                "unusable": 0
+              },
+              "sourceInput": {
+                "characters": 1866983,
+                "embeddedCharacters": 1655769,
+                "tokenizerMappedCharacters": 1655769,
+                "tokens": 570272,
+                "vectors": 10032,
+                "visibleCharacters": 1655769,
+                "windows": 10000
+              }
+            },
+            "elapsedMs": 6960,
+            "status": "completed"
+          },
+          "observedMs": 2692206699,
+          "pid": 93149,
+          "receipt": "6b53d9fa0b4a43ed2e55ff0a8af20eb343800cba44d82d9ebda32358f7fb716a",
+          "stage": "numerical-93149-2692199739221250"
+        },
+        "sha256": "0163e8e7bfd838b4311f0665feb480a70920050b290d1119c894aec29e8bb477",
+        "bytes": 1115
+      }
+    ],
+    "reference": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/vector-matrix-20261024/audit-10000/reference.json",
+      "sha256": "0345bbac461d0dd012ed311c04c64c151b4c84fd21c6f151a2956b9ac2a08c0e",
+      "bytes": 366744
+    }
+  },
+  "retired": {
+    "reason": "one active prepared private cache; terminal helpers are rebuildable; no archive; original DBs unchanged",
+    "duplicateStore": [
+      {
+        "retiredPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/projection-data/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+        "retainedPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "retiredPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/projection-data/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+        "retainedPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+        "sha256": "4ca49478e834f9e1f03cc25ffeef10fa0ab8550325f5ae29c0a9010574c7197c",
+        "bytes": 449
+      },
+      {
+        "retiredPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/projection-data/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+        "retainedPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "retiredPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/projection-data/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/9e3d16d56513fd44fb8986ceaa5f0e43d759471e0485d64f6c09b3e50619adde.pages",
+        "retainedPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/provider-data/read-cache/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/9e3d16d56513fd44fb8986ceaa5f0e43d759471e0485d64f6c09b3e50619adde.pages",
+        "sha256": "1be206cadd0efff1ea441ea93edf64e8a35fbdba9cb9ad9689d21ad9761a9ded",
+        "bytes": 68556636
+      }
+    ],
+    "helpers": [
+      {
+        "retiredPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/IncrementalMatrixSmoke",
+        "sha256": "fd87b9b57707d518522cc9ee506c48c0792848da53fa121116b61701495f74b0",
+        "bytes": 100842656
+      },
+      {
+        "retiredPath": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/IncrementalMatrixAudit",
+        "sha256": "52464614e8dfc62480344fe9e4f3a51651a1f8a9b479ebcf8de2429f447a6eae",
+        "bytes": 101494880
+      }
+    ]
+  },
+  "proofScope": [
+    "row/statistics codecs",
+    "31 references per bulk frontier level",
+    "old row chunk bytes under append-only premise",
+    "PageMap original IO premises; no complete IO/recognition/recall proof"
+  ],
+  "notEstablished": [
+    "upstream source delta enumeration",
+    "routed query compensation/clustering",
+    "bounded compaction",
+    "typed maintenance debt and timeout invalidation fix",
+    "all-owner hydration removal",
+    "cross-DB projection sharing",
+    "full shared/federated hook lifecycle",
+    "latest 50k useful native delivery/p99",
+    "model tokens/quality improvement",
+    "MCP storage privacy"
+  ],
+  "answeringModelCalls": 0,
+  "newSeeds": 0,
+  "adopted": false
+}

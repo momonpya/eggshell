@@ -154,9 +154,14 @@ corpus/fixed-resource deadline or zero-miss recommendation theorem is claimed.
    predetermined equal replications, inclusive input+output (including cached
    input and failed trials), quality and deadline. Record seed cost separately.
 
-Only the [paged projection component](paged-projection-store.md) has been
-implemented and checked here. It has a full-read regression and is unadopted.
-Incremental deltas, clustering/routing, conservative skip proofs and the complete
-shared/federated hook lifecycle are not implemented by that component. The last
+The [paged projection component](paged-projection-store.md) and subsequent
+[incremental projection writer](incremental-projections.md) are implemented and
+checked in isolation. The latter reuses PageMap's immutable append extents/COW
+root, keeps old projections and publishes counts atomically with rows, without a
+new storage engine. It still verifies all keys supplied by its caller; source
+change coverage, routed query deltas, compaction and clustering are unfinished.
+The full-read regression remains and both candidates are unadopted. Conservative
+skip proofs and the complete shared/federated hook lifecycle are not implemented.
+The last
 actual 50k native hook still fails useful delivery. No answering-model calls or
 new seeds were made for this review, and no token improvement is established.

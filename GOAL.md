@@ -1,5 +1,9 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-24 増分投影をLeanで隔離実装した。既存PageMapの追記blob/COW索引/単一headを使い、別の保存基盤やreadyの二重出版を増やさず、prepareMatrixの全投影再生成を置換した。実10kの19,969投影では不足1行だけを生成・36,581bytes追記し、全bit/被覆と旧prefix/旧参照が一致。再実行の生成/追記は0。合成4096行の差分1keyは6msだが、実DBへ全keyを渡す上流は確認に9.3秒残る。完全読出しもflat5.5秒対候補9.5秒の悪化を保持し、フック高速化と混同しない。
+更新中のreader・同root writer排他・別DB独立・64行追記後の子process強制停止/回復・32KiB行・破損1行だけの修復が成功。通常Leanのcodec/frontier/append時の旧chunk保存の証明とContractAudit成功、IO全体は未証明。最大合計RSSは実監査536,080KiB、guard終了0・残存0。数値providerも全返却順が参照一致し、新matrixから10,000窓を取得、再埋込0。原DB/rootとMiniLM数値境界は不変。
+候補5a4dbe36…は未採用。新しい回答モデル/seed/トークン比較0。次は出版差分/型付き保守負債から必要keyだけを渡す上流、timeout一律失効の除去、全owner復元を除く推薦/認定索引の接続。5万窓の有用配送と全Phases0–6は未完了。docs/incremental-projections.md参照。
+
 2026-10-24 直近の補正：他DBの機構の寄せ集めにせず、Eggshellの核に合わせて単純化する。原文内容の共有・元観測の出典/Exact足跡・証明済みWork e-classの三つの同一性を区別し、原文は共通参照、更新は一つの型付き差分から各索引へ反映する。vectorは同じ実埋込入力/contractの共有、シナプスは根拠原文への到達、等価性は独立した認定を担当する。既存の原文canonical化/内容keyを新発明と呼ばず、全owner復元・DBごとの重複投影・全量再準備を実際に取り除く。追加1件で旧投影を再生成しないこと、許可範囲で同じ入力の参照を増やしても再埋込しないこと、原文読出しが全ownerではなく採用範囲/依存に比例することを先に検査する。効果/新規性は未確認であり、総トークン改善の採用条件は維持する。
 
 2026-10-24 最新DB研究を設計へ反映：Databricks NEAREST BY（2026-10）とLiquid Clustering、Snowflake pruning（2025）、Redshift predicate caching（2024）、LSM-VEC（2025 arXiv）、DynamoDBの一次資料を確認。docs/db-research-decisions.mdに機構・転用・証明義務・未実装を分けて固定した。次の保存構成は不変base＋明示的deltaとし、索引の被覆境界以後の準備済み追加分を別検索して合流する。索引更新の遅れで新しい記憶を黙って除外せず、未埋込みは字句/シナプス/原文照会と明示的負債に残す。追加1keyで全量再生成するprepareMatrixを最初の置換対象にする。

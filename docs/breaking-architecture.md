@@ -15,9 +15,15 @@ serve that model; they are not additional stores or services to install.
 
 The [recent DB research decisions](db-research-decisions.md) map verified
 Databricks, Snowflake, Redshift, DynamoDB and arXiv mechanisms to the execution
-plan. The first incremental prototype uses immutable base segments plus an
-explicit delta, followed by clustered recommendation and deferred original
-loading. This is a design selection; those mechanisms are not yet implemented.
+plan. Immutable stored extents and explicit source-change coverage precede
+clustered recommendation and deferred original loading. The full source-change
+and routed-query mechanisms remain design targets.
+
+The [incremental projection component](incremental-projections.md) now implements
+the first storage step using immutable appended extents and existing COW roots,
+without another segment-catalog engine. It removes full projection reproduction;
+the full-key warm caller, routed query compensation, compaction and owner-loading
+replacement are still unfinished. Its complete-read regression remains recorded.
 
 ## Judgment
 
@@ -184,8 +190,10 @@ distinct costs, rather than treat a hash placement scheme as a semantic search.
   and projections; background compaction merges bounded runs. Keep reader-pinned
   publications and original provenance intact. The current paged projection
   prototype still rebuilds all projections when one missing key appears, because
-  `prepareMatrix` calls `writeUsing` with the complete key list. That API is a
-  component experiment, not the final incremental maintenance design.
+  `prepareMatrix` calls `writeUsing` with the complete key list. The later
+  incremental component replaces that call with `ensureUsing`: unchanged rows
+  are retained, but upstream still supplies full keys and checks their contents.
+  The source-change feed and incremental query coverage remain unfinished.
 - **Bloom filters:** summarize exact keys or lexical terms per immutable segment
   to avoid negative reads. Bind filters to that same segment/publication. A
   missing/invalid filter cannot establish absence. Hash collisions may add IO;
@@ -250,7 +258,8 @@ Capture/maintenance never embed the whole DB inside a foreground hook.
 1. The streaming/paged storage component has passed its bounded component checks;
    its full-read regression is recorded. Reuse appropriate pieces for immutable
    base/delta segments and incremental buckets, rather than another full-scan
-   enlargement. Check that adding one key does not reproduce all old rows.
+   enlargement. The incremental component now passes the no-old-row-production
+   check; connect upstream source changes to delta requests, not a full key scan.
 2. Separate preparation from the measured caller; introduce explicit maintenance
    debt and remove timeout-based invalidation without hiding actual corruption.
 3. Separate indexed authority from bounded recommendation. Replace full owner
