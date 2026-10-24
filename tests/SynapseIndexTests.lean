@@ -15,7 +15,7 @@ private def source (first := 10) (last := 12) : Range :=
 private def occurrence (name : String) : Occurrence := ⟨"session", "turn", name⟩
 
 private def readFact (database owner : String) : Fact :=
-  .read ⟨occurrence owner, source, ⟨database, owner, "work", 0, 100⟩⟩
+  .read {occurrence := occurrence owner,source,binding := ⟨database,owner,"work",0,100⟩}
 
 private def needReader (source : DB.PageMap.Snapshot) (storage := DB.Sidecar.Storage.database)
     (scope := Scope.shared) : IO Reader := do

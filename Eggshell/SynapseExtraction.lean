@@ -94,15 +94,21 @@ structure OutputRow where
 def OutputRow.covers (row : OutputRow) (first limit : Nat) : Bool :=
   row.first ≤ first && first < limit && limit ≤ row.limit && row.source.valid
 
-/-- No whole-reader fallback when a witness cannot be located in original rows. -/
+/-- A verified file row takes precedence over its enclosing native member.
+Otherwise keep the smallest covering span; adding context cannot expand a
+located witness into every enclosing container. -/
 def project (rows : Array OutputRow) (first limit : Nat) : Array Range :=
-  (rows.filter (·.covers first limit)).map (·.source)
+  let file := rows.any fun row => row.covers first limit && row.source.file?.isSome
+  let candidates := rows.filter fun row => row.covers first limit && (!file || row.source.file?.isSome)
+  let initial := (candidates[0]?).map (fun row => row.limit-row.first) |>.getD 0
+  let width := candidates.foldl (fun n row => min n (row.limit-row.first)) initial
+  (candidates.filter (fun row => row.limit-row.first == width)).map (·.source)
 
 theorem project_has_witness {rows : Array OutputRow} {first limit : Nat} {source : Range}
     (present : source ∈ project rows first limit) :
     ∃ row ∈ rows, row.source = source ∧ row.covers first limit = true := by
-  simp only [project, Array.mem_map, Array.mem_filter] at present
-  obtain ⟨row, ⟨member, covers⟩, equal⟩ := present
+  simp only [project, Array.mem_map, Array.mem_filter, Bool.and_eq_true] at present
+  obtain ⟨row, ⟨⟨member, covers, _⟩, _⟩, equal⟩ := present
   exact ⟨row, member, equal, covers⟩
 
 structure Produced where

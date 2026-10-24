@@ -321,8 +321,14 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       -- Foreign private work can label usage of this DB's memory, but cannot
       -- publish its terms or consumption edges into the shared DB lane.
       trace := acceptPublishedOutput localId trace completed
-      if let .ok reads := locateReads recorded.head.identity doc completed then
-        if currentOriginal then locations := locations.insert occurrence (reads.flatMap (·.rows))
+      let located := ObservationContext.locate recorded.head.identity doc completed
+      if currentOriginal then locations := locations.insert occurrence (located.flatMap (·.rows))
+      -- A general result does not state which part was requested as a read.
+      -- Locate all its consumption witnesses, but do not label every returned
+      -- field "missing then read". Native usage needs its own consumption/ACK
+      -- evidence; the certified file-read policy stays explicit here.
+      let reads := located.filter (·.read.source.file?.isSome)
+      if !reads.isEmpty then
         if let some (query, known, _) := starts[occurrence]? then
           let storedIndex ← indexAt? source known
           let mut stored := #[]

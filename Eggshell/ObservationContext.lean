@@ -2,6 +2,7 @@ module
 
 public import Eggshell.SynapseSource
 public import Eggshell.Sha256
+public import Eggshell.SynapseQuotes
 
 @[expose] public section
 
@@ -133,7 +134,7 @@ actual origin remains in the binding and can never certify another Work. -/
 def Fragment.read? (fragment : Fragment doc) : Option {read : Read // read.valid = true} :=
   let source := Range.original (originalSubject fragment.binding.work fragment.raw)
     fragment.binding.first fragment.binding.limit
-  let read : Read := ⟨fragment.occurrence,source,fragment.binding⟩
+  let read : Read := {occurrence := fragment.occurrence,source,binding := fragment.binding}
   if valid : read.valid = true then some ⟨read,valid⟩ else none
 
 /-- Resolve a stored canonical interval only against the same complete
@@ -142,11 +143,120 @@ def Prepared.bindSource? (prepared : Prepared doc) (database : String) (source :
   let .original original := source.subject | none
   if !doc.native || original != prepared.identity || !source.valid then none else do
     let occurrence ← doc.occurrences[0]?
-    let read : Read := ⟨occurrence,source,⟨database,doc.owner,doc.work,source.first-1,source.last⟩⟩
+    let read : Read := {occurrence,source,binding := ⟨database,doc.owner,doc.work,source.first-1,source.last⟩}
     if read.valid then some read else none
 
 def bindSource? (database : String) (doc : Document) (source : Range) : Option Read := do
   let prepared ← prepare? doc
   prepared.bindSource? database source
+
+/-- Transient spellings are hydrated from the original owner. Only their
+digests travel with a persisted Read; hash lookup alone never creates support. -/
+structure Quotation where
+  read : Read
+  text : String
+
+structure Catalog where
+  located : Array LocatedRead := #[]
+  quotations : Array Quotation := #[]
+
+def Catalog.reads (catalog : Catalog) : Array Read := catalog.located.map (·.read)
+
+/-- Certified source rows have disjoint original intervals. Search their
+sorted limits once, instead of scanning the growing native catalog per row. -/
+def fileCovers (rows : Array Read) (first limit : Nat) : Bool := Id.run do
+  let mut lower := 0
+  let mut upper := rows.size
+  while lower < upper do
+    let middle := (lower+upper)/2
+    let some row := rows[middle]? | return false
+    if row.binding.limit < limit then lower := middle+1 else upper := middle
+  return (rows[lower]?).any (fun row => row.binding.first ≤ first && limit ≤ row.binding.limit)
+
+def Catalog.add (catalog : Catalog) (prepared : Prepared doc) (database : String)
+    (files : Array Read) (first limit : Nat) (spellings : Array String) : Catalog := Id.run do
+  if !doc.native || first ≥ limit || limit > prepared.rawChars.size then return catalog
+  -- Preserve an existing certified file row instead of giving it a second,
+  -- larger native identity. General data never requires such certification.
+  if fileCovers files first limit then return catalog
+  let some occurrence := doc.occurrences[0]? | return catalog
+  let spellings := spellings.filter (!·.isEmpty) |>.toList.eraseDups.toArray
+  let read : Read := {
+    occurrence,source := Range.original prepared.identity first limit
+    binding := ⟨database,doc.owner,doc.work,first,limit⟩
+    quotations := spellings.map Quotes.digest |>.toList.eraseDups.toArray}
+  if !read.valid then return catalog
+  let payload := String.ofList (prepared.rawChars.extract first limit).toList
+  return {
+    located := catalog.located.push ⟨read,#[⟨read.source,first,limit⟩],#[read],payload⟩
+    quotations := catalog.quotations ++ spellings.map (fun text => ⟨read,text⟩)}
+
+/-- Enumerate source members/rows once during indexing, independently of tool
+names, command syntax and the presence of files. The immutable subject hash,
+JSON scan and character arrays are shared across all these spans. -/
+def Prepared.catalog (prepared : Prepared doc) (database : String) : Catalog := Id.run do
+  let mut catalog : Catalog := {located := (recordedReads database doc).toOption.getD #[]}
+  let files := (catalog.located.flatMap (·.originalRows)).qsort (fun a b => a.binding.limit < b.binding.limit)
+  if let some index := prepared.json then
+    for leaf in index.leaves do
+      let scalar := leaf.scalar
+      let member := String.ofList (prepared.rawChars.extract scalar.contextFirst scalar.limit).toList
+      let aliases := #[scalar.literal,member] ++ scalar.text.toArray
+      catalog := catalog.add prepared database files scalar.contextFirst scalar.limit aliases
+      if let some text := scalar.text then
+        if text.contains '\n' then
+          for line in textLines text do
+            let some first := scalar.offsets[line.first]? | continue
+            let some limit := scalar.offsets[line.limit]? | continue
+            let raw := String.ofList (prepared.rawChars.extract first limit).toList
+            catalog := catalog.add prepared database files first limit #[line.text,raw]
+    if index.leaves.isEmpty then
+      catalog := catalog.add prepared database files 0 prepared.rawChars.size #[prepared.raw]
+  else
+    for line in textLines prepared.raw do
+      let payload := String.ofList (prepared.rawChars.extract line.first line.limit).toList
+      catalog := catalog.add prepared database files line.first line.limit #[line.text,payload]
+  return catalog
+
+def recorded (database : String) (doc : Document) : Option Catalog := do
+  return (← prepare? doc).catalog database
+
+/-- File certification remains optional. General rows are located only when
+the actual completed call has the complete saved invocation and output. -/
+def locate (database : String) (doc : Document) (trace : Trace) : Array LocatedRead := Id.run do
+  let mut result := (locateReads database doc trace).toOption.getD #[]
+  let some prepared := prepare? doc | return result
+  let .ok (input,format) := invocationData (doc.workText.getD "") | return result
+  let native := (prepared.catalog database).located.filter (·.read.source.file?.isNone)
+  for occurrence in doc.occurrences do
+    let some started := trace.starts[occurrence]? | continue
+    if started.command != input || started.format != format || trace.finished[occurrence]? != some prepared.raw then continue
+    for located in native do
+      let read := {located.read with occurrence}
+      result := result.push {located with read,originalRows := #[read]}
+  return result
+
+/-- Exact quoted spellings provide advisory support/coquotation. The caller
+restricts the catalog to the answer's actual All-reachable source owners.
+This records an observed citation, not the truth or causality of a claim. -/
+def addQuotedAnswer (database : String) (doc : Document) (spellings : Array Quotation)
+    (graph : Graph) : Except String Graph := do
+  let decoded ← layout (doc.source.getD "")
+  let byText := spellings.foldl (fun (map : Std.HashMap String (Array Read)) item =>
+    map.insert item.text (map[item.text]?.getD #[] |>.push item.read)) {}
+  let mut graph := graph
+  let mut position := 0
+  for paragraph in decoded.text.splitOn "\n\n" do
+    let limit := position+paragraph.length
+    if position < limit then
+      let claim : Claim := ⟨database,doc.owner,decoded.offsets[position]!,decoded.offsets[limit]!⟩
+      for quote in Quotes.extract paragraph do
+        for read in byText[quote.text]?.getD #[] do
+          let support ← Support.checked read read.source claim
+          graph ← graph.insert (.supports support)
+          graph ← graph.insert (.coquoted (.claim claim) read.source)
+          graph ← graph.insert (.coquoted (.answer database doc.owner) read.source)
+    position := limit+2
+  return graph
 
 end Eggshell.Synapses.ObservationContext

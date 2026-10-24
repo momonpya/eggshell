@@ -54,8 +54,9 @@ structure TextLine where
 def textLines (text : String) : Array TextLine := Id.run do
   let mut lines := #[]
   let mut position := 0
+  let size := text.length
   for line in text.splitOn "\n" do
-    let limit := min text.length (position + line.length + 1)
+    let limit := min size (position + line.length + 1)
     if position < limit then lines := lines.push ⟨line, position, limit⟩
     position := limit
   return lines
@@ -220,7 +221,7 @@ def recordedRows (database : String) (doc : Document) : Except String (Array Rea
     let source : Range := ⟨files.toArray[0]!, number, number⟩
     let binding : Binding := ⟨database, doc.owner, doc.work,
       decoded.offsets[line.first]!, decoded.offsets[line.limit]!⟩
-    rows := rows.push ⟨occurrence, source, binding⟩
+    rows := rows.push {occurrence,source,binding}
   return rows
 
 def recordedReads (database : String) (doc : Document) : Except String (Array LocatedRead) := do
@@ -278,7 +279,7 @@ def locateReads (database : String) (doc : Document) (trace : Trace) : Except St
         if n == number && b == body then
           some (OutputRow.mk source actualLayout.offsets[actualLine.first]! actualLayout.offsets[actualLine.limit]!)
         else none
-      let recorded : Read := ⟨occurrence, source, binding⟩
+      let recorded : Read := {occurrence,source,binding}
       let located : LocatedRead := ⟨recorded, rows, #[recorded], line.text⟩
       if let some previous := chunks.back? then
         if previous.read.source.subject == .file file && previous.read.source.last + 1 == number &&

@@ -121,10 +121,12 @@ structure Read where
   occurrence : Occurrence
   source : Range
   binding : Binding
+  /-- Selector keys only. Rebuild rechecks the original quoted spelling. -/
+  quotations : Array String := #[]
   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
 
 def Read.valid (read : Read) : Bool :=
-  read.occurrence.valid && read.source.valid && read.binding.valid &&
+  read.occurrence.valid && read.source.valid && read.binding.valid && read.quotations.all digest &&
     match read.source.subject with
     | .file _ => true
     | .original original => original.work == read.binding.work &&

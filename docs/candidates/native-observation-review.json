@@ -1,6 +1,6 @@
 {
-  "status": "isolated immutable file/native subjects, canonical origins and three-relation native transport tested; automatic native support/usage producers and full qualification remain incomplete; unadopted",
-  "previousMilestone": "b7ec38b",
+  "status": "isolated automatic native derivation, explicit quotation/coquotation, incremental and DB-only reconstruction with canonical original-byte delivery tested; generic usage and external freshness validators remain incomplete; unadopted",
+  "previousMilestone": "937f2c9",
   "answeringModelCalls": 0,
   "newSeedCalls": 0,
   "ordinaryRuntimeChanged": false,
@@ -11,8 +11,8 @@
   },
   "patch": {
     "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/native-observation-runtime.patch",
-    "sha256": "1ea32db715b0fb06a78776f1360533af9d3f74a8ad4efb12e8cd00815ccba9ec",
-    "bytes": 95120
+    "sha256": "75527d9cda5d9dc7938ee86f6f129cc98788035eb73a472826d4bd3536c08543",
+    "bytes": 128642
   },
   "patchPreimages": [
     {
@@ -24,8 +24,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Synapses.lean",
-        "sha256": "90cab0839e3422aa43fa0fd3489bfd3a8d86a54aeb27aacba17504c03cc5bf4b",
-        "bytes": 20127
+        "sha256": "d6a2011240d9f723f03479a97b3d3a1d1c3ee974d3f00d99fb5e7c209712a710",
+        "bytes": 20268
       }
     },
     {
@@ -37,8 +37,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SynapseExtraction.lean",
-        "sha256": "837c7be259d2bd602e6f1647ee5a1aecefbe08d968825681827bdb4730568341",
-        "bytes": 15212
+        "sha256": "8088db1820c4e9e9860dda0514d1e55e8e9ab281be670aea2439564a715b8641",
+        "bytes": 15735
       }
     },
     {
@@ -50,8 +50,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SynapseIndex.lean",
-        "sha256": "f544d90e4ebe5571fac67f06cf6f773f7a7919704843f54ccd9d2959a269634b",
-        "bytes": 16486
+        "sha256": "0fc9fda36af20d9066f1584aafb8c737d37b5361f4f628aa39d07dcba57c06d2",
+        "bytes": 16612
       }
     },
     {
@@ -63,8 +63,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SynapseSource.lean",
-        "sha256": "0ec53afe2034515679ecd854a3825e10f0de45b6d9754fa2216d9b52c7132dc2",
-        "bytes": 17092
+        "sha256": "10d7ffb1b02203f4080058aa9c84e823e91019ea07971ab0b3e90c0ad15516e8",
+        "bytes": 17099
       }
     },
     {
@@ -115,8 +115,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SynapseJournal.lean",
-        "sha256": "fbe256d8252add40220b805b968c470bd2bca868c8011437d171cdcf142fdfcd",
-        "bytes": 25506
+        "sha256": "cdd7b15a40a987c23ebe4c1c1420babe9d0687d7a5bf0f64d0daf425dd5c8ba3",
+        "bytes": 25909
       }
     },
     {
@@ -128,8 +128,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/Handoff.lean",
-        "sha256": "47c96fc8790cb6d23f4fab3b2de646481d6b1d041316241b41cec77f7d46b803",
-        "bytes": 467450
+        "sha256": "45956fe553d896747bf2ced1e8dba3fe7fc9c57268bd5815d8ab469f72d43ea6",
+        "bytes": 467602
       }
     },
     {
@@ -159,8 +159,8 @@
       "before": null,
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/ObservationContext.lean",
-        "sha256": "3d7d78c94fe764874a6da4e08119209ee817f85ad0f56eebbd33e4b4b3af6984",
-        "bytes": 7520
+        "sha256": "3453cb71bf6f1e0699adb78a190fdf5d87bb1e520476bebc55503a9212d703a2",
+        "bytes": 13704
       }
     },
     {
@@ -185,8 +185,8 @@
       },
       "candidate": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SynapseBuild.lean",
-        "sha256": "fc2fedc322a050d151759612d5ff358663382532711ec55a2403dbfb5881dfc5",
-        "bytes": 12322
+        "sha256": "ac58cda7131b1fa3ba6f0d2b67ec012d1d46d44390446500561f18ce9c03a063",
+        "bytes": 14532
       }
     },
     {
@@ -214,6 +214,37 @@
         "sha256": "e2364a77c331bc54979a5169cff3c8f6b11c55ce176487d520268e4fb63a0d98",
         "bytes": 5447
       }
+    },
+    {
+      "name": "Eggshell/SynapseQuotes.lean",
+      "before": null,
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SynapseQuotes.lean",
+        "sha256": "35da41b13d19817a33002ad47515cd0aded7b9a41dcab32845a734accd61d47d",
+        "bytes": 1921
+      }
+    },
+    {
+      "name": "tests/SynapseNativeRebuildTests.lean",
+      "before": null,
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SynapseNativeRebuildTests.lean",
+        "sha256": "f2a0f4711d6b657b870fad97e3df07707e943d378f909a53f5a0189506e29684",
+        "bytes": 11778
+      }
+    },
+    {
+      "name": "Eggshell/SynapseProvenance.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-reseed-20261024/elision/read-forms/source-freeze/SynapseProvenance.lean",
+        "sha256": "d2f76f7eb89038ad6f90e81dd739f115090de00c7341ade4323b99044a90fc9e",
+        "bytes": 10430
+      },
+      "candidate": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/Eggshell/SynapseProvenance.lean",
+        "sha256": "8057bf26e0ae276577b6670af23ee18fb7f39a5347c2dbf9072ca88f590ffbb5",
+        "bytes": 10500
+      }
     }
   ],
   "tests": [
@@ -225,34 +256,34 @@
         "bytes": 4739
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.native-automatic-verified-result.txt",
         "sha256": "7821a9518163bedf77afd41fb2fc3486ad0b64006e409d5c9bd6c03fe45790a8",
         "bytes": 139
       },
       "stdout": "structured value checks passed: typed IDs, key exclusion, original Unicode coordinates, checked ancestor paths and 4096-leaf binary lookup",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalarTests.rsp",
-        "sha256": "5a41c2f591dc0f8417c036140691ba6ec3bc13f1848a4ea7136c646113c4f514",
-        "bytes": 22420
+        "sha256": "bf25f5b0c59460d7d44f4b48233fc469f839f239da049596039c234507d03636",
+        "bytes": 22503
       }
     },
     {
       "name": "SynapseInvocationTests",
       "source": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SynapseInvocationTests.lean",
-        "sha256": "a3b45fac10a94e253bb790521809908412dadaae9068c445b6e8098424dd46f9",
-        "bytes": 4597
+        "sha256": "6cfdd57582e63b1d1954bd705ea1dc5d1ef9ecb2f4ded58e9229f9c14ed8b04d",
+        "bytes": 4676
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.native-automatic-verified-result.txt",
         "sha256": "40d1862a6b20808db0be9835c41192c5a9e2c35c0e74eaeb39156cd6b7c18493",
         "bytes": 110
       },
       "stdout": "MCP invocation checks passed: nested arguments, structured results, exact producer/consumer and tool identity",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.rsp",
-        "sha256": "ecbe9d2326871d39779fd68bd51bf42c3f8e6fcfabc1d6bec8bd4b8d17d308fd",
-        "bytes": 22427
+        "sha256": "cd0823e79045d355e33dc1aab625872b81e37e62ca82bcfa9d6fe023bd2dd9ae",
+        "bytes": 22510
       }
     },
     {
@@ -263,15 +294,15 @@
         "bytes": 6827
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.native-automatic-verified-result.txt",
         "sha256": "c235b1007c58b71829e9abe5ad6df9c3ed396b523a33f07ca7cc28748e48c97f",
         "bytes": 125
       },
       "stdout": "generic observation checks passed: JSON context, Unicode offsets, literal/origin validation, byte receipts and MCP transport",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.rsp",
-        "sha256": "17cad874e49d5bad7d0174792978c0c8955a7b943a0ee137f66d8fa10f976876",
-        "bytes": 22428
+        "sha256": "1bc05cc07d5cbcda00c4e367f55f7d3a6121da998c30f150d7c2b3581b79ac07",
+        "bytes": 22511
       }
     },
     {
@@ -282,15 +313,15 @@
         "bytes": 7951
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.native-subject-origins-result.txt",
-        "sha256": "8b670b6a79f60ef7ba271bdb5a41c4df12f15214a4b9dca893a668acdd622937",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.native-automatic-verified-result.txt",
+        "sha256": "1e3d143c259a706cdbb6053f2e413456c60d74869a42a67cf7799c0e5d990499",
         "bytes": 169
       },
-      "stdout": "Lean recommendation tests passed: offers=6 requests=10 bytes=4527; three relations, omitted feedback, original rows, private index pinning, bounds and no graph mutation",
+      "stdout": "Lean recommendation tests passed: offers=6 requests=10 bytes=4543; three relations, omitted feedback, original rows, private index pinning, bounds and no graph mutation",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.rsp",
-        "sha256": "dd67d562b3f6c53ac4524249b1db953b06136f49f7cf8d895f63efa956c504d1",
-        "bytes": 22426
+        "sha256": "a2030b5bb733917a0ee40c356c1bf309e78dfc0081a43c35429b6f8c31dc2334",
+        "bytes": 22509
       }
     },
     {
@@ -301,15 +332,15 @@
         "bytes": 14540
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournalTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournalTests.native-automatic-verified-result.txt",
         "sha256": "c0bf295c58520a76f950a0b5bbde27287495837b1cd6561dd051b1c17dc8f02c",
         "bytes": 188
       },
       "stdout": "native journal checks passed: missing=1 partial=2 consumption=4; immutable retries, deferred publication, exact JSON coordinates, ACK knowledge, uncertainty, repeat and temporal isolation",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournalTests.rsp",
-        "sha256": "cd76fc0f186ac9cb293853415496706b78fdabab6190a93e36322d48c41b5009",
-        "bytes": 22424
+        "sha256": "b886910ca98b7d04816e8e4b9c6aab086988c9ba7785bc8bd88bdc48b59aa130",
+        "bytes": 22507
       }
     },
     {
@@ -320,34 +351,34 @@
         "bytes": 12518
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.native-automatic-verified-result.txt",
         "sha256": "5eca99bc23a69279ba5bb4d4afc2043b03e40c746f3c86f4b2c20d98dd34a462",
         "bytes": 136
       },
       "stdout": "Lean extraction checks passed: literal reads/citations, exact IDs, original Unicode coordinates, actual proposal order and usage labels",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.rsp",
-        "sha256": "d94a51eded3cd805cb4318f16196103e2ffe299ec8ee47a03ef3ea2a9af2df03",
-        "bytes": 22427
+        "sha256": "ebc7e26c1be923409c52caa69418bfa70bc825557e1ee09b81ab338bb832aa83",
+        "bytes": 22510
       }
     },
     {
       "name": "SynapseOutputDeliveryTests",
       "source": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SynapseOutputDeliveryTests.lean",
-        "sha256": "4e29b9aa268b870d007da981cb0d07fc1b266f0dcaf3e828e1d1fd94104486f6",
-        "bytes": 8560
+        "sha256": "e2e934286d64fb8a4e2c47e14c12e6848e0eb8b070489731e026e6d7aeef2ecd",
+        "bytes": 9069
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.native-automatic-verified-result.txt",
         "sha256": "889d446b74051014e3f191f7999cb14f7902c6e1513e63ee5c42bc9c6e06dce3",
         "bytes": 174
       },
       "stdout": "native MCP delivery passed: exact field selection without large sibling data, checked ancestor paths, long requested values, receipts, atomic budgets and unchanged authority",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.rsp",
-        "sha256": "0511a0854630fe6b60720cbdd02dbc585b351f3714ff83b3e854ea0a6503554e",
-        "bytes": 22431
+        "sha256": "c19359a05cde6e50e11488932d214435ea4217e5d8d75b349598833c0fcc1df9",
+        "bytes": 22514
       }
     },
     {
@@ -358,53 +389,53 @@
         "bytes": 5279
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.native-automatic-verified-result.txt",
         "sha256": "39db80b1251dfda5f19fd14427a1e4350628f5b65cb71f17c433849ddbeb5cd1",
         "bytes": 161
       },
       "stdout": "Lean production bundle gate passed: complete two-owner relation, no partial graph bonus, independent numerical base, duplicate relation and exact expansion cost",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.rsp",
-        "sha256": "99cd26aa57df7882644a99170a54521edfd9e05dd25474d0575b28e96005ac5d",
-        "bytes": 22427
+        "sha256": "7c416addef40396ab3725c8d359b71e457b71256fede488b07c7bbe26da994ef",
+        "bytes": 22510
       }
     },
     {
       "name": "SynapseTests",
       "source": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SynapseTests.lean",
-        "sha256": "1346b20ba7c8f07eef59339f8710880900d2fff9caf2ef85c55fe4ba5c91fb7b",
-        "bytes": 5745
+        "sha256": "11b3b262c703ac1bed7fa1d761a701c6f697bc9b9a2f9e801f9288f7825ef1de",
+        "bytes": 5770
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTests.native-automatic-verified-result.txt",
         "sha256": "7f42b8e4ab706e4e6bef7ce68fbdbe462009d276c6a44f39b779068c04fc441a",
         "bytes": 117
       },
       "stdout": "Lean synapse checks passed: cross-session join, immutable events, source boundaries, reverse derivation, coquotation",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTests.rsp",
-        "sha256": "74c73fbb34f5d5c2a97f58b8fec2769c3bed78690f0c17075fae05c13d69dc3e",
-        "bytes": 22417
+        "sha256": "60976faefdbaa4282463ab285cd51c9eb06f7c5aa50c69382b66d1702393bc55",
+        "bytes": 22500
       }
     },
     {
       "name": "SynapseIndexTests",
       "source": {
         "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SynapseIndexTests.lean",
-        "sha256": "2e12fde547b35a928c98050523694c71b4a8ea9a05d7c2aca07ed10e4472499b",
-        "bytes": 9789
+        "sha256": "17bcb2370b96a5be6cb3c9aa94e89fc528d616274569b85343f16acb732c0b84",
+        "bytes": 9804
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndexTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndexTests.native-automatic-verified-result.txt",
         "sha256": "cf94552396cb5bc5909512bd0153934fa76b6dc91e5783a72e0b2d3b450ea228",
         "bytes": 192
       },
       "stdout": "bounded posting scan pages=3; full posting scan pages=90\nnative synaptic index checks passed: atomic delta, idempotence, bounded reads, source invalidation, private usage and cross-chat reuse",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndexTests.rsp",
-        "sha256": "cef44e081f607e74481982d494adb0426f44b2289fccdeadc7a8b7b6e30d3bbd",
-        "bytes": 22422
+        "sha256": "27facc674e84f5deb16786a1d622eec82b175a0f579e12c381ea8a53a5756ba0",
+        "bytes": 22505
       }
     },
     {
@@ -415,15 +446,15 @@
         "bytes": 7835
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuildTests.native-subject-origins-result.txt",
-        "sha256": "2babffa671e0255fdadfe0475f8aaa8e3a6ca96affd21b49cfdceedea70fd40f",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuildTests.native-automatic-verified-result.txt",
+        "sha256": "972554fdadda526ac955def41d6477479dd7bcce2e1517dd040571941012bb51",
         "bytes": 96
       },
-      "stdout": "native builder checks passed: rebuild=10ms warm=1ms added=8ms cited=11ms late=14ms retired=15ms",
+      "stdout": "native builder checks passed: rebuild=10ms warm=1ms added=8ms cited=12ms late=15ms retired=19ms",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuildTests.rsp",
-        "sha256": "846ecb3e9aee41d7dfee5fc05ed1697d7039c4af568d1b70d734c5668faa6bdc",
-        "bytes": 22422
+        "sha256": "ca1f3bb4039a9d022620b2f07d38f9defb66ca2472dcb760f6cc59f26f6e3f6c",
+        "bytes": 22505
       }
     },
     {
@@ -434,18 +465,103 @@
         "bytes": 7994
       },
       "result": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSubjectTests.native-subject-origins-result.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSubjectTests.native-automatic-verified-result.txt",
         "sha256": "c2b2f54e8a05c8c7742d1e6d67c8ba39ab66d548a7359f64a1503dc856b98ce7",
         "bytes": 167
       },
       "stdout": "native subject checks passed: one data class across sessions, real origins, three persistent relations, private feedback, canonical delivery and no authority mutation",
       "linkResponse": {
         "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSubjectTests.rsp",
-        "sha256": "8c5462b50043da17ebd39b801c904ee7057c35f613d5b7b1439078db14f28117",
-        "bytes": 22424
+        "sha256": "bee5cd81126fdbd8eab1fc6473621039765b72b46edfa5158025c790c53620a5",
+        "bytes": 22507
+      }
+    },
+    {
+      "name": "SynapseNativeRebuildTests",
+      "source": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SynapseNativeRebuildTests.lean",
+        "sha256": "f2a0f4711d6b657b870fad97e3df07707e943d378f909a53f5a0189506e29684",
+        "bytes": 11778
+      },
+      "result": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseNativeRebuildTests.native-automatic-verified-result.txt",
+        "sha256": "b18c3d10f3323c8c9795b4a3bdfabea205592fad914829fa54ec3c1ac5e6bbfe",
+        "bytes": 149
+      },
+      "stdout": "automatic native rebuild passed: 2 consumption edges, 3 quote supports, canonical origins, incremental and DB-only equality, fragment recommendation",
+      "linkResponse": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseNativeRebuildTests.rsp",
+        "sha256": "136b33d81324b16ec966fc4d78e3b13c5b6070d3b35c443b22ad8728f5f02522",
+        "bytes": 22513
       }
     }
   ],
+  "portableRegression": {
+    "name": "SynapseProvenanceTests",
+    "source": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-index-20261023/checkout/tests/SynapseProvenanceTests.lean",
+      "sha256": "362896cbba1a4223af98a0c56478f31ea32286c9de4ccb711b2ec4278de221c2",
+      "bytes": 9389
+    },
+    "linkResponse": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.rsp",
+      "sha256": "578e025a267d1f115fdb3e76d3aacfdf8dbfe4c686f41b3b2a4cdc03579ba904",
+      "bytes": 22510
+    },
+    "results": [
+      {
+        "result": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.native-portable-create-result.txt",
+          "sha256": "7635e2af8ba24cc1c13c9822b000c6dce8a201ba4faedaa359dbdd17fa0596d9",
+          "bytes": 113
+        },
+        "stdout": "portable writer checks passed: 1 consumption witnesses; immutable, neutral, clock and insertion-order boundaries"
+      },
+      {
+        "result": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.native-portable-copy-result.txt",
+          "sha256": "cb3b9e60b66d35135ce4f494219215ce03b7ecf7b6149da7889cd0402780d8d4",
+          "bytes": 74
+        },
+        "stdout": "independent DB-only readonly reader passed: facts=4 rebuild=12ms warm=1ms"
+      },
+      {
+        "result": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.native-portable-independent-result.txt",
+          "sha256": "cb3b9e60b66d35135ce4f494219215ce03b7ecf7b6149da7889cd0402780d8d4",
+          "bytes": 74
+        },
+        "stdout": "independent DB-only readonly reader passed: facts=4 rebuild=12ms warm=1ms"
+      }
+    ],
+    "guards": [
+      {
+        "record": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-native-portable-verified.guard.json",
+          "sha256": "c34296bc70655bb821803157baa2606e0b517afba38a4a7f13c8ac222f6afc32",
+          "bytes": 1580
+        },
+        "sampledPeakRssKiB": 1619648,
+        "exitCode": 0,
+        "ownedPids": [
+
+        ]
+      },
+      {
+        "record": {
+          "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-native-portable-private.guard.json",
+          "sha256": "c00cf8a3b469f578847f41c7504f64b84b8aa895128ce44afc9172975dfbec41",
+          "bytes": 1577
+        },
+        "sampledPeakRssKiB": 1543824,
+        "exitCode": 0,
+        "ownedPids": [
+
+        ]
+      }
+    ],
+    "scope": "Original file provenance, immutable clock/order/retraction checks and a DB-only chmod readonly copy reconstructed in another process, including a fresh explicit EGGSHELL_DATA_ROOT. The first subprocess set XDG_DATA_HOME, which Eggshell does not use; the independent subprocess explicitly fixes the actual data root."
+  },
   "linkInputs": [
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/study-resources-20261024/controller/ArtifactHash.o",
@@ -804,33 +920,33 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Synapses.o",
-      "sha256": "63f4ac6a4881c699fb503134775c526b1835e65ab235cc8c6c3aea958c677bd1",
-      "bytes": 1258776
+      "sha256": "872b429182bb16e13b565912d4cb7cab165170fd615e3589697ba14149934250",
+      "bytes": 1293504
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtraction.o",
-      "sha256": "17396a766eab11d357c743bcdab719c0b19fe3f17ae3454da50c12bf171a6d6b",
-      "bytes": 343168
+      "sha256": "82e35bffd0733b080d7084bb258abe7901f6b6c38a6d7fcfcd5fca28ce075d22",
+      "bytes": 353352
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSource.o",
-      "sha256": "582cb243248f279a6764cb0962b3e8d3c2bd40fcc41ebfbe1e0df15102a641d3",
-      "bytes": 510752
+      "sha256": "95f1066b64d890e151421faddda062182fcc4933ebb235fcac26f4f3b2d3cce2",
+      "bytes": 511336
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenance.o",
-      "sha256": "b75a5ee0bc58cd71b2517c9e492a4ddf2cd23f4dc9b6f3354e270e322a580ba4",
-      "bytes": 318472
+      "sha256": "b4e41a75f483d651773c5c0e1dbe8c6d38ab3ff598d71376f4298b0f3a2fbf8b",
+      "bytes": 316512
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndex.o",
-      "sha256": "700c6226b22d0f8b1370c45b72e609d3ad4d1d0975d2ee6486637dca912fc656",
-      "bytes": 665464
+      "sha256": "3640ec22c26d52d0de02d7a91c3165326db2a6ea383d68c0da1ace115948b175",
+      "bytes": 688880
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuild.o",
-      "sha256": "545787d22cc4f688b8a4cadfa03ef1ac0b339dd3707ed7d882fa236a8c4769be",
-      "bytes": 365592
+      "sha256": "3e54ff7ab09d566e35600af9e58dfd1bbf5e01d566e6c79c8162c37849603a16",
+      "bytes": 437968
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/CanonicalSource.o",
@@ -954,13 +1070,13 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseUsage.o",
-      "sha256": "8965fa617b9bc3d341ab7c92766e2aa9be9ac563edaefb4d6f413f740527bfd1",
-      "bytes": 345456
+      "sha256": "b412e607e1a90be39ebf59e09da31227e9024e95947ec973b26f75f24a368af9",
+      "bytes": 346480
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/CanonicalSourceCache.o",
-      "sha256": "772149b08e5002bc9684d7fe3101cfc8948659f439a14c0f0da158238e6e2ce6",
-      "bytes": 179736
+      "sha256": "1d25ac6db7cfecb51eca092b6180d3c6d148c92be45ef6f835c4bbc7f8ac24d5",
+      "bytes": 182024
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/CanonicalSourcePacket.o",
@@ -969,18 +1085,18 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/CanonicalSourceDelivery.o",
-      "sha256": "782ebd5ab36f6422d7e77a25d243f2400d34f5e6c20e08e79dde00a22076eabb",
-      "bytes": 738304
+      "sha256": "153f837609b37dceff68c241d73a8b65008e142f7a151e24f4ab23739a463801",
+      "bytes": 738456
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommend.o",
-      "sha256": "7e8d93867a83e8a6bd8edf90d8ac56e0a59a92351c631cd1172f387b4609785a",
-      "bytes": 326016
+      "sha256": "bb2d206e628d017853e1984ba3766c02400aaadeb993e49ce609359c288f02bc",
+      "bytes": 332200
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTransport.o",
-      "sha256": "7f74e47c585e0bb8660f8bd154ebdfaf17415eacc44ec4fac099b59c604f7cfd",
-      "bytes": 249248
+      "sha256": "919ab4234968edf2a9b10e3d9a8430290f86aed60f9574f059c7fee5fede4b93",
+      "bytes": 248528
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundles.o",
@@ -999,8 +1115,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Handoff.o",
-      "sha256": "4124eb0c66560afd84318d36b7a1bff09d393bf1cf60c97467fc0856def34577",
-      "bytes": 4968856
+      "sha256": "7dc6f33a94fc8ec449c2864cddc2e86221050f8eb83e187e63020e375ced00af",
+      "bytes": 4963432
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_MiniLM.o",
@@ -1024,8 +1140,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournal.o",
-      "sha256": "265ab32d2a5044cdc0fa3db8e8ab130fb62d0af97ecbab908a7167a57c329de5",
-      "bytes": 850896
+      "sha256": "66086020e31ca109380b3a3ef36532b492870210ad1e7154f744d7062f080991",
+      "bytes": 855424
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/synaptic-reseed-20261024/elision/read-forms/native/Warm.o",
@@ -1459,8 +1575,8 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ObservationContext.o",
-      "sha256": "133bf5d8c953080b4217f260aae4f76ced5ba4d14e144d4a28a2601d7fe5bcf9",
-      "bytes": 78960
+      "sha256": "688c20e035e88bc582cfca9d04b3cbeb85432204e0983772fa7f5eaf628d3d33",
+      "bytes": 230328
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalars.o",
@@ -1468,34 +1584,39 @@
       "bytes": 138992
     },
     {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseQuotes.o",
+      "sha256": "17d765ac9c2a542685de1768e04785fa256c1ca1a07eae718cfd37dc6769192d",
+      "bytes": 17240
+    },
+    {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseInvocationTests.o",
-      "sha256": "3035f905f03bde8366bbbf21115ca568e2c9ff599c35fd33327fb4d51735b4d2",
-      "bytes": 72960
+      "sha256": "933f5ab7d8092945b1ed75e64c29bc207f3e47a80d4e925780db8d054192ef2b",
+      "bytes": 85568
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseObservationTests.o",
-      "sha256": "e8105dacaf2f9fc0b236ce13c728583e9e7d2cb0cb59a8c26073ca14ad6a7116",
-      "bytes": 106752
+      "sha256": "6f8d9710114eab90e2c51411f1a79adbd27d576ce0436e4c6b045b673d5ffca3",
+      "bytes": 105264
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseRecommendTests.o",
-      "sha256": "fbb8b45422f894c96f3a4de21113ac14fcb5305e7edca4d898d3d523fabdfff7",
-      "bytes": 104368
+      "sha256": "4943a9b7a706809ec06fd78cc3d22165f0ec44bed1eb88f598023b740dc62c32",
+      "bytes": 103728
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseJournalTests.o",
-      "sha256": "734b6da4880e8eeedec183b4590ef3b7f991ea81003be7817d61d7c4321ce6bf",
-      "bytes": 179960
+      "sha256": "564de3624caef31aa8efb8a4b89f721c142932f401717339504d7b53371cfc13",
+      "bytes": 178888
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtractionTests.o",
-      "sha256": "0c6e9beefa3b5c17396529e82574a2ac321cf970de622a3531a6c3284b414870",
-      "bytes": 236096
+      "sha256": "93a6f6b234198ce6dc0e16b051e172bf491612639cccbfe24080c1d00a3abdec",
+      "bytes": 234168
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseOutputDeliveryTests.o",
-      "sha256": "e32d2193df7acee0977dc228ca3dfcf8c15ba3a9b767a9c34f12453b9d29af1b",
-      "bytes": 113112
+      "sha256": "291422bc6a18f873c497415352c6136e8fbc729fbfdf28542baacbf3418a8c57",
+      "bytes": 124808
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBundleGateTests.o",
@@ -1504,23 +1625,33 @@
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseTests.o",
-      "sha256": "4f6bf258e80138d71be85599b03f967a59e896e4e67436a16e84b64d90eb348c",
-      "bytes": 96336
+      "sha256": "0360a6cdc236c33ed55ede1a23744168b8485b6935e8c21b7cfcc4fa25aa95cf",
+      "bytes": 96520
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseIndexTests.o",
-      "sha256": "f2c0cf70050c10778bc2d41233c4e777b49c9bf50697394c71e0dae5464a125e",
-      "bytes": 120672
+      "sha256": "e196bceffd8c1909e7d69d129dab70e68a15e1e99c0964da2f69bbf2635d28cf",
+      "bytes": 118720
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseBuildTests.o",
-      "sha256": "747832b2abc5a92410237a6ff0643a47a7181d1919e11098b8cea2db38af83c6",
+      "sha256": "fb64150c132bf1142264f894cb1c8e9374571b8f587db22825586fd7d2ed0f9a",
       "bytes": 116240
     },
     {
       "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSubjectTests.o",
-      "sha256": "7405eb4b490b3bb3229b35fc25762103d071f9e589a2bff20c24a94f18aedce6",
-      "bytes": 109832
+      "sha256": "21fbea257c8a6a8331dfbb5b71f2a19a538c604f302c8026f6a49525a8c2d820",
+      "bytes": 110848
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseNativeRebuildTests.o",
+      "sha256": "346f381eba0f766792c7aec5f9793ff3d4b80adb81572fc81001b7e0f6b45d41",
+      "bytes": 193992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseProvenanceTests.o",
+      "sha256": "a773192cbe7a25eb466f1ad7b98227a98ee197369ff66dcf4cb53b841d16f584",
+      "bytes": 135048
     }
   ],
   "guards": [
@@ -1692,19 +1823,162 @@
       "ownedPids": [
 
       ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-portable-native-core.guard.json",
+        "sha256": "116f00d2134a122a587a55854f3778e1643eca2707555b3d8ff48b70d228ac91",
+        "bytes": 1290
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1145856,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-portable-native-core-proof.guard.json",
+        "sha256": "46db4b24a70f9694a4754cfd6a03befe86ca4c5b8bc69395468ecd924e2d3743",
+        "bytes": 1297
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1211888,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-native-automatic.guard.json",
+        "sha256": "e1008a525d6e16a8e0a64beb5cb4223b06b4fed2e887aab5be06234930c394da",
+        "bytes": 1282
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1895248,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-native-automatic-tests.guard.json",
+        "sha256": "51d236854823f0a3b9d42107cd5ccd262baab9dfabe4d41b316138d5aabc8bb9",
+        "bytes": 1290
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1225360,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-native-automatic-final.guard.json",
+        "sha256": "ac0e3a104ad98be9f4c333b47a7be8f5692db04d6dac97918db3f11de4d9a087",
+        "bytes": 1287
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1976032,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-native-automatic-checked.guard.json",
+        "sha256": "aceb072da5147634f87849e4810f7b210adfe4464e53a8b08020671dc62c6ed8",
+        "bytes": 1289
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1952688,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-native-automatic.guard.json",
+        "sha256": "34c34beb971acdb3450f285f0ebd3047e0edd8cba40e64b7930bc1e9b1929c83",
+        "bytes": 1590
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1623088,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-native-automatic-diagnostic.guard.json",
+        "sha256": "3f74970b4cf29e3e2c69cbfa49132dc37a603f1a9485c48bfff16d45a6579672",
+        "bytes": 1435
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 876608,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-native-automatic-diagnostic.guard.json",
+        "sha256": "8cef6e7d2c3d8ee74a7e47476d01fe2fcdff000c95429c2542ced423c85d298a",
+        "bytes": 1591
+      },
+      "state": "finished",
+      "exitCode": 1,
+      "sampledPeakRssKiB": 1615664,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/build-native-automatic-freshness.guard.json",
+        "sha256": "56a0ca830879c85388f0e42c8685984a8ef96874d1ea488ac76c5e2e3b0c9820",
+        "bytes": 1202
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1904432,
+      "ownedPids": [
+
+      ]
+    },
+    {
+      "record": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/test-native-automatic-verified.guard.json",
+        "sha256": "11aa816b8a7cfe6468558da64bff5835ea8b72a65a3788abd3561db196943384",
+        "bytes": 1608
+      },
+      "state": "finished",
+      "exitCode": 0,
+      "sampledPeakRssKiB": 1626000,
+      "ownedPids": [
+
+      ]
     }
   ],
   "deliveries": [
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseOutputDeliveryTests/irrelevant-large.egg.delivery.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/irrelevant-large.egg.delivery.txt",
         "sha256": "5721cf36830e662829490437745bf6da3249fdeba38a9694637817aa2d2204a4",
         "bytes": 368
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseOutputDeliveryTests/irrelevant-large.egg.receipt.json",
-        "sha256": "3e7038fea3ca9f1d970dc016f0f26a03ce7f4994451bcc23c19f90f7f08c9369",
-        "bytes": 1812
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/irrelevant-large.egg.receipt.json",
+        "sha256": "0d3c399e3c991cff9662e182ce25305942ea48fe9b3d70f526e122ebd2be1264",
+        "bytes": 1816
       },
       "offers": [
         {
@@ -1739,7 +2013,7 @@
             "owner": "v8632617076027875263",
             "limit": 5035,
             "first": 5019,
-            "database": "cb9db0bb06a1b1191bfff68ec703fa5f3b18466b4f428af49627ce0b8df043c4"
+            "database": "87fa87e84a4d12a49b7a238fab6e6139a212b82c06486b725c6fa2ceeabffae1"
           },
           "addressDelivered": true
         }
@@ -1747,14 +2021,14 @@
     },
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseOutputDeliveryTests/selected-large.egg.delivery.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/selected-large.egg.delivery.txt",
         "sha256": "a24a988cd42c598a9c0dcb974e76b8da703f72969c13d0a1a967540c12910eec",
         "bytes": 5494
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseOutputDeliveryTests/selected-large.egg.receipt.json",
-        "sha256": "a9bae4466adc176cd3719f060420d16d2527fe805a6bcd5ec7a7ed1526ad760e",
-        "bytes": 1819
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/selected-large.egg.receipt.json",
+        "sha256": "1b91c13c18d3a426996059acf5856aa5ca954dd0613bb57b39bd8e9a0bf2bbd4",
+        "bytes": 1823
       },
       "offers": [
         {
@@ -1789,7 +2063,7 @@
             "owner": "v8632617076027875263",
             "limit": 5018,
             "first": 2,
-            "database": "705787adbb434a8b1c85a1daf245d6e016e9b5c86d33980dd8b0aadc85ebe853"
+            "database": "91e8cfceba954fcfad346d7e79cd0a11503bde1fc8a2e19e4559a40bf1e6a5e6"
           },
           "addressDelivered": true
         }
@@ -1797,14 +2071,14 @@
     },
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseOutputDeliveryTests/small.egg.delivery.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/small.egg.delivery.txt",
         "sha256": "617896de33b8a8b30be868838b7d8dc22e87e4dcbb02d717aaafb7128e9006c1",
         "bytes": 365
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseOutputDeliveryTests/small.egg.receipt.json",
-        "sha256": "79e54c2d00009ddb37cfb0857318a6537331f260abc9e178f8796c5d80895816",
-        "bytes": 1808
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/small.egg.receipt.json",
+        "sha256": "e015fa68484eb25e3ee0826d7297df50f4d33fa75847ecae951935041e82dd31",
+        "bytes": 1812
       },
       "offers": [
         {
@@ -1839,7 +2113,7 @@
             "owner": "v5582376009483042294",
             "limit": 51,
             "first": 35,
-            "database": "c422676b83066e5901222c1048690885fa1ce8269fff8c1c3d77715b57f0c3ee"
+            "database": "5ea95324aa4db933a956155170580db5524487a84c6e6c41bd40f4559501f820"
           },
           "addressDelivered": true
         }
@@ -1847,14 +2121,14 @@
     },
     {
       "body": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseOutputDeliveryTests/two-fields.egg.delivery.txt",
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/two-fields.egg.delivery.txt",
         "sha256": "8b76d601eed452a85d29c691491b68e60e318fd02054d6ba2a124facf7bff4a1",
         "bytes": 456
       },
       "receipt": {
-        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseOutputDeliveryTests/two-fields.egg.receipt.json",
-        "sha256": "a86618f3e2f79eef6971426836615c5197ac89827a17084eaefecc5be2873727",
-        "bytes": 2788
+        "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseOutputDeliveryTests/two-fields.egg.receipt.json",
+        "sha256": "afedf465f4c47dcf63733868f0fc4e6774c8bb03e09edec5710699128375491e",
+        "bytes": 2792
       },
       "offers": [
         {
@@ -1907,7 +2181,7 @@
             "owner": "v5582376009483042294",
             "limit": 51,
             "first": 35,
-            "database": "bb8b25e2752f21bdc9a0df30ac1b2159e5059d624fa7c7c837e839b667b90912"
+            "database": "394b9316fa33e521b647d433a70826dcea0b7d129857a88280b19243c2ea216b"
           },
           "addressDelivered": true
         },
@@ -1923,7 +2197,7 @@
             "owner": "v5582376009483042294",
             "limit": 34,
             "first": 2,
-            "database": "bb8b25e2752f21bdc9a0df30ac1b2159e5059d624fa7c7c837e839b667b90912"
+            "database": "394b9316fa33e521b647d433a70826dcea0b7d129857a88280b19243c2ea216b"
           },
           "addressDelivered": true
         }
@@ -1932,13 +2206,13 @@
   ],
   "canonicalNative": {
     "body": {
-      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseSubjectTests.delivery.txt",
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseSubjectTests.delivery.txt",
       "sha256": "6c14cef898af3dfd356224cc748f3959c6bf4a683879d8d2cde74f51198ea85c",
       "bytes": 798
     },
     "receipt": {
-      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-subject-origins-SynapseSubjectTests.receipt.json",
-      "sha256": "9c48d9cab41cabd45d5fcb222818f66709d80d0bc9e67567d9762200180a6d88",
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseSubjectTests.receipt.json",
+      "sha256": "f29df5723a8103a2057b8b47b6a62916e78f82802fbdd638565f336756a54633",
       "bytes": 16592
     },
     "references": [
@@ -1962,7 +2236,7 @@
             "owner": "v3138673491690376928",
             "limit": 22,
             "first": 1,
-            "database": "201f0e008b16c2091e4aa9207cf69e6617bbfaa5ea7d690f672e30969959b55c"
+            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
           }
         ],
         "bodyDelivered": true
@@ -1987,14 +2261,14 @@
             "owner": "v14061174050173540260",
             "limit": 37,
             "first": 18,
-            "database": "201f0e008b16c2091e4aa9207cf69e6617bbfaa5ea7d690f672e30969959b55c"
+            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
           },
           {
             "work": "v5370592181706687029",
             "owner": "v14892146687930449293",
             "limit": 37,
             "first": 18,
-            "database": "201f0e008b16c2091e4aa9207cf69e6617bbfaa5ea7d690f672e30969959b55c"
+            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
           }
         ],
         "bodyDelivered": true
@@ -2019,14 +2293,14 @@
             "owner": "v14061174050173540260",
             "limit": 17,
             "first": 1,
-            "database": "201f0e008b16c2091e4aa9207cf69e6617bbfaa5ea7d690f672e30969959b55c"
+            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
           },
           {
             "work": "v5370592181706687029",
             "owner": "v14892146687930449293",
             "limit": 17,
             "first": 1,
-            "database": "201f0e008b16c2091e4aa9207cf69e6617bbfaa5ea7d690f672e30969959b55c"
+            "database": "b1310d2becef8cffed4500bfb89ee04b5ea282df43528adaccf0f77dc8f0c2a5"
           }
         ],
         "bodyDelivered": true
@@ -2067,7 +2341,7 @@
           },
           "priority": 0,
           "kind": "support",
-          "evidence": "2f2ea10a81b63af86e9196039b0ca71cd0e3059db12f2b9e141c81ef448ab315"
+          "evidence": "54afae1d01ee5f56f42552a8bcb1ff1883f5673b1ab923c63b0867866815d0e6"
         },
         "bodyDelivered": true
       },
@@ -2105,45 +2379,7 @@
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "4aaffdf664befe31302cff8bdc756fe5055ead05a0409b1e358a25edf72df983"
-        },
-        "bodyDelivered": true
-      },
-      {
-        "offer": {
-          "target": {
-            "range": {
-              "source": {
-                "subject": {
-                  "original": {
-                    "original": {
-                      "work": "v11651003464310237499",
-                      "content": "a7891eae9bd020d5569167a2383fac74638b7117a23b33055c3a44b282878a96",
-                      "chars": 23
-                    }
-                  }
-                },
-                "last": 22,
-                "first": 2
-              }
-            }
-          },
-          "source": {
-            "subject": {
-              "original": {
-                "original": {
-                  "work": "v11651003464310237499",
-                  "content": "a7891eae9bd020d5569167a2383fac74638b7117a23b33055c3a44b282878a96",
-                  "chars": 23
-                }
-              }
-            },
-            "last": 22,
-            "first": 2
-          },
-          "priority": 0,
-          "kind": "coquotation",
-          "evidence": "c54bf65bbf796eab8c8cddd67836b3bdb019905167b98e41fcba48a598d3beaf"
+          "evidence": "1db0e5ccb3f53d0d585d26053601f14a93b9acec060e9cc749e8b1e27cf2dc53"
         },
         "bodyDelivered": true
       },
@@ -2181,7 +2417,45 @@
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "dff7f0f6400425cb1a277054211a375dfd8d488441bd09dc84827df9998fff9f"
+          "evidence": "28e169b4e106afedc9aed833c5826b7dcfc787a3e6ae92ebdbec8e6b6bd1d186"
+        },
+        "bodyDelivered": true
+      },
+      {
+        "offer": {
+          "target": {
+            "range": {
+              "source": {
+                "subject": {
+                  "original": {
+                    "original": {
+                      "work": "v11651003464310237499",
+                      "content": "a7891eae9bd020d5569167a2383fac74638b7117a23b33055c3a44b282878a96",
+                      "chars": 23
+                    }
+                  }
+                },
+                "last": 22,
+                "first": 2
+              }
+            }
+          },
+          "source": {
+            "subject": {
+              "original": {
+                "original": {
+                  "work": "v11651003464310237499",
+                  "content": "a7891eae9bd020d5569167a2383fac74638b7117a23b33055c3a44b282878a96",
+                  "chars": 23
+                }
+              }
+            },
+            "last": 22,
+            "first": 2
+          },
+          "priority": 0,
+          "kind": "coquotation",
+          "evidence": "983da9d317853b9b4d60a92321691ac0e4d9b48b3cf9131f4f0b9cef435f2914"
         },
         "bodyDelivered": true
       },
@@ -2231,13 +2505,13 @@
                 "subject": {
                   "original": {
                     "original": {
-                      "work": "v5370592181706687029",
-                      "content": "ab01f8744a8bf4d70b3adb667540f9c396551e529e858c8a8d675e14f7f51a16",
-                      "chars": 38
+                      "work": "v11651003464310237499",
+                      "content": "a7891eae9bd020d5569167a2383fac74638b7117a23b33055c3a44b282878a96",
+                      "chars": 23
                     }
                   }
                 },
-                "last": 17,
+                "last": 22,
                 "first": 2
               }
             }
@@ -2246,18 +2520,18 @@
             "subject": {
               "original": {
                 "original": {
-                  "work": "v5370592181706687029",
-                  "content": "ab01f8744a8bf4d70b3adb667540f9c396551e529e858c8a8d675e14f7f51a16",
-                  "chars": 38
+                  "work": "v11651003464310237499",
+                  "content": "a7891eae9bd020d5569167a2383fac74638b7117a23b33055c3a44b282878a96",
+                  "chars": 23
                 }
               }
             },
-            "last": 17,
+            "last": 22,
             "first": 2
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "02e3e8b2f79c42dec7049fd30fe640db40093f50483d89c8723edfbdf227915c"
+          "evidence": "1c07fc8352f182c0ab2088382b1d78cd4d2f93fa5ee2cdf9131519e77c941344"
         },
         "bodyDelivered": true
       },
@@ -2295,7 +2569,7 @@
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "15549f30a517888ac643f8748999fb16a04ad042317a86800b514986e7b725a1"
+          "evidence": "4f055417e97eea17a20b3b1cca06dcea93aca16b6427e632eef0b7c393210977"
         },
         "bodyDelivered": true
       },
@@ -2307,13 +2581,13 @@
                 "subject": {
                   "original": {
                     "original": {
-                      "work": "v11651003464310237499",
-                      "content": "a7891eae9bd020d5569167a2383fac74638b7117a23b33055c3a44b282878a96",
-                      "chars": 23
+                      "work": "v5370592181706687029",
+                      "content": "ab01f8744a8bf4d70b3adb667540f9c396551e529e858c8a8d675e14f7f51a16",
+                      "chars": 38
                     }
                   }
                 },
-                "last": 22,
+                "last": 17,
                 "first": 2
               }
             }
@@ -2322,18 +2596,18 @@
             "subject": {
               "original": {
                 "original": {
-                  "work": "v11651003464310237499",
-                  "content": "a7891eae9bd020d5569167a2383fac74638b7117a23b33055c3a44b282878a96",
-                  "chars": 23
+                  "work": "v5370592181706687029",
+                  "content": "ab01f8744a8bf4d70b3adb667540f9c396551e529e858c8a8d675e14f7f51a16",
+                  "chars": 38
                 }
               }
             },
-            "last": 22,
+            "last": 17,
             "first": 2
           },
           "priority": 0,
           "kind": "coquotation",
-          "evidence": "8f8e91f81c7df43aaa8a0ba369d8e4449a163ced6bd813471db6405cba7d3b31"
+          "evidence": "a71bbfa5ce5e47722f7d51b305838cbf0d634b7475c9d84675edb603cf0d3e51"
         },
         "bodyDelivered": true
       },
@@ -2377,27 +2651,613 @@
       }
     ]
   },
+  "automaticNative": {
+    "report": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseNativeRebuildTests/rebuild.json",
+      "sha256": "78d2c2549047d1400d0cdd14cee9d86146617dea069b32b31a872fcdb3c1dfc9",
+      "bytes": 29483
+    },
+    "body": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseNativeRebuildTests/delivery.txt",
+      "sha256": "863acc5ffbf60a0735b8c6e12144f11c5291a23ae41359c88fa7bb8a0ba13c30",
+      "bytes": 805
+    },
+    "receipt": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/native-automatic-verified-SynapseNativeRebuildTests/receipt.json",
+      "sha256": "619e78917ddbfea53c333c97270c22b4b41dd385b7162323cf49b14732f32d7d",
+      "bytes": 17729
+    },
+    "consumption": [
+      {
+        "term": "SECOND_02",
+        "rows": [
+          {
+            "subject": {
+              "original": {
+                "original": {
+                  "work": "v4024735067636115870",
+                  "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
+                  "chars": 79
+                }
+              }
+            },
+            "last": 61,
+            "first": 47
+          }
+        ],
+        "producerFinish": 40,
+        "producer": {
+          "useId": "inspect",
+          "turn": "turn",
+          "session": "first"
+        },
+        "outputLimit": 59,
+        "outputFormat": "json",
+        "outputFirst": 50,
+        "kind": "identifier",
+        "inputLimit": 18,
+        "inputFormat": "json",
+        "inputFirst": 9,
+        "consumerStart": 50,
+        "consumer": {
+          "useId": "follow",
+          "turn": "turn",
+          "session": "first"
+        }
+      },
+      {
+        "term": "\"RECORD_42\"",
+        "rows": [
+          {
+            "subject": {
+              "original": {
+                "original": {
+                  "work": "v9983747746511472433",
+                  "content": "68d010f92fb8969409319ab8b8df001dfd4b799164fa35241c69219492a8774f",
+                  "chars": 5050
+                }
+              }
+            },
+            "last": 5029,
+            "first": 5014
+          }
+        ],
+        "producerFinish": 20,
+        "producer": {
+          "useId": "lookup",
+          "turn": "turn",
+          "session": "first"
+        },
+        "outputLimit": 5029,
+        "outputFormat": "json",
+        "outputFirst": 5018,
+        "kind": "value",
+        "inputLimit": 17,
+        "inputFormat": "json",
+        "inputFirst": 6,
+        "consumerStart": 30,
+        "consumer": {
+          "useId": "inspect",
+          "turn": "turn",
+          "session": "first"
+        }
+      }
+    ],
+    "supports": [
+      {
+        "source": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v9983747746511472433",
+                "content": "68d010f92fb8969409319ab8b8df001dfd4b799164fa35241c69219492a8774f",
+                "chars": 5050
+              }
+            }
+          },
+          "last": 5049,
+          "first": 5031
+        },
+        "read": {
+          "source": {
+            "subject": {
+              "original": {
+                "original": {
+                  "work": "v9983747746511472433",
+                  "content": "68d010f92fb8969409319ab8b8df001dfd4b799164fa35241c69219492a8774f",
+                  "chars": 5050
+                }
+              }
+            },
+            "last": 5049,
+            "first": 5031
+          },
+          "quotations": [
+            "b7aae0f1326a5fe6e5360153f62aebf6f5fbf43d8bd4743ad39fcb9852ccf192",
+            "fb44b5c64dae421c41d82ac17ac9fe0b45a5e62133c70af82e2529494b1a1a21",
+            "332bb1668b2103562077f10ae3c8947bf8599e9ccb498da1f75519ecb1c5bf84"
+          ],
+          "occurrence": {
+            "useId": "lookup",
+            "turn": "turn",
+            "session": "second"
+          },
+          "binding": {
+            "work": "v9983747746511472433",
+            "owner": "v15926828530724936875",
+            "limit": 5049,
+            "first": 5030,
+            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          }
+        },
+        "claim": {
+          "limit": 52,
+          "first": 0,
+          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "answer": "v10761280368815418375"
+        },
+        "cited": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v9983747746511472433",
+                "content": "68d010f92fb8969409319ab8b8df001dfd4b799164fa35241c69219492a8774f",
+                "chars": 5050
+              }
+            }
+          },
+          "last": 5049,
+          "first": 5031
+        },
+        "binding": {
+          "work": "v9983747746511472433",
+          "owner": "v15926828530724936875",
+          "limit": 5049,
+          "first": 5030,
+          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+        }
+      },
+      {
+        "source": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v4024735067636115870",
+                "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
+                "chars": 79
+              }
+            }
+          },
+          "last": 22,
+          "first": 2
+        },
+        "read": {
+          "source": {
+            "subject": {
+              "original": {
+                "original": {
+                  "work": "v4024735067636115870",
+                  "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
+                  "chars": 79
+                }
+              }
+            },
+            "last": 22,
+            "first": 2
+          },
+          "quotations": [
+            "f9bc95b237492a4b9b3c464513f4f545d9252a28ebf64f460031dc66e2ffe976",
+            "a5f9eba9fce6910e4f2d942cf1de9c214dbd4e6b9268c290da39273854a13e9c",
+            "1cdb4b5e3ccd0240e78bcd93e4c453acfee3fba59a65937821a2c4ec9b99a23c"
+          ],
+          "occurrence": {
+            "useId": "inspect",
+            "turn": "turn",
+            "session": "first"
+          },
+          "binding": {
+            "work": "v4024735067636115870",
+            "owner": "v7280590681570043269",
+            "limit": 22,
+            "first": 1,
+            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          }
+        },
+        "claim": {
+          "limit": 52,
+          "first": 0,
+          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "answer": "v10761280368815418375"
+        },
+        "cited": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v4024735067636115870",
+                "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
+                "chars": 79
+              }
+            }
+          },
+          "last": 22,
+          "first": 2
+        },
+        "binding": {
+          "work": "v4024735067636115870",
+          "owner": "v7280590681570043269",
+          "limit": 22,
+          "first": 1,
+          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+        }
+      },
+      {
+        "source": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v9983747746511472433",
+                "content": "68d010f92fb8969409319ab8b8df001dfd4b799164fa35241c69219492a8774f",
+                "chars": 5050
+              }
+            }
+          },
+          "last": 5049,
+          "first": 5031
+        },
+        "read": {
+          "source": {
+            "subject": {
+              "original": {
+                "original": {
+                  "work": "v9983747746511472433",
+                  "content": "68d010f92fb8969409319ab8b8df001dfd4b799164fa35241c69219492a8774f",
+                  "chars": 5050
+                }
+              }
+            },
+            "last": 5049,
+            "first": 5031
+          },
+          "quotations": [
+            "b7aae0f1326a5fe6e5360153f62aebf6f5fbf43d8bd4743ad39fcb9852ccf192",
+            "fb44b5c64dae421c41d82ac17ac9fe0b45a5e62133c70af82e2529494b1a1a21",
+            "332bb1668b2103562077f10ae3c8947bf8599e9ccb498da1f75519ecb1c5bf84"
+          ],
+          "occurrence": {
+            "useId": "lookup",
+            "turn": "turn",
+            "session": "first"
+          },
+          "binding": {
+            "work": "v9983747746511472433",
+            "owner": "v12429964538136669636",
+            "limit": 5049,
+            "first": 5030,
+            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          }
+        },
+        "claim": {
+          "limit": 52,
+          "first": 0,
+          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "answer": "v10761280368815418375"
+        },
+        "cited": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v9983747746511472433",
+                "content": "68d010f92fb8969409319ab8b8df001dfd4b799164fa35241c69219492a8774f",
+                "chars": 5050
+              }
+            }
+          },
+          "last": 5049,
+          "first": 5031
+        },
+        "binding": {
+          "work": "v9983747746511472433",
+          "owner": "v12429964538136669636",
+          "limit": 5049,
+          "first": 5030,
+          "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+        }
+      }
+    ],
+    "build": {
+      "first": {
+        "unsupported": 0,
+        "source": {
+          "root": {
+            "rows": 771,
+            "offset": 49919,
+            "last": "workSurfaces:9:0",
+            "height": 1,
+            "first": "all:0",
+            "checksum": "3cf4e25f6f4074c5e5db179391ed34b69ba476565041e1067787124f946c5299",
+            "bytes": 395
+          },
+          "revision": 2,
+          "identity": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "bytes": 50314,
+          "authority": "native-rebuild"
+        },
+        "provenanceOriginals": 4,
+        "provenanceIgnored": 0,
+        "mode": "rebuild",
+        "index": {
+          "root": {
+            "rows": 117,
+            "offset": 50627,
+            "last": "provenance",
+            "height": 1,
+            "first": "fact:05872fa5c32710e5e759e03e6d652c8660703a92390924093d6690876c6e8ac0",
+            "checksum": "b5017f7cb2296f9393026b818ccb95226bf7af7fb0f752c23a9a8eb2b44f067a",
+            "bytes": 2884
+          },
+          "revision": 1,
+          "identity": "f5e9c0d7af88a82a22d3152b295805ec283eb6a7f080f76855eeb3cd5babc0ec",
+          "bytes": 53511,
+          "authority": "advisory:93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8:recommendations"
+        },
+        "hydrated": 6,
+        "facts": 22,
+        "elapsedMs": 52,
+        "consumptionRebuilt": true,
+        "candidates": 6,
+        "answers": 1
+      },
+      "incremental": {
+        "unsupported": 0,
+        "source": {
+          "root": {
+            "rows": 932,
+            "offset": 106647,
+            "last": "workSurfaces:9:0",
+            "height": 1,
+            "first": "all:0",
+            "checksum": "0001509611415b6f9f57a09d09ebc6e2a7cd9d0e9dd9dd3ac7d5ac70e666efba",
+            "bytes": 519
+          },
+          "revision": 4,
+          "identity": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "bytes": 107166,
+          "authority": "native-rebuild"
+        },
+        "provenanceOriginals": 0,
+        "provenanceIgnored": 0,
+        "mode": "incremental",
+        "index": {
+          "root": {
+            "rows": 131,
+            "offset": 104298,
+            "last": "provenance",
+            "height": 1,
+            "first": "fact:05872fa5c32710e5e759e03e6d652c8660703a92390924093d6690876c6e8ac0",
+            "checksum": "a23f4133ed231329bb90ce7586a88180b1bfbeecf29bdbdfea7c43192a34567b",
+            "bytes": 3101
+          },
+          "revision": 3,
+          "identity": "f5e9c0d7af88a82a22d3152b295805ec283eb6a7f080f76855eeb3cd5babc0ec",
+          "bytes": 107399,
+          "authority": "advisory:93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8:recommendations"
+        },
+        "hydrated": 3,
+        "facts": 26,
+        "elapsedMs": 33,
+        "consumptionRebuilt": false,
+        "candidates": 8,
+        "answers": 1
+      },
+      "copied": {
+        "unsupported": 0,
+        "source": {
+          "root": {
+            "rows": 932,
+            "offset": 106647,
+            "last": "workSurfaces:9:0",
+            "height": 1,
+            "first": "all:0",
+            "checksum": "0001509611415b6f9f57a09d09ebc6e2a7cd9d0e9dd9dd3ac7d5ac70e666efba",
+            "bytes": 519
+          },
+          "revision": 4,
+          "identity": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "bytes": 107166,
+          "authority": "native-rebuild"
+        },
+        "provenanceOriginals": 4,
+        "provenanceIgnored": 0,
+        "mode": "rebuild",
+        "index": {
+          "root": {
+            "rows": 131,
+            "offset": 58352,
+            "last": "provenance",
+            "height": 1,
+            "first": "fact:05872fa5c32710e5e759e03e6d652c8660703a92390924093d6690876c6e8ac0",
+            "checksum": "cd18bed6357c0b680ff6c793f89ea9c83bf304612615fa1accfd041a73107fc8",
+            "bytes": 2885
+          },
+          "revision": 1,
+          "identity": "f3a2cb273fe1bcc0bf971ae04faff878f3759a9918fd7d8b90624f271998d296",
+          "bytes": 61237,
+          "authority": "advisory:93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8:recommendations"
+        },
+        "hydrated": 8,
+        "facts": 26,
+        "elapsedMs": 58,
+        "consumptionRebuilt": true,
+        "candidates": 8,
+        "answers": 3
+      },
+      "private": {
+        "unsupported": 0,
+        "source": {
+          "root": {
+            "rows": 932,
+            "offset": 106647,
+            "last": "workSurfaces:9:0",
+            "height": 1,
+            "first": "all:0",
+            "checksum": "0001509611415b6f9f57a09d09ebc6e2a7cd9d0e9dd9dd3ac7d5ac70e666efba",
+            "bytes": 519
+          },
+          "revision": 4,
+          "identity": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8",
+          "bytes": 107166,
+          "authority": "native-rebuild"
+        },
+        "provenanceOriginals": 4,
+        "provenanceIgnored": 0,
+        "mode": "rebuild",
+        "index": {
+          "root": {
+            "rows": 131,
+            "offset": 58352,
+            "last": "provenance",
+            "height": 1,
+            "first": "fact:05872fa5c32710e5e759e03e6d652c8660703a92390924093d6690876c6e8ac0",
+            "checksum": "cd18bed6357c0b680ff6c793f89ea9c83bf304612615fa1accfd041a73107fc8",
+            "bytes": 2885
+          },
+          "revision": 1,
+          "identity": "52e438d34e640538ab26d7e2b2e991b13d809b658bd3d98696931d9fbfe812f2",
+          "bytes": 61237,
+          "authority": "advisory:93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8:recommendations"
+        },
+        "hydrated": 8,
+        "facts": 26,
+        "elapsedMs": 54,
+        "consumptionRebuilt": true,
+        "candidates": 8,
+        "answers": 3
+      }
+    },
+    "references": [
+      {
+        "source": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v9983747746511472433",
+                "content": "68d010f92fb8969409319ab8b8df001dfd4b799164fa35241c69219492a8774f",
+                "chars": 5050
+              }
+            }
+          },
+          "last": 5049,
+          "first": 5031
+        },
+        "origins": [
+          {
+            "work": "v9983747746511472433",
+            "owner": "v12429964538136669636",
+            "limit": 5049,
+            "first": 5030,
+            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          },
+          {
+            "work": "v9983747746511472433",
+            "owner": "v15926828530724936875",
+            "limit": 5049,
+            "first": 5030,
+            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          }
+        ],
+        "bodyDelivered": true
+      },
+      {
+        "source": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v4024735067636115870",
+                "content": "0f27febed1f0493b07d253641a9abb22f5259535730ef19bbbd1015ccde2ebcc",
+                "chars": 79
+              }
+            }
+          },
+          "last": 22,
+          "first": 2
+        },
+        "origins": [
+          {
+            "work": "v4024735067636115870",
+            "owner": "v7280590681570043269",
+            "limit": 22,
+            "first": 1,
+            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          }
+        ],
+        "bodyDelivered": true
+      },
+      {
+        "source": {
+          "subject": {
+            "original": {
+              "original": {
+                "work": "v9983747746511472433",
+                "content": "68d010f92fb8969409319ab8b8df001dfd4b799164fa35241c69219492a8774f",
+                "chars": 5050
+              }
+            }
+          },
+          "last": 5029,
+          "first": 5014
+        },
+        "origins": [
+          {
+            "work": "v9983747746511472433",
+            "owner": "v12429964538136669636",
+            "limit": 5029,
+            "first": 5013,
+            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          },
+          {
+            "work": "v9983747746511472433",
+            "owner": "v15926828530724936875",
+            "limit": 5029,
+            "first": 5013,
+            "database": "93e4118dd46b34e1e336578b972b654cd193fcd8e66dab1f75698e9c1eb472f8"
+          }
+        ],
+        "bodyDelivered": true
+      }
+    ]
+  },
   "transportTestIsNotFullDeliveryRequirement": true,
-  "currentSelectionLimitation": "Native shared/private facts and canonical delivery are supported by one interval algebra. Automatic non-file quote/usage capture and warm rebuild are not wired. Snapshot identity is not freshness or authority, and literal consumption is not proof of sufficient question evidence.",
+  "currentSelectionLimitation": "Automatic derivation and explicit literal quotation/coquotation rebuild from stored native origins. Quote digests select candidates; exact original spellings and real All reachability are rechecked. Literal consumption or quotation is not proof of sufficient question evidence. Generic missing/read and citation usage capture still needs pre-event input/ACK evidence; returning a field does not label it necessary. Snapshot identity and TTL hints are not freshness or authority.",
   "pending": [
-    "Automatic non-file support/coquotation/usage producers, immutable pre-event knowledge and warm rebuild",
+    "Automatic general-data usage producers with immutable pre-event knowledge, actual consumed spans and verified ACKs",
     "Location postings for changed Work/file subjects instead of exact snapshot-only lookup",
+    "Cancelable external freshness validator adapters, scoped evidence and residual-deadline allocation",
     "Evidence strength, fan-out normalization and idempotence",
     "Command-independent optional source alignment and narrow references",
     "Full product runtime qualification and fixed-runtime new-chat acquisition",
     "Matched inclusive input plus output token and quality comparisons for topics 1, 2, 3, both laps, predefined repetitions"
   ],
-  "scope": "Three synthetic native-format MCP observations were published in a real DB. Consumption came from the literal input/output Trace; support/coquotation and usage were built with checked APIs. Persistent shared/private lookups, original-projection planning, actual compiled selector and receipts were exercised. No external MCP server, real answering run or complete product hook lifecycle was invoked. Journal missing=1/partial=2 are intentional negative fixtures.",
+  "scope": "The original canonical-subject fixture uses checked manual support/coquotation/usage APIs. The new independent fixture stores native MCP observations, actual call intervals, answers and All relations, then automatically derives consumption and explicit quote/coquotation facts, compares incremental and DB-only rebuilds and warms the private read-only index. Actual original-projection selection and original-byte receipts are checked, including exclusion of an irrelevant 5000-character sibling. No external MCP server, answering model, new seed or complete product hook lifecycle is invoked. Journal missing=1/partial=2 are intentional negative fixtures.",
   "failures": [
-    "Initial Subject patterns shadowed constructor names. A stale source copy repeated the same failure once; corrected and added the core to the source synchronization list.",
-    "The new hash factory needed an explicit Sha256 import; corrected.",
-    "New transport records and receipt lists needed layout/parenthesis corrections.",
-    "Legacy file fixtures needed explicit Subject.file constructors; the new test needed an explicit HashMap type.",
-    "Receipt origin counts initially included repeated witnesses; the final typed set records distinct origins only."
+    "Earlier canonical-subject build failures and their raw guards remain recorded.",
+    "The projection proof initially did not reduce Id.run/pure; rewritten as a pure let-expression.",
+    "A test indexed a transient quotation with the partial-array accessor; replaced by explicit checked lookup.",
+    "A new selector fixture needed Lean record indentation and a concrete slice type.",
+    "The first automatic delivery test opened the read-only user lane after warming only the database lane. The diagnostic receipt proved available=false with no index. Added the missing private warm and checks that its facts equal the same frozen publication; both failures retained."
   ],
+  "freshness": {
+    "externalValidatorImplemented": false,
+    "snapshotHashAuthorizesFreshness": false,
+    "ttlAuthorizesCompletion": false,
+    "policyPromptRestrictsNoRecheckToMatched": true,
+    "deadlinePolicy": "Fixed overall hook deadline; future external validators must receive a bounded remaining-time deadline, preserve delivery margin and leave unknown observations advisory.",
+    "source": "https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching"
+  },
   "proofs": [
     "Synapses.original_read_binding",
     "Synapses.Range.intersection_within",
+    "Quotes.quote_is_original",
+    "Extraction.project_has_witness",
     "JsonScalars.address_resolves",
     "JsonScalars.address_literal_is_original",
     "ObservationContext.fragment_is_original",

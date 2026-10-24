@@ -1,7 +1,7 @@
 module
 
 public import Eggshell.GraphStore
-public import Eggshell.SynapseSource
+public import Eggshell.ObservationContext
 
 @[expose] public section
 
@@ -191,7 +191,7 @@ def derive (source : PageMap.Snapshot) : IO Derived := do
     let doc ← checkedDocument reader origin
     let some work := doc.workText | ignored := ignored+1; continue
     let some raw := doc.source | ignored := ignored+1; continue
-    if (workCommand work).toOption.isNone || (layout raw).toOption.isNone then ignored := ignored+1; continue
+    if (invocationData work).toOption.isNone || (layout raw).toOption.isNone then ignored := ignored+1; continue
     docs := docs.insert origin.owner doc
     events := events.push ⟨origin, true⟩ |>.push ⟨origin, false⟩
   events := events.qsort fun a b =>
@@ -209,14 +209,15 @@ def derive (source : PageMap.Snapshot) : IO Derived := do
       trace := {}; locations := {}; group := event.group
     let some doc := docs[event.origin.owner]? | throw (IO.userError "missing original provenance body")
     if event.start then
-      let command ← IO.ofExcept (workCommand (doc.workText.getD ""))
-      trace ← IO.ofExcept (trace.start event.origin.occurrence event.time command)
+      let (input,format) ← IO.ofExcept (invocationData (doc.workText.getD ""))
+      trace ← IO.ofExcept (trace.start event.origin.occurrence event.time input format)
     else
-      let output ← IO.ofExcept (layout (doc.source.getD ""))
-      trace ← IO.ofExcept (trace.finish event.origin.occurrence event.time output.text)
-      if let .ok reads := locateReads source.head.identity doc trace then
-        let rows := reads.filter (·.read.occurrence == event.origin.occurrence) |>.flatMap (·.rows)
-        locations := locations.insert event.origin.occurrence rows
+      let raw := doc.source.getD ""
+      let format := if (Json.parse raw).isOk then DataFormat.json else .text
+      trace ← IO.ofExcept (trace.finish event.origin.occurrence event.time raw format)
+      let reads := ObservationContext.locate source.head.identity doc trace
+      let rows := reads.filter (·.read.occurrence == event.origin.occurrence) |>.flatMap (·.rows)
+      locations := locations.insert event.origin.occurrence rows
   let located ← IO.ofExcept (trace.locate locations)
   return {result with graph := ← IO.ofExcept (result.graph.merge located.graph)}
 

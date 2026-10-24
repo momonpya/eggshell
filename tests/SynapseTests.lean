@@ -13,7 +13,7 @@ private def occurrence (session : String) : Occurrence := ⟨session, "turn", "r
 private def claim (session : String) : Claim := ⟨"database", session, 0, 100⟩
 
 private def readFor (session : String) (range := source) : Read :=
-  ⟨occurrence session, range, ⟨"database", session, "work", 0, 100⟩⟩
+  {occurrence := occurrence session,source := range,binding := ⟨"database",session,"work",0,100⟩}
 
 private def query : String := String.ofList (List.replicate 64 'b')
 

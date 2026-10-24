@@ -41,6 +41,7 @@ private def trial (rootPath : System.FilePath) (description : String)
   let (source,original) ← publish base producer
   let (source,used) ← publish source consumer
   let occurrence := fun (tool : ToolEvent) => Occurrence.mk "mcp-session" "turn" tool.useId
+  let _ ← Build.refresh source .database
   let known ← knowledge source [] false
   let domain := String.ofList (List.replicate 64 'a')
   let query := String.ofList (List.replicate 64 'b')
@@ -52,7 +53,15 @@ private def trial (rootPath : System.FilePath) (description : String)
   let replayed ← replay source events ((← IO.monoMsNow)+5000)
   check (replayed.consumed.size == (if consumeBoth then 2 else 1) && replayed.pending == 0 && replayed.unknown == 0)
     "native pre/post events did not form their exact consumption edge"
-  let _ ← Index.replace source .database .shared replayed.consumed
+  check (replayed.consumed.all fun fact => match fact with
+    | .consumed edge => !edge.rows.isEmpty
+    | _ => false) "live generic replay lost its original row coordinates"
+  -- Exercise the still-supported unlocated-witness lane explicitly. The
+  -- automatic located lane and DB-only reconstruction have a separate test.
+  let unlocated := replayed.consumed.map fun fact => match fact with
+    | .consumed edge => .consumed {edge with rows := #[]}
+    | other => other
+  let _ ← Index.replace source .database .shared unlocated
   let prepared ← Recommend.prepare source true
   let before := source.head
   let plan ← Synapses.Transport.build #[prepared] #[(Persistence.selectionKey used.original.relation,0)]

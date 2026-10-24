@@ -46,6 +46,7 @@ def main (args : List String) : IO Unit := do
   let base ← DB.PageMap.create (.mk rootPath) "mcp-invocation-fixture"
   let source ← store (← store base producer) consumer
   let occurrence := fun (tool : Plugin.ToolEvent) => Occurrence.mk "mcp-session" "turn" tool.useId
+  let _ ← Build.refresh source .database
   let known ← knowledge source [] false
   let events := #[
     Entry.mk ⟨domain,10⟩ (.start (occurrence producer) (Plugin.canonicalToolWork producer) query known),
@@ -58,7 +59,7 @@ def main (args : List String) : IO Unit := do
   let edges := result.consumed.filterMap fun fact => match fact with
     | .consumed edge => some edge | _ => none
   check (edges.size == 1 && edges.all (fun edge => edge.kind == .value &&
-    edge.term == (toJson "RECORD_42").compress && edge.rows.isEmpty &&
+    edge.term == (toJson "RECORD_42").compress && !edge.rows.isEmpty && edge.rows.all (·.file?.isNone) &&
     edge.producer == occurrence producer && edge.consumer == occurrence consumer))
     "structured MCP output did not produce its exact argument-consumption witness"
   let altered := {consumer with name := "mcp__different_server__inspect"}

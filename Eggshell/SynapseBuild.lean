@@ -106,6 +106,9 @@ structure Result where
   index : PageMap.Head
   candidates : Nat := 0
   hydrated : Nat := 0
+  consumptionRebuilt : Bool := false
+  provenanceOriginals : Nat := 0
+  provenanceIgnored : Nat := 0
   answers : Nat := 0
   unsupported : Nat := 0
   facts : Nat := 0
@@ -115,12 +118,20 @@ structure Result where
 structure Documents (snapshot : PageMap.Snapshot) where
   reader : NodeReader snapshot
   cache : IO.Ref (Std.HashMap Nat Document)
+  catalogs : IO.Ref (Std.HashMap Nat ObservationContext.Catalog)
 
 def Documents.get (documents : Documents snapshot) (id : Nat) : IO Document := do
   if let some doc := (← documents.cache.get)[id]? then return doc
   let doc ← document documents.reader id
   documents.cache.modify (·.insert id doc)
   return doc
+
+def Documents.catalog (documents : Documents snapshot) (id : Nat) : IO ObservationContext.Catalog := do
+  if let some catalog := (← documents.catalogs.get)[id]? then return catalog
+  let doc ← documents.get id
+  let catalog := (ObservationContext.recorded snapshot.head.identity doc).getD {}
+  documents.catalogs.modify (·.insert id catalog)
+  return catalog
 
 def ownerId? (snapshot : PageMap.Snapshot) (owner : String) : IO (Option Nat) := do
   let some checked := Persistence.SelectionKey.check? owner |
@@ -157,7 +168,7 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Resul
   let all ← topology snapshot
   let changed := delta.getD {}
   let affectedWorks := closure (reverse all) changed.works.toArray
-  let documents : Documents snapshot := ⟨← NodeReader.new snapshot, ← IO.mkRef {}⟩
+  let documents : Documents snapshot := ⟨← NodeReader.new snapshot, ← IO.mkRef {}, ← IO.mkRef {}⟩
   let mut readOwners := #[]
   let mut answerOwners := #[]
   let mut retiredReads : Std.HashSet String := {}
@@ -188,13 +199,21 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Resul
         if !doc.native then
           let entry := catalog.find? (·.id == id)
           if let some entry := entry then answerOwners := answerOwners.push entry
-  let mut graph ← IO.ofExcept (Graph.ofFacts (old.filter (retain retiredReads retiredAnswers false)))
+  let stamp := (toJson (← Provenance.stamp snapshot)).compress.toUTF8
+  let previousStamp ← previous.bindM (·.get "provenance")
+  -- A new answer does not change previously observed call order or row
+  -- projections. Reuse those facts only if their origin stamp and source
+  -- metadata are unchanged; otherwise replay from the pinned originals.
+  let keepConsumption := incremental && readOwners.isEmpty && !changed.removed && previousStamp == some stamp
+  let mut graph ← IO.ofExcept (Graph.ofFacts (old.filter (retain retiredReads retiredAnswers keepConsumption)))
   for entry in readOwners do
-    match recordedReads snapshot.head.identity (← documents.get entry.id) with
-    | .ok reads =>
-      for located in reads do graph ← IO.ofExcept (graph.insert (.read located.read))
-    | .error _ => unsupported := unsupported + 1
+    let catalog ← documents.catalog entry.id
+    if catalog.located.isEmpty then unsupported := unsupported+1
+    for read in catalog.reads do graph ← IO.ofExcept (graph.insert (.read read))
   let reads := graph.snapshot.filterMap fun fact => match fact with | .read read => some read | _ => none
+  let byQuote := reads.foldl (fun (map : Std.HashMap String (Array Read)) read =>
+    read.quotations.foldl (fun map digest =>
+      map.insert digest (map[digest]?.getD #[] |>.push read)) map) {}
   let mut workIds : Std.HashMap String Nat := {}
   for entry in catalog do
     if let some doc := (← documents.cache.get)[entry.id]? then workIds := workIds.insert doc.work entry.work
@@ -214,20 +233,33 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Resul
       (read.source.file?.map files.insert).getD files) ({} : Std.HashSet File)
     let citations := ((layout (doc.source.getD "")).map fun decoded =>
       paragraphCitations decoded.text files.toArray).toOption.getD #[]
-    let needed := available.filter fun read => citations.any (fun cited => read.source.contains cited)
+    let needed := available.filter fun read => citations.any (fun cited =>
+      (cited.intersection? read.source).isSome)
+    let quoteKeys := ((layout (doc.source.getD "")).map fun decoded =>
+      decoded.text.splitOn "\n\n" |>.toArray.flatMap (fun paragraph =>
+        (Quotes.extract paragraph).map (fun quote => Quotes.digest quote.text))).toOption.getD #[]
+    let quoted := quoteKeys.foldl (fun (set : Std.HashSet Read) digest =>
+      (byQuote[digest]?.getD #[]).foldl (fun set read =>
+        if (workIds[read.binding.work]?).any route.contains then set.insert read else set) set) {}
     let mut located := #[]
+    let mut spellings := #[]
     let mut seen : Std.HashSet Nat := {}
-    for read in needed do
+    for read in needed ++ quoted.toArray do
       let some id := readIds[read.binding.owner]? | continue
       if seen.contains id then continue
       seen := seen.insert id
-      match recordedReads snapshot.head.identity (← documents.get id) with
-      | .ok rows => located := located ++ rows
-      | .error _ => unsupported := unsupported + 1
+      let catalog ← documents.catalog id
+      located := located ++ catalog.located
+      -- Rehydrate and compare the exact spelling, rather than trusting a
+      -- digest or persisted index text as evidence of the original quote.
+      spellings := spellings ++ catalog.quotations.filter (fun item => quoted.contains item.read)
     match addAnswer snapshot.head.identity doc located graph with
     | .ok next => graph := next
     | .error _ => unsupported := unsupported + 1
-  let portable ← Provenance.derive snapshot
+    match ObservationContext.addQuotedAnswer snapshot.head.identity doc spellings graph with
+    | .ok next => graph := next
+    | .error _ => unsupported := unsupported + 1
+  let portable ← if keepConsumption then pure ({} : Provenance.Derived) else Provenance.derive snapshot
   graph ← IO.ofExcept (graph.merge portable.graph)
   let facts := graph.snapshot
   let head ← if incremental then
@@ -240,6 +272,7 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Resul
   return {
     mode := if incremental then "incremental" else "rebuild", source := snapshot.head, index := head
     candidates := catalog.size, hydrated := (← documents.cache.get).size, answers := answerOwners.size,
+    consumptionRebuilt := !keepConsumption,provenanceOriginals := portable.originals,provenanceIgnored := portable.ignored,
     unsupported, facts := facts.size, elapsedMs := (← IO.monoMsNow) - started}
 
 end Eggshell.Synapses.Build

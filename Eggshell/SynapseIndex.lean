@@ -30,6 +30,7 @@ def implementation : String :=
     (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
     (include_str "SynapseProvenance.lean").toUTF8,
     (include_str "JsonScalars.lean").toUTF8,
+    (include_str "SynapseQuotes.lean").toUTF8,
     (include_str "ObservationContext.lean").toUTF8,(include_str "Sha256.lean").toUTF8,
     (include_str "SourceEvidence.lean").toUTF8,
     (include_str "SearchUnicode.lean").toUTF8,
@@ -44,12 +45,14 @@ inductive Key where
   | quoted (source : Range)
   | source (source : Range)
   | subject (subject : Subject)
+  | quotation (digest : String)
   | query (digest : String)
   | usage (source : Range)
   deriving Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, ToJson, FromJson
 
 def addresses : Fact → Array Key
-  | .read recorded => #[.owner recorded.binding.database recorded.binding.owner, .source recorded.source, .subject recorded.source.subject]
+  | .read recorded => #[.owner recorded.binding.database recorded.binding.owner, .source recorded.source, .subject recorded.source.subject] ++
+      recorded.quotations.map Key.quotation
   | .supports support => #[
       .answer support.claim.database support.claim.answer, .claim support.claim, .source support.source]
   | .consumed edge => #[.consumer edge.consumer]

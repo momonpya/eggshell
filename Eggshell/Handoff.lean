@@ -4395,8 +4395,10 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
       "exceptions and contrasting results relevant to the current request. A simpler " ++
       "recorded example does not make a delivered exception irrelevant. Do not turn " ++
       "conditional observations into unconditional rules. " ++
-      "Source freshness is Eggshell's responsibility. Never repeat freshness checks " ++
-      "or reread delivered file ranges for confirmation, including updated observations. " ++
+      "Eggshell verifies dependencies marked as matched. Do not repeat those checks " ++
+      "or reread delivered file ranges whose source status is matched merely for confirmation. " ++
+      "An unverified external observation records past state; establish current state " ++
+      "only when the current request requires it. " ++
       "Follow each observation's newest source status; superseded contents remain history. " ++
       "Obtaining necessary undelivered evidence or executing a requested test is separate " ++
       "from reconfirming delivered evidence. " ++
