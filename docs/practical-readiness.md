@@ -6,12 +6,13 @@ performance work remains isolated under the adoption conditions in AGENTS.md.
 
 ## Priority and current evidence
 
-1. Remove repeated catalogue construction from hooks. The advanced candidate
-   still invokes `Store.searchDocuments` from semantic nomination. This walks
-   the entire candidate directory and checks each owner's frame, membership and
-   window directory. Work-origin admission also reconstructs original Work and
-   native-occurrence metadata. These are separate costs; caching only window
-   keys will not remove Work admission reads.
+1. Remove repeated catalogue construction from hooks. The isolated single-source
+   path now shares a prepared domain for catalogue, Work/native views and numeric
+   topology; original owner validation remains on admission. Cold fallback still
+   invokes `Store.searchDocuments`. Multi-source preparation still builds the
+   complete cross-DB identity table over semantic membership. The small/real-DB
+   stage checks in [the candidate record](prepared-candidate-domain.md) do not
+   qualify full 10,000/50,000-window hooks or that multi-source path.
 2. Close storage privacy before live MCP trials. `captureTerminal` persists the
    raw result before manager dispatch. `postToolUse` and operation graph
    compilation subsequently use the pending turn's single write target. No

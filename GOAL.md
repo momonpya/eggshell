@@ -1,8 +1,8 @@
 # Eggshell 実用化・論文化の実行順
 
 2026-10-24 最新の優先順位：反復する全件読出しの除去 → MCPの私有保存・保存前の認証情報除外 → 最新候補の規模/実ライフサイクル計測 → 1日/1週間の実用 → 論文比較。
-隔離候補にも `searchDocuments` の全候補走査とWork/native来歴の再構築が残る。窓の鍵だけをキャッシュして完了としない。
-出版/明示・背景warmで候補ドメインを作り、フックでは一度開いて共有する。現在の候補集合・順位・原文配送とExactの権限は固定スナップショットで照合する。
+隔離候補の単一DB経路では候補ドメインを一度開いて共有する実装が検証済み。cold時の原経路と、複数DBの全体同一性表の構築は残る。窓の鍵だけのキャッシュや小規模成功で完了としない。
+現在の候補集合・Work/native・窓・親子と原文配送は照合済み。次は実10k/50kの全フック、複数DB、graph変更後の増分準備まで進め、Exactの元owner検証を保つ。
 実用目標はwarm済み5万窓で初回・継続それぞれp95 <= 3秒、絶対上限30秒。旧版の5万窓失敗記録はあるが、最新候補は未検証であり、実MCPの1日/1週間試行も未実施。
 現状のMCPは通常のtoolと同じpending.writeへ流れ、最初のterminal captureもraw引数/結果を保存する。私有のusage索引検査を、MCP観測の既定私有保存と取り違えない。
 実サーバー試行の前に、全保存経路でのpolicy判定と私有データから派生する回答の保存先も閉じる。詳細と測定手順はdocs/practical-readiness.md。候補の本体/README/リリース採用にはAGENTS.mdの同条件・総トークン改善/品質/期限の条件も必要。
@@ -2325,3 +2325,40 @@ GOAL先頭とdocs/practical-readiness.mdへ固定した。Work/native来歴の�
 規模/日次増分/一週間の実用、同条件総トークン改善と品質の採用条件は未完了。
 製品runtimeはefb9a11d…のまま。追加モデル/seed0、総トークン/品質未測定、
 本体/README実績/リリース採用0。全Phases0–6 active。
+
+## 2026-10-24：候補ドメインをwarmへ移し、単一DBの実配送へ接続
+
+前回は利用辺の検証・pushがありprogress。今回、計画だけで止めずに候補ドメインを実装した。
+通常のgraph差分を持つ出版だけでsourceChangeを進め、派生memo出版では保持する。
+元DBの順序付きowner/Work/窓/native向きとAllの数値リンクを、明示/背景warmで一度準備する。
+DB/authority/source変更/母集団/実コードのバイトで拘束し、固定2ファイルを原子的に置き換える。
+読み取り専用DBでは私有側へ置く。cold readから作成・修復はせず、破損時は元の経路へ戻る。
+単一DBのフックでは一度開き、初回意味推薦・後の探索・focus・Work入場で同じものを共有する。
+候補入場後の原文owner/Work/native一致と既存compiler証明、Exact/所属/Union/鮮度の境界は維持する。
+
+Leanのcodec往復とsource markerの保持/前進を証明し、ContractAuditで出版/warm/実探索の経路を検査した。
+基本検査は、元の候補順/Work/native/窓/親子と一致し、open時の元DB観測は3キーだけだった。
+20回の派生memo出版でも再利用し、graph追記・削除・payload破損で古いreadyを拒否する。
+DBだけの読み取り専用コピーを私有cacheで再構築し、元head/pagesの不変も確認した。
+同じsnapshotを使った実discovery/packet関数で、3質問（本文3,500/4,232 bytesと空1件）の
+本文、completed/advisory、local Union、blockingが準備前後で一致した。これは題材1/2/3の試行ではない。
+
+既存の実seed DBで73候補・2,117 discovery窓の全Work/native/窓/順序が一致した。
+元の候補準備109 ms・DBページ491読出しに対し、独立pinした10回の準備済みopenは13〜15 ms・10読出し。
+先の2,192窓はfocus鍵も含むwarmの和集合なので、今回のdiscovery窓数と混同しない。
+実DBのhead/pages SHAは以前の固定記録と一致。元DBへは書いていない。
+別の合成した1万行・5万窓参照（3,592,254 bytes）のchecksum/復号/準備50回は276〜297 ms、p95=296 ms。
+これは候補情報のmicrobenchmarkであり、実5万窓DB、ベクトル採点、鮮度、stdoutを含むフックの合格ではない。
+
+最終core/integration/audit build、基本検査、実DB/配送/microbenchmark、ContractAuditは成功。
+初期のLean layout、test API、可変変数shadow、Warm object重複linkの失敗も記録した。
+最大task RSS 2,851,456 KiB、全guard終了済み・所有プロセス残存0。追加回答モデル/seed0。
+隔離runtimeの差分・元ソース・object・試験・受領・SHAはdocs/candidates/prepared-domain-review.json。
+ソース控えはtools/research/prepared-domain/、実装と限界はdocs/prepared-candidate-domain.md。
+
+次は全10k/50kフックの内訳と残コストを測る。複数DBのFederated.prepareは、documentsだけでなく
+全semantic membershipから完全なcross-DB同一性表を組む処理が残るため、単一DBの成功で完了としない。
+元の構造/byte witnessを保ったprepared化、およびgraph変更後の増分warmも必要である。
+MCPの既定私有/保存前credential除外、日次増分、実サーバー1日/1週間、全製品runtime、
+同条件の総トークン改善/品質/期限の採用条件は未完了。製品efb9a11d…・MiniLM・README実績・release不変。
+候補未採用、全Phases0–6 active。

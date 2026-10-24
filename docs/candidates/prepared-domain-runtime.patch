@@ -1,0 +1,691 @@
+diff --git a/Eggshell/GraphStore.lean b/Eggshell/GraphStore.lean
+--- a/Eggshell/GraphStore.lean
++++ b/Eggshell/GraphStore.lean
+@@ -1501,11 +1501,29 @@
+ 
+ theorem CheckedChange.neutral_derived (checked : CheckedChange onlyDerived)
+     (neutral : checked.change.neutral = true) : onlyDerived = true := checked.exact neutral
++
++/-- Source changes invalidate prepared nomination data; memo-only commits keep
++the existing source marker. This is a publication counter, not authority. -/
++def Change.sourceMarker (change : Change) (revision previous : Nat) : Nat :=
++  if change.neutral then previous else revision + 1
++
++theorem Change.neutral_keeps_marker (change : Change) (revision previous : Nat)
++    (neutral : change.neutral = true) : change.sourceMarker revision previous = previous := by
++  simp [sourceMarker, neutral]
++
++theorem Change.changed_advances_marker (change : Change) (revision previous : Nat)
++    (changed : change.neutral = false) (within : previous ≤ revision) :
++    previous < change.sourceMarker revision previous := by
++  simp [sourceMarker, changed]
++  omega
+ 
+ def writeChange (writer : Writer) (change : Change) : IO Unit := do
+   if ← writer.journalSealed.get then throw (IO.userError "change journal was already sealed")
+   let some checked := change.check? (← writer.onlyDerived.get) |
+     throw (IO.userError "authoritative writes cannot publish an empty graph delta")
++  unless checked.change.neutral do
++    putNat writer "sourceChange" (checked.change.sourceMarker writer.base.head.revision
++      (← getNat writer.get "sourceChange"))
+   putChunks writer "change" (writer.base.head.revision + 1)
+     (publicationCodec.encode ⟨writer.base.head, checked.change⟩).toByteArray
+   writer.journalSealed.set true
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -1,6 +1,7 @@
+ module
+ 
+ public import Eggshell.Deadline
++public import Eggshell.CandidateDomain
+ public import Eggshell.Receipt
+ 
+ public import Std.Data.HashSet.Lemmas
+@@ -6954,7 +6955,8 @@
+ /-- Stored parent/child roles come from complete pinned numeric frames even
+ when discovery's current topology is only a demand projection. -/
+ def savedSemanticChildren (snapshot : Persistence.Store.Snapshot)
+-    (workIds : Std.HashSet Nat) : IO (Std.HashSet Nat) := do
++    (workIds : Std.HashSet Nat) (preparedDomain : Option CandidateDomain.Ready := none) : IO (Std.HashSet Nat) := do
++  if let some domain := preparedDomain then return semanticChildIds workIds domain.data.links
+   let mut links := []
+   for entry in (← Persistence.Store.allHeaders snapshot) do
+     let some located := entry.2.atHead? snapshot.head |
+@@ -6964,15 +6966,17 @@
+ 
+ def indexedSemanticNominations (snapshot : Persistence.Store.Snapshot) (all : List AllEdge)
+     (command : List String) (current : String) (staged : List Matcher.Candidate := [])
+-    (receipt : Option String := none) :
++    (receipt : Option String := none) (preparedDomain : Option CandidateDomain.Ready := none) :
+     IO (Option IndexedSemanticNominations) := do
+-  let documents ← Persistence.Store.searchDocuments snapshot
++  let documents ← match preparedDomain with
++    | some domain => pure domain.documents
++    | none => Persistence.Store.searchDocuments snapshot
+   let mut workIds := Std.HashSet.ofList (documents.map (·.work))
+   let stagedWorks := Std.HashSet.ofList (staged.map (·.edge.work))
+   for candidate in staged do
+     if let some work ← Persistence.Store.findNode? snapshot candidate.edge.work then
+       workIds := workIds.insert work
+-  let mut childIds ← savedSemanticChildren snapshot workIds
++  let mut childIds ← savedSemanticChildren snapshot workIds preparedDomain
+   let mut stagedChildren : Std.HashSet Value := {}
+   for candidate in staged do
+     if let some work ← Persistence.Store.findNode? snapshot candidate.edge.work then
+@@ -6990,10 +6994,13 @@
+ Both paths use the same provider and bounded source-window reader; no All
+ descendant is restored merely to order the numerical request. -/
+ def headerSemanticNominations (snapshot : Persistence.Store.Snapshot)
+-    (command : List String) (current : String) (receipt : Option String := none) : IO (Option IndexedSemanticNominations) := do
+-  let documents ← Persistence.Store.searchDocuments snapshot
++    (command : List String) (current : String) (receipt : Option String := none)
++    (preparedDomain : Option CandidateDomain.Ready := none) : IO (Option IndexedSemanticNominations) := do
++  let documents ← match preparedDomain with
++    | some domain => pure domain.documents
++    | none => Persistence.Store.searchDocuments snapshot
+   let workIds := Std.HashSet.ofList (documents.map (·.work))
+-  let childIds ← savedSemanticChildren snapshot workIds
++  let childIds ← savedSemanticChildren snapshot workIds preparedDomain
+   indexedSemanticNominationsUsing snapshot documents childIds {} command current [] receipt
+ 
+ def indexedSemanticOwners (snapshot : Persistence.Store.Snapshot) (all : List AllEdge)
+@@ -7710,8 +7717,9 @@
+   -- is restored. The provider still observes the current corpus. A miss
+   -- consumes this same observation once, then follows the complete kernel.
+   let referenceQuery := meaningQuery.getD current
++  let preparedDomain ← CandidateDomain.openShared? snapshot receipt
+   let preparedSemantic ← if staged.isEmpty && evidence.isNone then
+-      selection.semanticMatcher.mapM (fun command => headerSemanticNominations snapshot command referenceQuery receipt)
++      selection.semanticMatcher.mapM (fun command => headerSemanticNominations snapshot command referenceQuery receipt preparedDomain)
+     else pure none
+   match preparedSemantic with
+   | some none => return some (some pendingSearch)
+@@ -7745,11 +7753,15 @@
+     supportOwners := some fun works excluded allowance ranking families =>
+       reader.supportOwners works excluded allowance ranking families
+     focusSupport := some fun works command question => do
+-      let documents ← Persistence.Store.supportWindowDocuments snapshot works
++      let documents ← match preparedDomain with
++        | some domain => pure ((domain.data.rows.filter (fun row => works.contains row.origin.work)).map (·.document snapshot))
++        | none => Persistence.Store.supportWindowDocuments snapshot works
+       let pulling ← snapshot.forkReader
+       focusIndexedEvidence command question documents
+         (fun document => do
+-          let value ← reader.read document.work
++          let value ← match preparedDomain.bind (fun domain => domain.owners[document.owner]?) with
++            | some row => pure row.origin.work
++            | none => reader.read document.work
+           match Matcher.atomText? value with
+           | some text => pure text
+           | none => throw (IO.userError "source-focus Work is not indexed text"))
+@@ -7765,14 +7777,16 @@
+     semantic := fun all command query candidates => do
+       if command == selection.semanticMatcher.getD [] && query == referenceQuery && candidates.isEmpty then
+         if let some nominated := preparedSemantic.join then return some nominated
+-      indexedSemanticNominations snapshot all command query candidates receipt
++      indexedSemanticNominations snapshot all command query candidates receipt preparedDomain
+     lexical := fun current staged => do
+       let posting ← RetrievalResearch.Index.coarseLookup snapshot receipt
+       lexicalNominations population posting
+         (fun id => Persistence.Store.getNat snapshot.get (Persistence.Store.key "member" id)) current staged
+     ordinal := fun id => do
++      if let some row := preparedDomain.bind (fun domain => domain.owners[id]?) then return row.ordinal
+       IO.ofExcept (Persistence.Store.payloadSize (← snapshot.get (Persistence.Store.key "member" id)))
+     readWork := fun id => do
++      if let some row := preparedDomain.bind (fun domain => domain.owners[id]?) then return row.origin
+       reader.workOrigin (← reader.locateOutcome id)
+     readOwner := fun id => do
+       reader.outcome (← reader.locateOutcome id)
+diff --git a/Eggshell/Warm.lean b/Eggshell/Warm.lean
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -1,5 +1,6 @@
+ module
+ public import Eggshell.CanonicalSourceCache
++public import Eggshell.CandidateDomain
+ 
+ public import Eggshell.PluginModel
+ public import Eggshell.SearchProvider
+@@ -47,6 +48,7 @@
+   | _ => false
+ 
+ def required (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Bool := do
++  unless ← CandidateDomain.ready snapshot do return true
+   unless ← RetrievalResearch.Index.ready snapshot do return true
+   if lexicalOnly target.command then return false
+   let _ :: "search-provider" :: _ := target.command | return false
+@@ -203,6 +205,7 @@
+   batches : Nat
+   elapsedMs : Nat
+   lexical : RetrievalResearch.Index.Result
++  domain : CandidateDomain.Result
+   deriving ToJson
+ 
+ /-- Explicit CLI work, never called by a cold search hook. Hydrate only the
+@@ -212,6 +215,7 @@
+   let started ← IO.monoMsNow
+   let _ ← Synapses.Journal.refresh snapshot target.storage ((← IO.monoMsNow)+60000)
+   let _ ← Synapses.CanonicalSource.Cache.refresh snapshot target.storage
++  let domain ← CandidateDomain.refresh snapshot target.storage
+   let lexical ← RetrievalResearch.Index.warm snapshot target.storage
+   if lexicalOnly target.command then
+     let empty : Coverage := {
+@@ -220,12 +224,12 @@
+       valid := 0, missing := 0, invalid := 0
+       encoderContract := SearchProvider.encoderContract, input := {}
+       focusContract := Plugin.focusWindowContract, discovery := {}, focus := {}}
+-    return ⟨empty, empty, 0, 0, (← IO.monoMsNow) - started, lexical⟩
++    return ⟨empty, empty, 0, 0, (← IO.monoMsNow) - started, lexical, domain⟩
+   let settings ← options snapshot target.command target.storage
+   let before ← inspect snapshot settings
+   if before.needed.isEmpty then
+     mark target snapshot
+-    return ⟨before.coverage, before.coverage, 0, 0, (← IO.monoMsNow) - started, lexical⟩
++    return ⟨before.coverage, before.coverage, 0, 0, (← IO.monoMsNow) - started, lexical, domain⟩
+   DB.Sidecar.withIndexClaim (DB.Sidecar.Owner.ofSnapshot snapshot) (fun _ => do
+     -- Another indexer may have filled the difference before this claim.
+     let current ← inspect snapshot settings
+@@ -248,7 +252,7 @@
+     let after ← inspect snapshot settings
+     unless after.needed.isEmpty do throw (IO.userError "provider acknowledged windows without valid DB cache records")
+     mark target snapshot
+-    pure ⟨before.coverage, after.coverage, current.needed.length, batches, (← IO.monoMsNow) - started, lexical⟩) target.storage
++    pure ⟨before.coverage, after.coverage, current.needed.length, batches, (← IO.monoMsNow) - started, lexical, domain⟩) target.storage
+ 
+ def run (snapshot : DB.PageMap.Snapshot) (command : List String) (writable : Bool := true) : IO Result := do
+   let target ← Plugin.registerIndexTarget snapshot command writable
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -17,7 +17,10 @@
+ reads use the same decoding/assembly implementation with their own read
+ capability; no alternate body representation or compatibility lane exists. -/
+ run_meta do
+-  for theoremName in #[``Eggshell.Synapses.Extraction.consumed_source_has_witness,
++  for theoremName in #[``Eggshell.CandidateDomain.packed_roundtrip,
++      ``Eggshell.Persistence.Store.Change.neutral_keeps_marker,
++      ``Eggshell.Persistence.Store.Change.changed_advances_marker,
++      ``Eggshell.Synapses.Extraction.consumed_source_has_witness,
+       ``Eggshell.Synapses.Extraction.consumed_source_is_later,
+       ``Eggshell.Synapses.Extraction.consumed_omission_requires_stored,
+       ``Eggshell.Synapses.Index.shared_rejects_usage,
+@@ -255,6 +258,14 @@
+       (``Eggshell.Plugin.automaticHandoff,
+         #[``Eggshell.Plugin.Handoff.checkSources, ``Eggshell.Persistence.Store.NodeReader.sources], #[]),
+       (``Eggshell.Plugin.Daemon.hookRequest, #[``Eggshell.ObservationAge.now], #[]),
++      (``Eggshell.Plugin.indexedDiscovery, #[``Eggshell.CandidateDomain.openShared?], #[]),
++      (``Eggshell.Warm.runTarget, #[``Eggshell.CandidateDomain.refresh], #[]),
++      (``Eggshell.CandidateDomain.refresh,
++        #[``Eggshell.Persistence.Store.searchDocuments, ``Eggshell.Persistence.Store.NodeReader.workOrigin,
++          ``Eggshell.Persistence.Store.allHeaders], #[]),
++      (``Eggshell.CandidateDomain.open?,
++        #[``Eggshell.FileSystem.boundedBytes, ``Eggshell.CandidateDomain.dataCodec], #[]),
++      (``Eggshell.Persistence.Store.writeChange, #[``Eggshell.Persistence.Store.Change.sourceMarker], #[]),
+       (``Eggshell.Synapses.Journal.replay, #[``Eggshell.Synapses.Journal.nativeFeedback], #[]),
+       (``Eggshell.Synapses.Journal.nativeFeedback,
+         #[``Eggshell.Synapses.Journal.indexAt?, ``Eggshell.Synapses.Journal.presentation,
+diff --git a/Eggshell/CandidateDomain.lean b/Eggshell/CandidateDomain.lean
+--- a/Eggshell/CandidateDomain.lean
++++ b/Eggshell/CandidateDomain.lean
+@@ -0,0 +1,212 @@
++module
++
++public import Eggshell.GraphStore
++public import Eggshell.Receipt
++
++@[expose] public section
++
++namespace Eggshell.CandidateDomain
++open Lean DB Persistence.Store
++
++/-- Nomination metadata only. Original owners must still be read and checked
++before Match can receive their original Work, Outcome and occurrence authority. -/
++structure Row where
++  owner : Nat
++  ordinal : Nat
++  work : Nat
++  text : String
++  native : Bool
++  windows : List String
++  deriving BEq, ToJson, FromJson
++
++def boolCodec : Wire.Codec Bool := Wire.natural.iso
++  (fun value => if value then 1 else 0) (· != 0) (by intro value; cases value <;> rfl)
++
++def rowCodec : Wire.Codec Row :=
++  (Wire.natural.product (Wire.natural.product (Wire.natural.product
++    (Wire.text.product (boolCodec.product (Wire.list Wire.text)))))).iso
++    (fun row => (row.owner,row.ordinal,row.work,row.text,row.native,row.windows))
++    (fun (owner,ordinal,work,text,native,windows) => ⟨owner,ordinal,work,text,native,windows⟩)
++    (by intro row; cases row; rfl)
++
++structure Data where
++  rows : List Row
++  links : List (Nat × List Nat)
++  deriving BEq
++
++def dataCodec : Wire.Codec Data :=
++  ((Wire.list rowCodec).product (Wire.list (Wire.natural.product (Wire.list Wire.natural)))).iso
++    (fun data => (data.rows,data.links)) (fun (rows,links) => ⟨rows,links⟩)
++    (by intro data; cases data; rfl)
++
++theorem packed_roundtrip (data : Data) (tail : List UInt8) :
++    dataCodec.decode (dataCodec.encode data ++ tail) = .ok (data,tail) :=
++  dataCodec.roundtrip data tail
++
++structure Stamp where
++  database : String
++  authority : String
++  change : Nat
++  roots : Nat
++  candidates : Nat
++  deriving BEq, ToJson, FromJson
++
++def stamp (source : Snapshot) : IO Stamp := do
++  return ⟨source.head.identity,Sha256.hex source.head.authority.toUTF8,
++    ← getNat source.get "sourceChange",← getNat source.get "roots",← getNat source.get "candidates"⟩
++
++def implementation : String := Sha256.hex (
++  (include_str "CandidateDomain.lean").toUTF8 ++
++  (include_str "GraphStore.lean").toUTF8 ++
++  (include_str "SearchRank.lean").toUTF8)
++
++structure Manifest where
++  source : PageMap.Head
++  stamp : Stamp
++  implementation : String
++  digest : String
++  bytes : Nat
++  windows : Nat
++  deriving ToJson, FromJson
++
++def maxBytes : Nat := 64*1024*1024
++
++def directory (source : Snapshot) (storage : Sidecar.Storage) : IO System.FilePath := do
++  return (← Sidecar.locate source storage).directory / "candidate-domain"
++
++def manifest? (source : Snapshot) (storage : Sidecar.Storage) : IO (Option Manifest) := do
++  let path ← directory source storage
++  let bytes ← FileSystem.boundedBytes (path / "ready.json") 65536
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid candidate readiness UTF-8")
++  let record ← IO.ofExcept (Json.parse text >>= fromJson? (α := Manifest))
++  unless record.stamp == (← stamp source) && record.implementation == implementation &&
++      record.bytes ≤ maxBytes && record.source.identity == source.head.identity &&
++      record.source.authority == source.head.authority do return none
++  return some record
++
++def Row.document (row : Row) (source : Snapshot) : SearchDocument :=
++  ⟨row.owner,row.work,row.windows,some (Sidecar.Owner.ofSnapshot source)⟩
++
++def Row.origin (row : Row) : WorkOrigin := ⟨.text row.text,row.native⟩
++
++structure Ready where
++  metadata : Manifest
++  data : Data
++  owners : Std.HashMap Nat Row
++  documents : List SearchDocument
++  workIds : Std.HashSet Nat
++
++/-- Stable directory order, unique owner/ordinal identities and all window
++keys are checked once. Cached native flags remain nomination hints. -/
++def prepare (source : Snapshot) (metadata : Manifest) (data : Data) : Except String Ready := do
++  unless data.rows.length == metadata.stamp.candidates do throw "candidate count disagrees"
++  let mut previous : Option Nat := none
++  let mut owners : Std.HashMap Nat Row := {}
++  let mut windows := 0
++  let mut workIds : Std.HashSet Nat := {}
++  for row in data.rows do
++    if owners.contains row.owner || previous.any (· ≥ row.ordinal) then throw "candidate order is not unique"
++    unless !row.windows.isEmpty && row.windows.all (fun value =>
++        value.length == 64 && value.toList.all (fun c =>
++          ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f'))) do throw "invalid candidate window key"
++    windows := windows+row.windows.length
++    previous := some row.ordinal
++    owners := owners.insert row.owner row
++    workIds := workIds.insert row.work
++  unless windows == metadata.windows do throw "candidate window count disagrees"
++  return ⟨metadata,data,owners,data.rows.map (·.document source),workIds⟩
++
++/-- One bounded payload read, checksum and decode. No source body or owner
++membership is scanned here, and a cold/invalid domain is never repaired. -/
++def open? (source : Snapshot) (storage : Sidecar.Storage) : IO (Option Ready) := do
++  let some metadata ← manifest? source storage | return none
++  let bytes ← FileSystem.boundedBytes ((← directory source storage) / "domain") maxBytes
++  unless bytes.size == metadata.bytes && Sha256.hex bytes == metadata.digest do
++    throw (IO.userError "candidate domain digest disagrees")
++  let (data,tail) ← IO.ofExcept (dataCodec.decode bytes.toList)
++  unless tail.isEmpty do throw (IO.userError "trailing candidate domain bytes")
++  some <$> IO.ofExcept (prepare source metadata data)
++
++def openShared? (source : Snapshot) (receipt : Option String := none) : IO (Option Ready) := do
++  let started ← IO.monoMsNow
++  for storage in [.database,.user] do
++    try
++      if let some ready ← open? source storage then
++        Receipt.observe receipt ("candidate-domain-" ++ source.head.identity) (Json.mkObj [
++          ("status",toJson "ready"),("storage",toJson storage),
++          ("rows",toJson ready.data.rows.length),("windows",toJson ready.metadata.windows),
++          ("bytes",toJson ready.metadata.bytes),("digest",toJson ready.metadata.digest),
++          ("elapsedMs",toJson ((← IO.monoMsNow)-started))])
++        return some ready
++    catch error =>
++      Receipt.observe receipt ("candidate-domain-" ++ source.head.identity) (Json.mkObj [
++        ("status",toJson "unavailable"),("storage",toJson storage),("error",toJson error.toString)])
++  return none
++
++/-- Maintenance hint only. Actual hook reads always verify the packed payload. -/
++def ready (source : Snapshot) : IO Bool := do
++  for storage in [.database,.user] do
++    try
++      if let some _ ← manifest? source storage then return true
++    catch _ => pure ()
++  return false
++
++/-- The same parent membership rule as the complete original-header path.
++Staged Work may extend the parent domain without reopening saved All frames. -/
++def Ready.children (ready : Ready) (parents : Std.HashSet Nat) : Std.HashSet Nat :=
++  ready.data.links.foldl (fun children (parent,values) =>
++    if parents.contains parent then values.foldl (·.insert ·) children else children) {}
++
++structure Result where
++  mode : String
++  metadata : Manifest
++  elapsedMs : Nat
++  deriving ToJson
++
++/-- Explicit/background maintenance only. Original catalogue and Work reads
++happen here once, outside the hook. Two atomically replaced files keep storage
++bounded across source changes; a racing reader can miss but cannot accept a
++mismatching payload. Original graph membership is never written. -/
++def refresh (source : Snapshot) (storage : Sidecar.Storage) : IO Result := do
++  let started ← IO.monoMsNow
++  if let some known ← try open? source storage catch _ => pure none then
++    return ⟨"warm",known.metadata,(← IO.monoMsNow)-started⟩
++  let expected ← stamp source
++  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun sidecar => do
++    unless (← stamp (← (Sidecar.Owner.ofSnapshot source).pin)) == expected do
++      throw (IO.userError "source changed before candidate preparation")
++    let reader ← NodeReader.new source
++    let mut rows := []
++    let mut windows := 0
++    for document in ← searchDocuments source do
++      let origin ← reader.workOrigin (← reader.locateOutcome document.owner)
++      let some text := text? origin.work | throw (IO.userError "candidate Work is not textual")
++      let ordinal ← getNat source.get (key "member" document.owner)
++      let row : Row := {
++        owner := document.owner
++        ordinal := ordinal
++        work := document.work
++        text := text
++        native := origin.native
++        windows := document.windows }
++      rows := row :: rows
++      windows := windows+document.windows.length
++    let mut links := []
++    for entry in ← allHeaders source do
++      let some located := entry.2.atHead? source.head | throw (IO.userError "foreign candidate topology")
++      links := (located.val.header.parent,located.val.header.children) :: links
++    let data : Data := ⟨rows.reverse,links.reverse⟩
++    let bytes := (dataCodec.encode data).toByteArray
++    unless bytes.size ≤ maxBytes do throw (IO.userError "candidate domain exceeds byte budget")
++    let metadata : Manifest := ⟨source.head,expected,implementation,Sha256.hex bytes,bytes.size,windows⟩
++    let _ ← IO.ofExcept (prepare source metadata data)
++    unless (← stamp (← (Sidecar.Owner.ofSnapshot source).pin)) == expected do
++      throw (IO.userError "source changed during candidate preparation")
++    let path ← Sidecar.childDirectory sidecar.directory "candidate-domain"
++    if let some previous ← try manifest? source storage catch _ => pure none then
++      if previous.source.revision > source.head.revision then throw (IO.userError "newer candidate domain already exists")
++    FileSystem.atomicExistingBytes (path / "domain") bytes
++    FileSystem.atomicExistingBytes (path / "ready.json") (toJson metadata).compress.toUTF8
++    return ⟨"prepared",metadata,(← IO.monoMsNow)-started⟩) storage
++
++end Eggshell.CandidateDomain
+diff --git a/tests/CandidateDomainTests.lean b/tests/CandidateDomainTests.lean
+--- a/tests/CandidateDomainTests.lean
++++ b/tests/CandidateDomainTests.lean
+@@ -0,0 +1,124 @@
++import Eggshell.CandidateDomain
++import Eggshell.PluginModel
++
++open Lean Eggshell Eggshell.CandidateDomain Eggshell.Persistence.Store
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def native (id : String) : Value :=
++  let tool : Plugin.ToolEvent := {
++    name := "catalog"
++    useId := id
++    input := (Json.mkObj [("item",toJson id)]).compress
++    response := (Json.mkObj [("id",toJson id),("status",toJson "open")]).compress }
++  (Plugin.compileOperationOutcomes (.text "seed") (.text "turn") tool).2
++
++private def publish (source : Snapshot) (values : List Value) : IO Snapshot := do
++  let _ ← DB.PageMap.withWriter source fun writer => do
++    let intern : Intern := ⟨writer,← IO.mkRef {}⟩
++    let ids ← values.mapM intern.root
++    writeChange writer ⟨ids,[],false⟩
++  DB.PageMap.pin source.directory
++
++private def summary (documents : List SearchDocument) : List (Nat × Nat × List String) :=
++  documents.map fun row => (row.owner,row.work,row.windows)
++
++private def scenario (root : System.FilePath) : IO Unit := do
++  let initial ← DB.PageMap.create (root / "source.egg") (Persistence.valueToJson (.text "authority")).compress
++  let a := native "one"
++  let b := native "two"
++  let plain ← IO.ofExcept (Plugin.relation? .outcome [.semantic (.text "通常のWork"),.semantic (.text "plain result")])
++  let some ownerA := OutcomeEdge.fromValue? a | throw (IO.userError "missing fixture owner")
++  let some ownerB := OutcomeEdge.fromValue? b | throw (IO.userError "missing fixture owner")
++  let all ← IO.ofExcept (Plugin.relation? .all [.semantic ownerA.work,.semantic ownerB.work])
++  let source ← publish initial [a,b,plain,all]
++  check ((← openShared? source).isNone) "cold read constructed a domain"
++  check (!(← (source.directory / "derived").pathExists)) "cold read created source files"
++  let sourceHead := source.head
++  let sourceBytes ← IO.FS.readBinFile (DB.PageMap.dataPath source.directory source.head)
++  let expected ← searchDocuments source
++  let built ← refresh source .database
++  check (built.mode == "prepared" && built.metadata.stamp.change > 0) "source change was not stamped"
++  check ((← DB.PageMap.pin source.directory).head == sourceHead &&
++    (← IO.FS.readBinFile (DB.PageMap.dataPath source.directory source.head)) == sourceBytes) "derived preparation changed source DB"
++  let source ← DB.PageMap.pin source.directory
++  source.trace.set (some {})
++  let some prepared ← openShared? source | throw (IO.userError "prepared domain missing")
++  let trace ← source.trace.get
++  check (trace.any fun trace => trace.complete && trace.operations.all (fun operation => match operation with
++    | .point key _ => ["sourceChange","roots","candidates"].contains key
++    | _ => false)) "prepared open read owner directories or original bodies"
++  check (summary prepared.documents == summary expected) "candidate order/windows changed"
++  let reader ← NodeReader.new source
++  for row in prepared.data.rows do
++    let origin ← reader.workOrigin (← reader.locateOutcome row.owner)
++    check (row.origin.work == origin.work && row.origin.native == origin.native &&
++      row.ordinal == (← getNat source.get (key "member" row.owner))) "cached Work/native view changed"
++  let mut originalLinks := []
++  for entry in ← allHeaders source do
++    originalLinks := originalLinks ++ [(entry.2.header.parent,entry.2.header.children)]
++  check (prepared.data.links == originalLinks) "candidate topology changed"
++  let again ← refresh source .database
++  check (again.mode == "warm" && again.metadata.digest == built.metadata.digest) "unchanged warm rebuilt domain"
++  let mut current := source
++  for index in [:20] do
++    let _ ← DB.PageMap.withWriter current fun writer => do
++      writer.put ("memo:domain-test:" ++ toString index) (some "derived".toUTF8)
++      writeChange writer ⟨[],[],false⟩
++    current ← DB.PageMap.pin current.directory
++  let some afterMemos ← openShared? current | throw (IO.userError "memo-only publication invalidated source domain")
++  check (afterMemos.metadata.digest == built.metadata.digest && (← stamp current) == (← stamp source))
++    "derived commits advanced source marker"
++  let appended ← publish current [native "three"]
++  check ((← openShared? appended).isNone && (← stamp appended).change > (← stamp current).change)
++    "new graph reused a stale domain"
++  let _ ← refresh appended .database
++  let some newDomain ← openShared? appended | throw (IO.userError "new publication domain missing")
++  let some id ← findNode? appended b | throw (IO.userError "missing retired owner")
++  let _ ← DB.PageMap.withWriter appended fun writer => do
++    removeRoot writer id
++    writeChange writer ⟨[],[id],false⟩
++  let retracted ← DB.PageMap.pin appended.directory
++  check ((← openShared? retracted).isNone) "retraction retained a ready domain"
++  let _ ← refresh retracted .database
++  let some retained ← openShared? retracted | throw (IO.userError "retracted domain missing")
++  check (retained.data.rows.length+1 == newDomain.data.rows.length && !retained.owners.contains id)
++    "retired owner remained in candidate domain"
++  let folder ← directory retracted .database
++  let good ← IO.FS.readBinFile (folder / "domain")
++  FileSystem.atomicExistingBytes (folder / "domain") (good ++ "damage".toUTF8)
++  check ((← openShared? retracted).isNone) "corrupt packed domain was accepted"
++  let repaired ← refresh retracted .database
++  check (repaired.mode == "prepared" && (← openShared? retracted).isSome) "explicit warm did not repair damaged cache"
++  let copied := root / "copied.egg"
++  IO.FS.createDir copied
++  IO.FS.writeBinFile (copied / "head") (← IO.FS.readBinFile (retracted.directory / "head"))
++  let copiedPages := DB.PageMap.dataPath copied retracted.head
++  IO.FS.writeBinFile copiedPages (← IO.FS.readBinFile (DB.PageMap.dataPath retracted.directory retracted.head))
++  for path in [copied / "head",copiedPages] do
++    IO.setAccessRights path {user := {read := true},group := {},other := {}}
++  IO.setAccessRights copied {user := {read := true,execution := true},group := {},other := {}}
++  let beforeHead ← IO.FS.readBinFile (copied / "head")
++  let beforePages ← IO.FS.readBinFile copiedPages
++  let readOnly ← DB.PageMap.pin copied
++  check ((← openShared? readOnly).isNone) "DB-only copy inherited a hidden sidecar"
++  let privateDomain ← refresh readOnly .user
++  let some portable ← openShared? readOnly | throw (IO.userError "private read-only domain missing")
++  check (summary portable.documents == summary retained.documents &&
++    privateDomain.metadata.digest == retained.metadata.digest && !(← (copied / "derived").pathExists) &&
++    (← IO.FS.readBinFile (copied / "head")) == beforeHead &&
++    (← IO.FS.readBinFile copiedPages) == beforePages) "read-only private preparation changed source/order"
++  IO.FS.writeFile (root / "domain.json") (Json.mkObj [
++    ("rows",toJson retained.data.rows.length),("bytes",toJson retained.metadata.bytes),
++    ("windows",toJson retained.metadata.windows),("sourceMarker",toJson retained.metadata.stamp.change),
++    ("memoPublications",toJson (20 : Nat)),("portableDigest",toJson portable.metadata.digest),
++    ("openSourceObservations",toJson ((trace.map (·.operations.length)).getD 0))]).pretty
++  IO.println "candidate domain checks passed: ordered original Work/native/windows/topology, no catalogue/body reads on open, memo stability, append/retract, corruption, explicit repair and DB-only read-only private reconstruction"
++
++def main (args : List String) : IO Unit := do
++  let [path] := args | throw (IO.userError "CandidateDomainTests NEW-DIRECTORY")
++  let root := System.FilePath.mk path
++  unless root.isAbsolute && !(← root.pathExists) do throw (IO.userError "new absolute test directory required")
++  IO.FS.createDirAll root
++  scenario root
+diff --git a/tools/research/CandidateDomainAudit.lean b/tools/research/CandidateDomainAudit.lean
+--- a/tools/research/CandidateDomainAudit.lean
++++ b/tools/research/CandidateDomainAudit.lean
+@@ -0,0 +1,116 @@
++import Eggshell.Handoff
++import Eggshell.CandidateDomain
++
++open Lean Eggshell Eggshell.Persistence.Store
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def catalogue (database report : System.FilePath) : IO Unit := do
++  let source ← DB.PageMap.pin database
++  let started ← IO.monoMsNow
++  let reader ← NodeReader.new source
++  let mut rows : List CandidateDomain.Row := []
++  for document in ← searchDocuments source do
++    let original ← reader.workOrigin (← reader.locateOutcome document.owner)
++    let some text := text? original.work | throw (IO.userError "nontextual candidate")
++    let ordinal ← getNat source.get (key "member" document.owner)
++    rows := ⟨document.owner,ordinal,document.work,text,original.native,document.windows⟩ :: rows
++  rows := rows.reverse
++  let originalMs := (← IO.monoMsNow)-started
++  let originalReads ← source.reads.get
++  let built ← CandidateDomain.refresh source .user
++  let mut samples := #[]
++  for _ in [:10] do
++    let pinned ← DB.PageMap.pin database
++    pinned.trace.set (some {})
++    let started ← IO.monoMsNow
++    let some ready ← CandidateDomain.openShared? pinned | throw (IO.userError "prepared catalogue missing")
++    check (ready.data.rows == rows) "original candidate order/view changed"
++    let elapsed := (← IO.monoMsNow)-started
++    let some trace ← pinned.trace.get | throw (IO.userError "missing read trace")
++    check (trace.complete && trace.operations.all (fun operation => match operation with
++      | .point key _ => ["sourceChange","roots","candidates"].contains key
++      | _ => false)) "prepared catalogue read original owners/bodies"
++    samples := samples.push (Json.mkObj [("elapsedMs",toJson elapsed),
++      ("dbPageReads",toJson (← pinned.reads.get)),("sourceObservations",toJson trace.operations.length)])
++  check ((← DB.PageMap.pin database).head == source.head) "catalogue audit changed DB head"
++  IO.FS.writeFile report (Json.mkObj [
++    ("scope",toJson "real DB catalogue and Work/native views only; not full hook latency"),
++    ("source",toJson source.head),("rows",toJson rows.length),("windows",toJson built.metadata.windows),
++    ("bytes",toJson built.metadata.bytes),("originalMs",toJson originalMs),
++    ("originalDbPageReads",toJson originalReads),("warm",toJson built),("samples",toJson samples)]).pretty
++
++private def delivery (database output : System.FilePath) : IO Unit := do
++  IO.FS.createDirAll output
++  let source ← DB.PageMap.pin database
++  check (!(← CandidateDomain.ready source)) "delivery reference must begin without prepared metadata"
++  let _ ← RetrievalResearch.Index.warm source .user
++  let selection : Config.Selection := {
++    label := "candidate-domain-regression"
++    read := [⟨"fixture",database⟩]
++    write := none
++    semanticMatcher := none
++    handoffChars := 120000 }
++  let queries := ["通常のWork","Inspect catalog item one status","unrelated missing subject"]
++  let mut before : Array (Option Plugin.Handoff) := #[]
++  for (query,index) in queries.zipIdx do
++    let handoff ← Plugin.computeAutomaticHandoff selection [some source] query [] false
++    before := before.push handoff
++    IO.FS.writeFile (output / s!"reference-{index}.json") (toJson handoff).compress
++    IO.FS.writeFile (output / s!"reference-{index}.txt") ((handoff.map (·.text)).getD "")
++  check (before.any (·.isSome)) "all reference packets were empty"
++  let _ ← CandidateDomain.refresh source .user
++  let mut cases := #[]
++  for (query,index) in queries.zipIdx do
++    let handoff ← Plugin.computeAutomaticHandoff selection [some source] query [] false
++    let previous := before[index]!
++    IO.FS.writeFile (output / s!"prepared-{index}.json") (toJson handoff).compress
++    IO.FS.writeFile (output / s!"prepared-{index}.txt") ((handoff.map (·.text)).getD "")
++    check ((previous.map (·.text)) == (handoff.map (·.text)) &&
++      (previous.map (·.completed)) == (handoff.map (·.completed)) &&
++      (previous.map (·.advisory)) == (handoff.map (·.advisory)) &&
++      (previous.map (·.blocksCurrent)) == (handoff.map (·.blocksCurrent)) &&
++      (previous.map (·.localUnions)) == (handoff.map (·.localUnions))) "prepared domain changed delivery/control"
++    cases := cases.push (Json.mkObj [("query",toJson query),("present",toJson handoff.isSome),
++      ("bodyBytes",toJson (((handoff.map (·.text)).getD "").utf8ByteSize)),("byteEqual",toJson true)])
++  check ((← DB.PageMap.pin database).head == source.head) "delivery audit changed original DB"
++  IO.FS.writeFile (output / "delivery.json") (Json.mkObj [
++    ("scope",toJson "fixed-snapshot discovery and packet regression; no daemon, model or token comparison"),
++    ("cases",toJson cases)]).pretty
++
++private def packed (database report : System.FilePath) : IO Unit := do
++  let source ← DB.PageMap.pin database
++  let key := Sha256.hex "original-window".toUTF8
++  let rows := (List.range 10000).map fun index =>
++    (⟨index+1,index,index+10001,s!"catalogue item {index}",true,List.replicate 5 key⟩ : CandidateDomain.Row)
++  let data : CandidateDomain.Data := ⟨rows,[]⟩
++  let bytes := (CandidateDomain.dataCodec.encode data).toByteArray
++  let checksum := Sha256.hex bytes
++  let expected : CandidateDomain.Stamp := ⟨source.head.identity,Sha256.hex source.head.authority.toUTF8,0,10000,10000⟩
++  let metadata : CandidateDomain.Manifest := ⟨source.head,expected,CandidateDomain.implementation,checksum,bytes.size,50000⟩
++  let mut timings : Array Nat := #[]
++  for _ in [:50] do
++    let started ← IO.monoMsNow
++    check (Sha256.hex bytes == checksum) "packed checksum changed"
++    let (decoded,tail) ← IO.ofExcept (CandidateDomain.dataCodec.decode bytes.toList)
++    check (tail.isEmpty && decoded == data) "packed domain roundtrip changed"
++    let prepared ← IO.ofExcept (CandidateDomain.prepare source metadata decoded)
++    check (prepared.documents.length == 10000 && prepared.metadata.windows == 50000) "packed population changed"
++    timings := timings.push ((← IO.monoMsNow)-started)
++  let ordered := timings.qsort (· < ·)
++  IO.FS.writeFile report (Json.mkObj [
++    ("scope",toJson "synthetic packed metadata microbenchmark only; not a 50000-window DB or full hook"),
++    ("rows",toJson (10000 : Nat)),("windows",toJson (50000 : Nat)),("bytes",toJson bytes.size),
++    ("samplesMs",toJson timings),("p95Ms",toJson ordered[47]!),
++    ("sourceWritten",toJson false),("answeringModelCalls",toJson (0 : Nat))]).pretty
++
++def main (args : List String) : IO Unit := do
++  let [mode,database,output] := args | throw (IO.userError "CandidateDomainAudit MODE DB NEW-OUTPUT")
++  let output := System.FilePath.mk output
++  check (!(← output.pathExists)) "keep existing audit evidence"
++  match mode with
++  | "catalogue" => catalogue (.mk database) output
++  | "delivery" => delivery (.mk database) output
++  | "packed" => packed (.mk database) output
++  | _ => throw (IO.userError "unknown audit mode")
