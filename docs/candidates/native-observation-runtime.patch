@@ -322,10 +322,12 @@ diff --git a/Eggshell/SynapseExtraction.lean b/Eggshell/SynapseExtraction.lean
 diff --git a/Eggshell/SynapseIndex.lean b/Eggshell/SynapseIndex.lean
 --- a/Eggshell/SynapseIndex.lean
 +++ b/Eggshell/SynapseIndex.lean
-@@ -29,6 +29,9 @@
+@@ -28,7 +28,10 @@
+     (include_str "Synapses.lean").toUTF8, (include_str "SynapseExtraction.lean").toUTF8,
      (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
      (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
-     (include_str "SynapseProvenance.lean").toUTF8,
+-    (include_str "SynapseProvenance.lean").toUTF8,
++    (include_str "SynapseProvenance.lean").toUTF8, (include_str "ObservationAge.lean").toUTF8,
 +    (include_str "JsonScalars.lean").toUTF8,
 +    (include_str "SynapseQuotes.lean").toUTF8,
 +    (include_str "ObservationContext.lean").toUTF8,(include_str "Sha256.lean").toUTF8,
@@ -843,7 +845,7 @@ diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
    if usage.isSome && digest query then roots := roots.push ⟨.query query, 0⟩
    roots := roots.qsort fun a b =>
      if a.priority == b.priority then (toJson a.key).compress < (toJson b.key).compress
-@@ -161,31 +187,33 @@
+@@ -161,37 +187,39 @@
        let identity : {value : String // value = Index.contentKey fact} := ⟨Index.contentKey fact, rfl⟩
        match task.key, fact with
        | .answer .., .supports support =>
@@ -883,12 +885,27 @@ diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
      | _ => true}
  
  /-- Pin optional index publications once for both memo identity and planning.
-@@ -211,15 +239,15 @@
-     source := source.head,shared := none,usage := none,failure := some s!"index-open: {error}"}
+ An advancing background worker cannot silently change the input mid-request. -/
+ structure Prepared where
+-  source : PageMap.Head
++  source : PageMap.Snapshot
+   shared : Option Index.Reader
+   usage : Option Index.Reader
+   failure : Option String := none
+@@ -205,21 +233,21 @@
+       pure (← CanonicalSource.Cache.open? source storage,none)
+       catch error => pure (none,some s!"canonical-open: {error}")
+     return {
+-      source := source.head,shared := ← Index.open? source storage .shared
++      source := source,shared := ← Index.open? source storage .shared
+       usage := ← Index.open? source .user .usage,canonical,canonicalFailure}
+   catch error => return {
+-    source := source.head,shared := none,usage := none,failure := some s!"index-open: {error}"}
++    source := source,shared := none,usage := none,failure := some s!"index-open: {error}"}
  
  def Prepared.identity (prepared : Prepared) : Json :=
 -  toJson (prepared.source.identity, prepared.source.authority,
-+  toJson (implementation,prepared.source.identity, prepared.source.authority,
++  toJson (implementation,prepared.source.head.identity, prepared.source.head.authority,
      prepared.shared.map (·.index.head), prepared.usage.map (·.index.head), prepared.failure,
      prepared.canonical.map (·.metadata),prepared.canonicalFailure,CanonicalSource.Delivery.implementation)
  
@@ -955,7 +972,7 @@ diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
 diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
 --- a/Eggshell/SynapseTransport.lean
 +++ b/Eggshell/SynapseTransport.lean
-@@ -25,7 +25,9 @@
+@@ -25,46 +25,152 @@
  
  structure LocatedOwner where
    owner : OutcomeEdge
@@ -963,13 +980,23 @@ diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
    located : Array Located
 +  outputs : Array (LocatedOutput document)
  
++structure Observation where
++  database : String
++  owner : String
++  work : String
++  occurrence : Occurrence
++  age : ObservationAge.Assessment
++  metadataFailure : Option String := none
++  deriving ToJson
++
  structure Plan where
    results : Array Recommend.Result := #[]
-@@ -33,38 +35,110 @@
+   owners : Array LocatedOwner := #[]
    documents : Array Document := #[]
    rows : Array Read := #[]
    unsupported : Nat := 0
 +  unlocatedFileOwners : Nat := 0
++  observations : Array Observation := #[]
  
  def Plan.complete (plan : Plan) : Bool := plan.results.all (·.complete)
  
@@ -1018,10 +1045,11 @@ diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
  def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat))
      (owners : Array Owner) (query : String) (deadline : Nat) : IO Plan := do
    let mut plan : Plan := {}
++  let assessedUnixMs ← ObservationAge.now
    for source in prepared do
 -    plan := {plan with results := plan.results.push (← source.collect answers query deadline)}
 +    let consumers := owners.flatMap fun owner =>
-+      if owner.database != source.source.identity then #[] else
++      if owner.database != source.source.head.identity then #[] else
 +      let priorities := answers.filterMap fun (key,priority) =>
 +        if key == Persistence.selectionKey owner.original.relation then some priority else none
 +      (Provenance.identities owner.original).flatMap fun occurrence =>
@@ -1037,14 +1065,34 @@ diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
 +    let wanted := (offers.toList.filterMap (·.target.source?)).eraseDups.toArray
 +    let originalRows := wanted.filterMap fun source => context.bind (·.bindSource? owner.database source)
 +    let rows := recorded.toOption.getD #[] ++ originalRows
++    let located := Recommend.locate offers rows
++    let outputs := context.map (Recommend.locateOutputsUsing offers owner.database) |>.getD #[]
++    -- Metadata is fetched only for offered native origins, once per occurrence,
++    -- with a fixed cap and the existing request deadline. It cannot block or
++    -- filter the historical body when unavailable, expired, or clock-skewed.
++    if !located.isEmpty || !outputs.isEmpty then
++      for occurrence in document.occurrences do
++        if plan.observations.any (fun prior => prior.database == owner.database &&
++            prior.owner == document.owner && prior.occurrence == occurrence) then continue
++        let (receivedUnixMs,metadataFailure) ←
++          if plan.observations.size ≥ 256 || (← IO.monoMsNow) ≥ deadline then
++            pure (none,some "metadata-budget")
++          else if let some source := prepared.find? (·.source.head.identity == owner.database) then
++            try
++              let origin ← Provenance.lookup? source.source owner.original occurrence
++              pure (origin.bind (·.receivedUnixMs),if origin.isNone then some "unrecorded" else none)
++            catch _ => pure (none,some "metadata-unverified")
++          else pure (none,some "source-unavailable")
++        plan := {plan with observations := plan.observations.push {
++          database := owner.database,owner := document.owner,work := document.work,occurrence
++          age := ObservationAge.assess assessedUnixMs receivedUnixMs,metadataFailure}}
      plan := {plan with
        documents := plan.documents.push document
        rows := plan.rows ++ rows
 -      owners := plan.owners.push ⟨owner.original, Recommend.locate offers rows⟩}
 +      unlocatedFileOwners := plan.unlocatedFileOwners +
 +        if !document.files.isEmpty && recorded.toOption.isNone then 1 else 0
-+      owners := plan.owners.push ⟨owner.original,document,Recommend.locate offers rows,
-+        context.map (Recommend.locateOutputsUsing offers owner.database) |>.getD #[]⟩}
++      owners := plan.owners.push ⟨owner.original,document,located,outputs⟩}
    return plan
  
  def Plan.receipt (plan : Plan) (text : String) : Json :=
@@ -1056,6 +1104,7 @@ diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
    Json.mkObj [
      ("complete", toJson plan.complete), ("unsupportedOwners", toJson plan.unsupported),
 +    ("unlocatedFileOwners",toJson plan.unlocatedFileOwners),
++    ("observationAges",toJson plan.observations),
      ("inputs", toJson (plan.results.map Recommend.Result.receipt)),
 +    ("originalReferences",toJson (originals.map fun source =>
 +      let bindings := plan.owners.flatMap fun owner => owner.located.filterMap fun located =>
@@ -1084,7 +1133,34 @@ diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
 diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
 --- a/Eggshell/SynapseJournal.lean
 +++ b/Eggshell/SynapseJournal.lean
-@@ -262,7 +262,7 @@
+@@ -61,7 +61,13 @@
+ structure Entry where
+   clock : Clock
+   payload : Payload
+-  deriving BEq, ToJson, FromJson
++  receivedUnixMs : Option Nat := none
++  deriving BEq, FromJson
++
++instance : ToJson Entry where
++  toJson entry := Json.mkObj ([
++    ("clock", toJson entry.clock), ("payload", toJson entry.payload)] ++
++    entry.receivedUnixMs.toList.map (fun time => ("receivedUnixMs", toJson time)))
+ 
+ def Entry.name (entry : Entry) : String :=
+   Index.contentKey (entry.payload.kind, entry.payload.occurrence)
+@@ -87,6 +93,11 @@
+     (result : retainFirst previous next = .ok accepted) : accepted.clock = previous.clock := by
+   rw [retry_keeps_first_observation previous next accepted result]
+ 
++theorem retry_keeps_receipt_time (previous next accepted : Entry)
++    (result : retainFirst previous next = .ok accepted) :
++    accepted.receivedUnixMs = previous.receivedUnixMs := by
++  rw [retry_keeps_first_observation previous next accepted result]
++
+ def completeKnowledge (known : Knowledge) (indexed : Bool) : Bool := !known.uncertain && indexed
+ 
+ theorem complete_knowledge_is_confirmed (known : Knowledge) (indexed : Bool)
+@@ -262,7 +273,7 @@
    let mut result : Replay := {}
    let mut trace : Trace := {}
    let mut domain := ""
@@ -1093,7 +1169,7 @@ diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
    let mut locations : Std.HashMap Occurrence (Array OutputRow) := {}
    let mut usage : Graph := .empty
    for value in values do
-@@ -276,17 +276,23 @@
+@@ -276,17 +287,23 @@
        continue
      match value.payload with
      | .start occurrence work query known =>
@@ -1123,7 +1199,15 @@ diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
          throw (IO.userError "native finish changed its observed invocation")
        let expected := (Plugin.compileOperationOutcomes (.text occurrence.session) (.text occurrence.turn) tool).2
        let localId ← findNode? source expected
-@@ -310,20 +316,26 @@
+@@ -303,27 +320,33 @@
+       let currentOriginal := localId.isSome
+       if currentOriginal then
+         let origin : Provenance.Origin :=
+-          ⟨id, occurrence, value.clock.domain, started.ordinal, value.clock.nanos⟩
++          ⟨id, occurrence, value.clock.domain, started.ordinal, value.clock.nanos, value.receivedUnixMs⟩
+         result := {result with origins := result.origins.push origin}
+       let originalReader ← NodeReader.new recorded
+       let doc ← Build.document originalReader id
        unless doc.occurrences.contains occurrence && doc.workText == some (Plugin.canonicalToolWork tool) do
          throw (IO.userError "native synaptic observation changed its exact occurrence")
        let some raw := doc.source | result := {result with unknown := result.unknown+1}; continue
@@ -1385,6 +1469,15 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
              synapticUnits := synapticBundles.toList.flatMap fun bundle =>
                bundle.members.toList.flatMap fun member => member.choices.toList.filterMap fun bound =>
                  if bound.owner == originalKey then some bound.spans else none
+@@ -7502,7 +7596,7 @@
+           | .ok merged => canonicalRows := canonicalRows.insert owner merged
+           | .error _ => canonicalRows := canonicalRows.erase owner
+   Receipt.observe source.receipt "canonical-source-input" (toJson (source.synaptic.map fun prepared =>
+-    (prepared.source.identity,prepared.canonical.map (fun ready => ready.metadata.rows),prepared.canonicalFailure)))
++    (prepared.source.head.identity,prepared.canonical.map (fun ready => ready.metadata.rows),prepared.canonicalFailure)))
+   -- The focused provider is an independent observation. Include its exact
+   -- durable owner/order/window reply before asking the memo to reuse a packet.
+   -- An unchanged first nomination alone cannot certify an unchanged focus.
 @@ -7564,6 +7658,7 @@
      (referenceRanks := referenceRanks)
      (referenceRanges := referenceRanges)
@@ -1393,6 +1486,15 @@ diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
      (synapticBundles := synapticBundles)
      (canonicalRows := canonicalRows)
    let rendered := rendered.map fun handoff => {handoff with synapticComplete := synaptic.complete}
+@@ -7997,7 +8092,7 @@
+   let synaptic ← (snapshots.filterMap id).toArray.mapM fun snapshot => do
+     let writable := selection.write.any (fun target => target.path.normalize == snapshot.directory.normalize)
+     try Synapses.Recommend.prepare snapshot writable
+-    catch _ => pure ({source := snapshot.head, shared := none, usage := none} : Synapses.Recommend.Prepared)
++    catch _ => pure ({source := snapshot, shared := none, usage := none} : Synapses.Recommend.Prepared)
+   let synapticIdentity := (toJson (synaptic.map Synapses.Recommend.Prepared.identity)).compress
+   let cacheable := demandCacheable staged
+   let externalSemantic := evidenceText.isNone && selection.semanticMatcher.isSome
 diff --git a/Eggshell/SynapseBundles.lean b/Eggshell/SynapseBundles.lean
 --- a/Eggshell/SynapseBundles.lean
 +++ b/Eggshell/SynapseBundles.lean
@@ -2208,7 +2310,7 @@ diff --git a/Eggshell/SynapseQuotes.lean b/Eggshell/SynapseQuotes.lean
 diff --git a/tests/SynapseNativeRebuildTests.lean b/tests/SynapseNativeRebuildTests.lean
 --- a/tests/SynapseNativeRebuildTests.lean
 +++ b/tests/SynapseNativeRebuildTests.lean
-@@ -0,0 +1,177 @@
+@@ -0,0 +1,189 @@
 +import Eggshell.SynapseJournal
 +import Eggshell.Handoff
 +
@@ -2289,11 +2391,14 @@ diff --git a/tests/SynapseNativeRebuildTests.lean b/tests/SynapseNativeRebuildTe
 +    answer.relation,← family answer a,← family answer b,← family answer c]
 +  let domain := String.ofList (List.replicate 64 'a')
 +  let occurrence := fun session name => Occurrence.mk session "turn" name
++  let some receivedUnixMs ← ObservationAge.now | throw (IO.userError "missing wall clock")
++  let expiredUnixMs := receivedUnixMs-ObservationAge.monthMs-60000
 +  let source ← Provenance.publish source #[
-+    ⟨ids[2]!,occurrence "first" "inspect",domain,30,40⟩,
-+    ⟨ids[0]!,occurrence "first" "lookup",domain,10,20⟩,
-+    ⟨ids[3]!,occurrence "first" "follow",domain,50,60⟩,
-+    ⟨ids[1]!,occurrence "second" "lookup",domain,10,20⟩]
++    ⟨ids[2]!,occurrence "first" "inspect",domain,30,40,some (receivedUnixMs-1000)⟩,
++    ⟨ids[0]!,occurrence "first" "lookup",domain,10,20,some expiredUnixMs⟩,
++    ⟨ids[3]!,occurrence "first" "follow",domain,50,60,none⟩,
++    ⟨ids[1]!,occurrence "second" "lookup",domain,10,20,none⟩]
++  let originalTimes := (← Provenance.records source).map (·.origin)
 +  let before := source.head
 +  let first ← Build.refresh source .database
 +  let all ← facts source
@@ -2345,12 +2450,21 @@ diff --git a/tests/SynapseNativeRebuildTests.lean b/tests/SynapseNativeRebuildTe
 +  check ((← Index.allFacts privateIndex.index) == expected &&
 +      (← DB.PageMap.pin copied.directory).head == copied.head)
 +    "private reconstruction changed native facts or source authority"
++  check ((← Provenance.records copied).map (·.origin) == originalTimes)
++    "DB-only rebuild or repeated warm rewrote acquisition dates"
 +  let prepared ← Recommend.prepare copied false
 +  let owners : Array Synapses.Transport.Owner := #[
 +    ⟨copied.head.identity,a,[]⟩,⟨copied.head.identity,again,[]⟩,⟨copied.head.identity,b,[]⟩,⟨copied.head.identity,c,[]⟩]
 +  let query := String.ofList (List.replicate 64 'b')
 +  let plan ← Synapses.Transport.build #[prepared] #[(Persistence.selectionKey answer.relation,0)] owners query ((← IO.monoMsNow)+5000)
 +  let offers := plan.results.flatMap (·.admitted)
++  check (plan.observations.any (·.age.status == .recent) &&
++    plan.observations.any (·.age.status == .expired) &&
++    plan.observations.any (·.age.status == .unknown))
++    "offered canonical data lost its independent recent, expired, or unknown origins"
++  check (plan.observations.all (fun item => item.age.receivedUnixMs ==
++    (originalTimes.find? (·.occurrence == item.occurrence)).bind (·.receivedUnixMs)))
++    "delivery annotated a different origin or fabricated an acquisition date"
 +  IO.FS.writeFile (root / "recommendation-before-delivery.json") (plan.receipt "").pretty
 +  check (plan.complete && offers.any (·.kind == "consumption") && offers.any (·.kind == "coquotation") &&
 +      (plan.outputRanges.flatMap (·.2)).all (fun range => range.limit-range.first < 5000))
@@ -2389,16 +2503,58 @@ diff --git a/tests/SynapseNativeRebuildTests.lean b/tests/SynapseNativeRebuildTe
 diff --git a/Eggshell/SynapseProvenance.lean b/Eggshell/SynapseProvenance.lean
 --- a/Eggshell/SynapseProvenance.lean
 +++ b/Eggshell/SynapseProvenance.lean
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,8 @@
  module
  
  public import Eggshell.GraphStore
 -public import Eggshell.SynapseSource
 +public import Eggshell.ObservationContext
++public import Eggshell.ObservationAge
  
  @[expose] public section
  
-@@ -191,7 +191,7 @@
+@@ -38,8 +39,17 @@
+   domain : String
+   started : Nat
+   finished : Nat
+-  deriving BEq, ToJson, FromJson
++  receivedUnixMs : Option Nat := none
++  deriving BEq, FromJson
+ 
++/-- Absence stays absent, including in original records without a wall clock. -/
++instance : ToJson Origin where
++  toJson origin := Json.mkObj ([
++    ("owner", toJson origin.owner), ("occurrence", toJson origin.occurrence),
++    ("domain", toJson origin.domain), ("started", toJson origin.started),
++    ("finished", toJson origin.finished)] ++
++    origin.receivedUnixMs.toList.map (fun time => ("receivedUnixMs", toJson time)))
++
+ def Origin.valid (origin : Origin) : Bool :=
+   origin.occurrence.valid && digest origin.domain && origin.started < origin.finished
+ 
+@@ -132,6 +142,21 @@
+     throw (IO.userError "provenance does not belong to its original native observation")
+   return doc
+ 
++/-- A single immutable metadata lookup against a pinned source, not a scan of
++the origin log. The caller's native owner and occurrence must both agree. -/
++def lookup? (source : PageMap.Snapshot) (owner : OutcomeEdge)
++    (occurrence : Occurrence) : IO (Option Origin) := do
++  unless (identities owner).contains occurrence do return none
++  let some encoded ← source.get (name occurrence) | return none
++  let stored ← decode (α := Stored) encoded
++  unless stored.origin.valid && stored.origin.occurrence == occurrence &&
++      stored.ordinal < (← state source).count do
++    throw (IO.userError "invalid native observation metadata")
++  unless (← findNode? source owner.relation) == some stored.origin.owner &&
++      (← source.get (key "member" stored.origin.owner)).isSome do
++    throw (IO.userError "native observation metadata has another owner")
++  return some stored.origin
++
+ /-- Only an explicitly writable native source may call this publisher. It
+ writes the existing non-authoritative namespace, never roots or Union rows. -/
+ def publish (source : PageMap.Snapshot) (origins : Array Origin) : IO PageMap.Snapshot := do
+@@ -191,7 +216,7 @@
      let doc ← checkedDocument reader origin
      let some work := doc.workText | ignored := ignored+1; continue
      let some raw := doc.source | ignored := ignored+1; continue
@@ -2407,7 +2563,7 @@ diff --git a/Eggshell/SynapseProvenance.lean b/Eggshell/SynapseProvenance.lean
      docs := docs.insert origin.owner doc
      events := events.push ⟨origin, true⟩ |>.push ⟨origin, false⟩
    events := events.qsort fun a b =>
-@@ -209,14 +209,15 @@
+@@ -209,14 +234,15 @@
        trace := {}; locations := {}; group := event.group
      let some doc := docs[event.origin.owner]? | throw (IO.userError "missing original provenance body")
      if event.start then
@@ -2666,12 +2822,25 @@ diff --git a/Eggshell/SourceEvidence.lean b/Eggshell/SourceEvidence.lean
 diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
 --- a/Eggshell/ContractAudit.lean
 +++ b/Eggshell/ContractAudit.lean
-@@ -16,7 +16,12 @@
+@@ -4,6 +4,7 @@
+ import Eggshell.SearchProvider
+ import Eggshell.SemanticMatcher
+ import Eggshell.PluginModel
++import Eggshell.SynapseLive
+ import Eggshell.Setup
+ import all Eggshell.GraphStore
+ import all Eggshell.Worker
+@@ -16,7 +17,17 @@
  reads use the same decoding/assembly implementation with their own read
  capability; no alternate body representation or compatibility lane exists. -/
  run_meta do
 -  for theoremName in #[``Eggshell.Plugin.DemandMemo.requested_record_rejects_another_request,
-+  for theoremName in #[``Eggshell.Deadline.never_extends,
++  for theoremName in #[``Eggshell.ObservationAge.recent_is_within_interval,
++      ``Eggshell.ObservationAge.expired_is_at_least_interval,
++      ``Eggshell.ObservationAge.missing_receipt_is_unknown,
++      ``Eggshell.ObservationAge.assessment_preserves_receipt,
++      ``Eggshell.Synapses.Journal.retry_keeps_receipt_time,
++      ``Eggshell.Deadline.never_extends,
 +      ``Eggshell.Deadline.reserves_delivery, ``Eggshell.Deadline.reserves_minimum,
 +      ``Eggshell.Deadline.expired_stays_expired,
 +      ``Eggshell.SourceEvidence.matched_status_has_checked_dependencies,
@@ -2680,8 +2849,12 @@ diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
        ``Eggshell.Plugin.DemandMemo.observed_record_has_current_request,
        ``Eggshell.Plugin.DemandMemo.captured_decode_keeps_origin,
        ``Eggshell.Plugin.changed_memo_payload_rejected,
-@@ -240,6 +245,7 @@
+@@ -238,8 +249,11 @@
+         #[``Eggshell.SourceEvidence.receiptFields?], #[]),
+       (``Eggshell.Plugin.automaticHandoff,
          #[``Eggshell.Plugin.Handoff.checkSources, ``Eggshell.Persistence.Store.NodeReader.sources], #[]),
++      (``Eggshell.Plugin.Daemon.hookRequest, #[``Eggshell.ObservationAge.now], #[]),
++      (``Eggshell.Synapses.Live.finish, #[``Eggshell.Synapses.Live.receivedUnixMs?], #[]),
        (``Eggshell.Plugin.Handoff.checkSources,
          #[``Eggshell.Plugin.Handoff.withCheckedSources, ``Eggshell.SourceEvidence.observeRecords,
 +          ``Eggshell.Deadline.verification, ``Eggshell.Receipt.observe,
@@ -2806,3 +2979,323 @@ diff --git a/tools/research/FreshnessSourceAudit.lean b/tools/research/Freshness
 +      Eggshell.Plugin.Worker.shutdown
 +      Eggshell.Plugin.Daemon.shutdown
 +  | _ => throw (IO.userError "FreshnessSourceAudit sources|observations")
+diff --git a/Eggshell/ObservationAge.lean b/Eggshell/ObservationAge.lean
+--- a/Eggshell/ObservationAge.lean
++++ b/Eggshell/ObservationAge.lean
+@@ -0,0 +1,66 @@
++module
++
++public import Lean
++public import Std.Time.DateTime.Timestamp
++
++@[expose] public section
++
++namespace Eggshell.ObservationAge
++open Lean
++
++/-- An advisory interval after receipt, not a proof that external data is unchanged. -/
++def monthMs : Nat := 30 * 24 * 60 * 60 * 1000
++
++inductive Status where
++  | recent | expired | unknown | clockSkew
++  deriving BEq, ToJson, FromJson
++
++structure Assessment where
++  receivedUnixMs : Option Nat
++  assessedUnixMs : Option Nat
++  updateAfterMs : Nat
++  status : Status
++  deriving BEq, ToJson, FromJson
++
++/-- Missing, invalid, or future receipt times cannot become recent. Zero TTL
++expires immediately. Callers may supply an applicable provider interval. -/
++def assess (now received : Option Nat) (interval : Nat := monthMs) : Assessment :=
++  let status := match now, received with
++    | some now, some received =>
++      if now = 0 ∨ received = 0 then .unknown
++      else if now < received then .clockSkew
++      else if now - received < interval then .recent else .expired
++    | _, _ => .unknown
++  ⟨received, now, interval, status⟩
++
++theorem recent_is_within_interval (now received interval : Nat)
++    (recent : (assess (some now) (some received) interval).status = .recent) :
++    received ≤ now ∧ now - received < interval := by
++  simp only [assess] at recent
++  split at recent <;> try contradiction
++  split at recent <;> try contradiction
++  split at recent <;> simp_all <;> omega
++
++theorem expired_is_at_least_interval (now received interval : Nat)
++    (expired : (assess (some now) (some received) interval).status = .expired) :
++    received ≤ now ∧ interval ≤ now - received := by
++  simp only [assess] at expired
++  split at expired <;> try contradiction
++  split at expired <;> try contradiction
++  split at expired <;> simp_all <;> omega
++
++theorem missing_receipt_is_unknown (now : Option Nat) (interval : Nat) :
++    (assess now none interval).status = .unknown := by cases now <;> rfl
++
++theorem assessment_preserves_receipt (now received : Option Nat) (interval : Nat) :
++    (assess now received interval).receivedUnixMs = received := rfl
++
++/-- Read the wall clock at ingress. Warm/replay must never call this to fill
++an absent receipt time on an old observation. -/
++def now : IO (Option Nat) := do
++  try
++    let millis := (← Std.Time.Timestamp.now).toMillisecondsSinceUnixEpoch.val
++    return if millis > 0 then some millis.toNat else none
++  catch _ => return none
++
++end Eggshell.ObservationAge
+diff --git a/Eggshell/Daemon.lean b/Eggshell/Daemon.lean
+--- a/Eggshell/Daemon.lean
++++ b/Eggshell/Daemon.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.PluginCli
+ public import Eggshell.DaemonWire
++public import Eggshell.ObservationAge
+ 
+ @[expose] public section
+ 
+@@ -297,10 +298,12 @@
+   simp [decodeHookReply, field, invalid]
+ 
+ def hookRequest (input : Json) (deadline : Nat) (receipt : String) : IO Json := do
++  let receivedUnixMs ← ObservationAge.now
+   let observedNanos ← IO.monoNanosNow
+   let event := (optionalString input "hook_event_name").getD ""
+   try
+     let input := attachClientConfig input (← IO.getEnv "EGGSHELL_CONFIG")
++      |>.setObjVal! "_eggshell_received_unix_ms" (toJson receivedUnixMs)
+     let captureStarted ← IO.monoMsNow
+     captureTerminal input
+     let captureMs := (← IO.monoMsNow) - captureStarted
+diff --git a/tests/ObservationAgeTests.lean b/tests/ObservationAgeTests.lean
+--- a/tests/ObservationAgeTests.lean
++++ b/tests/ObservationAgeTests.lean
+@@ -0,0 +1,52 @@
++import Eggshell.SynapseLive
++
++open Lean Eggshell Eggshell.Synapses Eggshell.Synapses.Journal
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def policy : IO Unit := do
++  let month := ObservationAge.monthMs
++  let received := 1000000000
++  check (month == 2592000000) "default advisory interval changed"
++  for interval in [0,1,month] do
++    for elapsed in [0,1,month-1,month,month+1] do
++      let age := ObservationAge.assess (some (received+elapsed)) (some received) interval
++      check (age.status == if elapsed < interval then .recent else .expired)
++        "receipt-age boundary is not half-open"
++      check (age.receivedUnixMs == some received) "assessment refreshed the acquisition date"
++  check ((ObservationAge.assess (some (received-1)) (some received)).status == .clockSkew &&
++    (ObservationAge.assess none (some received)).status == .unknown &&
++    (ObservationAge.assess (some received) none).status == .unknown &&
++    (ObservationAge.assess (some received) (some 0)).status == .unknown)
++    "unknown or future dates became fresh"
++  let clock : Clock := ⟨String.ofList (List.replicate 64 'a'),123⟩
++  let event : Entry := ⟨clock,.finish ⟨"session","turn","tool"⟩ "mcp__any__read" "{}" "{}" none,none⟩
++  let oldJson := Json.mkObj [("clock",toJson clock),("payload",toJson event.payload)]
++  let decoded ← IO.ofExcept (fromJson? (α := Entry) oldJson)
++  check (decoded == event && toJson decoded == oldJson)
++    "an event without a receipt date cannot remain canonical and unknown"
++  let known := {event with receivedUnixMs := some received}
++  let retried := {known with receivedUnixMs := some (received+month),clock := {clock with nanos := 999}}
++  check ((retainFirst known retried).toOption == some known)
++    "a retry refreshed the first acquisition date"
++  check ((retainFirst event known).toOption == some event)
++    "retry fabricated a receipt date for an unknown original"
++  let origin : Provenance.Origin := ⟨7,⟨"session","turn","tool"⟩,clock.domain,1,2,none⟩
++  let oldOrigin := Json.mkObj [("owner",toJson origin.owner),("occurrence",toJson origin.occurrence),
++    ("domain",toJson origin.domain),("started",toJson origin.started),("finished",toJson origin.finished)]
++  let decoded ← IO.ofExcept (fromJson? (α := Provenance.Origin) oldOrigin)
++  check (decoded == origin && toJson decoded == oldOrigin)
++    "old provenance gained a synthetic timestamp or changed its canonical digest"
++  let stamped := Json.mkObj [("_eggshell_received_unix_ms",toJson received)]
++  check (Live.receivedUnixMs? stamped == some received && Live.receivedUnixMs? (Json.mkObj []) == none &&
++      Live.receivedUnixMs? (Json.mkObj [("_eggshell_received_unix_ms",toJson (0 : Nat))]) == none)
++    "native ingress did not preserve an actual positive receipt time"
++  let some before ← ObservationAge.now | throw (IO.userError "missing system wall clock")
++  let some after ← ObservationAge.now | throw (IO.userError "missing system wall clock")
++  check (before > 1700000000000 && after ≥ before && after-before < 10000)
++    "system acquisition clock is not an epoch millisecond clock"
++
++def main (_ : List String) : IO Unit := do
++  policy
++  IO.println "observation age passed: 30-day and provider interval boundaries, unknown/skew, canonical undated records, immutable retries, native receipt extraction and system epoch clock"
+diff --git a/Eggshell/SynapseImport.lean b/Eggshell/SynapseImport.lean
+--- a/Eggshell/SynapseImport.lean
++++ b/Eggshell/SynapseImport.lean
+@@ -167,7 +167,7 @@
+       let exact := invoked.filter (fun owner => (bind? owner.doc call).isSome)
+       if exact.isEmpty then report := {report with outputMismatch := report.outputMismatch+1}; continue
+       let #[owner] := exact | report := {report with ambiguous := report.ambiguous+1}; continue
+-      let origin : Provenance.Origin := ⟨owner.id, call.occurrence, recording.domain, call.started, call.finished⟩
++      let origin : Provenance.Origin := ⟨owner.id, call.occurrence, recording.domain, call.started, call.finished, none⟩
+       if let some prior := seen[call.occurrence]? then
+         unless prior.owner == owner.id do throw (IO.userError "one occurrence has two original source owners")
+         report := {report with alreadyPresent := report.alreadyPresent+1}
+diff --git a/Eggshell/SynapseLive.lean b/Eggshell/SynapseLive.lean
+--- a/Eggshell/SynapseLive.lean
++++ b/Eggshell/SynapseLive.lean
+@@ -12,6 +12,9 @@
+   let nanos ← (input.getObjValAs? Nat "_eggshell_synapse_nanos").toOption
+   if digest domain then some ⟨domain, nanos⟩ else none
+ 
++def receivedUnixMs? (input : Json) : Option Nat :=
++  (input.getObjValAs? Nat "_eggshell_received_unix_ms").toOption.filter (0 < ·)
++
+ def attempt (action : IO Unit) : IO Unit := do
+   try action
+   catch error => IO.eprintln s!"Eggshell retained unknown synaptic ingress: {error}"
+@@ -53,7 +56,7 @@
+   let unknown ← uncertain files state
+   observe pending fun source => do
+     let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write
+-    return ⟨clock, .start occurrence (Plugin.canonicalToolWork tool) query known⟩
++    return ⟨clock, .start occurrence (Plugin.canonicalToolWork tool) query known, receivedUnixMs? input⟩
+ 
+ def finish (input : Json) (pending : Plugin.PendingTurn) (tool : Plugin.ToolEvent) : IO Unit := do
+   let some clock := clock? input | return
+@@ -62,7 +65,7 @@
+   let clock := contextClock clock state.epoch
+   let occurrence : Occurrence := ⟨pending.sessionId, pending.turnId, tool.useId⟩
+   observe pending fun _ => pure ⟨clock, .finish occurrence tool.name
+-    (Plugin.canonicalJson tool.input) (Plugin.canonicalJson tool.response) pending.write⟩
++    (Plugin.canonicalJson tool.input) (Plugin.canonicalJson tool.response) pending.write, receivedUnixMs? input⟩
+ 
+ /-- Stop supplies final text, not a native agent-message id. Its observed
+ origin is the hook's session/turn, explicitly distinct from a tool occurrence. -/
+@@ -76,6 +79,6 @@
+   let unknown ← uncertain files state
+   observe pending fun source => do
+     let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write
+-    return ⟨clock, .answer occurrence query text known⟩
++    return ⟨clock, .answer occurrence query text known, receivedUnixMs? input⟩
+ 
+ end Eggshell.Synapses.Live
+diff --git a/tests/SynapseInvocationTests.lean b/tests/SynapseInvocationTests.lean
+--- a/tests/SynapseInvocationTests.lean
++++ b/tests/SynapseInvocationTests.lean
+@@ -49,10 +49,10 @@
+   let _ ← Build.refresh source .database
+   let known ← knowledge source [] false
+   let events := #[
+-    Entry.mk ⟨domain,10⟩ (.start (occurrence producer) (Plugin.canonicalToolWork producer) query known),
+-    Entry.mk ⟨domain,20⟩ (.finish (occurrence producer) producer.name producer.input producer.response none),
+-    Entry.mk ⟨domain,30⟩ (.start (occurrence consumer) work query known),
+-    Entry.mk ⟨domain,40⟩ (.finish (occurrence consumer) consumer.name consumer.input consumer.response none)]
++    Entry.mk ⟨domain,10⟩ (.start (occurrence producer) (Plugin.canonicalToolWork producer) query known) none,
++    Entry.mk ⟨domain,20⟩ (.finish (occurrence producer) producer.name producer.input producer.response none) none,
++    Entry.mk ⟨domain,30⟩ (.start (occurrence consumer) work query known) none,
++    Entry.mk ⟨domain,40⟩ (.finish (occurrence consumer) consumer.name consumer.input consumer.response none) none]
+   let result ← replay source events ((← IO.monoMsNow)+5000)
+   check (result.unknown == 0 && result.pending == 0 && result.origins.size == 2 && result.consumers.size == 2)
+     "MCP calls did not retain their complete native provenance"
+@@ -64,7 +64,7 @@
+     "structured MCP output did not produce its exact argument-consumption witness"
+   let altered := {consumer with name := "mcp__different_server__inspect"}
+   let invalid := events.extract 0 3 |>.push
+-    ⟨⟨domain,40⟩,.finish (occurrence consumer) altered.name altered.input altered.response none⟩
++    ⟨⟨domain,40⟩,.finish (occurrence consumer) altered.name altered.input altered.response none, none⟩
+   let rejected ← try
+     let _ ← replay source invalid ((← IO.monoMsNow)+5000)
+     pure false
+diff --git a/tests/SynapseOutputDeliveryTests.lean b/tests/SynapseOutputDeliveryTests.lean
+--- a/tests/SynapseOutputDeliveryTests.lean
++++ b/tests/SynapseOutputDeliveryTests.lean
+@@ -46,10 +46,10 @@
+   let domain := String.ofList (List.replicate 64 'a')
+   let query := String.ofList (List.replicate 64 'b')
+   let events := #[
+-    Entry.mk ⟨domain,10⟩ (.start (occurrence producer) (canonicalToolWork producer) query known),
+-    Entry.mk ⟨domain,20⟩ (.finish (occurrence producer) producer.name producer.input producer.response none),
+-    Entry.mk ⟨domain,30⟩ (.start (occurrence consumer) (canonicalToolWork consumer) query known),
+-    Entry.mk ⟨domain,40⟩ (.finish (occurrence consumer) consumer.name consumer.input consumer.response none)]
++    Entry.mk ⟨domain,10⟩ (.start (occurrence producer) (canonicalToolWork producer) query known) none,
++    Entry.mk ⟨domain,20⟩ (.finish (occurrence producer) producer.name producer.input producer.response none) none,
++    Entry.mk ⟨domain,30⟩ (.start (occurrence consumer) (canonicalToolWork consumer) query known) none,
++    Entry.mk ⟨domain,40⟩ (.finish (occurrence consumer) consumer.name consumer.input consumer.response none) none]
+   let replayed ← replay source events ((← IO.monoMsNow)+5000)
+   check (replayed.consumed.size == (if consumeBoth then 2 else 1) && replayed.pending == 0 && replayed.unknown == 0)
+     "native pre/post events did not form their exact consumption edge"
+diff --git a/tests/SynapseJournalConcurrencyTests.lean b/tests/SynapseJournalConcurrencyTests.lean
+--- a/tests/SynapseJournalConcurrencyTests.lean
++++ b/tests/SynapseJournalConcurrencyTests.lean
+@@ -12,7 +12,7 @@
+ private def event (worker index : Nat) : Entry :=
+   ⟨⟨digest, worker*10000+index+1⟩,
+     .finish ⟨"parallel", "turn", s!"worker-{worker}-{index}"⟩ "shell"
+-      "{\"command\":\"printf symbol\"}" "{\"output\":\"symbol\"}" none⟩
++      "{\"command\":\"printf symbol\"}" "{\"output\":\"symbol\"}" none, none⟩
+ 
+ private def worker (root : System.FilePath) (number : Nat) : IO Unit := do
+   let source ← DB.PageMap.pin (root / "source.egg")
+diff --git a/tests/SynapseJournalTests.lean b/tests/SynapseJournalTests.lean
+--- a/tests/SynapseJournalTests.lean
++++ b/tests/SynapseJournalTests.lean
+@@ -33,12 +33,12 @@
+     (keys : List String := []) (uncertain := false) (cmd := command) (archive : Option String := none) : IO Entry := do
+   let tool := tool name cmd
+   return ⟨⟨domain, nanos⟩, .start (occurrence name) (Plugin.canonicalToolWork tool) query
+-    (← knowledge source keys uncertain archive)⟩
++    (← knowledge source keys uncertain archive), none⟩
+ 
+ private def finishEvent (name : String) (nanos : Nat) (cmd := command) (output := body)
+     (archive : Option String := none) : Entry :=
+   let tool := tool name cmd output
+-  ⟨⟨domain, nanos⟩, .finish (occurrence name) tool.name tool.input tool.response archive⟩
++  ⟨⟨domain, nanos⟩, .finish (occurrence name) tool.name tool.input tool.response archive, none⟩
+ 
+ private def facts (source : DB.PageMap.Snapshot) : IO (Array Fact) := do
+   let some usage ← Index.open? source .user .usage | return #[]
+@@ -58,13 +58,18 @@
+   let late ← startEvent source "missing" 999 ["h:" ++ Persistence.selectionKey seed.relation]
+   check (← append source start) "first Pre event was not recorded"
+   check (!(← append source late)) "retry rewrote first knowledge or clock"
+-  check (← append source (finishEvent "missing" 200 command body (some source.directory.toString))) "Post event was not recorded"
++  let finish := {finishEvent "missing" 200 command body (some source.directory.toString) with receivedUnixMs := some 1000000000}
++  check (← append source finish) "Post event was not recorded"
++  check (!(← append source {finish with receivedUnixMs := some 2000000000})) "retry refreshed a receipt date"
+   let before ← refresh source .database ((← IO.monoMsNow)+3000)
+   let source ← DB.PageMap.pin source.directory
+   check (before.pending == 1 && before.usage == 0) "unpublished Post invented a saved observation"
+-  let (source, _) ← publish source "live" "turn" (tool "missing")
++  let (source, missingOwner) ← publish source "live" "turn" (tool "missing")
+   let first ← refresh source .database ((← IO.monoMsNow)+3000)
+   let source ← DB.PageMap.pin source.directory
++  let some origin ← Provenance.lookup? source missingOwner (occurrence "missing") |
++    throw (IO.userError "replay did not publish the native origin")
++  check (origin.receivedUnixMs == some 1000000000) "journal replay replaced actual receipt time with warm time"
+   let missing ← usages source "missing"
+   check (first.usage == 1 && missing.size == 1 && missing.all (·.kind == .omittedThenRead))
+     "saved pre-read evidence or first observed knowledge was lost"
+@@ -76,7 +81,7 @@
+   check (repeated.turns == 0 && (← usages source "missing").size == 1) "replay inflated feedback"
+   let shown := ["h:" ++ Persistence.selectionKey seed.relation]
+   let answer : Entry := ⟨⟨domain, 300⟩, .answer (occurrence "answer") query
+-    "[source.cpp:11](src/source.cpp:11)" (← knowledge source shown false)⟩
++    "[source.cpp:11](src/source.cpp:11)" (← knowledge source shown false), none⟩
+   let _ ← append source answer
+   let _ ← refresh source .database ((← IO.monoMsNow)+3000)
+   let source ← DB.PageMap.pin source.directory
+diff --git a/tests/SynapseProvenanceTests.lean b/tests/SynapseProvenanceTests.lean
+--- a/tests/SynapseProvenanceTests.lean
++++ b/tests/SynapseProvenanceTests.lean
+@@ -58,8 +58,8 @@
+   let _ ← Build.refresh source .database
+   check ((← facts source .database).all fun fact => match fact with | .consumed _ => false | _ => true)
+     "DB allocation order invented a consumption edge"
+-  let readOrigin : Provenance.Origin := ⟨producerId, occurrence "read", clockDomain, 10, 20⟩
+-  let useOrigin : Provenance.Origin := ⟨consumerId, occurrence "consumer", clockDomain, 30, 40⟩
++  let readOrigin : Provenance.Origin := ⟨producerId, occurrence "read", clockDomain, 10, 20, none⟩
++  let useOrigin : Provenance.Origin := ⟨consumerId, occurrence "consumer", clockDomain, 30, 40, none⟩
+   for name in ["equal-time.egg", "reverse.egg", "other-clock.egg"] do
+     copySource source (root / name)
+     IO.FS.writeBinFile (root / name / "writer") ByteArray.empty

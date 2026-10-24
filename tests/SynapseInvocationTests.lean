@@ -49,10 +49,10 @@ def main (args : List String) : IO Unit := do
   let _ ← Build.refresh source .database
   let known ← knowledge source [] false
   let events := #[
-    Entry.mk ⟨domain,10⟩ (.start (occurrence producer) (Plugin.canonicalToolWork producer) query known),
-    Entry.mk ⟨domain,20⟩ (.finish (occurrence producer) producer.name producer.input producer.response none),
-    Entry.mk ⟨domain,30⟩ (.start (occurrence consumer) work query known),
-    Entry.mk ⟨domain,40⟩ (.finish (occurrence consumer) consumer.name consumer.input consumer.response none)]
+    Entry.mk ⟨domain,10⟩ (.start (occurrence producer) (Plugin.canonicalToolWork producer) query known) none,
+    Entry.mk ⟨domain,20⟩ (.finish (occurrence producer) producer.name producer.input producer.response none) none,
+    Entry.mk ⟨domain,30⟩ (.start (occurrence consumer) work query known) none,
+    Entry.mk ⟨domain,40⟩ (.finish (occurrence consumer) consumer.name consumer.input consumer.response none) none]
   let result ← replay source events ((← IO.monoMsNow)+5000)
   check (result.unknown == 0 && result.pending == 0 && result.origins.size == 2 && result.consumers.size == 2)
     "MCP calls did not retain their complete native provenance"
@@ -64,7 +64,7 @@ def main (args : List String) : IO Unit := do
     "structured MCP output did not produce its exact argument-consumption witness"
   let altered := {consumer with name := "mcp__different_server__inspect"}
   let invalid := events.extract 0 3 |>.push
-    ⟨⟨domain,40⟩,.finish (occurrence consumer) altered.name altered.input altered.response none⟩
+    ⟨⟨domain,40⟩,.finish (occurrence consumer) altered.name altered.input altered.response none, none⟩
   let rejected ← try
     let _ ← replay source invalid ((← IO.monoMsNow)+5000)
     pure false

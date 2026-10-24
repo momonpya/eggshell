@@ -28,7 +28,7 @@ def implementation : String :=
     (include_str "Synapses.lean").toUTF8, (include_str "SynapseExtraction.lean").toUTF8,
     (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
     (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
-    (include_str "SynapseProvenance.lean").toUTF8,
+    (include_str "SynapseProvenance.lean").toUTF8, (include_str "ObservationAge.lean").toUTF8,
     (include_str "JsonScalars.lean").toUTF8,
     (include_str "SynapseQuotes.lean").toUTF8,
     (include_str "ObservationContext.lean").toUTF8,(include_str "Sha256.lean").toUTF8,

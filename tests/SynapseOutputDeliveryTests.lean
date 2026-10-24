@@ -46,10 +46,10 @@ private def trial (rootPath : System.FilePath) (description : String)
   let domain := String.ofList (List.replicate 64 'a')
   let query := String.ofList (List.replicate 64 'b')
   let events := #[
-    Entry.mk ⟨domain,10⟩ (.start (occurrence producer) (canonicalToolWork producer) query known),
-    Entry.mk ⟨domain,20⟩ (.finish (occurrence producer) producer.name producer.input producer.response none),
-    Entry.mk ⟨domain,30⟩ (.start (occurrence consumer) (canonicalToolWork consumer) query known),
-    Entry.mk ⟨domain,40⟩ (.finish (occurrence consumer) consumer.name consumer.input consumer.response none)]
+    Entry.mk ⟨domain,10⟩ (.start (occurrence producer) (canonicalToolWork producer) query known) none,
+    Entry.mk ⟨domain,20⟩ (.finish (occurrence producer) producer.name producer.input producer.response none) none,
+    Entry.mk ⟨domain,30⟩ (.start (occurrence consumer) (canonicalToolWork consumer) query known) none,
+    Entry.mk ⟨domain,40⟩ (.finish (occurrence consumer) consumer.name consumer.input consumer.response none) none]
   let replayed ← replay source events ((← IO.monoMsNow)+5000)
   check (replayed.consumed.size == (if consumeBoth then 2 else 1) && replayed.pending == 0 && replayed.unknown == 0)
     "native pre/post events did not form their exact consumption edge"

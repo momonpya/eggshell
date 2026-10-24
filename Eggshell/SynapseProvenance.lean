@@ -2,6 +2,7 @@ module
 
 public import Eggshell.GraphStore
 public import Eggshell.ObservationContext
+public import Eggshell.ObservationAge
 
 @[expose] public section
 
@@ -38,7 +39,16 @@ structure Origin where
   domain : String
   started : Nat
   finished : Nat
-  deriving BEq, ToJson, FromJson
+  receivedUnixMs : Option Nat := none
+  deriving BEq, FromJson
+
+/-- Absence stays absent, including in original records without a wall clock. -/
+instance : ToJson Origin where
+  toJson origin := Json.mkObj ([
+    ("owner", toJson origin.owner), ("occurrence", toJson origin.occurrence),
+    ("domain", toJson origin.domain), ("started", toJson origin.started),
+    ("finished", toJson origin.finished)] ++
+    origin.receivedUnixMs.toList.map (fun time => ("receivedUnixMs", toJson time)))
 
 def Origin.valid (origin : Origin) : Bool :=
   origin.occurrence.valid && digest origin.domain && origin.started < origin.finished
@@ -131,6 +141,21 @@ def checkedDocument (reader : NodeReader source) (origin : Origin) : IO Document
   unless doc.native && doc.occurrences.contains origin.occurrence do
     throw (IO.userError "provenance does not belong to its original native observation")
   return doc
+
+/-- A single immutable metadata lookup against a pinned source, not a scan of
+the origin log. The caller's native owner and occurrence must both agree. -/
+def lookup? (source : PageMap.Snapshot) (owner : OutcomeEdge)
+    (occurrence : Occurrence) : IO (Option Origin) := do
+  unless (identities owner).contains occurrence do return none
+  let some encoded ← source.get (name occurrence) | return none
+  let stored ← decode (α := Stored) encoded
+  unless stored.origin.valid && stored.origin.occurrence == occurrence &&
+      stored.ordinal < (← state source).count do
+    throw (IO.userError "invalid native observation metadata")
+  unless (← findNode? source owner.relation) == some stored.origin.owner &&
+      (← source.get (key "member" stored.origin.owner)).isSome do
+    throw (IO.userError "native observation metadata has another owner")
+  return some stored.origin
 
 /-- Only an explicitly writable native source may call this publisher. It
 writes the existing non-authoritative namespace, never roots or Union rows. -/

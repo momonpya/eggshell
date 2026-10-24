@@ -58,8 +58,8 @@ private def fixture (root : System.FilePath) : IO Unit := do
   let _ ← Build.refresh source .database
   check ((← facts source .database).all fun fact => match fact with | .consumed _ => false | _ => true)
     "DB allocation order invented a consumption edge"
-  let readOrigin : Provenance.Origin := ⟨producerId, occurrence "read", clockDomain, 10, 20⟩
-  let useOrigin : Provenance.Origin := ⟨consumerId, occurrence "consumer", clockDomain, 30, 40⟩
+  let readOrigin : Provenance.Origin := ⟨producerId, occurrence "read", clockDomain, 10, 20, none⟩
+  let useOrigin : Provenance.Origin := ⟨consumerId, occurrence "consumer", clockDomain, 30, 40, none⟩
   for name in ["equal-time.egg", "reverse.egg", "other-clock.egg"] do
     copySource source (root / name)
     IO.FS.writeBinFile (root / name / "writer") ByteArray.empty

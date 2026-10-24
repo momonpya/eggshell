@@ -61,7 +61,13 @@ def Payload.valid (database : String) (payload : Payload) : Bool :=
 structure Entry where
   clock : Clock
   payload : Payload
-  deriving BEq, ToJson, FromJson
+  receivedUnixMs : Option Nat := none
+  deriving BEq, FromJson
+
+instance : ToJson Entry where
+  toJson entry := Json.mkObj ([
+    ("clock", toJson entry.clock), ("payload", toJson entry.payload)] ++
+    entry.receivedUnixMs.toList.map (fun time => ("receivedUnixMs", toJson time)))
 
 def Entry.name (entry : Entry) : String :=
   Index.contentKey (entry.payload.kind, entry.payload.occurrence)
@@ -85,6 +91,11 @@ theorem retry_keeps_first_observation (previous next accepted : Entry)
 
 theorem retry_keeps_observed_time (previous next accepted : Entry)
     (result : retainFirst previous next = .ok accepted) : accepted.clock = previous.clock := by
+  rw [retry_keeps_first_observation previous next accepted result]
+
+theorem retry_keeps_receipt_time (previous next accepted : Entry)
+    (result : retainFirst previous next = .ok accepted) :
+    accepted.receivedUnixMs = previous.receivedUnixMs := by
   rw [retry_keeps_first_observation previous next accepted result]
 
 def completeKnowledge (known : Knowledge) (indexed : Bool) : Bool := !known.uncertain && indexed
@@ -309,7 +320,7 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       let currentOriginal := localId.isSome
       if currentOriginal then
         let origin : Provenance.Origin :=
-          ⟨id, occurrence, value.clock.domain, started.ordinal, value.clock.nanos⟩
+          ⟨id, occurrence, value.clock.domain, started.ordinal, value.clock.nanos, value.receivedUnixMs⟩
         result := {result with origins := result.origins.push origin}
       let originalReader ← NodeReader.new recorded
       let doc ← Build.document originalReader id

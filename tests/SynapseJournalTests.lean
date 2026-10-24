@@ -33,12 +33,12 @@ private def startEvent (source : DB.PageMap.Snapshot) (name : String) (nanos : N
     (keys : List String := []) (uncertain := false) (cmd := command) (archive : Option String := none) : IO Entry := do
   let tool := tool name cmd
   return ⟨⟨domain, nanos⟩, .start (occurrence name) (Plugin.canonicalToolWork tool) query
-    (← knowledge source keys uncertain archive)⟩
+    (← knowledge source keys uncertain archive), none⟩
 
 private def finishEvent (name : String) (nanos : Nat) (cmd := command) (output := body)
     (archive : Option String := none) : Entry :=
   let tool := tool name cmd output
-  ⟨⟨domain, nanos⟩, .finish (occurrence name) tool.name tool.input tool.response archive⟩
+  ⟨⟨domain, nanos⟩, .finish (occurrence name) tool.name tool.input tool.response archive, none⟩
 
 private def facts (source : DB.PageMap.Snapshot) : IO (Array Fact) := do
   let some usage ← Index.open? source .user .usage | return #[]
@@ -58,13 +58,18 @@ private def scenario (root : System.FilePath) : IO Unit := do
   let late ← startEvent source "missing" 999 ["h:" ++ Persistence.selectionKey seed.relation]
   check (← append source start) "first Pre event was not recorded"
   check (!(← append source late)) "retry rewrote first knowledge or clock"
-  check (← append source (finishEvent "missing" 200 command body (some source.directory.toString))) "Post event was not recorded"
+  let finish := {finishEvent "missing" 200 command body (some source.directory.toString) with receivedUnixMs := some 1000000000}
+  check (← append source finish) "Post event was not recorded"
+  check (!(← append source {finish with receivedUnixMs := some 2000000000})) "retry refreshed a receipt date"
   let before ← refresh source .database ((← IO.monoMsNow)+3000)
   let source ← DB.PageMap.pin source.directory
   check (before.pending == 1 && before.usage == 0) "unpublished Post invented a saved observation"
-  let (source, _) ← publish source "live" "turn" (tool "missing")
+  let (source, missingOwner) ← publish source "live" "turn" (tool "missing")
   let first ← refresh source .database ((← IO.monoMsNow)+3000)
   let source ← DB.PageMap.pin source.directory
+  let some origin ← Provenance.lookup? source missingOwner (occurrence "missing") |
+    throw (IO.userError "replay did not publish the native origin")
+  check (origin.receivedUnixMs == some 1000000000) "journal replay replaced actual receipt time with warm time"
   let missing ← usages source "missing"
   check (first.usage == 1 && missing.size == 1 && missing.all (·.kind == .omittedThenRead))
     "saved pre-read evidence or first observed knowledge was lost"
@@ -76,7 +81,7 @@ private def scenario (root : System.FilePath) : IO Unit := do
   check (repeated.turns == 0 && (← usages source "missing").size == 1) "replay inflated feedback"
   let shown := ["h:" ++ Persistence.selectionKey seed.relation]
   let answer : Entry := ⟨⟨domain, 300⟩, .answer (occurrence "answer") query
-    "[source.cpp:11](src/source.cpp:11)" (← knowledge source shown false)⟩
+    "[source.cpp:11](src/source.cpp:11)" (← knowledge source shown false), none⟩
   let _ ← append source answer
   let _ ← refresh source .database ((← IO.monoMsNow)+3000)
   let source ← DB.PageMap.pin source.directory

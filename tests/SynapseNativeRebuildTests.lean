@@ -78,11 +78,14 @@ private def scenario (root : System.FilePath) : IO Unit := do
     answer.relation,← family answer a,← family answer b,← family answer c]
   let domain := String.ofList (List.replicate 64 'a')
   let occurrence := fun session name => Occurrence.mk session "turn" name
+  let some receivedUnixMs ← ObservationAge.now | throw (IO.userError "missing wall clock")
+  let expiredUnixMs := receivedUnixMs-ObservationAge.monthMs-60000
   let source ← Provenance.publish source #[
-    ⟨ids[2]!,occurrence "first" "inspect",domain,30,40⟩,
-    ⟨ids[0]!,occurrence "first" "lookup",domain,10,20⟩,
-    ⟨ids[3]!,occurrence "first" "follow",domain,50,60⟩,
-    ⟨ids[1]!,occurrence "second" "lookup",domain,10,20⟩]
+    ⟨ids[2]!,occurrence "first" "inspect",domain,30,40,some (receivedUnixMs-1000)⟩,
+    ⟨ids[0]!,occurrence "first" "lookup",domain,10,20,some expiredUnixMs⟩,
+    ⟨ids[3]!,occurrence "first" "follow",domain,50,60,none⟩,
+    ⟨ids[1]!,occurrence "second" "lookup",domain,10,20,none⟩]
+  let originalTimes := (← Provenance.records source).map (·.origin)
   let before := source.head
   let first ← Build.refresh source .database
   let all ← facts source
@@ -134,12 +137,21 @@ private def scenario (root : System.FilePath) : IO Unit := do
   check ((← Index.allFacts privateIndex.index) == expected &&
       (← DB.PageMap.pin copied.directory).head == copied.head)
     "private reconstruction changed native facts or source authority"
+  check ((← Provenance.records copied).map (·.origin) == originalTimes)
+    "DB-only rebuild or repeated warm rewrote acquisition dates"
   let prepared ← Recommend.prepare copied false
   let owners : Array Synapses.Transport.Owner := #[
     ⟨copied.head.identity,a,[]⟩,⟨copied.head.identity,again,[]⟩,⟨copied.head.identity,b,[]⟩,⟨copied.head.identity,c,[]⟩]
   let query := String.ofList (List.replicate 64 'b')
   let plan ← Synapses.Transport.build #[prepared] #[(Persistence.selectionKey answer.relation,0)] owners query ((← IO.monoMsNow)+5000)
   let offers := plan.results.flatMap (·.admitted)
+  check (plan.observations.any (·.age.status == .recent) &&
+    plan.observations.any (·.age.status == .expired) &&
+    plan.observations.any (·.age.status == .unknown))
+    "offered canonical data lost its independent recent, expired, or unknown origins"
+  check (plan.observations.all (fun item => item.age.receivedUnixMs ==
+    (originalTimes.find? (·.occurrence == item.occurrence)).bind (·.receivedUnixMs)))
+    "delivery annotated a different origin or fabricated an acquisition date"
   IO.FS.writeFile (root / "recommendation-before-delivery.json") (plan.receipt "").pretty
   check (plan.complete && offers.any (·.kind == "consumption") && offers.any (·.kind == "coquotation") &&
       (plan.outputRanges.flatMap (·.2)).all (fun range => range.limit-range.first < 5000))

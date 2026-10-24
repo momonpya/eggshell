@@ -217,7 +217,7 @@ def collect (shared : Index.Reader) (usage : Option Index.Reader)
 /-- Pin optional index publications once for both memo identity and planning.
 An advancing background worker cannot silently change the input mid-request. -/
 structure Prepared where
-  source : PageMap.Head
+  source : PageMap.Snapshot
   shared : Option Index.Reader
   usage : Option Index.Reader
   failure : Option String := none
@@ -225,11 +225,11 @@ structure Prepared where
 def prepare (source : PageMap.Snapshot) (writable : Bool) : IO Prepared := do
   try
     let (storage, _) ← Sidecar.destination (Sidecar.Owner.ofSnapshot source) writable
-    return ⟨source.head, ← Index.open? source storage .shared, ← Index.open? source .user .usage, none⟩
-  catch error => return ⟨source.head, none, none, some s!"index-open: {error}"⟩
+    return ⟨source, ← Index.open? source storage .shared, ← Index.open? source .user .usage, none⟩
+  catch error => return ⟨source, none, none, some s!"index-open: {error}"⟩
 
 def Prepared.identity (prepared : Prepared) : Json :=
-  toJson (implementation,prepared.source.identity, prepared.source.authority,
+  toJson (implementation,prepared.source.head.identity, prepared.source.head.authority,
     prepared.shared.map (·.index.head), prepared.usage.map (·.index.head), prepared.failure)
 
 def Prepared.collect (prepared : Prepared) (answers : Array (String × Nat)) (query : String)

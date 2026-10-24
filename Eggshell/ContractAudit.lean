@@ -4,6 +4,7 @@ import Eggshell.SearchRank
 import Eggshell.SearchProvider
 import Eggshell.SemanticMatcher
 import Eggshell.PluginModel
+import Eggshell.SynapseLive
 import Eggshell.Setup
 import all Eggshell.GraphStore
 public meta import Lean
@@ -15,7 +16,12 @@ open Lean
 reads use the same decoding/assembly implementation with their own read
 capability; no alternate body representation or compatibility lane exists. -/
 run_meta do
-  for theoremName in #[``Eggshell.Deadline.never_extends,
+  for theoremName in #[``Eggshell.ObservationAge.recent_is_within_interval,
+      ``Eggshell.ObservationAge.expired_is_at_least_interval,
+      ``Eggshell.ObservationAge.missing_receipt_is_unknown,
+      ``Eggshell.ObservationAge.assessment_preserves_receipt,
+      ``Eggshell.Synapses.Journal.retry_keeps_receipt_time,
+      ``Eggshell.Deadline.never_extends,
       ``Eggshell.Deadline.reserves_delivery, ``Eggshell.Deadline.reserves_minimum,
       ``Eggshell.Deadline.expired_stays_expired,
       ``Eggshell.SourceEvidence.matched_status_has_checked_dependencies,
@@ -200,6 +206,8 @@ run_meta do
         #[``Eggshell.SourceEvidence.receiptFields?], #[]),
       (``Eggshell.Plugin.automaticHandoff,
         #[``Eggshell.Plugin.Handoff.checkSources, ``Eggshell.Persistence.Store.NodeReader.sources], #[]),
+      (``Eggshell.Plugin.Daemon.hookRequest, #[``Eggshell.ObservationAge.now], #[]),
+      (``Eggshell.Synapses.Live.finish, #[``Eggshell.Synapses.Live.receivedUnixMs?], #[]),
       (``Eggshell.Plugin.Handoff.checkSources,
         #[``Eggshell.Plugin.Handoff.withCheckedSources, ``Eggshell.SourceEvidence.observeRecords,
           ``Eggshell.Deadline.verification, ``Eggshell.Receipt.observe,

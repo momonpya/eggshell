@@ -12,6 +12,9 @@ def clock? (input : Json) : Option Journal.Clock := do
   let nanos ← (input.getObjValAs? Nat "_eggshell_synapse_nanos").toOption
   if digest domain then some ⟨domain, nanos⟩ else none
 
+def receivedUnixMs? (input : Json) : Option Nat :=
+  (input.getObjValAs? Nat "_eggshell_received_unix_ms").toOption.filter (0 < ·)
+
 def attempt (action : IO Unit) : IO Unit := do
   try action
   catch error => IO.eprintln s!"Eggshell retained unknown synaptic ingress: {error}"
@@ -53,7 +56,7 @@ def start (input : Json) (files : Plugin.SessionFiles) (pending : Plugin.Pending
   let unknown ← uncertain files state
   observe pending fun source => do
     let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write
-    return ⟨clock, .start occurrence (Plugin.canonicalToolWork tool) query known⟩
+    return ⟨clock, .start occurrence (Plugin.canonicalToolWork tool) query known, receivedUnixMs? input⟩
 
 def finish (input : Json) (pending : Plugin.PendingTurn) (tool : Plugin.ToolEvent) : IO Unit := do
   let some clock := clock? input | return
@@ -62,7 +65,7 @@ def finish (input : Json) (pending : Plugin.PendingTurn) (tool : Plugin.ToolEven
   let clock := contextClock clock state.epoch
   let occurrence : Occurrence := ⟨pending.sessionId, pending.turnId, tool.useId⟩
   observe pending fun _ => pure ⟨clock, .finish occurrence tool.name
-    (Plugin.canonicalJson tool.input) (Plugin.canonicalJson tool.response) pending.write⟩
+    (Plugin.canonicalJson tool.input) (Plugin.canonicalJson tool.response) pending.write, receivedUnixMs? input⟩
 
 /-- Stop supplies final text, not a native agent-message id. Its observed
 origin is the hook's session/turn, explicitly distinct from a tool occurrence. -/
@@ -76,6 +79,6 @@ def answer (input : Json) (files : Plugin.SessionFiles) (pending : Plugin.Pendin
   let unknown ← uncertain files state
   observe pending fun source => do
     let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write
-    return ⟨clock, .answer occurrence query text known⟩
+    return ⟨clock, .answer occurrence query text known, receivedUnixMs? input⟩
 
 end Eggshell.Synapses.Live

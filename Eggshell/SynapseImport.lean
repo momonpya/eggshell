@@ -167,7 +167,7 @@ def plan (source : PageMap.Snapshot) (paths : Array System.FilePath) : IO Report
       let exact := invoked.filter (fun owner => (bind? owner.doc call).isSome)
       if exact.isEmpty then report := {report with outputMismatch := report.outputMismatch+1}; continue
       let #[owner] := exact | report := {report with ambiguous := report.ambiguous+1}; continue
-      let origin : Provenance.Origin := ⟨owner.id, call.occurrence, recording.domain, call.started, call.finished⟩
+      let origin : Provenance.Origin := ⟨owner.id, call.occurrence, recording.domain, call.started, call.finished, none⟩
       if let some prior := seen[call.occurrence]? then
         unless prior.owner == owner.id do throw (IO.userError "one occurrence has two original source owners")
         report := {report with alreadyPresent := report.alreadyPresent+1}

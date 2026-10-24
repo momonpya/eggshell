@@ -12,7 +12,7 @@ private def events : Nat := 32
 private def event (worker index : Nat) : Entry :=
   ⟨⟨digest, worker*10000+index+1⟩,
     .finish ⟨"parallel", "turn", s!"worker-{worker}-{index}"⟩ "shell"
-      "{\"command\":\"printf symbol\"}" "{\"output\":\"symbol\"}" none⟩
+      "{\"command\":\"printf symbol\"}" "{\"output\":\"symbol\"}" none, none⟩
 
 private def worker (root : System.FilePath) (number : Nat) : IO Unit := do
   let source ← DB.PageMap.pin (root / "source.egg")

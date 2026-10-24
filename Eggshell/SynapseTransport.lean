@@ -29,6 +29,15 @@ structure LocatedOwner where
   located : Array Located
   outputs : Array (LocatedOutput document)
 
+structure Observation where
+  database : String
+  owner : String
+  work : String
+  occurrence : Occurrence
+  age : ObservationAge.Assessment
+  metadataFailure : Option String := none
+  deriving ToJson
+
 structure Plan where
   results : Array Recommend.Result := #[]
   owners : Array LocatedOwner := #[]
@@ -36,6 +45,7 @@ structure Plan where
   rows : Array Read := #[]
   unsupported : Nat := 0
   unlocatedFileOwners : Nat := 0
+  observations : Array Observation := #[]
 
 def Plan.complete (plan : Plan) : Bool := plan.results.all (·.complete)
 
@@ -83,9 +93,10 @@ Neither a graph hint nor its priority may invent a range or an owner. -/
 def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat))
     (owners : Array Owner) (query : String) (deadline : Nat) : IO Plan := do
   let mut plan : Plan := {}
+  let assessedUnixMs ← ObservationAge.now
   for source in prepared do
     let consumers := owners.flatMap fun owner =>
-      if owner.database != source.source.identity then #[] else
+      if owner.database != source.source.head.identity then #[] else
       let priorities := answers.filterMap fun (key,priority) =>
         if key == Persistence.selectionKey owner.original.relation then some priority else none
       (Provenance.identities owner.original).flatMap fun occurrence =>
@@ -100,13 +111,33 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
     let wanted := (offers.toList.filterMap (·.target.source?)).eraseDups.toArray
     let originalRows := wanted.filterMap fun source => context.bind (·.bindSource? owner.database source)
     let rows := recorded.toOption.getD #[] ++ originalRows
+    let located := Recommend.locate offers rows
+    let outputs := context.map (Recommend.locateOutputsUsing offers owner.database) |>.getD #[]
+    -- Metadata is fetched only for offered native origins, once per occurrence,
+    -- with a fixed cap and the existing request deadline. It cannot block or
+    -- filter the historical body when unavailable, expired, or clock-skewed.
+    if !located.isEmpty || !outputs.isEmpty then
+      for occurrence in document.occurrences do
+        if plan.observations.any (fun prior => prior.database == owner.database &&
+            prior.owner == document.owner && prior.occurrence == occurrence) then continue
+        let (receivedUnixMs,metadataFailure) ←
+          if plan.observations.size ≥ 256 || (← IO.monoMsNow) ≥ deadline then
+            pure (none,some "metadata-budget")
+          else if let some source := prepared.find? (·.source.head.identity == owner.database) then
+            try
+              let origin ← Provenance.lookup? source.source owner.original occurrence
+              pure (origin.bind (·.receivedUnixMs),if origin.isNone then some "unrecorded" else none)
+            catch _ => pure (none,some "metadata-unverified")
+          else pure (none,some "source-unavailable")
+        plan := {plan with observations := plan.observations.push {
+          database := owner.database,owner := document.owner,work := document.work,occurrence
+          age := ObservationAge.assess assessedUnixMs receivedUnixMs,metadataFailure}}
     plan := {plan with
       documents := plan.documents.push document
       rows := plan.rows ++ rows
       unlocatedFileOwners := plan.unlocatedFileOwners +
         if !document.files.isEmpty && recorded.toOption.isNone then 1 else 0
-      owners := plan.owners.push ⟨owner.original,document,Recommend.locate offers rows,
-        context.map (Recommend.locateOutputsUsing offers owner.database) |>.getD #[]⟩}
+      owners := plan.owners.push ⟨owner.original,document,located,outputs⟩}
   return plan
 
 def Plan.receipt (plan : Plan) (text : String) : Json :=
@@ -118,6 +149,7 @@ def Plan.receipt (plan : Plan) (text : String) : Json :=
   Json.mkObj [
     ("complete", toJson plan.complete), ("unsupportedOwners", toJson plan.unsupported),
     ("unlocatedFileOwners",toJson plan.unlocatedFileOwners),
+    ("observationAges",toJson plan.observations),
     ("inputs", toJson (plan.results.map Recommend.Result.receipt)),
     ("originalReferences",toJson (originals.map fun source =>
       let bindings := plan.owners.flatMap fun owner => owner.located.filterMap fun located =>

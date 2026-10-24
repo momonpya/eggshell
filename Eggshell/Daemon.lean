@@ -2,6 +2,7 @@ module
 
 public import Eggshell.PluginCli
 public import Eggshell.DaemonWire
+public import Eggshell.ObservationAge
 
 @[expose] public section
 
@@ -297,9 +298,11 @@ theorem invalid_hook_reply_is_incomplete (reply : Option Json) (text : String)
   simp [decodeHookReply, field, invalid]
 
 def hookRequest (input : Json) (deadline : Nat) (receipt : String) : IO Json := do
+  let receivedUnixMs ← ObservationAge.now
   let event := (optionalString input "hook_event_name").getD ""
   try
     let input := attachClientConfig input (← IO.getEnv "EGGSHELL_CONFIG")
+      |>.setObjVal! "_eggshell_received_unix_ms" (toJson receivedUnixMs)
     let captureStarted ← IO.monoMsNow
     captureTerminal input
     let captureMs := (← IO.monoMsNow) - captureStarted

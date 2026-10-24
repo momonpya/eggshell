@@ -2252,3 +2252,38 @@ MCP履歴の更新は標準30日を目安にし、失効後も履歴として配
 今回の期限算術は、任意のOS/外部IOの完了時間の証明ではない。製品runtimeはefb9a11d…のままである。
 詳細・全差分・SHA・受領はdocs/synaptic-observation-domain.mdとdocs/candidates/native-observation-review.jsonへ保存した。
 回答モデル・追加seed呼出し0、総トークン・品質未測定、製品runtime・README・release採用0。全Phases0–6 active。
+
+## 2026-10-24：取得日時をDBへ運び、30日の年齢を配送の受領で計測
+
+直前の方針確認だけのturnはno progressだったため、未接続だった取得日時の保存を実装した。
+daemonの受付でUNIXミリ秒を一度取得し、LiveのPre/Post/Stopイベントから、
+実際に出版されたnative観測のOriginへ運ぶ。単調時計を日付に流用しない。
+同じイベントのretryは最初の取得日時を保持し、日時不明の古い記録をwarm時刻で新しくしない。
+日時がない記録は、日付のないまま既存のcanonicalな符号化とdigestを保つ。
+
+ObservationAgeの既定は30日で、境界ちょうどからexpiredとなる。
+不明・0・未来の日時をrecentにせず、recent/expiredの経過条件と元の日時を保つ性質をLeanで証明した。
+配送に入場した観測元のownerとoccurrenceを、固定したsource snapshotのB-treeで照合する。
+来歴の全走査はせず、メタデータ読出しは最大256件と既存の期限で制限する。
+各元の取得日時・判定時刻・期間・状態をobservationAgesへ残し、
+expired・unknown・読出し不能でも原文の配送を除かない。これで認定のledgerやUnionを作らない。
+
+最終の全体ビルド、主なLean検査17本、既存の来歴とソースの回帰3本、ContractAuditが成功した。
+DBだけをコピーして再構築した後も取得日時が一致し、recent/expired/unknownの観測元を区別して、
+推薦された3つの原文区間が実際の選択器から届いた。日付のない古いイベント/Originのcanonical往復、
+観測時刻を保持するjournal replay、複数プロセスの128イベント/128retryも通った。
+別プロセス・空の私有data root・書き込み禁止のDBコピーも再構築し、元DBのhead/pages不変を確認した。
+最終build最大2,153,776 KiB、主検査1,621,952 KiB、追加回帰2,054,656 KiB。全所有プロセスは終了済み。
+途中の失敗を含む最大は2,850,656 KiBで、4 GiBを超えていない。
+
+初回512 MiBの単独Lean検査は環境読込みの上限不足で失敗した。
+旧Liveをコピーしていたbuildリスト、Preparedのfallback、Entry.mkの引数、
+Importのリンク対象と重複する-Lオプションを消した検査設定を直し、最終ビルドと検査を通した。
+これらの失敗記録も保持し、成功した最終ソース・object・受領・試験を同じSHAの台帳で結ぶ。
+
+今回完成したのは取得日時と年齢の計測である。外部MCPの再確認、権限の文脈、通知失効、
+応答のTTL契約の取込み、エージェントに取得日を表示する処理は未完了。
+一般観測の利用ラベル、location投稿、伝播強度・fan-out、追加ソース座標と狭い位置参照、
+全製品hook lifecycle、固定runtimeの新seedと全題材・両周の同条件比較も残る。
+製品runtimeはefb9a11d…のまま。回答モデル・追加seed呼出し0、総トークン・品質未測定、
+製品runtime・README・release採用0。全Phases0–6 active。
