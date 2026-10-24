@@ -1,5 +1,11 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 Work e-classから原Work所有者索引を直接引くLean照会を隔離実装した。全Work rootsなしでも、現在のUnion/合同から得るテキストWorkの全クラスと全件走査の選択が一致することを証明。mixed Atom/Apply、元ownerの順序/重複、Exact足跡を保ち、推薦top-Kで認定候補を切らない。複数の固定DBもソース番号付きで直接照会し、全semantic membershipの共通表は作らない。
+小13検査と、既存1万/5万窓DB各60照会が完全oracleと一致した。positive中央値は約25/29ms、最大29.395/39.332ms、返却は1 ownerで51/67ページ読出し。陰性は約4/5ms。これは同じreaderの再利用ではないがOS cacheはflushせず、oracleは先に全件復元した。全hook/p99/大きな等価クラス/大量Unionの成績ではない。通常discoveryには未接続で、5万窓の未完了問題は未解決。
+現行入口は字面共有か外部推薦であり、等価性だけでは入場できない（findIn_no_surface_admissions）。partial-text Union推論とも混在している。次は構造的等価性の証人を直接消費するproducerを分け、元所属/鮮度/抽出を保って接続する。異なる字面のCoverageを捏造しない。最大合計RSS2,022,464KiB、全guard終了/所有process残存0、元DB hash不変。初回proofのimplicit binder失敗も保持。回答モデル/新seed/総トークン比較0、候補未採用。docs/work-class-lookup.md参照、全Phases0–6 active。
+
+現行AGENTS.mdの採用条件を優先する。同じ保存snapshot・対象ソース・質問・モデル・推論設定・harnessで、初回/履歴あり・題材1/2/3を事前固定した同数の複数反復で比較する。cached input/失敗試行込み入力＋出力の総トークン改善、品質維持、hook期限を確認してから採用する。下記2026-10-22の「配送だけで採用可能」は当時の条件であり、現在の採用条件ではない。証明・単体検査・配送一致・局所遅延だけで本体/README実績/releaseへ取り込まない。
+
 2026-10-25 projectMatchesの逐次全件走査/appendをLeanで置換した。既存baseの重複・新規の最初の元payload・追加順を保つAppendUniqueを作り、全listで元foldと一致すること、全WorkGraph/Match listでprojectMatchesと一致することを証明。logical specと生成Match/Union証人は保持し、コンパイラだけが高速版を使う。Handoffの特殊化Cも再生成・実リンクし、旧projector呼出しなし/高速版呼出しを確認した。
 固定小32例/10k4条件で全Handoff fieldと本文が一致（completed7/block5/正Unionを含む）。local Union無効の同候補比較は28,330/28,460→23,039/22,953ms、通常は9,271/9,211→9,210/9,314ms。実MiniLM/nativeは同DB/質問/設定・新しい私有query/chatで初回19,332→17,849ms、ACK後17,115→16,463ms。stdout/本文17,803bytes/重複抑制の空応答/stratum/ACKが一致し、両armの初回query miss・継続hit・原文再埋込0を確認。1組なので通常改善/p99とは断定しない。
 通常経路の開始後約1秒から7秒の別標本では原Work/payload読出し・頻度準備・幾何照合が見える。前回の74%は別mode/区間であり割合比較をしない。profileの全結果も通常比較と一致し、profile時間は除外。元source head/pages不変、最大合計RSS2,776,272KiB・全所有process終了。次は局所list調整ではなく、全Work復元を置き換える原典/正規signature/affected-parent索引と数値取得経路を優先する。認定は推薦top-Kで切らない。回答モデル/新seed/総トークン比較0、品質/p99/5万窓/共有複数DB未確認、製品/README実績/release未採用。docs/projection-fold.md参照、全Phases0–6 active。

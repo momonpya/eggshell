@@ -54,6 +54,16 @@ architecture targets; do not enlarge the fixture instead of changing them.
 
 ## Priority and current evidence
 
+The subsequent [Work-class query](work-class-lookup.md) composes rootless
+generated equality with original Work-owner buckets. Lean proves its ordered
+selection agrees with the full corpus-rooted equality filter. All 120 original
+source probes agree at 10k/50k; positive medians are about 25/29 ms for one owner.
+Thirteen small checks cover mixed congruence and two pinned DBs. This is not
+normal discovery, p99, token or 50k hook qualification. The remaining controller
+mixes structural recognition with partial-text inference; that producer boundary
+must change before this query can replace all-Work admission. Do not disguise
+equality as textual Coverage.
+
 1. Remove repeated catalogue construction from hooks. The isolated single-source
    path now shares a prepared domain for catalogue, Work/native views and numeric
    topology; original owner validation remains on admission. Cold fallback still
