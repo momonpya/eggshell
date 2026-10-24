@@ -1,0 +1,361 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -4,0 +5,2 @@
++public import Eggshell.DiscoveryCounters
++public import Eggshell.WorkPostings
+@@ -7210,0 +7213,6 @@
++  let counters ← DiscoveryCounters.create source.receipt
++  let countedWork := fun id => DiscoveryCounters.timed counters "work-view" (source.readWork id)
++  let countedOwner := fun id => DiscoveryCounters.timed counters "owner" (source.readOwner id)
++  let countedOrdinal := fun id => DiscoveryCounters.timed counters "ordinal" (source.ordinal id)
++  let countedSurfaces := fun units => DiscoveryCounters.timed counters "surface-postings" (source.surfaces units)
++  let countedFrequencies := fun units => DiscoveryCounters.timed counters "frequencies" (source.frequencies units)
+@@ -7262 +7270 @@
+-    source.ordinal id
++    countedOrdinal id
+@@ -7313,2 +7321,19 @@
+-      let ids ← source.surfaces query.pattern.surfaces.toList
+-      let knownFrequencies ← IO.mkRef state.frequencies
++      let ids ← countedSurfaces query.pattern.surfaces.toList
++      let requestedIds := hashDistinct (ids ++ if task == currentValue then matchingIds else [])
++      -- Fetch the same original document frequencies once per demand rather
++      -- than interleaving one dictionary traversal with every Work comparison.
++      -- This is a superset prefetch only; each admission keeps its own complete
++      -- read certificate and every accepted owner is still hydrated below.
++      let prefetched : Std.HashMap String Nat ← DiscoveryCounters.timed counters "work-frequency-prefetch" do
++        let mut terms := []
++        for id in requestedIds do
++          let ordinal ← countedOrdinal id
++          if state.owners.contains ordinal ||
++              (task == currentValue && semanticOrdinals.contains ordinal) then continue
++          let origin ← countedWork id
++          let some work := Matcher.WorkView.compile LogicalText.logicalNormalizer origin.work origin.native |
++            throw (IO.userError "indexed candidate has no textual Work")
++          terms := Matcher.Corpus.workScoringTerms work query ++ terms
++        let fetched ← readDemandFrequencies countedFrequencies state.frequencies (hashDistinct terms)
++        pure fetched.table
++      let knownFrequencies ← IO.mkRef prefetched
+@@ -7317 +7342 @@
+-      let admit := fun (ordinal : Nat) (work : Matcher.WorkView) => do
++      let admitUnmeasured := fun (ordinal : Nat) (work : Matcher.WorkView) => do
+@@ -7323 +7348 @@
+-        let read ← readDemandFrequencies source.frequencies known units
++        let read ← readDemandFrequencies countedFrequencies known units
+@@ -7343,2 +7368,3 @@
+-      for id in hashDistinct (ids ++ if task == currentValue then matchingIds else []) do
+-        state ← IndexedOwners.loadWork source.ordinal source.readWork source.readOwner state id admit
++      let admit := fun ordinal work => DiscoveryCounters.timed counters "work-admission" (admitUnmeasured ordinal work)
++      for id in requestedIds do
++        state ← IndexedOwners.loadWork countedOrdinal countedWork countedOwner state id admit
+@@ -7365 +7391 @@
+-      let read ← readDemandFrequencies source.frequencies state.frequencies units
++      let read ← readDemandFrequencies countedFrequencies state.frequencies units
+@@ -7382 +7408 @@
+-      let contextRead ← readDemandFrequencies source.frequencies state.frequencies contextUnits
++      let contextRead ← readDemandFrequencies countedFrequencies state.frequencies contextUnits
+@@ -7416 +7442 @@
+-          state ← IndexedOwners.load source.ordinal source.readOwner state id
++          state ← IndexedOwners.load countedOrdinal countedOwner state id
+@@ -7441 +7467,2 @@
+-  let nominated ← semanticIds.mapM source.readOwner
++  DiscoveryCounters.emit counters discovery.view.graph.outcomes.length
++  let nominated ← semanticIds.mapM countedOwner
+@@ -7739,0 +7767,3 @@
++  let workPostings ← match preparedDomain with
++    | some domain => WorkPostings.openShared? snapshot domain
++    | none => pure none
+@@ -7794 +7824,3 @@
+-    surfaces := Persistence.Store.workSurfaceCandidates snapshot
++    surfaces := match workPostings with
++      | some postings => WorkPostings.candidates postings
++      | none => Persistence.Store.workSurfaceCandidates snapshot
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -3,0 +4 @@
++public import Eggshell.WorkPostings
+@@ -51,0 +53 @@
++  unless ← WorkPostings.ready snapshot do return true
+@@ -150,0 +153,4 @@
++  let domain ← CandidateDomain.openShared? snapshot
++  let documents ← match domain with
++    | some ready => pure ready.documents
++    | none => Persistence.Store.searchDocuments snapshot
+@@ -153,2 +159,4 @@
+-  for document in ← Persistence.Store.searchDocuments snapshot do
+-    let work ← reader.read document.work
++  for document in documents do
++    let work ← match domain.bind (fun ready => ready.owners[document.owner]?) with
++      | some row => pure row.origin.work
++      | none => reader.read document.work
+@@ -218,0 +227 @@
++  let _ ← WorkPostings.refresh snapshot target.storage
+--- a/Eggshell/SynapseUsage.lean
++++ b/Eggshell/SynapseUsage.lean
+@@ -29,0 +30,45 @@
++
++structure SharedSpelling where
++  file : File
++  number : Nat
++  code : String
++  origins : Array (String × String × String × Occurrence)
++
++/-- Decode only complete shared frames. This grants no original-byte status;
++callers must bind each spelling to their saved original rows. -/
++def sharedSpellings (body : String) : Array SharedSpelling := Id.run do
++  let wrapper := "EGGSHELL SHARED SOURCE DATA\nOriginal recorded file data; advisory, not a completed operation.\n"
++  let mut found : Array SharedSpelling := #[]
++  for packet in (body.splitOn wrapper).tail do
++    let parts := packet.splitOn "END EGGSHELL SHARED SOURCE DATA\n"
++    if parts.length < 2 then continue
++    for block in (("\n" ++ parts.head!).splitOn "\nSOURCE ").tail do
++      let parts := block.splitOn "\nEND SOURCE"
++      if parts.length < 2 then continue
++      let suffix := parts[1]!
++      if !suffix.isEmpty && !suffix.startsWith "\n" then continue
++      let fileLine :: originsLine :: "CODE" :: codeLines := parts.head!.splitOn "\n" | continue
++      let some file := (Json.parse fileLine >>= fromJson? (α := File)).toOption | continue
++      if !file.valid || !originsLine.startsWith "ORIGINAL READS " then continue
++      let encoded := String.ofList (originsLine.toList.drop "ORIGINAL READS ".length)
++      let some origins := (Json.parse encoded >>= fromJson? (α := Array String)).toOption | continue
++      let origins := origins.filterMap fun origin =>
++        (Json.parse origin >>= fromJson? (α := String × String × String × Occurrence)).toOption
++      for line in codeLines do
++        let some (number,code) := numbered line | continue
++        found := found.push ⟨file,number,code,origins⟩
++  return found
++
++/-- A shared spelling can report only a range belonging to an original saved
++row. Sharing the payload never manufactures another execution witness. -/
++structure SharedWitness (reads : Array Read) where
++  row : Read
++  original : row ∈ reads
++  file : File
++  number : Nat
++  code : String
++  sourceExact : row.source = ⟨file,number,number⟩
++
++theorem SharedWitness.original_range (witness : SharedWitness reads) :
++    ∃ row ∈ reads, row.source = ⟨witness.file,witness.number,witness.number⟩ :=
++  ⟨witness.row,witness.original,witness.sourceExact⟩
+@@ -30,0 +76,36 @@
++/-- Recognize the producer's shared file frame, then compare every displayed
++code row with its raw scalar coordinates and declared DB/owner/Work/occurrence.
++Location-only notices and arbitrary matching prose cannot label delivery. -/
++def sharedPresented (body : String) (docs : Array Document) (reads : Array Read) :
++    Array (SharedWitness reads) := Id.run do
++  let displayed := sharedSpellings body
++  if displayed.isEmpty || reads.isEmpty then return #[]
++  let mut index : Std.HashMap (File × Nat × String) (Array (SharedWitness reads)) := {}
++  let byOwner := reads.attach.foldl (fun found saved =>
++    found.insert saved.val.binding.owner
++      ((found.getD saved.val.binding.owner #[]).push saved))
++    ({} : Std.HashMap String (Array {row // row ∈ reads}))
++  for doc in docs do
++    if !doc.native then continue
++    let some raw := doc.source | continue
++    let .ok decoded := layout raw | continue
++    for line in textLines decoded.text do
++      let some (number,code) := numbered line.text | continue
++      for saved in byOwner.getD doc.owner #[] do
++        let row := saved.val
++        if !row.valid || row.binding.work != doc.work ||
++            row.binding.first != decoded.offsets[line.first]! ||
++            row.binding.limit != decoded.offsets[line.limit]! then continue
++        let .file file := row.source.subject | continue
++        if same : row.source = ⟨file,number,number⟩ then
++          let witness : SharedWitness reads := ⟨row,saved.property,file,number,code,same⟩
++          let key := (file,number,code)
++          index := index.insert key ((index.getD key #[]).push witness)
++  let mut found := #[]
++  for spelling in displayed do
++    for witness in index.getD (spelling.file,spelling.number,spelling.code) #[] do
++      let row := witness.row
++      if spelling.origins.contains (row.binding.database,row.binding.owner,row.binding.work,row.occurrence) then
++        found := found.push witness
++  return found
++
+@@ -91,0 +173,5 @@
++  for witness in sharedPresented body docs reads do
++    result := {result with
++      ranges := result.ranges.push witness.row.source
++      bindings := result.bindings.push
++        (witness.row.binding.owner,witness.row.binding.first,witness.row.binding.limit)}
+--- /dev/null
++++ b/Eggshell/DiscoveryCounters.lean
+@@ -0,0 +1,45 @@
++module
++public import Eggshell.Receipt
++public import Lean.Data.Json.FromToJson
++@[expose] public section
++
++namespace Eggshell.DiscoveryCounters
++open Lean
++
++structure Count where
++  calls : Nat := 0
++  nanos : Nat := 0
++  deriving ToJson
++
++structure Recorder where
++  receipt : Option String
++  counts : IO.Ref (Std.HashMap String Count)
++  failed : IO.Ref Bool
++
++def create (receipt : Option String) : IO Recorder := do
++  return ⟨receipt,← IO.mkRef {},← IO.mkRef false⟩
++
++/-- Counts contain durations and call counts only, never source/query data.
++The result and exception of the observed action are returned unchanged. -/
++def timed (recorder : Recorder) (name : String) (action : IO α) : IO α := do
++  if recorder.receipt.isNone then return ← action
++  let started ← IO.monoNanosNow
++  try action
++  finally
++    try
++      let elapsed := (← IO.monoNanosNow)-started
++      recorder.counts.modify fun counts =>
++        let previous := counts.getD name {}
++        counts.insert name ⟨previous.calls+1,previous.nanos+elapsed⟩
++    catch _ => recorder.failed.set true
++
++def emit (recorder : Recorder) (outcomes : Nat) : IO Unit := do
++  if recorder.receipt.isNone then return
++  let values := (← recorder.counts.get).toList.mergeSort (fun a b => a.1 ≤ b.1)
++  Receipt.observe recorder.receipt s!"discovery-counters-{← IO.monoNanosNow}" (Json.mkObj [
++    ("complete",toJson (!(← recorder.failed.get))),
++    ("scope",toJson "overlapping counters; do not sum admission with nested frequency IO"),
++    ("graphOutcomes",toJson outcomes),
++    ("counters",Json.mkObj (values.map fun (name,value) => (name,toJson value)))])
++
++end Eggshell.DiscoveryCounters
+--- /dev/null
++++ b/Eggshell/WorkPostings.lean
+@@ -0,0 +1,128 @@
++module
++public import Eggshell.CandidateDomain
++@[expose] public section
++
++namespace Eggshell.WorkPostings
++open Lean DB Persistence.Store
++
++/-- In-memory postings from the single checked publication domain. These are
++nomination metadata; they never manufacture Outcome or completion authority. -/
++abbrev Index := Std.HashMap String (List (Nat × Nat))
++
++def build (rows : List CandidateDomain.Row) : Index := Id.run do
++  let mut index : Index := {}
++  for row in rows do
++    for surface in LogicalText.surfaceNames row.text do
++      index := index.insert surface ((row.ordinal,row.owner) :: index.getD surface [])
++  return index
++
++/-- Original root order is independent of the query's posting order. Duplicate
++surface hits contribute one owner, just as the persisted Work surface index. -/
++def lookup (index : Index) (surfaces : List String) : List Nat := Id.run do
++  let mut found : Std.TreeMap Nat Nat := {}
++  for surface in surfaces do
++    for (ordinal,owner) in index.getD surface [] do
++      found := found.insert ordinal owner
++  return found.toList.map Prod.snd
++
++/-- Effect boundaries keep pure index work inside its measured call rather
++than letting the compiler move it past adjacent monotonic-clock reads. -/
++@[noinline] def prepare (rows : List CandidateDomain.Row) : IO Index := pure (build rows)
++@[noinline] def candidates (index : Index) (surfaces : List String) : IO (List Nat) :=
++  pure (lookup index surfaces)
++
++def codec := Wire.list (Wire.text.product (Wire.list (Wire.natural.product Wire.natural)))
++def implementation := Sha256.hex ((include_str "WorkPostings.lean").toUTF8 ++
++  (include_str "LogicalText.lean").toUTF8)
++
++structure Manifest where
++  domain : String
++  implementation : String
++  digest : String
++  bytes : Nat
++  deriving ToJson, FromJson
++
++def directory (source : Snapshot) (storage : Sidecar.Storage) : IO System.FilePath := do
++  return (← CandidateDomain.directory source storage) / "work-postings"
++
++/-- Verify one bounded prepared index against the exact checked source domain.
++No Work spelling compilation, original owner reads or writes happen here. -/
++def open? (source : Snapshot) (domain : CandidateDomain.Ready) (storage : Sidecar.Storage) :
++    IO (Option Index) := do
++  let path ← directory source storage
++  let record ← FileSystem.boundedBytes (path / "ready.json") 65536
++  let record ← IO.ofExcept (Json.parse (((String.fromUTF8? record).getD "")) >>= fromJson? (α := Manifest))
++  unless record.domain == domain.metadata.digest && record.implementation == implementation &&
++      record.bytes ≤ CandidateDomain.maxBytes do return none
++  let bytes ← FileSystem.boundedBytes (path / "postings") CandidateDomain.maxBytes
++  unless bytes.size == record.bytes && Sha256.hex bytes == record.digest do
++    throw (IO.userError "prepared Work posting digest disagrees")
++  let (rows,tail) ← IO.ofExcept (codec.decode bytes.toList)
++  unless tail.isEmpty do throw (IO.userError "trailing prepared Work posting bytes")
++  let mut index : Index := {}
++  for (surface,entries) in rows do
++    unless !index.contains surface do throw (IO.userError "duplicate prepared Work surface")
++    for (ordinal,owner) in entries do
++      let some row := domain.owners[owner]? | throw (IO.userError "foreign prepared Work owner")
++      unless row.ordinal == ordinal do throw (IO.userError "prepared Work ordinal disagrees")
++    index := index.insert surface entries
++  return some index
++
++def openShared? (source : Snapshot) (domain : CandidateDomain.Ready) : IO (Option Index) := do
++  for storage in [.database,.user] do
++    try
++      if let some index ← open? source domain storage then return some index
++    catch _ => pure ()
++  return none
++
++/-- Scheduling hint only. Every hook still checks the actual packed payload. -/
++def ready (source : Snapshot) : IO Bool := do
++  for storage in [.database,.user] do
++    try
++      let some domain ← CandidateDomain.manifest? source storage | continue
++      let bytes ← FileSystem.boundedBytes ((← directory source storage) / "ready.json") 65536
++      let record ← IO.ofExcept (Json.parse (((String.fromUTF8? bytes).getD "")) >>= fromJson? (α := Manifest))
++      if record.domain == domain.digest && record.implementation == implementation &&
++          record.bytes ≤ CandidateDomain.maxBytes then return true
++    catch _ => pure ()
++  return false
++
++structure Result where
++  mode : String
++  bytes : Nat
++  elapsedMs : Nat
++  deriving ToJson
++
++/-- Publication/warm maintenance only. Two atomically replaced files keep
++the rebuildable index bounded; graph identity and authority are untouched. -/
++def refresh (source : Snapshot) (storage : Sidecar.Storage) : IO Result := do
++  let started ← IO.monoMsNow
++  let some domain ← CandidateDomain.open? source storage |
++    throw (IO.userError "prepare the candidate domain before Work postings")
++  if (← try open? source domain storage catch _ => pure none).isSome then
++    return ⟨"warm",0,(← IO.monoMsNow)-started⟩
++  let index ← prepare domain.data.rows
++  let rows := index.toList.mergeSort (fun a b => a.1 ≤ b.1)
++  let bytes := (codec.encode rows).toByteArray
++  unless bytes.size ≤ CandidateDomain.maxBytes do throw (IO.userError "Work postings exceed byte budget")
++  let record : Manifest := ⟨domain.metadata.digest,implementation,Sha256.hex bytes,bytes.size⟩
++  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun _ => do
++    unless (← CandidateDomain.stamp (← (Sidecar.Owner.ofSnapshot source).pin)) == domain.metadata.stamp do
++      throw (IO.userError "source changed while preparing Work postings")
++    let parent ← CandidateDomain.directory source storage
++    let path ← Sidecar.childDirectory parent "work-postings"
++    FileSystem.atomicExistingBytes (path / "postings") bytes
++    FileSystem.atomicExistingBytes (path / "ready.json") (toJson record).compress.toUTF8
++    return ⟨"prepared",bytes.size,(← IO.monoMsNow)-started⟩) storage
++
++theorem lookup_empty (index : Index) : lookup index [] = [] := rfl
++
++/-- Work postings use exactly the production spelling function, including
++native invocation text. No shell command or MCP tool name is filtered here. -/
++theorem row_surfaces (row : CandidateDomain.Row) (owner : OutcomeEdge)
++    (same : owner.work = .text row.text) :
++    Persistence.Store.ownerWorkSurfaces owner = LogicalText.surfaceNames row.text := by
++  simp [Persistence.Store.ownerWorkSurfaces,same,Persistence.Store.text?,Value.text,
++    String.fromUTF8?,String.toUTF8_eq_toByteArray,row.text.isValidUTF8,String.fromUTF8]
++
++end Eggshell.WorkPostings

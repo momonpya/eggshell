@@ -12,7 +12,11 @@ performance work remains isolated under the adoption conditions in AGENTS.md.
    invokes `Store.searchDocuments`. Multi-source preparation still builds the
    complete cross-DB identity table over semantic membership. The small/real-DB
    stage checks in [the candidate record](prepared-candidate-domain.md) do not
-   qualify full 10,000/50,000-window hooks or that multi-source path.
+   qualify that multi-source path. Actual native 10,000-window hooks now take
+   18–20 seconds: all 9,969 owners still pass Work admission and are hydrated.
+   See [the measured breakdown](native-hook-scale.md). The 30-second practical
+   gate remains unqualified at 50,000 windows: the measured reference returns
+   only an incomplete notice there.
 2. Close storage privacy before live MCP trials. `captureTerminal` persists the
    raw result before manager dispatch. `postToolUse` and operation graph
    compilation subsequently use the pending turn's single write target. No
@@ -50,13 +54,36 @@ open microbenchmark is not a full-hook latency result.
 
 ## Latency protocol
 
-The initial practical target is p95 <= 3 seconds for both first and subsequent
-hooks on a warmed 50,000-window DB. Thirty seconds remains a hard ceiling, not
-the target. Measure 50 hooks per category at 2, 1,024, 10,000 and 50,000 windows,
-and a fixed real DB. Freeze runtime SHA, source snapshot, questions, provider,
-cache state and harness before measurement. Define p95 by nearest rank
-`ceil(0.95 * n)`; retain every attempt, including timeout, incomplete stdout and
-fallback. Report semantic completion separately from usable fallback delivery.
+The user-confirmed practical gate is UserPromptSubmit p99 < 30 seconds on a
+warmed 50,000-window DB, separately for new chats and chats with acknowledged
+history. Faster remains preferable; the previous 3-second target was an
+aspiration, not a user requirement. Time includes startup, stdin/stdout and
+receipt confirmation at the caller boundary. An incomplete notice alone is
+not useful delivery, even when it flushes in 29 seconds. A continuation can
+correctly return no new body when the original is already acknowledged.
+
+Before the next qualification cohort, freeze 100 attempts per category at 2,
+1,024, 10,000 and 50,000 windows and a fixed real DB. Freeze runtime SHA, source
+snapshot, questions, provider, cache state and harness before measurement.
+Report nearest-rank sample p99, `ceil(0.99 * n)`, p50 and maximum, with every
+attempt retained. This empirical percentile does not establish a population
+p99 guarantee. Every timeout, incomplete search and missing useful delivery is
+also a failure; a percentile cannot hide it. Report semantic completion
+separately from usable lexical fallback. Existing diagnostic pairs do not
+qualify this cohort.
+
+Measure scaling rather than demand constant time on doubling. Full ordered
+matrix scoring retains O(N*d); repeated catalogue construction and per-owner
+IO are the avoidable costs. Do not extrapolate a timeout boundary from two DB
+sizes as an established limit. Record actual deadline margin at each scale.
+
+PreToolUse and PostToolUse are separate strata: record caller durations, p50,
+sample p99, maximum, count and summed per-turn handler cost. Sum is not elapsed
+turn wall time when calls overlap. Record semantic-enabled/projection/evidence
+conditions; a test with search disabled cannot qualify search latency. The
+existing seed's 144 Pre/Post handlers sum to 292,801 ms, despite each finishing
+within 3,877 ms. This older, initially empty DB is evidence of cumulative cost,
+not qualification of the latest runtime at 50,000 windows.
 
 Separate explicit cold-import/warm duration from warmed new-chat hooks. Record
 stage timings, read counts, payload bytes, peak aggregate RSS and free disk.
@@ -65,6 +92,15 @@ at 3.5 GiB. Generate scale fixtures in bounded publication batches and avoid
 retaining obsolete complete DB copies.
 
 ## MCP capture policy
+
+The implementation target is a private-constructor, policy-checked capture
+value accepted by every Eggshell durable writer. Enumerate terminal capture,
+Pre/Post journals, pending/recovery records, observations and answers, receipt
+bodies, vector/lexical/synaptic sidecars and Eggshell stderr logs. Apply policy
+before the first journal write. A ContractAudit-style dependency check must
+verify that raw tool events cannot reach these sinks without that boundary;
+secret-sentinel artifact scans separately test actual IO behavior. Neither
+test alone substitutes for the other.
 
 The target default is private storage for external observations. Unknown origin
 is private as well. Identify server/account/tenant from trusted adapter metadata;
@@ -99,6 +135,51 @@ an incomplete result was complete. Measure bytes and windows added, duplicates,
 compaction amplification and cleanup after a representative day, including
 large JSON results. Choose defaults from that measurement; no daily growth
 limit has yet been validated.
+
+Capacity policy separates hot recommendation indexes, cold retained originals,
+and explicit deletion. Lack of delivery or rereading is not evidence that a
+memory is dispensable. Cold records remain addressable by Exact identity and
+provenance even when they leave semantic/lexical recommendation. A tombstone
+can preserve an identity and explain unavailable evidence, but cannot count as
+available original bytes or pass completion checks that need those bytes.
+Compaction of historical copy-on-write pages is a separate bounded operation
+which preserves pinned readers; fixture transaction batching does not implement
+it. Do not silently create another unbounded archive.
+
+## Recognition index and matrix follow-up
+
+Keep full-population numerical scoring while removing per-window files and
+transporting packed float32 model outputs. This remains O(N*d), plus work on
+the nominated neighborhood; it is not O(K log N) overall. Preserve model,
+segmentation, accumulation, thresholds, stable ties and complete owner/window
+rankings. Float32 packing alone does not prove ranking or score equality.
+Measure first mapping, resident reuse, invalidation and ownership within the
+aggregate memory ceiling. No packed numerical matrix is qualified yet.
+
+An authority index can separately store scoped canonical Work signatures and
+class use lists at publication time. A congruence step requires equal operators,
+ordered argument roles, identical Exact references and equivalent Semantic
+references. Explicit persistent Unions can connect different signatures, so
+signature matching alone is not the complete authority index. After local
+Unions, revisit every affected parent through the complete use lists, including
+parents outside recommendation top-K. Class identifiers and prepared readiness
+belong to a pinned DB incarnation and Union state. Prove the indexed closure
+and recognition results equal to the full reference closure, rather than only
+showing returned matches are sound.
+
+Broad intrinsic Work alignment is also used for advice in the current matcher;
+a congruence index by itself does not eliminate that admission path. The actual
+10k measurements must therefore remain the performance baseline until the
+whole hook improves. Local changes can affect many parents; do not assume a
+small number of local Unions implies a fixed small rebuild cost.
+
+Freshness shortcuts retain fingerprint verification and reject ambiguous file
+metadata; matching mtime/size alone is insufficient. External observations
+without a supported current-state verifier remain historical advice. A later
+sampled shadow check may run only a typed, explicitly permitted read operation,
+not arbitrary stored shell text classified by a command-name prefix. Report
+the sampled denominator and disagreement count; a sample with no disagreement
+is not a proof that all completed reuse is correct.
 
 ## Live acceptance and later token adoption
 

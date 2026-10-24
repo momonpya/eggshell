@@ -1,0 +1,3764 @@
+{
+  "status": "isolated, unadopted; latest lifecycle passes; 30-second p99/useful delivery at 50k and matched token adoption remain unqualified",
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "parentReview": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/prepared-domain-review.json",
+    "sha256": "9ff45c526069d6fa2112ccae9e09bef8abe47702ffff07e022c25259159e89b7",
+    "bytes": 131291
+  },
+  "parentPatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/prepared-domain-runtime.patch",
+    "sha256": "c7cdd3cfaad5227e800db3ebff4d03716286b3156b015a7ed336cccd8ce1879e",
+    "bytes": 38739
+  },
+  "runtimePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/hook-scale-runtime.patch",
+    "sha256": "ca6d15b114a1d32c84e4fa1d5b28af1526b6c7db1271b86eb31a007729ccc3d5",
+    "bytes": 18233
+  },
+  "patchAppliesAndPostimagesMatch": true,
+  "sources": [
+    {
+      "name": "Eggshell/Handoff.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/preimages/Handoff.before-counters.lean",
+        "sha256": "547d5bbcb86d2ddcf35f516c5e29d581c384e6ea4b49df6d9b0c8a2804a115ea",
+        "bytes": 469659
+      },
+      "candidateSha256": "32fc79768effe0995641b571cdf91d35c19a3356684f5b3ee32295bbdad8c6f7"
+    },
+    {
+      "name": "Eggshell/Warm.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/preimages/Warm.before-batching.lean",
+        "sha256": "9fa86c21c5204ab29fc57a1708acc82e89e726d75ed8f9a7046e17c20e772beb",
+        "bytes": 12375
+      },
+      "candidateSha256": "f99d132b73f87a890cb29b4e389f1da47873aefc798feecb0265fb4a438408ba"
+    },
+    {
+      "name": "Eggshell/SynapseUsage.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/preimages/SynapseUsage.before-shared.lean",
+        "sha256": "0671fc37ca0c3f62a4c6ed0a69cb67c0839bda381fa9fcf03941ebe1e0517421",
+        "bytes": 11690
+      },
+      "candidateSha256": "e24d3e14125ebabb77f21a9eebd05a1450766d28178bf92099fcccae9d327439"
+    },
+    {
+      "name": "Eggshell/DiscoveryCounters.lean",
+      "before": null,
+      "candidateSha256": "09a5409670843a663fafcda229f161382d1ed9a60dd9a5365c43eb22f66c658b"
+    },
+    {
+      "name": "Eggshell/WorkPostings.lean",
+      "before": null,
+      "candidateSha256": "5e74e1f42105fae7106a6860094459ae04cd7e9ba5405122433951b05b41be48"
+    }
+  ],
+  "sourceCopies": [
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/hook-scale/tools/research/HookScaleRun.lean",
+      "sha256": "7519456e7fc030125ba6404f8ee4f35e5271d8d475d1e8dd77821c0530b5fe4f",
+      "bytes": 8875
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/hook-scale/tools/research/WorkPostingsAudit.lean",
+      "sha256": "a2a4c1991a365cc10a58c1061e42b0c2e568990dc82c7884487a316dfd87dbee",
+      "bytes": 3849
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/hook-scale/tools/research/HookScaleFixture.lean",
+      "sha256": "0bc4ef543ae9fe36850aa0e9b976a6a80c96189a1ad4e8b634afbe2e62614ddf",
+      "bytes": 3877
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/hook-scale/tests/SharedPresentationTests.lean",
+      "sha256": "b9ac4eeec6e66734d7d744ccf232de4b068cfd66e8d59a690c1e5fdce1861302",
+      "bytes": 4545
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/hook-scale/README.md",
+      "sha256": "48314a5e3de8da27ad0c2a5aef611a68b85daf1725b56ded0f70eeea9baa74cd",
+      "bytes": 2440
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/hook-scale/Eggshell/WorkPostings.lean",
+      "sha256": "5e74e1f42105fae7106a6860094459ae04cd7e9ba5405122433951b05b41be48",
+      "bytes": 6524
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/hook-scale/Eggshell/SynapseUsage.lean",
+      "sha256": "e24d3e14125ebabb77f21a9eebd05a1450766d28178bf92099fcccae9d327439",
+      "bytes": 16146
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/hook-scale/Eggshell/DiscoveryCounters.lean",
+      "sha256": "09a5409670843a663fafcda229f161382d1ed9a60dd9a5365c43eb22f66c658b",
+      "bytes": 1649
+    },
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/hook-scale/tools/research/HookLatencyAudit.lean",
+      "sha256": "1c13c0ffe1d4b954ff076628f03689423fbade492dd6beb27e5e3f62cfa9ffab",
+      "bytes": 4662
+    }
+  ],
+  "runtimes": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prefix/libexec/eggshell",
+      "sha256": "426dd1a710e55e9a65b027b8058655d80df935d483c723b0f8a27bd31df04008",
+      "bytes": 115074288
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prefix/libexec/eggshell-profile",
+      "sha256": "4f1d519f850153e6fd3cd1f9e6a587fd5b4189f1b2c5f1ba5099dc006c3b2860",
+      "bytes": 115113456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prefix/libexec/eggshell-batched",
+      "sha256": "fa29b60acfc0784705fdb3996fba266f7ba2639dc0f865229a8c9d39d0582fd3",
+      "bytes": 115263168
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prefix/libexec/eggshell-shared-frames",
+      "sha256": "9b64b26c42d426a30eb99265f464e561e5f0a4acc92be0a278ec8834eb9dcdf2",
+      "bytes": 115337376
+    }
+  ],
+  "records": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/audit-postings.guard.json",
+      "sha256": "b54a906a8ac704a2f834f975b6d81fd23bd76f1499694f965137ca805605b67d",
+      "bytes": 1540
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/audit-postings.log",
+      "sha256": "f53799528ed021cbc5228d8deba27b48e052e2feb825b707da79b99e4eaa61f9",
+      "bytes": 734
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/audit-postings.settings.json",
+      "sha256": "bb79638e752bac320926ccff1e565928814eff0ac1fe7f653e68dbcf5912b720",
+      "bytes": 448
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/audit-postings.sh",
+      "sha256": "dc1bec910b7e1dbd27620f69f105cc3d7b6cffc63b7b5bcf476bd0acb5d3a4ab",
+      "bytes": 673
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000.guard.json",
+      "sha256": "1542fd0d86664046d3681529f33cbbafec8c3672405e3106e3c7577a164416ff",
+      "bytes": 3416
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000.log",
+      "sha256": "f9a79af35651afed8650d189992729b3433d4502e470db38da2f25f236627533",
+      "bytes": 198
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000.settings.json",
+      "sha256": "5cf1aba1487639b2438f9331e54013992fdd797fa2603b7044bf4b6c8062dc05",
+      "bytes": 1187
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-continued/result.json",
+      "sha256": "9db699e854964aa52185cb9acb6814f5e1a88d430772dee9321a7cb2631204b4",
+      "bytes": 4045
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-continued/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-continued/stdin.json",
+      "sha256": "354544c447d25ee9f0b13cf21e825e4de5c6328815a112006a9418d84ed5f4d0",
+      "bytes": 421
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-continued/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-first/body.txt",
+      "sha256": "5c7a5f72c607710135747e78c438e89e9eb86351fb1fbf8df43772277a8cb264",
+      "bytes": 17803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-first/result.json",
+      "sha256": "ef17d565b4860d8979d9377acf415b94990fea3c3e8037941d9e2dddab620510",
+      "bytes": 23219
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-first/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-first/stdin.json",
+      "sha256": "8fa61a1eec3ec4f5e4ec92c1e4de7a4e1ee2243e50fdb894cd49c58eb76c306d",
+      "bytes": 417
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-first/stdout.json",
+      "sha256": "439687478242a4d77d155c30d4607fd2eece1a6760fb2f13e5b3fa5757aa619d",
+      "bytes": 18137
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/pair-0-shutdown.json",
+      "sha256": "5be584eb8ff221d0c902fb892230ec0317b5cdf0984b2a55f820cfdaadbe27cc",
+      "bytes": 113
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/private-warm.json",
+      "sha256": "a4281abd7526d674ad2b953e4b7879807e4783c8c76ed534454eabb9f0eb84c8",
+      "bytes": 3538
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/repeat-warm.json",
+      "sha256": "94b1bb84f4ddb6899f385a69a2be20ed593e170435c6234aea25d7be4b1d32e4",
+      "bytes": 3537
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/results.json",
+      "sha256": "0c2029c00c997f5ea70de3c5995a0b233572270aa4b923731b1c1ee0efd87532",
+      "bytes": 27552
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-10000/summary.json",
+      "sha256": "645b301cac5ec24c0e2e38883ef6b7d0536ae7c8bea9b9005fa2600cda97c90d",
+      "bytes": 28664
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched-comparison.json",
+      "sha256": "4d37995fdc40820fe7e3ca6a1d7d9c726d5467b61cb9f8690f362833e49a3f1b",
+      "bytes": 2954
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched-checked.guard.json",
+      "sha256": "4122e50a0bf9c13ba2a01e8e7953548682bfebdd17eb8bef8c20e031a225e8b2",
+      "bytes": 1252
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched-checked.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched-checked.settings.json",
+      "sha256": "50f1b4de02f92daa276584b131d6a71729ac40b8d1999341502f941e02c8aaea",
+      "bytes": 454
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched-plan.guard.json",
+      "sha256": "b56decce8309feb57a5b5608cd47fc40e3d36a1cf79648a160b60ffbe65ed398",
+      "bytes": 1249
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched-plan.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched-plan.settings.json",
+      "sha256": "d59377cb6598f8c601df0b21ed419cf00d741119c3086afbf03828f67e03635f",
+      "bytes": 451
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched.guard.json",
+      "sha256": "4aa43670ee7b39556fcb8123776eb8473cf89b466bd9bf8e9b68f02c969f2838",
+      "bytes": 1418
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched.log",
+      "sha256": "7c68f15a5d894d0e6bbea6833977daca644ab7276645c7397d8b54f7509a0e12",
+      "bytes": 768
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched.settings.json",
+      "sha256": "7902351350a821a64a22f0d888acc5346ae85b78c8fed65e97b4efec8c192a5e",
+      "bytes": 446
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-batched.sh",
+      "sha256": "4de7caaa7f35e7675ebd2595602ccaccc7c4302161988ee7cc2784f4b5a54f62",
+      "bytes": 1279
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-fixture.guard.json",
+      "sha256": "37d0e723a72461dfd50483d04245979a6850ca1ac85b22cab0a1fbdc735b63a8",
+      "bytes": 1244
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-fixture.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-fixture.settings.json",
+      "sha256": "49765b9d47c72577f1210359f4dd8b38d7f45792e0ffdaa8cf4b8f1f6a575742",
+      "bytes": 446
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-fixture.sh",
+      "sha256": "6f6d54b26684bd480254b843879b0b7eb497ea4874eb86d1e25bbc40c1b94ef4",
+      "bytes": 688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-profile-readers.guard.json",
+      "sha256": "a837f79ddc42b006aa9a1cc4835826e77f89a772929b0ae12971b5b56b07bd6d",
+      "bytes": 1252
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-profile-readers.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-profile-readers.settings.json",
+      "sha256": "42e53e363ec4b004d935afcf7be5e63417028b7f8bf1a8524f2549970b82be9c",
+      "bytes": 454
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-profile.guard.json",
+      "sha256": "6d7acf64169265198bb2403073423e743c67449c617b16fc75e7364dd59a15e0",
+      "bytes": 1246
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-profile.log",
+      "sha256": "3e0f1f5c66e105d9eb667290a08d3dd21b675ed3389f4a051d5880239b10fa70",
+      "bytes": 1746
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-profile.settings.json",
+      "sha256": "6e7cfad1056f29f01b58e4b990d1f7926b10a364a5d6c322bd79a1f9dc688bc5",
+      "bytes": 446
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-profile.sh",
+      "sha256": "e9f587b4459d81f4dbe5e47886f4fc3cc227f0e8563087a3fd712de01fdaefc1",
+      "bytes": 1246
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-receipt.guard.json",
+      "sha256": "6ff8f79b866881e245c827ba5d69be32efbbeeb2ad2c83881ab64e7ee3cebce4",
+      "bytes": 1538
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-receipt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-receipt.settings.json",
+      "sha256": "bd81bc36d363027bd3a581d7abea0aa19614c190492cfecb7625c89349f5d787",
+      "bytes": 446
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-receipt.sh",
+      "sha256": "be1f81a4f36cfd798c62b88b5a77042fcd7cc5cbad1bc417508b253dcb36366f",
+      "bytes": 836
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner-checked.guard.json",
+      "sha256": "a3fcecc13b8e6de9d28d8caad826eb5024a09e8593c2e390219466e486f6c3e9",
+      "bytes": 1250
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner-checked.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner-checked.settings.json",
+      "sha256": "2ef62258d538b3b0e0d04e4aa0522609a9e5c346d15f9dc16242d365128ebc4b",
+      "bytes": 452
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner-fresh.guard.json",
+      "sha256": "2c63dd6f6541f79e7eedb82b08c57ee75a09015199ab85732b449b26a4c7522b",
+      "bytes": 1240
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner-fresh.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner-fresh.settings.json",
+      "sha256": "8683c5ee2a145564c1fe17bcdb1598ba0245d8826993d39a848d5424223702c5",
+      "bytes": 450
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner-receipt.guard.json",
+      "sha256": "7d69a6787e8e0cee1bc85b3b7d0e33ccaaf23f66245b7be5994b4168431f46ce",
+      "bytes": 1240
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner-receipt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner-receipt.settings.json",
+      "sha256": "2aa114f1efd1f1c46f92029412089cd8a78789ea7c452cb0fcf00d70a7390be5",
+      "bytes": 452
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner.guard.json",
+      "sha256": "6ecb3973e1c193a3aacaa838bd5cb020450d37767fccf7f4d9a876621ed711fb",
+      "bytes": 1242
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner.log",
+      "sha256": "862ea584ee000a9fdee52a02545fdd5e4d998ce4657fff98f0607f55c05b670e",
+      "bytes": 644
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner.settings.json",
+      "sha256": "7313bae22fb7733895bfe4461eb40c1b2d62641ee6bacec4df6669c54a381155",
+      "bytes": 444
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runner.sh",
+      "sha256": "69c1a11d10dcb032802a6df6822c0a88c976ea395ff21332f3893cffd73e2cb7",
+      "bytes": 841
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runtime.guard.json",
+      "sha256": "de98ea8d4dc2243e1aad73f8bfac7f08fba3fd8d6a2db4c16be62a13d38527d3",
+      "bytes": 1539
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runtime.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runtime.settings.json",
+      "sha256": "f613692013f6f9caf8a6ac109b7d16eb3e08d9b25578a56572b3409da33f711a",
+      "bytes": 446
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-runtime.sh",
+      "sha256": "ad7af45a862db08e8caebcf9c57829ce1a84623095fc4ad198273914deb9d4e1",
+      "bytes": 2360
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-boundary.guard.json",
+      "sha256": "d5f3ab133eb264a891ffc56a0634f30e344599eace01ac0fd35a8fc0605e36c7",
+      "bytes": 1257
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-boundary.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-boundary.settings.json",
+      "sha256": "e360fa21c57d66f28e01f3f36abe00804902150fd544c73d9834d27eb20a16ed",
+      "bytes": 459
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete-checked.guard.json",
+      "sha256": "9f9d3bc27082997feb89bdd4d481d0dd2cce0bf2be726d78dc872a5fa0225147",
+      "bytes": 1266
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete-checked.log",
+      "sha256": "ae15df260bc69eac321ba435c695dc9c54661a87b589267dbcb709d727b36016",
+      "bytes": 82
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete-checked.settings.json",
+      "sha256": "6a4a69420dcb62e9aa1b4f3b024e084d3c9a9e434782697b91739e2f88f7fa48",
+      "bytes": 467
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete-domain.guard.json",
+      "sha256": "5ef97e9ee3b92bb5caa94542bc1661d34d3c056865f5eca21b906aed7b23957c",
+      "bytes": 1264
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete-domain.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete-domain.settings.json",
+      "sha256": "015d49864f3e4cdc219968a29c6f28fc97e0a9009443d68fdcbb3c567f7c2192",
+      "bytes": 466
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete-layout.guard.json",
+      "sha256": "f7b0e68aeecb99201191cf8414b91c7abeb010a7c0d13ea76743fd6d9e2ea522",
+      "bytes": 1264
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete-layout.log",
+      "sha256": "36f82d09b3c78b3cf84baeef22b73c3d5a6fb91e83fa7f5ae5fdaf0924e21df3",
+      "bytes": 390
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete-layout.settings.json",
+      "sha256": "5e5bca058ce5db2f7e8eaf935c32863090a35d5e1392ac8bb459560259688c52",
+      "bytes": 466
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete.guard.json",
+      "sha256": "aa4b17bfc4d1beae3795e11b84dae3e4aa360ebc337367f66924268583a53d80",
+      "bytes": 1258
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete.log",
+      "sha256": "4be22ab6c1a3852b6dae8e22d463ed2253fe73dc5cd3f455dbc3d58e9b55df61",
+      "bytes": 9995
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-complete.settings.json",
+      "sha256": "a8aa9e5bf4ee1bb5b15314a0faddd826bac41adb54c66e2e9bb35b55117c31a6",
+      "bytes": 459
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-frame.guard.json",
+      "sha256": "cc75490632c40416ad0a194a65241cf95ebc216cdcd54d7980fe847e803e3e94",
+      "bytes": 1254
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-frame.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-frame.settings.json",
+      "sha256": "9906c6c05f3198ccadaebc0cf7be82d98bacbc692d9286eff51f018e10b90dcb",
+      "bytes": 456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/build-shared-frame.sh",
+      "sha256": "dcb2ede97fd18f38fd0ae7014749967780bfa1d44f7022029b35f5c1972ff432",
+      "bytes": 1738
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/candidate-warm-10000.json",
+      "sha256": "f87a3838445859f05f9145adc5ab2986cfdd6bac0c6750574c3d6bb0fdbca6af",
+      "bytes": 3555
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-boundary.guard.json",
+      "sha256": "f4f529b8b5db3d8e4fb6d370faae2c6e86612a43873311a45021c52a914ee571",
+      "bytes": 1260
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-boundary.log",
+      "sha256": "e42f1c2061198ebc653368a9efb20e24d2f70e7044dae86d90712669aaae981e",
+      "bytes": 447
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-boundary.settings.json",
+      "sha256": "6d441f25205ceb3cd5d81efa7f3a562e7b0585c342553246acca02f896e9773c",
+      "bytes": 462
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-boundary.sh",
+      "sha256": "b042b67c13b2ad665d137ca99d9b09f8846db4afd2e7f0433594fe61aa185182",
+      "bytes": 1334
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-complete.guard.json",
+      "sha256": "cc1486be475765d1b470382b7952901675650cca5da2c18343c527cbcf0c8d6d",
+      "bytes": 1260
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-complete.log",
+      "sha256": "63902df4a2f800b4e638fdcbe320407c78a83f64c6d142582f048a302be50de5",
+      "bytes": 260
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-complete.settings.json",
+      "sha256": "d9b0728dcf4deef59a437af0c1d7c22af06a41e477f493ebf64e23d93691603d",
+      "bytes": 462
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-complete.sh",
+      "sha256": "a9a58172bb2fdb27dcc1fd49cd951cb5f2cb5049af39640b684e8e252ed80d9f",
+      "bytes": 1334
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-frame-checked.guard.json",
+      "sha256": "1f7d50f919d8d0c4d519532af6d6cd70f981a6c47d3c738b597acc8bba207055",
+      "bytes": 1262
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-frame-checked.log",
+      "sha256": "63902df4a2f800b4e638fdcbe320407c78a83f64c6d142582f048a302be50de5",
+      "bytes": 260
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-frame-checked.settings.json",
+      "sha256": "8eeac1e7ec73573aaf8036fa0ab8acd1eed3c2e4778608e31928c75ec52eb54e",
+      "bytes": 464
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-frame.guard.json",
+      "sha256": "1c26aa23be6a93b6cacd1ccf7747f6eb0e2ce54fdf3787a2de2c9aea7fb18bb0",
+      "bytes": 1252
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-frame.log",
+      "sha256": "d3321c227be09241373dd59804483488efe7516c64b849ad08e9b7495fa96f4c",
+      "bytes": 285
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-frame.settings.json",
+      "sha256": "51394b7fe94b4401a4f400f715d1c91f24784737f35c7ef5a2cf22fdf3eb5c68",
+      "bytes": 456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/check-shared-frame.sh",
+      "sha256": "55c34c923960306d64ebc6d1ee5ce8560829ff822df50545ca7bdf8245904bcf",
+      "bytes": 1040
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "8764a5bb082544ddea93209218fbd108d09061d5867156325c1080d78688aeed",
+      "bytes": 388
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/canonical-source-input.json",
+      "sha256": "8758a5e86a2c82979c19c7e498461ef1f4f960f6ef006c816b9e5f30954c0b8b",
+      "bytes": 233
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/dispatch.json",
+      "sha256": "8ebd2bdd5c2e5922684744727e6d0dcb9d7f223e044df9b85c85558ed1b5bcba",
+      "bytes": 189
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/ingress.json",
+      "sha256": "0e6ff6561b71e5fe5d0eb0ad4a5341b6cddc8691029c92eca531bac3eab393fd",
+      "bytes": 164
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/numerical-6407-2670562244801250.json",
+      "sha256": "51c6474cd5e162c11eba5d203e4e0f13f6f6ab449bc02efeaf1ba5c47b5273e9",
+      "bytes": 1069
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/numerical-6756-2670578329309875.json",
+      "sha256": "7f98fa564ce3c333bddd90ab7553fe1e5b386b87b4ff9e22af9bfecd877b8d94",
+      "bytes": 1024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/published.json",
+      "sha256": "40ef898c9c996e32d3feb1a0906a60206023bbb89bce1c839ff43ea41644cccb",
+      "bytes": 335
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/request.json",
+      "sha256": "851b965d851b2118d84b92aa9b3a1ecc7ca03689e3c9ae7bdea26466924d8f7e",
+      "bytes": 278
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/search.json",
+      "sha256": "2d5f902c80bc2222cbf6f3fe382df65af8c8959af161bc6763d6a878fa8d4932",
+      "bytes": 587
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/synaptic-delivery.json",
+      "sha256": "1f9d73c48579b9ceb222c6d379de73b928e4a56b4c6d3de1c30333dd65cc201a",
+      "bytes": 809
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/0459d87afda1d1f3d6086b3865e4430e4b02ce77cc2462e6b800f27d51be24f2/transport.json",
+      "sha256": "fa32e6e3cb1b8228ad7b7f64e57558b6e013319d4c12cf1faddb97d49cbdf495",
+      "bytes": 184
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/09372c43719554dea379b007e8f3f9bd3e709ca7352b0390e82d21efe5ead558/candidate-domain-eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.json",
+      "sha256": "e47403fcb9b1992fc2748f9914018d5664ca169f417771a8e56c5f2f2c5f4653",
+      "bytes": 390
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/09372c43719554dea379b007e8f3f9bd3e709ca7352b0390e82d21efe5ead558/dispatch.json",
+      "sha256": "1d8a199957ad7a5e891b7a49df428b2131b8e01abe9115706769bae66e9ed458",
+      "bytes": 346
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/09372c43719554dea379b007e8f3f9bd3e709ca7352b0390e82d21efe5ead558/failure.json",
+      "sha256": "9ada97b08b298e26f53a03c04144a5b094189ceebc1b7b3b3494402b6a700012",
+      "bytes": 201
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/09372c43719554dea379b007e8f3f9bd3e709ca7352b0390e82d21efe5ead558/ingress.json",
+      "sha256": "3d5389d28e5b7e95db9e7a32ed370028f16a45054b1ff0c5ef53ffdc532f386b",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/09372c43719554dea379b007e8f3f9bd3e709ca7352b0390e82d21efe5ead558/numerical-17917-2674587199634833.json",
+      "sha256": "3e685257c82150e70ffa3e723a3f4a3644788d2ab0c2786a2442d7a61d98e71a",
+      "bytes": 1071
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/09372c43719554dea379b007e8f3f9bd3e709ca7352b0390e82d21efe5ead558/published.json",
+      "sha256": "190d4702a57c734432858c096ba70e38f204aaa8d04d0f3f4b00e2747ca26ead",
+      "bytes": 790
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/09372c43719554dea379b007e8f3f9bd3e709ca7352b0390e82d21efe5ead558/request.json",
+      "sha256": "71c6e73d97d9b07956868d88c33ed8fe11f2b32892cc6ef69108188493c7da67",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "1737a2988b1b2d25b634005745735d2d62427a59b6c8351c7f692fd337c63913",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/canonical-source-input.json",
+      "sha256": "e78df852a831754de5a3eb517b7ae77aa745e9933b97842c005ab51aba00f68c",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/dispatch.json",
+      "sha256": "420b9d391ac7c6ff68a1f3c220c4645868e63c93c98d82815ffcb703807e6090",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/ingress.json",
+      "sha256": "af826f627c691a73c8a328fdd171eb3cdc3ce11c09833453052ac37dc6eb6088",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/numerical-67718-2669177484476250.json",
+      "sha256": "6d045359ec8c23832760b053eb2bd0ebfa051175357ff47058e8903dca7a29ac",
+      "bytes": 1071
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/numerical-69720-2669193656996333.json",
+      "sha256": "3a504ad646b9123835b080d72240ff3c0d0ac24c9f26380c6f77f7e51236a5e2",
+      "bytes": 1026
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/published.json",
+      "sha256": "94a80132a2ed6eaa10f764a556bd7b0e2adece7bd0f39701e46f4db7ed0bbe06",
+      "bytes": 336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/request.json",
+      "sha256": "0b301367e4809fc26a281d64d207d59471fcc7290dc5e101a2d9977529e3ef37",
+      "bytes": 266
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/search.json",
+      "sha256": "dbe879c4921c4df3df1cddafc378e49615ddbdb00e03a134f2ce72d071cb437f",
+      "bytes": 588
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/synaptic-delivery.json",
+      "sha256": "d39d4df4981fc2fb970bf6368387daf99814a59b3a1d79f0fb722e185acb5d03",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/34ae04b73ef15872223570fd05e2fa81937ecf2ef9aa8c158de97184196f9035/transport.json",
+      "sha256": "68272bb414d31af87823c04166a9bec8a02b3fa90e0fa80e60bb4b499f3b8cc0",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "df5eaae3994363308e83c0933f07fb3d2a37b14e3bce0837ce5ad26fd136b696",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/canonical-source-input.json",
+      "sha256": "0b8434b61ed8a57b7a24f6d10efd417a6caaaf0224f2725f9adcb71e88e7b290",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/discovery-counters-2672172464015708.json",
+      "sha256": "66b7a4746f29b08c69fc01fa05a0598df316c39df5883a6c41fcd3db17296aa4",
+      "bytes": 572
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/dispatch.json",
+      "sha256": "0edbfd7a1483a2bd1861fd6da31e9ca027f3d4c74f77f095a766e1776a5ebe93",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/ingress.json",
+      "sha256": "f68d4634b7d2a82775830e2ab01eed1acad5e986265516c223b994bb08ff365b",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/numerical-42064-2672156841744458.json",
+      "sha256": "d6c2b74a2caa3527060fc9bbc35825ac7cde22c8e75a1fdbbe3642bde13334b1",
+      "bytes": 1071
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/numerical-42423-2672172661108125.json",
+      "sha256": "9a80b79edd7d82a73063a3ecf1671828c7c9876a5714904d47f3de38b2076626",
+      "bytes": 1026
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/published.json",
+      "sha256": "42cad7aea557d4300a0b2c54806bd0be760738d81e9b1eb39f8695be3ab9a3a6",
+      "bytes": 336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/request.json",
+      "sha256": "55756f91609321bc30e4a39cba679ce10cd4f43049799ec66565312e356bc381",
+      "bytes": 279
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/search.json",
+      "sha256": "6dafd44594e4aaca1c9a87724ebfb20ac87cd9833422324c3b46f12b45f908e3",
+      "bytes": 588
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/synaptic-delivery.json",
+      "sha256": "01bfdb90b2c369398986747d0b32fac6619de9ae9839df883f15af46457a45b5",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/425f2285961467fbc5524d235aec498bb4777a0242c17762f73408e6bbff2823/transport.json",
+      "sha256": "141175f182f444ec7382322f32b4176c99503a9be463e1f6439a31d24213b011",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/ack.json",
+      "sha256": "0a91634d93e91dcf62e2dde1f79f21c9d83f74433a38ee4b58916d0d0fc05862",
+      "bytes": 178
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "f6795ba7bf43f15d6a8c68e4091ada387057b52f865af18aa291b00ba9b763a4",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/canonical-source-input.json",
+      "sha256": "062fb5aff70af42cf92bcd6b4bd3d9e37476d7b870db6a9ed20af4ff8e7fec52",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/discovery-counters-2672154071753000.json",
+      "sha256": "7e68862fbabd1b4c3350139e6919be49fe89306d6ef3af3e64cef8be5c8c2baf",
+      "bytes": 572
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/dispatch.json",
+      "sha256": "c98c39f88b73e5e71d7e90875bf3b85f235c3bf885d23537cecef209d19b6f41",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/freshness-2672154704461000.json",
+      "sha256": "57b5cb41a4979c0ea4fbc438b6c7d7eb94aa5586705fe96f7fbf82611079b60f",
+      "bytes": 1190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/ingress.json",
+      "sha256": "59fc6a0ff1517a667779e3a2a73ddaa389323b1568515b2810e3bfad3e466387",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/numerical-41641-2672138198917708.json",
+      "sha256": "0b11193e732dcffd9c8ec246b3fc86b81cdfdbbd126dcda239dee8a569147032",
+      "bytes": 1071
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/numerical-42014-2672154275203541.json",
+      "sha256": "860d768e30e8e8b5a79acb6abb9eedcaf86d2c6de55afb1045b8c2832ddf5f02",
+      "bytes": 1026
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/published.json",
+      "sha256": "548ae9dca473240916316cd048cbe25877185e2b7166bb820704333504fcf330",
+      "bytes": 18735
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/request.json",
+      "sha256": "ab5523087a667f39bb64e26fa0b5eea6ccff1246b428bf8f95bf221ac73494eb",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/search.json",
+      "sha256": "4e7ab2fcdc1b1257b9c5d955ec8ff88cfd82fa7667bb2a08175ed5e4b828b6f7",
+      "bytes": 727
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/synaptic-delivery.json",
+      "sha256": "93f700edb0dd56a043c1e077194df979051a03b9b19dfa39f332bfd4ab56dea6",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/51e33dedcdb62f0eff26a9f43724bfd97decf09b8f84f1eeda299518a129bb6c/transport.json",
+      "sha256": "94c1dfdbef631be0f09087b537f8b53813599d50921071d0df5321564bf7f8b4",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "636b80ec0369bd75e6dae48e94f3d6b4ee9d69249f7cf996932a20ee928354e7",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/canonical-source-input.json",
+      "sha256": "bd1176fe247101637d177a84635f205e1a7db16bfa76bd649013bca2fa6f6ebc",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/discovery-counters-2675350098549125.json",
+      "sha256": "9516fb20b945973d3fa0c504448c218a3b8390f4f81bd606f3d161ca8813dff7",
+      "bytes": 629
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/dispatch.json",
+      "sha256": "ff7023a8d8ea63a12d16925d4821ba3eae17eb32a0f4be7d1b37361a843f6f90",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/ingress.json",
+      "sha256": "63d8e47b437d0eab6137af3d162ee15f74967b44953bb0e016b1e11399d51d52",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/numerical-33421-2675337352423000.json",
+      "sha256": "329e1eafb88d4ef20b90a746afa5265ba6624d513128441811c0bce1faeb0bcc",
+      "bytes": 1071
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/numerical-33549-2675350287627416.json",
+      "sha256": "64b13fb675b2951879be608088122797ff2a3379b8aad9ccc69cb2c094f03b9d",
+      "bytes": 1026
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/published.json",
+      "sha256": "ce5094fb1651d453ab1dd83650fe304377ea27c5cb9c7098522a752c3332270e",
+      "bytes": 336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/request.json",
+      "sha256": "c106dc4a42b333358963dc8c668c810b52084169ec4808e14e01b941f9efa34d",
+      "bytes": 279
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/search.json",
+      "sha256": "640ddb41e1255aeb576f8b2c351733075383bc5103a2efd92ab5a8e3adcf4d61",
+      "bytes": 588
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/synaptic-delivery.json",
+      "sha256": "19e088c5f5c0cc950e2ebba75e9fae3dfc575a0a9034f13398ce72bf632a0072",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/549a90f290090bc388d130d01126835b640ac04641a1506f447f641e1844826f/transport.json",
+      "sha256": "b49b904e49c8eff5a52f9d94a8afe79a701850764cf337c4afa426e45c17ab76",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/7ba297036da64cca4471b7576fbfeef1b92587db3006b5471d236f5d7624e0b9/candidate-domain-eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.json",
+      "sha256": "796c4e697da040874885d97127c17a3cb088f04d2c2260b9dba2f75699314d42",
+      "bytes": 390
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/7ba297036da64cca4471b7576fbfeef1b92587db3006b5471d236f5d7624e0b9/dispatch.json",
+      "sha256": "06908bf5a9f2c36aeb66a3af290a960b6ba2e44ceb8aacfce732a0f54fc0e791",
+      "bytes": 346
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/7ba297036da64cca4471b7576fbfeef1b92587db3006b5471d236f5d7624e0b9/failure.json",
+      "sha256": "af582ba2ad649b18b2326bb2172851aae393c53b49903f93f6e4913abde25b49",
+      "bytes": 201
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/7ba297036da64cca4471b7576fbfeef1b92587db3006b5471d236f5d7624e0b9/ingress.json",
+      "sha256": "d881c2f56f181afd1ea13d9395a5d699cbddf64012389f7ad98e230078231d02",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/7ba297036da64cca4471b7576fbfeef1b92587db3006b5471d236f5d7624e0b9/numerical-18234-2674616176486583.json",
+      "sha256": "aa0972df0980c152069b7ce7b4a8ffa642d2cb55eb7c4b2cf5099904c66cb216",
+      "bytes": 1071
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/7ba297036da64cca4471b7576fbfeef1b92587db3006b5471d236f5d7624e0b9/published.json",
+      "sha256": "0258e65e40199bf525b8a07eb8daa8bf4ce4d083c47de5eeaff80c9e1b80f568",
+      "bytes": 790
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/7ba297036da64cca4471b7576fbfeef1b92587db3006b5471d236f5d7624e0b9/request.json",
+      "sha256": "355ff972fb86319dd7a425ad75e7be1efcc1b97e1ffe8bd4b89391303eb89576",
+      "bytes": 279
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "91285f7c889dc56dcdf1dea1c1df693907e186c7a390132fcfcf00bc2736b786",
+      "bytes": 387
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/canonical-source-input.json",
+      "sha256": "9fe1c44ffead6fe1d683d5c6ed9c49389fa3d262ba1482854c653f8fabffc185",
+      "bytes": 233
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/dispatch.json",
+      "sha256": "4092502d0d04f3712bdbb19b6cc03d03aafc92d1d2242582cfed3e6582d581bc",
+      "bytes": 189
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/ingress.json",
+      "sha256": "41a659cd7205b5b2bec0783fcf448b5ccdb6024af1da25ec41a8475123261aa4",
+      "bytes": 164
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/numerical-4419-2669994106898166.json",
+      "sha256": "2211e0dbe994c1f1d80708eff7ecbb898df898e72f749e274288badde7c6bff0",
+      "bytes": 1069
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/numerical-4559-2670009508088125.json",
+      "sha256": "164baae72ce9326692c8fc2b4535512b81b4963f04bf3d80580f4dde701aa4ea",
+      "bytes": 1024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/published.json",
+      "sha256": "5ab8af9d89655db203871b08b62b6f90bfce1779b18985a92902f995666db497",
+      "bytes": 335
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/request.json",
+      "sha256": "d2f02156594c5be973ed8c59b452bd8a32e2742edff4f05d6b6756ef7c4952cb",
+      "bytes": 261
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/search.json",
+      "sha256": "9d11ed12fd1fb8c27815c7c73db21c876da021e8afa1fc5e6bf1d31a6b686223",
+      "bytes": 583
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/synaptic-delivery.json",
+      "sha256": "130012d1acd41efc99a5601e2cc6a4abb6b97b08b3de34bc5917ebe69d89d94d",
+      "bytes": 809
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/884bf97063714c2da82daff8e692f4f311cd3c106aacf509fc080dbf996746f4/transport.json",
+      "sha256": "c133d7ea01881bb198ec14ad7d937ce603b79c4eb8da111dc120b6e59a029e20",
+      "bytes": 184
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/ack.json",
+      "sha256": "cc3a893ffe3aea766b75b22b4afd7e37b8c75ca3df1ec832b65cb7cbc5a983b1",
+      "bytes": 178
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "32f93638992e9b3e8b00e465df45984af7b6d9583e861637a56a8ea53e346317",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/canonical-source-input.json",
+      "sha256": "6ab6bb56e3aef41aa4a016a6aa50b9fdcc2a10bf63bb186766f57471fee4dd8c",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/discovery-counters-2675334734956291.json",
+      "sha256": "756f46b52b9d1a02bd4c5ddcad603fcd1820f9af96959a4e249b9d28b3ac6d46",
+      "bytes": 629
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/dispatch.json",
+      "sha256": "3bfd973e673deb6fa826cf6c50aea465dfb724d93708936b7fb1f5b9c8187038",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/freshness-2675335333623083.json",
+      "sha256": "02b2bbef9b7559f1f478acb1779f1a2d28207796537cd38745590e3711ba65d1",
+      "bytes": 1190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/ingress.json",
+      "sha256": "6ad676cc9bd3883cbc1c450598122b0f4dedba2a6f210701e3b8215be114a0a0",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/numerical-33275-2675321885966875.json",
+      "sha256": "643f8d3647d68ac380861666e764080b73871416e9a1272f8c2f406845d2d6b2",
+      "bytes": 1071
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/numerical-33391-2675334927588750.json",
+      "sha256": "7a0c2cd27318b809d669b4087db30448e75fb87333923bcdca6ae1ac1b34e92e",
+      "bytes": 1026
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/published.json",
+      "sha256": "e97eb2c85c0451d519055f20971ec5d0722195e9f97359b5ea0418b16e080161",
+      "bytes": 18735
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/request.json",
+      "sha256": "4636c392ab0fa8d11081dcd6b68ca087b1255796097aa58e9822e46ba6eac64a",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/search.json",
+      "sha256": "98e9054d491ed628555d146aa0772658a1b1fb8cb79c6dc15ab65d16950f80ca",
+      "bytes": 727
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/synaptic-delivery.json",
+      "sha256": "2c02d1505432d4c6642b73ea86f8d9aa362ff38e539986e6913e69eb5755ef82",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/9ecbb865b28d14e261995bbf611fde06207fa8f156d454c307ceec393d40121c/transport.json",
+      "sha256": "ee08148dfcd5008902da7154969cdcbd7eaabc32215d6a3229f2ea7887218c09",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/ack.json",
+      "sha256": "032c20452f304a480b9bf26d12a604f03f0f5e70215836db826470fd0a06d40a",
+      "bytes": 178
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "f54c1a36c654c52b28d60e115a753316207cc965474919275d4f883135546935",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/canonical-source-input.json",
+      "sha256": "0dfa76a74a7fd340de02faf65df30bbf9e05832be9e9cc7678b8675cfec3ea88",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/dispatch.json",
+      "sha256": "71d5a8ca0873fef0e81589030abb66d3dc6a1d7896a2af546aaa594acee88bf9",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/freshness-2669175448956541.json",
+      "sha256": "604e9cb2a4fc6e0d44e315bbc9a11ae24a9b0bbfd4aca6590fc6931ff04167e0",
+      "bytes": 1192
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/ingress.json",
+      "sha256": "cc47c85d89ea3ae65e5397c59a103a9ca745177d8b1643afbc876813ce61b3cb",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/numerical-65207-2669157260112625.json",
+      "sha256": "49ef62e5e276d6e8ac9a4d7d959cc258d203dd43a55a5eda2c0d773f0c50bbe1",
+      "bytes": 1084
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/numerical-67416-2669175083218875.json",
+      "sha256": "dac4bf6cf5cef0d11e4c47922e17cf2a80b5546bb58f63fea34b5ebba54e87b1",
+      "bytes": 1026
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/published.json",
+      "sha256": "17dd559b209e7b0bd51d564b4a47b2ab4654146e66cbe99f1c2a4eb5bcaf046b",
+      "bytes": 18735
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/request.json",
+      "sha256": "d61b50647fec2846286a71a880e51a6b6d6a4909690ed0bdbbdb9a9822155aea",
+      "bytes": 262
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/search.json",
+      "sha256": "6f678ce419ed876bc3eef1580482085ffbf053e45951a0029209966ea705ff88",
+      "bytes": 727
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/synaptic-delivery.json",
+      "sha256": "219bbb95624f11b4ea4c05bb113661dc16ea8cb030aee7e659388a70d09435f5",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/d7255584cf26328c2cafc22d94ebe27d13af01d9eeef35c030977ccc5de6b1f9/transport.json",
+      "sha256": "fafb34c274d50fada58db82f2188c6b727606f7c141967b139a887b38471c166",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "431917f83bd98625333788ffa70f4f706425915349dbd4baf903d414e57de9f0",
+      "bytes": 387
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/canonical-source-input.json",
+      "sha256": "72030e94916a2f5206976dfcf830ba51b2fd5fc2c54176afcc02bfe896e9146d",
+      "bytes": 233
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/dispatch.json",
+      "sha256": "4fdf15176e43590da7410a39d0f8119909a88c29c5c50b06e5cfc0e83cdd6c4b",
+      "bytes": 189
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/ingress.json",
+      "sha256": "8386138ed9020811a60d81f70d5c97354c8179e964fafa8b6416c5d4e866181d",
+      "bytes": 164
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/numerical-4587-2670011791512708.json",
+      "sha256": "e20ec57d9cda672aaefb710398332f7072eb3411a86a9d5dc4556d4c4be5b9f2",
+      "bytes": 1069
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/numerical-4743-2670027177457250.json",
+      "sha256": "aae81091a3c0a7a9caaee26d5cf3a280d980892f084ae1d38548d69da978fee0",
+      "bytes": 1024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/published.json",
+      "sha256": "f53411e813862a03907297fdd6519a80c9bfdca1185f2cbd9c50b94fbdb598e4",
+      "bytes": 335
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/request.json",
+      "sha256": "e4fdd29673a60b76a2892ac70c8fce67661d08dd858986a2067f7a7eadf53c2e",
+      "bytes": 265
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/search.json",
+      "sha256": "b7b315650f11d7df59a369a43a7ab0c12c4dd03239b794bc1a4b8d2f5133dd4d",
+      "bytes": 587
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/synaptic-delivery.json",
+      "sha256": "75d589339f3b644d45944a3cd7b1fbc8aa9d5a36adba75b11b5bfac6894f4480",
+      "bytes": 809
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/dee041c0f4b852076a093caee6bd5d11dbd873b00b4a3472d01a3c53e05d5535/transport.json",
+      "sha256": "90190f5a381d13b183f128bbf04160463670ad3eb4ceeaa04172112b915c3747",
+      "bytes": 184
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/ack.json",
+      "sha256": "1c35fe970aa2a3c74a9912d600eb5753d766bb9e02bf9472608bd0d54c34cfd7",
+      "bytes": 177
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "e415217cb19d4537f12d12087e244ca547093ffe96adf1bf3edb8f2fae7085eb",
+      "bytes": 387
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/canonical-source-input.json",
+      "sha256": "25a8953972b40420f2a007f124646f613b4a2aac3574426e4ca1670d0ba90289",
+      "bytes": 233
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/dispatch.json",
+      "sha256": "ec49c267c4cd4e9b9f67c64b44d1502154c75633c8ac17bfbcef95f284458c8d",
+      "bytes": 189
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/freshness-2670560176265250.json",
+      "sha256": "1d810e231ea8d93cf14f951b6b393dc02b4995072dc3807257228fb713dce91a",
+      "bytes": 1193
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/ingress.json",
+      "sha256": "9096c786988dd6baa901bad620b662b25913b50d4f602904aec4fb7595858d56",
+      "bytes": 164
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/numerical-5527-2670544213867583.json",
+      "sha256": "5707bec493ec6dc83503b0c9057bb9905018a6f2256a15f344dc3ff3c61c1d41",
+      "bytes": 1069
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/numerical-6049-2670559792936125.json",
+      "sha256": "b12ccd7b29ae59224680971c6edd94aad0353171380b59e1c160b139884a444f",
+      "bytes": 1024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/published.json",
+      "sha256": "3ed379678324a5053a56256d272503b981fe9ccd16369bbb7783a5f0ea62f1cb",
+      "bytes": 18734
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/request.json",
+      "sha256": "293d129057e18d326a902b5df09262bdfdda45726f698789be02303407bc18e2",
+      "bytes": 274
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/search.json",
+      "sha256": "232bce73eac5442b55d7a80b3a3058f62dfa0bc9ded3bbc6eb60f8c032110ba8",
+      "bytes": 726
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/synaptic-delivery.json",
+      "sha256": "23546351a6a01c549f1d1fdbab5d4951098eace681a830e90a8463c044c5d31c",
+      "bytes": 809
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/cohort-data/receipts/f5bf4281bd6905f3c5de4ca397013f55d877eb4bfa2ba2ba1fd0f601ab39b935/transport.json",
+      "sha256": "a0c412190d4617e8a6781da27d4fe780893b536f4b416fa3f09925b409eb2e89",
+      "bytes": 184
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/contract-and-warm.guard.json",
+      "sha256": "82a946b3450f9bb643a6583371f4e7b3d8c04771d73bfca777ca435a3e256753",
+      "bytes": 1251
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/contract-and-warm.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/contract-and-warm.settings.json",
+      "sha256": "14d880522202efbcb45517504ec35a198ddd9000bf7671f2a0e0e5406a804daf",
+      "bytes": 454
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/contract-and-warm.sh",
+      "sha256": "479bba78945f204ae32a742e26df5eec97c984d6fd9e7e8353d188350a1e0f3b",
+      "bytes": 516
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/contract-batched.log",
+      "sha256": "1e444fdaeda8aeed41a3ac5c688a1cf0a187d762d1cbc064b2258ab98d488893",
+      "bytes": 75353
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/contract-boundary.log",
+      "sha256": "1abb070b1a1eed0a7b365f39ecd701c443e260436a8534805db8ff3cd16c82e0",
+      "bytes": 75353
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/copied-source-vectors.json",
+      "sha256": "0cb886caac7b26d9563ff193f5c7b6168d0636ea542da4c4beef571704093fe3",
+      "bytes": 787
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000.guard.json",
+      "sha256": "bf59646793f43777dae7dc125e172af3e10cae766571f83e881fd98f1f05f3a5",
+      "bytes": 3295
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000.log",
+      "sha256": "1eb228df4465ae00d5c19142ee3e2d49551ba5fca9216782d0ebeb9098df3c58",
+      "bytes": 133
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000.settings.json",
+      "sha256": "234c32f658e178df2938d76f8ea933b1ba32c41875bc813693dd2cc6e8388678",
+      "bytes": 1052
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-continued/result.json",
+      "sha256": "f0d8ae446d16318502303e25820b0cda008dfd036dbf0a4229ab6dcd0d759971",
+      "bytes": 2707
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-continued/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-continued/stdin.json",
+      "sha256": "120908f6950ad9ef304b1ee262817803fc8229bfa8434733231f8eaff3b95c12",
+      "bytes": 414
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-continued/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-first/body.txt",
+      "sha256": "5c7a5f72c607710135747e78c438e89e9eb86351fb1fbf8df43772277a8cb264",
+      "bytes": 17803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-first/result.json",
+      "sha256": "9dd8ce320b84eea99b0ae569d5aa0f823a33a50e4c5f005079846543a5fe0c92",
+      "bytes": 21599
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-first/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-first/stdin.json",
+      "sha256": "856e53af753395e4217b9d2fb580bb17b617a36d296c3f8ae839f38a3a9c6b52",
+      "bytes": 410
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-first/stdout.json",
+      "sha256": "439687478242a4d77d155c30d4607fd2eece1a6760fb2f13e5b3fa5757aa619d",
+      "bytes": 18137
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/pair-0-shutdown.json",
+      "sha256": "e4987710642e3aef188c7dd7c819706cdbdde7cd3b22b11d9a1203c9a2cc004b",
+      "bytes": 113
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/private-warm.json",
+      "sha256": "1bf4ab64c860fa6ca2cc849b3c18213a1e892132f97bd7ef8702b1e6d55aea99",
+      "bytes": 3544
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/repeat-warm.json",
+      "sha256": "f2b63babc8104a3842985b3dde8373291ad88cf5a7f3cd5a40371d37bcf84a43",
+      "bytes": 3538
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/results.json",
+      "sha256": "27e23a3ae79cac9661ce8499d8f9634e095fca36d95e141ef87516afb6e28604",
+      "bytes": 24492
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-10000/summary.json",
+      "sha256": "1f39a008a1c15f2c1081ab6e4f8d2d468e8cb33bc613e2ae296e16369f0f963b",
+      "bytes": 25494
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000.guard.json",
+      "sha256": "e66be68046ae7da06c5231760e535562c7f99217e6bf54bf24cd88dcdd4929cd",
+      "bytes": 3340
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000.log",
+      "sha256": "e9c86d6f706b4c0de5cde78835aa2f0c6627b1314f64713432ad6d3e53c32f84",
+      "bytes": 199
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000.settings.json",
+      "sha256": "208c293aef9010c372eac91ed22b4ecca10d73ae3d997430dcd00c6bb9a9e5bc",
+      "bytes": 1172
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-continued/body.txt",
+      "sha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+      "bytes": 356
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-continued/result.json",
+      "sha256": "6945b84cc1a8af14f4717187a219e69a4d61ae2ee064a6a8c114077f11994d98",
+      "bytes": 2540
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-continued/stderr.txt",
+      "sha256": "dcef5e5cf1adb5353bda6135cbcf0d17e9b2a3e3e9ac30258ec9c519e2dd6b9f",
+      "bytes": 59
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-continued/stdin.json",
+      "sha256": "a2f1b0f99cf093311392e6695a98f863885316ef1a07c14beb76ef1083c5dfc1",
+      "bytes": 427
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-continued/stdout.json",
+      "sha256": "c20205d3fd5c865d354d970ccc2dc209f7fef704c3eac3637de279ee957c6a67",
+      "bytes": 442
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-first/body.txt",
+      "sha256": "e7713916afd55e7c72540e7c7b4067a83044d83b697957802585b6cc626466da",
+      "bytes": 356
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-first/result.json",
+      "sha256": "515f7050c88129806c48eec41635fa8e32455f34ca1dbee3eac38654ba18d6a3",
+      "bytes": 2536
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-first/stderr.txt",
+      "sha256": "dcef5e5cf1adb5353bda6135cbcf0d17e9b2a3e3e9ac30258ec9c519e2dd6b9f",
+      "bytes": 59
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-first/stdin.json",
+      "sha256": "013fa82b15b6f81e2ca649cdbcf497b5c73fb389b0fb5ee33f44ae9f0dad5b76",
+      "bytes": 423
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-first/stdout.json",
+      "sha256": "c20205d3fd5c865d354d970ccc2dc209f7fef704c3eac3637de279ee957c6a67",
+      "bytes": 442
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/pair-0-shutdown.json",
+      "sha256": "63e205ad08a486b31a2de131e794d6478faa5188ac68c6fdacbabec9574c70bd",
+      "bytes": 113
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/private-warm.json",
+      "sha256": "cc48841aed77f5acaf2680c2562fe52d1f018417100e964ca4537747a9d7346a",
+      "bytes": 3581
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/repeat-warm.json",
+      "sha256": "476f3217eea5f55069a2f3623816237e7d1969d4c3be5bc7952af552df6d43ad",
+      "bytes": 3574
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/results.json",
+      "sha256": "448e81084f45689e872f04fc9ba405853bd935abdc9e21e4fee87b57d5023f4e",
+      "bytes": 5213
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/diagnostic-50000/summary.json",
+      "sha256": "19f50d60b744cf5faa9370083df4d439211fa71b5e80582256363027313618f6",
+      "bytes": 6170
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/discovery-batched-10000.txt",
+      "sha256": "0d2b7fb9e188f2230d21f5984eedcbe3dc7b239b4a4d95603e2707d9d2be92b0",
+      "bytes": 334
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/discovery-diagnostic-50000.txt",
+      "sha256": "58df5e487b8d0603a1d7babba240e980ae10660577ea0361a57e06b42d3cb2f9",
+      "bytes": 70
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/discovery-profile-10000.txt",
+      "sha256": "8a70cb5aab7603b63454ec7ff6f8a69f6102109d0691222f8f9ff77868d366ce",
+      "bytes": 344
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/discovery-trace-10000.txt",
+      "sha256": "ae7fd9a60706689e29e4c63cd4fb0ffaa0a4d3d5a2a41fbad9d72521ed026488",
+      "bytes": 336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/discovery-trace-fresh-10000.txt",
+      "sha256": "0271bc67c7a7a4cfc98df05fd1918df424eb9467f66daf0e5121d55d163d1c2d",
+      "bytes": 340
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/eggshell.rsp",
+      "sha256": "2f81bc0267fa41d90de54acfa07a24848b9038d75a171a327970ad6745a171d4",
+      "bytes": 20246
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/fixture.rsp",
+      "sha256": "6328439f2c1aad0d3b554728b1cef178335c389e587d0341f2a5666d1955e03e",
+      "bytes": 20258
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/lifecycle-batched.guard.json",
+      "sha256": "c75defb40cba1e5d7ee159c9c4191ae65b37d9e6c7ef9de584690df8bea72f5d",
+      "bytes": 1252
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/lifecycle-batched.log",
+      "sha256": "3e282e01d311469e795ddc11f7611a0feee757cc647551d00f9264fd76f74f57",
+      "bytes": 85
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/lifecycle-batched.settings.json",
+      "sha256": "fa4f39db741b2e87f14a4d58d31d98a3b340cd0cf25299b7337d1e955e219ac7",
+      "bytes": 454
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/lifecycle-batched.sh",
+      "sha256": "c1dad81f46447efbdd0c250212e7f063157704b5993f5d09eb5dd9ac9ade6745",
+      "bytes": 1119
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prepare-10000.guard.json",
+      "sha256": "55a34dc373045225e050d777a30fa3f8aae3097c5a785c241d1df8bcad1014da",
+      "bytes": 1365
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prepare-10000.log",
+      "sha256": "3e24e0f944400e730e74de44a756dbd6fb8090e0a029cc7615ed42fc4fe168a2",
+      "bytes": 1381
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prepare-10000.settings.json",
+      "sha256": "24b1fb448b85823db349a6272ae164f45c75770b0f86f57e3a8a80c5fb9f483e",
+      "bytes": 746
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prepare-50000.guard.json",
+      "sha256": "3a86f343966af8695d235e7befdb9bf3942576334362d61555c0079d739571d4",
+      "bytes": 1367
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prepare-50000.log",
+      "sha256": "f6435bd13494337d918fcaf73ff82080b90b99a833d743743420292aa1c0bf63",
+      "bytes": 3963
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/prepare-50000.settings.json",
+      "sha256": "65ca2a88ab325fc8e598cca9864ce74c4d0fd00d96f407ece10f736c4fbb30f3",
+      "bytes": 746
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/private-warm-50000.sample.txt",
+      "sha256": "dfc36399688baf8b1f068a414c6f37d024d49fa8060e837cc58dc606af04ba47",
+      "bytes": 1041526
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000.guard.json",
+      "sha256": "68b8c5197f8cad762d49e5180785f7de736004ec6db224068f407c149279caba",
+      "bytes": 3230
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000.log",
+      "sha256": "591629abd95076e1d84731facc36a8fe69c5a1bf6759421ce20b5ee092fdcd84",
+      "bytes": 133
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000.settings.json",
+      "sha256": "b5f3d849ad9b84223503627d597ff11d20c315977f9ba861abf2a49a001caa43",
+      "bytes": 1187
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-continued/result.json",
+      "sha256": "879c32993ef92e9acb8ded38f3f568003e5c0b39393899771e3407f4fcdf181a",
+      "bytes": 4045
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-continued/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-continued/stdin.json",
+      "sha256": "13b436aa913d364d84e3a33ec697a1de38133ecd04f2ca98bac9cc0f9edd7986",
+      "bytes": 421
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-continued/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-first/body.txt",
+      "sha256": "5c7a5f72c607710135747e78c438e89e9eb86351fb1fbf8df43772277a8cb264",
+      "bytes": 17803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-first/result.json",
+      "sha256": "823f324e62dec33bb62434ad910b73b3a929d0ffd1c5b72549922d001e00a392",
+      "bytes": 23219
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-first/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-first/stdin.json",
+      "sha256": "76fb4370163dbf348c201a9789fd2e1795285a8c6d56a579bd3344c30220c9e3",
+      "bytes": 417
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-first/stdout.json",
+      "sha256": "439687478242a4d77d155c30d4607fd2eece1a6760fb2f13e5b3fa5757aa619d",
+      "bytes": 18137
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/pair-0-shutdown.json",
+      "sha256": "af198ecc00897562fb6f798bc5e2d48a39a70b88fc2ef8869e2624de101655d2",
+      "bytes": 113
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/private-warm.json",
+      "sha256": "e368ec50d4295beb1e1ad24201ccee97ed7dd046ea4dd5d93453d00899a85bfa",
+      "bytes": 3538
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/repeat-warm.json",
+      "sha256": "cbd683c67e85cd4fab9caecec461616984cb3ccb0e01659091caf0e5583750fe",
+      "bytes": 3537
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/results.json",
+      "sha256": "3160bcb2026b70d2aaeac59916bea4b8c752591dccd72ce53527ecd598d3e40a",
+      "bytes": 27552
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-10000/summary.json",
+      "sha256": "9a9c3b4c37621e2a86d0e447552cac8c51f3a6a84555d77015f15f6c223c8063",
+      "bytes": 28664
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile-comparison.json",
+      "sha256": "938aae86864d08372457d4d07b5801ce6c29e2ead34fc3b5c43658b1f29ff1fb",
+      "bytes": 2628
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/retired-failed-helper.json",
+      "sha256": "b4ff3907b94b05d247a61746a32d563b5a621de65310c5f62db19d859a952ac2",
+      "bytes": 341
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/retired-first-frame-runtime.json",
+      "sha256": "4e77073bbf55a181a8868ae46119daa3fef0312d3b73339bcfb7568466b607ed",
+      "bytes": 367
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/retired-intermediate-runtime.json",
+      "sha256": "46b2ce9af1127fdc224a3b79ff0131aaacde98602e7656cb4a718e52ed8b6e3d",
+      "bytes": 352
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/runner.rsp",
+      "sha256": "42205f163046c9e25f164c3560d90af885e84c72efc715d5ce45d6d3574dbed0",
+      "bytes": 20438
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/runtime-help.txt",
+      "sha256": "a02855227a21e6fda5d3c5dbdef544011e7f97d9411e3c7bd594e8d66f872728",
+      "bytes": 180
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/baseline.json",
+      "sha256": "a93c5680e58683983d65d3cb3566ab7c9c813f97b5e0cd3fd52462b276f22d5c",
+      "bytes": 18753
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/body.txt",
+      "sha256": "cad4d68fbb20c2534a8f37aebdcc81d7bf879bf45489b779f6b2eea712f24a73",
+      "bytes": 7353
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/feedback-post.json",
+      "sha256": "d9802597d70617729a2c47b9a32be66d4eaac17293e401a403a6269604cff9ba",
+      "bytes": 281
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/feedback-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/feedback-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/feedback-pre.json",
+      "sha256": "24f8505fbee798bc816187a0a90871e4225ad6164775f26c7c81c37142393456",
+      "bytes": 211
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/feedback-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/feedback-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/handoff.json",
+      "sha256": "32f92d0d33b43cc2475c176b0c32f1d3a7d7a547c16d655d0aaa080cc1b578d6",
+      "bytes": 19803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-0-post.json",
+      "sha256": "61a8ed4eda3a54427be240e01e3d25a2d446fb1cbca9698fdb06f30024cfe3be",
+      "bytes": 283
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-0-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-0-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-0-pre.json",
+      "sha256": "e293a5a33cdd1d80e59793d7d2485adf9fbca215762184e8fa89595dbc9c1d77",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-0-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-0-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-1-post.json",
+      "sha256": "021539dce004722232a4e85490901615a3804d9b5429804928cb8540662fb639",
+      "bytes": 273
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-1-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-1-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-1-pre.json",
+      "sha256": "1a9299e1bbec84939f764ee99f687a8bf4f8fd0aa8e46eb13d28f14b85936c07",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-1-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-1-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-2-post.json",
+      "sha256": "5365c07da4dfd7e7207167550bb8648310790036920c43dcfa28285e4d121211",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-2-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-2-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-2-pre.json",
+      "sha256": "a3a06780da64eb06d0c3b95f3d3a1ec914065f65e32a202578e97e19b5c4afbb",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-2-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/native-2-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/stop.json",
+      "sha256": "d82e44b678cd6a409da24bf2b53f8f3d261962053bc4cf7e467ea7f8968e8e25",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/stop.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/stop.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/synaptic-delivery.json",
+      "sha256": "6345537d0e8a5765ef520b9d262e8b0d803317dbef159ce37852f4f1f1ddb292",
+      "bytes": 14946
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-batched/warm.json",
+      "sha256": "d630da19e1bedbb935f354cf60c25c2d0c622bec28183fcd4fffae241ffc12b8",
+      "bytes": 3259
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/baseline.json",
+      "sha256": "e7c63f711d9abb29393d8342303cec7429faa9c683caab17665ca5756dd0968d",
+      "bytes": 18769
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/body.txt",
+      "sha256": "67738d6d1fa3d6354af991467ffaa466957809df905ce9ae0139223cc7cffd81",
+      "bytes": 7356
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/fallback.json",
+      "sha256": "ae1cebeccfa3e7f067b8605486229d3df3350451ad2bacafa23631dc437b0ff6",
+      "bytes": 19055
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/feedback-post.json",
+      "sha256": "d9802597d70617729a2c47b9a32be66d4eaac17293e401a403a6269604cff9ba",
+      "bytes": 281
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/feedback-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/feedback-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/feedback-pre.json",
+      "sha256": "24f8505fbee798bc816187a0a90871e4225ad6164775f26c7c81c37142393456",
+      "bytes": 211
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/feedback-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/feedback-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/handoff.json",
+      "sha256": "4b0284904720a8f992ba68bfbae5588f26307ae2880b069098852ea68f2142b3",
+      "bytes": 19815
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-0-post.json",
+      "sha256": "61a8ed4eda3a54427be240e01e3d25a2d446fb1cbca9698fdb06f30024cfe3be",
+      "bytes": 283
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-0-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-0-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-0-pre.json",
+      "sha256": "e293a5a33cdd1d80e59793d7d2485adf9fbca215762184e8fa89595dbc9c1d77",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-0-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-0-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-1-post.json",
+      "sha256": "021539dce004722232a4e85490901615a3804d9b5429804928cb8540662fb639",
+      "bytes": 273
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-1-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-1-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-1-pre.json",
+      "sha256": "1a9299e1bbec84939f764ee99f687a8bf4f8fd0aa8e46eb13d28f14b85936c07",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-1-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-1-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-2-post.json",
+      "sha256": "5365c07da4dfd7e7207167550bb8648310790036920c43dcfa28285e4d121211",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-2-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-2-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-2-pre.json",
+      "sha256": "a3a06780da64eb06d0c3b95f3d3a1ec914065f65e32a202578e97e19b5c4afbb",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-2-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/native-2-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/new-chat-body.txt",
+      "sha256": "67738d6d1fa3d6354af991467ffaa466957809df905ce9ae0139223cc7cffd81",
+      "bytes": 7356
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/new-chat-prompt.json",
+      "sha256": "ec25f296da732ee6ee170d6765dab31c8eccbb858f7223dcc5d7d13f013237a6",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/new-chat-prompt.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/new-chat-prompt.stdout",
+      "sha256": "0585485b81522ff66ddbdffbf0efd6f7940cf28fb240b5d4e77afe6c2539872a",
+      "bytes": 7699
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/stop.json",
+      "sha256": "d82e44b678cd6a409da24bf2b53f8f3d261962053bc4cf7e467ea7f8968e8e25",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/stop.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/stop.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/synaptic-delivery.json",
+      "sha256": "dc7995d2fd316b2665fee987be2ce2cb7e3cc3dfb4e6958279b5293d5279dcad",
+      "bytes": 14933
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-boundary/warm.json",
+      "sha256": "b3e95a37592764866ea1fc2b92318c3fc9fe9f796ee7b061939121f8d7353329",
+      "bytes": 3261
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/baseline.json",
+      "sha256": "29741bc37c67cc8226b6b7eb154130719fbd9364cadabd0e0a0d4ea98e37febf",
+      "bytes": 18767
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/body.txt",
+      "sha256": "e71e8fb660213f0166eddf3b117d3a8641c8e966d9f1b24b2f70f6c13a1c09e8",
+      "bytes": 7356
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/feedback-post.json",
+      "sha256": "d9802597d70617729a2c47b9a32be66d4eaac17293e401a403a6269604cff9ba",
+      "bytes": 281
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/feedback-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/feedback-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/feedback-pre.json",
+      "sha256": "24f8505fbee798bc816187a0a90871e4225ad6164775f26c7c81c37142393456",
+      "bytes": 211
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/feedback-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/feedback-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/handoff.json",
+      "sha256": "ed723962c776756feca3b4ef5e46955b5c4832d23914685cabc9af6930f2db77",
+      "bytes": 19813
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-0-post.json",
+      "sha256": "61a8ed4eda3a54427be240e01e3d25a2d446fb1cbca9698fdb06f30024cfe3be",
+      "bytes": 283
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-0-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-0-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-0-pre.json",
+      "sha256": "e293a5a33cdd1d80e59793d7d2485adf9fbca215762184e8fa89595dbc9c1d77",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-0-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-0-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-1-post.json",
+      "sha256": "021539dce004722232a4e85490901615a3804d9b5429804928cb8540662fb639",
+      "bytes": 273
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-1-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-1-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-1-pre.json",
+      "sha256": "1a9299e1bbec84939f764ee99f687a8bf4f8fd0aa8e46eb13d28f14b85936c07",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-1-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-1-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-2-post.json",
+      "sha256": "5365c07da4dfd7e7207167550bb8648310790036920c43dcfa28285e4d121211",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-2-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-2-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-2-pre.json",
+      "sha256": "a3a06780da64eb06d0c3b95f3d3a1ec914065f65e32a202578e97e19b5c4afbb",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-2-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/native-2-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/stop.json",
+      "sha256": "d82e44b678cd6a409da24bf2b53f8f3d261962053bc4cf7e467ea7f8968e8e25",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/stop.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/stop.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/synaptic-delivery.json",
+      "sha256": "722432b96e439c58ea77c542b272a9dc4a4ab439d0d4f4aeac4f425155014c3d",
+      "bytes": 14941
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-complete/warm.json",
+      "sha256": "1e3c96751db0ad423d221b60a8fbb9b2014d6f856a07c882f538d1c2da6e6b97",
+      "bytes": 3261
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/baseline.json",
+      "sha256": "05229e5fc49d42deb77af91ce73646500a7ccefec28371e868c46b2db63b1446",
+      "bytes": 18745
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/body.txt",
+      "sha256": "8cd1a94c63757130963872de8279f125ad846072cb5002dd4d3e7f0fa8dca416",
+      "bytes": 7353
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/feedback-post.json",
+      "sha256": "d9802597d70617729a2c47b9a32be66d4eaac17293e401a403a6269604cff9ba",
+      "bytes": 281
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/feedback-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/feedback-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/feedback-pre.json",
+      "sha256": "24f8505fbee798bc816187a0a90871e4225ad6164775f26c7c81c37142393456",
+      "bytes": 211
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/feedback-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/feedback-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/handoff.json",
+      "sha256": "24a88d3f9dc7d693c5a5d20d4437564cddcd0c6d11f40a1bc2ea6236816ceab9",
+      "bytes": 19805
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-0-post.json",
+      "sha256": "61a8ed4eda3a54427be240e01e3d25a2d446fb1cbca9698fdb06f30024cfe3be",
+      "bytes": 283
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-0-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-0-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-0-pre.json",
+      "sha256": "e293a5a33cdd1d80e59793d7d2485adf9fbca215762184e8fa89595dbc9c1d77",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-0-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-0-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-1-post.json",
+      "sha256": "021539dce004722232a4e85490901615a3804d9b5429804928cb8540662fb639",
+      "bytes": 273
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-1-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-1-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-1-pre.json",
+      "sha256": "1a9299e1bbec84939f764ee99f687a8bf4f8fd0aa8e46eb13d28f14b85936c07",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-1-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-1-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-2-post.json",
+      "sha256": "5365c07da4dfd7e7207167550bb8648310790036920c43dcfa28285e4d121211",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-2-post.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-2-post.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-2-pre.json",
+      "sha256": "a3a06780da64eb06d0c3b95f3d3a1ec914065f65e32a202578e97e19b5c4afbb",
+      "bytes": 203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-2-pre.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/native-2-pre.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/stop.json",
+      "sha256": "d82e44b678cd6a409da24bf2b53f8f3d261962053bc4cf7e467ea7f8968e8e25",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/stop.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/stop.stdout",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/synaptic-delivery.json",
+      "sha256": "738ac9f5a171785c1726312c193f7080d490df938001cc8853c113252633ba89",
+      "bytes": 14941
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/synaptic-delivery-shared/warm.json",
+      "sha256": "2a27dddcba7b6a14e50fd783eb3a33a03fa11ad9ea612df1823e78fa492d3bd9",
+      "bytes": 3257
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000.guard.json",
+      "sha256": "e3d7064eb39c5d2d95563433b55deb5ceb5966beb0a1070c6bcb79bf404fbda4",
+      "bytes": 3122
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000.log",
+      "sha256": "8a536dab4af4a7aba97761bff7b54c84aa401327faf3b5c1d4a304e4162bf33d",
+      "bytes": 130
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000.settings.json",
+      "sha256": "39024b2036bb8fd3f73d0fbab8fc7c9bfed40f4b093a51c4aaac7ecd5c71bb67",
+      "bytes": 1157
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-continued/result.json",
+      "sha256": "9a084fb7bbaaab59a0429719b552ea8c3c46f9d192911618524ea4da5aa6679f",
+      "bytes": 3834
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-continued/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-continued/stdin.json",
+      "sha256": "7ff30639edcf6d635fc9b057da72021f97dddd9b922c3352ddab2e1b52821c26",
+      "bytes": 404
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-continued/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-first/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-first/result.json",
+      "sha256": "eb3138cc03792116a9cbef9d77cf5980778941846075effbfecf14ea4268649e",
+      "bytes": 3822
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-first/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-first/stdin.json",
+      "sha256": "00aebc76bac8fa7f187511d0fdd14bd63d024b805bb021f2797257e81191696b",
+      "bytes": 400
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-first/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/pair-0-shutdown.json",
+      "sha256": "2d36d485f6e19c3e253895d9ab05c7205325b0b27cb9e23b4adb4d2b66d121c1",
+      "bytes": 112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/private-warm.json",
+      "sha256": "5675d37bbe882713fb352ec61b02d141dd98500d0559d9583761fdf8cf680518",
+      "bytes": 3537
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/repeat-warm.json",
+      "sha256": "e5f0a9ef563e8657f63bf42b47a9ea55c26bb45546afb308fe17bcf60140e503",
+      "bytes": 3537
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/results.json",
+      "sha256": "a16c10473f430755391ae699928fb28c668dc0b3bb985b6bede2cec9e1df30d1",
+      "bytes": 7915
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-10000/summary.json",
+      "sha256": "49f8c86a1ddfef38fa01053d5a8fccb6390b35c618e509c2c3db54f2969801b0",
+      "bytes": 8990
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-comparison.json",
+      "sha256": "3221f7cfc157dd269f93791f5ab466aa1eb79ea144412302c3b4c22ab6a58a1a",
+      "bytes": 490
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000.guard.json",
+      "sha256": "639578e338d3d8ea1f125cb17c0813fa942c35b3462fb7f288b7907a52a22574",
+      "bytes": 3140
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000.log",
+      "sha256": "b60b9faf72fb8c5e6bacf257da7fc6de63793efd84d2e1c1e17d3fe84bc55d77",
+      "bytes": 133
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000.settings.json",
+      "sha256": "595385d05db348146004e97e847c5e3d417c47878eedcb5d5ada28fe7e2ac1a6",
+      "bytes": 1175
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-continued/result.json",
+      "sha256": "44c51ca6624d2b340c5fdab659eccbc4e29122c768d65b70aba8a10f991e9fbc",
+      "bytes": 3879
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-continued/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-continued/stdin.json",
+      "sha256": "fcde15930936390fd6e77d25deb33d9b1dbc92bb015c231c4c6ff87f7afebd5b",
+      "bytes": 429
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-continued/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-first/body.txt",
+      "sha256": "5c7a5f72c607710135747e78c438e89e9eb86351fb1fbf8df43772277a8cb264",
+      "bytes": 17803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-first/result.json",
+      "sha256": "559bdd40c3becaa07b9c225faed6c24d10afb02399b1c5ea4efcb991ec8eea3d",
+      "bytes": 23052
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-first/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-first/stdin.json",
+      "sha256": "cb65f30ad4dfc8ff349ec0565d6b177be32525147fb10a3160fd2de01586dfb6",
+      "bytes": 425
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-first/stdout.json",
+      "sha256": "439687478242a4d77d155c30d4607fd2eece1a6760fb2f13e5b3fa5757aa619d",
+      "bytes": 18137
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/pair-0-shutdown.json",
+      "sha256": "d9d6b56745d4efd22e4deae2c72fcdc2366b9d9b8d6148f690813ef13a6fea04",
+      "bytes": 112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/private-warm.json",
+      "sha256": "712267124923fb25400f9b6bf472ffe5063a5e04576d93acc5316ee1d2493e31",
+      "bytes": 3537
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/repeat-warm.json",
+      "sha256": "8fc137d033557354b045bb274c233e52528e7b3bdc6b267f594a13d027776842",
+      "bytes": 3537
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/results.json",
+      "sha256": "e948b2b200335ef4e2fb61efa2e758c7af0f3e7256cc589ffecfceb2865d7059",
+      "bytes": 27211
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/trace-fresh-10000/summary.json",
+      "sha256": "0f67616116b88fdd6d5335b788c8c0a584a2eb41bcab03350e8efe2002781437",
+      "bytes": 28307
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/warm-10000.guard.json",
+      "sha256": "c5f19dfbfa3b2a2670171719b4cbfb5683439db9973fb3a9c60154716cda90af",
+      "bytes": 2063
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/warm-10000.log",
+      "sha256": "8883be6b9fcb9f447860b6f2ed78f9d38d4c1a04ee347ac5c59cf3fb0691708c",
+      "bytes": 3453
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/warm-10000.settings.json",
+      "sha256": "a1676bbd82b8c41534deb510943a43b184a4521e157bee23674a42872a260186",
+      "bytes": 734
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/warm-50000.guard.json",
+      "sha256": "c5c000b073645195ae9223f0e8a3db54df39d6aff07fbdc96bbc54d6ad1c797b",
+      "bytes": 2599
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/warm-50000.log",
+      "sha256": "517ae20e83ca5d892883fe7db650eb8871732f52e4b70023d9dd1105cff6ed66",
+      "bytes": 3601
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/warm-50000.sample.txt",
+      "sha256": "bfde3dc4602423c0f5274a498e45998a220927ce36540c867fd7bab48bc47cfa",
+      "bytes": 622886
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/warm-50000.settings.json",
+      "sha256": "4dcb701c1e73f8cbcef857ad2c235fd175f0286fbc157937c3996f8ddca86711",
+      "bytes": 734
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/fixture.json",
+      "sha256": "9916df4fa8b8becb7097233b229eb6cd3fa40fc71991f66d5544eb9965a5a6f9",
+      "bytes": 904
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source-after-native.json",
+      "sha256": "83d45cfe7c63711578261aa33f5cedf62ebfd865a6893a08ebfe600cb65d81eb",
+      "bytes": 457
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source-before-warm.json",
+      "sha256": "83d45cfe7c63711578261aa33f5cedf62ebfd865a6893a08ebfe600cb65d81eb",
+      "bytes": 457
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/fixture.json",
+      "sha256": "78d953dbffc04fa1fa55b03ebeb0438a2d83cc8c27c0b5421abb3351b5f2eda9",
+      "bytes": 910
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source-after-native.json",
+      "sha256": "56b692a6c6f3c412c9afd4696a3f461ca3e2395b24e1f0a8b6edce8dbcc4e3c4",
+      "bytes": 458
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source-after-warm.json",
+      "sha256": "56b692a6c6f3c412c9afd4696a3f461ca3e2395b24e1f0a8b6edce8dbcc4e3c4",
+      "bytes": 458
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source-before-warm.json",
+      "sha256": "56b692a6c6f3c412c9afd4696a3f461ca3e2395b24e1f0a8b6edce8dbcc4e3c4",
+      "bytes": 458
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/work-postings-audit-10000-invalid-timers.json",
+      "sha256": "ebf4c7f85e3eee201fda7157acd5955424467732dcf1d1df6111220e1d82f7b6",
+      "bytes": 679
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/work-postings-audit-10000-invalid-timers.log",
+      "sha256": "69ef2cfd0baa773d025d5d397aa12884b906c10c805df0edb8122a4187637f61",
+      "bytes": 595
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/work-postings-in-memory-10000.json",
+      "sha256": "f5f9621eae7897bee0e59fca0ff482b343e8e20d34b7bfe25cdf5661c255d008",
+      "bytes": 682
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/work-postings-in-memory-10000.log",
+      "sha256": "c07c1c334fa9932534cb74188f54813235b5d55c47ab88056b26238392f76c21",
+      "bytes": 598
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/work-postings-packed-10000.json",
+      "sha256": "eb9119aecb2a607c5a40c6558084ec1aebe4b795f2f79d5723f94c6d103149a5",
+      "bytes": 832
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit-failed.settings.json",
+      "sha256": "9ea091980d0505d7e289ea786dcf38a2b24875a59167b586cf54dc6a1c82f946",
+      "bytes": 564
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit-syntax.log",
+      "sha256": "8d2761aa2908a339bafaf72704634c910ee319b674af72a13d25697df044ab2f",
+      "bytes": 305
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit-failed.guard.json",
+      "sha256": "88e59d13c2a6a0c7b95318ec4892c2108776c40b3da3c91d23f0a555cb13317b",
+      "bytes": 1319
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit.guard.json",
+      "sha256": "96a93aede95ba4b1a6b465563fa5779e13b42779020bc8a3ac54ae0cab227424",
+      "bytes": 1314
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit-failed.log",
+      "sha256": "52a39cef38f1e063cc13fdbe5d7872f119bd6f865f85e7609eedc7b7d951d33d",
+      "bytes": 35674
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit-syntax.guard.json",
+      "sha256": "1123961618b27a9c3610faabd3224996245d080c0498f958ece59bfb234d97e2",
+      "bytes": 1314
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit-syntax.settings.json",
+      "sha256": "3b8d41f402f38d3382f2cca350ee00b82fcbc39ef66e8eb41a69c2159f484c0a",
+      "bytes": 647
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit.settings.json",
+      "sha256": "3b8d41f402f38d3382f2cca350ee00b82fcbc39ef66e8eb41a69c2159f484c0a",
+      "bytes": 647
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/seed-pre-post-latency.json",
+      "sha256": "8d11cfa4a40ef8bb09ff8a218b720ef05a95d60b3d25f6e8f223b1cd01dd5b72",
+      "bytes": 69439
+    }
+  ],
+  "latestLinkObjects": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_Wire.o",
+      "sha256": "02492119c2d793fddcfbda340ebdb322eff36824f1cab01faa2b76b9bcec7609",
+      "bytes": 177336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_FileSystem.o",
+      "sha256": "f2f4efbcdde8b5c7ec413f064620c4dd7c5bba6876ffd50431b0ce6243e621b6",
+      "bytes": 140296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Blake3.o",
+      "sha256": "a200f2ce68660c99eb6659c03dfb57398d5ba86a4d1744aeca7025ba6e447b72",
+      "bytes": 77776
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_PageMap.o",
+      "sha256": "05628d16dc1c8ec9dbd9b3f07579b8ca0feeda2d9dad8b0a81db8825aac59ac5",
+      "bytes": 789384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Paths.o",
+      "sha256": "fc787106ca943ba13f212da6dbbb45e811ebcd90884a922fe935c45065be637b",
+      "bytes": 20112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_Sidecar.o",
+      "sha256": "fcb0ccc2ac61c433da94341d38d3f0fd40c1a4c421849f5d30f70a707fc933de",
+      "bytes": 106344
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_CacheReclaim.o",
+      "sha256": "af61f59888222cfe6e73ed683d39b0e4fd009f2ac626aafc8bf3531c867d717c",
+      "bytes": 77904
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_LogicalText.o",
+      "sha256": "51fb4e0003546dc615a46899db3ca5888e79d5f69bb085ef4cea9fa538841111",
+      "bytes": 268048
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Value.o",
+      "sha256": "6fddeaa56885f741031412156c55595c9a63fced61d605aabc4a8b18b6cdeb4e",
+      "bytes": 105816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_HashDistinct.o",
+      "sha256": "6faa8c390b7f0a0279c144cdcce061d85eea9b1eb4644ad4ecc6392cd3b32c23",
+      "bytes": 15568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_KeyedOverride.o",
+      "sha256": "0112bbc7d23386b51354841e4b444425c71ccd96d603e0f614418d24badbe72c",
+      "bytes": 22032
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Union.o",
+      "sha256": "e2ccadf395c17bd33209a4614ae4914f17b9e91c572597e0f0c9a2f5b1a917eb",
+      "bytes": 24528
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Relation.o",
+      "sha256": "ffcd6e41c32eef143239b4fa147c5cb91f38fc6c04bec814c08cb0fd68bfbb06",
+      "bytes": 80504
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Graph.o",
+      "sha256": "60dcc7b0b8011dadb29320d7a4ff1f063ba8508f3df1edf631192cf953c8e803",
+      "bytes": 51728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Extract.o",
+      "sha256": "c51d952ec429406eca04b2575feb2e61aaea518ad734492cb41ead3896539f58",
+      "bytes": 192816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Quotient.o",
+      "sha256": "50df9c880773e8991da31546b18976171120f75bf0152dcd1ccceaab132c0f84",
+      "bytes": 254144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_GraphCodec.o",
+      "sha256": "e139e88c09d42e183551dfcd9f75fa5d3df8993dbb5b12d8be77378f9c92361c",
+      "bytes": 176968
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Partition.o",
+      "sha256": "d08ca7c01799a57d76485b6d40de68a18215cf898e4e451cfb926814ecc5681c",
+      "bytes": 10008
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_PartitionIndex.o",
+      "sha256": "6ea638029beb4cb18f53cb43e86ea2be32ff8f14aec1542ad3470df0d5f27fa8",
+      "bytes": 2424
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_AtomQuotient.o",
+      "sha256": "d7c3becfdc72c1177c665c6af1153995c0e03b502a4a4ac64ba46bb82bd1ed3b",
+      "bytes": 8824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SearchUnicode.o",
+      "sha256": "e987a217c87886016eb8b3742a1f60b7198800e94f54f795038408e9e72f5748",
+      "bytes": 416984
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Frequency.o",
+      "sha256": "5f40e020afe1273ede2f582c6787d66aad1d0d794c24392ab1c5964898914f62",
+      "bytes": 67336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_RetrievalCategories.o",
+      "sha256": "43c223186e505bc757d0111161c2b0698fca388d9015a9a4aed0124315a19327",
+      "bytes": 259728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_RetrievalGrams.o",
+      "sha256": "a6f97ae2279a3e48df8d5bf8430c1e335c18cf35e866916921491319337b1cf7",
+      "bytes": 152296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_FirstIndex.o",
+      "sha256": "ad4959a0bda29ae3334770f78febc84619006e6fb336fa7bf783ada94dc93b09",
+      "bytes": 30064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SearchRank.o",
+      "sha256": "ba3133b3e85d9030bb328be68ab14ea0a6d222e250c0e700d3e5b488aca5c266",
+      "bytes": 124824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Sha256.o",
+      "sha256": "fa8879952b5b7c2f0a890196fe423105fcc9b6299897c58084c6ec6e729c9748",
+      "bytes": 72816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceEvidence.o",
+      "sha256": "bd350e759a1fef68bc61c15512e8551d791e56bf96986bfa27b631aef204d2c1",
+      "bytes": 637320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/prepared-domain-20261024/GraphStore.o",
+      "sha256": "0978dc629bd3aaf70bdc16396f20252b6b9510a5f78af757581868d9c96c1c59",
+      "bytes": 1422136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-state-contention-20261024/Persistence.o",
+      "sha256": "d16d51089c3b1dfdd967adc68a0665b83edee1d934c6d2566ea20554517b3d09",
+      "bytes": 139072
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_QuotientAuthority.o",
+      "sha256": "8b9705ed43310f6326f63a56d8fcdabfc0b4c7931ff6dee918cae90ff48c0b6e",
+      "bytes": 6728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CongruenceFixed.o",
+      "sha256": "1b91e9e3213b6bd53ab4a4eea8f54274434342821c3b85207d12bd79e761aea7",
+      "bytes": 2432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CongruenceComplete.o",
+      "sha256": "cf85e4b0930b7e0fdaba0f4f2c66acdae82d3e7c18a0adc654f6ac87f6020b69",
+      "bytes": 69720
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CongruenceSound.o",
+      "sha256": "23de0396f4f8c7f2f708d5df77a8a92ab2e93c0ced4fff60bb06524198fe2abe",
+      "bytes": 4040
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_IncrementalQuotient.o",
+      "sha256": "68e00bc57f9c3106ea5fe9d3e2b21802ee581ba187beb776cc69422e7c1a5096",
+      "bytes": 27136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_TextParts.o",
+      "sha256": "c8fa4e91dd4d9ce1058dd7337fd7775f889f5a215bab3858c1f0ca5653608242",
+      "bytes": 12248
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Matcher.o",
+      "sha256": "39ccf4505b49e8757cbbbe8334181645dd7b3b9d90e4044f8bd12aafa07adf06",
+      "bytes": 975504
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Config.o",
+      "sha256": "5d9e5a58b95e8eedf2db562d48043ed4cc1228721502c58a69edcd06a48c6712",
+      "bytes": 284704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Lifecycle.o",
+      "sha256": "52b657a49ffc504c950b4a5c6b15c6c1da8af3788b542db4fb2c4a5e2668b539",
+      "bytes": 34872
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Receipt.o",
+      "sha256": "ade97cc0f3aca4e97bdfa479d7f28af76e600e36de7464b4d651253388b58395",
+      "bytes": 21928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SourceObservation.o",
+      "sha256": "8e8a48f40b37c2ee88e4d7ec845e8cd0db414ef44ee137b7099ef08c27195107",
+      "bytes": 327848
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_PluginModel.o",
+      "sha256": "eeb1d3d1073c3a40597a76d8f5f501f20f77cb8067961042dfe6d6621cdd1e77",
+      "bytes": 883976
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_ExactMemo.o",
+      "sha256": "f568eb6eef15f89d9eb16b2ff4d7c9b96d8bbfd51db80d770514b48f333c8a26",
+      "bytes": 14136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_ExactLazyMemo.o",
+      "sha256": "2645f66160dced12402fc74a0c6338bc537af1d97e35f3bf1c73a023f140681f",
+      "bytes": 21888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_PairDecisions.o",
+      "sha256": "665e21d233816017d8c9dd10031ea7fcdfcd77f1858e131403d53b359f85905b",
+      "bytes": 7376
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_IndexedCharacters.o",
+      "sha256": "e1a1da777282f2f2b370e96f88b9d76ae0500f387a8cfa33a9ce8bbcb17f02c3",
+      "bytes": 7560
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_BudgetPlan.o",
+      "sha256": "a06e967b27896b72e927ff158d4476304b9a0d1089707a99f0c31a75371ee5e8",
+      "bytes": 11928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_SharedCoverage.o",
+      "sha256": "595157eb7442b37f29b10d96462bf0712937fa5128af4d6a0e8c4912fa163595",
+      "bytes": 127016
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_DeferredCoverage.o",
+      "sha256": "f06db3076bb0b869a52fc23cbce194f2499bbeafa4cad278516b2753151d0a49",
+      "bytes": 59720
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Synapses.o",
+      "sha256": "5274cf19fe4c61fdecacf7f847c0be84bf601c1234c0c3a1dd2016ab3f953a6e",
+      "bytes": 1357928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtraction.o",
+      "sha256": "82e35bffd0733b080d7084bb258abe7901f6b6c38a6d7fcfcd5fca28ce075d22",
+      "bytes": 353352
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSource.o",
+      "sha256": "95f1066b64d890e151421faddda062182fcc4933ebb235fcac26f4f3b2d3cce2",
+      "bytes": 511336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseProvenance.o",
+      "sha256": "5881603f5e34d5bd2a145609c39cb6d09d7ce047b008cc7342065fe4ce7c9489",
+      "bytes": 340480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseIndex.o",
+      "sha256": "b97483e7732a5ad01d9f2ed0f42473125337dd7e8eec0cc11028808d03a0d294",
+      "bytes": 709472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseBuild.o",
+      "sha256": "fe07a280834449f76c8b277a35890e2a8b5743568b7d54f76d46c5146b6c6639",
+      "bytes": 436512
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSource.o",
+      "sha256": "d9f11102cc22c3d923c1e0c9735aac8e0d3f5334308e17f4b05d2cfc2d7d2308",
+      "bytes": 381472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourceRecords.o",
+      "sha256": "b6bfdbc4fa8d52a972537da604e3f70942a70c115b89d23ae29b06b87f0ba7f3",
+      "bytes": 138472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_ClosedCoverage.o",
+      "sha256": "2ee97f9cbf571780d71205f1e27baed118041db2df9bc118e8f2a269a4b9551f",
+      "bytes": 25600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_FocusWindows.o",
+      "sha256": "73e697acb06f8eba996efdc6cdc918d4e3eff22b0e0c1dd745f32ec6db2ab518",
+      "bytes": 8128
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_SourceWindow.o",
+      "sha256": "41f03113e4e7ccbe08d836c9062c612a3a90188d0753a7dee8832375601cf94c",
+      "bytes": 4016
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_AdvisoryFrontier.o",
+      "sha256": "8cbca010ca0e500467f19631affd372e1fa65ba01aa1b901c31e637843b70211",
+      "bytes": 39784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_OwnedRows.o",
+      "sha256": "601fb19c819f90d077921a9ce3ec995a815bceaa9bba96521b84879fe2b1c268",
+      "bytes": 11736
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SemanticMatcher.o",
+      "sha256": "8db8e27482be3b0988fe7013a84a6a85492e5523a629fac9e75a5c585bff799c",
+      "bytes": 324600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_OwnerProjection.o",
+      "sha256": "468fd274df5d8bb79fae9c3d6c468d79f727dc782145020020dc19ad9a32aa1a",
+      "bytes": 282400
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_EvidenceReplay.o",
+      "sha256": "557c639ca193136ac6b2e7f5e01c6557be257d82991004b14cd7da56d356a93d",
+      "bytes": 121560
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SurfaceJoin.o",
+      "sha256": "9bf4705cfc6d67f0186cc816c890f3b500ecea8d23d9799689cdb99677fcabf1",
+      "bytes": 71656
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_RankMemo.o",
+      "sha256": "28f50c6e102f235c62d9eb6c83192b7499c4c5627ebc6ab61879a3ca5a50ae6e",
+      "bytes": 189720
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SelectionReplay.o",
+      "sha256": "5e62e96fcd85ff831174a714f7af2cd62dab6328d954d76467f2ed8f2bfd3b86",
+      "bytes": 47512
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_GeometryMemo.o",
+      "sha256": "e16f7c4fbdd761a67f1718b7f4a266c6a638ce83e34d9133fd812eda592512cb",
+      "bytes": 291680
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SaturationMemo.o",
+      "sha256": "1fb61d52ce118d7db9420aefddb1a10f258d9300c3cc52ee3ecbc3e41f329ca9",
+      "bytes": 137600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DiscoveryMemo.o",
+      "sha256": "8ff34e553c970ff7c7654f8b7b21a189d3f8f14c8e94f151098053e6955700a5",
+      "bytes": 37024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DemandMemo.o",
+      "sha256": "aa428bdb6116963c44a8f0487cb77b5172c42a6c19005151dd31d73a302d371c",
+      "bytes": 125456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_RetrievalIndex.o",
+      "sha256": "e8eb371ba95aaa8808aeca52afd4591e5948de864e8ce8d956e69f2aeabf3424",
+      "bytes": 393088
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_FederatedSearch.o",
+      "sha256": "b9c840a2784f15f4f7990a9a74255b40f5483d6ba5774768d9b8f9b7e2df05b8",
+      "bytes": 338096
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_EqualityDependency.o",
+      "sha256": "5f748b29b136da90f66aae65e290814b381fb8fc03377ab6ba0c68cb178edb78",
+      "bytes": 18768
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SelectionDependency.o",
+      "sha256": "c992862205cc429ebbfd17eb9a3873e82bb1070c303b61c0e34475a2cac60b4c",
+      "bytes": 79432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DiscoveryAudit.o",
+      "sha256": "ea4a2802e319278c159771c0966458e7dc9812b7b392ac02969195331210dea5",
+      "bytes": 237272
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SelectionAudit.o",
+      "sha256": "a2bc037f2ded76563a5fbdc83e46510b94e9149a22e21d225328d44bf1ec9db4",
+      "bytes": 915880
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CompletedAuthority.o",
+      "sha256": "7b0f831b34ff531607fbdc61712817d64668511f4ba5e1570597538b768877e1",
+      "bytes": 2648
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseUsage.o",
+      "sha256": "2fd94a09df2668035ae2d2812fe5de0861f9c2a6ddaa5b0438d44d6b7edefaf0",
+      "bytes": 479688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourceCache.o",
+      "sha256": "e3bcad22c26ca4fde65a2f338b70c096a964233e5e37806359fdfee682f7ca0e",
+      "bytes": 183408
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourcePacket.o",
+      "sha256": "d8103935844f5dad70e41410c8e1727819d3fd809a40a6a6cc1048f7598e9513",
+      "bytes": 246952
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourceDelivery.o",
+      "sha256": "902a9f09e80ed847cd687b60473fdf3d5fe433d6acb34db4c55bc88363a28967",
+      "bytes": 742704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseRecommend.o",
+      "sha256": "3d5b4dc9087301451bd0f5a45bd4b3922531824906a2fb226901bca397f6e8d6",
+      "bytes": 340640
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseTransport.o",
+      "sha256": "46bc2ed810f23dd49da674495eb2b73b03d436e9c15370df96afc3b862e0419a",
+      "bytes": 298536
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseBundles.o",
+      "sha256": "7d503c65f99985d67896dd3b0ac4367bc04881806b7ac51120ee30a1e53c5d92",
+      "bytes": 147928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_IdentifierParts.o",
+      "sha256": "437fb6a304103af1cec5dcea22bf601fc81147c3521b1abbd9077f650e6a3c27",
+      "bytes": 17672
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_QueryLiterals.o",
+      "sha256": "2495ba2b7d2d311f8e9a7388c8f5fff858aaf829c39d023166a55adc832dcdf6",
+      "bytes": 39592
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/Handoff.o",
+      "sha256": "1f51ff761dad73609965b8f162d11bb7c385fdd442105047e8ad3bd06d57a33d",
+      "bytes": 5037736
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_MiniLM.o",
+      "sha256": "a77f55a9cb21726fd0cb8e17117aeaab863ef96600f7bb70af4a8c09ba4adefd",
+      "bytes": 67208
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_DirectoryReads.o",
+      "sha256": "3a93e4b814a8407ef01ac73431e9c4567d028801d75b7b6c7cb2eb5ae6be71e5",
+      "bytes": 39664
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_WindowCentroid.o",
+      "sha256": "59f0993f1ba187569bed7f390be7d89c001e91361152ef3f02dc65ea972b1dfa",
+      "bytes": 73432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/parallel-hook-resources-20261023/shared/native/SearchProvider.o",
+      "sha256": "a812fca1cbc77193468deb74fbc12b60c0adda09de0d11a81fc10e33d12c5151",
+      "bytes": 804288
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseJournal.o",
+      "sha256": "ddf8ba386e28076336f786bc7f66d920a5ec428dd2f7f3a6210d89eee2568945",
+      "bytes": 1084112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/Warm.o",
+      "sha256": "56b14796be4655a0c64557ce8f0b851e573a5cdf43ad37c16c0e6dfcecf72bea",
+      "bytes": 256208
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/Worker.o",
+      "sha256": "611eea4c5ba70cd87ae5112c27ff6f515c6d53924287275c3f40c6e3228e5cce",
+      "bytes": 415040
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseLive.o",
+      "sha256": "bbad2d0d066ae0c2ec46d44ed51b84dfd5eb5b806a096ecf05939341d3056921",
+      "bytes": 59784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/PluginHooks.o",
+      "sha256": "1601ddfa2eab3d4e86ba22d312d9fbf3da5604da73483b4386cb433126f229f6",
+      "bytes": 607472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/PluginCli.o",
+      "sha256": "7113698ff9abaf951b0a7c4b253d19287baf338172571a6a630c7b4e9acb29e5",
+      "bytes": 256960
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/Daemon.o",
+      "sha256": "d7437b14f013178c52567a94e0ab052810ed29b79d8a858492d6646a5a0e294d",
+      "bytes": 257312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/Install.o",
+      "sha256": "37cb50fee91c8208b92eb68df6badea65472849ed8ec906eff2ad822a2527562",
+      "bytes": 167760
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/Setup.o",
+      "sha256": "45e6696b984f36470983b440829f2127fa4fece643d53af367a243ff7cf84841",
+      "bytes": 30440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/Main.o",
+      "sha256": "6bf8adacb864b67b274189d2131f16ead83d6345fa2eb28e79448bfb9ffa9992",
+      "bytes": 55888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/Wire.c.o.export",
+      "sha256": "ee6d6091c1f1729c2a54803f848bd0004c615f70acc92c72b34b768a8d397f25",
+      "bytes": 97568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/FileSystem.c.o.export",
+      "sha256": "e64794a02ee6ea41ee5cde581a465909906ee58c95da2b568d7610d7e7c2e412",
+      "bytes": 104648
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Blake3.c.o.export",
+      "sha256": "2b74781c10d3a42ea5aa385c9e7d64ac3c274c3e92b574c2106bd3b7dda5e61d",
+      "bytes": 58280
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/PageMap.c.o.export",
+      "sha256": "71410867c65a71122a1a1ae3d0af302e2079317bc49a1fe2540d3c144b1f67a9",
+      "bytes": 412360
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Paths.c.o.export",
+      "sha256": "28ef4cc55cbc031f30fa90d10fc78244a0eabbdd48b9e46a284c5e249f8c8f8e",
+      "bytes": 10328
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/Sidecar.c.o.export",
+      "sha256": "d0999220a7489649c3670087fb5b8039f0713022d3653a73ec434b8ef354f91d",
+      "bytes": 70256
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/CacheReclaim.c.o.export",
+      "sha256": "d6f1d01a0c425580fe5f16892c89c4539d3155af8f7a8da858c54942545ad6a1",
+      "bytes": 44384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/LogicalText.c.o.export",
+      "sha256": "208f47b6a91131c3e94cc3a0cc4d7839053a35cb069b1972199fedfc24ff94b9",
+      "bytes": 134536
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Value.c.o.export",
+      "sha256": "be6d8f0467431c232abf4c0ce934587b8d33623d2c32e235a3aa981c7a55901a",
+      "bytes": 61464
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/HashDistinct.c.o.export",
+      "sha256": "6a9f581160b23397078c86f9f12f7fe4a249defa061d689d420db3f2a348edfb",
+      "bytes": 10624
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/KeyedOverride.c.o.export",
+      "sha256": "9f74c3df31418d803fb23c6f6529dfef67cbada85dc485c70cff37ec88af5afa",
+      "bytes": 13024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Union.c.o.export",
+      "sha256": "863cd8fd36f65437db4fe481d35050e275e8a8ee669dc9849016f9dc9e2f0e28",
+      "bytes": 13024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Relation.c.o.export",
+      "sha256": "9762de5c5c5a56d82edef95ea0590608f9ff44512423a8fa0fe6ccfb46b8aa4d",
+      "bytes": 41064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Graph.c.o.export",
+      "sha256": "6673bc5677ae879786ddb433a5d89222dd16e58b0ddc95c5d2821196cd77c08f",
+      "bytes": 28256
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Extract.c.o.export",
+      "sha256": "00b0fbe7281754591f99d4e802278fe407a0744bd3c3710183a0e62cc5b9589a",
+      "bytes": 117656
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Quotient.c.o.export",
+      "sha256": "28effa1547cfb45e90513cf8d6b48b0e3c3a5966466a84a4de193d12682ff245",
+      "bytes": 136104
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/GraphCodec.c.o.export",
+      "sha256": "ef352a69388827117d3edfb6c58ff3d3b441b2354d989f224fede6d900e985b1",
+      "bytes": 102080
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Partition.c.o.export",
+      "sha256": "6da18973f4e4d1775bc9b909fcb5df14c6f7f5ddf064487af5a5f64b36f11e0c",
+      "bytes": 5208
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/PartitionIndex.c.o.export",
+      "sha256": "06a8e4888b314ce42367fbe537608ab0f8a15c87fe7e12651f2917bb1aa5431c",
+      "bytes": 2472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/AtomQuotient.c.o.export",
+      "sha256": "5fb03b09bf4c0cac1cd3a85073a06a8d75ff3b4584e6d134ff5373f34ada6be0",
+      "bytes": 8296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SearchUnicode.c.o.export",
+      "sha256": "b035ac0f61f735d82ec39d6eea5e9c25095f34dd2573614c2fe85a984bf6ac89",
+      "bytes": 435896
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Frequency.c.o.export",
+      "sha256": "fe69d31a15250f12b347c83ccba64300712fc306e3da6f10735f4e1565ce7bb6",
+      "bytes": 38696
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/RetrievalCategories.c.o.export",
+      "sha256": "07823aabd5217b9d23638d05534ba158407693e5e3dad634b7c1a45b95f6aea8",
+      "bytes": 246512
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/RetrievalGrams.c.o.export",
+      "sha256": "cbb85bb14dbf6a51ac1d17554890a9ff7ff4d9371c7827fca93d90e51bfecd5e",
+      "bytes": 84176
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/FirstIndex.c.o.export",
+      "sha256": "8741beb2b70b284c63d78ef93cd445ffeb592ac0e234b0c447143492f0563f6f",
+      "bytes": 20152
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SearchRank.c.o.export",
+      "sha256": "e5de5b469b6d00c613c64fed41178e96a4dd9f57637a4ddc5ae95712b6ef31ea",
+      "bytes": 75608
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Sha256.c.o.export",
+      "sha256": "eadd3588e20d399f18808e9330ad40e20227884f11558df6bae41762e8e345be",
+      "bytes": 40552
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Persistence.c.o.export",
+      "sha256": "adde938803e024553d94394004abe0e657d828d13c69bb2da444e5bfd0e8a862",
+      "bytes": 81136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/QuotientAuthority.c.o.export",
+      "sha256": "10e0c7b212872e85ef0fce7ab26867ec8ef179ed327ee48e9be50b1ca5413137",
+      "bytes": 3976
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CongruenceFixed.c.o.export",
+      "sha256": "c221a57ce9f8705fec1ab8dfdba61068dcaea83ed7417b0e9f98940fd53d7013",
+      "bytes": 2480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CongruenceComplete.c.o.export",
+      "sha256": "e748aa55a8ca69929899bb3ec1df5bfb013757d4c673892496b60556f172f186",
+      "bytes": 31392
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CongruenceSound.c.o.export",
+      "sha256": "b4f2edc67e60deb3630779d4040183e27e7f0a69a1b2c7ca7761464179e5be43",
+      "bytes": 3392
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/IncrementalQuotient.c.o.export",
+      "sha256": "f755c551d88e06e98d89530725afb6a1770d655c9bc55c21f46dc0569b932198",
+      "bytes": 18024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/TextParts.c.o.export",
+      "sha256": "70c26c26c2136e52ed4f9b2ce4ee6e77ea6ccbb620e527dd51b7a171026438ef",
+      "bytes": 10528
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Matcher.c.o.export",
+      "sha256": "2e3038ae037ca87fc43e280019d2affcbe38816e8a8574810c079ae7cf75620e",
+      "bytes": 524624
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Config.c.o.export",
+      "sha256": "a7037acbc82d3e9ece758b6a81be56df567ba15e81a9320069e49eb67ef5b3d2",
+      "bytes": 149384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Lifecycle.c.o.export",
+      "sha256": "76704ed414fe5d34a2732562809871bf3767151ec5a23e31c2baeda37dcde316",
+      "bytes": 24128
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Receipt.c.o.export",
+      "sha256": "90c691218e416a7f763393a5f0b1f6befa86800c61d7aff0796765e76f6cdb2d",
+      "bytes": 15416
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SourceObservation.c.o.export",
+      "sha256": "32bac949870d5e13ffd1bb465ae60c9d793b131e516c6f22847b15aee17a9ed4",
+      "bytes": 216312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/PluginModel.c.o.export",
+      "sha256": "a67e34540c8ad3f74c30ad602a12099ce2e6d86e4fcfabac2e7d37c5dfcc48ef",
+      "bytes": 556800
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/ExactMemo.c.o.export",
+      "sha256": "3fc968662f70e749c49b39b90d0f172141777bb0757170764ba3e63264ca121d",
+      "bytes": 9096
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/ExactLazyMemo.c.o.export",
+      "sha256": "fee34e57bce9f8d7f4ed752e6297cd9881b22406fc4142b89f3728cf6d04c113",
+      "bytes": 15520
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/PairDecisions.c.o.export",
+      "sha256": "78fb5c6833051ee5e4da446176a6e3958b5bfaa1c8e60d34f48b36ac0250fdde",
+      "bytes": 7784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/IndexedCharacters.c.o.export",
+      "sha256": "c615b2bcf825ef3916947e9e8df7d6a1dd051eddddda52d901e6bb4228b3d0dd",
+      "bytes": 8008
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/BudgetPlan.c.o.export",
+      "sha256": "501f09d9ec43cd4b3876fe3a9c01b94654fc4e1f1a6e4eee06555323d7f6897d",
+      "bytes": 7440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/SharedCoverage.c.o.export",
+      "sha256": "1fe467a5195343df8bbf74f52ccac66c60c219397c5657f2cddc0941d47fd302",
+      "bytes": 68064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/FocusWindows.c.o.export",
+      "sha256": "c584d9ff32ce10f62e3b5ac7e6168f928bf8ab93ddcdac2935a2385a2e06f9c7",
+      "bytes": 6608
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/SourceWindow.c.o.export",
+      "sha256": "03d64ae14dc95e44c4c4cd5fce843ac4ebf6acebadf44ec257cfe2bd8f7a7303",
+      "bytes": 4104
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/AdvisoryFrontier.c.o.export",
+      "sha256": "33dbce99989b78d2bedce0a419b040b95323a60b1a2aa162393a25a2cb27d5ad",
+      "bytes": 25592
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/OwnedRows.c.o.export",
+      "sha256": "5a449b999fc7cbe9174266d9c8dee0ba6bba6732c69d19279bfe96273253a339",
+      "bytes": 9256
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SemanticMatcher.c.o.export",
+      "sha256": "806217a08f55bc64ccc2fcfe2ac5d23134c52bb081460caeb4a6fd651e067790",
+      "bytes": 202968
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/OwnerProjection.c.o.export",
+      "sha256": "158cf9fe9486eb13fc54f7331e2853efcbbb136714044de10e94e6df4a84eefd",
+      "bytes": 107936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/EvidenceReplay.c.o.export",
+      "sha256": "407031589ef296e909756dda8dd61dc4c31a5eb647321c2b6c15ee7023921f82",
+      "bytes": 63952
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SurfaceJoin.c.o.export",
+      "sha256": "56b40bc6ff1c3876374c77de8fc61f4a1b1d64c0c49d4eb44238c93b770a0027",
+      "bytes": 39096
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/RankMemo.c.o.export",
+      "sha256": "5d792d30b75209207f636702deb0aeae6d559f57a83d760f89aaf53d94b1f8b2",
+      "bytes": 98800
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SelectionReplay.c.o.export",
+      "sha256": "2ac3e317c8e35c60795595fa222f067f4ec025404a3efc84cb4d7053bf22aef2",
+      "bytes": 27344
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/GeometryMemo.c.o.export",
+      "sha256": "857f20aef5a1c7ae8da2c4b15b15a4afde76f250b8439c226c8082e6137e203f",
+      "bytes": 123704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SaturationMemo.c.o.export",
+      "sha256": "47c56cb3ac96846c2e9e0be3698670cdb66c684482197be624a3bdf1885fb55e",
+      "bytes": 74464
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DiscoveryMemo.c.o.export",
+      "sha256": "afd473c6d694d6c2a12af288f290e1464f800fe17fe4a752d9f3bc09333b6af6",
+      "bytes": 17824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DemandMemo.c.o.export",
+      "sha256": "5399a0640b84cfeaebb61d4aff5b60352f770ca514bf793cdc30b7bc3cd56c67",
+      "bytes": 65144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/RetrievalIndex.c.o.export",
+      "sha256": "0fb7c384728c6a8dbd580d144eaa95adbce1611e202f0e932a3baf293b59e49d",
+      "bytes": 269600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/FederatedSearch.c.o.export",
+      "sha256": "c8c5163789188f9a26d8e28f4db2bc39859a29d88d3ec47abc748e5e6a485e75",
+      "bytes": 181688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/EqualityDependency.c.o.export",
+      "sha256": "5b0442db84a57dec8bcb7f19b0c04cb6a982c1ac32c65e3adc33134056d8d8cc",
+      "bytes": 19088
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SelectionDependency.c.o.export",
+      "sha256": "11076b2a4ab0808f2f45e3f114e5ab7b4f0a1bf270c4151564036ef57a69a5e3",
+      "bytes": 43168
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DiscoveryAudit.c.o.export",
+      "sha256": "c79495d3b1c9b8f7a291f26ac9c1ade483c1aeea910091692f12f98617b32571",
+      "bytes": 139568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SelectionAudit.c.o.export",
+      "sha256": "0bc0a8c03101a8c403cbcff32746320515ed2381ef3412a0c4e7990b129fda7e",
+      "bytes": 581112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CompletedAuthority.c.o.export",
+      "sha256": "7fe76f834cc3385186399091614508c0e587f04d9d18dbeffba5a9a356e300d5",
+      "bytes": 2704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/IdentifierParts.c.o.export",
+      "sha256": "902c6498c386bfa9af572052543c9bb2f67e8645c18782ee243ac856fae2c63a",
+      "bytes": 11320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/QueryLiterals.c.o.export",
+      "sha256": "5225a9a6f3a6fb72f669e73beb1345c19772ca7d213e9430e5aaa770968bc70d",
+      "bytes": 27992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/MiniLM.c.o.export",
+      "sha256": "0dccff311203255c95d9f83a34a3b7e10c0441c0c6e74e5403f2892d11993973",
+      "bytes": 50504
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/DirectoryReads.c.o.export",
+      "sha256": "2d3581a6b9543ff3f3c9b66cea2d70a85e79fd4031be447e52d67d2dc34d541b",
+      "bytes": 23080
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/WindowCentroid.c.o.export",
+      "sha256": "b3ddc5d4068698195e6d2efd3a36f4ee17c64629c6c90fe30faf9c2ae4191a50",
+      "bytes": 44152
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SearchProvider.c.o.export",
+      "sha256": "cde22538916262e5d2a5e3edbfb48c20a83c8177a71bf2c1a4192ebcfb20d17c",
+      "bytes": 446128
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/lib/libstorage_sync.a",
+      "sha256": "261602862d9773ad01d379d0e01c4aa261be784907c31f45d039c658f27c9743",
+      "bytes": 27264
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/parallel-hook-resources-20261023/shared/native/DaemonWire.o",
+      "sha256": "7b92d8d4bea65115e9b84d6e4744a6d61b7fbe6de6dfc01c63321632a7444104",
+      "bytes": 98704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/numerical-lifecycle-20261024/OwnedNumerical.o",
+      "sha256": "1c1623e59bed64a3fbd0685b0158d452c4017a448445d069d9968a841b0ba3fe",
+      "bytes": 327672
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/prepared-domain-20261024/CandidateDomain.o",
+      "sha256": "ab359fdd1814e6902458eb6dae1e59ba5026baad31f2a7f44b247bec91e149b2",
+      "bytes": 446424
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ObservationContext.o",
+      "sha256": "688c20e035e88bc582cfca9d04b3cbeb85432204e0983772fa7f5eaf628d3d33",
+      "bytes": 230328
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ObservationAge.o",
+      "sha256": "7bf1b87fe204fde7385128dda1ac08e69fbd8f866e74e8fa937de8400831f949",
+      "bytes": 60936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Deadline.o",
+      "sha256": "3bfff434979e7b78915dff0517ee783577066b8e90c299dd539eeabc88c55339",
+      "bytes": 3920
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalars.o",
+      "sha256": "debeda2728178a0f65faca09fbdd361749136f7dcc8b7834b65d52c169f37a42",
+      "bytes": 138992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseQuotes.o",
+      "sha256": "17d765ac9c2a542685de1768e04785fa256c1ca1a07eae718cfd37dc6769192d",
+      "bytes": 17240
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile/DiscoveryCounters.o",
+      "sha256": "12f5cd53c25071300b8e2d487e121cbcc14c858e0a3e4b6e5d4e5e8094d98b7f",
+      "bytes": 52896
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched/WorkPostings.o",
+      "sha256": "dda2eca4003b1189a362f804de390c6977bda4a4c35fcc19ca2d22c34df1ddff",
+      "bytes": 212456
+    }
+  ],
+  "latestLinkResponse": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/full.rsp",
+    "sha256": "4c067bd22d204a8249b4a782941656c030abfa8140475732a80a12cea080bf10",
+    "bytes": 20509
+  },
+  "qualifications": {
+    "completeSourceDomain": true,
+    "native10000OriginalDelivery": true,
+    "diagnosticPairsOnly": true,
+    "p95Qualified": false,
+    "base50000OriginalDelivery": false,
+    "latest50000Qualified": false,
+    "tokenImprovementMeasured": false,
+    "qualityComparisonMeasured": false,
+    "adopted": false,
+    "mcpPrivateCaptureImplemented": false,
+    "liveMcpTrial": false,
+    "numericMatrixImplemented": false,
+    "authorityIndexImplemented": false,
+    "p99Qualified": false
+  },
+  "knownRejectedEvidence": [
+    "trace-10000 reused prior native history: not a first-hook stratum",
+    "in-memory Work posting audit invalid-timers: compiler moved pure work outside clock reads",
+    "50k fully flushed INCOMPLETE notices are failed searches; no acknowledged-history continuation",
+    "failed first shared-frame lifecycles: code was delivered but receipt missed the shared format or first consecutive frame",
+    "provisional extra canonical registry/receipt path was removed after the concrete parser boundary cause was found",
+    {
+      "kind": "initial latency auditor build failures",
+      "paths": [
+        "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit-failed.log",
+        "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/hook-latency-audit-syntax.log"
+      ],
+      "reason": "excessive compiler memory with broad import, then syntax error; neither produced a timing report; successful streaming Lean audit is separate"
+    }
+  ],
+  "constraints": {
+    "implementation": "Lean; existing numerical Python boundary unchanged",
+    "memoryCeilingKiB": 4194304,
+    "guardStopKiB": 3670016,
+    "subagentsUsed": false,
+    "installedRuntimeUnchanged": true
+  },
+  "patchApplyArgs": [
+    "--unidiff-zero"
+  ],
+  "latencyProtocol": {
+    "warmWindows": 50000,
+    "event": "UserPromptSubmit",
+    "strata": [
+      "new chat",
+      "acknowledged history"
+    ],
+    "sampleP99StrictlyBelowMs": 30000,
+    "attemptsPerStratum": 100,
+    "threeSecondTargetRequired": false,
+    "constantTimeOnDoublingRequired": false,
+    "retainEveryFailure": true,
+    "noticeOnlyIsUsefulDelivery": false,
+    "prePostReport": [
+      "count",
+      "median",
+      "sample p99",
+      "maximum",
+      "summed per-turn handler cost"
+    ],
+    "cohortExecuted": false
+  },
+  "toolHookLatency": {
+    "report": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/seed-pre-post-latency.json",
+      "sha256": "8d11cfa4a40ef8bb09ff8a218b720ef05a95d60b3d25f6e8f223b1cd01dd5b72",
+      "bytes": 69439
+    },
+    "input": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/study/seed-1/rpc/exchange.jsonl",
+      "sha256": "79d6db226f90bbd3d6e7a4d7820bb6df3196681754186211ed91fdd757af521d",
+      "bytes": 2601429
+    },
+    "config": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/study/seed-1/config.toml",
+      "sha256": "ac367c8a46ebcec67813ff1c530eeebf6cc6e1a141c440cba0646c42b1df2d31",
+      "bytes": 318
+    },
+    "runtimeSha256": "efb9a11d413b3ed2339413e4e6833b55497f05c6bdb5375098402d481c31ba2d",
+    "completePairs": 147,
+    "preCount": 72,
+    "postCount": 72,
+    "preSumMs": 178743,
+    "postSumMs": 114058,
+    "summedHandlerMs": 292801,
+    "turnWallOverheadMeasured": false,
+    "condition": "older runtime, initially empty growing seed DB; not latest warmed 10k/50k",
+    "latestLargeDbQualified": false,
+    "newAnsweringModelCalls": 0
+  }
+}
