@@ -167,9 +167,9 @@ Complete journal-producer refinement, all-view incremental maintenance, routed
 query deltas, compaction and clustering are unfinished.
 The full-read regression remains and these candidates are unadopted. Conservative
 skip proofs and the complete shared/federated hook lifecycle are not implemented.
-The [latest actual 50k pair](lexical-witness.md) supplies original evidence on
-the first request but still times out numerically; continuation converts a
-valid empty lexical result into an incomplete notice. That controller bug and
-full-scan cost remain separate from the layout research. No answering-model
+The [latest actual 50k pair](empty-search.md) supplies original evidence on the
+first request and retains a valid empty lexical continuation. The numerical
+lane still times out. Fixing the false-incomplete controller conversion does
+not remove full-scan cost or qualify the layout research. No answering-model
 calls or new seeds were made for this review, and no token improvement is
 established.

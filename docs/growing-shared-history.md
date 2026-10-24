@@ -3,11 +3,11 @@
 50,000, 100,000 or 1,000,000 windows are measurement points, not lifetime
 capacity requirements. Shared investigation of LLVM, Linux and Android across
 revisions can exceed all of them. No current experiment establishes useful
-delivery at one million windows. The [latest actual 50k native pair](lexical-witness.md)
-delivers original evidence on the first request, but the numerical lane still
-times out and continuation converts a valid empty lexical reply into an
-incomplete notice. This pair is unqualified; the earlier resource-stopped failure
-remains recorded separately.
+delivery at one million windows. The [latest actual 50k native pair](empty-search.md)
+delivers original evidence on the first request and retains a valid empty lexical
+continuation without an incomplete context body. Numerical search still times
+out. This is one diagnostic pair, not scale/p99 qualification; the earlier
+resource-stopped and false-incomplete failures remain recorded separately.
 
 ## Remove a ceiling rather than raise a constant
 

@@ -1,5 +1,9 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 有効な空Worker応答を未完了へ変換していた制御をLeanで隔離修正。既存SearchDelivery.emptyの現在stamp受理/JSON復号を通った場合だけ、本文/配送履歴/認定権限を持たない状態metadataを返す。欠損・不正・期限外・旧turn/epoch・サイズ超過・実pendingは別のまま、意味timeoutのtrace/表示を保持する。通常Lean証明/ContractAuditと10 route/status＋無効応答の検査が成功。helperのExcept.isError API不存在だけをtoOptionへ直し、失敗も保持した。
+実nativeの10k初回9,600ms/継続7,901ms、50k初回22,735ms/継続22,047ms。初回原文は両方前候補とバイト一致し、10k継続も空本文一致。50k継続の誤った未完了本文356bytesが0になり、disposition=empty/reason=no-new-memory/completed=0、記憶offer不受理/履歴12維持を確認。意味検索は約14.3秒でtimeoutのままなので完全数値順位の成功とはしない。時間延長/採点/選択/MiniLM/3辺/認定/鮮度は変更していない。
+新seed/回答モデル/総トークン比較0、候補未採用。明示warm/再warmの追加埋込/投影生成/行列追記0、元DB/字句索引hash不変、全final guard終了/所有process残存0、最大合計RSS2,114,880KiB。終了helperはhash後に削除しarchiveなし。次は行単位の数値読出し・検証・転送を測り、全件metadata/materialization依存を減らす。大規模共有/通常federation/私有MCP capture/Phase4規則/p99/全題材比較/論文は未完了。docs/empty-search.md参照、全Phases0–6 active。
+
 2026-10-25 同じpinned字句照会内で元の3点検証の実バイト/証明を共有し、既に検証したordinalで順位付けするLean候補を隔離実装。使われないWork表層索引openも除去。10k/50k各24語の順序/件数/エラー/完全論理trace、全9,969/49,969 ownerの順位値とtraceが元のscalar readerに一致した。矛盾ordinal、trace reset、後続出版、10種の無効状態、1,024key/破損検査、通常Lean証明/ContractAuditが成功。初期の失敗（矛盾member拒否前のcandidate観測漏れ）を元のmonadic順に直し、失敗も保持した。
 実nativeは10k初回9,812ms/継続7,944ms、50k初回22,897ms/継続22,584ms。全4本文は直前候補の保存済み対照と一致し、新規paired速度比較とはしない。50kは399,753 posting rowsの点要求が1,199,259→149,907、検証再利用349,784回、順位再利用49,969回。意味窓約14.3秒は未変更で、初回は字句原文21,346bytesを配送、継続は通知356bytesのままなので未合格。
 継続の直接原因は受領記録のdisposition=empty：Workerが期限内の有効な空結果を返しても、PluginHooksが字句routeだけでpendingSearchへ変換していた。残時間不足と混同せず、次は意味timeoutのtraceを保持したまま、有効な空配送と欠損/不正/期限外応答を区別する。読出し候補ではこの制御変更をまだ行っていない。

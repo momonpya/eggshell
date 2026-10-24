@@ -1,0 +1,70 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -425,6 +425,25 @@
+       | .ok (some handoff) => if handoff.reason == "search-incomplete" then .pending else .failed
+       | _ => .failed
+ 
++/-- A valid empty worker reply adds no memory or completion authority. Retain
++the observed search status even when its fallback has no new body to publish. -/
++def emptySearchResult (trace : SearchTrace) : Handoff := {
++  text := "", reason := "no-new-memory"
++  deliveredGraphs := [], completed := 0, advisory := 0, localUnions := 0
++  coveredFragments := [], blocksCurrent := false, search := some trace }
++
++theorem empty_search_has_no_authority (trace : SearchTrace) :
++    (emptySearchResult trace).text = "" ∧
++    (emptySearchResult trace).deliveredGraphs = [] ∧
++    (emptySearchResult trace).completed = 0 ∧
++    (emptySearchResult trace).localUnions = 0 ∧
++    (emptySearchResult trace).coveredFragments = [] ∧
++    (emptySearchResult trace).blocksCurrent = false := by
++  exact ⟨rfl,rfl,rfl,rfl,rfl,rfl⟩
++
++theorem empty_search_preserves_status (trace : SearchTrace) :
++    (emptySearchResult trace).search = some trace := rfl
++
+ /-- Constant metadata per DB, never a scan or embedding job in the hook.
+ The registry retains unavailable indexes. Actual numerical cache observations
+ persist typed private repair debt; a deadline never invalidates a checkpoint. -/
+@@ -501,9 +520,7 @@
+     match Worker.SearchDelivery.ofReply stamp current.turnId state.epoch now
+         pending.handoffChars result with
+     | .obsolete => return (none, "obsolete")
+-    | .empty _ =>
+-        if trace.route == .lexical then return (some {pendingSearch with search := some trace}, "empty")
+-        return (none, "empty")
++    | .empty _ => return (some (emptySearchResult trace), "empty")
+     | .incomplete _ _ => return (some {pendingSearch with search := some trace}, "incomplete")
+     | .found _ handoff _ _ => do
+         -- Linearize only publication, never the search or semantic matcher.
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -20,6 +20,8 @@
+ run_meta do
+   for theoremName in #[``Eggshell.CandidateDomain.packed_roundtrip,
+       ``Eggshell.LexicalReads.OwnerWitness.original_checks,
++      ``Eggshell.Plugin.empty_search_has_no_authority,
++      ``Eggshell.Plugin.empty_search_preserves_status,
+       ``Eggshell.Persistence.Store.Change.neutral_keeps_marker,
+       ``Eggshell.Persistence.Store.Change.changed_advances_marker,
+       ``Eggshell.Synapses.Extraction.consumed_source_has_witness,
+@@ -123,6 +125,19 @@
+         throwError "Demand proof uses an unapproved axiom: {theoremName}: {axiomName}"
+     logInfo m!"Audited {theoremName}: {axioms}"
+ 
++/- Accepted empty results retain status metadata; failed or unpublishable
++replies remain a separate incomplete result. -/
++run_meta do
++  let environment ← getEnv
++  let some delivery := environment.find? ``Eggshell.Plugin.deliverForWork |
++    throwError "Missing search delivery controller"
++  let some body := delivery.value? | throwError "Missing search delivery body"
++  for required in #[``Eggshell.Plugin.Worker.SearchDelivery.ofReply,
++      ``Eggshell.Plugin.emptySearchResult, ``Eggshell.Plugin.pendingSearch] do
++    unless body.getUsedConstants.contains required do
++      throwError "Search delivery bypasses accepted empty or incomplete classification: {required}"
++  logInfo "Audited accepted empty metadata and separate incomplete search handling"
++
+ /- Reuse only evidence bound to one immutable reader pair. A cache hit must
+ replay the original observations, including the later ordinal lookup. -/
+ run_meta do

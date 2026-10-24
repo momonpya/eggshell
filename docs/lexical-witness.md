@@ -125,3 +125,8 @@ p99, private MCP capture or concurrent shared-DB readiness. The broader design
 continues with one scoped original reference model, one source-change feed and
 separate recommendation/authority views, rather than a collection of copied DB
 subsystems. Phases 0–6 remain active and unfinished.
+
+The next [accepted-empty candidate](empty-search.md) fixes the controller
+conversion identified above, retaining the semantic timeout and changing no
+retrieval or deadline policy. Its actual 50k continuation has no incomplete
+context body and adds no memory offer or completion authority.
