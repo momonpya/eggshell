@@ -1,5 +1,9 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 projectMatchesの逐次全件走査/appendをLeanで置換した。既存baseの重複・新規の最初の元payload・追加順を保つAppendUniqueを作り、全listで元foldと一致すること、全WorkGraph/Match listでprojectMatchesと一致することを証明。logical specと生成Match/Union証人は保持し、コンパイラだけが高速版を使う。Handoffの特殊化Cも再生成・実リンクし、旧projector呼出しなし/高速版呼出しを確認した。
+固定小32例/10k4条件で全Handoff fieldと本文が一致（completed7/block5/正Unionを含む）。local Union無効の同候補比較は28,330/28,460→23,039/22,953ms、通常は9,271/9,211→9,210/9,314ms。実MiniLM/nativeは同DB/質問/設定・新しい私有query/chatで初回19,332→17,849ms、ACK後17,115→16,463ms。stdout/本文17,803bytes/重複抑制の空応答/stratum/ACKが一致し、両armの初回query miss・継続hit・原文再埋込0を確認。1組なので通常改善/p99とは断定しない。
+通常経路の開始後約1秒から7秒の別標本では原Work/payload読出し・頻度準備・幾何照合が見える。前回の74%は別mode/区間であり割合比較をしない。profileの全結果も通常比較と一致し、profile時間は除外。元source head/pages不変、最大合計RSS2,776,272KiB・全所有process終了。次は局所list調整ではなく、全Work復元を置き換える原典/正規signature/affected-parent索引と数値取得経路を優先する。認定は推薦top-Kで切らない。回答モデル/新seed/総トークン比較0、品質/p99/5万窓/共有複数DB未確認、製品/README実績/release未採用。docs/projection-fold.md参照、全Phases0–6 active。
+
 2026-10-25 入場済みMatchの判定照会をLeanの完全構造キー索引へ置換した。OutcomePolicy.admittedの先頭一致・重複・不在・completed/advisoryを全入力で保つ通常Lean証明とcsimpを追加し、元の論理policy/生成Match/Exact/Union証人は変更しない。表は各入場一覧について1回構築する。これはWorkクラスの出版時索引や完全fixedpointの証明を完成したものではない。
 小32例と固定10kの4条件で全Handoff/本文が一致。controlledのretrieval-onlyは35,293/35,475→30,307/30,306ms、通常は9,652/9,564→9,640/9,533ms。実MiniLM/nativeの同じ10k・質問・設定・新しい私有chatでは初回18,793→18,558ms、ACK後17,443→17,316msでstdout/本文/stratum/受領履歴が一致。1組だけなので通常速度改善/p99は未確認。Handoffの特殊化Cに旧探索が残った初回診断は除外し、呼出元再生成・実リンク後の結果を最終値にする。元source DBは不変、全guard終了/所有process残存0、最大合計RSS2,809,424KiB。
 別の処理スレッド2秒標本でprojectMatchesが993/1,341（約74%）、残りはtopology照会だった。全実行時間の割合ではなく、その区間の標本でありprofile試行の時間は比較から除外する。次はprojectMatchesの全件重複走査/逐次appendを、元の順序・base重複・出典payloadを保つ集合照会と一括追加にする。全Work復元/数値取得/認定の完全索引は残る。回答モデル/新seed/総トークン比較0、品質未測定、5万窓/共有複数DB/製品/README実績/release未採用。docs/admission-policy-index.md参照、全Phases0–6 active。

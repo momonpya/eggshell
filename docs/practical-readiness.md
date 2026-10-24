@@ -43,6 +43,15 @@ A separate processing-thread sample identifies quadratic `projectMatches`
 membership/append work as the next target. Persistent canonical recognition,
 routing, privacy and full scale qualification remain unfinished.
 
+The [stable projection fold](projection-fold.md) now replaces that repeated
+membership/append work with an exact set and one append, preserving the full
+graph list. All 36 controlled cases and native stdout/ACK behavior agree.
+Local-Union-disabled discovery falls from about 28.3 to 23.0 seconds in its
+current cohort; ordinary discovery remains about 9.2 seconds. Native first/
+continued are 17.8/16.5 seconds in one pair, not a p99 or token adoption result.
+Complete original Work restoration and numerical acquisition remain the next
+architecture targets; do not enlarge the fixture instead of changing them.
+
 ## Priority and current evidence
 
 1. Remove repeated catalogue construction from hooks. The isolated single-source

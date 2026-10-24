@@ -1,0 +1,3116 @@
+{
+  "status": "isolated stable graph projection with universal full-output refinement and native equivalence; unadopted",
+  "parentReview": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/admission-policy-review.json",
+    "sha256": "e616277acb7daa1b604b064334a1acf965d7677b7200b91e76159d994124f679",
+    "bytes": 168596
+  },
+  "runtimePatch": {
+    "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/projection-fold-runtime.patch",
+    "sha256": "9a3e0bcbcded966bcc9d163a67eb85a551e9ae8a199b214bd2e121a85690aa27",
+    "bytes": 5893
+  },
+  "patchBase": "retained admission-policy checkout",
+  "patchApplyArgs": [
+    "--unidiff-zero"
+  ],
+  "patchRoundtrip": true,
+  "changedSources": [
+    {
+      "name": "Eggshell/AppendUnique.lean",
+      "before": null,
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/AppendUnique.lean",
+        "sha256": "92017c6635b25bd405ad8a53d9bbf99ff6dae6ac9a54201d36f016400e9a2026",
+        "bytes": 3088
+      }
+    },
+    {
+      "name": "Eggshell/Matcher.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/Matcher.lean",
+        "sha256": "53e0f9c1544cc631375ca7c5c901f939f89d0ac9e41a42e16fa35482143c9537",
+        "bytes": 182586
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/Matcher.lean",
+        "sha256": "bcaf5df9da6d9708cc64ebef828b9b64a72c64ac09ef50fe6cb96faa6fb231f5",
+        "bytes": 184426
+      }
+    },
+    {
+      "name": "Eggshell/ContractAudit.lean",
+      "before": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/checkout/Eggshell/ContractAudit.lean",
+        "sha256": "eb38b41f01f4f2b1f44a4f185090823c735d8206646b7a0ae3dfa84c3918d910",
+        "bytes": 106166
+      },
+      "after": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/ContractAudit.lean",
+        "sha256": "ab29db5e5f77e40366f881700fe5d60166585a330eb990ba2854622abef5b798",
+        "bytes": 106352
+      }
+    }
+  ],
+  "sourceInputs": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/AppendUnique.lean",
+      "sha256": "92017c6635b25bd405ad8a53d9bbf99ff6dae6ac9a54201d36f016400e9a2026",
+      "bytes": 3088
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/Matcher.lean",
+      "sha256": "bcaf5df9da6d9708cc64ebef828b9b64a72c64ac09ef50fe6cb96faa6fb231f5",
+      "bytes": 184426
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/OutcomePolicyIndex.lean",
+      "sha256": "a7eec8e35fde4d534047455c749f05a7e16f752ba3d7b7e72c00ec02eed575ee",
+      "bytes": 2427
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/Handoff.lean",
+      "sha256": "4a59fe71c95065258a5a83a1ef1f1e9db4e9e933c65462e451158a04c0d5a930",
+      "bytes": 474610
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/Graph.lean",
+      "sha256": "7e8052fd99930b16f72f830bf99641c55349fcb60b97438fe71f3d8556724e35",
+      "bytes": 8664
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/Extract.lean",
+      "sha256": "b19f0295dd35db4b4ac74bee8d4282e35717f6cebf04a6483d59f5808ca18ef2",
+      "bytes": 53497
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/Value.lean",
+      "sha256": "542fd2db0ef6ec093a73b11f576620e415846942527dc1dac29a8f05b6155c21",
+      "bytes": 10803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/Eggshell/ContractAudit.lean",
+      "sha256": "ab29db5e5f77e40366f881700fe5d60166585a330eb990ba2854622abef5b798",
+      "bytes": 106352
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/tools/research/DeferredWorkAudit.lean",
+      "sha256": "ee17a5a582b8ec059965fe47d2926572c0e5d33ec5ccea001c1cbaa6674e1f2b",
+      "bytes": 7752
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/tools/research/HookScaleRun.lean",
+      "sha256": "d1d768698c809c1e32eae4102fd37c0caaeff923253046b97a84f3df847ab4f9",
+      "bytes": 9939
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/tools/research/ArtifactHash.lean",
+      "sha256": "3d3aafbd5b07f8bd0b5d79148e2170f0731c967d3014d0dc176d93b3c73cf04c",
+      "bytes": 2496
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/tools/research/StudyRuntime.lean",
+      "sha256": "a69c15a000f7ffd0da5e457c211589f1a0c335f08743ec6dfd859ed297a8d9cb",
+      "bytes": 8712
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/lakefile.lean",
+      "sha256": "3bb596f8d09b6f3caf54b3f657c621eb1bc1588de06cfc100e904368528a5194",
+      "bytes": 2975
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/checkout/lean-toolchain",
+      "sha256": "302cd63c54178885b89e669f33b38f12f4dd7ae7e5cac537b3203e3768d8fb2b",
+      "bytes": 25
+    }
+  ],
+  "sourceCopies": [
+    {
+      "path": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-fold/Eggshell/AppendUnique.lean",
+      "sha256": "92017c6635b25bd405ad8a53d9bbf99ff6dae6ac9a54201d36f016400e9a2026",
+      "bytes": 3088
+    }
+  ],
+  "generated": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/AppendUnique.c",
+      "sha256": "feaec5012159cd29ff4c8a91bd28deb4ed3c1ee6d3538650e35dade027ba7293",
+      "bytes": 22028
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/AppendUnique.o",
+      "sha256": "d985c2a1ea4019c54655bed46fd40defe81ec358eff4377a1fe0884e5205989c",
+      "bytes": 14240
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/Handoff.c",
+      "sha256": "993c32c4a231d4163e83b7db57ce56c8360c313bb6809bd8cc9471a5395a42ac",
+      "bytes": 6709213
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/Handoff.o",
+      "sha256": "b0da6acdc09073da77097c9e1d0d4a1d34ce13ef0b286d6df3d502875f40de84",
+      "bytes": 5077384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/Matcher.c",
+      "sha256": "5d88829d589a01e2e0039264e8a51f75c44e0b59ca9d26dcbeed69e1179f0eff",
+      "bytes": 1219005
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/Matcher.o",
+      "sha256": "a5c90c3a56c8b3fd00663fcde91fc0ef6641a51a9a917aa7ed8ef02f75166ac8",
+      "bytes": 995568
+    }
+  ],
+  "linkResponses": [
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/audit.rsp",
+        "sha256": "087401540cd39691cb157a4372d96b7ab02cd25bc2ab890148b9fe8200c1ed9a",
+        "bytes": 21011
+      },
+      "objectCount": 194
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native.rsp",
+        "sha256": "0998d691c06cacfca33b80a2a03d28ad895cdc0ad2731d523ed9398e3cf26e0d",
+        "bytes": 21164
+      },
+      "objectCount": 196
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/reference.rsp",
+        "sha256": "07fb1d82b48fed5e359bc749d14ad44ec1a8bf53bdb94f4ef9775d7973187aae",
+        "bytes": 20932
+      },
+      "objectCount": 193
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/runtime.rsp",
+        "sha256": "dd991bcf105628ba29e52472465019a900092e17bbb7a8db55bcd9de6f56f651",
+        "bytes": 20998
+      },
+      "objectCount": 194
+    }
+  ],
+  "linkedObjects": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/Handoff.o",
+      "sha256": "e3394614cf01ca9c0019c7c0a7807324bc197cdfac55e9495ae0cade0b27e22e",
+      "bytes": 5077936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/Matcher.o",
+      "sha256": "ec3a8da2d945ea4d969b3f3fd38f07ab39725ac6581b3c8ab633ae16dbc36ec1",
+      "bytes": 979696
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/OutcomePolicyIndex.o",
+      "sha256": "658db120a3d4ab395f0c26a72801ba9e8e9327abfd0a39f3877f0df34817c2f7",
+      "bytes": 37480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_AdvisoryFrontier.o",
+      "sha256": "8cbca010ca0e500467f19631affd372e1fa65ba01aa1b901c31e637843b70211",
+      "bytes": 39784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_AtomQuotient.o",
+      "sha256": "d7c3becfdc72c1177c665c6af1153995c0e03b502a4a4ac64ba46bb82bd1ed3b",
+      "bytes": 8824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Blake3.o",
+      "sha256": "a200f2ce68660c99eb6659c03dfb57398d5ba86a4d1744aeca7025ba6e447b72",
+      "bytes": 77776
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CompletedAuthority.o",
+      "sha256": "7b0f831b34ff531607fbdc61712817d64668511f4ba5e1570597538b768877e1",
+      "bytes": 2648
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Config.o",
+      "sha256": "5d9e5a58b95e8eedf2db562d48043ed4cc1228721502c58a69edcd06a48c6712",
+      "bytes": 284704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CongruenceComplete.o",
+      "sha256": "cf85e4b0930b7e0fdaba0f4f2c66acdae82d3e7c18a0adc654f6ac87f6020b69",
+      "bytes": 69720
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CongruenceFixed.o",
+      "sha256": "1b91e9e3213b6bd53ab4a4eea8f54274434342821c3b85207d12bd79e761aea7",
+      "bytes": 2432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_CongruenceSound.o",
+      "sha256": "23de0396f4f8c7f2f708d5df77a8a92ab2e93c0ced4fff60bb06524198fe2abe",
+      "bytes": 4040
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_CacheReclaim.o",
+      "sha256": "af61f59888222cfe6e73ed683d39b0e4fd009f2ac626aafc8bf3531c867d717c",
+      "bytes": 77904
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_PageMap.o",
+      "sha256": "05628d16dc1c8ec9dbd9b3f07579b8ca0feeda2d9dad8b0a81db8825aac59ac5",
+      "bytes": 789384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_Sidecar.o",
+      "sha256": "fcb0ccc2ac61c433da94341d38d3f0fd40c1a4c421849f5d30f70a707fc933de",
+      "bytes": 106344
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DB_Wire.o",
+      "sha256": "02492119c2d793fddcfbda340ebdb322eff36824f1cab01faa2b76b9bcec7609",
+      "bytes": 177336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DemandMemo.o",
+      "sha256": "aa428bdb6116963c44a8f0487cb77b5172c42a6c19005151dd31d73a302d371c",
+      "bytes": 125456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DiscoveryAudit.o",
+      "sha256": "ea4a2802e319278c159771c0966458e7dc9812b7b392ac02969195331210dea5",
+      "bytes": 237272
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_DiscoveryMemo.o",
+      "sha256": "8ff34e553c970ff7c7654f8b7b21a189d3f8f14c8e94f151098053e6955700a5",
+      "bytes": 37024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_EqualityDependency.o",
+      "sha256": "5f748b29b136da90f66aae65e290814b381fb8fc03377ab6ba0c68cb178edb78",
+      "bytes": 18768
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_EvidenceReplay.o",
+      "sha256": "557c639ca193136ac6b2e7f5e01c6557be257d82991004b14cd7da56d356a93d",
+      "bytes": 121560
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Extract.o",
+      "sha256": "c51d952ec429406eca04b2575feb2e61aaea518ad734492cb41ead3896539f58",
+      "bytes": 192816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_FederatedSearch.o",
+      "sha256": "b9c840a2784f15f4f7990a9a74255b40f5483d6ba5774768d9b8f9b7e2df05b8",
+      "bytes": 338096
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_FileSystem.o",
+      "sha256": "f2f4efbcdde8b5c7ec413f064620c4dd7c5bba6876ffd50431b0ce6243e621b6",
+      "bytes": 140296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Frequency.o",
+      "sha256": "5f40e020afe1273ede2f582c6787d66aad1d0d794c24392ab1c5964898914f62",
+      "bytes": 67336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_GeometryMemo.o",
+      "sha256": "e16f7c4fbdd761a67f1718b7f4a266c6a638ce83e34d9133fd812eda592512cb",
+      "bytes": 291680
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Graph.o",
+      "sha256": "60dcc7b0b8011dadb29320d7a4ff1f063ba8508f3df1edf631192cf953c8e803",
+      "bytes": 51728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_GraphCodec.o",
+      "sha256": "e139e88c09d42e183551dfcd9f75fa5d3df8993dbb5b12d8be77378f9c92361c",
+      "bytes": 176968
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_HashDistinct.o",
+      "sha256": "6faa8c390b7f0a0279c144cdcce061d85eea9b1eb4644ad4ecc6392cd3b32c23",
+      "bytes": 15568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_IncrementalQuotient.o",
+      "sha256": "68e00bc57f9c3106ea5fe9d3e2b21802ee581ba187beb776cc69422e7c1a5096",
+      "bytes": 27136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Lifecycle.o",
+      "sha256": "52b657a49ffc504c950b4a5c6b15c6c1da8af3788b542db4fb2c4a5e2668b539",
+      "bytes": 34872
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_LogicalText.o",
+      "sha256": "51fb4e0003546dc615a46899db3ca5888e79d5f69bb085ef4cea9fa538841111",
+      "bytes": 268048
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_MiniLM.o",
+      "sha256": "a77f55a9cb21726fd0cb8e17117aeaab863ef96600f7bb70af4a8c09ba4adefd",
+      "bytes": 67208
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Partition.o",
+      "sha256": "d08ca7c01799a57d76485b6d40de68a18215cf898e4e451cfb926814ecc5681c",
+      "bytes": 10008
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_PartitionIndex.o",
+      "sha256": "6ea638029beb4cb18f53cb43e86ea2be32ff8f14aec1542ad3470df0d5f27fa8",
+      "bytes": 2424
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Paths.o",
+      "sha256": "fc787106ca943ba13f212da6dbbb45e811ebcd90884a922fe935c45065be637b",
+      "bytes": 20112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_PluginModel.o",
+      "sha256": "eeb1d3d1073c3a40597a76d8f5f501f20f77cb8067961042dfe6d6621cdd1e77",
+      "bytes": 883976
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Quotient.o",
+      "sha256": "50df9c880773e8991da31546b18976171120f75bf0152dcd1ccceaab132c0f84",
+      "bytes": 254144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_QuotientAuthority.o",
+      "sha256": "8b9705ed43310f6326f63a56d8fcdabfc0b4c7931ff6dee918cae90ff48c0b6e",
+      "bytes": 6728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_RankMemo.o",
+      "sha256": "28f50c6e102f235c62d9eb6c83192b7499c4c5627ebc6ab61879a3ca5a50ae6e",
+      "bytes": 189720
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Receipt.o",
+      "sha256": "ade97cc0f3aca4e97bdfa479d7f28af76e600e36de7464b4d651253388b58395",
+      "bytes": 21928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Relation.o",
+      "sha256": "ffcd6e41c32eef143239b4fa147c5cb91f38fc6c04bec814c08cb0fd68bfbb06",
+      "bytes": 80504
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SaturationMemo.o",
+      "sha256": "1fb61d52ce118d7db9420aefddb1a10f258d9300c3cc52ee3ecbc3e41f329ca9",
+      "bytes": 137600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SearchRank.o",
+      "sha256": "ba3133b3e85d9030bb328be68ab14ea0a6d222e250c0e700d3e5b488aca5c266",
+      "bytes": 124824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SearchUnicode.o",
+      "sha256": "e987a217c87886016eb8b3742a1f60b7198800e94f54f795038408e9e72f5748",
+      "bytes": 416984
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SelectionAudit.o",
+      "sha256": "a2bc037f2ded76563a5fbdc83e46510b94e9149a22e21d225328d44bf1ec9db4",
+      "bytes": 915880
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SelectionDependency.o",
+      "sha256": "c992862205cc429ebbfd17eb9a3873e82bb1070c303b61c0e34475a2cac60b4c",
+      "bytes": 79432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SelectionReplay.o",
+      "sha256": "5e62e96fcd85ff831174a714f7af2cd62dab6328d954d76467f2ed8f2bfd3b86",
+      "bytes": 47512
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SemanticMatcher.o",
+      "sha256": "8db8e27482be3b0988fe7013a84a6a85492e5523a629fac9e75a5c585bff799c",
+      "bytes": 324600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Sha256.o",
+      "sha256": "fa8879952b5b7c2f0a890196fe423105fcc9b6299897c58084c6ec6e729c9748",
+      "bytes": 72816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SourceObservation.o",
+      "sha256": "8e8a48f40b37c2ee88e4d7ec845e8cd0db414ef44ee137b7099ef08c27195107",
+      "bytes": 327848
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_SurfaceJoin.o",
+      "sha256": "9bf4705cfc6d67f0186cc816c890f3b500ecea8d23d9799689cdb99677fcabf1",
+      "bytes": 71656
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_TextParts.o",
+      "sha256": "c8fa4e91dd4d9ce1058dd7337fd7775f889f5a215bab3858c1f0ca5653608242",
+      "bytes": 12248
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Union.o",
+      "sha256": "e2ccadf395c17bd33209a4614ae4914f17b9e91c572597e0f0c9a2f5b1a917eb",
+      "bytes": 24528
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/Eggshell_Value.o",
+      "sha256": "6fddeaa56885f741031412156c55595c9a63fced61d605aabc4a8b18b6cdeb4e",
+      "bytes": 105816
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_BudgetPlan.o",
+      "sha256": "a06e967b27896b72e927ff158d4476304b9a0d1089707a99f0c31a75371ee5e8",
+      "bytes": 11928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_ClosedCoverage.o",
+      "sha256": "2ee97f9cbf571780d71205f1e27baed118041db2df9bc118e8f2a269a4b9551f",
+      "bytes": 25600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_DeferredCoverage.o",
+      "sha256": "f06db3076bb0b869a52fc23cbce194f2499bbeafa4cad278516b2753151d0a49",
+      "bytes": 59720
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_DirectoryReads.o",
+      "sha256": "3a93e4b814a8407ef01ac73431e9c4567d028801d75b7b6c7cb2eb5ae6be71e5",
+      "bytes": 39664
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_ExactLazyMemo.o",
+      "sha256": "2645f66160dced12402fc74a0c6338bc537af1d97e35f3bf1c73a023f140681f",
+      "bytes": 21888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_ExactMemo.o",
+      "sha256": "f568eb6eef15f89d9eb16b2ff4d7c9b96d8bbfd51db80d770514b48f333c8a26",
+      "bytes": 14136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_FirstIndex.o",
+      "sha256": "ad4959a0bda29ae3334770f78febc84619006e6fb336fa7bf783ada94dc93b09",
+      "bytes": 30064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_FocusWindows.o",
+      "sha256": "73e697acb06f8eba996efdc6cdc918d4e3eff22b0e0c1dd745f32ec6db2ab518",
+      "bytes": 8128
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_IdentifierParts.o",
+      "sha256": "437fb6a304103af1cec5dcea22bf601fc81147c3521b1abbd9077f650e6a3c27",
+      "bytes": 17672
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_IndexedCharacters.o",
+      "sha256": "e1a1da777282f2f2b370e96f88b9d76ae0500f387a8cfa33a9ce8bbcb17f02c3",
+      "bytes": 7560
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_KeyedOverride.o",
+      "sha256": "0112bbc7d23386b51354841e4b444425c71ccd96d603e0f614418d24badbe72c",
+      "bytes": 22032
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_OwnedRows.o",
+      "sha256": "601fb19c819f90d077921a9ce3ec995a815bceaa9bba96521b84879fe2b1c268",
+      "bytes": 11736
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_OwnerProjection.o",
+      "sha256": "468fd274df5d8bb79fae9c3d6c468d79f727dc782145020020dc19ad9a32aa1a",
+      "bytes": 282400
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_PairDecisions.o",
+      "sha256": "665e21d233816017d8c9dd10031ea7fcdfcd77f1858e131403d53b359f85905b",
+      "bytes": 7376
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_QueryLiterals.o",
+      "sha256": "2495ba2b7d2d311f8e9a7388c8f5fff858aaf829c39d023166a55adc832dcdf6",
+      "bytes": 39592
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_RetrievalCategories.o",
+      "sha256": "43c223186e505bc757d0111161c2b0698fca388d9015a9a4aed0124315a19327",
+      "bytes": 259728
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_RetrievalGrams.o",
+      "sha256": "a6f97ae2279a3e48df8d5bf8430c1e335c18cf35e866916921491319337b1cf7",
+      "bytes": 152296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_RetrievalIndex.o",
+      "sha256": "e8eb371ba95aaa8808aeca52afd4591e5948de864e8ce8d956e69f2aeabf3424",
+      "bytes": 393088
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_SharedCoverage.o",
+      "sha256": "595157eb7442b37f29b10d96462bf0712937fa5128af4d6a0e8c4912fa163595",
+      "bytes": 127016
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_SourceWindow.o",
+      "sha256": "41f03113e4e7ccbe08d836c9062c612a3a90188d0753a7dee8832375601cf94c",
+      "bytes": 4016
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/canonical-records-20261023/native/tools_WindowCentroid.o",
+      "sha256": "59f0993f1ba187569bed7f390be7d89c001e91361152ef3f02dc65ea972b1dfa",
+      "bytes": 73432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/ArtifactHash.o",
+      "sha256": "6f6cb8b7abcd572388795c8dea63b37ad475fb1cad8c3367a2c03f7e1ddbfba8",
+      "bytes": 26624
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/CanonicalSourceDelivery.o",
+      "sha256": "8a1c7828ff1de28115839036a326927f389ebc40d07c9a494d439d8b5679ba4e",
+      "bytes": 745464
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Daemon.o",
+      "sha256": "d7437b14f013178c52567a94e0ab052810ed29b79d8a858492d6646a5a0e294d",
+      "bytes": 257312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/DeferredWorkAudit.o",
+      "sha256": "9612b99f9234ce48ca432e75ef472799c9dfdd12450d425db7134cf6238966f9",
+      "bytes": 128064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/HookScaleRun.o",
+      "sha256": "b04b81ae19e7422a40602539cba6b9d35228dd6b7c4df09f771474bb2266f4c6",
+      "bytes": 142552
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Install.o",
+      "sha256": "37cb50fee91c8208b92eb68df6badea65472849ed8ec906eff2ad822a2527562",
+      "bytes": 167760
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Main.o",
+      "sha256": "6bf8adacb864b67b274189d2131f16ead83d6345fa2eb28e79448bfb9ffa9992",
+      "bytes": 55888
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/PluginCli.o",
+      "sha256": "7113698ff9abaf951b0a7c4b253d19287baf338172571a6a630c7b4e9acb29e5",
+      "bytes": 256960
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/PluginHooks.o",
+      "sha256": "213724a6297ef12fc097aed1001da1980eede5625bc8484881fe023cdb506d28",
+      "bytes": 606968
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Setup.o",
+      "sha256": "45e6696b984f36470983b440829f2127fa4fece643d53af367a243ff7cf84841",
+      "bytes": 30440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/StudyRuntime.o",
+      "sha256": "bf6ac25c5bda97cde5ea35832392b3c541c95ec929a4f5fcb52549ecaca82a37",
+      "bytes": 119592
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/SynapseLive.o",
+      "sha256": "bbad2d0d066ae0c2ec46d44ed51b84dfd5eb5b806a096ecf05939341d3056921",
+      "bytes": 59784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/SynapseRecommend.o",
+      "sha256": "3d5b4dc9087301451bd0f5a45bd4b3922531824906a2fb226901bca397f6e8d6",
+      "bytes": 340640
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Warm.o",
+      "sha256": "5fe10c9d3e0eddc861974097598086f62b5c77f872185e5ffe0ea9509c937493",
+      "bytes": 367312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/WorkInference.o",
+      "sha256": "52a830a2d4ad318afef358764398b9d634c68c7e65ce034afe96241aa9e236f4",
+      "bytes": 78392
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/deferred-work-20261024/Worker.o",
+      "sha256": "372c51b2db36fafa10349178ba6fd1f4c86a9f60c1537281b7c35ccf7c82068d",
+      "bytes": 414936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/batched/WorkPostings.o",
+      "sha256": "dda2eca4003b1189a362f804de390c6977bda4a4c35fcc19ca2d22c34df1ddff",
+      "bytes": 212456
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/profile/DiscoveryCounters.o",
+      "sha256": "12f5cd53c25071300b8e2d487e121cbcc14c858e0a3e4b6e5d4e5e8094d98b7f",
+      "bytes": 52896
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSource.o",
+      "sha256": "d9f11102cc22c3d923c1e0c9735aac8e0d3f5334308e17f4b05d2cfc2d7d2308",
+      "bytes": 381472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourceCache.o",
+      "sha256": "e3bcad22c26ca4fde65a2f338b70c096a964233e5e37806359fdfee682f7ca0e",
+      "bytes": 183408
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourcePacket.o",
+      "sha256": "d8103935844f5dad70e41410c8e1727819d3fd809a40a6a6cc1048f7598e9513",
+      "bytes": 246952
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/CanonicalSourceRecords.o",
+      "sha256": "b6bfdbc4fa8d52a972537da604e3f70942a70c115b89d23ae29b06b87f0ba7f3",
+      "bytes": 138472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseBuild.o",
+      "sha256": "fe07a280834449f76c8b277a35890e2a8b5743568b7d54f76d46c5146b6c6639",
+      "bytes": 436512
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseBundles.o",
+      "sha256": "7d503c65f99985d67896dd3b0ac4367bc04881806b7ac51120ee30a1e53c5d92",
+      "bytes": 147928
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseIndex.o",
+      "sha256": "b97483e7732a5ad01d9f2ed0f42473125337dd7e8eec0cc11028808d03a0d294",
+      "bytes": 709472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseJournal.o",
+      "sha256": "ddf8ba386e28076336f786bc7f66d920a5ec428dd2f7f3a6210d89eee2568945",
+      "bytes": 1084112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseProvenance.o",
+      "sha256": "5881603f5e34d5bd2a145609c39cb6d09d7ce047b008cc7342065fe4ce7c9489",
+      "bytes": 340480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseTransport.o",
+      "sha256": "46bc2ed810f23dd49da674495eb2b73b03d436e9c15370df96afc3b862e0419a",
+      "bytes": 298536
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/receipt/SynapseUsage.o",
+      "sha256": "2fd94a09df2668035ae2d2812fe5de0861f9c2a6ddaa5b0438d44d6b7edefaf0",
+      "bytes": 479688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/hook-state-contention-20261024/Persistence.o",
+      "sha256": "d16d51089c3b1dfdd967adc68a0665b83edee1d934c6d2566ea20554517b3d09",
+      "bytes": 139072
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/incremental-projections-20261024/VectorMatrix.o",
+      "sha256": "cc5f681580eca443da4ac6878ba16ae5912c46f13a03bfc49f5bc50ce73cda2b",
+      "bytes": 227296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/lexical-reads-20261024/LexicalReads.o",
+      "sha256": "eab8ff080ebe3d333587991982cced3d2a4b5dbc81fdb1fd409717f0b7ee9f52",
+      "bytes": 195584
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/numerical-lifecycle-20261024/OwnedNumerical.o",
+      "sha256": "1c1623e59bed64a3fbd0685b0158d452c4017a448445d069d9968a841b0ba3fe",
+      "bytes": 327672
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/AdvisoryFrontier.c.o.export",
+      "sha256": "33dbce99989b78d2bedce0a419b040b95323a60b1a2aa162393a25a2cb27d5ad",
+      "bytes": 25592
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/AtomQuotient.c.o.export",
+      "sha256": "5fb03b09bf4c0cac1cd3a85073a06a8d75ff3b4584e6d134ff5373f34ada6be0",
+      "bytes": 8296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Blake3.c.o.export",
+      "sha256": "2b74781c10d3a42ea5aa385c9e7d64ac3c274c3e92b574c2106bd3b7dda5e61d",
+      "bytes": 58280
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CompletedAuthority.c.o.export",
+      "sha256": "7fe76f834cc3385186399091614508c0e587f04d9d18dbeffba5a9a356e300d5",
+      "bytes": 2704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Config.c.o.export",
+      "sha256": "a7037acbc82d3e9ece758b6a81be56df567ba15e81a9320069e49eb67ef5b3d2",
+      "bytes": 149384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CongruenceComplete.c.o.export",
+      "sha256": "e748aa55a8ca69929899bb3ec1df5bfb013757d4c673892496b60556f172f186",
+      "bytes": 31392
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CongruenceFixed.c.o.export",
+      "sha256": "c221a57ce9f8705fec1ab8dfdba61068dcaea83ed7417b0e9f98940fd53d7013",
+      "bytes": 2480
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/CongruenceSound.c.o.export",
+      "sha256": "b4f2edc67e60deb3630779d4040183e27e7f0a69a1b2c7ca7761464179e5be43",
+      "bytes": 3392
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/CacheReclaim.c.o.export",
+      "sha256": "d6f1d01a0c425580fe5f16892c89c4539d3155af8f7a8da858c54942545ad6a1",
+      "bytes": 44384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/PageMap.c.o.export",
+      "sha256": "71410867c65a71122a1a1ae3d0af302e2079317bc49a1fe2540d3c144b1f67a9",
+      "bytes": 412360
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/Sidecar.c.o.export",
+      "sha256": "d0999220a7489649c3670087fb5b8039f0713022d3653a73ec434b8ef354f91d",
+      "bytes": 70256
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DB/Wire.c.o.export",
+      "sha256": "ee6d6091c1f1729c2a54803f848bd0004c615f70acc92c72b34b768a8d397f25",
+      "bytes": 97568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DemandMemo.c.o.export",
+      "sha256": "5399a0640b84cfeaebb61d4aff5b60352f770ca514bf793cdc30b7bc3cd56c67",
+      "bytes": 65144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DiscoveryAudit.c.o.export",
+      "sha256": "c79495d3b1c9b8f7a291f26ac9c1ade483c1aeea910091692f12f98617b32571",
+      "bytes": 139568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/DiscoveryMemo.c.o.export",
+      "sha256": "afd473c6d694d6c2a12af288f290e1464f800fe17fe4a752d9f3bc09333b6af6",
+      "bytes": 17824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/EqualityDependency.c.o.export",
+      "sha256": "5b0442db84a57dec8bcb7f19b0c04cb6a982c1ac32c65e3adc33134056d8d8cc",
+      "bytes": 19088
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/EvidenceReplay.c.o.export",
+      "sha256": "407031589ef296e909756dda8dd61dc4c31a5eb647321c2b6c15ee7023921f82",
+      "bytes": 63952
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Extract.c.o.export",
+      "sha256": "00b0fbe7281754591f99d4e802278fe407a0744bd3c3710183a0e62cc5b9589a",
+      "bytes": 117656
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/FederatedSearch.c.o.export",
+      "sha256": "c8c5163789188f9a26d8e28f4db2bc39859a29d88d3ec47abc748e5e6a485e75",
+      "bytes": 181688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/FileSystem.c.o.export",
+      "sha256": "e64794a02ee6ea41ee5cde581a465909906ee58c95da2b568d7610d7e7c2e412",
+      "bytes": 104648
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Frequency.c.o.export",
+      "sha256": "fe69d31a15250f12b347c83ccba64300712fc306e3da6f10735f4e1565ce7bb6",
+      "bytes": 38696
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/GeometryMemo.c.o.export",
+      "sha256": "857f20aef5a1c7ae8da2c4b15b15a4afde76f250b8439c226c8082e6137e203f",
+      "bytes": 123704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Graph.c.o.export",
+      "sha256": "6673bc5677ae879786ddb433a5d89222dd16e58b0ddc95c5d2821196cd77c08f",
+      "bytes": 28256
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/GraphCodec.c.o.export",
+      "sha256": "ef352a69388827117d3edfb6c58ff3d3b441b2354d989f224fede6d900e985b1",
+      "bytes": 102080
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/HashDistinct.c.o.export",
+      "sha256": "6a9f581160b23397078c86f9f12f7fe4a249defa061d689d420db3f2a348edfb",
+      "bytes": 10624
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/IncrementalQuotient.c.o.export",
+      "sha256": "f755c551d88e06e98d89530725afb6a1770d655c9bc55c21f46dc0569b932198",
+      "bytes": 18024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Lifecycle.c.o.export",
+      "sha256": "76704ed414fe5d34a2732562809871bf3767151ec5a23e31c2baeda37dcde316",
+      "bytes": 24128
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/LogicalText.c.o.export",
+      "sha256": "208f47b6a91131c3e94cc3a0cc4d7839053a35cb069b1972199fedfc24ff94b9",
+      "bytes": 134536
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Matcher.c.o.export",
+      "sha256": "2e3038ae037ca87fc43e280019d2affcbe38816e8a8574810c079ae7cf75620e",
+      "bytes": 524624
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/MiniLM.c.o.export",
+      "sha256": "0dccff311203255c95d9f83a34a3b7e10c0441c0c6e74e5403f2892d11993973",
+      "bytes": 50504
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Partition.c.o.export",
+      "sha256": "6da18973f4e4d1775bc9b909fcb5df14c6f7f5ddf064487af5a5f64b36f11e0c",
+      "bytes": 5208
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/PartitionIndex.c.o.export",
+      "sha256": "06a8e4888b314ce42367fbe537608ab0f8a15c87fe7e12651f2917bb1aa5431c",
+      "bytes": 2472
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Paths.c.o.export",
+      "sha256": "28ef4cc55cbc031f30fa90d10fc78244a0eabbdd48b9e46a284c5e249f8c8f8e",
+      "bytes": 10328
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Persistence.c.o.export",
+      "sha256": "adde938803e024553d94394004abe0e657d828d13c69bb2da444e5bfd0e8a862",
+      "bytes": 81136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/PluginModel.c.o.export",
+      "sha256": "a67e34540c8ad3f74c30ad602a12099ce2e6d86e4fcfabac2e7d37c5dfcc48ef",
+      "bytes": 556800
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Quotient.c.o.export",
+      "sha256": "28effa1547cfb45e90513cf8d6b48b0e3c3a5966466a84a4de193d12682ff245",
+      "bytes": 136104
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/QuotientAuthority.c.o.export",
+      "sha256": "10e0c7b212872e85ef0fce7ab26867ec8ef179ed327ee48e9be50b1ca5413137",
+      "bytes": 3976
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/RankMemo.c.o.export",
+      "sha256": "5d792d30b75209207f636702deb0aeae6d559f57a83d760f89aaf53d94b1f8b2",
+      "bytes": 98800
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Receipt.c.o.export",
+      "sha256": "90c691218e416a7f763393a5f0b1f6befa86800c61d7aff0796765e76f6cdb2d",
+      "bytes": 15416
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Relation.c.o.export",
+      "sha256": "9762de5c5c5a56d82edef95ea0590608f9ff44512423a8fa0fe6ccfb46b8aa4d",
+      "bytes": 41064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SaturationMemo.c.o.export",
+      "sha256": "47c56cb3ac96846c2e9e0be3698670cdb66c684482197be624a3bdf1885fb55e",
+      "bytes": 74464
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SearchProvider.c.o.export",
+      "sha256": "cde22538916262e5d2a5e3edbfb48c20a83c8177a71bf2c1a4192ebcfb20d17c",
+      "bytes": 446128
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SearchRank.c.o.export",
+      "sha256": "e5de5b469b6d00c613c64fed41178e96a4dd9f57637a4ddc5ae95712b6ef31ea",
+      "bytes": 75608
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SearchUnicode.c.o.export",
+      "sha256": "b035ac0f61f735d82ec39d6eea5e9c25095f34dd2573614c2fe85a984bf6ac89",
+      "bytes": 435896
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SelectionAudit.c.o.export",
+      "sha256": "0bc0a8c03101a8c403cbcff32746320515ed2381ef3412a0c4e7990b129fda7e",
+      "bytes": 581112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SelectionDependency.c.o.export",
+      "sha256": "11076b2a4ab0808f2f45e3f114e5ab7b4f0a1bf270c4151564036ef57a69a5e3",
+      "bytes": 43168
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SelectionReplay.c.o.export",
+      "sha256": "2ac3e317c8e35c60795595fa222f067f4ec025404a3efc84cb4d7053bf22aef2",
+      "bytes": 27344
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SemanticMatcher.c.o.export",
+      "sha256": "806217a08f55bc64ccc2fcfe2ac5d23134c52bb081460caeb4a6fd651e067790",
+      "bytes": 202968
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Sha256.c.o.export",
+      "sha256": "eadd3588e20d399f18808e9330ad40e20227884f11558df6bae41762e8e345be",
+      "bytes": 40552
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SourceObservation.c.o.export",
+      "sha256": "32bac949870d5e13ffd1bb465ae60c9d793b131e516c6f22847b15aee17a9ed4",
+      "bytes": 216312
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/SurfaceJoin.c.o.export",
+      "sha256": "56b40bc6ff1c3876374c77de8fc61f4a1b1d64c0c49d4eb44238c93b770a0027",
+      "bytes": 39096
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/TextParts.c.o.export",
+      "sha256": "70c26c26c2136e52ed4f9b2ce4ee6e77ea6ccbb620e527dd51b7a171026438ef",
+      "bytes": 10528
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Union.c.o.export",
+      "sha256": "863cd8fd36f65437db4fe481d35050e275e8a8ee669dc9849016f9dc9e2f0e28",
+      "bytes": 13024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/Eggshell/Value.c.o.export",
+      "sha256": "be6d8f0467431c232abf4c0ce934587b8d33623d2c32e235a3aa981c7a55901a",
+      "bytes": 61464
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/BudgetPlan.c.o.export",
+      "sha256": "501f09d9ec43cd4b3876fe3a9c01b94654fc4e1f1a6e4eee06555323d7f6897d",
+      "bytes": 7440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/DirectoryReads.c.o.export",
+      "sha256": "2d3581a6b9543ff3f3c9b66cea2d70a85e79fd4031be447e52d67d2dc34d541b",
+      "bytes": 23080
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/ExactLazyMemo.c.o.export",
+      "sha256": "fee34e57bce9f8d7f4ed752e6297cd9881b22406fc4142b89f3728cf6d04c113",
+      "bytes": 15520
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/ExactMemo.c.o.export",
+      "sha256": "3fc968662f70e749c49b39b90d0f172141777bb0757170764ba3e63264ca121d",
+      "bytes": 9096
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/FirstIndex.c.o.export",
+      "sha256": "8741beb2b70b284c63d78ef93cd445ffeb592ac0e234b0c447143492f0563f6f",
+      "bytes": 20152
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/FocusWindows.c.o.export",
+      "sha256": "c584d9ff32ce10f62e3b5ac7e6168f928bf8ab93ddcdac2935a2385a2e06f9c7",
+      "bytes": 6608
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/IdentifierParts.c.o.export",
+      "sha256": "902c6498c386bfa9af572052543c9bb2f67e8645c18782ee243ac856fae2c63a",
+      "bytes": 11320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/IndexedCharacters.c.o.export",
+      "sha256": "c615b2bcf825ef3916947e9e8df7d6a1dd051eddddda52d901e6bb4228b3d0dd",
+      "bytes": 8008
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/KeyedOverride.c.o.export",
+      "sha256": "9f74c3df31418d803fb23c6f6529dfef67cbada85dc485c70cff37ec88af5afa",
+      "bytes": 13024
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/OwnedRows.c.o.export",
+      "sha256": "5a449b999fc7cbe9174266d9c8dee0ba6bba6732c69d19279bfe96273253a339",
+      "bytes": 9256
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/OwnerProjection.c.o.export",
+      "sha256": "158cf9fe9486eb13fc54f7331e2853efcbbb136714044de10e94e6df4a84eefd",
+      "bytes": 107936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/PairDecisions.c.o.export",
+      "sha256": "78fb5c6833051ee5e4da446176a6e3958b5bfaa1c8e60d34f48b36ac0250fdde",
+      "bytes": 7784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/QueryLiterals.c.o.export",
+      "sha256": "5225a9a6f3a6fb72f669e73beb1345c19772ca7d213e9430e5aaa770968bc70d",
+      "bytes": 27992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/RetrievalCategories.c.o.export",
+      "sha256": "07823aabd5217b9d23638d05534ba158407693e5e3dad634b7c1a45b95f6aea8",
+      "bytes": 246512
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/RetrievalGrams.c.o.export",
+      "sha256": "cbb85bb14dbf6a51ac1d17554890a9ff7ff4d9371c7827fca93d90e51bfecd5e",
+      "bytes": 84176
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/RetrievalIndex.c.o.export",
+      "sha256": "0fb7c384728c6a8dbd580d144eaa95adbce1611e202f0e932a3baf293b59e49d",
+      "bytes": 269600
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/SharedCoverage.c.o.export",
+      "sha256": "1fe467a5195343df8bbf74f52ccac66c60c219397c5657f2cddc0941d47fd302",
+      "bytes": 68064
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/SourceWindow.c.o.export",
+      "sha256": "03d64ae14dc95e44c4c4cd5fce843ac4ebf6acebadf44ec257cfe2bd8f7a7303",
+      "bytes": 4104
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/ir/tools/WindowCentroid.c.o.export",
+      "sha256": "b3ddc5d4068698195e6d2efd3a36f4ee17c64629c6c90fe30faf9c2ae4191a50",
+      "bytes": 44152
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/omitted-range-locators-20261022/checkout/.lake/build/lib/libstorage_sync.a",
+      "sha256": "261602862d9773ad01d379d0e01c4aa261be784907c31f45d039c658f27c9743",
+      "bytes": 27264
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/parallel-hook-resources-20261023/shared/native/DaemonWire.o",
+      "sha256": "7b92d8d4bea65115e9b84d6e4744a6d61b7fbe6de6dfc01c63321632a7444104",
+      "bytes": 98704
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/prepared-domain-20261024/CandidateDomain.o",
+      "sha256": "ab359fdd1814e6902458eb6dae1e59ba5026baad31f2a7f44b247bec91e149b2",
+      "bytes": 446424
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/prepared-domain-20261024/GraphStore.o",
+      "sha256": "0978dc629bd3aaf70bdc16396f20252b6b9510a5f78af757581868d9c96c1c59",
+      "bytes": 1422136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/AppendUnique.o",
+      "sha256": "d985c2a1ea4019c54655bed46fd40defe81ec358eff4377a1fe0884e5205989c",
+      "bytes": 14240
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/Handoff.o",
+      "sha256": "b0da6acdc09073da77097c9e1d0d4a1d34ce13ef0b286d6df3d502875f40de84",
+      "bytes": 5077384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/Matcher.o",
+      "sha256": "a5c90c3a56c8b3fd00663fcde91fc0ef6641a51a9a917aa7ed8ef02f75166ac8",
+      "bytes": 995568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/PreparationDebt.o",
+      "sha256": "b7bdfafa18c5d98fc8d647e068e9f8375163205e3f0559fada8f8c392a6603e2",
+      "bytes": 74016
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SearchProvider.o",
+      "sha256": "7085107a9bb0708908b44705a44c4cdb02d408f49ddcedf796bb95b11141e228",
+      "bytes": 878144
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-delta-warm-20261024/SourceDelta.o",
+      "sha256": "c239a3f88e6fdc1fa5ae1934a9c975b329ea3eed500d9ebc35c5df543205a983",
+      "bytes": 69328
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Deadline.o",
+      "sha256": "3bfff434979e7b78915dff0517ee783577066b8e90c299dd539eeabc88c55339",
+      "bytes": 3920
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/JsonScalars.o",
+      "sha256": "debeda2728178a0f65faca09fbdd361749136f7dcc8b7834b65d52c169f37a42",
+      "bytes": 138992
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ObservationAge.o",
+      "sha256": "7bf1b87fe204fde7385128dda1ac08e69fbd8f866e74e8fa937de8400831f949",
+      "bytes": 60936
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/ObservationContext.o",
+      "sha256": "688c20e035e88bc582cfca9d04b3cbeb85432204e0983772fa7f5eaf628d3d33",
+      "bytes": 230328
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SourceEvidence.o",
+      "sha256": "bd350e759a1fef68bc61c15512e8551d791e56bf96986bfa27b631aef204d2c1",
+      "bytes": 637320
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseExtraction.o",
+      "sha256": "82e35bffd0733b080d7084bb258abe7901f6b6c38a6d7fcfcd5fca28ce075d22",
+      "bytes": 353352
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseQuotes.o",
+      "sha256": "17d765ac9c2a542685de1768e04785fa256c1ca1a07eae718cfd37dc6769192d",
+      "bytes": 17240
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/SynapseSource.o",
+      "sha256": "95f1066b64d890e151421faddda062182fcc4933ebb235fcac26f4f3b2d3cce2",
+      "bytes": 511336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/source-precision-20261024/Synapses.o",
+      "sha256": "5274cf19fe4c61fdecacf7f847c0be84bf601c1234c0c3a1dd2016ab3f953a6e",
+      "bytes": 1357928
+    }
+  ],
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/eggshell",
+    "sha256": "8bee8e81af1e4f8cbb5862314ccf7e3f4ac887607bbb93363efacbc604982d4d",
+    "bytes": 115826368
+  },
+  "referenceRuntime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/authority-policy-20261025/eggshell",
+    "sha256": "06240233e911e8ff5eafb8bb069c5026732b809485b2bed88361c3f5b08756dc",
+    "bytes": 115826032
+  },
+  "retiredHelpers": [
+    {
+      "formerPath": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/ProjectionAudit",
+      "sha256": "66db6c0cf898a803c189a9c4c2eb0618b2b0aa7d3ead83ca511b27958aa485cb",
+      "bytes": 108470416,
+      "removed": true,
+      "reason": "owned terminal rebuildable helper; source, C, objects, link inputs and raw evidence retained; no archive"
+    },
+    {
+      "formerPath": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/ReferenceProjectionAudit",
+      "sha256": "3843c37f91cd263a9f8ed90076124b87e04f1d6b6a1dcead2b284e0027c9fe8b",
+      "bytes": 108469648,
+      "removed": true,
+      "reason": "owned terminal rebuildable helper; source, C, objects, link inputs and raw evidence retained; no archive"
+    },
+    {
+      "formerPath": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/HookScaleRun",
+      "sha256": "1b4c59047f09c89e9950a51690cd30e8f3ccfaa1d828f905a1c9d83949a49ac6",
+      "bytes": 102733440,
+      "removed": true,
+      "reason": "owned terminal rebuildable helper; source, C, objects, link inputs and raw evidence retained; no archive"
+    }
+  ],
+  "callerCodeCheck": {
+    "oldProjectionCaller": false,
+    "fastProjectionReached": true,
+    "oldPolicyClosure": false,
+    "caller": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/Handoff.c"
+  },
+  "controlled": {
+    "smallCases": 32,
+    "realCases": 4,
+    "allHandoffFieldsEqual": true,
+    "allBodiesEqual": true,
+    "completedSmall": 7,
+    "blockingSmall": 5,
+    "positiveLocalUnion": true,
+    "rows": [
+      {
+        "case": "broad-union-first",
+        "referenceMs": 9271,
+        "candidateMs": 9210,
+        "bodyEqual": true,
+        "handoffEqual": true
+      },
+      {
+        "case": "broad-union-continued",
+        "referenceMs": 9211,
+        "candidateMs": 9314,
+        "bodyEqual": true,
+        "handoffEqual": true
+      },
+      {
+        "case": "broad-retrieval-first",
+        "referenceMs": 28330,
+        "candidateMs": 23039,
+        "bodyEqual": true,
+        "handoffEqual": true
+      },
+      {
+        "case": "broad-retrieval-continued",
+        "referenceMs": 28460,
+        "candidateMs": 22953,
+        "bodyEqual": true,
+        "handoffEqual": true
+      }
+    ],
+    "replicationsPerCell": 1,
+    "normalGainEstablished": false
+  },
+  "native": {
+    "samePinnedSource": true,
+    "pairsPerArm": 1,
+    "cases": [
+      {
+        "phase": "first",
+        "checks": {
+          "sameQuestion": true,
+          "sameBody": true,
+          "sameStdout": true,
+          "validStrata": true,
+          "replyComplete": true,
+          "sameDisposition": true,
+          "sameAckCount": true,
+          "within30s": true
+        },
+        "referenceMs": 19332,
+        "candidateMs": 17849,
+        "bodyBytes": 17803
+      },
+      {
+        "phase": "continued",
+        "checks": {
+          "sameQuestion": true,
+          "sameBody": true,
+          "sameStdout": true,
+          "validStrata": true,
+          "replyComplete": true,
+          "sameDisposition": true,
+          "sameAckCount": true,
+          "within30s": true
+        },
+        "referenceMs": 17115,
+        "candidateMs": 16463,
+        "bodyBytes": 0
+      }
+    ],
+    "referenceRuntime": "06240233e911e8ff5eafb8bb069c5026732b809485b2bed88361c3f5b08756dc",
+    "candidateRuntime": "8bee8e81af1e4f8cbb5862314ccf7e3f4ac887607bbb93363efacbc604982d4d",
+    "p99Qualified": false,
+    "normalSpeedGainEstablished": false,
+    "tokenReductionMeasured": false,
+    "continuedEmptyReason": "same question after confirmed ACK, not incomplete search"
+  },
+  "nativeCacheStrata": {
+    "checked": true,
+    "cases": [
+      {
+        "arm": "reference",
+        "phase": "first",
+        "query": {
+          "absent": 1,
+          "hit": 0,
+          "unusable": 0
+        },
+        "source": {
+          "absent": 0,
+          "hit": 10000,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0,
+        "cacheMs": 5292
+      },
+      {
+        "arm": "reference",
+        "phase": "continued",
+        "query": {
+          "absent": 0,
+          "hit": 1,
+          "unusable": 0
+        },
+        "source": {
+          "absent": 0,
+          "hit": 10000,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0,
+        "cacheMs": 5305
+      },
+      {
+        "arm": "candidate",
+        "phase": "first",
+        "query": {
+          "absent": 1,
+          "hit": 0,
+          "unusable": 0
+        },
+        "source": {
+          "absent": 0,
+          "hit": 10000,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0,
+        "cacheMs": 5173
+      },
+      {
+        "arm": "candidate",
+        "phase": "continued",
+        "query": {
+          "absent": 0,
+          "hit": 1,
+          "unusable": 0
+        },
+        "source": {
+          "absent": 0,
+          "hit": 10000,
+          "unusable": 0
+        },
+        "sourceEncodeUs": 0,
+        "cacheMs": 5121
+      }
+    ]
+  },
+  "profile": {
+    "durationSeconds": 7,
+    "startedAboutSecondsAfterLaunch": 1,
+    "processingThreadSamples": 5198,
+    "profileMode": "ordinary local-Union mode at beginning of the first case; helper context preparation may be included",
+    "observedFrames": [
+      "NodeReader.workOrigin",
+      "WorkView.compile",
+      "GeometryMemo.prepareUsingM",
+      "GeometryMemo.prepareRanksFromM",
+      "DemandTopology",
+      "original PageMap payload/hash reads"
+    ],
+    "allProfileHandoffsAndBodiesEqual": true,
+    "profileTimingsExcluded": true,
+    "comparisonWithPrior74Percent": "different mode/window; do not compare fractions or extrapolate to total hook latency",
+    "raw": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile-stacks.txt"
+  },
+  "originalSources": [
+    {
+      "source": "10000",
+      "unchanged": true,
+      "files": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.pages",
+          "sha256": "289a7fee99ca10399f0174ff6025e8a4ac347d5148b842f88387b441a7722556",
+          "bytes": 55931677
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/head",
+          "sha256": "c450dbdc6cbd5b051cce8a4cb5b1828599bf6beb7eb19119bb126d0a8872d1f7",
+          "bytes": 397
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-10000/source.egg/writer",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "source": "50000",
+      "unchanged": true,
+      "files": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.pages",
+          "sha256": "e3b84e42a71b4e993c4e306585c75059312d4ab8501b4b0a56c4e9840f9ee926",
+          "bytes": 432031994
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/head",
+          "sha256": "4888fa698fd0a44d78db7b57dd040accbce72ca2d97bc869f1c837a54a538d53",
+          "bytes": 401
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/hook-scale-20261024/windows-50000/source.egg/writer",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      ]
+    }
+  ],
+  "guards": [
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build-2.guard.json",
+        "sha256": "afb67190e2126ba5006eaf0470966b9f00a024898fbdc33c4e035d5a6848ba5e",
+        "bytes": 1243
+      },
+      "exitCode": 1,
+      "peakRssKiB": 1301088,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build-3.guard.json",
+        "sha256": "d691d967ecf928d9190c6f74be4e401400ea01ec05bee4d67370cdca35997e0c",
+        "bytes": 1245
+      },
+      "exitCode": 0,
+      "peakRssKiB": 2776272,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build.guard.json",
+        "sha256": "a79e783592e16e8e957db81ee76f1af49318ba7db00b4cbc97dfa4da7d09aa06",
+        "bytes": 1241
+      },
+      "exitCode": 1,
+      "peakRssKiB": 1297680,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/controlled.guard.json",
+        "sha256": "e67531475023ebc03a9b9204385a3b9cee8da28a7d19a2db5e3b16430d374eee",
+        "bytes": 1173
+      },
+      "exitCode": 0,
+      "peakRssKiB": 419296,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate.guard.json",
+        "sha256": "255d1dfa6c6672795882167b02cb84ff2f40aec8d3c45de6073a4e12e3b25b5b",
+        "bytes": 3467
+      },
+      "exitCode": 0,
+      "peakRssKiB": 1936416,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference.guard.json",
+        "sha256": "90cdd43937742141274823ac7158ba43d9bab1f7f402a95087e83f9b5b738ff5",
+        "bytes": 2784
+      },
+      "exitCode": 0,
+      "peakRssKiB": 1603536,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile.guard.json",
+        "sha256": "52350e30ea4a4c3746bdb89d839a02c87cfd1486f564ed40e4b94f015477ea55",
+        "bytes": 1165
+      },
+      "exitCode": 0,
+      "peakRssKiB": 419776,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/proof-2.guard.json",
+        "sha256": "fe193ae2a14ec9c1c66ceb19adf1cbbc9ce491e866a8c09300f6ae4e2d4253a6",
+        "bytes": 1297
+      },
+      "exitCode": 0,
+      "peakRssKiB": 981872,
+      "survivors": [
+
+      ],
+      "triggered": false
+    },
+    {
+      "artifact": {
+        "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/proof.guard.json",
+        "sha256": "5e2f855fa11c414731da83a9076f81c7e01d83616ab0057f7e1578e13c3a4c49",
+        "bytes": 1297
+      },
+      "exitCode": 1,
+      "peakRssKiB": 988656,
+      "survivors": [
+
+      ],
+      "triggered": false
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build-2.guard.json",
+      "sha256": "afb67190e2126ba5006eaf0470966b9f00a024898fbdc33c4e035d5a6848ba5e",
+      "bytes": 1243
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build-2.log",
+      "sha256": "49a464edbbf6008093e864be173b56a5d2407f89cc33cdc45e55b9554f82a4a0",
+      "bytes": 2112
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build-2.settings.json",
+      "sha256": "5a8b540a31b85e9b40fc84a8f0cde07c88daa9efae016893aa7a132b4cdf6bd4",
+      "bytes": 447
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build-3.guard.json",
+      "sha256": "d691d967ecf928d9190c6f74be4e401400ea01ec05bee4d67370cdca35997e0c",
+      "bytes": 1245
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build-3.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build-3.settings.json",
+      "sha256": "0ddbbceceb174f9beab60c73f78c4c87c06b1bfc26cac0632a8a151b4d0d4270",
+      "bytes": 447
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build.guard.json",
+      "sha256": "a79e783592e16e8e957db81ee76f1af49318ba7db00b4cbc97dfa4da7d09aa06",
+      "bytes": 1241
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build.log",
+      "sha256": "1b4c05f301db4d91d9d0d1cec4ded3f1428517e327b91303eb47cdf5e2016e9f",
+      "bytes": 366
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build.settings.json",
+      "sha256": "e30977d92ab96b3beae5ac5e1ecb7dbbbe61e8bf3c6c3544ce7cc4a9548bcfc4",
+      "bytes": 445
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/build.sh",
+      "sha256": "1ed5a36276ab67faf5aee93aad2468c00081ab7044145355df98292e769ded0c",
+      "bytes": 2419
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/caller-code-check.json",
+      "sha256": "720e8535e25ebdabd02cbea7724441ad4878ffd66234be8f9902a1fe8d33b992",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/contract.log",
+      "sha256": "b9e7a24b242210c697ffaed05c4fd9d9f34e8950b084e8e570c7da5b25928784",
+      "bytes": 77102
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/controlled-summary.json",
+      "sha256": "ae1e8b3a0c4124477b2a3435888e5504760a5f9ee827829d5fddbf3881093274",
+      "bytes": 582
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/controlled.guard.json",
+      "sha256": "e67531475023ebc03a9b9204385a3b9cee8da28a7d19a2db5e3b16430d374eee",
+      "bytes": 1173
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/controlled.log",
+      "sha256": "3f5e54ca29183e78e3738eb9f4874569debc8911c0fdcff26f4be80b3cf0ab16",
+      "bytes": 247
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/controlled.settings.json",
+      "sha256": "fcc779d1237e496c372b54c52611ff8749f1e733c1a4a758914fbfe5fe7e58b8",
+      "bytes": 446
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/controlled.sh",
+      "sha256": "72f530cfbd98e3cfd2efb7a8846077bc04b1d0ce54d0fe7181345380253f64f5",
+      "bytes": 1126
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/final-inputs.json",
+      "sha256": "81719e126be67999f357adc8d8b88cb14c15826ba10fe9a8b112c19ebb5cdbab",
+      "bytes": 2109
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/helper-retirement.json",
+      "sha256": "6f9b3dab998eecba59be2fcc581df7dadcc071e85167ff060a0256ec977e730a",
+      "bytes": 1205
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-breakdown.json",
+      "sha256": "94abb5506a6f56770403848db62e51b5582dc82375f58f7ac9572aad2efb6aa0",
+      "bytes": 17641
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-cache-strata.json",
+      "sha256": "cd18c63a3c18f9e11b5aab7f075bf24d142314be60729a646b1378aa24edee7c",
+      "bytes": 1211
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/config.toml",
+      "sha256": "1fe6e3935a4c56d4956102269e26bcfb43c9c41aa03ca1038f9f3de5fca6d37e",
+      "bytes": 296
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-continued/result.json",
+      "sha256": "94ecbd51eade36d683b26f07e5631ee931a88b2c4a021236664ce7a5a9534cfa",
+      "bytes": 4269
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-continued/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-continued/stdin.json",
+      "sha256": "f3b9fd7316daca7fb8301ed1c95be1a7b250a8c21f9411a367e8c9746f01dfde",
+      "bytes": 449
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-continued/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-first/body.txt",
+      "sha256": "5c7a5f72c607710135747e78c438e89e9eb86351fb1fbf8df43772277a8cb264",
+      "bytes": 17803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-first/result.json",
+      "sha256": "08780b6e5222cce9d714e4cc52ab24328a31276205b9ce2177c889946372fa2c",
+      "bytes": 23443
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-first/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-first/stdin.json",
+      "sha256": "2832b8e578602a0cc1d584e0df649476766b46a594ff51b77ca2bc90ac77ffe3",
+      "bytes": 445
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-first/stdout.json",
+      "sha256": "439687478242a4d77d155c30d4607fd2eece1a6760fb2f13e5b3fa5757aa619d",
+      "bytes": 18137
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/pair-0-shutdown.json",
+      "sha256": "d2f82f6be6cc293a1579f22d1639d6752808908c6e4706aa71eb335e5e939118",
+      "bytes": 113
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/private-warm.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/private-warm.stdout.json",
+      "sha256": "0b65b2d179e9fa56e59da8858a253e2e4b2b724e42652d4f8a3ecf0016046794",
+      "bytes": 3799
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/repeat-warm.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/repeat-warm.stdout.json",
+      "sha256": "1775d24431e4a69936bc7373f71342bf7d3125de6656781a79787e0c740df376",
+      "bytes": 3799
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/results.json",
+      "sha256": "b76ca6fba7ef48c38c3e0df1c208cdd65eef029427adee9a18672b0dd9108f8c",
+      "bytes": 28010
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-10000/summary.json",
+      "sha256": "9a81958061496742e82f4e31f348b1e7ef780ee5b22ce71407ed2aceeee1cddb",
+      "bytes": 29114
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "ced5b720e4aec465513c0cf3be57797b6b986bbcf80ccb63d859e9a318215e6f",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/canonical-source-input.json",
+      "sha256": "6c5049bcdb724013ae24023e7f3d0666c11df8f494c70380f6eacad5d6825aae",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/discovery-counters-2710517708632583.json",
+      "sha256": "ce8a4cc7c779c378fa9581a53f5b97904ee82af772c13db6bbbd9c195147a83e",
+      "bytes": 674
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/dispatch.json",
+      "sha256": "cdb104c721abfb2a09003d03415323eb687a6999395132fa3329f400706d3790",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/ingress.json",
+      "sha256": "90195d001f936a0cc96cb178db5b8c3a6663dcbbded1e1e68cc5f39ab10115b6",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/lexical-reads-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "df7ba74c041d00a19cc77a3d759dc5758c3b0b6a216f20bbe02879a74008377a",
+      "bytes": 343
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/numerical-77970-2710503512636250.json",
+      "sha256": "65f3149e7754df682f11720cd6d6dc222b01574280a8b47a392211027c097ae4",
+      "bytes": 1121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/numerical-78100-2710517887873791.json",
+      "sha256": "29737bcc7f37a2cb0b4292bc9ea992f058176e3e3eb549443559f07163d56b8b",
+      "bytes": 1075
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/published.json",
+      "sha256": "4be61c6bd9a3d50445a179486b7c9476cd0bfca1d3d347991b5537ed3cf8cc15",
+      "bytes": 336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/request.json",
+      "sha256": "47138524565c9c85dbd59bacfc6ccd06b7d3a7257a488ae07eebbc3973de6365",
+      "bytes": 279
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/search.json",
+      "sha256": "21cee28fd7f845e07cb0fd5213f42d8b16acc6f38db06c3667c0065179067a45",
+      "bytes": 588
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/synaptic-delivery.json",
+      "sha256": "4ed8e68afdc24b7e935df34dd4d02673a5fa35ba1d646380c7a0618ccf855d4e",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/40c9de7467d960a9efc97715230b705a97890f5fffa0dbbe76b6ca0887b1280c/transport.json",
+      "sha256": "6b105b4cc766d5d9906601b4b1246391ae4cf0e5dfafc91d8d79a4fb0a8974f5",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/ack.json",
+      "sha256": "a9200e284129b3792ce65cda0112e67c648a82f046c5b1edc35624789e162604",
+      "bytes": 178
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "fbe244e6fe54fb6aeacb00dd3fb607fa98d36b06056603c901644e29d1d5abe0",
+      "bytes": 388
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/canonical-source-input.json",
+      "sha256": "513eb762e629e651e28131b1ff830302aedf007251be64910585c8b4fe527f7f",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/discovery-counters-2710501201508375.json",
+      "sha256": "6f9897c419cad7e7c2778e62b912bda9e6754eee6aa1b21fa3cc5ad81373a7b2",
+      "bytes": 674
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/dispatch.json",
+      "sha256": "90c4906febb629fcac3ec95db1a7588fef8c4c1433fb871188b257d34fc2a48c",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/freshness-2710501710832875.json",
+      "sha256": "a4dabf0724d68778c88196e1f430ebff6a51e00b2d45269a159d62b1739239c1",
+      "bytes": 1204
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/ingress.json",
+      "sha256": "54b6f1839310debf8623822f2bf8afd7a6cd961a1eb4e5bdde99681f6995f49a",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/lexical-reads-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "7acb3d188ce511518822dadc9d6af50321589dbee056b56cc254debe75b46434",
+      "bytes": 343
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/numerical-77771-2710485806788708.json",
+      "sha256": "b73de0d3011ead138cc13e0dc2c6214f72ecbdf948fa3ad9280f8a5ca555361f",
+      "bytes": 1132
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/numerical-77943-2710501381111541.json",
+      "sha256": "7a7513a6fe5ad0142709c66007b0d247a112b9ea80e53dfa0f070f1b3c71ca1c",
+      "bytes": 1075
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/published.json",
+      "sha256": "d13fb0f6fbd3718962e7705d8f72a5dcf209b50a63303a3971205de3e03797eb",
+      "bytes": 18735
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/request.json",
+      "sha256": "2aad5ee24bf4ef01a0a771013d29ee3e19704853ea8aadaeb627fb56edfc9882",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/search.json",
+      "sha256": "db215e83f063dbd05e3e66bca58105001b14eb8d0009933f173cad4989b4c1dd",
+      "bytes": 727
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/synaptic-delivery.json",
+      "sha256": "ce1fa67bbb870aeafeb4ca2224ae66e662f22b607ef23b7ffb7c6c0ed4c5f7cd",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate-data/receipts/cb5de087908228c9db7dd775f3163f22d2a293ff12e8707d7a046880bcf4e3c3/transport.json",
+      "sha256": "a2938584d11980ebcd9e9abdfd336e9282620dc356b5f96b1d7d1a6cbaa2b718",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate.guard.json",
+      "sha256": "255d1dfa6c6672795882167b02cb84ff2f40aec8d3c45de6073a4e12e3b25b5b",
+      "bytes": 3467
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate.log",
+      "sha256": "09c1989976d85b27698f1d789ae1e7002c426c0bf26401f7576ad1f6421ca576",
+      "bytes": 133
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-candidate.settings.json",
+      "sha256": "5eff20c2a273825b732b5014e71015798f9c8549c1a14564b8f4747f63c447ef",
+      "bytes": 1189
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-comparison.json",
+      "sha256": "65f53e09a54bf6e8ae424b5901f5cec72f1ca1f8ce34f34426aa41d49ecd7cc6",
+      "bytes": 1189
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/config.toml",
+      "sha256": "3c6b103ef1f3ab79f676bf6a0f9ab68cfdfca0258b0a53a1c7cf214fcae726ec",
+      "bytes": 297
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-continued/result.json",
+      "sha256": "415ba6ad794f446e25740ded311ac11863618a432aa2b4914735f7c17d2733fa",
+      "bytes": 4269
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-continued/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-continued/stdin.json",
+      "sha256": "4133fada7257f06190d64b241624ee0051e1129ae7124630ef5629008dd232d5",
+      "bytes": 449
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-continued/stdout.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "bytes": 3
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-first/body.txt",
+      "sha256": "5c7a5f72c607710135747e78c438e89e9eb86351fb1fbf8df43772277a8cb264",
+      "bytes": 17803
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-first/result.json",
+      "sha256": "58acb463660411baf1cf75dda7718b022c8af1ac4f08b611ace5f262ffc8bdc2",
+      "bytes": 23443
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-first/stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-first/stdin.json",
+      "sha256": "ffdc5bc685935dc71af40ace77473fab5060b7dde3549740ba218697c468b054",
+      "bytes": 445
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-first/stdout.json",
+      "sha256": "439687478242a4d77d155c30d4607fd2eece1a6760fb2f13e5b3fa5757aa619d",
+      "bytes": 18137
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/pair-0-shutdown.json",
+      "sha256": "1c448b219793d8cfdf244bf33bd0ac9408b5c914c663f123196aa7afa3f4d088",
+      "bytes": 113
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/private-warm.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/private-warm.stdout.json",
+      "sha256": "9b1e997d9d221154caf87fde35da4140a788ad1d8aa61201bffe12513b0c8e5d",
+      "bytes": 3801
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/repeat-warm.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/repeat-warm.stdout.json",
+      "sha256": "c3a98d44e55ddedf800a552ab05b3a789dff0cfdd2ccfe6b1fbdc99b36102f43",
+      "bytes": 3800
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/results.json",
+      "sha256": "531586b2f63f7c7bc3162fb9f947eb8c0bef4581226c41fbb543b7080943a19a",
+      "bytes": 28010
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-10000/summary.json",
+      "sha256": "eeed8bd0448c8d4e0568de4f430887f2d3bc5a61e8fd1863ff74101e2282e9f1",
+      "bytes": 29115
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/ack.json",
+      "sha256": "ef16148b1c02775ae883e8b60ed827d53e701206741c1be477abf5d31ecc441d",
+      "bytes": 178
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "e91afe00ce3f2395c7d1362df7b6e54029471569b398dfec95a68d1a06063837",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/canonical-source-input.json",
+      "sha256": "9a841fcea2faa32cb27d08b1837fd742c6746b808b0f618ff30227496703a7d2",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/discovery-counters-2710380373357583.json",
+      "sha256": "3933f5d41559dd2184db84d3d71565cdd1f1821767620f8a9289d8288a1c5da2",
+      "bytes": 674
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/dispatch.json",
+      "sha256": "c8830e31d42996d86b21d3015e6e198a99dd2038a58266ea5748c57ab6245fce",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/freshness-2710380944648916.json",
+      "sha256": "fcdb8ea49ffb0f62cdfa06ae3dd55448e6ddd9105e17986ae0610977e185c43e",
+      "bytes": 1203
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/ingress.json",
+      "sha256": "f9c447056e89ae8045aff4e83e33cc133ff800d293287f9203c22bd9f4642197",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/lexical-reads-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "b889a15be1b5e572ae901f5836c0d8ac68c8a113f8d96c7bb2e29d685cbc352d",
+      "bytes": 343
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/numerical-76660-2710363728715333.json",
+      "sha256": "5f6566132af86b8cc189467681c207ff20ba3aa2daa76f400a740dc08f738dcf",
+      "bytes": 1136
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/numerical-76942-2710380570202166.json",
+      "sha256": "89cf2aefd031608e9c6e20b419dd4128df5595cec149f5787168add279b56b29",
+      "bytes": 1075
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/published.json",
+      "sha256": "89d74b2535af739aa75b7827001829c308f2f02cd7fe9b67118e6e370836de8f",
+      "bytes": 18735
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/request.json",
+      "sha256": "6de23b052609855e7006eb4b9cd990135788b73a8f3c7707b718cd529f2608f0",
+      "bytes": 275
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/search.json",
+      "sha256": "f05750710fd7e233c7aaf2fa42a1f10de945658da68d4145fce8702396694d75",
+      "bytes": 727
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/synaptic-delivery.json",
+      "sha256": "d9a2d83fe2d548a374b1b7b2a3cc8758242395fbde0317e5a090cd82d97f4305",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/a180d0141bbfc40efc11c35bde8cc2bd4c2e7895ce94d4ceb0aecb30c82fda91/transport.json",
+      "sha256": "03c84a726e0381e4976d10c66250bd0a03168f18574ea9401952e8e07ddeb156",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/candidate-domain-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "9fa2ee5f75c373e3ecff6bb168f0f5e885936f7dfda87e6f182a319c353c8139",
+      "bytes": 389
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/canonical-source-input.json",
+      "sha256": "515cae500aef402c0dade08424b4b6c5956897f02cd4547534274bfaccf0e90c",
+      "bytes": 234
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/discovery-counters-2710397580214708.json",
+      "sha256": "c3272f98c25bcdae848462892d574dd2803d5179f9f457cb4807dca489bda353",
+      "bytes": 674
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/dispatch.json",
+      "sha256": "bccf210ae2cd6a5a1b5999a106e90ea096efd5b2970b53355205f2b842b5fde1",
+      "bytes": 190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/ingress.json",
+      "sha256": "750a9220d8d9723be1faf74a42d19635e4143b5211ce63770ae9faef5c4d1894",
+      "bytes": 165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/lexical-reads-ef0dee65a0f2a3a291e985dd416ada1d05f593d8905e386b87aa19e220fa6154.json",
+      "sha256": "fdf6f961dbabe1d15bfeb88b170cbb17cc2785746bdfc1e6c3176aff35488084",
+      "bytes": 343
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/numerical-76988-2710382835898458.json",
+      "sha256": "9f7dea20024ad77a726eec41879979d61b13321803eb926b760a2af12be74a36",
+      "bytes": 1121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/numerical-77202-2710397769636791.json",
+      "sha256": "f731713b925d6d11085be779470ba251eec0f6b7ac05e1a728a9b4c644c2466e",
+      "bytes": 1075
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/published.json",
+      "sha256": "f96a7af237938369314b406ba6c25544cdcb6598888dcf62d80ec8f4999133cb",
+      "bytes": 336
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/request.json",
+      "sha256": "5b5df0a72f7a7c2ab80064e33f51fefeea98bd72d9ad035b3a395229443c1827",
+      "bytes": 279
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/search.json",
+      "sha256": "9e6cfdeacddad57270acdb143be98674c4d7faaea3dba03ecf7d84b08bda597c",
+      "bytes": 588
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/synaptic-delivery.json",
+      "sha256": "a6a72fe7587f4162e4462661aa61f4ce1d04178ebd45b5e3fcce218aa81b1f0e",
+      "bytes": 810
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference-data/receipts/d7bb710b082cecbc7de1d2569057833e8627c5e589c0a3b11d311fdb00a23d54/transport.json",
+      "sha256": "57e3d558c67e3908f1152f4b08e8cb40f12bbd10568843c3df7dd6b77fe63d23",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference.guard.json",
+      "sha256": "90cdd43937742141274823ac7158ba43d9bab1f7f402a95087e83f9b5b738ff5",
+      "bytes": 2784
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference.log",
+      "sha256": "230480464ccf72fe905e5403443ed04ada8f98460f326c3db6907a2763b92bc1",
+      "bytes": 133
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/native-reference.settings.json",
+      "sha256": "5c8d129440187dcfd150501b04facc35aea52b04fd100037a40f0d3b4280950d",
+      "bytes": 1190
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile-command.log",
+      "sha256": "ae929f8225a5eeb234e03ebf39da35aefaaf8f725470697b476f457df4f2729e",
+      "bytes": 258
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile-helper.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile-sample.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile-stacks.txt",
+      "sha256": "562884564c0c8ce17f67af933edd65f04ee1aac0492c1a6ecd7b62d6d923c7f7",
+      "bytes": 3635870
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile-summary.json",
+      "sha256": "544dafcfd0f73fc33b9ff7c4dc685165e66482ec77883b18c5235f82ed0b4faf",
+      "bytes": 733
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile.guard.json",
+      "sha256": "52350e30ea4a4c3746bdb89d839a02c87cfd1486f564ed40e4b94f015477ea55",
+      "bytes": 1165
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile.pid",
+      "sha256": "b2bf3d6b1c4b77080e45066922cc6e2eecde38f9d38f029b796863cf98cf990e",
+      "bytes": 6
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile.settings.json",
+      "sha256": "f338eed692851a6b650cd17b9b56c5a00a43dab3311edb13eac460325d0c09b1",
+      "bytes": 440
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profile.sh",
+      "sha256": "2bc98ef878a2c5a0f8e3bdace7e9d709166903f748a74d181bf103ad5a9840e1",
+      "bytes": 951
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/broad-retrieval-first/body.txt",
+      "sha256": "ef53b60345b59d4b9480e1282b9dd0fc148faf8e03408e7758c81084943a644b",
+      "bytes": 23121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/broad-retrieval-first/handoff.json",
+      "sha256": "f2ffccf900c13299934f6f876be199b5fbdcb3cb8491a593343aba256162c6b9",
+      "bytes": 70541
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/broad-union-first/body.txt",
+      "sha256": "8b21d19c557960a15942250dc3561faa7fe3793f46213b258ea5f23d324759d4",
+      "bytes": 21432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/broad-union-first/handoff.json",
+      "sha256": "5c3aea647b32ecca7126ac38c935b45ce75baa8567822a0a13504ff3b1a6f111",
+      "bytes": 66509
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/cases.json",
+      "sha256": "43e2781d61248311f45495c04be46e8c6ed31d3b8831fb263c9c738205daaa6e",
+      "bytes": 4938
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/profiled-discovery/result.json",
+      "sha256": "2cbbb34edc807d67127f776905c4ca58f970334890ea24e4991e6ebb47081f20",
+      "bytes": 5634
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/proof-2.guard.json",
+      "sha256": "fe193ae2a14ec9c1c66ceb19adf1cbbc9ce491e866a8c09300f6ae4e2d4253a6",
+      "bytes": 1297
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/proof-2.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/proof-2.settings.json",
+      "sha256": "ae0859ae415b02507754b477516062c9f7b077956349199ba28e428ffd899a3c",
+      "bytes": 643
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/proof.guard.json",
+      "sha256": "5e2f855fa11c414731da83a9076f81c7e01d83616ab0057f7e1578e13c3a4c49",
+      "bytes": 1297
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/proof.log",
+      "sha256": "6fcbeac3abec78827108fb486200de270ca3e59e98c2f70ae6bf0add9c6cc8b5",
+      "bytes": 619
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/proof.settings.json",
+      "sha256": "0e83dd1249eb8529f6280ae29aa1c89c1784ecd2d2b60e966008851f74a8ee8e",
+      "bytes": 641
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/broad-retrieval-first/body.txt",
+      "sha256": "ef53b60345b59d4b9480e1282b9dd0fc148faf8e03408e7758c81084943a644b",
+      "bytes": 23121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/broad-retrieval-first/handoff.json",
+      "sha256": "f2ffccf900c13299934f6f876be199b5fbdcb3cb8491a593343aba256162c6b9",
+      "bytes": 70541
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/broad-union-first/body.txt",
+      "sha256": "8b21d19c557960a15942250dc3561faa7fe3793f46213b258ea5f23d324759d4",
+      "bytes": 21432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/broad-union-first/handoff.json",
+      "sha256": "5c3aea647b32ecca7126ac38c935b45ce75baa8567822a0a13504ff3b1a6f111",
+      "bytes": 66509
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/cases.json",
+      "sha256": "b47237c4f1fe42041eb42d155a2056122ea692c0c9a2527b12d5003e07c94419",
+      "bytes": 4938
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-candidate/result.json",
+      "sha256": "0ddddf5cd685a43d0483440d9944f549a391fbd2541608378773ca59bf82e111",
+      "bytes": 5634
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-comparison.json",
+      "sha256": "b8b9072cf40cff0c572051c248fe9497ab13d1582c445b9228f0254c3a1d1478",
+      "bytes": 12226
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/broad-retrieval-first/body.txt",
+      "sha256": "ef53b60345b59d4b9480e1282b9dd0fc148faf8e03408e7758c81084943a644b",
+      "bytes": 23121
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/broad-retrieval-first/handoff.json",
+      "sha256": "f2ffccf900c13299934f6f876be199b5fbdcb3cb8491a593343aba256162c6b9",
+      "bytes": 70541
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/broad-union-first/body.txt",
+      "sha256": "8b21d19c557960a15942250dc3561faa7fe3793f46213b258ea5f23d324759d4",
+      "bytes": 21432
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/broad-union-first/handoff.json",
+      "sha256": "5c3aea647b32ecca7126ac38c935b45ce75baa8567822a0a13504ff3b1a6f111",
+      "bytes": 66509
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/cases.json",
+      "sha256": "2fab8704d7038bee81b9fc7250ae27fc61e036c89ebf6e87e73074cb39b44c46",
+      "bytes": 4938
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/real-reference/result.json",
+      "sha256": "11bfd979c0470a3b9273293e1c2e2a206503ea1bd73963fc1cbace830e3ebdf9",
+      "bytes": 5634
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/seal.rb",
+      "sha256": "5c39a5b5c58273e6b101a6cd6355037446bb58665431759d3fb4156e0c6f7e68",
+      "bytes": 5985
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alias-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alias-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alias-retrieval-first/body.txt",
+      "sha256": "289d55f3240971edd030a2d9404422b1b24b1c26a8d5289ae773a76827e01c58",
+      "bytes": 7807
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alias-retrieval-first/handoff.json",
+      "sha256": "bee7c62442cd3c545e1ffb87ac8729b316f8ffdaebddb8aa6b7e504c4767b1e3",
+      "bytes": 19593
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alias-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alias-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alias-union-first/body.txt",
+      "sha256": "485b873d5b99adc4043c8c64cbd714af80e62fc35b0009cccff74622697cafda",
+      "bytes": 7059
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alias-union-first/handoff.json",
+      "sha256": "84193b9d73a3fb86edc7ea00b6e5151f9bfe7ea9294054d08f37f034d28d5932",
+      "bytes": 17435
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alpha-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alpha-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alpha-retrieval-first/body.txt",
+      "sha256": "782dd1c820d3e925cbf93b2484ef2992f46016fd35e25c92094c4c58ec416a2e",
+      "bytes": 8384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alpha-retrieval-first/handoff.json",
+      "sha256": "5ddd14db02a6463d80cd488dd7c8f6a1e36498ddb694ebbb0dd1fdaa840bc4d2",
+      "bytes": 20747
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alpha-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alpha-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alpha-union-first/body.txt",
+      "sha256": "38bf2fb4a4fb8db44b4d62a6b2b6581723f0e966aa770a4669fd6602a1793100",
+      "bytes": 7248
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/alpha-union-first/handoff.json",
+      "sha256": "6b8b998faf4ec7dd223d773c80fb699564cc6a51aa0805104163d64544745fde",
+      "bytes": 17811
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/broad-retrieval-first/body.txt",
+      "sha256": "2f233a6cc7f6ffa33604361fd28d46d3b2acc52754925ea12a257a43d8762253",
+      "bytes": 9362
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/broad-retrieval-first/handoff.json",
+      "sha256": "77345ba277140400a344f1a7a3a23d8c17a8692a30893ac900195065c332f822",
+      "bytes": 22703
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/broad-union-first/body.txt",
+      "sha256": "869c2a5a1e787c844a874de46fd6ec4a8a669a215d104375664e24b69c7c5565",
+      "bytes": 7824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/broad-union-first/handoff.json",
+      "sha256": "6003523dec1f42f41cbf8dd40f5224f3b6328fe5f94877da143cc6859c16ebad",
+      "bytes": 18963
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/cases.json",
+      "sha256": "0b5f8296f2e4855522ef1dc8c45c6db5ac056c1617534ef6f77cd85b26784b0a",
+      "bytes": 18219
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/clause-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/clause-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/clause-retrieval-first/body.txt",
+      "sha256": "750011a006bfb19fab1ff0be23e1d0f369905a10a6330f8922af440b363003a7",
+      "bytes": 7280
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/clause-retrieval-first/handoff.json",
+      "sha256": "29b889ef66c1b5657f1bff3819acfb91e1714315095d9c9a038b7e6ffce399ab",
+      "bytes": 17909
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/clause-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/clause-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/clause-union-first/body.txt",
+      "sha256": "2a84dac1febf0bc22a13784479b7b69850fbf07b963237a90971b0843d753a29",
+      "bytes": 8108
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/clause-union-first/handoff.json",
+      "sha256": "a4b07b6f1f39a2deef08500bfc91ab43c41f01fa9ee910b9e2f96839959b371e",
+      "bytes": 19860
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/external-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/external-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/external-retrieval-first/body.txt",
+      "sha256": "9d55166bb036848e88e85ee4da02fa86beb3dbe2d765c4cfbaa6783584e7fc29",
+      "bytes": 7267
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/external-retrieval-first/handoff.json",
+      "sha256": "f9c41dae4decbc8a2454511f7b8b751d5c1bacad9cca4d5268ad84467c3af4e8",
+      "bytes": 17891
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/external-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/external-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/external-union-first/body.txt",
+      "sha256": "20f60e22f9164a5b43fc1714bb78aaaffc9d2df3971a5616206e62eb9010c31f",
+      "bytes": 8158
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/external-union-first/handoff.json",
+      "sha256": "c8c3b4bbe05bbdf15764a6ae09a8f0bf166d5d486f66bae255fad1d21c97156c",
+      "bytes": 20018
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-quote-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-quote-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-quote-retrieval-first/body.txt",
+      "sha256": "20780e302ce5efab6046b9a23246aa76e298fcf661e02dd255e91eaff82ee818",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-quote-retrieval-first/handoff.json",
+      "sha256": "4ca95868acda0919c0b9e273e937485ec2148d59d9521d54535101d189779599",
+      "bytes": 17933
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-quote-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-quote-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-quote-union-first/body.txt",
+      "sha256": "69a0139873bb23b3ce2808611194959eda1f7481b55b13a0f49c8b189308c540",
+      "bytes": 8743
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-quote-union-first/handoff.json",
+      "sha256": "ffba17c27c66674af22b7423c0a8b14c166c5a60086c2d166b43792c0217bdeb",
+      "bytes": 21780
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-retrieval-first/body.txt",
+      "sha256": "ae0caf8d813f2710fd8baeec7ba396ee2a43e131fe25ce4cc894f3a7da90b43b",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-retrieval-first/handoff.json",
+      "sha256": "b40eec93b74d2d97b7a74d9986f5d775edd8e25fbbdc9782aab74272a467f8c0",
+      "bytes": 17927
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-union-first/body.txt",
+      "sha256": "0362dafee62f07b501be02d8b861173d45d740815fd310143ce22cd1e48bfcd0",
+      "bytes": 8655
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/native-union-first/handoff.json",
+      "sha256": "0802a69247dc73f43f6e395f32cee624de49604492001b3aaec05eac47fa2505",
+      "bytes": 21568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/result.json",
+      "sha256": "6cfceb66949ba5ebfd303a585d8bcc6df7ad36154ef2e8cbde17f05d83e32b9a",
+      "bytes": 19360
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/staged-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/staged-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/staged-retrieval-first/body.txt",
+      "sha256": "a5a347289ba62b83bb53d908e7ccff423b7bfd6bd0845bf7f3446d95b5cfd300",
+      "bytes": 7290
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/staged-retrieval-first/handoff.json",
+      "sha256": "336d33a564685dce9e5de75f07d2532b9933256464813e6a18c7bf964b8f0cfa",
+      "bytes": 17931
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/staged-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/staged-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/staged-union-first/body.txt",
+      "sha256": "d9d48c444cfcb8f08c2efa60a540da87d78672efa671ebf3128d04bc8ebddad3",
+      "bytes": 7461
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-candidate/staged-union-first/handoff.json",
+      "sha256": "6c4e1046534b11f6312aa5125fbcb391c85514645bdcbe26d1e9d8d2d5d27a51",
+      "bytes": 18755
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-comparison.json",
+      "sha256": "de688f20f04e98de45ff7d10bbb04805aa772c451b533c4841b6696f94027b13",
+      "bytes": 50081
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alias-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alias-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alias-retrieval-first/body.txt",
+      "sha256": "289d55f3240971edd030a2d9404422b1b24b1c26a8d5289ae773a76827e01c58",
+      "bytes": 7807
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alias-retrieval-first/handoff.json",
+      "sha256": "bee7c62442cd3c545e1ffb87ac8729b316f8ffdaebddb8aa6b7e504c4767b1e3",
+      "bytes": 19593
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alias-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alias-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alias-union-first/body.txt",
+      "sha256": "485b873d5b99adc4043c8c64cbd714af80e62fc35b0009cccff74622697cafda",
+      "bytes": 7059
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alias-union-first/handoff.json",
+      "sha256": "84193b9d73a3fb86edc7ea00b6e5151f9bfe7ea9294054d08f37f034d28d5932",
+      "bytes": 17435
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alpha-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alpha-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alpha-retrieval-first/body.txt",
+      "sha256": "782dd1c820d3e925cbf93b2484ef2992f46016fd35e25c92094c4c58ec416a2e",
+      "bytes": 8384
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alpha-retrieval-first/handoff.json",
+      "sha256": "5ddd14db02a6463d80cd488dd7c8f6a1e36498ddb694ebbb0dd1fdaa840bc4d2",
+      "bytes": 20747
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alpha-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alpha-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alpha-union-first/body.txt",
+      "sha256": "38bf2fb4a4fb8db44b4d62a6b2b6581723f0e966aa770a4669fd6602a1793100",
+      "bytes": 7248
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/alpha-union-first/handoff.json",
+      "sha256": "6b8b998faf4ec7dd223d773c80fb699564cc6a51aa0805104163d64544745fde",
+      "bytes": 17811
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/broad-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/broad-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/broad-retrieval-first/body.txt",
+      "sha256": "2f233a6cc7f6ffa33604361fd28d46d3b2acc52754925ea12a257a43d8762253",
+      "bytes": 9362
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/broad-retrieval-first/handoff.json",
+      "sha256": "77345ba277140400a344f1a7a3a23d8c17a8692a30893ac900195065c332f822",
+      "bytes": 22703
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/broad-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/broad-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/broad-union-first/body.txt",
+      "sha256": "869c2a5a1e787c844a874de46fd6ec4a8a669a215d104375664e24b69c7c5565",
+      "bytes": 7824
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/broad-union-first/handoff.json",
+      "sha256": "6003523dec1f42f41cbf8dd40f5224f3b6328fe5f94877da143cc6859c16ebad",
+      "bytes": 18963
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/cases.json",
+      "sha256": "664575b43c22125c94ca0496242f1084c36d2284049ddbe477ae58306c974993",
+      "bytes": 18218
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/clause-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/clause-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/clause-retrieval-first/body.txt",
+      "sha256": "750011a006bfb19fab1ff0be23e1d0f369905a10a6330f8922af440b363003a7",
+      "bytes": 7280
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/clause-retrieval-first/handoff.json",
+      "sha256": "29b889ef66c1b5657f1bff3819acfb91e1714315095d9c9a038b7e6ffce399ab",
+      "bytes": 17909
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/clause-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/clause-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/clause-union-first/body.txt",
+      "sha256": "2a84dac1febf0bc22a13784479b7b69850fbf07b963237a90971b0843d753a29",
+      "bytes": 8108
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/clause-union-first/handoff.json",
+      "sha256": "a4b07b6f1f39a2deef08500bfc91ab43c41f01fa9ee910b9e2f96839959b371e",
+      "bytes": 19860
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/external-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/external-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/external-retrieval-first/body.txt",
+      "sha256": "9d55166bb036848e88e85ee4da02fa86beb3dbe2d765c4cfbaa6783584e7fc29",
+      "bytes": 7267
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/external-retrieval-first/handoff.json",
+      "sha256": "f9c41dae4decbc8a2454511f7b8b751d5c1bacad9cca4d5268ad84467c3af4e8",
+      "bytes": 17891
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/external-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/external-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/external-union-first/body.txt",
+      "sha256": "20f60e22f9164a5b43fc1714bb78aaaffc9d2df3971a5616206e62eb9010c31f",
+      "bytes": 8158
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/external-union-first/handoff.json",
+      "sha256": "c8c3b4bbe05bbdf15764a6ae09a8f0bf166d5d486f66bae255fad1d21c97156c",
+      "bytes": 20018
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-quote-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-quote-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-quote-retrieval-first/body.txt",
+      "sha256": "20780e302ce5efab6046b9a23246aa76e298fcf661e02dd255e91eaff82ee818",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-quote-retrieval-first/handoff.json",
+      "sha256": "4ca95868acda0919c0b9e273e937485ec2148d59d9521d54535101d189779599",
+      "bytes": 17933
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-quote-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-quote-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-quote-union-first/body.txt",
+      "sha256": "69a0139873bb23b3ce2808611194959eda1f7481b55b13a0f49c8b189308c540",
+      "bytes": 8743
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-quote-union-first/handoff.json",
+      "sha256": "ffba17c27c66674af22b7423c0a8b14c166c5a60086c2d166b43792c0217bdeb",
+      "bytes": 21780
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-retrieval-first/body.txt",
+      "sha256": "ae0caf8d813f2710fd8baeec7ba396ee2a43e131fe25ce4cc894f3a7da90b43b",
+      "bytes": 7289
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-retrieval-first/handoff.json",
+      "sha256": "b40eec93b74d2d97b7a74d9986f5d775edd8e25fbbdc9782aab74272a467f8c0",
+      "bytes": 17927
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-union-first/body.txt",
+      "sha256": "0362dafee62f07b501be02d8b861173d45d740815fd310143ce22cd1e48bfcd0",
+      "bytes": 8655
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/native-union-first/handoff.json",
+      "sha256": "0802a69247dc73f43f6e395f32cee624de49604492001b3aaec05eac47fa2505",
+      "bytes": 21568
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/result.json",
+      "sha256": "d6f1734b521d9b171680211f2b3b0c510ccb3b749853e68d81cd1de074617f76",
+      "bytes": 19359
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/staged-retrieval-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/staged-retrieval-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/staged-retrieval-first/body.txt",
+      "sha256": "a5a347289ba62b83bb53d908e7ccff423b7bfd6bd0845bf7f3446d95b5cfd300",
+      "bytes": 7290
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/staged-retrieval-first/handoff.json",
+      "sha256": "336d33a564685dce9e5de75f07d2532b9933256464813e6a18c7bf964b8f0cfa",
+      "bytes": 17931
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/staged-union-continued/body.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/staged-union-continued/handoff.json",
+      "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "bytes": 4
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/staged-union-first/body.txt",
+      "sha256": "d9d48c444cfcb8f08c2efa60a540da87d78672efa671ebf3128d04bc8ebddad3",
+      "bytes": 7461
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/small-reference/staged-union-first/handoff.json",
+      "sha256": "6c4e1046534b11f6312aa5125fbcb391c85514645bdcbe26d1e9d8d2d5d27a51",
+      "bytes": 18755
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/source-files-after.json",
+      "sha256": "c9ade1f8a14eff64d8a01a8ab7da05d77c29c0f875926b9f1c42dba4aa22938c",
+      "bytes": 1688
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-fold-20261025/source-patch-check.json",
+      "sha256": "8fc3d0b39ede6d1d2e68147f00eb6d6d06b9df15239315348353a73b81d4fde8",
+      "bytes": 1780
+    }
+  ],
+  "scope": {
+    "newImplementation": "Lean",
+    "newPython": false,
+    "existingMiniLMNumericalBoundaryUnchanged": true,
+    "answeringModelCalls": 0,
+    "newSeeds": 0,
+    "totalTokenGainMeasured": false,
+    "qualityMeasured": false,
+    "p99Qualified": false,
+    "scale50000Qualified": false,
+    "persistentCanonicalRecognitionIndexed": false,
+    "fullParentDeferredSchedulerRefinement": false,
+    "federatedSharedLifecycleQualified": false,
+    "productAdopted": false,
+    "readmeResultsChanged": false,
+    "releaseChanged": false
+  },
+  "next": [
+    "complete original Work/canonical/affected-parent access independent of recommendation top-K",
+    "numerical acquisition and routed additions; preserve original snapshot/Exact witnesses",
+    "privacy, shared/federated native lifecycle and full scale gates",
+    "matched inclusive-token/quality trials before adoption"
+  ]
+}

@@ -1,0 +1,123 @@
+diff --git a/Eggshell/AppendUnique.lean b/Eggshell/AppendUnique.lean
+new file mode 100644
+index 0000000..2fa253a
+--- /dev/null
++++ b/Eggshell/AppendUnique.lean
+@@ -0,0 +1,64 @@
++module
++public import Std.Data.HashSet.Lemmas
++
++@[expose] public section
++namespace Eggshell.AppendUnique
++
++variable {α β : Type} [BEq β] [LawfulBEq β] [Hashable β]
++
++def reference (key : α → β) (base added : List α) : List α :=
++  added.foldl (fun current item =>
++    if current.any (fun old => key old == key item) then current
++    else current ++ [item]) base
++
++def Seen (key : α → β) (known : Std.HashSet β) (items : List α) : Prop :=
++  ∀ value, known.contains value = items.any (fun item => key item == value)
++
++/-- Keep original payloads; the set only answers exact membership. -/
++def loop (key : α → β) (known : Std.HashSet β) (added reversed : List α) :
++    List α :=
++  match added with
++  | [] => reversed
++  | item :: rest =>
++      if known.contains (key item) then loop key known rest reversed
++      else loop key (known.insert (key item)) rest (item :: reversed)
++
++theorem loop_exact (key : α → β) (base added : List α) (known : Std.HashSet β)
++    (reversed : List α) (seen : Seen key known (base ++ reversed.reverse)) :
++    base ++ (loop key known added reversed).reverse =
++      reference key (base ++ reversed.reverse) added := by
++  induction added generalizing known reversed with
++  | nil => rfl
++  | cons item rest ih =>
++      change base ++ (loop key known (item :: rest) reversed).reverse =
++        reference key (if (base ++ reversed.reverse).any (fun old => key old == key item)
++          then base ++ reversed.reverse else (base ++ reversed.reverse) ++ [item]) rest
++      rw [← seen (key item)]
++      cases found : known.contains (key item) with
++      | true => simpa only [loop, found, ↓reduceIte] using ih known reversed seen
++      | false =>
++          have next : base ++ (item :: reversed).reverse =
++              (base ++ reversed.reverse) ++ [item] := by
++            simp only [List.reverse_cons, List.append_assoc]
++          have nextSeen : Seen key (known.insert (key item)) (base ++ (item :: reversed).reverse) := by
++            intro value
++            rw [next, List.any_append, ← seen value]
++            simp [Std.HashSet.contains_insert, Bool.or_comm]
++          simpa only [loop, found, Bool.false_eq_true, ↓reduceIte, next] using
++            ih (known.insert (key item)) (item :: reversed) nextSeen
++
++/-- Existing duplicates stay; unseen additions retain first payload and order.
++Both prefix copying and repeated complete membership scans disappear. -/
++def merge (key : α → β) (base added : List α) : List α :=
++  base ++ (loop key (Std.HashSet.ofList (base.map key)) added []).reverse
++
++theorem merge_exact (key : α → β) (base added : List α) :
++    merge key base added = reference key base added := by
++  have seen : Seen key (Std.HashSet.ofList (base.map key)) (base ++ [].reverse) := by
++    intro value
++    simp only [List.reverse_nil, List.append_nil, Std.HashSet.contains_ofList, List.contains_map]
++    exact List.any_congr rfl (fun _ => BEq.comm)
++  simpa only [merge, List.reverse_nil, List.append_nil] using
++    loop_exact key base added (Std.HashSet.ofList (base.map key)) [] seen
++
++end Eggshell.AppendUnique
+diff --git a/Eggshell/Matcher.lean b/Eggshell/Matcher.lean
+index a524c61..a064c10 100644
+--- a/Eggshell/Matcher.lean
++++ b/Eggshell/Matcher.lean
+@@ -7,0 +8 @@ public import Eggshell.OutcomePolicyIndex
++public import Eggshell.AppendUnique
+@@ -3133,0 +3135,37 @@ def projectMatches (base : WorkGraph) (hits : List Match) : WorkGraph :=
++/-- The original edges are retained in the same order. A membership table
++suppresses only additions the original fold would have skipped. -/
++def projectMatchesFast (base : WorkGraph) (hits : List Match) : WorkGraph :=
++  let added := hits.filterMap fun matched =>
++    if matched.automatic then some matched.projectedEdge else none
++  let outcomes := AppendUnique.merge (·.relation) base.outcomes added
++  { base with outcomes }
++
++theorem projectMatchesFast_exact (base : WorkGraph) (hits : List Match) :
++    projectMatchesFast base hits = projectMatches base hits := by
++  have fold (rows : List OutcomeEdge) (addedMatches : List Match) :
++      AppendUnique.reference (·.relation) rows
++        (addedMatches.filterMap fun matched =>
++          if matched.automatic then some matched.projectedEdge else none) =
++      addedMatches.foldl (fun current matched =>
++        if !matched.automatic then current
++        else
++          let edge := matched.projectedEdge
++          if current.any (fun existing => existing.relation == edge.relation) then current
++          else current ++ [edge]) rows := by
++    induction addedMatches generalizing rows with
++    | nil => rfl
++    | cons matched rest ih =>
++        cases automatic : matched.automatic with
++        | false => simpa [AppendUnique.reference, automatic] using ih rows
++        | true =>
++            simpa [AppendUnique.reference, automatic] using
++              ih (if rows.any (fun existing => existing.relation == matched.projectedEdge.relation)
++                then rows else rows ++ [matched.projectedEdge])
++  unfold projectMatchesFast projectMatches
++  dsimp only
++  rw [AppendUnique.merge_exact, fold]
++
++@[csimp] theorem projectMatches_compiled : projectMatches = projectMatchesFast := by
++  funext base hits
++  exact (projectMatchesFast_exact base hits).symm
++
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index a7a127e..d5b34b9 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -72,0 +73,4 @@ run_meta do
++      ``Eggshell.AppendUnique.loop_exact,
++      ``Eggshell.AppendUnique.merge_exact,
++      ``Eggshell.Matcher.projectMatchesFast_exact,
++      ``Eggshell.Matcher.projectMatches_compiled,

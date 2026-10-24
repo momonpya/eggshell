@@ -46,6 +46,12 @@ bookkeeping, not yet the canonical Work/affected-parent index. Its profiled
 remaining bottleneck is graph projection's repeated membership scan and list
 append; replace that before layering another cache or placement mechanism over it.
 
+The [stable projection replacement](projection-fold.md) now preserves the complete
+projected graph while removing those scans/copies. Controlled disabled-Union
+time falls, but normal discovery remains near 9.2 seconds. The next structural
+step is still complete canonical Work/affected-parent access and routed original
+reads; the projection result does not establish large-scale readiness.
+
 ## Judgment
 
 The core is defensible. The current execution architecture is not ready for
