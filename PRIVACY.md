@@ -22,6 +22,14 @@ available. `!egg drop` clears the active turn but does not erase saved
 observations or cancel queued commits. It is not a way to retract data that a
 hook has already recorded.
 
+MCP arguments and results are included in tool observations. They are not
+automatically routed to a private database: the active profile's write target
+also applies to them and to the final answer. Per-server recording controls and
+credential exclusion before durable capture are not implemented. A database
+shared with others can therefore expose recorded MCP data through later
+handoffs. See the development [practical readiness gates](docs/practical-readiness.md)
+for the private capture work required before live MCP qualification.
+
 ## Network access
 
 Eggshell's runtime and matcher operate locally. Installation downloads the

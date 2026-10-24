@@ -169,7 +169,7 @@ def Feedback.completedRead (feedback : Feedback) (occurrence : Occurrence) (quer
       | .original _ => earlier.uncertainOwners.isEmpty
     let gaps := if checked then omittedRanges source stored earlier.ranges else #[]
     for gap in if gaps.isEmpty then #[source] else gaps do
-      graph ← graph.recordRead ⟨occurrence, ordinal⟩ query gap stored earlier.ranges checked
+      graph ← graph.recordRead ⟨occurrence, ordinal, none⟩ query gap stored earlier.ranges checked
       ordinal := ordinal+1
   return {feedback with graph}
 
@@ -180,7 +180,57 @@ def Feedback.answer (feedback : Feedback) (occurrence : Occurrence) (query text 
   let cited := paragraphCitations text files.toArray
   let mut graph := feedback.graph
   for index in [:cited.size] do
-    graph ← graph.recordCitation ⟨occurrence, index⟩ query cited[index]! feedback.delivered.ranges
+    graph ← graph.recordCitation ⟨occurrence, index, none⟩ query cited[index]! feedback.delivered.ranges
   return {feedback with graph}
+
+/-- A native usage label may cover only an actual located consumption witness.
+The native row remains tied to its original Work and response digest. -/
+structure ConsumedSource (edge : Consumption) where
+  source : Range
+  valid : edge.valid = true
+  native : source.file?.isNone = true
+  consumed : edge.rows.any (·.contains source) = true
+
+def consumedSource? (edge : Consumption) (source : Range) : Option (ConsumedSource edge) :=
+  if valid : edge.valid = true then
+    if native : source.file?.isNone = true then
+      if consumed : edge.rows.any (·.contains source) = true then
+        some ⟨source,valid,native,consumed⟩ else none
+    else none
+  else none
+
+theorem consumed_source_has_witness (checked : ConsumedSource edge) :
+    ∃ row ∈ edge.rows, row.contains checked.source = true := by
+  obtain ⟨index,bound,present⟩ := Array.any_eq_true.mp checked.consumed
+  exact ⟨edge.rows[index],by simp,present⟩
+
+theorem consumed_source_is_later (checked : ConsumedSource edge) :
+    edge.producerFinish < edge.consumerStart := by
+  exact Consumption.checked_before (edge := edge) (accepted := edge)
+    (by simp [Consumption.checked,checked.valid])
+
+/-- Literal reuse is advisory evidence, not proof of semantic necessity. The
+caller supplies immutable pre-read stored and ACK ranges; no returned sibling
+field is labelled merely because it was present in the tool's response. -/
+def consumedUsage? (checked : ConsumedSource edge) (query : String)
+    (stored delivered : Array Range) : Option Usage :=
+  if covered checked.source stored && !covered checked.source delivered then some {
+    event := {occurrence := edge.producer,ordinal := 0,consumption := some ⟨edge.consumer,checked.source⟩}
+    query,source := checked.source,kind := .omittedThenConsumed}
+  else none
+
+theorem consumed_omission_requires_stored (checked : ConsumedSource edge)
+    (observed : consumedUsage? checked query stored delivered = some usage) :
+    covered checked.source stored = true ∧ covered checked.source delivered = false := by
+  unfold consumedUsage? at observed
+  split at observed
+  next present => simpa only [Bool.and_eq_true,Bool.not_eq_true'] using present
+  next => contradiction
+
+def recordConsumed (graph : Graph) (checked : ConsumedSource edge) (query : String)
+    (stored delivered : Array Range) : Except String Graph :=
+  match consumedUsage? checked query stored delivered with
+  | some usage => graph.insert (.used usage)
+  | none => .ok graph
 
 end Eggshell.Synapses.Extraction

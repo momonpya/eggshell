@@ -84,8 +84,8 @@ def main (args : List String) : IO Unit := do
   check (relevant.ranges.contains id.source && relevant.occurrences.contains id.occurrence)
     "native support did not seed reverse consumption"
   let query := String.ofList (List.replicate 64 'b')
-  let usage ← IO.ofExcept ((Graph.empty.recordRead ⟨same.occurrence,0⟩ query id.source #[id.source] #[] true) >>= fun graph =>
-    graph.recordCitation ⟨same.occurrence,1⟩ query id.source #[id.source])
+  let usage ← IO.ofExcept ((Graph.empty.recordRead ⟨same.occurrence,0,none⟩ query id.source #[id.source] #[] true) >>= fun graph =>
+    graph.recordCitation ⟨same.occurrence,1,none⟩ query id.source #[id.source])
   let counts := usage.usageCounts id.source
   check (counts.omittedThenRead == 1 && counts.deliveredThenCited == 1)
     "native usage was not accumulated at the canonical data interval"

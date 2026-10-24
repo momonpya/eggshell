@@ -16,7 +16,12 @@ open Lean
 reads use the same decoding/assembly implementation with their own read
 capability; no alternate body representation or compatibility lane exists. -/
 run_meta do
-  for theoremName in #[``Eggshell.ObservationAge.recent_is_within_interval,
+  for theoremName in #[``Eggshell.Synapses.Extraction.consumed_source_has_witness,
+      ``Eggshell.Synapses.Extraction.consumed_source_is_later,
+      ``Eggshell.Synapses.Extraction.consumed_omission_requires_stored,
+      ``Eggshell.Synapses.Index.shared_rejects_usage,
+      ``Eggshell.Synapses.Recommend.Offer.usage_is_evidence,
+      ``Eggshell.ObservationAge.recent_is_within_interval,
       ``Eggshell.ObservationAge.expired_is_at_least_interval,
       ``Eggshell.ObservationAge.missing_receipt_is_unknown,
       ``Eggshell.ObservationAge.assessment_preserves_receipt,
@@ -207,6 +212,12 @@ run_meta do
       (``Eggshell.Plugin.automaticHandoff,
         #[``Eggshell.Plugin.Handoff.checkSources, ``Eggshell.Persistence.Store.NodeReader.sources], #[]),
       (``Eggshell.Plugin.Daemon.hookRequest, #[``Eggshell.ObservationAge.now], #[]),
+      (``Eggshell.Synapses.Journal.replay, #[``Eggshell.Synapses.Journal.nativeFeedback], #[]),
+      (``Eggshell.Synapses.Journal.nativeFeedback,
+        #[``Eggshell.Synapses.Journal.indexAt?, ``Eggshell.Synapses.Journal.presentation,
+          ``Eggshell.Synapses.Extraction.recordConsumed, ``Eggshell.Synapses.Extraction.consumedSource?], #[]),
+      (``Eggshell.Synapses.Journal.presentation,
+        #[``Eggshell.Synapses.Journal.originalAt?, ``Eggshell.Synapses.ObservationContext.recorded], #[]),
       (``Eggshell.Synapses.Live.finish, #[``Eggshell.Synapses.Live.receivedUnixMs?], #[]),
       (``Eggshell.Plugin.Handoff.checkSources,
         #[``Eggshell.Plugin.Handoff.withCheckedSources, ``Eggshell.SourceEvidence.observeRecords,

@@ -32,7 +32,7 @@ private def row (original : Transport.Owner) : IO Read := do
   return read
 
 private def usage (name : String) (source : Range) (kind : UsageKind) : Fact :=
-  .used ⟨⟨occurrence name, 0⟩, query, source, kind⟩
+  .used ⟨⟨occurrence name, 0, none⟩, query, source, kind⟩
 
 private def scenario (root : System.FilePath) : IO Unit := do
   let source ← DB.PageMap.create (root / "source.egg") (Persistence.valueToJson (.text "authority")).compress

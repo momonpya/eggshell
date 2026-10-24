@@ -62,7 +62,7 @@ diff --git a/Eggshell/Synapses.lean b/Eggshell/Synapses.lean
  
  theorem Range.contains_self (range : Range) : range.contains range = true := by
    simp [Range.contains]
-@@ -83,10 +121,24 @@
+@@ -83,11 +121,25 @@
    occurrence : Occurrence
    source : Range
    binding : Binding
@@ -77,7 +77,7 @@ diff --git a/Eggshell/Synapses.lean b/Eggshell/Synapses.lean
 +    | .file _ => true
 +    | .original original => original.work == read.binding.work &&
 +        read.source.first == read.binding.first+1 && read.source.last == read.binding.limit
-+
+ 
 +theorem original_read_binding (read : Read) (original : Original)
 +    (kind : read.source.subject = .original original) (valid : read.valid = true) :
 +    original.work = read.binding.work ∧ read.source.first = read.binding.first+1 ∧
@@ -85,9 +85,10 @@ diff --git a/Eggshell/Synapses.lean b/Eggshell/Synapses.lean
 +  have checked := valid
 +  simp only [Read.valid,kind,Bool.and_eq_true,beq_iff_eq] at checked
 +  simpa only [and_assoc] using checked.2
- 
++
  structure Claim where
    database : String
+   answer : String
 @@ -146,9 +198,13 @@
    next => contradiction
  
@@ -112,7 +113,55 @@ diff --git a/Eggshell/Synapses.lean b/Eggshell/Synapses.lean
    /-- Only rows located in the actual producer output, never its entire read. -/
    rows : Array Range := #[]
    deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
-@@ -324,7 +382,7 @@
+@@ -192,20 +250,34 @@
+   | .claim value => value.valid
+ 
+ inductive UsageKind where
+-  | omittedThenRead | deliveredThenCited | reread | sourceChanged
++  | omittedThenRead | omittedThenConsumed | deliveredThenCited | reread | sourceChanged
+   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+ 
+ def UsageKind.label : UsageKind → String
+   | .omittedThenRead => "omitted_then_read"
++  | .omittedThenConsumed => "omitted_then_consumed"
+   | .deliveredThenCited => "delivered_then_cited"
+   | .reread => "reread"
+   | .sourceChanged => "source_changed"
++
++structure ConsumptionUse where
++  consumer : Occurrence
++  source : Range
++  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+ 
+ structure Event where
+   occurrence : Occurrence
+   ordinal : Nat
+-  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
++  consumption : Option ConsumptionUse := none
++  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, FromJson
+ 
++/-- A consumed range is keyed by its actual downstream use, independently of
++which other ranges become used later. Ordinary observed ordinals stay distinct. -/
++instance : ToJson Event where
++  toJson event := Json.mkObj ([
++    ("occurrence",toJson event.occurrence),("ordinal",toJson event.ordinal)] ++
++    event.consumption.toList.map (fun value => ("consumption",toJson value)))
++
+ structure Usage where
+   event : Event
+   /-- Opaque digest, never a plaintext question in a shared DB. -/
+@@ -215,7 +287,9 @@
+   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+ 
+ def Usage.valid (usage : Usage) : Bool :=
+-  usage.event.occurrence.valid && digest usage.query && usage.source.valid
++  usage.event.occurrence.valid && digest usage.query && usage.source.valid &&
++    usage.event.consumption.all (fun cause => usage.event.ordinal == 0 && cause.consumer.valid &&
++      cause.consumer != usage.event.occurrence && cause.source == usage.source)
+ 
+ inductive Fact where
+   | read (read : Read)
+@@ -324,7 +398,7 @@
  
  /-- Closed interval union, bounded by observed intervals rather than line numbers. -/
  def covered (wanted : Range) (observed : Array Range) : Bool := Id.run do
@@ -121,7 +170,7 @@ diff --git a/Eggshell/Synapses.lean b/Eggshell/Synapses.lean
    let mut position := wanted.first
    for row in rows do
      if position < row.first then return false
-@@ -336,7 +394,7 @@
+@@ -336,7 +410,7 @@
    if !fingerprintChecked then .reread
    else if covered requested stored then
      if covered requested delivered then .reread else .omittedThenRead
@@ -130,6 +179,22 @@ diff --git a/Eggshell/Synapses.lean b/Eggshell/Synapses.lean
      then .sourceChanged
    else .reread
  
+@@ -375,6 +449,7 @@
+ 
+ structure UsageCounts where
+   omittedThenRead : Nat := 0
++  omittedThenConsumed : Nat := 0
+   deliveredThenCited : Nat := 0
+   reread : Nat := 0
+   sourceChanged : Nat := 0
+@@ -385,6 +460,7 @@
+     if query.any (· != usage.query) then counts else
+     match usage.kind with
+     | .omittedThenRead => {counts with omittedThenRead := counts.omittedThenRead + 1}
++    | .omittedThenConsumed => {counts with omittedThenConsumed := counts.omittedThenConsumed + 1}
+     | .deliveredThenCited => {counts with deliveredThenCited := counts.deliveredThenCited + 1}
+     | .reread => {counts with reread := counts.reread + 1}
+     | .sourceChanged => {counts with sourceChanged := counts.sourceChanged + 1}) {}
 diff --git a/Eggshell/SynapseExtraction.lean b/Eggshell/SynapseExtraction.lean
 --- a/Eggshell/SynapseExtraction.lean
 +++ b/Eggshell/SynapseExtraction.lean
@@ -691,7 +756,7 @@ diff --git a/Eggshell/SynapseUsage.lean b/Eggshell/SynapseUsage.lean
  
  /-- A PreToolUse packet arriving after proposal cannot rewrite what was known. -/
  def Feedback.start (feedback : Feedback) (occurrence : Occurrence) : Feedback :=
-@@ -159,7 +164,9 @@
+@@ -159,20 +164,73 @@
    let mut graph := feedback.graph
    let mut ordinal := 0
    for source in compactRanges requested do
@@ -701,8 +766,10 @@ diff --git a/Eggshell/SynapseUsage.lean b/Eggshell/SynapseUsage.lean
 +      | .original _ => earlier.uncertainOwners.isEmpty
      let gaps := if checked then omittedRanges source stored earlier.ranges else #[]
      for gap in if gaps.isEmpty then #[source] else gaps do
-       graph ← graph.recordRead ⟨occurrence, ordinal⟩ query gap stored earlier.ranges checked
-@@ -168,7 +175,8 @@
+-      graph ← graph.recordRead ⟨occurrence, ordinal⟩ query gap stored earlier.ranges checked
++      graph ← graph.recordRead ⟨occurrence, ordinal, none⟩ query gap stored earlier.ranges checked
+       ordinal := ordinal+1
+   return {feedback with graph}
  
  def Feedback.answer (feedback : Feedback) (occurrence : Occurrence) (query text : String) :
      Except String Feedback := do
@@ -712,6 +779,61 @@ diff --git a/Eggshell/SynapseUsage.lean b/Eggshell/SynapseUsage.lean
    let cited := paragraphCitations text files.toArray
    let mut graph := feedback.graph
    for index in [:cited.size] do
+-    graph ← graph.recordCitation ⟨occurrence, index⟩ query cited[index]! feedback.delivered.ranges
++    graph ← graph.recordCitation ⟨occurrence, index, none⟩ query cited[index]! feedback.delivered.ranges
+   return {feedback with graph}
+ 
++/-- A native usage label may cover only an actual located consumption witness.
++The native row remains tied to its original Work and response digest. -/
++structure ConsumedSource (edge : Consumption) where
++  source : Range
++  valid : edge.valid = true
++  native : source.file?.isNone = true
++  consumed : edge.rows.any (·.contains source) = true
++
++def consumedSource? (edge : Consumption) (source : Range) : Option (ConsumedSource edge) :=
++  if valid : edge.valid = true then
++    if native : source.file?.isNone = true then
++      if consumed : edge.rows.any (·.contains source) = true then
++        some ⟨source,valid,native,consumed⟩ else none
++    else none
++  else none
++
++theorem consumed_source_has_witness (checked : ConsumedSource edge) :
++    ∃ row ∈ edge.rows, row.contains checked.source = true := by
++  obtain ⟨index,bound,present⟩ := Array.any_eq_true.mp checked.consumed
++  exact ⟨edge.rows[index],by simp,present⟩
++
++theorem consumed_source_is_later (checked : ConsumedSource edge) :
++    edge.producerFinish < edge.consumerStart := by
++  exact Consumption.checked_before (edge := edge) (accepted := edge)
++    (by simp [Consumption.checked,checked.valid])
++
++/-- Literal reuse is advisory evidence, not proof of semantic necessity. The
++caller supplies immutable pre-read stored and ACK ranges; no returned sibling
++field is labelled merely because it was present in the tool's response. -/
++def consumedUsage? (checked : ConsumedSource edge) (query : String)
++    (stored delivered : Array Range) : Option Usage :=
++  if covered checked.source stored && !covered checked.source delivered then some {
++    event := {occurrence := edge.producer,ordinal := 0,consumption := some ⟨edge.consumer,checked.source⟩}
++    query,source := checked.source,kind := .omittedThenConsumed}
++  else none
++
++theorem consumed_omission_requires_stored (checked : ConsumedSource edge)
++    (observed : consumedUsage? checked query stored delivered = some usage) :
++    covered checked.source stored = true ∧ covered checked.source delivered = false := by
++  unfold consumedUsage? at observed
++  split at observed
++  next present => simpa only [Bool.and_eq_true,Bool.not_eq_true'] using present
++  next => contradiction
++
++def recordConsumed (graph : Graph) (checked : ConsumedSource edge) (query : String)
++    (stored delivered : Array Range) : Except String Graph :=
++  match consumedUsage? checked query stored delivered with
++  | some usage => graph.insert (.used usage)
++  | none => .ok graph
++
+ end Eggshell.Synapses.Extraction
 diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
 --- a/Eggshell/SynapseRecommend.lean
 +++ b/Eggshell/SynapseRecommend.lean
@@ -762,7 +884,7 @@ diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
 +    | .consumed edge => edge.rows.contains source
 +    | .coquoted _ quoted => quoted == source
 +    | .used usage => usage.source == source &&
-+        (usage.kind == .omittedThenRead || usage.kind == .deliveredThenCited)
++        (usage.kind == .omittedThenRead || usage.kind == .omittedThenConsumed || usage.kind == .deliveredThenCited)
 +    | .read _ => false
  
  structure Offer where
@@ -796,7 +918,8 @@ diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
    exact Array.mem_of_contains_eq_true witness
  
  theorem Offer.usage_is_evidence (offer : Offer) (usage : Usage) (kind : offer.fact = .used usage) :
-     usage.kind = .omittedThenRead ∨ usage.kind = .deliveredThenCited := by
+-    usage.kind = .omittedThenRead ∨ usage.kind = .deliveredThenCited := by
++    (usage.kind = .omittedThenRead ∨ usage.kind = .omittedThenConsumed) ∨ usage.kind = .deliveredThenCited := by
    have witness := offer.witness
 -  simp only [kind, carries, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq] at witness
 -  exact witness.2
@@ -868,8 +991,9 @@ diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
 -        result := addOffer result source task.priority fact identity
 +        result := addOffer result (.range source) task.priority fact identity
        | .query _, .used value =>
-         if value.kind == .omittedThenRead || value.kind == .deliveredThenCited then
+-        if value.kind == .omittedThenRead || value.kind == .deliveredThenCited then
 -          result := addOffer result value.source task.priority fact identity
++        if value.kind == .omittedThenRead || value.kind == .omittedThenConsumed || value.kind == .deliveredThenCited then
 +          result := addOffer result (.range value.source) task.priority fact identity
            queue := queue.push ⟨.quoted value.source, task.priority⟩
        | _, _ => pure ()
@@ -877,7 +1001,7 @@ diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
    -- remains useful only where no omission of that same range was observed.
    let missing := result.offers.foldl (fun ranges offer => match offer.fact with
 -    | .used value => if value.kind == .omittedThenRead then ranges.insert offer.source else ranges
-+    | .used value => if value.kind == .omittedThenRead then ranges.insert value.source else ranges
++    | .used value => if value.kind == .omittedThenRead || value.kind == .omittedThenConsumed then ranges.insert value.source else ranges
      | _ => ranges) ({} : Std.HashSet Range)
    return {result with offers := result.offers.filter fun offer => match offer.fact with
 -    | .used value => value.kind != .deliveredThenCited || !missing.contains offer.source
@@ -1133,43 +1257,216 @@ diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
 diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
 --- a/Eggshell/SynapseJournal.lean
 +++ b/Eggshell/SynapseJournal.lean
-@@ -61,7 +61,13 @@
+@@ -28,8 +28,16 @@
+   acknowledged : List String
+   uncertain : Bool
+   archive : Option String := none
+-  deriving BEq, ToJson, FromJson
++  archived : Option PageMap.Head := none
++  deriving BEq, FromJson
+ 
++instance : ToJson Knowledge where
++  toJson known := Json.mkObj ([
++    ("source",toJson known.source),("indexed",toJson known.indexed),
++    ("acknowledged",toJson known.acknowledged),("uncertain",toJson known.uncertain),
++    ("archive",toJson known.archive)] ++
++    known.archived.toList.map (fun head => ("archived",toJson head)))
++
+ inductive Payload where
+   | start (occurrence : Occurrence) (work query : String) (knowledge : Knowledge)
+   | finish (occurrence : Occurrence) (name input response : String) (archive : Option String)
+@@ -61,8 +69,14 @@
  structure Entry where
    clock : Clock
    payload : Payload
 -  deriving BEq, ToJson, FromJson
 +  receivedUnixMs : Option Nat := none
 +  deriving BEq, FromJson
-+
+ 
 +instance : ToJson Entry where
 +  toJson entry := Json.mkObj ([
 +    ("clock", toJson entry.clock), ("payload", toJson entry.payload)] ++
 +    entry.receivedUnixMs.toList.map (fun time => ("receivedUnixMs", toJson time)))
- 
++
  def Entry.name (entry : Entry) : String :=
    Index.contentKey (entry.payload.kind, entry.payload.occurrence)
-@@ -87,6 +93,11 @@
+ 
+@@ -87,11 +101,18 @@
      (result : retainFirst previous next = .ok accepted) : accepted.clock = previous.clock := by
    rw [retry_keeps_first_observation previous next accepted result]
  
+-def completeKnowledge (known : Knowledge) (indexed : Bool) : Bool := !known.uncertain && indexed
 +theorem retry_keeps_receipt_time (previous next accepted : Entry)
 +    (result : retainFirst previous next = .ok accepted) :
 +    accepted.receivedUnixMs = previous.receivedUnixMs := by
 +  rw [retry_keeps_first_observation previous next accepted result]
-+
- def completeKnowledge (known : Knowledge) (indexed : Bool) : Bool := !known.uncertain && indexed
  
++def completeKnowledge (known : Knowledge) (indexed : Bool) : Bool :=
++  !known.uncertain && indexed && (known.archive.isNone || known.archived.isSome)
++
  theorem complete_knowledge_is_confirmed (known : Knowledge) (indexed : Bool)
-@@ -262,7 +273,7 @@
+     (complete : completeKnowledge known indexed = true) : known.uncertain = false ∧ indexed = true := by
+-  simpa [completeKnowledge, Bool.and_eq_true] using complete
++  cases unknown : known.uncertain <;> cases available : indexed <;>
++    simp_all [completeKnowledge]
+ 
+ def Turn.name (turn : Turn) : String := Index.contentKey turn
+ 
+@@ -193,7 +214,10 @@
+     else if let some reader ← Index.open? source .user .shared then
+       pure (some ({head := reader.index.head, storage := .user, producer := reader.manifest.implementation} : IndexAt))
+     else pure none
+-  return ⟨source.head, indexed, known, uncertain, archive⟩
++  let archived ← archive.bindM fun path => do
++    if (.mk path : System.FilePath).normalize == source.directory.normalize then return some source.head
++    return (← PageMap.open? (.mk path)).map (·.head)
++  return ⟨source.head, indexed, known, uncertain, archive, archived⟩
+ 
+ def originalAt? (source : PageMap.Snapshot) (head : PageMap.Head) : IO (Option PageMap.Snapshot) := do
+   if (← Build.changes source head).isNone then return none
+@@ -218,19 +242,27 @@
+     | _ => none).eraseDups.toArray
+ 
+ def acknowledged (keys : List String) (doc : Document) (row : Read) : Bool :=
+-  keys.any fun value => match value.splitOn ":" with
++  let whole := keys.any fun value => match value.splitOn ":" with
+     | ["h", owner] => owner == doc.owner
+     | ["g", owner, result] => owner == doc.owner &&
+         doc.source.any (fun text => Persistence.selectionKey (.text text) == result)
+-    | ["e", owner, result, first, limit] => owner == doc.owner &&
+-        doc.source.any (fun text => Persistence.selectionKey (.text text) == result) &&
+-        (first.toNat?).any (fun a => (limit.toNat?).any (fun b =>
+-          a ≤ row.binding.first && row.binding.limit ≤ b && a < b))
+     | _ => false
++  let spans := keys.filterMap fun value => match value.splitOn ":" with
++    | ["e", owner, result, first, limit] =>
++        if owner == doc.owner && doc.source.any (fun text => Persistence.selectionKey (.text text) == result) then do
++          let a ← first.toNat?
++          let b ← limit.toNat?
++          if a < b then some (owner,a,b) else none
++        else none
++    | _ => none
++  whole || ({bindings := spans.toArray} : Presentation).coversBinding row.binding
+ 
+ def presentation (source : PageMap.Snapshot) (known : Knowledge) : IO Presentation := do
+   let some original ← originalAt? source known.source | return {}
+-  let archive ← known.archive.bindM fun path => PageMap.open? (.mk path)
++  let archive ← known.archive.bindM fun path => do
++    let some head := known.archived | return none
++    let some current ← PageMap.open? (.mk path) | return none
++    originalAt? current head
+   let sources := #[original] ++ archive.toArray
+   let mut ranges := #[]
+   for snapshot in sources do
+@@ -238,9 +270,73 @@
+     for owner in ownerKeys known.acknowledged do
+       let some id ← Build.ownerId? snapshot owner | continue
+       let doc ← Build.document reader id
+-      let .ok rows := recordedRows snapshot.head.identity doc | continue
+-      ranges := ranges ++ (rows.filter (acknowledged known.acknowledged doc)).map (·.source)
++      let some catalog := ObservationContext.recorded snapshot.head.identity doc | continue
++      ranges := ranges ++ (catalog.located.flatMap (·.originalRows) |>.filter (acknowledged known.acknowledged doc) |>.map (·.source))
+   return {ranges := compactRanges ranges}
++
++abbrev Starts := Std.HashMap Occurrence (String × Knowledge × String)
++
++structure NativeFeedback where
++  graph : Graph
++  unknown : Nat := 0
++  ambiguous : Nat := 0
++
++abbrev WitnessAt := Occurrence × Nat × Nat × WitnessKind × String
++
++def witnessAt (edge : Consumption) : WitnessAt :=
++  (edge.consumer,edge.inputFirst,edge.inputLimit,edge.kind,edge.term)
++
++/-- A literal may occur in several earlier outputs. Such an ambiguous match
++does not identify which re-read was useful, and cannot earn a missing label. -/
++def nativeCandidates (facts : Array Fact) : Array (Consumption × Range) := Id.run do
++  let mut candidates := #[]
++  for fact in facts do
++    let .consumed edge := fact | continue
++    for source in edge.rows do
++      if (consumedSource? edge source).isSome then candidates := candidates.push (edge,source)
++  return candidates
++
++def nativeFeedback (source : PageMap.Snapshot) (starts : Starts) (facts : Array Fact)
++    (graph : Graph) (deadline : Nat) : IO NativeFeedback := do
++  let candidates := nativeCandidates facts
++  let mut witnesses : Std.HashMap WitnessAt (Std.HashSet (Occurrence × Option Range)) := {}
++  for fact in facts do
++    let .consumed edge := fact | continue
++    let rows := if edge.rows.isEmpty then #[none] else edge.rows.map some
++    for range in rows do
++      let key := witnessAt edge
++      witnesses := witnesses.insert key ((witnesses[key]?.getD {}).insert (edge.producer,range))
++  let mut groups : Std.HashMap Occurrence (Array (Consumption × Range)) := {}
++  let mut result : NativeFeedback := ⟨graph,0,0⟩
++  for (edge,range) in candidates do
++    if (witnesses[witnessAt edge]?.getD {}).size != 1 then
++      result := {result with ambiguous := result.ambiguous+1}
++      continue
++    groups := groups.insert edge.producer (groups[edge.producer]?.getD #[] |>.push (edge,range))
++  for (producer,uses) in groups do
++    if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "native usage deadline")
++    let some (query,known,_) := starts[producer]? | result := {result with unknown := result.unknown+1}; continue
++    let indexed ← indexAt? source known
++    unless completeKnowledge known indexed.isSome do
++      result := {result with unknown := result.unknown+1}; continue
++    let some indexed := indexed | throw (IO.userError "missing checked pre-read index")
++    let subjects := uses.foldl (fun subjects (_,range) => subjects.insert range.subject) ({} : Std.HashSet Subject)
++    let mut stored := #[]
++    for subject in subjects do
++      let found ← indexed.lookup (.subject subject) 100000 deadline
++      unless found.complete do throw (IO.userError "incomplete native stored-read evidence")
++      stored := stored ++ found.facts.filterMap (fun fact => match fact with
++        | .read read => if read.occurrence != producer then some read.source else none
++        | _ => none)
++    let shown ← presentation source known
++    for (edge,requested) in uses do
++      -- Without a pre-existing original there was no missed memory to label.
++      unless covered requested stored do continue
++      let missing := omittedRanges requested stored shown.ranges
++      for range in if missing.isEmpty then #[requested] else missing do
++        let some checked := consumedSource? edge range | throw (IO.userError "usage escaped its consumption witness")
++        result := {result with graph := ← IO.ofExcept (recordConsumed result.graph checked query stored shown.ranges)}
++  return result
+ 
+ structure Replay where
+   consumed : Array Fact := #[]
+@@ -249,6 +345,7 @@
+   pending : Nat := 0
+   unknown : Nat := 0
+   origins : Array Provenance.Origin := #[]
++  ambiguousNativeUses : Nat := 0
+ 
+ def acceptPublishedOutput (ownerId : Option Nat) (previous observed : Trace) : Trace :=
+   if ownerId.isSome then observed else previous
+@@ -262,31 +359,47 @@
    let mut result : Replay := {}
    let mut trace : Trace := {}
    let mut domain := ""
 -  let mut starts : Std.HashMap Occurrence (String × Knowledge) := {}
-+  let mut starts : Std.HashMap Occurrence (String × Knowledge × String) := {}
++  let mut starts : Starts := {}
    let mut locations : Std.HashMap Occurrence (Array OutputRow) := {}
++  let mut observed : Trace := {}
++  let mut observedLocations : Std.HashMap Occurrence (Array OutputRow) := {}
    let mut usage : Graph := .empty
    for value in values do
-@@ -276,17 +287,23 @@
+     if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "synaptic replay deadline")
+     if domain != value.clock.domain then
+       let projected ← IO.ofExcept (trace.locate locations)
++      let privateTrace ← IO.ofExcept (observed.locate observedLocations)
++      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline
++      usage := feedback.graph
+       result := {result with consumed := result.consumed ++ projected.graph.snapshot}
++      result := {result with
++        unknown := result.unknown+feedback.unknown
++        ambiguousNativeUses := result.ambiguousNativeUses+feedback.ambiguous}
+       trace := {}; starts := {}; locations := {}; domain := value.clock.domain
++      observed := {}; observedLocations := {}
+     if trace.lastOrdinal.any (value.clock.nanos < ·) then
+       result := {result with unknown := result.unknown+1}
        continue
      match value.payload with
      | .start occurrence work query known =>
@@ -1180,6 +1477,7 @@ diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
 +      if let some (_,_,original) := starts[occurrence]? then
 +        unless original == work do throw (IO.userError "native start changed its complete invocation")
 +      trace ← IO.ofExcept (trace.start occurrence value.clock.nanos command format)
++      observed ← IO.ofExcept (observed.start occurrence value.clock.nanos command format)
 +      starts := starts.insert occurrence (query, known, work)
        result := {result with consumers := result.consumers.push occurrence}
      | .finish occurrence name input response archive =>
@@ -1199,7 +1497,7 @@ diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
          throw (IO.userError "native finish changed its observed invocation")
        let expected := (Plugin.compileOperationOutcomes (.text occurrence.session) (.text occurrence.turn) tool).2
        let localId ← findNode? source expected
-@@ -303,27 +320,33 @@
+@@ -303,27 +416,36 @@
        let currentOriginal := localId.isSome
        if currentOriginal then
          let origin : Provenance.Origin :=
@@ -1215,6 +1513,7 @@ diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
 -      let completed ← IO.ofExcept (trace.finish occurrence value.clock.nanos output.text)
 +      let outputFormat := if (Json.parse raw).isOk then DataFormat.json else .text
 +      let completed ← IO.ofExcept (trace.finish occurrence value.clock.nanos raw outputFormat)
++      observed ← IO.ofExcept (observed.finish occurrence value.clock.nanos raw outputFormat)
        -- Foreign private work can label usage of this DB's memory, but cannot
        -- publish its terms or consumption edges into the shared DB lane.
        trace := acceptPublishedOutput localId trace completed
@@ -1222,6 +1521,8 @@ diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
 -        if currentOriginal then locations := locations.insert occurrence (reads.flatMap (·.rows))
 -        if let some (query, known) := starts[occurrence]? then
 +      let located := ObservationContext.locate recorded.head.identity doc completed
++      observedLocations := observedLocations.insert occurrence
++        ((ObservationContext.locate recorded.head.identity doc observed).flatMap (·.rows))
 +      if currentOriginal then locations := locations.insert occurrence (located.flatMap (·.rows))
 +      -- A general result does not state which part was requested as a read.
 +      -- Locate all its consumption witnesses, but do not label every returned
@@ -1241,6 +1542,37 @@ diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
                unless found.complete do throw (IO.userError "incomplete stored-read evidence")
                stored := stored ++ found.facts.filterMap (fun fact => match fact with
                  | .read read => if read.occurrence != occurrence then some read.source else none
+@@ -342,7 +464,11 @@
+       let feedback ← IO.ofExcept (({graph := usage, delivered := shown} : Feedback).answer occurrence query text)
+       usage := feedback.graph
+   let projected ← IO.ofExcept (trace.locate locations)
+-  return {result with consumed := result.consumed ++ projected.graph.snapshot, usage := usage.snapshot}
++  let privateTrace ← IO.ofExcept (observed.locate observedLocations)
++  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline
++  return {result with
++    consumed := result.consumed ++ projected.graph.snapshot, usage := feedback.graph.snapshot
++    unknown := result.unknown+feedback.unknown,ambiguousNativeUses := result.ambiguousNativeUses+feedback.ambiguous}
+ 
+ structure Checkpoint where
+   source : PageMap.Head
+@@ -382,6 +508,7 @@
+   pending : Nat := 0
+   unknown : Nat := 0
+   complete : Bool := true
++  ambiguousNativeUses : Nat := 0
+   deriving ToJson, FromJson
+ 
+ def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (result : Replay) (deadline : Nat) : IO Unit := do
+@@ -443,7 +570,8 @@
+     else result := {result with complete := false}
+     result := {result with
+       turns := result.turns+1, consumed := result.consumed+replayed.consumed.size
+-      usage := result.usage+replayed.usage.size, pending := result.pending+replayed.pending, unknown := result.unknown+replayed.unknown}
++      usage := result.usage+replayed.usage.size, pending := result.pending+replayed.pending, unknown := result.unknown+replayed.unknown,
++      ambiguousNativeUses := result.ambiguousNativeUses+replayed.ambiguousNativeUses}
+   if result.complete then mark current checkpointKey expected
+   return result
+ 
 diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
 --- a/Eggshell/Handoff.lean
 +++ b/Eggshell/Handoff.lean
@@ -2830,12 +3162,17 @@ diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
  import Eggshell.Setup
  import all Eggshell.GraphStore
  import all Eggshell.Worker
-@@ -16,7 +17,17 @@
+@@ -16,7 +17,22 @@
  reads use the same decoding/assembly implementation with their own read
  capability; no alternate body representation or compatibility lane exists. -/
  run_meta do
 -  for theoremName in #[``Eggshell.Plugin.DemandMemo.requested_record_rejects_another_request,
-+  for theoremName in #[``Eggshell.ObservationAge.recent_is_within_interval,
++  for theoremName in #[``Eggshell.Synapses.Extraction.consumed_source_has_witness,
++      ``Eggshell.Synapses.Extraction.consumed_source_is_later,
++      ``Eggshell.Synapses.Extraction.consumed_omission_requires_stored,
++      ``Eggshell.Synapses.Index.shared_rejects_usage,
++      ``Eggshell.Synapses.Recommend.Offer.usage_is_evidence,
++      ``Eggshell.ObservationAge.recent_is_within_interval,
 +      ``Eggshell.ObservationAge.expired_is_at_least_interval,
 +      ``Eggshell.ObservationAge.missing_receipt_is_unknown,
 +      ``Eggshell.ObservationAge.assessment_preserves_receipt,
@@ -2849,11 +3186,17 @@ diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
        ``Eggshell.Plugin.DemandMemo.observed_record_has_current_request,
        ``Eggshell.Plugin.DemandMemo.captured_decode_keeps_origin,
        ``Eggshell.Plugin.changed_memo_payload_rejected,
-@@ -238,8 +249,11 @@
+@@ -238,8 +254,17 @@
          #[``Eggshell.SourceEvidence.receiptFields?], #[]),
        (``Eggshell.Plugin.automaticHandoff,
          #[``Eggshell.Plugin.Handoff.checkSources, ``Eggshell.Persistence.Store.NodeReader.sources], #[]),
 +      (``Eggshell.Plugin.Daemon.hookRequest, #[``Eggshell.ObservationAge.now], #[]),
++      (``Eggshell.Synapses.Journal.replay, #[``Eggshell.Synapses.Journal.nativeFeedback], #[]),
++      (``Eggshell.Synapses.Journal.nativeFeedback,
++        #[``Eggshell.Synapses.Journal.indexAt?, ``Eggshell.Synapses.Journal.presentation,
++          ``Eggshell.Synapses.Extraction.recordConsumed, ``Eggshell.Synapses.Extraction.consumedSource?], #[]),
++      (``Eggshell.Synapses.Journal.presentation,
++        #[``Eggshell.Synapses.Journal.originalAt?, ``Eggshell.Synapses.ObservationContext.recorded], #[]),
 +      (``Eggshell.Synapses.Live.finish, #[``Eggshell.Synapses.Live.receivedUnixMs?], #[]),
        (``Eggshell.Plugin.Handoff.checkSources,
          #[``Eggshell.Plugin.Handoff.withCheckedSources, ``Eggshell.SourceEvidence.observeRecords,
@@ -3299,3 +3642,261 @@ diff --git a/tests/SynapseProvenanceTests.lean b/tests/SynapseProvenanceTests.le
    for name in ["equal-time.egg", "reverse.egg", "other-clock.egg"] do
      copySource source (root / name)
      IO.FS.writeBinFile (root / name / "writer") ByteArray.empty
+diff --git a/tests/SynapseNativeUsageTests.lean b/tests/SynapseNativeUsageTests.lean
+--- a/tests/SynapseNativeUsageTests.lean
++++ b/tests/SynapseNativeUsageTests.lean
+@@ -0,0 +1,186 @@
++import Eggshell.SynapseLive
++import Eggshell.SynapseRecommend
++
++open Lean Eggshell Eggshell.Plugin Eggshell.Synapses Eggshell.Synapses.Extraction
++open Eggshell.Synapses.Journal Eggshell.Persistence.Store
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def domain : String := String.ofList (List.replicate 64 'a')
++private def query : String := String.ofList (List.replicate 64 'b')
++private def occurrence (name : String) : Occurrence := ⟨"live","turn",name⟩
++
++private def readTool (name : String) (id := "ID_ALPHA") : ToolEvent := {
++  name := "mcp__catalog__invoke",useId := name,input := "{\"key\":\"one\"}"
++  response := (Json.mkObj [("id",toJson id),("unused",toJson "UNUSED_VALUE"),
++    ("tail",toJson "TAIL_BETA")]).compress}
++
++private def useTool (name value : String) : ToolEvent := {
++  name := "mcp__catalog__use",useId := name
++  input := (Json.mkObj [("selected",toJson value),("private",toJson "PRIVATE_ARGUMENT_NEVER_SHARED")]).compress
++  response := (toJson "CONSUMER_DONE").compress}
++
++private def publish (source : DB.PageMap.Snapshot) (session : String) (tool : ToolEvent) :
++    IO (DB.PageMap.Snapshot × OutcomeEdge) := do
++  let relation := (compileOperationOutcomes (.text session) (.text "turn") tool).2
++  let some edge := OutcomeEdge.fromValue? relation | throw (IO.userError "invalid fixture")
++  let _ ← DB.PageMap.withWriter source fun writer => do
++    let intern : Intern := ⟨writer,← IO.mkRef {}⟩
++    let id ← intern.root relation
++    writeChange writer ⟨[id],[],false⟩
++  return (← DB.PageMap.pin source.directory,edge)
++
++private def events (tool : ToolEvent) (known : Knowledge) (time : Nat)
++    (archive : Option String) : Array Entry := #[
++  ⟨⟨domain,time⟩,.start (occurrence tool.useId) (canonicalToolWork tool) query known,none⟩,
++  ⟨⟨domain,time+1⟩,.finish (occurrence tool.useId) tool.name tool.input tool.response archive,none⟩]
++
++private def usageFacts (source : DB.PageMap.Snapshot) : IO (Array Usage) := do
++  let some ready ← Index.open? source .user .usage | return #[]
++  return (← Index.allFacts ready.index).filterMap fun fact => match fact with
++    | .used usage => some usage
++    | _ => none
++
++structure Case where
++  label : String
++  ack : String := "none"
++  privateWork : Bool := false
++  uncertain : Bool := false
++  missingIndex : Bool := false
++  priorData : Bool := true
++  consumed : Bool := true
++  ambiguous : Bool := false
++  appendLater : Bool := false
++  lateAck : Bool := false
++  archiveRetraction : Bool := false
++
++private def trial (root : System.FilePath) (spec : Case) : IO Json := do
++  let base ← DB.PageMap.create (root / "memory.egg") "native-usage-memory"
++  let (source,seed) ← publish base "seed" (readTool "seed" (if spec.priorData then "ID_ALPHA" else "OTHER_ID"))
++  let _ ← Build.refresh source .database
++  let reader ← NodeReader.new source
++  let some id ← findNode? source seed.relation | throw (IO.userError "missing seed")
++  let doc ← Build.document reader id
++  let some catalog := ObservationContext.recorded source.head.identity doc | throw (IO.userError "missing native catalog")
++  let some needed := (catalog.located.map (·.read)).find? (·.quotations.contains (Quotes.digest (if spec.priorData then "ID_ALPHA" else "OTHER_ID"))) |
++    throw (IO.userError "missing native id")
++  let key := fun a b => s!"e:{doc.owner}:{Persistence.selectionKey (.text (doc.source.getD ""))}:{a}:{b}"
++  let split := (needed.binding.first+needed.binding.limit)/2
++  let keys := match spec.ack with
++    | "whole" => ["h:" ++ doc.owner]
++    | "split" => [key needed.binding.first split,key split needed.binding.limit]
++    | "hole" => [key needed.binding.first split,key (split+1) needed.binding.limit]
++    | _ => []
++  let archive ← if spec.privateWork then pure (some (← DB.PageMap.create (root / "private.egg") "native-private-work")) else pure none
++  let archive ← if spec.archiveRetraction then do
++      let some saved := archive | throw (IO.userError "archive fixture required")
++      let (saved,_) ← publish saved "earlier-private" (readTool "old-private")
++      pure (some saved)
++    else pure archive
++  let archivePath := archive.map (·.directory.toString)
++  let keys ← if spec.archiveRetraction then do
++      unless archive.isSome do throw (IO.userError "missing archive")
++      let edge := (compileOperationOutcomes (.text "earlier-private") (.text "turn") (readTool "old-private")).2
++      pure ["h:" ++ Persistence.selectionKey edge]
++    else pure keys
++  let known ← knowledge source keys spec.uncertain archivePath
++  let known := if spec.missingIndex then {known with indexed := none} else known
++  let archive ← if spec.archiveRetraction then do
++      let some saved := archive | throw (IO.userError "missing archive")
++      let edge := (compileOperationOutcomes (.text "earlier-private") (.text "turn") (readTool "old-private")).2
++      let some id ← findNode? saved edge | throw (IO.userError "missing old private owner")
++      let _ ← DB.PageMap.withWriter saved fun writer => do
++        removeRoot writer id
++        writeChange writer ⟨[],[id],false⟩
++      pure (some (← DB.PageMap.pin saved.directory))
++    else pure archive
++  if spec.archiveRetraction then
++    check (covered needed.source (← presentation source known).ranges)
++      "a later archive retraction rewrote acknowledged pre-read knowledge"
++  let producer := readTool "read"
++  let consumer := useTool "use-A" "ID_ALPHA"
++  let tools := #[producer] ++ (if spec.ambiguous then #[readTool "another-read"] else #[]) ++
++    (if spec.consumed then #[consumer] else #[])
++  let mut source := source
++  let mut archive := archive
++  for tool in tools do
++    if let some saved := archive then
++      let (updated,_) ← publish saved "live" tool
++      archive := some updated
++    else
++      let (updated,_) ← publish source "live" tool
++      source := updated
++  let sourceBefore := source.head
++  let mut ordinal := 10
++  for tool in tools do
++    for event in events tool known ordinal archivePath do
++      let _ ← Journal.append source event
++      if spec.lateAck && event.payload.kind == "start" && tool.useId == producer.useId then
++        let lateKnown := {known with acknowledged := ["h:" ++ doc.owner]}
++        let late := {event with payload := .start (occurrence producer.useId) (canonicalToolWork producer) query lateKnown}
++        check (!(← Journal.append source late)) "retry replaced pre-read ACK knowledge"
++    ordinal := ordinal+10
++  let storage := if spec.privateWork then DB.Sidecar.Storage.user else .database
++  let replayed ← Journal.refresh source storage ((← IO.monoMsNow)+10000)
++  source ← DB.PageMap.pin source.directory
++  let beforeLater ← usageFacts source
++  let positive := beforeLater.filter (·.kind == .omittedThenConsumed)
++  let expected := spec.consumed && spec.priorData && !spec.uncertain && !spec.missingIndex &&
++    !spec.ambiguous && spec.ack != "whole" && spec.ack != "split" && !spec.archiveRetraction
++  check (positive.size == if expected then 1 else 0) s!"{spec.label}: wrong missing-use count"
++  check (beforeLater.all (fun usage => usage.event.occurrence == occurrence "read" &&
++      usage.event.consumption.any (fun cause => cause.consumer == occurrence "use-A" && cause.source == usage.source) &&
++      usage.source == needed.source)) s!"{spec.label}: unused sibling or fabricated event was labelled"
++  if spec.ambiguous then check (replayed.ambiguousNativeUses > 0) "ambiguous output matches were not recorded"
++  if spec.uncertain || spec.missingIndex then check (replayed.unknown > 0) "unconfirmed pre-read knowledge became complete"
++  if spec.privateWork then
++    check (source.head == sourceBefore && replayed.consumed == 0)
++      "private usage changed the shared source or published private consumption"
++  let some shared ← Index.open? source storage .shared | throw (IO.userError "missing shared index")
++  let sharedFacts ← Index.allFacts shared.index
++  check (sharedFacts.all (fun fact => match fact with | .used _ => false | _ => true) &&
++      ((toJson sharedFacts).compress.splitOn "PRIVATE_ARGUMENT_NEVER_SHARED").length == 1)
++    "private feedback or private arguments leaked to the shared index"
++  if expected then
++    let some usage ← Index.open? source .user .usage | throw (IO.userError "missing private usage index")
++    let recommendation ← Recommend.collect shared (some usage) #[] #[] query ((← IO.monoMsNow)+10000)
++    check (recommendation.complete && recommendation.admitted.any (·.target.source? == some needed.source))
++      "native missing-use feedback did not reach recommendation"
++  if spec.appendLater then
++    let later := useTool "use-B" "TAIL_BETA"
++    let (updated,_) ← publish source "live" later
++    source := updated
++    for event in events later known 50 none do let _ ← Journal.append source event; pure ()
++    let _ ← Journal.refresh source storage ((← IO.monoMsNow)+10000)
++    source ← DB.PageMap.pin source.directory
++    let after ← usageFacts source
++    check (after.size == 2 && beforeLater.all after.contains && after.all (·.kind == .omittedThenConsumed))
++      "later consumption reassigned an earlier usage event or lost a distinct used range"
++  let beforeRepeat ← usageFacts source
++  let again ← Journal.refresh source storage ((← IO.monoMsNow)+10000)
++  check (again.turns == 0 && (← usageFacts (← DB.PageMap.pin source.directory)) == beforeRepeat)
++    "unchanged native replay inflated use evidence"
++  return Json.mkObj [("case",toJson spec.label),("replay",toJson replayed),
++    ("usage",toJson beforeRepeat),("sourceUnchanged",toJson (sourceBefore == source.head))]
++
++def main (args : List String) : IO Unit := do
++  let [path] := args | throw (IO.userError "SynapseNativeUsageTests NEW-DIRECTORY")
++  let root := System.FilePath.mk path
++  check (root.isAbsolute && !(← root.pathExists)) "new absolute fixture required"
++  IO.FS.createDirAll root
++  let cases : Array Case := #[
++    {label := "missing-local"},{label := "missing-private",privateWork := true},
++    {label := "whole-ack",ack := "whole"},{label := "split-ack",ack := "split"},
++    {label := "hole-ack",ack := "hole"},{label := "uncertain",uncertain := true},
++    {label := "missing-index",missingIndex := true},{label := "absent-prior",priorData := false},
++    {label := "not-consumed",consumed := false},{label := "ambiguous",ambiguous := true},
++    {label := "append-later",appendLater := true},{label := "late-ack",lateAck := true},
++    {label := "archive-retraction",privateWork := true,archiveRetraction := true}]
++  let mut results := #[]
++  for spec in cases do
++    let directory := root / spec.label
++    IO.FS.createDirAll directory
++    results := results.push (← trial directory spec)
++  IO.FS.writeFile (root / "usage.json") (toJson results).pretty
++  IO.println s!"native usage passed: {cases.size} cases; consumed ranges only, pinned pre-read DB/ACKs, private feedback, ambiguity, stable later events and idempotent replay"
+diff --git a/tests/SynapseTests.lean b/tests/SynapseTests.lean
+--- a/tests/SynapseTests.lean
++++ b/tests/SynapseTests.lean
+@@ -22,7 +22,7 @@
+   let read := readFor session
+   let support ← Support.checked read range (claim session)
+   let graph ← Graph.ofFacts #[.read read, .supports support, .coquoted (.answer "database" session) range]
+-  graph.recordRead ⟨occurrence session, 0⟩ query range #[range] #[] true
++  graph.recordRead ⟨occurrence session, 0, none⟩ query range #[range] #[] true
+ 
+ private def mergeLaws : IO Unit := do
+   let a ← IO.ofExcept (sessionGraph "A")
+@@ -40,7 +40,7 @@
+   check (left.snapshot == right.snapshot) "join depends on grouping"
+   let restored ← IO.ofExcept ((fromJson? (toJson combined.snapshot) : Except String (Array Fact)) >>= Graph.ofFacts)
+   check (restored.snapshot == combined.snapshot) "native JSON roundtrip changed evidence"
+-  let conflict ← IO.ofExcept (Graph.empty.recordRead ⟨occurrence "A", 0⟩ query source #[source] #[source] true)
++  let conflict ← IO.ofExcept (Graph.empty.recordRead ⟨occurrence "A", 0, none⟩ query source #[source] #[source] true)
+   check ((!(a.merge conflict).isOk)) "conflicting usage event silently overwritten"
+   check ((a.usageCounts source).omittedThenRead == 1) "failed join changed its input"
+ 
+diff --git a/tests/SynapseIndexTests.lean b/tests/SynapseIndexTests.lean
+--- a/tests/SynapseIndexTests.lean
++++ b/tests/SynapseIndexTests.lean
+@@ -91,7 +91,7 @@
+ private def privacy (root : System.FilePath) : IO Unit := do
+   let snapshot ← DB.PageMap.create (root / "readonly.egg") "source-authority"
+   let usage : Fact := .used {
+-    event := ⟨occurrence "missing", 0⟩
++    event := ⟨occurrence "missing", 0, none⟩
+     query := String.ofList (List.replicate 64 'b')
+     source := source
+     kind := .omittedThenRead }
+@@ -103,7 +103,7 @@
+   check ((← lookup reader (.query (String.ofList (List.replicate 64 'b')))).facts == #[usage])
+     "private cross-chat usage was not persisted"
+   let conflict : Fact := .used {
+-    event := ⟨occurrence "missing", 0⟩
++    event := ⟨occurrence "missing", 0, none⟩
+     query := String.ofList (List.replicate 64 'b')
+     source := source
+     kind := .reread }
+diff --git a/tests/SynapseRecommendTests.lean b/tests/SynapseRecommendTests.lean
+--- a/tests/SynapseRecommendTests.lean
++++ b/tests/SynapseRecommendTests.lean
+@@ -32,7 +32,7 @@
+   return read
+ 
+ private def usage (name : String) (source : Range) (kind : UsageKind) : Fact :=
+-  .used ⟨⟨occurrence name, 0⟩, query, source, kind⟩
++  .used ⟨⟨occurrence name, 0, none⟩, query, source, kind⟩
+ 
+ private def scenario (root : System.FilePath) : IO Unit := do
+   let source ← DB.PageMap.create (root / "source.egg") (Persistence.valueToJson (.text "authority")).compress
+diff --git a/tests/SynapseSubjectTests.lean b/tests/SynapseSubjectTests.lean
+--- a/tests/SynapseSubjectTests.lean
++++ b/tests/SynapseSubjectTests.lean
+@@ -84,8 +84,8 @@
+   check (relevant.ranges.contains id.source && relevant.occurrences.contains id.occurrence)
+     "native support did not seed reverse consumption"
+   let query := String.ofList (List.replicate 64 'b')
+-  let usage ← IO.ofExcept ((Graph.empty.recordRead ⟨same.occurrence,0⟩ query id.source #[id.source] #[] true) >>= fun graph =>
+-    graph.recordCitation ⟨same.occurrence,1⟩ query id.source #[id.source])
++  let usage ← IO.ofExcept ((Graph.empty.recordRead ⟨same.occurrence,0,none⟩ query id.source #[id.source] #[] true) >>= fun graph =>
++    graph.recordCitation ⟨same.occurrence,1,none⟩ query id.source #[id.source])
+   let counts := usage.usageCounts id.source
+   check (counts.omittedThenRead == 1 && counts.deliveredThenCited == 1)
+     "native usage was not accumulated at the canonical data interval"

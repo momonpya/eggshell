@@ -22,7 +22,7 @@ private def sessionGraph (session : String) : Except String Graph := do
   let read := readFor session
   let support ← Support.checked read range (claim session)
   let graph ← Graph.ofFacts #[.read read, .supports support, .coquoted (.answer "database" session) range]
-  graph.recordRead ⟨occurrence session, 0⟩ query range #[range] #[] true
+  graph.recordRead ⟨occurrence session, 0, none⟩ query range #[range] #[] true
 
 private def mergeLaws : IO Unit := do
   let a ← IO.ofExcept (sessionGraph "A")
@@ -40,7 +40,7 @@ private def mergeLaws : IO Unit := do
   check (left.snapshot == right.snapshot) "join depends on grouping"
   let restored ← IO.ofExcept ((fromJson? (toJson combined.snapshot) : Except String (Array Fact)) >>= Graph.ofFacts)
   check (restored.snapshot == combined.snapshot) "native JSON roundtrip changed evidence"
-  let conflict ← IO.ofExcept (Graph.empty.recordRead ⟨occurrence "A", 0⟩ query source #[source] #[source] true)
+  let conflict ← IO.ofExcept (Graph.empty.recordRead ⟨occurrence "A", 0, none⟩ query source #[source] #[source] true)
   check ((!(a.merge conflict).isOk)) "conflicting usage event silently overwritten"
   check ((a.usageCounts source).omittedThenRead == 1) "failed join changed its input"
 

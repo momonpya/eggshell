@@ -250,19 +250,33 @@ def Group.valid : Group → Bool
   | .claim value => value.valid
 
 inductive UsageKind where
-  | omittedThenRead | deliveredThenCited | reread | sourceChanged
+  | omittedThenRead | omittedThenConsumed | deliveredThenCited | reread | sourceChanged
   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
 
 def UsageKind.label : UsageKind → String
   | .omittedThenRead => "omitted_then_read"
+  | .omittedThenConsumed => "omitted_then_consumed"
   | .deliveredThenCited => "delivered_then_cited"
   | .reread => "reread"
   | .sourceChanged => "source_changed"
 
+structure ConsumptionUse where
+  consumer : Occurrence
+  source : Range
+  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+
 structure Event where
   occurrence : Occurrence
   ordinal : Nat
-  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+  consumption : Option ConsumptionUse := none
+  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, FromJson
+
+/-- A consumed range is keyed by its actual downstream use, independently of
+which other ranges become used later. Ordinary observed ordinals stay distinct. -/
+instance : ToJson Event where
+  toJson event := Json.mkObj ([
+    ("occurrence",toJson event.occurrence),("ordinal",toJson event.ordinal)] ++
+    event.consumption.toList.map (fun value => ("consumption",toJson value)))
 
 structure Usage where
   event : Event
@@ -273,7 +287,9 @@ structure Usage where
   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
 
 def Usage.valid (usage : Usage) : Bool :=
-  usage.event.occurrence.valid && digest usage.query && usage.source.valid
+  usage.event.occurrence.valid && digest usage.query && usage.source.valid &&
+    usage.event.consumption.all (fun cause => usage.event.ordinal == 0 && cause.consumer.valid &&
+      cause.consumer != usage.event.occurrence && cause.source == usage.source)
 
 inductive Fact where
   | read (read : Read)
@@ -433,6 +449,7 @@ def Graph.recordCitation (graph : Graph) (event : Event) (query : String) (sourc
 
 structure UsageCounts where
   omittedThenRead : Nat := 0
+  omittedThenConsumed : Nat := 0
   deliveredThenCited : Nat := 0
   reread : Nat := 0
   sourceChanged : Nat := 0
@@ -443,6 +460,7 @@ def Graph.usageCounts (graph : Graph) (source : Range) (query : Option String :=
     if query.any (· != usage.query) then counts else
     match usage.kind with
     | .omittedThenRead => {counts with omittedThenRead := counts.omittedThenRead + 1}
+    | .omittedThenConsumed => {counts with omittedThenConsumed := counts.omittedThenConsumed + 1}
     | .deliveredThenCited => {counts with deliveredThenCited := counts.deliveredThenCited + 1}
     | .reread => {counts with reread := counts.reread + 1}
     | .sourceChanged => {counts with sourceChanged := counts.sourceChanged + 1}) {}

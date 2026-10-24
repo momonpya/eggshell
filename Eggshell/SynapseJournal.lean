@@ -28,7 +28,15 @@ structure Knowledge where
   acknowledged : List String
   uncertain : Bool
   archive : Option String := none
-  deriving BEq, ToJson, FromJson
+  archived : Option PageMap.Head := none
+  deriving BEq, FromJson
+
+instance : ToJson Knowledge where
+  toJson known := Json.mkObj ([
+    ("source",toJson known.source),("indexed",toJson known.indexed),
+    ("acknowledged",toJson known.acknowledged),("uncertain",toJson known.uncertain),
+    ("archive",toJson known.archive)] ++
+    known.archived.toList.map (fun head => ("archived",toJson head)))
 
 inductive Payload where
   | start (occurrence : Occurrence) (work query : String) (knowledge : Knowledge)
@@ -98,11 +106,13 @@ theorem retry_keeps_receipt_time (previous next accepted : Entry)
     accepted.receivedUnixMs = previous.receivedUnixMs := by
   rw [retry_keeps_first_observation previous next accepted result]
 
-def completeKnowledge (known : Knowledge) (indexed : Bool) : Bool := !known.uncertain && indexed
+def completeKnowledge (known : Knowledge) (indexed : Bool) : Bool :=
+  !known.uncertain && indexed && (known.archive.isNone || known.archived.isSome)
 
 theorem complete_knowledge_is_confirmed (known : Knowledge) (indexed : Bool)
     (complete : completeKnowledge known indexed = true) : known.uncertain = false ∧ indexed = true := by
-  simpa [completeKnowledge, Bool.and_eq_true] using complete
+  cases unknown : known.uncertain <;> cases available : indexed <;>
+    simp_all [completeKnowledge]
 
 def Turn.name (turn : Turn) : String := Index.contentKey turn
 
@@ -204,7 +214,10 @@ def knowledge (source : PageMap.Snapshot) (known : List String) (uncertain : Boo
     else if let some reader ← Index.open? source .user .shared then
       pure (some ({head := reader.index.head, storage := .user, producer := reader.manifest.implementation} : IndexAt))
     else pure none
-  return ⟨source.head, indexed, known, uncertain, archive⟩
+  let archived ← archive.bindM fun path => do
+    if (.mk path : System.FilePath).normalize == source.directory.normalize then return some source.head
+    return (← PageMap.open? (.mk path)).map (·.head)
+  return ⟨source.head, indexed, known, uncertain, archive, archived⟩
 
 def originalAt? (source : PageMap.Snapshot) (head : PageMap.Head) : IO (Option PageMap.Snapshot) := do
   if (← Build.changes source head).isNone then return none
@@ -229,19 +242,27 @@ def ownerKeys (known : List String) : Array String :=
     | _ => none).eraseDups.toArray
 
 def acknowledged (keys : List String) (doc : Document) (row : Read) : Bool :=
-  keys.any fun value => match value.splitOn ":" with
+  let whole := keys.any fun value => match value.splitOn ":" with
     | ["h", owner] => owner == doc.owner
     | ["g", owner, result] => owner == doc.owner &&
         doc.source.any (fun text => Persistence.selectionKey (.text text) == result)
-    | ["e", owner, result, first, limit] => owner == doc.owner &&
-        doc.source.any (fun text => Persistence.selectionKey (.text text) == result) &&
-        (first.toNat?).any (fun a => (limit.toNat?).any (fun b =>
-          a ≤ row.binding.first && row.binding.limit ≤ b && a < b))
     | _ => false
+  let spans := keys.filterMap fun value => match value.splitOn ":" with
+    | ["e", owner, result, first, limit] =>
+        if owner == doc.owner && doc.source.any (fun text => Persistence.selectionKey (.text text) == result) then do
+          let a ← first.toNat?
+          let b ← limit.toNat?
+          if a < b then some (owner,a,b) else none
+        else none
+    | _ => none
+  whole || ({bindings := spans.toArray} : Presentation).coversBinding row.binding
 
 def presentation (source : PageMap.Snapshot) (known : Knowledge) : IO Presentation := do
   let some original ← originalAt? source known.source | return {}
-  let archive ← known.archive.bindM fun path => PageMap.open? (.mk path)
+  let archive ← known.archive.bindM fun path => do
+    let some head := known.archived | return none
+    let some current ← PageMap.open? (.mk path) | return none
+    originalAt? current head
   let sources := #[original] ++ archive.toArray
   let mut ranges := #[]
   for snapshot in sources do
@@ -249,9 +270,73 @@ def presentation (source : PageMap.Snapshot) (known : Knowledge) : IO Presentati
     for owner in ownerKeys known.acknowledged do
       let some id ← Build.ownerId? snapshot owner | continue
       let doc ← Build.document reader id
-      let .ok rows := recordedRows snapshot.head.identity doc | continue
-      ranges := ranges ++ (rows.filter (acknowledged known.acknowledged doc)).map (·.source)
+      let some catalog := ObservationContext.recorded snapshot.head.identity doc | continue
+      ranges := ranges ++ (catalog.located.flatMap (·.originalRows) |>.filter (acknowledged known.acknowledged doc) |>.map (·.source))
   return {ranges := compactRanges ranges}
+
+abbrev Starts := Std.HashMap Occurrence (String × Knowledge × String)
+
+structure NativeFeedback where
+  graph : Graph
+  unknown : Nat := 0
+  ambiguous : Nat := 0
+
+abbrev WitnessAt := Occurrence × Nat × Nat × WitnessKind × String
+
+def witnessAt (edge : Consumption) : WitnessAt :=
+  (edge.consumer,edge.inputFirst,edge.inputLimit,edge.kind,edge.term)
+
+/-- A literal may occur in several earlier outputs. Such an ambiguous match
+does not identify which re-read was useful, and cannot earn a missing label. -/
+def nativeCandidates (facts : Array Fact) : Array (Consumption × Range) := Id.run do
+  let mut candidates := #[]
+  for fact in facts do
+    let .consumed edge := fact | continue
+    for source in edge.rows do
+      if (consumedSource? edge source).isSome then candidates := candidates.push (edge,source)
+  return candidates
+
+def nativeFeedback (source : PageMap.Snapshot) (starts : Starts) (facts : Array Fact)
+    (graph : Graph) (deadline : Nat) : IO NativeFeedback := do
+  let candidates := nativeCandidates facts
+  let mut witnesses : Std.HashMap WitnessAt (Std.HashSet (Occurrence × Option Range)) := {}
+  for fact in facts do
+    let .consumed edge := fact | continue
+    let rows := if edge.rows.isEmpty then #[none] else edge.rows.map some
+    for range in rows do
+      let key := witnessAt edge
+      witnesses := witnesses.insert key ((witnesses[key]?.getD {}).insert (edge.producer,range))
+  let mut groups : Std.HashMap Occurrence (Array (Consumption × Range)) := {}
+  let mut result : NativeFeedback := ⟨graph,0,0⟩
+  for (edge,range) in candidates do
+    if (witnesses[witnessAt edge]?.getD {}).size != 1 then
+      result := {result with ambiguous := result.ambiguous+1}
+      continue
+    groups := groups.insert edge.producer (groups[edge.producer]?.getD #[] |>.push (edge,range))
+  for (producer,uses) in groups do
+    if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "native usage deadline")
+    let some (query,known,_) := starts[producer]? | result := {result with unknown := result.unknown+1}; continue
+    let indexed ← indexAt? source known
+    unless completeKnowledge known indexed.isSome do
+      result := {result with unknown := result.unknown+1}; continue
+    let some indexed := indexed | throw (IO.userError "missing checked pre-read index")
+    let subjects := uses.foldl (fun subjects (_,range) => subjects.insert range.subject) ({} : Std.HashSet Subject)
+    let mut stored := #[]
+    for subject in subjects do
+      let found ← indexed.lookup (.subject subject) 100000 deadline
+      unless found.complete do throw (IO.userError "incomplete native stored-read evidence")
+      stored := stored ++ found.facts.filterMap (fun fact => match fact with
+        | .read read => if read.occurrence != producer then some read.source else none
+        | _ => none)
+    let shown ← presentation source known
+    for (edge,requested) in uses do
+      -- Without a pre-existing original there was no missed memory to label.
+      unless covered requested stored do continue
+      let missing := omittedRanges requested stored shown.ranges
+      for range in if missing.isEmpty then #[requested] else missing do
+        let some checked := consumedSource? edge range | throw (IO.userError "usage escaped its consumption witness")
+        result := {result with graph := ← IO.ofExcept (recordConsumed result.graph checked query stored shown.ranges)}
+  return result
 
 structure Replay where
   consumed : Array Fact := #[]
@@ -260,6 +345,7 @@ structure Replay where
   pending : Nat := 0
   unknown : Nat := 0
   origins : Array Provenance.Origin := #[]
+  ambiguousNativeUses : Nat := 0
 
 def acceptPublishedOutput (ownerId : Option Nat) (previous observed : Trace) : Trace :=
   if ownerId.isSome then observed else previous
@@ -273,15 +359,24 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
   let mut result : Replay := {}
   let mut trace : Trace := {}
   let mut domain := ""
-  let mut starts : Std.HashMap Occurrence (String × Knowledge × String) := {}
+  let mut starts : Starts := {}
   let mut locations : Std.HashMap Occurrence (Array OutputRow) := {}
+  let mut observed : Trace := {}
+  let mut observedLocations : Std.HashMap Occurrence (Array OutputRow) := {}
   let mut usage : Graph := .empty
   for value in values do
     if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "synaptic replay deadline")
     if domain != value.clock.domain then
       let projected ← IO.ofExcept (trace.locate locations)
+      let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline
+      usage := feedback.graph
       result := {result with consumed := result.consumed ++ projected.graph.snapshot}
+      result := {result with
+        unknown := result.unknown+feedback.unknown
+        ambiguousNativeUses := result.ambiguousNativeUses+feedback.ambiguous}
       trace := {}; starts := {}; locations := {}; domain := value.clock.domain
+      observed := {}; observedLocations := {}
     if trace.lastOrdinal.any (value.clock.nanos < ·) then
       result := {result with unknown := result.unknown+1}
       continue
@@ -291,6 +386,7 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       if let some (_,_,original) := starts[occurrence]? then
         unless original == work do throw (IO.userError "native start changed its complete invocation")
       trace ← IO.ofExcept (trace.start occurrence value.clock.nanos command format)
+      observed ← IO.ofExcept (observed.start occurrence value.clock.nanos command format)
       starts := starts.insert occurrence (query, known, work)
       result := {result with consumers := result.consumers.push occurrence}
     | .finish occurrence name input response archive =>
@@ -329,10 +425,13 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       let some raw := doc.source | result := {result with unknown := result.unknown+1}; continue
       let outputFormat := if (Json.parse raw).isOk then DataFormat.json else .text
       let completed ← IO.ofExcept (trace.finish occurrence value.clock.nanos raw outputFormat)
+      observed ← IO.ofExcept (observed.finish occurrence value.clock.nanos raw outputFormat)
       -- Foreign private work can label usage of this DB's memory, but cannot
       -- publish its terms or consumption edges into the shared DB lane.
       trace := acceptPublishedOutput localId trace completed
       let located := ObservationContext.locate recorded.head.identity doc completed
+      observedLocations := observedLocations.insert occurrence
+        ((ObservationContext.locate recorded.head.identity doc observed).flatMap (·.rows))
       if currentOriginal then locations := locations.insert occurrence (located.flatMap (·.rows))
       -- A general result does not state which part was requested as a read.
       -- Locate all its consumption witnesses, but do not label every returned
@@ -365,7 +464,11 @@ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) :
       let feedback ← IO.ofExcept (({graph := usage, delivered := shown} : Feedback).answer occurrence query text)
       usage := feedback.graph
   let projected ← IO.ofExcept (trace.locate locations)
-  return {result with consumed := result.consumed ++ projected.graph.snapshot, usage := usage.snapshot}
+  let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline
+  return {result with
+    consumed := result.consumed ++ projected.graph.snapshot, usage := feedback.graph.snapshot
+    unknown := result.unknown+feedback.unknown,ambiguousNativeUses := result.ambiguousNativeUses+feedback.ambiguous}
 
 structure Checkpoint where
   source : PageMap.Head
@@ -405,6 +508,7 @@ structure Result where
   pending : Nat := 0
   unknown : Nat := 0
   complete : Bool := true
+  ambiguousNativeUses : Nat := 0
   deriving ToJson, FromJson
 
 def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (result : Replay) (deadline : Nat) : IO Unit := do
@@ -466,7 +570,8 @@ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline : 
     else result := {result with complete := false}
     result := {result with
       turns := result.turns+1, consumed := result.consumed+replayed.consumed.size
-      usage := result.usage+replayed.usage.size, pending := result.pending+replayed.pending, unknown := result.unknown+replayed.unknown}
+      usage := result.usage+replayed.usage.size, pending := result.pending+replayed.pending, unknown := result.unknown+replayed.unknown,
+      ambiguousNativeUses := result.ambiguousNativeUses+replayed.ambiguousNativeUses}
   if result.complete then mark current checkpointKey expected
   return result
 

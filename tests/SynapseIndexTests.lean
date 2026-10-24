@@ -91,7 +91,7 @@ private def bounded (root : System.FilePath) : IO Unit := do
 private def privacy (root : System.FilePath) : IO Unit := do
   let snapshot ← DB.PageMap.create (root / "readonly.egg") "source-authority"
   let usage : Fact := .used {
-    event := ⟨occurrence "missing", 0⟩
+    event := ⟨occurrence "missing", 0, none⟩
     query := String.ofList (List.replicate 64 'b')
     source := source
     kind := .omittedThenRead }
@@ -103,7 +103,7 @@ private def privacy (root : System.FilePath) : IO Unit := do
   check ((← lookup reader (.query (String.ofList (List.replicate 64 'b')))).facts == #[usage])
     "private cross-chat usage was not persisted"
   let conflict : Fact := .used {
-    event := ⟨occurrence "missing", 0⟩
+    event := ⟨occurrence "missing", 0, none⟩
     query := String.ofList (List.replicate 64 'b')
     source := source
     kind := .reread }

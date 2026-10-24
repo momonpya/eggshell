@@ -36,7 +36,7 @@ def carries (fact : Fact) : Target → Bool
     | .consumed edge => edge.rows.contains source
     | .coquoted _ quoted => quoted == source
     | .used usage => usage.source == source &&
-        (usage.kind == .omittedThenRead || usage.kind == .deliveredThenCited)
+        (usage.kind == .omittedThenRead || usage.kind == .omittedThenConsumed || usage.kind == .deliveredThenCited)
     | .read _ => false
 
 structure Offer where
@@ -62,7 +62,7 @@ theorem Offer.consumption_row (offer : Offer) (edge : Consumption) (kind : offer
   exact Array.mem_of_contains_eq_true witness
 
 theorem Offer.usage_is_evidence (offer : Offer) (usage : Usage) (kind : offer.fact = .used usage) :
-    usage.kind = .omittedThenRead ∨ usage.kind = .deliveredThenCited := by
+    (usage.kind = .omittedThenRead ∨ usage.kind = .omittedThenConsumed) ∨ usage.kind = .deliveredThenCited := by
   have witness := offer.witness
   cases target : offer.target <;> simp_all [carries, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq]
 
@@ -201,14 +201,14 @@ def collect (shared : Index.Reader) (usage : Option Index.Reader)
       | .group _, .coquoted _ source =>
         result := addOffer result (.range source) task.priority fact identity
       | .query _, .used value =>
-        if value.kind == .omittedThenRead || value.kind == .deliveredThenCited then
+        if value.kind == .omittedThenRead || value.kind == .omittedThenConsumed || value.kind == .deliveredThenCited then
           result := addOffer result (.range value.source) task.priority fact identity
           queue := queue.push ⟨.quoted value.source, task.priority⟩
       | _, _ => pure ()
   -- A checked omission is the more direct observation. Positive citation
   -- remains useful only where no omission of that same range was observed.
   let missing := result.offers.foldl (fun ranges offer => match offer.fact with
-    | .used value => if value.kind == .omittedThenRead then ranges.insert value.source else ranges
+    | .used value => if value.kind == .omittedThenRead || value.kind == .omittedThenConsumed then ranges.insert value.source else ranges
     | _ => ranges) ({} : Std.HashSet Range)
   return {result with offers := result.offers.filter fun offer => match offer.fact with
     | .used value => value.kind != .deliveredThenCited || !missing.contains value.source
