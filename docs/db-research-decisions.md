@@ -1,5 +1,12 @@
 # DB research applied to growing shared memory
 
+2026-10-25 update: [team-scale-plan.md](team-scale-plan.md) supersedes the deployment
+and work order below. The target starts at 10 people and extends to 80; a shared
+entry point in the same Eggshell executable owns short per-DB publications.
+Git-independent originals, project scopes and actual NAS failure tests are
+required. The earlier no-additional-service constraint is superseded. The
+research mechanisms below remain precedents, not evidence of team readiness.
+
 Reviewed 2026-10-24; primary Databricks/Snowflake/Redshift sources and the latest
 LSM-VEC revision rechecked 2026-10-25, following the request to use recent work.
 These are architecture decisions for isolated implementation, not evidence of

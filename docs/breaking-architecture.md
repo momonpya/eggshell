@@ -1,5 +1,13 @@
 # Breaking redesign around evidence delivery
 
+2026-10-25 update: [the 10–80 person execution plan](team-scale-plan.md) and the
+rewritten GOAL.md now define the current target and order. Project-scoped shared
+DBs use a single publication authority per DB, immutable originals and one
+source-change feed. Git is optional; client/server sharing is part of the plan.
+The earlier no-service wording and the historical numerical-timeout status below
+are not current requirements or current measurements. See the later component
+records for actual 50k results; team/NAS/year-scale qualification remains open.
+
 2026-10-24: the user permits breaking every compatibility constraint except
 the core: use equivalence structure, vectors and synaptic relations to deliver
 needed persisted records across multiple DBs and concurrent shared-DB use.
