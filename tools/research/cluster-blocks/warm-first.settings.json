@@ -1,0 +1,22 @@
+{
+  "cwd": "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025",
+  "limitRssKiB": 3670016,
+  "minFreeKiB": 524288,
+  "ownedPrefixes": [
+    "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025"
+  ],
+  "record": "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/warm-first.guard.json",
+  "command": [
+    "/usr/bin/env",
+    "EGGSHELL_PREFIX=/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/prefix",
+    "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000",
+    "EGGSHELL_CONFIG=/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/preparation/config.toml",
+    "/bin/sh",
+    "-c",
+    "exec \"$1\" egg warm \"$2\" > \"$3\"",
+    "warm",
+    "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/prefix/libexec/eggshell",
+    "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg",
+    "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/preparation/private-warm.stdout.json"
+  ]
+}
