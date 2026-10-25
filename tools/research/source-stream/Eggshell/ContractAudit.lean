@@ -1,0 +1,1897 @@
+module
+
+import Eggshell.SearchRank
+import Eggshell.SearchProvider
+import Eggshell.KeyedSearchProvider
+import Eggshell.SemanticMatcher
+import Eggshell.PluginModel
+import Eggshell.SynapseLive
+import Eggshell.Setup
+import all Eggshell.GraphStore
+import all Eggshell.Worker
+public meta import Lean
+import tests.FullSearchOracle
+import Eggshell.WorkInference
+
+open Lean
+
+/- The normal pinned DAG reader captures whole payload programs. Writer
+reads use the same decoding/assembly implementation with their own read
+capability; no alternate body representation or compatibility lane exists. -/
+run_meta do
+  for theoremName in #[``Eggshell.BoundedSample.resident_bounded, ``Eggshell.BoundedSample.insert_bounded,
+      ``Eggshell.KeyedProtocol.scoped_choice_in_original_array,
+      ``Eggshell.KeyedSearchProvider.originalOwners_compiled,
+      ``Eggshell.LexicalAdvice.rank_prepared_exact,
+      ``Eggshell.WindowOwners.entries_original,
+      ``Eggshell.ProjectionCursor.Raw.actual_bytes_bounded,
+      ``Eggshell.ProjectionCache.State.actual_bytes_bounded,
+      ``Eggshell.VectorPartition.training_preserves_samples,
+      ``Eggshell.PartitionDelta.Transition.positive_iff,
+      ``Eggshell.PartitionDelta.Transition.shared_reference_survives,
+      ``Eggshell.PartitionDelta.Transition.last_reference_removed,
+      ``Eggshell.LexicalReads.OwnerWitness.original_checks,
+      ``Eggshell.Plugin.empty_search_has_no_authority,
+      ``Eggshell.Plugin.empty_search_preserves_status,
+      ``Eggshell.Persistence.Store.Change.neutral_keeps_marker,
+      ``Eggshell.Persistence.Store.Change.changed_advances_marker,
+      ``Eggshell.Synapses.Extraction.consumed_source_has_witness,
+      ``Eggshell.Synapses.Extraction.consumed_source_is_later,
+      ``Eggshell.Synapses.Extraction.consumed_omission_requires_stored,
+      ``Eggshell.Synapses.Index.shared_rejects_usage,
+      ``Eggshell.Synapses.Recommend.Offer.usage_is_evidence,
+      ``Eggshell.ObservationAge.recent_is_within_interval,
+      ``Eggshell.ObservationAge.expired_is_at_least_interval,
+      ``Eggshell.ObservationAge.missing_receipt_is_unknown,
+      ``Eggshell.ObservationAge.assessment_preserves_receipt,
+      ``Eggshell.Synapses.Journal.retry_keeps_receipt_time,
+      ``Eggshell.Deadline.never_extends,
+      ``Eggshell.Deadline.reserves_delivery, ``Eggshell.Deadline.reserves_minimum,
+      ``Eggshell.Deadline.expired_stays_expired,
+      ``Eggshell.SourceEvidence.matched_status_has_checked_dependencies,
+      ``Eggshell.SourceEvidence.external_status_never_matches,
+      ``Eggshell.Plugin.DemandMemo.requested_record_rejects_another_request,
+      ``Eggshell.Plugin.DemandMemo.observed_record_has_current_request,
+      ``Eggshell.Plugin.DemandMemo.captured_decode_keeps_origin,
+      ``Eggshell.Plugin.changed_memo_payload_rejected,
+      ``Eggshell.Plugin.replay_keeps_captured_payload,
+      ``Eggshell.Matcher.completed_original_authority,
+      ``Eggshell.Matcher.completed_authority,
+      ``Eggshell.Matcher.extraction_comparisons_generated,
+      ``Eggshell.Matcher.completed_not_retrieved,
+      ``Eggshell.Matcher.identified_never_unions,
+      ``Eggshell.Matcher.identified_keeps_original_owner,
+      ``Eggshell.Matcher.identified_has_no_lexical_coverage,
+      ``Eggshell.Matcher.nominated_never_unions,
+      ``Eggshell.Matcher.nominated_never_completes,
+      ``Eggshell.Matcher.nominated_has_no_coverage,
+      ``Eggshell.Plugin.SharedRangeAdapter.atomic_payload,
+      ``SourceWindow.projected_covers_iff,
+      ``Eggshell.Plugin.meaning_context_covers_exactly,
+      ``SharedCoverage.best_cached_compiled,
+      ``SharedCoverage.Evaluation.afterCost_exact,
+      ``SharedCoverage.Evaluation.afterBenefit_exact,
+      ``Eggshell.Plugin.required_cue_is_legacy_candidate,
+      ``Eggshell.Plugin.SharedRangeAdapter.control_is_reserved,
+      ``Eggshell.Plugin.SharedRangeAdapter.advisory_is_not_reserved,
+      ``Eggshell.Plugin.SharedRangeAdapter.advisory_reservation_is_empty,
+      ``Eggshell.Matcher.localUnion_not_retrieved,
+      ``Eggshell.Matcher.originCertified_erases,
+      ``Eggshell.Matcher.newLocalUnions_origins,
+      ``Eggshell.Matcher.discovery_local_unions_not_retrieved,
+      ``Eggshell.Matcher.discovery_generators_have_origin,
+      ``Eggshell.Matcher.completed_generator_origins,
+      ``Eggshell.IncrementalQuotient.ProducedView.certified_localUnions,
+      ``Eggshell.IncrementalQuotient.certifyExplicit_exact,
+      ``Eggshell.IncrementalQuotient.ProducedView.certified_exact,
+      ``Eggshell.IncrementalQuotient.make_localUnions,
+      ``Eggshell.Matcher.extraction_sound,
+      ``Eggshell.Matcher.extraction_completed_has_match,
+      ``Eggshell.OutcomePolicyIndex.table_exact,
+      ``Eggshell.OutcomePolicyIndex.classify_exact,
+      ``Eggshell.OutcomePolicyIndex.admitted_compiled,
+      ``Eggshell.AppendUnique.loop_exact,
+      ``Eggshell.AppendUnique.merge_exact,
+      ``Eggshell.Matcher.projectMatchesFast_exact,
+      ``Eggshell.Matcher.projectMatches_compiled,
+``Eggshell.OwnerProjection.hasKey_exact,
+      ``Eggshell.OwnerProjection.Windows.ranked_exact, ``Eggshell.OwnerProjection.project_exact,
+      ``Eggshell.OwnerProjection.foldlM_view, ``Eggshell.OwnerProjection.projectM_exact,
+      ``Eggshell.OwnerProjection.legacyM_exact, ``Eggshell.OwnerProjection.legacy_io_compiled,
+      ``Eggshell.Plugin.IndexedSemanticNominations.projection_roundtrip,
+      ``Eggshell.Plugin.IndexedSemanticNominations.projection_preserved,``Eggshell.Plugin.Worker.ready_preserves_upstream,
+      ``Eggshell.Plugin.Worker.unready_preserves_cutoff,
+      ``Eggshell.Plugin.Worker.late_ready_preserves_cutoff,
+      ``Eggshell.Plugin.Worker.foreign_ready_preserves_cutoff,
+      ``Eggshell.Plugin.configured_deadline_preserves_upstream,``Eggshell.OwnedRows.get_exact,
+      ``Eggshell.OwnedRows.reference_value,
+      ``Eggshell.append_fold_filterMapM, ``Eggshell.SemanticMatcher.indexed_nominations_compiled,``Eggshell.firstTable_exact,
+      ``Eggshell.FirstIndex.read_exact, ``Eggshell.SearchRank.fused_compiled,
+      ``Eggshell.SearchRank.select_compiled, ``Eggshell.SearchProvider.presentation_ranking_compiled,
+      ``Eggshell.SearchProvider.indexed_evidence_windows_compiled,``Eggshell.Plugin.semantic_deadline_preserves_upstream,
+      ``Eggshell.Plugin.semantic_deadline_reserves_fallback,``Eggshell.FileSystem.bounded_read_original,
+      ``Eggshell.SearchProvider.load_vector_original,``Eggshell.ExactLazyMemo.read_exact,
+      ``Eggshell.PairDecisions.read_eq, ``Eggshell.PairDecisions.decision_eq,
+      ``Eggshell.PairDecisions.branch_exact, ``Eggshell.PairDecisions.branch_function_eq,``Eggshell.ExactMemo.map_exact,
+      ``Eggshell.ExactMemo.filterMap_exact, ``Eggshell.Plugin.prepareContextViews_compiled,
+      ``Eggshell.Plugin.prepareCueViews_compiled, ``Eggshell.IndexedCharacters.slice_exact,
+      ``Eggshell.IndexedCharacters.decide₂_eq, ``Eggshell.Plugin.decodedEvidenceUsingIndexed_compiled,``Eggshell.Plugin.prepareContextualOwnerPlan_exact,
+      ``Eggshell.Plugin.prepareContextualSlicePlan_exact,
+      ``Eggshell.Plugin.prepareContextualSupportPlan_exact,
+      ``Eggshell.Plugin.coherentContextRanges_compiled,
+      ``Eggshell.Extract.solve_demand_exact,
+      ``Eggshell.Extract.solve_provenance,
+      ``Eggshell.Selection.validFor_provenance_congr,
+      ``Eggshell.Extract.runWithPolicyFuel_demand_exact,
+      ``Eggshell.QuotientBuilder.AtomQuotient.Index.subwork_exact,
+      ``Eggshell.Persistence.Store.ChildObservation.child_before,
+      ``Eggshell.Matcher.newLocalUnions_origin,
+      ``Eggshell.Matcher.ScheduleObservation.task_origin,
+      ``Eggshell.Matcher.rootContinuation_child_origin,
+      ``Eggshell.SelectionDependency.completedBranches_decomposition,
+      ``Eggshell.Matcher.discoverUsingM_views_exact] do
+    let axioms ← Lean.collectAxioms theoremName
+    for axiomName in axioms do
+      unless #[``propext, ``Classical.choice, ``Quot.sound].contains axiomName do
+        throwError "Demand proof uses an unapproved axiom: {theoremName}: {axiomName}"
+    logInfo m!"Audited {theoremName}: {axioms}"
+
+/- Accepted empty results retain status metadata; failed or unpublishable
+replies remain a separate incomplete result. -/
+run_meta do
+  let environment ← getEnv
+  let some delivery := environment.find? ``Eggshell.Plugin.deliverForWork |
+    throwError "Missing search delivery controller"
+  let some body := delivery.value? | throwError "Missing search delivery body"
+  for required in #[``Eggshell.Plugin.Worker.SearchDelivery.ofReply,
+      ``Eggshell.Plugin.emptySearchResult, ``Eggshell.Plugin.pendingSearch] do
+    unless body.getUsedConstants.contains required do
+      throwError "Search delivery bypasses accepted empty or incomplete classification: {required}"
+  logInfo "Audited accepted empty metadata and separate incomplete search handling"
+
+/- Reuse only evidence bound to one immutable reader pair. A cache hit must
+replay the original observations, including the later ordinal lookup. -/
+run_meta do
+  let environment ← getEnv
+  for (caller, required, forbidden) in #[
+      (``Eggshell.LexicalReads.query,
+        #[``IO.mkRef, ``Eggshell.LexicalReads.postingWith,
+          ``Eggshell.DB.PageMap.Snapshot.observe], #[]),
+      (``Eggshell.LexicalReads.postingWith,
+        #[``Eggshell.LexicalReads.OwnerWitness.check?,
+          ``Eggshell.Persistence.Store.getNat,
+          ``Eggshell.DB.PageMap.Snapshot.observe,
+          ``Eggshell.LexicalReads.Batch.read], #[]),
+      (``Eggshell.Plugin.indexedDiscovery,
+        #[``Eggshell.LexicalReads.coarseQuery, ``Eggshell.Plugin.lexicalNominations],
+        #[``Eggshell.Persistence.Store.searchDocuments])] do
+    let some declaration := environment.find? caller | throwError "Missing lexical witness caller: {caller}"
+    let some body := declaration.value? | throwError "Missing lexical witness body: {caller}"
+    for name in required do
+      unless body.getUsedConstants.contains name do
+        throwError "Lexical witness bypasses original checks or observations: {caller}, {name}"
+    for name in forbidden do
+      if body.getUsedConstants.contains name then
+        throwError "Indexed discovery opens unused Work spelling index: {caller}, {name}"
+  logInfo "Audited request-local lexical witnesses, original observations and deferred Work surfaces"
+
+run_meta do
+  let environment ← getEnv
+  for (caller, required) in #[
+      (``Eggshell.Persistence.Store.NodeReader.read, ``Eggshell.DB.PageMap.Snapshot.readPayload),
+      (``Eggshell.DB.PageMap.Snapshot.readPayload, ``Eggshell.DB.PageMap.Snapshot.readPayloadUsing),
+      (``Eggshell.Persistence.Store.readChunks, ``Eggshell.DB.PageMap.Snapshot.readPayloadUsing),
+      (``Eggshell.DB.PageMap.Snapshot.checkPayload?, ``Eggshell.DB.PageMap.HistoryReader.make?),
+      (``Eggshell.DB.PageMap.Snapshot.checkPayload?, ``Eggshell.DB.PageMap.HistoryReader.retainBlob),
+      (``Eggshell.DB.PageMap.Snapshot.checkPayload?, ``Eggshell.DB.PageMap.Snapshot.readPinnedBlob),
+      (``Eggshell.DB.PageMap.Snapshot.checkPayload?, ``Eggshell.DB.PageMap.checkPayloadChunks),
+      (``Eggshell.DB.PageMap.Snapshot.checkPayload?, ``Eggshell.DB.PageMap.PayloadPrefix.check?),
+      (``Eggshell.Persistence.Store.bodiesEqual, ``Eggshell.DB.PageMap.QuietReader.make),
+      (``Eggshell.Persistence.Store.bodiesEqual, ``Eggshell.DB.PageMap.checkPrefix),
+      (``Eggshell.Persistence.Store.bodiesEqual, ``Eggshell.DB.PageMap.Snapshot.observe),
+      (``Eggshell.Persistence.Store.bodiesEqual, ``Eggshell.Persistence.Store.bodyChunk)] do
+    let some definition := environment.find? caller | throwError "Missing payload caller: {caller}"
+    let some value := definition.value? | throwError "Missing payload implementation: {caller}"
+    unless value.getUsedConstants.contains required do
+      throwError "Payload caller bypasses canonical capture/validation: {caller}, {required}"
+  logInfo "Audited complete payload program capture in production DAG reads"
+
+/- All actual candidate compilers use the canonical lazy factory. Merely
+adding a lazy helper while leaving Outcome compilation eager is rejected. -/
+run_meta do
+  let environment ← getEnv
+  for (caller, required, forbidden) in #[
+      (``Eggshell.Matcher.compile, ``Eggshell.Matcher.makePatternLazy,
+        #[``Eggshell.Matcher.makePattern, ``Thunk.pure]),
+      (``Eggshell.Matcher.Corpus.finishCandidate, ``Eggshell.Matcher.compile,
+        #[``Eggshell.LogicalText.build, ``Eggshell.Matcher.makePattern]),
+      (``Eggshell.Matcher.Corpus.compileCandidate, ``Eggshell.Matcher.compile,
+        #[``Eggshell.LogicalText.build, ``Eggshell.Matcher.makePattern]),
+      (``Eggshell.Matcher.Corpus.OutcomeMemo.prepare, ``Eggshell.Matcher.compile,
+        #[``Eggshell.LogicalText.build, ``Eggshell.Matcher.makePattern])] do
+    let some declaration := environment.find? caller | throwError "Missing lazy compiler: {caller}"
+    let some body := declaration.value? | throwError "Compiler has no body: {caller}"
+    let dependencies := body.getUsedConstants
+    unless dependencies.contains required do
+      throwError "Candidate compiler bypasses lazy normalization: {caller}, {required}"
+    for name in forbidden do
+      if dependencies.contains name then
+        throwError "Candidate compiler eagerly constructs normalized text: {caller}, {name}"
+  logInfo m!"Audited canonical lazy normalization in production candidate and memo compilers"
+
+/- The capture caller uses an indexed collision bucket, never the full-list
+specification. This gate checks the actual production declaration separately
+from the equality and budget proofs below. -/
+run_meta do
+  let environment ← getEnv
+  let some declaration := environment.find? ``Eggshell.DB.PageMap.ReadTrace.add |
+    throwError "Missing production dependency capture"
+  let some body := declaration.value? | throwError "Dependency capture has no body"
+  let dependencies := body.getUsedConstants
+  for required in #[``Eggshell.DB.PageMap.ObservationIndex.contains,
+      ``Eggshell.DB.PageMap.ObservationIndex.insert] do
+    unless dependencies.contains required do
+      throwError "Production dependency capture bypasses its index: {required}"
+  for forbidden in #[``List.contains, ``Eggshell.DB.PageMap.ReadSummary.step] do
+    if dependencies.contains forbidden then
+      throwError "Production dependency capture scans the entire trace: {forbidden}"
+  logInfo m!"Audited indexed dependency capture and full-list negative control"
+
+/- Body capture must use a checked pinned reference, and memo reuse must
+pass the saved file identity through the typed validation entry point. -/
+run_meta do
+  let environment ← getEnv
+  for (caller, required) in #[
+      (``Eggshell.DB.PageMap.Snapshot.readBlob, ``Eggshell.DB.PageMap.Blob.pin?),
+      (``Eggshell.DB.PageMap.Snapshot.readBlob, ``Eggshell.DB.PageMap.Snapshot.readPinnedBlob),
+      (``Eggshell.DB.PageMap.Snapshot.readPinnedBlob, ``Eggshell.DB.PageMap.Snapshot.observe),
+      (``Eggshell.Plugin.DemandMemo.dependenciesAgree, ``Eggshell.DB.PageMap.Snapshot.verifyReads?)] do
+    let some declaration := environment.find? caller | throwError "Missing caller: {caller}"
+    let some body := declaration.value? | throwError "Caller has no body: {caller}"
+    unless body.getUsedConstants.contains required do
+      throwError "Immutable dependency caller bypasses checked references: {caller}, {required}"
+  logInfo m!"Audited immutable body capture and scoped dependency validation"
+
+/- Production source capture, binding and delivery must remain connected.
+This checks declaration reachability, separately from the kernel contracts. -/
+run_meta do
+  let environment ← getEnv
+  for (root, required, forbidden) in #[
+      (``Eggshell.DB.PageMap.open?,
+        #[``Eggshell.FileSystem.openRead, ``Eggshell.FileSystem.boundedBytes],
+        #[``IO.setAccessRights, ``Eggshell.FileSystem.privateDirectory, ``IO.FS.createDir]),
+      (``Eggshell.Plugin.discoverySelectionReport,
+        #[``Eggshell.SelectionDependency.report?, ``Eggshell.Matcher.extraction], #[]),
+      (``Eggshell.Plugin.auditRenderedSelection,
+        #[``Eggshell.SelectionDependency.Report.ofValid, ``Eggshell.SelectionAudit.capture],
+        #[``Eggshell.EqualityDependency.DirectIndex.make, ``Eggshell.SelectionAudit.analyze]),
+      (``Eggshell.SelectionAudit.Snapshot.ofReport,
+        #[``Eggshell.SelectionDependency.completedBranches, ``Eggshell.DiscoveryAudit.ComparisonRow.encode,
+          ``Eggshell.SelectionAudit.unionOrigins],
+        #[``Eggshell.EqualityDependency.DirectIndex.make]),
+      (``Eggshell.SelectionAudit.Admission.observe,
+        #[``Eggshell.Matcher.localUnion?],
+        #[``Eggshell.EqualityDependency.DirectIndex.make, ``Eggshell.QuotientBuilder.build?]),
+      (``Eggshell.Matcher.Candidate.prepareWork,
+        #[``Eggshell.Matcher.WorkView.prepare], #[]),
+      (``Eggshell.Matcher.localUnion?,
+        #[``Eggshell.Matcher.WorkAlignment.localUnion?], #[]),
+      (``Eggshell.WorkInference.load,
+        #[``Eggshell.Persistence.Store.NodeReader.workOrigin,
+          ``Eggshell.Persistence.Store.NodeReader.locateOutcome],
+        #[``Eggshell.Persistence.Store.NodeReader.outcome, ``Eggshell.OutcomeEdge.make]),
+      (``Eggshell.Plugin.indexedTerminalRoot,
+        #[``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.SelectionAudit.Admission.observe,
+          ``Eggshell.DiscoveryAudit.Schedule.terminal],
+        #[``Eggshell.SelectionAudit.analyzeAdmission]),
+      (``Eggshell.Plugin.indexedDiscoveryUsing,
+        #[``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.SelectionAudit.Admission.observe,
+          ``Eggshell.DiscoveryAudit.Trail.observe, ``Eggshell.WorkClassLookup.prepare?,
+          ``Eggshell.Matcher.Match.identified, ``Eggshell.Matcher.Match.nominated,
+          ``Eggshell.Plugin.IndexedOwners.workRoots],
+        #[``Eggshell.SelectionAudit.analyzeAdmission, ``Eggshell.WorkInference.decide,
+          ``Eggshell.WorkInference.Covered.add]),
+      (``Eggshell.DiscoveryAudit.Schedule.observe,
+        #[``Eggshell.SelectionDependency.Report.ofValid],
+        #[``Eggshell.Matcher.extractAt, ``Eggshell.Extract.runWithPolicyFuel,
+          ``Eggshell.QuotientBuilder.build?]),
+      (``Eggshell.Plugin.Daemon.hookClient,
+        #[``Eggshell.Plugin.Worker.awaitUntil, ``Eggshell.Plugin.Worker.killGroup,
+          ``Eggshell.Plugin.Daemon.decodeHookReply], #[``IO.getStdin, ``Eggshell.Plugin.captureTerminal]),
+      (``Eggshell.Plugin.Daemon.hookProcess,
+        #[``Eggshell.Plugin.Daemon.hookRequest], #[]),
+      (``Eggshell.Plugin.Daemon.hookRequest,
+        #[``Eggshell.Plugin.captureTerminal, ``Eggshell.Plugin.Daemon.exchangeBefore],
+        #[``Eggshell.Plugin.Daemon.boundedRpc]),
+      (``Eggshell.Receipt.write,
+        #[``Eggshell.FileSystem.atomicExistingBytes], #[]),
+      (``Eggshell.Plugin.Daemon.rpcClient,
+        #[``Eggshell.Receipt.write], #[]),
+      (``Eggshell.Plugin.deliverForWork,
+        #[``Eggshell.Receipt.observe], #[]),
+      (``Eggshell.Plugin.recordTool,
+        #[``Eggshell.FileSystem.immutableBytes, ``Eggshell.Plugin.readNativeTool?],
+        #[]),
+      (``Eggshell.Plugin.captureTerminal,
+        #[``Eggshell.Plugin.recordTool, ``Eggshell.Plugin.sealRecordedRead,
+          ``Eggshell.Plugin.queueCheckpoint],
+        #[``Eggshell.SourceObservation.step, ``Eggshell.Plugin.observeRelatedFiles]),
+      (``Eggshell.Plugin.sealRecordedRead, #[``Eggshell.SourceEvidence.sealCapture], #[]),
+      (``Eggshell.Plugin.preToolUse,
+        #[``Eggshell.Plugin.nativeSourceInput?, ``Eggshell.SourceEvidence.capture,
+          ], #[``Eggshell.SourceObservation.step]),
+      (``Eggshell.Plugin.observeRelatedFiles,
+        #[``Eggshell.SourceObservation.step, ``Eggshell.Plugin.observationTool,
+          ``Eggshell.Plugin.queueCheckpoint,
+          ``Eggshell.SourceObservation.acknowledge], #[]),
+      (``Eggshell.SourceObservation.step,
+        #[``Eggshell.FileSystem.readPage, ``Eggshell.SourceEvidence.stepRoot,
+          ``Eggshell.SourceObservation.finish], #[]),
+      (``Eggshell.Plugin.Worker.run,
+        #[``Eggshell.Plugin.observeRelatedFiles], #[]),
+      (``Eggshell.Plugin.reconcileToolReceipts,
+        #[``Eggshell.Plugin.attachCertificate], #[]),
+      (``Eggshell.Persistence.Store.Intern.root,
+        #[``Eggshell.SourceEvidence.receiptFields?], #[]),
+      (``Eggshell.Plugin.automaticHandoff,
+        #[``Eggshell.Plugin.Handoff.checkSources, ``Eggshell.Persistence.Store.NodeReader.sources], #[]),
+      (``Eggshell.Plugin.Daemon.hookRequest, #[``Eggshell.ObservationAge.now], #[]),
+      (``Eggshell.Plugin.indexedDiscovery,
+        #[``Eggshell.Plugin.keyedSemanticNominations],
+        #[``Eggshell.Plugin.headerSemanticNominations,
+          ``Eggshell.Persistence.Store.searchDocuments]),
+      (``Eggshell.Plugin.keyedSemanticNominations,
+        #[``Eggshell.KeyedSearchClient.nominate],
+        #[``Eggshell.Persistence.Store.searchDocuments]),
+      (``Eggshell.KeyedSearchClient.nominate,
+        #[``Eggshell.KeyedProtocol.check, ``Eggshell.KeyedProtocol.validateRelated,
+          ``Eggshell.SemanticMatcher.withResponseDeadline, ``Eggshell.KeyedProtocol.Scope.ofSnapshot],
+        #[``Eggshell.Persistence.Store.searchDocuments]),
+      (``Eggshell.KeyedProtocol.validateRelated,
+        #[``Eggshell.WindowOwners.resolve, ``Eggshell.Persistence.Store.locateOutcome,
+          ``Eggshell.Persistence.Store.getNat], #[]),
+      (``Eggshell.KeyedSearchProvider.handle,
+        #[``Eggshell.KeyedSearchProvider.routed, ``Eggshell.WindowOwners.lookup,
+          ``Eggshell.KeyedSearchProvider.project, ``Eggshell.SearchProvider.handleIndexed,
+          ``Eggshell.LexicalAdvice.originals],
+        #[``Eggshell.Persistence.Store.searchDocuments]),
+      (``Eggshell.KeyedSearchProvider.lexical,
+        #[``Eggshell.LexicalAdvice.query],#[``Eggshell.LexicalReads.coarseQuery]),
+      (``Eggshell.LexicalAdvice.query,
+        #[``Eggshell.RetrievalResearch.Index.open?, ``Eggshell.LexicalAdvice.posting,
+          ``Eggshell.LexicalAdvice.rankPrepared],
+        #[``Eggshell.LexicalReads.query, ``Eggshell.Persistence.Store.searchDocuments,
+          ``Eggshell.Persistence.Store.locateOutcome]),
+      (``Eggshell.LexicalAdvice.originals,
+        #[``Eggshell.LexicalReads.OwnerWitness.check?, ``Eggshell.SourceDelta.documents],#[]),
+      (``Eggshell.Warm.runTarget,
+        #[``Eggshell.WindowOwners.refresh,
+          ``Eggshell.PartitionBuild.prepare], #[]),
+      (``Eggshell.BlockScore.prepare, #[``Eggshell.ProjectionCache.read, ``Eggshell.ProjectionCursor.checkExtent],
+        #[``Eggshell.DB.PageMap.Snapshot.foldRange, ``Eggshell.VectorMatrix.readRow]),
+      (``Eggshell.PartitionBuild.incremental, #[``Eggshell.SourceDelta.read?,
+        ``Eggshell.SourceDelta.documents, ``Eggshell.ProjectionCursor.select, ``Eggshell.ProjectionRetention.check],
+        #[``Eggshell.ProjectionCursor.catalogue, ``Eggshell.VectorPartition.train,
+          ``Eggshell.Persistence.Store.searchDocuments]),
+      (``Eggshell.ProjectionCursor.read, #[``Eggshell.DB.PageMap.Snapshot.readBlob],
+        #[``Eggshell.VectorMatrix.readRow]),
+      (``Eggshell.ProjectionCursor.select, #[``Eggshell.DB.PageMap.Snapshot.get],
+        #[``Eggshell.DB.PageMap.Snapshot.foldRange]),
+      (``Eggshell.SourceCatalogue.fold,
+        #[``Eggshell.DB.PageMap.Snapshot.foldRange, ``Eggshell.SourceDelta.documents],
+        #[``Eggshell.Persistence.Store.searchDocuments, ``Eggshell.Persistence.Store.NodeReader.workOrigin,
+          ``Eggshell.Persistence.Store.allHeaders]),
+      (``Eggshell.PartitionBuild.rebuild,
+        #[``Eggshell.SourceCatalogue.references, ``Eggshell.ProjectionCursor.fold, ``Eggshell.PartitionBuild.selectSample],
+        #[``Eggshell.ProjectionCursor.catalogue, ``Eggshell.Persistence.Store.searchDocuments]),
+      (``Eggshell.PartitionBuild.selectSample,
+        #[``Eggshell.ProjectionCursor.fold, ``Eggshell.BoundedSample.State.insert],
+        #[``Eggshell.ProjectionCursor.catalogue]),
+      (``Eggshell.Persistence.Store.writeChange, #[``Eggshell.Persistence.Store.Change.sourceMarker], #[]),
+      (``Eggshell.Synapses.Journal.replay, #[``Eggshell.Synapses.Journal.nativeFeedback], #[]),
+      (``Eggshell.Synapses.Journal.nativeFeedback,
+        #[``Eggshell.Synapses.Journal.indexAt?, ``Eggshell.Synapses.Journal.presentation,
+          ``Eggshell.Synapses.Extraction.recordConsumed, ``Eggshell.Synapses.Extraction.consumedSource?], #[]),
+      (``Eggshell.Synapses.Journal.presentation,
+        #[``Eggshell.Synapses.Journal.originalAt?, ``Eggshell.Synapses.ObservationContext.recorded], #[]),
+      (``Eggshell.Synapses.Live.finish, #[``Eggshell.Synapses.Live.receivedUnixMs?], #[]),
+      (``Eggshell.Plugin.Handoff.checkSources,
+        #[``Eggshell.Plugin.Handoff.withCheckedSources, ``Eggshell.SourceEvidence.observeRecords,
+          ``Eggshell.Deadline.verification, ``Eggshell.Receipt.observe,
+          ``Eggshell.Plugin.checkSourceUse?, ``Eggshell.Plugin.sourceRefreshText], #[]),
+      (``Eggshell.Plugin.Handoff.checkedCheckpoints,
+        #[``Eggshell.Plugin.checkApplicableSourceUse?], #[]),
+      (``Eggshell.Plugin.renderOwnerSourceStatus,
+        #[``Eggshell.Plugin.checkedOwnerSources?], #[``Eggshell.Plugin.sourceApplicable]),
+      (``Eggshell.Plugin.indexedDiscoveryUsing,
+        #[``Eggshell.Plugin.surroundingEvidenceQuery,
+          ``Eggshell.Plugin.focusNeighborhood, ``Eggshell.Plugin.sourceFocus?,
+          ``Eggshell.Plugin.refocusObservedNeighborhood,
+          ``Eggshell.Plugin.sourcePositionQuery, ``Eggshell.Plugin.refineSourcePositions,
+          ``Eggshell.Plugin.entrySourceFocus,
+          ``Eggshell.Plugin.prioritizedEvidence,
+          ``Eggshell.SemanticMatcher.nominateIndexed], #[]),
+      (``Eggshell.Plugin.indexedDiscovery,
+        #[``Eggshell.Plugin.focusIndexedEvidence,
+          ``Eggshell.Persistence.Store.supportWindowDocuments,
+          ``Eggshell.Plugin.focusedEvidenceWindows], #[]),
+      (``Eggshell.Plugin.federatedDiscovery,
+        #[``Eggshell.Plugin.focusIndexedEvidence,
+          ``Eggshell.Plugin.focusedEvidenceWindows], #[]),
+      (``Eggshell.Persistence.Store.supportWindowDocuments,
+        #[``Eggshell.Persistence.Store.supportDocuments],
+        #[``Eggshell.Persistence.Store.readNode,
+          ``Eggshell.Persistence.Store.readSearchWindow]),
+      (``Eggshell.Plugin.deliverForWork,
+        #[``Eggshell.Plugin.Handoff.reconcileDelivery, ``Eggshell.Plugin.ThreadState.deliveryClaims], #[]),
+      (``Eggshell.Plugin.Handoff.reconcileDelivery,
+        #[``Eggshell.Plugin.DeliveryPart.remaining, ``Eggshell.Plugin.sourceFrame?], #[]),
+      (``Eggshell.Plugin.Daemon.rpcClient,
+        #[``Eggshell.Plugin.Daemon.rpcDeadline, ``Eggshell.Plugin.Daemon.exchangeBefore,
+          ``Eggshell.Plugin.Daemon.receiveFrameBefore], #[]),
+      (``Eggshell.Plugin.DeliveryPart.remaining,
+        #[``Eggshell.Plugin.ContextDelivery.novelCue, ``Eggshell.Plugin.DeliveryFragment.remaining], #[]),
+      (``Eggshell.Plugin.renderAutomatic,
+        #[``Eggshell.Plugin.referencePlanningClaims, ``Eggshell.Plugin.contextPlanKey,
+          ``Eggshell.Plugin.contextPlanQuestion,
+          ``Eggshell.Plugin.advisoryTransportAllowed,
+          ``Eggshell.Plugin.lookupContextAllowed,
+          ``Eggshell.Plugin.policyPacketCost,
+          ``Eggshell.Plugin.Handoff.reconcileDelivery,
+          ``Eggshell.Plugin.observedTransportSelection,
+          ``Eggshell.Plugin.sourceTable, ``Eggshell.Plugin.Selected.sourceUse,
+          ``Eggshell.Plugin.Selected.sourceCheckpoint?, ``Eggshell.Plugin.ownerContextAllowances,
+          ``Eggshell.Plugin.contextSlicePlan, ``Eggshell.Plugin.boundedFlexiblePacketSlices,
+          ``Eggshell.Plugin.deliveredEvidenceRanges, ``Eggshell.Plugin.EvidenceRange.subtractAll,
+          ``Eggshell.Plugin.DecodedLayout.make, ``Eggshell.Plugin.decodedEvidenceUsing?,
+          ``Eggshell.Plugin.prepareContextualOwnerPlan,
+          ``Eggshell.Plugin.prepareContextualSlicePlan,
+          ``Eggshell.Plugin.prepareContextualSupportPlan, ``Eggshell.BudgetPlan.eval,
+          ``Eggshell.Plugin.coalesceRankedContexts,
+          ``Eggshell.Plugin.ownerContextDemand, ``Eggshell.Plugin.adaptivePacketBudget,
+          ``Eggshell.Plugin.minimumContextCostFor,
+          ``Eggshell.Plugin.prepareAnchorViews, ``Eggshell.Plugin.ownerAnchorMinimum,
+          ``Eggshell.Plugin.ownerContextLevels, ``Eggshell.QueryLiterals.focus,
+          ``Eggshell.Plugin.coherentPacketDemand,
+          ``Eggshell.Plugin.contextAllowanceLevels, ``Eggshell.Plugin.preferredContextLevel,
+          ``Eggshell.Plugin.requestedContextLevels,
+          ``Eggshell.Plugin.contextStructureHeads, ``Eggshell.Plugin.structureContextRanges,
+          ``Eggshell.Plugin.contextRangesWithStructurePrepared,
+          ``Eggshell.Plugin.coherentRecordContext,
+          ``Eggshell.Plugin.rankedContextRanges,
+          ``Eggshell.Plugin.prepareContextViews,
+          ``Eggshell.Plugin.meaningPacketEntry,
+          ``Eggshell.Plugin.evidenceAdmissionPriority,
+          ``Eggshell.Plugin.remainingEvidence], #[]),
+      (``Eggshell.Plugin.nativeOccurrence,
+        #[], #[``Eggshell.SourceEvidence.encode]) ] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    while !pending.isEmpty do
+      if let name :: rest := pending then
+        pending := rest
+        if seen.contains name then continue
+        seen := seen.insert name
+        if let some definition := environment.find? name then
+          if let some value := definition.value? then
+            for dependency in value.getUsedConstants do
+              if dependency.toString.startsWith "Eggshell." then pending := dependency :: pending
+    for name in required do
+      unless seen.contains name do throwError "Source boundary {root} does not reach {name}"
+    for name in forbidden do
+      if seen.contains name then throwError "Source metadata changes stable owner through {root}: {name}"
+    logInfo m!"Audited source boundary {root}"
+
+/- Keep the normal read/write boundary independent of the test-only full
+   oracle and known whole-graph loaders, including indirect helper calls.
+   This is a declaration dependency regression gate, not an IO/time theorem. -/
+run_meta do
+  let environment ← getEnv
+  let forbidden := #[``Eggshell.Persistence.Store.materialize,
+    ``Eggshell.Persistence.Store.revise, ``Eggshell.Persistence.loadExisting?,
+    ``Eggshell.Persistence.loadComposite]
+  for (root, normal) in #[(``Eggshell.Plugin.automaticHandoff, true),
+      (``Eggshell.Plugin.computeAutomaticHandoff, true),
+      (``Eggshell.Persistence.appendPrepared, true),
+      (``Eggshell.Persistence.load, false),
+      (``Eggshell.TestOracle.computeGeneralAutomaticHandoff, false)] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    let mut blocked : Option Name := none
+    while !pending.isEmpty do
+      if let name :: rest := pending then
+        pending := rest
+        if seen.contains name then continue
+        seen := seen.insert name
+        if forbidden.contains name || name.toString.startsWith "Eggshell.TestOracle." then
+          blocked := some name
+          break
+        if let some definition := environment.find? name then
+          if let some value := definition.value? then
+            for dependency in value.getUsedConstants do
+              if dependency.toString.startsWith "Eggshell." then
+                pending := dependency :: pending
+    if root == ``Eggshell.Plugin.computeAutomaticHandoff then
+      unless seen.contains ``Eggshell.Plugin.SingleSource.find? do
+        throwError "Normal search does not reach the complete readable-source selector"
+    match normal, blocked with
+    | true, some name =>
+        throwError "Normal persistence/search boundary {root} reaches forbidden full-source declaration {name}"
+    | true, none =>
+        logInfo m!"Audited no full-source restoration reachable from {root}: {seen.size} declarations"
+    | false, some name =>
+        logInfo m!"Audited full-source gate rejects {root} via {name}"
+    | false, none =>
+        throwError "Full-source restoration regression gate failed to reject {root}"
+
+/- The production federation interpreter must actually use checked child
+substitution and streamed Atom comparisons. Reject a return to recursive DAG
+comparison, and keep the frozen earlier interpreter as a negative control. -/
+run_meta do
+  let environment ← getEnv
+  for (root, canonical) in #[(``Eggshell.Persistence.Store.Federated.Identity.add, true),
+      (``Eggshell.TestOracle.FederationBeforeCanonical.Identity.add, false)] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    let mut recursive := false
+    let mut substitution := false
+    let mut chunks := false
+    while !pending.isEmpty do
+      if let name :: rest := pending then
+        pending := rest
+        if seen.contains name then continue
+        seen := seen.insert name
+        if #[``Eggshell.Persistence.Store.nodesEqual,
+            ``Eggshell.Persistence.Store.nodesEqualBound].contains name then recursive := true
+        if name == ``Eggshell.Persistence.Store.Federated.ReboundApplication.make? then substitution := true
+        if name == ``Eggshell.Persistence.Store.bodiesEqual then chunks := true
+        if let some definition := environment.find? name then
+          if let some value := definition.value? then
+            for dependency in value.getUsedConstants do
+              if dependency.toString.startsWith "Eggshell." then pending := dependency :: pending
+    unless recursive == !canonical && substitution == canonical && chunks do
+      throwError "Federation identity boundary {root}: recursive={recursive}, substitution={substitution}, chunks={chunks}"
+    logInfo m!"Audited federation identity {root}: recursive={recursive}, substitution={substitution}, chunks={chunks}"
+
+/- Root persistence must really use the direct traversal. The equality proofs
+above are erased, so the production definition graph need not reach either
+flattened list specification. Keep the frozen old compiler as a negative gate. -/
+run_meta do
+  let environment ← getEnv
+  let flattened := #[``Eggshell.Value.nodes, ``Eggshell.Value.refsNodes,
+    ``Eggshell.Value.semanticNodes, ``Eggshell.Value.refsSemanticNodes]
+  for (root, direct) in #[(``Eggshell.Persistence.Store.RootReach.compile, true),
+      (``Eggshell.TestOracle.rootReachBeforeFold, false)] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    let mut blocked : Option Name := none
+    while !pending.isEmpty do
+      if let name :: rest := pending then
+        pending := rest
+        if seen.contains name then continue
+        seen := seen.insert name
+        if flattened.contains name then
+          blocked := some name
+          break
+        if let some definition := environment.find? name then
+          if let some value := definition.value? then
+            for dependency in value.getUsedConstants do
+              if dependency.toString.startsWith "Eggshell." then
+                pending := dependency :: pending
+    match direct, blocked with
+    | true, none => logInfo m!"Audited direct root traversal from {root}: no flattened node list"
+    | false, some name => logInfo m!"Audited flattened-node gate rejects {root} via {name}"
+    | true, some name => throwError "Direct root traversal {root} reaches flattened node list {name}"
+    | false, none => throwError "Flattened-node gate failed to reject {root}"
+
+/- Search projection must stay outside normal publication. Also check the
+actual positive/negative call graphs: an equality theorem alone would allow
+a later implementation to reintroduce the full copied-parts list. -/
+run_meta do
+  let environment ← getEnv
+  for (root, expectedStream, expectedList) in #[
+      (``Eggshell.Persistence.appendPrepared, false, false),
+      (``Eggshell.Matcher.materializeContext, true, false),
+      (``Eggshell.Matcher.intersectingSourceParts, true, false),
+      (``Eggshell.TestOracle.sourcePartsBeforeStreaming, false, true)] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    let mut streamed := false
+    let mut copiedList := false
+    while !pending.isEmpty do
+      if let name :: rest := pending then
+        pending := rest
+        if seen.contains name then continue
+        seen := seen.insert name
+        if name == ``Eggshell.TextParts.foldProjection then streamed := true
+        if name == ``String.splitOn || name == ``String.splitOnAux then copiedList := true
+        if let some definition := environment.find? name then
+          if let some value := definition.value? then
+            for dependency in value.getUsedConstants do
+              if dependency.toString.startsWith "Eggshell." ||
+                  dependency == ``String.splitOn || dependency == ``String.splitOnAux then
+                pending := dependency :: pending
+    unless streamed == expectedStream && copiedList == expectedList do
+      throwError "Source projection boundary {root}: streamed={streamed}, copied-list={copiedList}"
+    logInfo m!"Audited source projection {root}: streamed={streamed}, copied-list={copiedList}"
+
+/- Neither separated discovery nor append needs Work frequency inference.
+The independent numerical/lexical recommender retains its own source statistics. -/
+run_meta do
+  let environment ← getEnv
+  let selective := #[``Eggshell.Matcher.prepareInUsing, ``Eggshell.Matcher.contextTerms,
+    ``Eggshell.Plugin.readDemandFrequencies]
+  for (root, normalSearch) in #[(``Eggshell.Plugin.indexedDiscoveryUsing, false),
+      (``Eggshell.Persistence.appendPrepared, false)] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    while !pending.isEmpty do
+      if let name :: rest := pending then
+        pending := rest
+        if seen.contains name then continue
+        seen := seen.insert name
+        if let some definition := environment.find? name then
+          if let some value := definition.value? then
+            for dependency in value.getUsedConstants do
+              if dependency.toString.startsWith "Eggshell." then
+                pending := dependency :: pending
+    for target in selective do
+      unless seen.contains target == normalSearch do
+        throwError "Demand frequency path {root} has unexpected dependency {target}"
+    if seen.contains ``Eggshell.Matcher.Corpus.scoringTerms then
+      throwError "Demand frequency path {root} reaches eager Outcome scoring terms"
+    logInfo m!"Audited selective frequency path {root}: search={normalSearch}"
+
+/- The actual term collector must stream over existing units. Its complete
+flat-list specification belongs only to the erased equality theorem. -/
+run_meta do
+  let environment ← getEnv
+  let some definition := environment.find? ``Eggshell.Matcher.contextTerms |
+    throwError "Missing production context term collector"
+  let some value := definition.value? |
+    throwError "Context term collector has no implementation"
+  let dependencies := value.getUsedConstants
+  unless dependencies.contains ``List.foldl do
+    throwError "Context term collector no longer folds existing units"
+  if dependencies.contains ``List.flatMap || dependencies.contains ``List.map then
+    throwError "Context term collector materializes repeated unit lists"
+  logInfo "Audited context term collector: streaming fold, no repeated map/flatMap lists"
+
+/- All incidence is a save-time index consumed by the actual native caller.
+The sparse reads cannot hydrate a descendant or full topology. -/
+run_meta do
+  let environment ← getEnv
+  for (root, target) in #[( ``Eggshell.Persistence.Store.Intern.root,
+      ``Eggshell.Persistence.Store.AllHeader.writeIndex),
+      (``Eggshell.Persistence.Store.AllHeader.writeIndex,
+        ``Eggshell.Persistence.Store.AllParentPosting.write),
+      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.Persistence.Store.literalAllParents),
+      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.Persistence.Store.literalAllChildren),
+      (``Eggshell.Persistence.Store.removeRoot, ``Eggshell.Persistence.Store.AllParentPosting.name)] do
+    let some definition := environment.find? root | throwError "Missing All parent caller {root}"
+    let some value := definition.value? | throwError "Missing All parent body {root}"
+    unless value.getUsedConstants.contains target do
+      throwError "All parent caller {root} no longer uses {target}"
+  let some definition := environment.find? ``Eggshell.Persistence.Store.literalAllParents |
+    throwError "Missing literal All parent lookup"
+  let some value := definition.value? | throwError "Missing literal All parent lookup body"
+  for forbidden in #[``Eggshell.Persistence.Store.allHeaders,
+      ``Eggshell.Persistence.Store.NodeReader.read, ``Eggshell.Persistence.Store.resolve,
+      ``Eggshell.Persistence.Store.materialize, ``Eggshell.Persistence.Store.topology] do
+    if value.getUsedConstants.contains forbidden then
+      throwError "Sparse All parent lookup restores a graph or descendant: {forbidden}"
+  let some definition := environment.find? ``Eggshell.Persistence.Store.literalAllChildren |
+    throwError "Missing literal All child lookup"
+  let some value := definition.value? | throwError "Missing literal All child lookup body"
+  for forbidden in #[``Eggshell.Persistence.Store.allHeaders,
+      ``Eggshell.Persistence.Store.NodeReader.read, ``Eggshell.Persistence.Store.resolve,
+      ``Eggshell.Persistence.Store.materialize, ``Eggshell.Persistence.Store.topology] do
+    if value.getUsedConstants.contains forbidden then
+      throwError "Sparse All child lookup restores a graph or descendant: {forbidden}"
+  logInfo "Audited save-time All incidence, actual native caller and descendant-free direct lookups"
+
+/- The actual context lane retains only the demanded unit directory. Full
+unit/Work directories remain specifications, never executing dependencies. -/
+run_meta do
+  let environment ← getEnv
+  for (root, current) in #[( ``Eggshell.Matcher.surfaceContextCover, true),
+      (``Eggshell.Matcher.surfaceContextCoverWith, false)] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    while !pending.isEmpty do
+      if let name :: rest := pending then
+        pending := rest
+        if seen.contains name then continue
+        seen := seen.insert name
+        if let some definition := environment.find? name then
+          -- Refinement propositions mention the full interpreter. They are
+          -- erased, rather than executing edges of the production program.
+          if definition matches .thmInfo _ then continue
+          if let some value := definition.value? then
+            for dependency in value.getUsedConstants do
+              if dependency.toString.startsWith "Eggshell." then
+                pending := dependency :: pending
+    unless seen.contains ``Eggshell.Matcher.consumeContext == !current &&
+        seen.contains ``Eggshell.Matcher.consumeUnitContext == current do
+      throwError "Context traversal gate failed for {root}"
+    if !current then
+      logInfo "Audited context traversal gate rejects the former filtered-queue interpreter"
+      continue
+    unless seen.contains ``Eggshell.LogicalText.contextDemandIndex &&
+        seen.contains ``Eggshell.LogicalText.foldPositions &&
+        seen.contains ``Eggshell.LogicalText.ByteSource.make &&
+        seen.contains ``Eggshell.LogicalText.ByteSource.slice? &&
+        seen.contains ``Eggshell.Matcher.ContextDirectory.insert do
+      throwError "Production context no longer consumes the certified demanded unit directory"
+    for forbidden in #[``Eggshell.Matcher.Pattern.surface, ``Eggshell.Matcher.Pattern.surfaces,
+        ``Eggshell.LogicalText.surfaceIndex, ``Eggshell.LogicalText.surfaceKeys,
+        ``Eggshell.Matcher.Pattern.contextSurface, ``Eggshell.LogicalText.contextSurfaceIndex,
+        ``List.range, ``Eggshell.LogicalText.gramsAt,
+        ``Eggshell.LogicalText.byteSlice?, ``Eggshell.LogicalText.logicalSlice?] do
+      if seen.contains forbidden then
+        throwError "Production context expands an unrequested directory: {forbidden}"
+    logInfo "Audited context matching: certified occurrence queues, prepared byte source, no full unit/Work/position directory"
+  let some queue := environment.find? ``Eggshell.Matcher.consumeUnitContext |
+    throwError "Missing production context queue"
+  let some body := queue.value? | throwError "Missing production context queue body"
+  if body.getUsedConstants.contains ``List.filter then
+    throwError "Production context queue scans its entire remaining occurrence list"
+
+/- Work anchor enumeration also prepares its byte source outside the loop.
+The complete slice interpreter belongs to the erased equality proof. -/
+run_meta do
+  let environment ← getEnv
+  let some definition := environment.find? ``Eggshell.LogicalText.gramsAt |
+    throwError "Missing production Work anchor enumeration"
+  let some value := definition.value? |
+    throwError "Work anchor enumeration has no implementation"
+  let dependencies := value.getUsedConstants
+  unless dependencies.contains ``Eggshell.LogicalText.ByteSource.make &&
+      dependencies.contains ``Eggshell.LogicalText.ByteSource.slice? do
+    throwError "Work anchor enumeration no longer uses a prepared byte source"
+  if dependencies.contains ``Eggshell.LogicalText.logicalSlice? ||
+      dependencies.contains ``Eggshell.LogicalText.byteSlice? then
+    throwError "Work anchor enumeration reconverts the complete source per anchor"
+  logInfo "Audited Work anchor enumeration: prepared byte source and exact slice refinement"
+
+/- Actual selected-owner controllers retain one typed reader, rather than
+calling the per-owner administrative constructor wrapper. Private mutable
+tables stay opaque; this gate is not a filesystem/value refinement proof. -/
+run_meta do
+  let environment ← getEnv
+  for root in #[``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.Plugin.indexedDiscovery,
+      ``Eggshell.Plugin.federatedDiscovery] do
+    let some definition := environment.find? root | throwError "Missing source controller {root}"
+    let some value := definition.value? | throwError "Missing source controller body {root}"
+    let dependencies := value.getUsedConstants
+    unless dependencies.contains ``Eggshell.Persistence.Store.NodeReader.outcome do
+      throwError "Selected owner controller no longer uses the bound DAG reader: {root}"
+    for forbidden in #[``Eggshell.Persistence.Store.readLocatedOutcome,
+        ``Eggshell.Persistence.Store.readLocatedWork,
+        ``Eggshell.Persistence.Store.readLocatedWorkOrigin] do
+      if dependencies.contains forbidden then
+        throwError "Selected owner controller allocates independent reader tables: {root}, {forbidden}"
+    logInfo m!"Audited pinned owner reader in actual {root}"
+
+  for (root, topology, unions) in #[
+      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.Persistence.Store.NodeReader.atomTopology?,
+        ``Eggshell.Persistence.Store.NodeReader.atomUnions?),
+      (``Eggshell.Plugin.indexedDiscovery, ``Eggshell.Persistence.Store.DemandTopology.read,
+        ``Eggshell.Persistence.Store.NodeReader.unions),
+      (``Eggshell.Persistence.Store.Federated.prepare, ``Eggshell.Persistence.Store.NodeReader.topology,
+        ``Eggshell.Persistence.Store.NodeReader.unions)] do
+    let some definition := environment.find? root | throwError "Missing topology controller {root}"
+    let some value := definition.value? | throwError "Missing topology controller body {root}"
+    let dependencies := value.getUsedConstants
+    unless dependencies.contains topology && dependencies.contains unions do
+      throwError "Topology and Union do not use the bound reader: {root}"
+    for forbidden in #[``Eggshell.Persistence.Store.topology, ``Eggshell.Persistence.Store.readUnions,
+        ``Eggshell.Persistence.Store.atomTopology?, ``Eggshell.Persistence.Store.atomUnions?] do
+      if dependencies.contains forbidden then
+        throwError "Topology controller creates independent administrative readers: {root}, {forbidden}"
+    if root == ``Eggshell.Plugin.indexedDiscovery &&
+        dependencies.contains ``Eggshell.Persistence.Store.NodeReader.topology then
+      throwError "Single-source discovery eagerly hydrates All before its demand closure"
+  let some federated := environment.find? ``Eggshell.Plugin.federatedDiscovery |
+    throwError "Missing federated discovery"
+  let some body := federated.value? | throwError "Missing federated discovery body"
+  unless body.getUsedConstants.contains ``Eggshell.Persistence.Store.Federated.Catalogue.readers do
+    throwError "Federated owners do not reuse the topology reader family"
+  if body.getUsedConstants.contains ``Eggshell.Persistence.Store.NodeReaders.new then
+    throwError "Federated discovery allocates a second source reader family"
+  for root in #[``Eggshell.Persistence.Store.NodeReader.readTopology,
+      ``Eggshell.Persistence.Store.NodeReader.unions] do
+    let some definition := environment.find? root | throwError "Missing bound topology reader {root}"
+    let some value := definition.value? | throwError "Missing bound topology body {root}"
+    unless value.getUsedConstants.contains ``Eggshell.Persistence.Store.NodeReader.read do
+      throwError "Topology resolution bypasses the pinned DAG table: {root}"
+    if value.getUsedConstants.contains ``Eggshell.Persistence.Store.readNode then
+      throwError "Topology resolution creates per-endpoint tables: {root}"
+  logInfo "Audited one pinned source reader across All, Union and selected Outcome owners"
+
+/- The exact memo is consumed by both real candidate compilation paths;
+proving a disconnected alternate compiler does not pass this gate. -/
+run_meta do
+  let environment ← getEnv
+  for (root, target) in #[(``Eggshell.Plugin.indexedTerminalRoot,
+      ``Eggshell.Matcher.Corpus.compileCandidatesUsing),
+      (``Eggshell.Plugin.IndexedOwners.retain, ``Eggshell.Matcher.Corpus.OutcomeMemo.prepare)] do
+    let some definition := environment.find? root | throwError "Missing Outcome memo caller {root}"
+    let some value := definition.value? | throwError "Missing Outcome memo body {root}"
+    unless value.getUsedConstants.contains target do
+      throwError "Production caller does not consume canonical Outcome reuse: {root}"
+    logInfo m!"Audited canonical Outcome compilation reuse in {root}"
+
+/- Work alignment plans are no longer production discovery inputs. Keep the
+retained reference certifiers audited without opening their old rank tables. -/
+run_meta do
+  let environment ← getEnv
+  let some automatic := environment.find? ``Eggshell.Plugin.automaticHandoff |
+    throwError "Missing automatic handoff"
+  let some automaticBody := automatic.value? | throwError "Missing automatic handoff body"
+  if automaticBody.getUsedConstants.contains ``Eggshell.Matcher.RankMemo.Reader.new then
+    throwError "Automatic handoff opens obsolete Work-alignment rank advice"
+  if automaticBody.getUsedConstants.contains ``Eggshell.Matcher.RankMemo.read then
+    throwError "Automatic handoff enumerates every unused rank record"
+  let some indexed := environment.find? ``Eggshell.Plugin.indexedDiscoveryUsing |
+    throwError "Missing indexed discovery"
+  let some indexedBody := indexed.value? | throwError "Missing indexed discovery body"
+  for forbidden in #[``Eggshell.Matcher.GeometryMemo.prepareRanksFromM,
+      ``Eggshell.Matcher.GeometryMemo.prepareUsingM,
+      ``Eggshell.Matcher.GeometryMemo.Context.groundM,
+      ``Eggshell.Plugin.DiscoveryMemo.Publisher.checkpoint,
+      ``Eggshell.Matcher.RankMemo.publish, ``Eggshell.Plugin.SaturationMemo.publish] do
+    if indexedBody.getUsedConstants.contains forbidden then
+      throwError "Separated discovery retains obsolete Work-alignment plans: {forbidden}"
+  for name in #[``Eggshell.Matcher.GeometryMemo.Context.groundPatternsM,
+      ``Eggshell.Matcher.GeometryMemo.Context.Prepared.addM] do
+    let some definition := environment.find? name | throwError "Missing context plan caller: {name}"
+    let some value := definition.value? | throwError "Missing context plan implementation: {name}"
+    if value.getUsedConstants.contains ``Eggshell.Matcher.RankMemo.read then
+      throwError "Context plan enumerates unused durable demands: {name}"
+  logInfo "Audited retained reference context plans and their absence from separated discovery"
+  let some contextObtain := environment.find? ``Eggshell.Matcher.GeometryMemo.Context.obtain |
+    throwError "Missing durable context certifier"
+  let some contextBody := contextObtain.value? | throwError "Missing context certifier body"
+  unless contextBody.getUsedConstants.contains ``Eggshell.Matcher.ContextPlan.repair do
+    throwError "Context certifier bypasses single-pass current-domain repair"
+  if contextBody.getUsedConstants.contains ``Eggshell.Matcher.ContextPlan.check then
+    throwError "Context certifier validates and then regenerates a changed plan"
+  let some contextGround := environment.find? ``Eggshell.Matcher.GeometryMemo.Context.groundRowM |
+    throwError "Missing production context grounding"
+  let some contextGroundBody := contextGround.value? | throwError "Missing context grounding body"
+  unless contextGroundBody.getUsedConstants.contains ``Eggshell.Matcher.GeometryMemo.Context.groundPatternsM do
+    throwError "Production context grounding bypasses operation-bound repair"
+  unless automaticBody.getUsedConstants.contains ``Eggshell.Plugin.demandResponse? do
+    throwError "Automatic demand reuse bypasses its current nomination certificate"
+  let some reuse := environment.find? ``Eggshell.Plugin.demandResponse? |
+    throwError "Missing demand response validation"
+  let some reuseBody := reuse.value? | throwError "Missing demand response validation body"
+  unless reuseBody.getUsedConstants.contains ``Eggshell.Plugin.DemandMemo.readObserved &&
+      reuseBody.getUsedConstants.contains ``Eggshell.Plugin.DemandMemo.dependenciesAgree do
+    throwError "Demand response validation omits current nominations or graph dependencies"
+  unless indexedBody.getUsedConstants.contains ``Eggshell.Plugin.IndexedContext.semantic do
+    throwError "Observed demand reuse bypasses the current external semantic reader"
+  logInfo "Audited production nomination certificate and current external observation caller"
+  let some controller := environment.find? ``Eggshell.Plugin.indexedDiscovery |
+    throwError "Missing single-source controller"
+  let some controllerBody := controller.value? | throwError "Missing single-source controller body"
+  unless controllerBody.getUsedConstants.contains ``Eggshell.Plugin.keyedSemanticNominations do
+    throwError "Single-source semantic reuse bypasses current scoped nominations"
+  unless controllerBody.getUsedConstants.contains ``Eggshell.Persistence.Store.DemandTopology.new &&
+      controllerBody.getUsedConstants.contains ``Eggshell.Persistence.Store.DemandTopology.read &&
+      controllerBody.getUsedConstants.contains ``Eggshell.Persistence.Store.DemandTopology.childLookup do
+    throwError "Single-source controller omits demand topology or global child authority"
+  unless indexedBody.getUsedConstants.contains ``Eggshell.Plugin.IndexedContext.prepareTopology &&
+      indexedBody.getUsedConstants.contains ``Eggshell.Plugin.IndexedContext.childMembership do
+    throwError "Shared controller does not consume its pinned demand topology adapter"
+  logInfo "Audited actual per-pass demand topology and separate global child authority"
+  let some childLookup := environment.find? ``Eggshell.Persistence.Store.DemandTopology.childLookup |
+    throwError "Missing pinned child-posting lookup"
+  let some childBody := childLookup.value? | throwError "Missing child-posting implementation"
+  for required in #[``Eggshell.Quotient.AliasIndex.prepare,
+      ``Eggshell.Quotient.AliasIndex.aliases,
+      ``Eggshell.Persistence.Store.literalAllChildren] do
+    unless childBody.getUsedConstants.contains required do
+      throwError "Completion bypasses the certified current alias index: {required}"
+  for forbidden in #[``Eggshell.Persistence.Store.NodeReader.topology,
+      ``Eggshell.Persistence.Store.NodeReader.readTopology,
+      ``Eggshell.Persistence.Store.allHeaders] do
+    if childBody.getUsedConstants.contains forbidden then
+      throwError "Completion restores the whole All graph: {forbidden}"
+  logInfo "Audited general structured child-role lookup without All hydration"
+  let some childPosting := environment.find? ``Eggshell.Persistence.Store.literalAllChildren |
+    throwError "Missing original child posting boundary"
+  let some childPostingBody := childPosting.value? | throwError "Missing original child posting body"
+  for required in #[``Eggshell.Persistence.Store.ChildObservation.mk,
+      ``Eggshell.Persistence.Store.AllHeader.fromFrame?] do
+    unless childPostingBody.getUsedConstants.contains required do
+      throwError "Child diagnostics bypass the original checked frame: {required}"
+  for forbidden in #[``Eggshell.Persistence.Store.NodeReader.read,
+      ``Eggshell.Persistence.Store.NodeReader.topology] do
+    if childPostingBody.getUsedConstants.contains forbidden then
+      throwError "Child diagnostics hydrate unrelated source bodies: {forbidden}"
+  let mut queue := [``Eggshell.Plugin.headerSemanticNominations, ``Eggshell.KeyedSearchClient.nominate]
+  let mut seen : Std.HashSet Name := {}
+  while let name :: remaining := queue do
+    queue := remaining
+    if seen.contains name then continue
+    seen := seen.insert name
+    for forbidden in #[``Eggshell.Persistence.Store.resolve, ``Eggshell.Persistence.Store.readNode,
+        ``Eggshell.Persistence.Store.NodeReader.read, ``Eggshell.Persistence.Store.NodeReader.topology,
+        ``Eggshell.Persistence.Store.NodeReader.unions, ``Eggshell.Persistence.Store.materialize] do
+      if name == forbidden then throwError "Semantic preflight restores a whole Value: {name}"
+    if name == ``Eggshell.KeyedSearchClient.nominate then
+      let some declaration := environment.find? name | throwError "Missing scoped nomination client"
+      let some body := declaration.value? | throwError "Missing scoped nomination body"
+      for forbidden in #[``Eggshell.Persistence.Store.searchDocuments] do
+        if body.getUsedConstants.contains forbidden then
+          throwError "Scoped nomination reopens the complete candidate catalogue: {forbidden}"
+    if name.toString.startsWith "Eggshell." then
+      if let some declaration := environment.find? name then
+        if let some body := declaration.value? then queue := body.getUsedConstants.toList ++ queue
+  logInfo "Audited scoped and reference header preflight before selected Value restoration"
+  for root in #[``Eggshell.Matcher.SelectionReplay.check, ``Eggshell.Matcher.SelectionReplay.positions,
+      ``Eggshell.Matcher.SelectionReplay.Index.extend] do
+    let some definition := environment.find? root | throwError "Missing selection runtime {root}"
+    let some value := definition.value? | throwError "Missing selection runtime body {root}"
+    for forbidden in #[``List.append, ``List.flatMap] do
+      if value.getUsedConstants.contains forbidden then
+        throwError "Selection runtime rebuilds its old chosen history: {root}"
+  logInfo "Audited actual selection replay: demanded IO, indexed unit membership, no copied selection history"
+
+/- The reuse predicate must inspect the current dependency sequence before
+building a replacement. Reject a return to building a signature just to
+decide whether the already certified old key can be reused. -/
+run_meta do
+  let environment ← getEnv
+  for root in #[``Eggshell.QuotientBuilder.CongruenceMemo.refsAgree,
+      ``Eggshell.QuotientBuilder.CongruenceMemo.signatureAgrees] do
+    let some definition := environment.find? root | throwError "Missing signature dependency checker {root}"
+    let some body := definition.value? | throwError "Missing dependency checker body {root}"
+    for forbidden in #[``Eggshell.QuotientBuilder.normalizeRefs,
+        ``Eggshell.QuotientBuilder.signature, ``Eggshell.QuotientBuilder.CongruenceMemo.Key.make] do
+      if body.getUsedConstants.contains forbidden then
+        throwError "Signature hit probe reconstructs or rehashes its replacement: {root}, {forbidden}"
+  for (root, required) in #[
+      (``Eggshell.QuotientBuilder.CongruenceMemo.prepareRows,
+        ``Eggshell.QuotientBuilder.CongruenceMemo.prepareSignature),
+      (``Eggshell.QuotientBuilder.CongruenceMemo.prepareScript,
+        ``Eggshell.QuotientBuilder.CongruenceMemo.Script.repairFrom),
+      (``Eggshell.QuotientBuilder.CongruenceMemo.Script.repairFrom,
+        ``Eggshell.QuotientBuilder.CongruenceMemo.ReplayState.next)] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    while !pending.isEmpty do
+      if let name :: rest := pending then
+        pending := rest
+        if seen.contains name then continue
+        seen := seen.insert name
+        if let some definition := environment.find? name then
+          if let some body := definition.value? then
+            for dependency in body.getUsedConstants do
+              if dependency.toString.contains "CongruenceMemo" then
+                pending := dependency :: pending
+    unless seen.contains required do
+      throwError "Production saturation bypasses its dependency interpreter: {root}, {required}"
+  logInfo "Audited current signature dependencies before replacement construction in actual saturation"
+
+/- This module is imported by the test executable, not the product executable.
+   Reject admissions and any new axiom outside Lean's standard logical basis. -/
+run_meta do
+  let contracts := #[
+    ``Eggshell.EqualityDependency.DirectIndex.same_iff,
+    ``Eggshell.EqualityDependency.DirectIndex.generated,
+    ``Eggshell.EqualityDependency.persistent_has_union_path,
+    ``Eggshell.EqualityDependency.local_has_current_union_path,
+    ``Eggshell.EqualityDependency.congruence_is_necessary,
+    ``Eggshell.SelectionDependency.dedup_output,
+    ``Eggshell.SelectionDependency.comparisons_positive,
+    ``Eggshell.Plugin.discovery_selection_report_exists,
+    ``Eggshell.Matcher.Match.retrieved_projection_keeps_owner,
+    ``Eggshell.Matcher.retrieved_is_advisory,
+    ``Eggshell.Matcher.retrieved_never_unions,
+    ``Eggshell.Plugin.mem_supportFirst,
+    ``Eggshell.Plugin.mem_transportOrder,
+    ``Eggshell.Plugin.native_transport_keeps_support_order,
+    ``Eggshell.Plugin.neighborhood_transport_has_source_path,
+    ``Eggshell.Plugin.source_support_has_original_path,
+    ``Eggshell.Plugin.source_support_has_no_control,
+    ``Eggshell.Plugin.contextual_owner_preserves_control,
+    ``Eggshell.Plugin.hook_deadline_preserves_upstream,
+    ``Eggshell.Plugin.hook_deadline_never_extends_upstream,
+    ``Eggshell.Plugin.coherent_entry_packet_budget_bounded,
+    ``Eggshell.Plugin.coherent_entry_packet_budget_tail_independent,
+    ``Eggshell.Plugin.RankedContext.join_covers,
+    ``Eggshell.Plugin.coalesce_context_covers,
+    ``Eggshell.Plugin.coalesce_ranked_contexts_covers,
+    ``Eggshell.Plugin.expanded_context_ranges_cover_expansions,
+    ``Eggshell.Plugin.core_context_ranges_covers,
+    ``Eggshell.Plugin.context_ranges_keep_core_prefix,
+    ``Eggshell.Plugin.adaptive_packet_budget_bounded,
+    ``Eggshell.Plugin.adaptive_packet_budget_follows_demand,
+    ``Eggshell.Plugin.coherent_packet_demand_covers_entries,
+    ``Eggshell.Plugin.coherent_packet_demand_has_no_floor,
+    ``Eggshell.Plugin.context_allowance_levels_within_demand,
+    ``Eggshell.Plugin.preferred_context_level_is_existing,
+    ``Eggshell.Plugin.checked_context_extension_preserves_observations,
+    ``Eggshell.Plugin.compact_context_preserves_authority,
+    ``Eggshell.Plugin.compact_context_preserves_observations,
+    ``Eggshell.Plugin.no_context_gain_keeps_original,
+    ``Eggshell.Plugin.primary_interpretation_is_nominated,
+    ``Eggshell.Plugin.incoherent_context_keeps_original,
+    ``Eggshell.Plugin.fragment_render_preserves_presented_data,
+    ``Eggshell.Plugin.raw_fragment_presentation_is_original,
+    ``Eggshell.Plugin.prepared_key_selection_is_exact,
+    ``Eggshell.Plugin.requested_context_level_bounded,
+    ``Eggshell.Plugin.nominated_support_remains_packet_entry,
+    ``Eggshell.Plugin.repeated_parent_follows_original_sources,
+    ``Eggshell.Plugin.original_child_priority_retained,
+    ``Eggshell.Plugin.same_family_entry_precedes_support,
+    ``Eggshell.Plugin.earlier_family_support_precedes_later_entry,
+    ``Eggshell.Plugin.packet_level_never_decreases,
+    ``Eggshell.Plugin.packet_enrichment_never_decreases,
+    ``Eggshell.Plugin.structure_context_keeps_planned_positions,
+    ``Eggshell.Plugin.structured_context_keeps_ranked_ranges,
+    ``Eggshell.Plugin.structured_context_keeps_core_ranges,
+    ``Eggshell.Plugin.structured_context_ranked_prefix,
+    ``Eggshell.Plugin.prerequisite_context_keeps_cue,
+    ``Eggshell.Plugin.coherent_record_context_keeps_cue,
+    ``Eggshell.Plugin.ranked_context_covers_core,
+    ``Eggshell.Plugin.prepared_context_views_bounded,
+    ``Eggshell.Plugin.owner_context_allowance_reserves_observation,
+    ``Eggshell.Plugin.minimum_context_cost_for_bounded,
+    ``Eggshell.Plugin.minimum_context_cost_bounded,
+    ``Eggshell.Plugin.minimum_context_cost_tail_independent,
+    ``Eggshell.Plugin.entry_source_focus_includes_entry,
+    ``Eggshell.Plugin.entry_source_focus_original_domain,
+    ``Eggshell.Plugin.empty_context_has_no_demand,
+    ``Eggshell.Plugin.coherent_context_ranges_keep_cues,
+    ``Eggshell.Plugin.record_context_retains_original,
+    ``Eggshell.Plugin.context_ranges_cover_expansions,
+    ``Eggshell.Plugin.context_ranges_keep_nominated_position,
+    ``Eggshell.Plugin.ContextSpan.ranges_cover,
+    ``Eggshell.Plugin.ContextSpan.widen_covers,
+    ``Eggshell.Plugin.ContextSelection.total_bounded,
+    ``Eggshell.Plugin.remaining_evidence_was_planned,
+    ``Eggshell.Plugin.contextual_support_has_no_control,
+    ``Eggshell.Plugin.admitted_source_support_preserves_no_control,
+    ``Eggshell.Plugin.native_transport_preserves_control,
+    ``Eggshell.Plugin.native_transport_is_original,
+    ``Eggshell.Plugin.native_discovery_nominations_empty,
+    ``Eggshell.Plugin.control_delta_only_uses_checkpoints,
+    ``Eggshell.Plugin.control_delta_omits_staged_native_history,
+    ``Eggshell.Plugin.intrinsic_transport_unchanged,
+    ``Eggshell.Plugin.source_entry_native_unchanged,
+    ``Eggshell.Plugin.source_entry_was_selected,
+    ``Eggshell.Plugin.source_entry_exclusion_requires_selected,
+    ``Eggshell.Plugin.source_family_priority_bounded,
+    ``Eggshell.Plugin.source_family_child_priority,
+    ``Eggshell.Plugin.FocusedNeighborhood.original_owner,
+    ``Eggshell.Plugin.evidence_search_windows_keep_coordinates,
+    ``Eggshell.Plugin.evidence_window_is_original_suffix,
+    ``Eggshell.Plugin.evidence_directory_keeps_positions,
+    ``Eggshell.Plugin.evidence_directory_position_unchanged,
+    ``Eggshell.Plugin.focused_evidence_window_is_original,
+    ``Eggshell.Plugin.focused_evidence_windows_bounded,
+    ``Eggshell.Plugin.focused_evidence_windows_distinct,
+    ``Eggshell.Plugin.evidence_search_window_is_original_suffix,
+    ``Eggshell.Plugin.evidence_focus_is_original_suffix,
+    ``Eggshell.Plugin.source_focus_requires_original_positions,
+    ``Eggshell.Plugin.primary_evidence_positions_preserved,
+    ``Eggshell.Plugin.unfocused_evidence_positions_unchanged,
+    ``Eggshell.Plugin.IndexedSemanticNominations.focused_identity_injective,
+    ``Eggshell.Plugin.owner_source_status_within_byte_budget,
+    ``Eggshell.Plugin.source_frame_fits_both,
+    ``Eggshell.Plugin.source_frame_preserves_text,
+    ``Eggshell.Plugin.source_entry_is_nominated,
+    ``Eggshell.Plugin.empty_nomination_keeps_intrinsic,
+    ``Eggshell.Plugin.nonempty_source_entries_preserved,
+    ``Eggshell.Plugin.source_entry_owner_has_evidence,
+    ``Eggshell.Plugin.fit_whole_slices_within_allowance,
+    ``Eggshell.Plugin.bounded_whole_slices_same_selection,
+    ``Eggshell.Plugin.fit_preferred_slices_within_allowance,
+    ``Eggshell.Plugin.fit_dual_slices_within_allowances,
+    ``Eggshell.Plugin.packet_level_keeps_owners,
+    ``Eggshell.Plugin.packet_enrichment_preserves_coverage,
+    ``Eggshell.Plugin.Worker.oversized_utf8_reply_is_incomplete,
+    ``Eggshell.Plugin.fitting_owner_is_complete_when_it_fits,
+    ``Eggshell.Plugin.identical_alternatives_preserve_whole_fitting,
+    ``Eggshell.Plugin.complete_transport_evidence,
+    ``Eggshell.Plugin.transport_evidence_binding_present,
+    ``Eggshell.Plugin.surrounding_tool_evidence_is_original,
+    ``Eggshell.Plugin.surrounding_tool_binding_is_original,
+    ``Eggshell.Persistence.Store.IncidentAll.neighbor_is_original,
+    ``Eggshell.Persistence.Store.IncidentAll.disconnected_rejected,
+    ``Eggshell.Plugin.SourceRoute.work_has_original_path,
+    ``Eggshell.SemanticMatcher.IndexedOrder.existing,
+    ``Eggshell.SemanticMatcher.IndexedOrder.covers,
+    ``Eggshell.Persistence.Store.ranked_support_is_original,
+    ``Eggshell.Persistence.Store.source_rank_precedes_family,
+    ``Eggshell.Persistence.Store.WorkOwnerPosting.matches_original,
+    ``Eggshell.Persistence.Store.checked_work_owner_original,
+    ``Eggshell.Persistence.Store.foreign_work_owner_rejected,
+    ``Eggshell.Persistence.Store.work_owner_bucket_complete,
+    ``Eggshell.Persistence.Store.work_owner_retraction_exact,
+    ``Eggshell.Plugin.EvidenceRange.source_exact,
+    ``Eggshell.Plugin.EvidenceRange.text_bounded,
+    ``Eggshell.Plugin.EvidenceRange.subtract_covers,
+    ``Eggshell.Plugin.EvidenceRange.subtractAll_covers,
+    ``Eggshell.Plugin.DecodedLayout.is_canonical,
+    ``Eggshell.Plugin.decoded_layout_preserves_evidence,
+    ``Eggshell.Plugin.decoded_tool_text_recreates_source,
+    ``Eggshell.Plugin.encoded_text_body_exact,
+    ``Eggshell.Plugin.decoded_evidence_source_exact,
+    ``Eggshell.Plugin.decoded_evidence_reencodes_original,
+    ``Eggshell.Plugin.decoded_evidence_occurrence_bound,
+    ``Eggshell.Plugin.contextualSlice_without_positions,
+    ``Eggshell.Plugin.evidenceRangeKey_ne_graphKey,
+    ``Eggshell.SemanticMatcher.IndexedNomination.window_owned,
+    ``Eggshell.SourceEvidence.relative_cannot_escape,
+    ``Eggshell.SourceEvidence.checked_dependencies_exact,
+    ``Eggshell.SourceEvidence.changed_dependency_rejected,
+    ``Eggshell.SourceEvidence.incomplete_record_rejected,
+    ``Eggshell.SourceEvidence.relocated_record_agreement,
+    ``Eggshell.SourceEvidence.receipt_owner_bound,
+    ``Eggshell.SourceEvidence.receipt_other_owner_rejected,
+    ``Eggshell.SourceEvidence.authorization_has_current_dependencies,
+    ``Eggshell.SourceEvidence.authorization_uses_observed_ledger,
+    ``Eggshell.SourceEvidence.checked_iff_valid_dependencies,
+    ``Eggshell.SourceObservation.add_bounded,
+    ``Eggshell.SourceObservation.observation_bytes_bounded,
+    ``Eggshell.SourceObservation.observation_certificate_bound,
+    ``Eggshell.SourceObservation.pending_is_not_complete,
+    ``Eggshell.SourceObservation.resumed_digest_exact,
+    ``Eggshell.SourceObservation.bank_storage_bounded,
+    ``Eggshell.Plugin.existing_read_certificate_retained,
+    ``Eggshell.SourceObservation.changed_dependencies_are_historical,
+    ``Eggshell.SourceObservation.dependent_result_requires_old_content,
+    ``Eggshell.Plugin.observation_binds_new_record,
+    ``Eggshell.Plugin.source_references_restore,
+    ``Eggshell.Plugin.selected_source_table_restores,
+    ``Eggshell.Plugin.checked_source_use_retains_own_receipt,
+    ``Eggshell.Plugin.current_receipt_suffices,
+    ``Eggshell.Plugin.checked_source_use_has_current_dependencies,
+    ``Eggshell.Plugin.applicable_source_use_has_current_dependencies,
+    ``Eggshell.Plugin.checked_owner_requires_every_dependency,
+    ``Eggshell.Plugin.owner_source_status_within_budget,
+    ``Eggshell.Plugin.checked_source_blocks_require_a_checkpoint,
+    ``Eggshell.Plugin.selected_source_checkpoint_requires_local_completion,
+    ``Eggshell.Plugin.unknown_native_source_input_rejected,
+    ``Eggshell.SourceEvidence.accepted_read_plan_dependencies,
+    ``Eggshell.SourceEvidence.read_plan_dependencies_nonempty,
+    ``Eggshell.SourceEvidence.stream_filters_preserve_dependencies,
+    ``Eggshell.SourceEvidence.combined_files_exact,
+    ``Eggshell.SourceEvidence.joined_read_plan_dependencies,
+    ``Eggshell.SourceEvidence.joined_read_plan_preserves_every_source,
+    ``Eggshell.Persistence.Store.source_header_bound,
+    ``Eggshell.Plugin.native_receipt_ignores_source,
+    ``Eggshell.Plugin.operation_owner_ignores_source,
+    ``Eggshell.Plugin.unverified_source_never_blocks,
+    ``Eggshell.Plugin.source_block_requires_checked_dependencies,
+    ``Eggshell.Plugin.source_notice_fits,
+    ``Eggshell.Plugin.source_refresh_has_no_control,
+    ``Eggshell.SourceObservation.unverified_emits_no_evidence,
+    ``Eggshell.Plugin.unknown_source_refresh_is_silent,
+    ``Eggshell.Plugin.repeated_source_refresh_is_silent,
+    ``Eggshell.Plugin.unnamed_source_refresh_is_silent,
+    ``Eggshell.Plugin.source_refresh_overhead_bounded,
+    ``Eggshell.Plugin.replace_source_status_preserves_other_keys,
+    ``Eggshell.Plugin.add_delivered_preserves_other_keys,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.refsAgree_exact,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.signatureAgrees_exact,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.advanceSeen_outside,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.ChangedKeys.advance,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.ChangedKeys.advance_keys,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.ReplayState.next,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.Script.repairFrom,
+    ``Eggshell.Matcher.SelectionReplay.Index.empty_exact,
+    ``Eggshell.Matcher.SelectionReplay.Index.extend_exact,
+    ``Eggshell.Matcher.SelectionReplay.Index.conflicts_exact,
+    ``Eggshell.Matcher.SelectionReplay.check_exact,
+    ``Eggshell.Matcher.SelectionReplay.positions_lower,
+    ``Eggshell.Matcher.SelectionReplay.positions_check,
+    ``Eggshell.Matcher.SelectionReplay.obtain_exact,
+    ``Eggshell.Matcher.RankMemo.select_binding,
+    ``Eggshell.Matcher.GeometryMemo.prepared_provider_exact,
+    ``Eggshell.Matcher.Corpus.OutcomeMemo.prepare_exact,
+    ``Eggshell.Matcher.Corpus.OutcomeMemo.different_body_not_reused,
+    ``Eggshell.Matcher.Corpus.OutcomeMemo.nontext_preserves_cache,
+    ``Eggshell.Matcher.Corpus.OutcomeMemo.finish_exact,
+    ``Eggshell.Matcher.Corpus.compileCandidatesUsing_exact,
+    ``Eggshell.Persistence.Store.NodeReader.scope_exact,
+    ``Eggshell.Persistence.Store.NodeReaders.at_scope,
+    ``Eggshell.Persistence.Store.NodeReader.different_scope,
+    ``Eggshell.TextParts.foldSplitOnAux_exact,
+    ``Eggshell.TextParts.foldSplitOn_exact,
+    ``Eggshell.TextParts.foldProjectionAux_exact,
+    ``Eggshell.TextParts.foldProjection_exact,
+    ``Eggshell.Matcher.sourcePartEnd_bounds,
+    ``Eggshell.Matcher.sourcePartStep_afterEnd,
+    ``Eggshell.Matcher.sourcePartSuffix_stable,
+    ``Eggshell.Matcher.intersectingSourceParts_exact,
+    ``Eggshell.TestOracle.sourcePartsBeforeStreaming_exact,
+    ``Eggshell.TestOracle.materializeContextBeforeStreaming_exact,
+    ``Eggshell.Value.foldNodes_exact,
+    ``Eggshell.Value.foldRefsNodes_exact,
+    ``Eggshell.Value.foldSemanticNodes_exact,
+    ``Eggshell.Value.foldRefsSemanticNodes_exact,
+    ``Eggshell.HashDistinct.fold_contains,
+    ``Eggshell.Persistence.Store.RootReach.compile_reference,
+    ``Eggshell.TestOracle.rootReachBeforeFold_exact,
+    ``Eggshell.LogicalText.logicalNormalizer_list_exact,
+    ``Eggshell.LogicalText.ByteSource.slice_exact,
+    ``Eggshell.LogicalText.contextGramUsing_exact,
+    ``Eggshell.LogicalText.grams_exact,
+    ``Eggshell.LogicalText.gramsAt_width,
+    ``Eggshell.LogicalText.indexGrams_lookup,
+    ``Eggshell.LogicalText.gramsAt_lookup_single,
+    ``Eggshell.LogicalText.contextSurfaceIndex_exact,
+    ``Eggshell.LogicalText.foldPositions_exact,
+    ``Eggshell.LogicalText.contextDemandIndex_exact,
+    ``Eggshell.LogicalText.contextDemandIndex_unrequested,
+    ``Eggshell.LogicalText.contextDemandIndex_single,
+    ``Eggshell.Matcher.Pattern.canonical,
+    ``Eggshell.Matcher.compile_eager_exact,
+    ``Eggshell.Matcher.Corpus.finishCandidate_eager_exact,
+    ``Eggshell.Matcher.Pattern.contextSurface_exact,
+    ``Eggshell.Matcher.ContextEquivalent.insert,
+    ``Eggshell.Matcher.ContextDirectory.filtered,
+    ``Eggshell.Matcher.consumeUnitContext_exact,
+    ``Eggshell.Matcher.surfaceContextCoverUnits_exact,
+    ``Eggshell.Matcher.ContextPlan.check_exact,
+    ``Eggshell.Matcher.ContextPlan.check_generate,
+    ``Eggshell.Matcher.ContextPlan.repair_exact,
+    ``Eggshell.Matcher.ContextPlan.score_generate_exact,
+    ``Eggshell.Matcher.ContextPlan.decode_encode,
+    ``Eggshell.Matcher.surfaceContextCoverPlan_exact,
+    ``Eggshell.Matcher.GeometryMemo.Context.provider_exact,
+    ``Eggshell.Matcher.GeometryMemo.Context.changed_input_rejected,
+    ``Eggshell.Matcher.PreparedMatch.groundUsing_exact,
+    ``Eggshell.Matcher.distinctiveAnchorCount_exact,
+    ``Eggshell.Matcher.consumeContext_congr,
+    ``Eggshell.Matcher.consumeContext_requested_congr,
+    ``Eggshell.Matcher.Pattern.contextDemand_exact,
+    ``Eggshell.Matcher.surfaceContextCover_demand_exact,
+    ``Eggshell.Matcher.surfaceContextCover_exact,
+    ``Eggshell.TestOracle.logicalNormalizerBeforeStreaming_exact,
+    ``Eggshell.IncrementalQuotient.ViewProvider.result_exact,
+    ``Eggshell.IncrementalQuotient.ViewProvider.withPlan_generation,
+    ``Eggshell.IncrementalQuotient.ViewProvider.advance_generation,
+    ``Eggshell.Plugin.SaturationMemo.capturePlan_bounded,
+    ``Eggshell.Plugin.SaturationMemo.capturePlan_producer,
+    ``Eggshell.Plugin.DiscoveryMemo.captured_producer,
+    ``Eggshell.Plugin.DiscoveryMemo.captured_bounded,
+    ``Eggshell.Plugin.DiscoveryMemo.captured_restore_exact,
+    ``Eggshell.Plugin.SaturationMemo.viewProvider_generation,
+    ``Eggshell.Relation.semanticValues_map,
+    ``Eggshell.Relation.exactValues_map,
+    ``Eggshell.Relation.splitOccurrence_map,
+    ``Eggshell.Persistence.Store.NodeFrame.nativeResolved_exact,
+    ``Eggshell.Matcher.Corpus.compiled_work_view,
+    ``Eggshell.Matcher.Corpus.compiled_work_view_candidate,
+    ``Eggshell.Matcher.Corpus.workScoringTerms_exact,
+    ``Eggshell.Matcher.Corpus.workTerms_has_unit,
+    ``Eggshell.Matcher.Corpus.weightedUnits_congr,
+    ``Eggshell.Matcher.Corpus.informationWeights_congr,
+    ``Eggshell.Matcher.WorkView.pair_patterns,
+    ``Eggshell.Matcher.WorkView.alignments_weights_congr,
+    ``Eggshell.Matcher.PreparedMatch.ground_exact,
+    ``Eggshell.Matcher.reusedContextPattern_same,
+    ``Eggshell.Matcher.reusedContextPattern_exact,
+    ``Eggshell.Matcher.prepareInUsing_exact,
+    ``Eggshell.Matcher.prepareInUsing_frequency_congr,
+    ``Eggshell.Matcher.contextTerms_has_unit,
+    ``Eggshell.Matcher.contextTerms_exact,
+    ``Eggshell.Matcher.groundContextPatterns_weights_congr,
+    ``Eggshell.Matcher.groundPrepared_frequency_congr,
+    ``Eggshell.Matcher.prepareAndGround_exact,
+    ``Eggshell.Plugin.extendDemandFrequencies_preserves,
+    ``Eggshell.Matcher.GeometryMemo.inputsWork_exact,
+    ``Eggshell.Matcher.Corpus.compileCandidate_phases,
+    ``Eggshell.Matcher.Corpus.compileWorkCandidate_owner,
+    ``Eggshell.Matcher.Corpus.finishCandidate_compiled,
+    ``Eggshell.Matcher.Candidate.workAlignments_outcome_independent,
+    ``Eggshell.Matcher.Candidate.findMatches_no_work,
+    ``Eggshell.Matcher.Candidate.finish_no_work,
+    ``Eggshell.Matcher.findInUsing_work_projection_exact,
+    ``Eggshell.TestOracle.findInUsingBeforeWorkGate_exact,
+    ``Eggshell.SearchRank.rankRows_map,
+    ``Eggshell.SearchRank.document_frequency_append,
+    ``Eggshell.SearchRank.windows_exact,
+    ``Eggshell.SearchRank.locatedWindows_exact,
+    ``Eggshell.Persistence.Store.window_codec_roundtrip,
+    ``Eggshell.Persistence.Store.span_codec_roundtrip,
+    ``Eggshell.Persistence.Store.SourceWindow.source_exact,
+    ``Eggshell.Persistence.Store.WindowRange.extraction_bounded,
+    ``Eggshell.Persistence.Store.WindowRange.chunks_bounded,
+    ``Eggshell.SearchProvider.CheckedVector.source_shape,
+    ``Eggshell.FileSystem.ReadSize.native_bound,
+    ``Eggshell.SemanticMatcher.candidate_text_source,
+    ``Eggshell.SemanticMatcher.WindowPull.handles_exact,
+    ``Eggshell.SemanticMatcher.WindowPull.handles_bounded,
+    ``Eggshell.SemanticMatcher.documentOwners_owned,
+    ``Eggshell.Persistence.Store.BodyChunk.bounded,
+    ``Eggshell.Persistence.Store.ReferencePairs.positions,
+    ``Eggshell.Persistence.Store.ReferencePairs.unequal_arity,
+    ``Eggshell.Persistence.Store.ReferencePairs.resolved,
+    ``Eggshell.Persistence.Store.ReferencePairs.application_exact,
+    ``Eggshell.Value.semanticNodes_subset_nodes,
+    ``Eggshell.Persistence.SelectionKey.spelling_exact,
+    ``Eggshell.Persistence.Store.RootReach.compile_nodes,
+    ``Eggshell.Persistence.Store.RootReach.compile_unique,
+    ``Eggshell.Persistence.Store.RootReach.compile_member,
+    ``Eggshell.Persistence.Store.RootReach.compile_role,
+    ``Eggshell.Persistence.Store.RootReach.compile_semantic_complete,
+    ``Eggshell.Persistence.Store.RootReach.codec_roundtrip,
+    ``Eggshell.Persistence.Store.RootReach.check_exact,
+    ``Eggshell.Persistence.Store.NodeMembership.retract_add,
+    ``Eggshell.Plugin.manualHandoffForRoots_advisory,
+    ``Eggshell.Persistence.Store.Federated.PostingSet.raw_add,
+    ``Eggshell.Persistence.Store.Federated.PostingSet.complete_stream,
+    ``Eggshell.Persistence.Store.Federated.PostingSet.membership,
+    ``Eggshell.Persistence.Store.Federated.ApplicationKey.denote_injective,
+    ``Eggshell.Persistence.Store.Federated.ApplicationKey.rebind_exact,
+    ``Eggshell.Persistence.Store.Federated.ApplicationKey.equality_exact,
+    ``Eggshell.Persistence.Store.Federated.ReboundApplication.resolved,
+    ``Eggshell.Persistence.Store.Federated.ReboundApplication.parent_bound,
+    ``Eggshell.SearchProvider.WindowBatch.make,
+    ``Eggshell.SearchProvider.WindowBatch.existing,
+    ``Eggshell.QuotientBuilder.AtomQuotient.Index.append_partition,
+    ``Eggshell.QuotientBuilder.AtomQuotient.independent,
+    ``Eggshell.QuotientBuilder.AtomQuotient.Index.aliases_are_atoms,
+    ``Eggshell.Quotient.AliasBuckets.collect_membership,
+    ``Eggshell.Quotient.AliasIndex.aliases_exact,
+    ``Eggshell.Quotient.AliasIndex.child_role_exact,
+    ``Eggshell.QuotientBuilder.AtomQuotient.prepare_mixed_rejected,
+    ``Eggshell.QuotientBuilder.AtomQuotient.Index.append_no_replay,
+    ``Eggshell.QuotientBuilder.AtomQuotient.Index.beginRun_partition,
+    ``Eggshell.IncrementalQuotient.make_agrees,
+    ``Eggshell.Equivalent.without_edges,
+    ``Eggshell.QuotientBuilder.CongruenceSound.merge_sound,
+    ``Eggshell.QuotientBuilder.CongruenceSound.explicit_sound,
+    ``Eggshell.QuotientBuilder.CongruenceSound.signature_sound,
+    ``Eggshell.QuotientBuilder.CongruenceSound.saturation_sound,
+    ``Eggshell.QuotientBuilder.CongruenceSound.certified_sound,
+    ``Eggshell.QuotientBuilder.CongruenceSound.build_sound,
+    ``Eggshell.QuotientBuilder.CongruenceFixed.take_perm,
+    ``Eggshell.QuotientBuilder.CongruenceFixed.merge_progress,
+    ``Eggshell.QuotientBuilder.CongruenceFixed.pass_progress,
+    ``Eggshell.QuotientBuilder.CongruenceFixed.saturation_fixed,
+    ``Eggshell.QuotientBuilder.CongruenceFixed.kernel_fixed,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.pass_closed,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.kernel_domain,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.kernel_connected,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.kernel_semantic_closed,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.evaluate_equivalent,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.kernel_complete,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.outside_atom_literal,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.build_complete,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.build_complete_atoms,
+    ``Eggshell.QuotientBuilder.CongruenceComplete.kernel_root,
+    ``Eggshell.QuotientBuilder.CongruenceSound.attach_exact,
+    ``Eggshell.QuotientBuilder.CongruenceSound.Checked.ungenerated_rejected,
+    ``Eggshell.QuotientBuilder.CongruenceSound.Checked.without_edges,
+    ``Eggshell.QuotientBuilder.CongruenceSound.Checked.domain_independent,
+    ``Eggshell.QuotientBuilder.CongruenceSound.Checked.atoms_independent,
+    ``Eggshell.IncrementalQuotient.generatedView_exact,
+    ``Eggshell.IncrementalQuotient.generatedView_complete,
+    ``Eggshell.IncrementalQuotient.make_generated,
+    ``Eggshell.IncrementalQuotient.ViewProvider.generated,
+    ``Eggshell.IncrementalQuotient.ViewProvider.complete,
+    ``Eggshell.IncrementalQuotient.ViewProvider.domain_independent,
+    ``Eggshell.Plugin.SaturationMemo.viewProvider_generated,
+    ``Eggshell.Plugin.SaturationMemo.viewProvider_domain_independent,
+    ``Eggshell.Plugin.quotientWorkRoots_contains_work,
+    ``Eggshell.IncrementalQuotient.make_extraction,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.Key.ext,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.Prepared.canonical,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.pass_exact,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.Script.repair,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.Script.wrong_instructions_rejected,
+    ``Eggshell.QuotientBuilder.CongruenceMemo.apply_compiled,
+    ``Eggshell.QuotientBuilder.plannedSaturateCongruence_exact,
+    ``Eggshell.QuotientBuilder.plannedBuild_exact,
+    ``Eggshell.IncrementalQuotient.ViewProvider.observed_exact,
+    ``Eggshell.Matcher.discoverUsingM_views_exact,
+    ``Eggshell.Matcher.discoverInUsing_views_exact,
+    ``Eggshell.Plugin.SaturationMemo.codec_roundtrip,
+    ``Eggshell.Plugin.SaturationMemo.restored_build_exact,
+    ``Eggshell.QuotientBuilder.memoSaturateCongruence_exact,
+    ``Eggshell.QuotientBuilder.saturateCongruence_reference,
+    ``Eggshell.DB.PageMap.page_codec_roundtrip,
+    ``Eggshell.DB.PageMap.PageCache.touch_bounded,
+    ``Eggshell.DB.PageMap.PageCache.touch_recent,
+    ``Eggshell.DB.PageMap.PageCache.find_rejects,
+    ``Eggshell.DB.PageMap.head_codec_roundtrip,
+    ``Eggshell.DB.PageMap.blob_codec_roundtrip,
+    ``Eggshell.DB.PageMap.blob_bytes_preserved_by_append,
+    ``Eggshell.DB.PageMap.blob_bytes_preserved_by_recovery,
+    ``Eggshell.DB.PageMap.foreign_read_identity_rejected,
+    ``Eggshell.DB.PageMap.checkPayloadChunks_full_domain,
+    ``Eggshell.DB.PageMap.checkPrefixLoop_exact,
+    ``Eggshell.DB.PageMap.checkPrefix_exact,
+    ``Eggshell.DB.PageMap.PayloadPrefix.outside_rejected,
+    ``Eggshell.DB.PageMap.HistoryReader.retains_exact_reference,
+    ``Eggshell.DB.PageMap.read_observation_roundtrip,
+    ``Eggshell.DB.PageMap.changed_observation_rejected,
+    ``Eggshell.DB.PageMap.ReadTrace.add_bounded,
+    ``Eggshell.DB.PageMap.ObservationIndex.contains_exact,
+    ``Eggshell.DB.PageMap.ReadTrace.add_exact,
+    ``Eggshell.DB.PageMap.ReadTrace.fold_exact,
+    ``Eggshell.DB.PageMap.ReadTrace.incomplete_stays_incomplete,
+    ``Eggshell.DB.PageMap.RangeProgress.unexpected_rejected,
+    ``Eggshell.Persistence.Store.change_codec_roundtrip,
+    ``Eggshell.Persistence.Store.publication_codec_roundtrip,
+    ``Eggshell.Persistence.Store.NodeFrame.check_exact,
+    ``Eggshell.Persistence.Store.NodeFrame.forward_rejected,
+    ``Eggshell.Persistence.Store.payloadSize_missing_rejected,
+    ``Eggshell.Persistence.Store.payloadSize_encoded,
+    ``Eggshell.Persistence.Store.exactIds_sound,
+    ``Eggshell.Persistence.Store.semanticIds_sound,
+    ``Eggshell.Persistence.Store.AllHeader.parent_before,
+    ``Eggshell.Persistence.Store.AllHeader.child_before,
+    ``Eggshell.Persistence.Store.AllHeader.interpret_parent,
+    ``Eggshell.Persistence.Store.AllHeader.interpret_children,
+    ``Eggshell.Persistence.Store.AllHeader.interpret_frame,
+    ``Eggshell.Persistence.Store.LocatedAll.foreign_head_rejected,
+    ``Eggshell.Plugin.semantic_child_membership,
+    ``Eggshell.Plugin.topology_demand_keeps_references,
+    ``Eggshell.Plugin.membership_demand_covers_staged,
+    ``Eggshell.Persistence.Store.OutcomeHeader.work_before,
+    ``Eggshell.Persistence.Store.OutcomeHeader.outcome_before,
+    ``Eggshell.Persistence.Store.OutcomeHeader.observation_before,
+    ``Eggshell.Persistence.Store.LocatedOutcome.foreign_head_rejected,
+    ``Eggshell.Persistence.Store.Change.neutral_exact,
+    ``Eggshell.DB.PageMap.derivedStep_false,
+    ``Eggshell.DB.PageMap.derived_trace_exact,
+    ``Eggshell.DB.PageMap.derived_rows_preserve,
+    ``Eggshell.DB.PageMap.derived_trace_preserve,
+    ``Eggshell.Persistence.Store.Change.authoritative_neutral_rejected,
+    ``Eggshell.Persistence.Store.CheckedChange.neutral_derived,
+    ``Eggshell.Plugin.DemandMemo.codec_roundtrip,
+    ``Eggshell.Plugin.DemandMemo.neutral_replay,
+    ``Eggshell.Plugin.DemandMemo.NeutralChain.preserves,
+    ``Eggshell.Plugin.DemandMemo.changed_request_rejected,
+    ``Eggshell.Plugin.DemandMemo.changed_nominations_rejected,
+    ``Eggshell.Plugin.DemandMemo.observed_record_has_current_nominations,
+    ``Eggshell.Plugin.DemandMemo.metadata_reader_uses_pinned_file,
+    ``Eggshell.Plugin.DemandMemo.metadata_reader_counts_actual_io,
+    ``Eggshell.Plugin.demand_cache_requires_persisted_evidence,
+    ``Eggshell.Persistence.Store.term_payload_roundtrip,
+    ``Eggshell.Persistence.Store.different_term_rejected,
+    ``Eggshell.Persistence.Store.reviseValues_retired,
+    ``Eggshell.Persistence.Store.reviseValues_new,
+    ``Eggshell.Persistence.Store.union_pair_key_symmetric,
+    ``Eggshell.Persistence.Store.LocatedUnion.foreign_head_rejected,
+    ``Eggshell.Graph.removeUnionPair_membership,
+    ``Eggshell.Graph.removeUnionPair_retired,
+    ``Eggshell.DB.PageMap.merge_lookup,
+    ``Eggshell.DB.PageMap.Lookup.pages_bounded,
+    ``Eggshell.DB.PageMap.KeyRange.select_exact,
+    ``Eggshell.DB.PageMap.leaf_bounds,
+    ``Eggshell.DB.PageMap.KeyRange.prune_exact,
+    ``Eggshell.DB.PageMap.KeyRange.prunedRows_exact,
+    ``Eggshell.Persistence.Store.Chunk.payload_bounded,
+    ``Eggshell.Persistence.Store.Chunk.adjacent_exact,
+    ``Eggshell.Persistence.Store.different_chunk_rejected,
+    ``Eggshell.DB.PageMap.pairwise_of_ordered,
+    ``Eggshell.FileSystem.publication_agreement_exact,
+    ``Eggshell.Matcher.Corpus.stored_owner_terms_exact,
+    ``Eggshell.Matcher.Corpus.compileCandidate_nontext,
+    ``Eggshell.Matcher.Corpus.compileCandidate_owner,
+    ``Eggshell.Matcher.Corpus.compileCandidate_atom_work,
+    ``Eggshell.Matcher.Corpus.compileCandidates_textual,
+    ``Eggshell.Matcher.Corpus.build_textual_projection,
+    ``Eggshell.Matcher.findIn_textual_projection,
+    ``Eggshell.Plugin.IndexedOwners.candidates_exact,
+    ``Eggshell.Plugin.IndexedOwners.atom_outcomes,
+    ``Eggshell.Plugin.SaturationMemo.viewProvider_exact,
+    ``Eggshell.Plugin.SingleSource.table_exact,
+    ``Eggshell.Plugin.SingleSource.only_present,
+    ``Eggshell.Plugin.SingleSource.two_rejected,
+    ``Eggshell.Plugin.indexed_saturation_memo_exact,
+    ``Eggshell.Matcher.Corpus.stored_work_surfaces_exact,
+    ``Eggshell.Matcher.sharesSurface_keys,
+    ``Eggshell.Matcher.stored_work_surface_admission,
+    ``Eggshell.Matcher.findIn_no_surface_admissions,
+    ``Eggshell.Plugin.renderAutomatic_empty_terminal,
+    ``Eggshell.Persistence.Store.AllParentPosting.matches_exact,
+    ``Eggshell.Persistence.Store.AllHeader.child_membership_exact,
+    ``Eggshell.Matcher.Candidate.prepareWork_subworks_exact,
+    ``Eggshell.Matcher.Candidate.preparedWorks_work_only,
+    ``Eggshell.Matcher.localUnion_work_only,
+    ``Eggshell.WorkInference.complete_pass_exact,
+    ``Eggshell.WorkInference.complete_admitted_pass_exact,
+    ``Eggshell.WorkInference.pass_candidates_irrelevant,
+    ``Eggshell.WorkInference.Prepared.inert_effects,
+    ``Eggshell.WorkInference.deferred_inert,
+    ``Eggshell.WorkInference.Prepared.covered_effects,
+    ``Eggshell.WorkInference.deferred_covered,
+    ``Eggshell.WorkInference.Prepared.retrieved_never_proposes,
+    ``Eggshell.WorkInference.Prepared.proposed_scope,
+    ``Eggshell.Matcher.selected_admissions_exact,
+    ``Eggshell.Matcher.findInUsing_selected_exact,
+    ``Eggshell.Matcher.findInUsing_no_admissions,
+    ``Eggshell.Extract.runWithPolicy_unadmitted_root,
+    ``Eggshell.Selection.validFor_selected,
+    ``Eggshell.Extract.runWithPolicy_terminal_exact,
+    ``Eggshell.Extract.runWithPolicy_terminal_all_irrelevant,
+    ``Eggshell.Extract.runWithPolicy_terminal_selected,
+    ``Eggshell.Extract.classified_selected,
+    ``Eggshell.Extract.solve_selected,
+    ``Eggshell.Extract.runWithPolicyFuel_selected,
+    ``Eggshell.Extract.runWithPolicyFuel_sound,
+    ``Eggshell.Matcher.extraction_sound,
+    ``Eggshell.Matcher.TerminalRoot.changed_union_rejected,
+    ``Eggshell.Matcher.TerminalRoot.changed_projection_rejected,
+    ``Eggshell.Matcher.TerminalRoot.changed_demand_rejected,
+    ``Eggshell.Matcher.TerminalRoot.discovery_exact,
+    ``Eggshell.Plugin.renderAutomatic_no_hits,
+    ``Eggshell.Plugin.DeliveryInterval.subtract_covers,
+    ``Eggshell.Plugin.DeliveryInterval.subtractAll_covers,
+    ``Eggshell.Plugin.exhausted_context_cannot_refill,
+    ``Eggshell.Plugin.accepted_plan_cannot_resend,
+    ``Eggshell.Plugin.accepted_observation_plan_cannot_refill,
+    ``Eggshell.Plugin.old_advisory_position_closed,
+    ``Eggshell.Plugin.new_advisory_position_retained,
+    ``Eggshell.Plugin.unaccepted_advisory_position_retained,
+    ``Eggshell.Plugin.grounded_transport_retained,
+    ``Eggshell.Plugin.excluded_advisory_transport_closed,
+    ``Eggshell.Plugin.advisory_plan_question_ignores_operations,
+    ``Eggshell.Plugin.grounded_native_plan_keeps_operation,
+    ``Eggshell.Plugin.meaning_plan_independent_of_receipts,
+    ``Eggshell.Plugin.surrounding_evidence_query_does_not_follow_tools,
+    ``Eggshell.Plugin.surrounding_evidence_query_without_question,
+    ``Eggshell.Plugin.native_source_positions_keep_question,
+    ``Eggshell.Plugin.source_positions_independent_of_operation,
+    ``Eggshell.Plugin.focus_domain_keeps_entry,
+    ``Eggshell.Plugin.focus_domain_keeps_distinct_support,
+    ``Eggshell.Plugin.focus_domain_extra_row_is_distinct,
+    ``Eggshell.Plugin.prerequisite_cues_keep_ranked,
+    ``Eggshell.Plugin.prerequisite_cues_keep_heads,
+    ``Eggshell.Plugin.following_context_keeps_cue,
+    ``Eggshell.Plugin.source_order_keeps_original_views,
+    ``Eggshell.Plugin.source_order_cost_unchanged,
+    ``Eggshell.Plugin.complete_structure_was_original,
+    ``Eggshell.Plugin.initial_source_positions_keep_question,
+    ``Eggshell.Plugin.refined_source_positions_keep_original,
+    ``Eggshell.Plugin.ordinary_context_levels_preserved,
+    ``Eggshell.Plugin.explicit_context_keeps_its_minimum,
+    ``Eggshell.Plugin.selected_anchor_cluster_retained,
+    ``Eggshell.Plugin.context_data_has_original_child,
+    ``Eggshell.Plugin.ordinary_reference_minimum_preserved,
+    ``Eggshell.QueryLiterals.window_is_original, ``Eggshell.QueryLiterals.window_count_bounded,
+    ``Eggshell.QueryLiterals.windows_distinct, ``Eggshell.QueryLiterals.anchors_are_selected,
+    ``Eggshell.Plugin.refined_source_positions_keep_locator,
+    ``Eggshell.Plugin.policy_packet_cost_covers_actual,
+    ``Eggshell.Plugin.policy_packet_cost_wording_independent,
+    ``Eggshell.Plugin.native_advisory_requires_focus,
+    ``Eggshell.Plugin.initial_context_unrestricted,
+    ``Eggshell.Plugin.grounded_native_context_retained,
+    ``Eggshell.Plugin.observed_transport_requires_grounding,
+    ``Eggshell.Plugin.observed_transport_retains_grounding,
+    ``Eggshell.Plugin.Daemon.rpc_preserves_supplied_deadline,
+    ``Eggshell.Plugin.reconciled_delivery_fits,
+    ``Eggshell.Plugin.remaining_frame_not_acknowledged,
+    ``Eggshell.Plugin.remaining_frame_has_visible_owner,
+    ``Eggshell.Plugin.remaining_envelope_preserves_original_fragments,
+    ``Eggshell.Plugin.source_notice_preserves_observed_body,
+    ``Eggshell.Plugin.changed_source_use_has_observed_difference,
+    ``Eggshell.Plugin.open_source_domain_cannot_complete_native,
+    ``Eggshell.SourceEvidence.observed_command_file_from_read,
+    ``Eggshell.Plugin.expired_offer_is_not_a_claim,
+    ``Eggshell.Plugin.request_meaning_uses_human_question,
+    ``Eggshell.TestOracle.CorpusCache.prepare_exact,
+    ``Eggshell.Matcher.Corpus.full_frequencies_exact,
+    ``Eggshell.Matcher.Corpus.appendCandidates_exact,
+    ``Eggshell.Matcher.Corpus.ownerRows_count,
+    ``Eggshell.Frequency.Index.replace,
+    ``Eggshell.Frequency.affectedRegion,
+    ``Eggshell.Frequency.change_no_zeros,
+    ``Eggshell.TestOracle.SearchMemo.get_exact,
+    ``Eggshell.TestOracle.SearchMemo.getUsing_exact,
+    ``Eggshell.TestOracle.CachedWorkspace.reuse_exact,
+    ``Eggshell.Matcher.GeometryMemo.provider_exact,
+    ``Eggshell.Matcher.GeometryMemo.prepareRanksFrom_bounded,
+    ``Eggshell.Matcher.pairedCoveragesUsing_exact,
+    ``Eggshell.Matcher.RankMemo.provider_exact,
+    ``Eggshell.Matcher.RankMemo.codec_roundtrip,
+    ``Eggshell.Matcher.EvidenceReplay.certify_exact,
+    ``Eggshell.Matcher.EvidenceReplay.runs_flatten,
+    ``Eggshell.Matcher.EvidenceReplay.mergePairs_perm,
+    ``Eggshell.Matcher.EvidenceReplay.mergeRuns_perm,
+    ``Eggshell.Matcher.EvidenceReplay.replay_nodup,
+    ``Eggshell.Matcher.EvidenceReplay.Keyed.order_exact,
+    ``Eggshell.Matcher.SurfaceJoin.Group.lookup_exact,
+    ``Eggshell.Matcher.SurfaceJoin.Directory.lookup_exact,
+    ``Eggshell.Matcher.demandProvider_exact,
+    ``Eggshell.Matcher.GeometryMemo.changed_input_rejected,
+    ``Eggshell.TestOracle.SearchMemo.evaluateUsing_exact,
+    ``Eggshell.TestOracle.SearchMemo.changed_input_rejected,
+    ``Eggshell.LogicalText.indexedUnitSpan_exact,
+    ``Eggshell.LogicalText.grams_exact,
+    ``Eggshell.SemanticMatcher.eligible_iff_readable_owner,
+    ``Eggshell.SemanticMatcher.readable_owner_remains_eligible,
+    ``Eggshell.SemanticMatcher.nomination_has_corpus_owner,
+    ``Eggshell.SemanticMatcher.index_receipt_matches_batch,
+    ``Eggshell.SemanticMatcher.mismatched_index_acknowledgement_rejected,
+    ``Eggshell.Plugin.committed_index_owner_present,
+    ``Eggshell.Plugin.committedPromotion?_identity,
+    ``Eggshell.Plugin.index_ticket_root_is_published,
+    ``Eggshell.Plugin.pending_search_has_no_authority,
+    ``Eggshell.Plugin.terminal_order_preserves_answer,
+    ``Eggshell.Plugin.terminal_seal_preserves_observations,
+    ``Eggshell.Plugin.terminal_close_never_reopens,
+    ``Eggshell.Plugin.Worker.expired_window_cannot_start,
+    ``Eggshell.Plugin.Worker.busy_open_gate_retries,
+    ``Eggshell.Plugin.Worker.completed_empty_gate_is_finished,
+    ``Eggshell.Plugin.Worker.read_admission_is_live,
+    ``Eggshell.Plugin.Worker.read_admission_is_bounded,
+    ``Eggshell.Plugin.Worker.stale_waiter_cannot_start,
+    ``Eggshell.Plugin.Worker.changed_waiter_context_cannot_start,
+    ``Eggshell.Plugin.Worker.incomplete_delivery_has_no_authority,
+    ``Eggshell.Plugin.Worker.stale_search_reply_is_discarded,
+    ``Eggshell.Plugin.Worker.old_context_reply_is_discarded,
+    ``Eggshell.Plugin.Worker.expired_search_reply_is_incomplete,
+    ``Eggshell.Plugin.Worker.missing_search_reply_is_incomplete,
+    ``Eggshell.Plugin.Daemon.valid_hook_reply_is_preserved,
+    ``Eggshell.Plugin.Daemon.absent_hook_reply_is_incomplete,
+    ``Eggshell.Plugin.Daemon.invalid_hook_reply_is_incomplete,
+    ``Eggshell.SearchRank.deduplicated_nodup,
+    ``Eggshell.SearchRank.terms_nodup,
+    ``Eggshell.SearchRank.document_count_exact,
+    ``Eggshell.SearchRank.Corpus.rank_exact,
+    ``Eggshell.SearchRank.lexical_exact,
+    ``Eggshell.SearchProvider.oversized_corpus_not_retained,
+    ``Eggshell.SearchRank.selected_no_duplicates,
+    ``Eggshell.SearchRank.selected_within_budget,
+    ``Eggshell.SearchRank.selected_is_existing,
+    ``Eggshell.SearchRank.selected_was_ranked,
+    ``Eggshell.SearchRank.zero_budget_is_empty,
+    ``Eggshell.Plugin.ranked_evidence_choice_is_original,
+    ``Eggshell.Setup.configured_is_preserved,
+    ``Eggshell.Setup.check_never_initializes,
+    ``Eggshell.Setup.initialize_only_when_missing,
+    ``Eggshell.SearchProvider.accepted_cache_identity,
+    ``Eggshell.SearchProvider.presentation_ranking_original,
+    ``Eggshell.SearchProvider.presentation_ranking_complete,
+    ``Eggshell.SearchProvider.presentation_ranking_no_duplicates,
+    ``Eggshell.SearchProvider.changed_cache_window_rejected,
+    ``Eggshell.SearchProvider.changed_cache_model_rejected]
+  for contract in contracts do
+    let axioms ← Lean.collectAxioms contract
+    for dependency in axioms do
+      unless #[``propext, ``Quot.sound, ``Classical.choice].contains dependency do
+        throwError "{contract} depends on unapproved axiom {dependency}"
+    logInfo m!"Audited {contract}: {axioms}"
+
+/- Actual delivery consumes the extraction covered by completed_authority.
+The accelerated and terminal producers retain the current generated proof;
+this audit does not replace the source binding/freshness IO specification. -/
+run_meta do
+  let environment ← getEnv
+  for (root, required) in #[
+      (``Eggshell.Matcher.discoverUsingM?, ``Eggshell.IncrementalQuotient.ProducedView.certified),
+      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.IncrementalQuotient.certifyExplicit?),
+      (``Eggshell.Plugin.indexedTerminalRoot, ``Eggshell.Matcher.TerminalRoot.discovery),
+      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.WorkClassLookup.prepare?),
+      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.Persistence.Store.NodeReaders.classOwners),
+      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.Matcher.Match.identified),
+      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.Matcher.TerminalRoot.discovery),
+      (``Eggshell.Plugin.indexedIdentifiedRoot, ``Eggshell.Plugin.auditRenderedSelection),
+      (``Eggshell.Plugin.computeAutomaticHandoff, ``Eggshell.Plugin.indexedIdentifiedRoot)] do
+    let mut seen : Std.HashSet Name := {}
+    let mut pending := [root]
+    while let name :: tail := pending do
+      pending := tail
+      if seen.contains name then continue
+      seen := seen.insert name
+      if name.toString.startsWith "Eggshell." then
+        if let some declaration := environment.find? name then
+          if let some body := declaration.value? then pending := body.getUsedConstants.toList ++ pending
+    unless seen.contains required do
+      throwError "Production completed-authority path bypassed: {root}, {required}"
+  for root in #[``Eggshell.Plugin.renderAutomatic, ``Eggshell.Plugin.auditRenderedSelection] do
+    let some declaration := environment.find? root | throwError "Missing delivery boundary {root}"
+    unless declaration.type.getUsedConstants.contains ``Eggshell.Matcher.extraction do
+      throwError "Delivery accepts an extraction without the main-theorem binding: {root}"
+    let some body := declaration.value? | throwError "Missing delivery implementation {root}"
+    unless body.getUsedConstants.contains ``Subtype.val do
+      throwError "Delivery no longer consumes its certified extraction: {root}"
+  let some receipt := environment.find? ``Eggshell.Plugin.auditRenderedSelection |
+    throwError "Missing equality receipt boundary"
+  let some body := receipt.value? | throwError "Missing equality receipt implementation"
+  unless body.getUsedConstants.contains ``Eggshell.Matcher.Discovery.persistentUnions do
+    throwError "Equality receipt is detached from the actual discovery generators"
+  let some origins := environment.find? ``Eggshell.Matcher.Discovery.localOrigins |
+    throwError "Discovery lost the local generator ancestry field"
+  unless origins.type.getUsedConstants.contains ``Eggshell.Matcher.LocalUnionOrigins do
+    throwError "Discovery ancestry is detached from local constructor calls"
+  logInfo "Audited generated authority and non-retrieved local origins in discovery, terminal and class producers"
+
+run_meta do
+  let environment ← getEnv
+  let forbidden := #[``Eggshell.Persistence.Store.searchDocuments,
+    ``Eggshell.Persistence.Store.NodeReader.readTopology,
+    ``Eggshell.Persistence.Store.Federated.prepare]
+  let mut seen : Std.HashSet Name := {}
+  let mut pending := [``Eggshell.Plugin.indexedIdentifiedRoot]
+  while let name :: rest := pending do
+    pending := rest
+    if seen.contains name then continue
+    seen := seen.insert name
+    if forbidden.contains name then throwError "Work-class root restored a full catalogue: {name}"
+    if name.toString.startsWith "Eggshell." then
+      if let some declaration := environment.find? name then
+        if let some body := declaration.value? then pending := body.getUsedConstants.toList ++ pending
+  logInfo "Audited class root without source-window, full-topology or federated catalogue restoration"
+
+run_meta do
+  let environment ← getEnv
+  let some declaration := environment.find? ``Eggshell.Plugin.indexedDiscoveryUsing |
+    throwError "Missing separated discovery controller"
+  let some body := declaration.value? | throwError "Missing separated discovery body"
+  let used := body.getUsedConstants
+  for forbidden in #[``Eggshell.Plugin.IndexedContext.surfaces,
+      ``Eggshell.Plugin.IndexedContext.readWork, ``Eggshell.Plugin.IndexedContext.frequencies,
+      ``Eggshell.Matcher.findInUsing, ``Eggshell.Matcher.prepareInUsing,
+      ``Eggshell.Matcher.GeometryMemo.prepareUsingM] do
+    if used.contains forbidden then
+      throwError "Separated discovery restored partial-text matching: {forbidden}"
+  for required in #[``Eggshell.Plugin.IndexedContext.identityOwners,
+      ``Eggshell.WorkClassLookup.prepare?, ``Eggshell.Matcher.Match.identified,
+      ``Eggshell.Matcher.Match.nominated, ``Eggshell.Matcher.discoverUsingM?,
+      ``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.Synapses.Transport.build] do
+    unless used.contains required do
+      throwError "Separated discovery lost its original evidence boundary: {required}"
+  logInfo "Audited class recognition and original advisory nomination without full Work surface inference"
+
+/- A memo is the captured calculation under the exact request and observation;
+its replay keeps bytes and the origin locator without asserting complete ancestry. -/
+run_meta do
+  let environment ← getEnv
+  for (caller, required) in #[
+      (``Eggshell.Plugin.DemandMemo.readObserved, ``Eggshell.Plugin.DemandMemo.readChecked),
+      (``Eggshell.Plugin.DemandMemo.readChecked, ``Eggshell.Plugin.DemandMemo.requestedRecord?),
+      (``Eggshell.Plugin.demandResponse?, ``Eggshell.Plugin.checkedMemoResponse?),
+      (``Eggshell.Plugin.demandResponse?, ``Eggshell.Plugin.memoReplayTrace),
+      (``Eggshell.Plugin.demandResponse?, ``Eggshell.Receipt.observe),
+      (``Eggshell.Plugin.automaticHandoff, ``Eggshell.Plugin.DemandMemo.capture),
+      (``Eggshell.Plugin.automaticHandoff, ``Eggshell.Plugin.DemandMemo.publishCaptured)] do
+    let some declaration := environment.find? caller | throwError "Missing memo producer {caller}"
+    let some body := declaration.value? | throwError "Missing memo implementation {caller}"
+    unless body.getUsedConstants.contains required do
+      throwError "Memo binding bypassed: {caller}, {required}"
+  let some automatic := environment.find? ``Eggshell.Plugin.automaticHandoff |
+    throwError "Missing automatic handoff"
+  let some body := automatic.value? | throwError "Missing automatic handoff body"
+  if body.getUsedConstants.contains ``Eggshell.Plugin.DemandMemo.publish then
+    throwError "Automatic handoff publishes an uncaptured memo row"
+  logInfo "Audited exact memo request, captured response, canonical replay and current receipt origin link"
+
+example (delivered : List String) (windows : List Nat)
+    (owner : Eggshell.OutcomeEdge) (connections : String)
+    (records : List Eggshell.SourceEvidence.Record) (slice : Eggshell.Plugin.TransportSlice) :
+    (Eggshell.Plugin.prepareContextualOwnerPlan delivered windows owner connections records slice).eval =
+      Eggshell.Plugin.prepareContextualOwnerPart delivered windows owner connections records slice :=
+  Eggshell.Plugin.prepareContextualOwnerPlan_exact delivered windows owner connections records slice
+
+example (delivered : List String) (windows : List Nat) (slice : Eggshell.Plugin.TransportSlice) :
+    (Eggshell.Plugin.prepareContextualSlicePlan delivered windows slice).eval =
+      Eggshell.Plugin.prepareContextualSlice delivered windows slice :=
+  Eggshell.Plugin.prepareContextualSlicePlan_exact delivered windows slice
+
+example (roots : List Eggshell.Value) (all : List Eggshell.AllEdge) (unions : List Eggshell.UnionEdge)
+    (delivered : List String) (windows : List Nat)
+    (support : Eggshell.Plugin.SourceSupport roots all unions) :
+    (Eggshell.Plugin.prepareContextualSupportPlan delivered windows support).eval =
+      Eggshell.Plugin.prepareContextualSupportSlice delivered windows support :=
+  Eggshell.Plugin.prepareContextualSupportPlan_exact delivered windows support
+
+example : @Eggshell.Plugin.prepareContextViews = @Eggshell.Plugin.prepareContextViewsFast :=
+  Eggshell.Plugin.prepareContextViews_compiled
+example : @Eggshell.Plugin.prepareCueViews = @Eggshell.Plugin.prepareCueViewsFast :=
+  Eggshell.Plugin.prepareCueViews_compiled
+example : @Eggshell.Plugin.decodedEvidenceUsing? = @Eggshell.Plugin.decodedEvidenceUsingIndexed? :=
+  Eggshell.Plugin.decodedEvidenceUsingIndexed_compiled
+
+run_meta do
+  let environment ← getEnv
+  for caller in #[``Eggshell.Plugin.prepareContextViewsFast, ``Eggshell.Plugin.prepareCueViewsUsingFast] do
+    let some declaration := environment.find? caller | throwError "Missing memoized context caller"
+    let some body := declaration.value? | throwError "Memoized context caller has no body"
+    for required in #[``Eggshell.ExactMemo.filterMap, ``Eggshell.Plugin.decodedEvidenceUsing?] do
+      unless body.getUsedConstants.contains required do
+        throwError "Context memo bypasses exact result or scalar validation: {caller}, {required}"
+
+run_meta do
+  let environment ← getEnv
+  let some declaration := environment.find? ``Eggshell.Plugin.decodedEvidenceUsingIndexed? |
+    throwError "Missing exact prefix decoder"
+  let some body := declaration.value? | throwError "Prefix decoder has no body"
+  for required in #[``Eggshell.PairDecisions.branch, ``Eggshell.IndexedCharacters.branch₂] do
+    unless body.getUsedConstants.contains required do
+      throwError "Decoder bypasses a certified scalar decision: {required}"
+
+example (path : System.FilePath) (limit : Nat) :
+    Eggshell.FileSystem.boundedBytes path limit =
+      (do Eggshell.FileSystem.boundedRead (← Eggshell.FileSystem.openRead path.toString) limit) :=
+  Eggshell.FileSystem.bounded_read_original path limit
+
+run_meta do
+  let environment ← getEnv
+  for (caller, required) in #[
+      (``Eggshell.SearchProvider.loadIndexedVector, ``Eggshell.FileSystem.boundedRead),
+      (``Eggshell.SearchProvider.loadIndexedVector, ``Eggshell.SearchProvider.decodeVectorBytes),
+      (``Eggshell.SearchProvider.indexedWindow, ``Eggshell.SearchProvider.loadIndexedVector),
+      (``Eggshell.SearchProvider.handleIndexedUsing, ``Eggshell.DirectoryReads.new),
+      (``Eggshell.SearchProvider.saveVector, ``Eggshell.DirectoryReads.invalidate),
+      (``Eggshell.DirectoryReads.open, ``Eggshell.FileSystem.openReadAt)] do
+    let some declaration := environment.find? caller | throwError "Missing directory read caller: {caller}"
+    let some body := declaration.value? | throwError "Directory read caller has no body: {caller}"
+    unless body.getUsedConstants.contains required do
+      throwError "Directory reads bypass the secure bounded decoder: {caller}, {required}"
+
+run_meta do
+  let environment ← getEnv
+  let some declaration := environment.find? ``Eggshell.SearchProvider.handleIndexedUsing |
+    throwError "Missing indexed numerical handler"
+  let some body := declaration.value? | throwError "Numerical handler has no body"
+  unless body.getUsedConstants.contains ``Eggshell.SearchProvider.indexedEvidenceWindows do
+    throwError "Numerical ranking bypasses the exact evidence directory"
+
+run_meta do
+  let environment ← getEnv
+  for (caller, required) in #[
+      (``Eggshell.Plugin.Worker.readSearchReply, ``Eggshell.Plugin.Worker.readyDeadline),
+      (``Eggshell.Plugin.Worker.search, ``Eggshell.Plugin.automaticHandoff),
+      (``Eggshell.Plugin.indexedDiscoveryUsing, ``Eggshell.Plugin.IndexedContext.onSemanticReady),
+      (``Eggshell.Plugin.deliverForWork, ``Eggshell.Plugin.Worker.exchange)] do
+    let some declaration := environment.find? caller | throwError "Missing progress caller: {caller}"
+    let some body := declaration.value? | throwError "Missing progress body: {caller}"
+    unless body.getUsedConstants.contains required do
+      throwError "Search progress bypasses its checked boundary: {caller}: {required}"
+
+run_meta do
+  let environment ← getEnv
+  for caller in #[``Eggshell.Plugin.indexedSemanticNominationsUsing,
+      ``Eggshell.Plugin.federatedSemanticNominations] do
+    let some declaration := environment.find? caller | throwError "Missing owner projection caller"
+    let some body := declaration.value? | throwError "Missing owner projection body"
+    unless body.getUsedConstants.contains ``Eggshell.OwnerProjection.legacyIO &&
+        body.getUsedConstants.contains ``Eggshell.Plugin.resolveSemanticOwner do
+      throwError "Owner projection bypasses its checked source array or compiler equality"
+
+run_meta do
+  let environment ← getEnv
+  let some declaration := environment.find? ``Eggshell.Plugin.prepareCueViewsFast |
+    throwError "Missing cue fast wrapper"
+  let some body := declaration.value? | throwError "Missing cue fast wrapper body"
+  unless body.getUsedConstants.contains ``Eggshell.Plugin.prepareCueViewsUsingFast do
+    throwError "Cue wrapper bypasses the exact prepared implementation"
+
+run_meta do
+  let environment ← getEnv
+  for (caller, required) in #[( ``Eggshell.Plugin.renderAutomatic,
+      ``Eggshell.Plugin.SharedRangeAdapter.mandatorySlices),
+      (``Eggshell.Plugin.SharedRangeAdapter.mandatorySlices, ``Eggshell.Plugin.Selected.blocks)] do
+    let some declaration := environment.find? caller | throwError "Missing native-control reservation caller"
+    let some body := declaration.value? | throwError "Missing native-control reservation implementation"
+    unless body.getUsedConstants.contains required do
+      throwError "Reservation bypasses actual native control: {caller}, {required}"
+  logInfo "Audited reservation of actual native control and ordinary advisory eligibility"
+
+run_meta do
+  let environment ← getEnv
+  for (caller,required) in #[
+      (``Eggshell.Plugin.meaningContext?, ``SourceWindow.project),
+      (``Eggshell.Plugin.SharedRangeAdapter.rankedCues, ``Eggshell.Plugin.meaningContext?),
+      (``Eggshell.Plugin.rankedContextRanges, ``Eggshell.Plugin.meaningContext?),
+      (``Eggshell.Plugin.meaningContextGroups, ``Eggshell.Plugin.meaningContext?),
+      (``Eggshell.Plugin.SharedRangeAdapter.prepare, ``Eggshell.Plugin.rankedContextRanges),
+      (``Eggshell.Plugin.SharedRangeAdapter.prepare, ``Eggshell.Plugin.SharedRangeAdapter.atomicUnit)] do
+    let some declaration := environment.find? caller | throwError "Missing source-window caller"
+    let some body := declaration.value? | throwError "Missing source-window implementation"
+    unless body.getUsedConstants.contains required do
+      throwError "Source-window caller bypasses the checked projection: {caller}, {required}"
