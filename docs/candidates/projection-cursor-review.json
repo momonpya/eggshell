@@ -1,0 +1,2796 @@
+{
+  "capturedAt": "2026-10-25T06:54:04Z",
+  "candidate": "direct-original-projections-and-delta-warm",
+  "parentCommit": "c0248d286bb34aacd5852c8bed075f9143892555",
+  "adopted": false,
+  "productRuntimeChanged": false,
+  "inclusiveTokenComparison": false,
+  "qualityQualification": false,
+  "requiredHistoryRecallQualification": false,
+  "millionWindowQualification": false,
+  "heldoutHundredInquiryQualification": false,
+  "sharedConcurrentQualification": false,
+  "prePostScaleQualification": false,
+  "sourceSegmentCacheRetired": false,
+  "safeFloatPruningClaimed": false,
+  "newPythonImplementation": false,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "sourceEmbeddingCalls": 0,
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/eggshell",
+    "bytes": 117201984,
+    "sha256": "82542bcea5547ed06fdd01ef3b35d3f4d7405a75c0d93a60ec9d46f4ab8ade48"
+  },
+  "payload": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/prefix/libexec/eggshell",
+    "bytes": 117201984,
+    "sha256": "82542bcea5547ed06fdd01ef3b35d3f4d7405a75c0d93a60ec9d46f4ab8ade48"
+  },
+  "sources": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/ProjectionCursor.lean",
+      "bytes": 4409,
+      "sha256": "7481e9e7cdb9948a194b3b67f5008edc1d934d897e6e47fbe3efe457b50feea2",
+      "relative": "ProjectionCursor.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/ProjectionCache.lean",
+      "bytes": 3248,
+      "sha256": "b4e866ec4bd902ff734ec0d4114563222c17ad6f066ee8fecbdb7f64a450b324",
+      "relative": "ProjectionCache.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/VectorPartition.lean",
+      "bytes": 15921,
+      "sha256": "cba94278abd83c74744753b8e19963281a8307cba069836fa29f5665036e2301",
+      "relative": "VectorPartition.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/PartitionBuild.lean",
+      "bytes": 7063,
+      "sha256": "f94312e1eedf9eeb14bd82317600b541ad4654029319e046fe1aa4e8da92d090",
+      "relative": "PartitionBuild.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/DirectProjectionAudit.lean",
+      "bytes": 12607,
+      "sha256": "d020d0d2dd4b147551017b553fc8f4990366968058f200b9253ea94cefb0ecfd",
+      "relative": "DirectProjectionAudit.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/Eggshell/BlockScore.lean",
+      "bytes": 4699,
+      "sha256": "44688adcabbc5a5354be24444f32f41c96ffc5c48227ea4358e9ee5d548a5b96",
+      "relative": "Eggshell/BlockScore.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/Eggshell/SearchProvider.lean",
+      "bytes": 45016,
+      "sha256": "647c5adbdc9817b2294810aaadefed391ee5bb66d14d1e16b8a63854f9427e46",
+      "relative": "Eggshell/SearchProvider.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/Eggshell/Warm.lean",
+      "bytes": 20074,
+      "sha256": "6a35772b3f563d8c2bac1805ab0a341d40bb8d3b320be4bc44b78adbf803fc68",
+      "relative": "Eggshell/Warm.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/Eggshell/Numerical.lean",
+      "bytes": 19148,
+      "sha256": "aff04384aaf30211e28fe1d4c7c89129ac28fb5fe5d435fc40da5e94fb3f6379",
+      "relative": "Eggshell/Numerical.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/Eggshell/KeyedSearchProvider.lean",
+      "bytes": 12087,
+      "sha256": "49a2791a0fe3ba8a5928b639f6831af46d5879368d113a8d500f0eee90e23d45",
+      "relative": "Eggshell/KeyedSearchProvider.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/Eggshell/ContractAudit.lean",
+      "bytes": 114650,
+      "sha256": "78833f85114e4f2f43d09dac6ad070c390107945ce66fbf353bceaa765fd6d89",
+      "relative": "Eggshell/ContractAudit.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/tools/research/NativeHookAudit.lean",
+      "bytes": 12659,
+      "sha256": "892d024d642394df6166278870c9b8adc64f8de33dc0271fa90e13927275e440",
+      "relative": "tools/research/NativeHookAudit.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/Main.lean",
+      "bytes": 3584,
+      "sha256": "40a83a98c5c7851cf1abec6f420b1ae174c46d1f6bb30e1fff433941dacead97",
+      "relative": "Main.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/checkout/runtime/block_score.py",
+      "bytes": 1923,
+      "sha256": "f97ba742342e10cb6d3fe7d4dca6807718e57d11906584546bf0fe24508d5ecd",
+      "relative": "runtime/block_score.py"
+    }
+  ],
+  "frozenInputs": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.pages",
+      "bytes": 432031994,
+      "sha256": "e3b84e42a71b4e993c4e306585c75059312d4ab8501b4b0a56c4e9840f9ee926"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/head",
+      "bytes": 401,
+      "sha256": "4888fa698fd0a44d78db7b57dd040accbce72ca2d97bc869f1c837a54a538d53"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/derived/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/lexical/849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc/tree/head",
+      "bytes": 521,
+      "sha256": "c23e0b44cd6fdad1638f9fd0ae186c7a5deb0912c4d35ef7b7e40e535a2cf01a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/derived/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/lexical/849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc/tree/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/derived/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/lexical/849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc/tree/5daea4be8151db2a9c701068568ad16a9ae3a904b064f108872b308d49cd3ce9.pages",
+      "bytes": 1234757626,
+      "sha256": "669f4ec1930d3d2742fe57800f0a8bab63d007279b95945158ba86c35418f8df"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0.pages",
+      "bytes": 343002049,
+      "sha256": "29883e11a158fb975b1e3ecc7e7f1ff784b21d16cac604593947d2d8892c2b73"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+      "bytes": 452,
+      "sha256": "e35146d6c49bb44cdc2d1384f873af6c13df65e00c76461833d11b1b1dfcc52c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+      "bytes": 452,
+      "sha256": "e35146d6c49bb44cdc2d1384f873af6c13df65e00c76461833d11b1b1dfcc52c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0.pages",
+      "bytes": 343002049,
+      "sha256": "29883e11a158fb975b1e3ecc7e7f1ff784b21d16cac604593947d2d8892c2b73"
+    }
+  ],
+  "linkedInputs": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/DirectProjectionAudit.o",
+      "bytes": 162616,
+      "sha256": "be83eccfbbcd1779acdd2b2c80c8fe7afc2286285fe61a35f243e78e451a8eda"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/ProjectionCache.o",
+      "bytes": 63968,
+      "sha256": "745c826f676cf5ca42c62fd353cb3623032028ccd2a7a846ddbdc4a1e6ad31f8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/ProjectionCursor.o",
+      "bytes": 69952,
+      "sha256": "6ab4213a61680135a16f486d5551dbaf52afd825db5b23436f6d169efa027fe9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/PartitionBuild.o",
+      "bytes": 149184,
+      "sha256": "30c9b0e85756d5f20a9f77ec1c4171f74c7ed75cadddc84644da19ddb602b39c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/VectorPartition.o",
+      "bytes": 394776,
+      "sha256": "0e087907f3661dcbd260ccafcead5f98287a2d7a9d3bc22b72d61c52c4ee6cc4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/000-ArtifactHash.o",
+      "bytes": 26624,
+      "sha256": "6f6cb8b7abcd572388795c8dea63b37ad475fb1cad8c3367a2c03f7e1ddbfba8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/tools_research_NativeHookAudit.o",
+      "bytes": 164128,
+      "sha256": "8ae989a9674ba7f7f5af5ed27b92ad774c4f9b65d8799f15de0c500adb4b785e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/tools_research_StudyRuntime.o",
+      "bytes": 119592,
+      "sha256": "bf6ac25c5bda97cde5ea35832392b3c541c95ec929a4f5fcb52549ecaca82a37"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_BlockScore.o",
+      "bytes": 178336,
+      "sha256": "66c391f65b4259272c87dbc5e2ed088e7f27d09f29f3a2152717bb36fe57552a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/002-Eggshell_LexicalAdvice.o",
+      "bytes": 169808,
+      "sha256": "182cd862bdb89d4f1d10633a7f9cc09b54942e80ef2706987a5a0c6493ba1d0e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_KeyedSearchProvider.o",
+      "bytes": 292472,
+      "sha256": "042a4c8f26eec8fb4059e03e0c00de454e7aa15338a3c0e1546636fc68a935a0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/Eggshell_KeyedSearchClient.o",
+      "bytes": 48704,
+      "sha256": "1fdd58651d932143d9b7d3799e538a1abe48643ad4615705fdb1a012bd717005"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/Eggshell_KeyedProtocol.o",
+      "bytes": 324856,
+      "sha256": "1ac4460877c9a67c0dde04f1373598d0cf9bd37d3173e8e3d2d2b59b53c0412d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/006-WindowOwners.o",
+      "bytes": 466680,
+      "sha256": "6dee9e6fbba901282e41706baa93c537629d46fbcbbb04cc351f11aae0eb7c4a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/007-Eggshell_WorkClassLookup.o",
+      "bytes": 46272,
+      "sha256": "ac9d61de8e4fe97b07baccadd393e44a1055db0b165747123ba4a8a56b5f2232"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/008-AppendUnique.o",
+      "bytes": 14240,
+      "sha256": "d985c2a1ea4019c54655bed46fd40defe81ec358eff4377a1fe0884e5205989c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/009-OutcomePolicyIndex.o",
+      "bytes": 37480,
+      "sha256": "658db120a3d4ab395f0c26a72801ba9e8e9327abfd0a39f3877f0df34817c2f7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/010-Eggshell_WorkInference.o",
+      "bytes": 78392,
+      "sha256": "52a830a2d4ad318afef358764398b9d634c68c7e65ce034afe96241aa9e236f4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/011-PreparationDebt.o",
+      "bytes": 74016,
+      "sha256": "b7bdfafa18c5d98fc8d647e068e9f8375163205e3f0559fada8f8c392a6603e2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/012-SourceDelta.o",
+      "bytes": 69328,
+      "sha256": "c239a3f88e6fdc1fa5ae1934a9c975b329ea3eed500d9ebc35c5df543205a983"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/013-Eggshell_DB_Wire.o",
+      "bytes": 177336,
+      "sha256": "02492119c2d793fddcfbda340ebdb322eff36824f1cab01faa2b76b9bcec7609"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/014-Eggshell_FileSystem.o",
+      "bytes": 140296,
+      "sha256": "f2f4efbcdde8b5c7ec413f064620c4dd7c5bba6876ffd50431b0ce6243e621b6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/inline-hash/Blake3.o",
+      "bytes": 611256,
+      "sha256": "1e4080a9d4514de0ae3137b4e228c9eb9dd6eadef2664661c959fe57a659954e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/016-Eggshell_DB_PageMap.o",
+      "bytes": 789384,
+      "sha256": "05628d16dc1c8ec9dbd9b3f07579b8ca0feeda2d9dad8b0a81db8825aac59ac5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/017-Eggshell_Paths.o",
+      "bytes": 20112,
+      "sha256": "fc787106ca943ba13f212da6dbbb45e811ebcd90884a922fe935c45065be637b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/018-Eggshell_DB_Sidecar.o",
+      "bytes": 106344,
+      "sha256": "fcb0ccc2ac61c433da94341d38d3f0fd40c1a4c421849f5d30f70a707fc933de"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/019-Eggshell_DB_CacheReclaim.o",
+      "bytes": 77904,
+      "sha256": "af61f59888222cfe6e73ed683d39b0e4fd009f2ac626aafc8bf3531c867d717c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/020-Eggshell_LogicalText.o",
+      "bytes": 268048,
+      "sha256": "51fb4e0003546dc615a46899db3ca5888e79d5f69bb085ef4cea9fa538841111"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/021-Eggshell_Value.o",
+      "bytes": 105816,
+      "sha256": "6fddeaa56885f741031412156c55595c9a63fced61d605aabc4a8b18b6cdeb4e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/022-Eggshell_HashDistinct.o",
+      "bytes": 15568,
+      "sha256": "6faa8c390b7f0a0279c144cdcce061d85eea9b1eb4644ad4ecc6392cd3b32c23"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/023-tools_KeyedOverride.o",
+      "bytes": 22032,
+      "sha256": "0112bbc7d23386b51354841e4b444425c71ccd96d603e0f614418d24badbe72c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/024-Eggshell_Union.o",
+      "bytes": 24528,
+      "sha256": "e2ccadf395c17bd33209a4614ae4914f17b9e91c572597e0f0c9a2f5b1a917eb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/025-Eggshell_Relation.o",
+      "bytes": 80504,
+      "sha256": "ffcd6e41c32eef143239b4fa147c5cb91f38fc6c04bec814c08cb0fd68bfbb06"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/026-Eggshell_Graph.o",
+      "bytes": 51728,
+      "sha256": "60dcc7b0b8011dadb29320d7a4ff1f063ba8508f3df1edf631192cf953c8e803"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/027-Eggshell_Extract.o",
+      "bytes": 192816,
+      "sha256": "c51d952ec429406eca04b2575feb2e61aaea518ad734492cb41ead3896539f58"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/028-Eggshell_Quotient.o",
+      "bytes": 254144,
+      "sha256": "50df9c880773e8991da31546b18976171120f75bf0152dcd1ccceaab132c0f84"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/029-Eggshell_GraphCodec.o",
+      "bytes": 176968,
+      "sha256": "e139e88c09d42e183551dfcd9f75fa5d3df8993dbb5b12d8be77378f9c92361c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/030-Eggshell_Partition.o",
+      "bytes": 10008,
+      "sha256": "d08ca7c01799a57d76485b6d40de68a18215cf898e4e451cfb926814ecc5681c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/031-Eggshell_PartitionIndex.o",
+      "bytes": 2424,
+      "sha256": "6ea638029beb4cb18f53cb43e86ea2be32ff8f14aec1542ad3470df0d5f27fa8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/032-Eggshell_AtomQuotient.o",
+      "bytes": 8824,
+      "sha256": "d7c3becfdc72c1177c665c6af1153995c0e03b502a4a4ac64ba46bb82bd1ed3b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/033-Eggshell_SearchUnicode.o",
+      "bytes": 416984,
+      "sha256": "e987a217c87886016eb8b3742a1f60b7198800e94f54f795038408e9e72f5748"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/034-Eggshell_Frequency.o",
+      "bytes": 67336,
+      "sha256": "5f40e020afe1273ede2f582c6787d66aad1d0d794c24392ab1c5964898914f62"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/035-tools_RetrievalCategories.o",
+      "bytes": 259728,
+      "sha256": "43c223186e505bc757d0111161c2b0698fca388d9015a9a4aed0124315a19327"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/036-tools_RetrievalGrams.o",
+      "bytes": 152296,
+      "sha256": "a6f97ae2279a3e48df8d5bf8430c1e335c18cf35e866916921491319337b1cf7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/037-tools_FirstIndex.o",
+      "bytes": 30064,
+      "sha256": "ad4959a0bda29ae3334770f78febc84619006e6fb336fa7bf783ada94dc93b09"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/038-Eggshell_SearchRank.o",
+      "bytes": 124824,
+      "sha256": "ba3133b3e85d9030bb328be68ab14ea0a6d222e250c0e700d3e5b488aca5c266"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/039-Eggshell_Sha256.o",
+      "bytes": 72816,
+      "sha256": "fa8879952b5b7c2f0a890196fe423105fcc9b6299897c58084c6ec6e729c9748"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/040-SourceEvidence.o",
+      "bytes": 637320,
+      "sha256": "bd350e759a1fef68bc61c15512e8551d791e56bf96986bfa27b631aef204d2c1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/041-GraphStore.o",
+      "bytes": 1422136,
+      "sha256": "0978dc629bd3aaf70bdc16396f20252b6b9510a5f78af757581868d9c96c1c59"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/042-Persistence.o",
+      "bytes": 139072,
+      "sha256": "d16d51089c3b1dfdd967adc68a0665b83edee1d934c6d2566ea20554517b3d09"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/043-Eggshell_QuotientAuthority.o",
+      "bytes": 6728,
+      "sha256": "8b9705ed43310f6326f63a56d8fcdabfc0b4c7931ff6dee918cae90ff48c0b6e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/044-Eggshell_CongruenceFixed.o",
+      "bytes": 2432,
+      "sha256": "1b91e9e3213b6bd53ab4a4eea8f54274434342821c3b85207d12bd79e761aea7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/045-Eggshell_CongruenceComplete.o",
+      "bytes": 69720,
+      "sha256": "cf85e4b0930b7e0fdaba0f4f2c66acdae82d3e7c18a0adc654f6ac87f6020b69"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/046-Eggshell_CongruenceSound.o",
+      "bytes": 4040,
+      "sha256": "23de0396f4f8c7f2f708d5df77a8a92ab2e93c0ced4fff60bb06524198fe2abe"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/047-Eggshell_IncrementalQuotient.o",
+      "bytes": 27136,
+      "sha256": "68e00bc57f9c3106ea5fe9d3e2b21802ee581ba187beb776cc69422e7c1a5096"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/048-Eggshell_TextParts.o",
+      "bytes": 12248,
+      "sha256": "c8fa4e91dd4d9ce1058dd7337fd7775f889f5a215bab3858c1f0ca5653608242"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/049-Eggshell_Matcher.o",
+      "bytes": 1021144,
+      "sha256": "837eda4ab868be10761d2ae3ba5400b82783039f569267a8759973213ed13055"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/050-Eggshell_Config.o",
+      "bytes": 284704,
+      "sha256": "5d9e5a58b95e8eedf2db562d48043ed4cc1228721502c58a69edcd06a48c6712"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/051-Eggshell_Lifecycle.o",
+      "bytes": 34872,
+      "sha256": "52b657a49ffc504c950b4a5c6b15c6c1da8af3788b542db4fb2c4a5e2668b539"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/052-Eggshell_Receipt.o",
+      "bytes": 21928,
+      "sha256": "ade97cc0f3aca4e97bdfa479d7f28af76e600e36de7464b4d651253388b58395"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/053-Eggshell_SourceObservation.o",
+      "bytes": 327848,
+      "sha256": "8e8a48f40b37c2ee88e4d7ec845e8cd0db414ef44ee137b7099ef08c27195107"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/054-Eggshell_PluginModel.o",
+      "bytes": 883976,
+      "sha256": "eeb1d3d1073c3a40597a76d8f5f501f20f77cb8067961042dfe6d6621cdd1e77"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/055-tools_ExactMemo.o",
+      "bytes": 14136,
+      "sha256": "f568eb6eef15f89d9eb16b2ff4d7c9b96d8bbfd51db80d770514b48f333c8a26"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/056-tools_ExactLazyMemo.o",
+      "bytes": 21888,
+      "sha256": "2645f66160dced12402fc74a0c6338bc537af1d97e35f3bf1c73a023f140681f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/057-tools_PairDecisions.o",
+      "bytes": 7376,
+      "sha256": "665e21d233816017d8c9dd10031ea7fcdfcd77f1858e131403d53b359f85905b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/058-tools_IndexedCharacters.o",
+      "bytes": 7560,
+      "sha256": "e1a1da777282f2f2b370e96f88b9d76ae0500f387a8cfa33a9ce8bbcb17f02c3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/059-tools_BudgetPlan.o",
+      "bytes": 11928,
+      "sha256": "a06e967b27896b72e927ff158d4476304b9a0d1089707a99f0c31a75371ee5e8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/060-tools_SharedCoverage.o",
+      "bytes": 127016,
+      "sha256": "595157eb7442b37f29b10d96462bf0712937fa5128af4d6a0e8c4912fa163595"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/061-tools_DeferredCoverage.o",
+      "bytes": 59720,
+      "sha256": "f06db3076bb0b869a52fc23cbce194f2499bbeafa4cad278516b2753151d0a49"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/062-Synapses.o",
+      "bytes": 1357928,
+      "sha256": "5274cf19fe4c61fdecacf7f847c0be84bf601c1234c0c3a1dd2016ab3f953a6e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/063-SynapseExtraction.o",
+      "bytes": 353352,
+      "sha256": "82e35bffd0733b080d7084bb258abe7901f6b6c38a6d7fcfcd5fca28ce075d22"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/064-SynapseSource.o",
+      "bytes": 511336,
+      "sha256": "95f1066b64d890e151421faddda062182fcc4933ebb235fcac26f4f3b2d3cce2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/065-SynapseProvenance.o",
+      "bytes": 340480,
+      "sha256": "5881603f5e34d5bd2a145609c39cb6d09d7ce047b008cc7342065fe4ce7c9489"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/066-SynapseIndex.o",
+      "bytes": 709472,
+      "sha256": "b97483e7732a5ad01d9f2ed0f42473125337dd7e8eec0cc11028808d03a0d294"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/067-SynapseBuild.o",
+      "bytes": 436512,
+      "sha256": "fe07a280834449f76c8b277a35890e2a8b5743568b7d54f76d46c5146b6c6639"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/068-CanonicalSource.o",
+      "bytes": 381472,
+      "sha256": "d9f11102cc22c3d923c1e0c9735aac8e0d3f5334308e17f4b05d2cfc2d7d2308"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/069-CanonicalSourceRecords.o",
+      "bytes": 138472,
+      "sha256": "b6bfdbc4fa8d52a972537da604e3f70942a70c115b89d23ae29b06b87f0ba7f3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/070-tools_ClosedCoverage.o",
+      "bytes": 25600,
+      "sha256": "2ee97f9cbf571780d71205f1e27baed118041db2df9bc118e8f2a269a4b9551f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/071-tools_FocusWindows.o",
+      "bytes": 8128,
+      "sha256": "73e697acb06f8eba996efdc6cdc918d4e3eff22b0e0c1dd745f32ec6db2ab518"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/072-tools_SourceWindow.o",
+      "bytes": 4016,
+      "sha256": "41f03113e4e7ccbe08d836c9062c612a3a90188d0753a7dee8832375601cf94c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/073-Eggshell_AdvisoryFrontier.o",
+      "bytes": 39784,
+      "sha256": "8cbca010ca0e500467f19631affd372e1fa65ba01aa1b901c31e637843b70211"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/074-tools_OwnedRows.o",
+      "bytes": 11736,
+      "sha256": "601fb19c819f90d077921a9ce3ec995a815bceaa9bba96521b84879fe2b1c268"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/075-Eggshell_SemanticMatcher.o",
+      "bytes": 324600,
+      "sha256": "8db8e27482be3b0988fe7013a84a6a85492e5523a629fac9e75a5c585bff799c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/076-tools_OwnerProjection.o",
+      "bytes": 282400,
+      "sha256": "468fd274df5d8bb79fae9c3d6c468d79f727dc782145020020dc19ad9a32aa1a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/077-Eggshell_EvidenceReplay.o",
+      "bytes": 121560,
+      "sha256": "557c639ca193136ac6b2e7f5e01c6557be257d82991004b14cd7da56d356a93d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/078-Eggshell_SurfaceJoin.o",
+      "bytes": 71656,
+      "sha256": "9bf4705cfc6d67f0186cc816c890f3b500ecea8d23d9799689cdb99677fcabf1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/079-Eggshell_RankMemo.o",
+      "bytes": 189720,
+      "sha256": "28f50c6e102f235c62d9eb6c83192b7499c4c5627ebc6ab61879a3ca5a50ae6e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/080-Eggshell_SelectionReplay.o",
+      "bytes": 47512,
+      "sha256": "5e62e96fcd85ff831174a714f7af2cd62dab6328d954d76467f2ed8f2bfd3b86"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/081-Eggshell_GeometryMemo.o",
+      "bytes": 291888,
+      "sha256": "d7690eaecee070ca9669abf9397b5612154216cfe3941c007cec99d55270a687"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/082-Eggshell_SaturationMemo.o",
+      "bytes": 137600,
+      "sha256": "1fb61d52ce118d7db9420aefddb1a10f258d9300c3cc52ee3ecbc3e41f329ca9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/083-Eggshell_DiscoveryMemo.o",
+      "bytes": 37024,
+      "sha256": "8ff34e553c970ff7c7654f8b7b21a189d3f8f14c8e94f151098053e6955700a5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/084-Eggshell_DemandMemo.o",
+      "bytes": 125456,
+      "sha256": "aa428bdb6116963c44a8f0487cb77b5172c42a6c19005151dd31d73a302d371c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/085-tools_RetrievalIndex.o",
+      "bytes": 393088,
+      "sha256": "e8eb371ba95aaa8808aeca52afd4591e5948de864e8ce8d956e69f2aeabf3424"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/086-Eggshell_FederatedSearch.o",
+      "bytes": 338096,
+      "sha256": "b9c840a2784f15f4f7990a9a74255b40f5483d6ba5774768d9b8f9b7e2df05b8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/087-Eggshell_EqualityDependency.o",
+      "bytes": 18768,
+      "sha256": "5f748b29b136da90f66aae65e290814b381fb8fc03377ab6ba0c68cb178edb78"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/088-Eggshell_SelectionDependency.o",
+      "bytes": 79432,
+      "sha256": "c992862205cc429ebbfd17eb9a3873e82bb1070c303b61c0e34475a2cac60b4c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/089-Eggshell_DiscoveryAudit.o",
+      "bytes": 235784,
+      "sha256": "f9da0a2038fb6b44fe9507517d9fd7d3ed689c1fb705a8093354438d3a8bfc19"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/090-Eggshell_SelectionAudit.o",
+      "bytes": 927192,
+      "sha256": "60c589d105aeabcb8ccef34ff3b1f068382b803482ac79cc9f1a4150cab28126"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/091-Eggshell_CompletedAuthority.o",
+      "bytes": 2648,
+      "sha256": "7b0f831b34ff531607fbdc61712817d64668511f4ba5e1570597538b768877e1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/092-SynapseUsage.o",
+      "bytes": 479688,
+      "sha256": "2fd94a09df2668035ae2d2812fe5de0861f9c2a6ddaa5b0438d44d6b7edefaf0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/093-CanonicalSourceCache.o",
+      "bytes": 183408,
+      "sha256": "e3bcad22c26ca4fde65a2f338b70c096a964233e5e37806359fdfee682f7ca0e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/094-CanonicalSourcePacket.o",
+      "bytes": 246952,
+      "sha256": "d8103935844f5dad70e41410c8e1727819d3fd809a40a6a6cc1048f7598e9513"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/095-CanonicalSourceDelivery.o",
+      "bytes": 745464,
+      "sha256": "8a1c7828ff1de28115839036a326927f389ebc40d07c9a494d439d8b5679ba4e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/096-SynapseRecommend.o",
+      "bytes": 340640,
+      "sha256": "3d5b4dc9087301451bd0f5a45bd4b3922531824906a2fb226901bca397f6e8d6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/097-SynapseTransport.o",
+      "bytes": 298536,
+      "sha256": "46bc2ed810f23dd49da674495eb2b73b03d436e9c15370df96afc3b862e0419a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/098-SynapseBundles.o",
+      "bytes": 147928,
+      "sha256": "7d503c65f99985d67896dd3b0ac4367bc04881806b7ac51120ee30a1e53c5d92"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/099-tools_IdentifierParts.o",
+      "bytes": 17672,
+      "sha256": "437fb6a304103af1cec5dcea22bf601fc81147c3521b1abbd9077f650e6a3c27"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/100-tools_QueryLiterals.o",
+      "bytes": 39592,
+      "sha256": "2495ba2b7d2d311f8e9a7388c8f5fff858aaf829c39d023166a55adc832dcdf6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/Eggshell_Handoff.o",
+      "bytes": 5027584,
+      "sha256": "b24b87e5caac406af483b1df5d7c6e65315831c66b1801ad451870011db090ef"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/102-Eggshell_MiniLM.o",
+      "bytes": 67208,
+      "sha256": "a77f55a9cb21726fd0cb8e17117aeaab863ef96600f7bb70af4a8c09ba4adefd"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/103-tools_DirectoryReads.o",
+      "bytes": 39664,
+      "sha256": "3a93e4b814a8407ef01ac73431e9c4567d028801d75b7b6c7cb2eb5ae6be71e5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/104-tools_WindowCentroid.o",
+      "bytes": 73432,
+      "sha256": "59f0993f1ba187569bed7f390be7d89c001e91361152ef3f02dc65ea972b1dfa"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_SearchProvider.o",
+      "bytes": 935288,
+      "sha256": "f4b3bee445a0828ab1feeffba033cf0a7ef7b2108591fdd99760e94cb0d73b4d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/105-Eggshell_SynapseJournal.o",
+      "bytes": 1084112,
+      "sha256": "ddf8ba386e28076336f786bc7f66d920a5ec428dd2f7f3a6210d89eee2568945"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_Warm.o",
+      "bytes": 390552,
+      "sha256": "56d5e26e6974bb1fda0a2f53d1b429dd84c258d92990893f65c2f866a94bf707"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_Worker.o",
+      "bytes": 414936,
+      "sha256": "372c51b2db36fafa10349178ba6fd1f4c86a9f60c1537281b7c35ccf7c82068d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/106-Eggshell_SynapseLive.o",
+      "bytes": 59784,
+      "sha256": "bbad2d0d066ae0c2ec46d44ed51b84dfd5eb5b806a096ecf05939341d3056921"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_PluginHooks.o",
+      "bytes": 605704,
+      "sha256": "86a76c8de74e521e73ddb40e89999c4eeac241a279fd80a249bbcce275e2e6ca"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_PluginCli.o",
+      "bytes": 256960,
+      "sha256": "7113698ff9abaf951b0a7c4b253d19287baf338172571a6a630c7b4e9acb29e5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_Daemon.o",
+      "bytes": 257312,
+      "sha256": "d7437b14f013178c52567a94e0ab052810ed29b79d8a858492d6646a5a0e294d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_Install.o",
+      "bytes": 167760,
+      "sha256": "37cb50fee91c8208b92eb68df6badea65472849ed8ec906eff2ad822a2527562"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_Setup.o",
+      "bytes": 30440,
+      "sha256": "45e6696b984f36470983b440829f2127fa4fece643d53af367a243ff7cf84841"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Main.o",
+      "bytes": 51128,
+      "sha256": "e7b9c91f35af7eeb728eccebde66100aee754828d56fb98c82ece79ea51f79da"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/180-libstorage_sync.a",
+      "bytes": 27264,
+      "sha256": "261602862d9773ad01d379d0e01c4aa261be784907c31f45d039c658f27c9743"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/181-Eggshell_DaemonWire.o",
+      "bytes": 98704,
+      "sha256": "7b92d8d4bea65115e9b84d6e4744a6d61b7fbe6de6dfc01c63321632a7444104"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_Numerical.o",
+      "bytes": 398872,
+      "sha256": "b7b0404bfcb5a34fb96ff9d534f7cd106e3e794eec112c00a311d1bfb8b83564"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/182-CandidateDomain.o",
+      "bytes": 446424,
+      "sha256": "ab359fdd1814e6902458eb6dae1e59ba5026baad31f2a7f44b247bec91e149b2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/183-ObservationContext.o",
+      "bytes": 230328,
+      "sha256": "688c20e035e88bc582cfca9d04b3cbeb85432204e0983772fa7f5eaf628d3d33"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/184-ObservationAge.o",
+      "bytes": 60936,
+      "sha256": "7bf1b87fe204fde7385128dda1ac08e69fbd8f866e74e8fa937de8400831f949"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/185-Deadline.o",
+      "bytes": 3920,
+      "sha256": "3bfff434979e7b78915dff0517ee783577066b8e90c299dd539eeabc88c55339"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/186-JsonScalars.o",
+      "bytes": 138992,
+      "sha256": "debeda2728178a0f65faca09fbdd361749136f7dcc8b7834b65d52c169f37a42"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/187-SynapseQuotes.o",
+      "bytes": 17240,
+      "sha256": "17d765ac9c2a542685de1768e04785fa256c1ca1a07eae718cfd37dc6769192d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/188-DiscoveryCounters.o",
+      "bytes": 52896,
+      "sha256": "12f5cd53c25071300b8e2d487e121cbcc14c858e0a3e4b6e5d4e5e8094d98b7f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/189-WorkPostings.o",
+      "bytes": 212456,
+      "sha256": "dda2eca4003b1189a362f804de390c6977bda4a4c35fcc19ca2d22c34df1ddff"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/190-VectorMatrix.o",
+      "bytes": 227296,
+      "sha256": "cc5f681580eca443da4ac6878ba16ae5912c46f13a03bfc49f5bc50ce73cda2b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/191-Eggshell_LexicalReads.o",
+      "bytes": 251240,
+      "sha256": "bc96664a773254bea0502ac6ec63103ee99fc0056af3e9d25bab18a9849764c2"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/plan.json",
+      "bytes": 6852,
+      "sha256": "daa1f316eb52321ff2be83a9bf89945e570ba0387af38cf1beeb46ff6c108846"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/basis.json",
+      "bytes": 275,
+      "sha256": "c91e869bce80a4422c9e1473df8cec1af86a00f8d943799f07fbcc70d761d247"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/runtime-binding.json",
+      "bytes": 426,
+      "sha256": "3b0b399610248762241bf8c058681970c55f66ae52645106c5c937825bb68e32"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-comparison.json",
+      "bytes": 12973,
+      "sha256": "007956b79213b480ea447a3cd813b637df0f3d84110df52d59a347044a421bba"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/direct-comparison.json",
+      "bytes": 449,
+      "sha256": "4b95d770397ce952b8ecbb91530386a962a3dbd2bcc1711801c141e17798a7df"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/runtime-modules.json",
+      "bytes": 4222,
+      "sha256": "f495bee093ae181cb76532d596da603c43a70267c0a2eb5709cc8d9fe577fadf"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/modules.json",
+      "bytes": 486,
+      "sha256": "dc4777103f13a6427a01bcd1eebc9be0ddcb6f795888ade7e92fe3624cc308b8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/runtime.rsp",
+      "bytes": 13706,
+      "sha256": "404e20703221e0b69cfaa5d3f8f622ea06de3e1bb0ca101099f386b55e9225eb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/lean-path.txt",
+      "bytes": 161,
+      "sha256": "fc4f08f828c56da8d6058f1ce24a1de42ee2fd0e1786884c32bbc0fe4a896e43"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build.rb",
+      "bytes": 3306,
+      "sha256": "9ca799d3d570965eefee5481af22b351a69d350c6b777bfbf5c03df9541e53d5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/verify-inputs.rb",
+      "bytes": 611,
+      "sha256": "ed32afa24a0a86785bd98fdc39f4c2a5dc5c13579ea51277fb7cf65c24d32dbc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cache.settings.json",
+      "bytes": 492,
+      "sha256": "cdb88e1c5cf60f76071b93076cabc2bde0a835310b0eff4f45773a21d46b3f7f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-partition.settings.json",
+      "bytes": 495,
+      "sha256": "68a94207e8143cc6176c7ac169691ee7206a10fe2069a2d76be8e5361898564b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/direct.settings.json",
+      "bytes": 1177,
+      "sha256": "4f8b7519c16089fbfcbc8b2082f44713414883bda54fb7ad7a2dc2959045f554"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cache-proof.settings.json",
+      "bytes": 498,
+      "sha256": "1d03eccd1892b63e646cbc31768bb5e23121c8f30fc083fe5777192d1ead0e59"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-direct.settings.json",
+      "bytes": 456,
+      "sha256": "71af2dbba72fabdb62296b625637230c9538b753a58d4bacb43d6cee19933a7b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/payload.settings.json",
+      "bytes": 538,
+      "sha256": "999482cf1a2c376c408de87add091887940db604f3deb70cba109a15024f6ba8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build.settings.json",
+      "bytes": 449,
+      "sha256": "992bf791f57a7d53f8c0f4cbcbd1c96addf0728eaecccb4a5464646abab73f9a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/warm-repeat.settings.json",
+      "bytes": 1173,
+      "sha256": "f1b677ca778ba5833e492f2110e8e73a388a11739d80cb225dd2236943aa9af8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture.settings.json",
+      "bytes": 786,
+      "sha256": "aa20d5e372c66fd9169db86581307fbc6dd885ab83de765e31a13f04623723bb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-audit.settings.json",
+      "bytes": 498,
+      "sha256": "ccd7bea7684894ebdeeda3b8ddb579f2cf2a083b3f25861818f7730202df4024"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture.settings.json",
+      "bytes": 765,
+      "sha256": "e86253e69c4a039f7aa92c406b84bd0aa6edf508beec2ae6fe472d1fcc1dd93a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native.settings.json",
+      "bytes": 1362,
+      "sha256": "311700c5e8cda0919f5d8ff8bbfd1086d685ea893cfcd787798863cda64b0692"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/warm-first.settings.json",
+      "bytes": 1173,
+      "sha256": "e7f21314f58c581ef0120b3f9049c5e0759bab69139208773c1aed22547ad1a2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-visible.settings.json",
+      "bytes": 495,
+      "sha256": "9ded5e1e5eb14b9e977cf9900d50843d6e0ad85eae372e8c753da586065049d8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/scale.settings.json",
+      "bytes": 1241,
+      "sha256": "4afd8647a427bfe42fe66592c6516e56b7b1b3b356af63d83cf6a19e802911eb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cursor.settings.json",
+      "bytes": 494,
+      "sha256": "1d5ba496ea3bc22e8acc594f45b1c6b64829fe7bb609b443f79d5025cdb8756a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/link.settings.json",
+      "bytes": 467,
+      "sha256": "21f4cdb030e1244cc3b8280ef6464ff20173136bd41166cb48ea2c2196013d15"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cache-audit.settings.json",
+      "bytes": 504,
+      "sha256": "58783107c84713e4fa3496ad4510385ed56cb812efcdbae85c43464d309ecf5d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/direct.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/warm-first.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-audit.log",
+      "bytes": 79440,
+      "sha256": "b190a9c08e493234d6791d0e129cb7807b238d3e0434f9f7c90abf95c085d630"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cache.log",
+      "bytes": 697,
+      "sha256": "d90758eb9c279555ab8fb4fcba3db8715c89f9867a3abe92c6b0b4ba01b04e1e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/payload.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-partition.log",
+      "bytes": 897,
+      "sha256": "7fdc5f823e92445e8cb8c9568cb04b63c6ea6b10e15707c389f6dd3c8acc562e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-visible.log",
+      "bytes": 503,
+      "sha256": "e8fbec908df04d78fcd27706b1a3d6e4b884a577a70b2b8c432ad5a4d3716f23"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-direct.log",
+      "bytes": 79962,
+      "sha256": "c79fd419cf81becc97d37e0636e20ae8e362a260b69fd2d39e8f66fe5d63cbc3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cache-audit.log",
+      "bytes": 79896,
+      "sha256": "995f6903d95bda84ec026c384625e13a31a5f9a319837df98c9698112be5439b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/warm-first.sample.log",
+      "bytes": 198,
+      "sha256": "2bbe7d748c04200139d8b3b5aec8fceb6965f655ec74979a66738b629440377a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cursor.log",
+      "bytes": 1347,
+      "sha256": "9225f019a200ac2cd0a3a94d54e1e0d1bf43b1a2b02a15842f038c51c3f2dbf4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native.log",
+      "bytes": 390,
+      "sha256": "35469edb3ab45605f32a6347f5244c4d5f3765550a4b47c2bda3dbf9b2d3c640"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cache-proof.log",
+      "bytes": 4332,
+      "sha256": "3ed2f575d945522699fba8682f1c6733e7b27fd2e5e1bd3aff88a47caa744bf5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/warm-repeat.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/scale.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/link.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build.log",
+      "bytes": 1215,
+      "sha256": "f9023d9430747152433fcb458bb43bd0866ceca88b988738ce730a9b0a2b749f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/warm-first.sample.txt",
+      "bytes": 27387,
+      "sha256": "7ff6e0155132573b23ea87a3f4f401019ab610e5fe90360f6466a33255823d0b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/preparation/summary.json",
+      "bytes": 607,
+      "sha256": "55d920477bb7289fcbf95200d67c4b7dd113f33793442b781d26bb7a931a58b5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/preparation/private-warm.stdout.json",
+      "bytes": 4144,
+      "sha256": "c2529ca00e90cca566b664caf61735fda489f95ab8ff28c8ec418b0255acf552"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/preparation/repeat-warm.stdout.json",
+      "bytes": 3783,
+      "sha256": "b58c3c991d2bc802c4d685341acb0d35baf75554263ed0c7a5408b947b1f73db"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/preparation/config.toml",
+      "bytes": 315,
+      "sha256": "51c502762faac2dff37725c789deffe747518e3fd34b12d32daadaf9c400942f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/result.json",
+      "bytes": 872,
+      "sha256": "d06adc80eb54748fba4eb2a89263abfa79b075521c13bdd5f00e6919c923f0f0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/scale/result.json",
+      "bytes": 1116,
+      "sha256": "98cdc515e2ec2e4b6810094c9b2a6b7b8f0ec4b5fd9ada479d051a71b430b91f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-first/body.txt",
+      "bytes": 9308,
+      "sha256": "9f89d87e3603068eb91d8fd8b54e80da7052551e968c2c9b80106564cadf2d43"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-first/result.json",
+      "bytes": 40198,
+      "sha256": "3ce77ec2cdd93d2bf38c20c31754fad5700b20b20b953b2125ca585d3f00b5bb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-first/stdin.json",
+      "bytes": 429,
+      "sha256": "079f8e32a51339509c681675db2dd5c9657cea3311a781f4f772228d8d87ffa3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-first/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-first/stdout.json",
+      "bytes": 9525,
+      "sha256": "533702658bbf44d750c2871062ec503f9f9494428085be6142e3cb5927e11cff"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/summary.json",
+      "bytes": 183187,
+      "sha256": "95484e3087b7c5310c8ad7e2b22812b6907567139c4d6aebf87dc89ae7d2b600"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-first/body.txt",
+      "bytes": 9322,
+      "sha256": "68a11643411262a79fc1242d4a54c7151128406411cae78b7452ead0ab34536d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-first/result.json",
+      "bytes": 40189,
+      "sha256": "2f9f59e245b5168d8bb0f1da15eddcd6ceed638432bf082b38df0633be001a49"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-first/stdin.json",
+      "bytes": 429,
+      "sha256": "17017ac3184cd69f0415e10f02d8d85b6228825c8f23eeabb8152abf87fa9c25"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-first/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-first/stdout.json",
+      "bytes": 9539,
+      "sha256": "bb2e21dfd4acb59806cfe10a427e00785b7f8ea29250e60be0b082c52972647a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-continued/body.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-continued/result.json",
+      "bytes": 18082,
+      "sha256": "ba73cfc75d0b27af9aab5f0833d6350abccf5371685912b189bb12ca650e7076"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-continued/stdin.json",
+      "bytes": 433,
+      "sha256": "83a31cfc589c711be351f8b422b4bc2f9d105879f01653609e5daf706e7f932f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-continued/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-continued/stdout.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/private-warm.stdout.json",
+      "bytes": 5301,
+      "sha256": "fa146d6b4b8c55f0c673360cf75ed319871d012b1ffbc0e473ac2627b7fdaa25"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-shutdown.json",
+      "bytes": 113,
+      "sha256": "55d1907b657a594e651cfea2949d3f9a6e4831785fd771a18f7bca49e0034e45"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/results.json",
+      "bytes": 178637,
+      "sha256": "31137ec6d970ea2b0137a7b372fa3e671e42862679dc345529af281565e42427"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-first/body.txt",
+      "bytes": 9300,
+      "sha256": "ef3b2974665e6be216f2035f879be45922c702679f4e0ce9e2cd1a5dc8d7ac38"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-first/result.json",
+      "bytes": 40126,
+      "sha256": "f8fa4146bbee415afb0b4e73d87b1a654cabac420f38a2403d5ab522e42aaf2d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-first/stdin.json",
+      "bytes": 429,
+      "sha256": "9431cbec911843f30b7252cbab9a68b666fc74d474a1cab99b36b758e46c6532"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-first/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-first/stdout.json",
+      "bytes": 9517,
+      "sha256": "5bcafd0e8985c038777f6199e261f257ab69d6f8495c808cac66efa8cef01f61"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-continued/body.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-continued/result.json",
+      "bytes": 18080,
+      "sha256": "4b4d4357fd33a26a25cb876b07bcfd2ec0463e678cf02a669c3bfaccbccc1548"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-continued/stdin.json",
+      "bytes": 433,
+      "sha256": "b953b5fc853802f443648cdc85abc1f629f98e363f9e95fe70a612a62eb338f6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-continued/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-1-continued/stdout.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-shutdown.json",
+      "bytes": 113,
+      "sha256": "a694e73cf82ebcce318c6e7d3b0ae6a75b414dd77826e54c57a7e6ecb30dcd49"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/repeat-warm.stdout.json",
+      "bytes": 4940,
+      "sha256": "d2b5154203d37b3b4938982d56e923823a3d271215c41e38165d03d8c00a3ebc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-0-shutdown.json",
+      "bytes": 113,
+      "sha256": "f746dbe3dc8b5064633e3ad236d34adc5e85a9ef66876389f3bc12f45f3e194f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-continued/body.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-continued/result.json",
+      "bytes": 18079,
+      "sha256": "24506ef5eb3afae5ddd053625aef4240321ccf0017283d0f3381443d845caaf5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-continued/stdin.json",
+      "bytes": 433,
+      "sha256": "2f64ea77fc8247e697f455c0b9c3de86356e3b6675a2d71ea7b5ea635869f429"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-continued/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/pair-2-continued/stdout.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/preparation-reuse.json",
+      "bytes": 2335,
+      "sha256": "0ae5ebcb116fbb6df2649fdaba4034cf1af3b5f9bf2d28d5b47e8bf95ef33564"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/config.toml",
+      "bytes": 315,
+      "sha256": "51c502762faac2dff37725c789deffe747518e3fd34b12d32daadaf9c400942f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/direct.request.json",
+      "bytes": 821,
+      "sha256": "057b997336d81f58418775619f12f54ee6fccf98055defaf8d42a8f450f9ee90"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/direct.stdout.json",
+      "bytes": 639450,
+      "sha256": "9b8acc34bb22ac361cf272248c76b17bc2163cf1f2695ee0a58fae0fce53c1be"
+    }
+  ],
+  "guards": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-audit.guard.json",
+      "bytes": 1209,
+      "sha256": "a3d34dfbb207dddd14b09ca4f74945530599f93e21db6eb36400d534b562f084"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cache-audit.guard.json",
+      "bytes": 1215,
+      "sha256": "b727860d72a1c498ff7b90f66f1dd4394199eb0b02c5b72745e8ef3ae1b27a3d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cache-proof.guard.json",
+      "bytes": 1209,
+      "sha256": "0ff325c594f180c54f850166e5efd6d028ddb8d2ad33e2c50ac557fec46c714d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cache.guard.json",
+      "bytes": 1199,
+      "sha256": "842aca7de54c97fdc18e3d40172e69fec1675902ae877ca7979f25dd34f51ccf"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-cursor.guard.json",
+      "bytes": 1200,
+      "sha256": "a6e70fa38107aea7b98107cfd93b17e7495c4c26ec607db116409c026225312e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-direct.guard.json",
+      "bytes": 1177,
+      "sha256": "b4df02c2c2a28cb5a0193da35cb47fba79adc79dee90f8a60c1f81b18d676e80"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-partition.guard.json",
+      "bytes": 1206,
+      "sha256": "27ab9d4614d0442ae0ba7771f01513ffc7dfce0db8371c8bcbcbec2b8edd4646"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build-visible.guard.json",
+      "bytes": 1144,
+      "sha256": "f9166be118fc7b4ca41a86908d5a7830b75fd520b750175006a6bf778af0afde"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build.guard.json",
+      "bytes": 1167,
+      "sha256": "fe54969af0897a8b730d6212f5ab3c90472400032a140117638dd5082679465f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture.guard.json",
+      "bytes": 1397,
+      "sha256": "def67e2b072bb0270f74aca180c9db48938ae4023a26257c9acd8fa237c2f5e7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/direct.guard.json",
+      "bytes": 2230,
+      "sha256": "974644b9b38a9192e303fbaf91b17320f99211a124d3edb064eb97eb765bdfad"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture.guard.json",
+      "bytes": 1376,
+      "sha256": "e3f0477eb3aa5f81fe0799fc496cfa25e8a25a396101fd02480b2ba5b3b9d3fb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/link.guard.json",
+      "bytes": 1475,
+      "sha256": "78a350ae886cd44f9e83d5a3be05798d42401e73b22d1a43c5ec1340bf112c21"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native.guard.json",
+      "bytes": 3548,
+      "sha256": "3316b8006040b6977326632fd71763ced99d3a5be765189496ac9e341f97bf66"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/payload.guard.json",
+      "bytes": 1165,
+      "sha256": "b91b7c2e550dbe69887a9de7012174f0d92b2cd49e45054784cc561022de510f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/scale.guard.json",
+      "bytes": 1836,
+      "sha256": "e50b12401678769edb08227aaf1ac02bc71c5a4d2f077db6a4da142ed2eceedb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/warm-first.guard.json",
+      "bytes": 1775,
+      "sha256": "725ada546662464a93fa2dda49b580c14bfd7a2e82818b8c1d760e4bc9784b3c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/warm-repeat.guard.json",
+      "bytes": 1771,
+      "sha256": "3575467a540d297166f6bdb752ded47d65b378b4b6e8024ac91c5de36bb43b2d"
+    }
+  ],
+  "finalGuards": [
+    "build-direct",
+    "fixture",
+    "payload",
+    "warm-first",
+    "warm-repeat",
+    "scale",
+    "native",
+    "direct"
+  ],
+  "maximumAggregateRssKiB": 1510864,
+  "rawCacheCapacity": 67108864,
+  "rawCacheMaxRows": 16384,
+  "fixture": {
+    "wideChunks": 8,
+    "wideBytes": 32768,
+    "updatedRows": 67,
+    "truncationRejected": true,
+    "tinyCacheBytes": 16,
+    "selectedRows": 1,
+    "residentHits": 1,
+    "repeatWrites": 0,
+    "partition": {
+      "root": {
+        "rows": 12,
+        "offset": 15,
+        "last": "ready",
+        "height": 0,
+        "first": "cell:0",
+        "checksum": "df32b4ab775532029169f5a24b4f73e526f7c2527aa7685a1f166396bd45ff20",
+        "bytes": 5688
+      },
+      "revision": 1,
+      "identity": "35b9aacca31f79bf9612d55d56d339fc5b2ba004f59eb81b793e0a3e6f0d9b0e",
+      "bytes": 5703,
+      "authority": "eggshell.vector-partition:cba94278abd83c74744753b8e19963281a8307cba069836fa29f5665036e2301"
+    },
+    "oldPinPreserved": true,
+    "modelCalls": 0,
+    "metadataReadsForOneKey": 2,
+    "frameBytesEqual": true,
+    "duplicateVectorDirectoriesAbsent": true,
+    "corruptionRejected": true,
+    "comparedRows": 66,
+    "coldDoesNotPrepare": true,
+    "changedOwnerRejected": true
+  },
+  "scale": {
+    "source": {
+      "root": {
+        "rows": 6446518,
+        "offset": 432030480,
+        "last": "workSurfaces:99998:0",
+        "height": 4,
+        "first": "body:0",
+        "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+        "bytes": 1514
+      },
+      "revision": 13,
+      "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+      "bytes": 432031994,
+      "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+    },
+    "rows": 99969,
+    "modelCalls": 0,
+    "matrix": {
+      "root": {
+        "rows": 99970,
+        "offset": 343000610,
+        "last": "stats",
+        "height": 3,
+        "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+        "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+        "bytes": 1439
+      },
+      "revision": 1,
+      "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+      "bytes": 343002049,
+      "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+    },
+    "duplicateVectorDirectoriesAbsent": true,
+    "allOriginalBitsAndCoverageEqual": true
+  },
+  "warm": {
+    "after": {
+      "database": {
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "directory": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg"
+      },
+      "discovery": {
+        "input": {
+          "characters": 9426890,
+          "embeddedCharacters": 8375676,
+          "tokenizerMappedCharacters": 8375676,
+          "tokens": 2871291,
+          "vectors": 50032,
+          "visibleCharacters": 8375676,
+          "windows": 50000
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 50000,
+        "windows": 50000
+      },
+      "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "focus": {
+        "input": {
+          "characters": 4640976,
+          "embeddedCharacters": 4189390,
+          "tokenizerMappedCharacters": 4189390,
+          "tokens": 1613654,
+          "vectors": 50032,
+          "visibleCharacters": 4189390,
+          "windows": 50000
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 50000,
+        "windows": 50000
+      },
+      "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+      "input": {
+        "characters": 14052122,
+        "embeddedCharacters": 12551147,
+        "tokenizerMappedCharacters": 12551147,
+        "tokens": 4479268,
+        "vectors": 100002,
+        "visibleCharacters": 12551147,
+        "windows": 99969
+      },
+      "invalid": 0,
+      "missing": 0,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": 13,
+      "valid": 99969,
+      "windows": 99969
+    },
+    "batches": 0,
+    "before": {
+      "database": {
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "directory": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg"
+      },
+      "discovery": {
+        "input": {
+          "characters": 9426890,
+          "embeddedCharacters": 8375676,
+          "tokenizerMappedCharacters": 8375676,
+          "tokens": 2871291,
+          "vectors": 50032,
+          "visibleCharacters": 8375676,
+          "windows": 50000
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 50000,
+        "windows": 50000
+      },
+      "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "focus": {
+        "input": {
+          "characters": 4640976,
+          "embeddedCharacters": 4189390,
+          "tokenizerMappedCharacters": 4189390,
+          "tokens": 1613654,
+          "vectors": 50032,
+          "visibleCharacters": 4189390,
+          "windows": 50000
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 50000,
+        "windows": 50000
+      },
+      "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+      "input": {
+        "characters": 14052122,
+        "embeddedCharacters": 12551147,
+        "tokenizerMappedCharacters": 12551147,
+        "tokens": 4479268,
+        "vectors": 100002,
+        "visibleCharacters": 12551147,
+        "windows": 99969
+      },
+      "invalid": 0,
+      "missing": 0,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": 13,
+      "valid": 99969,
+      "windows": 99969
+    },
+    "changedOwners": 0,
+    "domain": {
+      "elapsedMs": 28076,
+      "metadata": {
+        "bytes": 8658024,
+        "digest": "5dc158f04f1254f6dea05d2c8bd833961090cea1eb1ac0359285f6064677cac3",
+        "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+        "source": {
+          "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]",
+          "bytes": 432031994,
+          "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+          "revision": 13,
+          "root": {
+            "bytes": 1514,
+            "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+            "first": "body:0",
+            "height": 4,
+            "last": "workSurfaces:99998:0",
+            "offset": 432030480,
+            "rows": 6446518
+          }
+        },
+        "stamp": {
+          "authority": "b0c9b66b1734c490b93a96f26c3eb871f3fe904958a2f87a48d61a9dbfb0f503",
+          "candidates": 49969,
+          "change": 13,
+          "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+          "roots": 49969
+        },
+        "windows": 50000
+      },
+      "mode": "prepared"
+    },
+    "elapsedMs": 260716,
+    "lexical": {
+      "added": 0,
+      "batches": 0,
+      "hydrated": 0,
+      "removed": 0,
+      "stamp": {
+        "authority": "b0c9b66b1734c490b93a96f26c3eb871f3fe904958a2f87a48d61a9dbfb0f503",
+        "candidates": 49969,
+        "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "roots": 49969
+      }
+    },
+    "partition": {
+      "assignmentMs": 9074,
+      "cells": 512,
+      "elapsedMs": 27539,
+      "mode": "prepared",
+      "points": 50000,
+      "readMs": 12945,
+      "trainingMs": 2780,
+      "writtenBytes": 6665474
+    },
+    "planReason": "no-usable-history",
+    "projections": {
+      "added": 0,
+      "bytes": 307104768,
+      "elapsedMs": 56472,
+      "mode": "warm",
+      "produced": 0,
+      "requested": 99969,
+      "reused": 99969,
+      "rows": 99969,
+      "writtenBytes": 0
+    },
+    "publications": 0,
+    "requested": 0,
+    "scope": "full-source",
+    "windowOwners": {
+      "added": 50000,
+      "changedOwners": 49969,
+      "elapsedMs": 13117,
+      "mode": "full-source",
+      "occurrences": 50000,
+      "removed": 0,
+      "writtenBytes": 4568129
+    }
+  },
+  "repeatWarm": {
+    "after": {
+      "database": {
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "directory": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg"
+      },
+      "discovery": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "focus": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+      "input": {
+        "characters": 0,
+        "embeddedCharacters": 0,
+        "tokenizerMappedCharacters": 0,
+        "tokens": 0,
+        "vectors": 0,
+        "visibleCharacters": 0,
+        "windows": 0
+      },
+      "invalid": 0,
+      "missing": 0,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": 13,
+      "valid": 0,
+      "windows": 0
+    },
+    "batches": 0,
+    "before": {
+      "database": {
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "directory": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg"
+      },
+      "discovery": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "focus": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+      "input": {
+        "characters": 0,
+        "embeddedCharacters": 0,
+        "tokenizerMappedCharacters": 0,
+        "tokens": 0,
+        "vectors": 0,
+        "visibleCharacters": 0,
+        "windows": 0
+      },
+      "invalid": 0,
+      "missing": 0,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": 13,
+      "valid": 0,
+      "windows": 0
+    },
+    "changedOwners": 0,
+    "domain": {
+      "elapsedMs": 466,
+      "metadata": {
+        "bytes": 8658024,
+        "digest": "5dc158f04f1254f6dea05d2c8bd833961090cea1eb1ac0359285f6064677cac3",
+        "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+        "source": {
+          "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]",
+          "bytes": 432031994,
+          "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+          "revision": 13,
+          "root": {
+            "bytes": 1514,
+            "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+            "first": "body:0",
+            "height": 4,
+            "last": "workSurfaces:99998:0",
+            "offset": 432030480,
+            "rows": 6446518
+          }
+        },
+        "stamp": {
+          "authority": "b0c9b66b1734c490b93a96f26c3eb871f3fe904958a2f87a48d61a9dbfb0f503",
+          "candidates": 49969,
+          "change": 13,
+          "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+          "roots": 49969
+        },
+        "windows": 50000
+      },
+      "mode": "warm"
+    },
+    "elapsedMs": 2111,
+    "lexical": {
+      "added": 0,
+      "batches": 0,
+      "hydrated": 0,
+      "removed": 0,
+      "stamp": {
+        "authority": "b0c9b66b1734c490b93a96f26c3eb871f3fe904958a2f87a48d61a9dbfb0f503",
+        "candidates": 49969,
+        "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "roots": 49969
+      }
+    },
+    "partition": {
+      "assignmentMs": 0,
+      "cells": 512,
+      "elapsedMs": 2,
+      "mode": "warm",
+      "points": 50000,
+      "readMs": 0,
+      "trainingMs": 0,
+      "writtenBytes": 0
+    },
+    "planReason": "source-unchanged",
+    "projections": {
+      "added": 0,
+      "bytes": 0,
+      "elapsedMs": 0,
+      "mode": "empty",
+      "produced": 0,
+      "requested": 0,
+      "reused": 0,
+      "rows": 0,
+      "writtenBytes": 0
+    },
+    "publications": 0,
+    "requested": 0,
+    "scope": "publication-delta",
+    "windowOwners": {
+      "added": 0,
+      "changedOwners": 0,
+      "elapsedMs": 4,
+      "mode": "warm",
+      "occurrences": 50000,
+      "removed": 0,
+      "writtenBytes": 0
+    }
+  },
+  "vectorPageBytes": {
+    "baseline": {
+      "projections": 343002049,
+      "routing": 7179039,
+      "blocks": 335817132,
+      "partition": 6665935,
+      "clustered": 335779003
+    },
+    "candidate": {
+      "projections": 343002049,
+      "routing": 0,
+      "blocks": 0,
+      "partition": 6665474,
+      "clustered": 0
+    },
+    "baselineTotal": 1028443158,
+    "candidateTotal": 349667523,
+    "note": "Pooled projection and routing pages only; excludes raw encoder segment cache, source DB, lexical/synapse/class indexes, model and runtime"
+  },
+  "native": {
+    "pairs": 3,
+    "semanticCompleted": 6,
+    "cases": [
+      {
+        "validStratum": true,
+        "totalMs": 7049,
+        "startupMs": 94,
+        "search": {
+          "turn": "pair-0-first",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 6652,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2758280979,
+          "semanticFinishDeadlineMs": 2758303369,
+          "semanticDeadlineMs": 2758289041,
+          "searchStartedMs": 2758274713,
+          "reason": "selected=8 visible=8 new-roots=8 completed=0 advisory=8 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=historical",
+          "localUnions": 0,
+          "initialSearch": true,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 1,
+          "disposition": "offered",
+          "deadlineMs": 2758303369,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 1.",
+        "phase": "first",
+        "pair": 0,
+        "originalBody": true,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6652,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 6955,
+        "historyBefore": 0,
+        "exitCode": 0,
+        "bodySha256": "9f89d87e3603068eb91d8fd8b54e80da7052551e968c2c9b80106564cadf2d43",
+        "bodyBytes": 9308,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 3852,
+        "startupMs": 94,
+        "search": {
+          "turn": "pair-0-continued",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 3535,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2758284882,
+          "semanticFinishDeadlineMs": 2758310344,
+          "semanticDeadlineMs": 2758296019,
+          "searchStartedMs": 2758281695,
+          "reason": "no-new-memory",
+          "localUnions": 0,
+          "initialSearch": false,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 2,
+          "disposition": "empty",
+          "deadlineMs": 2758310344,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 1.",
+        "phase": "continued",
+        "pair": 0,
+        "originalBody": false,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6652,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 3852,
+        "historyBefore": 12,
+        "exitCode": 0,
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 6595,
+        "startupMs": 97,
+        "search": {
+          "turn": "pair-1-first",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 6183,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2758291492,
+          "semanticFinishDeadlineMs": 2758314344,
+          "semanticDeadlineMs": 2758300020,
+          "searchStartedMs": 2758285696,
+          "reason": "selected=8 visible=8 new-roots=8 completed=0 advisory=8 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=historical",
+          "localUnions": 0,
+          "initialSearch": true,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 1,
+          "disposition": "offered",
+          "deadlineMs": 2758314344,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 2.",
+        "phase": "first",
+        "pair": 1,
+        "originalBody": true,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6183,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 6498,
+        "historyBefore": 0,
+        "exitCode": 0,
+        "bodySha256": "ef3b2974665e6be216f2035f879be45922c702679f4e0ce9e2cd1a5dc8d7ac38",
+        "bodyBytes": 9300,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 3664,
+        "startupMs": 97,
+        "search": {
+          "turn": "pair-1-continued",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 3351,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2758295193,
+          "semanticFinishDeadlineMs": 2758320850,
+          "semanticDeadlineMs": 2758306525,
+          "searchStartedMs": 2758292200,
+          "reason": "no-new-memory",
+          "localUnions": 0,
+          "initialSearch": false,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 2,
+          "disposition": "empty",
+          "deadlineMs": 2758320850,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 2.",
+        "phase": "continued",
+        "pair": 1,
+        "originalBody": false,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6183,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 3664,
+        "historyBefore": 12,
+        "exitCode": 0,
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 6413,
+        "startupMs": 97,
+        "search": {
+          "turn": "pair-2-first",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 6003,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2758301651,
+          "semanticFinishDeadlineMs": 2758324675,
+          "semanticDeadlineMs": 2758310351,
+          "searchStartedMs": 2758296027,
+          "reason": "selected=8 visible=8 new-roots=8 completed=0 advisory=8 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=historical",
+          "localUnions": 0,
+          "initialSearch": true,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 1,
+          "disposition": "offered",
+          "deadlineMs": 2758324675,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 3.",
+        "phase": "first",
+        "pair": 2,
+        "originalBody": true,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6003,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 6316,
+        "historyBefore": 0,
+        "exitCode": 0,
+        "bodySha256": "68a11643411262a79fc1242d4a54c7151128406411cae78b7452ead0ab34536d",
+        "bodyBytes": 9322,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 3707,
+        "startupMs": 97,
+        "search": {
+          "turn": "pair-2-continued",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 3399,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2758305402,
+          "semanticFinishDeadlineMs": 2758331002,
+          "semanticDeadlineMs": 2758316676,
+          "searchStartedMs": 2758302351,
+          "reason": "no-new-memory",
+          "localUnions": 0,
+          "initialSearch": false,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 2,
+          "disposition": "empty",
+          "deadlineMs": 2758331002,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 3.",
+        "phase": "continued",
+        "pair": 2,
+        "originalBody": false,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6003,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 3707,
+        "historyBefore": 12,
+        "exitCode": 0,
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0,
+        "acknowledgedHistory": 12
+      }
+    ],
+    "comparisons": [
+      {
+        "pair": 0,
+        "phase": "first",
+        "ms": 7049,
+        "bodyEqual": true,
+        "candidateSha256": "9f89d87e3603068eb91d8fd8b54e80da7052551e968c2c9b80106564cadf2d43",
+        "referenceSha256": "9f89d87e3603068eb91d8fd8b54e80da7052551e968c2c9b80106564cadf2d43",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6652,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "numerical": [
+          {
+            "purpose": "focus",
+            "status": "completed",
+            "elapsedMs": 117,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoredWindows": 8,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 6,
+              "projectionMisses": 8,
+              "projectionHits": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 14,
+                "requestUs": 84,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          },
+          {
+            "purpose": "keyed-discovery",
+            "status": "completed",
+            "elapsedMs": 3070,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 4132,
+                "absent": 0
+              },
+              "scoredWindows": 4132,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12693504,
+              "projectionReadMsWithinScore": 2651,
+              "projectionMisses": 4132,
+              "projectionHits": 0,
+              "encoder": {
+                "startupUs": 80275,
+                "sourceEncodeUs": 0,
+                "scoreUs": 1977,
+                "requestUs": 9649,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "pair": 0,
+        "phase": "continued",
+        "ms": 3852,
+        "bodyEqual": true,
+        "candidateSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "referenceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 3535,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "numerical": [
+          {
+            "purpose": "focus",
+            "status": "completed",
+            "elapsedMs": 113,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoredWindows": 8,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 2,
+              "projectionMisses": 0,
+              "projectionHits": 8,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 13,
+                "requestUs": 87,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          },
+          {
+            "purpose": "keyed-discovery",
+            "status": "completed",
+            "elapsedMs": 255,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 4132,
+                "absent": 0
+              },
+              "scoredWindows": 4132,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 34,
+              "projectionMisses": 0,
+              "projectionHits": 4132,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 1982,
+                "requestUs": 9372,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "pair": 1,
+        "phase": "first",
+        "ms": 6595,
+        "bodyEqual": true,
+        "candidateSha256": "ef3b2974665e6be216f2035f879be45922c702679f4e0ce9e2cd1a5dc8d7ac38",
+        "referenceSha256": "ef3b2974665e6be216f2035f879be45922c702679f4e0ce9e2cd1a5dc8d7ac38",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6183,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "numerical": [
+          {
+            "purpose": "focus",
+            "status": "completed",
+            "elapsedMs": 117,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoredWindows": 8,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 6,
+              "projectionMisses": 8,
+              "projectionHits": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 13,
+                "requestUs": 86,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          },
+          {
+            "purpose": "keyed-discovery",
+            "status": "completed",
+            "elapsedMs": 3085,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 4132,
+                "absent": 0
+              },
+              "scoredWindows": 4132,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12693504,
+              "projectionReadMsWithinScore": 2704,
+              "projectionMisses": 4132,
+              "projectionHits": 0,
+              "encoder": {
+                "startupUs": 44185,
+                "sourceEncodeUs": 0,
+                "scoreUs": 2012,
+                "requestUs": 9601,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "pair": 1,
+        "phase": "continued",
+        "ms": 3664,
+        "bodyEqual": true,
+        "candidateSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "referenceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 3351,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "numerical": [
+          {
+            "purpose": "keyed-discovery",
+            "status": "completed",
+            "elapsedMs": 252,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 4132,
+                "absent": 0
+              },
+              "scoredWindows": 4132,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 30,
+              "projectionMisses": 0,
+              "projectionHits": 4132,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 1928,
+                "requestUs": 9112,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          },
+          {
+            "purpose": "focus",
+            "status": "completed",
+            "elapsedMs": 112,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoredWindows": 8,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 1,
+              "projectionMisses": 0,
+              "projectionHits": 8,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 14,
+                "requestUs": 103,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "pair": 2,
+        "phase": "first",
+        "ms": 6413,
+        "bodyEqual": true,
+        "candidateSha256": "68a11643411262a79fc1242d4a54c7151128406411cae78b7452ead0ab34536d",
+        "referenceSha256": "68a11643411262a79fc1242d4a54c7151128406411cae78b7452ead0ab34536d",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6003,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "numerical": [
+          {
+            "purpose": "keyed-discovery",
+            "status": "completed",
+            "elapsedMs": 3079,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 4131,
+                "absent": 0
+              },
+              "scoredWindows": 4131,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12690432,
+              "projectionReadMsWithinScore": 2692,
+              "projectionMisses": 4131,
+              "projectionHits": 0,
+              "encoder": {
+                "startupUs": 43985,
+                "sourceEncodeUs": 0,
+                "scoreUs": 2168,
+                "requestUs": 9941,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          },
+          {
+            "purpose": "focus",
+            "status": "completed",
+            "elapsedMs": 116,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoredWindows": 8,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12715008,
+              "projectionReadMsWithinScore": 6,
+              "projectionMisses": 8,
+              "projectionHits": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 12,
+                "requestUs": 80,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "pair": 2,
+        "phase": "continued",
+        "ms": 3707,
+        "bodyEqual": true,
+        "candidateSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "referenceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 3399,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "numerical": [
+          {
+            "purpose": "focus",
+            "status": "completed",
+            "elapsedMs": 112,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoredWindows": 8,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12715008,
+              "projectionReadMsWithinScore": 1,
+              "projectionMisses": 0,
+              "projectionHits": 8,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 13,
+                "requestUs": 84,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          },
+          {
+            "purpose": "keyed-discovery",
+            "status": "completed",
+            "elapsedMs": 247,
+            "metrics": {
+              "source": {
+                "unusable": 0,
+                "hit": 4131,
+                "absent": 0
+              },
+              "scoredWindows": 4131,
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12715008,
+              "projectionReadMsWithinScore": 34,
+              "projectionMisses": 0,
+              "projectionHits": 4131,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 1936,
+                "requestUs": 9044,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "source": {
+      "root": {
+        "rows": 6446518,
+        "offset": 432030480,
+        "last": "workSurfaces:99998:0",
+        "height": 4,
+        "first": "body:0",
+        "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+        "bytes": 1514
+      },
+      "revision": 13,
+      "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+      "bytes": 432031994,
+      "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+    },
+    "summary": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/native-50000/summary.json",
+      "bytes": 183187,
+      "sha256": "95484e3087b7c5310c8ad7e2b22812b6907567139c4d6aebf87dc89ae7d2b600"
+    }
+  },
+  "directComparison": {
+    "completeResponseEqual": true,
+    "referenceOwners": 4101,
+    "candidateOwners": 4101,
+    "referenceWindows": 4116,
+    "candidateWindows": 4116,
+    "commonWindows": 4116,
+    "sameWindowSet": true,
+    "referenceTop8": [
+      5,
+      2075,
+      1745,
+      3515,
+      3485,
+      2285,
+      3455,
+      1775
+    ],
+    "candidateTop8": [
+      5,
+      2075,
+      1745,
+      3515,
+      3485,
+      2285,
+      3455,
+      1775
+    ],
+    "coverageEqual": true,
+    "relatedEqual": true,
+    "reference": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/direct.stdout.json",
+      "bytes": 639450,
+      "sha256": "9b8acc34bb22ac361cf272248c76b17bc2163cf1f2695ee0a58fae0fce53c1be"
+    },
+    "candidate": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/direct.stdout.json",
+      "bytes": 639450,
+      "sha256": "9b8acc34bb22ac361cf272248c76b17bc2163cf1f2695ee0a58fae0fce53c1be"
+    }
+  },
+  "notes": [
+    "All original binary64 projection rows and coverage match the existing reader; original NumPy kernel is byte-identical",
+    "Direct-provider equality covers the same nominated 4101 owners, not exhaustive 49969-owner recall",
+    "Training sample membership is fixed, but canonical source-key order replaces physical-axis order; do not infer identical geometry or recall outside measured questions",
+    "Repeat warm verifies unchanged publication/checkpoint contracts and inspects zero windows; it is not a second complete audit",
+    "First warm builds fresh private source indexes; its 260716ms must not be compared as an equal-cache timing with parent warm",
+    "The existing source encoder segment JSON cache remains; this change removes duplicate pooled physical layouts",
+    "Partition preparation still retrains and enumerates globally after basis changes; incremental partition assignment, compaction and large-scale shared use remain unfinished"
+  ]
+}
