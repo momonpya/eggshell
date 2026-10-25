@@ -7,7 +7,8 @@ open Lean Eggshell Eggshell.Research
 source-only recovery. This fixture has no answering-model credentials. -/
 def main (args : List String) : IO UInt32 := do
   try
-    unless args.length ≤ 1 do throw (IO.userError "NativePublicationNativeMain [CANDIDATE-ROOT]")
+    unless args.length ≤ 1 || (args.length == 2 && args[1]? == some "publisher") do
+      throw (IO.userError "NativePublicationNativeMain [CANDIDATE-ROOT [publisher]]")
     let root := System.FilePath.mk (args.head?.getD "/Users/ovm/.codex/experiments/eggshell/native-publication-20261025")
     unless root.isAbsolute do throw (IO.userError "absolute candidate root required")
     let installRoot := root / "prefix"
@@ -40,7 +41,25 @@ def main (args : List String) : IO UInt32 := do
       environment }
     let template := root / "native-input.json"
     IO.FS.writeFile template (toJson input).pretty
-    StudySeedChecks.run template.toString fixture.toString true
+    try StudySeedChecks.run template.toString fixture.toString true
+    finally
+      if args[1]? == some "publisher" then
+        let endpointPath := fixture / "data/publisher/endpoint.json"
+        if let some endpoint ← (Eggshell.Plugin.readJson? endpointPath [] : IO (Option Eggshell.Plugin.Daemon.Endpoint)) then
+          let stats ← StudyCommand.run binary.toString #["publication-control","stats"] environment
+            fixture.toString "" (fixture / "publisher-stats") 10000
+          unless stats.exitCode == 0 do throw (IO.userError "publisher statistics failed")
+          let started ← IO.monoMsNow
+          let stopped ← StudyCommand.run binary.toString #["publication-control","shutdown"] environment
+            fixture.toString "" (fixture / "publisher-stop") 10000
+          unless stopped.exitCode == 0 do throw (IO.userError "publisher shutdown failed")
+          while ← Eggshell.Numerical.alive endpoint.pid do
+            unless (← IO.monoMsNow) < started+10000 do throw (IO.userError "native publisher did not exit")
+            IO.sleep 5
+          unless !(← endpointPath.pathExists) do throw (IO.userError "native publisher retained its endpoint")
+          IO.FS.writeFile (fixture / "publisher-shutdown.json") (Json.mkObj [
+            ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("pid",toJson endpoint.pid),
+            ("endpointRemoved",toJson true),("processExited",toJson true)]).pretty
     IO.println (← IO.FS.readFile (fixture / "result.json"))
     IO.println (← IO.FS.readFile (fixture / "recovery.json"))
     let audit ← IO.ofExcept (Json.parse (← IO.FS.readFile (fixture / "recall-audit.json")))
