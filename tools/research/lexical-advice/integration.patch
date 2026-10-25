@@ -1,0 +1,49 @@
+--- a/Eggshell/KeyedSearchProvider.lean
++++ b/Eggshell/KeyedSearchProvider.lean
+@@ -5,0 +6 @@
++public import Eggshell.LexicalAdvice
+@@ -30,18 +31,2 @@
+-def lexical (source : Snapshot) (queryText : String) (receipt : Option String) : IO Lexical := do
+-  let query ← LexicalReads.coarseQuery source receipt
+-  let mut postings : Std.HashMap String (Std.HashSet Nat) := {}
+-  let mut frequency : Std.HashMap String Nat := {}
+-  let mut owners : Std.HashSet Nat := {}
+-  for term in SearchRank.terms queryText do
+-    let (found,count) ← query.posting term
+-    postings := postings.insert term (Std.HashSet.ofList found)
+-    frequency := frequency.insert term count
+-    for owner in found do owners := owners.insert owner
+-  let ordered ← owners.toList.mapM fun owner => do pure (← query.ordinal owner,owner)
+-  let rows := (ordered.mergeSort (fun a b => a.1 ≤ b.1)).map Prod.snd
+-  let population ← getNat source.get "candidates"
+-  let contains := fun owner term => (postings.getD term {}).contains owner
+-  let ranked := SearchRank.rankRows queryText rows contains (frequency.getD · 0) false population
+-  let anchors := SearchRank.rankRows queryText rows contains (frequency.getD · 0) true population
+-  query.report
+-  return ⟨originalOwners rows ranked,originalOwners rows anchors⟩
++def lexical (source : Snapshot) (queryText : String) (receipt : Option String) :
++    IO LexicalAdvice.Result := LexicalAdvice.query source queryText receipt
+@@ -137 +122 @@
+-    rankings := (index.val,ranked) :: rankings
++    rankings := (index.val,⟨ranked.ranked,ranked.anchors⟩) :: rankings
+@@ -147 +132 @@
+-    let documents ← SourceDelta.documents source wanted
++    let documents ← LexicalAdvice.originals ranked wanted request.receipt
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -24,0 +25 @@
++      ``Eggshell.LexicalAdvice.rank_prepared_exact,
+@@ -350 +351,2 @@
+-          ``Eggshell.KeyedSearchProvider.project, ``Eggshell.SearchProvider.handleIndexed],
++          ``Eggshell.KeyedSearchProvider.project, ``Eggshell.SearchProvider.handleIndexed,
++          ``Eggshell.LexicalAdvice.originals],
+@@ -351,0 +354,9 @@
++      (``Eggshell.KeyedSearchProvider.lexical,
++        #[``Eggshell.LexicalAdvice.query],#[``Eggshell.LexicalReads.coarseQuery]),
++      (``Eggshell.LexicalAdvice.query,
++        #[``Eggshell.RetrievalResearch.Index.open?, ``Eggshell.LexicalAdvice.posting,
++          ``Eggshell.LexicalAdvice.rankPrepared],
++        #[``Eggshell.LexicalReads.query, ``Eggshell.Persistence.Store.searchDocuments,
++          ``Eggshell.Persistence.Store.locateOutcome]),
++      (``Eggshell.LexicalAdvice.originals,
++        #[``Eggshell.LexicalReads.OwnerWitness.check?, ``Eggshell.SourceDelta.documents],#[]),
