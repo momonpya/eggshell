@@ -61,3 +61,14 @@ Ended old executable files were removed with their path/digest evidence kept in
 `retired-executables.json`; source and object build dependencies remain. The
 current runtime, controller, numeric runtime and active study inputs are kept.
 No compressed archive was created.
+
+The completed native and synthetic DB/cache directories, old isolated-account
+scratch, and four additional ended executable files were subsequently removed.
+Their evidence is `retired-completed.json`; publication digests and test results
+remain. Real CLI metadata discovery found gpt-5.6-luna/xhigh and the eight native
+hooks; the exact isolated hook bundle was trusted and the new seed plan sealed.
+No answering-model turn was started. Disk preflight requires 2,097,152 KiB free;
+the later measured free space was only 727,652 KiB despite cleanup. Keep this
+capacity refusal separate from a failed model run and from the synthetic
+110-token counters. An alternate storage location or freed capacity is needed
+before starting the real seed. The six real answering stages remain 0/6.
