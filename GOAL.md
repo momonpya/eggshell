@@ -1,5 +1,12 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 100万窓以上を目指し、routerを主経路とするLean候補をWarmと通常single-DB native discoveryへ接続。要求は全documents一覧ではなく、質問と閉じた元DB/authority/pinned headだけ。router窓key→元owner/Work/ordinal/元窓位置→元full-vector採点へ進み、入場する所有者だけを元DBで検証する。順位用の局所窓番号を元位置へ戻し、別DBの同じlocal IDを混ぜない。字句/3シナプス/完全e-class認定/元鮮度を維持し、推薦は認定権限を持たない。通常discoveryのe-class owner索引は既に接続されており、routerの上位Kへ認定を制限していない。
+最初の実nativeは23,297/23,001msで返ったが意味検索は約14.3秒でtimeoutした。この失敗を残し、字句順位の復元が結果ごとに全linked listを引く二乗処理になっていた点を修正。一度作る配列による復元が元の順位/結果と完全一致することを通常Leanで証明。固定snapshot/質問のprovider応答は修正前後でバイト一致し、単発診断14,296→6,940ms。反復した速度比較やトークン改善とはしない。
+修正後にfresh manager/chatの初回からやり直し、実50k（49,969owner/50,000discovery窓、99,969投影）の初回11,418ms・継続8,162msで両方semantic=completedを確認。初回にはmanager起動1,173msを含む。819bytes要求、128/4,096葉、3,125 routing key/物理posting行、3,133所有者を採点し、字句へのtimeout退避は0。元観測を含む本文9,316bytesとstdout SHA/ACKを確認、継続は正しい空/no-new-memory、ACK履歴12を維持した。認定completedは0で、意味検索の完了とは区別する。
+Warmは元ストレージ方針で逆引きとrouterを準備し、matrix変更時は旧routerを未準備とし、tree/manifestを同一headで原子的に置換する。旧pinは保持。成分試験で2DB scope/元位置/不正Work/窓/冷却と空の区別、65→66点の置換を確認した。初回明示warm189,387ms（router45,039ms）、再warm143,466ms（router3ms/追加書込0）、元埋込/行列追記0。foregroundだけの修正後は、同じ元headと過去の完全監査SHAを拘束し、現在のWarm.requiredによる23msのready確認をして再利用した。これはwarm全件検査の高速化ではない。
+最終build/ContractAudit/成分試験は成功。元DB/字句12ファイルのhash不変、全guard終了/残存0、最大合計RSS2,143,744KiB、終了済の再構築可能な実験実行体4本はhash後削除・archiveなし。新seed/回答モデル/元埋込/総トークン比較0、品質/必要原文のrecall未測定、候補未採用。本体/README実績/release不変。過去のtop8重なり0は履歴として保持し、新nativeのrecallの値として流用しない。
+次はcommon lexical postingsの全列挙とrouted数値行のscalar IO、matrix/router差分と圧縮を進める。現router更新は全再構築で、native federationも旧global catalogueのまま。100万窓/共有並行/私有MCP capture/Pre/Post大規模/p99/全題材1–3・両周・同条件複数反復の総トークンと品質/論文は未完了。docs/keyed-native-routing.mdとdocs/candidates/keyed-native-review.json参照、全Phases0–6 active。
+
 2026-10-25 窓keyから元owner/Work/所属ordinal/窓位置を直接引くDB所有の逆引き索引をLeanで隔離実装。本文やチャットIDは複製せず、同一内容の別位置を保持する。既存の認証済み出版日誌から変更ownerだけを取り、保存済み旧headと現在headの窓で撤回/追加するため、別のowner逆索引も全domain再生成も増やさない。manifestとpostingsは同一PageMap headで原子的に出版する。cold/変更/系譜不一致は有効な空結果と区別し、foregroundで修復しない。
 照会は最大4,096key/8,192物理posting行で実際に走査を止め、tombstoneも課金し、未訪問/打切りkeyをpartialKeysに残す。通常Leanで元位置への健全性/完全性、同内容の別位置、codec、葉の行数保存とchecked全体quotaを確認。IO全体の詳細化証明ではない。70ownerの完全oracle、追加1owner/撤回1owner/neutral、旧固定reader、不正位置/withdrawn/corrupt/重複/過大要求、writer競合拒否と別DB claim独立の検査が成功した。
 既存readonly 50kの49,969owner/50,000窓を14,221ms・4,568,129bytes書込で準備し、再実行4ms/追加書込0。元の全50,000座標と25batchの保存索引照会が一致（digest cb995bd6…3941）。固定3,125窓の事前指定3反復は、索引open/逆引き/全元照合の合計3,028/2,939/2,500ms、逆引きだけ580/583/521ms。新processだがOS cacheはflushせず、routing/採点/native速度比較とはしない。

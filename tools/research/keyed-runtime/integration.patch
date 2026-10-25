@@ -1,0 +1,135 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -26,0 +27 @@
++public import Eggshell.KeyedSearchClient
+@@ -6990 +6991,2 @@
+-  let lexicalPosting ← LexicalReads.strictLookup snapshot receipt
++  let lexicalPosting ← if documents.isEmpty then pure (fun _ => pure ([],0))
++    else LexicalReads.strictLookup snapshot receipt
+@@ -7102,0 +7105,27 @@
++
++/-- The normal stored producer sends one closed source scope, not every owner
++or window. Original admission checks happen in the client and normal reader;
++the bounded numerical ranking remains advisory throughout. -/
++def keyedSemanticNominations (snapshot : Persistence.Store.Snapshot)
++    (command : List String) (current : String) (staged : List Matcher.Candidate := [])
++    (receipt : Option String := none) : IO (Option IndexedSemanticNominations) := do
++  let some nominated ← KeyedSearchClient.nominate command #[snapshot] current receipt | return none
++  let choice := fun row : KeyedProtocol.ScopedChoice #[snapshot] => row.choice
++  let stored : IndexedSemanticNominations := {
++    durable := nominated.related.map (fun row => (choice row).owner)
++    durableRanking := nominated.ranked.map (fun row => (choice row).owner)
++    durableWindows := nominated.ranked.filterMap fun row =>
++      let original := choice row
++      if original.windows.isEmpty then none else some (original.owner,original.windows.map (·.position))
++    presentationOrder := nominated.ranked.map (fun row => .inl (choice row).owner) }
++  if staged.isEmpty then return some stored
++  -- Unpublished text is a separate, already bounded local domain. No stored
++  -- catalogue is reopened to combine it with the persistent nominations.
++  let some unpublished ← indexedSemanticNominationsUsing snapshot [] {} {} command current staged receipt | return none
++  Receipt.observe receipt "keyed-staged" (Json.mkObj [
++    ("candidates",toJson staged.length),("related",toJson unpublished.staged.length)])
++  return some { stored with
++    staged := unpublished.staged
++    stagedRanking := unpublished.stagedRanking
++    stagedWindows := unpublished.stagedWindows
++    presentationOrder := stored.presentationOrder ++ unpublished.presentationOrder }
+@@ -7757 +7786 @@
+-  let preparedDomain ← CandidateDomain.openShared? snapshot receipt
++  let preparedDomain : Option CandidateDomain.Ready := none
+@@ -7759 +7788 @@
+-      selection.semanticMatcher.mapM (fun command => headerSemanticNominations snapshot command referenceQuery receipt preparedDomain)
++      selection.semanticMatcher.mapM (fun command => keyedSemanticNominations snapshot command referenceQuery [] receipt)
+@@ -7818 +7847,2 @@
+-      indexedSemanticNominations snapshot all command query candidates receipt preparedDomain
++      let _ := all
++      keyedSemanticNominations snapshot command query candidates receipt
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -5,0 +6,2 @@
++public import Eggshell.WindowOwners
++public import Eggshell.VectorRoute
+@@ -90,0 +93 @@
++  unless (← WindowOwners.openShared? snapshot).isSome do return true
+@@ -107 +110,3 @@
+-    return current.projection.isNone
++    let sidecar ← DB.Sidecar.locate snapshot target.storage
++    let some matrix ← VectorMatrix.open? sidecar.semantic current.model SearchProvider.encoderContract | return true
++    return (← VectorRoute.open? sidecar.semantic current.model SearchProvider.encoderContract matrix).isNone
+@@ -310,0 +316,2 @@
++  windowOwners : Option WindowOwners.Result := none
++  routing : Option VectorRoute.Refresh := none
+@@ -322,0 +330 @@
++  let windowOwners ← WindowOwners.refresh snapshot target.storage
+@@ -339,0 +348 @@
++      windowOwners := some windowOwners
+@@ -365,0 +375,5 @@
++    let routing ← match ← VectorMatrix.open? settings.cache settings.model SearchProvider.encoderContract with
++      | some matrix => some <$> VectorRoute.refresh settings.cache settings.model SearchProvider.encoderContract matrix
++      | none =>
++        if (← Persistence.Store.getNat snapshot.get "candidates") == 0 then pure none
++        else throw (IO.userError "warm did not publish a numerical matrix")
+@@ -380 +394,3 @@
+-      projections := some projections }) target.storage
++      projections := some projections
++      windowOwners := some windowOwners
++      routing := routing }) target.storage
+--- a/Main.lean
++++ b/Main.lean
+@@ -4,0 +5 @@
++public import Eggshell.KeyedSearchProvider
+@@ -33,0 +35 @@
++      | "keyed-search-provider" :: options => Eggshell.KeyedSearchProvider.run options
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -4,0 +5 @@
++import Eggshell.KeyedSearchProvider
+@@ -21,0 +23,5 @@
++      ``Eggshell.KeyedProtocol.scoped_choice_in_original_array,
++      ``Eggshell.KeyedSearchProvider.originalOwners_compiled,
++      ``Eggshell.WindowOwners.entries_original,
++      ``Eggshell.VectorRoute.prepared_preserves_original,
++      ``Eggshell.VectorRoute.nomination_keys_bounded,
+@@ -328,2 +334,21 @@
+-      (``Eggshell.Plugin.indexedDiscovery, #[``Eggshell.CandidateDomain.openShared?], #[]),
+-      (``Eggshell.Warm.runTarget, #[``Eggshell.CandidateDomain.refresh], #[]),
++      (``Eggshell.Plugin.indexedDiscovery,
++        #[``Eggshell.Plugin.keyedSemanticNominations],
++        #[``Eggshell.CandidateDomain.openShared?, ``Eggshell.Plugin.headerSemanticNominations,
++          ``Eggshell.Persistence.Store.searchDocuments]),
++      (``Eggshell.Plugin.keyedSemanticNominations,
++        #[``Eggshell.KeyedSearchClient.nominate],
++        #[``Eggshell.Persistence.Store.searchDocuments, ``Eggshell.CandidateDomain.openShared?]),
++      (``Eggshell.KeyedSearchClient.nominate,
++        #[``Eggshell.KeyedProtocol.check, ``Eggshell.KeyedProtocol.validateRelated,
++          ``Eggshell.SemanticMatcher.withResponseDeadline, ``Eggshell.KeyedProtocol.Scope.ofSnapshot],
++        #[``Eggshell.Persistence.Store.searchDocuments]),
++      (``Eggshell.KeyedProtocol.validateRelated,
++        #[``Eggshell.WindowOwners.resolve, ``Eggshell.Persistence.Store.locateOutcome,
++          ``Eggshell.Persistence.Store.getNat], #[]),
++      (``Eggshell.KeyedSearchProvider.handle,
++        #[``Eggshell.KeyedSearchProvider.routed, ``Eggshell.WindowOwners.lookup,
++          ``Eggshell.KeyedSearchProvider.project, ``Eggshell.SearchProvider.handleIndexed],
++        #[``Eggshell.Persistence.Store.searchDocuments, ``Eggshell.CandidateDomain.openShared?]),
++      (``Eggshell.Warm.runTarget,
++        #[``Eggshell.CandidateDomain.refresh, ``Eggshell.WindowOwners.refresh,
++          ``Eggshell.VectorRoute.refresh], #[]),
+@@ -824,2 +849,2 @@
+-  unless controllerBody.getUsedConstants.contains ``Eggshell.Plugin.headerSemanticNominations do
+-    throwError "Single-source semantic reuse hydrates topology before its current observation"
++  unless controllerBody.getUsedConstants.contains ``Eggshell.Plugin.keyedSemanticNominations do
++    throwError "Single-source semantic reuse bypasses current scoped nominations"
+@@ -859 +884 @@
+-  let mut queue := [``Eggshell.Plugin.headerSemanticNominations]
++  let mut queue := [``Eggshell.Plugin.headerSemanticNominations, ``Eggshell.KeyedSearchClient.nominate]
+@@ -868,0 +894,7 @@
++    if name == ``Eggshell.KeyedSearchClient.nominate then
++      let some declaration := environment.find? name | throwError "Missing scoped nomination client"
++      let some body := declaration.value? | throwError "Missing scoped nomination body"
++      for forbidden in #[``Eggshell.Persistence.Store.searchDocuments,
++          ``Eggshell.CandidateDomain.openShared?] do
++        if body.getUsedConstants.contains forbidden then
++          throwError "Scoped nomination reopens the complete candidate catalogue: {forbidden}"
+@@ -872 +904 @@
+-  logInfo "Audited header-only semantic preflight before selected Value restoration"
++  logInfo "Audited scoped and reference header preflight before selected Value restoration"
