@@ -102,8 +102,9 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
     IO.FS.createDirAll (System.FilePath.mk localLibrary).parent.get!
     detachInterfaces (.mk (settings.output ++ "/lib/" ++ path))
     let generated := settings.output ++ "/" ++ stem name ++ ".c"
+    let packageRoot := if name.startsWith "tools.research." then settings.project else settings.core
     run settings (stem name ++ "-lean") (settings.toolchain ++ "/bin/lean")
-      #["-j1","-M3072","-DwarningAsError=true","-c",generated,"-o",localLibrary,source]
+      #["--root=" ++ packageRoot,"-j1","-M3072","-DwarningAsError=true","-c",generated,"-o",localLibrary,source]
     run settings (stem name ++ "-c") (settings.toolchain ++ "/bin/leanc") #["-c","-O2","-o",object,generated]
     IO.FS.writeFile cached text
     IO.FS.removeFile generated
