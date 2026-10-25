@@ -1,0 +1,41 @@
+{
+  "parent": "/Users/ovm/.codex/experiments/eggshell/lexical-advice-20261025",
+  "adopted": false,
+  "scope": "router-aligned contiguous blocks; original raw vector bits; authenticated bounded byte cache; no scoring policy change",
+  "answeringModelCalls": 0,
+  "seedCalls": 0,
+  "sourceEmbeddingCalls": 0,
+  "newPythonImplementation": false,
+  "maxBlockBytes": 1048576,
+  "sharedCacheBytes": 67108864,
+  "limitRssKiB": 3670016,
+  "minFreeKiB": 524288,
+  "parentCommit": "5227a18bde0bb6aab3439007e1b84e03ef62a69c",
+  "references": [
+    "https://arxiv.org/abs/1202.6101",
+    "https://faiss.ai/cpp_api/file/IndexIVF_8h.html",
+    "https://www.vldb.org/pvldb/vol18/p1770-ke.pdf"
+  ],
+  "readComparison": {
+    "repetitions": 3,
+    "orders": [
+      [
+        "original",
+        "blocked"
+      ],
+      [
+        "blocked",
+        "original"
+      ],
+      [
+        "original",
+        "blocked"
+      ]
+    ],
+    "request": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-comparison/routed-request.json",
+    "metric": "first and repeated read milliseconds; original hex/coverage exact equality outside timing",
+    "osCache": "not flushed",
+    "nativeHook": false,
+    "numericalScoring": false
+  }
+}
