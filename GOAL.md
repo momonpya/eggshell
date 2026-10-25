@@ -1,5 +1,10 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 旧12座標/depth-first routerを置き換える全次元の均等球面分割をLeanで隔離実装。元行列99,969投影のうち配送候補50,000窓を対象にし、対象だけを揃えた旧軸分割も対照にした。質問を使わずSHA順の16,384標本・4更新・葉32標本を固定し、512セルへ全件をstream配属、セル重心は全件集計。全標本のPermutation/codec tailを通常Leanで証明。元DB/行列/block headとeligible鍵集合SHAへ出版を拘束し、重複/変化basis/循環nodeを検査。元投影/np.dot/モデルは不変、追加Pythonなし、推薦に認定権限なし。
+固定clock質問3件の完全数値上位8所有者は、現行軸0/0/0、eligible軸0/2/0、全次元8/8/8。標本外だが索引対象には含まれる自己照会8件では現行35/64、eligible軸24/64、全次元62/64で2件の欠落を保持。独立保留repoやLLVM題材1–3ではない。全50,000窓を同じ数値primitiveで採点し、最初の質問は保存済み3,125スコアbitと元完全providerの上位8所有者にも一致。質問に合わせた再調整はしていない。
+学習2,867ms/stream配属13,969ms/出版2,789ms、セル57–163件/計50,000、索引約7.1MiB。推薦部299ms初回/reader再利用80–110ms、元採点/所有者/配送を含まない。元完全採点13,935–14,460msもnative時間ではない。eligible軸の0msは生成Cで純粋計算がclock後へ動いたため速度評価から除外し、数値を残して明記。元DB/字句6file・元projection/axis7fileのSHA一致、最終build/試行guard終了0/残存0、最大合計RSS1,481,120KiB（試行612,944）。未実行旧helperはhash後削除・archiveなし。
+モデル/新seed/元埋込/総token比較0、候補未採用、本体/README実績/release不変。Warm/keyed/nativeには未接続。固定512セル/全体metadata準備/新規出版のみのため100万窓・差分/圧縮・複数DB共有並行・p99/安全なFloat32上界/必要履歴保留条件/全題材両周の総tokenと品質/論文は未完了。次は役割別索引を通常準備/発見へ接続し、完全e-class認定と3辺を保って実読出し込みを測る。docs/vector-partition.md参照、全Phases0–6 active。
+
 2026-10-25 連続blockの元binary64を、Leanの既存数値daemonへ直接接続した隔離候補を検証。DB/元head/整合性/有界cache/期限/停止/被覆/順位はLean、NumPy境界の追加50行は従来のfloat32変換・行ごとのdotだけ。MiniLM encoder/数値の意味/選択/字句/3辺/完全認定は維持。daemonで64MiB/最大1,024blockと4,096ページの派生物cacheを共有し、実frame寸法を通常Leanで証明した。
 固定3,125鍵・AB/BA/ABの全3反復で元readerと全Float bit/被覆/順位一致。初回旧5,059/5,114/5,001ms対新4,097/4,312/3,879ms、再読旧2,402/2,345/2,085ms対resident750/843/734ms。反復1の初期には別のreadonly SHA監査が重なり、OS cacheもflushせず、静かな環境での速度反復とはしない。初回128block検証/再読3,125hit・新検証0/実保持9,600,000bytes、非有限値拒否・復帰・raw子再利用・最後の所有者終了を確認。最初の遅い試作も保持した。
 5万窓の実UserPromptSubmitは、新しいmanager/chatの固定3組で初回7,364/9,420/8,631ms・継続4,284/4,733/4,719ms。全6回semantic完了/foreground warm0、元本文9,316/9,311/9,304bytes、継続は正しい空/ACK履歴12、stdout/出版SHAとmanager終了/endpoint撤去を確認。保存済み親候補と同じ質問の組0は初回本文/継続空がバイト一致。LLVM題材1–3や新しい速度A/Bではない。最初はハーネスがhook clientへPLUGIN_ROOTを渡さずmanager世代が食い違い、終了検査失敗・guard回収となった。製品を変えず環境を揃え、初回から再計測した。
