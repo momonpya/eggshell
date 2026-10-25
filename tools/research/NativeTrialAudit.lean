@@ -1,6 +1,7 @@
 import Eggshell.SynapseBuild
 import Eggshell.SynapseUsage
 import tools.research.ArtifactHash
+import tools.research.RequiredDelivery
 
 open Lean Eggshell Eggshell.Synapses
 
@@ -60,6 +61,23 @@ def inspect (input : String) : IO Json := do
   for (name,expected) in specification.files do
     check ((← ArtifactHash.hex (System.FilePath.mk specification.source / name)) == expected)
       "immutable source bytes changed"
+  let before ← DB.PageMap.pin (.mk specification.source)
+  let (documents,rows) ← originals before
+  let alternatives : Array (String × Array Read × Array Range) := specification.required.map fun requirement =>
+    let candidates := rows.filter fun row =>
+      match row.source.subject with
+      | .file file => file.relative == requirement.path &&
+          row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
+      | .original _ => false
+    let files := candidates.foldl (fun found row => match row.source.subject with
+      | .file file => found.insert file
+      | .original _ => found) ({} : Std.HashSet File)
+    let targets := files.toArray.map fun file => Range.mk (.file file) requirement.first requirement.last
+    (requirement.name,candidates,targets)
+  -- The denominator is determined from the immutable source before inspecting
+  -- delivery bytes. A later failed candidate cannot shrink it.
+  let frozen ← IO.ofExcept (RequiredDelivery.freeze (alternatives.map fun (name,_,targets) =>
+    ⟨name,targets⟩) (rows.map (·.source)))
   let request ← readJson trial.request
   check ((request.getObjValAs? String "hook_event_name").toOption == some "UserPromptSubmit" &&
     (request.getObjValAs? String "prompt").toOption == some specification.prompt &&
@@ -71,37 +89,28 @@ def inspect (input : String) : IO Json := do
     (timing.getObjValAs? String "stdoutSha256").toOption == some (Sha256.hex stdout.toUTF8))
     "native preflight failed, expired or has different stdout"
   let reply ← IO.ofExcept (Json.parse stdout)
-  let body ← IO.ofExcept (reply.getObjVal? "hookSpecificOutput" >>= (·.getObjValAs? String "additionalContext"))
+  check reply.getObj?.isOk "native hook returned a non-object reply"
+  let body := (reply.getObjVal? "hookSpecificOutput" >>= (·.getObjValAs? String "additionalContext")).toOption.getD ""
   check (body == (← IO.FS.readFile (.mk trial.body))) "saved body differs from actual stdout"
-  let before ← DB.PageMap.pin (.mk specification.source)
   let after ← DB.PageMap.pin (.mk trial.database)
   let same ← Index.sameSources after before.head (after.head.revision-before.head.revision+1)
   let original ← IO.FS.readBinFile (DB.PageMap.dataPath before.directory before.head)
   let current ← IO.FS.readBinFile (DB.PageMap.dataPath after.directory after.head)
   let prefixExact := original.extract 0 before.head.bytes == current.extract 0 before.head.bytes
   check (same && prefixExact) "preparation changed original source facts or pages"
-  let (documents,rows) ← originals before
   let shown := Extraction.presented body documents rows
-  let requirements := specification.required.map fun requirement =>
-    let candidates := rows.filter fun row =>
-      match row.source.subject with
-      | .file file => file.relative == requirement.path &&
-          row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
-      | .original _ => false
-    let files := candidates.foldl (fun found row => match row.source.subject with
-      | .file file => found.insert file
-      | .original _ => found) ({} : Std.HashSet File)
-    let stored := files.toArray.any fun file => covered ⟨.file file,requirement.first,requirement.last⟩
-      (candidates.map (·.source))
-    let delivered := files.toArray.any fun file => covered ⟨.file file,requirement.first,requirement.last⟩ shown.ranges
-    Json.mkObj [("name",toJson requirement.name),("stored",toJson stored),
-      ("storedOwners",toJson ((candidates.map (·.binding.owner)).toList.eraseDups.toArray)),
+  let requirements := alternatives.map fun (name,candidates,targets) =>
+    let stored := targets.any (fun target => covered target (candidates.map (fun (row : Read) => row.source)))
+    let delivered := targets.any (fun target => covered target shown.ranges)
+    Json.mkObj [("name",toJson name),("stored",toJson stored),
+      ("storedOwners",toJson ((candidates.map (fun (row : Read) => row.binding.owner)).toList.eraseDups.toArray)),
       ("bodyDelivered",toJson delivered),("unlocated",toJson (!stored))]
   return Json.mkObj [("specSha256",toJson (Sha256.hex bytes)),
     ("sourceGraphFiles",Json.mkObj (specification.files.toList.map fun (name,digest) => (name,toJson digest))),
     ("sameSourceFacts",toJson same),("samePublishedPagePrefix",toJson prefixExact),
     ("originalDocuments",toJson documents.size),("originalRows",toJson rows.size),
     ("stdoutSha256",toJson (Sha256.hex stdout.toUTF8)),("bodySha256",toJson (Sha256.hex body.toUTF8)),
+    ("frozenEvidence",toJson frozen),("requiredDelivery",toJson (RequiredDelivery.assess frozen shown.ranges)),
     ("requirements",toJson requirements)]
 
 /-- Source extraction and literal code/fingerprint comparison stay in Lean.

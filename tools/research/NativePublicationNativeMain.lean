@@ -5,9 +5,11 @@ open Lean Eggshell Eggshell.Research
 
 /-- Exercise the actual product hooks, shell, save worker, index worker and
 source-only recovery. This fixture has no answering-model credentials. -/
-def main : IO UInt32 := do
+def main (args : List String) : IO UInt32 := do
   try
-    let root := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell/native-publication-20261025"
+    unless args.length ≤ 1 do throw (IO.userError "NativePublicationNativeMain [CANDIDATE-ROOT]")
+    let root := System.FilePath.mk (args.head?.getD "/Users/ovm/.codex/experiments/eggshell/native-publication-20261025")
+    unless root.isAbsolute do throw (IO.userError "absolute candidate root required")
     let installRoot := root / "prefix"
     unless !(← installRoot.pathExists) do throw (IO.userError "keep the existing native fixture prefix")
     let binary := installRoot / "libexec/eggshell"
@@ -41,5 +43,7 @@ def main : IO UInt32 := do
     StudySeedChecks.run template.toString fixture.toString true
     IO.println (← IO.FS.readFile (fixture / "result.json"))
     IO.println (← IO.FS.readFile (fixture / "recovery.json"))
+    let audit ← IO.ofExcept (Json.parse (← IO.FS.readFile (fixture / "recall-audit.json")))
+    IO.println (← IO.ofExcept (audit.getObjVal? "requiredDelivery")).compress
     return 0
   catch error => IO.eprintln error.toString; return 1

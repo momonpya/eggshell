@@ -91,7 +91,11 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
   let hasLocal ← if ← System.FilePath.pathExists localLibrary then
     pure ((← (System.FilePath.mk localLibrary).symlinkMetadata).type != .symlink)
     else pure false
-  let inherited ← System.FilePath.pathExists (settings.core ++ "/.lake/build/lib/lean/" ++ path ++ ".olean")
+  -- Research sources live in the changing project, rather than the frozen
+  -- candidate checkout. An inherited interface cannot establish their bytes.
+  -- Compile them locally once; the local source cache handles later reuse.
+  let inherited ← if name.startsWith "tools.research." then pure false else
+    System.FilePath.pathExists (settings.core ++ "/.lake/build/lib/lean/" ++ path ++ ".olean")
   if !hasLocal && inherited && !changed && !settings.force.contains name then
     state.modify fun s => {s with done := s.done.insert name false,active := s.active.erase name}
     return false

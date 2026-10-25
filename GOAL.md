@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-10-25更新。状態はactive。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。古い逐次追記を現在の指示として重ねず、この順序を優先する。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-10-26更新。状態はactive。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。古い逐次追記を現在の指示として重ねず、この順序を優先する。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -31,6 +31,8 @@
 - seedの52 RPC原本文はすべて保存済み。warm自身の中立な来歴出版がpinを古くする不具合を隔離修正し、同一入力のモデルなし比較で親失敗/候補成功、56 native来歴の欠落0を確認。再warm224ms。これは実フックやtoken改善の合格ではない。[snapshot-refresh.md](docs/snapshot-refresh.md)。
 - 旧seed DB/private cache・比較DB/cache・旧prefixは監査後に削除済み。bee29fda固定で続行できる現存seedはない。worker-lifecycle候補79bcbc4a…は、10/40/80待機client・実worker6個の終了/遅延受付試行とContractAuditが成功し、終了後の再spawn/残存0。これは共有DB負荷や元seed超過原因の再現ではない。[worker-lifecycle.md](docs/worker-lifecycle.md)。
 - native-publication候補fb0b1e12…で、元本文とportable時系列を同一commitへ接続。commit前の失敗/ACK喪失再送/遅れた終了記録/DBだけの復元と再送、実Pre/Post/Stopの6観測・13journal記録、3辺、既存ContractAuditを検査した。集計RSS最大2,612,592 KiB。保存ACKから配送済みの印を作る経路も除いた。これは共有投入ACK・80人DB負荷・95%配送・総tokenの合格ではない。次の測定runtimeは残る投入/launcher検査後に固定する。[native-publication.md](docs/native-publication.md)。
+- group-publication候補279b64b2…で有界な群の出版を実装。直接保存の18条件・780要求で初回受付93件の失敗を確認し、同じ初期DB・入力の出版中核では全780件を保存、ACK済み欠落/再送重複0。1DB・80要求・50 KBは準備/commit/読戻し込み4,617ms。ただし複数DBの成功条件には遅延悪化もあり、全条件の高速化とはしない。共有サービスは未接続、背景索引のstale-writer拒否も残る。[group-publication.md](docs/group-publication.md)。
+- 95%を整数で測るLean監査を実本文へ接続。別チャット/新private領域/読取専用DBの合成試行で必要コード2/2を配送し、意味検索完了、discovery/focus各7窓cache hit、source再埋め込み0、実フック1,843ms。これは6段階/保留実務/大規模の95%達成ではない。[required-delivery.md](docs/required-delivery.md)。
 - 旧seed費用は3,472,146総token、115フック失敗0、daemon終了超過。失敗費用を除外しない。新系列の題材1/2/3・2周目は0/6。
 
 ## 実行順と完了証拠
@@ -44,6 +46,8 @@
 ### B：チーム共有の原典と出版
 
 一つの実行体の共有入口、DBごとの出版責任者、不変原文、source-change feed、全経路の保存前方針判定を接続。1/4/16プロジェクトDB×10/40/80接続、私有/共有/読取専用、MCP・SMB・gitなしツリー・一般JSON/テキストで保存と復元を確かめる。NASの検証をローカル試行で代用しない。
+
+次の着手点は、有界な出版中核を実際の複数チャットの入口とDB/viewごとの更新責任者へ接続すること。private journalの全Entryをremoteへ送らず、照合済みのquery-free原典とscope判定を運ぶ。単なるロック待ち延長やプロセス内の群の試験だけで、80人の共有DBを完成扱いにしない。
 
 ### C：差分準備と大規模検索
 

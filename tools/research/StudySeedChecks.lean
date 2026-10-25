@@ -58,6 +58,58 @@ private def coquoted : Fact → Bool
   | .coquoted _ _ => true
   | _ => false
 
+/-- Freeze required DB-present source rows before a new chat's real hook runs.
+This is a small model-free check of the audit wiring, not the recall study. -/
+private def recall (plan : Input) (root source : System.FilePath)
+    (environment : Array (String × Option String)) : IO Unit := do
+  let snapshot := root / "recall-source.egg"
+  let files ← StudyRuntime.checkpoint source snapshot
+  let question := "Show the saved source evidence for NEEDED_SYMBOL and OTHER_SYMBOL."
+  let frozen := Json.mkObj [
+    ("source",toJson snapshot.toString),("workspace",toJson root.toString),("prompt",toJson question),
+    ("files",toJson files),("required",toJson #[
+      Json.mkObj [("name",toJson "needed-symbol"),("path",toJson "src/source.cpp"),
+        ("first",toJson (11 : Nat)),("last",toJson (11 : Nat))],
+      Json.mkObj [("name",toJson "other-symbol"),("path",toJson "src/source.cpp"),
+        ("first",toJson (14 : Nat)),("last",toJson (14 : Nat))]])]
+  save (root / "recall-required-before-delivery.json") frozen
+  let configuration := root / "recall-config.toml"
+  IO.FS.writeFile configuration ("default = \"work\"\nsemantic_matcher = " ++
+    (toJson #[plan.runtime.path,"search-provider"]).compress ++ "\n[eggs]\nwork = " ++
+    (toJson source.toString).compress ++ "\n[profiles.work]\nread = [\"work\"]\nhandoff_chars = 120000\n")
+  let data := root / "recall-data"
+  IO.FS.createDir data
+  let session := "native-recall-preflight"
+  let environment := replaceEnv environment #[
+    ("EGGSHELL_DATA_ROOT",some data.toString),("EGGSHELL_CONFIG",some configuration.toString),
+    ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
+  let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment root.toString ""
+    (root / "recall-warm") 60000
+  check (warm.exitCode == 0) "readonly recall source was not warmed"
+  let managed ← StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) session
+    (data / "sessions" / session / "daemon.json") environment
+  let command := root / "recall-hook"
+  try
+    let input := Json.mkObj [("hook_event_name",toJson "UserPromptSubmit"),
+      ("session_id",toJson session),("turn_id",toJson "recall-turn"),("cwd",toJson root.toString),
+      ("prompt",toJson question),("_eggshell_config",toJson configuration.toString)]
+    let output ← StudyCommand.run plan.runtime.path #["codex-hook"] environment root.toString
+      (input.compress ++ "\n") command 35000
+    check (output.exitCode == 0) "readonly recall hook failed"
+    let reply ← IO.ofExcept (Json.parse output.stdout)
+    let body := (reply.getObjVal? "hookSpecificOutput" >>= (·.getObjValAs? String "additionalContext")).toOption.getD ""
+    IO.FS.writeFile (root / "recall-body.txt") body
+  finally StudyRuntime.stopManaged managed (root / "recall-shutdown.json")
+  let audit := Json.mkObj [("source",frozen),("database",toJson source.toString),
+    ("request",toJson (command / "stdin").toString),("stdout",toJson (command / "stdout").toString),
+    ("timing",toJson (command / "record.json").toString),("body",toJson (root / "recall-body.txt").toString)]
+  save (root / "recall-audit-input.json") audit
+  let report ← NativeTrialAudit.inspect (root / "recall-audit-input.json").toString
+  save (root / "recall-audit.json") report
+  let result ← IO.ofExcept (report.getObjVal? "requiredDelivery")
+  check ((result.getObjValAs? Nat "eligible").toOption == some 2) "recall denominator lacks frozen DB-present originals"
+  check ((result.getObjValAs? Bool "targetMet").toOption == some true) "actual readonly hook omitted required fixture evidence"
+
 /-- The fixture writes no relations. Only real hooks, a real shell, the save
 worker and the index worker may create its observations and consumption. -/
 def run (templatePath directory : String) (remote : Bool := false) : IO Unit := do
@@ -196,6 +248,7 @@ def run (templatePath directory : String) (remote : Bool := false) : IO Unit := 
     ("consumptionWitnesses",toJson (recovered.filter isConsumption).size),
     ("supports",toJson (recovered.filter supported).size),
     ("coquoted",toJson (recovered.filter coquoted).size)])
+  if remote then recall plan root copied environment
 
 def cliMain (args : List String) : IO UInt32 := do
   try
