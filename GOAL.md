@@ -39,6 +39,7 @@
 - 研究harnessで出版serviceを直接所有し、chat→出版の順に実終了/endpoint除去まで確認するようにした。古いnative計数名を参照する入場検査も修正。実native試行と課金なしseed/fresh模擬試行は成功し、終了後の残存0。製品runtimeはc7bdbb03…から変えていない。連続保存中の索引警告4件は残るが、静止後warmは14/14窓有効・欠落/不正0。新seed取得へ進むためのharness検証であり、95%や総token改善の証拠ではない。[study-services.md](docs/study-services.md)。
 - 空き容量が回復した後、指示により旧DB/キャッシュ等38対象と、全登録ownerが消失済みの私有cache81個を追加削除した。論理サイズ合計約259 MiB、archiveなし。最初のseed起動は未作成の出力親に対する容量検査で止まり、モデル起動0・残存0。準備側で親を作成し、元記録を残した別attemptへ進む。runtimeは同一。[unused-study-data.md](docs/unused-study-data.md)。
 - 新seedはc7bdbb03…・5.6-luna/xhigh・AGENTS無効で取得完了、3,691,514総token、61フック失敗0、終了後残存0。待機保存2件を回収し、静止warmは1,855窓有効・欠落/不正0。native開始/終了/portable origin各29件、欠落0。配送前監査でToolChainキー/HLSL分岐が原文にある一方、番号付き行としては未照合と判明したため、不在として除外せず原文文字範囲の検査を接続する。題材1〜3・2周目は引き続き0/6。[team-seed.md](docs/team-seed.md)。
+- 元出力の文字範囲を使うLean監査を接続し、配送前にDB内の必要項目を題材別4/6/5件と凍結した。製品runtimeは同一。題材1の独立2チャットは12.8/11.7秒で同じ本文を返したが、配送は2/4件で95%未達。言語状態と末尾警告は同じ元観測にあるのに本文から落ちている。回答モデルへの入場を拒否し、6段階は0/6のまま。座標未照合を不在として分母から外さず、入場・原文共有・選択を切り分ける。13境界検査成功は配送成功やtoken改善の代用にしない。[original-evidence-audit.md](docs/original-evidence-audit.md)。
 
 ## 実行順と完了証拠
 

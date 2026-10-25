@@ -2,17 +2,13 @@ import Eggshell.SynapseBuild
 import Eggshell.SynapseUsage
 import tools.research.ArtifactHash
 import tools.research.RequiredDelivery
+import tools.research.OriginalEvidence
 
 open Lean Eggshell Eggshell.Synapses
 
 namespace Eggshell.Research.NativeTrialAudit
 
-private structure Requirement where
-  name : String
-  path : String
-  first : Nat
-  last : Nat
-  deriving FromJson
+private abbrev Requirement := OriginalEvidence.Reference
 
 private structure Source where
   source : String
@@ -62,18 +58,14 @@ def inspect (input : String) : IO Json := do
     check ((← ArtifactHash.hex (System.FilePath.mk specification.source / name)) == expected)
       "immutable source bytes changed"
   let before ← DB.PageMap.pin (.mk specification.source)
-  let (documents,rows) ← originals before
-  let alternatives : Array (String × Array Read × Array Range) := specification.required.map fun requirement =>
-    let candidates := rows.filter fun row =>
-      match row.source.subject with
-      | .file file => file.relative == requirement.path &&
-          row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
-      | .original _ => false
-    let files := candidates.foldl (fun found row => match row.source.subject with
-      | .file file => found.insert file
-      | .original _ => found) ({} : Std.HashSet File)
-    let targets := files.toArray.map fun file => Range.mk (.file file) requirement.first requirement.last
-    (requirement.name,candidates,targets)
+  let (documents,fileRows) ← originals before
+  let resolved ← OriginalEvidence.resolve (.mk specification.workspace) before.head.identity
+    documents fileRows specification.required
+  let rows := resolved.reads
+  let alternatives : Array (String × Array Read × Array Range) := resolved.requirements.map fun item =>
+    let candidates := rows.filter fun row => item.alternatives.any fun target =>
+      target.subject == row.source.subject && row.source.first ≤ target.last && target.first ≤ row.source.last
+    (item.name,candidates,item.alternatives)
   -- The denominator is determined from the immutable source before inspecting
   -- delivery bytes. A later failed candidate cannot shrink it.
   let frozen ← IO.ofExcept (RequiredDelivery.freeze (alternatives.map fun (name,_,targets) =>
@@ -108,7 +100,8 @@ def inspect (input : String) : IO Json := do
   return Json.mkObj [("specSha256",toJson (Sha256.hex bytes)),
     ("sourceGraphFiles",Json.mkObj (specification.files.toList.map fun (name,digest) => (name,toJson digest))),
     ("sameSourceFacts",toJson same),("samePublishedPagePrefix",toJson prefixExact),
-    ("originalDocuments",toJson documents.size),("originalRows",toJson rows.size),
+    ("originalDocuments",toJson documents.size),("originalRows",toJson fileRows.size),
+    ("originalOutputBindings",toJson resolved.bindings),
     ("stdoutSha256",toJson (Sha256.hex stdout.toUTF8)),("bodySha256",toJson (Sha256.hex body.toUTF8)),
     ("frozenEvidence",toJson frozen),("requiredDelivery",toJson (RequiredDelivery.assess frozen shown.ranges)),
     ("requirements",toJson requirements)]

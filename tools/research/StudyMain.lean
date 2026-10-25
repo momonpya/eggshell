@@ -13,6 +13,7 @@ import tools.research.StudyEnvironmentChecks
 import tools.research.StudyTransportChecks
 import tools.research.PrepareMatchedSource
 import tools.research.StudyBootstrap
+import tools.research.StudyHistory
 
 open Lean Eggshell.Research
 
@@ -41,6 +42,7 @@ def main (args : List String) : IO UInt32 := do
         return 0
     | "guard" :: rest => ResourceGuard.cliMain rest
     | "runtime" :: rest => StudyRuntime.cliMain rest
+    | "history" :: rest => StudyHistory.cliMain rest; return 0
     | "audit" :: rest => NativeTrialAudit.cliMain rest; return 0
     | "replay" :: rest => StudyAccounting.cliMain rest
     | ["generation-space",directory] =>

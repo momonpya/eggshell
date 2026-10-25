@@ -1,17 +1,13 @@
 import tools.research.StudyAcquire
 import Eggshell.SynapseLive
+import tools.research.OriginalEvidence
 
 open Lean Eggshell Eggshell.Synapses Eggshell.Synapses.Extraction
 open Eggshell.Research
 
 namespace Eggshell.Research.NativeSeedAudit
 
-private structure Requirement where
-  name : String
-  path : String
-  first : Nat
-  last : Nat
-  deriving FromJson, ToJson
+private abbrev Requirement := OriginalEvidence.Reference
 
 private structure Topic where
   topic : Nat
@@ -153,23 +149,29 @@ def cliMain (args : List String) : IO Unit := do
   let topics ← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk definitions)) >>= fromJson? (α := Array Topic))
   let mut availability := #[]
   for topic in topics do
+    let resolved ← OriginalEvidence.resolve (.mk plan.workspace) original.head.identity
+      documents rows topic.referenceRanges
+    let frozen ← IO.ofExcept (RequiredDelivery.freeze resolved.requirements (resolved.reads.map (·.source)))
     let mut required := #[]
     for requirement in topic.referenceRanges do
       check (safeRelative requirement.path && 0 < requirement.first && requirement.first ≤ requirement.last)
         "invalid frozen source requirement"
-      let candidates := rows.filter fun row => match row.source.subject with
-        | .file file => file.relative == requirement.path &&
-            row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
-        | .original _ => false
+      let some item := resolved.requirements.find? (·.name == requirement.name) |
+        throw (IO.userError "original reference was not resolved")
+      let candidates := resolved.reads.filter fun row => item.alternatives.any fun target =>
+        target.subject == row.source.subject && row.source.first ≤ target.last && target.first ≤ row.source.last
       let files := candidates.foldl (fun found row => match row.source.subject with
         | .file file => found.insert file
         | .original _ => found) ({} : Std.HashSet File)
-      let stored := files.toArray.any fun file => covered ⟨.file file,requirement.first,requirement.last⟩ (candidates.map (·.source))
+      let stored := item.alternatives.any (fun target => covered target (candidates.map (·.source)))
       required := required.push (Json.mkObj [
         ("reference",toJson requirement),("storedOriginal",toJson stored),
         ("sourceFiles",toJson files.toArray),("originalRows",toJson candidates),
+        ("originalOutputBindings",toJson (resolved.bindings.filter fun row =>
+          (row.getObjValAs? String "name").toOption == some requirement.name)),
         ("owners",toJson (candidates.map (·.binding.owner)).toList.eraseDups.toArray)])
-    availability := availability.push (Json.mkObj [("topic",toJson topic.topic),("requirements",toJson required)])
+    availability := availability.push (Json.mkObj [("topic",toJson topic.topic),
+      ("frozenEvidence",toJson frozen),("requirements",toJson required)])
   check ((← StudyRuntime.files original.directory) == files) "audit changed the frozen seed publication"
   let unaccounted := commandAudit.filter fun row =>
     ((row.getObjVal? "audit").bind (·.getObjValAs? Nat "portableOrigins")).toOption == some 0
