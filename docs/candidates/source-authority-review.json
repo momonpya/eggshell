@@ -1,0 +1,2242 @@
+{"sources":
+ [{"sha256": "0d4ac00a644f75f984f79f8ac1dbfbe55acdc9f58ebab300d6f869209f8c8ec2",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-authority/Eggshell/SynapseProvenance.lean",
+   "bytes": 13891},
+  {"sha256": "b897a4bd31a2fdba6d5baa85c2806b9d03196a822ded88ebe7c1bfcefd22db59",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-authority/Eggshell/SynapseJournal.lean",
+   "bytes": 32611},
+  {"sha256": "da51cdf9945d86bdba85950e5baf51f098ea1a1e1a69a313cd71385135ca9d18",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-authority/Eggshell/Warm.lean",
+   "bytes": 20449}],
+ "shutdown":
+ {"stopElapsedMs": 43,
+  "pid": 50821,
+  "phase": "stopped",
+  "endpointRemoved": true,
+  "daemonExitCode": 0,
+  "acknowledged": true},
+ "sampledPeakRssKiB": 2691568,
+ "recovery":
+ {"supports": 4,
+  "sourceOnlyCheckpoint": true,
+  "runtime":
+  {"sha256": "c7bdbb03c2c03cc03eaab44e144d6d378893d8b6c1e11ea7e108b76d4980c563",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell"},
+  "publicationUnchanged": true,
+  "newPrivateRoot": true,
+  "coquoted": 4,
+  "consumptionWitnesses": 1},
+ "recallShutdown":
+ {"stopElapsedMs": 52,
+  "pid": 51924,
+  "phase": "stopped",
+  "endpointRemoved": true,
+  "daemonExitCode": 0,
+  "acknowledged": true},
+ "publisherShutdown":
+ {"processExited": true,
+  "pid": 51220,
+  "endpointRemoved": true,
+  "elapsedMs": 97},
+ "productionAdoption": false,
+ "product":
+ {"sha256": "c7bdbb03c2c03cc03eaab44e144d6d378893d8b6c1e11ea7e108b76d4980c563",
+  "path":
+  "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/product",
+  "bytes": 117140304},
+ "native":
+ {"supports": 4,
+  "runtime":
+  {"sha256": "c7bdbb03c2c03cc03eaab44e144d6d378893d8b6c1e11ea7e108b76d4980c563",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell"},
+  "realMcpServerUsed": false,
+  "privateUsage": 4,
+  "portableOrigins": 6,
+  "nativeToolCalls": 6,
+  "nativeJournalEvents": 13,
+  "emptyInitialDatabase": true,
+  "directRelationInsertions": 0,
+  "coquoted": 4,
+  "consumptionWitnesses": 1,
+  "conditionalReadRows": 4,
+  "answeringModelCalls": 0,
+  "actualShellCalls": 4,
+  "McpShapedHookPairs": 2},
+ "limitations":
+ ["Model-free lock diagnosis uses separate fresh DB identities, not a matched model-token trial",
+  "Captured-publication coverage is not a claim that all later source changes are ready",
+  "Missing original intervals require the source producer to retry; background backfill was removed",
+  "The 2/2 actual hook is a synthetic fixture, not topics 1-3 and the second lap",
+  "No 80-client derived-view throughput, NAS, million-window payload or token-improvement claim",
+  "A prefix test initially expected replay completion to cover later source changes; the corrected check uses view watermarks and later debt",
+  "The first baseline build was rejected before starting at 4 GiB free disk; small checks reserve 2 GiB disk with the same 3.5 GiB RSS stop"],
+ "harness":
+ {"sha256": "f7482424cc0c0432021e3331a5df2d10c97532289461cb0025a94d20ed77a99b",
+  "path":
+  "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/SourceAuthorityChecksMain.lean",
+  "bytes": 6795},
+ "guards":
+ [{"stdout":
+   {"sha256":
+    "f20790c4bf12caf992f49c18ab13210d3ee58015ea4af21b76506f35e077996e",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/boundary.stdout",
+    "bytes": 392},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/boundary.stderr",
+    "bytes": 0},
+   "label": "boundary",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/boundary.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/lib:/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checkout/.lake/build/lib/lean:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "--root=/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+      "-j1",
+      "-M1536",
+      "-DwarningAsError=true",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/NativePublicationContract.lean"]},
+    "samples": 35,
+    "sampledPeakRssKiB": 826112,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 782240,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 53409,
+      "parent": 53407,
+      "lane": null},
+     {"rssKiB": 43872,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 53407,
+      "parent": 53378,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 53407,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 7766,
+    "childPid": 53409}},
+  {"stdout":
+   {"sha256":
+    "cbf775d59ded44cd7edc7a8f9c4b1e205eb82f6da5d8ff4a12bdff8f25382f2b",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-prefix.stdout",
+    "bytes": 286},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-prefix.stderr",
+    "bytes": 0},
+   "label": "candidate-prefix",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-prefix.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-data",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/StudyMain",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-prefix-fixtures",
+      "candidate"]},
+    "samples": 21,
+    "sampledPeakRssKiB": 88208,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 44320,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/StudyMain",
+      "pid": 48808,
+      "parent": 48806,
+      "lane": null},
+     {"rssKiB": 43888,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 48806,
+      "parent": 48793,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 48806,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 6075,
+    "childPid": 48808}},
+  {"stdout":
+   {"sha256":
+    "a9458d0b8046b865160632bbe52f1e48d2d4b4f7f9105f48e147e099513d2c2d",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checks-build.stdout",
+    "bytes": 57},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checks-build.stderr",
+    "bytes": 0},
+   "label": "checks-build",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checks-build.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checks-build.plan.json"]},
+    "samples": 18,
+    "sampledPeakRssKiB": 1972256,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 556080,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 46563,
+      "parent": 46561,
+      "lane": null},
+     {"rssKiB": 1372288,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 46569,
+      "parent": 46563,
+      "lane": null},
+     {"rssKiB": 43888,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 46561,
+      "parent": 46548,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 46561,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 5517,
+    "childPid": 46563}},
+  {"stdout":
+   {"sha256":
+    "d13d4d3f738d4af11bb0455126cddd39d307ac919195a28d418ff828c1d2dd9a",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/verifier-boundary.stdout",
+    "bytes": 234},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/verifier-boundary.stderr",
+    "bytes": 0},
+   "label": "verifier-boundary",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/verifier-boundary.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/lib:/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checkout/.lake/build/lib/lean:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "--root=/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+      "-j1",
+      "-M1536",
+      "-DwarningAsError=true",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/SourceAuthorityContract.lean"]},
+    "samples": 9,
+    "sampledPeakRssKiB": 810976,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 767264,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 52587,
+      "parent": 52539,
+      "lane": null},
+     {"rssKiB": 43712,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 52539,
+      "parent": 52521,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 52539,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 4598,
+    "childPid": 52587}},
+  {"stdout":
+   {"sha256":
+    "dc9518fda73908e6b77c25167f703888274a89408807ff0f72a07aa77db7afab",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-final.stdout",
+    "bytes": 113},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-final.stderr",
+    "bytes": 0},
+   "label": "baseline-final",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-final.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-data",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build/StudyMain",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-final-fixtures",
+      "baseline"]},
+    "samples": 18,
+    "sampledPeakRssKiB": 54976,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 11088,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build/StudyMain",
+      "pid": 58145,
+      "parent": 58114,
+      "lane": null},
+     {"rssKiB": 43888,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 58114,
+      "parent": 58100,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 58114,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 5688,
+    "childPid": 58145}},
+  {"stdout":
+   {"sha256":
+    "dc9518fda73908e6b77c25167f703888274a89408807ff0f72a07aa77db7afab",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-lock.stdout",
+    "bytes": 113},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-lock.stderr",
+    "bytes": 0},
+   "label": "baseline-lock",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-lock.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-data",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build/StudyMain",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-lock-fixtures",
+      "baseline"]},
+    "samples": 15,
+    "sampledPeakRssKiB": 55440,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 11696,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build/StudyMain",
+      "pid": 46501,
+      "parent": 46499,
+      "lane": null},
+     {"rssKiB": 43744,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 46499,
+      "parent": 46486,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 46499,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 5252,
+    "childPid": 46501}},
+  {"stdout":
+   {"sha256":
+    "0f88c0cbf3acf80a6e1a2a41d5c52ec1add382beaaea40ebec3654ad8920bbda",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/contract.stdout",
+    "bytes": 80159},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/contract.stderr",
+    "bytes": 0},
+   "label": "contract",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/contract.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/lib:/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checkout/.lake/build/lib/lean:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "--root=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checkout",
+      "-j1",
+      "-M1536",
+      "-DwarningAsError=true",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checkout/Eggshell/ContractAudit.lean"]},
+    "samples": 70,
+    "sampledPeakRssKiB": 906336,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 862432,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 53048,
+      "parent": 53018,
+      "lane": null},
+     {"rssKiB": 43904,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 53018,
+      "parent": 52988,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 53018,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 12464,
+    "childPid": 53048}},
+  {"stdout":
+   {"sha256":
+    "50b602cc3ac1fcba74b1e2f916dcf63ce3bd5d6924397080f81f486b70bdef96",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native-run.stdout",
+    "bytes": 919},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native-run.stderr",
+    "bytes": 0},
+   "label": "native-run",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native-run.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native/data",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/StudyMain",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026",
+      "publisher"]},
+    "samples": 194,
+    "sampledPeakRssKiB": 1866928,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 46624,
+      "role": "codex-worker",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 51206,
+      "parent": 50821,
+      "lane": "save"},
+     {"rssKiB": 47904,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 51220,
+      "parent": 51206,
+      "lane": null},
+     {"rssKiB": 46608,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 51279,
+      "parent": 1,
+      "lane": null},
+     {"rssKiB": 1094512,
+      "role": null,
+      "program":
+      "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+      "pid": 51292,
+      "parent": 51279,
+      "lane": null},
+     {"rssKiB": 182240,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/StudyMain",
+      "pid": 49660,
+      "parent": 49365,
+      "lane": null},
+     {"rssKiB": 44000,
+      "role": "codex-hook",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 51800,
+      "parent": 49660,
+      "lane": null},
+     {"rssKiB": 44560,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 51801,
+      "parent": 51800,
+      "lane": null},
+     {"rssKiB": 44944,
+      "role": null,
+      "program": "(eggshell)",
+      "pid": 51803,
+      "parent": 51011,
+      "lane": null},
+     {"rssKiB": 44256,
+      "role": "search-provider",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 51805,
+      "parent": 51079,
+      "lane": null},
+     {"rssKiB": 42992,
+      "role": null,
+      "program": "(eggshell)",
+      "pid": 51806,
+      "parent": 51803,
+      "lane": null},
+     {"rssKiB": 38400,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 51807,
+      "parent": 51805,
+      "lane": null},
+     {"rssKiB": 51744,
+      "role": "codex-daemon",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 50821,
+      "parent": 49660,
+      "lane": null},
+     {"rssKiB": 49392,
+      "role": "codex-worker",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 51011,
+      "parent": 50821,
+      "lane": "search"},
+     {"rssKiB": 49728,
+      "role": "codex-worker",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix/libexec/eggshell",
+      "pid": 51079,
+      "parent": 50821,
+      "lane": "index"},
+     {"rssKiB": 39024,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 49365,
+      "parent": 49327,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 49365,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 28596,
+    "childPid": 49660}},
+  {"stdout":
+   {"sha256":
+    "175d49e3f0fbfc9904f95cb61f07d47e9490b3e4aeccfd38e979b0d70bb474f0",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native-build.stdout",
+    "bytes": 563},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native-build.stderr",
+    "bytes": 0},
+   "label": "native-build",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native-build.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native-build.plan.json"]},
+    "samples": 146,
+    "sampledPeakRssKiB": 2081392,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 558496,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 48924,
+      "parent": 48888,
+      "lane": null},
+     {"rssKiB": 1478784,
+      "role": null,
+      "program": "(lean)",
+      "pid": 49053,
+      "parent": 48924,
+      "lane": null},
+     {"rssKiB": 44112,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 48888,
+      "parent": 48874,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 48888,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 21916,
+    "childPid": 48924}},
+  {"stdout":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-lock.stdout",
+    "bytes": 0},
+   "stderr":
+   {"sha256":
+    "cf817e676c1c49ef9bbdbf259d8a7855e23ce171005d72d3afdb6b9cafd838bf",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-lock.stderr",
+    "bytes": 80},
+   "label": "candidate-lock",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-lock.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-data",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/StudyMain",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-lock-fixtures",
+      "candidate"]},
+    "samples": 17,
+    "sampledPeakRssKiB": 43824,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 176,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/StudyMain",
+      "pid": 46808,
+      "parent": 46806,
+      "lane": null},
+     {"rssKiB": 43648,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 46806,
+      "parent": 46793,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 46806,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 5547,
+    "childPid": 46808}},
+  {"stdout":
+   {"sha256":
+    "a9458d0b8046b865160632bbe52f1e48d2d4b4f7f9105f48e147e099513d2c2d",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix-check-build.stdout",
+    "bytes": 57},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix-check-build.stderr",
+    "bytes": 0},
+   "label": "prefix-check-build",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix-check-build.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/prefix-check-build.plan.json"]},
+    "samples": 102,
+    "sampledPeakRssKiB": 1972528,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 555984,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 46973,
+      "parent": 46952,
+      "lane": null},
+     {"rssKiB": 1372608,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 46985,
+      "parent": 46973,
+      "lane": null},
+     {"rssKiB": 43936,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 46952,
+      "parent": 46939,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 46952,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 16174,
+    "childPid": 46973}},
+  {"stdout":
+   {"sha256":
+    "a9458d0b8046b865160632bbe52f1e48d2d4b4f7f9105f48e147e099513d2c2d",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build.stdout",
+    "bytes": 57},
+   "stderr":
+   {"sha256":
+    "4f81b4f36f327831416e4b399075a398a7e5ba078bf2bf1d9843eaa003be7123",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build.stderr",
+    "bytes": 372},
+   "label": "baseline-build",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build.plan.json"]},
+    "samples": 95,
+    "sampledPeakRssKiB": 1964448,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 1363984,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 46136,
+      "parent": 45350,
+      "lane": null},
+     {"rssKiB": 556544,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 45350,
+      "parent": 45332,
+      "lane": null},
+     {"rssKiB": 43920,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 45332,
+      "parent": 45297,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 45332,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 15334,
+    "childPid": 45350}},
+  {"stdout":
+   {"sha256":
+    "9594eff583a56c28cd61c2d847e66fde2d89c16b6429de0c17b6a0819086f63d",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build.stdout",
+    "bytes": 1006},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build.stderr",
+    "bytes": 0},
+   "label": "build",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 4194304,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build-plan.json"]},
+    "samples": 710,
+    "sampledPeakRssKiB": 2691568,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 2120128,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 37033,
+      "parent": 34372,
+      "lane": null},
+     {"rssKiB": 528464,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 34372,
+      "parent": 34340,
+      "lane": null},
+     {"rssKiB": 42976,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 34340,
+      "parent": 34239,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 34340,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 95496,
+    "childPid": 34372}},
+  {"stdout":
+   {"sha256":
+    "d13d4d3f738d4af11bb0455126cddd39d307ac919195a28d418ff828c1d2dd9a",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/source-final.stdout",
+    "bytes": 234},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/source-final.stderr",
+    "bytes": 0},
+   "label": "source-final",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/source-final.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/lib:/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checkout/.lake/build/lib/lean:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "--root=/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+      "-j1",
+      "-M1536",
+      "-DwarningAsError=true",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/SourceAuthorityContract.lean"]},
+    "samples": 38,
+    "sampledPeakRssKiB": 811376,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 767520,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 60230,
+      "parent": 60003,
+      "lane": null},
+     {"rssKiB": 43856,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 60003,
+      "parent": 59784,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 60003,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 8218,
+    "childPid": 60230}},
+  {"stdout":
+   {"sha256":
+    "bf8d304fbe196cc8ac9c49333865aaeec557be57a82f9223ce55d428b272f1a5",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/source-boundary.stdout",
+    "bytes": 146},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/source-boundary.stderr",
+    "bytes": 0},
+   "label": "source-boundary",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/source-boundary.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/lib:/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/checkout/.lake/build/lib/lean:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "--root=/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+      "-j1",
+      "-M1536",
+      "-DwarningAsError=true",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/SourceAuthorityContract.lean"]},
+    "samples": 35,
+    "sampledPeakRssKiB": 798672,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 754832,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 52212,
+      "parent": 52210,
+      "lane": null},
+     {"rssKiB": 43840,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 52210,
+      "parent": 52192,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 52210,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 7743,
+    "childPid": 52212}},
+  {"stdout":
+   {"sha256":
+    "a9458d0b8046b865160632bbe52f1e48d2d4b4f7f9105f48e147e099513d2c2d",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-checked-build.stdout",
+    "bytes": 57},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-checked-build.stderr",
+    "bytes": 0},
+   "label": "baseline-checked-build",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-checked-build.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-checked-build.plan.json"]},
+    "samples": 38,
+    "sampledPeakRssKiB": 1971616,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 556032,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 46407,
+      "parent": 46386,
+      "lane": null},
+     {"rssKiB": 1371648,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 46413,
+      "parent": 46407,
+      "lane": null},
+     {"rssKiB": 43936,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 46386,
+      "parent": 46373,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 46386,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 8182,
+    "childPid": 46407}},
+  {"stdout":
+   {"sha256":
+    "a9458d0b8046b865160632bbe52f1e48d2d4b4f7f9105f48e147e099513d2c2d",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-final-build.stdout",
+    "bytes": 57},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-final-build.stderr",
+    "bytes": 0},
+   "label": "baseline-final-build",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-final-build.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/source-authority-20261026"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-final-build.plan.json"]},
+    "samples": 78,
+    "sampledPeakRssKiB": 1984672,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 555984,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 57733,
+      "parent": 57731,
+      "lane": null},
+     {"rssKiB": 1384656,
+      "role": null,
+      "program": "(lean)",
+      "pid": 57741,
+      "parent": 57733,
+      "lane": null},
+     {"rssKiB": 44032,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 57731,
+      "parent": 57716,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 57731,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 13275,
+    "childPid": 57733}}],
+ "fixtureSearch":
+ {"warmRequests": 0,
+  "warmMs": 0,
+  "semanticMs": 1644,
+  "semantic": "completed",
+  "route": "configured",
+  "lexicalMs": 0},
+ "fixtureReceipts":
+ [{"value":
+   {"stage": "ack",
+    "receipt":
+    "17da0a1c1bffa44845609e9ebfec4042f86285e27626a500ca19ee8e3d9eeaa3",
+    "pid": 51974,
+    "observedMs": 2795583350,
+    "data": {"rpcCompleted": true, "offerAccepted": true}},
+   "name": "ack.json"},
+  {"value":
+   {"stage": "numerical-51939-2795582902916541",
+    "receipt":
+    "17da0a1c1bffa44845609e9ebfec4042f86285e27626a500ca19ee8e3d9eeaa3",
+    "pid": 51939,
+    "observedMs": 2795582968,
+    "data":
+    {"status": "completed",
+     "elapsedMs": 66,
+     "counters":
+     {"sourceInput":
+      {"windows": 7,
+       "visibleCharacters": 818,
+       "vectors": 7,
+       "tokens": 450,
+       "tokenizerMappedCharacters": 818,
+       "embeddedCharacters": 818,
+       "characters": 912},
+      "source": {"unusable": 0, "hit": 7, "absent": 0},
+      "scoringPolicy":
+      "window centroid weighted by newly covered source tokens",
+      "scoredWindows": 7,
+      "scoreMs": 63,
+      "queryMs": 1,
+      "queryInput":
+      {"windows": 1,
+       "visibleCharacters": 58,
+       "vectors": 1,
+       "tokens": 22,
+       "tokenizerMappedCharacters": 58,
+       "embeddedCharacters": 58,
+       "characters": 66},
+      "query": {"unusable": 0, "hit": 1, "absent": 0},
+      "projectionRetainedBytes": 21504,
+      "projectionReadMsWithinScore": 4,
+      "projectionMisses": 7,
+      "projectionHits": 0,
+      "phase": "encoder-reply",
+      "matrixRows": 7,
+      "matrixOpens": 0,
+      "matrixOpenMs": 0,
+      "encoder":
+      {"startupUs": 31323,
+       "sourceEncodeUs": 0,
+       "scoreUs": 7,
+       "requestUs": 61,
+       "replies": 1,
+       "queryEncodeUs": 0,
+       "modelLoaded": false,
+       "leaseUs": 0,
+       "initializeUs": 0},
+      "cacheMs": 0},
+     "corpus":
+     {"windowReferences": 7,
+      "purpose": "keyed-discovery",
+      "numerical": true,
+      "durableDocuments": 7,
+      "documents": 7}}},
+   "name": "numerical-51939-2795582902916541.json"},
+  {"value":
+   {"stage": "search",
+    "receipt":
+    "17da0a1c1bffa44845609e9ebfec4042f86285e27626a500ca19ee8e3d9eeaa3",
+    "pid": 51924,
+    "observedMs": 2795583245,
+    "data":
+    {"turn": "recall-turn",
+     "trace":
+     {"warmRequests": 0,
+      "warmMs": 0,
+      "semanticMs": 1644,
+      "semantic": "completed",
+      "route": "configured",
+      "lexicalMs": 0},
+     "semanticReadyMs": 2795582987,
+     "semanticFinishDeadlineMs": 2795610253,
+     "semanticDeadlineMs": 2795595926,
+     "searchStartedMs": 2795581600,
+     "reason":
+     "selected=2 visible=2 new-roots=5 completed=0 advisory=6 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=mixed",
+     "localUnions": 0,
+     "initialSearch": true,
+     "finishReadyWithinHook": true,
+     "equalityOrigin": null,
+     "epoch": 1,
+     "disposition": "offered",
+     "deadlineMs": 2795610253,
+     "completed": 0}},
+   "name": "search.json"},
+  {"value":
+   {"stage": "synaptic-delivery",
+    "receipt":
+    "17da0a1c1bffa44845609e9ebfec4042f86285e27626a500ca19ee8e3d9eeaa3",
+    "pid": 51936,
+    "observedMs": 2795583241,
+    "data":
+    {"unsupportedOwners": 0,
+     "unlocatedFileOwners": 1,
+     "originalReferences": [],
+     "originalOutputs": [],
+     "offers":
+     [{"offer":
+       {"target":
+        {"range":
+         {"source":
+          {"subject":
+           {"file":
+            {"file":
+             {"relative": "src/source.cpp",
+              "fingerprint":
+              "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+              "bytes": 135}}},
+           "last": 14,
+           "first": 14}}},
+        "source":
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 14,
+         "first": 14},
+        "priority": 0,
+        "kind": "support",
+        "evidence":
+        "0c8a68bf6ff49b04641dbbfcb0e5d3b472cd45533ae639c307d85f023edc2cf7"},
+       "bodyDelivered": true},
+      {"offer":
+       {"target":
+        {"range":
+         {"source":
+          {"subject":
+           {"file":
+            {"file":
+             {"relative": "src/source.cpp",
+              "fingerprint":
+              "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+              "bytes": 135}}},
+           "last": 11,
+           "first": 11}}},
+        "source":
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 11,
+         "first": 11},
+        "priority": 0,
+        "kind": "support",
+        "evidence":
+        "0e5952264e4499aa1bf80b725c7c0184b6c082d6fcfe8748ef32e486383e4b3a"},
+       "bodyDelivered": true},
+      {"offer":
+       {"target":
+        {"range":
+         {"source":
+          {"subject":
+           {"file":
+            {"file":
+             {"relative": "src/source.cpp",
+              "fingerprint":
+              "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+              "bytes": 135}}},
+           "last": 14,
+           "first": 14}}},
+        "source":
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 14,
+         "first": 14},
+        "priority": 0,
+        "kind": "support",
+        "evidence":
+        "2991c2d888dafcf56b5b10c9bc368a81d21ff18b125f1b48d32a38e7fc8a72f5"},
+       "bodyDelivered": true},
+      {"offer":
+       {"target":
+        {"range":
+         {"source":
+          {"subject":
+           {"file":
+            {"file":
+             {"relative": "src/source.cpp",
+              "fingerprint":
+              "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+              "bytes": 135}}},
+           "last": 11,
+           "first": 11}}},
+        "source":
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 11,
+         "first": 11},
+        "priority": 0,
+        "kind": "support",
+        "evidence":
+        "bcd194fe731b0cf7e1d171620ab4a28c15eb9b4e91ca675c76fb1f9912c5e5ec"},
+       "bodyDelivered": true},
+      {"offer":
+       {"target":
+        {"range":
+         {"source":
+          {"subject":
+           {"file":
+            {"file":
+             {"relative": "src/source.cpp",
+              "fingerprint":
+              "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+              "bytes": 135}}},
+           "last": 11,
+           "first": 11}}},
+        "source":
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 11,
+         "first": 11},
+        "priority": 0,
+        "kind": "coquotation",
+        "evidence":
+        "96f7da5f0bb2a4512a3c88f2dd411200d49537ec9da963b6d067bb923d64ca98"},
+       "bodyDelivered": true},
+      {"offer":
+       {"target":
+        {"range":
+         {"source":
+          {"subject":
+           {"file":
+            {"file":
+             {"relative": "src/source.cpp",
+              "fingerprint":
+              "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+              "bytes": 135}}},
+           "last": 14,
+           "first": 14}}},
+        "source":
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 14,
+         "first": 14},
+        "priority": 0,
+        "kind": "coquotation",
+        "evidence":
+        "ae0dc8d0516303162ebaeb14cb90c2bde6cdaf20dbd7b07a8412361de32839d3"},
+       "bodyDelivered": true},
+      {"offer":
+       {"target":
+        {"range":
+         {"source":
+          {"subject":
+           {"file":
+            {"file":
+             {"relative": "src/source.cpp",
+              "fingerprint":
+              "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+              "bytes": 135}}},
+           "last": 14,
+           "first": 14}}},
+        "source":
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 14,
+         "first": 14},
+        "priority": 0,
+        "kind": "coquotation",
+        "evidence":
+        "130fe2f9ff3b09826af126576d7ea0d11eb999aa9d8fad2ab951444c0d9b1a39"},
+       "bodyDelivered": true},
+      {"offer":
+       {"target":
+        {"range":
+         {"source":
+          {"subject":
+           {"file":
+            {"file":
+             {"relative": "src/source.cpp",
+              "fingerprint":
+              "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+              "bytes": 135}}},
+           "last": 11,
+           "first": 11}}},
+        "source":
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 11,
+         "first": 11},
+        "priority": 0,
+        "kind": "coquotation",
+        "evidence":
+        "a7277dabb8cca41e8a0803b2a3d118c0fd24de72b15c10ea203465d9a878864d"},
+       "bodyDelivered": true},
+      {"offer":
+       {"target":
+        {"range":
+         {"source":
+          {"subject":
+           {"file":
+            {"file":
+             {"relative": "src/source.cpp",
+              "fingerprint":
+              "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+              "bytes": 135}}},
+           "last": 11,
+           "first": 11}}},
+        "source":
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 11,
+         "first": 11},
+        "priority": 1,
+        "kind": "consumption",
+        "evidence":
+        "db059ade555d5b033e4604cd779c76e04caae7bd9a4c19af2c58054113a2201c"},
+       "bodyDelivered": true}],
+     "observationAges":
+     [{"work": "v16091257481005768352",
+       "owner": "v8756678298549845531",
+       "occurrence":
+       {"useId": "read", "turn": "seed-turn", "session": "native-empty-seed"},
+       "metadataFailure": null,
+       "database":
+       "31dafe3d1158ef6db0918ef3db199b2440aaf30cec162216915f23cac8b72103",
+       "age":
+       {"updateAfterMs": 2592000000,
+        "status": "recent",
+        "receivedUnixMs": 1792948132185,
+        "assessedUnixMs": 1792948144363}},
+      {"work": "v9151421604388305840",
+       "owner": "v7366121029029872774",
+       "occurrence":
+       {"useId": "other", "turn": "seed-turn", "session": "native-empty-seed"},
+       "metadataFailure": null,
+       "database":
+       "31dafe3d1158ef6db0918ef3db199b2440aaf30cec162216915f23cac8b72103",
+       "age":
+       {"updateAfterMs": 2592000000,
+        "status": "recent",
+        "receivedUnixMs": 1792948136738,
+        "assessedUnixMs": 1792948144363}},
+      {"work": "v12574781294298505079",
+       "owner": "v10943140934422153137",
+       "occurrence":
+       {"useId": "reread", "turn": "seed-turn", "session": "native-empty-seed"},
+       "metadataFailure": null,
+       "database":
+       "31dafe3d1158ef6db0918ef3db199b2440aaf30cec162216915f23cac8b72103",
+       "age":
+       {"updateAfterMs": 2592000000,
+        "status": "recent",
+        "receivedUnixMs": 1792948137757,
+        "assessedUnixMs": 1792948144363}}],
+     "inputs":
+     [{"usage": null,
+       "requests": 10,
+       "offers":
+       [{"target":
+         {"range":
+          {"source":
+           {"subject":
+            {"file":
+             {"file":
+              {"relative": "src/source.cpp",
+               "fingerprint":
+               "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+               "bytes": 135}}},
+            "last": 14,
+            "first": 14}}},
+         "source":
+         {"subject":
+          {"file":
+           {"file":
+            {"relative": "src/source.cpp",
+             "fingerprint":
+             "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+             "bytes": 135}}},
+          "last": 14,
+          "first": 14},
+         "priority": 0,
+         "kind": "support",
+         "evidence":
+         "0c8a68bf6ff49b04641dbbfcb0e5d3b472cd45533ae639c307d85f023edc2cf7"},
+        {"target":
+         {"range":
+          {"source":
+           {"subject":
+            {"file":
+             {"file":
+              {"relative": "src/source.cpp",
+               "fingerprint":
+               "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+               "bytes": 135}}},
+            "last": 11,
+            "first": 11}}},
+         "source":
+         {"subject":
+          {"file":
+           {"file":
+            {"relative": "src/source.cpp",
+             "fingerprint":
+             "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+             "bytes": 135}}},
+          "last": 11,
+          "first": 11},
+         "priority": 0,
+         "kind": "support",
+         "evidence":
+         "0e5952264e4499aa1bf80b725c7c0184b6c082d6fcfe8748ef32e486383e4b3a"},
+        {"target":
+         {"range":
+          {"source":
+           {"subject":
+            {"file":
+             {"file":
+              {"relative": "src/source.cpp",
+               "fingerprint":
+               "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+               "bytes": 135}}},
+            "last": 14,
+            "first": 14}}},
+         "source":
+         {"subject":
+          {"file":
+           {"file":
+            {"relative": "src/source.cpp",
+             "fingerprint":
+             "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+             "bytes": 135}}},
+          "last": 14,
+          "first": 14},
+         "priority": 0,
+         "kind": "support",
+         "evidence":
+         "2991c2d888dafcf56b5b10c9bc368a81d21ff18b125f1b48d32a38e7fc8a72f5"},
+        {"target":
+         {"range":
+          {"source":
+           {"subject":
+            {"file":
+             {"file":
+              {"relative": "src/source.cpp",
+               "fingerprint":
+               "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+               "bytes": 135}}},
+            "last": 11,
+            "first": 11}}},
+         "source":
+         {"subject":
+          {"file":
+           {"file":
+            {"relative": "src/source.cpp",
+             "fingerprint":
+             "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+             "bytes": 135}}},
+          "last": 11,
+          "first": 11},
+         "priority": 0,
+         "kind": "support",
+         "evidence":
+         "bcd194fe731b0cf7e1d171620ab4a28c15eb9b4e91ca675c76fb1f9912c5e5ec"},
+        {"target":
+         {"range":
+          {"source":
+           {"subject":
+            {"file":
+             {"file":
+              {"relative": "src/source.cpp",
+               "fingerprint":
+               "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+               "bytes": 135}}},
+            "last": 11,
+            "first": 11}}},
+         "source":
+         {"subject":
+          {"file":
+           {"file":
+            {"relative": "src/source.cpp",
+             "fingerprint":
+             "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+             "bytes": 135}}},
+          "last": 11,
+          "first": 11},
+         "priority": 0,
+         "kind": "coquotation",
+         "evidence":
+         "96f7da5f0bb2a4512a3c88f2dd411200d49537ec9da963b6d067bb923d64ca98"},
+        {"target":
+         {"range":
+          {"source":
+           {"subject":
+            {"file":
+             {"file":
+              {"relative": "src/source.cpp",
+               "fingerprint":
+               "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+               "bytes": 135}}},
+            "last": 14,
+            "first": 14}}},
+         "source":
+         {"subject":
+          {"file":
+           {"file":
+            {"relative": "src/source.cpp",
+             "fingerprint":
+             "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+             "bytes": 135}}},
+          "last": 14,
+          "first": 14},
+         "priority": 0,
+         "kind": "coquotation",
+         "evidence":
+         "ae0dc8d0516303162ebaeb14cb90c2bde6cdaf20dbd7b07a8412361de32839d3"},
+        {"target":
+         {"range":
+          {"source":
+           {"subject":
+            {"file":
+             {"file":
+              {"relative": "src/source.cpp",
+               "fingerprint":
+               "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+               "bytes": 135}}},
+            "last": 14,
+            "first": 14}}},
+         "source":
+         {"subject":
+          {"file":
+           {"file":
+            {"relative": "src/source.cpp",
+             "fingerprint":
+             "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+             "bytes": 135}}},
+          "last": 14,
+          "first": 14},
+         "priority": 0,
+         "kind": "coquotation",
+         "evidence":
+         "130fe2f9ff3b09826af126576d7ea0d11eb999aa9d8fad2ab951444c0d9b1a39"},
+        {"target":
+         {"range":
+          {"source":
+           {"subject":
+            {"file":
+             {"file":
+              {"relative": "src/source.cpp",
+               "fingerprint":
+               "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+               "bytes": 135}}},
+            "last": 11,
+            "first": 11}}},
+         "source":
+         {"subject":
+          {"file":
+           {"file":
+            {"relative": "src/source.cpp",
+             "fingerprint":
+             "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+             "bytes": 135}}},
+          "last": 11,
+          "first": 11},
+         "priority": 0,
+         "kind": "coquotation",
+         "evidence":
+         "a7277dabb8cca41e8a0803b2a3d118c0fd24de72b15c10ea203465d9a878864d"},
+        {"target":
+         {"range":
+          {"source":
+           {"subject":
+            {"file":
+             {"file":
+              {"relative": "src/source.cpp",
+               "fingerprint":
+               "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+               "bytes": 135}}},
+            "last": 11,
+            "first": 11}}},
+         "source":
+         {"subject":
+          {"file":
+           {"file":
+            {"relative": "src/source.cpp",
+             "fingerprint":
+             "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+             "bytes": 135}}},
+          "last": 11,
+          "first": 11},
+         "priority": 1,
+         "kind": "consumption",
+         "evidence":
+         "db059ade555d5b033e4604cd779c76e04caae7bd9a4c19af2c58054113a2201c"}],
+       "index":
+       {"root":
+        {"rows": 123,
+         "offset": 53747,
+         "last": "provenance",
+         "height": 1,
+         "first":
+         "fact:0c8a68bf6ff49b04641dbbfcb0e5d3b472cd45533ae639c307d85f023edc2cf7",
+         "checksum":
+         "26083a2e7bd82ebd75f484f64f2dac373cac4f380eb23f32922c501cba1a8237",
+         "bytes": 2884},
+        "revision": 1,
+        "identity":
+        "6d7a99902c980bcacbe8698325e32a6e9a7ac20dd8dbe4a07567a841c132a7a7",
+        "bytes": 56631,
+        "authority":
+        "advisory:31dafe3d1158ef6db0918ef3db199b2440aaf30cec162216915f23cac8b72103:recommendations"},
+       "failure": null,
+       "facts": 13,
+       "complete": true,
+       "bytes": 8007,
+       "available": true}],
+     "complete": true,
+     "bundles":
+     [{"priority": 0,
+       "members":
+       [{"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 14,
+         "first": 14},
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 11,
+         "first": 11}],
+       "located": true,
+       "kind": "claim",
+       "identity":
+       "b25c5693813567308eb614db0089e7a0716bfc5888d74ffbf0cf700fb085761d",
+       "bodyDelivered": true},
+      {"priority": 0,
+       "members":
+       [{"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 14,
+         "first": 14},
+        {"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 11,
+         "first": 11}],
+       "located": true,
+       "kind": "answer",
+       "identity":
+       "c0a2e4d210e7162fd3cc42ce65ec262dbe3cd7e9ddc634e5c22f01e7d140bd10",
+       "bodyDelivered": true},
+      {"priority": 1,
+       "members":
+       [{"subject":
+         {"file":
+          {"file":
+           {"relative": "src/source.cpp",
+            "fingerprint":
+            "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+            "bytes": 135}}},
+         "last": 11,
+         "first": 11}],
+       "located": true,
+       "kind": "consumption",
+       "identity":
+       "db059ade555d5b033e4604cd779c76e04caae7bd9a4c19af2c58054113a2201c",
+       "bodyDelivered": true}]}},
+   "name": "synaptic-delivery.json"},
+  {"value":
+   {"stage": "transport",
+    "receipt":
+    "17da0a1c1bffa44845609e9ebfec4042f86285e27626a500ca19ee8e3d9eeaa3",
+    "pid": 51931,
+    "observedMs": 2795583246,
+    "data": {"rpcMs": 1648, "managerMs": 2, "captureMs": 0}},
+   "name": "transport.json"},
+  {"value":
+   {"stage": "numerical-51966-2795583087124416",
+    "receipt":
+    "17da0a1c1bffa44845609e9ebfec4042f86285e27626a500ca19ee8e3d9eeaa3",
+    "pid": 51966,
+    "observedMs": 2795583204,
+    "data":
+    {"status": "completed",
+     "elapsedMs": 117,
+     "counters":
+     {"sourceInput":
+      {"windows": 7,
+       "visibleCharacters": 464,
+       "vectors": 7,
+       "tokens": 260,
+       "tokenizerMappedCharacters": 464,
+       "embeddedCharacters": 464,
+       "characters": 511},
+      "source": {"unusable": 0, "hit": 7, "absent": 0},
+      "scoringPolicy":
+      "window centroid weighted by newly covered source tokens",
+      "scoredWindows": 7,
+      "scoreMs": 115,
+      "queryMs": 1,
+      "queryInput":
+      {"windows": 1,
+       "visibleCharacters": 58,
+       "vectors": 1,
+       "tokens": 22,
+       "tokenizerMappedCharacters": 58,
+       "embeddedCharacters": 58,
+       "characters": 66},
+      "query": {"unusable": 0, "hit": 1, "absent": 0},
+      "projectionRetainedBytes": 43008,
+      "projectionReadMsWithinScore": 2,
+      "projectionMisses": 7,
+      "projectionHits": 0,
+      "phase": "encoder-reply",
+      "matrixRows": 7,
+      "matrixOpens": 0,
+      "matrixOpenMs": 0,
+      "encoder":
+      {"startupUs": 0,
+       "sourceEncodeUs": 0,
+       "scoreUs": 14,
+       "requestUs": 102,
+       "replies": 1,
+       "queryEncodeUs": 0,
+       "modelLoaded": false,
+       "leaseUs": 0,
+       "initializeUs": 0},
+      "cacheMs": 0},
+     "corpus":
+     {"windowReferences": 7,
+      "purpose": "focus",
+      "numerical": true,
+      "durableDocuments": 7,
+      "documents": 7}}},
+   "name": "numerical-51966-2795583087124416.json"}],
+ "fixtureRecall":
+ {"stdoutSha256":
+  "c48b15cebdd8890f0434e4c919cc3419120877dc6f38953f88c5b2cbb50fbc0a",
+  "specSha256":
+  "ab087e034cdd82a4eacd97c5030bb3f8d916baab54b3330e51fc0a7b5771d3af",
+  "sourceGraphFiles":
+  {"writer": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "publisher.guard":
+   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "head": "4f071322b516272f63539e32fd65e9bf9fb53dfafa4d932a3a6b2968b922569c",
+   "31dafe3d1158ef6db0918ef3db199b2440aaf30cec162216915f23cac8b72103.pages":
+   "3e3d1608e07a720865a360165d27e24eddb42b2bc53916e0e3f054a7fd73277d"},
+  "sameSourceFacts": true,
+  "samePublishedPagePrefix": true,
+  "requirements":
+  [{"unlocated": false,
+    "storedOwners": ["v8756678298549845531", "v10943140934422153137"],
+    "stored": true,
+    "name": "needed-symbol",
+    "bodyDelivered": true},
+   {"unlocated": false,
+    "storedOwners": ["v8756678298549845531", "v7366121029029872774"],
+    "stored": true,
+    "name": "other-symbol",
+    "bodyDelivered": true}],
+  "requiredDelivery":
+  {"targetPercent": 95,
+   "targetMet": true,
+   "missing": [],
+   "initiallyUnavailable": [],
+   "eligible": 2,
+   "delivered": 2},
+  "originalRows": 10,
+  "originalDocuments": 7,
+  "frozenEvidence":
+  {"units":
+   [{"names": ["needed-symbol"],
+     "alternatives":
+     [{"subject":
+       {"file":
+        {"file":
+         {"relative": "src/source.cpp",
+          "fingerprint":
+          "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+          "bytes": 135}}},
+       "last": 11,
+       "first": 11}]},
+    {"names": ["other-symbol"],
+     "alternatives":
+     [{"subject":
+       {"file":
+        {"file":
+         {"relative": "src/source.cpp",
+          "fingerprint":
+          "b242c07d74895b9f38da276a2a065cec08c7d6b8bc4a811b3e51be449cfa365d",
+          "bytes": 135}}},
+       "last": 14,
+       "first": 14}]}],
+   "initiallyUnavailable": []},
+  "bodySha256":
+  "94b31374d3d8743c35d39c347a2f9a604cda957af8419bc3da4db2ce4e6fca58"},
+ "fixtureHookTiming":
+ {"stdoutSha256":
+  "c48b15cebdd8890f0434e4c919cc3419120877dc6f38953f88c5b2cbb50fbc0a",
+  "exitCode": 0,
+  "elapsedMs": 1951},
+ "diskPreflight":
+ {"sha256": "2f53a4f352ca8fa58e779c1585c96bbdf7129519658106aa2c87a9deebade872",
+  "path":
+  "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build-preflight.stderr",
+  "bytes": 54},
+ "completedTestDataDeleted":
+ [{"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-lock-fixtures",
+   "logicalBytes": 15163},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-final-fixtures",
+   "logicalBytes": 15166},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-lock-fixtures",
+   "logicalBytes": 25590},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-prefix-fixtures",
+   "logicalBytes": 68014},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-data",
+   "logicalBytes": 5936},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/candidate-data",
+   "logicalBytes": 61436},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native/work.egg",
+   "logicalBytes": 624206},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native/work.egg.guard",
+   "logicalBytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native/output.egg",
+   "logicalBytes": 430598},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native/recall-source.egg",
+   "logicalBytes": 201641},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native/data",
+   "logicalBytes": 217298},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native/recovery-data",
+   "logicalBytes": 328},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/native/recall-data",
+   "logicalBytes": 172274},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/build/StudyMain",
+   "logicalBytes": 104579520},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/source-authority-20261026/baseline-build/StudyMain",
+   "logicalBytes": 105273888}],
+ "capturedPublication":
+ {"viewSource":
+  {"root":
+   {"rows": 187,
+    "offset": 1798,
+    "last": "workSurfaces:5:0",
+    "height": 0,
+    "first": "all:0",
+    "checksum":
+    "0805058222ed8be04232e81c1538e37e3b710b7b29ab7525d9fb72a3ca7d193d",
+    "bytes": 5744},
+   "revision": 1,
+   "identity":
+   "a43eae36c620e0c495d95b30af6c15cf149331c786ddc132a61a5eb932633d0b",
+   "bytes": 7542,
+   "authority":
+   "[\"atom\",[101,103,103,32,97,117,116,104,111,114,105,116,121,32,97,101,52,98,52,49,49,49,101,53,102,50,98,98,56,52,98,97,54,51,56,55,98,98,50,51,98,102,56,99,55,48,56,48,52,53,97,51,56,55,57,53,53,52,98,54,56,51,97,55,53,98,100,102,101,57,50,53,50,53,52,98,49,102]]"},
+  "replay":
+  {"usage": 0,
+   "unknown": 1,
+   "turns": 1,
+   "pending": 0,
+   "consumed": 0,
+   "complete": true,
+   "ambiguousNativeUses": 0},
+  "nativeDebt": true,
+  "later":
+  {"root":
+   {"rows": 296,
+    "offset": 17863,
+    "last": "workSurfaces:5:0",
+    "height": 1,
+    "first": "all:0",
+    "checksum":
+    "061752ddbb3048089d819b534fd331cb4d1c72cb261d88e1ec2f7ddc2180ff94",
+    "bytes": 199},
+   "revision": 2,
+   "identity":
+   "a43eae36c620e0c495d95b30af6c15cf149331c786ddc132a61a5eb932633d0b",
+   "bytes": 18062,
+   "authority":
+   "[\"atom\",[101,103,103,32,97,117,116,104,111,114,105,116,121,32,97,101,52,98,52,49,49,49,101,53,102,50,98,98,56,52,98,97,54,51,56,55,98,98,50,51,98,102,56,99,55,48,56,48,52,53,97,51,56,55,57,53,53,52,98,54,56,51,97,55,53,98,100,102,101,57,50,53,50,53,52,98,49,102]]"},
+  "journalDebt": true,
+  "captured":
+  {"root":
+   {"rows": 187,
+    "offset": 1798,
+    "last": "workSurfaces:5:0",
+    "height": 0,
+    "first": "all:0",
+    "checksum":
+    "0805058222ed8be04232e81c1538e37e3b710b7b29ab7525d9fb72a3ca7d193d",
+    "bytes": 5744},
+   "revision": 1,
+   "identity":
+   "a43eae36c620e0c495d95b30af6c15cf149331c786ddc132a61a5eb932633d0b",
+   "bytes": 7542,
+   "authority":
+   "[\"atom\",[101,103,103,32,97,117,116,104,111,114,105,116,121,32,97,101,52,98,52,49,49,49,101,53,102,50,98,98,56,52,98,97,54,51,56,55,98,98,50,51,98,102,56,99,55,48,56,48,52,53,97,51,56,55,57,53,53,52,98,54,56,51,97,55,53,98,100,102,101,57,50,53,50,53,52,98,49,102]]"}},
+ "candidate":
+ {"sourceWriterHeld": true,
+  "sourceProducerResolvedInterval": true,
+  "sourceHeadUnchanged": true,
+  "retryDuplicates": 0,
+  "replayComplete": true,
+  "missingIntervalNotBackfilled": true,
+  "laterPublicationDebtVisible": true,
+  "laterPrefixCaughtUp": true,
+  "capturedPrefixPreserved": true,
+  "answeringModelCalls": 0},
+ "baseline":
+ {"sourceWriterHeld": true,
+  "sourceHeadUnchanged": true,
+  "baselineError": "DB writer is busy",
+  "answeringModelCalls": 0},
+ "archiveCreated": false,
+ "answeringModelCalls": 0}

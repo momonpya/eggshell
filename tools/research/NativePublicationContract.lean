@@ -24,7 +24,7 @@ run_meta do
         #[``Eggshell.Synapses.Provenance.Binding.check?, ``Eggshell.Synapses.Provenance.stage],#[]),
       (``Eggshell.Synapses.Provenance.stage,
         #[``Eggshell.Synapses.Provenance.appendRows, ``Eggshell.Persistence.Store.Intern.value],
-        #[``Eggshell.DB.PageMap.withWriter, ``Eggshell.Synapses.Provenance.publish]),
+        #[``Eggshell.DB.PageMap.withWriter]),
       (``Eggshell.Plugin.flushDeferred,
         #[``Eggshell.Plugin.NativePublication.SaveReply.check?],
         #[``Eggshell.Plugin.addDeliveredGraphs]),

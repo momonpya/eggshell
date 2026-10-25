@@ -33,6 +33,7 @@
 - native-publication候補fb0b1e12…で、元本文とportable時系列を同一commitへ接続。commit前の失敗/ACK喪失再送/遅れた終了記録/DBだけの復元と再送、実Pre/Post/Stopの6観測・13journal記録、3辺、既存ContractAuditを検査した。集計RSS最大2,612,592 KiB。保存ACKから配送済みの印を作る経路も除いた。これは共有投入ACK・80人DB負荷・95%配送・総tokenの合格ではない。次の測定runtimeは残る投入/launcher検査後に固定する。[native-publication.md](docs/native-publication.md)。
 - group-publication候補279b64b2…で有界な群の出版を実装。直接保存の18条件・780要求で初回受付93件の失敗を確認し、同じ初期DB・入力の出版中核では全780件を保存、ACK済み欠落/再送重複0。1DB・80要求・50 KBは準備/commit/読戻し込み4,617ms。ただし複数DBの成功条件には遅延悪化もあり、全条件の高速化とはしない。その時点では共有サービス未接続で、背景索引のstale-writer拒否も残っていた。[group-publication.md](docs/group-publication.md)。
 - publication-service候補e4dad6a6…で実フックとkeepの保存を一つの出版入口へ接続。DBごとのcapability、出版責任者、有界な受付と失敗群の分離を実装した。loopback TCPの18条件・780要求と再送で原文/時系列の欠落・重複0を検査。負荷中の終了でtask所有一覧を失う不具合を修正し、処理中と待機中の80要求から1,524msで終了、再起動後の全件再送で80件を保持した。ACK済み2件の欠落も0。これは80人の複数PC/NAS利用、全viewの責任者集約、95%配送や総token改善の合格ではない。[publication-service.md](docs/publication-service.md)。
+- source-authority候補c7bdbb03…で、背景再生から原文intervalを再出版する経路を削除。原文writerを保持したnative診断で、旧候補のbusyを再現し、新候補の再生完了、source head不変、不足intervalを補完しないこと、保存側の再送による解消を確認した。取得済みpublicationのviewと後から増えた準備債務も分けた。実フックはstderr空、6観測・13記録・3辺を保持し、別private/読取専用の必要コード2/2を1,951msで配送。これは全viewの競合解決や95%の本評価ではない。[source-authority.md](docs/source-authority.md)。
 - 95%を整数で測るLean監査を実本文へ接続。別チャット/新private領域/読取専用DBの合成試行で必要コード2/2を配送し、意味検索完了、discovery/focus各7窓cache hit、source再埋め込み0、実フック1,843ms。これは6段階/保留実務/大規模の95%達成ではない。[required-delivery.md](docs/required-delivery.md)。
 - 旧seed費用は3,472,146総token、115フック失敗0、daemon終了超過。失敗費用を除外しない。新系列の題材1/2/3・2周目は0/6。
 

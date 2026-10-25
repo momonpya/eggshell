@@ -1,0 +1,23 @@
+# 原文を出版する処理と、来歴を読む処理を分ける
+
+2026-10-26。隔離候補のruntime SHA-256は `c7bdbb03c2c03cc03eaab44e144d6d378893d8b6c1e11ea7e108b76d4980c563`。前段は [publication-service.md](publication-service.md)。実装は `tools/research/source-authority/`、証拠は [source-authority-review.json](candidates/source-authority-review.json)。本体・README実績・releaseへは未採用。
+
+前段の実フックでは、索引ticketが `DB writer is busy` で残る記録があった。原文とportable intervalを同じcommitへ入れる経路を作った後も、背景のjournal再生が同じintervalを原文DBへ再出版しようとしていた。追加する行が0件でも、原文writerを取ってから無変更と分かる構造だった。
+
+旧候補e4dad6a6…の実コードを、原文writerを保持したnative試験で呼び、このエラーを再現した。新候補はその再出版関数を削除した。背景処理は、保存済みの元観測・occurrence・時計domain・開始/終了・保存時刻・割当順序を点照会で検査する。存在しないintervalを背景で補完せず、保存側の再送に残す。新候補は原文writerを保持したまま、来歴の再生を完了した。
+
+`Warm.refreshSource` は取得したpublicationをそのまま使う。途中でsourceの最新headを取り直して、既に処理したpublicationを破棄することはしない。元のsnapshotまでの来歴準備と、後から増えたsourceの準備は分ける。検査では、revision 1のviewを維持しながらrevision 2の原文を追加し、viewのwatermarkは1、新しいsourceに対する準備要求はtrueであることを確認した。その後revision 2まで追いつくことも確認した。
+
+ここでjournal再生の`complete=true`は、渡したpublicationに対する完了である。最新source全体の準備完了とは扱わない。最初の検査ではこの二つを混同するassertを置いて失敗したため、実際のview watermarkと最新sourceに対する`required`で検査する形へ修正し、失敗記録も保持した。全viewでこの仕組みを仕上げたとは主張しない。
+
+不足する終了記録を保存した後も、未出版のintervalは背景処理から作られないことを検査した。source headは変わらず、準備要求も残る。元のsource producerへ再送するとintervalが1件だけ保存され、その後はwriterを保持した状態でも背景再生が完了した。ACKに含まれていない証拠を、準備成功によって認定済みにする変更はない。
+
+既存ContractAudit、原文のatomic publication境界、背景処理から原文producerへ到達しない依存監査が通った。新しい照合関数からwriter/append/atomic writeへ到達しないことと、削除した再出版関数がLean環境に残らないことも検査した。これは宣言依存の監査であり、OSのdurabilityや全IO経路の形式証明ではない。
+
+実Pre/Post/Stopでは6観測・13journal記録、portable origin 6件、消費1件・supports 4件・共起4件、私有の利用4件を確認した。DBだけのコピーからも3辺を回復できた。別private領域・読取専用DBからの実UserPromptSubmitは1,951 msで、意味検索が完了し、事前固定した必要コード2件を2件とも配送した。この試行のstderrは空で、前段で出たwriter競合は出ていない。1試行から、あらゆるviewの競合が消えたとは扱わない。
+
+guardの集計RSS最大は2,691,568 KiB（約2.57 GiB）で、3.5 GiBの停止guardと4 GiB未満の制約を保った。小さい試験の開始時に空きdisk 4 GiBの事前検査で止まった記録がある。その後の小さい検査は空きdiskを2 GiB予約し、RAMのguardは変更していない。
+
+この比較は同じnative workloadと同じ検査コードを使うが、独立した小さいDBを作ったモデルなしの競合診断である。同一snapshotによるモデルのtoken比較ではない。回答モデル呼出しは0件。題材1/2/3・両周の95%配送、総token改善、80人のview更新能力、NAS、100万窓以上は未合格。全write前の保存方針、MCPの既定私有、共有viewの更新責任者、最新sourceと準備済みpublicationの差分を検索へ渡す仕事も残る。
+
+終了済みの診断DB、private journal、派生cache、検査実行体は、結果と配送本文を抽出して15対象・論理サイズ211,691,058 bytesを削除済み。archiveは作っていない。実装・制御・監査はLeanで行い、既存MiniLMの数値境界を除いてPython/Rubyを追加していない。
