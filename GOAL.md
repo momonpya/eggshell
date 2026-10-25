@@ -1,5 +1,9 @@
 # Eggshell 実用化・論文化の実行順
 
+2026-10-25 Claudeの差分warm指摘を実producerの内訳で確認。シナプス7,928ms、原文行cache29,627ms、窓所有者27ms、字句16,387ms、残り3,021ms。最大の原文行cacheをLean隔離候補canonical-deltaで元出版差分へ接続した。元head/履歴/受領記録を検証し、変更所有者の旧寄与を除き、現原文を同じ検証済み抽出器で追加。共有された原文の別所有者は保持する。無関係な時刻・利用metadataへの依存を除き、元ソースの指紋受領記録の削除・追加は追跡する。通常Leanの結び付き/本文保持証明、ContractAudit、nativeの共有行/削除復元/再追加/指紋変更/矛盾拒否/metadata中立/破損修復と独立全抽出照合が成功。IO全体の同値定理ではない。
+同じ5万窓の1窓追加はwarm本体63,858→27,686ms、guard全体67,817→31,368ms。原文cacheは内訳測定29,627→7ms、変更所有者1/復元1。既存発見投影を再使用、不足focus1窓のみ既存MiniLMで追加、推薦索引361ms/投影1/1cell/再学習0。再warm本体18ms/要求・追記0。この大規模fixtureはnativeコード行0であり、大きな原文cacheの性能には一般化しない。基底は新原文cacheを全構築し、既存の完成済み埋込/focus基底にcheckpointを設定した条件で、冷えたDBからのwarm全体の測定ではない。
+実フック3組は初回9,777/8,443/8,090ms、ACK後3,859/3,529/3,473ms。全6回semantic完了/前景warm0/親と本文byte一致。原入力14file不変、全11guard終了/所有process0、最大合計RSS2,164,976KiB。回答モデル/新seed0、新Python0、候補未採用、本体/README実績/release不変。終了済cache/旧実行体/生成Cをarchiveなしで削除し親2検査器も成功。字句/シナプスの全件処理、原文flat JSON/32MiB/全残存行のfilter・描画は残り、warm全体の差分化は未完了。実100問recall/20%追加劣化・再学習/物理圧縮/大規模PrePost/MCP保存前方針/100万窓/共有並行/全題材両周総token・品質を継続。docs/canonical-delta.mdとdocs/candidates/canonical-delta-review.jsonへ証拠。Phases0–6 active。
+
 2026-10-25 Lean隔離候補source-streamで、使われていなかったflat候補ドメイン/重複Work postingsの準備と読出しを廃止。元B-treeを所属/逆引き/元フレーム/窓鍵で検証して逐次読み、初期学習も全投影metadataを保持せず16,384行以下のbalanced tree sampleにした。上限を通常Leanで証明し、元文書/バッチ順/共有参照/欠損拒否/旧pin/差分fixtureとContractAuditが成功。認定/Exact/Union/3辺/鮮度/数値の意味は維持。
 固定5万窓のsampleと分割/代表/所属/参照数を含む51,535レコードが親候補と一致し、最終runtimeでも全件再照合。初期構築47,171ms（速度改善は主張しない）。実フック3組は初回9,769/7,933/8,694ms、ACK後3,841/3,184/3,565ms、全6回semantic完了/前景warm0/全本文が親とbyte一致。同じ推薦4,101所有者の全順位/窓/related/coverageも直接providerで一致。変更なしwarmは本体22ms/guard全体5,908ms、埋込/投影/追記0。
 完成済み旧私有字句索引をSHA一致の独立cloneで用意した1窓追加のwarm全体は本体63,858ms/guard全体67,817ms。窓所有者索引23ms/追加1、推薦索引393ms/投影1行/1cell/再学習0、行列は不足focus1窓だけを既存MiniLMで追加し、再warm本体20ms/要求・追記0。しかし来歴と字句warmの全件処理が残り、warm全体の差分化は未完了。私有字句索引がない先行試行のdisk guard停止、clone権限の設定失敗、全リセット後の成功も記録した。
