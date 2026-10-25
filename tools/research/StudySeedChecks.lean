@@ -60,7 +60,7 @@ private def coquoted : Fact → Bool
 
 /-- The fixture writes no relations. Only real hooks, a real shell, the save
 worker and the index worker may create its observations and consumption. -/
-def run (templatePath directory : String) : IO Unit := do
+def run (templatePath directory : String) (remote : Bool := false) : IO Unit := do
   let plan ← IO.ofExcept (fromJson? (α := Input) (← StudyAdmission.readJson templatePath))
   StudyAdmission.verifyArtifact plan.runtime
   for artifact in plan.pluginFiles do StudyAdmission.verifyArtifact artifact
@@ -107,6 +107,18 @@ def run (templatePath directory : String) : IO Unit := do
       ("consume", "printf NEEDED_SYMBOL"),
       ("other", "nl -ba src/source.cpp | sed -n '13,15p'"),
       ("reread", "nl -ba src/source.cpp | sed -n '10,12p'")]
+    let remoteCalls : Array Plugin.ToolEvent := if !remote then #[] else #[
+      ⟨"mcp__catalog__lookup","remote-lookup","{}",
+        (toJson #[Json.mkObj [("id",toJson "RECORD_42"),
+          ("uri",toJson "smb://customer/logs/boot.txt")]]).compress,none⟩,
+      ⟨"mcp__catalog__inspect","remote-inspect",
+        (Json.mkObj [("request",Json.mkObj [("record",toJson "RECORD_42")])]).compress,
+        (Json.mkObj [("status",toJson "available")]).compress,none⟩]
+    let toolCount := commands.size+remoteCalls.size
+    let remoteConsumption := fun all => !remote || all.any (fun fact => match fact with
+      | .consumed edge => edge.producer.useId == "remote-lookup" && edge.consumer.useId == "remote-inspect" &&
+          edge.kind == .value && edge.term == (toJson "RECORD_42").compress && !edge.rows.isEmpty
+      | _ => false)
     for index in [:commands.size] do
       let (useId, command) := commands[index]!
       let input := Json.mkObj [("command",toJson command)]
@@ -118,13 +130,20 @@ def run (templatePath directory : String) : IO Unit := do
       hook (useId ++ "-Post") (fields ++ [("hook_event_name",toJson "PostToolUse"),
         ("tool_response",Json.mkObj [("output",toJson actual.stdout),("exitCode",toJson actual.exitCode)])])
       origins database (index+1)
+    for (tool,index) in remoteCalls.zipIdx do
+      let fields := [("tool_name",toJson tool.name),("tool_use_id",toJson tool.useId),
+        ("tool_input",← IO.ofExcept (Json.parse tool.input))]
+      hook (tool.useId ++ "-Pre") (fields ++ [("hook_event_name",toJson "PreToolUse")])
+      hook (tool.useId ++ "-Post") (fields ++ [("hook_event_name",toJson "PostToolUse"),
+        ("tool_response",← IO.ofExcept (Json.parse tool.response))])
+      origins database (commands.size+index+1)
     hook "Stop" [("hook_event_name",toJson "Stop"),
       ("last_assistant_message",toJson "The symbols are supported by [first](src/source.cpp:11) and [second](src/source.cpp:14).")]
     let _ ← call "keep" #["egg","keep"] ""
-    let all ← facts database fun all => all.any isConsumption && all.any supported && all.any coquoted
+    let all ← facts database fun all => all.any isConsumption && all.any supported && all.any coquoted && remoteConsumption all
     let snapshot ← DB.PageMap.pin database
     let stored ← Provenance.records snapshot
-    check (stored.size == commands.size && stored.all (fun row => row.origin.valid && row.origin.occurrence.session == session))
+    check (stored.size == toolCount && stored.all (fun row => row.origin.valid && row.origin.occurrence.session == session))
       "native origins lost their source or temporal binding"
     let sourceReader ← Persistence.Store.NodeReader.new snapshot
     let mut checkedRows := 0
@@ -138,7 +157,7 @@ def run (templatePath directory : String) : IO Unit := do
     check (checkedRows == 4) "conditional read was not checked in the saved source"
     let journal ← Journal.prepare snapshot
     let entries ← Journal.turnEntries journal ⟨session,turn⟩
-    check (entries.size == 9) "native Pre/Post/Stop journal is incomplete"
+    check (entries.size == toolCount*2+1) "native Pre/Post/Stop journal is incomplete"
     let mut usage : Array Fact := #[]
     if let some reader ← Index.open? snapshot .user .usage then usage ← Index.allFacts reader.index
     save (root / "facts.json") (toJson all)
@@ -146,7 +165,9 @@ def run (templatePath directory : String) : IO Unit := do
     save (root / "usage.json") (toJson usage)
     save (root / "result.json") (Json.mkObj [
       ("runtime",toJson plan.runtime),("emptyInitialDatabase",toJson true),
-      ("actualToolCalls",toJson commands.size),("nativeJournalEvents",toJson entries.size),
+      ("actualShellCalls",toJson commands.size),("McpShapedHookPairs",toJson remoteCalls.size),
+      ("realMcpServerUsed",toJson false),("nativeToolCalls",toJson toolCount),
+      ("nativeJournalEvents",toJson entries.size),
       ("portableOrigins",toJson stored.size),("consumptionWitnesses",toJson (all.filter isConsumption).size),
       ("conditionalReadRows",toJson checkedRows),
       ("supports",toJson (all.filter supported).size),("coquoted",toJson (all.filter coquoted).size),

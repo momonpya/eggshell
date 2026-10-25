@@ -8,6 +8,8 @@
 
 コアはe-graphによる厳密な認定、ベクトルと導出・共起・利用の3辺による推薦、必要な元記録の期限内配送、複数DB・共有並行利用。それ以外の互換性は捨ててよい。手動の形式番号や旧経路の併存を増やさない。Leanで実装・証明・実験制御する。既存MiniLM/ONNX/NumPy等の必要な数値/OS境界は明示し、必然性のないPython/Rubyを追加しない。サブエージェントは使わない。
 
+中心の達成条件は、質問に必要で、許可されたDBの固定snapshotに原文がある履歴の95%以上を、期限内の実配送本文に含めること。窓の検索recall、位置の通知、要約、過去回答の全文だけで代用しない。配送前に必要範囲/項目を凍結し、重なる同じ根拠は一件として数える。全体平均だけで弱い題材を隠さず、題材・周・負荷条件別にも95%以上を検査する。詳細は実行計画の配送契約に従う。これは目標であり、現時点の実測達成値ではない。
+
 推薦は近似を許し、必要原文のrecallを実測する。認定は推薦top-Kで切らず、許可された全ソースの等価性・Exact・元観測・鮮度に対する完全な検索を保つ。類似度やシナプスでUnion/completedを作らない。全順位一致は推薦の診断用の基準であり、近似変更の一律禁止条件にしない。
 
 ## 保存と共有の方針
@@ -27,7 +29,8 @@
 - 主に5万窓・単一利用の隔離候補を検証した段階。10〜80人、数年相当、NAS並行障害、100万窓超の実payload、総token改善は未合格。候補は未採用。
 - 字句のpostings/頻度差分と消費の逆引きは既存。残る全件処理は変更対象列挙と来歴再生であり、同じ索引を新設し直さない。
 - seedの52 RPC原本文はすべて保存済み。warm自身の中立な来歴出版がpinを古くする不具合を隔離修正し、同一入力のモデルなし比較で親失敗/候補成功、56 native来歴の欠落0を確認。再warm224ms。これは実フックやtoken改善の合格ではない。[snapshot-refresh.md](docs/snapshot-refresh.md)。
-- 旧seed DB/private cache・比較DB/cache・旧prefixは監査後に削除済み。bee29fda固定で続行できる現存seedはない。snapshot-refreshに続くworker-lifecycle候補79bcbc4a…は、10/40/80待機client・実worker6個の終了/遅延受付試行とContractAuditが成功し、終了後の再spawn/残存0。これは共有DB負荷や元seed超過原因の再現ではない。耐久ACKの分離は未実装。次の測定runtimeは終了/耐久検査後に固定する。[worker-lifecycle.md](docs/worker-lifecycle.md)。
+- 旧seed DB/private cache・比較DB/cache・旧prefixは監査後に削除済み。bee29fda固定で続行できる現存seedはない。worker-lifecycle候補79bcbc4a…は、10/40/80待機client・実worker6個の終了/遅延受付試行とContractAuditが成功し、終了後の再spawn/残存0。これは共有DB負荷や元seed超過原因の再現ではない。[worker-lifecycle.md](docs/worker-lifecycle.md)。
+- native-publication候補fb0b1e12…で、元本文とportable時系列を同一commitへ接続。commit前の失敗/ACK喪失再送/遅れた終了記録/DBだけの復元と再送、実Pre/Post/Stopの6観測・13journal記録、3辺、既存ContractAuditを検査した。集計RSS最大2,612,592 KiB。保存ACKから配送済みの印を作る経路も除いた。これは共有投入ACK・80人DB負荷・95%配送・総tokenの合格ではない。次の測定runtimeは残る投入/launcher検査後に固定する。[native-publication.md](docs/native-publication.md)。
 - 旧seed費用は3,472,146総token、115フック失敗0、daemon終了超過。失敗費用を除外しない。新系列の題材1/2/3・2周目は0/6。
 
 ## 実行順と完了証拠
@@ -54,7 +57,7 @@ compaction、圧縮、cold読出し、配置移動、バックアップ復元を
 
 ### E：必要記憶・総token・品質
 
-Aの後に小さい配送比較を早期実施してよいが、B〜Dを飛ばして実用化完了とはしない。空DB/new chatの新seedから、同じruntime SHA・gpt-5.6-luna/xhighで題材1/2/3、2周目を実行する。runtime変更ならseedから再開。保存/来歴/索引完了を確認し、配送を見る前にDBにある必要記憶を凍結する。未配送は全6段階合計で高々1件。位置だけの通知や要約を元本文の配送と数えない。
+Aの後に小さい配送比較を早期実施してよいが、B〜Dを飛ばして実用化完了とはしない。空DB/new chatの新seedから、同じruntime SHA・gpt-5.6-luna/xhighで題材1/2/3、2周目を実行する。runtime変更ならseedから再開。保存/来歴/索引完了を確認し、配送を見る前にDBにある必要記憶を凍結する。最新の中心条件を95%以上の実配送へ更新する。全6段階合計の未配送件数も併記し、従来の「高々1件」との違いを隠さない。位置だけの通知や要約を元本文の配送と数えない。
 
 最初の候補1反復を採用の証拠にしない。現行と候補を同一snapshot/ソース/質問/model/effort/harnessで、初回/履歴あり×3題材の事前固定した同数複数反復により比較する。入力+出力総tokenにcached inputと失敗分を含め、seed費用は別記。回答品質維持とdeadlineを要する。配送量/単体試験/証明だけでは採用しない。最新AGENTSの条件に合格するまで本体・README実績・releaseへ採用しない。
 

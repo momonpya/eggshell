@@ -97,6 +97,11 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
     return false
   let compiled := !localReady || changed
   if compiled then
+    -- Inherited source links may resolve outside the selected package root.
+    -- Materialize only the module being rebuilt, preserving its exact bytes.
+    if (← (System.FilePath.mk source).symlinkMetadata).type == .symlink then
+      IO.FS.removeFile source
+      IO.FS.writeFile source text
     (← IO.getStdout).putStrLn ((Json.mkObj [("compiling",toJson name)]).compress)
     (← IO.getStdout).flush
     IO.FS.createDirAll (System.FilePath.mk localLibrary).parent.get!
