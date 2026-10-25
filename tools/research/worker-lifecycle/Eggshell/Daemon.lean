@@ -1,0 +1,424 @@
+module
+
+public import Eggshell.PluginCli
+public import Eggshell.DaemonWire
+public import Eggshell.ObservationAge
+
+@[expose] public section
+
+namespace Eggshell.Plugin.Daemon
+
+open Lean Std Async TCP
+
+
+def serveRequest (session secret : String) (json : Json) : IO (Json × Bool) := do
+  if optionalString json "secret" != some secret then
+    pure (response (.error "unauthorized daemon request"), false)
+  else
+    match optionalString json "kind" with
+    | some "hook" =>
+        let input := json.getObjValD "payload"
+        if optionalString input "session_id" != some session then
+          return (response (.error "wrong chat manager"), false)
+        let started ← IO.monoMsNow
+        let dispatched ← try pure (.ok (← dispatchHook input))
+          catch error => pure (.error error.toString)
+        Receipt.observe (optionalString input "_eggshell_receipt") "dispatch" (Json.mkObj [
+          ("elapsedMs", toJson ((← IO.monoMsNow) - started)),
+          ("completed", toJson dispatched.isOk),
+          ("error", match dispatched with | .error error => toJson error | .ok _ => Json.null)])
+        pure (response dispatched, false)
+    | some "ack" =>
+        try
+          let id ← IO.ofExcept (requiredString (json.getObjValD "payload") "receipt")
+          let accepted ← acknowledge session id
+          pure (response (.ok (toJson accepted).compress), false)
+        catch error => pure (response (.error error.toString), false)
+    | some "ping" => pure (response (.ok (toString (← IO.monoMsNow))), false)
+    | some "shutdown" => pure (response (.ok ""), true)
+    | _ => pure (response (.error "unknown daemon request"), false)
+
+/--
+Serve one occurrence for this chat. Search and saving have independent worker
+processes; the state lock covers only short metadata transitions.
+-/
+def serveClient (session secret : String) (stopping : IO.Ref Bool)
+    (client : Socket.Client) : IO Unit := do
+  let (reply, stop) ← try
+      let bytes ← receiveFrame client
+      let text ← match String.fromUTF8? bytes with
+        | some text => pure text
+        | none => throw (IO.userError "daemon request is not UTF-8")
+      let json ← match Json.parse text with
+        | .ok json => pure json
+        | .error message => throw (IO.userError message)
+      serveRequest session secret json
+    catch error => pure (response (.error error.toString), false)
+  sendFrame client reply.compress.toUTF8
+  if stop then stopping.set true
+
+def retainRunning (tasks : List (Task (Except IO.Error Unit))) :
+    IO (List (Task (Except IO.Error Unit))) := do
+  let mut running := []
+  for task in tasks do
+    if ← IO.hasFinished task then
+      if let .error error ← IO.wait task then
+        IO.eprintln s!"eggshelld client: {error}"
+    else
+      running := task :: running
+  pure running
+
+def removeEndpointIfOwned (endpoint : Endpoint) : IO Unit := do
+  let path ← endpointPath endpoint.session
+  try
+    if let some current ← (readJson? path endpointJsonDefaults : IO (Option Endpoint)) then
+      if current.secret = endpoint.secret then removeIfExists path
+  catch _ => pure ()
+
+def run (session : String) : IO UInt32 := do
+  let files ← sessionFiles session
+  Persistence.withLockWithin (files.directory / "manager") 0 do
+    runOwned session
+where
+ runOwned (session : String) : IO UInt32 := do
+  let path ← endpointPath session
+  if let some parent := path.parent then IO.FS.createDirAll parent
+  let server ← Socket.Server.mk
+  server.bind (loopback 0)
+  server.listen 128
+  server.noDelay
+  let address ← server.getSockName
+  let secret := Blake3.hex (← IO.getRandomBytes 32)
+  let endpoint : Endpoint := {
+    session
+    pid := (← IO.Process.getPID).toNat
+    port := address.port.toNat
+    secret
+    generation := ← desiredGeneration
+  }
+  writeJson path endpoint
+  Persistence.privateFile path
+  let stopping ← IO.mkRef false
+  let mut clients : List (Task (Except IO.Error Unit)) := []
+  let mut lastActivity ← IO.monoMsNow
+  let mut saves : List (Task (Except IO.Error Unit)) := []
+  let mut indexes : List (Task (Except IO.Error Unit)) := []
+  let saveCursor ← IO.mkRef ("", ([] : List String))
+  let mut nextSave : Nat := 0
+  let mut nextIndex : Nat := 0
+  try
+    while !(← stopping.get) do
+      match ← server.tryAccept with
+      | none => IO.sleep 1
+      | some client =>
+          lastActivity ← IO.monoMsNow
+          if clients.length < 32 then
+            clients := (← IO.asTask (serveClient session secret stopping client) .dedicated) :: clients
+      clients ← retainRunning clients
+      saves ← retainRunning saves
+      indexes ← retainRunning indexes
+      let now ← IO.monoMsNow
+      if saves.isEmpty && now ≥ nextSave then
+        saves := [← IO.asTask (flushDeferred session (now + 60000) (some saveCursor)) .dedicated]
+        nextSave := now + 1000
+      if indexes.isEmpty && now ≥ nextIndex then
+        indexes := [← IO.asTask (flushIndexes session (now + 60000)) .dedicated]
+        nextIndex := now + 1000
+      if saves.isEmpty && indexes.isEmpty && now > lastActivity + 300000 then stopping.set true
+    pure 0
+  catch error =>
+    IO.eprintln s!"eggshelld: {error}"
+    pure 1
+  finally
+    for task in clients ++ saves ++ indexes do IO.cancel task
+    Worker.shutdown
+    removeEndpointIfOwned endpoint
+
+
+def loadEndpoint (session : String) : IO Endpoint := do
+  let path ← endpointPath session
+  let some endpoint ← (readJson? path endpointJsonDefaults : IO (Option Endpoint)) |
+    throw (IO.userError "eggshelld is not running")
+  pure endpoint
+
+def spawn (session : String) : IO Unit := do
+  let executable ← daemonExecutable
+  let _ ← IO.Process.spawn {
+    cmd := executable.toString
+    args := #["codex-daemon", session]
+    stdin := .null
+    stdout := .null
+    stderr := .null
+    setsid := true
+  }
+  pure ()
+
+def readyEndpoint (session : String) : IO Endpoint := do
+  let endpoint ← loadEndpoint session
+  if endpoint.session != session then throw (IO.userError "wrong chat endpoint")
+  let expected ← desiredGeneration
+  if !endpoint.compatible expected then
+    throw (IO.userError "eggshelld executable generation is stale")
+  let _ ← exchange endpoint "ping" (budget := 250)
+  pure endpoint
+
+partial def awaitEndpoint (session : String) : Nat → IO Endpoint
+  | 0 => throw (IO.userError "eggshelld did not become ready")
+  | attempts + 1 =>
+      try
+        readyEndpoint session
+      catch _ =>
+        IO.sleep 10
+        awaitEndpoint session attempts
+
+def ensure (session : String) : IO Endpoint := do
+  try readyEndpoint session
+  catch _ => Persistence.withLockWithin (← startupLock session) 200 do
+    try readyEndpoint session
+    catch _ =>
+      try
+        let stale ← loadEndpoint session
+        let _ ← exchange stale "shutdown" (budget := 250)
+      catch _ => pure ()
+      removeIfExists (← endpointPath session)
+      spawn session
+      awaitEndpoint session startupAttempts
+
+def attachClientConfig (input : Json) (config : Option String) : Json :=
+  match config with
+  | some path => input.setObjVal! "_eggshell_config" path
+  | none => input
+
+/-- The RPC subprocess owns every potentially blocking transport operation. -/
+def rpcDeadline (now : Nat) (supplied : Option Nat) : Nat :=
+  supplied.getD (now + 24000)
+
+theorem rpc_preserves_supplied_deadline (now deadline : Nat) :
+    rpcDeadline now (some deadline) = deadline := rfl
+
+def rpcClient (kind : String) : IO UInt32 := do
+  let result ← try
+    let input ← IO.ofExcept (Json.parse (← (← IO.getStdin).getLine))
+    if kind == "receipt" then
+      let id ← IO.ofExcept (requiredString input "receipt")
+      Receipt.write id "published" (input.getObjValD "publication")
+      let ack := input.getObjValD "ack"
+      if ack != Json.null then
+        let acknowledged ← try
+          let session ← IO.ofExcept (requiredString ack "session_id")
+          let endpoint ← ensure session
+          let deadline ← IO.ofExcept (input.getObjValAs? Nat "_eggshell_rpc_deadline")
+          let accepted ← exchangeBefore endpoint "ack" ack deadline
+          pure (Json.mkObj [("rpcCompleted", toJson true),
+            ("offerAccepted", (Json.parse accepted).toOption.getD Json.null)])
+          catch error => pure (Json.mkObj [("rpcCompleted", toJson false), ("error", toJson error.toString)])
+        Receipt.write id "ack" acknowledged
+      pure (Json.mkObj [("output", toJson "")])
+    else do
+      let session ← IO.ofExcept (requiredString input "session_id")
+      let endpoint ← ensure session
+      let deadline := rpcDeadline (← IO.monoMsNow)
+        (input.getObjValAs? Nat "_eggshell_rpc_deadline").toOption
+      let output ← exchangeBefore endpoint kind input deadline
+      pure (Json.mkObj [("output", output)])
+    catch error => pure (Json.mkObj [("error", error.toString)])
+  IO.println result.compress
+  pure 0
+
+/-- The supervisor kills and reaps its process group before returning on timeout. -/
+def boundedRpc (kind : String) (input : Json) (deadline : Nat) : IO (Option String) := do
+  let child ← IO.Process.spawn {
+    cmd := (← IO.appPath).toString, args := #["codex-rpc", kind]
+    stdin := .piped, stdout := .piped, stderr := .null, setsid := true }
+  let task ← IO.asTask (do
+    child.stdin.putStr ((input.setObjVal! "_eggshell_rpc_deadline" (toJson deadline)).compress ++ "\n")
+    child.stdin.flush
+    -- RPC stdin is one JSON line; it must not wait for EOF from its parent.
+    child.stdout.readToEnd) .dedicated
+  try
+    let result ← Worker.awaitUntil task deadline
+    Worker.killGroup child
+    let _ ← child.wait
+    let _ ← IO.wait task
+    pure result
+  catch error =>
+    Worker.killGroup child
+    let _ ← child.wait
+    throw error
+
+def validHookOutput (text : String) : Bool :=
+  match Json.parse text with
+  | .ok (.obj _) => true
+  | _ => false
+
+/-- Only a decoded JSON object may be forwarded as a completed hook response. -/
+structure HookOutput where
+  text : String
+  valid : validHookOutput text = true
+
+inductive HookReply where
+  | completed (output : HookOutput)
+  | incomplete
+
+def decodeHookReply (reply : Option Json) : HookReply :=
+  match reply.bind (optionalString · "output") with
+  | none => .incomplete
+  | some text =>
+      if valid : validHookOutput text = true then .completed ⟨text, valid⟩
+      else .incomplete
+
+def incompleteHook (event : String) : String :=
+  if ["UserPromptSubmit", "PreToolUse", "PostToolUse"].contains event then
+    hookContext event pendingSearch.text
+  else
+    systemMessage "Eggshell hook did not complete. Memory delivery and this hook's processing are unconfirmed."
+
+def HookReply.output (event : String) : HookReply → String
+  | .completed output => output.text
+  | .incomplete => incompleteHook event
+
+def HookReply.isComplete : HookReply → Bool
+  | .completed _ => true
+  | .incomplete => false
+
+theorem valid_hook_reply_is_preserved (reply : Option Json) (event text : String)
+    (field : reply.bind (optionalString · "output") = some text)
+    (valid : validHookOutput text = true) :
+    (decodeHookReply reply).output event = text := by
+  simp [decodeHookReply, field, valid, HookReply.output]
+
+theorem absent_hook_reply_is_incomplete (event : String) :
+    (decodeHookReply none).output event = incompleteHook event ∧
+      (decodeHookReply none).isComplete = false := by
+  exact ⟨rfl, rfl⟩
+
+theorem invalid_hook_reply_is_incomplete (reply : Option Json) (text : String)
+    (field : reply.bind (optionalString · "output") = some text)
+    (invalid : validHookOutput text = false) :
+    decodeHookReply reply = .incomplete := by
+  simp [decodeHookReply, field, invalid]
+
+def hookRequest (input : Json) (deadline : Nat) (receipt : String) : IO Json := do
+  let receivedUnixMs ← ObservationAge.now
+  let observedNanos ← IO.monoNanosNow
+  let event := (optionalString input "hook_event_name").getD ""
+  try
+    let input := attachClientConfig input (← IO.getEnv "EGGSHELL_CONFIG")
+      |>.setObjVal! "_eggshell_received_unix_ms" (toJson receivedUnixMs)
+    let captureStarted ← IO.monoMsNow
+    captureTerminal input
+    let captureMs := (← IO.monoMsNow) - captureStarted
+    let input := (input.setObjVal! "_eggshell_deadline" (toJson (deadline - 250)))
+      |>.setObjVal! "_eggshell_receipt" receipt
+    let session ← IO.ofExcept (requiredString input "session_id")
+    let ensureStarted ← IO.monoMsNow
+    let endpoint ← ensure session
+    let input := (input.setObjVal! "_eggshell_synapse_clock" (toJson (Sha256.hex endpoint.secret.toUTF8)))
+      |>.setObjVal! "_eggshell_synapse_nanos" (toJson observedNanos)
+    let ready ← IO.monoMsNow
+    let output ← exchangeBefore endpoint "hook" input (deadline - 250)
+    Receipt.observe (some receipt) "transport" (Json.mkObj [
+      ("captureMs", toJson captureMs), ("managerMs", toJson (ready - ensureStarted)),
+      ("rpcMs", toJson ((← IO.monoMsNow) - ready))])
+    let json := some (Json.mkObj [("output", output)])
+    let reply := decodeHookReply json
+    let ack := if reply.isComplete && output != emptyHook then
+      Json.mkObj [("session_id", session), ("receipt", receipt)] else Json.null
+    pure (Json.mkObj [("output", reply.output event), ("ack", ack)])
+  catch error =>
+    Receipt.observe (some receipt) "failure" (Json.mkObj [("stage", toJson "request"), ("error", toJson error.toString)])
+    IO.eprintln s!"Eggshell hook failed open: {error}"
+    pure (Json.mkObj [("output", incompleteHook event)])
+
+/-- All ingress, journaling and transport IO belongs to this supervised child.
+The parent alone forwards the hook response and acknowledges that write. -/
+def hookProcess (deadline : Nat) (receipt : String) : IO UInt32 := do
+  let started ← IO.monoMsNow
+  Receipt.observe (some receipt) "ingress" (Json.mkObj [("deadlineMs", toJson deadline)])
+  let response ← try
+    let inputText ← (← IO.getStdin).readToEnd
+    let input ← IO.ofExcept (Json.parse inputText)
+    Receipt.observe (some receipt) "request" (Json.mkObj [
+      ("inputMs", toJson ((← IO.monoMsNow) - started)),
+      ("inputBytes", toJson inputText.utf8ByteSize),
+      ("event", toJson (optionalString input "hook_event_name")),
+      ("session", toJson (optionalString input "session_id")),
+      ("turn", toJson (optionalString input "turn_id"))])
+    hookRequest input deadline receipt
+    catch error =>
+      Receipt.observe (some receipt) "failure" (Json.mkObj [("stage", toJson "ingress"), ("error", toJson error.toString)])
+      IO.eprintln s!"Eggshell hook failed open: {error}"
+      pure (Json.mkObj [("output", incompleteHook "")])
+  IO.println response.compress
+  pure 0
+
+/-- The registered handler selects its budget before stdin can block. The child
+inherits stdin, so a timed-out reader cannot keep a parent IO task alive. -/
+def hookClient (fast : Bool := false) : IO UInt32 := do
+  let started ← IO.monoMsNow
+  let deadline := started + (if fast then 2000 else 29000)
+  let receipt ← Receipt.fresh
+  try
+    let child ← IO.Process.spawn {
+      cmd := (← IO.appPath).toString, args := #["codex-hook-child", toString deadline, receipt]
+      stdin := .inherit, stdout := .piped, stderr := .inherit, setsid := true }
+    let task ← IO.asTask child.stdout.readToEnd .dedicated
+    let result ← try
+      Worker.awaitUntil task (deadline - 150)
+      finally
+        Worker.killGroup child
+        let _ ← child.wait
+        let _ ← IO.wait task
+        pure ()
+    let json := result.bind (Json.parse · |>.toOption)
+    let reply := decodeHookReply json
+    let stdout ← IO.getStdout
+    let output := (reply.output "").trimAscii.toString ++ "\n"
+    stdout.putStr output
+    stdout.flush
+    let flushed ← IO.monoMsNow
+    let publication := Json.mkObj [("output", toJson output),
+      ("bytes", toJson output.utf8ByteSize), ("sha256", toJson (Sha256.hex output.toUTF8)),
+      ("replyComplete", toJson reply.isComplete), ("startedMs", toJson started),
+      ("flushedMs", toJson flushed), ("deadlineMs", toJson deadline)]
+    let payload := Json.mkObj [("receipt", toJson receipt), ("publication", publication),
+      ("ack", if reply.isComplete then json.map (·.getObjValD "ack") |>.getD Json.null else Json.null)]
+    let recorded ← try boundedRpc "receipt" payload deadline
+      catch error => do
+        IO.eprintln s!"Eggshell publication receipt failed: {error}"
+        pure none
+    unless recorded.bind (Json.parse · |>.toOption) |>.bind (optionalString · "output") |>.isSome do
+      IO.eprintln s!"Eggshell publication receipt was not confirmed: {receipt}"
+    pure 0
+  catch error =>
+    IO.eprintln s!"Eggshell hook failed open: {error}"
+    IO.println (incompleteHook "")
+    pure 0
+
+def awaitStopped (endpoint : Endpoint) : IO Unit := do
+  let deadline := (← IO.monoMsNow) + 3000
+  repeat
+    let status ← IO.Process.output {
+      cmd := "/bin/kill", args := #["-0", toString endpoint.pid]
+      stdin := .null }
+    if status.exitCode != 0 then return
+    if (← IO.monoMsNow) ≥ deadline then
+      throw (IO.userError "eggshelld acknowledged shutdown but has not exited")
+    IO.sleep 5
+
+def shutdown : IO Unit := do
+  let root ← dataRoot
+  let directory := root / "sessions"
+  let paths ← if ← directory.pathExists then do
+      (← directory.readDir).toList.mapM fun entry => pure (entry.path / "daemon.json")
+    else pure []
+  for path in root / "daemon.json" :: paths do
+    if let some endpoint ← (readJson? path endpointJsonDefaults : IO (Option Endpoint)) then
+      try
+        let _ ← exchange endpoint "shutdown" (budget := 500)
+      catch _ => pure ()
+      -- Receipt of the RPC reply is not proof that its workers have exited.
+      -- Do not report successful teardown until the manager really exits.
+      awaitStopped endpoint
+
+end Eggshell.Plugin.Daemon

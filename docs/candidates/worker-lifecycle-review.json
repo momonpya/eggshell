@@ -1,0 +1,464 @@
+{"sources":
+ [{"sha256": "6024c9ae878d69fc038f45033edfef096fa46964c2d7151c636f17a573249a06",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/worker-lifecycle/Eggshell/WorkerLifetime.lean",
+   "bytes": 1510},
+  {"sha256": "2ed743e9573ce8607c12112be38a979e20673e73ccb0bc808aa41c4bc6385941",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/worker-lifecycle/Eggshell/Worker.lean",
+   "bytes": 29096},
+  {"sha256": "f454d737e127bee6bf6b07a304ecf3ff8cc5bc1f986edede6a91a0b21d0a7481",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/worker-lifecycle/Eggshell/Daemon.lean",
+   "bytes": 17833}],
+ "scenarios":
+ [{"survivingChildren": 0,
+   "shutdownMs": 23,
+   "lateWorkerSpawns": 0,
+   "lateAdmissionResults": 10,
+   "databaseOrAnsweringModelUsed": false,
+   "clients": 10,
+   "activeChildren": 6},
+  {"survivingChildren": 0,
+   "shutdownMs": 23,
+   "lateWorkerSpawns": 0,
+   "lateAdmissionResults": 40,
+   "databaseOrAnsweringModelUsed": false,
+   "clients": 40,
+   "activeChildren": 6},
+  {"survivingChildren": 0,
+   "shutdownMs": 28,
+   "lateWorkerSpawns": 0,
+   "lateAdmissionResults": 80,
+   "databaseOrAnsweringModelUsed": false,
+   "clients": 80,
+   "activeChildren": 6}],
+ "sampledPeakRssKiB": 1944976,
+ "productionAdoption": false,
+ "product":
+ {"sha256": "79bcbc4a701f9a14d2b71d3802fb9d4055258053c1a350ce157a3acd50539076",
+  "path":
+  "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/product",
+  "bytes": "116728112"},
+ "limitations":
+ ["No 80-user database throughput or NAS qualification",
+  "No durable ACK/source-only provenance change in this component",
+  "No answering-model, delivery-recall or token comparison",
+  "The original expensive-seed shutdown timeout is not reproduced here",
+  "Ordinary cell proofs and native lifecycle fixtures do not prove all daemon IO"],
+ "guards":
+ [{"stdout":
+   {"sha256":
+    "280461f3b7b675d725f44f9114da0c4d7f7765756b40b10f22dd9ec47d84e578",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build.stdout",
+    "bytes": 70},
+   "stderr":
+   {"sha256":
+    "88ad5f2731fcf4dc07a48ac3d86daa6578fc65c5893d57ebebd2f121d3fba275",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build.stderr",
+    "bytes": 3144},
+   "record":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025"],
+     "minFreeKiB": 4194304,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/lib:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build-plan.json"]},
+    "samples": 116,
+    "sampledPeakRssKiB": 1287136,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 689744,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 6530,
+      "parent": 5584,
+      "lane": null},
+     {"rssKiB": 556272,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 5584,
+      "parent": 5533,
+      "lane": null},
+     {"rssKiB": 41120,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 5533,
+      "parent": 5521,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 5533,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 18955,
+    "childPid": 5584},
+   "name": "build"},
+  {"stdout":
+   {"sha256":
+    "29f171348f04ddc9cd6db5b5df54060976e5472e909471434cb8f4d15072a786",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build-retry.stdout",
+    "bytes": 72},
+   "stderr":
+   {"sha256":
+    "937c08225ed65e06453513d485d9fa970330f63828adcd22fe7d2c0e8a361b66",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build-retry.stderr",
+    "bytes": 1272},
+   "record":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build-retry.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025"],
+     "minFreeKiB": 4194304,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/lib:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build-plan.json"]},
+    "samples": 48,
+    "sampledPeakRssKiB": 1325072,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 556768,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 7417,
+      "parent": 7394,
+      "lane": null},
+     {"rssKiB": 723952,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 7440,
+      "parent": 7417,
+      "lane": null},
+     {"rssKiB": 44352,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 7394,
+      "parent": 7382,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 7394,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 9779,
+    "childPid": 7417},
+   "name": "build-retry"},
+  {"stdout":
+   {"sha256":
+    "38562d330d8bf5c154755756232dd75bd98b34125052a199d16e1a75b4321d39",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build-final.stdout",
+    "bytes": 261},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build-final.stderr",
+    "bytes": 0},
+   "record":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build-final.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025"],
+     "minFreeKiB": 4194304,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/lib:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build-plan.json"]},
+    "samples": 176,
+    "sampledPeakRssKiB": 1486672,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 48832,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/leanc",
+      "pid": 8550,
+      "parent": 8168,
+      "lane": null},
+     {"rssKiB": 26624,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/clang",
+      "pid": 8551,
+      "parent": 8550,
+      "lane": null},
+     {"rssKiB": 828144,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/ld64.lld",
+      "pid": 8552,
+      "parent": 8551,
+      "lane": null},
+     {"rssKiB": 541600,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 8168,
+      "parent": 8130,
+      "lane": null},
+     {"rssKiB": 41472,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 8130,
+      "parent": 8118,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 8130,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 26981,
+    "childPid": 8168},
+   "name": "build-final"},
+  {"stdout":
+   {"sha256":
+    "8e2cc953190c33d82c63b9016d92890271d3df33d954bccb5cce49e22b9a0b79",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/test-build.stdout",
+    "bytes": 51},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/test-build.stderr",
+    "bytes": 0},
+   "record":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/test-build.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025"],
+     "minFreeKiB": 4194304,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/lib:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M1536",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/test-build-plan.json"]},
+    "samples": 119,
+    "sampledPeakRssKiB": 1944976,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 507952,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 9868,
+      "parent": 9816,
+      "lane": null},
+     {"rssKiB": 1397120,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 9901,
+      "parent": 9868,
+      "lane": null},
+     {"rssKiB": 39904,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 9816,
+      "parent": 9804,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 9816,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 19527,
+    "childPid": 9868},
+   "name": "test-build"},
+  {"stdout":
+   {"sha256":
+    "9c7933f24af7167ccd69c0660c7e2b5c82aa5278a2024b897e7efcd97132589a",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/checks.stdout",
+    "bytes": 468},
+   "stderr":
+   {"sha256":
+    "33ef19d096892266b2611124f2b6303aba551b0a1749722905ff7c7ade557839",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/checks.stderr",
+    "bytes": 1179},
+   "record":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/checks.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025"],
+     "minFreeKiB": 4194304,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build/StudyMain"]},
+    "samples": 26,
+    "sampledPeakRssKiB": 140576,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 41952,
+      "role": null,
+      "program": "(StudyMain)",
+      "pid": 10424,
+      "parent": 10388,
+      "lane": null},
+     {"rssKiB": 54368,
+      "role": null,
+      "program": "(StudyMain)",
+      "pid": 10530,
+      "parent": 10424,
+      "lane": null},
+     {"rssKiB": 44256,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 10388,
+      "parent": 10376,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 10388,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 7016,
+    "childPid": 10424},
+   "name": "checks"},
+  {"stdout":
+   {"sha256":
+    "c5081917675d3ab063143a67a365a95fd7e6f731f393a7db70c5aac649eb54f6",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/contract.stdout",
+    "bytes": 80159},
+   "stderr":
+   {"sha256":
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/contract.stderr",
+    "bytes": 0},
+   "record":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/contract.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025"],
+     "minFreeKiB": 4194304,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_PATH=/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build/lib:/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/lib/lean",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "--root=/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/checkout",
+      "-j1",
+      "-M1536",
+      "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/checkout/Eggshell/ContractAudit.lean"]},
+    "samples": 65,
+    "sampledPeakRssKiB": 910656,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 866304,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 11185,
+      "parent": 11158,
+      "lane": null},
+     {"rssKiB": 44352,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 11158,
+      "parent": 11146,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 11158,
+    "exitCode": 0,
+    "error": null,
+    "elapsedMs": 11899,
+    "childPid": 11185},
+   "name": "contract"}],
+ "deletedTestExecutableAbsent": true,
+ "deletedTestExecutable":
+ {"sha256": "8895e0466b8b97e8023a57a3e06f43a951aa2d146bdb7006242b90fc1053b404",
+  "path":
+  "/Users/ovm/.codex/experiments/eggshell/worker-lifecycle-20261025/build/StudyMain",
+  "bytes": "103200848"},
+ "databaseOrCacheCreated": false,
+ "contractAuditPassed": true,
+ "archiveCreated": false,
+ "answeringModelCalls": 0}

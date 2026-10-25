@@ -27,7 +27,7 @@
 - 主に5万窓・単一利用の隔離候補を検証した段階。10〜80人、数年相当、NAS並行障害、100万窓超の実payload、総token改善は未合格。候補は未採用。
 - 字句のpostings/頻度差分と消費の逆引きは既存。残る全件処理は変更対象列挙と来歴再生であり、同じ索引を新設し直さない。
 - seedの52 RPC原本文はすべて保存済み。warm自身の中立な来歴出版がpinを古くする不具合を隔離修正し、同一入力のモデルなし比較で親失敗/候補成功、56 native来歴の欠落0を確認。再warm224ms。これは実フックやtoken改善の合格ではない。[snapshot-refresh.md](docs/snapshot-refresh.md)。
-- 旧seed DB/private cache・比較DB/cache・旧prefixは監査後に削除済み。bee29fda固定で続行できる現存seedはない。最新検査候補SHAは5f209125…、終了処理は未修正。次の測定runtimeは終了/耐久検査後に固定する。
+- 旧seed DB/private cache・比較DB/cache・旧prefixは監査後に削除済み。bee29fda固定で続行できる現存seedはない。snapshot-refreshに続くworker-lifecycle候補79bcbc4a…は、10/40/80待機client・実worker6個の終了/遅延受付試行とContractAuditが成功し、終了後の再spawn/残存0。これは共有DB負荷や元seed超過原因の再現ではない。耐久ACKの分離は未実装。次の測定runtimeは終了/耐久検査後に固定する。[worker-lifecycle.md](docs/worker-lifecycle.md)。
 - 旧seed費用は3,472,146総token、115フック失敗0、daemon終了超過。失敗費用を除外しない。新系列の題材1/2/3・2周目は0/6。
 
 ## 実行順と完了証拠
@@ -73,4 +73,3 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 検証済みの区切りでhook-ingress-supervisorへpush。author/committerはmomonoya。終了した実験DB/cacheは抽出後に削除し、圧縮/archiveとして残さない。コード・実測・配送記録・digestを残し、削除済み入力で現在も再検証できるとは主張しない。実利用の記憶は勝手に消さない。
 
 全体goalはactive。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。
-
