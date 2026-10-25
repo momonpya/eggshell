@@ -1,0 +1,65 @@
+{
+  "parentCommit": "0954b689edf72d653f78e37c826337d17d9b79b8",
+  "adopted": false,
+  "scope": "raw block scoring through the existing Lean numerical daemon with one shared cache and unchanged row dot primitive",
+  "answeringModelCalls": 0,
+  "seedCalls": 0,
+  "sourceEmbeddingCalls": 0,
+  "sourceEncoderChanged": false,
+  "numericalBoundaryExtensionOnly": true,
+  "limitRssKiB": 3670016,
+  "minFreeKiB": 524288,
+  "comparisons": {
+    "repetitions": 3,
+    "orders": [
+      [
+        "reference",
+        "raw"
+      ],
+      [
+        "raw",
+        "reference"
+      ],
+      [
+        "reference",
+        "raw"
+      ]
+    ],
+    "request": "/Users/ovm/.codex/experiments/eggshell/matrix-access-20261025/query-comparison/routed-request.json",
+    "everyFloatAndFullResponse": true
+  },
+  "firstProbe": "compare-0: all bits/order match but slower; per-batch PageMap cache reset; preserved as a failed probe",
+  "finalComparisonsPrefix": "compare-shared",
+  "metadataCache": "one shared PageMap.PageCache across derived block readers; bounded 4096 pages; full reference equality including checksum before reuse",
+  "retiredParent": "/Users/ovm/.codex/experiments/eggshell/vector-blocks-20261025",
+  "currentRequest": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/inputs/routed-request.json",
+  "currentFixture": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg",
+  "currentNumericalSupport": "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/prefix/share/eggshell/minilm",
+  "nativeCohort": {
+    "pairs": 3,
+    "phases": [
+      "first",
+      "continued"
+    ],
+    "questions": "frozen NativeHookAudit synthetic clock questions 1, 2, 3; not LLVM benchmark topics",
+    "preparation": "two explicit warm children on the same pinned readonly source and current contracts",
+    "plugin": "isolated product-generated launchers; no marketplace registration",
+    "source": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg",
+    "binarySha256": "07df2d11797cdc99c2e1590939276d753e612baabd9bdc898eb5c01d95c39cdf",
+    "settingsSha256": "785e86586d081ad9f0f6af127c6d7e7c31003217b127caf9f539af1375be8941",
+    "sourceEmbeddingCallsExpected": 0,
+    "answeringModelCalls": 0,
+    "deadlineMs": 30000,
+    "notAdoption": true
+  },
+  "nativeEnvironmentCorrection": {
+    "cause": "PLUGIN_ROOT passed to managed daemon but missing in directly invoked hook client; launcher metadata and binary metadata produce different lifecycle generations",
+    "failedCohort": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/native-50000",
+    "currentCohort": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/native-50000-configured",
+    "pairs": 3,
+    "sameRuntimeSha256": "07df2d11797cdc99c2e1590939276d753e612baabd9bdc898eb5c01d95c39cdf",
+    "settingsSha256": "0916ad9545e78d77c25f355a79c19882e9dde016dcd5c726804a340de8c74c16",
+    "preparationOnlyEvidence": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/native-preparation",
+    "sourceEncoderOrProductCodeChanged": false
+  }
+}
