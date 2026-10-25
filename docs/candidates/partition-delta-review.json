@@ -1,0 +1,4485 @@
+{
+  "capturedAt": "2026-10-25T08:35:50Z",
+  "candidate": "source-publication-delta-routing",
+  "parentCommit": "f8577e2",
+  "adopted": false,
+  "productRuntimeChanged": false,
+  "inclusiveTokenComparison": false,
+  "qualityQualification": false,
+  "requiredHistoryRecallQualification": false,
+  "millionWindowQualification": false,
+  "heldoutHundredInquiryQualification": false,
+  "sharedConcurrentQualification": false,
+  "prePostScaleQualification": false,
+  "sourceSegmentCacheRetired": false,
+  "safeFloatPruningClaimed": false,
+  "newPythonImplementation": false,
+  "answeringModelCalls": 0,
+  "newSeedCalls": 0,
+  "successfulLocalSourceEmbeddingWindows": 2,
+  "finalLocalSourceEmbeddingWindows": 1,
+  "wholeMutationWarmMeasured": false,
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/eggshell",
+    "bytes": 117478320,
+    "sha256": "f6615040f7880062f4f59360a16d02dd48da684f6cae5de762375cfc1bf7b8ea"
+  },
+  "payload": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prefix/libexec/eggshell",
+    "bytes": 117478320,
+    "sha256": "f6615040f7880062f4f59360a16d02dd48da684f6cae5de762375cfc1bf7b8ea"
+  },
+  "sources": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/checkout/PartitionDelta.lean",
+      "bytes": 1747,
+      "sha256": "0a2af14a0cbed03abb8151788460369e6759fcc3734df7a74c5a2b473b95c788",
+      "relative": "PartitionDelta.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/checkout/ProjectionRetention.lean",
+      "bytes": 2753,
+      "sha256": "a841531bb7c4f0b707a6171f804d0a9f9c00069564154332a004d1fb2e91cff9",
+      "relative": "ProjectionRetention.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/checkout/VectorPartition.lean",
+      "bytes": 17263,
+      "sha256": "a551fb94f0c8ca8b8b61a365886256612fc26dc9f9bce94b96b6a35864c1ba88",
+      "relative": "VectorPartition.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/checkout/PartitionBuild.lean",
+      "bytes": 12733,
+      "sha256": "ccb42ee1db9628f1601b5d767307734267b461a87f346c11583bb317955d78a9",
+      "relative": "PartitionBuild.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/checkout/PartitionDeltaAudit.lean",
+      "bytes": 15765,
+      "sha256": "24f880d458a907c140604b8ecbebaa54e40d9801d268785ed118777f13f0c994",
+      "relative": "PartitionDeltaAudit.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/checkout/AtomicAudit.lean",
+      "bytes": 6670,
+      "sha256": "c3fdcc81c83df6f40d04033c0887b95007427fdcc9e122073a7848de9d84c257",
+      "relative": "AtomicAudit.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/checkout/Main.lean",
+      "bytes": 4034,
+      "sha256": "44220ff0f4ff0510aea39117c32acd320338602744923325495b4c8bcbfd339e",
+      "relative": "Main.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/checkout/Eggshell/KeyedSearchProvider.lean",
+      "bytes": 12179,
+      "sha256": "c4794892622d6c151055afd9f5d9d26da13258dcd86794d3d6c47de7b02009e3",
+      "relative": "Eggshell/KeyedSearchProvider.lean"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/checkout/Eggshell/ContractAudit.lean",
+      "bytes": 115220,
+      "sha256": "e1ccce76a241802b72e9778f85f296c0fec43c68c5ca8b6e8666f1f198249318",
+      "relative": "Eggshell/ContractAudit.lean"
+    }
+  ],
+  "frozenInputs": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.pages",
+      "bytes": 432031994,
+      "sha256": "e3b84e42a71b4e993c4e306585c75059312d4ab8501b4b0a56c4e9840f9ee926"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/head",
+      "bytes": 401,
+      "sha256": "4888fa698fd0a44d78db7b57dd040accbce72ca2d97bc869f1c837a54a538d53"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/derived/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/lexical/849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc/tree/head",
+      "bytes": 521,
+      "sha256": "c23e0b44cd6fdad1638f9fd0ae186c7a5deb0912c4d35ef7b7e40e535a2cf01a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/derived/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/lexical/849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc/tree/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/derived/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/lexical/849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc/tree/5daea4be8151db2a9c701068568ad16a9ae3a904b064f108872b308d49cd3ce9.pages",
+      "bytes": 1234757626,
+      "sha256": "669f4ec1930d3d2742fe57800f0a8bab63d007279b95945158ba86c35418f8df"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0.pages",
+      "bytes": 343002049,
+      "sha256": "29883e11a158fb975b1e3ecc7e7f1ff784b21d16cac604593947d2d8892c2b73"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+      "bytes": 452,
+      "sha256": "e35146d6c49bb44cdc2d1384f873af6c13df65e00c76461833d11b1b1dfcc52c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+      "bytes": 452,
+      "sha256": "e35146d6c49bb44cdc2d1384f873af6c13df65e00c76461833d11b1b1dfcc52c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0.pages",
+      "bytes": 343002049,
+      "sha256": "29883e11a158fb975b1e3ecc7e7f1ff784b21d16cac604593947d2d8892c2b73"
+    }
+  ],
+  "modelFiles": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/partition/17c138a94199657fe240b63d217c207e58afef7d1d002617ba54e28b2b713afd/head",
+      "bytes": 385,
+      "sha256": "9d10ff730b92654f14b32bf20e1d49daeff6f0f4cb3f1588aaba47a13da27065"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/partition/17c138a94199657fe240b63d217c207e58afef7d1d002617ba54e28b2b713afd/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/partition/17c138a94199657fe240b63d217c207e58afef7d1d002617ba54e28b2b713afd/b769d47a552ced551649fd3d2da4f0c8031626c6fe6f85643087b2233dbded1a.pages",
+      "bytes": 7376652,
+      "sha256": "e2f89976dc3b2e87f33f009f8ede5688b40a2817599ea1b428c619f6987eeedc"
+    }
+  ],
+  "mutationFiles": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-source.egg/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.pages",
+      "bytes": 432590138,
+      "sha256": "789ec8affd8f9d03761bd19c347d3278a933b32a3f517e92b6802c51eac47d33"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-source.egg/head",
+      "bytes": 401,
+      "sha256": "5cd00906f39bb835b4757834e34abd1b584e6a4e6e10003b81a71e52b8a9e4f9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-source.egg/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+      "bytes": 452,
+      "sha256": "96590d7c87f21061c84913a8e23c999ad398679bfa63fae8e33773145a4fed07"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0.pages",
+      "bytes": 343029047,
+      "sha256": "1d33ee444536b4158562c0c9c1e0db94139fde65b84141b4fb33fac22fdf667b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/partition/17c138a94199657fe240b63d217c207e58afef7d1d002617ba54e28b2b713afd/head",
+      "bytes": 385,
+      "sha256": "c5829b1b33b920e283d389eee83bf8ae91f4086676f6cf87d8a66de2844e41af"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/partition/17c138a94199657fe240b63d217c207e58afef7d1d002617ba54e28b2b713afd/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/partition/17c138a94199657fe240b63d217c207e58afef7d1d002617ba54e28b2b713afd/b769d47a552ced551649fd3d2da4f0c8031626c6fe6f85643087b2233dbded1a.pages",
+      "bytes": 7416578,
+      "sha256": "fc675cee7a44a350169215c5aad1600615a910ea7ac175617a6a211fc2d6cb6e"
+    }
+  ],
+  "linkedInputs": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/PartitionDeltaAudit.o",
+      "bytes": 227480,
+      "sha256": "66d43222836892b2f5e780b292ded7b5a0082e2e734c871f133498789acd1620"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/ProjectionRetention.o",
+      "bytes": 65904,
+      "sha256": "05139441bd9a8d858e7091e29e18a1a26218da3b2779986101871061259a704a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/PartitionDelta.o",
+      "bytes": 47096,
+      "sha256": "7514c5c6f5ed67ee8b08745f993f964d73c7e208cec935e987a663ea034180b9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/DirectProjectionAudit.o",
+      "bytes": 161544,
+      "sha256": "e995e77aa3a90555f43ac9eb4908d9c4fd9301146ce3e23d7f441c9f4a0bc966"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/ProjectionCache.o",
+      "bytes": 63968,
+      "sha256": "745c826f676cf5ca42c62fd353cb3623032028ccd2a7a846ddbdc4a1e6ad31f8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/ProjectionCursor.o",
+      "bytes": 69952,
+      "sha256": "6ab4213a61680135a16f486d5551dbaf52afd825db5b23436f6d169efa027fe9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/PartitionBuild.o",
+      "bytes": 255176,
+      "sha256": "7e9b8ba49f80f1a36a308a03b2db91e569b06cdc5608b391c2c35afd7c856eda"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/VectorPartition.o",
+      "bytes": 418784,
+      "sha256": "70e6e37bb16a2ea40e4f42a33953180c97453611b84594aafb6aa912d119ee34"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/000-ArtifactHash.o",
+      "bytes": 26624,
+      "sha256": "6f6cb8b7abcd572388795c8dea63b37ad475fb1cad8c3367a2c03f7e1ddbfba8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/tools_research_NativeHookAudit.o",
+      "bytes": 164128,
+      "sha256": "8ae989a9674ba7f7f5af5ed27b92ad774c4f9b65d8799f15de0c500adb4b785e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/tools_research_StudyRuntime.o",
+      "bytes": 119592,
+      "sha256": "bf6ac25c5bda97cde5ea35832392b3c541c95ec929a4f5fcb52549ecaca82a37"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_BlockScore.o",
+      "bytes": 178336,
+      "sha256": "66c391f65b4259272c87dbc5e2ed088e7f27d09f29f3a2152717bb36fe57552a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/002-Eggshell_LexicalAdvice.o",
+      "bytes": 169808,
+      "sha256": "182cd862bdb89d4f1d10633a7f9cc09b54942e80ef2706987a5a0c6493ba1d0e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/Eggshell_KeyedSearchProvider.o",
+      "bytes": 293520,
+      "sha256": "e3333b2f8a1e1d02a8f0b8b28169b0c52f8be57082f81e7f73de010cc508816b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/Eggshell_KeyedSearchClient.o",
+      "bytes": 48704,
+      "sha256": "1fdd58651d932143d9b7d3799e538a1abe48643ad4615705fdb1a012bd717005"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/Eggshell_KeyedProtocol.o",
+      "bytes": 324856,
+      "sha256": "1ac4460877c9a67c0dde04f1373598d0cf9bd37d3173e8e3d2d2b59b53c0412d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/006-WindowOwners.o",
+      "bytes": 466680,
+      "sha256": "6dee9e6fbba901282e41706baa93c537629d46fbcbbb04cc351f11aae0eb7c4a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/007-Eggshell_WorkClassLookup.o",
+      "bytes": 46272,
+      "sha256": "ac9d61de8e4fe97b07baccadd393e44a1055db0b165747123ba4a8a56b5f2232"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/008-AppendUnique.o",
+      "bytes": 14240,
+      "sha256": "d985c2a1ea4019c54655bed46fd40defe81ec358eff4377a1fe0884e5205989c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/009-OutcomePolicyIndex.o",
+      "bytes": 37480,
+      "sha256": "658db120a3d4ab395f0c26a72801ba9e8e9327abfd0a39f3877f0df34817c2f7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/010-Eggshell_WorkInference.o",
+      "bytes": 78392,
+      "sha256": "52a830a2d4ad318afef358764398b9d634c68c7e65ce034afe96241aa9e236f4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/011-PreparationDebt.o",
+      "bytes": 74016,
+      "sha256": "b7bdfafa18c5d98fc8d647e068e9f8375163205e3f0559fada8f8c392a6603e2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/012-SourceDelta.o",
+      "bytes": 69328,
+      "sha256": "c239a3f88e6fdc1fa5ae1934a9c975b329ea3eed500d9ebc35c5df543205a983"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/013-Eggshell_DB_Wire.o",
+      "bytes": 177336,
+      "sha256": "02492119c2d793fddcfbda340ebdb322eff36824f1cab01faa2b76b9bcec7609"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/014-Eggshell_FileSystem.o",
+      "bytes": 140296,
+      "sha256": "f2f4efbcdde8b5c7ec413f064620c4dd7c5bba6876ffd50431b0ce6243e621b6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/inline-hash/Blake3.o",
+      "bytes": 611256,
+      "sha256": "1e4080a9d4514de0ae3137b4e228c9eb9dd6eadef2664661c959fe57a659954e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/016-Eggshell_DB_PageMap.o",
+      "bytes": 789384,
+      "sha256": "05628d16dc1c8ec9dbd9b3f07579b8ca0feeda2d9dad8b0a81db8825aac59ac5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/017-Eggshell_Paths.o",
+      "bytes": 20112,
+      "sha256": "fc787106ca943ba13f212da6dbbb45e811ebcd90884a922fe935c45065be637b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/018-Eggshell_DB_Sidecar.o",
+      "bytes": 106344,
+      "sha256": "fcb0ccc2ac61c433da94341d38d3f0fd40c1a4c421849f5d30f70a707fc933de"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/019-Eggshell_DB_CacheReclaim.o",
+      "bytes": 77904,
+      "sha256": "af61f59888222cfe6e73ed683d39b0e4fd009f2ac626aafc8bf3531c867d717c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/020-Eggshell_LogicalText.o",
+      "bytes": 268048,
+      "sha256": "51fb4e0003546dc615a46899db3ca5888e79d5f69bb085ef4cea9fa538841111"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/021-Eggshell_Value.o",
+      "bytes": 105816,
+      "sha256": "6fddeaa56885f741031412156c55595c9a63fced61d605aabc4a8b18b6cdeb4e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/022-Eggshell_HashDistinct.o",
+      "bytes": 15568,
+      "sha256": "6faa8c390b7f0a0279c144cdcce061d85eea9b1eb4644ad4ecc6392cd3b32c23"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/023-tools_KeyedOverride.o",
+      "bytes": 22032,
+      "sha256": "0112bbc7d23386b51354841e4b444425c71ccd96d603e0f614418d24badbe72c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/024-Eggshell_Union.o",
+      "bytes": 24528,
+      "sha256": "e2ccadf395c17bd33209a4614ae4914f17b9e91c572597e0f0c9a2f5b1a917eb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/025-Eggshell_Relation.o",
+      "bytes": 80504,
+      "sha256": "ffcd6e41c32eef143239b4fa147c5cb91f38fc6c04bec814c08cb0fd68bfbb06"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/026-Eggshell_Graph.o",
+      "bytes": 51728,
+      "sha256": "60dcc7b0b8011dadb29320d7a4ff1f063ba8508f3df1edf631192cf953c8e803"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/027-Eggshell_Extract.o",
+      "bytes": 192816,
+      "sha256": "c51d952ec429406eca04b2575feb2e61aaea518ad734492cb41ead3896539f58"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/028-Eggshell_Quotient.o",
+      "bytes": 254144,
+      "sha256": "50df9c880773e8991da31546b18976171120f75bf0152dcd1ccceaab132c0f84"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/029-Eggshell_GraphCodec.o",
+      "bytes": 176968,
+      "sha256": "e139e88c09d42e183551dfcd9f75fa5d3df8993dbb5b12d8be77378f9c92361c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/030-Eggshell_Partition.o",
+      "bytes": 10008,
+      "sha256": "d08ca7c01799a57d76485b6d40de68a18215cf898e4e451cfb926814ecc5681c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/031-Eggshell_PartitionIndex.o",
+      "bytes": 2424,
+      "sha256": "6ea638029beb4cb18f53cb43e86ea2be32ff8f14aec1542ad3470df0d5f27fa8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/032-Eggshell_AtomQuotient.o",
+      "bytes": 8824,
+      "sha256": "d7c3becfdc72c1177c665c6af1153995c0e03b502a4a4ac64ba46bb82bd1ed3b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/033-Eggshell_SearchUnicode.o",
+      "bytes": 416984,
+      "sha256": "e987a217c87886016eb8b3742a1f60b7198800e94f54f795038408e9e72f5748"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/034-Eggshell_Frequency.o",
+      "bytes": 67336,
+      "sha256": "5f40e020afe1273ede2f582c6787d66aad1d0d794c24392ab1c5964898914f62"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/035-tools_RetrievalCategories.o",
+      "bytes": 259728,
+      "sha256": "43c223186e505bc757d0111161c2b0698fca388d9015a9a4aed0124315a19327"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/036-tools_RetrievalGrams.o",
+      "bytes": 152296,
+      "sha256": "a6f97ae2279a3e48df8d5bf8430c1e335c18cf35e866916921491319337b1cf7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/037-tools_FirstIndex.o",
+      "bytes": 30064,
+      "sha256": "ad4959a0bda29ae3334770f78febc84619006e6fb336fa7bf783ada94dc93b09"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/038-Eggshell_SearchRank.o",
+      "bytes": 124824,
+      "sha256": "ba3133b3e85d9030bb328be68ab14ea0a6d222e250c0e700d3e5b488aca5c266"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/039-Eggshell_Sha256.o",
+      "bytes": 72816,
+      "sha256": "fa8879952b5b7c2f0a890196fe423105fcc9b6299897c58084c6ec6e729c9748"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/040-SourceEvidence.o",
+      "bytes": 637320,
+      "sha256": "bd350e759a1fef68bc61c15512e8551d791e56bf96986bfa27b631aef204d2c1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/041-GraphStore.o",
+      "bytes": 1422136,
+      "sha256": "0978dc629bd3aaf70bdc16396f20252b6b9510a5f78af757581868d9c96c1c59"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/042-Persistence.o",
+      "bytes": 139072,
+      "sha256": "d16d51089c3b1dfdd967adc68a0665b83edee1d934c6d2566ea20554517b3d09"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/043-Eggshell_QuotientAuthority.o",
+      "bytes": 6728,
+      "sha256": "8b9705ed43310f6326f63a56d8fcdabfc0b4c7931ff6dee918cae90ff48c0b6e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/044-Eggshell_CongruenceFixed.o",
+      "bytes": 2432,
+      "sha256": "1b91e9e3213b6bd53ab4a4eea8f54274434342821c3b85207d12bd79e761aea7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/045-Eggshell_CongruenceComplete.o",
+      "bytes": 69720,
+      "sha256": "cf85e4b0930b7e0fdaba0f4f2c66acdae82d3e7c18a0adc654f6ac87f6020b69"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/046-Eggshell_CongruenceSound.o",
+      "bytes": 4040,
+      "sha256": "23de0396f4f8c7f2f708d5df77a8a92ab2e93c0ced4fff60bb06524198fe2abe"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/047-Eggshell_IncrementalQuotient.o",
+      "bytes": 27136,
+      "sha256": "68e00bc57f9c3106ea5fe9d3e2b21802ee581ba187beb776cc69422e7c1a5096"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/048-Eggshell_TextParts.o",
+      "bytes": 12248,
+      "sha256": "c8fa4e91dd4d9ce1058dd7337fd7775f889f5a215bab3858c1f0ca5653608242"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/049-Eggshell_Matcher.o",
+      "bytes": 1021144,
+      "sha256": "837eda4ab868be10761d2ae3ba5400b82783039f569267a8759973213ed13055"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/050-Eggshell_Config.o",
+      "bytes": 284704,
+      "sha256": "5d9e5a58b95e8eedf2db562d48043ed4cc1228721502c58a69edcd06a48c6712"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/051-Eggshell_Lifecycle.o",
+      "bytes": 34872,
+      "sha256": "52b657a49ffc504c950b4a5c6b15c6c1da8af3788b542db4fb2c4a5e2668b539"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/052-Eggshell_Receipt.o",
+      "bytes": 21928,
+      "sha256": "ade97cc0f3aca4e97bdfa479d7f28af76e600e36de7464b4d651253388b58395"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/053-Eggshell_SourceObservation.o",
+      "bytes": 327848,
+      "sha256": "8e8a48f40b37c2ee88e4d7ec845e8cd0db414ef44ee137b7099ef08c27195107"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/054-Eggshell_PluginModel.o",
+      "bytes": 883976,
+      "sha256": "eeb1d3d1073c3a40597a76d8f5f501f20f77cb8067961042dfe6d6621cdd1e77"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/055-tools_ExactMemo.o",
+      "bytes": 14136,
+      "sha256": "f568eb6eef15f89d9eb16b2ff4d7c9b96d8bbfd51db80d770514b48f333c8a26"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/056-tools_ExactLazyMemo.o",
+      "bytes": 21888,
+      "sha256": "2645f66160dced12402fc74a0c6338bc537af1d97e35f3bf1c73a023f140681f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/057-tools_PairDecisions.o",
+      "bytes": 7376,
+      "sha256": "665e21d233816017d8c9dd10031ea7fcdfcd77f1858e131403d53b359f85905b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/058-tools_IndexedCharacters.o",
+      "bytes": 7560,
+      "sha256": "e1a1da777282f2f2b370e96f88b9d76ae0500f387a8cfa33a9ce8bbcb17f02c3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/059-tools_BudgetPlan.o",
+      "bytes": 11928,
+      "sha256": "a06e967b27896b72e927ff158d4476304b9a0d1089707a99f0c31a75371ee5e8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/060-tools_SharedCoverage.o",
+      "bytes": 127016,
+      "sha256": "595157eb7442b37f29b10d96462bf0712937fa5128af4d6a0e8c4912fa163595"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/061-tools_DeferredCoverage.o",
+      "bytes": 59720,
+      "sha256": "f06db3076bb0b869a52fc23cbce194f2499bbeafa4cad278516b2753151d0a49"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/062-Synapses.o",
+      "bytes": 1357928,
+      "sha256": "5274cf19fe4c61fdecacf7f847c0be84bf601c1234c0c3a1dd2016ab3f953a6e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/063-SynapseExtraction.o",
+      "bytes": 353352,
+      "sha256": "82e35bffd0733b080d7084bb258abe7901f6b6c38a6d7fcfcd5fca28ce075d22"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/064-SynapseSource.o",
+      "bytes": 511336,
+      "sha256": "95f1066b64d890e151421faddda062182fcc4933ebb235fcac26f4f3b2d3cce2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/065-SynapseProvenance.o",
+      "bytes": 340480,
+      "sha256": "5881603f5e34d5bd2a145609c39cb6d09d7ce047b008cc7342065fe4ce7c9489"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/066-SynapseIndex.o",
+      "bytes": 709472,
+      "sha256": "b97483e7732a5ad01d9f2ed0f42473125337dd7e8eec0cc11028808d03a0d294"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/067-SynapseBuild.o",
+      "bytes": 436512,
+      "sha256": "fe07a280834449f76c8b277a35890e2a8b5743568b7d54f76d46c5146b6c6639"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/068-CanonicalSource.o",
+      "bytes": 381472,
+      "sha256": "d9f11102cc22c3d923c1e0c9735aac8e0d3f5334308e17f4b05d2cfc2d7d2308"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/069-CanonicalSourceRecords.o",
+      "bytes": 138472,
+      "sha256": "b6bfdbc4fa8d52a972537da604e3f70942a70c115b89d23ae29b06b87f0ba7f3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/070-tools_ClosedCoverage.o",
+      "bytes": 25600,
+      "sha256": "2ee97f9cbf571780d71205f1e27baed118041db2df9bc118e8f2a269a4b9551f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/071-tools_FocusWindows.o",
+      "bytes": 8128,
+      "sha256": "73e697acb06f8eba996efdc6cdc918d4e3eff22b0e0c1dd745f32ec6db2ab518"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/072-tools_SourceWindow.o",
+      "bytes": 4016,
+      "sha256": "41f03113e4e7ccbe08d836c9062c612a3a90188d0753a7dee8832375601cf94c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/073-Eggshell_AdvisoryFrontier.o",
+      "bytes": 39784,
+      "sha256": "8cbca010ca0e500467f19631affd372e1fa65ba01aa1b901c31e637843b70211"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/074-tools_OwnedRows.o",
+      "bytes": 11736,
+      "sha256": "601fb19c819f90d077921a9ce3ec995a815bceaa9bba96521b84879fe2b1c268"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/075-Eggshell_SemanticMatcher.o",
+      "bytes": 324600,
+      "sha256": "8db8e27482be3b0988fe7013a84a6a85492e5523a629fac9e75a5c585bff799c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/076-tools_OwnerProjection.o",
+      "bytes": 282400,
+      "sha256": "468fd274df5d8bb79fae9c3d6c468d79f727dc782145020020dc19ad9a32aa1a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/077-Eggshell_EvidenceReplay.o",
+      "bytes": 121560,
+      "sha256": "557c639ca193136ac6b2e7f5e01c6557be257d82991004b14cd7da56d356a93d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/078-Eggshell_SurfaceJoin.o",
+      "bytes": 71656,
+      "sha256": "9bf4705cfc6d67f0186cc816c890f3b500ecea8d23d9799689cdb99677fcabf1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/079-Eggshell_RankMemo.o",
+      "bytes": 189720,
+      "sha256": "28f50c6e102f235c62d9eb6c83192b7499c4c5627ebc6ab61879a3ca5a50ae6e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/080-Eggshell_SelectionReplay.o",
+      "bytes": 47512,
+      "sha256": "5e62e96fcd85ff831174a714f7af2cd62dab6328d954d76467f2ed8f2bfd3b86"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/081-Eggshell_GeometryMemo.o",
+      "bytes": 291888,
+      "sha256": "d7690eaecee070ca9669abf9397b5612154216cfe3941c007cec99d55270a687"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/082-Eggshell_SaturationMemo.o",
+      "bytes": 137600,
+      "sha256": "1fb61d52ce118d7db9420aefddb1a10f258d9300c3cc52ee3ecbc3e41f329ca9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/083-Eggshell_DiscoveryMemo.o",
+      "bytes": 37024,
+      "sha256": "8ff34e553c970ff7c7654f8b7b21a189d3f8f14c8e94f151098053e6955700a5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/084-Eggshell_DemandMemo.o",
+      "bytes": 125456,
+      "sha256": "aa428bdb6116963c44a8f0487cb77b5172c42a6c19005151dd31d73a302d371c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/085-tools_RetrievalIndex.o",
+      "bytes": 393088,
+      "sha256": "e8eb371ba95aaa8808aeca52afd4591e5948de864e8ce8d956e69f2aeabf3424"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/086-Eggshell_FederatedSearch.o",
+      "bytes": 338096,
+      "sha256": "b9c840a2784f15f4f7990a9a74255b40f5483d6ba5774768d9b8f9b7e2df05b8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/087-Eggshell_EqualityDependency.o",
+      "bytes": 18768,
+      "sha256": "5f748b29b136da90f66aae65e290814b381fb8fc03377ab6ba0c68cb178edb78"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/088-Eggshell_SelectionDependency.o",
+      "bytes": 79432,
+      "sha256": "c992862205cc429ebbfd17eb9a3873e82bb1070c303b61c0e34475a2cac60b4c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/089-Eggshell_DiscoveryAudit.o",
+      "bytes": 235784,
+      "sha256": "f9da0a2038fb6b44fe9507517d9fd7d3ed689c1fb705a8093354438d3a8bfc19"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/090-Eggshell_SelectionAudit.o",
+      "bytes": 927192,
+      "sha256": "60c589d105aeabcb8ccef34ff3b1f068382b803482ac79cc9f1a4150cab28126"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/091-Eggshell_CompletedAuthority.o",
+      "bytes": 2648,
+      "sha256": "7b0f831b34ff531607fbdc61712817d64668511f4ba5e1570597538b768877e1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/092-SynapseUsage.o",
+      "bytes": 479688,
+      "sha256": "2fd94a09df2668035ae2d2812fe5de0861f9c2a6ddaa5b0438d44d6b7edefaf0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/093-CanonicalSourceCache.o",
+      "bytes": 183408,
+      "sha256": "e3bcad22c26ca4fde65a2f338b70c096a964233e5e37806359fdfee682f7ca0e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/094-CanonicalSourcePacket.o",
+      "bytes": 246952,
+      "sha256": "d8103935844f5dad70e41410c8e1727819d3fd809a40a6a6cc1048f7598e9513"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/095-CanonicalSourceDelivery.o",
+      "bytes": 745464,
+      "sha256": "8a1c7828ff1de28115839036a326927f389ebc40d07c9a494d439d8b5679ba4e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/096-SynapseRecommend.o",
+      "bytes": 340640,
+      "sha256": "3d5b4dc9087301451bd0f5a45bd4b3922531824906a2fb226901bca397f6e8d6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/097-SynapseTransport.o",
+      "bytes": 298536,
+      "sha256": "46bc2ed810f23dd49da674495eb2b73b03d436e9c15370df96afc3b862e0419a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/098-SynapseBundles.o",
+      "bytes": 147928,
+      "sha256": "7d503c65f99985d67896dd3b0ac4367bc04881806b7ac51120ee30a1e53c5d92"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/099-tools_IdentifierParts.o",
+      "bytes": 17672,
+      "sha256": "437fb6a304103af1cec5dcea22bf601fc81147c3521b1abbd9077f650e6a3c27"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/100-tools_QueryLiterals.o",
+      "bytes": 39592,
+      "sha256": "2495ba2b7d2d311f8e9a7388c8f5fff858aaf829c39d023166a55adc832dcdf6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/Eggshell_Handoff.o",
+      "bytes": 5027584,
+      "sha256": "b24b87e5caac406af483b1df5d7c6e65315831c66b1801ad451870011db090ef"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/102-Eggshell_MiniLM.o",
+      "bytes": 67208,
+      "sha256": "a77f55a9cb21726fd0cb8e17117aeaab863ef96600f7bb70af4a8c09ba4adefd"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/103-tools_DirectoryReads.o",
+      "bytes": 39664,
+      "sha256": "3a93e4b814a8407ef01ac73431e9c4567d028801d75b7b6c7cb2eb5ae6be71e5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/104-tools_WindowCentroid.o",
+      "bytes": 73432,
+      "sha256": "59f0993f1ba187569bed7f390be7d89c001e91361152ef3f02dc65ea972b1dfa"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_SearchProvider.o",
+      "bytes": 935288,
+      "sha256": "f4b3bee445a0828ab1feeffba033cf0a7ef7b2108591fdd99760e94cb0d73b4d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/105-Eggshell_SynapseJournal.o",
+      "bytes": 1084112,
+      "sha256": "ddf8ba386e28076336f786bc7f66d920a5ec428dd2f7f3a6210d89eee2568945"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/Eggshell_Warm.o",
+      "bytes": 390552,
+      "sha256": "56d5e26e6974bb1fda0a2f53d1b429dd84c258d92990893f65c2f866a94bf707"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/Eggshell_Worker.o",
+      "bytes": 414936,
+      "sha256": "372c51b2db36fafa10349178ba6fd1f4c86a9f60c1537281b7c35ccf7c82068d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/106-Eggshell_SynapseLive.o",
+      "bytes": 59784,
+      "sha256": "bbad2d0d066ae0c2ec46d44ed51b84dfd5eb5b806a096ecf05939341d3056921"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/Eggshell_PluginHooks.o",
+      "bytes": 605704,
+      "sha256": "86a76c8de74e521e73ddb40e89999c4eeac241a279fd80a249bbcce275e2e6ca"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/Eggshell_PluginCli.o",
+      "bytes": 256960,
+      "sha256": "7113698ff9abaf951b0a7c4b253d19287baf338172571a6a630c7b4e9acb29e5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/Eggshell_Daemon.o",
+      "bytes": 257312,
+      "sha256": "d7437b14f013178c52567a94e0ab052810ed29b79d8a858492d6646a5a0e294d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/Eggshell_Install.o",
+      "bytes": 167760,
+      "sha256": "37cb50fee91c8208b92eb68df6badea65472849ed8ec906eff2ad822a2527562"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/Eggshell_Setup.o",
+      "bytes": 30440,
+      "sha256": "45e6696b984f36470983b440829f2127fa4fece643d53af367a243ff7cf84841"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/Main.o",
+      "bytes": 53312,
+      "sha256": "f3bb419614eafdb9939372de6f2a05de09c27b33b39d40292d1f51ba7eabbf6a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/180-libstorage_sync.a",
+      "bytes": 27264,
+      "sha256": "261602862d9773ad01d379d0e01c4aa261be784907c31f45d039c658f27c9743"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/181-Eggshell_DaemonWire.o",
+      "bytes": 98704,
+      "sha256": "7b92d8d4bea65115e9b84d6e4744a6d61b7fbe6de6dfc01c63321632a7444104"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/Eggshell_Numerical.o",
+      "bytes": 398872,
+      "sha256": "b7b0404bfcb5a34fb96ff9d534f7cd106e3e794eec112c00a311d1bfb8b83564"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/182-CandidateDomain.o",
+      "bytes": 446424,
+      "sha256": "ab359fdd1814e6902458eb6dae1e59ba5026baad31f2a7f44b247bec91e149b2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/183-ObservationContext.o",
+      "bytes": 230328,
+      "sha256": "688c20e035e88bc582cfca9d04b3cbeb85432204e0983772fa7f5eaf628d3d33"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/184-ObservationAge.o",
+      "bytes": 60936,
+      "sha256": "7bf1b87fe204fde7385128dda1ac08e69fbd8f866e74e8fa937de8400831f949"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/185-Deadline.o",
+      "bytes": 3920,
+      "sha256": "3bfff434979e7b78915dff0517ee783577066b8e90c299dd539eeabc88c55339"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/186-JsonScalars.o",
+      "bytes": 138992,
+      "sha256": "debeda2728178a0f65faca09fbdd361749136f7dcc8b7834b65d52c169f37a42"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/187-SynapseQuotes.o",
+      "bytes": 17240,
+      "sha256": "17d765ac9c2a542685de1768e04785fa256c1ca1a07eae718cfd37dc6769192d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/188-DiscoveryCounters.o",
+      "bytes": 52896,
+      "sha256": "12f5cd53c25071300b8e2d487e121cbcc14c858e0a3e4b6e5d4e5e8094d98b7f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/189-WorkPostings.o",
+      "bytes": 212456,
+      "sha256": "dda2eca4003b1189a362f804de390c6977bda4a4c35fcc19ca2d22c34df1ddff"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/190-VectorMatrix.o",
+      "bytes": 227296,
+      "sha256": "cc5f681580eca443da4ac6878ba16ae5912c46f13a03bfc49f5bc50ce73cda2b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/link-inputs/191-Eggshell_LexicalReads.o",
+      "bytes": 251240,
+      "sha256": "bc96664a773254bea0502ac6ec63103ee99fc0056af3e9d25bab18a9849764c2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/AtomicAudit.o",
+      "bytes": 64400,
+      "sha256": "f6c1430e1981bf5eef4f0cc9f135a9569b45851d34f277dc44f305eb772f368c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/AtomicAudit.c",
+      "bytes": 134108,
+      "sha256": "4ad989b37a81cd3553c9fb743b646e990464f19d1114e326ec347e951ab69403"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic.rsp",
+      "bytes": 13944,
+      "sha256": "9e06367b4e59553b669c529f044e2d356aa4f2bef05314cf79c1e34be12ffd88"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct.settings.json",
+      "bytes": 1148,
+      "sha256": "ed1f4734d792d90b9a2305597f98eaa76bb51253ae76380dade66603fddf824c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-audit.guard.json",
+      "bytes": 1168,
+      "sha256": "89b5b2eef1be5008e5e21bdbed703a1ccb11b2bf5a23ca43056b02c298c5a0ae"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic.settings.json",
+      "bytes": 719,
+      "sha256": "650c38033112200577ccfc0744882bd65f4f73467ec0b2b4c586ae3a559a8962"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/plan.json",
+      "bytes": 7183,
+      "sha256": "ae0103ea77a1aeb443939187c335da68aa3e5f767182c686df20b69690ad601d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic.guard.json",
+      "bytes": 1337,
+      "sha256": "c19d8ac4e294675c51e159874515e8ffbe5056873453792317446190ce0929bc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload.settings.json",
+      "bytes": 528,
+      "sha256": "9da0575673947beb4eb2a2f2d45c9d9bffbb77beedabc0b23db5865e13241c9d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture.guard.json",
+      "bytes": 1358,
+      "sha256": "bf5f3e2920a627e18011d512e32a460bd9063bb1fe557ba585e01fd973779a2e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare-final.guard.json",
+      "bytes": 1673,
+      "sha256": "beb798a20e332baf681fa3acf693cccf2469ac724f98d9001f327c75f9310cb7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct-retention.guard.json",
+      "bytes": 2306,
+      "sha256": "309149e88bd9a225baf1ff0d70aff4f26f0bc1ea64c5cf4469d830ef0b771e8d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare-final.settings.json",
+      "bytes": 1238,
+      "sha256": "fc5d24aad2e7579270012668556e0e5b490415ee9b0be7ccb4e739a3d111e405"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct.request.json",
+      "bytes": 821,
+      "sha256": "057b997336d81f58418775619f12f54ee6fccf98055defaf8d42a8f450f9ee90"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build.settings.json",
+      "bytes": 441,
+      "sha256": "9baeb3c2c8058abc61dcc125aa685246efafaff0d3f596ef9a883f6ca8d5da94"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention.guard.json",
+      "bytes": 2386,
+      "sha256": "b68fdc3b870a81c27bbe65ca40acf24cd6e23f07bc030fdc342cd5a74aa258c7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare-retention.settings.json",
+      "bytes": 1246,
+      "sha256": "fb9466dec55765560eafad8a08106295457cd7018fb514762cd8ab8d28af8e8a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-repeat.settings.json",
+      "bytes": 1155,
+      "sha256": "43e28c3f571af20012157397f8bc4e10e2d49464c3d03a3559d8237291884f53"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture.settings.json",
+      "bytes": 772,
+      "sha256": "8a44f9ad3e2cbd06ccea724755d3384ce0de0335bf51461eeb7735e3b6341703"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-fixtures.settings.json",
+      "bytes": 450,
+      "sha256": "54665db60b3e44d5df5a226176699667f4296c42a8cb5ca0ce24e3d0a20a9c63"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-retention-checked.settings.json",
+      "bytes": 459,
+      "sha256": "7aba584d3c5e0b50354e403e3daa4d29b0d53a96457567272fee1d64c5c4b757"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-shape.settings.json",
+      "bytes": 447,
+      "sha256": "b86fe6bc2b308afe2efc7296bd116755719dacd97bc7640b74b9bcdad05020dc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-fixtures.guard.json",
+      "bytes": 1170,
+      "sha256": "d6e6316e30b97766f9c8e8392a041e9aee7bed2ae5bf86d7d96df0aa2b5725bb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-final.guard.json",
+      "bytes": 1159,
+      "sha256": "af0689c1f44e0eb5f908a785a7383a608aa2d4864fbbd45823ae1fc4c2252586"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build-memory.guard.json",
+      "bytes": 1182,
+      "sha256": "6cf3b703b61a93fe163334494a0b23cdc6766b6ac48b27f3eda621dac5870640"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare.guard.json",
+      "bytes": 1819,
+      "sha256": "39cd459eb5b779cee553b75777821f0c46997d8cda0f1755fe3781c57e6931ef"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-audit.settings.json",
+      "bytes": 447,
+      "sha256": "025e90bff1516c6c24af5c308802e62b76e0f505f4b710d66368a707328b8751"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/retired-executables.json",
+      "bytes": 1930,
+      "sha256": "19c15afa197e0fde1e0d7783f99720cf699b1aa8c5a2e36882843f7cf0cb94b5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/basis.json",
+      "bytes": 352,
+      "sha256": "2413f0d402801c205e70e63cd2cd92ddd962d47a5a6fb4b81c27d4f802c5d616"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build.settings.json",
+      "bytes": 455,
+      "sha256": "39e4206ab4b8790c24f2b676912cfc75de921bd021b7eb399e9756e5c7ad3ccb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare-retention.guard.json",
+      "bytes": 1839,
+      "sha256": "83b87e1c10c0006ee62195a73e5e4c4b07eae3016d318bd08d905b836c4a750b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build-memory.settings.json",
+      "bytes": 462,
+      "sha256": "be5ccfe131cb2e592c8b6812022792bd15883b9275468ca02c9323d151667bc0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-retention-repeat.settings.json",
+      "bytes": 1175,
+      "sha256": "ff6034ba972841c3e2b204d5473877d3c94d2af96f9f4d5c97ff382056e4d088"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-retention.guard.json",
+      "bytes": 1168,
+      "sha256": "b0f83151a3f7dd67b5ae7a9aabaf23481c4b81e17eafbeed4d273a0c9f588e9d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-writable.settings.json",
+      "bytes": 1021,
+      "sha256": "e93ac7a3cf92f9fed7ab06cb70c8e83b570216a348761a452ce5b2f30c36b349"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-retention.settings.json",
+      "bytes": 451,
+      "sha256": "127e5dee58de72d6bb8c3d8059a0cc33b35d781098d87a7961e1d4e5f2753d2f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-scale.guard.json",
+      "bytes": 1168,
+      "sha256": "516a745a8eaced4d5ace3ec0c93bae0cd900a3ff1e8dd70cbbf3c4d3a207e83d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention.settings.json",
+      "bytes": 1368,
+      "sha256": "ffd33bc6ab25d60b6d754bbdaf8a22e3864c473457c551f3aa270dcd3968a61a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-final.settings.json",
+      "bytes": 534,
+      "sha256": "e3c097d31a8477dede53dbe490d3f030f32b1779d96b6c9a22267ad36ad3f24f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare.settings.json",
+      "bytes": 1226,
+      "sha256": "845c67b3d0299156e6792e7cf2071ffa3eb87212ad161951963c3c1495ce4617"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention.settings.json",
+      "bytes": 1062,
+      "sha256": "15448f03c230e8b4de1bdeaa2510cba5fc987ca6a0d2c18d72dfeb304e2860c7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-retention.settings.json",
+      "bytes": 538,
+      "sha256": "bc10700b1b1a698f44e6b4c5f21ddbc843b1b3b0f0bab9bcb75b78376d74bd10"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-repeat.guard.json",
+      "bytes": 1751,
+      "sha256": "b230e9bcd687c3c671184bb8482503530511b8d0f917c8c5f720baec8f807602"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build-retention.guard.json",
+      "bytes": 1186,
+      "sha256": "3cccec6e2135e4ac11b3194963d0196b44054cecaf26819d35a147b3e4a3f6d8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/retired-payload.json",
+      "bytes": 297,
+      "sha256": "bd509c90ab69d45f9ba86aae424e71eb606b47d79b34a853c32232f765212b1e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-scale.guard.json",
+      "bytes": 1160,
+      "sha256": "81a356c5428af777db29ffb50aded5b533ffeb68a9268e7c5112a13e05959b28"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture.settings.json",
+      "bytes": 749,
+      "sha256": "ad7952553d72e122fc3eb0b55529dad96fd8fe9fed010d6e4a053ffa0cddb1e1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-shape.guard.json",
+      "bytes": 1160,
+      "sha256": "8a20c2827c9cb33f7a8efabcb1c16f717793e145e8be017c2c1045ffb822f354"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-retention-checked.guard.json",
+      "bytes": 1122,
+      "sha256": "7d55f2ab54a84991ea6e0c78f05ed8e9c3c363b003edf3e83c3c21900b3cdb0e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native.guard.json",
+      "bytes": 3506,
+      "sha256": "66e24904a43c0d71f9300c36e23588c83e6225da70ff95545e526dbf18118538"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native.settings.json",
+      "bytes": 1338,
+      "sha256": "db6afa371085b9b5e808b2cc13d3f1c1a99e8d722bffb3d6467ffa0ca2ebf7f8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation.settings.json",
+      "bytes": 1012,
+      "sha256": "b2f7559859929b2401d0bb8fb22df6ab4abd2046fde74e69cf810743a66be2f0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-layout.guard.json",
+      "bytes": 1167,
+      "sha256": "2a88a85c56cc001353c62f00130dcc148c9d17fa4218f842b52b44e4cb1059df"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload.guard.json",
+      "bytes": 1091,
+      "sha256": "871b0413f4aae456b0af30781635edba829fa5dff1fd577941ddd7ea1084622f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention.settings.json",
+      "bytes": 769,
+      "sha256": "d10de00b26263fa39554afa015cea653477ce9e2ec93b084591ec6b947679972"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build-retention.settings.json",
+      "bytes": 465,
+      "sha256": "654b4b975ae65d531b543f12eced1efcb8d4bdc70eb0d345f5e42ad0a541c9d0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention.guard.json",
+      "bytes": 3536,
+      "sha256": "432b3f4ee61680273d726817135127b1d8cd36aa118da221394280e0c14f84e5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-first.settings.json",
+      "bytes": 1155,
+      "sha256": "73a08302ad4457863c2ea92ef3b67998c40d9bd34d0acfd177393e2c8e8481ad"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-comparison.json",
+      "bytes": 2685,
+      "sha256": "6fc29e4082502cd492e5731444f996a16b97654f2e73d97db87aee5b87d6dc5d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct-retention-comparison.json",
+      "bytes": 126,
+      "sha256": "3d75a0b77dc6a6b5ab7872010aa99f5bef9d2b8c0e27d71ac9636f291c39e544"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-scale.settings.json",
+      "bytes": 447,
+      "sha256": "08f79fb9fc22ca95fa212d814326797b1591ccf2ffe1ca9a9cf72b049e677db4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct-retention.stdout.json",
+      "bytes": 639450,
+      "sha256": "9b8acc34bb22ac361cf272248c76b17bc2163cf1f2695ee0a58fae0fce53c1be"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build.guard.json",
+      "bytes": 1159,
+      "sha256": "aa054bc661cbfb7dcf70e093a3d59d35d1e10e98a199925ab5cae3591024ddd1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-retention-repeat.guard.json",
+      "bytes": 1771,
+      "sha256": "faf2dde6951652d7f5d7b2c2696b47113c2036798544a32429b60ac10ea5391d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-scale.settings.json",
+      "bytes": 534,
+      "sha256": "8b86d6cad071ff06742659bef8d0e23c83e024b5e0ecbb63cd161a2eae99740b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/retained-prefixes.json",
+      "bytes": 759,
+      "sha256": "5989d273c5a6388b97a53b9cd379fba89bccca06c8f0dfba491cc6834098eea5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation.guard.json",
+      "bytes": 1606,
+      "sha256": "49b68dcae8b465990d189b29f8b0942f531a0bd3447e5616a37eec272b34692b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build.guard.json",
+      "bytes": 1176,
+      "sha256": "6becb23fc8119fcae4b1059dc6ac023ef9644a0941b6ae6811a2ee8a0ecd2d73"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-retention-first.settings.json",
+      "bytes": 1175,
+      "sha256": "32cb165783ca1bf5122dad5c7728b0fcdd4770d2de0cd128a1568057efadbd7b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-retention-first.guard.json",
+      "bytes": 1771,
+      "sha256": "e349595c476ae4e04861e39c3ae3780a4cd8fa62704a861fb80561278b571d7a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention.settings.json",
+      "bytes": 749,
+      "sha256": "675f7258def28a445a36a2ca3a37734e4a5cd91d19b4f4ddb6988c2bf1e320db"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/modules.json",
+      "bytes": 435,
+      "sha256": "3e6da334fa9fd517dc4c4b4b2d741c3ffc7b114673d73bbf9f193f566e52dc08"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct.stdout.json",
+      "bytes": 639450,
+      "sha256": "9b8acc34bb22ac361cf272248c76b17bc2163cf1f2695ee0a58fae0fce53c1be"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention.guard.json",
+      "bytes": 1367,
+      "sha256": "07aa5e213b32372d17bf6076621fb8e493a7dbea8e74edc77e1dc405d53570a7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct-retention.settings.json",
+      "bytes": 1168,
+      "sha256": "dfc2c1bc44bd1d2f6b522cb8b5311bc4515487ff077a404d947a4264369a9008"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-first.guard.json",
+      "bytes": 1751,
+      "sha256": "70b17bce97132465b6ee6ce64f78054c44eec7908eafe592ccb590157de555d3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-writable.guard.json",
+      "bytes": 2346,
+      "sha256": "441d952f14988b4faed0587f173088da00532f1d42bf3288db99cf05fe770c37"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct.guard.json",
+      "bytes": 2287,
+      "sha256": "059919d7e1ff827df38cfafd571f54ec1378bc5c2432e431610c500b3e004be9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/final-cleanup.json",
+      "bytes": 1337,
+      "sha256": "9039c4020d1c5b13920fe5b1bda67a8fef165b8386d54cd98cfc79f607a0095a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture.guard.json",
+      "bytes": 1381,
+      "sha256": "802e991d7d6d4c921f81e5490eec59de5e9b44eaf5ae21df5c278055c26c2f12"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/retired-pre-retention-payload.json",
+      "bytes": 230,
+      "sha256": "4d3da773cee29bf23e316db0a5afd4563a01836b1ebd60a621e7d373751247e2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/retired-payload-audit.json",
+      "bytes": 230,
+      "sha256": "4416247b957e923a692d14672e01210e5a65ac123120c86e1044dd9fc81fc49a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/runtime-modules.json",
+      "bytes": 4292,
+      "sha256": "be55163d50c7942e565aee6bbe9fbd8e678435a5e8d4d37e78407f2a81b0cf9f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct-comparison.json",
+      "bytes": 166,
+      "sha256": "e94d537650ab491d75cc92fd107db96b5b61cd6f7c7004456d00715192f8cf42"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention.guard.json",
+      "bytes": 1315,
+      "sha256": "fa788e27f9c9b4fc46b147dced9ee6db5a9378c7596bc0398ea7b6cbbf796045"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-layout.settings.json",
+      "bytes": 448,
+      "sha256": "0348f5b80aad8db75469bf4aeeb3ad9ab00c3c9aeef706162e1b82c6aa059685"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-retention.guard.json",
+      "bytes": 1164,
+      "sha256": "d47c44b883c018410932aa9870ab39aacded21c86c9417f0b9dd82e334baa2f7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-comparison.json",
+      "bytes": 2685,
+      "sha256": "1bd7db405fd00996549e3f0349249304f3be77d48d310335343ebafcf0d04fbb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-layout.log",
+      "bytes": 661,
+      "sha256": "26e7d98be6cb1a27e8b2f56dbd11f547c13a925648ee31a8f4879570c61f14f1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-shape.log",
+      "bytes": 80155,
+      "sha256": "9fa972f0921531bf1301ffac23e50c04c2d8c88a858211f199397594e97c5eab"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-fixtures.log",
+      "bytes": 80191,
+      "sha256": "1423bbb3720ae5c2e8b9b15867b6c09132e66f318c8b976818718df6c641b578"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare-retention.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build-retention.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-first.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build.log",
+      "bytes": 1068,
+      "sha256": "139e889afb4f00c9e59886af26394f23b4027197d576ebad58cc1b5ae7a224ad"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-writable.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-audit.log",
+      "bytes": 1938,
+      "sha256": "8060f2d5ad1f2d8ce5ecd89e587a5c86c2c71691eb09e37854b0f116c9e8066c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-retention.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build-memory.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-retention.log",
+      "bytes": 1118,
+      "sha256": "ffbd2632350a85617326e86318183ff1fea8eec9454a7ba508debf624a57dbe1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare-final.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct-retention.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-retention-first.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-scale.log",
+      "bytes": 80191,
+      "sha256": "1423bbb3720ae5c2e8b9b15867b6c09132e66f318c8b976818718df6c641b578"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-final.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-scale.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native.log",
+      "bytes": 390,
+      "sha256": "648b466272fbfcf49717a028d20fcd35fcbc9d13749ec09f0d54910870246617"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-retention-repeat.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-repeat.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation.log",
+      "bytes": 38,
+      "sha256": "b3462ede1400fe84229ebda1ec7bbe90d93d0f557a948d2f78b6581e567479b3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention.log",
+      "bytes": 390,
+      "sha256": "f402dd4d98d43b129ccb6dcd38ea19b546fb6cedb1952c5e268e1fd3d2f0f9bc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-retention-checked.log",
+      "bytes": 80227,
+      "sha256": "2a947464c2f8c2c758f075664ef329f768d5495a3564b98313391720cb3ccd9a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build.log",
+      "bytes": 409,
+      "sha256": "88cb10951d05a559e8c4080925585417d648d43240f53c5f954d13379257bb7a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/preparation-retention/summary.json",
+      "bytes": 539,
+      "sha256": "b0bcfdb61a770bd4ab8fcf7d8a6414359dab8246277d022448bd66f3bda738d3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/preparation-retention/private-warm.stdout.json",
+      "bytes": 3894,
+      "sha256": "4266b61b5c9bd95f9ea6fcea0234c5150eb54a99579096fe25cf33c0df23eea7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/preparation-retention/repeat-warm.stdout.json",
+      "bytes": 3894,
+      "sha256": "5983fd32cfa68c5e2e1ef0ea7ba5486db928a8cf7f3a864270baa925c801761e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-first/body.txt",
+      "bytes": 9308,
+      "sha256": "9f89d87e3603068eb91d8fd8b54e80da7052551e968c2c9b80106564cadf2d43"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-first/result.json",
+      "bytes": 40263,
+      "sha256": "7d61b0bba62a1114417bc1cccbaa7bcabd86a0303e29052730dd4a1b55f03158"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-first/stdin.json",
+      "bytes": 445,
+      "sha256": "17fa25509e1222537573011a58d5a2b49afc67cabc9094f29284529c36bbf4d7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-first/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-first/stdout.json",
+      "bytes": 9525,
+      "sha256": "533702658bbf44d750c2871062ec503f9f9494428085be6142e3cb5927e11cff"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/summary.json",
+      "bytes": 183576,
+      "sha256": "5ae2d7e2ca6ed4af94906adffd4c28ac5912f33f7e05dc001e8b92e2bc54e1f3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-first/body.txt",
+      "bytes": 9322,
+      "sha256": "68a11643411262a79fc1242d4a54c7151128406411cae78b7452ead0ab34536d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-first/result.json",
+      "bytes": 40254,
+      "sha256": "f007b95f13ef762114e513f461d571ab03e1bd70f3aca2e6a178268a675cc6b4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-first/stdin.json",
+      "bytes": 445,
+      "sha256": "39a68a949b5bb95ba9674b844e2d045837cea10e23a5dd631a8f0e53ded57e36"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-first/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-first/stdout.json",
+      "bytes": 9539,
+      "sha256": "bb2e21dfd4acb59806cfe10a427e00785b7f8ea29250e60be0b082c52972647a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-continued/body.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-continued/result.json",
+      "bytes": 18139,
+      "sha256": "568da60f6e42c1f36c78a29b332609e17325cf025a76c94782cb7f2a621e0e61"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-continued/stdin.json",
+      "bytes": 449,
+      "sha256": "4a92885a77b3a6e5bb651b0b0be79e230ad7a24e58e415cb97cd58b8476a53b3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-continued/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-continued/stdout.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/private-warm.stdout.json",
+      "bytes": 5087,
+      "sha256": "5411373c6260287c14716935973202f0344d5136747fbb14dc612042e4ba3fb5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-shutdown.json",
+      "bytes": 113,
+      "sha256": "cef47b85baded9df3dec2b2ae640f1059d5f96b0b6517749a48ab2c53f3438bf"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/results.json",
+      "bytes": 179016,
+      "sha256": "c74b5d08baa5e6cc8a399cae0cb78c9f18c174ec1671da40de2857fe58280ff0"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-first/body.txt",
+      "bytes": 9300,
+      "sha256": "ef3b2974665e6be216f2035f879be45922c702679f4e0ce9e2cd1a5dc8d7ac38"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-first/result.json",
+      "bytes": 40192,
+      "sha256": "4b1377a9b46a2606a76c692902b7a6942044f0cf98affd63bebafa445ad23377"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-first/stdin.json",
+      "bytes": 445,
+      "sha256": "66fc779fd8b55c57068f50bf0d75238096be956fcc22e46c2dc5004f38cbf218"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-first/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-first/stdout.json",
+      "bytes": 9517,
+      "sha256": "5bcafd0e8985c038777f6199e261f257ab69d6f8495c808cac66efa8cef01f61"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-continued/body.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-continued/result.json",
+      "bytes": 18137,
+      "sha256": "feb00d7ed875908126db78fc0a985aac4108609869fd7f03b9b35761f398ada4"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-continued/stdin.json",
+      "bytes": 449,
+      "sha256": "cc9630bba6c8043fcfb014b83d36a4e20ff7d4a6c1085d17f08db1a7aa069d51"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-continued/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-1-continued/stdout.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-shutdown.json",
+      "bytes": 113,
+      "sha256": "0c40a31cf2694e142e9a231cd98bc802f21084bd88de72ab6919bdf601448ea1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/repeat-warm.stdout.json",
+      "bytes": 5087,
+      "sha256": "2a35e9a2be76c01dbdea6068cda72587715f663ee679e54805103c1ba0fc566d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-0-shutdown.json",
+      "bytes": 113,
+      "sha256": "9f14b98cdb5bab06c1bda1fd32da4d7c397a66a528f3d8fb5d4feb08637d1788"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-continued/body.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-continued/result.json",
+      "bytes": 18136,
+      "sha256": "1df865856e43bfc1579fd1fe5ab66ec2ab4bb7eb50e1f92e834a91c4ab6975a6"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-continued/stdin.json",
+      "bytes": 449,
+      "sha256": "e29012b283b8694fe9c0c707887ae3de1b8ef3e6125ef641de089a11b4cec00d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-continued/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/pair-2-continued/stdout.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/preparation-reuse.json",
+      "bytes": 2343,
+      "sha256": "3de539ae67e1b7d0be4ebcea80757b186a7c0bc1310214cea03bd21bd153ed47"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/config.toml",
+      "bytes": 313,
+      "sha256": "5f8f7309d5fcc7b450c73cef298034182d8be145e6487660b9d4895ff9974de1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/result.json",
+      "bytes": 2744,
+      "sha256": "bbcbec10ca95dd85660ddc7804c304694cd9b871e46bbe31d318b688bef3501d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/result.json",
+      "bytes": 751,
+      "sha256": "26d97a608f0a8c7f55058c03c6dc027f3d21dea6885b269230ff13187ec361f7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/retention/result.json",
+      "bytes": 445,
+      "sha256": "a5cd7530a138da26bec7bcc8002b8a9d2fdb9d2618a7242aa949219248808674"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepared-retention/result.json",
+      "bytes": 1849,
+      "sha256": "17098992d8a98bd28411f7dc78d08adb4a1aa5ccbc972aa0032b9afa9d8f1e64"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention/result.json",
+      "bytes": 3796,
+      "sha256": "f29c76371306e3b0bffc0a1cd91743d89718a40629550be0d514df85e8530910"
+    }
+  ],
+  "guards": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build-memory.guard.json",
+      "bytes": 1182,
+      "sha256": "6cf3b703b61a93fe163334494a0b23cdc6766b6ac48b27f3eda621dac5870640"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build-retention.guard.json",
+      "bytes": 1186,
+      "sha256": "3cccec6e2135e4ac11b3194963d0196b44054cecaf26819d35a147b3e4a3f6d8"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build.guard.json",
+      "bytes": 1176,
+      "sha256": "6becb23fc8119fcae4b1059dc6ac023ef9644a0941b6ae6811a2ee8a0ecd2d73"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention.guard.json",
+      "bytes": 1367,
+      "sha256": "07aa5e213b32372d17bf6076621fb8e493a7dbea8e74edc77e1dc405d53570a7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic.guard.json",
+      "bytes": 1337,
+      "sha256": "c19d8ac4e294675c51e159874515e8ffbe5056873453792317446190ce0929bc"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-audit.guard.json",
+      "bytes": 1168,
+      "sha256": "89b5b2eef1be5008e5e21bdbed703a1ccb11b2bf5a23ca43056b02c298c5a0ae"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-fixtures.guard.json",
+      "bytes": 1170,
+      "sha256": "d6e6316e30b97766f9c8e8392a041e9aee7bed2ae5bf86d7d96df0aa2b5725bb"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-layout.guard.json",
+      "bytes": 1167,
+      "sha256": "2a88a85c56cc001353c62f00130dcc148c9d17fa4218f842b52b44e4cb1059df"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-retention-checked.guard.json",
+      "bytes": 1122,
+      "sha256": "7d55f2ab54a84991ea6e0c78f05ed8e9c3c363b003edf3e83c3c21900b3cdb0e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-retention.guard.json",
+      "bytes": 1168,
+      "sha256": "b0f83151a3f7dd67b5ae7a9aabaf23481c4b81e17eafbeed4d273a0c9f588e9d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-scale.guard.json",
+      "bytes": 1168,
+      "sha256": "516a745a8eaced4d5ace3ec0c93bae0cd900a3ff1e8dd70cbbf3c4d3a207e83d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build-shape.guard.json",
+      "bytes": 1160,
+      "sha256": "8a20c2827c9cb33f7a8efabcb1c16f717793e145e8be017c2c1045ffb822f354"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build.guard.json",
+      "bytes": 1159,
+      "sha256": "aa054bc661cbfb7dcf70e093a3d59d35d1e10e98a199925ab5cae3591024ddd1"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture.guard.json",
+      "bytes": 1381,
+      "sha256": "802e991d7d6d4c921f81e5490eec59de5e9b44eaf5ae21df5c278055c26c2f12"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct-retention.guard.json",
+      "bytes": 2306,
+      "sha256": "309149e88bd9a225baf1ff0d70aff4f26f0bc1ea64c5cf4469d830ef0b771e8d"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct.guard.json",
+      "bytes": 2287,
+      "sha256": "059919d7e1ff827df38cfafd571f54ec1378bc5c2432e431610c500b3e004be9"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention.guard.json",
+      "bytes": 1315,
+      "sha256": "fa788e27f9c9b4fc46b147dced9ee6db5a9378c7596bc0398ea7b6cbbf796045"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture.guard.json",
+      "bytes": 1358,
+      "sha256": "bf5f3e2920a627e18011d512e32a460bd9063bb1fe557ba585e01fd973779a2e"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention.guard.json",
+      "bytes": 2386,
+      "sha256": "b68fdc3b870a81c27bbe65ca40acf24cd6e23f07bc030fdc342cd5a74aa258c7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-writable.guard.json",
+      "bytes": 2346,
+      "sha256": "441d952f14988b4faed0587f173088da00532f1d42bf3288db99cf05fe770c37"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation.guard.json",
+      "bytes": 1606,
+      "sha256": "49b68dcae8b465990d189b29f8b0942f531a0bd3447e5616a37eec272b34692b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention.guard.json",
+      "bytes": 3536,
+      "sha256": "432b3f4ee61680273d726817135127b1d8cd36aa118da221394280e0c14f84e5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native.guard.json",
+      "bytes": 3506,
+      "sha256": "66e24904a43c0d71f9300c36e23588c83e6225da70ff95545e526dbf18118538"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-final.guard.json",
+      "bytes": 1159,
+      "sha256": "af0689c1f44e0eb5f908a785a7383a608aa2d4864fbbd45823ae1fc4c2252586"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-retention.guard.json",
+      "bytes": 1164,
+      "sha256": "d47c44b883c018410932aa9870ab39aacded21c86c9417f0b9dd82e334baa2f7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload-scale.guard.json",
+      "bytes": 1160,
+      "sha256": "81a356c5428af777db29ffb50aded5b533ffeb68a9268e7c5112a13e05959b28"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/payload.guard.json",
+      "bytes": 1091,
+      "sha256": "871b0413f4aae456b0af30781635edba829fa5dff1fd577941ddd7ea1084622f"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare-final.guard.json",
+      "bytes": 1673,
+      "sha256": "beb798a20e332baf681fa3acf693cccf2469ac724f98d9001f327c75f9310cb7"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare-retention.guard.json",
+      "bytes": 1839,
+      "sha256": "83b87e1c10c0006ee62195a73e5e4c4b07eae3016d318bd08d905b836c4a750b"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prepare.guard.json",
+      "bytes": 1819,
+      "sha256": "39cd459eb5b779cee553b75777821f0c46997d8cda0f1755fe3781c57e6931ef"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-first.guard.json",
+      "bytes": 1751,
+      "sha256": "70b17bce97132465b6ee6ce64f78054c44eec7908eafe592ccb590157de555d3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-repeat.guard.json",
+      "bytes": 1751,
+      "sha256": "b230e9bcd687c3c671184bb8482503530511b8d0f917c8c5f720baec8f807602"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-retention-first.guard.json",
+      "bytes": 1771,
+      "sha256": "e349595c476ae4e04861e39c3ae3780a4cd8fa62704a861fb80561278b571d7a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/warm-retention-repeat.guard.json",
+      "bytes": 1771,
+      "sha256": "faf2dde6951652d7f5d7b2c2696b47113c2036798544a32429b60ac10ea5391d"
+    }
+  ],
+  "finalGuards": [
+    "build-retention-checked",
+    "payload-retention",
+    "fixture-retention",
+    "atomic-build-retention",
+    "atomic-retention",
+    "prepare-retention",
+    "warm-retention-first",
+    "warm-retention-repeat",
+    "native-retention",
+    "direct-retention",
+    "mutation-retention"
+  ],
+  "maximumAggregateRssKiB": 1527104,
+  "fixture": {
+    "sourceEmbeddingCalls": 0,
+    "sharedReferenceRetained": true,
+    "sharedDeletion": {
+      "writtenBytes": 7530,
+      "trainingMs": 0,
+      "touchedCells": 4,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 1,
+      "readMs": 5,
+      "projectionRows": 11,
+      "points": 77,
+      "mode": "publication-delta",
+      "elapsedMs": 8,
+      "changedOwners": 1,
+      "cells": 4,
+      "assignmentMs": 3,
+      "addedKeys": 0
+    },
+    "reactivation": {
+      "writtenBytes": 7530,
+      "trainingMs": 0,
+      "touchedCells": 4,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 0,
+      "readMs": 6,
+      "projectionRows": 11,
+      "points": 77,
+      "mode": "publication-delta",
+      "elapsedMs": 9,
+      "changedOwners": 1,
+      "cells": 4,
+      "assignmentMs": 3,
+      "addedKeys": 11
+    },
+    "oldPinPreserved": true,
+    "lastReferenceRemoved": true,
+    "lastDeletion": {
+      "writtenBytes": 7530,
+      "trainingMs": 0,
+      "touchedCells": 4,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 11,
+      "readMs": 5,
+      "projectionRows": 11,
+      "points": 66,
+      "mode": "publication-delta",
+      "elapsedMs": 8,
+      "changedOwners": 1,
+      "cells": 4,
+      "assignmentMs": 3,
+      "addedKeys": 0
+    },
+    "initial": {
+      "writtenBytes": 7467,
+      "trainingMs": 0,
+      "touchedCells": 0,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 0,
+      "readMs": 4,
+      "projectionRows": 154,
+      "points": 77,
+      "mode": "prepared",
+      "elapsedMs": 9,
+      "changedOwners": 0,
+      "cells": 4,
+      "assignmentMs": 0,
+      "addedKeys": 0
+    },
+    "independentCensus": true,
+    "geometryFrozen": true,
+    "focusOnly": {
+      "writtenBytes": 7530,
+      "trainingMs": 0,
+      "touchedCells": 0,
+      "retainedMetadataProbes": 11,
+      "removedKeys": 0,
+      "readMs": 1,
+      "projectionRows": 0,
+      "points": 77,
+      "mode": "publication-delta",
+      "elapsedMs": 4,
+      "changedOwners": 0,
+      "cells": 4,
+      "assignmentMs": 3,
+      "addedKeys": 0
+    },
+    "empty": {
+      "writtenBytes": 7529,
+      "trainingMs": 0,
+      "touchedCells": 4,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 77,
+      "readMs": 12,
+      "projectionRows": 77,
+      "points": 0,
+      "mode": "publication-delta",
+      "elapsedMs": 16,
+      "changedOwners": 67,
+      "cells": 4,
+      "assignmentMs": 4,
+      "addedKeys": 0
+    },
+    "coordinateReused": true,
+    "compacted": {
+      "writtenBytes": 1126,
+      "trainingMs": 0,
+      "touchedCells": 0,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 0,
+      "readMs": 1,
+      "projectionRows": 2,
+      "points": 1,
+      "mode": "rebuilt",
+      "elapsedMs": 3,
+      "changedOwners": 0,
+      "cells": 1,
+      "assignmentMs": 0,
+      "addedKeys": 0
+    },
+    "boundedRows": 2,
+    "answeringModelCalls": 0,
+    "additionProjectionReadBytes": 13084,
+    "addition": {
+      "writtenBytes": 7530,
+      "trainingMs": 0,
+      "touchedCells": 1,
+      "retainedMetadataProbes": 11,
+      "removedKeys": 0,
+      "readMs": 3,
+      "projectionRows": 1,
+      "points": 78,
+      "mode": "publication-delta",
+      "elapsedMs": 6,
+      "changedOwners": 1,
+      "cells": 4,
+      "assignmentMs": 3,
+      "addedKeys": 1
+    }
+  },
+  "atomic": {
+    "pendingEditsBeforeFailure": 2,
+    "partialPublicationRejected": true,
+    "oldPinPreserved": true,
+    "foreignSourceRebuilt": true,
+    "fallback": {
+      "writtenBytes": 1041,
+      "trainingMs": 0,
+      "touchedCells": 0,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 0,
+      "readMs": 0,
+      "projectionRows": 0,
+      "points": 0,
+      "mode": "rebuilt",
+      "elapsedMs": 2,
+      "changedOwners": 0,
+      "cells": 1,
+      "assignmentMs": 0,
+      "addedKeys": 0
+    },
+    "explicitRepair": {
+      "writtenBytes": 1041,
+      "trainingMs": 0,
+      "touchedCells": 0,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 0,
+      "readMs": 1,
+      "projectionRows": 0,
+      "points": 0,
+      "mode": "rebuilt",
+      "elapsedMs": 3,
+      "changedOwners": 0,
+      "cells": 1,
+      "assignmentMs": 0,
+      "addedKeys": 0
+    },
+    "answeringModelCalls": 0
+  },
+  "retention": {
+    "replacementRebuilt": true,
+    "replacement": {
+      "probes": 2,
+      "preserved": false
+    },
+    "rebuilt": {
+      "writtenBytes": 1280,
+      "trainingMs": 0,
+      "touchedCells": 0,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 0,
+      "readMs": 0,
+      "projectionRows": 6,
+      "points": 3,
+      "mode": "rebuilt",
+      "elapsedMs": 2,
+      "changedOwners": 0,
+      "cells": 1,
+      "assignmentMs": 0,
+      "addedKeys": 0
+    },
+    "appendPreserved": true,
+    "append": {
+      "probes": 2,
+      "preserved": true
+    }
+  },
+  "initialPreparation": {
+    "source": {
+      "root": {
+        "rows": 6446518,
+        "offset": 432030480,
+        "last": "workSurfaces:99998:0",
+        "height": 4,
+        "first": "body:0",
+        "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+        "bytes": 1514
+      },
+      "revision": 13,
+      "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+      "bytes": 432031994,
+      "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+    },
+    "priorOriginalColumnAuditReused": true,
+    "prepared": {
+      "writtenBytes": 7376652,
+      "trainingMs": 2746,
+      "touchedCells": 0,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 0,
+      "readMs": 11075,
+      "projectionRows": 66384,
+      "points": 50000,
+      "mode": "prepared",
+      "elapsedMs": 27727,
+      "changedOwners": 0,
+      "cells": 512,
+      "assignmentMs": 11112,
+      "addedKeys": 0
+    },
+    "partition": {
+      "root": {
+        "rows": 51536,
+        "offset": 7376468,
+        "last": "ready",
+        "height": 3,
+        "first": "cell:0",
+        "checksum": "8d3104770afac2dd801980a50b1639c0173396573f5cf6a2842b3bf8d24c14ab",
+        "bytes": 184
+      },
+      "revision": 1,
+      "identity": "b769d47a552ced551649fd3d2da4f0c8031626c6fe6f85643087b2233dbded1a",
+      "bytes": 7376652,
+      "authority": "eggshell.vector-partition:a551fb94f0c8ca8b8b61a365886256612fc26dc9f9bce94b96b6a35864c1ba88"
+    },
+    "matrix": {
+      "root": {
+        "rows": 99970,
+        "offset": 343000610,
+        "last": "stats",
+        "height": 3,
+        "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+        "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+        "bytes": 1439
+      },
+      "revision": 1,
+      "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+      "bytes": 343002049,
+      "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+    },
+    "answeringModelCalls": 0
+  },
+  "repeatWarm": {
+    "after": {
+      "database": {
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "directory": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg"
+      },
+      "discovery": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "focus": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+      "input": {
+        "characters": 0,
+        "embeddedCharacters": 0,
+        "tokenizerMappedCharacters": 0,
+        "tokens": 0,
+        "vectors": 0,
+        "visibleCharacters": 0,
+        "windows": 0
+      },
+      "invalid": 0,
+      "missing": 0,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": 13,
+      "valid": 0,
+      "windows": 0
+    },
+    "batches": 0,
+    "before": {
+      "database": {
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "directory": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg"
+      },
+      "discovery": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "focus": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+      "input": {
+        "characters": 0,
+        "embeddedCharacters": 0,
+        "tokenizerMappedCharacters": 0,
+        "tokens": 0,
+        "vectors": 0,
+        "visibleCharacters": 0,
+        "windows": 0
+      },
+      "invalid": 0,
+      "missing": 0,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": 13,
+      "valid": 0,
+      "windows": 0
+    },
+    "changedOwners": 0,
+    "domain": {
+      "elapsedMs": 490,
+      "metadata": {
+        "bytes": 8658024,
+        "digest": "5dc158f04f1254f6dea05d2c8bd833961090cea1eb1ac0359285f6064677cac3",
+        "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+        "source": {
+          "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]",
+          "bytes": 432031994,
+          "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+          "revision": 13,
+          "root": {
+            "bytes": 1514,
+            "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+            "first": "body:0",
+            "height": 4,
+            "last": "workSurfaces:99998:0",
+            "offset": 432030480,
+            "rows": 6446518
+          }
+        },
+        "stamp": {
+          "authority": "b0c9b66b1734c490b93a96f26c3eb871f3fe904958a2f87a48d61a9dbfb0f503",
+          "candidates": 49969,
+          "change": 13,
+          "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+          "roots": 49969
+        },
+        "windows": 50000
+      },
+      "mode": "warm"
+    },
+    "elapsedMs": 2180,
+    "lexical": {
+      "added": 0,
+      "batches": 0,
+      "hydrated": 0,
+      "removed": 0,
+      "stamp": {
+        "authority": "b0c9b66b1734c490b93a96f26c3eb871f3fe904958a2f87a48d61a9dbfb0f503",
+        "candidates": 49969,
+        "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "roots": 49969
+      }
+    },
+    "partition": {
+      "addedKeys": 0,
+      "assignmentMs": 0,
+      "cells": 512,
+      "changedOwners": 0,
+      "elapsedMs": 1,
+      "mode": "warm",
+      "points": 50000,
+      "projectionRows": 0,
+      "readMs": 0,
+      "removedKeys": 0,
+      "retainedMetadataProbes": 0,
+      "touchedCells": 0,
+      "trainingMs": 0,
+      "writtenBytes": 0
+    },
+    "planReason": "source-unchanged",
+    "projections": {
+      "added": 0,
+      "bytes": 0,
+      "elapsedMs": 0,
+      "mode": "empty",
+      "produced": 0,
+      "requested": 0,
+      "reused": 0,
+      "rows": 0,
+      "writtenBytes": 0
+    },
+    "publications": 0,
+    "requested": 0,
+    "scope": "publication-delta",
+    "windowOwners": {
+      "added": 0,
+      "changedOwners": 0,
+      "elapsedMs": 4,
+      "mode": "warm",
+      "occurrences": 50000,
+      "removed": 0,
+      "writtenBytes": 0
+    }
+  },
+  "firstWarm": {
+    "after": {
+      "database": {
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "directory": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg"
+      },
+      "discovery": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "focus": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+      "input": {
+        "characters": 0,
+        "embeddedCharacters": 0,
+        "tokenizerMappedCharacters": 0,
+        "tokens": 0,
+        "vectors": 0,
+        "visibleCharacters": 0,
+        "windows": 0
+      },
+      "invalid": 0,
+      "missing": 0,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": 13,
+      "valid": 0,
+      "windows": 0
+    },
+    "batches": 0,
+    "before": {
+      "database": {
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "directory": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg"
+      },
+      "discovery": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "encoderContract": "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+      "focus": {
+        "input": {
+          "characters": 0,
+          "embeddedCharacters": 0,
+          "tokenizerMappedCharacters": 0,
+          "tokens": 0,
+          "vectors": 0,
+          "visibleCharacters": 0,
+          "windows": 0
+        },
+        "invalid": 0,
+        "missing": 0,
+        "valid": 0,
+        "windows": 0
+      },
+      "focusContract": "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+      "input": {
+        "characters": 0,
+        "embeddedCharacters": 0,
+        "tokenizerMappedCharacters": 0,
+        "tokens": 0,
+        "vectors": 0,
+        "visibleCharacters": 0,
+        "windows": 0
+      },
+      "invalid": 0,
+      "missing": 0,
+      "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "revision": 13,
+      "valid": 0,
+      "windows": 0
+    },
+    "changedOwners": 0,
+    "domain": {
+      "elapsedMs": 495,
+      "metadata": {
+        "bytes": 8658024,
+        "digest": "5dc158f04f1254f6dea05d2c8bd833961090cea1eb1ac0359285f6064677cac3",
+        "implementation": "2f3baa07951f0188cc02dd4ebbc3987dfa40e94c412895efdb6935428e755cae",
+        "source": {
+          "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]",
+          "bytes": 432031994,
+          "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+          "revision": 13,
+          "root": {
+            "bytes": 1514,
+            "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+            "first": "body:0",
+            "height": 4,
+            "last": "workSurfaces:99998:0",
+            "offset": 432030480,
+            "rows": 6446518
+          }
+        },
+        "stamp": {
+          "authority": "b0c9b66b1734c490b93a96f26c3eb871f3fe904958a2f87a48d61a9dbfb0f503",
+          "candidates": 49969,
+          "change": 13,
+          "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+          "roots": 49969
+        },
+        "windows": 50000
+      },
+      "mode": "warm"
+    },
+    "elapsedMs": 2183,
+    "lexical": {
+      "added": 0,
+      "batches": 0,
+      "hydrated": 0,
+      "removed": 0,
+      "stamp": {
+        "authority": "b0c9b66b1734c490b93a96f26c3eb871f3fe904958a2f87a48d61a9dbfb0f503",
+        "candidates": 49969,
+        "contract": "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+        "database": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+        "roots": 49969
+      }
+    },
+    "partition": {
+      "addedKeys": 0,
+      "assignmentMs": 0,
+      "cells": 512,
+      "changedOwners": 0,
+      "elapsedMs": 2,
+      "mode": "warm",
+      "points": 50000,
+      "projectionRows": 0,
+      "readMs": 0,
+      "removedKeys": 0,
+      "retainedMetadataProbes": 0,
+      "touchedCells": 0,
+      "trainingMs": 0,
+      "writtenBytes": 0
+    },
+    "planReason": "source-unchanged",
+    "projections": {
+      "added": 0,
+      "bytes": 0,
+      "elapsedMs": 0,
+      "mode": "empty",
+      "produced": 0,
+      "requested": 0,
+      "reused": 0,
+      "rows": 0,
+      "writtenBytes": 0
+    },
+    "publications": 0,
+    "requested": 0,
+    "scope": "publication-delta",
+    "windowOwners": {
+      "added": 0,
+      "changedOwners": 0,
+      "elapsedMs": 4,
+      "mode": "warm",
+      "occurrences": 50000,
+      "removed": 0,
+      "writtenBytes": 0
+    }
+  },
+  "mutation": {
+    "wholeWarmMeasured": false,
+    "sourceEmbeddingWindows": 1,
+    "sourceBefore": {
+      "root": {
+        "rows": 6446518,
+        "offset": 432030480,
+        "last": "workSurfaces:99998:0",
+        "height": 4,
+        "first": "body:0",
+        "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+        "bytes": 1514
+      },
+      "revision": 13,
+      "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+      "bytes": 432031994,
+      "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+    },
+    "sourceAfter": {
+      "root": {
+        "rows": 6446621,
+        "offset": 432588624,
+        "last": "workSurfaces:99998:0",
+        "height": 4,
+        "first": "body:0",
+        "checksum": "5bb8cbad51c98d3716d9e5127e35c8dea586173f9b8f7572db80c2cfe5c03f06",
+        "bytes": 1514
+      },
+      "revision": 14,
+      "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+      "bytes": 432590138,
+      "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+    },
+    "repeat": {
+      "writtenBytes": 0,
+      "trainingMs": 0,
+      "touchedCells": 0,
+      "retainedMetadataProbes": 0,
+      "removedKeys": 0,
+      "readMs": 0,
+      "projectionRows": 0,
+      "points": 50001,
+      "mode": "warm",
+      "elapsedMs": 1,
+      "changedOwners": 0,
+      "cells": 512,
+      "assignmentMs": 0,
+      "addedKeys": 0
+    },
+    "projectionReads": 11,
+    "projectionReadBytes": 46119,
+    "prepared": {
+      "writtenBytes": 39926,
+      "trainingMs": 0,
+      "touchedCells": 1,
+      "retainedMetadataProbes": 372,
+      "removedKeys": 0,
+      "readMs": 222,
+      "projectionRows": 1,
+      "points": 50001,
+      "mode": "publication-delta",
+      "elapsedMs": 234,
+      "changedOwners": 1,
+      "cells": 512,
+      "assignmentMs": 12,
+      "addedKeys": 1
+    },
+    "partitionBefore": {
+      "root": {
+        "rows": 51536,
+        "offset": 7376468,
+        "last": "ready",
+        "height": 3,
+        "first": "cell:0",
+        "checksum": "8d3104770afac2dd801980a50b1639c0173396573f5cf6a2842b3bf8d24c14ab",
+        "bytes": 184
+      },
+      "revision": 1,
+      "identity": "b769d47a552ced551649fd3d2da4f0c8031626c6fe6f85643087b2233dbded1a",
+      "bytes": 7376652,
+      "authority": "eggshell.vector-partition:a551fb94f0c8ca8b8b61a365886256612fc26dc9f9bce94b96b6a35864c1ba88"
+    },
+    "partitionAfter": {
+      "root": {
+        "rows": 51537,
+        "offset": 7416394,
+        "last": "ready",
+        "height": 3,
+        "first": "cell:0",
+        "checksum": "98b2fef0dc9cf04353a7c958d26258ee50c57d80f868a55134d2951303cbff22",
+        "bytes": 184
+      },
+      "revision": 2,
+      "identity": "b769d47a552ced551649fd3d2da4f0c8031626c6fe6f85643087b2233dbded1a",
+      "bytes": 7416578,
+      "authority": "eggshell.vector-partition:a551fb94f0c8ca8b8b61a365886256612fc26dc9f9bce94b96b6a35864c1ba88"
+    },
+    "oldPinPreserved": true,
+    "membershipMatchesIndependentDelta": true,
+    "matrixBefore": {
+      "root": {
+        "rows": 99970,
+        "offset": 343000610,
+        "last": "stats",
+        "height": 3,
+        "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+        "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+        "bytes": 1439
+      },
+      "revision": 1,
+      "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+      "bytes": 343002049,
+      "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+    },
+    "matrixAfter": {
+      "root": {
+        "rows": 99971,
+        "offset": 343027607,
+        "last": "stats",
+        "height": 3,
+        "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+        "checksum": "3905b490c59187ede73d3ed0a9094a6dccfa4b4bdbc7846b8d8d413294eb2e42",
+        "bytes": 1440
+      },
+      "revision": 2,
+      "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+      "bytes": 343029047,
+      "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+    },
+    "geometryFrozen": true,
+    "answeringModelCalls": 0
+  },
+  "retainedPrefixes": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-source.egg/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.pages",
+      "prefixBytes": 432031994,
+      "sha256": "e3b84e42a71b4e993c4e306585c75059312d4ab8501b4b0a56c4e9840f9ee926"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0.pages",
+      "prefixBytes": 343002049,
+      "sha256": "29883e11a158fb975b1e3ecc7e7f1ff784b21d16cac604593947d2d8892c2b73"
+    }
+  ],
+  "native": {
+    "pairs": 3,
+    "semanticCompleted": 6,
+    "cases": [
+      {
+        "validStratum": true,
+        "totalMs": 8337,
+        "startupMs": 97,
+        "search": {
+          "turn": "pair-0-first",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 7932,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2764395348,
+          "semanticFinishDeadlineMs": 2764416452,
+          "semanticDeadlineMs": 2764402125,
+          "searchStartedMs": 2764387798,
+          "reason": "selected=8 visible=8 new-roots=8 completed=0 advisory=8 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=historical",
+          "localUnions": 0,
+          "initialSearch": true,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 1,
+          "disposition": "offered",
+          "deadlineMs": 2764416452,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 1.",
+        "phase": "first",
+        "pair": 0,
+        "originalBody": true,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 7932,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 8240,
+        "historyBefore": 0,
+        "exitCode": 0,
+        "bodySha256": "9f89d87e3603068eb91d8fd8b54e80da7052551e968c2c9b80106564cadf2d43",
+        "bodyBytes": 9308,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 3992,
+        "startupMs": 97,
+        "search": {
+          "turn": "pair-0-continued",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 3687,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2764399390,
+          "semanticFinishDeadlineMs": 2764424699,
+          "semanticDeadlineMs": 2764410372,
+          "searchStartedMs": 2764396046,
+          "reason": "no-new-memory",
+          "localUnions": 0,
+          "initialSearch": false,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 2,
+          "disposition": "empty",
+          "deadlineMs": 2764424699,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 1.",
+        "phase": "continued",
+        "pair": 0,
+        "originalBody": false,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 7932,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 3992,
+        "historyBefore": 12,
+        "exitCode": 0,
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 7244,
+        "startupMs": 101,
+        "search": {
+          "turn": "pair-1-first",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 6828,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2764406624,
+          "semanticFinishDeadlineMs": 2764428845,
+          "semanticDeadlineMs": 2764414518,
+          "searchStartedMs": 2764400191,
+          "reason": "selected=8 visible=8 new-roots=8 completed=0 advisory=8 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=historical",
+          "localUnions": 0,
+          "initialSearch": true,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 1,
+          "disposition": "offered",
+          "deadlineMs": 2764428845,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 2.",
+        "phase": "first",
+        "pair": 1,
+        "originalBody": true,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6828,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 7143,
+        "historyBefore": 0,
+        "exitCode": 0,
+        "bodySha256": "ef3b2974665e6be216f2035f879be45922c702679f4e0ce9e2cd1a5dc8d7ac38",
+        "bodyBytes": 9300,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 3933,
+        "startupMs": 101,
+        "search": {
+          "turn": "pair-1-continued",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 3628,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2764410615,
+          "semanticFinishDeadlineMs": 2764435994,
+          "semanticDeadlineMs": 2764421668,
+          "searchStartedMs": 2764407343,
+          "reason": "no-new-memory",
+          "localUnions": 0,
+          "initialSearch": false,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 2,
+          "disposition": "empty",
+          "deadlineMs": 2764435994,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 2.",
+        "phase": "continued",
+        "pair": 1,
+        "originalBody": false,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6828,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 3933,
+        "historyBefore": 12,
+        "exitCode": 0,
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 7229,
+        "startupMs": 95,
+        "search": {
+          "turn": "pair-2-first",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 6828,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2764417880,
+          "semanticFinishDeadlineMs": 2764440079,
+          "semanticDeadlineMs": 2764425752,
+          "searchStartedMs": 2764411426,
+          "reason": "selected=8 visible=8 new-roots=8 completed=0 advisory=8 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=historical",
+          "localUnions": 0,
+          "initialSearch": true,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 1,
+          "disposition": "offered",
+          "deadlineMs": 2764440079,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 3.",
+        "phase": "first",
+        "pair": 2,
+        "originalBody": true,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6828,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 7134,
+        "historyBefore": 0,
+        "exitCode": 0,
+        "bodySha256": "68a11643411262a79fc1242d4a54c7151128406411cae78b7452ead0ab34536d",
+        "bodyBytes": 9322,
+        "acknowledgedHistory": 12
+      },
+      {
+        "validStratum": true,
+        "totalMs": 3736,
+        "startupMs": 95,
+        "search": {
+          "turn": "pair-2-continued",
+          "trace": {
+            "warmRequests": 0,
+            "warmMs": 0,
+            "semanticMs": 3428,
+            "semantic": "completed",
+            "route": "configured",
+            "lexicalMs": 0
+          },
+          "semanticReadyMs": 2764421654,
+          "semanticFinishDeadlineMs": 2764447226,
+          "semanticDeadlineMs": 2764432900,
+          "searchStartedMs": 2764418575,
+          "reason": "no-new-memory",
+          "localUnions": 0,
+          "initialSearch": false,
+          "finishReadyWithinHook": true,
+          "equalityOrigin": null,
+          "epoch": 2,
+          "disposition": "empty",
+          "deadlineMs": 2764447226,
+          "completed": 0
+        },
+        "replyComplete": true,
+        "question": "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 3.",
+        "phase": "continued",
+        "pair": 2,
+        "originalBody": false,
+        "lastOfferedSearch": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6828,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "hookMs": 3736,
+        "historyBefore": 12,
+        "exitCode": 0,
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0,
+        "acknowledgedHistory": 12
+      }
+    ],
+    "comparisons": [
+      {
+        "pair": 0,
+        "phase": "first",
+        "totalMs": 8337,
+        "bodyEqual": true,
+        "candidateSha256": "9f89d87e3603068eb91d8fd8b54e80da7052551e968c2c9b80106564cadf2d43",
+        "referenceSha256": "9f89d87e3603068eb91d8fd8b54e80da7052551e968c2c9b80106564cadf2d43",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 7932,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        }
+      },
+      {
+        "pair": 0,
+        "phase": "continued",
+        "totalMs": 3992,
+        "bodyEqual": true,
+        "candidateSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "referenceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 3687,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        }
+      },
+      {
+        "pair": 1,
+        "phase": "first",
+        "totalMs": 7244,
+        "bodyEqual": true,
+        "candidateSha256": "ef3b2974665e6be216f2035f879be45922c702679f4e0ce9e2cd1a5dc8d7ac38",
+        "referenceSha256": "ef3b2974665e6be216f2035f879be45922c702679f4e0ce9e2cd1a5dc8d7ac38",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6828,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        }
+      },
+      {
+        "pair": 1,
+        "phase": "continued",
+        "totalMs": 3933,
+        "bodyEqual": true,
+        "candidateSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "referenceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 3628,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        }
+      },
+      {
+        "pair": 2,
+        "phase": "first",
+        "totalMs": 7229,
+        "bodyEqual": true,
+        "candidateSha256": "68a11643411262a79fc1242d4a54c7151128406411cae78b7452ead0ab34536d",
+        "referenceSha256": "68a11643411262a79fc1242d4a54c7151128406411cae78b7452ead0ab34536d",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 6828,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        }
+      },
+      {
+        "pair": 2,
+        "phase": "continued",
+        "totalMs": 3736,
+        "bodyEqual": true,
+        "candidateSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "referenceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "search": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 3428,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        }
+      }
+    ],
+    "counters": [
+      {
+        "pair": 0,
+        "phase": "first",
+        "routing": [
+          {
+            "unseenVectorKeys": 45904,
+            "totalCells": 512,
+            "storage": "user",
+            "source": {
+              "root": {
+                "rows": 6446518,
+                "offset": 432030480,
+                "last": "workSurfaces:99998:0",
+                "height": 4,
+                "first": "body:0",
+                "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                "bytes": 1514
+              },
+              "revision": 13,
+              "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+              "bytes": 432031994,
+              "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+            },
+            "safeFloatPruning": false,
+            "postingRows": 4096,
+            "postingAllowance": 8192,
+            "partialCell": false,
+            "keys": 4096,
+            "keyAllowance": 4096,
+            "elapsedMs": 332,
+            "cells": 42,
+            "basis": {
+              "width": 384,
+              "source": {
+                "root": {
+                  "rows": 6446518,
+                  "offset": 432030480,
+                  "last": "workSurfaces:99998:0",
+                  "height": 4,
+                  "first": "body:0",
+                  "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                  "bytes": 1514
+                },
+                "revision": 13,
+                "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+                "bytes": 432031994,
+                "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+              },
+              "rows": 50000,
+              "matrix": {
+                "root": {
+                  "rows": 99970,
+                  "offset": 343000610,
+                  "last": "stats",
+                  "height": 3,
+                  "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+                  "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+                  "bytes": 1439
+                },
+                "revision": 1,
+                "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+                "bytes": 343002049,
+                "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+              },
+              "eligibility": "c2b5287c44c1b298e9c66c7514ebe3575e0dd2900f8335b6f8d40fd87df6694d"
+            }
+          }
+        ],
+        "numerical": [
+          {
+            "status": "completed",
+            "elapsedMs": 119,
+            "counters": {
+              "sourceInput": {
+                "windows": 8,
+                "visibleCharacters": 642,
+                "vectors": 8,
+                "tokens": 245,
+                "tokenizerMappedCharacters": 642,
+                "embeddedCharacters": 642,
+                "characters": 714
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 8,
+              "scoreMs": 117,
+              "queryMs": 1,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 8,
+              "projectionMisses": 8,
+              "projectionHits": 0,
+              "phase": "encoder-reply",
+              "matrixRows": 8,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 13,
+                "requestUs": 81,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 8,
+              "purpose": "focus",
+              "numerical": true,
+              "durableDocuments": 8,
+              "documents": 8
+            }
+          },
+          {
+            "status": "completed",
+            "elapsedMs": 4109,
+            "counters": {
+              "sourceInput": {
+                "windows": 4132,
+                "visibleCharacters": 699999,
+                "vectors": 4164,
+                "tokens": 238829,
+                "tokenizerMappedCharacters": 699999,
+                "embeddedCharacters": 699999,
+                "characters": 787985
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 4132,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 4132,
+              "scoreMs": 4093,
+              "queryMs": 1,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12693504,
+              "projectionReadMsWithinScore": 3693,
+              "projectionMisses": 4132,
+              "projectionHits": 0,
+              "phase": "encoder-reply",
+              "matrixRows": 4132,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 74009,
+                "sourceEncodeUs": 0,
+                "scoreUs": 1934,
+                "requestUs": 9321,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 4132,
+              "purpose": "keyed-discovery",
+              "numerical": true,
+              "durableDocuments": 4101,
+              "documents": 4101
+            }
+          }
+        ]
+      },
+      {
+        "pair": 0,
+        "phase": "continued",
+        "routing": [
+          {
+            "unseenVectorKeys": 45904,
+            "totalCells": 512,
+            "storage": "user",
+            "source": {
+              "root": {
+                "rows": 6446518,
+                "offset": 432030480,
+                "last": "workSurfaces:99998:0",
+                "height": 4,
+                "first": "body:0",
+                "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                "bytes": 1514
+              },
+              "revision": 13,
+              "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+              "bytes": 432031994,
+              "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+            },
+            "safeFloatPruning": false,
+            "postingRows": 4096,
+            "postingAllowance": 8192,
+            "partialCell": false,
+            "keys": 4096,
+            "keyAllowance": 4096,
+            "elapsedMs": 310,
+            "cells": 42,
+            "basis": {
+              "width": 384,
+              "source": {
+                "root": {
+                  "rows": 6446518,
+                  "offset": 432030480,
+                  "last": "workSurfaces:99998:0",
+                  "height": 4,
+                  "first": "body:0",
+                  "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                  "bytes": 1514
+                },
+                "revision": 13,
+                "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+                "bytes": 432031994,
+                "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+              },
+              "rows": 50000,
+              "matrix": {
+                "root": {
+                  "rows": 99970,
+                  "offset": 343000610,
+                  "last": "stats",
+                  "height": 3,
+                  "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+                  "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+                  "bytes": 1439
+                },
+                "revision": 1,
+                "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+                "bytes": 343002049,
+                "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+              },
+              "eligibility": "c2b5287c44c1b298e9c66c7514ebe3575e0dd2900f8335b6f8d40fd87df6694d"
+            }
+          }
+        ],
+        "numerical": [
+          {
+            "status": "completed",
+            "elapsedMs": 110,
+            "counters": {
+              "sourceInput": {
+                "windows": 8,
+                "visibleCharacters": 642,
+                "vectors": 8,
+                "tokens": 245,
+                "tokenizerMappedCharacters": 642,
+                "embeddedCharacters": 642,
+                "characters": 714
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 8,
+              "scoreMs": 108,
+              "queryMs": 1,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 1,
+              "projectionMisses": 0,
+              "projectionHits": 8,
+              "phase": "encoder-reply",
+              "matrixRows": 8,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 12,
+                "requestUs": 83,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 8,
+              "purpose": "focus",
+              "numerical": true,
+              "durableDocuments": 8,
+              "documents": 8
+            }
+          },
+          {
+            "status": "completed",
+            "elapsedMs": 251,
+            "counters": {
+              "sourceInput": {
+                "windows": 4132,
+                "visibleCharacters": 699999,
+                "vectors": 4164,
+                "tokens": 238829,
+                "tokenizerMappedCharacters": 699999,
+                "embeddedCharacters": 699999,
+                "characters": 787985
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 4132,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 4132,
+              "scoreMs": 234,
+              "queryMs": 0,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 29,
+              "projectionMisses": 0,
+              "projectionHits": 4132,
+              "phase": "encoder-reply",
+              "matrixRows": 4132,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 1863,
+                "requestUs": 8443,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 4132,
+              "purpose": "keyed-discovery",
+              "numerical": true,
+              "durableDocuments": 4101,
+              "documents": 4101
+            }
+          }
+        ]
+      },
+      {
+        "pair": 1,
+        "phase": "first",
+        "routing": [
+          {
+            "unseenVectorKeys": 45904,
+            "totalCells": 512,
+            "storage": "user",
+            "source": {
+              "root": {
+                "rows": 6446518,
+                "offset": 432030480,
+                "last": "workSurfaces:99998:0",
+                "height": 4,
+                "first": "body:0",
+                "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                "bytes": 1514
+              },
+              "revision": 13,
+              "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+              "bytes": 432031994,
+              "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+            },
+            "safeFloatPruning": false,
+            "postingRows": 4139,
+            "postingAllowance": 8192,
+            "partialCell": true,
+            "keys": 4096,
+            "keyAllowance": 4096,
+            "elapsedMs": 304,
+            "cells": 43,
+            "basis": {
+              "width": 384,
+              "source": {
+                "root": {
+                  "rows": 6446518,
+                  "offset": 432030480,
+                  "last": "workSurfaces:99998:0",
+                  "height": 4,
+                  "first": "body:0",
+                  "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                  "bytes": 1514
+                },
+                "revision": 13,
+                "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+                "bytes": 432031994,
+                "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+              },
+              "rows": 50000,
+              "matrix": {
+                "root": {
+                  "rows": 99970,
+                  "offset": 343000610,
+                  "last": "stats",
+                  "height": 3,
+                  "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+                  "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+                  "bytes": 1439
+                },
+                "revision": 1,
+                "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+                "bytes": 343002049,
+                "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+              },
+              "eligibility": "c2b5287c44c1b298e9c66c7514ebe3575e0dd2900f8335b6f8d40fd87df6694d"
+            }
+          }
+        ],
+        "numerical": [
+          {
+            "status": "completed",
+            "elapsedMs": 120,
+            "counters": {
+              "sourceInput": {
+                "windows": 8,
+                "visibleCharacters": 640,
+                "vectors": 8,
+                "tokens": 240,
+                "tokenizerMappedCharacters": 640,
+                "embeddedCharacters": 640,
+                "characters": 712
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 8,
+              "scoreMs": 118,
+              "queryMs": 1,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 9,
+              "projectionMisses": 8,
+              "projectionHits": 0,
+              "phase": "encoder-reply",
+              "matrixRows": 8,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 13,
+                "requestUs": 84,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 1
+            },
+            "corpus": {
+              "windowReferences": 8,
+              "purpose": "focus",
+              "numerical": true,
+              "durableDocuments": 8,
+              "documents": 8
+            }
+          },
+          {
+            "status": "completed",
+            "elapsedMs": 4020,
+            "counters": {
+              "sourceInput": {
+                "windows": 4132,
+                "visibleCharacters": 699933,
+                "vectors": 4164,
+                "tokens": 239330,
+                "tokenizerMappedCharacters": 699933,
+                "embeddedCharacters": 699933,
+                "characters": 787919
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 4132,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 4132,
+              "scoreMs": 4005,
+              "queryMs": 1,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12693504,
+              "projectionReadMsWithinScore": 3634,
+              "projectionMisses": 4132,
+              "projectionHits": 0,
+              "phase": "encoder-reply",
+              "matrixRows": 4132,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 49981,
+                "sourceEncodeUs": 0,
+                "scoreUs": 1949,
+                "requestUs": 9238,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 4132,
+              "purpose": "keyed-discovery",
+              "numerical": true,
+              "durableDocuments": 4101,
+              "documents": 4101
+            }
+          }
+        ]
+      },
+      {
+        "pair": 1,
+        "phase": "continued",
+        "routing": [
+          {
+            "unseenVectorKeys": 45904,
+            "totalCells": 512,
+            "storage": "user",
+            "source": {
+              "root": {
+                "rows": 6446518,
+                "offset": 432030480,
+                "last": "workSurfaces:99998:0",
+                "height": 4,
+                "first": "body:0",
+                "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                "bytes": 1514
+              },
+              "revision": 13,
+              "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+              "bytes": 432031994,
+              "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+            },
+            "safeFloatPruning": false,
+            "postingRows": 4139,
+            "postingAllowance": 8192,
+            "partialCell": true,
+            "keys": 4096,
+            "keyAllowance": 4096,
+            "elapsedMs": 416,
+            "cells": 43,
+            "basis": {
+              "width": 384,
+              "source": {
+                "root": {
+                  "rows": 6446518,
+                  "offset": 432030480,
+                  "last": "workSurfaces:99998:0",
+                  "height": 4,
+                  "first": "body:0",
+                  "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                  "bytes": 1514
+                },
+                "revision": 13,
+                "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+                "bytes": 432031994,
+                "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+              },
+              "rows": 50000,
+              "matrix": {
+                "root": {
+                  "rows": 99970,
+                  "offset": 343000610,
+                  "last": "stats",
+                  "height": 3,
+                  "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+                  "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+                  "bytes": 1439
+                },
+                "revision": 1,
+                "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+                "bytes": 343002049,
+                "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+              },
+              "eligibility": "c2b5287c44c1b298e9c66c7514ebe3575e0dd2900f8335b6f8d40fd87df6694d"
+            }
+          }
+        ],
+        "numerical": [
+          {
+            "status": "completed",
+            "elapsedMs": 113,
+            "counters": {
+              "sourceInput": {
+                "windows": 8,
+                "visibleCharacters": 640,
+                "vectors": 8,
+                "tokens": 240,
+                "tokenizerMappedCharacters": 640,
+                "embeddedCharacters": 640,
+                "characters": 712
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 8,
+              "scoreMs": 112,
+              "queryMs": 0,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 1,
+              "projectionMisses": 0,
+              "projectionHits": 8,
+              "phase": "encoder-reply",
+              "matrixRows": 8,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 12,
+                "requestUs": 79,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 8,
+              "purpose": "focus",
+              "numerical": true,
+              "durableDocuments": 8,
+              "documents": 8
+            }
+          },
+          {
+            "status": "completed",
+            "elapsedMs": 247,
+            "counters": {
+              "sourceInput": {
+                "windows": 4132,
+                "visibleCharacters": 699933,
+                "vectors": 4164,
+                "tokens": 239330,
+                "tokenizerMappedCharacters": 699933,
+                "embeddedCharacters": 699933,
+                "characters": 787919
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 4132,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 4132,
+              "scoreMs": 229,
+              "queryMs": 1,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12718080,
+              "projectionReadMsWithinScore": 30,
+              "projectionMisses": 0,
+              "projectionHits": 4132,
+              "phase": "encoder-reply",
+              "matrixRows": 4132,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 1889,
+                "requestUs": 8615,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 1
+            },
+            "corpus": {
+              "windowReferences": 4132,
+              "purpose": "keyed-discovery",
+              "numerical": true,
+              "durableDocuments": 4101,
+              "documents": 4101
+            }
+          }
+        ]
+      },
+      {
+        "pair": 2,
+        "phase": "first",
+        "routing": [
+          {
+            "unseenVectorKeys": 45904,
+            "totalCells": 512,
+            "storage": "user",
+            "source": {
+              "root": {
+                "rows": 6446518,
+                "offset": 432030480,
+                "last": "workSurfaces:99998:0",
+                "height": 4,
+                "first": "body:0",
+                "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                "bytes": 1514
+              },
+              "revision": 13,
+              "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+              "bytes": 432031994,
+              "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+            },
+            "safeFloatPruning": false,
+            "postingRows": 4140,
+            "postingAllowance": 8192,
+            "partialCell": true,
+            "keys": 4096,
+            "keyAllowance": 4096,
+            "elapsedMs": 331,
+            "cells": 43,
+            "basis": {
+              "width": 384,
+              "source": {
+                "root": {
+                  "rows": 6446518,
+                  "offset": 432030480,
+                  "last": "workSurfaces:99998:0",
+                  "height": 4,
+                  "first": "body:0",
+                  "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                  "bytes": 1514
+                },
+                "revision": 13,
+                "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+                "bytes": 432031994,
+                "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+              },
+              "rows": 50000,
+              "matrix": {
+                "root": {
+                  "rows": 99970,
+                  "offset": 343000610,
+                  "last": "stats",
+                  "height": 3,
+                  "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+                  "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+                  "bytes": 1439
+                },
+                "revision": 1,
+                "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+                "bytes": 343002049,
+                "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+              },
+              "eligibility": "c2b5287c44c1b298e9c66c7514ebe3575e0dd2900f8335b6f8d40fd87df6694d"
+            }
+          }
+        ],
+        "numerical": [
+          {
+            "status": "completed",
+            "elapsedMs": 3994,
+            "counters": {
+              "sourceInput": {
+                "windows": 4131,
+                "visibleCharacters": 700263,
+                "vectors": 4163,
+                "tokens": 240698,
+                "tokenizerMappedCharacters": 700263,
+                "embeddedCharacters": 700263,
+                "characters": 788228
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 4131,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 4131,
+              "scoreMs": 3981,
+              "queryMs": 1,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12690432,
+              "projectionReadMsWithinScore": 3623,
+              "projectionMisses": 4131,
+              "projectionHits": 0,
+              "phase": "encoder-reply",
+              "matrixRows": 4131,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 43154,
+                "sourceEncodeUs": 0,
+                "scoreUs": 2038,
+                "requestUs": 9431,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 4131,
+              "purpose": "keyed-discovery",
+              "numerical": true,
+              "durableDocuments": 4100,
+              "documents": 4100
+            }
+          },
+          {
+            "status": "completed",
+            "elapsedMs": 116,
+            "counters": {
+              "sourceInput": {
+                "windows": 8,
+                "visibleCharacters": 650,
+                "vectors": 8,
+                "tokens": 245,
+                "tokenizerMappedCharacters": 650,
+                "embeddedCharacters": 650,
+                "characters": 722
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 8,
+              "scoreMs": 114,
+              "queryMs": 1,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12715008,
+              "projectionReadMsWithinScore": 6,
+              "projectionMisses": 8,
+              "projectionHits": 0,
+              "phase": "encoder-reply",
+              "matrixRows": 8,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 13,
+                "requestUs": 85,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 8,
+              "purpose": "focus",
+              "numerical": true,
+              "durableDocuments": 8,
+              "documents": 8
+            }
+          }
+        ]
+      },
+      {
+        "pair": 2,
+        "phase": "continued",
+        "routing": [
+          {
+            "unseenVectorKeys": 45904,
+            "totalCells": 512,
+            "storage": "user",
+            "source": {
+              "root": {
+                "rows": 6446518,
+                "offset": 432030480,
+                "last": "workSurfaces:99998:0",
+                "height": 4,
+                "first": "body:0",
+                "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                "bytes": 1514
+              },
+              "revision": 13,
+              "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+              "bytes": 432031994,
+              "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+            },
+            "safeFloatPruning": false,
+            "postingRows": 4140,
+            "postingAllowance": 8192,
+            "partialCell": true,
+            "keys": 4096,
+            "keyAllowance": 4096,
+            "elapsedMs": 324,
+            "cells": 43,
+            "basis": {
+              "width": 384,
+              "source": {
+                "root": {
+                  "rows": 6446518,
+                  "offset": 432030480,
+                  "last": "workSurfaces:99998:0",
+                  "height": 4,
+                  "first": "body:0",
+                  "checksum": "8410231761fb08851dc099dc49548147532c5e1fc67008cd55f11cd7d3b1f241",
+                  "bytes": 1514
+                },
+                "revision": 13,
+                "identity": "eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971",
+                "bytes": 432031994,
+                "authority": "[\"atom\",[112,114,97,99,116,105,99,97,108,32,115,99,97,108,101,32,53,48,48,48,48]]"
+              },
+              "rows": 50000,
+              "matrix": {
+                "root": {
+                  "rows": 99970,
+                  "offset": 343000610,
+                  "last": "stats",
+                  "height": 3,
+                  "first": "row:000020ffd6faefd2a6ea7e5b2b0ba62081b9ee47cf72b283d4d8d4c8b21399e6",
+                  "checksum": "d2a442874dccfb84c951232ceadd8c891ec27f87050c80ba91657ba2ddb5e87f",
+                  "bytes": 1439
+                },
+                "revision": 1,
+                "identity": "f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0",
+                "bytes": 343002049,
+                "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+              },
+              "eligibility": "c2b5287c44c1b298e9c66c7514ebe3575e0dd2900f8335b6f8d40fd87df6694d"
+            }
+          }
+        ],
+        "numerical": [
+          {
+            "status": "completed",
+            "elapsedMs": 241,
+            "counters": {
+              "sourceInput": {
+                "windows": 4131,
+                "visibleCharacters": 700263,
+                "vectors": 4163,
+                "tokens": 240698,
+                "tokenizerMappedCharacters": 700263,
+                "embeddedCharacters": 700263,
+                "characters": 788228
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 4131,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 4131,
+              "scoreMs": 227,
+              "queryMs": 0,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12715008,
+              "projectionReadMsWithinScore": 30,
+              "projectionMisses": 0,
+              "projectionHits": 4131,
+              "phase": "encoder-reply",
+              "matrixRows": 4131,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 1949,
+                "requestUs": 8586,
+                "replies": 17,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 4131,
+              "purpose": "keyed-discovery",
+              "numerical": true,
+              "durableDocuments": 4100,
+              "documents": 4100
+            }
+          },
+          {
+            "status": "completed",
+            "elapsedMs": 110,
+            "counters": {
+              "sourceInput": {
+                "windows": 8,
+                "visibleCharacters": 650,
+                "vectors": 8,
+                "tokens": 245,
+                "tokenizerMappedCharacters": 650,
+                "embeddedCharacters": 650,
+                "characters": 722
+              },
+              "source": {
+                "unusable": 0,
+                "hit": 8,
+                "absent": 0
+              },
+              "scoringPolicy": "window centroid weighted by newly covered source tokens",
+              "scoredWindows": 8,
+              "scoreMs": 108,
+              "queryMs": 0,
+              "queryInput": {
+                "windows": 1,
+                "visibleCharacters": 84,
+                "vectors": 1,
+                "tokens": 24,
+                "tokenizerMappedCharacters": 84,
+                "embeddedCharacters": 84,
+                "characters": 96
+              },
+              "query": {
+                "unusable": 0,
+                "hit": 1,
+                "absent": 0
+              },
+              "projectionRetainedBytes": 12715008,
+              "projectionReadMsWithinScore": 1,
+              "projectionMisses": 0,
+              "projectionHits": 8,
+              "phase": "encoder-reply",
+              "matrixRows": 8,
+              "matrixOpens": 0,
+              "matrixOpenMs": 0,
+              "encoder": {
+                "startupUs": 0,
+                "sourceEncodeUs": 0,
+                "scoreUs": 11,
+                "requestUs": 77,
+                "replies": 1,
+                "queryEncodeUs": 0,
+                "modelLoaded": false,
+                "leaseUs": 0,
+                "initializeUs": 0
+              },
+              "cacheMs": 0
+            },
+            "corpus": {
+              "windowReferences": 8,
+              "purpose": "focus",
+              "numerical": true,
+              "durableDocuments": 8,
+              "documents": 8
+            }
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention-50000/summary.json",
+      "bytes": 183576,
+      "sha256": "5ae2d7e2ca6ed4af94906adffd4c28ac5912f33f7e05dc001e8b92e2bc54e1f3"
+    }
+  },
+  "directComparison": {
+    "completeResponseEqual": true,
+    "owners": 4101,
+    "rankedEqual": true,
+    "relatedEqual": true,
+    "coverageEqual": true,
+    "reference": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/direct.stdout.json",
+      "bytes": 639450,
+      "sha256": "9b8acc34bb22ac361cf272248c76b17bc2163cf1f2695ee0a58fae0fce53c1be"
+    },
+    "candidate": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/direct-retention.stdout.json",
+      "bytes": 639450,
+      "sha256": "9b8acc34bb22ac361cf272248c76b17bc2163cf1f2695ee0a58fae0fce53c1be"
+    }
+  },
+  "cleanup": {
+    "executables": {
+      "capturedAt": "2026-10-25T07:29:33Z",
+      "reason": "Superseded unadopted executables; successful current comparison candidates and fixed DB/model/objects retained",
+      "archivesCreated": 0,
+      "removed": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/eggshell",
+          "bytes": 117032816,
+          "allocatedBytes": 117035008,
+          "sha256": "07df2d11797cdc99c2e1590939276d753e612baabd9bdc898eb5c01d95c39cdf"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/prefix/libexec/eggshell",
+          "bytes": 117032816,
+          "allocatedBytes": 117035008,
+          "sha256": "07df2d11797cdc99c2e1590939276d753e612baabd9bdc898eb5c01d95c39cdf"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/eggshell",
+          "bytes": 117449744,
+          "allocatedBytes": 117452800,
+          "sha256": "45559e6af7c59c12ae48bd521d4d7fb64faebaad12659b66493264702dea77d8"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/prefix/libexec/eggshell",
+          "bytes": 117449744,
+          "allocatedBytes": 117452800,
+          "sha256": "45559e6af7c59c12ae48bd521d4d7fb64faebaad12659b66493264702dea77d8"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/inline-hash/eggshell",
+          "bytes": 117598000,
+          "allocatedBytes": 117600256,
+          "sha256": "c547c326dfa9ffcc9186ef85d53cef87e88ae6e5c5a2abec8af5193fcc07d2b7"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/inline-hash/prefix/libexec/eggshell",
+          "bytes": 117598000,
+          "allocatedBytes": 117600256,
+          "sha256": "c547c326dfa9ffcc9186ef85d53cef87e88ae6e5c5a2abec8af5193fcc07d2b7"
+        }
+      ],
+      "removedCount": 6,
+      "logicalBytes": 704161120,
+      "allocatedBytes": 704176128,
+      "currentEvidenceReferences": 0,
+      "currentSymlinkReferences": 0,
+      "openReferences": 0
+    },
+    "final": {
+      "capturedAt": "2026-10-25T08:33:23Z",
+      "archivesCreated": 0,
+      "removed": [
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-audit",
+          "kind": "completed independent test executable",
+          "bytes": 104498576,
+          "sha256": "a875f25801e246fb67ac34d7651c29cba6d6407b6a29599b699f1a23502d45e6"
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/partition/af0fff3a04821e45615a7f7fb4def4f20f5e7fd68c6def1da88818ecec4efae7",
+          "kind": "superseded intermediate DB or cache",
+          "files": 3,
+          "logicalBytes": 7377037
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-source.egg",
+          "kind": "superseded intermediate DB or cache",
+          "files": 3,
+          "logicalBytes": 432590539
+        },
+        {
+          "path": "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-data",
+          "kind": "superseded intermediate DB or cache",
+          "files": 13,
+          "logicalBytes": 350453227
+        }
+      ],
+      "removedPathsCheckedAbsent": true,
+      "frozenInputsVerified": 14,
+      "note": "No reclaimed-byte claim for APFS cloned directories; final independent-test outputs and final DBs remain"
+    }
+  },
+  "notes": [
+    "Refcounts count original occurrences; one owner removal cannot retract another owner's window",
+    "Trained assignment computes a cell coordinate; there is no separate key-to-cell reverse index",
+    "Incremental updates preserve the trained centroids; retrieval recall under corpus drift is not qualified",
+    "Old-row metadata changes, discontinuous source history, incompatible matrix lineage or bounded verification exhaustion require full maintenance",
+    "B-tree member roots compact on explicit rebuilding; physical page-file reclamation and reader leasing remain unfinished",
+    "Initial trained geometry and the full same-nominated-candidate provider response match the parent on the measured question; exhaustive recall is not implied",
+    "Only routing-component mutation was measured; CandidateDomain still uses a global bounded flat artifact and other warm producers remain scalability work",
+    "Two successful local MiniLM source-encoding trials were performed, including the preliminary pre-retention trial; no answering models or new seeds were run",
+    "The read-only cloned mutation initially failed before changing source head; only the distinct owned clone inode was made writable",
+    "The independent atomic helper was hashed and removed after successful tests; no archive was created"
+  ]
+}
