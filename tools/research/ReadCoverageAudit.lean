@@ -33,6 +33,7 @@ def main (args : List String) : IO Unit := do
     throw (IO.userError "ReadCoverageAudit DATABASE WORKSPACE TASK-DEFINITIONS NEW-REPORT")
   let output := System.FilePath.mk report
   unless !(← output.pathExists) do throw (IO.userError "keep the existing read audit")
+  let topics ← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk definitions)) >>= fromJson? (α := Array Topic))
   let source ← DB.PageMap.pin (.mk database)
   let before ← StudyRuntime.files source.directory
   let reader ← Persistence.Store.NodeReader.new source
@@ -49,6 +50,12 @@ def main (args : List String) : IO Unit := do
     let doc ← Build.document reader entry.id
     if !doc.native then continue
     total := total+1
+    -- Unsupported read coordinates do not imply absent original bytes. Load
+    -- reference source identities from saved dependencies as well as rows.
+    for file in doc.files do
+      if topics.any (fun topic => topic.referenceRanges.any (·.path == file.relative)) &&
+          !sourceFiles.contains file then
+        sourceFiles := sourceFiles.insert file (← sourceLines (.mk workspace) file)
     let command : Except String String := match doc.workText with
       | none => .error "missing work"
       | some work => workCommand work
@@ -69,14 +76,16 @@ def main (args : List String) : IO Unit := do
         ({} : Std.HashMap (Nat × Nat) Read)
       for line in textLines decoded.text do
         let some row := coordinates[(decoded.offsets[line.first]!,decoded.offsets[line.limit]!)]? | continue
+        let some file := row.source.file? |
+          throw (IO.userError "file row audit received an original-output character range")
         let some (number,code) := numbered line.text | throw (IO.userError "located row has no number")
         unless number == row.source.first && number == row.source.last && row.valid do
           throw (IO.userError "invalid original row coordinates")
-        let expected ← match sourceFiles[row.source.file]? with
+        let expected ← match sourceFiles[file]? with
           | some lines => pure lines
           | none => do
-            let lines ← sourceLines (.mk workspace) row.source.file
-            sourceFiles := sourceFiles.insert row.source.file lines
+            let lines ← sourceLines (.mk workspace) file
+            sourceFiles := sourceFiles.insert file lines
             pure lines
         if expected[number-1]? != some code then
           mismatches := mismatches.push (Json.mkObj [("row",toJson row),("observed",toJson code),
@@ -89,13 +98,13 @@ def main (args : List String) : IO Unit := do
       ("owner",toJson doc.owner),("occurrences",toJson doc.occurrences),("command",toJson command.toOption),
       ("planError",toJson (match plans with | .ok _ => none | .error message => some message)),
       ("recordedRows",toJson found.size),("rowIdentities",toJson identities)])
-  let topics ← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk definitions)) >>= fromJson? (α := Array Topic))
   let availability := topics.map fun topic => Json.mkObj [
     ("topic",toJson topic.topic),("requirements",toJson (topic.referenceRanges.map fun requirement => Id.run do
-      let candidates := allRows.filter fun row => row.source.file.relative == requirement.path &&
-        row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
-      let files := candidates.foldl (fun found row => found.insert row.source.file) ({} : Std.HashSet File)
-      let located := files.toArray.any fun file => covered ⟨file,requirement.first,requirement.last⟩ (candidates.map (·.source))
+      let candidates := allRows.filter fun row => row.source.file?.any fun file =>
+        file.relative == requirement.path && row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
+      let files := candidates.foldl (fun found row => (row.source.file?.map found.insert).getD found)
+        ({} : Std.HashSet File)
+      let located := files.toArray.any fun file => covered ⟨.file file,requirement.first,requirement.last⟩ (candidates.map (·.source))
       let literalOwners := sourceFiles.toArray.filterMap fun (file,lines) => do
         if file.relative != requirement.path || requirement.first == 0 ||
             requirement.last < requirement.first || lines.size < requirement.last then none else
