@@ -1,0 +1,147 @@
+{
+  "candidate": "learned-partition-through-native-hooks",
+  "parentCommit": "00f02af",
+  "pairs": 3,
+  "queries": [
+    "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 1.",
+    "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 2.",
+    "Find kernel realtime clock observations for monotonic scheduling and elapsed timers, question 3."
+  ],
+  "strata": [
+    "new manager and new chat; first prompt",
+    "same manager, same prompt after confirmed ACK"
+  ],
+  "globalVectorKeyBudget": 4096,
+  "globalPhysicalRowBudget": 8192,
+  "sourceEmbeddingCallsExpected": 0,
+  "answeringModelCalls": 0,
+  "sourceFiles": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971.pages",
+      "bytes": 432031994,
+      "sha256": "e3b84e42a71b4e993c4e306585c75059312d4ab8501b4b0a56c4e9840f9ee926"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/head",
+      "bytes": 401,
+      "sha256": "4888fa698fd0a44d78db7b57dd040accbce72ca2d97bc869f1c837a54a538d53"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/derived/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/lexical/849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc/tree/head",
+      "bytes": 521,
+      "sha256": "c23e0b44cd6fdad1638f9fd0ae186c7a5deb0912c4d35ef7b7e40e535a2cf01a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/derived/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/lexical/849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc/tree/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg/derived/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/lexical/849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc/tree/5daea4be8151db2a9c701068568ad16a9ae3a904b064f108872b308d49cd3ce9.pages",
+      "bytes": 1234757626,
+      "sha256": "669f4ec1930d3d2742fe57800f0a8bab63d007279b95945158ba86c35418f8df"
+    }
+  ],
+  "originalNumericalFiles": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb.writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/f7e75b1842ad8406db5e1210e05e162e1ec931a9d54481849b9c98eb4d5046d0.pages",
+      "bytes": 343002049,
+      "sha256": "29883e11a158fb975b1e3ecc7e7f1ff784b21d16cac604593947d2d8892c2b73"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/head",
+      "bytes": 452,
+      "sha256": "e35146d6c49bb44cdc2d1384f873af6c13df65e00c76461833d11b1b1dfcc52c"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/projections/220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/routing/7cd863a5e60cf1643e38e5bfbba8d5a787e8c53fb5cfa7798467a5ac359219d3/0a4865dfd466f1d8c3cd7a52bd099035411fb677baf8f6a3eb3acb74b4d9eccf.pages",
+      "bytes": 7179039,
+      "sha256": "fab538505d15e4856a948fe49cf92a9b326f7383cd8109d0dca39a9b6ffa0b91"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/routing/7cd863a5e60cf1643e38e5bfbba8d5a787e8c53fb5cfa7798467a5ac359219d3/head",
+      "bytes": 380,
+      "sha256": "bd429c30c604b15a245ece94188a121d9dc921ff9655577366ee7f6395f547aa"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache/eb5d3f9baf77963bfcfdc94afde22939b244236c8a6ef70bf4c12133b3058971/semantic/routing/7cd863a5e60cf1643e38e5bfbba8d5a787e8c53fb5cfa7798467a5ac359219d3/writer",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "sources": [
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/checkout/VectorPartition.lean",
+      "bytes": 15945,
+      "sha256": "38902a28bdb7cadc497134e9fcddda597653f9ba465d9cfc11877ea4e695dbb2"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/checkout/PartitionBuild.lean",
+      "bytes": 10586,
+      "sha256": "bfd19f90fbaaaaca442d7379697b3360f0e1e6d7828c2382c58105e6ebfede92"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/checkout/PartitionNativeAudit.lean",
+      "bytes": 7858,
+      "sha256": "953732237b9ab25a7c65ec1639409bf7d3b11517a32fcd21d78507b277349613"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/checkout/Eggshell/KeyedProtocol.lean",
+      "bytes": 5026,
+      "sha256": "95fd3af0a7d57769f80df1f3e4a23a1788992214e3ea40c8f3720f28913d5b34"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/checkout/Eggshell/KeyedSearchClient.lean",
+      "bytes": 2939,
+      "sha256": "ac0183749fef8e40ffd498cac5c7c50c07644da83589d9320bd997dbd8adeba5"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/checkout/Eggshell/KeyedSearchProvider.lean",
+      "bytes": 12387,
+      "sha256": "eb4d058458a49bfb68e97078712b40a8c51d3c606b284c77e978f64a9f9b7da3"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/checkout/Eggshell/Warm.lean",
+      "bytes": 21423,
+      "sha256": "88f32a4405248f105b9997ec0b7c744f21560f566d0f60810ba3c9ea8006ca4a"
+    },
+    {
+      "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/checkout/Main.lean",
+      "bytes": 3538,
+      "sha256": "0466e3411e3531d87b577a5642578aacdeb98a82b37adf13833e09567c9da12d"
+    }
+  ],
+  "runtime": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/eggshell",
+    "bytes": 117449744,
+    "sha256": "45559e6af7c59c12ae48bd521d4d7fb64faebaad12659b66493264702dea77d8"
+  },
+  "settings": {
+    "path": "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/native.settings.json",
+    "bytes": 1155,
+    "sha256": "6e3678ba90a0edcff4f56d398c64c9830a98decd7eadcd6ba858972ff931681c"
+  },
+  "adopted": false,
+  "deadlineMs": 30000,
+  "limitRssKiB": 3670016,
+  "userCeilingRssKiB": 4194304,
+  "scope": "actual native hook delivery and learned recommendation coverage; not LLVM topic 1/2/3, token, answer quality, exact top-k, or million-window qualification",
+  "partialCoverageExpected": true,
+  "sourceChanges": "unions/Exact/freshness/certification untouched",
+  "archivesCreated": 0
+}
