@@ -83,12 +83,17 @@ def inspect (input : String) : IO Json := do
   let (documents,rows) ← originals before
   let shown := Extraction.presented body documents rows
   let requirements := specification.required.map fun requirement =>
-    let candidates := rows.filter fun row => row.source.file.relative == requirement.path &&
-      row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
-    let files := candidates.foldl (fun found row => found.insert row.source.file) ({} : Std.HashSet File)
-    let stored := files.toArray.any fun file => covered ⟨file,requirement.first,requirement.last⟩
+    let candidates := rows.filter fun row =>
+      match row.source.subject with
+      | .file file => file.relative == requirement.path &&
+          row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
+      | .original _ => false
+    let files := candidates.foldl (fun found row => match row.source.subject with
+      | .file file => found.insert file
+      | .original _ => found) ({} : Std.HashSet File)
+    let stored := files.toArray.any fun file => covered ⟨.file file,requirement.first,requirement.last⟩
       (candidates.map (·.source))
-    let delivered := files.toArray.any fun file => covered ⟨file,requirement.first,requirement.last⟩ shown.ranges
+    let delivered := files.toArray.any fun file => covered ⟨.file file,requirement.first,requirement.last⟩ shown.ranges
     Json.mkObj [("name",toJson requirement.name),("stored",toJson stored),
       ("storedOwners",toJson ((candidates.map (·.binding.owner)).toList.eraseDups.toArray)),
       ("bodyDelivered",toJson delivered),("unlocated",toJson (!stored))]

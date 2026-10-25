@@ -49,4 +49,4 @@ Claudeの「warm全体の差分化が最優先」という指摘を取り込ん�
 
 100万窓以上、複数DB共有並行、MCP、必要原文の保留条件、全題材・両周・同数複数反復の総トークンと品質は未完了。AGENTSの採用条件を満たすまで製品へ取り込まない。Phases 0〜6は継続する。
 
-コードは [tools/research/canonical-delta](../tools/research/canonical-delta/)、証拠は [canonical-delta-review.json](candidates/canonical-delta-review.json)。`ruby tools/research/canonical-delta/check.rb` で検査できる。
+コードは [tools/research/canonical-delta](../tools/research/canonical-delta/)、実行時の証拠・ハッシュは [canonical-delta-review.json](candidates/canonical-delta-review.json)。実験終了後、利用者の指示によりDB・キャッシュとRuby補助を削除した。保存した結果を、削除済み入力による現在の再検証とは扱わない。以後の実験はLeanのStudyMain、StudyBuildMain、StudyMaintenanceMainで行う。

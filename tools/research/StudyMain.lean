@@ -12,6 +12,7 @@ import tools.research.StudyCommandChecks
 import tools.research.StudyEnvironmentChecks
 import tools.research.StudyTransportChecks
 import tools.research.PrepareMatchedSource
+import tools.research.StudyBootstrap
 
 open Lean Eggshell.Research
 
@@ -20,6 +21,24 @@ audit, daemon management, metadata inspection and cost replay. -/
 def main (args : List String) : IO UInt32 := do
   try
     match args with
+    | "bootstrap" :: rest => StudyBootstrap.cliMain rest
+    | ["study-prompts",spec,workspace,output] =>
+        unless !(← (System.FilePath.mk output).pathExists) do throw (IO.userError "keep existing prompts")
+        let prompts ← IO.ofExcept ((← StudyAdmission.readJson spec).getObjValAs? (Array String) "prompts")
+        unless prompts.size == 4 do throw (IO.userError "expected seed and three fixed topic prompts")
+        IO.FS.createDirAll output
+        for index in [:prompts.size] do
+          IO.FS.writeFile (System.FilePath.mk output / s!"topic-{index}.txt")
+            (prompts[index]!.replace "<LLVM_SOURCE>" workspace)
+        return 0
+    | "artifacts" :: paths =>
+        let artifacts ← paths.toArray.mapM fun path => StudyPrepare.artifact (.mk path)
+        IO.println (toJson artifacts).pretty
+        return 0
+    | ["json-fields",path] =>
+        let object ← IO.ofExcept ((← StudyAdmission.readJson path).getObj?)
+        IO.println (toJson (object.toArray.map Prod.fst)).pretty
+        return 0
     | "guard" :: rest => ResourceGuard.cliMain rest
     | "runtime" :: rest => StudyRuntime.cliMain rest
     | "audit" :: rest => NativeTrialAudit.cliMain rest; return 0

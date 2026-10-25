@@ -6,6 +6,13 @@ open Eggshell.Research
 
 namespace Eggshell.Research.StudySeedChecks
 
+structure Input where
+  runtime : StudyAdmission.Artifact
+  pluginRoot : String
+  pluginFiles : Array StudyAdmission.Artifact
+  environment : Array (String × Option String)
+  deriving FromJson, ToJson
+
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
@@ -54,7 +61,7 @@ private def coquoted : Fact → Bool
 /-- The fixture writes no relations. Only real hooks, a real shell, the save
 worker and the index worker may create its observations and consumption. -/
 def run (templatePath directory : String) : IO Unit := do
-  let plan ← IO.ofExcept (fromJson? (α := StudyAdmission.Plan) (← StudyAdmission.readJson templatePath))
+  let plan ← IO.ofExcept (fromJson? (α := Input) (← StudyAdmission.readJson templatePath))
   StudyAdmission.verifyArtifact plan.runtime
   for artifact in plan.pluginFiles do StudyAdmission.verifyArtifact artifact
   let root := System.FilePath.mk directory

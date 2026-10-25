@@ -37,4 +37,4 @@
 
 100万窓以上、実Inquiryの100問、セルの劣化と再学習、物理圧縮、複数DBの共有並行、大規模Pre/Post、MCP私有保存、必要原文の保留条件、全題材・両周・複数反復の同条件総トークンと品質は未完了。新規採用はAGENTSの比較条件を満たしてから行う。
 
-コードは [tools/research/source-stream](../tools/research/source-stream/)、入力・runtime・成功/失敗・受領記録・削除は [source-stream-review.json](candidates/source-stream-review.json)。`ruby tools/research/source-stream/check.rb` で拘束を確認する。Phases 0〜6は継続する。
+コードは [tools/research/source-stream](../tools/research/source-stream/)、実行時の入力・runtime・成功/失敗・受領記録のハッシュは [source-stream-review.json](candidates/source-stream-review.json)。実験終了後、利用者の指示によりDB・キャッシュとRuby補助を削除した。保存済みの結果と、現存入力による再検証を区別する。以後の実験制御はLeanで行う。Phases 0〜6は継続する。

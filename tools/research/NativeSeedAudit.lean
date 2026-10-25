@@ -157,10 +157,14 @@ def cliMain (args : List String) : IO Unit := do
     for requirement in topic.referenceRanges do
       check (safeRelative requirement.path && 0 < requirement.first && requirement.first ≤ requirement.last)
         "invalid frozen source requirement"
-      let candidates := rows.filter fun row => row.source.file.relative == requirement.path &&
-        row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
-      let files := candidates.foldl (fun found row => found.insert row.source.file) ({} : Std.HashSet File)
-      let stored := files.toArray.any fun file => covered ⟨file,requirement.first,requirement.last⟩ (candidates.map (·.source))
+      let candidates := rows.filter fun row => match row.source.subject with
+        | .file file => file.relative == requirement.path &&
+            row.source.first ≤ requirement.last && requirement.first ≤ row.source.last
+        | .original _ => false
+      let files := candidates.foldl (fun found row => match row.source.subject with
+        | .file file => found.insert file
+        | .original _ => found) ({} : Std.HashSet File)
+      let stored := files.toArray.any fun file => covered ⟨.file file,requirement.first,requirement.last⟩ (candidates.map (·.source))
       required := required.push (Json.mkObj [
         ("reference",toJson requirement),("storedOriginal",toJson stored),
         ("sourceFiles",toJson files.toArray),("originalRows",toJson candidates),

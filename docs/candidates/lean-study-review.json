@@ -1,0 +1,2722 @@
+{"seedState": "generation-completed-persistence-finalization-failed",
+ "scope":
+ "Lean experiment orchestration and retirement of completed study data",
+ "runtimeChanged": false,
+ "rubyRequired": false,
+ "retainedStudyDbPurpose":
+ "The new seed is retained for publication recovery and planned downstream stages, not historical evidence.",
+ "records":
+ [{"sha256": "a61baa38e1118b4637abbbab8e22be96df6473e53d17219b5c59749aa9b8e30d",
+   "report":
+   {"rubyHelpers": 67,
+    "retainedArtifactsPresent": true,
+    "removedTargets": 164,
+    "logicalBytesRemoved": 5928093894,
+    "databaseOrCacheDirectories": 93,
+    "archivesCreated": 0},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/maintenance-verified.json",
+   "bytes": 173},
+  {"sha256": "5fda645b666f6510e17ce69aa0a197d27c1153987af592ff3542852145f37c78",
+   "report":
+   {"targets":
+    [{"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/delete-obsolete.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1262},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 8090},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/cleanup-internal.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2339},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/scale-data-50000/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 372785589},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 2334450181},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/cleanup-repository-data.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1260},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2197},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/prepare-mutation.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2652},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 139413},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/freeze.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/scale-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/scale-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 354955403},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/setup.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1987},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3803},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/mutation-source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 432590539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 328539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 295},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 7809},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 11059},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3194},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 956},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 683742},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 683742},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 380158444},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 36934},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 16031},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 234},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 432590539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 2251},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 40873},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/retention/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 8585},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 16031},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 234},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 850},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/truncated.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34546},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 291896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/corrupt.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3129},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 350453237},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117478320},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prefix/libexec/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117478320},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 168587},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 23222},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 14172},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 168587},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 328539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 295},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2736},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/inline-hash/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 668},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/truncated.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34546},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 291896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/corrupt.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 39556},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 7768},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/verify-inputs.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 611},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 291896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/corrupt.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3306},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 690622},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 690622},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/scale-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/scale-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 354954152},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3780},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/mutation-source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 432590539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117294384},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/prefix/libexec/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117294384},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 7988},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1376},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/warm-producers-20261025/build-profile.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 548},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-stream/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 6995},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-stream/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3780},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/block-score/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 8090},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/block-score/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2947},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/block-score/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2197},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/cluster-blocks/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 11059},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/cluster-blocks/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3375},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/cluster-blocks/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3194},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/helpers.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1222},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/prepare-native.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1578},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/review-check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1712},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/plan-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1653},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/review.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 8474},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/provider-probe.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1825},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1385},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/helpers.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1222},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/run-benchmarks.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 672},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/plan-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1423},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5779},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1107},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1385},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-partition/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 7988},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-partition/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2485},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-partition/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1376},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 14172},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 4294},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2736},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/inline-hash/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 668},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-cursor/verify-inputs.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 611},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-cursor/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 6567},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-cursor/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3306},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/read-helper-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 842},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/helper-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1054},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5253},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/retire.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 830},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1023},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/prepare-mutation.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2652},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/freeze.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/setup.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1987},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/profiling/build-profile.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 548},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5763},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3803},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-delta/atomic-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 850},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-delta/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 6933},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-delta/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3129}],
+    "plan":
+    {"roots":
+     ["/Users/ovm/.codex/experiments/eggshell/block-score-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/warm-producers-20261025"],
+     "retained":
+     ["/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/eggshell",
+      "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/prefix",
+      "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/resource-controller",
+      "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/prefix",
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025"],
+     "helperRoot":
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research",
+     "guards":
+     ["/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/native.guard.json",
+      "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/mutation-first.guard.json",
+      "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/mutation-repeat.guard.json",
+      "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/native.guard.json",
+      "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention.guard.json"]},
+    "archivesCreated": 0},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/maintenance-inventory.json",
+   "bytes": 23825},
+  {"sha256": "9793adbb3942574ea4de9c03b458cf4421724ce3b41156787550a5e9dc4613ab",
+   "report":
+   {"targets":
+    [{"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 2334450181},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/cleanup-repository-data.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1260},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2197},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/prepare-mutation.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2652},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 139413},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/freeze.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/scale-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/scale-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 354955403},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/setup.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1987},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3803},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/mutation-source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 432590539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/corrupt/clustered/b97f514da70ad775054f7b37c61850194fb51d23fed0d0c32d076e363dc5eb69",
+       "kind": "completed-database-or-cache"},
+      "bytes": 17970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/packed/clustered/b97f514da70ad775054f7b37c61850194fb51d23fed0d0c32d076e363dc5eb69",
+       "kind": "completed-database-or-cache"},
+      "bytes": 17970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/vectors/blocks/3f3ddab6083ad153280f7d130368f83dc7b692e49820ca09af98c3d7164973e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 31337},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/vectors/projections/c48ad176cc5745e7de1257cda9bb129d68ce86d35454a2a5440601821ff673e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 25523},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/vectors/routing/68ab740f9b38c359137b6eb861c5edf77b22e9086a81bf8282cd17a12a98cea5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 21139},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/vectors/partition/fb6da163ae1a6465718eb964e16b2eced9bc66ade394b052135d65b2c563a08b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 25787},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 328539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 295},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 7809},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 11059},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3194},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 956},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 33215},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/vectors/partition/3a40659f791bfc17a6e5cf3633a1a96ef5e042ad2b4cf59489edad16382b08f5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 60554},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 683742},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/budget/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 3478},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/budget/vectors/partition/3a40659f791bfc17a6e5cf3633a1a96ef5e042ad2b4cf59489edad16382b08f5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5017},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 33215},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/vectors/partition/2ca429fe086d0a8ecf38212d1a6c0e86d232e7963461e66be175f68c9fb6bed3",
+       "kind": "completed-database-or-cache"},
+      "bytes": 60554},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 683742},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/budget/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 3478},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/budget/vectors/partition/2ca429fe086d0a8ecf38212d1a6c0e86d232e7963461e66be175f68c9fb6bed3",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5017},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 380158444},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 36934},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 1468},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/vectors/partition/3a40659f791bfc17a6e5cf3633a1a96ef5e042ad2b4cf59489edad16382b08f5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 16031},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 234},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 432590539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 2251},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 40873},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/retention/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 2772},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/retention/vectors/partition/2ca429fe086d0a8ecf38212d1a6c0e86d232e7963461e66be175f68c9fb6bed3",
+       "kind": "completed-database-or-cache"},
+      "bytes": 4230},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/retention/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 8585},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 1468},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/vectors/partition/2ca429fe086d0a8ecf38212d1a6c0e86d232e7963461e66be175f68c9fb6bed3",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 16031},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 234},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 850},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/truncated.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34546},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/wide/projections/a8edcf93a4d166ab82381a2a87a2e2e7e842d5fb0c369ada0103c5c31cdbe2a2",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 291896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/corrupt.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3129},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 350453237},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117478320},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prefix/libexec/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117478320},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 168587},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 23222},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 14172},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/vectors/blocks/3f3ddab6083ad153280f7d130368f83dc7b692e49820ca09af98c3d7164973e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 7954},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/vectors/projections/c48ad176cc5745e7de1257cda9bb129d68ce86d35454a2a5440601821ff673e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 12674},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/vectors/routing/68ab740f9b38c359137b6eb861c5edf77b22e9086a81bf8282cd17a12a98cea5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5397},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/vectors/partition/fb6da163ae1a6465718eb964e16b2eced9bc66ade394b052135d65b2c563a08b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 6572},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 168587},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/vectors/blocks/3f3ddab6083ad153280f7d130368f83dc7b692e49820ca09af98c3d7164973e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 15641},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/vectors/projections/c48ad176cc5745e7de1257cda9bb129d68ce86d35454a2a5440601821ff673e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 13575},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/vectors/routing/68ab740f9b38c359137b6eb861c5edf77b22e9086a81bf8282cd17a12a98cea5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 10580},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/vectors/partition/fb6da163ae1a6465718eb964e16b2eced9bc66ade394b052135d65b2c563a08b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 12978},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 328539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 295},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2736},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/inline-hash/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 668},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/truncated.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34546},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/wide/projections/a8edcf93a4d166ab82381a2a87a2e2e7e842d5fb0c369ada0103c5c31cdbe2a2",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 291896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/corrupt.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 39556},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 7768},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/verify-inputs.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 611},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/vectors/clustered/1f9a1f016d8cceb4f8fc7b2227cda7b267d541036e02c12cce595695999cf171",
+       "kind": "completed-database-or-cache"},
+      "bytes": 17950},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/vectors/projections/e3ca716ec7f906b1d8128d933b33a9b2acf376f9f13ac671a00eab91c35a0e6b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 19806},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/vectors/partition/918ec446277f3149028c3fef09a8dbcc31ebfb17f83a1898d35bbec42e39861c",
+       "kind": "completed-database-or-cache"},
+      "bytes": 11989},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/wide/projections/e3ca716ec7f906b1d8128d933b33a9b2acf376f9f13ac671a00eab91c35a0e6b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 291896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/corrupt.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3306},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 33215},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/vectors/partition/7c58a85acfea71898a07058e81be966a3c78c68dd5ae5b15244e42c4b1d12dbd",
+       "kind": "completed-database-or-cache"},
+      "bytes": 60554},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 690622},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/budget/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 3478},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/budget/vectors/partition/7c58a85acfea71898a07058e81be966a3c78c68dd5ae5b15244e42c4b1d12dbd",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5017},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 33215},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/vectors/partition/7c58a85acfea71898a07058e81be966a3c78c68dd5ae5b15244e42c4b1d12dbd",
+       "kind": "completed-database-or-cache"},
+      "bytes": 60554},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 690622},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/budget/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 3478},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/budget/vectors/partition/7c58a85acfea71898a07058e81be966a3c78c68dd5ae5b15244e42c4b1d12dbd",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5017},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/scale-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/scale-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 354954152},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3780},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/mutation-source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 432590539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117294384},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/prefix/libexec/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117294384},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025/trial/partition",
+       "kind": "completed-database-or-cache"},
+      "bytes": 6666319},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 7988},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1376},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/warm-producers-20261025/build-profile.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 548},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-stream/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 6995},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-stream/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3780},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/block-score/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 8090},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/block-score/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2947},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/block-score/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2197},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/cluster-blocks/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 11059},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/cluster-blocks/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3375},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/cluster-blocks/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3194},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/helpers.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1222},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/prepare-native.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1578},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/review-check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1712},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/plan-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1653},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/review.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 8474},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/provider-probe.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1825},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1385},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/helpers.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1222},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/run-benchmarks.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 672},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/plan-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1423},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5779},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1107},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1385},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-partition/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 7988},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-partition/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2485},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-partition/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1376},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 14172},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 4294},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2736},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/inline-hash/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 668},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-cursor/verify-inputs.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 611},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-cursor/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 6567},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-cursor/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3306},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/read-helper-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 842},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/helper-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1054},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5253},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/retire.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 830},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1023},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/prepare-mutation.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2652},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/freeze.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/setup.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1987},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/profiling/build-profile.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 548},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5763},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3803},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-delta/atomic-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 850},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-delta/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 6933},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-delta/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3129}],
+    "plan":
+    {"roots":
+     ["/Users/ovm/.codex/experiments/eggshell/block-score-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025",
+      "/Users/ovm/.codex/experiments/eggshell/warm-producers-20261025"],
+     "retained":
+     ["/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/eggshell",
+      "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/prefix",
+      "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/resource-controller",
+      "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/prefix",
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025"],
+     "helperRoot":
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research",
+     "guards":
+     ["/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/native.guard.json",
+      "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/mutation-first.guard.json",
+      "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/mutation-repeat.guard.json",
+      "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/native.guard.json",
+      "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/native-retention.guard.json"]},
+    "archivesCreated": 0},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/maintenance-remaining.json",
+   "bytes": 34008},
+  {"sha256": "964c2ed7564a03b5300a18fa9b734a394a1ed8456bfbc99b6d085f17fff25ad3",
+   "report":
+   {"retained":
+    ["/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/eggshell",
+     "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/prefix",
+     "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/resource-controller",
+     "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/prefix",
+     "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025"],
+    "removed":
+    [{"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/fixtures/source-50000.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 2334450181},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/cleanup-repository-data.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1260},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/block-score-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2197},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/prepare-mutation.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2652},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 139413},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/freeze.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/scale-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/scale-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 354955403},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/setup.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1987},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3803},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/canonical-delta-20261025/mutation-source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 432590539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/corrupt/clustered/b97f514da70ad775054f7b37c61850194fb51d23fed0d0c32d076e363dc5eb69",
+       "kind": "completed-database-or-cache"},
+      "bytes": 17970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/packed/clustered/b97f514da70ad775054f7b37c61850194fb51d23fed0d0c32d076e363dc5eb69",
+       "kind": "completed-database-or-cache"},
+      "bytes": 17970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/vectors/blocks/3f3ddab6083ad153280f7d130368f83dc7b692e49820ca09af98c3d7164973e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 31337},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/vectors/projections/c48ad176cc5745e7de1257cda9bb129d68ce86d35454a2a5440601821ff673e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 25523},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/vectors/routing/68ab740f9b38c359137b6eb861c5edf77b22e9086a81bf8282cd17a12a98cea5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 21139},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/vectors/partition/fb6da163ae1a6465718eb964e16b2eced9bc66ade394b052135d65b2c563a08b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 25787},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 328539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture/base/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 295},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 7809},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 11059},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/cluster-blocks-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3194},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 956},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 33215},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/vectors/partition/3a40659f791bfc17a6e5cf3633a1a96ef5e042ad2b4cf59489edad16382b08f5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 60554},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 683742},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/budget/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 3478},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/budget/vectors/partition/3a40659f791bfc17a6e5cf3633a1a96ef5e042ad2b4cf59489edad16382b08f5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5017},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 33215},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/vectors/partition/2ca429fe086d0a8ecf38212d1a6c0e86d232e7963461e66be175f68c9fb6bed3",
+       "kind": "completed-database-or-cache"},
+      "bytes": 60554},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 683742},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/budget/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 3478},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/budget/vectors/partition/2ca429fe086d0a8ecf38212d1a6c0e86d232e7963461e66be175f68c9fb6bed3",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5017},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-retention/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/scale-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 380158444},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 36934},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 1468},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/vectors/partition/3a40659f791bfc17a6e5cf3633a1a96ef5e042ad2b4cf59489edad16382b08f5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 16031},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 234},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 432590539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 2251},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 40873},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/retention/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 2772},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/retention/vectors/partition/2ca429fe086d0a8ecf38212d1a6c0e86d232e7963461e66be175f68c9fb6bed3",
+       "kind": "completed-database-or-cache"},
+      "bytes": 4230},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/retention/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 8585},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 1468},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/vectors/partition/2ca429fe086d0a8ecf38212d1a6c0e86d232e7963461e66be175f68c9fb6bed3",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 16031},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-retention/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 234},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/atomic-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 850},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/truncated.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34546},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/wide/projections/a8edcf93a4d166ab82381a2a87a2e2e7e842d5fb0c369ada0103c5c31cdbe2a2",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 291896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/cursor-fixture/corrupt.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3129},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/mutation-retention-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 350453237},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117478320},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-delta-20261025/prefix/libexec/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117478320},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 168587},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 23222},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 14172},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/vectors/blocks/3f3ddab6083ad153280f7d130368f83dc7b692e49820ca09af98c3d7164973e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 7954},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/vectors/projections/c48ad176cc5745e7de1257cda9bb129d68ce86d35454a2a5440601821ff673e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 12674},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/vectors/routing/68ab740f9b38c359137b6eb861c5edf77b22e9086a81bf8282cd17a12a98cea5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5397},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/vectors/partition/fb6da163ae1a6465718eb964e16b2eced9bc66ade394b052135d65b2c563a08b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 6572},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-ready/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 168587},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/vectors/blocks/3f3ddab6083ad153280f7d130368f83dc7b692e49820ca09af98c3d7164973e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 15641},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/vectors/projections/c48ad176cc5745e7de1257cda9bb129d68ce86d35454a2a5440601821ff673e6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 13575},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/vectors/routing/68ab740f9b38c359137b6eb861c5edf77b22e9086a81bf8282cd17a12a98cea5",
+       "kind": "completed-database-or-cache"},
+      "bytes": 10580},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/vectors/partition/fb6da163ae1a6465718eb964e16b2eced9bc66ade394b052135d65b2c563a08b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 12978},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 328539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/fixture-neutral/foreign.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 295},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2736},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/partition-native-20261025/inline-hash/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 668},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/truncated.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34546},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/wide/projections/a8edcf93a4d166ab82381a2a87a2e2e7e842d5fb0c369ada0103c5c31cdbe2a2",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 291896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture/corrupt.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 39556},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 7768},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/verify-inputs.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 611},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/vectors/clustered/1f9a1f016d8cceb4f8fc7b2227cda7b267d541036e02c12cce595695999cf171",
+       "kind": "completed-database-or-cache"},
+      "bytes": 17950},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/vectors/projections/e3ca716ec7f906b1d8128d933b33a9b2acf376f9f13ac671a00eab91c35a0e6b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 19806},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/vectors/partition/918ec446277f3149028c3fef09a8dbcc31ebfb17f83a1898d35bbec42e39861c",
+       "kind": "completed-database-or-cache"},
+      "bytes": 11989},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/wide/projections/e3ca716ec7f906b1d8128d933b33a9b2acf376f9f13ac671a00eab91c35a0e6b",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 291896},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/cursor-fixture/corrupt.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 34547},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/projection-cursor-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3306},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 33215},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/vectors/partition/7c58a85acfea71898a07058e81be966a3c78c68dd5ae5b15244e42c4b1d12dbd",
+       "kind": "completed-database-or-cache"},
+      "bytes": 60554},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 690622},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/budget/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 3478},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/budget/vectors/partition/7c58a85acfea71898a07058e81be966a3c78c68dd5ae5b15244e42c4b1d12dbd",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5017},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture/delta/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 33215},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/vectors/partition/7c58a85acfea71898a07058e81be966a3c78c68dd5ae5b15244e42c4b1d12dbd",
+       "kind": "completed-database-or-cache"},
+      "bytes": 60554},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 690622},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/budget/vectors/projections/faf90623f4c51dfbe0ee0c799324e6c5a6ffc4115df5ac51824efbe0ea1f75c6",
+       "kind": "completed-database-or-cache"},
+      "bytes": 3478},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/budget/vectors/partition/7c58a85acfea71898a07058e81be966a3c78c68dd5ae5b15244e42c4b1d12dbd",
+       "kind": "completed-database-or-cache"},
+      "bytes": 5017},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/fixture-final/delta/budget/source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 43374},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/scale-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/scale-data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 354954152},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3780},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/mutation-source.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 432590539},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117294384},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/source-stream-20261025/prefix/libexec/eggshell",
+       "kind": "superseded-executable"},
+      "bytes": 117294384},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025/trial/partition",
+       "kind": "completed-database-or-cache"},
+      "bytes": 6666319},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 7988},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/vector-partition-20261025/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1376},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/warm-producers-20261025/build-profile.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 548},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-stream/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 6995},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/source-stream/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3780},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/block-score/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 8090},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/block-score/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2947},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/block-score/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2197},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/cluster-blocks/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 11059},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/cluster-blocks/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3375},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/cluster-blocks/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3194},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/helpers.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1222},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/prepare-native.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1578},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/review-check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1712},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/plan-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1653},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/review.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 8474},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/provider-probe.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1825},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/keyed-runtime/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1385},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/helpers.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1222},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/run-benchmarks.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 672},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/plan-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1423},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5779},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1107},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/lexical-advice/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1385},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-partition/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 7988},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-partition/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2485},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-partition/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1376},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 14172},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 4294},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2736},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-native/inline-hash/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 668},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-cursor/verify-inputs.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 611},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-cursor/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 6567},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/projection-cursor/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3306},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/read-helper-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 842},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/helper-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1054},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/capture.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5253},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/retire.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 830},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/vector-blocks/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1023},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/prepare-mutation.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 2652},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/freeze.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5970},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/setup.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 1987},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/profiling/build-profile.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 548},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 5763},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/canonical-delta/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3803},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-delta/atomic-build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 850},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-delta/check.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 6933},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/partition-delta/build.rb",
+       "kind": "obsolete-ruby-helper"},
+      "bytes": 3129}],
+    "plan":
+    "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/maintenance-remaining.json",
+    "archivesCreated": 0},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/maintenance-final.json",
+   "bytes": 32879},
+  {"sha256": "77c57b76a2b677a9d4242d2a7b35c21ab5a5fb41eb2dbe7bb55b37f5a5016771",
+   "report":
+   {"retained":
+    ["/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/result.json",
+     "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/recovery.json",
+     "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/shutdown.json"],
+    "removed":
+    [{"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/work.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 503563},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/recovery-data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/output.egg",
+       "kind": "completed-database-or-cache"},
+      "bytes": 330008},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/data/numerical",
+       "kind": "completed-database-or-cache"},
+      "bytes": 0},
+     {"target":
+      {"path":
+       "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/data/read-cache",
+       "kind": "completed-database-or-cache"},
+      "bytes": 122483}],
+    "plan":
+    "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate-cleanup-inventory.json",
+    "archivesCreated": 0},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate-cleanup-result.json",
+   "bytes": 1330},
+  {"sha256": "509fe4946443b5d11708f180fbfd75b4c586417da4ece36eb72a5b170cec7a29",
+   "report":
+   {"supports": 4,
+    "runtime":
+    {"sha256":
+     "bee29fda3795f53e6cec8a8c7ca198bb408c2a471fe7483d157a61af2d2345d5",
+     "path":
+     "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell"},
+    "privateUsage": 4,
+    "portableOrigins": 4,
+    "nativeJournalEvents": 9,
+    "emptyInitialDatabase": true,
+    "directRelationInsertions": 0,
+    "coquoted": 4,
+    "consumptionWitnesses": 1,
+    "conditionalReadRows": 4,
+    "answeringModelCalls": 0,
+    "actualToolCalls": 4},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/result.json",
+   "bytes": 419},
+  {"sha256": "d2247046d94fae480f6e131bb3e528706bba923b2f291f8b91b672c3938f3a3e",
+   "report":
+   {"supports": 4,
+    "sourceOnlyCheckpoint": true,
+    "runtime":
+    {"sha256":
+     "bee29fda3795f53e6cec8a8c7ca198bb408c2a471fe7483d157a61af2d2345d5",
+     "path":
+     "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell"},
+    "publicationUnchanged": true,
+    "newPrivateRoot": true,
+    "coquoted": 4,
+    "consumptionWitnesses": 1},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/recovery.json",
+   "bytes": 311},
+  {"sha256": "e77656ce692cf72f8947403fb63e33ed9f832f9632f7411a2d44e10fa0d1160d",
+   "report":
+   {"stopElapsedMs": 1878,
+    "pid": 57236,
+    "phase": "stopped",
+    "endpointRemoved": true,
+    "daemonExitCode": 0,
+    "acknowledged": true},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/native-gate/shutdown.json",
+   "bytes": 115},
+  {"sha256": "c034f1c280335dd8cc5e005331b4706bd21860611e495c4d161e9c9cc39d59b7",
+   "report":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/seed-1.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/lean-study-20261025"],
+     "minFreeKiB": 4194304,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025",
+     "command":
+     ["/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "acquire",
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/seed-1.plan.json",
+      "396eb8dfcb7b815d5c8c9ea6de25d712bb052e737026b456de04ed51c9c12d3a"]},
+    "samples": 2124,
+    "sampledPeakRssKiB": 2831600,
+    "reason": "leftover-processes",
+    "peakProcesses":
+    [{"rssKiB": 48000,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/controller/StudyMain",
+      "pid": 59723,
+      "parent": 59721,
+      "lane": null},
+     {"rssKiB": 47328,
+      "role": null,
+      "program": "node",
+      "pid": 59878,
+      "parent": 59723,
+      "lane": null},
+     {"rssKiB": 119008,
+      "role": null,
+      "program":
+      "/Users/ovm/.nodebrew/node/v24.8.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/bin/codex",
+      "pid": 59881,
+      "parent": 59878,
+      "lane": null},
+     {"rssKiB": 65168,
+      "role": "codex-worker",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 60926,
+      "parent": 59933,
+      "lane": "search"},
+     {"rssKiB": 75696,
+      "role": "codex-daemon",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 59933,
+      "parent": 59723,
+      "lane": null},
+     {"rssKiB": 44416,
+      "role": "codex-hook",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61042,
+      "parent": 59881,
+      "lane": null},
+     {"rssKiB": 44336,
+      "role": "codex-hook",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61043,
+      "parent": 59881,
+      "lane": null},
+     {"rssKiB": 44384,
+      "role": "codex-hook",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61044,
+      "parent": 59881,
+      "lane": null},
+     {"rssKiB": 44352,
+      "role": "codex-hook",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61045,
+      "parent": 59881,
+      "lane": null},
+     {"rssKiB": 44944,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61048,
+      "parent": 61044,
+      "lane": null},
+     {"rssKiB": 44928,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61049,
+      "parent": 61045,
+      "lane": null},
+     {"rssKiB": 44848,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61050,
+      "parent": 61042,
+      "lane": null},
+     {"rssKiB": 44992,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61051,
+      "parent": 61043,
+      "lane": null},
+     {"rssKiB": 45760,
+      "role": null,
+      "program": "(eggshell)",
+      "pid": 61055,
+      "parent": 60035,
+      "lane": null},
+     {"rssKiB": 45776,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61056,
+      "parent": 60224,
+      "lane": null},
+     {"rssKiB": 45776,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61057,
+      "parent": 60226,
+      "lane": null},
+     {"rssKiB": 45824,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61059,
+      "parent": 60926,
+      "lane": null},
+     {"rssKiB": 68800,
+      "role": "codex-worker",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 60035,
+      "parent": 59933,
+      "lane": "search"},
+     {"rssKiB": 42064,
+      "role": null,
+      "program": "(eggshell)",
+      "pid": 61060,
+      "parent": 61055,
+      "lane": null},
+     {"rssKiB": 42000,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61061,
+      "parent": 61056,
+      "lane": null},
+     {"rssKiB": 81936,
+      "role": "codex-worker",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 60037,
+      "parent": 59933,
+      "lane": "index"},
+     {"rssKiB": 40848,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61062,
+      "parent": 61057,
+      "lane": null},
+     {"rssKiB": 19824,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 61063,
+      "parent": 61059,
+      "lane": null},
+     {"rssKiB": 58528,
+      "role": "codex-worker",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 60083,
+      "parent": 59933,
+      "lane": "save"},
+     {"rssKiB": 52512,
+      "role": null,
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 60098,
+      "parent": 1,
+      "lane": null},
+     {"rssKiB": 1326320,
+      "role": null,
+      "program":
+      "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+      "pid": 60100,
+      "parent": 60098,
+      "lane": null},
+     {"rssKiB": 64048,
+      "role": "codex-worker",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 60224,
+      "parent": 59933,
+      "lane": "search"},
+     {"rssKiB": 64672,
+      "role": "codex-worker",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell",
+      "pid": 60226,
+      "parent": 59933,
+      "lane": "search"},
+     {"rssKiB": 28176,
+      "role": null,
+      "program":
+      "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+      "pid": 60234,
+      "parent": 60098,
+      "lane": null},
+     {"rssKiB": 46336,
+      "role": "guard",
+      "program": "./controller/StudyMain",
+      "pid": 59721,
+      "parent": 59709,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": true,
+    "guardSha256":
+    "e9dc71cb314135b4d9b37a45c5c5a2933da0a0a9b5f1765c6a7d6a85bd60f8be",
+    "guardPid": 59721,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 279123,
+    "childPid": 59723},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/seed-1.guard.json",
+   "bytes": 5772},
+  {"sha256": "ab1c67c9d1545e53233b27e703f2d853d24b312dc6b1218918f653543409d45f",
+   "report":
+   {"usage":
+    {"usageEvents": 34,
+     "unknownFinalUsage": false,
+     "total":
+     {"totalTokens": 3472146,
+      "reasoningOutputTokens": 9085,
+      "outputTokens": 19292,
+      "inputTokens": 3452854,
+      "cachedInputTokens": 3252736},
+     "terminalStatus": "completed",
+     "scope":
+     {"turnId": "01a172dc-3b55-7932-a2a4-687ad908ab7a",
+      "threadId": "01a172dc-3a83-7593-a17f-7d9a51df47be",
+      "expectedBodySha256":
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+     "reroutes": [],
+     "protocolPassed": true,
+     "packets": [],
+     "observedPromptHook": true,
+     "observedInclusiveTokens": 3472146,
+     "issues": [],
+     "initialContextPolicy": "empty-seed",
+     "initialBodyMatched": true,
+     "hookFailures": [],
+     "hookCount": 115,
+     "finalUsageKnown": true,
+     "errors": [],
+     "answerSha256":
+     "7e60e61e386651589887000c00f9d7f30c9b0218de2fde0e8aae25d6275fafb3"},
+    "runtime":
+    {"sha256":
+     "bee29fda3795f53e6cec8a8c7ca198bb408c2a471fe7483d157a61af2d2345d5",
+     "path":
+     "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/prefix/libexec/eggshell"},
+    "runError": null,
+    "productionAdoption": false,
+    "label": "new-native-seed-1",
+    "kind": "seed",
+    "completed": false,
+    "cleanupError": "owned daemon did not exit before the cleanup deadline",
+    "checkpointError": null,
+    "captureError": null},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/study/seed-1/failure.json",
+   "bytes": 1143},
+  {"sha256": "9599faf82a3624311065826bef4787f940f4f601b109488e0a5cfd48949df0eb",
+   "report":
+   {"usageEvents": 34,
+    "unknownFinalUsage": false,
+    "total":
+    {"totalTokens": 3472146,
+     "reasoningOutputTokens": 9085,
+     "outputTokens": 19292,
+     "inputTokens": 3452854,
+     "cachedInputTokens": 3252736},
+    "terminalStatus": "completed",
+    "scope":
+    {"turnId": "01a172dc-3b55-7932-a2a4-687ad908ab7a",
+     "threadId": "01a172dc-3a83-7593-a17f-7d9a51df47be",
+     "expectedBodySha256":
+     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+    "reroutes": [],
+    "protocolPassed": true,
+    "packets": [],
+    "observedPromptHook": true,
+    "observedInclusiveTokens": 3472146,
+    "issues": [],
+    "initialContextPolicy": "empty-seed",
+    "initialBodyMatched": true,
+    "hookFailures": [],
+    "hookCount": 115,
+    "finalUsageKnown": true,
+    "errors": [],
+    "answerSha256":
+    "7e60e61e386651589887000c00f9d7f30c9b0218de2fde0e8aae25d6275fafb3"},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/study/seed-1/usage.json",
+   "bytes": 736},
+  {"sha256": "5c2f5ca4c2b5a8c062a02b3a40643871087bfd247ec00dc37f6e00072d96de14",
+   "report":
+   {"sixStagesAcceptedWithOneTotalOmission": true,
+    "secondOmissionRejected": true,
+    "runtimeChangeRejected": true,
+    "checksPassed": 9,
+    "changedHistoryRejected": true,
+    "answeringModelCalls": 0},
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/delivery-budget-checks/result.json",
+   "bytes": 177},
+  {"sha256": "e3ca41f86f06b48439dac2fc7194d237ee92b8debef9a59e5512b8ca5ffb5a3c",
+   "report": null,
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/lean-study-20261025/DeliveryBudgetChecks.lean",
+   "bytes": 3517}],
+ "productionAdoption": false,
+ "newTokenSavingsClaim": false,
+ "newPython": false,
+ "completedTopicStages": 0,
+ "completedDataRetention":
+ "Delete DBs and caches after no planned call needs them. No compression or archive.",
+ "allSixStagesPassed": false}
