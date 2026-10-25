@@ -149,7 +149,12 @@ def run (templatePath directory : String) (remote : Bool := false) : IO Unit := 
     let _ ← IO.ofExcept (Json.parse result.stdout)
     pure ()
   let endpoint := root / "data/sessions" / session / "daemon.json"
-  let managed ← StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) session endpoint environment
+  let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) (root / "data") environment
+  let managed ← try
+    StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) session endpoint environment
+    catch error =>
+      StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
+      throw error
   try
     hook "SessionStart" [("hook_event_name",toJson "SessionStart")]
     hook "UserPromptSubmit" [("hook_event_name",toJson "UserPromptSubmit"),
@@ -226,7 +231,8 @@ def run (templatePath directory : String) (remote : Bool := false) : IO Unit := 
       ("privateUsage",toJson usage.size),("answeringModelCalls",toJson (0 : Nat)),
       ("directRelationInsertions",toJson (0 : Nat))])
   finally
-    StudyRuntime.stopManaged managed (root / "shutdown.json")
+    try StudyRuntime.stopManaged managed (root / "shutdown.json")
+    finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
   let copied := root / "output.egg"
   let publication ← StudyRuntime.checkpoint database copied
   save (root / "publication-files.json") (toJson publication)

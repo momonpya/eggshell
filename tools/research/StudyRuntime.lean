@@ -95,6 +95,7 @@ structure Managed where
   private exit : IO.Ref (Option UInt32)
   private endpoint : Plugin.Daemon.Endpoint
   private path : System.FilePath
+  private expectedShutdown : String := ""
 
 def startManaged (binary plugin : System.FilePath) (session : String) (path : System.FilePath)
     (environment : Array (String × Option String)) : IO Managed := do
@@ -116,6 +117,37 @@ def startManaged (binary plugin : System.FilePath) (session : String) (path : Sy
       pure ()
     throw error
 
+/-- The study owns this child directly, before any model turn starts. It does
+not infer ownership from a shared endpoint or terminate another chat's service.
+Publication startup prepares no source DB, vectors or answering context. -/
+def startPublisher (binary dataRoot : System.FilePath)
+    (environment : Array (String × Option String)) : IO Managed := do
+  let dataRoot := dataRoot.normalize
+  check (binary.isAbsolute && dataRoot.isAbsolute && dataRoot.toString != "/")
+    "absolute isolated publisher paths required"
+  check ((environment.filter (·.1 == "EGGSHELL_DATA_ROOT")) ==
+    #[("EGGSHELL_DATA_ROOT",some dataRoot.toString)]) "publisher environment differs from its isolated scope"
+  FileSystem.rejectSymlinkAncestors dataRoot
+  let path := dataRoot / "publisher/endpoint.json"
+  check ((← FileSystem.symlinkMetadata? path).isNone) "a publisher already owns this study scope"
+  let child ← IO.Process.spawn {
+    cmd := binary.toString,args := #["codex-publication-daemon"],env := environment
+    stdin := .null,stdout := .inherit,stderr := .inherit,setsid := true }
+  let exit ← IO.mkRef none
+  try
+    let endpoint ← ready child "publisher" path exit ((← IO.monoMsNow)+10000)
+    check (endpoint.compatible (← Plugin.Daemon.executableGeneration binary))
+      "publisher executable differs from its frozen runtime"
+    let pong ← Plugin.Daemon.exchange endpoint "ping" (budget := 1000)
+    check (pong == "true") "owned publisher rejected readiness"
+    return {child,exit,endpoint,path,expectedShutdown := "true"}
+  catch error =>
+    if (← poll child exit).isNone then
+      Plugin.Worker.killGroup child
+      let _ ← child.wait
+      pure ()
+    throw error
+
 def abort (managed : Managed) : IO Unit := do
   if (← poll managed.child managed.exit).isNone then
     Plugin.Worker.killGroup managed.child
@@ -130,14 +162,17 @@ def stopManaged (managed : Managed) (report : System.FilePath) : IO Unit := do
   try
     let current ← IO.ofExcept (fromJson? (α := Plugin.Daemon.Endpoint) (← readJson managed.path))
     check (current.pid == managed.endpoint.pid && current.secret == managed.endpoint.secret) "owned daemon was replaced"
-    let acknowledged ← Plugin.Daemon.exchange managed.endpoint "shutdown" (budget := 500)
-    check (acknowledged == "") "daemon rejected shutdown"
+    let acknowledged ← Plugin.Daemon.exchange managed.endpoint "shutdown"
+      (budget := if managed.expectedShutdown.isEmpty then 500 else 5000)
+    check (acknowledged == managed.expectedShutdown) "owned process rejected shutdown"
     let stopStarted ← IO.monoMsNow
     let code ← stopped managed.child managed.exit (stopStarted + 15000)
     let removed := !(← managed.path.pathExists)
     let result := Json.mkObj [("phase",toJson "stopped"),("pid",toJson managed.endpoint.pid),
       ("daemonExitCode",toJson code.toNat),("endpointRemoved",toJson removed),
-      ("stopElapsedMs",toJson ((← IO.monoMsNow)-stopStarted)),("acknowledged",toJson true)]
+      ("processExited",toJson true),
+      ("stopElapsedMs",toJson ((← IO.monoMsNow)-stopStarted)),("acknowledged",toJson true),
+      ("service",toJson (if managed.expectedShutdown.isEmpty then "session" else "publication"))]
     writeJson report result
     check (code == 0 && removed) "owned daemon did not stop cleanly"
   catch error =>

@@ -35,7 +35,7 @@ def main (args : List String) : IO Unit := do
         "LEAN_NUM_THREADS=1",(root / (if mode == "baseline" then "baseline-build/StudyMain" else
           "build/StudyMain")).toString,(root / (label ++ "-fixtures")).toString,arm]
     | "native" => pure #["/usr/bin/env","EGGSHELL_DATA_ROOT=" ++ (root / "native/data").toString,
-        "LEAN_NUM_THREADS=1",(root / "build/StudyMain").toString,root.toString,"publisher"]
+        "LEAN_NUM_THREADS=1",(root / "build/StudyMain").toString,root.toString]
     | "contract" | "boundary" | "source-contract" =>
       pure #["/usr/bin/env","LEAN_PATH=" ++ (root / "build/lib").toString ++ ":" ++
           (root / "checkout/.lake/build/lib/lean").toString ++ ":" ++ toolchain ++ "/lib/lean",

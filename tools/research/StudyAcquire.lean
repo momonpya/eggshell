@@ -9,6 +9,7 @@ structure Gate where
   guard : StudyAdmission.Artifact
   shutdown : StudyAdmission.Artifact
   recovery : StudyAdmission.Artifact
+  publisherShutdown : StudyAdmission.Artifact
   deriving FromJson, ToJson
 
 structure Plan where
@@ -51,6 +52,30 @@ private def verifySource (plan : Plan) : IO Unit := do
   check (commit.exitCode == 0 && commit.stdout.trimAscii.toString == plan.sourceCommit &&
     status.exitCode == 0 && status.stdout.trimAscii.isEmpty) "source commit or clean workspace changed"
 
+/-- Validate the actual producer's schema before starting a charged turn.
+Missing counters cannot pass as equal `none` values. -/
+def verifyNativeGate (runtime gate guard shutdown recovered publisherShutdown : Json) : Except String Unit := do
+  let tools ← gate.getObjValAs? Nat "nativeToolCalls"
+  let origins ← gate.getObjValAs? Nat "portableOrigins"
+  let journalEvents ← gate.getObjValAs? Nat "nativeJournalEvents"
+  unless (gate.getObjVal? "runtime").toOption == some runtime &&
+    (gate.getObjValAs? Bool "emptyInitialDatabase").toOption == some true &&
+    (gate.getObjValAs? Nat "answeringModelCalls").toOption == some 0 &&
+    (gate.getObjValAs? Nat "directRelationInsertions").toOption == some 0 &&
+    (gate.getObjValAs? Nat "consumptionWitnesses").toOption.any (· > 0) &&
+    tools > 0 && origins == tools && journalEvents == 2*tools+1 do
+    throw "native empty-DB provenance gate is absent or belongs to another runtime"
+  unless (guard.getObjValAs? Nat "exitCode").toOption == some 0 &&
+    (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] &&
+    (shutdown.getObjValAs? Nat "daemonExitCode").toOption == some 0 &&
+    (shutdown.getObjValAs? Bool "endpointRemoved").toOption == some true &&
+    (publisherShutdown.getObjValAs? Bool "processExited").toOption == some true &&
+    (publisherShutdown.getObjValAs? Bool "endpointRemoved").toOption == some true &&
+    (recovered.getObjValAs? Bool "sourceOnlyCheckpoint").toOption == some true &&
+    (recovered.getObjValAs? Bool "publicationUnchanged").toOption == some true &&
+    (recovered.getObjValAs? Nat "consumptionWitnesses").toOption.any (· > 0) do
+    throw "native gate cleanup or portable source-only recovery failed"
+
 private def verify (plan : Plan) : IO StudyAccounting.Acquisition := do
   check (plan.model == "gpt-5.6-luna" && plan.effort == "xhigh") "fixed Luna/xhigh required"
   check (plan.provider == "openai" || plan.provider == "synthetic") "explicit acquisition provider required"
@@ -59,28 +84,16 @@ private def verify (plan : Plan) : IO StudyAccounting.Acquisition := do
     | "fresh" => pure .fresh
     | _ => throw (IO.userError "acquisition kind must be seed or fresh")
   for artifact in #[plan.runtime,plan.runner,plan.cliWrapper,plan.nativeCli,plan.accountConfiguration,plan.prompt,
-      plan.gate.report,plan.gate.guard,plan.gate.shutdown,plan.gate.recovery] ++ plan.pluginFiles ++ plan.harness do
+      plan.gate.report,plan.gate.guard,plan.gate.shutdown,plan.gate.recovery,
+      plan.gate.publisherShutdown] ++ plan.pluginFiles ++ plan.harness do
     StudyAdmission.verifyArtifact artifact
   StudyAdmission.verifyPluginRuntime plan.runtime plan.pluginRoot
   let gate ← StudyAdmission.readJson plan.gate.report.path
   let guard ← StudyAdmission.readJson plan.gate.guard.path
   let shutdown ← StudyAdmission.readJson plan.gate.shutdown.path
   let recovered ← StudyAdmission.readJson plan.gate.recovery.path
-  check ((gate.getObjVal? "runtime").toOption == some (toJson plan.runtime) &&
-    (gate.getObjValAs? Bool "emptyInitialDatabase").toOption == some true &&
-    (gate.getObjValAs? Nat "answeringModelCalls").toOption == some 0 &&
-    (gate.getObjValAs? Nat "directRelationInsertions").toOption == some 0 &&
-    (gate.getObjValAs? Nat "consumptionWitnesses").toOption.any (· > 0) &&
-    (gate.getObjValAs? Nat "actualToolCalls").toOption == (gate.getObjValAs? Nat "portableOrigins").toOption)
-    "native empty-DB provenance gate is absent or belongs to another runtime"
-  check ((guard.getObjValAs? Nat "exitCode").toOption == some 0 &&
-    (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] &&
-    (shutdown.getObjValAs? Nat "daemonExitCode").toOption == some 0 &&
-    (shutdown.getObjValAs? Bool "endpointRemoved").toOption == some true &&
-    (recovered.getObjValAs? Bool "sourceOnlyCheckpoint").toOption == some true &&
-    (recovered.getObjValAs? Bool "publicationUnchanged").toOption == some true &&
-    (recovered.getObjValAs? Nat "consumptionWitnesses").toOption.any (· > 0))
-    "native gate cleanup or portable source-only recovery failed"
+  let publisherShutdown ← StudyAdmission.readJson plan.gate.publisherShutdown.path
+  IO.ofExcept (verifyNativeGate (toJson plan.runtime) gate guard shutdown recovered publisherShutdown)
   check ((← IO.FS.realPath (← IO.appPath)) == (← IO.FS.realPath (.mk plan.runner.path)))
     "running acquisition controller differs from frozen harness"
   verifySource plan
@@ -148,6 +161,7 @@ def run (input digest : String) : IO UInt32 := do
     cwd := plan.workspace,environment,output := (root / "rpc").toString,
     timeoutMs := 900000,responseBytes := 32*1024*1024,transcriptBytes := 256*1024*1024 }
   let manager ← IO.mkRef (none : Option StudyRuntime.Managed)
+  let publisher ← IO.mkRef (none : Option StudyRuntime.Managed)
   let identity ← IO.mkRef (none : Option StudyAccounting.Scope)
   let mut runError : Option String := none
   let mut cleanupError : Option String := none
@@ -181,6 +195,9 @@ def run (input digest : String) : IO UInt32 := do
         "actual model/effort or disabled AGENTS requirement differs"
       let id ← IO.ofExcept ((← IO.ofExcept (thread.getObjVal? "thread")).getObjValAs? String "id")
       if kind == .seed then
+        let owned ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
+        publisher.set (some owned)
+        save root "publisher.json" (Json.mkObj [("pid",toJson (StudyRuntime.pid owned))])
         let managed ← StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) id
           (data / "sessions" / id / "daemon.json") environment
         manager.set (some managed)
@@ -208,6 +225,10 @@ def run (input digest : String) : IO UInt32 := do
   if let some managed ← manager.get then
     try StudyRuntime.stopManaged managed (root / "shutdown.json")
     catch error => cleanupError := some error.toString
+  let mut publisherError : Option String := none
+  if let some owned ← publisher.get then
+    try StudyRuntime.stopManaged owned (root / "publisher-shutdown.json")
+    catch error => publisherError := some error.toString
   let mut captureError : Option String := none
   let mut usage := Json.mkObj [("unknownFinalUsage",toJson true),("observedInclusiveTokens",.null)]
   try
@@ -229,12 +250,13 @@ def run (input digest : String) : IO UInt32 := do
     verifySource plan
     StudyAdmission.verifyArtifact plan.runtime
   catch error => checkpointError := some error.toString
-  let passed := runError.isNone && cleanupError.isNone && captureError.isNone && checkpointError.isNone &&
+  let passed := runError.isNone && cleanupError.isNone && publisherError.isNone && captureError.isNone && checkpointError.isNone &&
     (usage.getObjValAs? Bool "protocolPassed").toOption == some true
   save root (if passed then "result.json" else "failure.json") (Json.mkObj [
     ("completed",toJson passed),("kind",toJson plan.kind),("label",toJson plan.label),
     ("usage",usage),("runtime",toJson plan.runtime),("runError",toJson runError),
     ("cleanupError",toJson cleanupError),("captureError",toJson captureError),
+    ("publisherError",toJson publisherError),
     ("checkpointError",toJson checkpointError),("productionAdoption",toJson false)])
   return if passed then 0 else 1
 

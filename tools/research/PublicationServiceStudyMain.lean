@@ -29,7 +29,7 @@ def main (args : List String) : IO Unit := do
         "LEAN_NUM_THREADS=1",(root / "build/StudyMain").toString,root.toString,label]
     | "native" => pure #["/usr/bin/env","EGGSHELL_DATA_ROOT=" ++ (root / "native/data").toString,
         "LEAN_NUM_THREADS=1",(root / "build/StudyMain").toString,
-        root.toString,"publisher"]
+        root.toString]
     | "lifecycle" => pure #["/usr/bin/env","EGGSHELL_DATA_ROOT=" ++ (root / "lifecycle-data").toString,
         "LEAN_NUM_THREADS=1",(root / "build/StudyMain").toString,root.toString,label]
     | "contract" | "boundary" => pure #["/usr/bin/env",

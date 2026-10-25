@@ -77,6 +77,7 @@ def run (input digest : String) : IO UInt32 := do
   IO.FS.writeFile (directory / "prompt.txt") admitted.prompt
   save directory "input-files.json" (toJson (← StudyRuntime.checkpoint (.mk plan.database) (directory / "input.egg")))
   let manager ← IO.mkRef (none : Option StudyRuntime.Managed)
+  let publisher ← IO.mkRef (none : Option StudyRuntime.Managed)
   let scope ← IO.mkRef (none : Option StudyAccounting.Scope)
   let mut runError : Option String := none
   let mut cleanupError : Option String := none
@@ -121,6 +122,9 @@ def run (input digest : String) : IO UInt32 := do
         "actual model, effort or instructions differ from the frozen plan"
       let id ← IO.ofExcept ((← IO.ofExcept (thread.getObjVal? "thread")).getObjValAs? String "id")
       let endpoint := System.FilePath.mk plan.dataRoot / "sessions" / id / "daemon.json"
+      let owned ← StudyRuntime.startPublisher (.mk plan.runtime.path) (.mk plan.dataRoot) plan.environment
+      publisher.set (some owned)
+      save directory "publisher.json" (Json.mkObj [("pid",toJson (StudyRuntime.pid owned))])
       let managed ← StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) id endpoint plan.environment
       manager.set (some managed)
       save directory "manager.json" (Json.mkObj [("pid",toJson (StudyRuntime.pid managed)),("session",toJson id)])
@@ -145,6 +149,10 @@ def run (input digest : String) : IO UInt32 := do
   if let some managed ← manager.get then
     try StudyRuntime.stopManaged managed (directory / "shutdown.json")
     catch error => cleanupError := some error.toString
+  let mut publisherError : Option String := none
+  if let some owned ← publisher.get then
+    try StudyRuntime.stopManaged owned (directory / "publisher-shutdown.json")
+    catch error => publisherError := some error.toString
   let mut captureError : Option String := none
   let mut usage : Json := .null
   try usage ← capture admitted directory (← scope.get)
@@ -153,10 +161,11 @@ def run (input digest : String) : IO UInt32 := do
   try
     save directory "output-files.json" (toJson (← StudyRuntime.checkpoint (.mk plan.database) (directory / "output.egg")))
   catch error => checkpointError := some error.toString
-  let succeeded := runError.isNone && cleanupError.isNone && captureError.isNone && checkpointError.isNone &&
+  let succeeded := runError.isNone && cleanupError.isNone && publisherError.isNone && captureError.isNone && checkpointError.isNone &&
     (usage.getObjValAs? Bool "protocolPassed").toOption == some true
   let result := Json.mkObj [("label",toJson plan.label),("completed",toJson succeeded),
     ("runError",toJson runError),("cleanupError",toJson cleanupError),("captureError",toJson captureError),
+    ("publisherError",toJson publisherError),
     ("checkpointError",toJson checkpointError),("usage",usage),
     ("knownOmissions",toJson admitted.knownOmissions),("productionAdoption",toJson false),
     ("elapsedMs",toJson ((← IO.monoMsNow)-started))]

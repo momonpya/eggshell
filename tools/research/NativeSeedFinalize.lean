@@ -49,15 +49,22 @@ def cliMain (args : List String) : IO UInt32 := do
       ("EGGSHELL_DATA_ROOT",some data.toString),("EGGSHELL_CONFIG",some (root / "config.toml").toString),
       ("EGGSHELL_PROFILE",some "work"),("CODEX_THREAD_ID",some session),("CODEX_TURN_ID",none)]
     if !before.isEmpty then
-      let managed ← StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot)
-        session (files / "daemon.json") environment
+      let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
+      let managed ← try
+        StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot)
+          session (files / "daemon.json") environment
+        catch error =>
+          StudyRuntime.stopManaged publisher (output / "publisher-shutdown.json")
+          throw error
       try
         let deadline := (← IO.monoMsNow)+120000
         repeat
           if (← queued files).isEmpty then break
           check ((← IO.monoMsNow) < deadline) "frozen runtime did not drain its queued seed publication"
           IO.sleep 100
-      finally StudyRuntime.stopManaged managed (output / "shutdown.json")
+      finally
+        try StudyRuntime.stopManaged managed (output / "shutdown.json")
+        finally StudyRuntime.stopManaged publisher (output / "publisher-shutdown.json")
     let after ← queued files
     check after.isEmpty "queued source work remains after owned daemon exit"
     if drainOnly then

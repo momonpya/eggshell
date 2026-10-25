@@ -36,6 +36,7 @@
 - source-authority候補c7bdbb03…で、背景再生から原文intervalを再出版する経路を削除。原文writerを保持したnative診断で、旧候補のbusyを再現し、新候補の再生完了、source head不変、不足intervalを補完しないこと、保存側の再送による解消を確認した。取得済みpublicationのviewと後から増えた準備債務も分けた。実フックはstderr空、6観測・13記録・3辺を保持し、別private/読取専用の必要コード2/2を1,951msで配送。これは全viewの競合解決や95%の本評価ではない。[source-authority.md](docs/source-authority.md)。
 - 95%を整数で測るLean監査を実本文へ接続。別チャット/新private領域/読取専用DBの合成試行で必要コード2/2を配送し、意味検索完了、discovery/focus各7窓cache hit、source再埋め込み0、実フック1,843ms。これは6段階/保留実務/大規模の95%達成ではない。[required-delivery.md](docs/required-delivery.md)。
 - 旧seed費用は3,472,146総token、115フック失敗0、daemon終了超過。失敗費用を除外しない。新系列の題材1/2/3・2周目は0/6。
+- 研究harnessで出版serviceを直接所有し、chat→出版の順に実終了/endpoint除去まで確認するようにした。古いnative計数名を参照する入場検査も修正。実native試行と課金なしseed/fresh模擬試行は成功し、終了後の残存0。製品runtimeはc7bdbb03…から変えていない。連続保存中の索引警告4件は残るが、静止後warmは14/14窓有効・欠落/不正0。新seed取得へ進むためのharness検証であり、95%や総token改善の証拠ではない。[study-services.md](docs/study-services.md)。
 
 ## 実行順と完了証拠
 

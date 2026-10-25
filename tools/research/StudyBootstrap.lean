@@ -101,7 +101,8 @@ def sealSeed (root : String) : IO Unit := do
       report := ← StudyPrepare.artifact (gate / "result.json")
       guard := ← StudyPrepare.artifact (directory / "native-gate.guard.json")
       shutdown := ← StudyPrepare.artifact (gate / "shutdown.json")
-      recovery := ← StudyPrepare.artifact (gate / "recovery.json") }
+      recovery := ← StudyPrepare.artifact (gate / "recovery.json")
+      publisherShutdown := ← StudyPrepare.artifact (gate / "publisher-shutdown.json") }
     environment := input.environment }
   IO.FS.createDirAll (directory / "study")
   save (directory / "seed-1.plan.json") (toJson plan)
