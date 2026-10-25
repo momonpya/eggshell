@@ -89,7 +89,17 @@ def main (args : List String) : IO Unit := do
       ("responseBytes",toJson (32*1024*1024 : Nat)),("transcriptBytes",toJson (64*1024*1024 : Nat))]
     save (root / "discovery.settings.json") settings
     guarded "setup-probe" #[(root / "controller").toString,"probe",(root / "discovery.settings.json").toString]
-  | ["seal"] =>
+  | "seal" :: labels =>
+    let label ← match labels with
+      | [] => pure "seed-1"
+      | [label] =>
+        unless !label.isEmpty && label.toList.all (fun c => c.isAlphanum || c == '-') do
+          throw (IO.userError "plain distinct seed attempt label required")
+        pure label
+      | _ => throw (IO.userError "seal [ATTEMPT-LABEL]")
+    -- The disk preflight inspects the new acquisition directory's parent.
+    -- Prepare that parent before freezing a plan or starting the controller.
+    IO.FS.createDirAll (root / "study")
     let original ← read (previous / "seed-1.plan.json")
     let runtime ← artifact (root / "prefix/libexec/eggshell")
     let facts ← read (root / "native/result.json")
@@ -116,9 +126,10 @@ def main (args : List String) : IO Unit := do
       |>.setObjVal! "gate" gateFields |>.setObjVal! "harness" (toJson harness)
       |>.setObjVal! "environment" (toJson environment)
       |>.setObjVal! "output" (toJson (root / "study/seed-1").toString)
-      |>.setObjVal! "guardRecord" (toJson (root / "seed-1.guard.json").toString)
-    save (root / "seed-1.plan.json") plan
-    let sealed ← artifact (root / "seed-1.plan.json")
+      |>.setObjVal! "guardRecord" (toJson (root / (label ++ ".guard.json")).toString)
+    let planFile := root / (label ++ ".plan.json")
+    save planFile plan
+    let sealed ← artifact planFile
     let digest ← IO.ofExcept (sealed.getObjValAs? String "sha256")
-    guarded "seed-1" #[(root / "controller").toString,"acquire",(root / "seed-1.plan.json").toString,digest]
-  | _ => throw (IO.userError "PrepareStudyExecutionMain init|probe|seal")
+    guarded label #[(root / "controller").toString,"acquire",planFile.toString,digest]
+  | _ => throw (IO.userError "PrepareStudyExecutionMain init|probe|seal [ATTEMPT-LABEL]")

@@ -37,6 +37,7 @@
 - 95%を整数で測るLean監査を実本文へ接続。別チャット/新private領域/読取専用DBの合成試行で必要コード2/2を配送し、意味検索完了、discovery/focus各7窓cache hit、source再埋め込み0、実フック1,843ms。これは6段階/保留実務/大規模の95%達成ではない。[required-delivery.md](docs/required-delivery.md)。
 - 旧seed費用は3,472,146総token、115フック失敗0、daemon終了超過。失敗費用を除外しない。新系列の題材1/2/3・2周目は0/6。
 - 研究harnessで出版serviceを直接所有し、chat→出版の順に実終了/endpoint除去まで確認するようにした。古いnative計数名を参照する入場検査も修正。実native試行と課金なしseed/fresh模擬試行は成功し、終了後の残存0。製品runtimeはc7bdbb03…から変えていない。連続保存中の索引警告4件は残るが、静止後warmは14/14窓有効・欠落/不正0。新seed取得へ進むためのharness検証であり、95%や総token改善の証拠ではない。[study-services.md](docs/study-services.md)。
+- 空き容量が回復した後、指示により旧DB/キャッシュ等38対象と、全登録ownerが消失済みの私有cache81個を追加削除した。論理サイズ合計約259 MiB、archiveなし。最初のseed起動は未作成の出力親に対する容量検査で止まり、モデル起動0・残存0。準備側で親を作成し、元記録を残した別attemptへ進む。runtimeは同一。[unused-study-data.md](docs/unused-study-data.md)。
 
 ## 実行順と完了証拠
 
