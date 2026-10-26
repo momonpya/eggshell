@@ -26,6 +26,8 @@ structure State where
   objects : Std.HashMap String String := {}
   records : Array Json := #[]
   inheritedStamps : Std.HashMap String String := {}
+  inputStamps : Std.HashMap String String := {}
+  closures : Std.HashMap String (Std.HashSet String) := {}
 
 private def check (b : Bool) (message : String) : IO Unit :=
   unless b do throw (IO.userError message)
@@ -99,19 +101,37 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
   let source := (if name.startsWith "tools.research." then settings.project else settings.core) ++ "/" ++ path ++ ".lean"
   if !(← System.FilePath.pathExists source) then
     check (← System.FilePath.pathExists (settings.toolchain ++ "/lib/lean/" ++ path ++ ".olean")) s!"missing module: {name}"
-    state.modify fun s => {s with done := s.done.insert name false,active := s.active.erase name}
+    state.modify fun s => {s with
+      done := s.done.insert name false,active := s.active.erase name
+      inputStamps := s.inputStamps.insert name (toJson (settings.toolchain,name)).compress
+      closures := s.closures.insert name (({} : Std.HashSet String).insert name)}
     return false
   let text ← IO.FS.readFile source
   let stamp ← sourceStamp (.mk source) text
   let mut changed := false
-  for dependency in imports text do changed := (← visit settings state dependency) || changed
+  let mut closure := ({} : Std.HashSet String).insert name
+  for dependency in imports text do
+    changed := (← visit settings state dependency) || changed
+    for included in (← state.get).closures[dependency]?.getD {} do
+      closure := closure.insert included
+  state.modify fun s => {s with
+    inputStamps := s.inputStamps.insert name stamp
+    closures := s.closures.insert name closure}
+  -- A failed build may already have refreshed a dependency. Its compile flag
+  -- is false on retry, so it cannot establish whether a cached parent is new.
+  -- Bind the exact, deduplicated transitive input set instead of that flag.
+  let stamps := (← state.get).inputStamps
+  let dependencyStamp := toJson (closure.toArray.qsort (· < ·) |>.map
+    (fun moduleName => (moduleName,stamps[moduleName]?.getD ""))) |>.compress
   let object := settings.output ++ "/" ++ stem name ++ ".o"
   let cached := settings.output ++ "/" ++ stem name ++ ".source"
+  let dependencies := settings.output ++ "/" ++ stem name ++ ".dependencies"
   let localLibrary := settings.output ++ "/lib/" ++ path ++ ".olean"
   let localReady ← if !(← System.FilePath.pathExists object) then pure false
     else if !(← System.FilePath.pathExists localLibrary) then pure false
     else if !(← System.FilePath.pathExists cached) then pure false
-    else pure ((← IO.FS.readFile cached) == stamp)
+    else if !(← System.FilePath.pathExists dependencies) then pure false
+    else pure ((← IO.FS.readFile cached) == stamp && (← IO.FS.readFile dependencies) == dependencyStamp)
   let hasLocal ← if ← System.FilePath.pathExists localLibrary then
     pure ((← (System.FilePath.mk localLibrary).symlinkMetadata).type != .symlink)
     else pure false
@@ -130,12 +150,12 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
           let previous := System.FilePath.mk (baseline ++ "/" ++ path ++ ".lean")
           if !(← previous.pathExists) then pure false else
             pure ((← sourceStamp previous (← IO.FS.readFile previous)) == stamp)
-  let inherited ← if name.startsWith "tools.research." || !matchedStamp then pure false else
+  let inherited ← if name.startsWith "tools.research." || name.startsWith "tests." || !matchedStamp then pure false else
     System.FilePath.pathExists (settings.core ++ "/.lake/build/lib/lean/" ++ path ++ ".olean")
   if !hasLocal && inherited && !changed && !settings.force.contains name then
     state.modify fun s => {s with done := s.done.insert name false,active := s.active.erase name}
     return false
-  let compiled := !localReady || changed
+  let compiled := !localReady
   if compiled then
     -- Inherited source links may resolve outside the selected package root.
     -- Materialize only the module being rebuilt, preserving its exact bytes.
@@ -152,14 +172,15 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
       #["--root=" ++ packageRoot,"-j1","-M3072","-DwarningAsError=true","-c",generated,"-o",localLibrary,source]
     run settings (stem name ++ "-c") (settings.toolchain ++ "/bin/leanc") #["-c","-O2","-o",object,generated]
     IO.FS.writeFile cached stamp
+    IO.FS.writeFile dependencies dependencyStamp
     IO.FS.removeFile generated
   state.modify fun s => {s with
-    done := s.done.insert name compiled
+    done := s.done.insert name (!matchedStamp || changed)
     active := s.active.erase name
     objects := s.objects.insert name object
     records := s.records.push (Json.mkObj [
       ("module",toJson name),("source",toJson source),("object",toJson object),("compiled",toJson compiled)])}
-  return compiled
+  return !matchedStamp || changed
 
 def build (input : String) : IO Unit := do
   let settings ← IO.ofExcept (fromJson? (α := Settings) (← readJson input))
@@ -171,9 +192,10 @@ def build (input : String) : IO Unit := do
     if row.trimAscii.isEmpty then continue
     let path ← IO.ofExcept (Json.parse row >>= Json.getStr?)
     let some name := objectMap[path]? | continue
+    let name ← IO.ofExcept name.getStr?
     let cache := (System.FilePath.mk path).withExtension "source"
     if ← cache.pathExists then
-      inheritedStamps := inheritedStamps.insert (← IO.ofExcept name.getStr?) (← IO.FS.readFile cache)
+      inheritedStamps := inheritedStamps.insert name (← IO.FS.readFile cache)
   let state ← IO.mkRef ({inheritedStamps} : State)
   let _ ← visit settings state settings.mainModule
   let state ← state.get
@@ -209,8 +231,54 @@ def build (input : String) : IO Unit := do
 end Eggshell.Research.StudyBuild
 open Eggshell.Research.StudyBuild
 
+private def resumeAudit (directory : String) : IO Unit := do
+  let root := System.FilePath.mk directory
+  check (root.isAbsolute && !(← root.pathExists)) "new absolute resumed-build fixture required"
+  IO.FS.createDirAll (root / "core/.lake/build/lib/lean")
+  let core := root / "core"
+  let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
+  IO.FS.writeFile (root / "objects.json") "{}"
+  IO.FS.writeFile (root / "baseline.rsp") ""
+  let settings : Settings := {
+    project := core.toString,core := core.toString,output := (root / "build").toString,toolchain
+    baselineResponse := (root / "baseline.rsp").toString,baselineMain := "absent"
+    objectModules := (root / "objects.json").toString,parents := #[],force := #[],mainModule := "Main"}
+  let plan := root / "plan.json"
+  IO.FS.writeFile plan (toJson settings).pretty
+  IO.FS.writeFile (core / "Box.lean") "module\n@[expose] public section\nstructure Box where\n  x : Nat\n"
+  let middle := "module\npublic import Box\n@[expose] public section\ndef answer (box : Box) : Nat := box.x+1\n"
+  IO.FS.writeFile (core / "Middle.lean") middle
+  IO.FS.writeFile (core / "Broken.lean") "module\n"
+  IO.FS.writeFile (core / "Main.lean") "import Box\nimport Broken\nimport Middle\ndef main : IO Unit := IO.println (toString (answer ⟨2⟩))\n"
+  build plan.toString
+  let before ← IO.Process.output {cmd := (root / "build/StudyMain").toString}
+  check (before.exitCode == 0 && before.stdout.trimAscii == "3") "invalid initial layout fixture"
+  IO.FS.writeFile (core / "Box.lean") "module\n@[expose] public section\nstructure Box where\n  y : Nat\n  x : Nat\n"
+  IO.FS.writeFile (core / "Broken.lean") "module\n#check deliberately_missing_name\n"
+  IO.FS.writeFile (core / "Main.lean") "import Box\nimport Broken\nimport Middle\ndef main : IO Unit := IO.println (toString (answer ⟨9,2⟩))\n"
+  let mut failed := false
+  try build plan.toString catch _ => failed := true
+  check failed "fixture did not stop after refreshing its dependency"
+  IO.FS.writeFile (core / "Broken.lean") "module\n"
+  build plan.toString
+  let after ← IO.Process.output {cmd := (root / "build/StudyMain").toString}
+  let record ← readJson (root / "build/build.json").toString
+  let modules ← IO.ofExcept (record.getObjValAs? (Array Json) "modules")
+  let compiled := fun name => modules.find? (fun row => (row.getObjValAs? String "module").toOption == some name)
+    |>.bind (fun row => (row.getObjValAs? Bool "compiled").toOption)
+  check (after.exitCode == 0 && after.stdout.trimAscii == "3" && compiled "Box" == some false &&
+      compiled "Middle" == some true && (← IO.FS.readFile (core / "Middle.lean")) == middle)
+    "resumed build reused a parent with the old field layout"
+  IO.FS.writeFile (root / "results.json") (Json.mkObj [
+    ("dependencyCachedOnRetry",toJson true),("unchangedParentRecompiled",toJson true),
+    ("runtimeValueBefore",toJson before.stdout.trimAscii.copy),("runtimeValueAfter",toJson after.stdout.trimAscii.copy),
+    ("staleLayoutWouldReturn",toJson (10 : Nat)),("answeringModelCalls",toJson (0 : Nat))]).pretty
+
 def main (args : List String) : IO UInt32 := do
   try
+    if let ["resume-check",directory] := args then
+      resumeAudit directory
+      return 0
     if let ["source-stamp-check",directory] := args then
       let root := System.FilePath.mk directory
       check (root.isAbsolute && !(← root.pathExists)) "fresh absolute stamp fixture required"

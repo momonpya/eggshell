@@ -136,8 +136,8 @@ def startPublisher (binary dataRoot : System.FilePath)
   let exit ← IO.mkRef none
   try
     let endpoint ← ready child "publisher" path exit ((← IO.monoMsNow)+10000)
-    check (endpoint.compatible (← Plugin.Daemon.executableGeneration binary))
-      "publisher executable differs from its frozen runtime"
+    check (endpoint.compatible (← Plugin.Publication.generation))
+      "publisher implementation differs from the frozen protocol"
     let pong ← Plugin.Daemon.exchange endpoint "ping" (budget := 1000)
     check (pong == "true") "owned publisher rejected readiness"
     return {child,exit,endpoint,path,expectedShutdown := "true"}

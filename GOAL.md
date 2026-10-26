@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-10-26更新。状態はactive。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。古い逐次追記を現在の指示として重ねず、この順序を優先する。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-10-27更新。状態はactive。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。古い逐次追記を現在の指示として重ねず、この順序を優先する。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -47,6 +47,8 @@
 - コマンドを入力に持たない内容対応のLean部品を隔離実装した。完全な参照索引、一意な対応、錨からの連続一致を証明。出力側を索引化し入力をstreamする状態は、入力増加によってエントリ数/キー集合が増えず、同じ位置の併合は冪等・交換・結合的。1万入力レコード/出力3件の検査と通常axiom監査に成功した。これは取得/出版adapterや実フックへの接続、95%配送、総token改善の合格ではない。次はMCPを含む原文recordをfile座標の成否と独立に正規化し、主張/消費/共起/利用の対応を原文と同時に保存する。file aliasは確認済み内容がある場合の補助であり必須にしない。[content-correspondence.md](docs/content-correspondence.md)。
 
 ## 実行順と完了証拠
+
+内容対応をLeanで実取得・同一出版・差分無効化・canonical/シナプス・利用ラベルまで隔離接続した。後着の対応をwarmが無視する不具合と、共有原文frameを旧形式でしか配送確認しない不具合を修正。入力streamの全候補一致、18改変対照、取消/再送/元ファイル削除後のDB-only復元が成功した。実Pre/Post/Stopは7観測・15時系列・任意名providerの15行を保持し、別private/読取専用の小fixtureは2/2・2,161ms、集計RSS1,947,824KiB・残存0。ビルド再開の依存更新漏れも修正し、型配置の実行試験と新規FullSearchOracle/ContractAuditを確認した。実行物f9fd4713…は未採用。保存/準備の競合警告1件、全件列挙、共有JSON全体の準備は残る。LLVMの4/6/5項目は未再監査、回答モデル0・6段階0/6、95%/総token改善/80人規模は未達。[captured-correspondence.md](docs/captured-correspondence.md)。
 
 永続整数接続を隔離runtimeの実フックへ接続し、受領の`synapticComplete=true`を確認した。27,825提案の独立全探索との順序一致を保ち、元範囲の結合は39.4→4.5秒、bundle projectionは48.2→4.9秒へ短縮した。区間被覆の正規化、owner→unit postingsの候補列/順序一致、照会内の共通cueDirectory準備もLeanで証明した。しかし実フックは約29秒の未完了通知のまま、最新の実本文も凍結4項目中0件だった。探索完走やcache部品の存在を配送成功として扱わない。次はDBサービスに検証済みblockと準備済みsnapshotを共有させ、全payloadの再読込/検証/復号とsessionごとの復元を除く。照会内の準備と照会間の共有を分け、蓄積・更新・80並行要求を実測する。回答モデル0・6段階0/6、95%と総token改善は未達・未採用。[routed-transport.md](docs/routed-transport.md)、[selector-preparation.md](docs/selector-preparation.md)、[shared-preparation.md](docs/shared-preparation.md)。
 

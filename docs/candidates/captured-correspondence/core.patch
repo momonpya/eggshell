@@ -1,0 +1,856 @@
+--- a/Eggshell/CanonicalSource.lean
++++ b/Eggshell/CanonicalSource.lean
+@@ -233,0 +234,23 @@
++    statistics := {statistics with originalRows := statistics.originalRows+1}
++  return (registry,statistics)
++
++def addPublishedDocument (source : PageMap.Snapshot) (id : Nat) (document : Document)
++    (registry : Registry) (statistics : Statistics) : IO (Registry × Statistics) := do
++  let unsupported := statistics.unsupportedOwners
++  let (registry,statistics) ← IO.ofExcept (addDocument registry statistics source.head.identity document)
++  let some captured ← ContentMetadata.load? source id document | return (registry,statistics)
++  let some raw := document.source | throw (IO.userError "captured original source is unavailable")
++  let characters := raw.toList.toArray
++  let mut registry := registry
++  let mut statistics := statistics
++  for alias in captured.aliases do
++    let some code := ContentCapture.code? characters alias |
++      throw (IO.userError "published content alias lost its literal bytes")
++    let key : Key := ⟨alias.file,alias.line⟩
++    let previous := registry.atoms[key]?
++    unless previous.all (fun atom => atom.code == code) do
++      throw (IO.userError "two original payloads disagree at the same captured file row")
++    let binding : Binding := ⟨source.head.identity,document.owner,document.work,alias.first,alias.limit⟩
++    let origins := document.occurrences.foldl (fun found occurrence => found.insert ⟨occurrence,binding⟩)
++      (previous.map (·.origins) |>.getD {})
++    registry := ⟨registry.atoms.insert key ⟨code,origins⟩⟩
+@@ -234,0 +258 @@
++  if !captured.aliases.isEmpty then statistics := {statistics with unsupportedOwners := unsupported}
+@@ -244 +268 @@
+-      let next ← IO.ofExcept (addDocument registry statistics source.head.identity document)
++      let next ← addPublishedDocument source entry.id document registry statistics
+@@ -276 +300 @@
+-      let (_,contribution) ← IO.ofExcept (addDocument {} {} source.head.identity document)
++      let (_,contribution) ← addPublishedDocument history.snapshot entry.owner document {} {}
+@@ -278,2 +302,2 @@
+-  let documents ← current.mapM fun entry => Build.document newReader entry.owner
+-  for document in documents do owners := owners.insert document.owner
++  let documents ← current.mapM fun entry => return (entry.owner,← Build.document newReader entry.owner)
++  for (_,document) in documents do owners := owners.insert document.owner
+@@ -281 +305 @@
+-  for document in documents do
++  for (id,document) in documents do
+@@ -283 +307 @@
+-      let next ← IO.ofExcept (addDocument registry statistics source.head.identity document)
++      let next ← addPublishedDocument source id document registry statistics
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -11 +11 @@
+-  (include_str "SynapseBuild.lean").toUTF8])
++  (include_str "SynapseBuild.lean").toUTF8,ContentCapture.implementation.toUTF8])
+--- a/Eggshell/ContentCapture.lean
++++ b/Eggshell/ContentCapture.lean
+@@ -0,0 +1,281 @@
++module
++public import Eggshell.ObservedRecords
++public import tools.ContentCorrespondence
++@[expose] public section
++
++namespace Eggshell.ContentCapture
++open Lean Synapses Synapses.Extraction
++open ContentCorrespondence
++
++/-- Literal coordinates supplement the original record. They are not an
++execution certificate, a closed dependency set, or a reason to union Work. -/
++structure Alias where
++  file : Synapses.File
++  line : Nat
++  spelling : Synapses.ObservedRecords.Spelling
++  chars : Nat
++  first : Nat
++  limit : Nat
++  deriving Repr, BEq, ToJson, FromJson
++
++structure Captured where
++  implementation : String
++  /-- Export only files referenced by accepted matches. Unmatched argument
++  files and failed scans remain in the private pre-call capture. -/
++  inputs : Array SourceEvidence.File
++  complete : Bool
++  aliases : Array Alias
++  failure : Option String := none
++  deriving Repr, ToJson, FromJson
++
++def implementation : String := Blake3.hex (Blake3.digest "eggshell.content-capture".toUTF8 [
++  (include_str "ContentCapture.lean").toUTF8,
++  (include_str "ContentMetadata.lean").toUTF8,(include_str "SourceEvidence.lean").toUTF8,
++  (include_str "FileSystem.lean").toUTF8,
++  (include_str "../tools/ContentCorrespondence.lean").toUTF8,
++  Synapses.ObservedRecords.implementation.toUTF8])
++
++structure Output where
++  spelling : Synapses.ObservedRecords.Spelling
++  text : String
++
++/-- Index actual data projections, never a command or provider name. Base
++partitions remain in ObservedRecords even if no file correspondence exists. -/
++def outputs (raw : String) : Array Output := Id.run do
++  let characters := raw.toList.toArray
++  let mut result := #[]
++  let mut seen : Std.HashSet (Nat × Nat × Synapses.ObservedRecords.Projection) := {}
++  for record in Synapses.ObservedRecords.normalize raw do
++    for spelling in record.spellings do
++      unless [Synapses.ObservedRecords.Projection.rawLine,.stringBodyLine,.string].contains spelling.projection do continue
++      let key := (spelling.first,spelling.limit,spelling.projection)
++      if seen.contains key then continue
++      seen := seen.insert key
++      let some text := Synapses.ObservedRecords.project characters spelling | continue
++      unless !text.isEmpty && !text.contains '\n' do continue
++      result := result.push ⟨spelling,text⟩
++  return result
++
++structure Trie where
++  outputs : Array Output
++  characters : Array (Array Char)
++  edges : Std.HashMap (Nat × Char) Nat := {}
++  -- Each node is a suffix of one immutable output projection. No input
++  -- text or unbounded posting list is retained during the file scan.
++  nodes : Array (Nat × Nat) := #[(0,0)]
++
++def Trie.prepare (rows : Array Output) : Trie := Id.run do
++  let mut trie : Trie := {outputs := rows,characters := rows.map (fun row => row.text.toList.toArray)}
++  for row in [:rows.size] do
++    let some output := rows[row]? | continue
++    let mut node := 0
++    let mut depth := 0
++    for char in output.text.toList.reverse do
++      depth := depth+1
++      match trie.edges[(node,char)]? with
++      | some next => node := next
++      | none =>
++        let next := trie.nodes.size
++        trie := {trie with
++          edges := trie.edges.insert (node,char) next
++          nodes := trie.nodes.push (row,depth)}
++        node := next
++  return trie
++
++def suffix (text : String) (chars : Nat) : String :=
++  String.ofList (text.toList.drop (text.length-chars))
++
++def Trie.key? (trie : Trie) (node : Nat) : Option String := do
++  let (row,depth) ← trie.nodes[node]?
++  let characters ← trie.characters[row]?
++  if depth == 0 || characters.size < depth then none else
++    some (String.ofList (characters.extract (characters.size-depth) characters.size).toList)
++
++def Trie.find? (trie : Trie) (text : String) : Option Nat := do
++  if text.isEmpty then none else do
++    let node ← text.toList.reverse.foldlM (fun node char => trie.edges[(node,char)]?) 0
++    if trie.key? node == some text then some node else none
++
++abbrev State := Array Candidate
++
++def Trie.start (trie : Trie) : State := Array.replicate trie.nodes.size .absent
++
++def Trie.observe (trie : Trie) (state : State) (position : Position) (text : String) : State :=
++  match trie.find? text with
++  | none => state
++  | some node => state.modify node (fun previous => previous.join (.one position))
++
++theorem Trie.observe_size (trie : Trie) (state : State) (position : Position) (text : String) :
++    (trie.observe state position text).size = state.size := by
++  simp only [observe]
++  split <;> simp
++
++theorem Trie.find_checked (trie : Trie) (text : String) (node : Nat)
++    (found : trie.find? text = some node) : trie.key? node = some text := by
++  cases vacant : text.isEmpty with
++  | true => simp [find?,vacant] at found
++  | false =>
++    cases traced : text.toList.reverse.foldlM (fun node char => trie.edges[(node,char)]?) 0 with
++    | none => simp [find?,vacant,traced] at found
++    | some selected =>
++      simp [find?,vacant,traced] at found
++      simpa [found.2] using found.1
++
++def Trie.selected? (trie : Trie) (state : State) (output : Output) : Option (Position × Nat) := Id.run do
++  let mut node := 0
++  let mut depth := 0
++  let characters := output.text.toList.toArray
++  let mut found : Option (Candidate × Nat) := none
++  for char in output.text.toList.reverse do
++    let some next := trie.edges[(node,char)]? | break
++    node := next
++    depth := depth+1
++    let candidate := state[node]?.getD .absent
++    let expected := fun _ => String.ofList (characters.extract (characters.size-depth) characters.size).toList
++    if candidate != .absent && trie.key? node == some (expected ()) then
++      found := some (candidate,depth)
++  match found with
++  | some (.one position,count) => return some (position,count)
++  | _ => return none
++
++def escapedWidth (text : String) : Nat := (toJson text).compress.length-2
++
++def alias? (inputs : Array SourceEvidence.File) (characters : Array Char) (output : Output)
++    (position : Position) (chars : Nat) : Option Alias := do
++  let file ← inputs[position.1]?
++  let content ← file.content
++  if chars == 0 || output.text.length < chars || position.2 == 0 then none else do
++    let code := suffix output.text chars
++    let preceding := String.ofList (output.text.toList.take (output.text.length-chars))
++    let encoded := match output.spelling.projection with
++      | .string | .stringBody | .stringBodyLine => true
++      | _ => false
++    let base := output.spelling.first + if output.spelling.projection == .string then 1 else 0
++    let first := base + if encoded then escapedWidth preceding else preceding.length
++    let limit := first + if encoded then escapedWidth code else code.length
++    let literal := String.ofList (characters.extract first limit).toList
++    let expected := if encoded then String.ofList ((toJson code).compress.toList.drop 1 |>.dropLast) else code
++    if first < limit && limit ≤ output.spelling.limit && literal == expected then
++      some ⟨⟨file.relative,content.root,content.bytes⟩,position.2,output.spelling,chars,first,limit⟩
++    else none
++
++/-- JSON leaves and a general literal lexer supply path hints. The executable
++name is not a discriminator. Only regular files inside the workspace survive;
++these hints never establish complete execution dependencies. -/
++partial def inputStrings : Json → Array String
++  | .str value => #[value]
++  | .arr values => values.flatMap inputStrings
++  | .obj values => values.toArray.flatMap (inputStrings ∘ Prod.snd)
++  | _ => #[]
++
++def candidates (workspace : System.FilePath) (input : Json) : Array SourceEvidence.Relative := Id.run do
++  let some directory := SourceEvidence.inputDirectory? workspace input | return #[]
++  let mut result := #[]
++  let mut seen : Std.HashSet String := {}
++  for value in inputStrings input do
++    for word in #[value] ++ ((shellWords value).toOption.getD #[]) do
++      if word.contains "://" then continue
++      let some relative := SourceEvidence.relative? workspace directory word | continue
++      if seen.contains relative.text then continue
++      seen := seen.insert relative.text
++      result := result.push relative
++  return result
++
++def captureInputs (workspace : System.FilePath) (input : Json)
++    (known : Option SourceEvidence.Capture) (deadline : Nat) : IO SourceEvidence.Capture := do
++  let mut probes := []
++  for relative in candidates workspace input do
++    if (← IO.monoMsNow) ≥ deadline then return SourceEvidence.unknown workspace
++    let path := workspace / relative.text
++    try
++      FileSystem.rejectSymlinkAncestors path
++      if (← FileSystem.regularMetadata? path).isNone then continue
++      unless probes.length < 256 do return SourceEvidence.unknown workspace
++      let previous := known.bind fun captured => captured.probes.find? (·.file.relative == relative.text)
++      let some observed ← match previous with
++          | some probe => pure (some probe)
++          | none => SourceEvidence.probe workspace relative deadline
++        | return SourceEvidence.unknown workspace
++      probes := probes ++ [observed]
++    catch _ => return SourceEvidence.unknown workspace
++  let record : SourceEvidence.Record := ⟨workspace.fileName.getD workspace.toString,
++    probes.map (·.file),[],true,false⟩
++  return ⟨record,probes⟩
++
++/-- The same held descriptor supplies fingerprint pages and line records.
++Uniqueness is accepted only after every named input reaches stable EOF with
++its pre-call content fingerprint. Long irrelevant lines allocate no buffer. -/
++def scan (workspace : System.FilePath) (file : SourceEvidence.File) (fileIndex : Nat)
++    (trie : Trie) (initial : State) (deadline : Nat) : IO (Option State) := do
++  let some expected := file.content | return none
++  let some relative := SourceEvidence.Relative.check? file.relative | return none
++  let path := workspace / relative.text
++  FileSystem.rejectSymlinkAncestors path
++  let handle ← FileSystem.openRead path.toString
++  let before ← FileSystem.readVersion handle
++  unless before.bytes == expected.bytes do return none
++  let maxLine := trie.outputs.foldl (fun size row => max size row.text.utf8ByteSize) 0
++  let mut root : SourceEvidence.Root :=
++    ⟨Blake3.digest "eggshell.source.file".toUTF8 [Blake3.u64le before.bytes],Blake3.hashSegments_size _⟩
++  let mut offset := 0
++  let mut line := 1
++  let mut pending := ByteArray.empty
++  let mut omitted := false
++  let mut state := initial
++  while offset < before.bytes do
++    if (← IO.monoMsNow) ≥ deadline then return none
++    let count := min 4096 (before.bytes-offset)
++    let page ← FileSystem.readPage handle offset.toUInt64 ⟨count,Nat.min_le_left _ _⟩
++    unless page.size == count do return none
++    root := SourceEvidence.stepRoot root page
++    offset := offset+count
++    for byte in page do
++      if byte == 10 then
++        if !omitted then
++          if let some text := String.fromUTF8? pending then state := trie.observe state (fileIndex,line) text
++        pending := ByteArray.empty
++        omitted := false
++        line := line+1
++      else if !omitted then
++        if pending.size < maxLine then pending := pending.push byte
++        else pending := ByteArray.empty; omitted := true
++  if !pending.isEmpty && !omitted then
++    if let some text := String.fromUTF8? pending then state := trie.observe state (fileIndex,line) text
++  let after ← FileSystem.readVersion handle
++  let current ← FileSystem.readVersion (← FileSystem.openRead path.toString)
++  unless (← IO.monoMsNow) < deadline && FileSystem.stableRead before after current offset &&
++      Blake3.hex root.val == expected.root do return none
++  return some state
++
++def finish (workspace : System.FilePath) (captured : SourceEvidence.Capture)
++    (raw : String) (deadline : Nat) : IO Captured := do
++  let inputs := captured.record.files.toArray
++  let failed := fun reason => ({implementation,inputs := #[],complete := false,aliases := #[],failure := some reason} : Captured)
++  unless captured.record.valid && captured.record.files == captured.probes.map (·.file) do
++    return failed "input-not-captured"
++  unless raw.utf8ByteSize ≤ 2*1024*1024 do return failed "output-budget"
++  let rows := outputs raw
++  let trie := Trie.prepare rows
++  let characters := raw.toList.toArray
++  let mut state := trie.start
++  for fileIndex in [:inputs.size] do
++    let some file := inputs[fileIndex]? | return failed "input-domain"
++    let result ← try scan workspace file fileIndex trie state deadline catch _ => pure none
++    let some next := result | return failed "input-not-sealed"
++    state := next
++  let aliases := rows.filterMap fun row => do
++    let (position,chars) ← trie.selected? state row
++    alias? inputs characters row position chars
++  let referenced := inputs.filter fun input => aliases.any fun alias =>
++    input.relative == alias.file.relative && input.content == some ⟨alias.file.bytes,alias.file.fingerprint⟩
++  return ⟨implementation,referenced,true,aliases,none⟩
++
++def code? (characters : Array Char) (alias : Alias) : Option String := do
++  let text ← Synapses.ObservedRecords.project characters alias.spelling
++  if alias.chars == 0 || alias.chars > text.length then none else do
++    let code := suffix text alias.chars
++    let reconstructed ← alias? #[⟨alias.file.relative,some ⟨alias.file.bytes,alias.file.fingerprint⟩⟩]
++      characters ⟨alias.spelling,text⟩ (0,alias.line) alias.chars
++    if reconstructed == alias then some code else none
++
++end Eggshell.ContentCapture
+--- a/Eggshell/ContentMetadata.lean
++++ b/Eggshell/ContentMetadata.lean
+@@ -0,0 +1,122 @@
++module
++public import Eggshell.ContentCapture
++@[expose] public section
++
++namespace Eggshell.ContentMetadata
++open Lean DB Synapses Synapses.Extraction Persistence.Store
++
++structure Header where
++  database : String
++  owner : String
++  work : String
++  original : String
++  implementation : String
++  inputs : Array SourceEvidence.File
++  complete : Bool
++  failure : Option String
++  aliases : Nat
++  chunks : Array String
++  deriving ToJson, FromJson
++
++def ownerKey (id : Nat) := "memo:content-alias:owner:" ++ toString id
++def chunkKey (digest : String) := "memo:content-alias:chunk:" ++ digest
++def chunkCount : Nat := 64
++
++structure Line (raw : String) where
++  alias : ContentCapture.Alias
++  code : String
++  original : ContentCapture.code? raw.toList.toArray alias = some code
++  within : alias.first < alias.limit ∧ alias.limit ≤ raw.length
++
++def line? (raw : String) (alias : ContentCapture.Alias) : Option (Line raw) := do
++  if within : alias.first < alias.limit ∧ alias.limit ≤ raw.length then
++    match original : ContentCapture.code? raw.toList.toArray alias with
++    | some code => some ⟨alias,code,original,within⟩
++    | none => none
++  else none
++
++theorem Line.original_projection (line : Line raw) :
++    ContentCapture.code? raw.toList.toArray line.alias = some line.code := line.original
++
++theorem Line.original_bounds (line : Line raw) :
++    line.alias.first < line.alias.limit ∧ line.alias.limit ≤ raw.length := line.within
++
++def validAlias (inputs : Array SourceEvidence.File) (characters : Array Char)
++    (alias : ContentCapture.Alias) : Bool :=
++  alias.file.valid && 0 < alias.line && alias.first < alias.limit && alias.limit ≤ characters.size &&
++    (ContentCapture.code? characters alias).isSome && inputs.any (fun file =>
++      file.relative == alias.file.relative && file.content == some ⟨alias.file.bytes,alias.file.fingerprint⟩)
++
++/-- Source metadata joins original bytes and portable origins in their one
++existing transaction. No second writer, source reopen or derived repair. -/
++def stage (writer : PageMap.Writer) (id : Nat) (doc : Document)
++    (captured : ContentCapture.Captured) : IO Bool := do
++  unless doc.native && captured.implementation == ContentCapture.implementation do
++    throw (IO.userError "content correspondence is not from the selected native capture")
++  let some raw := doc.source | throw (IO.userError "content correspondence lost its original body")
++  let characters := raw.toList.toArray
++  unless (captured.complete || captured.aliases.isEmpty) &&
++      captured.aliases.all (validAlias captured.inputs characters) do
++    throw (IO.userError "invalid content correspondence projection")
++  let mut chunks := #[]
++  let mut changed := false
++  for index in [: (captured.aliases.size+chunkCount-1)/chunkCount] do
++    let aliases := captured.aliases.extract (index*chunkCount) ((index+1)*chunkCount)
++    let bytes := (toJson aliases).compress.toUTF8
++    unless bytes.size ≤ 262144 do throw (IO.userError "content correspondence block exceeds its bound")
++    let digest := Sha256.hex bytes
++    if let some previous ← writer.get (chunkKey digest) then
++      unless previous == bytes do throw (IO.userError "conflicting content correspondence block")
++    else writer.put (chunkKey digest) (some bytes); changed := true
++    chunks := chunks.push digest
++  let pinned ← writer.snapshot
++  let header : Header := ⟨pinned.head.identity,doc.owner,doc.work,Sha256.hex raw.toUTF8,
++    captured.implementation,captured.inputs,captured.complete,captured.failure,captured.aliases.size,chunks⟩
++  let bytes := (toJson header).compress.toUTF8
++  unless bytes.size ≤ 262144 do throw (IO.userError "content correspondence header exceeds its bound")
++  if let some previous ← writer.get (ownerKey id) then
++    unless previous == bytes do throw (IO.userError "content correspondence changed for an immutable native result")
++  else writer.put (ownerKey id) (some bytes); changed := true
++  return changed
++
++def load? (source : PageMap.Snapshot) (id : Nat) (doc : Document) : IO (Option ContentCapture.Captured) := do
++  let some bytes ← source.get (ownerKey id) | return none
++  let header ← ObservedRecords.decode (α := Header) bytes
++  if header.implementation != ContentCapture.implementation then return none
++  let some raw := doc.source | throw (IO.userError "content metadata lost original native output")
++  unless doc.native && header.database == source.head.identity && header.owner == doc.owner &&
++      header.work == doc.work && header.original == Sha256.hex raw.toUTF8 do
++    throw (IO.userError "content correspondence belongs to another original")
++  let mut aliases := #[]
++  for digest in header.chunks do
++    unless Synapses.digest digest do throw (IO.userError "invalid content block address")
++    let some bytes ← source.get (chunkKey digest) | throw (IO.userError "missing content block")
++    unless Sha256.hex bytes == digest do throw (IO.userError "changed content block")
++    let rows ← ObservedRecords.decode (α := Array ContentCapture.Alias) bytes
++    unless rows.size ≤ chunkCount do throw (IO.userError "foreign content block extent")
++    aliases := aliases ++ rows
++  let characters := raw.toList.toArray
++  unless aliases.size == header.aliases && (header.complete || aliases.isEmpty) &&
++      aliases.all (validAlias header.inputs characters) do
++    throw (IO.userError "incomplete content correspondence directory")
++  return some ⟨header.implementation,header.inputs,header.complete,aliases,header.failure⟩
++
++def catalog (database : String) (doc : Document) (captured : ContentCapture.Captured) :
++    Except String ObservationContext.Catalog := do
++  let some raw := doc.source | throw "missing original content body"
++  let some occurrence := doc.occurrences[0]? | throw "missing original occurrence"
++  let characters := raw.toList.toArray
++  let mut result : ObservationContext.Catalog := {}
++  for alias in captured.aliases do
++    let some code := ContentCapture.code? characters alias | throw "content alias lost literal equality"
++    let read : Read := {
++      occurrence,source := ⟨.file alias.file,alias.line,alias.line⟩
++      binding := ⟨database,doc.owner,doc.work,alias.first,alias.limit⟩
++      quotations := #[Quotes.digest code]}
++    unless read.valid do throw "content alias has an invalid original binding"
++    result := {
++      located := result.located.push ⟨read,#[⟨read.source,alias.first,alias.limit⟩],#[read],code⟩
++      quotations := result.quotations.push ⟨read,code⟩}
++  return result
++
++end Eggshell.ContentMetadata
+--- a/Eggshell/DemandMemo.lean
++++ b/Eggshell/DemandMemo.lean
+@@ -168 +168 @@
+-  obtain ⟨added, removed, unionsSame⟩ := (Store.Change.neutral_exact change).mp neutral
++  obtain ⟨added, removed, unionsSame, _affected⟩ := (Store.Change.neutral_exact change).mp neutral
+@@ -278 +278 @@
+-    Store.writeChange writer ⟨[], [], false⟩
++    Store.writeChange writer {added := [],removed := [],unionsChanged := false}
+--- a/Eggshell/DiscoveryMemo.lean
++++ b/Eggshell/DiscoveryMemo.lean
+@@ -79 +79 @@
+-      Store.writeChange writer ⟨[], [], false⟩
++      Store.writeChange writer {added := [],removed := [],unionsChanged := false}
+--- a/Eggshell/GraphStore.lean
++++ b/Eggshell/GraphStore.lean
+@@ -1450,0 +1451,4 @@
++
++structure MetadataChange where
++  changed : Bool := false
++  affected : List Nat := []
+@@ -1455,0 +1460 @@
++  affected : List Nat := []
+@@ -1460,4 +1465,4 @@
+-    (Wire.natural.iso (fun b : Bool => if b then 1 else 0) (fun n => n != 0)
+-      (by intro b; cases b <;> rfl)))).iso
+-    (fun c => (c.added, c.removed, c.unionsChanged))
+-    (fun (added, removed, unionsChanged) => ⟨added, removed, unionsChanged⟩)
++    ((Wire.natural.iso (fun b : Bool => if b then 1 else 0) (fun n => n != 0)
++      (by intro b; cases b <;> rfl)).product (Wire.list Wire.natural)))).iso
++    (fun c => (c.added, c.removed, c.unionsChanged,c.affected))
++    (fun (added, removed, unionsChanged,affected) => ⟨added, removed, unionsChanged,affected⟩)
+@@ -1485 +1490 @@
+-  change.added.isEmpty && change.removed.isEmpty && !change.unionsChanged
++  change.added.isEmpty && change.removed.isEmpty && !change.unionsChanged && change.affected.isEmpty
+@@ -1488 +1493 @@
+-    change.added = [] ∧ change.removed = [] ∧ change.unionsChanged = false := by
++    change.added = [] ∧ change.removed = [] ∧ change.unionsChanged = false ∧ change.affected = [] := by
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -7823,20 +7823,5 @@
+-  let allowed := synapticOwners.foldl (fun found owner =>
+-    found.insert (owner.database,relationKey owner.original.relation))
+-    ({} : Std.HashSet (String × String))
+-  let mut canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {}
+-  -- Independently validated source rows remain available when graph
+-  -- expansion ends at its advisory resource bound.
+-  if recommendation && evidence.isNone then
+-    for prepared in source.synaptic do
+-      if let some ready := prepared.canonical then
+-        try
+-          let owners := allowed.toArray.filterMap fun (database,owner) =>
+-            if database == prepared.source.head.identity then some owner else none
+-          let found ← Publication.Client.sourceRows ready owners advisoryDeadline
+-          Receipt.observe source.receipt "canonical-source-reuse" (toJson (prepared.source.head.identity,
+-            ready.access.reuse,found.reuse,found.rows.map fun (owner,rows) => (owner,rows.size)))
+-          for (owner,part) in found.rows do
+-            match Synapses.CanonicalSource.Delivery.merge (canonicalRows[owner]?.getD #[] ++ part) with
+-            | .ok merged => canonicalRows := canonicalRows.insert owner merged
+-            | .error _ => canonicalRows := canonicalRows.erase owner
+-        catch error => Receipt.observe source.receipt "canonical-source-failure" (toJson error.toString)
++  let canonicalRows := synaptic.canonical
++  for status in synaptic.canonicalReuse do
++    Receipt.observe source.receipt "canonical-source-reuse" (toJson status)
++  for failure in synaptic.canonicalFailure do
++    Receipt.observe source.receipt "canonical-source-failure" (toJson failure)
+--- a/Eggshell/NativePublication.lean
++++ b/Eggshell/NativePublication.lean
+@@ -4,0 +5 @@
++public import Eggshell.ContentMetadata
+@@ -11 +12,12 @@
+-/-- A source publication and derived readiness are separate acknowledgements. -/
++structure CaptureCoverage where
++  captured : Nat := 0
++  unavailable : Nat := 0
++  pending : Nat := 0
++  aliases : Nat := 0
++  deriving ToJson, FromJson
++
++def CaptureCoverage.accounted (coverage : CaptureCoverage) (observations : Nat) : Bool :=
++  coverage.captured+coverage.unavailable+coverage.pending == observations
++
++/-- Source timing, content correspondence and derived readiness are separate
++coverage claims. A complete native interval does not promise a file alias. -/
+@@ -17,0 +30 @@
++  content : Option CaptureCoverage := none
+@@ -21 +34,2 @@
+-  receipt.timed + receipt.awaiting + receipt.unavailable == receipt.observations
++  receipt.timed + receipt.awaiting + receipt.unavailable == receipt.observations &&
++    receipt.content.all (·.accounted receipt.observations)
+@@ -135 +149 @@
+-def stage (items : Array Item) (intern : Persistence.Store.Intern) : IO Bool := do
++def stage (items : Array Item) (intern : Persistence.Store.Intern) : IO Persistence.Store.MetadataChange := do
+@@ -137,0 +152,2 @@
++  let mut affected := []
++  let mut owners := []
+@@ -143,0 +160 @@
++    owners := id :: owners
+@@ -154 +171,7 @@
+-    recordsChanged := (← ObservedRecords.stage intern.writer id document) || recordsChanged
++    let originalChanged ← ObservedRecords.stage intern.writer id document
++    let contentChanged ← match item.tool.correspondence with
++      | none => pure false
++      | some captured => ContentMetadata.stage intern.writer id document captured
++    if originalChanged || contentChanged then
++      recordsChanged := true
++      affected := id :: affected
+@@ -166 +189,4 @@
+-  return (← Provenance.stage intern bindings) || recordsChanged
++  let timingChanged ← Provenance.stage intern bindings
++  return {
++    changed := timingChanged || recordsChanged
++    affected := hashDistinct (affected ++ if timingChanged then owners else [])}
+@@ -177,0 +204,7 @@
++  let content := items.foldl (fun result item => match item.tool.correspondence with
++    | none => {result with pending := result.pending+1}
++    | some captured => {
++        result with
++        captured := result.captured + if captured.complete then 1 else 0
++        unavailable := result.unavailable + if captured.complete then 0 else 1
++        aliases := result.aliases+captured.aliases.size}) ({} : CaptureCoverage)
+@@ -179 +212 @@
+-    awaiting := counts.awaiting,unavailable := counts.unavailable}
++    awaiting := counts.awaiting,unavailable := counts.unavailable,content := some content}
+--- a/Eggshell/ObservedRecords.lean
++++ b/Eggshell/ObservedRecords.lean
+@@ -12 +12 @@
+-  deriving DecidableEq, BEq, Hashable, ToJson, FromJson
++  deriving Repr, DecidableEq, BEq, Hashable, ToJson, FromJson
+@@ -18 +18 @@
+-  deriving DecidableEq, BEq, Hashable
++  deriving Repr, DecidableEq, BEq, Hashable
+--- a/Eggshell/Persistence.lean
++++ b/Eggshell/Persistence.lean
+@@ -65 +65 @@
+-      Store.writeChange writer ⟨added, removed, unionsChanged⟩
++      Store.writeChange writer {added,removed,unionsChanged}
+@@ -134 +134 @@
+-    (stage : Store.Intern → α → IO Bool := fun _ _ => pure false) : IO (Publication α) :=
++    (stage : Store.Intern → α → IO Store.MetadataChange := fun _ _ => pure {}) : IO (Publication α) :=
+@@ -152,2 +152,4 @@
+-      if !added.isEmpty || unionsChanged || metadataChanged then
+-        Store.writeChange writer ⟨added.reverse, [], unionsChanged⟩
++      if !added.isEmpty || unionsChanged || metadataChanged.changed || !metadataChanged.affected.isEmpty then
++        Store.writeChange writer {
++          added := added.reverse,removed := [],unionsChanged
++          affected := hashDistinct metadataChanged.affected}
+--- a/Eggshell/PluginCli.lean
++++ b/Eggshell/PluginCli.lean
+@@ -184 +184 @@
+-      Persistence.Store.writeChange writer ⟨[], [], true⟩
++      Persistence.Store.writeChange writer {added := [],removed := [],unionsChanged := true}
+@@ -195 +195 @@
+-      Persistence.Store.writeChange writer ⟨[], [], true⟩
++      Persistence.Store.writeChange writer {added := [],removed := [],unionsChanged := true}
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -641 +640,0 @@
+-            let some sourceInput := nativeSourceInput? initial | pure none
+@@ -643,3 +642,7 @@
+-            let capture ← SourceEvidence.capture (System.FilePath.mk pending.cwd)
+-              sourceInput (min deadline ((← IO.monoMsNow) + 250))
+-            pure (some (pending.cwd, capture))
++            let budget := min deadline ((← IO.monoMsNow)+250)
++            let workspace := System.FilePath.mk pending.cwd
++            let primary ← (nativeSourceInput? initial).mapM fun sourceInput =>
++              SourceEvidence.capture workspace sourceInput budget
++            let sourceInput := (Json.parse initial.input).toOption.getD (.str initial.input)
++            let content ← ContentCapture.captureInputs workspace sourceInput primary budget
++            pure (some (pending.cwd,primary,content))
+@@ -648 +651 @@
+-  let tool := {initial with source := captured.map (·.2)}
++  let tool := {initial with source := captured.bind (·.2.1),contentInputs := captured.map (·.2.2)}
+@@ -663 +666 @@
+-          {tool with source := none} else tool
++          {tool with source := none,contentInputs := none} else tool
+@@ -710 +713 @@
+-def sealRecordedRead (pending : PendingTurn) (tool : ToolEvent) : IO ToolEvent := do
++def sealRecordedSource (pending : PendingTurn) (tool : ToolEvent) : IO ToolEvent := do
+@@ -722,2 +725,23 @@
+-    sealRecordedRead pending tool = pure tool := by
+-  simp [sealRecordedRead, hasCertificate]
++    sealRecordedSource pending tool = pure tool := by
++  simp [sealRecordedSource, hasCertificate]
++
++/-- Native bytes are already journaled. Optional content matches use the
++pre-call input fingerprints, and are sealed before their checkpoint is queued.
++Interrupted/unsupported captures retain an explicit unavailable result. -/
++def sealRecordedRead (pending : PendingTurn) (tool : ToolEvent) : IO ToolEvent := do
++  let tool ← sealRecordedSource pending tool
++  if tool.correspondence.isSome then return tool
++  let previous := pending.inFlight.find? fun previous =>
++    previous.useId == tool.useId && previous.name == tool.name &&
++      canonicalJson previous.input == canonicalJson tool.input
++  let captured ← match previous.bind (·.contentInputs) with
++    | none => pure ({
++        implementation := ContentCapture.implementation
++        inputs := #[]
++        complete := false
++        aliases := #[]
++        failure := some "input-not-captured"} : ContentCapture.Captured)
++    | some inputs => do
++        let deadline := (← IO.monoMsNow)+250
++        ContentCapture.finish (System.FilePath.mk pending.cwd) inputs (canonicalJson tool.response) deadline
++  return {tool with contentInputs := none,correspondence := some captured}
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -8,0 +9 @@
++public import Eggshell.ContentCapture
+@@ -88,0 +90,2 @@
++  contentInputs : Option SourceEvidence.Capture := none
++  correspondence : Option ContentCapture.Captured := none
+@@ -274 +277,2 @@
+-def ToolEvent.native (tool : ToolEvent) : ToolEvent := {tool with source := none}
++def ToolEvent.native (tool : ToolEvent) : ToolEvent :=
++  {tool with source := none,contentInputs := none,correspondence := none}
+@@ -278,0 +283,4 @@
++theorem native_receipt_ignores_correspondence (tool : ToolEvent)
++    (contentInputs : Option SourceEvidence.Capture) (correspondence : Option ContentCapture.Captured) :
++    ({tool with contentInputs,correspondence}.native) = tool.native := rfl
++
+@@ -284,0 +293,10 @@
++structure ContentCertificate where
++  stamp : String
++  bytes : Nat
++  captured : ContentCapture.Captured
++  deriving ToJson, FromJson
++
++def contentCertificatePath (files : SessionFiles) (turn useId : String) : System.FilePath :=
++  files.directory / "correspondence" / (toolDirectory files turn).fileName.getD "" /
++    (toolReceiptPath files turn useId).fileName.getD ""
++
+@@ -310,0 +329 @@
++  let mut result := tool.native
+@@ -315 +334 @@
+-        return {tool with source := some certificate.source}
++        result := {result with source := some certificate.source}
+@@ -317 +336,7 @@
+-  pure tool.native
++  try
++    if let some certificate ← (readJson? (contentCertificatePath files turn tool.useId) :
++        IO (Option ContentCertificate)) then
++      if certificate.stamp == version.stamp && certificate.bytes == version.bytes then
++        result := {result with correspondence := some certificate.captured}
++  catch _ => pure ()
++  return result
+@@ -336,0 +362,9 @@
++    if let some parent := certificatePath.parent then FileSystem.durableDirectory parent
++    FileSystem.immutableBytes certificatePath (toJson certificate |>.compress |>.toUTF8)
++  if let some captured := tool.correspondence then
++    let some (previous,version) ← readNativeTool? path |
++      throw (IO.userError "native receipt disappeared before content publication")
++    unless toJson previous == toJson tool.native do
++      throw (IO.userError "content correspondence belongs to another native result")
++    let certificate : ContentCertificate := ⟨version.stamp,version.bytes,captured⟩
++    let certificatePath := contentCertificatePath files turn tool.useId
+@@ -681,0 +716,5 @@
++theorem operation_owner_ignores_correspondence (session turn : Value) (tool : ToolEvent)
++    (contentInputs : Option SourceEvidence.Capture) (correspondence : Option ContentCapture.Captured) :
++    compileOperationOutcomes session turn {tool with contentInputs,correspondence} =
++      compileOperationOutcomes session turn tool := rfl
++
+--- a/Eggshell/RankMemo.lean
++++ b/Eggshell/RankMemo.lean
+@@ -227 +227,2 @@
+-    if ← publishUsing writer saved lane then Store.writeChange writer ⟨[], [], false⟩
++    if ← publishUsing writer saved lane then
++      Store.writeChange writer {added := [],removed := [],unionsChanged := false}
+--- a/Eggshell/SaturationMemo.lean
++++ b/Eggshell/SaturationMemo.lean
+@@ -248 +248,2 @@
+-    if ← publishUsing writer saved then Store.writeChange writer ⟨[], [], false⟩
++    if ← publishUsing writer saved then
++      Store.writeChange writer {added := [],removed := [],unionsChanged := false}
+--- a/Eggshell/SourceDelta.lean
++++ b/Eggshell/SourceDelta.lean
+@@ -53 +53 @@
+-    if publication.change.added.length + publication.change.removed.length > 8192 then return none
++    if publication.change.added.length + publication.change.removed.length + publication.change.affected.length > 8192 then return none
+@@ -56 +56,2 @@
+-      let owners := hashDistinct (publication.change.added ++ publication.change.removed ++ previous.owners)
++      let owners := hashDistinct (publication.change.added ++ publication.change.removed ++
++        publication.change.affected ++ previous.owners)
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -69 +69 @@
+-    for id in publication.change.added ++ publication.change.removed do
++    for id in publication.change.added ++ publication.change.removed ++ publication.change.affected do
+@@ -140 +140,6 @@
+-  let catalog := {original with located := files ++ original.located}
++  let captured ← match ← ContentMetadata.load? snapshot id doc with
++    | none => pure ({} : ObservationContext.Catalog)
++    | some captured => IO.ofExcept (ContentMetadata.catalog snapshot.head.identity doc captured)
++  let catalog := {original with
++    located := files ++ captured.located ++ original.located
++    quotations := captured.quotations ++ original.quotations}
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -31,0 +32,2 @@
++    (include_str "ContentCapture.lean").toUTF8,(include_str "ContentMetadata.lean").toUTF8,
++    (include_str "../tools/ContentCorrespondence.lean").toUTF8,
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -406 +406 @@
+-      let tool : Plugin.ToolEvent := ⟨name, occurrence.useId, input, response, none⟩
++      let tool : Plugin.ToolEvent := {name,useId := occurrence.useId,input,response}
+--- a/Eggshell/SynapseProvenance.lean
++++ b/Eggshell/SynapseProvenance.lean
+@@ -5,0 +6 @@
++public import Eggshell.ContentMetadata
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -48,0 +49,3 @@
++  canonical : Std.HashMap String (Array CanonicalSource.StoredRow) := {}
++  canonicalReuse : Array (String × CanonicalSource.Shared.Reuse × CanonicalSource.Shared.Reuse) := #[]
++  canonicalFailure : Array (String × String) := #[]
+@@ -49,0 +53,20 @@
++/-- A file coordinate alone is insufficient. Every returned row is checked
++against this original owner's literal bytes, Work and native occurrence. -/
++def canonicalReads (database : String) (document : Document)
++    (stored : Array CanonicalSource.StoredRow) : Array Read := Id.run do
++  unless document.native do return #[]
++  let characters := (document.source.getD "").toList.toArray
++  let mut result := #[]
++  for row in stored do
++    for origin in row.origins do
++      unless origin.binding.database == database && origin.binding.owner == document.owner &&
++          origin.binding.work == document.work && document.occurrences.contains origin.occurrence &&
++          CanonicalSource.literal characters origin.binding.first origin.binding.limit row.code do continue
++      let read : Read := {
++        occurrence := origin.occurrence
++        source := ⟨.file row.key.file,row.key.line,row.key.line⟩
++        binding := origin.binding
++        quotations := #[Quotes.digest row.code]}
++      if read.valid then result := result.push read
++  return result
++
+@@ -111,0 +135,17 @@
++  -- One scoped acquisition serves graph binding and the final renderer.
++  -- A graph resource limit cannot erase independently verified source rows.
++  for source in prepared do
++    if let some reference := source.canonical then
++      try
++        let ids := owners.filterMap fun owner =>
++          if owner.database == source.source.head.identity then
++            some (Persistence.selectionKey owner.original.relation) else none
++        let found ← Plugin.Publication.Client.sourceRows reference ids deadline
++        let reuse := (source.source.head.identity,reference.access.reuse,found.reuse)
++        plan := {plan with canonicalReuse := plan.canonicalReuse.push reuse}
++        for (owner,rows) in found.rows do
++          let merged ← IO.ofExcept (CanonicalSource.Delivery.merge ((plan.canonical[owner]?.getD #[]) ++ rows))
++          plan := {plan with canonical := plan.canonical.insert owner merged}
++      catch error =>
++        let failure := (source.source.head.identity,error.toString)
++        plan := {plan with canonicalFailure := plan.canonicalFailure.push failure}
+@@ -118 +158 @@
+-      return {results := plan.results.map fun result =>
++      return {plan with results := plan.results.map fun result =>
+@@ -124 +164,2 @@
+-    let rows := recorded.toOption.getD #[] ++ originalRows
++    let capturedRows := canonicalReads owner.database document (plan.canonical[document.owner]?.getD #[])
++    let rows := recorded.toOption.getD #[] ++ capturedRows ++ originalRows
+--- a/Eggshell/SynapseUsage.lean
++++ b/Eggshell/SynapseUsage.lean
+@@ -74,0 +75,18 @@
++
++/-- A file alias can cover just its original code bytes, without a numbered
++prefix. JSON escaping changes representation, never the saved code spelling. -/
++structure SharedCode (original : String) where
++  text : String
++  exact : text = original ∨
++    String.ofList ((toJson text).compress.toList.drop 1 |>.dropLast) = original
++
++def sharedCodes (original : String) : Array (SharedCode original) := Id.run do
++  let mut result := #[⟨original,Or.inl rfl⟩]
++  if let some text := (Json.parse ("\"" ++ original ++ "\"") >>= Json.getStr?).toOption then
++    if same : String.ofList ((toJson text).compress.toList.drop 1 |>.dropLast) = original then
++      if text != original then result := result.push ⟨text,Or.inr same⟩
++  return result
++
++theorem SharedCode.original_spelling (code : SharedCode original) :
++    code.text = original ∨
++      String.ofList ((toJson code.text).compress.toList.drop 1 |>.dropLast) = original := code.exact
+@@ -90,0 +109,14 @@
++    let characters := raw.toList.toArray
++    for saved in byOwner.getD doc.owner #[] do
++      let row := saved.val
++      if !row.valid || row.binding.work != doc.work || !doc.occurrences.contains row.occurrence then continue
++      let .file file := row.source.subject | continue
++      if row.source.first != row.source.last then continue
++      if !(row.binding.first < row.binding.limit && row.binding.limit ≤ characters.size) then continue
++      let original := String.ofList (characters.extract row.binding.first row.binding.limit).toList
++      for code in sharedCodes original do
++        if code.text.isEmpty || code.text.contains '\n' || code.text.contains '\r' then continue
++        if same : row.source = ⟨file,row.source.first,row.source.first⟩ then
++          let witness : SharedWitness reads := ⟨row,saved.property,file,row.source.first,code.text,same⟩
++          let key := (file,row.source.first,code.text)
++          index := index.insert key ((index.getD key #[]).push witness)

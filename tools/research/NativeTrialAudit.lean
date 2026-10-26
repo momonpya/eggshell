@@ -1,5 +1,6 @@
 import Eggshell.SynapseBuild
 import Eggshell.SynapseUsage
+import Eggshell.ContentMetadata
 import tools.research.ArtifactHash
 import tools.research.RequiredDelivery
 import tools.research.OriginalEvidence
@@ -33,15 +34,41 @@ private def check (condition : Bool) (message : String) : IO Unit :=
 private def readJson (path : String) : IO Json := do
   IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path)))
 
-private def originals (source : DB.PageMap.Snapshot) :
+private def originals (source : DB.PageMap.Snapshot) (workspace : System.FilePath) :
     IO (Array Extraction.Document × Array Read) := do
   let reader ← Persistence.Store.NodeReader.new source
   let mut documents := #[]
   let mut rows := #[]
+  let mut images : Std.HashMap File OriginalEvidence.Image := {}
   -- Discover original owners from this publication, including newly accumulated
   -- observations. Human reference requirements never choose the source owners.
   for entry in ← Build.entries source do
-    let doc ← Build.document reader entry.id
+    let mut doc ← Build.document reader entry.id
+    if let some captured ← ContentMetadata.load? source entry.id doc then
+      let catalog ← IO.ofExcept (ContentMetadata.catalog source.head.identity doc captured)
+      let characters := doc.source.getD "" |>.toList.toArray
+      -- The product's saved coordinates are not the oracle. Re-read and hash
+      -- the reference image, then compare the actual original slice with its
+      -- claimed file line independently of the capture matcher.
+      for located in catalog.located do
+        let row := located.read
+        let some file := row.source.file? | throw (IO.userError "file alias has no file")
+        let image ← match images[file]? with
+          | some image => pure image
+          | none => do
+              let image ← OriginalEvidence.load workspace file
+              images := images.insert file image
+              pure image
+        let lines := (image.text.splitOn "\n").toArray
+        let some expected := lines[row.source.first-1]? | throw (IO.userError "file alias exceeds reference image")
+        let original := String.ofList (characters.extract row.binding.first row.binding.limit).toList
+        let decoded := (Json.parse ("\"" ++ original ++ "\"") >>= Json.getStr?).toOption
+        check (row.source.first == row.source.last && (original == expected || decoded == some expected))
+          "saved file alias differs from independent reference bytes"
+        rows := rows.push row
+      let files := captured.inputs.filterMap fun input => input.content.map fun content =>
+        (⟨input.relative,content.root,content.bytes⟩ : File)
+      doc := {doc with files := (hashDistinct (doc.files.toList ++ files.toList)).toArray}
     documents := documents.push doc
     if let .ok found := Extraction.recordedRows source.head.identity doc then rows := rows ++ found
   return (documents,rows)
@@ -58,7 +85,7 @@ def inspect (input : String) : IO Json := do
     check ((← ArtifactHash.hex (System.FilePath.mk specification.source / name)) == expected)
       "immutable source bytes changed"
   let before ← DB.PageMap.pin (.mk specification.source)
-  let (documents,fileRows) ← originals before
+  let (documents,fileRows) ← originals before (.mk specification.workspace)
   let resolved ← OriginalEvidence.resolve (.mk specification.workspace) before.head.identity
     documents fileRows specification.required
   let rows := resolved.reads
