@@ -1,0 +1,98 @@
+LEAN_EXPORT lean_object* l_StableTournament_joinCached___redArg(lean_object* v_order_403_, lean_object* v_depth_404_, lean_object* v_inst_405_, lean_object* v_held_406_, lean_object* v_leftBest_407_, lean_object* v_rightBest_408_, lean_object* v_left_409_, lean_object* v_right_410_){
+_start:
+{
+lean_object* v_best_411_; lean_object* v_tree_412_; uint8_t v___x_413_; 
+v_best_411_ = lean_ctor_get(v_left_409_, 0);
+v_tree_412_ = lean_ctor_get(v_left_409_, 1);
+lean_inc(v_best_411_);
+lean_inc_ref(v_inst_405_);
+v___x_413_ = l_Option_instDecidableEq___redArg(v_inst_405_, v_best_411_, v_leftBest_407_);
+if (v___x_413_ == 0)
+{
+lean_object* v___x_414_; 
+lean_dec(v_rightBest_408_);
+lean_dec(v_held_406_);
+lean_dec_ref(v_inst_405_);
+v___x_414_ = l_StableTournament_join___redArg(v_order_403_, v_depth_404_, v_left_409_, v_right_410_);
+return v___x_414_;
+}
+else
+{
+lean_object* v_best_415_; lean_object* v_tree_416_; uint8_t v___x_417_; 
+v_best_415_ = lean_ctor_get(v_right_410_, 0);
+v_tree_416_ = lean_ctor_get(v_right_410_, 1);
+lean_inc(v_best_415_);
+v___x_417_ = l_Option_instDecidableEq___redArg(v_inst_405_, v_best_415_, v_rightBest_408_);
+if (v___x_417_ == 0)
+{
+lean_object* v___x_418_; 
+lean_dec(v_held_406_);
+v___x_418_ = l_StableTournament_join___redArg(v_order_403_, v_depth_404_, v_left_409_, v_right_410_);
+return v___x_418_;
+}
+else
+{
+lean_object* v___x_420_; uint8_t v_isShared_421_; uint8_t v_isSharedCheck_426_; 
+lean_inc_ref(v_tree_416_);
+lean_inc(v_best_415_);
+lean_inc_ref(v_tree_412_);
+lean_inc(v_best_411_);
+lean_dec_ref(v_left_409_);
+lean_dec_ref(v_order_403_);
+v_isSharedCheck_426_ = !lean_is_exclusive(v_right_410_);
+if (v_isSharedCheck_426_ == 0)
+{
+lean_object* v_unused_427_; lean_object* v_unused_428_; 
+v_unused_427_ = lean_ctor_get(v_right_410_, 1);
+lean_dec(v_unused_427_);
+v_unused_428_ = lean_ctor_get(v_right_410_, 0);
+lean_dec(v_unused_428_);
+v___x_420_ = v_right_410_;
+v_isShared_421_ = v_isSharedCheck_426_;
+goto v_resetjp_419_;
+}
+else
+{
+lean_dec(v_right_410_);
+v___x_420_ = lean_box(0);
+v_isShared_421_ = v_isSharedCheck_426_;
+goto v_resetjp_419_;
+}
+v_resetjp_419_:
+{
+lean_object* v___x_422_; lean_object* v___x_424_; 
+v___x_422_ = lean_alloc_ctor(1, 5, 0);
+lean_ctor_set(v___x_422_, 0, v_depth_404_);
+lean_ctor_set(v___x_422_, 1, v_best_411_);
+lean_ctor_set(v___x_422_, 2, v_best_415_);
+lean_ctor_set(v___x_422_, 3, v_tree_412_);
+lean_ctor_set(v___x_422_, 4, v_tree_416_);
+if (v_isShared_421_ == 0)
+{
+lean_ctor_set(v___x_420_, 1, v___x_422_);
+lean_ctor_set(v___x_420_, 0, v_held_406_);
+v___x_424_ = v___x_420_;
+goto v_reusejp_423_;
+}
+else
+{
+lean_object* v_reuseFailAlloc_425_; 
+v_reuseFailAlloc_425_ = lean_alloc_ctor(0, 2, 0);
+lean_ctor_set(v_reuseFailAlloc_425_, 0, v_held_406_);
+lean_ctor_set(v_reuseFailAlloc_425_, 1, v___x_422_);
+v___x_424_ = v_reuseFailAlloc_425_;
+goto v_reusejp_423_;
+}
+v_reusejp_423_:
+{
+return v___x_424_;
+}
+}
+}
+}
+}
+}
+LEAN_EXPORT lean_object* l_StableTournament_joinCached(lean_object* v_00_u03b1_429_, lean_object* v_order_430_, lean_object* v_depth_431_, lean_object* v_inst_432_, lean_object* v_held_433_, lean_object* v_leftBest_434_, lean_object* v_rightBest_435_, lean_object* v_exact_436_, lean_object* v_left_437_, lean_object* v_right_438_){
+_start:
+{
+lean_object* v___x_439_; 

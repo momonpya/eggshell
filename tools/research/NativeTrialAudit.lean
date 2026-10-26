@@ -4,6 +4,7 @@ import Eggshell.ContentMetadata
 import tools.research.ArtifactHash
 import tools.research.RequiredDelivery
 import tools.research.OriginalEvidence
+import Eggshell.Worker
 
 open Lean Eggshell Eggshell.Synapses
 
@@ -132,6 +133,45 @@ def inspect (input : String) : IO Json := do
     ("stdoutSha256",toJson (Sha256.hex stdout.toUTF8)),("bodySha256",toJson (Sha256.hex body.toUTF8)),
     ("frozenEvidence",toJson frozen),("requiredDelivery",toJson (RequiredDelivery.assess frozen shown.ranges)),
     ("requirements",toJson requirements)]
+
+/-- Body coverage from an explicitly unbounded worker diagnostic is distinct
+from timely hook delivery. It cannot satisfy the native preflight gate. -/
+def inspectWorker (input : String) : IO Json := do
+  let bytes ← IO.FS.readBinFile (.mk input)
+  let some text := String.fromUTF8? bytes | throw (IO.userError "worker audit encoding")
+  let trial ← IO.ofExcept (Json.parse text >>= fromJson? (α := Trial))
+  let specification := trial.source
+  for (name,expected) in specification.files do
+    check ((← ArtifactHash.hex (.mk specification.source / name)) == expected) "worker source bytes changed"
+  let before ← DB.PageMap.pin (.mk specification.source)
+  let request ← IO.ofExcept ((← readJson trial.request) |> fromJson? (α := Plugin.Worker.Search))
+  check (request.pending.prompt == specification.prompt && request.work == specification.prompt &&
+    request.pending.cwd == specification.workspace && !request.enforce && request.evidence.isNone)
+    "worker diagnostic differs from the frozen question"
+  let stdout ← IO.FS.readFile (.mk trial.stdout)
+  let timing ← readJson trial.timing
+  check ((timing.getObjValAs? Nat "exitCode").toOption == some 0 &&
+    (timing.getObjValAs? String "stdoutSha256").toOption == some (Sha256.hex stdout.toUTF8)) "worker reply differs"
+  let some last := (stdout.splitOn "\n" |>.filter (!·.isEmpty)).getLast? |
+    throw (IO.userError "worker diagnostic has no frame")
+  let frame ← IO.ofExcept (Json.parse last >>= fromJson? (α := Plugin.Worker.SearchFrame))
+  let .reply identity handoff := frame | throw (IO.userError "worker diagnostic has only progress")
+  check (identity == request.identity) "worker reply identity differs"
+  let (documents,fileRows) ← originals before (.mk specification.workspace)
+  let resolved ← OriginalEvidence.resolve (.mk specification.workspace) before.head.identity
+    documents fileRows specification.required
+  let frozen ← IO.ofExcept (RequiredDelivery.freeze (resolved.requirements.map fun item =>
+    ⟨item.name,item.alternatives⟩) (resolved.reads.map (·.source)))
+  let after ← DB.PageMap.pin (.mk trial.database)
+  check (after.head == before.head) "worker diagnostic changed the source publication"
+  let body := handoff.map (·.text) |>.getD ""
+  let shown := Extraction.presented body documents resolved.reads
+  return Json.mkObj [("diagnosticOnly",toJson true),("actualHook",toJson false),
+    ("latencyAcceptance",toJson false),("productionAdoption",toJson false),
+    ("specSha256",toJson (Sha256.hex bytes)),("stdoutSha256",toJson (Sha256.hex stdout.toUTF8)),
+    ("bodySha256",toJson (Sha256.hex body.toUTF8)),("bodyChars",toJson body.length),
+    ("elapsedMs",timing.getObjValD "elapsedMs"),("frozenEvidence",toJson frozen),
+    ("coverageWithoutDeadline",toJson (RequiredDelivery.assess frozen shown.ranges))]
 
 /-- Source extraction and literal code/fingerprint comparison stay in Lean.
 The orchestrator can seal the report, then replay it without trusting labels. -/

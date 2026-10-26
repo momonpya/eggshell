@@ -1,0 +1,28 @@
+--- a/tools/DeferredCoverage.lean
++++ b/tools/DeferredCoverage.lean
+@@ -3,0 +4 @@
++import all Init.Util
+@@ -460,0 +462 @@
++  dbg_trace s!"EGGSHELL_SELECTOR_ROUND selected={prior.selected.length} offers={p.offers.size}"
+@@ -469 +471 @@
+-  simp only [best,bestDeferred,same]
++  simp only [best,bestDeferred,same,dbgTrace]
+@@ -492 +494,9 @@
+-def choose? (p : Problem) : Option (Selection p) := do
++def choose? (p : Problem) : Option (Selection p) :=
++  let bits := fun value : Nat => if value == 0 then 0 else value.log2+1
++  let common := max 1 (p.weights.foldl Nat.gcd 0)
++  let maxBits := p.weights.foldl (fun previous value => max previous (bits value)) 0
++  let normalizedBits := p.weights.foldl (fun previous value => max previous (bits (value/common))) 0
++  let nodes := p.offers.foldl (fun total offer => total+offer.closure.length) 0
++  let cues := p.offers.foldl (fun total offer => total+offer.covers.length) 0
++  dbg_trace s!"EGGSHELL_SELECTOR_INPUT offers={p.offers.size} nodes={p.costs.size} cues={p.weights.size} nodeEntries={nodes} cueEntries={cues} maxWeightBits={maxBits} commonBits={bits common} normalizedBits={normalizedBits}"
++  do
+@@ -495 +505,3 @@
+-  pure (prefer (fill prepared p.offers.size initial (values initial)) (bestSingleton initial))
++  let result := prefer (fill prepared p.offers.size initial (values initial)) (bestSingleton initial)
++  dbg_trace s!"EGGSHELL_SELECTOR_RESULT selected={result.selected.map (·.val)}"
++  pure result
+@@ -500 +512 @@
+-  simp only [chooseDeferred?,choose?,fill_exact,fillDeferred_exact]
++  simp only [chooseDeferred?,choose?,fill_exact,fillDeferred_exact,dbgTrace]

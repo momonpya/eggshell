@@ -25,18 +25,25 @@ private def commands (root : System.FilePath) : IO Json := do
   return toJson (result.qsort fun a b => a.1 < b.1)
 
 def main (args : List String) : IO Unit := do
-  let [mode] := args | throw (IO.userError "CollectSynapticPublication routing|receipt|prepared|payload")
-  unless ["routing","receipt","prepared","payload","fold","leaf","sparse","dispatch","streaming"].contains mode do throw (IO.userError "known candidate required")
+  let (mode,attempt) ← match args with
+    | [mode] => pure (mode,none)
+    | ["tournament","eager-join"] => pure ("tournament",some "failed-eager-join")
+    | _ => throw (IO.userError "CollectSynapticPublication MODE [eager-join]")
+  unless ["routing","receipt","prepared","payload","fold","leaf","sparse","dispatch","streaming","tournament","span"].contains mode do throw (IO.userError "known candidate required")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let name := if mode == "routing" then "synaptic-publication-delta" else if mode == "streaming" then "streamed-incidence" else if mode == "dispatch" then "incremental-dispatch" else if mode == "sparse" then "incremental-selection" else if mode == "leaf" then "bounded-leaf-encoding" else if mode == "fold" then "selector-weight-fold" else if mode == "payload" then "nonempty-source-payload" else if mode == "prepared" then "receipt-preparation" else "receipt-row-postings"
+  let name := if mode == "span" then "bound-span-preparation" else if mode == "tournament" then "tournament-selection" else if mode == "routing" then "synaptic-publication-delta" else if mode == "streaming" then "streamed-incidence" else if mode == "dispatch" then "incremental-dispatch" else if mode == "sparse" then "incremental-selection" else if mode == "leaf" then "bounded-leaf-encoding" else if mode == "fold" then "selector-weight-fold" else if mode == "payload" then "nonempty-source-payload" else if mode == "prepared" then "receipt-preparation" else "receipt-row-postings"
   let root := base / (name ++ "-20261027")
-  let parent := base / (if mode == "routing" then "captured-correspondence-20261026" else if mode == "streaming" then "incremental-dispatch-20261027" else if mode == "dispatch" then "incremental-selection-20261027" else if mode == "sparse" then "bounded-leaf-encoding-20261027" else if mode == "leaf" then "selector-weight-fold-20261027" else if mode == "fold" then "nonempty-source-payload-20261027" else if mode == "payload" then "receipt-preparation-20261027" else if mode == "prepared" then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
+  let parent := base / (if mode == "tournament" || mode == "span" then "streamed-incidence-20261027" else if mode == "routing" then "captured-correspondence-20261026" else if mode == "streaming" then "incremental-dispatch-20261027" else if mode == "dispatch" then "incremental-selection-20261027" else if mode == "sparse" then "bounded-leaf-encoding-20261027" else if mode == "leaf" then "selector-weight-fold-20261027" else if mode == "fold" then "nonempty-source-payload-20261027" else if mode == "payload" then "receipt-preparation-20261027" else if mode == "prepared" then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let output := project / "docs/candidates" / name
+  let output := attempt.map (output / ·) |>.getD output
   let records := output / "records"
   let files := if mode == "routing" then #["Eggshell/SynapseIndex.lean","Eggshell/SynapseRecommend.lean",
     "Eggshell/SynapticRouting.lean","Eggshell/SynapticRoutingStore.lean","Eggshell/SynapticTransport.lean",
     "Eggshell/SynapticTopology.lean","Eggshell/SynapticTopologyStore.lean"]
+    else if mode == "span" then #["Eggshell/SynapseBundles.lean"]
+    else if mode == "tournament" then #["Eggshell/Handoff.lean","tools/DeferredCoverage.lean",
+      "tools/StableTournament.lean","tools/SelectionRating.lean","tools/TournamentCoverage.lean"]
     else if mode == "leaf" then #["Eggshell/DB/PageMap.lean"]
     else if mode == "streaming" then #["tools/DeferredCoverage.lean","tools/KeyPostings.lean"]
     else if mode == "fold" || mode == "sparse" || mode == "dispatch" then #["tools/DeferredCoverage.lean"]
@@ -83,7 +90,7 @@ def main (args : List String) : IO Unit := do
       (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] do throw (IO.userError "candidate still active")
     guards := guards.push (entry.fileName,guard)
   write (records / "guards.json") (toJson (guards.qsort fun a b => a.1 < b.1)).pretty
-  for run in ["atomic-projection","actual-checkpoint","span-receipt","keyed-receipt","forced-receipt","original-domain-regression","exact-marginals","atomic-page-encoding","incremental-marginals","checked-incremental-marginals","shared-evaluation-marginals","public-entry-marginals","streaming-postings-marginals"] do
+  for run in ["atomic-projection","actual-checkpoint","span-receipt","keyed-receipt","forced-receipt","original-domain-regression","exact-marginals","atomic-page-encoding","incremental-marginals","checked-incremental-marginals","shared-evaluation-marginals","public-entry-marginals","streaming-postings-marginals","selection-check","lazy-selection-check","matched-selection-check","repeated-bindings"] do
     copyIf (root / run / "results.json") (records / run / "results.json")
   let native := root / "native-atomic-routing"
   copyIf (native / "routing-hook.json") (records / "native/routing-hook.json")
@@ -98,6 +105,7 @@ def main (args : List String) : IO Unit := do
     write (records / "fixed-source/warm.json") (← commands study).pretty
     for topic in [1,2,3] do
       let path := study / s!"topic-{topic}"
+      if !(← path.pathExists) then continue
       for name in ["audit.json","body.txt","shutdown.json"] do copyIf (path / name) (records / "fixed-source" / s!"topic-{topic}" / name)
       write (records / "fixed-source" / s!"topic-{topic}/hook.json") (← commands path).pretty
     write (records / "profile/hook.json") (← commands (study / "profile-topic-2")).pretty
@@ -131,6 +139,10 @@ def main (args : List String) : IO Unit := do
   copyIf (root / "audit-build/tools_research_PageEncodingAudit-lean.stdout") (records / "contracts/bounded-page-encoding.stdout")
   copyIf (root / "audit-build/tools_research_IncrementalSelectionAudit-lean.stdout") (records / "contracts/incremental-selection.stdout")
   copyIf (root / "audit-build/tools_research_IncrementalSelectionAudit.source") (records / "contracts/audit-source.json")
+  copyIf (root / "audit-build/tools_research_TournamentSelectionAudit-lean.stdout") (records / "contracts/tournament.stdout")
+  copyIf (root / "audit-build/tools_research_TournamentSelectionAudit.source") (records / "contracts/tournament-source.json")
+  copyIf (root / "audit-build/tools_research_BoundSpanAudit-lean.stdout") (records / "contracts/bound-span.stdout")
+  copyIf (root / "audit-build/tools_research_BoundSpanAudit.source") (records / "contracts/bound-span-source.json")
   let artifact ← IO.Process.output {
     cmd := (base / "study-services-20261026/assessed-controller").toString
     args := #["artifacts",(root / "product-build/StudyMain").toString]}

@@ -15,8 +15,10 @@ private def original? (value : Json) : Option (String × Nat × Nat) := do
 /-- The frozen oracle is used only to explain recorded decisions after the
 product has finished. No requirement, label or oracle enters a hook. -/
 def main (args : List String) : IO Unit := do
-  let [trialPath,executablePath,outputPath] := args |
-    throw (IO.userError "ExplainMissingNative TRIAL EXPLAIN-EXEC NEW-DIRECTORY")
+  let (trialPath,executablePath,outputPath,workerEvidence) ← match args with
+    | [trialPath,executablePath,outputPath] => pure (trialPath,executablePath,outputPath,none)
+    | ["worker",trialPath,evidence,executablePath,outputPath] => pure (trialPath,executablePath,outputPath,some evidence)
+    | _ => throw (IO.userError "ExplainMissingNative TRIAL EXPLAIN-EXEC NEW-DIRECTORY | worker TRIAL EVIDENCE EXPLAIN-EXEC NEW-DIRECTORY")
   let trial := System.FilePath.mk trialPath
   let output := System.FilePath.mk outputPath
   unless trial.isAbsolute && output.isAbsolute && !(← output.pathExists) do
@@ -24,9 +26,17 @@ def main (args : List String) : IO Unit := do
   IO.FS.createDir output
   let mut summaries := #[]
   let mut known : Std.HashMap (String × Nat × Nat) String := {}
-  for topic in [1,2,3] do
-    let audit ← read (trial / s!"topic-{topic}/audit.json")
-    let missing ← IO.ofExcept ((audit.getObjValD "requiredDelivery").getObjValAs? (Array (Array String)) "missing")
+  let jobs ← match workerEvidence with
+    | none => pure (([1,2,3] : List Nat).map fun topic =>
+        (topic,trial / s!"topic-{topic}/audit.json",s!"atomic-topology-source-{topic}","requiredDelivery"))
+    | some evidence => do
+      let evidence := System.FilePath.mk evidence
+      let request ← read (evidence / "worker/stdin")
+      let session ← IO.ofExcept ((request.getObjValD "pending").getObjValAs? String "sessionId")
+      pure [(2,evidence / "result.json",session,"coverageWithoutDeadline")]
+  for (topic,auditPath,session,coverageField) in jobs do
+    let audit ← read auditPath
+    let missing ← IO.ofExcept ((audit.getObjValD coverageField).getObjValAs? (Array (Array String)) "missing")
     let eligible ← IO.ofExcept ((audit.getObjValD "frozenEvidence").getObjValAs? (Array Json) "units")
     for item in eligible do
       let names ← IO.ofExcept (item.getObjValAs? (Array String) "names")
@@ -39,7 +49,7 @@ def main (args : List String) : IO Unit := do
           if !(← (entry.path / "selection-plan.json").pathExists) then continue
           let request ← read (entry.path / "request.json")
           unless ((request.getObjValD "data").getObjValAs? String "session").toOption ==
-              some s!"atomic-topology-source-{topic}" do continue
+              some session do continue
           let plan := (← read (entry.path / "selection-plan.json")).getObjValD "data"
           let families ← IO.ofExcept (plan.getObjValAs? (Array Json) "families")
           let some family := families.find? (fun row => (row.getObjValAs? String "work").toOption == some work) |
@@ -63,12 +73,13 @@ def main (args : List String) : IO Unit := do
         for decision in ← IO.ofExcept (report.getObjValAs? (Array Json) "decisions") do
           let receipt ← IO.ofExcept (decision.getObjValAs? String "receipt")
           let request ← read (trial / "data/receipts" / receipt / "request.json")
-          if ((request.getObjValD "data").getObjValAs? String "session").toOption != some s!"atomic-topology-source-{topic}" then continue
+          if ((request.getObjValD "data").getObjValAs? String "session").toOption != some session then continue
           decisions := decisions.push (Json.mkObj ((#["owner","nominationRank","focusRank","hydrated",
             "unitCount","selectedUnitCount","originalChars","coveredByCandidateUnion","coveredBySelectedUnion",
             "candidateGaps","firstRecordedLoss"]).toList.map fun key => (key,decision.getObjValD key)))
       summaries := summaries.push (Json.mkObj [("topic",toJson topic),("names",toJson names),
         ("reports",toJson reports),("decisions",toJson decisions)])
   IO.FS.writeFile (output / "summary.json") (Json.mkObj [("missing",toJson summaries),
+    ("diagnosticOnly",toJson workerEvidence.isSome),
     ("answeringModelCalls",toJson (0 : Nat)),("sourceWrites",toJson (0 : Nat))]).pretty
   IO.println (toJson summaries).compress

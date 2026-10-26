@@ -1,5 +1,6 @@
 import tools.research.StudySeedChecks
 import Eggshell.Install
+import tools.research.StudyWorkerProbe
 open Lean Eggshell Eggshell.Research
 
 private def check (valid : Bool) (message : String) : IO Unit :=
@@ -12,10 +13,15 @@ private def save (path : System.FilePath) (value : Json) : IO Unit := IO.FS.writ
 requirements are audit-only and never enter the hook's inputs. -/
 def main (args : List String) : IO UInt32 := do
   try
-    let (candidate,destination,resume) ← match args with
-      | [candidate,destination] => pure (candidate,destination,false)
-      | [candidate,destination,"resume"] => pure (candidate,destination,true)
-      | _ => throw (IO.userError "SynapticSourceHookAudit CANDIDATE DIRECTORY [resume]")
+    let (candidate,destination,resume,probe,topics) ← match args with
+      | [candidate,destination] => pure (candidate,destination,false,false,[1,2,3])
+      | [candidate,destination,"resume"] => pure (candidate,destination,true,false,[1,2,3])
+      | [candidate,destination,"worker"] => pure (candidate,destination,false,true,[2])
+      | [candidate,destination,"topic",number] =>
+        let some topic := number.toNat? | throw (IO.userError "numeric topic required")
+        unless [1,2,3].contains topic do throw (IO.userError "unknown fixed diagnostic topic")
+        pure (candidate,destination,false,false,[topic])
+      | _ => throw (IO.userError "SynapticSourceHookAudit CANDIDATE DIRECTORY [resume|worker|topic NUMBER]")
     let root := System.FilePath.mk destination
     check (root.isAbsolute && (← root.pathExists) == resume) "new trial or explicit unfinished-trial resume required"
     if !resume then IO.FS.createDir root
@@ -99,7 +105,7 @@ def main (args : List String) : IO UInt32 := do
     let publisher ← StudyRuntime.startPublisher binary data environment resume
     let mut results := #[]
     try
-      for topic in [1,2,3] do
+      for topic in topics do
         let some definition := definitions.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
           throw (IO.userError "missing question definition")
         let some frozen := availability.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
@@ -113,6 +119,22 @@ def main (args : List String) : IO UInt32 := do
         let session := s!"atomic-topology-source-{topic}"
         let managed ← StudyRuntime.startManaged binary plugin session (data / "sessions" / session / "daemon.json") environment
         try
+          if probe then
+            let output ← StudyWorkerProbe.run binary database data session workspace prompt environment (stage / "worker")
+            check (output.exitCode == 0) "diagnostic worker failed"
+            let some line := (output.stdout.splitOn "\n" |>.filter (!·.isEmpty)).getLast? |
+              throw (IO.userError "diagnostic worker did not return a reply")
+            let frame ← IO.ofExcept (Json.parse line >>= fromJson? (α := Plugin.Worker.SearchFrame))
+            let .reply _ handoff := frame | throw (IO.userError "diagnostic worker returned progress only")
+            let metadata := output.stderr.splitOn "\n" |>.filter (·.startsWith "EGGSHELL_SELECTOR_")
+            save (stage / "probe.json") (Json.mkObj [("topic",toJson topic),("elapsedMs",toJson output.elapsedMs),
+              ("deadlineMs",toJson (120000 : Nat)),("diagnosticOnly",toJson true),("actualHook",toJson false),
+              ("latencyAcceptance",toJson false),("handoffPresent",toJson handoff.isSome),
+              ("bodyChars",toJson (handoff.map (·.text.length))),
+              ("selectorObservations",toJson metadata),("runtimeSha256",toJson runtimeSha)])
+            for observation in metadata do IO.println observation
+            results := results.push (← read (stage / "probe.json"))
+            continue
           let request := Json.mkObj [("hook_event_name",toJson "UserPromptSubmit"),("session_id",toJson session),
             ("turn_id",toJson "source-turn"),("cwd",toJson workspace),("prompt",toJson prompt),
             ("_eggshell_config",toJson configuration.toString)]
@@ -142,7 +164,9 @@ def main (args : List String) : IO UInt32 := do
     finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
     check ((← DB.PageMap.pin database).head == original.head && (← StudyRuntime.files database) == sourceFiles)
       "actual hooks or warm changed the original checkpoint"
-    save (root / "results.json") (Json.mkObj [("topics",toJson results),("answeringModelCalls",toJson (0 : Nat)),
+    save (root / "results.json") (Json.mkObj [("topics",toJson results),("diagnosticOnly",toJson probe),
+      ("requestedTopics",toJson topics),("singleTopicDiagnostic",toJson (topics.length == 1 && !probe)),
+      ("answeringModelCalls",toJson (0 : Nat)),
       ("answeringStages",toJson (0 : Nat)),("newSeedStudy",toJson false),("productionAdoption",toJson false)])
     return 0
   catch error => IO.eprintln error.toString; return 1

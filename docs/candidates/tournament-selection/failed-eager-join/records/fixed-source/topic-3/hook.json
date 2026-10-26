@@ -1,0 +1,11 @@
+[["hook",
+  {"timing":
+   {"stdoutSha256":
+    "c20205d3fd5c865d354d970ccc2dc209f7fef704c3eac3637de279ee957c6a67",
+    "exitCode": 0,
+    "elapsedMs": 29008},
+   "stdout":
+   "{\"hookSpecificOutput\":{\"additionalContext\":\"EGGSHELL SEARCH INCOMPLETE\\nLocal memory search is busy or unavailable. This is not a completed search with no matches.\\nNo prior work is certified as complete by this notice. Continue uncovered work using accessible evidence; if required evidence is unavailable, report that gap instead of repeatedly checking the same source.\\nEND EGGSHELL SEARCH INCOMPLETE\",\"hookEventName\":\"UserPromptSubmit\"}}\n",
+   "stdin":
+   "{\"_eggshell_config\":\"/Users/ovm/.codex/experiments/eggshell/tournament-selection-20261027/fixed-source-hooks/config.toml\",\"cwd\":\"/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project\",\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"You are running one fixed LLVM source investigation.\\n\\nThe immutable source workspace is /Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project.\\n\\nUse only the fixed source workspace and condition context delivered by hooks. Do not use web, external memories, plugins, sub-agents, or files outside this workspace. Do not modify the source.\\n\\nTASK\\n\\nFor Clang driver option parsing and tool-chain selection in the fixed llvm-project snapshot, audit the interaction of --target, -x, and -fsyntax-only. Trace the argument parsing, final phase, toolchain selection, and job construction boundaries in clang/lib/Driver/Driver.cpp and clang/lib/Driver/ToolChains. Check the relevant clang/test/Driver expectations. Explain which previously established facts remain applicable and which additional evidence is required. Do not claim an installed compiler reproduces this snapshot without verifying its build. Give source-grounded behavior, a no-change or justified-fix decision, and a bounded conclusion for anything not reproducible. Respond in ja.\\n\",\"session_id\":\"atomic-topology-source-3\",\"turn_id\":\"source-turn\"}\n",
+   "stderr": "Eggshell hook failed open: daemon receive deadline expired\n"}]]

@@ -1,0 +1,16 @@
+--- a/Eggshell/SynapseBundles.lean
++++ b/Eggshell/SynapseBundles.lean
+@@ -57,0 +58,2 @@
++  spans : List (Nat × Nat)
++  spansExact : spans = (rows.toList.map fun row => (row.binding.first,row.binding.limit)).eraseDups
+@@ -59,2 +61,3 @@
+-def Bound.spans (bound : Bound source) : List (Nat × Nat) :=
+-  (bound.rows.toList.map fun row => (row.binding.first,row.binding.limit)).eraseDups
++theorem Bound.spans_exact (bound : Bound source) :
++    bound.spans = (bound.rows.toList.map fun row => (row.binding.first,row.binding.limit)).eraseDups :=
++  bound.spansExact
+@@ -116 +119,3 @@
+-          some ⟨owner.original.owner,owner.key,owner.keyExact,rows,valid,inside,owned,complete⟩ else none
++          let spans := hashDistinct (rows.toList.map fun row => (row.binding.first,row.binding.limit))
++          some ⟨owner.original.owner,owner.key,owner.keyExact,rows,valid,inside,owned,complete,
++            spans,HashDistinct.reference _⟩ else none

@@ -33,12 +33,16 @@
 - 以前の実本文8/15件（53.3%）は不合格。その際に、未配送7件中6件が「選択済みの全範囲・費用0・本文なし」という虚偽被覆だった。共有payloadの非空性を型/復号境界で保証し、空なら任意ツールの原文recordへ渡す修正を隔離した。空payloadへ戻さない。[receipt-preparation.md](docs/receipt-preparation.md)、[nonempty-source-payload.md](docs/nonempty-source-payload.md)。
 - 限界費用/価値は、選択によって新しく覆われたnode/cueから影響候補だけを更新するLean部品を実装し、全選択順まで全再計算と一致することを証明した。公開入口を呼ぶnative比較は512候補・16,384cueで1,280→265ms。コンパイル時置換の2段登録による接続漏れも修正し、実Handoff objectの呼出先検査を実seed監査の起動条件へ加えた。[incremental-selection.md](docs/incremental-selection.md)、[incremental-dispatch.md](docs/incremental-dispatch.md)。
 - 直近のruntime ff2f9419…では、逆引きの共有配列コピーを先頭追加後の一括配列化へ、変更対象の巨大な重複展開を逐次収集へ隔離置換した。値・順序・重複まで証明し、全ハッシュ衝突もnativeで検査。8,192行の構築は50msから1ms未満。しかし同じC7の実フックは29,014/29,007/29,013msで未完了、実本文0/4・0/6・0/5。集計RSS最大1,850,224KiB、保護停止/残存0。別のCPU診断では全候補の比較が支配し、順位分母をLCMへまとめた巨大Nat積の比較が残る。配送・総tokenの合格にはしない。[streamed-incidence.md](docs/streamed-incidence.md)。
+- 題材2の別worker診断は33,345/32,608msで同じ本文117,761文字を生成したが、必要原文は両方3/6件だった。診断期限120秒を実フック30秒の合格へ転用しない。実入力は18,974候補を724回走査し、最大重み263bit・最大公約数1。欠落3件はすべて候補範囲にあり、最初に落ちた段階は選択。期限だけを直しても95%にはならない。raw recordとcanonical rowの費用共有の違いは未確定の調査対象であり、まだ原因と断定しない。[selector-observation.md](docs/selector-observation.md)。
+- 束縛の原文範囲も、照合ごとの重複除去を作成時の一度だけへ移した。元の範囲列との完全一致を証明し、1,024範囲×128照合は353→1ms。しかし実フックの題材2は29,023msで通知のみ、0/6件。1/3は未実行。部品の改善を実配送の改善とは扱わず、全体の経路変更へ進む。[bound-span-preparation.md](docs/bound-span-preparation.md)。
 - PageMapの分割判定で全pending行を先に符号化するメモリ増加は隔離修正済み。元の一commit、完全保存、取消/回復、旧pinを保持する。[bounded-leaf-encoding.md](docs/bounded-leaf-encoding.md)。共有準備APIの80同時要求では1回の準備・79件の共有待ちを検査したが、実フック全体の80並行利用や全registryの差分準備の証拠ではない。[shared-preparation.md](docs/shared-preparation.md)。
+
+実フックが失敗し続けたため、部品の高速化を積んで同じ一連のwarm・3題材を繰り返す順序を止める。通常のwarm済み照会は数秒で本文を返すことを目指し、30秒は上限として扱う。根本の経路変更は[prepared-delivery-path.md](docs/prepared-delivery-path.md)。木の候補は実配送0/15件・直近の親への速度改善なしで撤回し、DB/cache/runtimeも削除済み。[tournament-selection.md](docs/tournament-selection.md)。
 
 直近の実行順は次のとおり。
 
-1. 重みのbit数/共通因子、候補数、選択回数/比較回数を実入力で測る。採点の意味を変えず数値表現と再比較を直す。公開入口とnative呼出先を検査し、同じ固定snapshotの15項目を実本文で再監査する。題材2も展開数と段階時間を残す。
-2. DBサービスで不変の準備を共有し、canonical payloadの全読込/検証/復号や所有者ごとの原文単位の再構築を減らす。質問に依存する起点・重み・選択を出版時へ丸ごと移す要件にはしない。キャッシュの存在と実際の再利用を区別する。
+1. 失敗した実入力を抽出・準備・選択・描画の境界で固定・再生し、全候補の被覆選択が終わるまで本文を返せない構造を変更する。全走査との選択順一致を推薦の一律条件にせず、95%の必要原文配送と実速度で検証する。認定の完全性は維持する。
+2. 出版差分から、file aliasの有無に依存しない不変の原文recordと隣接表を準備し、DBサービスで共有する。vector・字句・3辺から同じrecord IDを引き、照会内の全出力の復号・原文単位の再構築をなくす。原文と出典を含む有効な配送候補を保持し、追加探索の期限切れだけで本文を全て失わない。質問に依存する起点と展開は照会時に行う。キャッシュの存在と実際の再利用を区別する。
 3. 配送条件を通したruntimeを固定し、空DB/新規チャットのseedから題材1/2/3と2周目へ進む。途中でruntimeを替えた回答比較は混ぜない。旧固定seedのモデルなし診断を新seed実験と呼ばない。
 4. 同一snapshot・ソース・質問・model・effort・harnessで、現行と候補を事前固定した同数の複数反復で比較する。入力+出力、cached input、失敗分を含め、seed費用を別記する。品質・期限・総token改善の採用条件を全題材/両周で満たすまで未採用とする。
 

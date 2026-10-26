@@ -5,7 +5,10 @@ open Lean
 /-- Check the actual native call site, in addition to equality of the Lean
 functions. Equivalent results alone cannot detect an unconnected optimizer. -/
 def main (args : List String) : IO Unit := do
-  let [directory] := args | throw (IO.userError "NativeSelectorDispatch CANDIDATE")
+  let (directory,tournament) ← match args with
+    | [directory] => pure (directory,false)
+    | [directory,"tournament"] => pure (directory,true)
+    | _ => throw (IO.userError "NativeSelectorDispatch CANDIDATE [tournament]")
   let root := System.FilePath.mk directory
   let report := root / "native-selector-dispatch.json"
   unless root.isAbsolute do throw (IO.userError "absolute dispatch directory required")
@@ -21,7 +24,8 @@ def main (args : List String) : IO Unit := do
   let result ← IO.Process.output {cmd := "/usr/bin/nm",args := #["-u",object.toString]}
   unless result.exitCode == 0 do throw (IO.userError result.stderr)
   let names := result.stdout.splitOn "\n" |>.map (·.trimAscii.toString)
-  let expected := "_l_SharedCoverage_Deferred_Sparse_choose_x3f"
+  let expected := if tournament then "_l_SharedCoverage_Deferred_Tournament_choose_x3f"
+    else "_l_SharedCoverage_Deferred_Sparse_choose_x3f"
   let old := "_l_SharedCoverage_Deferred_chooseDeferred_x3f"
   let direct := names.contains expected
   let legacy := names.contains old

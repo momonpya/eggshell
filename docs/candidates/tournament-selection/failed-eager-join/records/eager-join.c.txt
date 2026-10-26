@@ -1,0 +1,39 @@
+LEAN_EXPORT lean_object* l_StableTournament_joinCached___redArg(lean_object* v_order_409_, lean_object* v_depth_410_, lean_object* v_inst_411_, lean_object* v_held_412_, lean_object* v_leftBest_413_, lean_object* v_rightBest_414_, lean_object* v_left_415_, lean_object* v_right_416_){
+_start:
+{
+lean_object* v_best_417_; lean_object* v_next_418_; uint8_t v___x_419_; 
+v_best_417_ = lean_ctor_get(v_left_415_, 0);
+lean_inc(v_best_417_);
+lean_inc_ref(v_right_416_);
+v_next_418_ = l_StableTournament_join___redArg(v_order_409_, v_depth_410_, v_left_415_, v_right_416_);
+lean_inc_ref(v_inst_411_);
+v___x_419_ = l_Option_instDecidableEq___redArg(v_inst_411_, v_best_417_, v_leftBest_413_);
+if (v___x_419_ == 0)
+{
+lean_dec_ref(v_right_416_);
+lean_dec(v_rightBest_414_);
+lean_dec(v_held_412_);
+lean_dec_ref(v_inst_411_);
+return v_next_418_;
+}
+else
+{
+lean_object* v_best_420_; uint8_t v___x_421_; 
+v_best_420_ = lean_ctor_get(v_right_416_, 0);
+lean_inc(v_best_420_);
+lean_dec_ref(v_right_416_);
+v___x_421_ = l_Option_instDecidableEq___redArg(v_inst_411_, v_best_420_, v_rightBest_414_);
+if (v___x_421_ == 0)
+{
+lean_dec(v_held_412_);
+return v_next_418_;
+}
+else
+{
+lean_object* v___x_422_; 
+v___x_422_ = l_StableTournament_Cache_relabel___redArg(v_next_418_, v_held_412_);
+return v___x_422_;
+}
+}
+}
+}
