@@ -21,11 +21,12 @@ def main (args : List String) : IO Unit := do
   let leaf := args.head? == some "leaf"
   let sparse := args.head? == some "sparse"
   let dispatch := args.head? == some "dispatch"
+  let streaming := args.head? == some "streaming"
   let receipt := args.head? == some "receipt"
-  let args := if receipt || prepared || payload || fold || leaf || sparse || dispatch then args.tail else args
+  let args := if receipt || prepared || payload || fold || leaf || sparse || dispatch || streaming then args.tail else args
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let root := base / (if dispatch then "incremental-dispatch-20261027" else if sparse then "incremental-selection-20261027" else if leaf then "bounded-leaf-encoding-20261027" else if fold then "selector-weight-fold-20261027" else if payload then "nonempty-source-payload-20261027" else if prepared then "receipt-preparation-20261027" else if receipt then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
-  let parent := base / (if dispatch then "incremental-selection-20261027" else if sparse then "bounded-leaf-encoding-20261027" else if leaf then "selector-weight-fold-20261027" else if fold then "nonempty-source-payload-20261027" else if payload then "receipt-preparation-20261027" else if prepared then "receipt-row-postings-20261027" else if receipt then "synaptic-publication-delta-20261027" else "captured-correspondence-20261026")
+  let root := base / (if streaming then "streamed-incidence-20261027" else if dispatch then "incremental-dispatch-20261027" else if sparse then "incremental-selection-20261027" else if leaf then "bounded-leaf-encoding-20261027" else if fold then "selector-weight-fold-20261027" else if payload then "nonempty-source-payload-20261027" else if prepared then "receipt-preparation-20261027" else if receipt then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
+  let parent := base / (if streaming then "incremental-dispatch-20261027" else if dispatch then "incremental-selection-20261027" else if sparse then "bounded-leaf-encoding-20261027" else if leaf then "selector-weight-fold-20261027" else if fold then "nonempty-source-payload-20261027" else if payload then "receipt-preparation-20261027" else if prepared then "receipt-row-postings-20261027" else if receipt then "synaptic-publication-delta-20261027" else "captured-correspondence-20261026")
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
   if prepared && args == ["reference"] then
@@ -51,7 +52,7 @@ def main (args : List String) : IO Unit := do
     IO.FS.createDir root
     let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",(parent / "checkout").toString,(root / "checkout").toString]}
     unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
-    if receipt || prepared || payload || fold || leaf || sparse || dispatch then return
+    if receipt || prepared || payload || fold || leaf || sparse || dispatch || streaming then return
     let core := root / "checkout/Eggshell"
     let index ← IO.FS.readFile (core / "SynapseIndex.lean")
     let recommend ← IO.FS.readFile (core / "SynapseRecommend.lean")
@@ -120,6 +121,10 @@ def main (args : List String) : IO Unit := do
     let output := if mode == "run-profile" || resume then root / "fixed-source-hooks" else root / label
     let hooks := mode == "run-hooks"
     let source := mode == "run-source" || resume
+    if (dispatch || streaming) && source then
+      let checked ← IO.Process.output {cmd := toolchain ++ "/bin/lean",args := #["--run",
+        project ++ "/tools/research/NativeSelectorDispatch.lean",root.toString]}
+      unless checked.exitCode == 0 do throw (IO.userError (checked.stdout ++ checked.stderr))
     let command := #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_DATA_ROOT=" ++
       (if hooks then output / "native/data" else output / "data").toString,
       (root / (if hooks then "hooks-build/StudyMain"
@@ -152,7 +157,7 @@ def main (args : List String) : IO Unit := do
       else if mode == "profile" then "tools.research.ProfileSynapticSource"
       else if mode == "explain" then "tools.research.DeliveryExplain"
       else if mode == "receipt-audit" then if prepared then "tools.research.ReceiptPreparationAudit" else "tools.research.ReceiptPostingsAudit"
-      else if sparse || dispatch then "tools.research.IncrementalSelectionAudit" else if leaf then "tools.research.PageEncodingAudit" else if fold then "tools.research.SelectorFoldAudit" else if payload then "tools.research.NonemptySourcePayloadAudit" else "tools.research.SynapticPublicationAudit"))
+      else if sparse || dispatch || streaming then "tools.research.IncrementalSelectionAudit" else if leaf then "tools.research.PageEncodingAudit" else if fold then "tools.research.SelectorFoldAudit" else if payload then "tools.research.NonemptySourcePayloadAudit" else "tools.research.SynapticPublicationAudit"))
     |>.setObjVal! "force" (toJson (if mode == "contract" then #["Eggshell.ContractAudit"] else (#[] : Array String)))
     |>.setObjVal! "objectModules" (toJson (root / "objects.json").toString)
     |>.setObjVal! "baselineResponse" (toJson (parent / "product-build/runtime.rsp").toString)

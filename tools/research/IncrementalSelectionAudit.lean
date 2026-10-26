@@ -8,6 +8,8 @@ open Lean Eggshell SharedCoverage Deferred
 #print axioms Sparse.score_exact
 #print axioms Sparse.fill_exact
 #print axioms Sparse.choose_exact
+#print axioms Sparse.Incidence.changed_streaming_exact
+#print axioms KeyPostings.compactDirectory_exact
 
 private def check (value : Bool) (message : String) : IO Unit :=
   unless value do throw (IO.userError message)
@@ -16,6 +18,23 @@ private def check (value : Bool) (message : String) : IO Unit :=
 private def reference (p : Problem) : Option (Selection p) := do
   let initial ← empty? p
   pure (prefer (fillDeferred p.offers.size initial) (bestSingleton initial))
+
+private def densePostings (population keys : Nat) : IO Json := do
+  let _ : Hashable Nat := ⟨fun _ => 0⟩
+  let rows := (Array.range population).map fun index => (index%keys,index%97)
+  let queries := (List.range keys) ++ [keys]
+  let started ← IO.monoMsNow
+  let parent := KeyPostings.directory Prod.fst rows
+  let original := queries.map fun key => parent[key]?.getD #[]
+  check ((original.map Array.size).sum == population) "old postings were not fully prepared"
+  let parentMs := (← IO.monoMsNow)-started
+  let started ← IO.monoMsNow
+  let current := KeyPostings.prepare Prod.fst rows
+  let rebuilt := queries.map current.lookup
+  check (rebuilt == original) "postings changed order, duplicates or collided full keys"
+  return Json.mkObj [("rows",toJson population),("keys",toJson keys),
+    ("forcedHashCollisions",toJson true),("parentMs",toJson parentMs),
+    ("candidateMs",toJson ((← IO.monoMsNow)-started)),("exactOriginalSequences",toJson true)]
 
 private def scenario (count population groups budget : Nat) : IO Json := do
   let costs := (Array.range (count+2)).map fun i => if i == 0 then (40,80) else (i%7+1,i%9+2)
@@ -38,6 +57,12 @@ private def scenario (count population groups budget : Nat) : IO Json := do
           stored.gains[index] == Sparse.rawGain (evaluation current) index) "cached marginal differs from full scan"
       let some best := Sparse.best current stored | break
       let before := evaluation current
+      check (prepared.nodes.changed before.nodeIndex p.offers[best.index].closure ==
+        hashDistinct (prepared.nodes.touched (p.offers[best.index].closure.filter
+          fun value => !before.nodeIndex.contains value))) "streamed changed nodes reordered offers"
+      check (prepared.cues.changed before.cueIndex p.offers[best.index].covers ==
+        hashDistinct (prepared.cues.touched (p.offers[best.index].covers.filter
+          fun value => !before.cueIndex.contains value))) "streamed changed cues reordered offers"
       states := states.push (Json.mkObj [("selected",toJson current.selected.length),
         ("costUpdates",toJson (prepared.nodes.changed before.nodeIndex p.offers[best.index].closure).length),
         ("gainUpdates",toJson (prepared.cues.changed before.cueIndex p.offers[best.index].covers).length)])
@@ -72,7 +97,13 @@ def main (args : List String) : IO UInt32 := do
       let result ← scenario count population groups budget
       IO.println result.compress
       results := results.push result
+    let mut postings := #[]
+    for (population,keys) in [(128,1),(8192,1),(16384,8)] do
+      let result ← densePostings population keys
+      IO.println result.compress
+      postings := postings.push result
     IO.FS.writeFile (root / "results.json") (Json.mkObj [("synthetic",toJson true),
-      ("scenarios",toJson results),("answeringModelCalls",toJson (0 : Nat)),("productionAdoption",toJson false)]).pretty
+      ("scenarios",toJson results),("postings",toJson postings),
+      ("answeringModelCalls",toJson (0 : Nat)),("productionAdoption",toJson false)]).pretty
     return 0
   catch error => IO.eprintln error.toString; return 1

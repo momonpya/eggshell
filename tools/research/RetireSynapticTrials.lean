@@ -29,15 +29,25 @@ def main (args : List String) : IO Unit := do
   let payload := args == ["payload-checks"]
   let fold := args == ["fold-ended"]
   let old := args == ["prior-ended"]
+  let sparse := args == ["sparse-ended"]
+  let dispatch := args == ["dispatch-ended"]
+  let streaming := args == ["streaming-ended"]
   let prepared := args == ["prepared-checks"] || ended
-  unless prepared || payload || fold || old || args.isEmpty do throw (IO.userError "RetireSynapticTrials [prepared-checks|prepared-ended|payload-checks|fold-ended|prior-ended]")
+  unless prepared || payload || fold || old || sparse || dispatch || streaming || args.isEmpty do throw (IO.userError "RetireSynapticTrials [prepared-checks|prepared-ended|payload-checks|fold-ended|prior-ended|sparse-ended|dispatch-ended|streaming-ended]")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let report := project / "docs/candidates" / (if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
+  let report := project / "docs/candidates" / (if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
     (if old then "records/retirement-prior.json" else if ended then "records/retirement-finished.json" else "records/retirement.json")
   unless !(← report.pathExists) do throw (IO.userError "keep retirement evidence")
   let mut targets := #[]
-  let runs := if old then #[
+  let runs := if streaming then #[("streamed-incidence",#["fixed-source-hooks","audit-build",
+      "contract-build","source-build","profile-build","streaming-postings-marginals"])]
+    else if dispatch then #[("incremental-dispatch",#["product-build/StudyMain","fixed-source-hooks",
+      "audit-build","contract-build","source-build","profile-build","public-entry-marginals"])]
+    else if sparse then #[("incremental-selection",#["product-build/StudyMain","fixed-source-hooks",
+      "audit-build","contract-build","source-build","profile-build","checked-incremental-marginals",
+      "shared-evaluation-marginals","incremental-marginals"])]
+    else if old then #[
       ("synaptic-publication-delta",#["product-build/StudyMain"]),
       ("receipt-row-postings",#["product-build/StudyMain"]),
       ("receipt-preparation",#["product-build/StudyMain"]),
@@ -70,7 +80,8 @@ def main (args : List String) : IO Unit := do
   unless processes.exitCode == 0 do throw (IO.userError "cannot inspect trial ownership")
   for name in ["captured-correspondence-20261026","synaptic-publication-delta-20261027",
       "receipt-row-postings-20261027","receipt-preparation-20261027","nonempty-source-payload-20261027",
-      "selector-weight-fold-20261027","bounded-leaf-encoding-20261027","incremental-selection-20261027"] do
+      "selector-weight-fold-20261027","bounded-leaf-encoding-20261027","incremental-selection-20261027",
+      "incremental-dispatch-20261027","streamed-incidence-20261027"] do
     let root := base / name
     protectLinks (root / "product-build/lib") targets
     let response ← IO.FS.readFile (root / "product-build/runtime.rsp")

@@ -1,0 +1,64 @@
+--- a/tools/DeferredCoverage.lean
++++ b/tools/DeferredCoverage.lean
+@@ -348,0 +349,8 @@
++
++/-- Stream postings into one membership set. Do not build a large list of
++duplicate affected offers merely to throw the duplicates away afterwards. -/
++def Incidence.changedStreaming {features : Fin n → List (Fin d)} (layout : Incidence features)
++    (seen : Std.HashMap (Fin d) Unit) (added : List (Fin d)) : List (Fin n) :=
++  let input := added.filter fun feature => !seen.contains feature
++  let result := input.foldl (fun state feature => (layout.lookup feature).foldl HashDistinct.step state) ({},[])
++  result.2.reverse
+@@ -349,0 +358,6 @@
++@[csimp] theorem Incidence.changed_streaming_exact : @Incidence.changed = @Incidence.changedStreaming := by
++  funext n d features layout seen added
++  unfold changed changedStreaming Incidence.touched hashDistinct
++  rw [List.foldl_flatMap]
++  rfl
++
+--- a/tools/KeyPostings.lean
++++ b/tools/KeyPostings.lean
+@@ -35,0 +36,40 @@
++/-- Append to persistent arrays repeatedly copies their shared prefixes.
++Collect immutable cons cells, then materialize each ordered array once. -/
++def reversedDirectory (keyOf : α → κ) (values : Array α) : Std.HashMap κ (List α) :=
++  values.foldl (fun found value => found.insert (keyOf value)
++    (value :: found[keyOf value]?.getD [])) {}
++
++theorem reversedDirectory_exact (keyOf : α → κ) (values : Array α) (key : κ) :
++    (reversedDirectory keyOf values)[key]?.getD [] =
++      (values.filterMap (fun value => if keyOf value == key then some value else none)).toList.reverse := by
++  have go : ∀ reversed : List α,
++      (reversedDirectory keyOf reversed.reverse.toArray)[key]?.getD [] =
++        (reversed.reverse.toArray.filterMap (fun value => if keyOf value == key then some value else none)).toList.reverse := by
++    intro reversed
++    induction reversed with
++    | nil => simp [reversedDirectory]
++    | cons value previous ih =>
++      have step : (value :: previous).reverse.toArray = previous.reverse.toArray.push value := by simp
++      rw [step]
++      simp only [reversedDirectory,Array.foldl_push,Std.HashMap.getElem?_insert]
++      by_cases same : keyOf value = key
++      · simpa [same,reversedDirectory,Array.filterMap_push] using congrArg (List.cons value) ih
++      · simpa [same,reversedDirectory,Array.filterMap_push] using ih
++  simpa using go values.toList.reverse
++
++def compactDirectory (keyOf : α → κ) (values : Array α) : Std.HashMap κ (Array α) :=
++  (reversedDirectory keyOf values).map (fun _ rows => rows.reverse.toArray)
++
++theorem compactDirectory_exact (keyOf : α → κ) (values : Array α) (key : κ) :
++    (compactDirectory keyOf values)[key]?.getD #[] = values.filterMap
++      (fun value => if keyOf value == key then some value else none) := by
++  have exact := reversedDirectory_exact keyOf values key
++  unfold compactDirectory
++  simp only [Std.HashMap.getElem?_map]
++  cases found : (reversedDirectory keyOf values)[key]? with
++  | none => simpa [found] using congrArg (fun rows => rows.reverse.toArray) exact
++  | some rows =>
++    simp only [found,Option.getD_some] at exact
++    simp only [Option.map_some,Option.getD_some]
++    rw [exact,List.reverse_reverse,Array.toArray_toList]
++
+@@ -37 +77 @@
+-  ⟨directory keyOf values,directory_exact keyOf values⟩
++  ⟨compactDirectory keyOf values,compactDirectory_exact keyOf values⟩

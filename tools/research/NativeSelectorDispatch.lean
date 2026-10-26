@@ -8,7 +8,7 @@ def main (args : List String) : IO Unit := do
   let [directory] := args | throw (IO.userError "NativeSelectorDispatch CANDIDATE")
   let root := System.FilePath.mk directory
   let report := root / "native-selector-dispatch.json"
-  unless root.isAbsolute && !(← report.pathExists) do throw (IO.userError "new absolute dispatch report required")
+  unless root.isAbsolute do throw (IO.userError "absolute dispatch directory required")
   let build := root / "product-build"
   let object := build / "Eggshell_Handoff.o"
   let source := root / "checkout/Eggshell/Handoff.lean"
@@ -25,9 +25,13 @@ def main (args : List String) : IO Unit := do
   let old := "_l_SharedCoverage_Deferred_chooseDeferred_x3f"
   let direct := names.contains expected
   let legacy := names.contains old
-  IO.FS.writeFile report (Json.mkObj [("object",toJson object.toString),
+  let checked := Json.mkObj [("object",toJson object.toString),
     ("publicEntry",toJson "SharedCoverage.choose?"),("expectedNativeCallee",toJson expected),
     ("expectedCalleePresent",toJson direct),("legacyCalleePresent",toJson legacy),
-    ("sourceAndLinkChecked",toJson true),("productionAdoption",toJson false)]).pretty
+    ("sourceAndLinkChecked",toJson true),("productionAdoption",toJson false)]
+  if ← report.pathExists then
+    let previous ← IO.ofExcept (Json.parse (← IO.FS.readFile report))
+    unless previous == checked do throw (IO.userError "native dispatch differs from the preserved report")
+  else IO.FS.writeFile report checked.pretty
   unless direct && !legacy do throw (IO.userError "native hook does not call the proved incremental selector")
   IO.println "Native Handoff calls the incremental selector directly; legacy dispatch absent"

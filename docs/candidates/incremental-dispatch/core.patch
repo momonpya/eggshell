@@ -1,0 +1,9 @@
+--- a/tools/DeferredCoverage.lean
++++ b/tools/DeferredCoverage.lean
+@@ -184 +184 @@
+-@[csimp] theorem choose_deferred_compiled : @choose? = @chooseDeferred? := by
++theorem choose_deferred_compiled : @choose? = @chooseDeferred? := by
+@@ -483 +483,2 @@
+-@[csimp] theorem choose_exact : @chooseDeferred? = @choose? := by
++@[csimp] theorem choose_exact : @SharedCoverage.choose? = @choose? := by
++  rw [choose_deferred_compiled]

@@ -24,59 +24,29 @@
 - 正本vectorは一つ。有界なsegment、階層router、遅延原文取得、compaction、coldからの呼戻しで全履歴のRAM常駐を避ける。Bloomと配置hashは役割がある場合だけ加える。
 - 未使用だけで記憶を消さない。物理圧縮/再配置は元bytes・証拠・旧pinを保持する。明示保持方針の削除は原文不在を明示し、digest墓標だけで原文配送やcompletedが可能とは扱わない。
 
-## 現在地
+## 現在地と次の順序
 
-- Leanの共有原文準備候補で、実seedの80同時要求は1回の準備・79件の共有待ちとなり原文不一致0、原文取得APIの最大1,004ms。1/4/16 DB×10/40/80条件と、出版/旧reader/非書込みfilesystem/期限切れ/権限境界の試験も通った。関連RSS最大1,294,640 KiB。ただし実フックは28,987msで未完了、必要原文0/4、回答実験0/6。百万窓・日次蓄積・NAS・総token改善・95%は未達/未検証。選択前の共有hit後にも束の行重複除去が二乗で繰り返されている。全registryの一括準備を不変blockの差分準備へ移す課題も残る。[shared-preparation.md](docs/shared-preparation.md)。
-- その後、束の行重複除去を順序まで一致するhash処理へ置き換えた隔離候補も検査した。変更済み通常moduleを親のobjectから再利用するharness欠陥を直し、ソース/object/link一致を確認した実行物afdc9d82…で、新規sessionの実フックは28,992ms・必要原文0/4のままだった。修正前の親と同じbinaryの試行と、sessionを再利用した363msの空応答は評価から除外した。同じ修正を成功前提で繰り返さず、取得/出版への内容対応と差分blockへ進む。[shared-bundle-projection.md](docs/shared-bundle-projection.md)。
-- 主に5万窓・単一利用の隔離候補を検証した段階。10〜80人、数年相当、NAS並行障害、100万窓超の実payload、総token改善は未合格。候補は未採用。
-- 字句のpostings/頻度差分と消費の逆引きは既存。残る全件処理は変更対象列挙と来歴再生であり、同じ索引を新設し直さない。
-- seedの52 RPC原本文はすべて保存済み。warm自身の中立な来歴出版がpinを古くする不具合を隔離修正し、同一入力のモデルなし比較で親失敗/候補成功、56 native来歴の欠落0を確認。再warm224ms。これは実フックやtoken改善の合格ではない。[snapshot-refresh.md](docs/snapshot-refresh.md)。
-- 旧seed DB/private cache・比較DB/cache・旧prefixは監査後に削除済み。bee29fda固定で続行できる現存seedはない。worker-lifecycle候補79bcbc4a…は、10/40/80待機client・実worker6個の終了/遅延受付試行とContractAuditが成功し、終了後の再spawn/残存0。これは共有DB負荷や元seed超過原因の再現ではない。[worker-lifecycle.md](docs/worker-lifecycle.md)。
-- native-publication候補fb0b1e12…で、元本文とportable時系列を同一commitへ接続。commit前の失敗/ACK喪失再送/遅れた終了記録/DBだけの復元と再送、実Pre/Post/Stopの6観測・13journal記録、3辺、既存ContractAuditを検査した。集計RSS最大2,612,592 KiB。保存ACKから配送済みの印を作る経路も除いた。これは共有投入ACK・80人DB負荷・95%配送・総tokenの合格ではない。次の測定runtimeは残る投入/launcher検査後に固定する。[native-publication.md](docs/native-publication.md)。
-- group-publication候補279b64b2…で有界な群の出版を実装。直接保存の18条件・780要求で初回受付93件の失敗を確認し、同じ初期DB・入力の出版中核では全780件を保存、ACK済み欠落/再送重複0。1DB・80要求・50 KBは準備/commit/読戻し込み4,617ms。ただし複数DBの成功条件には遅延悪化もあり、全条件の高速化とはしない。その時点では共有サービス未接続で、背景索引のstale-writer拒否も残っていた。[group-publication.md](docs/group-publication.md)。
-- publication-service候補e4dad6a6…で実フックとkeepの保存を一つの出版入口へ接続。DBごとのcapability、出版責任者、有界な受付と失敗群の分離を実装した。loopback TCPの18条件・780要求と再送で原文/時系列の欠落・重複0を検査。負荷中の終了でtask所有一覧を失う不具合を修正し、処理中と待機中の80要求から1,524msで終了、再起動後の全件再送で80件を保持した。ACK済み2件の欠落も0。これは80人の複数PC/NAS利用、全viewの責任者集約、95%配送や総token改善の合格ではない。[publication-service.md](docs/publication-service.md)。
-- source-authority候補c7bdbb03…で、背景再生から原文intervalを再出版する経路を削除。原文writerを保持したnative診断で、旧候補のbusyを再現し、新候補の再生完了、source head不変、不足intervalを補完しないこと、保存側の再送による解消を確認した。取得済みpublicationのviewと後から増えた準備債務も分けた。実フックはstderr空、6観測・13記録・3辺を保持し、別private/読取専用の必要コード2/2を1,951msで配送。これは全viewの競合解決や95%の本評価ではない。[source-authority.md](docs/source-authority.md)。
-- 95%を整数で測るLean監査を実本文へ接続。別チャット/新private領域/読取専用DBの合成試行で必要コード2/2を配送し、意味検索完了、discovery/focus各7窓cache hit、source再埋め込み0、実フック1,843ms。これは6段階/保留実務/大規模の95%達成ではない。[required-delivery.md](docs/required-delivery.md)。
-- 旧seed費用は3,472,146総token、115フック失敗0、daemon終了超過。失敗費用を除外しない。新系列の題材1/2/3・2周目は0/6。
-- 研究harnessで出版serviceを直接所有し、chat→出版の順に実終了/endpoint除去まで確認するようにした。古いnative計数名を参照する入場検査も修正。実native試行と課金なしseed/fresh模擬試行は成功し、終了後の残存0。製品runtimeはc7bdbb03…から変えていない。連続保存中の索引警告4件は残るが、静止後warmは14/14窓有効・欠落/不正0。新seed取得へ進むためのharness検証であり、95%や総token改善の証拠ではない。[study-services.md](docs/study-services.md)。
-- 空き容量が回復した後、指示により旧DB/キャッシュ等38対象と、全登録ownerが消失済みの私有cache81個を追加削除した。論理サイズ合計約259 MiB、archiveなし。最初のseed起動は未作成の出力親に対する容量検査で止まり、モデル起動0・残存0。準備側で親を作成し、元記録を残した別attemptへ進む。runtimeは同一。[unused-study-data.md](docs/unused-study-data.md)。
-- 新seedはc7bdbb03…・5.6-luna/xhigh・AGENTS無効で取得完了、3,691,514総token、61フック失敗0、終了後残存0。待機保存2件を回収し、静止warmは1,855窓有効・欠落/不正0。native開始/終了/portable origin各29件、欠落0。配送前監査でToolChainキー/HLSL分岐が原文にある一方、番号付き行としては未照合と判明したため、不在として除外せず原文文字範囲の検査を接続する。題材1〜3・2周目は引き続き0/6。[team-seed.md](docs/team-seed.md)。
-- 元出力の文字範囲を使うLean監査を接続し、配送前にDB内の必要項目を題材別4/6/5件と凍結した。製品runtimeは同一。題材1の独立2チャットは12.8/11.7秒で同じ本文を返したが、配送は2/4件で95%未達。言語状態と末尾警告は同じ元観測にあるのに本文から落ちている。回答モデルへの入場を拒否し、6段階は0/6のまま。座標未照合を不在として分母から外さず、入場・原文共有・選択を切り分ける。13境界検査成功は配送成功やtoken改善の代用にしない。[original-evidence-audit.md](docs/original-evidence-audit.md)。
-- 一つの型付き選択Planから実配送と診断を作る隔離候補で、元本文のバイト一致と新規コンパイルしたoracle/ContractAuditを確認。欠落所有者は推薦3番目・focus6番目で入場済み。言語状態は候補にあるが未選択、末尾警告は候補の和集合にも元出力81文字が欠ける。準備済み行の独立利用だけでは838行/21単位から8単位を選んでも2/4件、途中のシナプス結果を採る案も2/4件で本文が不安定だった。いずれも未採用。原文recordの完全な候補集合とqueryの順位信号を分離し、重み変更やcommand認識器の追加でごまかさない。新たな回答モデル呼出し0、6段階は0/6。[delivery-selection-plan.md](docs/delivery-selection-plan.md)。
-- 旧record閉包のSHAは今回runtimeと一致し、修正削除ではない。独立したシナプス探索で原文経路を無効化する条件、採点後の16件打切り、32件取得型の順位への流用を確認した。全順位保持は初回未完了、CPU診断3/4件。所有者ごと一度の原文record準備は26.5/24.9秒・2/4件、共有初期費用を束ねる案も26.8/25.4秒・2/4件で未採用。原文範囲・native境界・新規oracle/ContractAuditの成功は配送合格の代用にしない。シナプス全探索は診断条件で2,086照会・1.95秒、通常の256照会上限では完走できない。一方、必要4項目への辺はこの診断でも未確認。座標索引には依然としてliteral nl/sedコマンド文法への依存があるため、これ以上の選択重み調整を止め、取得時の入力内容と元出力の照合・対応の同時出版へ進む。ファイルでないMCP/JSONは原文/fieldのまま扱い、曖昧なfile座標は作らない。回答モデル呼出し0、6段階0/6。[focus-domain.md](docs/focus-domain.md)。
-- コマンドを入力に持たない内容対応のLean部品を隔離実装した。完全な参照索引、一意な対応、錨からの連続一致を証明。出力側を索引化し入力をstreamする状態は、入力増加によってエントリ数/キー集合が増えず、同じ位置の併合は冪等・交換・結合的。1万入力レコード/出力3件の検査と通常axiom監査に成功した。これは取得/出版adapterや実フックへの接続、95%配送、総token改善の合格ではない。次はMCPを含む原文recordをfile座標の成否と独立に正規化し、主張/消費/共起/利用の対応を原文と同時に保存する。file aliasは確認済み内容がある場合の補助であり必須にしない。[content-correspondence.md](docs/content-correspondence.md)。
+全体はactive。候補は本体・README実績・releaseへ未採用。95%配送、総token改善、10〜80人・数年・NASの実証は未達。回答モデルの新しい比較は0回、題材1/2/3と2周目は0/6のまま。部品の証明やAPI負荷試験を全体の合格にしない。
 
-## 実行順と完了証拠
+- 固定したC7 seedは原文45,216,846 bytes・revision 31、取得費用3,691,514総token、61フック失敗0。必要原文を配送前に題材別4/6/5件と凍結した。後から座標が付かないことを理由に分母を減らさない。[team-seed.md](docs/team-seed.md)、[original-evidence-audit.md](docs/original-evidence-audit.md)。
+- 内容対応はコマンドに依存せず取得/同一出版/差分無効化へ隔離接続済み。ファイル以外のMCP/JSON/一般テキストも元recordを保持する。3辺の整数接続は元Fact・postingsと同じcommitへ統合し、実seedの27,825推薦が独立完全探索と順序一致した。これは全warmの差分化や実配送の合格ではない。[captured-correspondence.md](docs/captured-correspondence.md)、[synaptic-publication-delta.md](docs/synaptic-publication-delta.md)。
+- 以前の実本文8/15件（53.3%）は不合格。その際に、未配送7件中6件が「選択済みの全範囲・費用0・本文なし」という虚偽被覆だった。共有payloadの非空性を型/復号境界で保証し、空なら任意ツールの原文recordへ渡す修正を隔離した。空payloadへ戻さない。[receipt-preparation.md](docs/receipt-preparation.md)、[nonempty-source-payload.md](docs/nonempty-source-payload.md)。
+- 限界費用/価値は、選択によって新しく覆われたnode/cueから影響候補だけを更新するLean部品を実装し、全選択順まで全再計算と一致することを証明した。公開入口を呼ぶnative比較は512候補・16,384cueで1,280→265ms。コンパイル時置換の2段登録による接続漏れも修正し、実Handoff objectの呼出先検査を実seed監査の起動条件へ加えた。[incremental-selection.md](docs/incremental-selection.md)、[incremental-dispatch.md](docs/incremental-dispatch.md)。
+- 直近のruntime ff2f9419…では、逆引きの共有配列コピーを先頭追加後の一括配列化へ、変更対象の巨大な重複展開を逐次収集へ隔離置換した。値・順序・重複まで証明し、全ハッシュ衝突もnativeで検査。8,192行の構築は50msから1ms未満。しかし同じC7の実フックは29,014/29,007/29,013msで未完了、実本文0/4・0/6・0/5。集計RSS最大1,850,224KiB、保護停止/残存0。別のCPU診断では全候補の比較が支配し、順位分母をLCMへまとめた巨大Nat積の比較が残る。配送・総tokenの合格にはしない。[streamed-incidence.md](docs/streamed-incidence.md)。
+- PageMapの分割判定で全pending行を先に符号化するメモリ増加は隔離修正済み。元の一commit、完全保存、取消/回復、旧pinを保持する。[bounded-leaf-encoding.md](docs/bounded-leaf-encoding.md)。共有準備APIの80同時要求では1回の準備・79件の共有待ちを検査したが、実フック全体の80並行利用や全registryの差分準備の証拠ではない。[shared-preparation.md](docs/shared-preparation.md)。
 
-限界費用/価値の逆引きと状態に結び付けた差分保持をLeanで証明し、独立native比較は512候補・16,384cueで1,239→258ms、全64件の選択順一致。ただしC7実フックは約29秒・0/15のまま。CPU記録とHandoff objectで、コンパイル時置換の2段登録により旧chooseDeferredが実行され、新部品へ接続されていないことを特定した。次は公開入口からの置換を一つにし、比較試験も公開入口を呼ぶ。呼出先のobject検査を実フック前に追加し、同じ凍結15項目を再監査する。最初のEvaluation再構築による81.8秒の悪化も記録済み。回答モデル0・6段階0/6・総token未測定・未採用。[incremental-selection.md](docs/incremental-selection.md)。
+直近の実行順は次のとおり。
 
-巨大leafの分割前符号化を除いた隔離候補で、同じC7 seedのwarmは146,362msで完了し、集計RSS最大1,841,136KiB・保護停止なし・残存0。8,192行の完全保存、flush非公開、取消/回復、旧leaf/旧pin、新規oracle/ContractAudit、小fixture2/2を確認した。しかし実フック3題材は29,015/29,011/29,025msで未完了、0/4・0/6・0/5のまま。メモリ修正と配送期限を分けて扱う。次は候補・重み・予算・安定した選択順を保ち、限界値の再計算を影響した候補へ限定する。回答モデル0・6段階0/6・総token未測定・未採用。[bounded-leaf-encoding.md](docs/bounded-leaf-encoding.md)。
+1. 重みのbit数/共通因子、候補数、選択回数/比較回数を実入力で測る。採点の意味を変えず数値表現と再比較を直す。公開入口とnative呼出先を検査し、同じ固定snapshotの15項目を実本文で再監査する。題材2も展開数と段階時間を残す。
+2. DBサービスで不変の準備を共有し、canonical payloadの全読込/検証/復号や所有者ごとの原文単位の再構築を減らす。質問に依存する起点・重み・選択を出版時へ丸ごと移す要件にはしない。キャッシュの存在と実際の再利用を区別する。
+3. 配送条件を通したruntimeを固定し、空DB/新規チャットのseedから題材1/2/3と2周目へ進む。途中でruntimeを替えた回答比較は混ぜない。旧固定seedのモデルなし診断を新seed実験と呼ばない。
+4. 同一snapshot・ソース・質問・model・effort・harnessで、現行と候補を事前固定した同数の複数反復で比較する。入力+出力、cached input、失敗分を含め、seed費用を別記する。品質・期限・総token改善の採用条件を全題材/両周で満たすまで未採用とする。
 
-被覆重みのmap/再帰sumを1走査foldへ隔離置換し、任意の自然数でbenefit/afterBenefitが等しいことをLeanで証明した。重複cue・300bit超の重み・4状態の全限界値も参照式と一致。しかしC7再監査はwarmの集計RSS3,694,384KiBで保護停止し、実フック未実行。調査でPageMap.Writer.leavesが分割判定のために全pending行を先にencodeしていたと判明した。commitの原子性を保ち、encode前に物理ページの行数を判定する隔離修正を着手。8,192行の全順序、flush非公開、取消/回復、旧大型leafの読出し/更新を検査済み。全行を複数ページへ保存し、検索候補は捨てない。回答モデル0・6段階0/6・未採用。[selector-weight-fold.md](docs/selector-weight-fold.md)。
+失敗した重み調整、予約枠、max-min、主張類似度、全体最適化などを同じ成功前提で再試行しない。過去の証拠は各docs/candidatesとGit履歴に残し、現在の手順と混ぜない。終了済みDB/cache/helper/runtimeは抽出後に削除し、archiveとして保管しない。現在の原seedと実際に依存するobject/interfaceは保持する。
 
-共有payloadの非空性を型と復号境界で保証し、canonicalが空なら任意ツールの原文recordへ渡す隔離修正を実装した。コード/JSON/日本語/MCP合成試験で全原文被覆・正の費用・制御なしを確認し、新規oracle/ContractAuditも成功。しかし同じC7実フック3題材は全件約29秒で選択が未完了、0/4・0/6・0/5。親の8/15を現候補の成功としない。CPU sampleで限界被覆の重み合計、再帰的List.sumの繰返しを特定したため、候補・重み・予算・結果を保つ写像/累積の融合へ進む。必要なら逆引きによる限界値の差分更新を証明する。空payloadへ戻さず、候補を打ち切らない。warmをpublisher起動前に完了し、集計RSS3,594,272KiB・残存0。回答モデル0・6段階0/6・未採用。[nonempty-source-payload.md](docs/nonempty-source-payload.md)。
+## 共有実用化までの契約
 
-受領確認の共有と範囲→bindings索引を隔離実装し、同じC7 seedの実フックが25.7〜25.9秒で本文を返した。凍結した必要原文は題材1/2/3で2/4・3/6・3/5、合計8/15（53.3%）、95%に不合格。段階説明で、未配送7件中6件が「選択済みの全原文範囲、費用0、実本文なし」と判明した。canonicalの空配列を`shared=some []`へ変え、空templateのatomicUnitが全範囲を名乗る経路を特定。次は非空共有payloadの型と原文recordへの分岐でこの虚偽被覆を除く。重み調整には戻らない。warmは一度RSS保護で停止し、同じ原文/runtimeの単独warmの回復後に実フックを監査した。全Factを一writerで更新する初期構築の保持メモリも有界化する。旧候補16対象をarchiveなしで削除。回答モデル0・6段階0/6・総token改善未測定・未採用。[receipt-preparation.md](docs/receipt-preparation.md)。
-
-配送受領の番号付き原文行×Readの走査を、照合条件・値・順序・重複を保つ範囲postingsへ隔離置換した。1,024行の独立比較は873→8ms、新規oracle/ContractAudit成功。しかし同じC7 seedの題材1/2/3は約29秒で0/4・0/6・0/5のまま。CPU sampleで次の全件処理が`Transport.Plan.receipt`の原文範囲×全所有者・全行の照合と判明したため、範囲bindingsの索引と本文確認の共有へ進む。重み変更では対処しない。回答モデル0・6段階0/6・未採用。[receipt-row-postings.md](docs/receipt-row-postings.md)。
-
-推薦用の整数接続を元のFact・postingsと同じPageMap/commitへ隔離統合した。追加/削除/再追加/私有feedbackで独立探索の全推薦列と一致し、4,101 Factへの1件追加37ms、取消・再送・旧pin・scopeを検査した。実seedの39,757共有/20私有Factでも27,825推薦の順序一致。通常warmからの小フックは探索完走・2/2配送・2,147ms。しかしC7固定seedの題材1/2/3は約29秒で全件未完了、0/4・0/6・0/5だった。題材2は数値2.8秒、探索/結合10.3秒、選択計画22.2秒まで進み、CPU sampleで選択の費用/価値計算と、返却前の受領検査の原文行×Read走査を特定した。次は同じ条件と順序を保つ範囲postingsで受領検査を直す。Build全体の差分化や95%の合格ではない。回答モデル0・6段階0/6・未採用。[synaptic-publication-delta.md](docs/synaptic-publication-delta.md)。
-
-内容対応をLeanで実取得・同一出版・差分無効化・canonical/シナプス・利用ラベルまで隔離接続した。後着の対応をwarmが無視する不具合と、共有原文frameを旧形式でしか配送確認しない不具合を修正。入力streamの全候補一致、18改変対照、取消/再送/元ファイル削除後のDB-only復元が成功した。実Pre/Post/Stopは7観測・15時系列・任意名providerの15行を保持し、別private/読取専用の小fixtureは2/2・2,161ms、集計RSS1,947,824KiB・残存0。ビルド再開の依存更新漏れも修正し、型配置の実行試験と新規FullSearchOracle/ContractAuditを確認した。実行物f9fd4713…は未採用。保存/準備の競合警告1件、全件列挙、共有JSON全体の準備は残る。LLVMの4/6/5項目は未再監査、回答モデル0・6段階0/6、95%/総token改善/80人規模は未達。[captured-correspondence.md](docs/captured-correspondence.md)。
-
-永続整数接続を隔離runtimeの実フックへ接続し、受領の`synapticComplete=true`を確認した。27,825提案の独立全探索との順序一致を保ち、元範囲の結合は39.4→4.5秒、bundle projectionは48.2→4.9秒へ短縮した。区間被覆の正規化、owner→unit postingsの候補列/順序一致、照会内の共通cueDirectory準備もLeanで証明した。しかし実フックは約29秒の未完了通知のまま、最新の実本文も凍結4項目中0件だった。探索完走やcache部品の存在を配送成功として扱わない。次はDBサービスに検証済みblockと準備済みsnapshotを共有させ、全payloadの再読込/検証/復号とsessionごとの復元を除く。照会内の準備と照会間の共有を分け、蓄積・更新・80並行要求を実測する。回答モデル0・6段階0/6、95%と総token改善は未達・未採用。[routed-transport.md](docs/routed-transport.md)、[selector-preparation.md](docs/selector-preparation.md)、[shared-preparation.md](docs/shared-preparation.md)。
-
-接続用の保存部品もLeanで隔離実装した。原索引/DBのhead・scope・実装bytesに結び付けた整数の接続をPageMapへ保存し、原典Factの全件常駐なしに読める。原典1,024件/8MiB以下のbatchで初期構築し、未完了像はreadyにしない。27,825件の推薦は順序・根拠・優先順位・選択器の束ね方まで独立した完全走査と一致。私有の利用から共有の共起へ戻る合成陽性も9,689件で順序一致した。500ms枠は初回501msでなお失敗、続く完全走査は617/230ms、集計RSS283,168KiB。これはp99や実フック改善ではない。次は既存出版差分/warm責任者への接続と、推薦Hintから原文bindingへのtransportを実装し、全体期限から探索予算を配分する。必要な旧feedback参照まで削らず、使わなくなった推薦専用postingsは接続後に整理する。全探索後の選択・実配送は未確認、実配送5/15件・回答モデル0・6段階0/6・95%/総token未達/未採用は変わらない。[synaptic-routing-store.md](docs/synaptic-routing-store.md)。
-
-最優先は、シナプスの推薦用接続を出版時にコンパクトな索引へ投影し、有界な不変blockから走査する経路の接続である。実seedのモデルなし監査は題材1/2/3で2/4・0/6・3/5件、合計5/15件。題材2の未完了を分母から除外しない。通常の最初の照会は500msで打ち切られる一方、独立した完全走査は24,390ms・27,825推薦で題材1の4/4項目に到達した。整数IDによるLean試作は準備済みarenaの走査13/13/13ms、全推薦の根拠・優先順位まで完全一致。ただし全件準備に7,866msかかる常駐試作であり、実フックへは未接続。全DBを毎回RAMへ載せる方式として採用しない。出版差分・source/indexへの結合・私有scope・block cache上限を保つ保存/遅延読出しへ進め、接続後に同じ凍結原文の実配送を再監査する。重み調整や時間依存の途中結果採用へ戻らない。回答モデル0・6段階0/6、95%と総token改善は未達・未採用。[synaptic-routing.md](docs/synaptic-routing.md)。
-
-その前段のwarm失敗は、利用ラベルを付けられない読み取りにも全受領本文を復元していたことをCPU sampleで特定した。資格判定を同じ位置関係のまま復元より先へ移した隔離候補05e28ed8…で、同一59イベントの再生は16,807→8,232ms、消費4,877・利用18・元観測29の各ダイジェストは完全一致。実Pre/Post/Stop・source-only復元・小fixture2/2・fresh oracle/ContractAudit成功。これは上記5/15件の配送不合格を覆すものではなく、終了済みのDB/cache/helperは小さい記録を残して削除する。現在のseedと次の索引接続で実際に使う題材1の固定入力だけを保持する。[feedback-context.md](docs/feedback-context.md)。
-
-引用を原文record全体と完全一致で照合していた条件も隔離修正した。複数の引用を一度に検索し、各原文表現内で引用ごとに一つの検証済み文字範囲だけを保持する。保存時に作って捨てていた全record文字列索引は除き、compactな検証済み座標のみを保存する。同一source-only snapshot・別private領域の比較で、コード内識別子への支持0→4辺、MCP URI内の引用への支持0→1辺、read/consumedは完全同一、元DB不変。別のprintf出力に同じ語があっても必要なコード原文の支持とは数えない。実Pre/Post/Stop・DB-only復元・2/2小fixture配送2,142ms、7観測の取消/再送/長いJSON/別private復元、fresh oracle/ContractAudit/依存監査が通過。集計RSS最大2,739,312 KiB、回答モデル0、6段階0/6。並行保存時の準備警告、実題材の95%/総token改善/10〜80人・NAS条件は未合格・未採用。[literal-support.md](docs/literal-support.md)。
-
-直近の原文経路の修正：元本文・portable時系列と同じ出版へ、コマンド非依存の原文recordディレクトリを接続した隔離候補を検査した。任意プロバイダーの非JSON引数/出力、引用符で始まる通常文、長いMCP JSONを含む7観測の欠落0、取消/ACK喪失再送/変更block拒否/別private領域へのDB-only復元が成功。実Pre/Post/Stopでも6観測・27recordの完全原文被覆を確認し、小さい読取専用配送fixtureは2/2・1,788ms。fresh oracle/ContractAudit成功、集計RSS最大2,738,000 KiB、残存0。保存中のsource-changed準備警告1件は未解消。旧修正の削除ではなく部分経路だけの成功を完全契約と扱っていた問題であり、全record一致を要求する引用対応と有限の探索上限、LLVMの必要原文欠落は解消済みとしない。回答モデル呼出し0・6段階0/6、95%/総token改善は未達・未採用。[observed-records.md](docs/observed-records.md)。
-
-### A：終了・再開と耐久契約（着手点）
+### A：終了・再開と耐久契約
 
 投入ACK、元記録の出版、索引準備、配送ACKを型で分ける。取消せる背景処理と、原文/時系列/portable来歴の耐久記録を分ける。終了後のworker再起動を禁止し、queueを残して再開可能にする。終了超過だけで耐久済み生成を失敗にせず、残存processを無視して成功にもしない。
 

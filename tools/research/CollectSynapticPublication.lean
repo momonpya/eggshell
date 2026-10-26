@@ -26,11 +26,11 @@ private def commands (root : System.FilePath) : IO Json := do
 
 def main (args : List String) : IO Unit := do
   let [mode] := args | throw (IO.userError "CollectSynapticPublication routing|receipt|prepared|payload")
-  unless ["routing","receipt","prepared","payload","fold","leaf","sparse","dispatch"].contains mode do throw (IO.userError "known candidate required")
+  unless ["routing","receipt","prepared","payload","fold","leaf","sparse","dispatch","streaming"].contains mode do throw (IO.userError "known candidate required")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let name := if mode == "routing" then "synaptic-publication-delta" else if mode == "dispatch" then "incremental-dispatch" else if mode == "sparse" then "incremental-selection" else if mode == "leaf" then "bounded-leaf-encoding" else if mode == "fold" then "selector-weight-fold" else if mode == "payload" then "nonempty-source-payload" else if mode == "prepared" then "receipt-preparation" else "receipt-row-postings"
+  let name := if mode == "routing" then "synaptic-publication-delta" else if mode == "streaming" then "streamed-incidence" else if mode == "dispatch" then "incremental-dispatch" else if mode == "sparse" then "incremental-selection" else if mode == "leaf" then "bounded-leaf-encoding" else if mode == "fold" then "selector-weight-fold" else if mode == "payload" then "nonempty-source-payload" else if mode == "prepared" then "receipt-preparation" else "receipt-row-postings"
   let root := base / (name ++ "-20261027")
-  let parent := base / (if mode == "routing" then "captured-correspondence-20261026" else if mode == "dispatch" then "incremental-selection-20261027" else if mode == "sparse" then "bounded-leaf-encoding-20261027" else if mode == "leaf" then "selector-weight-fold-20261027" else if mode == "fold" then "nonempty-source-payload-20261027" else if mode == "payload" then "receipt-preparation-20261027" else if mode == "prepared" then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
+  let parent := base / (if mode == "routing" then "captured-correspondence-20261026" else if mode == "streaming" then "incremental-dispatch-20261027" else if mode == "dispatch" then "incremental-selection-20261027" else if mode == "sparse" then "bounded-leaf-encoding-20261027" else if mode == "leaf" then "selector-weight-fold-20261027" else if mode == "fold" then "nonempty-source-payload-20261027" else if mode == "payload" then "receipt-preparation-20261027" else if mode == "prepared" then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let output := project / "docs/candidates" / name
   let records := output / "records"
@@ -38,6 +38,7 @@ def main (args : List String) : IO Unit := do
     "Eggshell/SynapticRouting.lean","Eggshell/SynapticRoutingStore.lean","Eggshell/SynapticTransport.lean",
     "Eggshell/SynapticTopology.lean","Eggshell/SynapticTopologyStore.lean"]
     else if mode == "leaf" then #["Eggshell/DB/PageMap.lean"]
+    else if mode == "streaming" then #["tools/DeferredCoverage.lean","tools/KeyPostings.lean"]
     else if mode == "fold" || mode == "sparse" || mode == "dispatch" then #["tools/DeferredCoverage.lean"]
     else if mode == "payload" then #["Eggshell/CanonicalSourceDelivery.lean","Eggshell/Handoff.lean","Eggshell/SynapseTransport.lean"]
     else if mode == "prepared" then #["Eggshell/SynapseTransport.lean","Eggshell/SynapseBundles.lean","tools/KeyPostings.lean"]
@@ -82,7 +83,7 @@ def main (args : List String) : IO Unit := do
       (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] do throw (IO.userError "candidate still active")
     guards := guards.push (entry.fileName,guard)
   write (records / "guards.json") (toJson (guards.qsort fun a b => a.1 < b.1)).pretty
-  for run in ["atomic-projection","actual-checkpoint","span-receipt","keyed-receipt","forced-receipt","original-domain-regression","exact-marginals","atomic-page-encoding","incremental-marginals","checked-incremental-marginals","shared-evaluation-marginals","public-entry-marginals"] do
+  for run in ["atomic-projection","actual-checkpoint","span-receipt","keyed-receipt","forced-receipt","original-domain-regression","exact-marginals","atomic-page-encoding","incremental-marginals","checked-incremental-marginals","shared-evaluation-marginals","public-entry-marginals","streaming-postings-marginals"] do
     copyIf (root / run / "results.json") (records / run / "results.json")
   let native := root / "native-atomic-routing"
   copyIf (native / "routing-hook.json") (records / "native/routing-hook.json")
