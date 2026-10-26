@@ -16,11 +16,14 @@ private def replace (source before after : String) : IO String := do
 
 def main (args : List String) : IO Unit := do
   let prepared := args.head? == some "prepared"
+  let payload := args.head? == some "payload"
+  let fold := args.head? == some "fold"
+  let leaf := args.head? == some "leaf"
   let receipt := args.head? == some "receipt"
-  let args := if receipt || prepared then args.tail else args
+  let args := if receipt || prepared || payload || fold || leaf then args.tail else args
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let root := base / (if prepared then "receipt-preparation-20261027" else if receipt then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
-  let parent := base / (if prepared then "receipt-row-postings-20261027" else if receipt then "synaptic-publication-delta-20261027" else "captured-correspondence-20261026")
+  let root := base / (if leaf then "bounded-leaf-encoding-20261027" else if fold then "selector-weight-fold-20261027" else if payload then "nonempty-source-payload-20261027" else if prepared then "receipt-preparation-20261027" else if receipt then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
+  let parent := base / (if leaf then "selector-weight-fold-20261027" else if fold then "nonempty-source-payload-20261027" else if payload then "receipt-preparation-20261027" else if prepared then "receipt-row-postings-20261027" else if receipt then "synaptic-publication-delta-20261027" else "captured-correspondence-20261026")
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
   if prepared && args == ["reference"] then
@@ -46,7 +49,7 @@ def main (args : List String) : IO Unit := do
     IO.FS.createDir root
     let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",(parent / "checkout").toString,(root / "checkout").toString]}
     unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
-    if receipt || prepared then return
+    if receipt || prepared || payload || fold || leaf then return
     let core := root / "checkout/Eggshell"
     let index ← IO.FS.readFile (core / "SynapseIndex.lean")
     let recommend ← IO.FS.readFile (core / "SynapseRecommend.lean")
@@ -80,6 +83,12 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile (core / "SynapticRoutingStore.lean") ("module\npublic import Eggshell.SynapticRouting\npublic import Eggshell.SynapticTopologyStore\n@[expose] public section\nnamespace Eggshell.Synapses.Routing.Store\nopen Lean DB Recommend\n" ++ manifest ++ reader ++ "\n" ++ scan ++ "end Eggshell.Synapses.Routing.Store\n")
     return
   let [mode,label] := args | throw (IO.userError "PrepareSynapticPublication fork | product|audit|hooks|run-audit|run-hooks LABEL")
+  if mode == "run-canonical" then
+    IO.FS.writeFile (root / (label ++ "-settings.json")) (Json.mkObj [
+      ("command",toJson #[(root / "canonical-build/StudyMain").toString]),("cwd",toJson project),
+      ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
+      ("ownedPrefixes",toJson #[root.toString]),("record",toJson (root / (label ++ ".guard.json")).toString)]).pretty
+    return
   if mode == "run-missing" then
     IO.FS.writeFile (root / (label ++ "-settings.json")) (Json.mkObj [
       ("command",toJson #["/usr/bin/env","LEAN_NUM_THREADS=1",toolchain ++ "/bin/lean","-j1","-M1536","--run",
@@ -102,7 +111,7 @@ def main (args : List String) : IO Unit := do
       ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
       ("ownedPrefixes",toJson #[root.toString]),("record",toJson (root / (label ++ ".guard.json")).toString)]).pretty
     return
-  unless ["product","audit","hooks","contract","checkpoint","source","profile","explain","receipt-audit","run-audit","run-hooks","run-checkpoint","run-source","run-resume-source","run-profile","run-receipt-audit"].contains mode && !label.isEmpty &&
+  unless ["product","audit","hooks","contract","canonical","checkpoint","source","profile","explain","receipt-audit","run-audit","run-hooks","run-checkpoint","run-source","run-resume-source","run-profile","run-receipt-audit"].contains mode && !label.isEmpty &&
       label.toList.all (fun c => c.isAlphanum || c == '-') do throw (IO.userError "known mode and simple label required")
   if mode.startsWith "run-" then
     let resume := mode == "run-resume-source"
@@ -135,12 +144,13 @@ def main (args : List String) : IO Unit := do
     |>.setObjVal! "mainModule" (toJson (if mode == "product" then "Main"
       else if mode == "hooks" then "tools.research.CapturedHookAudit"
       else if mode == "contract" then if prepared then "tools.research.ReceiptPreparationContractMain" else "tools.research.SynapticPublicationContractMain"
+      else if mode == "canonical" then "tests.CanonicalHookTests"
       else if mode == "checkpoint" then "tools.research.SynapticCheckpointAudit"
       else if mode == "source" then "tools.research.SynapticSourceHookAudit"
       else if mode == "profile" then "tools.research.ProfileSynapticSource"
       else if mode == "explain" then "tools.research.DeliveryExplain"
       else if mode == "receipt-audit" then if prepared then "tools.research.ReceiptPreparationAudit" else "tools.research.ReceiptPostingsAudit"
-      else "tools.research.SynapticPublicationAudit"))
+      else if leaf then "tools.research.PageEncodingAudit" else if fold then "tools.research.SelectorFoldAudit" else if payload then "tools.research.NonemptySourcePayloadAudit" else "tools.research.SynapticPublicationAudit"))
     |>.setObjVal! "force" (toJson (if mode == "contract" then #["Eggshell.ContractAudit"] else (#[] : Array String)))
     |>.setObjVal! "objectModules" (toJson (root / "objects.json").toString)
     |>.setObjVal! "baselineResponse" (toJson (parent / "product-build/runtime.rsp").toString)

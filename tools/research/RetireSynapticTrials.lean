@@ -25,14 +25,19 @@ private partial def protectLinks (path : System.FilePath) (targets : Array Syste
         throw (IO.userError "active product interface depends on an ended helper")
 
 def main (args : List String) : IO Unit := do
-  let prepared := args == ["prepared-checks"]
-  unless prepared || args.isEmpty do throw (IO.userError "RetireSynapticTrials [prepared-checks]")
+  let ended := args == ["prepared-ended"]
+  let payload := args == ["payload-checks"]
+  let prepared := args == ["prepared-checks"] || ended
+  unless prepared || payload || args.isEmpty do throw (IO.userError "RetireSynapticTrials [prepared-checks|prepared-ended|payload-checks]")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let report := project / "docs/candidates" / (if prepared then "receipt-preparation" else "receipt-row-postings") / "records/retirement.json"
+  let report := project / "docs/candidates" / (if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
+    (if ended then "records/retirement-finished.json" else "records/retirement.json")
   unless !(← report.pathExists) do throw (IO.userError "keep retirement evidence")
   let mut targets := #[]
-  let runs := if prepared then #[ ("receipt-preparation",#["keyed-receipt","forced-receipt","missing-explanation",
+  let runs := if ended then #[("receipt-preparation",#["fixed-source-hooks","missing-unit-explanation","source-build","explain-build"])]
+    else if payload then #[("nonempty-source-payload",#["original-domain-regression","audit-build","canonical-build","contract-build","source-build","profile-build"])]
+    else if prepared then #[ ("receipt-preparation",#["keyed-receipt","forced-receipt","missing-explanation",
       "receipt-audit-build","contract-build"])] else #[
       ("synaptic-publication-delta",#["atomic-projection","actual-checkpoint","native-atomic-routing","fixed-source-hooks",
         "audit-build","hooks-build","contract-build","checkpoint-build","source-build","profile-build"]),
@@ -53,7 +58,8 @@ def main (args : List String) : IO Unit := do
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","pid=,command="]}
   unless processes.exitCode == 0 do throw (IO.userError "cannot inspect trial ownership")
   for name in ["captured-correspondence-20261026","synaptic-publication-delta-20261027",
-      "receipt-row-postings-20261027","receipt-preparation-20261027"] do
+      "receipt-row-postings-20261027","receipt-preparation-20261027","nonempty-source-payload-20261027",
+      "selector-weight-fold-20261027"] do
     let root := base / name
     protectLinks (root / "product-build/lib") targets
     let response ← IO.FS.readFile (root / "product-build/runtime.rsp")

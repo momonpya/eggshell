@@ -1,0 +1,61 @@
+--- a/Eggshell/CanonicalSourceDelivery.lean
++++ b/Eggshell/CanonicalSourceDelivery.lean
+@@ -35 +35 @@
+-  deriving BEq, ToJson, FromJson
++  nonempty : rows.isEmpty = false
+@@ -36,0 +37,24 @@
++def Part.check? (rows : Array StoredRow) (plan : String := "") : Option Part :=
++  if nonempty : rows.isEmpty = false then some ⟨rows,plan,nonempty⟩ else none
++
++theorem empty_part_rejected (plan : String) : Part.check? #[] plan = none := by
++  simp [Part.check?]
++
++theorem checked_part_nonempty (rows : Array StoredRow) (plan : String) (part : Part)
++    (checked : Part.check? rows plan = some part) : rows.isEmpty = false := by
++  unfold Part.check? at checked
++  split at checked
++  · assumption
++  · contradiction
++
++instance : BEq Part := ⟨fun a b => a.rows == b.rows && a.plan == b.plan⟩
++instance : ToJson Part := ⟨fun part => Json.mkObj [("rows",toJson part.rows),("plan",toJson part.plan)]⟩
++instance : FromJson Part where
++  fromJson? value := do
++    let rows ← value.getObjValAs? (Array StoredRow) "rows"
++    let plan ← match value.getObjVal? "plan" with
++      | .ok field => field.getStr?
++      | .error _ => pure ""
++    let some part := Part.check? rows plan | throw "empty shared source payload"
++    return part
++
+@@ -54 +78 @@
+-  if rows.isEmpty then none else some {part with rows}
++  if nonempty : rows.isEmpty = false then some {part with rows,nonempty} else none
+@@ -71 +94,0 @@
+-    · contradiction
+@@ -73,0 +97 @@
++    · contradiction
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5445 +5445 @@
+-    let shared : Synapses.CanonicalSource.Delivery.Part := {rows}
++    let some shared := Synapses.CanonicalSource.Delivery.Part.check? rows | continue
+@@ -5949 +5949 @@
+-  let shared : Synapses.CanonicalSource.Delivery.Part := {rows := mergedRows}
++  let shared ← Synapses.CanonicalSource.Delivery.Part.check? mergedRows
+@@ -6280,2 +6280,2 @@
+-        if let some rows := canonicalRows[relationKey first.matched.edge.relation]? then
+-          let shared : Synapses.CanonicalSource.Delivery.Part := {rows}
++        if let some shared := (canonicalRows[relationKey first.matched.edge.relation]?).bind
++            (fun rows => Synapses.CanonicalSource.Delivery.Part.check? rows) then
+@@ -6308,2 +6308,2 @@
+-        if let some rows := canonicalRows[relationKey source.owner.relation]? then
+-          let shared : Synapses.CanonicalSource.Delivery.Part := {rows}
++        if let some shared := (canonicalRows[relationKey source.owner.relation]?).bind
++            (fun rows => Synapses.CanonicalSource.Delivery.Part.check? rows) then
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -150 +150,2 @@
+-          plan := {plan with canonical := plan.canonical.insert owner merged}
++          plan := {plan with canonical := if merged.isEmpty then plan.canonical.erase owner
++            else plan.canonical.insert owner merged}

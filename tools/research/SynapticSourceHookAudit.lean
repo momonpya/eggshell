@@ -73,29 +73,32 @@ def main (args : List String) : IO UInt32 := do
       ("PLUGIN_ROOT",some plugin.toString),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none),
       ("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),
       ("MKL_NUM_THREADS",some "1"),("HF_HUB_OFFLINE",some "1"),("TOKENIZERS_PARALLELISM",some "false")]
+    -- Static, read-only preparation needs no publisher child. Own the data
+    -- service only for actual hooks, after the same frozen source is ready.
+    if resume then
+      let guard ← read (.mk candidate / "isolated-warm-profile.guard.json")
+      check ((guard.getObjValAs? String "state").toOption == some "finished" &&
+        (guard.getObjValAs? Nat "exitCode").toOption == some 0 &&
+        (guard.getObjValAs? Bool "guardTriggered").toOption == some false &&
+        (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[]) "isolated warm is not finished successfully"
+      let report ← read (.mk candidate / "isolated-warm-profile.stdout")
+      let databases ← IO.ofExcept (report.getObjValAs? (Array Json) "databases")
+      check (databases.size == 1 && databases.all (fun entry =>
+        ((entry.getObjValD "after").getObjValAs? Nat "missing").toOption == some 0 &&
+        ((entry.getObjValD "after").getObjValAs? Nat "invalid").toOption == some 0)) "recovered warm is incomplete"
+      save (root / "warm-complete.json") (Json.mkObj [("runtimeSha256",toJson runtimeSha),
+        ("elapsedMs",guard.getObjValD "elapsedMs"),("recoveredAfterRssStop",toJson true),
+        ("warmTimingDiagnosticOnly",toJson true)])
+    else
+      IO.println "fixed-source warm starting"
+      (← IO.getStdout).flush
+      let warm ← StudyCommand.run binary.toString #["egg","warm","work"] environment workspace "" (root / "warm") 300000
+      check (warm.exitCode == 0) s!"fixed source warm failed: {warm.stderr}"
+      save (root / "warm-complete.json") (Json.mkObj [("runtimeSha256",toJson runtimeSha),("elapsedMs",toJson warm.elapsedMs),
+        ("publisherStartedAfterWarm",toJson true)])
     let publisher ← StudyRuntime.startPublisher binary data environment resume
     let mut results := #[]
     try
-      if resume then
-        let guard ← read (.mk candidate / "isolated-warm-profile.guard.json")
-        check ((guard.getObjValAs? String "state").toOption == some "finished" &&
-          (guard.getObjValAs? Nat "exitCode").toOption == some 0 &&
-          (guard.getObjValAs? Bool "guardTriggered").toOption == some false &&
-          (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[]) "isolated warm is not finished successfully"
-        let report ← read (.mk candidate / "isolated-warm-profile.stdout")
-        let databases ← IO.ofExcept (report.getObjValAs? (Array Json) "databases")
-        check (databases.size == 1 && databases.all (fun entry =>
-          ((entry.getObjValD "after").getObjValAs? Nat "missing").toOption == some 0 &&
-          ((entry.getObjValD "after").getObjValAs? Nat "invalid").toOption == some 0)) "recovered warm is incomplete"
-        save (root / "warm-complete.json") (Json.mkObj [("runtimeSha256",toJson runtimeSha),
-          ("elapsedMs",guard.getObjValD "elapsedMs"),("recoveredAfterRssStop",toJson true),
-          ("warmTimingDiagnosticOnly",toJson true)])
-      else
-        IO.println "fixed-source warm starting"
-        (← IO.getStdout).flush
-        let warm ← StudyCommand.run binary.toString #["egg","warm","work"] environment workspace "" (root / "warm") 300000
-        check (warm.exitCode == 0) s!"fixed source warm failed: {warm.stderr}"
-        save (root / "warm-complete.json") (Json.mkObj [("runtimeSha256",toJson runtimeSha),("elapsedMs",toJson warm.elapsedMs)])
       for topic in [1,2,3] do
         let some definition := definitions.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
           throw (IO.userError "missing question definition")

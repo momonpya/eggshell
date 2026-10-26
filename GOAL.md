@@ -48,6 +48,8 @@
 
 ## 実行順と完了証拠
 
+共有payloadの非空性を型と復号境界で保証し、canonicalが空なら任意ツールの原文recordへ渡す隔離修正を実装した。コード/JSON/日本語/MCP合成試験で全原文被覆・正の費用・制御なしを確認し、新規oracle/ContractAuditも成功。しかし同じC7実フック3題材は全件約29秒で選択が未完了、0/4・0/6・0/5。親の8/15を現候補の成功としない。CPU sampleで限界被覆の重み合計、再帰的List.sumの繰返しを特定したため、候補・重み・予算・結果を保つ写像/累積の融合へ進む。必要なら逆引きによる限界値の差分更新を証明する。空payloadへ戻さず、候補を打ち切らない。warmをpublisher起動前に完了し、集計RSS3,594,272KiB・残存0。回答モデル0・6段階0/6・未採用。[nonempty-source-payload.md](docs/nonempty-source-payload.md)。
+
 受領確認の共有と範囲→bindings索引を隔離実装し、同じC7 seedの実フックが25.7〜25.9秒で本文を返した。凍結した必要原文は題材1/2/3で2/4・3/6・3/5、合計8/15（53.3%）、95%に不合格。段階説明で、未配送7件中6件が「選択済みの全原文範囲、費用0、実本文なし」と判明した。canonicalの空配列を`shared=some []`へ変え、空templateのatomicUnitが全範囲を名乗る経路を特定。次は非空共有payloadの型と原文recordへの分岐でこの虚偽被覆を除く。重み調整には戻らない。warmは一度RSS保護で停止し、同じ原文/runtimeの単独warmの回復後に実フックを監査した。全Factを一writerで更新する初期構築の保持メモリも有界化する。旧候補16対象をarchiveなしで削除。回答モデル0・6段階0/6・総token改善未測定・未採用。[receipt-preparation.md](docs/receipt-preparation.md)。
 
 配送受領の番号付き原文行×Readの走査を、照合条件・値・順序・重複を保つ範囲postingsへ隔離置換した。1,024行の独立比較は873→8ms、新規oracle/ContractAudit成功。しかし同じC7 seedの題材1/2/3は約29秒で0/4・0/6・0/5のまま。CPU sampleで次の全件処理が`Transport.Plan.receipt`の原文範囲×全所有者・全行の照合と判明したため、範囲bindingsの索引と本文確認の共有へ進む。重み変更では対処しない。回答モデル0・6段階0/6・未採用。[receipt-row-postings.md](docs/receipt-row-postings.md)。

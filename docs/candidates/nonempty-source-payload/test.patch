@@ -1,0 +1,24 @@
+--- a/tests/CanonicalHookTests.lean
++++ b/tests/CanonicalHookTests.lean
+@@ -31 +31 @@
+-  let shared : Delivery.Part := {rows := combined,plan := "p:fixture"}
++  let some shared := Delivery.Part.check? combined "p:fixture" | throw (IO.userError "empty shared source fixture")
+@@ -40 +40 @@
+-  check (!covered ⟨file,7,7⟩ damaged.ranges && damaged.uncertain.contains file)
++  check (!covered ⟨file,7,7⟩ damaged.ranges)
+@@ -41,0 +42,5 @@
++  check (covered ⟨file,8,8⟩ damaged.ranges)
++    "independently verified intact row was discarded with a damaged neighbor"
++  IO.println (Json.mkObj [("tamperedRowDelivered",toJson (covered ⟨file,7,7⟩ damaged.ranges)),
++    ("intactRowDelivered",toJson (covered ⟨file,8,8⟩ damaged.ranges)),
++    ("wholeFileUncertain",toJson (damaged.uncertain.contains file))]).compress
+@@ -76 +81,8 @@
+-  check (SharedCoverage.cost problem offers == SharedCoverage.cost problem [head])
++  let unitArray := units.toArray
++  check (unitArray.size == problem.offers.size) "cost model lost an original source unit"
++  let some headUnit := unitArray[head.val]? | throw (IO.userError "first source offer has no unit")
++  let headKeys := (headUnit.slice.shared.map (·.rows.map (·.key))).getD #[]
++  let some duplicate := offers.find? (fun index => (unitArray[index.val]?).any fun unit =>
++    unit.family != headUnit.family && (unit.slice.shared.map (·.rows.map (·.key))).getD #[] == headKeys) |
++    throw (IO.userError "fixture has no same-payload observation from another owner")
++  check (SharedCoverage.cost problem [head,duplicate] == SharedCoverage.cost problem [head])
