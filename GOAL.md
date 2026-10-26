@@ -46,6 +46,8 @@
 
 ## 実行順と完了証拠
 
+引用を原文record全体と完全一致で照合していた条件も隔離修正した。複数の引用を一度に検索し、各原文表現内で引用ごとに一つの検証済み文字範囲だけを保持する。保存時に作って捨てていた全record文字列索引は除き、compactな検証済み座標のみを保存する。同一source-only snapshot・別private領域の比較で、コード内識別子への支持0→4辺、MCP URI内の引用への支持0→1辺、read/consumedは完全同一、元DB不変。別のprintf出力に同じ語があっても必要なコード原文の支持とは数えない。実Pre/Post/Stop・DB-only復元・2/2小fixture配送2,142ms、7観測の取消/再送/長いJSON/別private復元、fresh oracle/ContractAudit/依存監査が通過。集計RSS最大2,739,312 KiB、回答モデル0、6段階0/6。並行保存時の準備警告、実題材の95%/総token改善/10〜80人・NAS条件は未合格・未採用。[literal-support.md](docs/literal-support.md)。
+
 直近の原文経路の修正：元本文・portable時系列と同じ出版へ、コマンド非依存の原文recordディレクトリを接続した隔離候補を検査した。任意プロバイダーの非JSON引数/出力、引用符で始まる通常文、長いMCP JSONを含む7観測の欠落0、取消/ACK喪失再送/変更block拒否/別private領域へのDB-only復元が成功。実Pre/Post/Stopでも6観測・27recordの完全原文被覆を確認し、小さい読取専用配送fixtureは2/2・1,788ms。fresh oracle/ContractAudit成功、集計RSS最大2,738,000 KiB、残存0。保存中のsource-changed準備警告1件は未解消。旧修正の削除ではなく部分経路だけの成功を完全契約と扱っていた問題であり、全record一致を要求する引用対応と有限の探索上限、LLVMの必要原文欠落は解消済みとしない。回答モデル呼出し0・6段階0/6、95%/総token改善は未達・未採用。[observed-records.md](docs/observed-records.md)。
 
 ### A：終了・再開と耐久契約（着手点）

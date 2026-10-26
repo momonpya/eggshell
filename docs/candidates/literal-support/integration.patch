@@ -1,0 +1,137 @@
+--- a/Eggshell/ObservationContext.lean
++++ b/Eggshell/ObservationContext.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.SynapseSource
+ public import Eggshell.Sha256
+ public import Eggshell.SynapseQuotes
++public import tools.LiteralSearch
+ 
+ @[expose] public section
+ 
+@@ -155,6 +156,21 @@
+ structure Quotation where
+   read : Read
+   text : String
++
++/-- Scan the actual reachable record spellings for all of an answer's literal
++quotes together. A matching identifier may occur inside a row/member; it need
++not equal the entire enclosing record. Duplicate aliases do not multiply a
++read's support. These are advisory citations, never execution certificates. -/
++def quoteMatches (index : LiteralSearch.Index patterns) (spellings : Array Quotation) : Array Quotation := Id.run do
++  let mut seen : Std.HashSet (Read × String) := {}
++  let mut result := #[]
++  for item in spellings do
++    for hit in LiteralSearch.first index item.text do
++      let text := patterns[hit.pattern]
++      if seen.contains (item.read,text) then continue
++      seen := seen.insert (item.read,text)
++      result := result.push ⟨item.read,text⟩
++  return result
+ 
+ structure Catalog where
+   located : Array LocatedRead := #[]
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -219,9 +219,6 @@
+     if catalog.located.isEmpty then unsupported := unsupported+1
+     for read in catalog.reads do graph ← IO.ofExcept (graph.insert (.read read))
+   let reads := graph.snapshot.filterMap fun fact => match fact with | .read read => some read | _ => none
+-  let byQuote := reads.foldl (fun (map : Std.HashMap String (Array Read)) read =>
+-    read.quotations.foldl (fun map digest =>
+-      map.insert digest (map[digest]?.getD #[] |>.push read)) map) {}
+   let mut workIds : Std.HashMap String Nat := {}
+   for entry in catalog do
+     if let some doc := (← documents.cache.get)[entry.id]? then workIds := workIds.insert doc.work entry.work
+@@ -243,24 +240,30 @@
+       paragraphCitations decoded.text files.toArray).toOption.getD #[]
+     let needed := available.filter fun read => citations.any (fun cited =>
+       (cited.intersection? read.source).isSome)
+-    let quoteKeys := ((layout (doc.source.getD "")).map fun decoded =>
++    let quoteTexts := ((layout (doc.source.getD "")).map fun decoded =>
+       decoded.text.splitOn "\n\n" |>.toArray.flatMap (fun paragraph =>
+-        (Quotes.extract paragraph).map (fun quote => Quotes.digest quote.text))).toOption.getD #[]
+-    let quoted := quoteKeys.foldl (fun (set : Std.HashSet Read) digest =>
+-      (byQuote[digest]?.getD #[]).foldl (fun set read =>
+-        if (workIds[read.binding.work]?).any route.contains then set.insert read else set) set) {}
+-    let mut located := #[]
++        (Quotes.extract paragraph).map (·.text))).toOption.getD #[]
++    let quoteTexts := hashDistinct quoteTexts.toList |>.toArray
++    let index := LiteralSearch.prepare quoteTexts
++    let allowed := available.foldl (fun (set : Std.HashSet Read) read => set.insert read) {}
+     let mut spellings := #[]
++    let mut quoteOwners : Std.HashSet Nat := {}
++    if !quoteTexts.isEmpty then
++      for read in available do
++        let some id := readIds[read.binding.owner]? | continue
++        if quoteOwners.contains id then continue
++        quoteOwners := quoteOwners.insert id
++        let catalog ← documents.catalog id
++        spellings := spellings ++ ObservationContext.quoteMatches index
++          (catalog.quotations.filter (fun item => allowed.contains item.read))
++    let mut located := #[]
+     let mut seen : Std.HashSet Nat := {}
+-    for read in needed ++ quoted.toArray do
++    for read in needed ++ spellings.map (·.read) do
+       let some id := readIds[read.binding.owner]? | continue
+       if seen.contains id then continue
+       seen := seen.insert id
+       let catalog ← documents.catalog id
+       located := located ++ catalog.located
+-      -- Rehydrate and compare the exact spelling, rather than trusting a
+-      -- digest or persisted index text as evidence of the original quote.
+-      spellings := spellings ++ catalog.quotations.filter (fun item => quoted.contains item.read)
+     match addAnswer snapshot.head.identity doc located graph with
+     | .ok next => graph := next
+     | .error _ => unsupported := unsupported + 1
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -33,6 +33,7 @@
+     (include_str "SynapseQuotes.lean").toUTF8,
+     (include_str "ObservationContext.lean").toUTF8,(include_str "Sha256.lean").toUTF8,
+     (include_str "ObservedRecords.lean").toUTF8,
++    (include_str "../tools/LiteralSearch.lean").toUTF8,
+     (include_str "SourceEvidence.lean").toUTF8,
+     (include_str "SearchUnicode.lean").toUTF8,
+     (include_str "../tools/RetrievalCategories.lean").toUTF8])
+--- a/Eggshell/ObservedRecords.lean
++++ b/Eggshell/ObservedRecords.lean
+@@ -1,7 +1,6 @@
+ module
+ public import Eggshell.GraphStore
+ public import Eggshell.ObservationContext
+-public import tools.ContentCorrespondence
+ @[expose] public section
+ 
+ namespace Eggshell.Synapses.ObservedRecords
+@@ -128,26 +127,22 @@
+ 
+ structure Prepared (raw : String) where
+   records : Array Record
+-  texts : ContentCorrespondence.Inputs
+-  correspondence : ContentCorrespondence.Index texts
+ 
+ def prepare (raw : String) : Except String (Prepared raw) := do
+   let records := normalize raw
+   let characters := raw.toList.toArray
+-  let texts ← records.mapM fun record => do
++  for record in records do
+     unless record.first < record.limit && record.limit ≤ characters.size do throw "invalid original record"
+-    record.spellings.mapM fun spelling => do
++    for spelling in record.spellings do
+       unless record.first ≤ spelling.first && spelling.limit ≤ record.limit do throw "foreign spelling interval"
+       match project characters spelling with
+-      | some text => pure text
++      | some _ => pure ()
+       | none => throw "spelling is not an original data projection"
+-  let some correspondence := ContentCorrespondence.prepare? texts | throw "incomplete original correspondence index"
+-  return ⟨records,texts,correspondence⟩
++  return ⟨records⟩
+ 
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.observed-records".toUTF8 [
+   (include_str "ObservedRecords.lean").toUTF8,(include_str "JsonScalars.lean").toUTF8,
+-  (include_str "SynapseSource.lean").toUTF8,
+-  (include_str "../tools/ContentCorrespondence.lean").toUTF8])
++  (include_str "SynapseSource.lean").toUTF8])
+ 
+ structure Header where
+   database : String

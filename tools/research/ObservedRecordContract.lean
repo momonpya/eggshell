@@ -16,7 +16,7 @@ run_meta do
         #[``Eggshell.Synapses.ObservedRecords.stage, ``Eggshell.Synapses.Provenance.stage],
         #[``Eggshell.DB.PageMap.withWriter, ``Eggshell.Synapses.Build.refresh]),
       (``Eggshell.Synapses.ObservedRecords.stage,
-        #[``Eggshell.Synapses.ObservedRecords.prepare, ``ContentCorrespondence.prepare?,
+        #[``Eggshell.Synapses.ObservedRecords.prepare, ``Eggshell.Synapses.ObservedRecords.project,
           ``Eggshell.DB.PageMap.Writer.put],
         #[``Eggshell.DB.PageMap.withWriter, ``Eggshell.FileSystem.openRead,
           ``Eggshell.Synapses.Extraction.readPlans]),

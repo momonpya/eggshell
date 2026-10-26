@@ -25,6 +25,12 @@ private def reference (patterns : Array String) (original : String) : Array (Nat
         result := result.push (pattern,first,limit)
   return result.qsort before
 
+private def referenceFirst (occurrences : Array (Nat × Nat × Nat)) : Array (Nat × Nat × Nat) := Id.run do
+  let mut result := #[]
+  for occurrence in occurrences do
+    if !result.any (·.1 == occurrence.1) then result := result.push occurrence
+  return result
+
 def main : IO Unit := do
   let patterns := #["a","aa","aba","b","ba","", "a"]
   let mut level := #[""]
@@ -32,6 +38,8 @@ def main : IO Unit := do
   for _ in [:11] do
     for original in level do
       check (actual patterns original == reference patterns original) "literal search disagreed with independent exhaustive enumeration"
+      let found := (first (prepare patterns) original).map (fun hit => (hit.pattern.val,hit.first,hit.limit)) |>.qsort before
+      check (found == referenceFirst (reference patterns original)) "bounded witness search lost first occurrences"
       checked := checked+1
     level := level.flatMap fun text => #[text ++ "a",text ++ "b"]
   for (wanted,original) in #[
@@ -42,7 +50,11 @@ def main : IO Unit := do
     check (actual wanted original == reference wanted original) "literal search lost Unicode, overlaps or a long-field tail"
   let forged : Index #["absent"] := ⟨#[{terminal := #[0]}]⟩
   check ((find forged "actual data").isEmpty) "an invalid automaton fabricated original content"
+  let repeated := String.ofList (List.replicate 100000 'a')
+  check ((first (prepare #["a","aa","absent"]) repeated).size == 2)
+    "repeated input accumulated more than one witness per pattern"
   IO.println (Json.mkObj [("exhaustiveInputs",toJson checked),
     ("unicodeAndLongTail",toJson true),("overlappingMatches",toJson true),
     ("independentReferenceAgreement",toJson true),("invalidIndexCannotForge",toJson true),
+    ("boundedWitnessesFor100000RepeatedCharacters",toJson true),
     ("answeringModelCalls",toJson (0 : Nat)),("productionAdoption",toJson false)]).compress

@@ -7,7 +7,9 @@ open Lean Eggshell Eggshell.Research
 source-only recovery. This fixture has no answering-model credentials. -/
 def main (args : List String) : IO UInt32 := do
   try
-    unless args.length ≤ 1 do throw (IO.userError "NativePublicationNativeMain [CANDIDATE-ROOT]")
+    unless args.length ≤ 2 && (args.length < 2 || args[1]? == some "literal") do
+      throw (IO.userError "NativePublicationNativeMain [CANDIDATE-ROOT [literal]]")
+    let literal := args[1]? == some "literal"
     let root := System.FilePath.mk (args.head?.getD "/Users/ovm/.codex/experiments/eggshell/native-publication-20261025")
     unless root.isAbsolute do throw (IO.userError "absolute candidate root required")
     let installRoot := root / "prefix"
@@ -40,7 +42,7 @@ def main (args : List String) : IO UInt32 := do
       environment }
     let template := root / "native-input.json"
     IO.FS.writeFile template (toJson input).pretty
-    StudySeedChecks.run template.toString fixture.toString true
+    StudySeedChecks.run template.toString fixture.toString true literal
     IO.println (← IO.FS.readFile (fixture / "result.json"))
     IO.println (← IO.FS.readFile (fixture / "recovery.json"))
     let audit ← IO.ofExcept (Json.parse (← IO.FS.readFile (fixture / "recall-audit.json")))

@@ -219,8 +219,15 @@ private def copied (root : System.FilePath) : IO Unit := do
 def main (args : List String) : IO UInt32 := do
   try
     match args with
-    | ["create",path] => fixture (.mk path)
-    | ["copy",path] => copied (.mk path)
+    | [mode,path] =>
+        let some data ← IO.getEnv "EGGSHELL_DATA_ROOT" |
+          throw (IO.userError "fixture requires an isolated EGGSHELL_DATA_ROOT")
+        check ((System.FilePath.mk data).isAbsolute && data.startsWith ((System.FilePath.mk path).normalize.toString ++ "/"))
+          "fixture data must belong to its disposable test directory"
+        match mode with
+        | "create" => fixture (.mk path)
+        | "copy" => copied (.mk path)
+        | _ => throw (IO.userError "ObservedRecordPublicationChecks create|copy ROOT")
     | _ => throw (IO.userError "ObservedRecordPublicationChecks create|copy ROOT")
     return 0
   catch error => IO.eprintln error.toString; return 1

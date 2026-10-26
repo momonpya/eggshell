@@ -58,6 +58,22 @@ private def coquoted : Fact → Bool
   | .coquoted _ _ => true
   | _ => false
 
+/-- The wanted quote is strictly inside an original spelling, not equal to a
+whole saved record or supported through a file-coordinate citation. -/
+private def literalSupport (source : DB.PageMap.Snapshot) (facts : Array Fact)
+    (wanted : String) : IO Bool := do
+  let reader ← Persistence.Store.NodeReader.new source
+  for fact in facts do
+    let .supports support := fact | continue
+    if support.source.file?.isSome || support.read.quotations.contains (Quotes.digest wanted) then continue
+    let some id ← Build.ownerId? source support.binding.owner | continue
+    let doc ← Build.document reader id
+    let some raw := doc.source | continue
+    let text := String.ofList ((raw.toList.drop support.binding.first).take
+      (support.binding.limit-support.binding.first))
+    if (text.splitOn wanted).length > 1 then return true
+  return false
+
 /-- Freeze required DB-present source rows before a new chat's real hook runs.
 This is a small model-free check of the audit wiring, not the recall study. -/
 private def recall (plan : Input) (root source : System.FilePath)
@@ -112,7 +128,8 @@ private def recall (plan : Input) (root source : System.FilePath)
 
 /-- The fixture writes no relations. Only real hooks, a real shell, the save
 worker and the index worker may create its observations and consumption. -/
-def run (templatePath directory : String) (remote : Bool := false) : IO Unit := do
+def run (templatePath directory : String) (remote : Bool := false)
+    (literal : Bool := false) : IO Unit := do
   let plan ← IO.ofExcept (fromJson? (α := Input) (← StudyAdmission.readJson templatePath))
   StudyAdmission.verifyArtifact plan.runtime
   for artifact in plan.pluginFiles do StudyAdmission.verifyArtifact artifact
@@ -194,11 +211,16 @@ def run (templatePath directory : String) (remote : Bool := false) : IO Unit := 
       hook (tool.useId ++ "-Post") (fields ++ [("hook_event_name",toJson "PostToolUse"),
         ("tool_response",← IO.ofExcept (Json.parse tool.response))])
       origins database (commands.size+index+1)
-    hook "Stop" [("hook_event_name",toJson "Stop"),
-      ("last_assistant_message",toJson "The symbols are supported by [first](src/source.cpp:11) and [second](src/source.cpp:14).")]
+    let answer := if literal then
+        "The symbol `NEEDED_SYMBOL` and remote location `customer/logs` are supported by [first](src/source.cpp:11) and [second](src/source.cpp:14)."
+      else "The symbols are supported by [first](src/source.cpp:11) and [second](src/source.cpp:14)."
+    hook "Stop" [("hook_event_name",toJson "Stop"),("last_assistant_message",toJson answer)]
     let _ ← call "keep" #["egg","keep"] ""
     let all ← facts database fun all => all.any isConsumption && all.any supported && all.any coquoted && remoteConsumption all
     let snapshot ← DB.PageMap.pin database
+    if literal then
+      for wanted in ["NEEDED_SYMBOL","customer/logs"] do
+        check (← literalSupport snapshot all wanted) s!"original substring quote lost its support: {wanted}"
     let stored ← Provenance.records snapshot
     check (stored.size == toolCount && stored.all (fun row => row.origin.valid && row.origin.occurrence.session == session))
       "native origins lost their source or temporal binding"
@@ -227,6 +249,7 @@ def run (templatePath directory : String) (remote : Bool := false) : IO Unit := 
       ("nativeJournalEvents",toJson entries.size),
       ("portableOrigins",toJson stored.size),("consumptionWitnesses",toJson (all.filter isConsumption).size),
       ("conditionalReadRows",toJson checkedRows),
+      ("literalSubstringChecks",toJson (if literal then 2 else (0 : Nat))),
       ("supports",toJson (all.filter supported).size),("coquoted",toJson (all.filter coquoted).size),
       ("privateUsage",toJson usage.size),("answeringModelCalls",toJson (0 : Nat)),
       ("directRelationInsertions",toJson (0 : Nat))])
@@ -247,6 +270,10 @@ def run (templatePath directory : String) (remote : Bool := false) : IO Unit := 
     (root / "recover-warm") 60000
   check (warmed.exitCode == 0) "source-only seed could not be warmed without its old private state"
   let recovered ← facts copied fun all => all.any isConsumption && all.any supported && all.any coquoted
+  if literal then
+    for wanted in ["NEEDED_SYMBOL","customer/logs"] do
+      check (← literalSupport (← DB.PageMap.pin copied) recovered wanted)
+        s!"source-only reconstruction lost substring support: {wanted}"
   check ((← StudyRuntime.files copied) == publication) "recovering derived synapses changed the source publication"
   save (root / "recovery.json") (Json.mkObj [
     ("runtime",toJson plan.runtime),("sourceOnlyCheckpoint",toJson true),
