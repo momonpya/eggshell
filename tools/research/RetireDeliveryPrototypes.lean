@@ -4,13 +4,14 @@ open Lean
 
 private def base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
 private def allowed := #["advisory-prefix-20261026","selection-plan-20261026",
-  "canonical-plan-20261026","record-catalog-20261026"]
+  "canonical-plan-20261026","record-catalog-20261026","shared-activation-20261026"]
 private def buildDependencies := #["complete-focus-20261026","record-focus-20261026"]
 
 private def targets (name : String) : Array String :=
   if buildDependencies.contains name then
     #["topic-1/work.egg","topic-1/data","prefix","contract/lib"]
-  else #["topic-1/work.egg","topic-1/data","checks","check-build","inspection","build","prefix","checkout","contract/lib"]
+  else #["topic-1/work.egg","topic-1/data","checks","check-build","inspection","build","prefix","checkout","contract/lib",
+    "probe-tools_research_SharedActivationChecks","probe-tools_research_SynapticWalkAudit"]
 
 private def digest (path : System.FilePath) : IO String := do
   let result ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",path.toString]}

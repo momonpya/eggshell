@@ -1,0 +1,120 @@
+{"steps":
+ [{"label": "compile",
+   "exitCode": 0,
+   "command":
+   ["--root=/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence",
+    "-j1",
+    "-M1024",
+    "-DwarningAsError=true",
+    "-o",
+    "/Users/ovm/.codex/experiments/eggshell/content-correspondence-final-20261026/lib/tools/ContentCorrespondence.olean",
+    "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence/tools/ContentCorrespondence.lean"]},
+  {"label": "checks",
+   "exitCode": 0,
+   "command":
+   ["--root=/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence",
+    "-j1",
+    "-M1024",
+    "-DwarningAsError=true",
+    "--run",
+    "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence/Checks.lean"]},
+  {"label": "axioms",
+   "exitCode": 0,
+   "command":
+   ["--root=/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence",
+    "-j1",
+    "-M1024",
+    "-DwarningAsError=true",
+    "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence/Audit.lean"]}],
+ "sources":
+ [{"sha256": "40c2c1c0eec9c9dec7eba124db52ff2535b10db3970cbe94f8d0f66351c496f1",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence/tools/ContentCorrespondence.lean"},
+  {"sha256": "4c3dd67c0aa210424e1c9c45fd688b90da72e7a21f16f8fc0269c2d8864b967f",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence/Checks.lean"},
+  {"sha256": "08d68afdbaeec6a237298f05325c85f4e6d66c4365ca8a12ae8535c0010f7219",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence/Audit.lean"},
+  {"sha256": "67b46b1395ee55a156ec729e89837e46dcaa7d44029657f4eeea4b1a224422e1",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/content-correspondence/Run.lean"}],
+ "retiredActivationResult":
+ {"state": "finished",
+  "completed":
+  ["/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/topic-1/work.egg",
+   "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/topic-1/data",
+   "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/build",
+   "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/prefix",
+   "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/checkout",
+   "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/contract/lib",
+   "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/probe-tools_research_SharedActivationChecks",
+   "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/probe-tools_research_SynapticWalkAudit"],
+  "archives": false},
+ "retiredActivation":
+ {"state": "inspected",
+  "removed":
+  [{"prototypeProductSha256":
+    "e71877c8eca288250d9c33d393ed256201f35e2ea9ab4a6a9a32ba06e6d64c67",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/topic-1/work.egg",
+    "logicalBytes": 161237392},
+   {"prototypeProductSha256":
+    "e71877c8eca288250d9c33d393ed256201f35e2ea9ab4a6a9a32ba06e6d64c67",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/topic-1/data",
+    "logicalBytes": 10883638},
+   {"prototypeProductSha256":
+    "e71877c8eca288250d9c33d393ed256201f35e2ea9ab4a6a9a32ba06e6d64c67",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/build",
+    "logicalBytes": 160783694},
+   {"prototypeProductSha256":
+    "e71877c8eca288250d9c33d393ed256201f35e2ea9ab4a6a9a32ba06e6d64c67",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/prefix",
+    "logicalBytes": 117265345},
+   {"prototypeProductSha256":
+    "e71877c8eca288250d9c33d393ed256201f35e2ea9ab4a6a9a32ba06e6d64c67",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/checkout",
+    "logicalBytes": 1193397},
+   {"prototypeProductSha256":
+    "e71877c8eca288250d9c33d393ed256201f35e2ea9ab4a6a9a32ba06e6d64c67",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/contract/lib",
+    "logicalBytes": 38555560},
+   {"prototypeProductSha256":
+    "e71877c8eca288250d9c33d393ed256201f35e2ea9ab4a6a9a32ba06e6d64c67",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/probe-tools_research_SharedActivationChecks",
+    "logicalBytes": 102642931},
+   {"prototypeProductSha256":
+    "e71877c8eca288250d9c33d393ed256201f35e2ea9ab4a6a9a32ba06e6d64c67",
+    "path":
+    "/Users/ovm/.codex/experiments/eggshell/shared-activation-20261026/probe-tools_research_SynapticWalkAudit",
+    "logicalBytes": 103869948}],
+  "logicalBytes": 696431905,
+  "currentSeedAndSupportRetained": true,
+  "archives": false,
+  "activeCandidateRetained":
+  "/Users/ovm/.codex/experiments/eggshell/study-services-20261026"},
+ "resourceGuard":
+ {"state": "finished",
+  "peakRssKiB": 1040176,
+  "ownedPids": [],
+  "limitRssKiB": 3670016},
+ "productionAdoption": false,
+ "checks":
+ {"streamStateEntries": 3,
+  "productionAdoption": false,
+  "mismatchNotInvented": true,
+  "inputRecords": 10000,
+  "duplicateMergeIdempotent": true,
+  "completeIndexRequired": true,
+  "commandInputs": 0,
+  "changedInputRejected": true,
+  "captureAdapterIntegrated": false,
+  "ambiguousNotAssigned": true},
+ "captureAdapterIntegrated": false,
+ "answeringModelCalls": 0}

@@ -1,0 +1,10 @@
+import tools.ContentCorrespondence
+
+#print axioms ContentCorrespondence.Index.contains_original
+#print axioms ContentCorrespondence.Unique.only_original
+#print axioms ContentCorrespondence.AnchoredRun.anchor_preserved
+#print axioms ContentCorrespondence.Candidate.join_idempotent
+#print axioms ContentCorrespondence.Candidate.join_commutative
+#print axioms ContentCorrespondence.Candidate.join_associative
+#print axioms ContentCorrespondence.observe_size
+#print axioms ContentCorrespondence.observe_keeps_domain
