@@ -21,21 +21,32 @@ private partial def protectLinks (path : System.FilePath) (targets : Array Syste
     if metadata.type == .dir then protectLinks entry.path targets
     else if metadata.type == .symlink then
       let actual ← IO.FS.realPath entry.path
-      if targets.any (fun target => actual.toString.startsWith (target.toString ++ "/")) then
+      if targets.any (fun target => actual == target || actual.toString.startsWith (target.toString ++ "/")) then
         throw (IO.userError "active product interface depends on an ended helper")
 
 def main (args : List String) : IO Unit := do
   let ended := args == ["prepared-ended"]
   let payload := args == ["payload-checks"]
+  let fold := args == ["fold-ended"]
+  let old := args == ["prior-ended"]
   let prepared := args == ["prepared-checks"] || ended
-  unless prepared || payload || args.isEmpty do throw (IO.userError "RetireSynapticTrials [prepared-checks|prepared-ended|payload-checks]")
+  unless prepared || payload || fold || old || args.isEmpty do throw (IO.userError "RetireSynapticTrials [prepared-checks|prepared-ended|payload-checks|fold-ended|prior-ended]")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let report := project / "docs/candidates" / (if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
-    (if ended then "records/retirement-finished.json" else "records/retirement.json")
+  let report := project / "docs/candidates" / (if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
+    (if old then "records/retirement-prior.json" else if ended then "records/retirement-finished.json" else "records/retirement.json")
   unless !(← report.pathExists) do throw (IO.userError "keep retirement evidence")
   let mut targets := #[]
-  let runs := if ended then #[("receipt-preparation",#["fixed-source-hooks","missing-unit-explanation","source-build","explain-build"])]
+  let runs := if old then #[
+      ("synaptic-publication-delta",#["product-build/StudyMain"]),
+      ("receipt-row-postings",#["product-build/StudyMain"]),
+      ("receipt-preparation",#["product-build/StudyMain"]),
+      ("nonempty-source-payload",#["product-build/StudyMain","fixed-source-hooks"]),
+      ("selector-weight-fold",#["product-build/StudyMain"]),
+      ("bounded-leaf-encoding",#["product-build/StudyMain","fixed-source-hooks","atomic-page-encoding",
+        "native-atomic-routing","audit-build","source-build","hooks-build","contract-build"])]
+    else if fold then #[("selector-weight-fold",#["fixed-source-hooks","audit-build","source-build","exact-marginals"])]
+    else if ended then #[("receipt-preparation",#["fixed-source-hooks","missing-unit-explanation","source-build","explain-build"])]
     else if payload then #[("nonempty-source-payload",#["original-domain-regression","audit-build","canonical-build","contract-build","source-build","profile-build"])]
     else if prepared then #[ ("receipt-preparation",#["keyed-receipt","forced-receipt","missing-explanation",
       "receipt-audit-build","contract-build"])] else #[
@@ -59,7 +70,7 @@ def main (args : List String) : IO Unit := do
   unless processes.exitCode == 0 do throw (IO.userError "cannot inspect trial ownership")
   for name in ["captured-correspondence-20261026","synaptic-publication-delta-20261027",
       "receipt-row-postings-20261027","receipt-preparation-20261027","nonempty-source-payload-20261027",
-      "selector-weight-fold-20261027"] do
+      "selector-weight-fold-20261027","bounded-leaf-encoding-20261027","incremental-selection-20261027"] do
     let root := base / name
     protectLinks (root / "product-build/lib") targets
     let response ← IO.FS.readFile (root / "product-build/runtime.rsp")

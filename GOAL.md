@@ -48,6 +48,8 @@
 
 ## 実行順と完了証拠
 
+限界費用/価値の逆引きと状態に結び付けた差分保持をLeanで証明し、独立native比較は512候補・16,384cueで1,239→258ms、全64件の選択順一致。ただしC7実フックは約29秒・0/15のまま。CPU記録とHandoff objectで、コンパイル時置換の2段登録により旧chooseDeferredが実行され、新部品へ接続されていないことを特定した。次は公開入口からの置換を一つにし、比較試験も公開入口を呼ぶ。呼出先のobject検査を実フック前に追加し、同じ凍結15項目を再監査する。最初のEvaluation再構築による81.8秒の悪化も記録済み。回答モデル0・6段階0/6・総token未測定・未採用。[incremental-selection.md](docs/incremental-selection.md)。
+
 巨大leafの分割前符号化を除いた隔離候補で、同じC7 seedのwarmは146,362msで完了し、集計RSS最大1,841,136KiB・保護停止なし・残存0。8,192行の完全保存、flush非公開、取消/回復、旧leaf/旧pin、新規oracle/ContractAudit、小fixture2/2を確認した。しかし実フック3題材は29,015/29,011/29,025msで未完了、0/4・0/6・0/5のまま。メモリ修正と配送期限を分けて扱う。次は候補・重み・予算・安定した選択順を保ち、限界値の再計算を影響した候補へ限定する。回答モデル0・6段階0/6・総token未測定・未採用。[bounded-leaf-encoding.md](docs/bounded-leaf-encoding.md)。
 
 被覆重みのmap/再帰sumを1走査foldへ隔離置換し、任意の自然数でbenefit/afterBenefitが等しいことをLeanで証明した。重複cue・300bit超の重み・4状態の全限界値も参照式と一致。しかしC7再監査はwarmの集計RSS3,694,384KiBで保護停止し、実フック未実行。調査でPageMap.Writer.leavesが分割判定のために全pending行を先にencodeしていたと判明した。commitの原子性を保ち、encode前に物理ページの行数を判定する隔離修正を着手。8,192行の全順序、flush非公開、取消/回復、旧大型leafの読出し/更新を検査済み。全行を複数ページへ保存し、検索候補は捨てない。回答モデル0・6段階0/6・未採用。[selector-weight-fold.md](docs/selector-weight-fold.md)。

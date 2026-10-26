@@ -1,0 +1,299 @@
+--- a/tools/DeferredCoverage.lean
++++ b/tools/DeferredCoverage.lean
+@@ -2,0 +3 @@
++public import tools.KeyPostings
+@@ -186,0 +188,294 @@
++namespace Sparse
++
++/-- The reverse incidence contains all full feature/offer identities. Hashes
++nominate buckets only. Duplicate features remain harmless during updates. -/
++def pairs (features : Fin n → List (Fin d)) : Array (Fin d × Fin n) :=
++  ((List.finRange n).flatMap fun index => (features index).map (·,index)).toArray
++
++structure Incidence (features : Fin n → List (Fin d)) where
++  index : KeyPostings.Index Prod.fst (pairs features)
++
++def incidence (features : Fin n → List (Fin d)) : Incidence features :=
++  ⟨KeyPostings.prepare Prod.fst (pairs features)⟩
++
++def Incidence.lookup {features : Fin n → List (Fin d)}
++    (layout : Incidence features) (feature : Fin d) : List (Fin n) :=
++  ((layout.index.lookup feature).map Prod.snd).toList
++
++theorem Incidence.lookup_exact {features : Fin n → List (Fin d)}
++    (layout : Incidence features) (feature : Fin d) (offer : Fin n) :
++    offer ∈ layout.lookup feature ↔ feature ∈ features offer := by
++  unfold Incidence.lookup
++  rw [layout.index.lookup_exact]
++  simp only [Array.toList_map,Array.toList_filterMap,
++    pairs,List.mem_filterMap,List.mem_flatMap,
++    List.mem_map,List.mem_finRange,true_and]
++  constructor
++  · rintro ⟨pair,⟨_,⟨i,value,member,rfl⟩,kept⟩,last⟩
++    by_cases equal : value = feature
++    · simp only [equal,BEq.rfl,ite_true,Option.some.injEq] at kept
++      subst pair
++      simpa only [Prod.snd] using last ▸ equal ▸ member
++    · simp [equal] at kept
++  · intro member
++    exact ⟨(feature,offer),⟨(feature,offer),⟨offer,feature,member,rfl⟩,by simp⟩,rfl⟩
++
++def Incidence.touched {features : Fin n → List (Fin d)}
++    (layout : Incidence features) (added : List (Fin d)) : List (Fin n) :=
++  added.flatMap layout.lookup
++
++theorem Incidence.touched_complete {features : Fin n → List (Fin d)}
++    (layout : Incidence features) (added : List (Fin d)) (offer : Fin n)
++    (feature : Fin d) (present : feature ∈ features offer) (new : feature ∈ added) :
++    offer ∈ layout.touched added :=
++  List.mem_flatMap.mpr ⟨feature,new,(layout.lookup_exact feature offer).mpr present⟩
++
++def patch (values : Vector α n) (replacement : Fin n → α) (indices : List (Fin n)) : Vector α n :=
++  indices.foldl (fun current (index : Fin n) => current.set index.val (replacement index) index.isLt) values
++
++theorem patch_exact (values : Vector α n) (replacement : Fin n → α)
++    (indices : List (Fin n)) (query : Fin n) :
++    (patch values replacement indices)[query] =
++      if query ∈ indices then replacement query else values[query] := by
++  induction indices generalizing values with
++  | nil => simp [patch]
++  | cons head tail ih =>
++    change (patch (values.set head.val (replacement head) head.isLt) replacement tail)[query] = _
++    rw [ih]
++    by_cases member : query ∈ tail
++    · simp [member]
++    · by_cases same : query = head
++      · subst query; simp [member]
++      · have different : head.val ≠ query.val := by
++          intro equal; exact same (Fin.ext equal.symm)
++        simp [member,same,different]
++
++def rawCost (cached : Evaluation prior) (index : Fin p.offers.size) : Nat × Nat :=
++  (hashDistinct (p.offers[index].closure.filter fun node => !cached.nodeIndex.contains node)).foldl
++    (fun total node => (total.1+p.costs[node].1,total.2+p.costs[node].2)) (0,0)
++
++def rawGain (cached : Evaluation prior) (index : Fin p.offers.size) : Nat :=
++  weighted (fun cue => p.weights[cue])
++    (hashDistinct (p.offers[index].covers.filter fun cue => !cached.cueIndex.contains cue))
++
++theorem fold_cost_base (p : Problem) (items : List (Fin p.costs.size)) (base : Nat × Nat) :
++    items.foldl (fun total node => (total.1+p.costs[node].1,total.2+p.costs[node].2)) base =
++    let zero := items.foldl (fun total node => (total.1+p.costs[node].1,total.2+p.costs[node].2)) (0,0)
++    (base.1+zero.1,base.2+zero.2) := by
++  induction items generalizing base with
++  | nil => simp
++  | cons head tail ih =>
++    simp only [List.foldl_cons]
++    simp only [Nat.zero_add]
++    rw [ih _ , ih (p.costs[head].1,p.costs[head].2)]
++    simp [Nat.add_assoc]
++
++theorem rawCost_exact (cached : Evaluation prior) (index : Fin p.offers.size) :
++    cached.afterCost index =
++      (cached.beforeCost.1+(rawCost cached index).1,cached.beforeCost.2+(rawCost cached index).2) := by
++  exact fold_cost_base _ _ _
++
++theorem rawGain_exact (cached : Evaluation prior) (index : Fin p.offers.size) :
++    cached.afterBenefit index = cached.beforeBenefit+rawGain cached index := by
++  simp only [Evaluation.afterBenefit,rawGain,weighted_exact]
++
++def marginal (prior : Selection p) (index : Fin p.offers.size) : (Nat × Nat) × Nat :=
++  let cached := evaluation prior
++  (rawCost cached index,rawGain cached index)
++
++structure Values (prior : Selection p) where
++  costs : Vector (Nat × Nat) p.offers.size
++  gains : Vector Nat p.offers.size
++  costsExact : ∀ index, costs[index] = rawCost (evaluation prior) index
++  gainsExact : ∀ index, gains[index] = rawGain (evaluation prior) index
++
++def values (prior : Selection p) : Values prior :=
++  let cached := evaluation prior
++  ⟨Vector.ofFn (rawCost cached),Vector.ofFn (rawGain cached),
++    by intro index; simp [cached],by intro index; simp [cached]⟩
++
++theorem features_unchanged (features : Fin n → List (Fin d)) (selected : List (Fin n))
++    (winner offer : Fin n)
++    (covered : ∀ feature ∈ features offer, feature ∈ features winner → feature ∈ selected.flatMap features)
++    (feature : Fin d) (present : feature ∈ features offer) :
++    ((selected++[winner]).flatMap features).contains feature =
++      (selected.flatMap features).contains feature := by
++  by_cases already : feature ∈ selected.flatMap features
++  · simp [List.flatMap_append,List.contains_eq_mem,already]
++  · have absent : feature ∉ features winner := fun member => already (covered feature present member)
++    simp [List.flatMap_append,List.contains_eq_mem,already,absent]
++
++theorem nodeFilter_unchanged (prior next : Selection p) (winner offer : Fin p.offers.size)
++    (extension : next.selected = prior.selected++[winner])
++    (covered : ∀ node ∈ p.offers[offer].closure, node ∈ p.offers[winner].closure →
++      (evaluation prior).nodeIndex.contains node = true) :
++    p.offers[offer].closure.filter (fun node => !(evaluation prior).nodeIndex.contains node) =
++      p.offers[offer].closure.filter (fun node => !(evaluation next).nodeIndex.contains node) := by
++    apply List.filter_congr
++    intro node present
++    rw [(evaluation prior).nodesExact,(evaluation next).nodesExact]
++    simp only [nodes,List.contains_eq_mem,List.mem_eraseDups,extension]
++    simpa only [List.contains_eq_mem] using congrArg (! ·)
++      (features_unchanged (fun i => p.offers[i].closure)
++        prior.selected winner offer (by
++          intro value member included
++          have seen := covered value member included
++          rw [(evaluation prior).nodesExact] at seen
++          simpa [nodes] using List.contains_iff_mem.mp seen) node present).symm
++
++theorem cueFilter_unchanged (prior next : Selection p) (winner offer : Fin p.offers.size)
++    (extension : next.selected = prior.selected++[winner])
++    (covered : ∀ cue ∈ p.offers[offer].covers, cue ∈ p.offers[winner].covers →
++      (evaluation prior).cueIndex.contains cue = true) :
++    p.offers[offer].covers.filter (fun cue => !(evaluation prior).cueIndex.contains cue) =
++      p.offers[offer].covers.filter (fun cue => !(evaluation next).cueIndex.contains cue) := by
++    apply List.filter_congr
++    intro cue present
++    rw [(evaluation prior).cuesExact,(evaluation next).cuesExact]
++    simp only [cues,List.contains_eq_mem,List.mem_eraseDups,extension]
++    simpa only [List.contains_eq_mem] using congrArg (! ·)
++      (features_unchanged (fun i => p.offers[i].covers)
++        prior.selected winner offer (by
++          intro value member included
++          have seen := covered value member included
++          rw [(evaluation prior).cuesExact] at seen
++          simpa [cues] using List.contains_iff_mem.mp seen) cue present).symm
++
++def Incidence.changed {features : Fin n → List (Fin d)} (layout : Incidence features)
++    (seen : Std.HashMap (Fin d) Unit) (added : List (Fin d)) : List (Fin n) :=
++  hashDistinct (layout.touched (added.filter fun feature => !seen.contains feature))
++
++theorem Incidence.unchanged {features : Fin n → List (Fin d)} (layout : Incidence features)
++    (seen : Std.HashMap (Fin d) Unit) (added : List (Fin d)) (offer : Fin n)
++    (absent : offer ∉ layout.changed seen added) (feature : Fin d)
++    (present : feature ∈ features offer) (included : feature ∈ added) :
++    seen.contains feature = true := by
++  cases found : seen.contains feature with
++  | true => rfl
++  | false =>
++    apply False.elim
++    apply absent
++    exact (HashDistinct.mem _ _).mpr (layout.touched_complete _ _ feature present
++      (List.mem_filter.mpr ⟨included,by simp [found]⟩))
++
++structure Layout (p : Problem) where
++  nodes : Incidence (fun i : Fin p.offers.size => p.offers[i].closure)
++  cues : Incidence (fun i : Fin p.offers.size => p.offers[i].covers)
++
++def layout (p : Problem) : Layout p := ⟨incidence _,incidence _⟩
++
++def Values.advance (stored : Values prior) (layout : Layout p) (next : Selection p)
++    (winner : Fin p.offers.size) (extension : next.selected = prior.selected++[winner]) : Values next :=
++  let before := evaluation prior
++  let after := evaluation next
++  {costs := patch stored.costs (rawCost after) (layout.nodes.changed before.nodeIndex p.offers[winner].closure)
++   gains := patch stored.gains (rawGain after) (layout.cues.changed before.cueIndex p.offers[winner].covers)
++   costsExact := by
++    intro query
++    rw [patch_exact]
++    split
++    · rfl
++    · rename_i absent
++      rw [stored.costsExact]
++      unfold rawCost
++      rw [nodeFilter_unchanged prior next winner query extension
++        (layout.nodes.unchanged _ _ _ absent)]
++   gainsExact := by
++    intro query
++    rw [patch_exact]
++    split
++    · rfl
++    · rename_i absent
++      rw [stored.gainsExact]
++      unfold rawGain
++      rw [cueFilter_unchanged prior next winner query extension
++        (layout.cues.unchanged _ _ _ absent)]}
++
++def Values.afterCost (stored : Values prior) (index : Fin p.offers.size) : Nat × Nat :=
++  let before := (evaluation prior).beforeCost
++  (before.1+stored.costs[index].1,before.2+stored.costs[index].2)
++
++theorem Values.afterCost_exact (stored : Values prior) (index : Fin p.offers.size) :
++    stored.afterCost index = (evaluation prior).afterCost index := by
++  simp only [Values.afterCost,stored.costsExact,rawCost_exact]
++
++theorem Values.gain_exact (stored : Values prior) (index : Fin p.offers.size) :
++    stored.gains[index] = (evaluation prior).afterBenefit index-(evaluation prior).beforeBenefit := by
++  simp only [stored.gainsExact,rawGain_exact,Nat.add_sub_cancel_left]
++
++def score? (prior : Selection p) (stored : Values prior) (seen : Known prior)
++    (index : Fin p.offers.size) : Option (Score prior (evaluation prior)) :=
++  letI : Decidable (index ∉ prior.selected) := seen.fresh index
++  if fresh : index ∉ prior.selected then
++    let after := stored.afterCost index
++    if fits : after.1 ≤ p.limit.1 ∧ after.2 ≤ p.limit.2 then
++      let gain := stored.gains[index]
++      if positive : 0 < gain then
++        some ⟨index,fresh,by
++          dsimp only [after] at fits
++          rwa [stored.afterCost_exact] at fits,gain,positive,
++          max ((after.1-(evaluation prior).beforeCost.1)*p.limit.2)
++            ((after.2-(evaluation prior).beforeCost.2)*p.limit.1)⟩
++      else none
++    else none
++  else none
++
++theorem score_exact (stored : Values prior) (seen : Known prior) (index : Fin p.offers.size) :
++    score? prior stored seen index = Deferred.score? prior (evaluation prior) seen index := by
++  simp only [score?,Deferred.score?,stored.afterCost_exact,stored.gain_exact]
++
++def step (prior : Selection p) (stored : Values prior) (seen : Known prior)
++    (found : Option (Score prior (evaluation prior))) (index : Fin p.offers.size) :=
++  match score? prior stored seen index,found with
++  | none,_ => found
++  | some next,none => some next
++  | some next,some previous => if betterScore next previous then some next else found
++
++theorem step_exact (stored : Values prior) (seen : Known prior)
++    (found : Option (Score prior (evaluation prior))) (index : Fin p.offers.size) :
++    step prior stored seen found index = Deferred.step prior (evaluation prior) seen found index := by
++  simp only [step,Deferred.step,score_exact]
++  cases current : Deferred.score? prior (evaluation prior) seen index <;> cases found <;> rfl
++
++def best (prior : Selection p) (stored : Values prior) : Option (Score prior (evaluation prior)) :=
++  (List.finRange p.offers.size).foldl (step prior stored (known prior)) none
++
++theorem best_exact (stored : Values prior) :
++    (best prior stored).map Score.proposal = SharedCoverage.best prior := by
++  have same : step prior stored (known prior) = Deferred.step prior (evaluation prior) (known prior) := by
++    funext found index
++    exact step_exact stored _ found index
++  rw [← bestDeferred_exact]
++  simp only [best,bestDeferred,same]
++
++def fill (layout : Layout p) (fuel : Nat) (prior : Selection p) (stored : Values prior) : Selection p :=
++  match fuel with
++  | 0 => prior
++  | fuel+1 => match best prior stored with
++    | none => prior
++    | some score =>
++      let next := score.proposal.result
++      fill layout fuel next (stored.advance layout next score.index rfl)
++
++theorem fill_exact (layout : Layout p) (fuel : Nat) (prior : Selection p) (stored : Values prior) :
++    fill layout fuel prior stored = SharedCoverage.fill fuel prior := by
++  induction fuel generalizing prior with
++  | zero => rfl
++  | succ fuel ih =>
++    rw [SharedCoverage.fill,← best_exact stored]
++    cases found : best prior stored with
++    | none => simp [fill,found]
++    | some score =>
++      simpa only [fill,found,Option.map_some] using
++        (ih score.proposal.result (stored.advance layout _ score.index rfl))
++
++def choose? (p : Problem) : Option (Selection p) := do
++  let initial ← empty? p
++  let prepared := layout p
++  pure (prefer (fill prepared p.offers.size initial (values initial)) (bestSingleton initial))
++
++@[csimp] theorem choose_exact : @chooseDeferred? = @choose? := by
++  funext p
++  simp only [chooseDeferred?,choose?,fill_exact,fillDeferred_exact]
++
++end Sparse

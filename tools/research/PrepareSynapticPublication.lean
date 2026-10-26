@@ -19,11 +19,13 @@ def main (args : List String) : IO Unit := do
   let payload := args.head? == some "payload"
   let fold := args.head? == some "fold"
   let leaf := args.head? == some "leaf"
+  let sparse := args.head? == some "sparse"
+  let dispatch := args.head? == some "dispatch"
   let receipt := args.head? == some "receipt"
-  let args := if receipt || prepared || payload || fold || leaf then args.tail else args
+  let args := if receipt || prepared || payload || fold || leaf || sparse || dispatch then args.tail else args
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let root := base / (if leaf then "bounded-leaf-encoding-20261027" else if fold then "selector-weight-fold-20261027" else if payload then "nonempty-source-payload-20261027" else if prepared then "receipt-preparation-20261027" else if receipt then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
-  let parent := base / (if leaf then "selector-weight-fold-20261027" else if fold then "nonempty-source-payload-20261027" else if payload then "receipt-preparation-20261027" else if prepared then "receipt-row-postings-20261027" else if receipt then "synaptic-publication-delta-20261027" else "captured-correspondence-20261026")
+  let root := base / (if dispatch then "incremental-dispatch-20261027" else if sparse then "incremental-selection-20261027" else if leaf then "bounded-leaf-encoding-20261027" else if fold then "selector-weight-fold-20261027" else if payload then "nonempty-source-payload-20261027" else if prepared then "receipt-preparation-20261027" else if receipt then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
+  let parent := base / (if dispatch then "incremental-selection-20261027" else if sparse then "bounded-leaf-encoding-20261027" else if leaf then "selector-weight-fold-20261027" else if fold then "nonempty-source-payload-20261027" else if payload then "receipt-preparation-20261027" else if prepared then "receipt-row-postings-20261027" else if receipt then "synaptic-publication-delta-20261027" else "captured-correspondence-20261026")
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
   if prepared && args == ["reference"] then
@@ -49,7 +51,7 @@ def main (args : List String) : IO Unit := do
     IO.FS.createDir root
     let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",(parent / "checkout").toString,(root / "checkout").toString]}
     unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
-    if receipt || prepared || payload || fold || leaf then return
+    if receipt || prepared || payload || fold || leaf || sparse || dispatch then return
     let core := root / "checkout/Eggshell"
     let index ← IO.FS.readFile (core / "SynapseIndex.lean")
     let recommend ← IO.FS.readFile (core / "SynapseRecommend.lean")
@@ -150,7 +152,7 @@ def main (args : List String) : IO Unit := do
       else if mode == "profile" then "tools.research.ProfileSynapticSource"
       else if mode == "explain" then "tools.research.DeliveryExplain"
       else if mode == "receipt-audit" then if prepared then "tools.research.ReceiptPreparationAudit" else "tools.research.ReceiptPostingsAudit"
-      else if leaf then "tools.research.PageEncodingAudit" else if fold then "tools.research.SelectorFoldAudit" else if payload then "tools.research.NonemptySourcePayloadAudit" else "tools.research.SynapticPublicationAudit"))
+      else if sparse || dispatch then "tools.research.IncrementalSelectionAudit" else if leaf then "tools.research.PageEncodingAudit" else if fold then "tools.research.SelectorFoldAudit" else if payload then "tools.research.NonemptySourcePayloadAudit" else "tools.research.SynapticPublicationAudit"))
     |>.setObjVal! "force" (toJson (if mode == "contract" then #["Eggshell.ContractAudit"] else (#[] : Array String)))
     |>.setObjVal! "objectModules" (toJson (root / "objects.json").toString)
     |>.setObjVal! "baselineResponse" (toJson (parent / "product-build/runtime.rsp").toString)
