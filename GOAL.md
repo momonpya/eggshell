@@ -48,6 +48,10 @@
 
 ## 実行順と完了証拠
 
+配送受領の番号付き原文行×Readの走査を、照合条件・値・順序・重複を保つ範囲postingsへ隔離置換した。1,024行の独立比較は873→8ms、新規oracle/ContractAudit成功。しかし同じC7 seedの題材1/2/3は約29秒で0/4・0/6・0/5のまま。CPU sampleで次の全件処理が`Transport.Plan.receipt`の原文範囲×全所有者・全行の照合と判明したため、範囲bindingsの索引と本文確認の共有へ進む。重み変更では対処しない。回答モデル0・6段階0/6・未採用。[receipt-row-postings.md](docs/receipt-row-postings.md)。
+
+推薦用の整数接続を元のFact・postingsと同じPageMap/commitへ隔離統合した。追加/削除/再追加/私有feedbackで独立探索の全推薦列と一致し、4,101 Factへの1件追加37ms、取消・再送・旧pin・scopeを検査した。実seedの39,757共有/20私有Factでも27,825推薦の順序一致。通常warmからの小フックは探索完走・2/2配送・2,147ms。しかしC7固定seedの題材1/2/3は約29秒で全件未完了、0/4・0/6・0/5だった。題材2は数値2.8秒、探索/結合10.3秒、選択計画22.2秒まで進み、CPU sampleで選択の費用/価値計算と、返却前の受領検査の原文行×Read走査を特定した。次は同じ条件と順序を保つ範囲postingsで受領検査を直す。Build全体の差分化や95%の合格ではない。回答モデル0・6段階0/6・未採用。[synaptic-publication-delta.md](docs/synaptic-publication-delta.md)。
+
 内容対応をLeanで実取得・同一出版・差分無効化・canonical/シナプス・利用ラベルまで隔離接続した。後着の対応をwarmが無視する不具合と、共有原文frameを旧形式でしか配送確認しない不具合を修正。入力streamの全候補一致、18改変対照、取消/再送/元ファイル削除後のDB-only復元が成功した。実Pre/Post/Stopは7観測・15時系列・任意名providerの15行を保持し、別private/読取専用の小fixtureは2/2・2,161ms、集計RSS1,947,824KiB・残存0。ビルド再開の依存更新漏れも修正し、型配置の実行試験と新規FullSearchOracle/ContractAuditを確認した。実行物f9fd4713…は未採用。保存/準備の競合警告1件、全件列挙、共有JSON全体の準備は残る。LLVMの4/6/5項目は未再監査、回答モデル0・6段階0/6、95%/総token改善/80人規模は未達。[captured-correspondence.md](docs/captured-correspondence.md)。
 
 永続整数接続を隔離runtimeの実フックへ接続し、受領の`synapticComplete=true`を確認した。27,825提案の独立全探索との順序一致を保ち、元範囲の結合は39.4→4.5秒、bundle projectionは48.2→4.9秒へ短縮した。区間被覆の正規化、owner→unit postingsの候補列/順序一致、照会内の共通cueDirectory準備もLeanで証明した。しかし実フックは約29秒の未完了通知のまま、最新の実本文も凍結4項目中0件だった。探索完走やcache部品の存在を配送成功として扱わない。次はDBサービスに検証済みblockと準備済みsnapshotを共有させ、全payloadの再読込/検証/復号とsessionごとの復元を除く。照会内の準備と照会間の共有を分け、蓄積・更新・80並行要求を実測する。回答モデル0・6段階0/6、95%と総token改善は未達・未採用。[routed-transport.md](docs/routed-transport.md)、[selector-preparation.md](docs/selector-preparation.md)、[shared-preparation.md](docs/shared-preparation.md)。

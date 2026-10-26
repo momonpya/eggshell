@@ -1,0 +1,665 @@
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -4,0 +5 @@
++public import Eggshell.SynapticTopologyStore
+@@ -11,14 +11,0 @@
+-inductive Scope where
+-  | shared | usage
+-  deriving Repr, BEq, ToJson, FromJson
+-
+-def Scope.directory : Scope → String
+-  | .shared => "recommendations"
+-  | .usage => "usage"
+-
+-def Scope.accepts (scope : Scope) : Fact → Bool
+-  | .used _ => scope == .usage
+-  | _ => scope == .shared
+-
+-theorem shared_rejects_usage (usage : Usage) : Scope.shared.accepts (.used usage) = false := rfl
+-
+@@ -27,0 +15 @@
++    (include_str "SynapticTopology.lean").toUTF8,(include_str "SynapticTopologyStore.lean").toUTF8,
+@@ -43,26 +30,0 @@
+-inductive Key where
+-  | owner (database owner : String)
+-  | answer (database owner : String)
+-  | claim (claim : Claim)
+-  | consumer (occurrence : Occurrence)
+-  | group (group : Group)
+-  | quoted (source : Range)
+-  | source (source : Range)
+-  | subject (subject : Subject)
+-  | quotation (digest : String)
+-  | query (digest : String)
+-  | usage (source : Range)
+-  deriving Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, ToJson, FromJson
+-
+-def addresses : Fact → Array Key
+-  | .read recorded => #[.owner recorded.binding.database recorded.binding.owner, .source recorded.source, .subject recorded.source.subject] ++
+-      recorded.quotations.map Key.quotation
+-  | .supports support => #[
+-      .answer support.claim.database support.claim.answer, .claim support.claim, .source support.source]
+-  | .consumed edge => #[.consumer edge.consumer]
+-  | .coquoted group source => #[.group group, .quoted source]
+-  | .used usage => #[.query usage.query, .usage usage.source]
+-
+-def contentKey [ToJson α] (value : α) : String :=
+-  Blake3.hex (Blake3.digest "eggshell.synaptic-object".toUTF8 [(toJson value).compress.toUTF8])
+-
+@@ -100,10 +61,0 @@
+-
+-def payloadLimit : Nat := 262144
+-
+-def decode [FromJson α] [ToJson α] (bytes : ByteArray) : IO α := do
+-  unless bytes.size ≤ payloadLimit do throw (IO.userError "synaptic record exceeds its byte bound")
+-  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid synaptic UTF-8")
+-  let value ← IO.ofExcept (Json.parse text >>= fromJson? (α := α))
+-  unless (toJson value).compress.toUTF8 == bytes do
+-    throw (IO.userError "noncanonical synaptic record")
+-  return value
+@@ -165,5 +116,0 @@
+-def checkedBytes [ToJson α] (value : α) : IO ByteArray := do
+-  let bytes := (toJson value).compress.toUTF8
+-  unless bytes.size ≤ payloadLimit do throw (IO.userError "synaptic record exceeds its byte bound")
+-  return bytes
+-
+@@ -182,0 +130 @@
++  Routing.Store.insert writer fact
+@@ -192,0 +141 @@
++  Routing.Store.erase writer fact
+@@ -229,0 +179 @@
++      Routing.Store.finish writer count
+@@ -259,0 +210 @@
++      Routing.Store.finish writer wanted.size
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -21,25 +20,0 @@
+-/-- Output identity is native occurrence identity. File coordinates are an
+-additional addressing scheme, never a prerequisite for recommending data. -/
+-inductive Target where
+-  | range (source : Range)
+-  | output (producer : Occurrence)
+-  deriving DecidableEq, BEq, ToJson
+-
+-def Target.source? : Target → Option Range
+-  | .range source => some source
+-  | .output _ => none
+-
+-/-- A recommendation names data actually carried by its advisory witness.
+-Ordinary rereads and changed sources do not reward a candidate. -/
+-def carries (fact : Fact) : Target → Bool
+-  | .output producer => match fact with
+-    | .consumed edge => edge.producer == producer
+-    | _ => false
+-  | .range source => match fact with
+-    | .supports support => support.source == source
+-    | .consumed edge => edge.rows.contains source
+-    | .coquoted _ quoted => quoted == source
+-    | .used usage => usage.source == source &&
+-        (usage.kind == .omittedThenRead || usage.kind == .omittedThenConsumed || usage.kind == .deliveredThenCited)
+-    | .read _ => false
+-
+--- a/Eggshell/SynapticRouting.lean
++++ b/Eggshell/SynapticRouting.lean
+@@ -9,34 +8,0 @@
+-/-- One step in the existing advisory relation. No original output, command
+-grammar, similarity score, or human reference list enters this projection. -/
+-structure Step where
+-  targets : Array Target := #[]
+-  next : Array Index.Key := #[]
+-  deriving BEq
+-
+-def project (key : Index.Key) (fact : Fact) : Step :=
+-  match key, fact with
+-  | .answer .., .supports support =>
+-    ⟨#[.range support.source], #[.group (.claim support.claim),
+-      .consumer support.read.occurrence, .quoted support.source]⟩
+-  | .consumer _, .consumed edge =>
+-    ⟨if edge.rows.isEmpty then #[.output edge.producer] else edge.rows.map Target.range,
+-      edge.rows.map Index.Key.quoted |>.push (.consumer edge.producer)⟩
+-  | .quoted _, .coquoted group _ => ⟨#[], #[.group group]⟩
+-  | .group _, .coquoted _ source => ⟨#[.range source], #[]⟩
+-  | .query _, .used value =>
+-    if value.kind == .omittedThenRead || value.kind == .omittedThenConsumed ||
+-        value.kind == .deliveredThenCited then
+-      ⟨#[.range value.source], #[.quoted value.source]⟩ else {}
+-  | _, _ => {}
+-
+-/-- Projection cannot invent a recommended target. Control authority remains
+-outside this module: a supported target is still only an advisory witness. -/
+-theorem project_carries (key : Index.Key) (fact : Fact) (target : Target)
+-    (present : target ∈ (project key fact).targets) : carries fact target = true := by
+-  cases key <;> cases fact <;> simp only [project] at present <;>
+-    try simp_all [carries]
+-  all_goals
+-    split at present <;> simp_all [Array.mem_map, Bool.or_eq_true, beq_iff_eq]
+-  obtain ⟨source,member,rfl⟩ := present
+-  simpa using member
+-
+--- a/Eggshell/SynapticRoutingStore.lean
++++ b/Eggshell/SynapticRoutingStore.lean
+@@ -2 +1,0 @@
+-
+@@ -4 +3 @@
+-
++public import Eggshell.SynapticTopologyStore
+@@ -8,70 +6,0 @@
+-
+-deriving instance FromJson for Target
+-
+-def implementation : String := Blake3.hex (Blake3.digest "eggshell.routing-store".toUTF8 [
+-  (include_str "SynapticRoutingStore.lean").toUTF8,
+-  (include_str "SynapticRouting.lean").toUTF8, Index.implementation.toUTF8])
+-
+-/-- This is an advisory projection, never an Outcome or a completion proof.
+-The original fact remains in the pinned source index and is not copied. -/
+-structure Arc where
+-  evidence : String
+-  kind : Nat
+-  group : Option Nat
+-  targets : Array Nat
+-  next : Array Nat
+-  deriving BEq
+-
+-def arcCodec : Wire.Codec Arc :=
+-  (Wire.text.product (Wire.natural.product ((Wire.optional Wire.natural).product
+-    ((Wire.list Wire.natural).product (Wire.list Wire.natural))))).iso
+-    (fun arc => (arc.evidence,arc.kind,arc.group,arc.targets.toList,arc.next.toList))
+-    (fun (evidence,kind,group,targets,next) => ⟨evidence,kind,group,targets.toArray,next.toArray⟩)
+-    (by intro arc; cases arc; simp)
+-
+-theorem arc_roundtrip (arc : Arc) (tail : List UInt8) :
+-    arcCodec.decode (arcCodec.encode arc ++ tail) = .ok (arc,tail) :=
+-  arcCodec.roundtrip arc tail
+-
+-def encode (arc : Arc) : ByteArray := (arcCodec.encode arc).toByteArray
+-
+-def decode (payload : ByteArray) : IO Arc := do
+-  unless payload.size ≤ Index.payloadLimit do throw (IO.userError "routing arc exceeds its bound")
+-  let (arc,rest) ← IO.ofExcept (arcCodec.decode payload.toList)
+-  unless rest.isEmpty && encode arc == payload && digest arc.evidence && arc.kind < 6 &&
+-      (arc.kind == 0 || arc.kind == 2) == arc.group.isSome do
+-    throw (IO.userError "invalid or noncanonical routing arc")
+-  return arc
+-
+-def kind : Fact → Nat
+-  | .supports _ => 0
+-  | .consumed _ => 1
+-  | .coquoted .. => 2
+-  | .used usage => match usage.kind with
+-    | .omittedThenRead => 3
+-    | .omittedThenConsumed => 4
+-    | _ => 5
+-  | .read _ => 0
+-
+-def kindName : Nat → String
+-  | 0 => "support" | 1 => "consumption" | 2 => "coquotation"
+-  | 3 => "omitted_then_read" | 4 => "omitted_then_consumed"
+-  | _ => "delivered_then_cited"
+-
+-structure Node where
+-  key : Index.Key
+-  id : Nat
+-  deriving ToJson, FromJson
+-
+-structure Destination where
+-  target : Target
+-  id : Nat
+-  deriving ToJson, FromJson
+-
+-structure Counts where
+-  facts : Nat := 0
+-  nodes : Nat := 0
+-  targets : Nat := 0
+-  arcs : Nat := 0
+-  deriving ToJson, FromJson
+-
+@@ -86,63 +14,0 @@
+-def arcPrefix (node : Nat) : String := s!"arc:{node}:"
+-def arcName (node : Nat) (identity : String) : String := arcPrefix node ++ identity
+-
+-def put [ToJson α] (writer : PageMap.Writer) (key : String) (value : α) : IO Unit := do
+-  writer.put key (some (← Index.checkedBytes value))
+-
+-def counts (writer : PageMap.Writer) : IO Counts := do
+-  match ← writer.get "counts" with
+-  | some bytes => Index.decode bytes
+-  | none => pure {}
+-
+-def internNode (writer : PageMap.Writer) (key : Index.Key) : IO Nat := do
+-  let name := "key:" ++ Index.contentKey key
+-  if let some bytes ← writer.get name then
+-    let node ← Index.decode (α := Node) bytes
+-    unless node.key == key do throw (IO.userError "routing node digest ambiguity")
+-    return node.id
+-  let previous ← counts writer
+-  let node : Node := ⟨key,previous.nodes⟩
+-  put writer name node
+-  put writer s!"node:{node.id}" node
+-  put writer "counts" {previous with nodes := previous.nodes+1}
+-  return node.id
+-
+-def internDestination (writer : PageMap.Writer) (target : Target) : IO Nat := do
+-  let name := "destination:" ++ Index.contentKey target
+-  if let some bytes ← writer.get name then
+-    let destination ← Index.decode (α := Destination) bytes
+-    unless destination.target == target do throw (IO.userError "routing target digest ambiguity")
+-    return destination.id
+-  let previous ← counts writer
+-  let destination : Destination := ⟨target,previous.targets⟩
+-  put writer name destination
+-  put writer s!"target:{destination.id}" destination
+-  put writer "counts" {previous with targets := previous.targets+1}
+-  return destination.id
+-
+-/-- Only checked facts feed the projection. Full original evidence is kept in
+-the original index; the new rows contain handles and graph incidence only. -/
+-def insert (writer : PageMap.Writer) (fact : Fact) : IO Unit := do
+-  unless fact.valid do throw (IO.userError "invalid routing source fact")
+-  let identity := Index.contentKey fact
+-  if (← writer.get ("fact:" ++ identity)).isSome then return
+-  let mut arcs := 0
+-  for key in Index.addresses fact do
+-    let step := Routing.project key fact
+-    if step.targets.isEmpty && step.next.isEmpty then continue
+-    let id ← internNode writer key
+-    let targets ← step.targets.mapM (internDestination writer)
+-    let next ← step.next.mapM (internNode writer)
+-    let group ← match fact with
+-      | .supports support => pure (some (← internNode writer (.group (.claim support.claim))))
+-      | .coquoted group _ => pure (some (← internNode writer (.group group)))
+-      | _ => pure none
+-    let arc : Arc := ⟨identity,kind fact,group,targets,next⟩
+-    let payload := encode arc
+-    unless payload.size ≤ Index.payloadLimit do throw (IO.userError "routing arc exceeds its bound")
+-    writer.put (arcName id identity) (some payload)
+-    arcs := arcs+1
+-  writer.put ("fact:" ++ identity) (some ByteArray.empty)
+-  let previous ← counts writer
+-  put writer "counts" {previous with facts := previous.facts+1,arcs := previous.arcs+arcs}
+-
+@@ -153,8 +19,15 @@
+-def open? (basis : Index.Reader) (directory : System.FilePath) : IO (Option Reader) := do
+-  let some snapshot ← PageMap.open? directory | return none
+-  let some bytes ← snapshot.get "manifest" | return none
+-  let manifest ← Index.decode (α := Manifest) bytes
+-  unless manifest.basis == basis.index.head && manifest.source == basis.manifest.source &&
+-      manifest.scope == basis.manifest.scope && manifest.implementation == implementation &&
+-      manifest.counts.facts == basis.manifest.facts do return none
+-  return some ⟨snapshot,manifest⟩
++/-- Facts, inverse postings and integer incidences are one pinned snapshot.
++Opening does no preparation and cannot observe a half-published projection. -/
++def open? (basis : Index.Reader) : IO (Option Reader) := do
++  let some bytes ← basis.index.get "route:implementation" | return none
++  unless (← Index.decode (α := String) bytes) == implementation do return none
++  let some bytes ← basis.index.get "route:counts" | return none
++  let total ← Index.decode (α := Counts) bytes
++  unless total.facts == basis.manifest.facts do return none
++  let manifest : Manifest := {
++    basis := basis.index.head
++    source := basis.manifest.source
++    scope := basis.manifest.scope
++    implementation
++    counts := total}
++  return some ⟨basis.index,manifest⟩
+@@ -162,40 +34,0 @@
+-/-- Initial construction streams immutable fact pages in bounded batches.
+-Interrupted construction has no ready manifest and cannot be opened. This
+-prototype deliberately does not substitute a full rebuild for delta updates. -/
+-def build (basis : Index.Reader) (directory : System.FilePath) (batchSize : Nat := 1024)
+-    (batchBytes : Nat := 8*1024*1024) : IO Reader := do
+-  unless 0 < batchSize && batchSize ≤ 1024 && Index.payloadLimit ≤ batchBytes &&
+-      batchBytes ≤ 8*1024*1024 && !(← directory.pathExists) do
+-    throw (IO.userError "fresh routing directory and bounded fact/byte batch required")
+-  let snapshot ← PageMap.create directory ("routing:" ++ basis.index.head.identity)
+-  let current ← IO.mkRef snapshot
+-  let flush := fun (facts : Array Fact) => do
+-    let (_,_,_) ← PageMap.withWriter (← current.get) fun writer =>
+-      facts.forM (insert writer)
+-    current.set (← PageMap.pin directory)
+-  let remaining ← basis.index.foldRange ⟨"fact:","fact;"⟩ (fun (pending,cost) row => do
+-    let some bytes := row.2 | return (pending,cost)
+-    let fact ← Index.decode (α := Fact) bytes
+-    unless row.1 == Index.factName fact && fact.valid && basis.manifest.scope.accepts fact &&
+-        Index.belongs basis.manifest.source.identity fact do
+-      throw (IO.userError "source routing fact is not bound to the pinned index")
+-    let (pending,cost) ← if cost+bytes.size > batchBytes && !pending.isEmpty then do
+-        flush pending
+-        pure (#[],0)
+-      else pure (pending,cost)
+-    let pending := pending.push fact
+-    if pending.size < batchSize then return (pending,cost+bytes.size)
+-    flush pending
+-    return (#[],0)) ((#[],0) : Array Fact × Nat)
+-  if !remaining.1.isEmpty then flush remaining.1
+-  let (_,_,_) ← PageMap.withWriter (← current.get) fun writer => do
+-    let total ← counts writer
+-    unless total.facts == basis.manifest.facts do throw (IO.userError "routing source coverage mismatch")
+-    put writer "manifest" ({
+-      basis := basis.index.head
+-      source := basis.manifest.source
+-      scope := basis.manifest.scope
+-      implementation
+-      counts := total} : Manifest)
+-  let some ready ← open? basis directory | throw (IO.userError "routing publication did not seal")
+-  return ready
+@@ -215 +48 @@
+-  let range : PageMap.KeyRange := ⟨arcPrefix node,s!"arc:{node};"⟩
++  let range : PageMap.KeyRange := ⟨arcPrefix node,s!"route:arc:{node};"⟩
+@@ -284 +117 @@
+-  let some bytes ← reader.snapshot.get s!"target:{id}" |
++  let some bytes ← reader.snapshot.get (targetName id) |
+@@ -291 +124 @@
+-  let some bytes ← reader.snapshot.get s!"node:{id}" |
++  let some bytes ← reader.snapshot.get (nodeName id) |
+@@ -299 +132 @@
+-  let some bytes ← reader.snapshot.get ("key:" ++ Index.contentKey key) | return (none,0)
++  let some bytes ← reader.snapshot.get ("route:key:" ++ Index.contentKey key) | return (none,0)
+@@ -356 +189 @@
+-            let some bytes ← reader.snapshot.get s!"node:{next}" |
++            let some bytes ← reader.snapshot.get (nodeName next) |
+--- a/Eggshell/SynapticTransport.lean
++++ b/Eggshell/SynapticTransport.lean
+@@ -59 +59 @@
+-    let some routing ← Routing.Store.open? shared (shared.index.directory / "routing") |
++    let some routing ← Routing.Store.open? shared |
+@@ -62 +62 @@
+-      let some view ← Routing.Store.open? original (original.index.directory / "routing") |
++      let some view ← Routing.Store.open? original |
+--- a/Eggshell/SynapticTopology.lean
++++ b/Eggshell/SynapticTopology.lean
+@@ -0,0 +1,129 @@
++module
++public import Eggshell.GraphStore
++public import Eggshell.SynapseSource
++@[expose] public section
++namespace Eggshell.Synapses
++open Lean DB
++namespace Index
++inductive Scope where
++  | shared | usage
++  deriving Repr, BEq, ToJson, FromJson
++
++def Scope.directory : Scope → String
++  | .shared => "recommendations"
++  | .usage => "usage"
++
++def Scope.accepts (scope : Scope) : Fact → Bool
++  | .used _ => scope == .usage
++  | _ => scope == .shared
++
++theorem shared_rejects_usage (usage : Usage) : Scope.shared.accepts (.used usage) = false := rfl
++
++inductive Key where
++  | owner (database owner : String)
++  | answer (database owner : String)
++  | claim (claim : Claim)
++  | consumer (occurrence : Occurrence)
++  | group (group : Group)
++  | quoted (source : Range)
++  | source (source : Range)
++  | subject (subject : Subject)
++  | quotation (digest : String)
++  | query (digest : String)
++  | usage (source : Range)
++  deriving Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, ToJson, FromJson
++
++def addresses : Fact → Array Key
++  | .read recorded => #[.owner recorded.binding.database recorded.binding.owner, .source recorded.source, .subject recorded.source.subject] ++
++      recorded.quotations.map Key.quotation
++  | .supports support => #[
++      .answer support.claim.database support.claim.answer, .claim support.claim, .source support.source]
++  | .consumed edge => #[.consumer edge.consumer]
++  | .coquoted group source => #[.group group, .quoted source]
++  | .used usage => #[.query usage.query, .usage usage.source]
++
++def contentKey [ToJson α] (value : α) : String :=
++  Blake3.hex (Blake3.digest "eggshell.synaptic-object".toUTF8 [(toJson value).compress.toUTF8])
++
++def payloadLimit : Nat := 262144
++
++def decode [FromJson α] [ToJson α] (bytes : ByteArray) : IO α := do
++  unless bytes.size ≤ payloadLimit do throw (IO.userError "synaptic record exceeds its byte bound")
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid synaptic UTF-8")
++  let value ← IO.ofExcept (Json.parse text >>= fromJson? (α := α))
++  unless (toJson value).compress.toUTF8 == bytes do
++    throw (IO.userError "noncanonical synaptic record")
++  return value
++
++def checkedBytes [ToJson α] (value : α) : IO ByteArray := do
++  let bytes := (toJson value).compress.toUTF8
++  unless bytes.size ≤ payloadLimit do throw (IO.userError "synaptic record exceeds its byte bound")
++  return bytes
++
++end Index
++namespace Recommend
++/-- Output identity is native occurrence identity. File coordinates are an
++additional addressing scheme, never a prerequisite for recommending data. -/
++inductive Target where
++  | range (source : Range)
++  | output (producer : Occurrence)
++  deriving DecidableEq, BEq, ToJson
++
++def Target.source? : Target → Option Range
++  | .range source => some source
++  | .output _ => none
++
++/-- A recommendation names data actually carried by its advisory witness.
++Ordinary rereads and changed sources do not reward a candidate. -/
++def carries (fact : Fact) : Target → Bool
++  | .output producer => match fact with
++    | .consumed edge => edge.producer == producer
++    | _ => false
++  | .range source => match fact with
++    | .supports support => support.source == source
++    | .consumed edge => edge.rows.contains source
++    | .coquoted _ quoted => quoted == source
++    | .used usage => usage.source == source &&
++        (usage.kind == .omittedThenRead || usage.kind == .omittedThenConsumed || usage.kind == .deliveredThenCited)
++    | .read _ => false
++
++deriving instance FromJson for Target
++end Recommend
++namespace Routing
++open Recommend
++/-- One step in the existing advisory relation. No original output, command
++grammar, similarity score, or human reference list enters this projection. -/
++structure Step where
++  targets : Array Target := #[]
++  next : Array Index.Key := #[]
++  deriving BEq
++
++def project (key : Index.Key) (fact : Fact) : Step :=
++  match key, fact with
++  | .answer .., .supports support =>
++    ⟨#[.range support.source], #[.group (.claim support.claim),
++      .consumer support.read.occurrence, .quoted support.source]⟩
++  | .consumer _, .consumed edge =>
++    ⟨if edge.rows.isEmpty then #[.output edge.producer] else edge.rows.map Target.range,
++      edge.rows.map Index.Key.quoted |>.push (.consumer edge.producer)⟩
++  | .quoted _, .coquoted group _ => ⟨#[], #[.group group]⟩
++  | .group _, .coquoted _ source => ⟨#[.range source], #[]⟩
++  | .query _, .used value =>
++    if value.kind == .omittedThenRead || value.kind == .omittedThenConsumed ||
++        value.kind == .deliveredThenCited then
++      ⟨#[.range value.source], #[.quoted value.source]⟩ else {}
++  | _, _ => {}
++
++/-- Projection cannot invent a recommended target. Control authority remains
++outside this module: a supported target is still only an advisory witness. -/
++theorem project_carries (key : Index.Key) (fact : Fact) (target : Target)
++    (present : target ∈ (project key fact).targets) : carries fact target = true := by
++  cases key <;> cases fact <;> simp only [project] at present <;>
++    try simp_all [carries]
++  all_goals
++    split at present <;> simp_all [Array.mem_map, Bool.or_eq_true, beq_iff_eq]
++  obtain ⟨source,member,rfl⟩ := present
++  simpa using member
++
++end Routing
++end Eggshell.Synapses
+--- a/Eggshell/SynapticTopologyStore.lean
++++ b/Eggshell/SynapticTopologyStore.lean
+@@ -0,0 +1,162 @@
++module
++public import Eggshell.SynapticTopology
++@[expose] public section
++namespace Eggshell.Synapses.Routing.Store
++open Lean DB Recommend
++def implementation : String := Blake3.hex (Blake3.digest "eggshell.synaptic-topology".toUTF8 [
++  (include_str "SynapticTopology.lean").toUTF8,(include_str "SynapticTopologyStore.lean").toUTF8])
++
++/-- This is an advisory projection, never an Outcome or a completion proof.
++The original fact remains in the pinned source index and is not copied. -/
++structure Arc where
++  evidence : String
++  kind : Nat
++  group : Option Nat
++  targets : Array Nat
++  next : Array Nat
++  deriving BEq
++
++def arcCodec : Wire.Codec Arc :=
++  (Wire.text.product (Wire.natural.product ((Wire.optional Wire.natural).product
++    ((Wire.list Wire.natural).product (Wire.list Wire.natural))))).iso
++    (fun arc => (arc.evidence,arc.kind,arc.group,arc.targets.toList,arc.next.toList))
++    (fun (evidence,kind,group,targets,next) => ⟨evidence,kind,group,targets.toArray,next.toArray⟩)
++    (by intro arc; cases arc; simp)
++
++theorem arc_roundtrip (arc : Arc) (tail : List UInt8) :
++    arcCodec.decode (arcCodec.encode arc ++ tail) = .ok (arc,tail) :=
++  arcCodec.roundtrip arc tail
++
++def encode (arc : Arc) : ByteArray := (arcCodec.encode arc).toByteArray
++
++def decode (payload : ByteArray) : IO Arc := do
++  unless payload.size ≤ Index.payloadLimit do throw (IO.userError "routing arc exceeds its bound")
++  let (arc,rest) ← IO.ofExcept (arcCodec.decode payload.toList)
++  unless rest.isEmpty && encode arc == payload && digest arc.evidence && arc.kind < 6 &&
++      (arc.kind == 0 || arc.kind == 2) == arc.group.isSome do
++    throw (IO.userError "invalid or noncanonical routing arc")
++  return arc
++
++def kind : Fact → Nat
++  | .supports _ => 0
++  | .consumed _ => 1
++  | .coquoted .. => 2
++  | .used usage => match usage.kind with
++    | .omittedThenRead => 3
++    | .omittedThenConsumed => 4
++    | _ => 5
++  | .read _ => 0
++
++def kindName : Nat → String
++  | 0 => "support" | 1 => "consumption" | 2 => "coquotation"
++  | 3 => "omitted_then_read" | 4 => "omitted_then_consumed"
++  | _ => "delivered_then_cited"
++
++structure Node where
++  key : Index.Key
++  id : Nat
++  deriving ToJson, FromJson
++
++structure Destination where
++  target : Target
++  id : Nat
++  deriving ToJson, FromJson
++
++structure Counts where
++  facts : Nat := 0
++  nodes : Nat := 0
++  targets : Nat := 0
++  arcs : Nat := 0
++  deriving ToJson, FromJson
++
++def arcPrefix (node : Nat) : String := s!"route:arc:{node}:"
++def arcName (node : Nat) (identity : String) : String := arcPrefix node ++ identity
++def nodeName (node : Nat) : String := s!"route:node:{node}"
++def targetName (target : Nat) : String := s!"route:target:{target}"
++
++def put [ToJson α] (writer : PageMap.Writer) (key : String) (value : α) : IO Unit := do
++  writer.put key (some (← Index.checkedBytes value))
++
++def counts (writer : PageMap.Writer) : IO Counts := do
++  match ← writer.get "route:counts" with
++  | some bytes => Index.decode bytes
++  | none => pure {}
++
++def internNode (writer : PageMap.Writer) (key : Index.Key) : IO Nat := do
++  let name := "route:key:" ++ Index.contentKey key
++  if let some bytes ← writer.get name then
++    let node ← Index.decode (α := Node) bytes
++    unless node.key == key do throw (IO.userError "routing node digest ambiguity")
++    return node.id
++  let previous ← counts writer
++  let node : Node := ⟨key,previous.nodes⟩
++  put writer name node
++  put writer (nodeName node.id) node
++  put writer "route:counts" {previous with nodes := previous.nodes+1}
++  return node.id
++
++def internDestination (writer : PageMap.Writer) (target : Target) : IO Nat := do
++  let name := "route:destination:" ++ Index.contentKey target
++  if let some bytes ← writer.get name then
++    let destination ← Index.decode (α := Destination) bytes
++    unless destination.target == target do throw (IO.userError "routing target digest ambiguity")
++    return destination.id
++  let previous ← counts writer
++  let destination : Destination := ⟨target,previous.targets⟩
++  put writer name destination
++  put writer (targetName destination.id) destination
++  put writer "route:counts" {previous with targets := previous.targets+1}
++  return destination.id
++
++/-- Only checked facts feed the projection. Full original evidence is kept in
++the original index; the new rows contain handles and graph incidence only. -/
++def insert (writer : PageMap.Writer) (fact : Fact) : IO Unit := do
++  unless fact.valid do throw (IO.userError "invalid routing source fact")
++  let identity := Index.contentKey fact
++  if (← writer.get ("route:fact:" ++ identity)).isSome then return
++  let mut nodes : Array Nat := #[]
++  for key in Index.addresses fact do
++    let step := Routing.project key fact
++    if step.targets.isEmpty && step.next.isEmpty then continue
++    let id ← internNode writer key
++    let targets ← step.targets.mapM (internDestination writer)
++    let next ← step.next.mapM (internNode writer)
++    let group ← match fact with
++      | .supports support => pure (some (← internNode writer (.group (.claim support.claim))))
++      | .coquoted group _ => pure (some (← internNode writer (.group group)))
++      | _ => pure none
++    let arc : Arc := ⟨identity,kind fact,group,targets,next⟩
++    let payload := encode arc
++    unless payload.size ≤ Index.payloadLimit do throw (IO.userError "routing arc exceeds its bound")
++    writer.put (arcName id identity) (some payload)
++    nodes := nodes.push id
++  put writer ("route:fact:" ++ identity) nodes
++  let previous ← counts writer
++  put writer "route:counts" {previous with facts := previous.facts+1,arcs := previous.arcs+nodes.size}
++
++/-- Fact incidence is removed by its persisted handles, never by a graph or
++dictionary scan. Interned keys survive so old pinned readers remain valid. -/
++def erase (writer : PageMap.Writer) (fact : Fact) : IO Unit := do
++  let identity := Index.contentKey fact
++  let some bytes ← writer.get ("route:fact:" ++ identity) | return
++  let nodes ← Index.decode (α := Array Nat) bytes
++  for node in nodes do
++    let some bytes ← writer.get (arcName node identity) | throw (IO.userError "missing retired routing incidence")
++    let arc ← decode bytes
++    unless arc.evidence == identity do throw (IO.userError "retired routing incidence differs from its fact")
++    writer.put (arcName node identity) none
++  let previous ← counts writer
++  unless 0 < previous.facts && nodes.size ≤ previous.arcs do throw (IO.userError "routing counters underflow")
++  writer.put ("route:fact:" ++ identity) none
++  put writer "route:counts" {previous with facts := previous.facts-1,arcs := previous.arcs-nodes.size}
++
++/-- Sealed in the source fact writer, after the exact same add/remove delta.
++No second DB publication or asynchronous readiness marker is involved. -/
++def finish (writer : PageMap.Writer) (expected : Nat) : IO Unit := do
++  let total ← counts writer
++  unless total.facts == expected do throw (IO.userError "routing projection differs from source fact count")
++  let bytes ← Index.checkedBytes implementation
++  if (← writer.get "route:implementation") != some bytes then
++    writer.put "route:implementation" (some bytes)
++
++end Eggshell.Synapses.Routing.Store

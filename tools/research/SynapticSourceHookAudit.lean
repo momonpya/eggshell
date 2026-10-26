@@ -1,0 +1,118 @@
+import tools.research.StudySeedChecks
+import Eggshell.Install
+open Lean Eggshell Eggshell.Research
+
+private def check (valid : Bool) (message : String) : IO Unit :=
+  unless valid do throw (IO.userError message)
+private def read (path : System.FilePath) : IO Json := do
+  IO.ofExcept (Json.parse (← IO.FS.readFile path))
+private def save (path : System.FilePath) (value : Json) : IO Unit := IO.FS.writeFile path value.pretty
+
+/-- Fixed old seed, three original questions, no answering turn. Frozen
+requirements are audit-only and never enter the hook's inputs. -/
+def main (args : List String) : IO UInt32 := do
+  try
+    let [candidate,destination] := args | throw (IO.userError "SynapticSourceHookAudit CANDIDATE NEW-DIRECTORY")
+    let root := System.FilePath.mk destination
+    check (root.isAbsolute && !(← root.pathExists)) "new fixed-source hook trial required"
+    IO.FS.createDir root
+    let study := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell/study-services-20261026"
+    let definitionsBytes ← IO.FS.readBinFile (study / "task-definitions.json")
+    check (Sha256.hex definitionsBytes == "e2f6b683c2d761734da43793eadf2a8be363f9d356124d3830fd4ab85538c9cf")
+      "frozen question definitions changed"
+    let oldAudit ← read (study / "seed-1-complete-audit.json")
+    check ((oldAudit.getObjValAs? Bool "seedAccepted").toOption == some true) "source seed was not accepted"
+    let definitions ← IO.ofExcept (Json.parse (← IO.FS.readFile (study / "task-definitions.json")) >>= Json.getArr?)
+    let availability ← IO.ofExcept (oldAudit.getObjValAs? (Array Json) "availability")
+    let database := root / "work.egg"
+    let sourceFiles ← StudyRuntime.checkpoint (study / "common-seed-1/source.egg") database
+    let original ← DB.PageMap.pin database
+    check (original.head.identity == "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de" &&
+      original.head.revision == 31 && original.head.bytes == 45216846) "wrong original checkpoint"
+    save (root / "frozen-before-delivery.json") (toJson availability)
+    let installRoot := root / "prefix"
+    let binary := installRoot / "libexec/eggshell"
+    IO.FS.createDirAll binary.parent.get!
+    let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-c",candidate ++ "/product-build/StudyMain",binary.toString]}
+    check (copied.exitCode == 0) "could not select candidate product"
+    let runtimeSha ← ArtifactHash.hex binary
+    let plugin := installRoot / "share/eggshell/codex-plugin"
+    let launcher := plugin / "bin/eggshelld"
+    IO.FS.createDirAll launcher.parent.get!
+    IO.FS.writeFile launcher (Install.pluginLauncher installRoot)
+    IO.setAccessRights launcher {
+      user := {read := true,write := true,execution := true}
+      group := {read := true,execution := true}
+      other := {read := true,execution := true} }
+    let link ← IO.Process.output {cmd := "/bin/ln",args := #["-s",
+      "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/prefix/share/eggshell/minilm",
+      (installRoot / "share/eggshell/minilm").toString]}
+    check (link.exitCode == 0) "could not select existing numerical boundary"
+    let data := root / "data"
+    IO.FS.createDir data
+    let workspace := "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project"
+    let configuration := root / "config.toml"
+    IO.FS.writeFile configuration ("default = \"work\"\nsemantic_matcher = " ++
+      (toJson #[binary.toString,"search-provider"]).compress ++ "\n[eggs]\nwork = " ++
+      (toJson database.toString).compress ++ "\n[profiles.work]\nread = [\"work\"]\nhandoff_chars = 120000\n")
+    let environment := #[
+      ("EGGSHELL_PREFIX",some installRoot.toString),("EGGSHELL_DATA_ROOT",some data.toString),
+      ("EGGSHELL_CONFIG",some configuration.toString),("EGGSHELL_PROFILE",some "work"),
+      ("PLUGIN_ROOT",some plugin.toString),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none),
+      ("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),
+      ("MKL_NUM_THREADS",some "1"),("HF_HUB_OFFLINE",some "1"),("TOKENIZERS_PARALLELISM",some "false")]
+    let publisher ← StudyRuntime.startPublisher binary data environment
+    let mut results := #[]
+    try
+      IO.println "fixed-source warm starting"
+      (← IO.getStdout).flush
+      let warm ← StudyCommand.run binary.toString #["egg","warm","work"] environment workspace "" (root / "warm") 300000
+      check (warm.exitCode == 0) s!"fixed source warm failed: {warm.stderr}"
+      save (root / "warm-complete.json") (Json.mkObj [("runtimeSha256",toJson runtimeSha),("elapsedMs",toJson warm.elapsedMs)])
+      for topic in [1,2,3] do
+        let some definition := definitions.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
+          throw (IO.userError "missing question definition")
+        let some frozen := availability.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
+          throw (IO.userError "missing frozen evidence")
+        let stage := root / s!"topic-{topic}"
+        IO.FS.createDir stage
+        let promptPath ← IO.ofExcept ((definition.getObjValD "prompt").getObjValAs? String "path")
+        let prompt ← IO.FS.readFile (.mk promptPath)
+        let expected ← IO.ofExcept ((definition.getObjValD "prompt").getObjValAs? String "sha256")
+        check (Sha256.hex prompt.toUTF8 == expected) "fixed question changed"
+        let session := s!"atomic-topology-source-{topic}"
+        let managed ← StudyRuntime.startManaged binary plugin session (data / "sessions" / session / "daemon.json") environment
+        try
+          let request := Json.mkObj [("hook_event_name",toJson "UserPromptSubmit"),("session_id",toJson session),
+            ("turn_id",toJson "source-turn"),("cwd",toJson workspace),("prompt",toJson prompt),
+            ("_eggshell_config",toJson configuration.toString)]
+          let hook := stage / "hook"
+          let output ← StudyCommand.run binary.toString #["codex-hook"] environment workspace
+            (request.compress ++ "\n") hook 35000
+          check (output.exitCode == 0 && output.elapsedMs < 30000) s!"topic {topic} hook failed or expired"
+          let reply ← IO.ofExcept (Json.parse output.stdout)
+          let body := ((reply.getObjValD "hookSpecificOutput").getObjValAs? String "additionalContext").toOption.getD ""
+          IO.FS.writeFile (stage / "body.txt") body
+          let specification := Json.mkObj [("source",toJson database.toString),("workspace",toJson workspace),
+            ("prompt",toJson prompt),("files",toJson sourceFiles),("required",definition.getObjValD "referenceRanges")]
+          let input := Json.mkObj [("source",specification),("database",toJson database.toString),
+            ("request",toJson (hook / "stdin").toString),("stdout",toJson (hook / "stdout").toString),
+            ("timing",toJson (hook / "record.json").toString),("body",toJson (stage / "body.txt").toString)]
+          save (stage / "audit-input.json") input
+          let audited ← NativeTrialAudit.inspect (stage / "audit-input.json").toString
+          check (audited.getObjValD "frozenEvidence" == frozen.getObjValD "frozenEvidence")
+            "fixed evidence denominator changed"
+          save (stage / "audit.json") audited
+          let summary := Json.mkObj [("topic",toJson topic),("elapsedMs",toJson output.elapsedMs),
+            ("requiredDelivery",audited.getObjValD "requiredDelivery"),("runtimeSha256",toJson runtimeSha)]
+          results := results.push summary
+          IO.println summary.compress
+          (← IO.getStdout).flush
+        finally StudyRuntime.stopManaged managed (stage / "shutdown.json")
+    finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
+    check ((← DB.PageMap.pin database).head == original.head && (← StudyRuntime.files database) == sourceFiles)
+      "actual hooks or warm changed the original checkpoint"
+    save (root / "results.json") (Json.mkObj [("topics",toJson results),("answeringModelCalls",toJson (0 : Nat)),
+      ("answeringStages",toJson (0 : Nat)),("newSeedStudy",toJson false),("productionAdoption",toJson false)])
+    return 0
+  catch error => IO.eprintln error.toString; return 1

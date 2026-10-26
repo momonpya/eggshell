@@ -7,7 +7,10 @@ open Lean Eggshell Eggshell.Research
 source-only recovery. This fixture has no answering-model credentials. -/
 def main (args : List String) : IO UInt32 := do
   try
-    let [candidate,destination] := args | throw (IO.userError "CapturedHookAudit CANDIDATE NEW-DIRECTORY")
+    let (candidate,destination,requireRouting) ← match args with
+      | [candidate,destination] => pure (candidate,destination,false)
+      | [candidate,destination,"routing"] => pure (candidate,destination,true)
+      | _ => throw (IO.userError "CapturedHookAudit CANDIDATE NEW-DIRECTORY [routing]")
     let root := System.FilePath.mk destination
     unless root.isAbsolute && !(← root.pathExists) do throw (IO.userError "new absolute fixture root required")
     let installRoot := root / "prefix"
@@ -45,5 +48,17 @@ def main (args : List String) : IO UInt32 := do
     IO.println (← IO.FS.readFile (fixture / "recovery.json"))
     let audit ← IO.ofExcept (Json.parse (← IO.FS.readFile (fixture / "recall-audit.json")))
     IO.println (← IO.ofExcept (audit.getObjVal? "requiredDelivery")).compress
+    if requireRouting then
+      let mut complete := false
+      for entry in ← (fixture / "recall-data/receipts").readDir do
+        let path := entry.path / "delivery-domain.json"
+        if !(← path.pathExists) then continue
+        let receipt ← IO.ofExcept (Json.parse (← IO.FS.readFile path))
+        if ((receipt.getObjValD "data").getObjValAs? Bool "synapticComplete").toOption == some true then
+          complete := true
+      unless complete do throw (IO.userError "actual hook did not complete its atomic synaptic walk")
+      IO.FS.writeFile (root / "routing-hook.json") (Json.mkObj [
+        ("actualHook",toJson true),("synapticComplete",toJson true),
+        ("answeringModelCalls",toJson (0 : Nat))]).pretty
     return 0
   catch error => IO.eprintln error.toString; return 1

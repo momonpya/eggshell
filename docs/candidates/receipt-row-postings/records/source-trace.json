@@ -1,0 +1,903 @@
+[{"session": "atomic-topology-source-1",
+  "receipt": "6503ad7d0ff3c4819d83317fd27b3ccf839cab7e51cfc4671b65156d346484f6",
+  "events":
+  [{"ms": 0, "event": "ingress.json", "data": {"deadlineMs": 2882470044}},
+   {"ms": 1,
+    "event": "request.json",
+    "data":
+    {"turn": "source-turn",
+     "session": "atomic-topology-source-1",
+     "inputMs": 1,
+     "inputBytes": 1222,
+     "event": "UserPromptSubmit"}},
+   {"ms": 245,
+    "event": "keyed-request.json",
+    "data":
+    {"sources": 1,
+     "requestBytes": 1633,
+     "allDocumentMetadataTransferred": false}},
+   {"ms": 1784,
+    "event":
+    "lexical-advice-76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de.json",
+    "data":
+    {"postingRows": 599,
+     "owners": 30,
+     "originalOwnerChecks": 0,
+     "elapsedMs": 99,
+     "completePostingCounts": true,
+     "authority": "advisory-only"}},
+   {"ms": 1832,
+    "event":
+    "keyed-partition-76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de.json",
+    "data":
+    {"unseenVectorKeys": 0,
+     "totalCells": 64,
+     "storage": "user",
+     "source":
+     {"root":
+      {"fields":
+       ["bytes", "checksum", "first", "height", "last", "offset", "rows"]},
+      "revision": 31,
+      "identity":
+      "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+      "bytes": 45216846,
+      "authority":
+      "[\"atom\",[116,101,97,109,45,115,111,117,114,99,101,45,115,101,101,100,45,49]]"},
+     "safeFloatPruning": false,
+     "postingRows": 1849,
+     "postingAllowance": 8192,
+     "partialCell": false,
+     "keys": 1849,
+     "keyAllowance": 4096,
+     "elapsedMs": 45,
+     "cells": 64,
+     "basis":
+     {"width": 384,
+      "source":
+      {"fields": ["authority", "bytes", "identity", "revision", "root"]},
+      "rows": 1849,
+      "matrix":
+      {"fields": ["authority", "bytes", "identity", "revision", "root"]},
+      "eligibility":
+      "3a53b841241312ab6a93ae1ed9536d7dbf655e33192f5a76015fdcdd02d564ae"}}},
+   {"ms": 1866,
+    "event":
+    "lexical-consumed-76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de.json",
+    "data":
+    {"source":
+     {"root":
+      {"fields":
+       ["bytes", "checksum", "first", "height", "last", "offset", "rows"]},
+      "revision": 31,
+      "identity":
+      "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+      "bytes": 45216846,
+      "authority":
+      "[\"atom\",[116,101,97,109,45,115,111,117,114,99,101,45,115,101,101,100,45,49]]"},
+     "originalOwnerChecks": 8,
+     "documents": 8,
+     "advisoryOnly": true}},
+   {"ms": 2426,
+    "event": "numerical-8093-2882443028176916.json",
+    "data":
+    {"status": "completed",
+     "elapsedMs": 559,
+     "counters":
+     {"sourceInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "source": {"fields": ["absent", "hit", "unusable"]},
+      "scoringPolicy":
+      "window centroid weighted by newly covered source tokens",
+      "scoredWindows": 1849,
+      "scoreMs": 553,
+      "queryMs": 3,
+      "queryInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "query": {"fields": ["absent", "hit", "unusable"]},
+      "projectionRetainedBytes": 5680128,
+      "projectionReadMsWithinScore": 420,
+      "projectionMisses": 1849,
+      "projectionHits": 0,
+      "phase": "encoder-reply",
+      "matrixRows": 1849,
+      "matrixOpens": 0,
+      "matrixOpenMs": 0,
+      "encoder":
+      {"fields":
+       ["initializeUs",
+        "leaseUs",
+        "modelLoaded",
+        "queryEncodeUs",
+        "replies",
+        "requestUs",
+        "scoreUs",
+        "sourceEncodeUs",
+        "startupUs"]},
+      "cacheMs": 1},
+     "corpus":
+     {"windowReferences": 1849,
+      "purpose": "keyed-discovery",
+      "numerical": true,
+      "durableDocuments": 30,
+      "documents": 30}}},
+   {"ms": 2427,
+    "event": "keyed-coverage.json",
+    "data":
+    [{"unseenVectorKeys": 0,
+      "totalCells": 64,
+      "source": 0,
+      "routePoints": 1849,
+      "routeKeys": 1849,
+      "routeCells": 64,
+      "population": 30,
+      "physicalRows": 1849,
+      "partialKeys": {"entries": 0},
+      "partialCell": false,
+      "nominatedOwners": 30,
+      "lexicalWindowOmissions": 0,
+      "lexicalOwners": 8,
+      "approximate": true}]},
+   {"ms": 2440,
+    "event": "keyed-nominations.json",
+    "data":
+    {"related": 8,
+     "ranked": 30,
+     "coverage":
+     [{"fields":
+       ["approximate",
+        "lexicalOwners",
+        "lexicalWindowOmissions",
+        "nominatedOwners",
+        "partialCell",
+        "partialKeys",
+        "physicalRows",
+        "population",
+        "routeCells",
+        "routeKeys",
+        "routePoints",
+        "source",
+        "totalCells",
+        "unseenVectorKeys"]}],
+     "authority": "advisory-only"}},
+   {"ms": 2489,
+    "event": "discovery-counters-2882443650058208.json",
+    "data":
+    {"scope":
+     "overlapping counters; do not sum admission with nested frequency IO",
+     "graphOutcomes": 16,
+     "counters":
+     {"work-class-owners": {"fields": ["calls", "nanos"]},
+      "owner": {"fields": ["calls", "nanos"]},
+      "ordinal": {"fields": ["calls", "nanos"]}},
+     "complete": true}},
+   {"ms": 2981,
+    "event": "numerical-8119-2882443860796125.json",
+    "data":
+    {"status": "completed",
+     "elapsedMs": 282,
+     "counters":
+     {"sourceInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "source": {"fields": ["absent", "hit", "unusable"]},
+      "scoringPolicy":
+      "window centroid weighted by newly covered source tokens",
+      "scoredWindows": 1849,
+      "scoreMs": 111,
+      "queryMs": 159,
+      "queryInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "query": {"fields": ["absent", "hit", "unusable"]},
+      "projectionRetainedBytes": 5787648,
+      "projectionReadMsWithinScore": 25,
+      "projectionMisses": 35,
+      "projectionHits": 1814,
+      "phase": "encoder-reply",
+      "matrixRows": 1849,
+      "matrixOpens": 0,
+      "matrixOpenMs": 0,
+      "encoder":
+      {"fields":
+       ["initializeUs",
+        "leaseUs",
+        "modelLoaded",
+        "queryEncodeUs",
+        "replies",
+        "requestUs",
+        "scoreUs",
+        "sourceEncodeUs",
+        "startupUs"]},
+      "cacheMs": 0},
+     "corpus":
+     {"windowReferences": 1849,
+      "purpose": "focus",
+      "numerical": true,
+      "durableDocuments": 30,
+      "documents": 30}}},
+   {"ms": 8647,
+    "event": "canonical-source-input.json",
+    "data":
+    [["76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+      {"entries": 2}]]},
+   {"ms": 8647,
+    "event": "canonical-source-reuse.json",
+    "data":
+    ["76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+     ["loaded", "hit"]]},
+   {"ms": 10236,
+    "event": "delivery-domain.json",
+    "data":
+    {"synapticComplete": true,
+     "nominated":
+     ["v8800107710862398518",
+      "v11459476469311155858",
+      "v5413273379768701678",
+      "v8230242550905737408",
+      "v6074522768795721594",
+      "v11887740919153722209",
+      "v8643967879187448099",
+      "v11160331603835172360"],
+     "hydrated": {"entries": 30},
+     "focusRanking": {"entries": 30},
+     "focusPositions": {"entries": 30},
+     "canonicalUsed": {"entries": 30}}},
+   {"ms": 21791,
+    "event": "selection-plan.json",
+    "data":
+    {"units": {"entries": 2865},
+     "selected": {"entries": 705},
+     "scale":
+     1289494614414635084884678239799219980907919666679843581569982055265585117488000,
+     "limit": [120000, 128000],
+     "fixedCost": [16379, 16381],
+     "families": {"entries": 30}}},
+   {"ms": 28635,
+    "event": "failure.json",
+    "data": {"stage": "request", "error": "daemon receive deadline expired"}},
+   {"ms": 28639,
+    "event": "dispatch.json",
+    "data":
+    {"error":
+     "timed out waiting for /Users/ovm/.codex/experiments/eggshell/receipt-row-postings-20261027/fixed-source-hooks/data/sessions/atomic-topology-source-1/state.guard",
+     "elapsedMs": 28634,
+     "completed": false}},
+   {"ms": 28757,
+    "event": "published.json",
+    "data":
+    {"startedMs": 2882441044,
+     "sha256":
+     "c20205d3fd5c865d354d970ccc2dc209f7fef704c3eac3637de279ee957c6a67",
+     "replyComplete": true,
+     "output": {"characters": 442},
+     "flushedMs": 2882469803,
+     "deadlineMs": 2882470044,
+     "bytes": 442}}]},
+ {"session": "atomic-topology-source-3",
+  "receipt": "f22d2be73b31a87efa306f7edf266bdd52cbac0c0b51b6d0f15bbd647dafbc5b",
+  "events":
+  [{"ms": 0, "event": "ingress.json", "data": {"deadlineMs": 2882535933}},
+   {"ms": 1,
+    "event": "request.json",
+    "data":
+    {"turn": "source-turn",
+     "session": "atomic-topology-source-3",
+     "inputMs": 1,
+     "inputBytes": 1373,
+     "event": "UserPromptSubmit"}},
+   {"ms": 132,
+    "event": "keyed-request.json",
+    "data":
+    {"sources": 1,
+     "requestBytes": 1784,
+     "allDocumentMetadataTransferred": false}},
+   {"ms": 1491,
+    "event":
+    "lexical-advice-76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de.json",
+    "data":
+    {"postingRows": 591,
+     "owners": 30,
+     "originalOwnerChecks": 0,
+     "elapsedMs": 85,
+     "completePostingCounts": true,
+     "authority": "advisory-only"}},
+   {"ms": 1540,
+    "event":
+    "keyed-partition-76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de.json",
+    "data":
+    {"unseenVectorKeys": 0,
+     "totalCells": 64,
+     "storage": "user",
+     "source":
+     {"root":
+      {"fields":
+       ["bytes", "checksum", "first", "height", "last", "offset", "rows"]},
+      "revision": 31,
+      "identity":
+      "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+      "bytes": 45216846,
+      "authority":
+      "[\"atom\",[116,101,97,109,45,115,111,117,114,99,101,45,115,101,101,100,45,49]]"},
+     "safeFloatPruning": false,
+     "postingRows": 1849,
+     "postingAllowance": 8192,
+     "partialCell": false,
+     "keys": 1849,
+     "keyAllowance": 4096,
+     "elapsedMs": 46,
+     "cells": 64,
+     "basis":
+     {"width": 384,
+      "source":
+      {"fields": ["authority", "bytes", "identity", "revision", "root"]},
+      "rows": 1849,
+      "matrix":
+      {"fields": ["authority", "bytes", "identity", "revision", "root"]},
+      "eligibility":
+      "3a53b841241312ab6a93ae1ed9536d7dbf655e33192f5a76015fdcdd02d564ae"}}},
+   {"ms": 1570,
+    "event":
+    "lexical-consumed-76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de.json",
+    "data":
+    {"source":
+     {"root":
+      {"fields":
+       ["bytes", "checksum", "first", "height", "last", "offset", "rows"]},
+      "revision": 31,
+      "identity":
+      "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+      "bytes": 45216846,
+      "authority":
+      "[\"atom\",[116,101,97,109,45,115,111,117,114,99,101,45,115,101,101,100,45,49]]"},
+     "originalOwnerChecks": 8,
+     "documents": 8,
+     "advisoryOnly": true}},
+   {"ms": 2118,
+    "event": "numerical-8731-2882508622721166.json",
+    "data":
+    {"status": "completed",
+     "elapsedMs": 547,
+     "counters":
+     {"sourceInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "source": {"fields": ["absent", "hit", "unusable"]},
+      "scoringPolicy":
+      "window centroid weighted by newly covered source tokens",
+      "scoredWindows": 1849,
+      "scoreMs": 538,
+      "queryMs": 3,
+      "queryInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "query": {"fields": ["absent", "hit", "unusable"]},
+      "projectionRetainedBytes": 5680128,
+      "projectionReadMsWithinScore": 408,
+      "projectionMisses": 1849,
+      "projectionHits": 0,
+      "phase": "encoder-reply",
+      "matrixRows": 1849,
+      "matrixOpens": 0,
+      "matrixOpenMs": 0,
+      "encoder":
+      {"fields":
+       ["initializeUs",
+        "leaseUs",
+        "modelLoaded",
+        "queryEncodeUs",
+        "replies",
+        "requestUs",
+        "scoreUs",
+        "sourceEncodeUs",
+        "startupUs"]},
+      "cacheMs": 0},
+     "corpus":
+     {"windowReferences": 1849,
+      "purpose": "keyed-discovery",
+      "numerical": true,
+      "durableDocuments": 30,
+      "documents": 30}}},
+   {"ms": 2120,
+    "event": "keyed-coverage.json",
+    "data":
+    [{"unseenVectorKeys": 0,
+      "totalCells": 64,
+      "source": 0,
+      "routePoints": 1849,
+      "routeKeys": 1849,
+      "routeCells": 64,
+      "population": 30,
+      "physicalRows": 1849,
+      "partialKeys": {"entries": 0},
+      "partialCell": false,
+      "nominatedOwners": 30,
+      "lexicalWindowOmissions": 0,
+      "lexicalOwners": 8,
+      "approximate": true}]},
+   {"ms": 2133,
+    "event": "keyed-nominations.json",
+    "data":
+    {"related": 8,
+     "ranked": 30,
+     "coverage":
+     [{"fields":
+       ["approximate",
+        "lexicalOwners",
+        "lexicalWindowOmissions",
+        "nominatedOwners",
+        "partialCell",
+        "partialKeys",
+        "physicalRows",
+        "population",
+        "routeCells",
+        "routeKeys",
+        "routePoints",
+        "source",
+        "totalCells",
+        "unseenVectorKeys"]}],
+     "authority": "advisory-only"}},
+   {"ms": 2172,
+    "event": "discovery-counters-2882509222979541.json",
+    "data":
+    {"scope":
+     "overlapping counters; do not sum admission with nested frequency IO",
+     "graphOutcomes": 16,
+     "counters":
+     {"work-class-owners": {"fields": ["calls", "nanos"]},
+      "owner": {"fields": ["calls", "nanos"]},
+      "ordinal": {"fields": ["calls", "nanos"]}},
+     "complete": true}},
+   {"ms": 2677,
+    "event": "numerical-8755-2882509428767416.json",
+    "data":
+    {"status": "completed",
+     "elapsedMs": 300,
+     "counters":
+     {"sourceInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "source": {"fields": ["absent", "hit", "unusable"]},
+      "scoringPolicy":
+      "window centroid weighted by newly covered source tokens",
+      "scoredWindows": 1849,
+      "scoreMs": 116,
+      "queryMs": 172,
+      "queryInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "query": {"fields": ["absent", "hit", "unusable"]},
+      "projectionRetainedBytes": 5787648,
+      "projectionReadMsWithinScore": 26,
+      "projectionMisses": 35,
+      "projectionHits": 1814,
+      "phase": "encoder-reply",
+      "matrixRows": 1849,
+      "matrixOpens": 0,
+      "matrixOpenMs": 0,
+      "encoder":
+      {"fields":
+       ["initializeUs",
+        "leaseUs",
+        "modelLoaded",
+        "queryEncodeUs",
+        "replies",
+        "requestUs",
+        "scoreUs",
+        "sourceEncodeUs",
+        "startupUs"]},
+      "cacheMs": 0},
+     "corpus":
+     {"windowReferences": 1849,
+      "purpose": "focus",
+      "numerical": true,
+      "durableDocuments": 30,
+      "documents": 30}}},
+   {"ms": 8323,
+    "event": "canonical-source-reuse.json",
+    "data":
+    ["76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+     ["hit", "hit"]]},
+   {"ms": 8323,
+    "event": "canonical-source-input.json",
+    "data":
+    [["76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+      {"entries": 2}]]},
+   {"ms": 9898,
+    "event": "delivery-domain.json",
+    "data":
+    {"synapticComplete": true,
+     "nominated":
+     ["v8800107710862398518",
+      "v8643967879187448099",
+      "v8230242550905737408",
+      "v5413273379768701678",
+      "v11459476469311155858",
+      "v4803407488787106520",
+      "v6074522768795721594",
+      "v18066972032291558081"],
+     "hydrated": {"entries": 30},
+     "focusRanking": {"entries": 30},
+     "focusPositions": {"entries": 30},
+     "canonicalUsed": {"entries": 30}}},
+   {"ms": 21885,
+    "event": "selection-plan.json",
+    "data":
+    {"units": {"entries": 2865},
+     "selected": {"entries": 708},
+     "scale":
+     1289494614414635084884678239799219980907919666679843581569982055265585117488000,
+     "limit": [120000, 128000],
+     "fixedCost": [16779, 16781],
+     "families": {"entries": 30}}},
+   {"ms": 28632,
+    "event": "failure.json",
+    "data": {"stage": "request", "error": "daemon receive deadline expired"}},
+   {"ms": 28637,
+    "event": "dispatch.json",
+    "data":
+    {"error":
+     "timed out waiting for /Users/ovm/.codex/experiments/eggshell/receipt-row-postings-20261027/fixed-source-hooks/data/sessions/atomic-topology-source-3/state.guard",
+     "elapsedMs": 28634,
+     "completed": false}},
+   {"ms": 28756,
+    "event": "published.json",
+    "data":
+    {"startedMs": 2882506933,
+     "sha256":
+     "c20205d3fd5c865d354d970ccc2dc209f7fef704c3eac3637de279ee957c6a67",
+     "replyComplete": true,
+     "output": {"characters": 442},
+     "flushedMs": 2882535689,
+     "deadlineMs": 2882535933,
+     "bytes": 442}}]},
+ {"session": "atomic-topology-source-2",
+  "receipt": "7d973a4bd78d5ce81b5ba1b1aa614dda7b0a5093798b42641bb45763ecf29d06",
+  "events":
+  [{"ms": 0, "event": "ingress.json", "data": {"deadlineMs": 2882502580}},
+   {"ms": 0,
+    "event": "request.json",
+    "data":
+    {"turn": "source-turn",
+     "session": "atomic-topology-source-2",
+     "inputMs": 0,
+     "inputBytes": 1181,
+     "event": "UserPromptSubmit"}},
+   {"ms": 131,
+    "event": "keyed-request.json",
+    "data":
+    {"sources": 1,
+     "requestBytes": 1592,
+     "allDocumentMetadataTransferred": false}},
+   {"ms": 1485,
+    "event":
+    "lexical-advice-76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de.json",
+    "data":
+    {"postingRows": 542,
+     "owners": 26,
+     "originalOwnerChecks": 0,
+     "elapsedMs": 83,
+     "completePostingCounts": true,
+     "authority": "advisory-only"}},
+   {"ms": 1532,
+    "event":
+    "keyed-partition-76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de.json",
+    "data":
+    {"unseenVectorKeys": 0,
+     "totalCells": 64,
+     "storage": "user",
+     "source":
+     {"root":
+      {"fields":
+       ["bytes", "checksum", "first", "height", "last", "offset", "rows"]},
+      "revision": 31,
+      "identity":
+      "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+      "bytes": 45216846,
+      "authority":
+      "[\"atom\",[116,101,97,109,45,115,111,117,114,99,101,45,115,101,101,100,45,49]]"},
+     "safeFloatPruning": false,
+     "postingRows": 1849,
+     "postingAllowance": 8192,
+     "partialCell": false,
+     "keys": 1849,
+     "keyAllowance": 4096,
+     "elapsedMs": 44,
+     "cells": 64,
+     "basis":
+     {"width": 384,
+      "source":
+      {"fields": ["authority", "bytes", "identity", "revision", "root"]},
+      "rows": 1849,
+      "matrix":
+      {"fields": ["authority", "bytes", "identity", "revision", "root"]},
+      "eligibility":
+      "3a53b841241312ab6a93ae1ed9536d7dbf655e33192f5a76015fdcdd02d564ae"}}},
+   {"ms": 1563,
+    "event":
+    "lexical-consumed-76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de.json",
+    "data":
+    {"source":
+     {"root":
+      {"fields":
+       ["bytes", "checksum", "first", "height", "last", "offset", "rows"]},
+      "revision": 31,
+      "identity":
+      "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+      "bytes": 45216846,
+      "authority":
+      "[\"atom\",[116,101,97,109,45,115,111,117,114,99,101,45,115,101,101,100,45,49]]"},
+     "originalOwnerChecks": 8,
+     "documents": 8,
+     "advisoryOnly": true}},
+   {"ms": 2124,
+    "event": "numerical-8408-2882475259906291.json",
+    "data":
+    {"status": "completed",
+     "elapsedMs": 561,
+     "counters":
+     {"sourceInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "source": {"fields": ["absent", "hit", "unusable"]},
+      "scoringPolicy":
+      "window centroid weighted by newly covered source tokens",
+      "scoredWindows": 1849,
+      "scoreMs": 555,
+      "queryMs": 3,
+      "queryInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "query": {"fields": ["absent", "hit", "unusable"]},
+      "projectionRetainedBytes": 5680128,
+      "projectionReadMsWithinScore": 419,
+      "projectionMisses": 1849,
+      "projectionHits": 0,
+      "phase": "encoder-reply",
+      "matrixRows": 1849,
+      "matrixOpens": 0,
+      "matrixOpenMs": 0,
+      "encoder":
+      {"fields":
+       ["initializeUs",
+        "leaseUs",
+        "modelLoaded",
+        "queryEncodeUs",
+        "replies",
+        "requestUs",
+        "scoreUs",
+        "sourceEncodeUs",
+        "startupUs"]},
+      "cacheMs": 2},
+     "corpus":
+     {"windowReferences": 1849,
+      "purpose": "keyed-discovery",
+      "numerical": true,
+      "durableDocuments": 30,
+      "documents": 30}}},
+   {"ms": 2125,
+    "event": "keyed-coverage.json",
+    "data":
+    [{"unseenVectorKeys": 0,
+      "totalCells": 64,
+      "source": 0,
+      "routePoints": 1849,
+      "routeKeys": 1849,
+      "routeCells": 64,
+      "population": 30,
+      "physicalRows": 1849,
+      "partialKeys": {"entries": 0},
+      "partialCell": false,
+      "nominatedOwners": 30,
+      "lexicalWindowOmissions": 0,
+      "lexicalOwners": 8,
+      "approximate": true}]},
+   {"ms": 2137,
+    "event": "keyed-nominations.json",
+    "data":
+    {"related": 8,
+     "ranked": 30,
+     "coverage":
+     [{"fields":
+       ["approximate",
+        "lexicalOwners",
+        "lexicalWindowOmissions",
+        "nominatedOwners",
+        "partialCell",
+        "partialKeys",
+        "physicalRows",
+        "population",
+        "routeCells",
+        "routeKeys",
+        "routePoints",
+        "source",
+        "totalCells",
+        "unseenVectorKeys"]}],
+     "authority": "advisory-only"}},
+   {"ms": 2175,
+    "event": "discovery-counters-2882475871624166.json",
+    "data":
+    {"scope":
+     "overlapping counters; do not sum admission with nested frequency IO",
+     "graphOutcomes": 16,
+     "counters":
+     {"work-class-owners": {"fields": ["calls", "nanos"]},
+      "owner": {"fields": ["calls", "nanos"]},
+      "ordinal": {"fields": ["calls", "nanos"]}},
+     "complete": true}},
+   {"ms": 2679,
+    "event": "numerical-8431-2882476072755666.json",
+    "data":
+    {"status": "completed",
+     "elapsedMs": 303,
+     "counters":
+     {"sourceInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "source": {"fields": ["absent", "hit", "unusable"]},
+      "scoringPolicy":
+      "window centroid weighted by newly covered source tokens",
+      "scoredWindows": 1849,
+      "scoreMs": 113,
+      "queryMs": 179,
+      "queryInput":
+      {"fields":
+       ["characters",
+        "embeddedCharacters",
+        "tokenizerMappedCharacters",
+        "tokens",
+        "vectors",
+        "visibleCharacters",
+        "windows"]},
+      "query": {"fields": ["absent", "hit", "unusable"]},
+      "projectionRetainedBytes": 5787648,
+      "projectionReadMsWithinScore": 27,
+      "projectionMisses": 35,
+      "projectionHits": 1814,
+      "phase": "encoder-reply",
+      "matrixRows": 1849,
+      "matrixOpens": 0,
+      "matrixOpenMs": 0,
+      "encoder":
+      {"fields":
+       ["initializeUs",
+        "leaseUs",
+        "modelLoaded",
+        "queryEncodeUs",
+        "replies",
+        "requestUs",
+        "scoreUs",
+        "sourceEncodeUs",
+        "startupUs"]},
+      "cacheMs": 0},
+     "corpus":
+     {"windowReferences": 1849,
+      "purpose": "focus",
+      "numerical": true,
+      "durableDocuments": 30,
+      "documents": 30}}},
+   {"ms": 8348,
+    "event": "canonical-source-reuse.json",
+    "data":
+    ["76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+     ["hit", "hit"]]},
+   {"ms": 8349,
+    "event": "canonical-source-input.json",
+    "data":
+    [["76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de",
+      {"entries": 2}]]},
+   {"ms": 9944,
+    "event": "delivery-domain.json",
+    "data":
+    {"synapticComplete": true,
+     "nominated":
+     ["v8800107710862398518",
+      "v8230242550905737408",
+      "v8643967879187448099",
+      "v6074522768795721594",
+      "v5413273379768701678",
+      "v18066972032291558081",
+      "v4803407488787106520",
+      "v11160331603835172360"],
+     "hydrated": {"entries": 30},
+     "focusRanking": {"entries": 30},
+     "focusPositions": {"entries": 30},
+     "canonicalUsed": {"entries": 30}}},
+   {"ms": 21576,
+    "event": "selection-plan.json",
+    "data":
+    {"units": {"entries": 2865},
+     "selected": {"entries": 712},
+     "scale":
+     1289494614414635084884678239799219980907919666679843581569982055265585117488000,
+     "limit": [120000, 128000],
+     "fixedCost": [16587, 16589],
+     "families": {"entries": 30}}},
+   {"ms": 28636,
+    "event": "failure.json",
+    "data": {"stage": "request", "error": "daemon receive deadline expired"}},
+   {"ms": 28644,
+    "event": "dispatch.json",
+    "data":
+    {"error":
+     "timed out waiting for /Users/ovm/.codex/experiments/eggshell/receipt-row-postings-20261027/fixed-source-hooks/data/sessions/atomic-topology-source-2/state.guard",
+     "elapsedMs": 28641,
+     "completed": false}},
+   {"ms": 28759,
+    "event": "published.json",
+    "data":
+    {"startedMs": 2882473580,
+     "sha256":
+     "c20205d3fd5c865d354d970ccc2dc209f7fef704c3eac3637de279ee957c6a67",
+     "replyComplete": true,
+     "output": {"characters": 442},
+     "flushedMs": 2882502340,
+     "deadlineMs": 2882502580,
+     "bytes": 442}}]}]

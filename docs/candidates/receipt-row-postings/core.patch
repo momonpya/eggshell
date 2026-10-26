@@ -1,0 +1,65 @@
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -15,0 +16 @@
++    (include_str "../tools/SpanPostings.lean").toUTF8,
+--- a/Eggshell/SynapseUsage.lean
++++ b/Eggshell/SynapseUsage.lean
+@@ -3,0 +4 @@
++public import tools.SpanPostings
+@@ -123,0 +125,4 @@
++    let spanOf := fun (saved : {row // row ∈ reads}) =>
++      if saved.val.valid && saved.val.binding.work == doc.work then
++        some (saved.val.binding.first,saved.val.binding.limit) else none
++    let spans := SpanPostings.prepare spanOf (byOwner.getD doc.owner #[]).toList
+@@ -126 +131 @@
+-      for saved in byOwner.getD doc.owner #[] do
++      for saved in spans.lookup (decoded.offsets[line.first]!,decoded.offsets[line.limit]!) do
+@@ -128,3 +132,0 @@
+-        if !row.valid || row.binding.work != doc.work ||
+-            row.binding.first != decoded.offsets[line.first]! ||
+-            row.binding.limit != decoded.offsets[line.limit]! then continue
+--- a/tools/SpanPostings.lean
++++ b/tools/SpanPostings.lean
+@@ -0,0 +1,42 @@
++module
++public import Std.Data.HashMap.Lemmas
++@[expose] public section
++namespace Eggshell.SpanPostings
++
++/-- Exact original-byte coordinates index the original candidate sequence.
++Values, order and duplicates are retained; hashing is only a directory. -/
++def directory (spanOf : α → Option (Nat × Nat)) (values : List α) :
++    Std.HashMap (Nat × Nat) (List α) :=
++  values.foldr (fun value found => match spanOf value with
++    | none => found
++    | some span => found.insert span (value :: found[span]?.getD [])) {}
++
++theorem directory_exact (spanOf : α → Option (Nat × Nat)) (values : List α)
++    (span : Nat × Nat) :
++    (directory spanOf values)[span]?.getD [] = values.filter (fun value => spanOf value == some span) := by
++  induction values with
++  | nil => simp [directory]
++  | cons value rest ih =>
++    cases found : spanOf value with
++    | none => simpa [directory,found] using ih
++    | some actual =>
++      by_cases same : actual = span
++      · simpa [directory,found,same] using congrArg (List.cons value) ih
++      · simpa [directory,found,same,Std.HashMap.getElem?_insert] using ih
++
++structure Index (spanOf : α → Option (Nat × Nat)) (values : List α) where
++  postings : Std.HashMap (Nat × Nat) (List α)
++  exact : ∀ span, postings[span]?.getD [] = values.filter (fun value => spanOf value == some span)
++
++def prepare (spanOf : α → Option (Nat × Nat)) (values : List α) : Index spanOf values :=
++  ⟨directory spanOf values,directory_exact spanOf values⟩
++
++variable {α : Type u} {spanOf : α → Option (Nat × Nat)} {values : List α}
++
++def Index.lookup (index : Index spanOf values) (span : Nat × Nat) : List α :=
++  index.postings[span]?.getD []
++
++theorem Index.lookup_exact (index : Index spanOf values) (span : Nat × Nat) :
++    index.lookup span = values.filter (fun value => spanOf value == some span) := index.exact span
++
++end Eggshell.SpanPostings
