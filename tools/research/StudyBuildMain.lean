@@ -13,6 +13,7 @@ structure Settings where
   toolchain : String
   baselineResponse : String
   baselineMain : String
+  baselineCore : Option String := none
   objectModules : String
   parents : Array String
   force : Array String
@@ -24,6 +25,7 @@ structure State where
   active : Std.HashSet String := {}
   objects : Std.HashMap String String := {}
   records : Array Json := #[]
+  inheritedStamps : Std.HashMap String String := {}
 
 private def check (b : Bool) (message : String) : IO Unit :=
   unless b do throw (IO.userError message)
@@ -35,13 +37,21 @@ private def readJson (path : String) : IO Json := do
 interfaces therefore form one explicit overlay, including opaque companions. -/
 private partial def inheritLibrary (source target : System.FilePath) : IO Unit := do
   IO.FS.createDirAll target
-  for entry in ← source.readDir do
+  -- Link to the actual interface, not another overlay's link. Chained
+  -- candidate libraries otherwise exceed the OS symlink limit despite a
+  -- valid inherited object, and later cleanup can break an unrelated build.
+  let actualSource ← IO.FS.realPath source
+  for entry in ← actualSource.readDir do
     if !(← entry.path.pathExists) then continue
     let destination := target / entry.fileName
     if ← entry.path.isDir then inheritLibrary entry.path destination
-    else if !(← destination.pathExists) then
-      let linked ← IO.Process.output {cmd := "/bin/ln",args := #["-s",entry.path.toString,destination.toString]}
-      check (linked.exitCode == 0) s!"cannot link inherited interface: {destination}"
+    else
+      let metadata ← try pure (some (← destination.symlinkMetadata)) catch _ => pure none
+      if metadata.any (·.type == .symlink) then IO.FS.removeFile destination
+      if metadata.isNone || metadata.any (·.type == .symlink) then
+        let actual ← IO.FS.realPath entry.path
+        let linked ← IO.Process.output {cmd := "/bin/ln",args := #["-s",actual.toString,destination.toString]}
+        check (linked.exitCode == 0) s!"cannot link inherited interface: {destination}"
 
 private def detachInterfaces (path : System.FilePath) : IO Unit := do
   let parent := path.parent.get!
@@ -108,7 +118,19 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
   -- Research sources live in the changing project, rather than the frozen
   -- candidate checkout. An inherited interface cannot establish their bytes.
   -- Compile them locally once; the local source cache handles later reuse.
-  let inherited ← if name.startsWith "tools.research." then pure false else
+  -- A changed ordinary module must not inherit an old object either. Use
+  -- the actual object's stamp; for an unstamped frozen base, require the
+  -- explicitly selected parent source to be byte-identical. Missing source
+  -- provenance causes a rebuild rather than silently selecting old code.
+  let matchedStamp ← match (← state.get).inheritedStamps[name]? with
+    | some original => pure (original == stamp)
+    | none => match settings.baselineCore with
+      | none => pure false
+      | some baseline => do
+          let previous := System.FilePath.mk (baseline ++ "/" ++ path ++ ".lean")
+          if !(← previous.pathExists) then pure false else
+            pure ((← sourceStamp previous (← IO.FS.readFile previous)) == stamp)
+  let inherited ← if name.startsWith "tools.research." || !matchedStamp then pure false else
     System.FilePath.pathExists (settings.core ++ "/.lake/build/lib/lean/" ++ path ++ ".olean")
   if !hasLocal && inherited && !changed && !settings.force.contains name then
     state.modify fun s => {s with done := s.done.insert name false,active := s.active.erase name}
@@ -143,11 +165,19 @@ def build (input : String) : IO Unit := do
   let settings ← IO.ofExcept (fromJson? (α := Settings) (← readJson input))
   IO.FS.createDirAll settings.output
   inheritLibrary (.mk (settings.core ++ "/.lake/build/lib/lean")) (.mk (settings.output ++ "/lib"))
-  let state ← IO.mkRef ({} : State)
+  let objectMap ← IO.ofExcept ((← readJson settings.objectModules).getObj?)
+  let mut inheritedStamps : Std.HashMap String String := {}
+  for row in (← IO.FS.readFile settings.baselineResponse).splitOn "\n" do
+    if row.trimAscii.isEmpty then continue
+    let path ← IO.ofExcept (Json.parse row >>= Json.getStr?)
+    let some name := objectMap[path]? | continue
+    let cache := (System.FilePath.mk path).withExtension "source"
+    if ← cache.pathExists then
+      inheritedStamps := inheritedStamps.insert (← IO.ofExcept name.getStr?) (← IO.FS.readFile cache)
+  let state ← IO.mkRef ({inheritedStamps} : State)
   let _ ← visit settings state settings.mainModule
   let state ← state.get
   let mut modules : Std.HashMap String String := {}
-  let objectMap ← IO.ofExcept ((← readJson settings.objectModules).getObj?)
   for (path,name) in objectMap.toArray do modules := modules.insert path (← IO.ofExcept name.getStr?)
   for parent in settings.parents do
     if !(← System.FilePath.pathExists (parent ++ "/modules.json")) then continue

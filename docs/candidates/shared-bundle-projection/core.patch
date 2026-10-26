@@ -1,0 +1,15 @@
+--- a/Eggshell/SynapseBundles.lean
++++ b/Eggshell/SynapseBundles.lean
+@@ -2,0 +3 @@
++public import Eggshell.HashDistinct
+@@ -101,0 +103,7 @@
++def bindingRows (source : Range) (owner : OwnerRows) : Array Read :=
++  (hashDistinct (owner.directory[source]?.getD #[]).toList).toArray
++
++theorem binding_rows_exact (source : Range) (owner : OwnerRows) :
++    bindingRows source owner = (owner.directory[source]?.getD #[]).toList.eraseDups.toArray := by
++  simp only [bindingRows,HashDistinct.reference]
++
+@@ -103 +111 @@
+-  let rows := (owner.directory[source]?.getD #[]).toList.eraseDups.toArray
++  let rows := bindingRows source owner

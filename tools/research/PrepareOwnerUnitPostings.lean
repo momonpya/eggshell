@@ -43,6 +43,7 @@ def main (args : List String) : IO Unit := do
     |>.setObjVal! "force" (toJson #["Eggshell.Handoff","Main"])
     |>.setObjVal! "baselineResponse" (toJson (parent / "product-build/runtime.rsp").toString)
     |>.setObjVal! "baselineMain" (toJson (parent / "product-build/Main.o").toString)
+    |>.setObjVal! "baselineCore" (toJson (parent / "checkout").toString)
   IO.FS.writeFile (candidate / "build-plan.json") plan.pretty
   let library := candidate / "checkout/.lake/build/lib/lean"
   IO.FS.removeFile library

@@ -1,0 +1,622 @@
+--- a/Eggshell/CanonicalSourcePrepared.lean
++++ b/Eggshell/CanonicalSourcePrepared.lean
+@@ -0,0 +1,273 @@
++module
++
++public import Eggshell.CanonicalSourceCache
++public import Eggshell.CanonicalSourceDelivery
++public import Std.Sync.Mutex
++public import Init.System.Promise
++
++@[expose] public section
++
++namespace Eggshell.Synapses.CanonicalSource.Shared
++open Lean DB
++
++def allOwners (registry : Registry) : Std.HashSet (String × String) := Id.run do
++  let mut allowed : Std.HashSet (String × String) := {}
++  for (_,atom) in registry.atoms do
++    for origin in atom.origins do
++      allowed := allowed.insert (origin.binding.database,origin.binding.owner)
++  return allowed
++
++structure Loaded where
++  ready : Cache.Ready
++  owners : Std.HashMap String (Array StoredRow)
++  exact : owners = Delivery.byOwner ready.registry (allOwners ready.registry)
++
++/-- All owners are projected once. Filtering the request then performs point
++lookups; neither a full registry nor another customer's state crosses the wire. -/
++def Loaded.make (ready : Cache.Ready) : Loaded :=
++  ⟨ready,Delivery.byOwner ready.registry (allOwners ready.registry),rfl⟩
++
++theorem Loaded.lookup_exact (loaded : Loaded) (owner : String) :
++    loaded.owners[owner]? =
++      (Delivery.byOwner loaded.ready.registry (allOwners loaded.ready.registry))[owner]? := by
++  rw [loaded.exact]
++
++def Loaded.rows (loaded : Loaded) (owners : Array String) : Array (String × Array StoredRow) :=
++  owners.map fun owner => (owner,loaded.owners[owner]?.getD #[])
++
++theorem Loaded.requested_domain (loaded : Loaded) (owners : Array String) :
++    (loaded.rows owners).map Prod.fst = owners := by
++  simp [Loaded.rows,Array.map_map,Function.comp_def]
++
++structure Budget (capacity : Nat) where
++  used : Nat := 0
++  within : used ≤ capacity := by omega
++
++def Budget.reserve? (budget : Budget capacity) (amount : Nat) : Option (Budget capacity) :=
++  if fits : budget.used+amount ≤ capacity then some ⟨budget.used+amount,fits⟩ else none
++
++def Budget.release (budget : Budget capacity) (amount : Nat) : Budget capacity :=
++  ⟨budget.used-amount,Nat.le_trans (Nat.sub_le ..) budget.within⟩
++
++theorem Budget.reserved_within (budget next : Budget capacity) (amount : Nat)
++    (_reserved : budget.reserve? amount = some next) : next.used ≤ capacity := next.within
++
++def capacity : Nat := 512*1024*1024
++def maxLoads : Nat := 2
++def maxEntries : Nat := 128
++
++structure Entry where
++  promise : IO.Promise (Except String Loaded)
++  charge : Nat
++  borrowers : Nat
++  stamp : Nat
++  serial : Nat
++  loading : Bool := true
++
++structure State where
++  entries : Std.HashMap String Entry := {}
++  budget : Budget capacity := {}
++  active : Nat := 0
++  clock : Nat := 0
++  closed : Bool := false
++  loads : Nat := 0
++  hits : Nat := 0
++  joins : Nat := 0
++  evictions : Nat := 0
++  readBytes : Nat := 0
++
++structure Pool where
++  state : Std.Mutex State
++  tasks : Std.Mutex (Array (Task (Except IO.Error Unit)))
++
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new #[]⟩
++
++inductive Admission where
++  | borrowed (entry : Entry)
++  | start (entry : Entry)
++  | busy
++
++def evict (state : State) : Option State := do
++  let idle := state.entries.toArray.filter fun (_,entry) => !entry.loading && entry.borrowers == 0
++  let (key,entry) ← (idle.qsort fun a b => a.2.stamp < b.2.stamp)[0]?
++  return {state with
++    entries := state.entries.erase key
++    budget := state.budget.release entry.charge
++    evictions := state.evictions+1}
++
++def reclaim (state : State) (charge : Nat) : Nat → State
++  | 0 => state
++  | fuel+1 =>
++      if state.budget.used+charge ≤ capacity && state.entries.size < maxEntries then state else
++      match evict state with
++      | none => state
++      | some next => reclaim next charge fuel
++
++def State.borrow? (state : State) (key : String) : Option (State × Entry) := do
++  let entry ← state.entries[key]?
++  let entry := {entry with borrowers := entry.borrowers+1,stamp := state.clock+1}
++  return ({state with
++    entries := state.entries.insert key entry
++    clock := state.clock+1
++    hits := state.hits + (if entry.loading then 0 else 1)
++    joins := state.joins + (if entry.loading then 1 else 0)},entry)
++
++def Pool.borrow? (pool : Pool) (key : String) : IO (Option Entry) := pool.state.atomically do
++  let state ← get
++  unless !state.closed do throw (IO.userError "prepared source service is closed")
++  let some (next,entry) := state.borrow? key | return none
++  set next
++  return some entry
++
++def Pool.admit (pool : Pool) (key : String) (charge : Nat) : IO Admission := pool.state.atomically do
++  let state ← get
++  unless !state.closed do throw (IO.userError "prepared source service is closed")
++  if let some (state,entry) := state.borrow? key then
++    set state
++    return .borrowed entry
++  if state.active ≥ maxLoads then return .busy
++  let state := reclaim state charge maxEntries
++  if state.active ≥ maxLoads || state.entries.size ≥ maxEntries then
++    set state
++    return .busy
++  let some budget := state.budget.reserve? charge | set state; return .busy
++  let entry : Entry := ⟨← IO.Promise.new,charge,1,state.clock+1,state.clock+1,true⟩
++  set {state with
++    entries := state.entries.insert key entry
++    budget
++    clock := state.clock+1
++    active := state.active+1
++    loads := state.loads+1}
++  return .start entry
++
++def Pool.release (pool : Pool) (key : String) (serial : Nat) : IO Unit := pool.state.atomically do
++  modify fun state => match state.entries[key]? with
++    | none => state
++    | some entry => if entry.serial != serial then state else
++        {state with entries := state.entries.insert key {entry with borrowers := entry.borrowers-1}}
++
++def Pool.finish (pool : Pool) (key : String) (entry : Entry)
++    (bytes : Nat) (result : Except String Loaded) : IO Unit := pool.state.atomically do
++  let state ← get
++  if !state.closed then
++    match state.entries[key]? with
++    | none => pure ()
++    | some current =>
++        if current.serial != entry.serial then pure () else match result with
++        | .ok _ => set {state with
++            active := state.active-1
++            readBytes := state.readBytes+bytes
++            entries := state.entries.insert key {current with loading := false}}
++        | .error _ => set {state with
++            active := state.active-1
++            entries := state.entries.erase key
++            budget := state.budget.release current.charge}
++  unless ← entry.promise.isResolved do entry.promise.resolve result
++
++/-- Closing and launching share the same short ownership lock. A requester
++cannot spawn a preparation after close has retired its task registry. -/
++def Pool.launch (pool : Pool) (identity : String) (entry : Entry) (bytes : Nat)
++    (load : IO Loaded) : IO Unit := pool.state.atomically do
++  let state ← get
++  if state.closed then
++    unless ← entry.promise.isResolved do entry.promise.resolve (.error "prepared source service stopped")
++    return
++  let task ← IO.asTask (do
++    let result ← try pure (.ok (← load) : Except String Loaded)
++      catch error => pure (.error error.toString)
++    pool.finish identity entry bytes result) .dedicated
++  pool.tasks.atomically do
++    let live ← (← get).filterM fun task => return !(← IO.hasFinished task)
++    set (live.push task)
++
++def key (path : System.FilePath) (metadata : Cache.Manifest) : String :=
++  (toJson (path.normalize.toString,metadata)).compress
++
++inductive Reuse where
++  | loaded | joined | hit
++  deriving BEq, ToJson, FromJson
++
++/-- A read capability names one source scope and immutable preparation.
++Only its non-secret identity belongs in a delivery/memo receipt. -/
++structure Access where
++  database : String
++  scope : String
++  capability : String
++  source : PageMap.Head
++  metadata : Cache.Manifest
++  reuse : Reuse
++  deriving ToJson, FromJson
++
++def Access.identity (access : Access) : Json :=
++  toJson (access.database,access.scope,access.source,access.metadata)
++
++theorem Access.capability_not_identity (access : Access) (secret : String) :
++    ({access with capability := secret}).identity = access.identity := rfl
++
++structure Projection where
++  identity : Json
++  rows : Array (String × Array StoredRow)
++  reuse : Reuse
++  deriving ToJson, FromJson
++
++/-- Payload bytes are verified only by the preparation owner. Admission
++charges a conservative footprint including decoder and origin-index overhead;
++the process RSS limit is measured independently of this accounting. -/
++def Pool.acquire (pool : Pool) (source : PageMap.Snapshot) (path : System.FilePath)
++    (metadata : Cache.Manifest) (deadline : Nat) : IO (Entry × Reuse) := do
++  unless (← IO.monoMsNow) < deadline do throw (IO.userError "prepared source request expired")
++  let identity := key path metadata
++  if let some entry ← pool.borrow? identity then
++    return (entry,if entry.loading then .joined else .hit)
++  let payload := path / (metadata.payload ++ ".json")
++  let bytes := (← payload.metadata).byteSize.toNat
++  unless bytes ≤ 32*1024*1024 do throw (IO.userError "prepared source payload exceeds its bound")
++  let charge := bytes*8+metadata.rows*1024+65536
++  unless charge ≤ capacity do throw (IO.userError "prepared source footprint exceeds service capacity")
++  repeat
++    unless (← IO.monoMsNow) < deadline do throw (IO.userError "prepared source admission expired")
++    match ← pool.admit identity charge with
++    | .busy => IO.sleep 1
++    | .borrowed entry => return (entry,if entry.loading then .joined else .hit)
++    | .start entry =>
++        try
++          pool.launch identity entry bytes do
++            let some ready ← Cache.atSource? source path metadata |
++              throw (IO.userError "prepared source no longer matches its publication")
++            return Loaded.make ready
++        catch error => pool.finish identity entry 0 (.error error.toString)
++        return (entry,.loaded)
++  throw (IO.userError "unreachable prepared source admission")
++
++def Pool.withReady (pool : Pool) (source : PageMap.Snapshot) (path : System.FilePath)
++    (metadata : Cache.Manifest) (deadline : Nat) (use : Loaded → Reuse → IO α) : IO α := do
++  let identity := key path metadata
++  let (entry,reuse) ← pool.acquire source path metadata deadline
++  try
++    repeat
++      unless (← IO.monoMsNow) < deadline do throw (IO.userError "prepared source wait expired")
++      if ← entry.promise.isResolved then
++        let some result := entry.promise.result?.get | throw (IO.userError "prepared source reply missing")
++        return ← use (← IO.ofExcept result) reuse
++      IO.sleep 1
++    throw (IO.userError "unreachable prepared source wait")
++  finally pool.release identity entry.serial
++
++def Pool.close (pool : Pool) : IO Unit := do
++  pool.state.atomically do
++    let state ← get
++    set {state with closed := true,entries := {},budget := {},active := 0}
++    for (_,entry) in state.entries do
++      unless ← entry.promise.isResolved do entry.promise.resolve (.error "prepared source service stopped")
++  for task in ← pool.tasks.atomically get do IO.cancel task
++
++def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
++  let state ← get
++  return Json.mkObj [("entries",toJson state.entries.size),("chargedBytes",toJson state.budget.used),
++    ("capacity",toJson capacity),("active",toJson state.active),("loads",toJson state.loads),
++    ("hits",toJson state.hits),("joins",toJson state.joins),("evictions",toJson state.evictions),
++    ("verifiedPayloadBytes",toJson state.readBytes),("closed",toJson state.closed),
++    ("accountedExact",toJson (state.budget.used ==
++      state.entries.fold (fun total _ entry => total+entry.charge) 0))]
++
++end Eggshell.Synapses.CanonicalSource.Shared
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -4,0 +5 @@
++public import Eggshell.CanonicalSourcePrepared
+@@ -82 +83,9 @@
+-def generation : IO String := do Daemon.executableGeneration (← IO.appPath)
++/-- Installation paths and copy mtimes are not service generations. The same
++source protocol can share one owner across clients built from the same code. -/
++def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
++  (include_str "PublicationWire.lean").toUTF8,(include_str "PublicationClient.lean").toUTF8,
++  (include_str "PublicationService.lean").toUTF8,(include_str "NativePublication.lean").toUTF8,
++  (include_str "CanonicalSourcePrepared.lean").toUTF8,(include_str "DaemonWire.lean").toUTF8,
++  (include_str "PluginModel.lean").toUTF8,(include_str "DB/PageMap.lean").toUTF8,
++  (include_str "DB/Sidecar.lean").toUTF8,
++  CanonicalSource.Cache.implementation.toUTF8,Index.implementation.toUTF8])
+@@ -83,0 +93,4 @@
++initialize runtimeGeneration : String ← pure implementation
++
++def generation : IO String := pure runtimeGeneration
++
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -4,0 +5 @@
++public import Eggshell.CanonicalSourcePrepared
+@@ -10,0 +12,67 @@
++structure SourceReference where
++  endpoint : Daemon.Endpoint
++  access : Synapses.CanonicalSource.Shared.Access
++
++def SourceReference.metadata (reference : SourceReference) := reference.access.metadata
++
++def SourceReference.identity (reference : SourceReference) : Json := reference.access.identity
++
++def liveBudget (deadline : Nat) : IO Nat := do
++  let now ← IO.monoMsNow
++  unless now < deadline do throw (IO.userError "prepared source request expired")
++  return min maxBudgetMs (deadline-now)
++
++/-- An explicitly supplied data-side owner is useful to native clients and
++does not require a writer registration for a read-only source. -/
++def prepareSourceUsing (endpoint : Daemon.Endpoint) (source : PageMap.Snapshot)
++    (storage : Sidecar.Storage) (deadline : Nat) : IO (Option SourceReference) := do
++  let budget ← liveBudget deadline
++  let response ← Daemon.exchange endpoint "prepare-source" (Json.mkObj [
++    ("directory",toJson source.directory.toString),("source",toJson source.head),("storage",toJson storage),
++    ("budgetMs",toJson budget)]) (budget := budget)
++  let value ← IO.ofExcept (Json.parse response)
++  if value == Json.null then return none
++  let access ← IO.ofExcept (fromJson? (α := Synapses.CanonicalSource.Shared.Access) value)
++  unless access.database == source.head.identity && access.source == source.head &&
++      access.metadata.source.identity == source.head.identity && Synapses.digest access.scope &&
++      Synapses.digest access.capability &&
++      access.metadata.implementation == Synapses.CanonicalSource.Cache.implementation do
++    throw (IO.userError "prepared source reply changed its scope or source")
++  return some ⟨{endpoint with secret := access.capability},access⟩
++
++/-- After local administration grants a read scope, refreshing it needs only
++that scope's read capability, including when the publisher is another owner. -/
++def SourceReference.refresh (reference : SourceReference) (source : PageMap.Head)
++    (deadline : Nat) : IO (Option SourceReference) := do
++  let budget ← liveBudget deadline
++  let response ← Daemon.exchange reference.endpoint "refresh-source" (Json.mkObj [
++    ("database",toJson reference.access.database),("scope",toJson reference.access.scope),
++    ("source",toJson (some source)),("budgetMs",toJson budget)]) (budget := budget)
++  let value ← IO.ofExcept (Json.parse response)
++  if value == Json.null then return none
++  let access ← IO.ofExcept (fromJson? (α := Synapses.CanonicalSource.Shared.Access) value)
++  unless access.database == reference.access.database && access.scope == reference.access.scope &&
++      access.capability == reference.access.capability && access.source == source &&
++      access.metadata.implementation == Synapses.CanonicalSource.Cache.implementation do
++    throw (IO.userError "prepared source refresh changed its read authority")
++  return some ⟨reference.endpoint,access⟩
++
++def sourceRows (reference : SourceReference) (owners : Array String) (deadline : Nat) :
++    IO Synapses.CanonicalSource.Shared.Projection := do
++  let access := reference.access
++  let owners := (hashDistinct owners.toList).toArray
++  let budget ← liveBudget deadline
++  let response ← Daemon.exchange reference.endpoint "source-rows" (Json.mkObj [
++    ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
++    ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) (budget := budget)
++  let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.CanonicalSource.Shared.Projection))
++  unless result.identity == reference.identity && result.rows.map Prod.fst == owners do
++    throw (IO.userError "prepared source projection changed its owner domain")
++  for (owner,rows) in result.rows do
++    unless rows.all (fun row => row.origins.all (fun origin =>
++        origin.binding.database == access.database && origin.binding.owner == owner)) do
++      throw (IO.userError "prepared source projection crossed its owner scope")
++    let _ ← IO.ofExcept (Synapses.CanonicalSource.load access.database rows)
++    pure ()
++  return result
++
+@@ -21,0 +90,4 @@
++  if let some endpoint ← endpoint? then
++    if endpoint.compatible (← generation) then
++      let reachable ← try ready endpoint; pure true catch _ => pure false
++      if reachable then return endpoint
+@@ -29,5 +101 @@
+-        let _ ← Daemon.exchange endpoint "shutdown" (budget := 500)
+-        let deadline := (← IO.monoMsNow)+10000
+-        while (← endpoint?).isSome do
+-          unless (← IO.monoMsNow) < deadline do throw (IO.userError "old publisher did not release its ownership")
+-          IO.sleep 5
++        throw (IO.userError "shared data service uses another implementation; explicitly stop its owner before replacement")
+@@ -48,0 +117,4 @@
++def prepareSource (source : PageMap.Snapshot) (storage : Sidecar.Storage)
++    (deadline : Nat) : IO (Option SourceReference) := do
++  prepareSourceUsing (← resolve) source storage deadline
++
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -3,0 +4 @@
++public import Eggshell.CanonicalSourcePrepared
+@@ -34,0 +36,11 @@
++structure ReadSource where
++  directory : System.FilePath
++  database : String
++  storage : Sidecar.Storage
++  scope : String
++  capability : String
++
++structure DeferredReply where
++  promise : IO.Promise (Except IO.Error Unit)
++  charge : Nat
++
+@@ -38,0 +51,131 @@
++  sources : Std.Mutex (Array ReadSource)
++  prepared : CanonicalSource.Shared.Pool
++  sourceReplies : Std.Mutex Nat
++  deferredReplies : Std.Mutex (Array DeferredReply)
++
++def reserveReply (server : Server) (charge deadline : Nat) : IO Unit := do
++  repeat
++    unless !(← server.stopping.get) && (← IO.monoMsNow) < deadline do
++      throw (IO.userError "source service reply admission expired")
++    let admitted ← server.sourceReplies.atomically do
++      let used ← get
++      -- Large source responses leave control headroom. Slow readers must
++      -- not prevent stats, source ACKs or the service owner's shutdown.
++      let limit := if charge > 65536 then 48*1024*1024 else 64*1024*1024
++      if used+charge > limit then return false
++      set (used+charge)
++      return true
++    if admitted then return
++    IO.sleep 1
++
++/-- A timed-out send retains its byte reservation until the native write has
++released its buffers. Slow readers cannot create unaccounted output queues. -/
++def sendReply (server : Server) (client : Socket.Client) (payload : ByteArray)
++    (deadline : Nat) (reserved : IO.Ref Nat) : IO Unit := do
++  let charge ← reserved.get
++  unless payload.size ≤ Daemon.maxFrameBytes && payload.size ≤ charge && charge > 0 do
++    throw (IO.userError "unreserved or oversized source service reply")
++  let pending ← client.native.send #[Daemon.frameLength payload,payload]
++  let started ← IO.monoMsNow
++  repeat
++    if ← pending.isResolved then
++      let some result := pending.result?.get | throw (IO.userError "source service send disappeared")
++      return ← IO.ofExcept result
++    let now ← IO.monoMsNow
++    if now ≥ deadline || ((← server.stopping.get) && now ≥ started+25) then
++      let charge ← reserved.get
++      server.deferredReplies.atomically (modify (·.push ⟨pending,charge⟩))
++      reserved.set 0
++      throw (IO.userError "source service send expired")
++    IO.sleep 1
++
++def reapReplies (server : Server) : IO Unit := do
++  let released ← server.deferredReplies.atomically do
++    let mut live := #[]
++    let mut released := 0
++    for reply in ← get do
++      if ← reply.promise.isResolved then released := released+reply.charge
++      else live := live.push reply
++    set live
++    return released
++  server.sourceReplies.atomically (modify (·-released))
++
++/-- Read registration grants no publisher lease or source write authority.
++Paths are accepted only through the existing local administration capability. -/
++def readSource (server : Server) (path : System.FilePath) (database : String)
++    (storage : Sidecar.Storage) : IO ReadSource := server.sources.atomically do
++  let sources ← get
++  if let some source := sources.find? (fun source => source.directory == path &&
++      source.database == database && source.storage == storage) then return source
++  unless sources.size < 1024 do throw (IO.userError "prepared source registration is full")
++  let scope := Sha256.hex (toJson (path.normalize.toString,database,storage)).compress.toUTF8
++  let source : ReadSource := ⟨path,database,storage,scope,Blake3.hex (← IO.getRandomBytes 32)⟩
++  set (sources.push source)
++  return source
++
++def prepareRegistered (server : Server) (scope : ReadSource)
++    (requested : Option PageMap.Head) (deadline : Nat) : IO Json := do
++  let current ← PageMap.pin scope.directory
++  unless current.head.identity == scope.database do throw (IO.userError "prepared source incarnation changed")
++  let some pinned ← PageMap.HistoryReader.make? current (requested.getD current.head) |
++    throw (IO.userError "requested prepared source snapshot is unavailable")
++  let source := pinned.snapshot
++  let cachePath ← CanonicalSource.Cache.directory source scope.storage
++  let some metadata ← CanonicalSource.Cache.manifest? cachePath | return Json.null
++  unless metadata.implementation == CanonicalSource.Cache.implementation &&
++      digest metadata.payload && (← Index.sameSources source metadata.source) do return Json.null
++  server.prepared.withReady source cachePath metadata deadline fun loaded reuse => do
++    let access : CanonicalSource.Shared.Access := {
++      database := source.head.identity
++      scope := scope.scope
++      capability := scope.capability
++      source := source.head
++      metadata := loaded.ready.metadata
++      reuse}
++    return toJson access
++
++def prepareSource (server : Server) (payload : Json) (deadline : Nat) : IO Json := do
++  let path ← PageMap.absolute (.mk (← IO.ofExcept (payload.getObjValAs? String "directory")))
++  let head ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := PageMap.Head))
++  let storage ← IO.ofExcept (payload.getObjVal? "storage" >>= fromJson? (α := Sidecar.Storage))
++  let current ← PageMap.pin path
++  unless current.head.identity == head.identity do throw (IO.userError "prepared source identity changed")
++  let scope ← readSource server path head.identity storage
++  prepareRegistered server scope (some head) deadline
++
++def scopedSource (server : Server) (secret : String) (payload : Json) : IO ReadSource := do
++  let database ← IO.ofExcept (payload.getObjValAs? String "database")
++  let identity ← IO.ofExcept (payload.getObjValAs? String "scope")
++  server.sources.atomically do
++    let some scope := (← get).find? (fun source => source.database == database && source.scope == identity) |
++      throw (IO.userError "unknown prepared source scope")
++    unless scope.capability == secret do throw (IO.userError "unauthorized prepared source projection")
++    return scope
++
++def refreshSource (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
++  let scope ← scopedSource server secret payload
++  let requested ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := Option PageMap.Head))
++  prepareRegistered server scope requested deadline
++
++def sourceRows (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
++  let database ← IO.ofExcept (payload.getObjValAs? String "database")
++  let identity ← IO.ofExcept (payload.getObjValAs? String "scope")
++  let scope ← scopedSource server secret payload
++  let head ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := PageMap.Head))
++  let metadata ← IO.ofExcept (payload.getObjVal? "metadata" >>= fromJson? (α := CanonicalSource.Cache.Manifest))
++  let owners ← IO.ofExcept (payload.getObjValAs? (Array String) "owners")
++  unless owners.size ≤ 4096 && owners.all (fun owner => owner.utf8ByteSize ≤ 256) &&
++      head.identity == scope.database && metadata.source.identity == scope.database &&
++      metadata.implementation == CanonicalSource.Cache.implementation && digest metadata.payload do
++    throw (IO.userError "invalid prepared source projection request")
++  let current ← PageMap.pin scope.directory
++  let some pinned ← PageMap.HistoryReader.make? current head |
++    throw (IO.userError "prepared source snapshot retired")
++  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
++  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded reuse => do
++    let access : CanonicalSource.Shared.Access := ⟨database,identity,"",head,metadata,reuse⟩
++    let result : CanonicalSource.Shared.Projection := ⟨access.identity,loaded.rows owners,reuse⟩
++    let value := toJson result
++    unless value.compress.utf8ByteSize ≤ (Daemon.maxFrameBytes-4096)/2 do
++      throw (IO.userError "prepared source projection exceeds its wire bound")
++    return value
+@@ -177 +320,4 @@
+-    ("publishedGroups",toJson state.publishedGroups),("publishedReplies",toJson state.publishedReplies)]
++    ("publishedGroups",toJson state.publishedGroups),("publishedReplies",toJson state.publishedReplies),
++    ("preparedSources",← server.prepared.stats),
++    ("replyBytes",toJson (← server.sourceReplies.atomically get)),
++    ("deferredReplies",toJson (← server.deferredReplies.atomically get).size)]
+@@ -212,0 +359 @@
++  let reservedReply ← IO.mkRef (0 : Nat)
+@@ -213,0 +361,2 @@
++  let deadline := (← IO.monoMsNow)+maxBudgetMs
++  let replyDeadline ← IO.mkRef deadline
+@@ -215 +363,0 @@
+-    let deadline := (← IO.monoMsNow)+maxBudgetMs
+@@ -232 +380,11 @@
+-    let value ← if kind == "publish" then do
++    let deadline ← if ["prepare-source","refresh-source","source-rows"].contains kind then do
++        let budget ← IO.ofExcept (payload.getObjValAs? Nat "budgetMs")
++        pure (min deadline (deadline-maxBudgetMs+min budget maxBudgetMs))
++      else pure deadline
++    replyDeadline.set deadline
++    let replyCharge := if kind == "source-rows" then 16*1024*1024 else 65536
++    reserveReply server replyCharge deadline
++    reservedReply.set replyCharge
++    let value ← if kind == "refresh-source" then refreshSource server secret payload deadline
++      else if kind == "source-rows" then sourceRows server secret payload deadline
++      else if kind == "publish" then do
+@@ -237,0 +396 @@
++        | "prepare-source" => prepareSource server payload deadline
+@@ -245 +404,5 @@
+-  try Daemon.sendFrame client reply.compress.toUTF8
++  try
++    if (← reservedReply.get) == 0 then
++      reserveReply server 65536 (min deadline ((← IO.monoMsNow)+100))
++      reservedReply.set 65536
++    sendReply server client reply.compress.toUTF8 (← replyDeadline.get) reservedReply
+@@ -249,0 +413,2 @@
++    let bytes ← reservedReply.get
++    server.sourceReplies.atomically (modify (·-bytes))
+@@ -280 +445,2 @@
+-  let server : Server := ⟨← Std.Mutex.new ({} : State),← Std.Mutex.new 0,← IO.mkRef false⟩
++  let server : Server := ⟨← Std.Mutex.new ({} : State),← Std.Mutex.new 0,← IO.mkRef false,
++    ← Std.Mutex.new #[],← CanonicalSource.Shared.Pool.new,← Std.Mutex.new 0,← Std.Mutex.new #[]⟩
+@@ -296,0 +463 @@
++      reapReplies server
+@@ -306,0 +474 @@
++    server.prepared.close
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -7,0 +8 @@
++public import Eggshell.PublicationClient
+@@ -227 +228 @@
+-  canonical : Option CanonicalSource.Cache.Ready := none
++  canonical : Option Plugin.Publication.Client.SourceReference := none
+@@ -230 +231 @@
+-def prepare (source : PageMap.Snapshot) (writable : Bool) : IO Prepared := do
++def prepare (source : PageMap.Snapshot) (writable : Bool) (deadline : Option Nat := none) : IO Prepared := do
+@@ -234 +235,3 @@
+-      pure (← CanonicalSource.Cache.open? source storage,none)
++      let prepared ← Plugin.Publication.Client.prepareSource source storage
++        (deadline.getD ((← IO.monoMsNow)+5000))
++      pure (prepared,if prepared.isNone then some "canonical-not-ready" else none)
+@@ -245 +248 @@
+-    prepared.canonical.map (·.metadata),prepared.canonicalFailure,CanonicalSource.Delivery.implementation)
++    prepared.canonical.map (·.identity),prepared.canonicalFailure,CanonicalSource.Delivery.implementation)
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -7832,5 +7832,11 @@
+-        let rows := Synapses.CanonicalSource.Delivery.byOwner ready.registry allowed
+-        for (owner,part) in rows do
+-          match Synapses.CanonicalSource.Delivery.merge (canonicalRows[owner]?.getD #[] ++ part) with
+-          | .ok merged => canonicalRows := canonicalRows.insert owner merged
+-          | .error _ => canonicalRows := canonicalRows.erase owner
++        try
++          let owners := allowed.toArray.filterMap fun (database,owner) =>
++            if database == prepared.source.head.identity then some owner else none
++          let found ← Publication.Client.sourceRows ready owners advisoryDeadline
++          Receipt.observe source.receipt "canonical-source-reuse" (toJson (prepared.source.head.identity,
++            ready.access.reuse,found.reuse,found.rows.map fun (owner,rows) => (owner,rows.size)))
++          for (owner,part) in found.rows do
++            match Synapses.CanonicalSource.Delivery.merge (canonicalRows[owner]?.getD #[] ++ part) with
++            | .ok merged => canonicalRows := canonicalRows.insert owner merged
++            | .error _ => canonicalRows := canonicalRows.erase owner
++        catch error => Receipt.observe source.receipt "canonical-source-failure" (toJson error.toString)
+@@ -8368 +8374,4 @@
+-    try Synapses.Recommend.prepare snapshot writable
++    let now ← IO.monoMsNow
++    let deadline := sourceContext.map (·.deadline) |>.getD (now+20000)
++    let preparationDeadline := min deadline (now+(deadline-now)/4)
++    try Synapses.Recommend.prepare snapshot writable (some preparationDeadline)
