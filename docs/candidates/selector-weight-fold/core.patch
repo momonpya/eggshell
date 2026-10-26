@@ -1,0 +1,27 @@
+--- a/tools/DeferredCoverage.lean
++++ b/tools/DeferredCoverage.lean
+@@ -8,0 +9,24 @@
++/-- Fuse mapping and natural-number accumulation. This remains exact for
++arbitrarily large weights; no floating-point arithmetic enters selection. -/
++def weighted (measure : α → Nat) (values : List α) : Nat :=
++  values.foldl (fun total value => total+measure value) 0
++
++theorem weighted_exact (measure : α → Nat) (values : List α) :
++    weighted measure values = (values.map measure).sum := by
++  simp only [weighted,List.sum_eq_foldl_nat,List.foldl_map]
++
++def benefitFold (p : Problem) (selected : List (Fin p.offers.size)) : Nat :=
++  weighted (fun cue => p.weights[cue]) (cues p selected)
++
++@[csimp] theorem benefit_fold_compiled : @benefit = @benefitFold := by
++  funext p selected
++  exact (weighted_exact (fun cue => p.weights[cue]) (cues p selected)).symm
++
++def afterBenefitFold (cached : Evaluation prior) (index : Fin p.offers.size) : Nat :=
++  let fresh := hashDistinct (p.offers[index].covers.filter fun cue => !cached.cueIndex.contains cue)
++  cached.beforeBenefit + weighted (fun cue => p.weights[cue]) fresh
++
++@[csimp] theorem after_benefit_fold_compiled : @Evaluation.afterBenefit = @afterBenefitFold := by
++  funext p prior cached index
++  simp only [Evaluation.afterBenefit,afterBenefitFold,weighted_exact]
++

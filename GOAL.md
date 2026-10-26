@@ -48,6 +48,10 @@
 
 ## 実行順と完了証拠
 
+巨大leafの分割前符号化を除いた隔離候補で、同じC7 seedのwarmは146,362msで完了し、集計RSS最大1,841,136KiB・保護停止なし・残存0。8,192行の完全保存、flush非公開、取消/回復、旧leaf/旧pin、新規oracle/ContractAudit、小fixture2/2を確認した。しかし実フック3題材は29,015/29,011/29,025msで未完了、0/4・0/6・0/5のまま。メモリ修正と配送期限を分けて扱う。次は候補・重み・予算・安定した選択順を保ち、限界値の再計算を影響した候補へ限定する。回答モデル0・6段階0/6・総token未測定・未採用。[bounded-leaf-encoding.md](docs/bounded-leaf-encoding.md)。
+
+被覆重みのmap/再帰sumを1走査foldへ隔離置換し、任意の自然数でbenefit/afterBenefitが等しいことをLeanで証明した。重複cue・300bit超の重み・4状態の全限界値も参照式と一致。しかしC7再監査はwarmの集計RSS3,694,384KiBで保護停止し、実フック未実行。調査でPageMap.Writer.leavesが分割判定のために全pending行を先にencodeしていたと判明した。commitの原子性を保ち、encode前に物理ページの行数を判定する隔離修正を着手。8,192行の全順序、flush非公開、取消/回復、旧大型leafの読出し/更新を検査済み。全行を複数ページへ保存し、検索候補は捨てない。回答モデル0・6段階0/6・未採用。[selector-weight-fold.md](docs/selector-weight-fold.md)。
+
 共有payloadの非空性を型と復号境界で保証し、canonicalが空なら任意ツールの原文recordへ渡す隔離修正を実装した。コード/JSON/日本語/MCP合成試験で全原文被覆・正の費用・制御なしを確認し、新規oracle/ContractAuditも成功。しかし同じC7実フック3題材は全件約29秒で選択が未完了、0/4・0/6・0/5。親の8/15を現候補の成功としない。CPU sampleで限界被覆の重み合計、再帰的List.sumの繰返しを特定したため、候補・重み・予算・結果を保つ写像/累積の融合へ進む。必要なら逆引きによる限界値の差分更新を証明する。空payloadへ戻さず、候補を打ち切らない。warmをpublisher起動前に完了し、集計RSS3,594,272KiB・残存0。回答モデル0・6段階0/6・未採用。[nonempty-source-payload.md](docs/nonempty-source-payload.md)。
 
 受領確認の共有と範囲→bindings索引を隔離実装し、同じC7 seedの実フックが25.7〜25.9秒で本文を返した。凍結した必要原文は題材1/2/3で2/4・3/6・3/5、合計8/15（53.3%）、95%に不合格。段階説明で、未配送7件中6件が「選択済みの全原文範囲、費用0、実本文なし」と判明した。canonicalの空配列を`shared=some []`へ変え、空templateのatomicUnitが全範囲を名乗る経路を特定。次は非空共有payloadの型と原文recordへの分岐でこの虚偽被覆を除く。重み調整には戻らない。warmは一度RSS保護で停止し、同じ原文/runtimeの単独warmの回復後に実フックを監査した。全Factを一writerで更新する初期構築の保持メモリも有界化する。旧候補16対象をarchiveなしで削除。回答モデル0・6段階0/6・総token改善未測定・未採用。[receipt-preparation.md](docs/receipt-preparation.md)。

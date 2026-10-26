@@ -1,0 +1,27 @@
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -1088,0 +1089,21 @@
++/- Check cardinality before invoking the list-based wire encoder. A bulk
++publication must not allocate an encoding of its entire pending map merely
++to discover that it does not fit one page. This is a writer policy, not a
++reader format limit; all input rows are retained by the existing split. -/
++def leafFits (rows : List Row) : Bool :=
++  if rows.length ≤ 128 then decide ((encode (.leaf rows)).size ≤ 8192) else false
++
++theorem leaf_fits_bounded_rows (rows : List Row) (fits : leafFits rows = true) :
++    rows.length ≤ 128 := by
++  by_cases bounded : rows.length ≤ 128
++  · exact bounded
++  · simp [leafFits,bounded] at fits
++
++theorem leaf_fits_bounded_bytes (rows : List Row) (fits : leafFits rows = true) :
++    (encode (.leaf rows)).size ≤ 8192 := by
++  have bounded := leaf_fits_bounded_rows rows fits
++  simpa [leafFits,bounded] using fits
++
++theorem large_leaf_splits (rows : List Row) (large : 128 < rows.length) :
++    leafFits rows = false := by simp [leafFits,Nat.not_le_of_lt large]
++
+@@ -1091 +1112 @@
+-  if (encode page).size ≤ 8192 then pure [← writer.appendPage page]
++  if leafFits rows then pure [← writer.appendPage page]

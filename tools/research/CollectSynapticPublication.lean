@@ -26,17 +26,19 @@ private def commands (root : System.FilePath) : IO Json := do
 
 def main (args : List String) : IO Unit := do
   let [mode] := args | throw (IO.userError "CollectSynapticPublication routing|receipt|prepared|payload")
-  unless ["routing","receipt","prepared","payload"].contains mode do throw (IO.userError "known candidate required")
+  unless ["routing","receipt","prepared","payload","fold","leaf"].contains mode do throw (IO.userError "known candidate required")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let name := if mode == "routing" then "synaptic-publication-delta" else if mode == "payload" then "nonempty-source-payload" else if mode == "prepared" then "receipt-preparation" else "receipt-row-postings"
+  let name := if mode == "routing" then "synaptic-publication-delta" else if mode == "leaf" then "bounded-leaf-encoding" else if mode == "fold" then "selector-weight-fold" else if mode == "payload" then "nonempty-source-payload" else if mode == "prepared" then "receipt-preparation" else "receipt-row-postings"
   let root := base / (name ++ "-20261027")
-  let parent := base / (if mode == "routing" then "captured-correspondence-20261026" else if mode == "payload" then "receipt-preparation-20261027" else if mode == "prepared" then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
+  let parent := base / (if mode == "routing" then "captured-correspondence-20261026" else if mode == "leaf" then "selector-weight-fold-20261027" else if mode == "fold" then "nonempty-source-payload-20261027" else if mode == "payload" then "receipt-preparation-20261027" else if mode == "prepared" then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let output := project / "docs/candidates" / name
   let records := output / "records"
   let files := if mode == "routing" then #["Eggshell/SynapseIndex.lean","Eggshell/SynapseRecommend.lean",
     "Eggshell/SynapticRouting.lean","Eggshell/SynapticRoutingStore.lean","Eggshell/SynapticTransport.lean",
     "Eggshell/SynapticTopology.lean","Eggshell/SynapticTopologyStore.lean"]
+    else if mode == "leaf" then #["Eggshell/DB/PageMap.lean"]
+    else if mode == "fold" then #["tools/DeferredCoverage.lean"]
     else if mode == "payload" then #["Eggshell/CanonicalSourceDelivery.lean","Eggshell/Handoff.lean","Eggshell/SynapseTransport.lean"]
     else if mode == "prepared" then #["Eggshell/SynapseTransport.lean","Eggshell/SynapseBundles.lean","tools/KeyPostings.lean"]
     else #["Eggshell/SynapseIndex.lean","Eggshell/SynapseUsage.lean","tools/SpanPostings.lean"]
@@ -80,7 +82,7 @@ def main (args : List String) : IO Unit := do
       (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] do throw (IO.userError "candidate still active")
     guards := guards.push (entry.fileName,guard)
   write (records / "guards.json") (toJson (guards.qsort fun a b => a.1 < b.1)).pretty
-  for run in ["atomic-projection","actual-checkpoint","span-receipt","keyed-receipt","forced-receipt","original-domain-regression"] do
+  for run in ["atomic-projection","actual-checkpoint","span-receipt","keyed-receipt","forced-receipt","original-domain-regression","exact-marginals","atomic-page-encoding"] do
     copyIf (root / run / "results.json") (records / run / "results.json")
   let native := root / "native-atomic-routing"
   copyIf (native / "routing-hook.json") (records / "native/routing-hook.json")
@@ -121,6 +123,8 @@ def main (args : List String) : IO Unit := do
   copyIf (root / "canonical-native.stdout") (records / "contracts/canonical-native.stdout")
   copyIf (root / "canonical-independent-row-native.stdout") (records / "contracts/canonical-independent-row-native.stdout")
   copyIf (root / "canonical-checked-payload-native.stdout") (records / "contracts/canonical-checked-payload-native.stdout")
+  copyIf (root / "audit-build/tools_research_SelectorFoldAudit-lean.stdout") (records / "contracts/weight-fold.stdout")
+  copyIf (root / "audit-build/tools_research_PageEncodingAudit-lean.stdout") (records / "contracts/bounded-page-encoding.stdout")
   let artifact ← IO.Process.output {
     cmd := (base / "study-services-20261026/assessed-controller").toString
     args := #["artifacts",(root / "product-build/StudyMain").toString]}
