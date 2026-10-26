@@ -13,14 +13,19 @@ private def checkedProcess (cwd : System.FilePath) (label command : String)
 particular, native read/hash/numeric boundaries are not run in the interpreter.
 The product binary, its interfaces and its link inputs are never rewritten. -/
 def main (args : List String) : IO Unit := do
-  let [rootName,moduleName] := args | throw (IO.userError "BuildNativeProbe ROOT tools.research.MODULE")
+  let (rootName,moduleName,label) ← match args with
+    | [rootName,moduleName] => pure (rootName,moduleName,"")
+    | [rootName,moduleName,label] => pure (rootName,moduleName,label)
+    | _ => throw (IO.userError "BuildNativeProbe ROOT tools.research.MODULE [LABEL]")
   let root := System.FilePath.mk rootName
   unless root.isAbsolute && moduleName.startsWith "tools.research." &&
       moduleName.toList.all (fun char => char.isAlphanum || char == '.' || char == '_') do
     throw (IO.userError "absolute built root and research module required")
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
-  let target := root / ("probe-" ++ moduleName.replace "." "_")
+  unless label.toList.all (fun char => char.isAlphanum || char == '-') do
+    throw (IO.userError "simple probe label required")
+  let target := root / ("probe-" ++ moduleName.replace "." "_" ++ if label.isEmpty then "" else "-" ++ label)
   unless !(← target.pathExists) do throw (IO.userError "keep earlier native-probe evidence")
   let source := project / (moduleName.replace "." "/" ++ ".lean")
   let captured ← IO.FS.readFile source

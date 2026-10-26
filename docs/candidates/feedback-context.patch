@@ -1,0 +1,26 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -453,6 +453,12 @@
+       if !reads.isEmpty then
+         if let some (query, known, _) := starts[occurrence]? then
+           let storedIndex ← indexAt? source known
++          -- Missing/unverifiable pre-read knowledge cannot earn a read label.
++          -- Do not decode every acknowledged original only to discard the
++          -- resulting presentation after the same eligibility decision.
++          unless completeKnowledge known storedIndex.isSome do
++            result := {result with unknown := result.unknown+1}
++            continue
+           let mut stored := #[]
+           if let some index := storedIndex then
+             let files := reads.foldl (fun files read => files.insert read.read.source.subject) ({} : Std.HashSet Subject)
+@@ -463,10 +469,6 @@
+                 | .read read => if read.occurrence != occurrence then some read.source else none
+                 | _ => none)
+           let shown ← presentation source known
+-          let uncertain := !(completeKnowledge known storedIndex.isSome)
+-          if uncertain then
+-            result := {result with unknown := result.unknown+1}
+-            continue
+           let feedback : Feedback := ({graph := usage, delivered := shown} : Feedback).start occurrence
+           let feedback ← IO.ofExcept (feedback.completedRead occurrence query (reads.map (·.read.source)) stored)
+           usage := feedback.graph

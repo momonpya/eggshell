@@ -1,0 +1,37 @@
+{
+  "status": "quarantined",
+  "productionAdoption": false,
+  "parentRuntimeSha256": "cfbbf02315b322d04fa7759af8305f817af70e7c58018c1c776f70b3248ef873",
+  "candidateRuntimeSha256": "05e28ed8f1bb6606b02d5ef7b2fa2ca1e2e34d9cb9168e347a51691609e6b46f",
+  "patch": "feedback-context.patch",
+  "samePrivateEvents": 59,
+  "privateReplayMs": {"parent": 16807, "candidate": 8232, "pairs": 1},
+  "evidenceUnchanged": {
+    "consumption": 4877,
+    "usage": 18,
+    "origins": 29,
+    "pending": 0,
+    "unknown": 18,
+    "consumptionDigest": "f377aeda6a74b2f6fbead92eb708d44849fef08dac02e97455997a5412266c61",
+    "usageDigest": "2c795e8e3c2b1e29ac40c2c2b878445dc0fcc171338b5f974bc9a8e24f437877",
+    "originsDigest": "b21411965eab4d8bc346d33745e83658a136d7ed670751d226691775de1181db"
+  },
+  "actualRequiredDelivery": [
+    {"topic": 1, "eligible": 4, "delivered": 2, "hookMs": [25989, 25203]},
+    {"topic": 2, "eligible": 6, "delivered": 0, "hookMs": [28976], "incompleteNotice": true},
+    {"topic": 3, "eligible": 5, "delivered": 3, "hookMs": [28884, 26346]}
+  ],
+  "freshFullSearchOracle": true,
+  "contractAudit": true,
+  "nativePrePostStop": true,
+  "sourceOnlyRestoration": true,
+  "tinyFixtureDelivery": {"eligible": 2, "delivered": 2},
+  "remainingWarning": "original basis changed during incremental assignment",
+  "answeringModelCalls": 0,
+  "answeringStages": 0,
+  "newSeedStudy": false,
+  "requiredDelivery95Established": false,
+  "totalTokenImprovementEstablished": false,
+  "teamNasScaleEstablished": false,
+  "records": "feedback-context/records"
+}
