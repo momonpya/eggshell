@@ -1,0 +1,478 @@
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -14,7 +14,8 @@
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.observation-recommendation".toUTF8 [
+   (include_str "SynapseRecommend.lean").toUTF8,(include_str "ObservationContext.lean").toUTF8,
+   (include_str "JsonScalars.lean").toUTF8,(include_str "SynapseTransport.lean").toUTF8,
+-  (include_str "SynapseUsage.lean").toUTF8])
++  (include_str "SynapseUsage.lean").toUTF8,(include_str "SynapticTransport.lean").toUTF8,
++  (include_str "SynapticRoutingStore.lean").toUTF8])
+ 
+ /-- Output identity is native occurrence identity. File coordinates are an
+ additional addressing scheme, never a prerequisite for recommending data. -/
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -1,6 +1,6 @@
+ module
+ 
+-public import Eggshell.SynapseRecommend
++public import Eggshell.SynapticTransport
+ 
+ @[expose] public section
+ 
+@@ -26,7 +26,7 @@
+ structure LocatedOwner where
+   owner : OutcomeEdge
+   document : Document
+-  located : Array Located
++  located : Array Routed.Located
+   outputs : Array (LocatedOutput document)
+ 
+ structure Observation where
+@@ -39,7 +39,7 @@
+   deriving ToJson
+ 
+ structure Plan where
+-  results : Array Recommend.Result := #[]
++  results : Array Routed.Result := #[]
+   owners : Array LocatedOwner := #[]
+   documents : Array Document := #[]
+   rows : Array Read := #[]
+@@ -91,8 +91,10 @@
+ /-- Stored original rows are the only source of transport coordinates.
+ Neither a graph hint nor its priority may invent a range or an owner. -/
+ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat))
+-    (owners : Array Owner) (query : String) (deadline : Nat) : IO Plan := do
++    (owners : Array Owner) (query : String) (deadline : Nat)
++    (graphDeadline : Option Nat := none) : IO Plan := do
+   let mut plan : Plan := {}
++  let mut outputWitnesses : Array (String × Array Offer) := #[]
+   let assessedUnixMs ← ObservationAge.now
+   for source in prepared do
+     let consumers := owners.flatMap fun owner =>
+@@ -101,18 +103,29 @@
+         if key == Persistence.selectionKey owner.original.relation then some priority else none
+       (Provenance.identities owner.original).flatMap fun occurrence =>
+         priorities.map fun priority => (occurrence,priority)
+-    plan := {plan with results := plan.results.push (← source.collect answers query deadline {} consumers)}
++    let result ← Routed.collect source answers query (min deadline (graphDeadline.getD deadline)) consumers
++    let (result,outputs) ← try pure (result,← Routed.outputOffers source result deadline)
++      catch error => pure ({result with complete := false,failure := some s!"output-witness: {error}"},#[])
++    outputWitnesses := outputWitnesses.push (source.source.head.identity,outputs)
++    plan := {plan with results := plan.results.push result}
+   let offers := plan.results.flatMap (·.admitted)
+   if offers.isEmpty then return plan
++  -- Query-invariant across owners. Computing this same ordered set inside
++  -- each owner was quadratic work repeated for every hydrated observation.
++  let wanted := (offers.toList.filterMap (·.target.source?)).eraseDups.toArray
+   for owner in owners do
++    if (← IO.monoMsNow) ≥ deadline then
++      return {results := plan.results.map fun result =>
++        {result with complete := false,failure := some "binding-deadline"}}
+     let .ok document := owner.document | plan := {plan with unsupported := plan.unsupported+1}; continue
+     let recorded := recordedRows owner.database document
+     let context := ObservationContext.prepare? document
+-    let wanted := (offers.toList.filterMap (·.target.source?)).eraseDups.toArray
+     let originalRows := wanted.filterMap fun source => context.bind (·.bindSource? owner.database source)
+     let rows := recorded.toOption.getD #[] ++ originalRows
+-    let located := Recommend.locate offers rows
+-    let outputs := context.map (Recommend.locateOutputsUsing offers owner.database) |>.getD #[]
++    let located := Routed.locate offers rows
++    let witnesses := outputWitnesses.flatMap fun (database,offers) =>
++      if database == owner.database then offers else #[]
++    let outputs := context.map (Recommend.locateOutputsUsing witnesses owner.database) |>.getD #[]
+     -- Metadata is fetched only for offered native origins, once per occurrence,
+     -- with a fixed cap and the existing request deadline. It cannot block or
+     -- filter the historical body when unavailable, expired, or clock-skewed.
+@@ -150,7 +163,7 @@
+     ("complete", toJson plan.complete), ("unsupportedOwners", toJson plan.unsupported),
+     ("unlocatedFileOwners",toJson plan.unlocatedFileOwners),
+     ("observationAges",toJson plan.observations),
+-    ("inputs", toJson (plan.results.map Recommend.Result.receipt)),
++    ("inputs", toJson (plan.results.map Routed.Result.receipt)),
+     ("originalReferences",toJson (originals.map fun source =>
+       let bindings := plan.owners.flatMap fun owner => owner.located.filterMap fun located =>
+         if located.source == source then some located.row.binding else none
+@@ -170,7 +183,7 @@
+       let delivered := match offer.target with
+         | .range source => covered source delivery.ranges
+         | .output _ => plan.owners.any fun owner => owner.outputs.any fun located =>
+-            located.offer.identity == offer.identity && delivery.coversBinding located.fragment.binding
++            located.offer.identity == offer.evidence && delivery.coversBinding located.fragment.binding
+       Json.mkObj [("offer", offer.json), ("bodyDelivered", toJson delivered)]))]
+ 
+ end Eggshell.Synapses.Transport
+--- a/Eggshell/SynapseBundles.lean
++++ b/Eggshell/SynapseBundles.lean
+@@ -1,35 +1,29 @@
+ module
+ public import Eggshell.SynapseTransport
++public import Std.Data.HashMap.Lemmas
+ @[expose] public section
+ 
+ namespace Eggshell.Synapses.Bundles
+-open Lean Persistence.Store Recommend
++open Lean Persistence.Store Recommend Routing.Store
+ 
+-inductive Reason where
+-  | quoted (group : Group)
+-  | consumed (edge : Consumption)
+-  | used (usage : Usage)
+-  deriving BEq, Hashable, ToJson
++def bundleKind (hint : Hint) : String := match hint.group with
++  | some (.claim _) => "claim"
++  | some (.answer ..) => "answer"
++  | none => Routing.Store.kindName hint.kind
+ 
+-def reason? : Fact → Option Reason
+-  | .supports value => some (.quoted (.claim value.claim))
+-  | .coquoted group _ => some (.quoted group)
+-  | .consumed value => some (.consumed value)
+-  | .used value => some (.used value)
+-  | .read _ => none
+-
+ structure Demand where
+-  reason : Reason
+-  offers : Array Offer
++  key : String
++  kind : String
++  offers : Array Hint
+   nonempty : offers.isEmpty = false
+   sourcesOnly : offers.all (fun offer => offer.target.source?.isSome) = true
+-  same : offers.all (fun offer => reason? offer.fact == some reason) = true
++  same : offers.all (fun offer => offer.reasonKey == key && bundleKind offer == kind) = true
+ 
+-def Demand.check? (reason : Reason) (offers : Array Offer) : Option Demand :=
++def Demand.check? (key kind : String) (offers : Array Hint) : Option Demand :=
+   if nonempty : offers.isEmpty = false then
+     if sourcesOnly : offers.all (fun offer => offer.target.source?.isSome) = true then
+-      if same : offers.all (fun offer => reason? offer.fact == some reason) = true then
+-        some ⟨reason,offers,nonempty,sourcesOnly,same⟩ else none
++      if same : offers.all (fun offer => offer.reasonKey == key && bundleKind offer == kind) = true then
++        some ⟨key,kind,offers,nonempty,sourcesOnly,same⟩ else none
+     else none
+   else none
+ 
+@@ -40,21 +34,13 @@
+   demand.offers.foldl (fun priority offer => min priority offer.priority)
+     ((demand.offers[0]?).map (·.priority) |>.getD 0)
+ 
+-def Demand.key (demand : Demand) : String := Index.contentKey demand.reason
+-
+-def Demand.kind (demand : Demand) : String := match demand.reason with
+-  | .quoted (.claim _) => "claim"
+-  | .quoted (.answer ..) => "answer"
+-  | .consumed _ => "consumption"
+-  | .used usage => usage.kind.label
+-
+ def demands (plan : Transport.Plan) : Array Demand := Id.run do
+-  let mut groups : Std.HashMap Reason (Array Offer) := {}
++  let mut groups : Std.HashMap (String × String) (Array Hint) := {}
+   for offer in plan.results.flatMap (·.admitted) do
+     if offer.target.source?.isNone then continue
+-    let some reason := reason? offer.fact | continue
+-    groups := groups.insert reason (groups[reason]?.getD #[] |>.push offer)
+-  return (groups.toArray.filterMap fun (reason,offers) => Demand.check? reason offers).qsort fun a b =>
++    let key := (offer.reasonKey,bundleKind offer)
++    groups := groups.insert key (groups[key]?.getD #[] |>.push offer)
++  return (groups.toArray.filterMap fun ((key,kind),offers) => Demand.check? key kind offers).qsort fun a b =>
+     if a.priority == b.priority then a.key < b.key else a.priority < b.priority
+ 
+ /-- The original owner and every scalar row remain attached to their range.
+@@ -86,10 +72,35 @@
+   original : Transport.LocatedOwner
+   key : String
+   keyExact : key = Persistence.selectionKey original.owner.relation
++  directory : Std.HashMap Range (Array Read)
++  directoryExact : ∀ source, directory[source]?.getD #[] = original.located.filterMap
++    (fun located => if located.source == source then some located.row else none)
+ 
++def rowDirectory (located : Array Routed.Located) : Std.HashMap Range (Array Read) :=
++  located.foldl (fun directory row => directory.insert row.source
++    ((directory[row.source]?.getD #[]).push row.row)) {}
++
++theorem row_directory_exact (located : Array Routed.Located) (source : Range) :
++    (rowDirectory located)[source]?.getD #[] = located.filterMap
++      (fun row => if row.source == source then some row.row else none) := by
++  have go : ∀ reversed : List Routed.Located,
++      (rowDirectory reversed.reverse.toArray)[source]?.getD #[] =
++        reversed.reverse.toArray.filterMap (fun row =>
++          if row.source == source then some row.row else none) := by
++    intro reversed
++    induction reversed with
++    | nil => simp [rowDirectory]
++    | cons row previous ih =>
++      have step : (row :: previous).reverse.toArray = previous.reverse.toArray.push row := by simp
++      rw [step]
++      simp only [rowDirectory,Array.foldl_push,Std.HashMap.getElem?_insert]
++      by_cases same : row.source = source
++      · simpa [same,rowDirectory,Array.filterMap_push] using congrArg (fun rows => rows.push row.row) ih
++      · simpa [same,rowDirectory,Array.filterMap_push] using ih
++  simpa using go located.toList.reverse
++
+ def bind? (source : Range) (owner : OwnerRows) : Option (Bound source) :=
+-  let rows := (owner.original.located.toList.filterMap fun located =>
+-    if located.source == source then some located.row else none).eraseDups.toArray
++  let rows := (owner.directory[source]?.getD #[]).toList.eraseDups.toArray
+   if valid : rows.all Read.valid = true then
+     if inside : rows.all (fun row => source.contains row.source) = true then
+       if owned : rows.all (fun row => row.binding.owner == owner.key) = true then
+@@ -108,7 +119,8 @@
+ 
+ def project (plan : Transport.Plan) : Array Projected :=
+   let owners := plan.owners.map fun original =>
+-    (⟨original,Persistence.selectionKey original.owner.relation,rfl⟩ : OwnerRows)
++    (⟨original,Persistence.selectionKey original.owner.relation,rfl,
++      rowDirectory original.located,row_directory_exact original.located⟩ : OwnerRows)
+   (demands plan).filterMap (project? owners)
+ 
+ theorem projected_sources_unchanged (projected : Projected) :
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -239,6 +239,87 @@
+           ⟨covers, fun prior member => fresh prior (by simp [member])⟩
+         exact ⟨part, List.mem_flatMap.mpr ⟨middle, member, next⟩, covers⟩
+ 
++def DeliveryInterval.connected (left right : DeliveryInterval) : Prop :=
++  left.start ≤ right.stop ∧ right.start ≤ left.stop
++
++instance (left right : DeliveryInterval) : Decidable (left.connected right) :=
++  inferInstanceAs (Decidable (_ ∧ _))
++
++def DeliveryInterval.join (left right : DeliveryInterval)
++    (_ : left.connected right) : DeliveryInterval :=
++  ⟨min left.start right.start,max left.stop right.stop,
++    by have := left.ordered; have := right.ordered; omega⟩
++
++theorem DeliveryInterval.join_covers (left right : DeliveryInterval)
++    (connected : left.connected right) (position : Nat) :
++    (left.join right connected).covers position ↔ left.covers position ∨ right.covers position := by
++  simp only [join,covers]
++  unfold DeliveryInterval.connected at connected
++  omega
++
++def DeliveryInterval.coalesceFrom (current : DeliveryInterval) : List DeliveryInterval → List DeliveryInterval
++  | [] => [current]
++  | next :: rest => if connected : current.connected next then
++      coalesceFrom (current.join next connected) rest
++    else current :: coalesceFrom next rest
++
++theorem DeliveryInterval.coalesceFrom_covers (current : DeliveryInterval)
++    (rest : List DeliveryInterval) (position : Nat) :
++    (∃ part ∈ coalesceFrom current rest,part.covers position) ↔
++      current.covers position ∨ ∃ part ∈ rest,part.covers position := by
++  induction rest generalizing current with
++  | nil => simp [coalesceFrom]
++  | cons next rest ih =>
++    simp only [coalesceFrom]
++    split
++    · rw [ih,join_covers]; simp [or_assoc]
++    · simp only [List.mem_cons,exists_eq_or_imp]; rw [ih]
++
++def DeliveryInterval.coalesce (ranges : List DeliveryInterval) : List DeliveryInterval :=
++  match ranges.mergeSort (fun left right => left.start ≤ right.start) with
++  | [] => []
++  | first :: rest => coalesceFrom first rest
++
++theorem DeliveryInterval.coalesce_covers (ranges : List DeliveryInterval) (position : Nat) :
++    (∃ part ∈ coalesce ranges,part.covers position) ↔ ∃ part ∈ ranges,part.covers position := by
++  have sorted : (∃ part ∈ ranges.mergeSort (fun left right => left.start ≤ right.start),part.covers position) ↔
++      ∃ part ∈ ranges,part.covers position := by simp
++  cases publication : ranges.mergeSort (fun left right => left.start ≤ right.start) with
++  | nil => simpa [coalesce,publication] using sorted
++  | cons first rest => simpa [coalesce,publication,coalesceFrom_covers] using sorted
++
++theorem DeliveryInterval.subtractAll_empty (range : DeliveryInterval) (prior : List DeliveryInterval) :
++    (range.subtractAll prior).isEmpty = true ↔
++      ¬ ∃ position,range.covers position ∧ ∀ part ∈ prior,¬part.covers position := by
++  constructor
++  · intro empty ⟨position,inside,fresh⟩
++    obtain ⟨part,member,_⟩ := (subtractAll_covers range prior position).mpr ⟨inside,fresh⟩
++    have missing : range.subtractAll prior = [] := List.isEmpty_iff.mp empty
++    simp [missing] at member
++  · intro none
++    cases output : range.subtractAll prior with
++    | nil => rfl
++    | cons part rest =>
++      exfalso
++      apply none
++      have member : part ∈ range.subtractAll prior := by simp [output]
++      exact ⟨part.start,(subtractAll_covers range prior part.start).mp
++        ⟨part,member,Nat.le_refl _,part.ordered⟩⟩
++
++theorem DeliveryInterval.subtractAll_empty_same_union (range : DeliveryInterval)
++    (left right : List DeliveryInterval)
++    (same : ∀ position,(∃ part ∈ left,part.covers position) ↔ ∃ part ∈ right,part.covers position) :
++    (range.subtractAll left).isEmpty = (range.subtractAll right).isEmpty := by
++  apply Bool.eq_iff_iff.mpr
++  change (range.subtractAll left).isEmpty = true ↔ (range.subtractAll right).isEmpty = true
++  rw [subtractAll_empty,subtractAll_empty]
++  apply not_congr
++  apply exists_congr
++  intro position
++  apply and_congr_right
++  intro _
++  simpa only [not_exists,not_and] using not_congr (same position)
++
+ def ContextDelivery.previous (context : ContextDelivery) (delivered : List String) : List DeliveryInterval :=
+   delivered.filterMap fun key => do
+     let ["e", owner, outcome, first, last] := key.splitOn ":" | none
+@@ -5226,10 +5307,23 @@
+       family.contextualOutputs.template.visibleKeys = family.template.visibleKeys := by
+   cases found : family.outputEnvelope? <;> simp [Family.contextualOutputs,found]
+ 
++def validCoverage (ranges : List (Nat × Nat)) : List DeliveryInterval :=
++  ranges.filterMap fun (first,last) =>
++    if ordered : first < last then some ⟨first,last,ordered⟩ else none
++
++structure CoverageIndex (ranges : List (Nat × Nat)) where
++  intervals : List DeliveryInterval
++  exact : ∀ position,(∃ part ∈ intervals,part.covers position) ↔
++    ∃ part ∈ validCoverage ranges,part.covers position
++
++def CoverageIndex.prepare (ranges : List (Nat × Nat)) : CoverageIndex ranges :=
++  ⟨DeliveryInterval.coalesce (validCoverage ranges),DeliveryInterval.coalesce_covers _⟩
++
+ structure UnitPlan where
+   family : Nat
+   slice : TransportSlice
+   ranges : List (Nat × Nat)
++  coverage : CoverageIndex ranges := CoverageIndex.prepare ranges
+ 
+ structure CuePiece where
+   family : Nat
+@@ -5249,6 +5343,18 @@
+     (DeliveryInterval.subtractAll ⟨first,last,ordered⟩ prior).isEmpty
+   else false
+ 
++def UnitPlan.coversPrepared (unit : UnitPlan) (first last : Nat) : Bool :=
++  if ordered : first < last then
++    (DeliveryInterval.subtractAll ⟨first,last,ordered⟩ unit.coverage.intervals).isEmpty
++  else false
++
++theorem UnitPlan.prepared_covers_exact (unit : UnitPlan) (first last : Nat) :
++    unit.coversPrepared first last = covers unit.ranges first last := by
++  unfold UnitPlan.coversPrepared covers
++  split
++  · exact DeliveryInterval.subtractAll_empty_same_union _ _ _ unit.coverage.exact
++  · rfl
++
+ /-- A previously admitted complete projection stays atomic. This copies its
+ payload and native-control fields exactly; an owner nomination is not a
+ fabricated numerical source position. -/
+@@ -5741,7 +5847,7 @@
+   indices.any fun index =>
+     let unit := units[index]
+     member.choices.any fun bound => keys[unit.family]? == some bound.owner &&
+-      bound.spans.all (fun (a,b) => covers unit.ranges a b)
++      bound.spans.all (fun (a,b) => unit.coversPrepared a b)
+ 
+ structure BundlePlan (keys : Array String) (units : Array UnitPlan) where
+   projected : Synapses.Bundles.Projected
+@@ -5787,7 +5893,7 @@
+   let bonus ← (pieces.zipIdx.filter fun (piece,_) => piece.baseWeight < piece.weight &&
+     plan.indices.any fun index =>
+       let unit := units[index]
+-      unit.family == piece.family && covers unit.ranges piece.first piece.last &&
++      unit.family == piece.family && unit.coversPrepared piece.first piece.last &&
+         plan.projected.members.any fun member => member.choices.any fun bound =>
+           keys[unit.family]? == some bound.owner && covers bound.spans piece.first piece.last).mapM fun (_,id) => do
+     let cue ← directory.1[id]?
+@@ -7160,6 +7266,7 @@
+   (List.mem_filter.mp present).2
+ 
+ structure IndexedContext where
++  upstreamDeadline : Option Nat := none
+   synaptic : Array Synapses.Recommend.Prepared := #[]
+   receipt : Option String := none
+   onSemanticReady : IO Unit := pure ()
+@@ -7664,11 +7771,14 @@
+         original := item.owner
+         provenance := item.provenance}
+       synapticOwners := synapticOwners.push original
++  let advisoryNow ← IO.monoMsNow
++  let advisoryDeadline := source.upstreamDeadline.getD (advisoryNow+30000)
+   let synaptic ← if recommendation && evidence.isNone then
+     Synapses.Transport.build source.synaptic
+       ((synapticRoots nominationRanking nominatedOwners).toArray.map fun (owner,priority) =>
+         (relationKey owner,priority))
+-      synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) ((← IO.monoMsNow)+500)
++      synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) advisoryDeadline
++      (graphDeadline := some (Synapses.Routed.graphDeadline advisoryNow advisoryDeadline))
+     else pure ({} : Synapses.Transport.Plan)
+   let synapticBundles := Synapses.Bundles.project synaptic
+   let allowed := synapticOwners.foldl (fun found owner =>
+@@ -7797,7 +7907,8 @@
+     (savedSaturation : SaturationMemo.Saved := [])
+     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
+     (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none)
+-    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[]) :
++    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[])
++    (upstreamDeadline : Option Nat := none) :
+     IO (Option (Option Handoff)) := do
+   let some single := SingleSource.find? snapshots | return none
+   let snapshot := single.snapshot
+@@ -7829,6 +7940,7 @@
+   let allCount := some (← Persistence.Store.getNat snapshot.get "alls")
+   let unions ← reader.unions (← Persistence.Store.authority snapshot)
+   let source : IndexedContext := {
++    upstreamDeadline
+     synaptic
+     receipt, onSemanticReady
+     all := [], persistent := unions.map (·.edge), outcomeCount
+@@ -7976,7 +8088,8 @@
+     (savedSaturation : SaturationMemo.Saved := [])
+     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
+     (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none)
+-    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[]) :
++    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[])
++    (upstreamDeadline : Option Nat := none) :
+     IO (Option Handoff) := do
+   let sources := (snapshots.filterMap id).toArray
+   let catalogue ← Persistence.Store.Federated.prepare sources
+@@ -7985,6 +8098,7 @@
+     let nextRoot ← Persistence.Store.getNat snapshot.get "roots"
+     pure ({identity := snapshot.head.identity, nextRoot} : AdvisoryFrontier)
+   let source : IndexedContext := {
++    upstreamDeadline
+     synaptic
+     receipt, onSemanticReady
+     all := catalogue.all
+@@ -8116,7 +8230,8 @@
+     (savedSaturation : SaturationMemo.Saved := [])
+     (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
+     (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none)
+-    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[]) : IO (Option Handoff) := do
++    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[])
++    (upstreamDeadline : Option Nat := none) : IO (Option Handoff) := do
+   if selection.read.isEmpty then return none
+   unless selection.read.length == snapshots.length do
+     throw (IO.userError "source snapshot arity mismatch")
+@@ -8130,9 +8245,9 @@
+       if let some result ← indexedTerminalRoot selection snapshots current deliveredGraphs
+           enforce evidenceText enableLocalUnion refreshSources receipt then return result
+     if let some result ← indexedDiscovery selection snapshots current deliveredGraphs
+-        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic then return result
++        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline then return result
+     return ← federatedDiscovery selection snapshots current deliveredGraphs
+-      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic
++      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline
+   catch error =>
+     IO.eprintln s!"eggshell: indexed search unavailable: {error}"
+     return some pendingSearch
+@@ -8266,6 +8381,7 @@
+     evidenceText staged stagedVisible enableLocalUnion [] [] none sourceContext.isSome reuseSemantic meaningQuery
+     (sourceContext.bind (·.receipt))
+     (sourceContext.map (·.onSemanticReady) |>.getD (pure ())) (synaptic := synaptic)
++    (upstreamDeadline := sourceContext.map (·.deadline))
+   -- Only a genuinely overflowing complete rendering needs a reduced graph
+   -- budget. Both passes retain the same immutable source capabilities; the
+   -- dependency trace conservatively includes every read from either pass.
+@@ -8276,6 +8392,7 @@
+       snapshots current deliveredGraphs enforce evidenceText staged stagedVisible enableLocalUnion
+       [] [] none sourceContext.isSome reuseSemantic meaningQuery (sourceContext.bind (·.receipt))
+       (sourceContext.map (·.onSemanticReady) |>.getD (pure ())) (synaptic := synaptic)
++      (upstreamDeadline := sourceContext.map (·.deadline))
+   if let some request := request then
+     if let some writable := writable then
+       if !(← reused.get) && (← publishable.get) &&

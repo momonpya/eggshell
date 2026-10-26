@@ -1,0 +1,57 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -24,6 +24,7 @@
+ public import Eggshell.SemanticMatcher
+ public import Eggshell.KeyedSearchClient
+ public import tools.OwnerProjection
++public import tools.OwnerUnitPostings
+ public import Eggshell.GeometryMemo
+ public import Eggshell.SaturationMemo
+ public import Eggshell.DiscoveryMemo
+@@ -5848,6 +5849,26 @@
+     let unit := units[index]
+     member.choices.any fun bound => keys[unit.family]? == some bound.owner &&
+       bound.spans.all (fun (a,b) => unit.coversPrepared a b)
++
++def memberOwners (member : Synapses.Bundles.Member) : List String :=
++  member.choices.toList.map (·.owner)
++
++theorem member_covered_owner (keys : Array String) (units : Array UnitPlan)
++    (member : Synapses.Bundles.Member) (index : Fin units.size)
++    (covered : memberCovered keys units [index] member = true) :
++    ∃ owner ∈ memberOwners member, keys[units[index].family]? = some owner := by
++  simp only [memberCovered,List.any_cons,List.any_nil,Bool.or_false] at covered
++  obtain ⟨bound,present,valid⟩ := Array.any_eq_true'.mp covered
++  have matched : keys[units[index].family]? = some bound.owner := by
++    simpa only [Bool.and_eq_true,beq_iff_eq] using (Bool.and_eq_true_iff.mp valid).1
++  exact ⟨bound.owner,List.mem_map.mpr ⟨bound,by simpa using present,rfl⟩,matched⟩
++
++theorem member_candidates_exact (keys : Array String) (units : Array UnitPlan)
++    (member : Synapses.Bundles.Member)
++    (directory : OwnerUnitPostings.Index (fun index : Fin units.size => keys[units[index].family]?)) :
++    directory.select (memberOwners member) (fun index => memberCovered keys units [index] member) =
++      (List.finRange units.size).filter (fun index => memberCovered keys units [index] member) :=
++  directory.select_exact _ _ (member_covered_owner keys units member)
+ 
+ structure BundlePlan (keys : Array String) (units : Array UnitPlan) where
+   projected : Synapses.Bundles.Projected
+@@ -5972,11 +5993,18 @@
+     let pieces := cuePieces scale families units
+     let p ← problem families units pieces fixed ceiling
+     let keys := (families.map fun family => relationKey family.owner.relation).toArray
++    let directory := OwnerUnitPostings.prepare (fun index : Fin unitArray.size => keys[unitArray[index].family]?)
++    let mut universes : Std.HashMap (List String) (List (Fin unitArray.size)) := {}
+     let mut candidates : Std.HashMap Synapses.Range (List (Fin unitArray.size)) := {}
+     for projected in bundles do
+       for member in projected.members do
+         if candidates.contains member.source then continue
+-        let choices := (List.finRange unitArray.size).filter fun index =>
++        let owners := memberOwners member
++        let eligible := match universes[owners]? with
++          | some found => found
++          | none => (directory.union owners).toList
++        universes := universes.insert owners eligible
++        let choices := eligible.filter fun index =>
+           memberCovered keys unitArray [index] member
+         candidates := candidates.insert member.source choices
+     let recipes := ClosedCoverage.original p ++ (bundles.filterMap fun projected =>

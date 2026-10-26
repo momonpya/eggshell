@@ -46,6 +46,8 @@
 
 ## 実行順と完了証拠
 
+永続整数接続を隔離runtimeの実フックへ接続し、受領の`synapticComplete=true`を確認した。27,825提案の独立全探索との順序一致を保ち、元範囲の結合は39.4→4.5秒、bundle projectionは48.2→4.9秒へ短縮した。区間被覆の正規化、owner→unit postingsの候補列/順序一致、照会内の共通cueDirectory準備もLeanで証明した。しかし実フックは約29秒の未完了通知のまま、最新の実本文も凍結4項目中0件だった。探索完走やcache部品の存在を配送成功として扱わない。次はDBサービスに検証済みblockと準備済みsnapshotを共有させ、全payloadの再読込/検証/復号とsessionごとの復元を除く。照会内の準備と照会間の共有を分け、蓄積・更新・80並行要求を実測する。回答モデル0・6段階0/6、95%と総token改善は未達・未採用。[routed-transport.md](docs/routed-transport.md)、[selector-preparation.md](docs/selector-preparation.md)、[shared-preparation.md](docs/shared-preparation.md)。
+
 接続用の保存部品もLeanで隔離実装した。原索引/DBのhead・scope・実装bytesに結び付けた整数の接続をPageMapへ保存し、原典Factの全件常駐なしに読める。原典1,024件/8MiB以下のbatchで初期構築し、未完了像はreadyにしない。27,825件の推薦は順序・根拠・優先順位・選択器の束ね方まで独立した完全走査と一致。私有の利用から共有の共起へ戻る合成陽性も9,689件で順序一致した。500ms枠は初回501msでなお失敗、続く完全走査は617/230ms、集計RSS283,168KiB。これはp99や実フック改善ではない。次は既存出版差分/warm責任者への接続と、推薦Hintから原文bindingへのtransportを実装し、全体期限から探索予算を配分する。必要な旧feedback参照まで削らず、使わなくなった推薦専用postingsは接続後に整理する。全探索後の選択・実配送は未確認、実配送5/15件・回答モデル0・6段階0/6・95%/総token未達/未採用は変わらない。[synaptic-routing-store.md](docs/synaptic-routing-store.md)。
 
 最優先は、シナプスの推薦用接続を出版時にコンパクトな索引へ投影し、有界な不変blockから走査する経路の接続である。実seedのモデルなし監査は題材1/2/3で2/4・0/6・3/5件、合計5/15件。題材2の未完了を分母から除外しない。通常の最初の照会は500msで打ち切られる一方、独立した完全走査は24,390ms・27,825推薦で題材1の4/4項目に到達した。整数IDによるLean試作は準備済みarenaの走査13/13/13ms、全推薦の根拠・優先順位まで完全一致。ただし全件準備に7,866msかかる常駐試作であり、実フックへは未接続。全DBを毎回RAMへ載せる方式として採用しない。出版差分・source/indexへの結合・私有scope・block cache上限を保つ保存/遅延読出しへ進め、接続後に同じ凍結原文の実配送を再監査する。重み調整や時間依存の途中結果採用へ戻らない。回答モデル0・6段階0/6、95%と総token改善は未達・未採用。[synaptic-routing.md](docs/synaptic-routing.md)。
@@ -69,6 +71,8 @@
 ローカルの実フック入口まで接続した出版候補を足場に、DB/viewごとの更新責任者、保存前のscope判定、データ側サービスの複数PC transport/認証へ進む。private journalの全Entryや配送済み情報を転送しない。保存対象のWorkには歴史上の依頼文が含まれ得ることと、質問vector/cacheを共有しないことを分ける。loopbackの成功を80人・NASの検証に代用しない。
 
 ### C：差分準備と大規模検索
+
+disk cacheの存在だけを再利用済みと扱わない。照会内の共通表は一度だけ作り、DBサービスで検証済みblockと準備済みsnapshotを共有する。検索/準備側もDBサービスに集約し、sessionを軽いclientにする。scope・元publication・view head・実装bytesで鍵を固定し、同じ準備の同時要求は一つにまとめる。容量は80接続それぞれでなくサービス全体で制限し、差分で更新する。現コードに残るcanonical payloadの全読込み/検証/復号と、bundleごとの共通表再生成を除く。契約と未検証条件は[shared-preparation.md](docs/shared-preparation.md)。
 
 既存viewを差分入口へ統合し、router階層化、独立した完全e-class認定索引、原文の遅延取得を仕上げる。既存の通常discovery接続を二重実装せず、federation・大クラス・local Unionを含む全件依存を除く。1件/バッチ追加で過去全件列挙・再埋め込み0を実測し、準備債務が投入に追い付くことを確認する。
 

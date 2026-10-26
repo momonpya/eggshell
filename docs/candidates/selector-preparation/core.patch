@@ -1,0 +1,44 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5906,11 +5906,11 @@
+   if complete : projected.members.all (memberCovered keys units selected) = true then
+     some ⟨projected,selected,complete⟩ else none
+ 
+-def bundleRecipe? (keys : Array String) (units : Array UnitPlan) (pieces : List CuePiece)
++def bundleRecipePrepared? (keys : Array String) (units : Array UnitPlan) (pieces : List CuePiece)
++    (directory : Array Nat × Array (Nat × Nat))
+     (p : SharedCoverage.Problem) (plan : BundlePlan keys units) : Option (ClosedCoverage.Recipe p) := do
+   let parts ← plan.indices.mapM fun index =>
+     if h : index.val < p.offers.size then some (⟨index.val,h⟩ : Fin p.offers.size) else none
+-  let directory := cueDirectory pieces
+   let bonus ← (pieces.zipIdx.filter fun (piece,_) => piece.baseWeight < piece.weight &&
+     plan.indices.any fun index =>
+       let unit := units[index]
+@@ -5921,6 +5921,15 @@
+     if h : cue*2+1 < p.weights.size then some (⟨cue*2+1,h⟩ : Fin p.weights.size) else none
+   pure {parts,bonus}
+ 
++def bundleRecipe? (keys : Array String) (units : Array UnitPlan) (pieces : List CuePiece)
++    (p : SharedCoverage.Problem) (plan : BundlePlan keys units) : Option (ClosedCoverage.Recipe p) :=
++  bundleRecipePrepared? keys units pieces (cueDirectory pieces) p plan
++
++theorem bundle_recipe_preparation_exact (keys : Array String) (units : Array UnitPlan)
++    (pieces : List CuePiece) (p : SharedCoverage.Problem) (plan : BundlePlan keys units) :
++    bundleRecipePrepared? keys units pieces (cueDirectory pieces) p plan =
++      bundleRecipe? keys units pieces p plan := rfl
++
+ def materialize (units : Array UnitPlan) (indices : List Nat) : Option (List TransportSlice) := do
+   let mut rows : List (Nat × TransportSlice) := []
+   let mut sharedRows := #[]
+@@ -6007,8 +6016,10 @@
+         let choices := eligible.filter fun index =>
+           memberCovered keys unitArray [index] member
+         candidates := candidates.insert member.source choices
++    let cueIndex := cueDirectory pieces
++    let recipe := bundleRecipePrepared? keys unitArray pieces cueIndex p
+     let recipes := ClosedCoverage.original p ++ (bundles.filterMap fun projected =>
+-      (bundlePlan? keys unitArray p candidates projected).bind (bundleRecipe? keys unitArray pieces p))
++      (bundlePlan? keys unitArray p candidates projected).bind recipe)
+     let compiled := ClosedCoverage.compile p recipes
+     let chosen ← SharedCoverage.choose? compiled
+     let expanded := (ClosedCoverage.expand p recipes chosen.selected).map (·.val) |>.eraseDups

@@ -61,6 +61,19 @@ private def imports (source : String) : Array String :=
       let words := (row.drop introducer.length).toString.splitOn " " |>.filter (! ·.isEmpty)
       (if words.head? == some "all" then words.drop 1 else words).head?) |>.toArray
 
+/-- `include_str` contributes executable identity even without an import
+edge. A cached module must bind those literal file bytes as well as its own
+text; otherwise a changed transport can leave an old implementation stamp. -/
+private def sourceStamp (path : System.FilePath) (source : String) : IO String := do
+  let mut included := #[]
+  for suffix in (source.splitOn "include_str \"").drop 1 do
+    let some name := (suffix.splitOn "\"").head? |
+      throw (IO.userError "unterminated include_str in build source")
+    let dependency := path.parent.get! / name
+    let bytes ← IO.FS.readFile dependency
+    included := included.push (name,bytes)
+  return (toJson (source,included)).compress
+
 private def run (settings : Settings) (label command : String) (args : Array String) : IO Unit := do
   let library := settings.output ++ "/lib:" ++ settings.core ++ "/.lake/build/lib/lean:" ++ settings.toolchain ++ "/lib/lean"
   let result ← IO.Process.output {cmd := command,args,env := #[("LEAN_PATH",some library)]}
@@ -79,6 +92,7 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
     state.modify fun s => {s with done := s.done.insert name false,active := s.active.erase name}
     return false
   let text ← IO.FS.readFile source
+  let stamp ← sourceStamp (.mk source) text
   let mut changed := false
   for dependency in imports text do changed := (← visit settings state dependency) || changed
   let object := settings.output ++ "/" ++ stem name ++ ".o"
@@ -87,7 +101,7 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
   let localReady ← if !(← System.FilePath.pathExists object) then pure false
     else if !(← System.FilePath.pathExists localLibrary) then pure false
     else if !(← System.FilePath.pathExists cached) then pure false
-    else pure ((← IO.FS.readFile cached) == text)
+    else pure ((← IO.FS.readFile cached) == stamp)
   let hasLocal ← if ← System.FilePath.pathExists localLibrary then
     pure ((← (System.FilePath.mk localLibrary).symlinkMetadata).type != .symlink)
     else pure false
@@ -115,7 +129,7 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
     run settings (stem name ++ "-lean") (settings.toolchain ++ "/bin/lean")
       #["--root=" ++ packageRoot,"-j1","-M3072","-DwarningAsError=true","-c",generated,"-o",localLibrary,source]
     run settings (stem name ++ "-c") (settings.toolchain ++ "/bin/leanc") #["-c","-O2","-o",object,generated]
-    IO.FS.writeFile cached text
+    IO.FS.writeFile cached stamp
     IO.FS.removeFile generated
   state.modify fun s => {s with
     done := s.done.insert name compiled
@@ -163,9 +177,30 @@ def build (input : String) : IO Unit := do
     ("settings",toJson settings),("modules",toJson state.records),("newPythonOrRuby",toJson false)]).pretty
 
 end Eggshell.Research.StudyBuild
+open Eggshell.Research.StudyBuild
 
 def main (args : List String) : IO UInt32 := do
   try
+    if let ["source-stamp-check",directory] := args then
+      let root := System.FilePath.mk directory
+      check (root.isAbsolute && !(← root.pathExists)) "fresh absolute stamp fixture required"
+      IO.FS.createDir root
+      let path := root / "Module.lean"
+      let source := "def payload := (include_str \"payload.txt\")\n"
+      IO.FS.writeFile path source
+      IO.FS.writeFile (root / "payload.txt") "first"
+      let first ← sourceStamp path source
+      IO.FS.writeFile (root / "payload.txt") "changed"
+      let second ← sourceStamp path source
+      let repeated ← sourceStamp path source
+      check (first != second && second == repeated && (← IO.FS.readFile path) == source)
+        "embedded file change was not bound to the cache stamp"
+      IO.FS.removeFile path
+      IO.FS.removeFile (root / "payload.txt")
+      IO.FS.removeDir root
+      IO.println (Json.mkObj [("sourceUnchanged",toJson true),("includeChangeInvalidates",toJson true),
+        ("repeatStable",toJson true),("fixtureRemoved",toJson true)]).compress
+      return 0
     let [input] := args | throw (IO.userError "StudyBuildMain SETTINGS")
     Eggshell.Research.StudyBuild.build input
     return 0
