@@ -28,6 +28,8 @@
 
 全体はactive。候補は本体・README実績・releaseへ未採用。95%配送、総token改善、10〜80人・数年・NASの実証は未達。回答モデルの新しい比較は0回、題材1/2/3と2周目は0/6のまま。部品の証明やAPI負荷試験を全体の合格にしない。
 
+- 直近の原文view候補は、既存の汎用列挙をシナプスと同じ出版差分・DBサービスの共有読出しへ接続した。原文6,310範囲、DB境界、共有readerの物理再読0を検査。しかし題材2の実フックは12,644 msで空、実描画の予算確認等を直した後も13,338 ms・119,349 bytesで必要原文0/6。後者は同じ準備済みDB、新しいnative session、warm 0回であり、回答モデル実験ではない。細切れのfrontier選択は撤回する。focus 1,141→render complete 11,382 msの区間には、まだ原文の再束縛と全体診断が残る。直接選択の部品が速いことを実フックの数秒達成にしない。終了済み12対象のDB/cache/helper/runtimeは抽出後にarchiveなしで削除済み。[prepared-record-delivery.md](docs/prepared-record-delivery.md)。
+
 - 固定したC7 seedは原文45,216,846 bytes・revision 31、取得費用3,691,514総token、61フック失敗0。必要原文を配送前に題材別4/6/5件と凍結した。後から座標が付かないことを理由に分母を減らさない。[team-seed.md](docs/team-seed.md)、[original-evidence-audit.md](docs/original-evidence-audit.md)。
 - 内容対応はコマンドに依存せず取得/同一出版/差分無効化へ隔離接続済み。ファイル以外のMCP/JSON/一般テキストも元recordを保持する。3辺の整数接続は元Fact・postingsと同じcommitへ統合し、実seedの27,825推薦が独立完全探索と順序一致した。これは全warmの差分化や実配送の合格ではない。[captured-correspondence.md](docs/captured-correspondence.md)、[synaptic-publication-delta.md](docs/synaptic-publication-delta.md)。
 - 以前の実本文8/15件（53.3%）は不合格。その際に、未配送7件中6件が「選択済みの全範囲・費用0・本文なし」という虚偽被覆だった。共有payloadの非空性を型/復号境界で保証し、空なら任意ツールの原文recordへ渡す修正を隔離した。空payloadへ戻さない。[receipt-preparation.md](docs/receipt-preparation.md)、[nonempty-source-payload.md](docs/nonempty-source-payload.md)。
@@ -40,6 +42,8 @@
 実フックが失敗し続けたため、部品の高速化を積んで同じ一連のwarm・3題材を繰り返す順序を止める。通常のwarm済み照会は数秒で本文を返すことを目指し、30秒は上限として扱う。根本の経路変更は[prepared-delivery-path.md](docs/prepared-delivery-path.md)。木の候補は実配送0/15件・直近の親への速度改善なしで撤回し、DB/cache/runtimeも削除済み。[tournament-selection.md](docs/tournament-selection.md)。
 
 直近の実行順は次のとおり。
+
+原文viewに接続しただけの細切れfrontierは必要原文の配送0/6で失敗している。次の境界は`Transport.build`の再解析/範囲束縛、引用のまとまりと証拠の種類を失わない配送、選択後の`Extraction.presented`/`Bundles.receipt`の再計算である。無駄な計算を先に除き、同じ全warmと題材の再走を診断の代用にしない。単純な費用関数の部品試験と、実描画・実フックの値を分ける。
 
 1. 失敗した実入力を抽出・準備・選択・描画の境界で固定・再生し、全候補の被覆選択が終わるまで本文を返せない構造を変更する。全走査との選択順一致を推薦の一律条件にせず、95%の必要原文配送と実速度で検証する。認定の完全性は維持する。
 2. 出版差分から、file aliasの有無に依存しない不変の原文recordと隣接表を準備し、DBサービスで共有する。既存の`ObservationContext.Prepared.catalog`を使い、ファイル行用のcanonical cacheに入らない一般出力を照会ごとに`prepareOriginalRecords`で作り直す経路を統合する。新しい抽出器を重ねない。vector・字句・3辺から同じrecord IDを引き、照会内の全出力の復号・原文単位の再構築をなくす。原文と出典を含む有効な配送候補を保持し、追加探索の期限切れだけで本文を全て失わない。質問に依存する起点と展開は照会時に行う。キャッシュの存在と実際の再利用を区別する。

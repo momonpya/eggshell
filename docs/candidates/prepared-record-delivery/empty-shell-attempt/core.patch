@@ -1,0 +1,434 @@
+--- a/Eggshell/ObservedRecordView.lean
++++ b/Eggshell/ObservedRecordView.lean
+@@ -0,0 +1,164 @@
++module
++public import Eggshell.ObservedRecords
++@[expose] public section
++
++namespace Eggshell.Synapses.ObservedRecordView
++open Lean DB _root_.Eggshell.Synapses.Extraction
++
++/-- Query-free structure from the original observation catalogue. File aliases
++and command syntax are not prerequisites for retaining any original byte. -/
++structure Span where
++  first : Nat
++  limit : Nat
++  decoded : Bool
++  deriving BEq, Hashable
++
++instance : ToJson Span where
++  toJson span := toJson (span.first,span.limit,span.decoded)
++instance : FromJson Span where
++  fromJson? value := do
++    let (first,limit,decoded) ← fromJson? (α := Nat × Nat × Bool) value
++    return ⟨first,limit,decoded⟩
++
++structure Header where
++  database : String
++  owner : String
++  work : String
++  original : Original
++  occurrences : Array Occurrence
++  characters : Nat
++  blocks : Nat
++  deriving BEq, ToJson, FromJson
++
++structure View where
++  header : Header
++  spans : Array Span
++  blocks : Array String
++  deriving ToJson, FromJson
++
++structure Block where
++  text : String
++  spans : Array Span
++  deriving ToJson, FromJson
++
++def ownerKey (owner : String) := "observed-view:owner:" ++ owner
++def blockKey (digest : String) := "observed-view:block:" ++ digest
++def blockRef (owner : String) (index : Nat) := "observed-view:ref:" ++ owner ++ ":" ++ toString index
++def blockChars := ObservedRecords.chunkChars
++
++def make (database : String) (document : Document) : Except String View := do
++  unless document.native && !document.occurrences.isEmpty do throw "missing original observation authority"
++  let some raw := document.source | throw "missing original observation body"
++  let prepared ← ObservedRecords.prepare raw
++  let characters := raw.toList.toArray
++  let spans := prepared.records.filterMap fun record =>
++    if record.spellings.isEmpty || record.limit-record.first > blockChars then none else
++    some (⟨record.first,record.limit,
++      record.spellings.any fun spelling => spelling.first == record.first &&
++        spelling.limit == record.limit &&
++        (spelling.projection == .stringBody || spelling.projection == .stringBodyLine)⟩ : Span)
++  let blocks := (ObservedRecords.base characters.size).map fun record =>
++    String.ofList (characters.extract record.first record.limit).toList
++  return ⟨⟨database,document.owner,document.work,ObservationContext.originalSubject document.work raw,
++    document.occurrences,characters.size,blocks.size⟩,spans,blocks⟩
++
++/-- The payload is copied exactly once into bounded content-addressed blocks.
++The source publication, original digest and observation identities stay in
++the directory, independently of payload sharing. -/
++def stage (writer : PageMap.Writer) (database : String) (document : Document) : IO Unit := do
++  let view ← IO.ofExcept (make database document)
++  for index in [:view.blocks.size] do
++    let block : Block := ⟨view.blocks[index]!,view.spans.filter fun span =>
++      span.first < (index+1)*blockChars && index*blockChars < span.limit⟩
++    let bytes := (toJson block).compress.toUTF8
++    unless bytes.size ≤ 60000 do throw (IO.userError "original view block exceeds page bound")
++    let digest := Sha256.hex bytes
++    if let some previous ← writer.get (blockKey digest) then
++      unless previous == bytes do throw (IO.userError "conflicting original view block")
++    else writer.put (blockKey digest) (some bytes)
++    writer.put (blockRef document.owner index) (some digest.toUTF8)
++  let bytes := (toJson view.header).compress.toUTF8
++  unless bytes.size ≤ 16384 do throw (IO.userError "original view directory exceeds its byte bound")
++  writer.put (ownerKey document.owner) (some bytes)
++
++def load? (index : PageMap.Snapshot) (database owner : String) : IO (Option View) := do
++  let some bytes ← index.get (ownerKey owner) | return none
++  unless bytes.size ≤ 16384 do throw (IO.userError "oversized original view directory")
++  let header ← ObservedRecords.decode (α := Header) bytes
++  unless header.database == database && header.owner == owner &&
++      header.occurrences.all Occurrence.valid && !header.occurrences.isEmpty &&
++      header.blocks == (header.characters+blockChars-1)/blockChars do
++    throw (IO.userError "foreign or invalid original view directory")
++  let mut blocks := #[]
++  let mut spans := #[]
++  for position in [:header.blocks] do
++    let some pointer ← index.get (blockRef owner position) | throw (IO.userError "missing original block pointer")
++    let some digest := String.fromUTF8? pointer | throw (IO.userError "invalid original block pointer")
++    let some bytes ← index.get (blockKey digest) | throw (IO.userError "missing original view block")
++    unless bytes.size ≤ 60000 && Sha256.hex bytes == digest do
++      throw (IO.userError "invalid original view block digest")
++    let block ← ObservedRecords.decode (α := Block) bytes
++    let text := block.text
++    unless text.length == min blockChars (header.characters-position*blockChars) do
++      throw (IO.userError "invalid original view character extent")
++    unless block.spans.all (fun span => span.first < span.limit && span.limit ≤ header.characters &&
++        span.limit-span.first ≤ blockChars && span.first < (position+1)*blockChars && position*blockChars < span.limit) do
++      throw (IO.userError "invalid original view record interval")
++    spans := spans ++ block.spans
++    blocks := blocks.push text
++  return some ⟨header,(hashDistinct spans.toList).toArray,blocks⟩
++
++/-- A point extraction reads only intersecting blocks; it never walks the
++prefix of the owner's body or repeats JSON parsing/record normalization. -/
++def View.slice (view : View) (first limit : Nat) : Option String := do
++  unless first < limit && limit ≤ view.header.characters do none
++  let start := first/blockChars
++  let stop := (limit-1)/blockChars+1
++  let mut parts := []
++  for index in [start:stop] do
++    let block ← view.blocks[index]?
++    let a := first-index*blockChars
++    let b := min blockChars (limit-index*blockChars)
++    parts := String.ofList (block.toList.drop a |>.take (b-a)) :: parts
++  return "".intercalate parts.reverse
++
++structure Piece where
++  span : Span
++  original : String
++  deriving BEq, ToJson, FromJson
++
++/-- Only intersecting prepared records are offered. The base partition is
++always available for bytes outside a structural record; no input shape can
++make an original region disappear. The caller retains query priorities. -/
++def View.pieces (view : View) (first limit : Nat) : Array Piece := Id.run do
++  if first ≥ limit || limit > view.header.characters then return #[]
++  let spans := (view.spans.filter fun span => span.first < limit && first < span.limit).qsort fun a b => a.first < b.first
++  let mut cursor := first
++  let mut all := spans
++  for span in spans do
++    if cursor < span.first then
++      for record in ObservedRecords.base view.header.characters do
++        let a := max cursor record.first
++        let b := min span.first record.limit
++        if a < b then all := all.push ⟨a,b,false⟩
++    cursor := max cursor span.limit
++  if cursor < limit then
++    for record in ObservedRecords.base view.header.characters do
++      let a := max cursor record.first
++      let b := min limit record.limit
++      if a < b then all := all.push ⟨a,b,false⟩
++  return all.filterMap fun span => (view.slice span.first span.limit).map (Piece.mk span)
++
++/-- A delivered piece is tied to the exact stored range. This constructor
++does not return any control Match, Union or completion certificate. -/
++structure CheckedPiece (view : View) where
++  piece : Piece
++  exact : view.slice piece.span.first piece.span.limit = some piece.original
++
++def Piece.check? (view : View) (piece : Piece) : Option (CheckedPiece view) :=
++  if exact : view.slice piece.span.first piece.span.limit = some piece.original then some ⟨piece,exact⟩ else none
++
++theorem checked_piece_exact (view : View) (piece : CheckedPiece view) :
++    view.slice piece.piece.span.first piece.piece.span.limit = some piece.piece.original := piece.exact
++
++end Eggshell.Synapses.ObservedRecordView
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -5,0 +6 @@
++public import Eggshell.ObservedRecordView
+@@ -26,0 +28 @@
++    (include_str "ObservedRecordView.lean").toUTF8,
+@@ -160 +162,2 @@
+-    (expected : Option PageMap.Head) (delta : Delta) : IO PageMap.Head := do
++    (expected : Option PageMap.Head) (delta : Delta)
++    (prepareRecords : PageMap.Writer → IO Unit := fun _ => pure ()) : IO PageMap.Head := do
+@@ -178,0 +182 @@
++      prepareRecords writer
+@@ -196 +200 @@
+-    (facts : Array Fact) : IO PageMap.Head := do
++    (facts : Array Fact) (prepareRecords : PageMap.Writer → IO Unit := fun _ => pure ()) : IO PageMap.Head := do
+@@ -209,0 +214 @@
++      prepareRecords writer
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -280,0 +281,11 @@
++  -- The same changed-owner feed and the same atomic index publication own
++  -- the immutable original read view. Queries never normalize these bodies.
++  let prepareRecords := fun writer : PageMap.Writer => do
++    if !incremental then
++      let pinned ← writer.snapshot
++      let prior ← pinned.foldRange ⟨"observed-view:owner:","observed-view:owner;"⟩
++        (fun keys row => pure (keys.push row.1)) (#[] : Array String)
++      for key in prior do writer.put key none
++    for owner in retiredReads do writer.put (ObservedRecordView.ownerKey owner) none
++    for entry in readOwners do
++      ObservedRecordView.stage writer snapshot.head.identity (← documents.get entry.id)
+@@ -286,2 +297,2 @@
+-        added := facts.filter (!previous.contains ·) }
+-    else Index.replace snapshot storage .shared facts
++        added := facts.filter (!previous.contains ·) } prepareRecords
++    else Index.replace snapshot storage .shared facts prepareRecords
+--- a/Eggshell/CanonicalSourcePrepared.lean
++++ b/Eggshell/CanonicalSourcePrepared.lean
+@@ -23,0 +24,3 @@
++  /-- Opened once for the pinned preparation, sharing the bounded PageMap
++  -- block cache across sessions. No per-session original record rebuild. -/
++  originals : Option Index.Reader := none
+@@ -28 +31 @@
+-  ⟨ready,Delivery.byOwner ready.registry (allOwners ready.registry),rfl⟩
++  ⟨ready,Delivery.byOwner ready.registry (allOwners ready.registry),rfl,none⟩
+@@ -225 +228,2 @@
+-  let charge := bytes*8+metadata.rows*1024+65536
++  -- Include the original view's bounded page cache in service admission.
++  let charge := bytes*8+metadata.rows*1024+65536+256*1024*1024
+@@ -237 +241 @@
+-            return Loaded.make ready
++            return {Loaded.make ready with originals := ← Index.openShared? source}
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -5,0 +6 @@
++public import Eggshell.ObservedRecordView
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -81,0 +82,18 @@
++def sourceRecords (reference : SourceReference) (owners : Array String) (deadline : Nat) :
++    IO (Array (String × Option Synapses.ObservedRecordView.View)) := do
++  let access := reference.access
++  let owners := (hashDistinct owners.toList).toArray
++  let budget ← liveBudget deadline
++  let response ← Daemon.exchange reference.endpoint "source-records" (Json.mkObj [
++    ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
++    ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) (budget := budget)
++  let (head,rows) ← IO.ofExcept (Json.parse response >>=
++    fromJson? (α := PageMap.Head × Array (String × Option Synapses.ObservedRecordView.View)))
++  unless head == access.source && rows.map Prod.fst == owners do
++    throw (IO.userError "original record projection changed its requested source or owner domain")
++  for (owner,found) in rows do
++    if let some view := found then
++      unless view.header.database == access.database && view.header.owner == owner do
++        throw (IO.userError "original record view crossed its read scope")
++  return rows
++
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -182,0 +183,28 @@
++/-- The identical authenticated read scope serves generic original output.
++The prepared index snapshot is shared; no query repairs or normalizes it. -/
++def sourceRecords (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
++  let scope ← scopedSource server secret payload
++  let head ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := PageMap.Head))
++  let metadata ← IO.ofExcept (payload.getObjVal? "metadata" >>= fromJson? (α := CanonicalSource.Cache.Manifest))
++  let owners ← IO.ofExcept (payload.getObjValAs? (Array String) "owners")
++  unless owners.size ≤ 4096 && owners.all (fun owner => owner.utf8ByteSize ≤ 256) &&
++      head.identity == scope.database && metadata.source.identity == scope.database &&
++      metadata.implementation == CanonicalSource.Cache.implementation && digest metadata.payload do
++    throw (IO.userError "invalid original record projection request")
++  let current ← PageMap.pin scope.directory
++  let some pinned ← PageMap.HistoryReader.make? current head |
++    throw (IO.userError "original source snapshot retired")
++  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
++  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded _ => do
++    let some original := loaded.originals | throw (IO.userError "original record view is not prepared")
++    let mut rows : Array (String × Option ObservedRecordView.View) := #[]
++    let mut size := 0
++    for owner in owners do
++      unless (← IO.monoMsNow) < deadline do throw (IO.userError "original record projection expired")
++      let found ← ObservedRecordView.load? original.index scope.database owner
++      let value := toJson (owner,found)
++      size := size+value.compress.utf8ByteSize
++      unless size ≤ (Daemon.maxFrameBytes-4096)/2 do throw (IO.userError "original record projection exceeds wire bound")
++      rows := rows.push (owner,found)
++    return toJson (head,rows)
++
+@@ -380 +408 @@
+-    let deadline ← if ["prepare-source","refresh-source","source-rows"].contains kind then do
++    let deadline ← if ["prepare-source","refresh-source","source-rows","source-records"].contains kind then do
+@@ -385 +413 @@
+-    let replyCharge := if kind == "source-rows" then 16*1024*1024 else 65536
++    let replyCharge := if kind == "source-rows" || kind == "source-records" then 16*1024*1024 else 65536
+@@ -389,0 +418 @@
++      else if kind == "source-records" then sourceRecords server secret payload deadline
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -53,0 +54 @@
++  originalViews : Std.HashMap String ObservedRecordView.View := {}
+@@ -151,0 +153,4 @@
++        let originals ← Plugin.Publication.Client.sourceRecords reference ids deadline
++        for (owner,view) in originals do
++          if let some view := view then
++            plan := {plan with originalViews := plan.originalViews.insert owner view}
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5266,0 +5267 @@
++  originalView : Option Synapses.ObservedRecordView.View := none
+@@ -5617,0 +5619,8 @@
++
++/-- The prepared original view replaces the global covered-feature problem
++for advisory delivery. This path never constructs a control Match. -/
++structure DirectOffer where
++  family : Nat
++  round : Nat
++  priority : Nat
++  fragment : DeliveryFragment
+@@ -5618,0 +5628,40 @@
++def directOffers (familyIndex : Nat) (family : Family) : Array DirectOffer := Id.run do
++  let some view := family.originalView | return #[]
++  let some raw := Matcher.atomText? family.owner.outcome | return #[]
++  if view.header.owner != relationKey family.owner.relation ||
++      view.header.work != relationKey family.owner.work ||
++      view.header.original.content != Sha256.hex raw.toUTF8 ||
++      "".intercalate view.blocks.toList != raw then return #[]
++  let cues := (rankedCues family).toArray.qsort fun a b => a.first < b.first
++  let mut grouped : Array RankedCue := #[]
++  for cue in cues do
++    if cue.first ≥ cue.last || cue.last > view.header.characters then continue
++    match grouped.back? with
++    | some prior =>
++      if cue.first ≤ prior.last then
++        grouped := grouped.pop.push {prior with
++          last := max cue.last prior.last
++          priority := min cue.priority prior.priority}
++      else grouped := grouped.push cue
++    | none => grouped := grouped.push cue
++  let mut pieces : Array (Nat × Synapses.ObservedRecordView.Piece) := #[]
++  let mut seen : Std.HashSet (Nat × Nat) := {}
++  for cue in grouped do
++    for piece in view.pieces cue.first cue.last do
++      if seen.contains (piece.span.first,piece.span.limit) then continue
++      seen := seen.insert (piece.span.first,piece.span.limit)
++      pieces := pieces.push (cue.priority,piece)
++  let ordered := pieces.qsort fun a b =>
++    if a.1 == b.1 then a.2.span.first < b.2.span.first else a.1 < b.1
++  let mut compact : Array (Nat × Synapses.ObservedRecordView.Piece) := #[]
++  for (priority,piece) in ordered do
++    match compact.back? with
++    | some (previous,prior) =>
++      if previous == priority && prior.span.limit == piece.span.first &&
++          prior.span.decoded == piece.span.decoded && piece.span.limit-prior.span.first ≤ 2048 then
++        compact := compact.pop.push (priority,⟨{prior.span with limit := piece.span.limit},prior.original ++ piece.original⟩)
++      else compact := compact.push (priority,piece)
++    | none => compact := compact.push (priority,piece)
++  return compact.mapIdx fun round (priority,piece) =>
++    ⟨familyIndex,round,priority,⟨piece.span.first,piece.original,piece.span.decoded,none⟩⟩
++
+@@ -5979,0 +6029,65 @@
++    ∃ suffix, plan.result.val = mandatory ++ suffix := plan.result.property.2.2
++
++structure DirectPlan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
++    (mandatory : List TransportSlice) where
++  offers : Nat
++  selected : Nat
++  missingViews : Nat
++  result : Fitted ceiling cost mandatory
++
++def DirectPlan.receipt (plan : DirectPlan ceiling cost mandatory) : Json :=
++  Json.mkObj [("route",toJson "prepared-original-records"),("offers",toJson plan.offers),
++    ("selected",toJson plan.selected),("missingViews",toJson plan.missingViews),
++    ("globalCoverageProblem",toJson false),("actualCost",toJson (cost plan.result.val))]
++
++/-- Walk a finite ordered frontier once. Prepared original records are
++interleaved across admitted owners; fragment/envelope costs are charged once.
++Only the final actually rendered packet establishes its budget certificate. -/
++def directPlan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
++    (families : List Family) (mandatory : List TransportSlice := []) :
++    Option (DirectPlan ceiling cost mandatory) := Id.run do
++  let families := families.map fun family => Family.contextualOutputs
++    {family with cached := #[],template := {family.template with shared := none}}
++  let templates := families.toArray.map fun family =>
++    match family.template.context with
++    | none => family.template
++    | some context =>
++      let context := {context with fragments := [],cues := []}
++      {family.template with context := some context,keys := context.keys,text := context.render}
++  let shells := templates.toList.map fun slice => match slice.context with
++    | none => {slice with text := ""}
++    | some context => {slice with text := context.render}
++  let base := cost (mandatory ++ shells)
++  let offers := ((families.toArray.mapIdx directOffers).flatMap id).qsort fun a b =>
++    if a.round != b.round then a.round < b.round
++    else if a.priority != b.priority then a.priority < b.priority else a.family < b.family
++  let mut remaining := (ceiling.1-base.1,ceiling.2-base.2)
++  let mut chosen : Std.HashMap Nat (List DeliveryFragment) := {}
++  let mut selected := 0
++  for offer in offers do
++    let some template := templates[offer.family]? | continue
++    let some context := template.context | continue
++    let text := offer.fragment.render context.compactCaptions ++ "\n"
++    let charge := (text.length,text.utf8ByteSize)
++    if charge.1 ≤ remaining.1 && charge.2 ≤ remaining.2 then
++      remaining := (remaining.1-charge.1,remaining.2-charge.2)
++      chosen := chosen.insert offer.family (offer.fragment :: chosen[offer.family]?.getD [])
++      selected := selected+1
++  let mut slices := []
++  for index in [:templates.size] do
++    let some fragments := chosen[index]? | continue
++    let some template := templates[index]? | continue
++    let some context := template.context | continue
++    let context := {context with fragments := fragments.reverse,cues := fragments.map fun fragment =>
++      (fragment.first,fragment.first+fragment.original.length)}
++    slices := slices ++ [{template with context := some context,keys := context.keys,text := context.render}]
++  let result := mandatory ++ slices
++  if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
++    return some ⟨offers.size,selected,families.countP (fun family => Matcher.nativeOutcome family.owner && family.originalView.isNone),
++      ⟨result,fits.1,fits.2,⟨slices,rfl⟩⟩⟩
++  else if fits : (cost mandatory).1 ≤ ceiling.1 ∧ (cost mandatory).2 ≤ ceiling.2 then
++    return some ⟨offers.size,0,families.countP (fun family => Matcher.nativeOutcome family.owner && family.originalView.isNone),
++      ⟨mandatory,fits.1,fits.2,⟨[],by simp⟩⟩⟩
++  else return none
++
++theorem direct_keeps_control (plan : DirectPlan ceiling cost mandatory) :
+@@ -6186,0 +6301 @@
++    (originalViews : Std.HashMap String Synapses.ObservedRecordView.View := {})
+@@ -6404,3 +6519,3 @@
+-            cached := canonicalRows[originalKey]?.getD #[]} : SharedRangeAdapter.Family) else []
+-    let locations := SharedRangeAdapter.RangeLocators.combine
+-      ((families.filter (·.cached.isEmpty)).flatMap SharedRangeAdapter.RangeLocators.prepare)
++            cached := canonicalRows[originalKey]?.getD #[]
++            originalView := originalViews[originalKey]?} : SharedRangeAdapter.Family) else []
++    let locations := []
+@@ -6409 +6524 @@
+-    let sharedLocations := Synapses.CanonicalSource.Delivery.locators sharedDomain
++    let sharedLocations := ""
+@@ -6463 +6578 @@
+-      SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles
++      SharedRangeAdapter.directPlan (budget,byteBudget.getD (budget*4)) packetCost families mandatory
+@@ -7822 +7937,3 @@
+-  let synapticBundles := Synapses.Bundles.project synaptic
++  -- Direct original-range delivery does not construct every alternative
++  -- bundle projection merely to discard it in a different selector.
++  let synapticBundles : Array Synapses.Bundles.Projected := #[]
+@@ -7900,0 +8018 @@
++    (originalViews := synaptic.originalViews)

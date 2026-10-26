@@ -36,15 +36,19 @@ def main (args : List String) : IO Unit := do
   let tournamentAttempt := args == ["tournament-attempt"]
   let tournamentEnded := args == ["tournament-ended"]
   let spanEnded := args == ["span-ended"]
+  let recordEnded := args == ["record-ended"]
   let prepared := args == ["prepared-checks"] || ended
-  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
+  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || recordEnded || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let report := project / "docs/candidates" / (if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
+  let report := project / "docs/candidates" / (if recordEnded then "prepared-record-delivery" else if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
     (if old then "records/retirement-prior.json" else if ended then "records/retirement-finished.json" else "records/retirement.json")
   unless !(← report.pathExists) do throw (IO.userError "keep retirement evidence")
   let mut targets := #[]
-  let runs := if spanEnded then #[("bound-span-preparation",#["fixed-source-hooks","source-build","audit-build","repeated-bindings"])]
+  let runs := if recordEnded then #[("prepared-record-delivery",#["fixed-source-hooks","checked-hook",
+      "source-build","audit-build","inspect-build","budget-build","replay-build","raw-record-points",
+      "point-diagnosis","variable-frames","ranked-variable-frames","product-build/StudyMain"])]
+    else if spanEnded then #[("bound-span-preparation",#["fixed-source-hooks","source-build","audit-build","repeated-bindings"])]
     else if tournamentEnded then #[("tournament-selection",#["."])]
     else if tournamentAttempt then #[("tournament-selection",#["fixed-source-hooks","source-build","audit-build","selection-check","product-build/StudyMain"])]
     else if observing then #[("selector-observation",#["."])]
@@ -92,7 +96,7 @@ def main (args : List String) : IO Unit := do
       "receipt-row-postings-20261027","receipt-preparation-20261027","nonempty-source-payload-20261027",
       "selector-weight-fold-20261027","bounded-leaf-encoding-20261027","incremental-selection-20261027",
       "incremental-dispatch-20261027","streamed-incidence-20261027","tournament-selection-20261027",
-      "bound-span-preparation-20261027"] do
+      "bound-span-preparation-20261027","prepared-record-delivery-20261027"] do
     let root := base / name
     if !(← root.pathExists) then continue
     if targets.contains root then continue
