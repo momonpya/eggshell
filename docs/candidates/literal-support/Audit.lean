@@ -1,0 +1,2 @@
+import tools.LiteralSearch
+#print axioms LiteralSearch.hit_is_requested_original

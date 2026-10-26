@@ -1,0 +1,186 @@
+--- a/Eggshell/SynapseSource.lean
++++ b/Eggshell/SynapseSource.lean
+@@ -15,7 +15,7 @@
+   offsets : Array Nat
+ 
+ /-- Canonical JSON is checked once; coordinates name original scalar characters. -/
+-def layout (raw : String) : Except String Layout := do
++def canonicalLayout (raw : String) : Except String Layout := do
+   let projected ← if raw.startsWith "\"" then pure (some (raw, 0)) else
+     match Json.parse raw with
+     | .ok (.obj value) => do
+@@ -44,6 +44,22 @@
+   offsets := offsets.push position
+   unless position + (if encoded then 1 else 0) == base + fragment.length do throw "scalar layout mismatch"
+   return ⟨text, raw, offsets⟩
++
++/-- A failed optional JSON projection never discards an observed body. The
++literal view has a coordinate for every original character, including malformed
++or noncanonical JSON and arbitrary provider text. -/
++def layoutView (raw : String) : Layout :=
++  match canonicalLayout raw with
++  | .ok view => {view with original := raw}
++  | .error _ => ⟨raw,raw,Array.range (raw.length+1)⟩
++
++def layout (raw : String) : Except String Layout := .ok (layoutView raw)
++
++theorem layout_total (raw : String) :
++    ∃ view, layout raw = .ok view ∧ view.original = raw := by
++  refine ⟨layoutView raw,rfl,?_⟩
++  simp only [layoutView]
++  split <;> rfl
+ 
+ structure TextLine where
+   text : String
+@@ -125,8 +141,12 @@
+ /-- All fields of the original native invocation participate. Field names
+ cannot identify the tool's semantics or discard the other argument values. -/
+ def invocationData (work : String) : Except String (String × DataFormat) := do
+-  let payload ← workInput work
+-  return (payload.compress,.json)
++  let parts := work.splitOn "\n"
++  unless 2 ≤ parts.length do throw "no native invocation payload"
++  let raw := "\n".intercalate parts.tail
++  match Json.parse raw with
++  | .ok payload => return (payload.compress,.json)
++  | .error _ => return (raw,.text)
+ 
+ def invocationInput (work : String) : Except String String := (invocationData work).map (·.1)
+ 
+--- a/Eggshell/ObservationContext.lean
++++ b/Eggshell/ObservationContext.lean
+@@ -223,19 +223,23 @@
+ 
+ /-- File certification remains optional. General rows are located only when
+ the actual completed call has the complete saved invocation and output. -/
+-def locate (database : String) (doc : Document) (trace : Trace) : Array LocatedRead := Id.run do
++def locateUsing (database : String) (doc : Document) (trace : Trace)
++    (catalog : Catalog) : Array LocatedRead := Id.run do
+   let mut result := (locateReads database doc trace).toOption.getD #[]
+-  let some prepared := prepare? doc | return result
++  let some raw := doc.source | return result
+   let .ok (input,format) := invocationData (doc.workText.getD "") | return result
+-  let native := (prepared.catalog database).located.filter (·.read.source.file?.isNone)
++  let native := catalog.located.filter (·.read.source.file?.isNone)
+   for occurrence in doc.occurrences do
+     let some started := trace.starts[occurrence]? | continue
+-    if started.command != input || started.format != format || trace.finished[occurrence]? != some prepared.raw then continue
++    if started.command != input || started.format != format || trace.finished[occurrence]? != some raw then continue
+     for located in native do
+       let read := {located.read with occurrence}
+       result := result.push {located with read,originalRows := #[read]}
+   return result
+ 
++def locate (database : String) (doc : Document) (trace : Trace) : Array LocatedRead :=
++  locateUsing database doc trace ((recorded database doc).getD {})
++
+ /-- Exact quoted spellings provide advisory support/coquotation. The caller
+ restricts the catalog to the answer's actual All-reachable source owners.
+ This records an observed citation, not the truth or causality of a claim. -/
+--- a/Eggshell/SynapseProvenance.lean
++++ b/Eggshell/SynapseProvenance.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.GraphStore
+ public import Eggshell.ObservationContext
++public import Eggshell.ObservedRecords
+ public import Eggshell.ObservationAge
+ 
+ @[expose] public section
+@@ -252,8 +253,7 @@
+     if (← source.get (key "member" origin.owner)).isNone then ignored := ignored+1; continue
+     let doc ← checkedDocument reader origin
+     let some work := doc.workText | ignored := ignored+1; continue
+-    let some raw := doc.source | ignored := ignored+1; continue
+-    if (invocationData work).toOption.isNone || (layout raw).toOption.isNone then ignored := ignored+1; continue
++    if doc.source.isNone || (invocationData work).toOption.isNone then ignored := ignored+1; continue
+     docs := docs.insert origin.owner doc
+     events := events.push ⟨origin, true⟩ |>.push ⟨origin, false⟩
+   events := events.qsort fun a b =>
+@@ -277,7 +277,12 @@
+       let raw := doc.source.getD ""
+       let format := if (Json.parse raw).isOk then DataFormat.json else .text
+       trace ← IO.ofExcept (trace.finish event.origin.occurrence event.time raw format)
+-      let reads := ObservationContext.locate source.head.identity doc trace
++      let catalog ← match ← ObservedRecords.load? source event.origin.owner doc with
++        | some catalog => pure catalog
++        | none => do
++            let prepared ← IO.ofExcept (ObservedRecords.prepare raw)
++            IO.ofExcept (ObservedRecords.catalog source.head.identity doc prepared.records)
++      let reads := ObservationContext.locateUsing source.head.identity doc trace catalog
+       let rows := reads.filter (·.read.occurrence == event.origin.occurrence) |>.flatMap (·.rows)
+       locations := locations.insert event.origin.occurrence rows
+   let located ← IO.ofExcept (trace.locate locations)
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -32,6 +32,7 @@
+     (include_str "JsonScalars.lean").toUTF8,
+     (include_str "SynapseQuotes.lean").toUTF8,
+     (include_str "ObservationContext.lean").toUTF8,(include_str "Sha256.lean").toUTF8,
++    (include_str "ObservedRecords.lean").toUTF8,
+     (include_str "SourceEvidence.lean").toUTF8,
+     (include_str "SearchUnicode.lean").toUTF8,
+     (include_str "../tools/RetrievalCategories.lean").toUTF8])
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -129,7 +129,15 @@
+ def Documents.catalog (documents : Documents snapshot) (id : Nat) : IO ObservationContext.Catalog := do
+   if let some catalog := (← documents.catalogs.get)[id]? then return catalog
+   let doc ← documents.get id
+-  let catalog := (ObservationContext.recorded snapshot.head.identity doc).getD {}
++  let original ← match ← ObservedRecords.load? snapshot id doc with
++    | some catalog => pure catalog
++    | none => do
++        let some raw := doc.source | throw (IO.userError "original record body is missing")
++        let prepared ← IO.ofExcept (ObservedRecords.prepare raw)
++        IO.ofExcept (ObservedRecords.catalog snapshot.head.identity doc prepared.records)
++  -- File aliases are additional coordinates, never the original domain gate.
++  let files := (recordedReads snapshot.head.identity doc).toOption.getD #[]
++  let catalog := {original with located := files ++ original.located}
+   documents.catalogs.modify (·.insert id catalog)
+   return catalog
+ 
+--- a/Eggshell/NativePublication.lean
++++ b/Eggshell/NativePublication.lean
+@@ -1,6 +1,7 @@
+ module
+ 
+ public import Eggshell.SynapseJournal
++public import Eggshell.ObservedRecords
+ 
+ @[expose] public section
+ 
+@@ -133,12 +134,24 @@
+ 
+ def stage (items : Array Item) (intern : Persistence.Store.Intern) : IO Bool := do
+   let mut bindings := #[]
++  let mut recordsChanged := false
+   for item in items do
+     let owner := (compileOperationOutcomes (.text item.occurrence.session)
+       (.text item.occurrence.turn) item.tool).2
+     let some edge := OutcomeEdge.fromValue? owner |
+       throw (IO.userError "native publication did not compile an Outcome")
+     let id ← intern.value owner
++    let document : Synapses.Extraction.Document := {
++      owner := Persistence.selectionKey edge.relation
++      work := Persistence.selectionKey edge.work
++      workText := Persistence.Store.text? edge.work
++      source := Persistence.Store.text? edge.outcome
++      native := edge.observations.any (Relation.observesOutcomeWork edge.outcome edge.work)
++      occurrences := Provenance.identities edge
++      files := #[] }
++    unless (← intern.writer.get (key "member" id)).isSome do
++      throw (IO.userError "original record owner was not source-published")
++    recordsChanged := (← ObservedRecords.stage intern.writer id document) || recordsChanged
+     let origin : Option Provenance.Origin := match item.evidence with
+       | .timed first last _ => some ⟨id,item.occurrence,first.clock.domain,
+           first.clock.nanos,last.clock.nanos,last.receivedUnixMs⟩
+@@ -150,7 +163,7 @@
+     let some binding := Provenance.Binding.check? edge origin |
+       throw (IO.userError "native publication has an invalid observed interval")
+     bindings := bindings.push binding
+-  Provenance.stage intern bindings
++  return (← Provenance.stage intern bindings) || recordsChanged
+ 
+ structure TimingCounts where
+   timed : Nat := 0

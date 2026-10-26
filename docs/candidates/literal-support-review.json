@@ -1,0 +1,71 @@
+{"resources":
+ {"userCeilingRssKiB": 4194304,
+  "state": "finished",
+  "settings":
+  {"record":
+   "/Users/ovm/.codex/experiments/eggshell/record-publication-20261026/literal-reference.guard.json",
+   "ownedPrefixes":
+   ["/Users/ovm/.codex/experiments/eggshell/record-publication-20261026",
+    "/Users/ovm/.codex/experiments/eggshell/literal-support-reference-20261026"],
+   "minFreeKiB": 2097152,
+   "limitRssKiB": 3670016,
+   "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+   "command":
+   ["/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+    "-j1",
+    "-M768",
+    "--run",
+    "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/literal-support/Run.lean",
+    "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/literal-support",
+    "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0",
+    "/Users/ovm/.codex/experiments/eggshell/literal-support-reference-20261026"]},
+  "samples": 11,
+  "sampledPeakRssKiB": 1032848,
+  "reason": null,
+  "peakProcesses":
+  [{"rssKiB": 456432,
+    "role": null,
+    "program":
+    "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+    "pid": 42716,
+    "parent": 42678,
+    "lane": null},
+   {"rssKiB": 532240,
+    "role": null,
+    "program":
+    "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+    "pid": 42723,
+    "parent": 42716,
+    "lane": null},
+   {"rssKiB": 44176,
+    "role": "guard",
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/study-services-20261026/assessed-controller",
+    "pid": 42678,
+    "parent": 48938,
+    "lane": null}],
+  "ownedPids": [],
+  "limitRssKiB": 3670016,
+  "guardTriggered": false,
+  "guardSha256":
+  "4432bb7db70d0e821cd11fa019a664371e0cc89b716db3be4d6d90a747a6b4d6",
+  "guardPid": 42678,
+  "exitCode": 0,
+  "error": null,
+  "elapsedMs": 4605,
+  "childPid": 42716},
+ "requiredDelivery95Established": false,
+ "proofAxioms":
+ "'LiteralSearch.hit_is_requested_original' depends on axioms: [propext, Classical.choice, Quot.sound]\n",
+ "componentOnly": true,
+ "completeAlgorithmProof": false,
+ "checks":
+ {"unicodeAndLongTail": true,
+  "productionAdoption": false,
+  "overlappingMatches": true,
+  "invalidIndexCannotForge": true,
+  "independentReferenceAgreement": true,
+  "exhaustiveInputs": 2047,
+  "answeringModelCalls": 0},
+ "adopted": false,
+ "actualProductIntegration": false}
