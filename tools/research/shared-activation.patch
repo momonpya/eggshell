@@ -1,0 +1,136 @@
+--- a/tools/ClosedCoverage.lean
++++ b/tools/ClosedCoverage.lean
+@@ -21,6 +21,72 @@
+ def original (p : SharedCoverage.Problem) : Array (Recipe p) :=
+   (List.finRange p.offers.size).toArray.map fun index => {parts := [index]}
+
++/-- A look-ahead proposal can only combine supplied original offers. Its
++shared setup is used for ordering, never discounted from actual wire cost. -/
++structure Activation (p : SharedCoverage.Problem) (available : List (Fin p.offers.size)) where
++  parts : List {index : Fin p.offers.size // index ∈ available}
++
++def Activation.recipe (activation : Activation p available) : Recipe p :=
++  {parts := activation.parts.map (·.val)}
++
++theorem Activation.original_parts (activation : Activation p available)
++    (index : Fin p.offers.size) (present : index ∈ activation.recipe.parts) :
++    index ∈ available := by
++  obtain ⟨part,_,same⟩ := List.mem_map.mp present
++  exact same ▸ part.property
++
++theorem Activation.no_bonus (activation : Activation p available) :
++    activation.recipe.bonus = [] := rfl
++
++def densityBetter (gain charge priorGain priorCharge : Nat) : Bool :=
++  if charge == 0 then priorCharge != 0 || priorGain < gain
++  else if priorCharge == 0 then false
++  else priorGain*charge < gain*priorCharge
++
++/-- A deterministic activation frontier: order original records by their
++payload density, evaluate every prefix with exact shared node/cue unions, and
++offer only the best feasible density prefix. No k, fitted weight or reserved
++budget is introduced. All original singleton offers remain available too.
++This is look-ahead for a shared fixed cost, not a global optimality claim. -/
++def activation? (p : SharedCoverage.Problem) (setup : Fin p.costs.size)
++    (available : List (Fin p.offers.size)) : Option (Activation p available) := Id.run do
++  let eligible := available.attach.filter fun index => p.offers[index.val].closure.contains setup
++  let scored := eligible.map fun index =>
++    let offer := p.offers[index.val]
++    let gain := (Eggshell.hashDistinct offer.covers).foldl (fun sum cue => sum+p.weights[cue]) 0
++    let payload := (Eggshell.hashDistinct offer.closure).filter (· != setup)
++    let cost := payload.foldl (fun sum atom =>
++      (sum.1+p.costs[atom].1,sum.2+p.costs[atom].2)) (0,0)
++    (index,gain,max (cost.1*p.limit.2) (cost.2*p.limit.1))
++  let ordered := scored.mergeSort fun left right =>
++    !densityBetter right.2.1 right.2.2 left.2.1 left.2.2
++  let mut nodes : Std.HashSet (Fin p.costs.size) := {}
++  let mut cues : Std.HashSet (Fin p.weights.size) := {}
++  let mut cost := p.fixed
++  let mut gain := 0
++  let mut batch := []
++  let mut best := []
++  let mut bestGain := 0
++  let mut bestCharge := 0
++  for (index,_,_) in ordered do
++    for atom in p.offers[index.val].closure do
++      if !nodes.contains atom then
++        nodes := nodes.insert atom
++        cost := (cost.1+p.costs[atom].1,cost.2+p.costs[atom].2)
++    if p.limit.1 < cost.1 || p.limit.2 < cost.2 then break
++    for cue in p.offers[index.val].covers do
++      if !cues.contains cue then
++        cues := cues.insert cue
++        gain := gain+p.weights[cue]
++    batch := index :: batch
++    let charge := max ((cost.1-p.fixed.1)*p.limit.2) ((cost.2-p.fixed.2)*p.limit.1)
++    if best.isEmpty || densityBetter gain charge bestGain bestCharge then
++      best := batch
++      bestGain := gain
++      bestCharge := charge
++  if bestGain == 0 then return none
++  return some {parts := best.reverse}
++
+ def recipeAt (p : SharedCoverage.Problem) (recipes : Array (Recipe p))
+     (index : Fin (compile p recipes).offers.size) : Recipe p :=
+   recipes[index.val]'(by simpa [compile] using index.isLt)
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5458,9 +5458,8 @@
+       units := units ++ [{family := familyIndex,slice,ranges}]
+   return (units,cues)
+
+-/-- Prepare the immutable record/structure index once per owner. Each query
+-window gets its own complete local dependency closure, not a prefix of the
+-other windows of this owner. This creates no control Match. -/
++/-- Prepare the immutable record/structure index once per owner. Query
++positions decorate its values, without defining its domain or control. -/
+ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
+   let outputs := prepareOutputs familyIndex family
+   if !family.cached.isEmpty then
+@@ -5873,7 +5872,13 @@
+         let choices := (List.finRange unitArray.size).filter fun index =>
+           memberCovered keys unitArray [index] member
+         candidates := candidates.insert member.source choices
+-    let recipes := ClosedCoverage.original p ++ (bundles.filterMap fun projected =>
++    let activations := (families.toArray.mapIdx fun familyIndex _ => do
++      if bounded : familyIndex < p.costs.size then
++        let parts := (List.finRange p.offers.size).filter fun index =>
++          (unitArray[index.val]?).any (·.family == familyIndex)
++        (ClosedCoverage.activation? p ⟨familyIndex,bounded⟩ parts).map (·.recipe)
++      else none).filterMap id
++    let recipes := ClosedCoverage.original p ++ activations ++ (bundles.filterMap fun projected =>
+       (bundlePlan? keys unitArray p candidates projected).bind (bundleRecipe? keys unitArray pieces p))
+     let compiled := ClosedCoverage.compile p recipes
+     let chosen ← SharedCoverage.choose? compiled
+@@ -5913,7 +5918,11 @@
+       ("selected",toJson (plan.selected.contains index))]
+   Json.mkObj [("families",toJson familyRows),("units",toJson units),
+     ("fixedCost",toJson plan.problem.fixed),("limit",toJson plan.problem.limit),("scale",toJson plan.scale),
+-    ("selected",toJson plan.selected)]
++    ("selected",toJson plan.selected),
++    ("problem",Json.mkObj [("costs",toJson plan.problem.costs),("weights",toJson plan.problem.weights),
++      ("offers",toJson (plan.problem.offers.map fun offer => Json.mkObj [
++        ("closure",toJson (offer.closure.map Fin.val)),("covers",toJson (offer.covers.map Fin.val))])),
++      ("fixed",toJson plan.problem.fixed),("limit",toJson plan.problem.limit)])]
+
+ namespace RangeLocators
+
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -1917,3 +1917,16 @@
+     let some body := declaration.value? | throwError "Missing source-window implementation"
+     unless body.getUsedConstants.contains required do
+       throwError "Source-window caller bypasses the checked projection: {caller}, {required}"
++
++#print axioms ClosedCoverage.Activation.original_parts
++#print axioms ClosedCoverage.Activation.no_bonus
++
++run_meta do
++  let environment ← getEnv
++  let some declaration := environment.find? ``Eggshell.Plugin.SharedRangeAdapter.plan |
++    throwError "Missing original-range plan"
++  let some body := declaration.value? | throwError "Missing original-range plan body"
++  for required in #[``ClosedCoverage.original, ``ClosedCoverage.activation?,
++      ``ClosedCoverage.compile, ``ClosedCoverage.expand] do
++    unless body.getUsedConstants.contains required do
++      throwError "Shared setup bypasses original offers or closure expansion: {required}"

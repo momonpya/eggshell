@@ -1,0 +1,62 @@
+--- a/Eggshell/CanonicalSourceRecords.lean
++++ b/Eggshell/CanonicalSourceRecords.lean
+@@ -119,6 +119,32 @@
+     (requested : List (Fin rows.size)) : Array StoredRow :=
+   ((closeIndices records requested).map fun index => rows[index]).toArray
+
++/-- Query-independent original domain. Bounded records remain whole; a row
++without such a record gets its own original unit. Relevance never determines
++which stored row can be purchased. The set is prepared once, not per hint. -/
++def catalogue (rows : Array StoredRow) (records : List (Record rows)) :
++    List (List (Fin rows.size)) :=
++  let entries := records.map (·.indices)
++  let covered := Std.HashSet.ofList entries.flatten
++  entries ++ ((List.finRange rows.size).filter fun index => !covered.contains index).map (fun index => [index])
++
++theorem catalogue_complete (rows : Array StoredRow) (records : List (Record rows))
++    (index : Fin rows.size) : index ∈ (catalogue rows records).flatten := by
++  simp only [catalogue,List.flatten_append]
++  by_cases present : index ∈ (records.map (·.indices)).flatten
++  · exact List.mem_append_left _ present
++  · apply List.mem_append_right
++    apply List.mem_flatten.mpr
++    refine ⟨[index],?_,by simp⟩
++    apply List.mem_map.mpr
++    refine ⟨index,?_,rfl⟩
++    simpa [Std.HashSet.contains_ofList] using present
++
++theorem catalogue_payload_original (rows : Array StoredRow) (records : List (Record rows))
++    (indices : List (Fin rows.size)) (_member : indices ∈ catalogue rows records)
++    (index : Fin rows.size) (_inside : index ∈ indices) : rows[index] ∈ rows :=
++  Array.getElem_mem index.isLt
++
+ theorem closed_row_is_original (rows : Array StoredRow) (records : List (Record rows))
+     (requested : List (Fin rows.size)) (row : StoredRow) (member : row ∈ close rows records requested) :
+     row ∈ rows := by
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5317,14 +5317,20 @@
+     (meaningContext? source (work.length+1) position 0).map fun view => (view.span.start,view.span.stop)
+   let groups := focused.map (fun span => [span]) ++ family.referenceRanges.map Prod.snd ++
+     family.synapticRanges.map (fun (_,a,b) => [(a,b)]) ++ family.synapticUnits
+-  let mut seen : Std.HashSet (List (Nat × Nat)) := {}
+-  let mut units := []
+-  for spans in groups do
++  -- Hints decorate a complete immutable record domain. They may combine
++  -- records, but cannot make an unhinted original row unavailable to fitting.
++  -- Payloads and file frames are still charged once by the shared problem.
++  let catalogue := (Synapses.CanonicalSource.Records.catalogue family.cached records).map fun indices =>
++    (indices.map fun index => family.cached[index]).toArray
++  let combined := groups.map fun spans =>
+     let requested := (List.finRange family.cached.size).filter fun index =>
+       let row := family.cached[index]
+       row.origins.any fun origin => origin.binding.owner == owner && spans.any fun (a,b) =>
+         a < origin.binding.limit && origin.binding.first < b
+-    let rows := Synapses.CanonicalSource.Records.close family.cached records requested
++    Synapses.CanonicalSource.Records.close family.cached records requested
++  let mut seen : Std.HashSet (List (Nat × Nat)) := {}
++  let mut units := []
++  for rows in catalogue ++ combined do
+     if rows.isEmpty then continue
+     let ranges := cachedBindings owner rows
+     if seen.contains ranges then continue

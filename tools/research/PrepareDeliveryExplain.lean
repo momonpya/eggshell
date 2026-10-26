@@ -6,7 +6,8 @@ def main (args : List String) : IO Unit := do
   let (rootPath,receipts,owner,label,range) ← match args with
     | [a,b,c,d] => pure (a,b,c,d,([] : List String))
     | [a,b,c,d,first,limit] => pure (a,b,c,d,[first,limit])
-    | _ => throw (IO.userError "PrepareDeliveryExplain ROOT RECEIPTS OWNER LABEL [FIRST LIMIT]")
+    | [a,b,c,d,first,limit,source] => pure (a,b,c,d,[first,limit,source])
+    | _ => throw (IO.userError "PrepareDeliveryExplain ROOT RECEIPTS OWNER LABEL [FIRST LIMIT [SOURCE]]")
   let root := System.FilePath.mk rootPath
   unless root.isAbsolute && (← root.isDir) && !label.isEmpty &&
       label.toList.all (fun char => char.isAlphanum || char == '-') do

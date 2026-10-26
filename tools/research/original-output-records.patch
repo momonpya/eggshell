@@ -1,0 +1,253 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5190,7 +5190,7 @@
+ output fields can compete. Completed members and shared source packets keep
+ their own typed transport. No display text is parsed to recover provenance. -/
+ def Family.outputEnvelope? (family : Family) : Option ContextDelivery := do
+-  if family.outputRanges.isEmpty || family.template.context.isSome ||
++  if family.template.context.isSome ||
+       family.template.shared.isSome || !family.cached.isEmpty ||
+       !family.template.members.all (·.applicability == .advisory) ||
+       !Matcher.nativeOutcome family.owner then none else do
+@@ -5315,7 +5315,7 @@
+   let records := Synapses.CanonicalSource.Records.prepare family.cached
+   let focused := (family.windows ++ family.references).eraseDups.filterMap fun position =>
+     (meaningContext? source (work.length+1) position 0).map fun view => (view.span.start,view.span.stop)
+-  let groups := focused.map (fun span => [span]) ++ family.referenceRanges.map Prod.snd ++
++  let groups := family.referenceRanges.map Prod.snd ++
+     family.synapticRanges.map (fun (_,a,b) => [(a,b)]) ++ family.synapticUnits
+   -- Hints decorate a complete immutable record domain. They may combine
+   -- records, but cannot make an unhinted original row unavailable to fitting.
+@@ -5371,106 +5371,106 @@
+       cues := cues ++ [(first,last)]
+   return (units,cues)
+
++/-- One whole-scalar check permits display decoding at recorded character
++boundaries. This is presentation evidence, never a file alias or Work proof. -/
++structure ScalarLayout (source : String) where
++  layout : DecodedLayout source
++  canonical : source = (toJson layout.decoded.text).compress
++
++def ScalarLayout.check? (source : String) : Option (ScalarLayout source) := do
++  let decoded ← decodedToolText? source
++  let layout := DecodedLayout.make decoded
++  if canonical : source = (toJson layout.decoded.text).compress then
++    some ⟨layout,canonical⟩ else none
++
++def ScalarLayout.boundaries (prepared : ScalarLayout source) : Std.HashSet Nat := Id.run do
++  let mut position := 1
++  let mut result := ({} : Std.HashSet Nat).insert position
++  for (_,width) in prepared.layout.widths do
++    position := position+width
++    result := result.insert position
++  return result
++
++/-- Original bytes are independent of optional display decoding. Array slicing
++does work proportional to the selected record, not its preceding source. -/
++def originalRecordFragment (original : IndexedCharacters source) (range : EvidenceRange source)
++    (decode : Bool) : DeliveryFragment := {
++  first := range.start
++  original := original.slice range.start (range.stop-range.start)
++  decoded := decode }
++
++theorem original_record_fragment_exact (original : IndexedCharacters source)
++    (range : EvidenceRange source) (decode : Bool) :
++    (originalRecordFragment original range decode).first = range.start ∧
++    (originalRecordFragment original range decode).original = range.text := by
++  exact ⟨rfl,original.slice_exact range.start (range.stop-range.start)⟩
++
++/-- A query-independent catalogue of bounded original records. Layout is
++prepared once per owner; focus only supplies values afterwards. Prefix
++reencoding and owner-value hashing do not run once per query window. -/
++def prepareOriginalRecords (familyIndex : Nat) (family : Family) :
++    List UnitPlan × List (Nat × Nat) := Id.run do
++  let some source := Matcher.atomText? family.owner.outcome | return ([],[])
++  let some envelope := family.template.context | return ([],[])
++  let some wholeSpan := (if positive : 0 < source.length then
++    some (⟨0,source.length,positive,Nat.le_refl _⟩ : ContextSpan source) else none) | return ([],[])
++  let scalar := ScalarLayout.check? source
++  let layout := scalar.map (·.layout)
++  let original := layout.map (·.original) |>.getD (IndexedCharacters.make source)
++  let boundaries := scalar.map ScalarLayout.boundaries |>.getD {}
++  let records := contextRecordSpans source layout
++  let heads := contextStructureHeads source layout
++  let scopedHeads := contextStructureHeads source layout true
++  let covered := records.map fun record =>
++    (⟨record.start,record.stop,record.ordered⟩ : DeliveryInterval)
++  let whole : DeliveryInterval := ⟨wholeSpan.start,wholeSpan.stop,wholeSpan.ordered⟩
++  let gaps := (whole.subtractAll covered).attach.map fun gap =>
++    (⟨gap.val.start,gap.val.stop,gap.val.ordered,by
++      have inside : gap.val.covers (gap.val.stop-1) := by
++        have := gap.val.ordered
++        simp only [DeliveryInterval.covers]
++        omega
++      have contained := ((DeliveryInterval.subtractAll_covers whole covered (gap.val.stop-1)).mp
++        ⟨gap.val,gap.property,inside⟩).1
++      have bound := wholeSpan.within
++      simp only [DeliveryInterval.covers,whole] at contained
++      omega⟩ : ContextSpan source)
++  let workChars := (Matcher.atomText? family.owner.work).getD "" |>.length
++  let cues := ((rankedContextRanges source (workChars+1)
++    (family.windows ++ family.references).eraseDups).map fun range => (range.start,range.stop)) ++
++    (family.synapticRanges ++ family.outputCues).map (fun (_,a,b) => (a,b))
++  let mut units := []
++  let mut seen : Std.HashSet (Nat × Nat) := {}
++  for record in records ++ gaps do
++    for part in record.ranges do
++      let required := recordPrerequisite records heads scopedHeads part
++      if seen.contains (required.start,required.stop) then continue
++      seen := seen.insert (required.start,required.stop)
++      let fragment := originalRecordFragment original required
++        (scalar.isSome && boundaries.contains required.start && boundaries.contains required.stop)
++      let ranges := [(required.start,required.stop)]
++      let selectedCues := cues.filterMap fun (a,b) =>
++        let first := max a required.start
++        let last := min b required.stop
++        if first < last then some (first,last) else none
++      let context := {envelope with fragments := [fragment],cues := selectedCues}
++      let slice := {family.template with context := some context,keys := context.keys,text := context.render}
++      units := units ++ [{family := familyIndex,slice,ranges}]
++  return (units,cues)
++
+ /-- Prepare the immutable record/structure index once per owner. Each query
+ window gets its own complete local dependency closure, not a prefix of the
+ other windows of this owner. This creates no control Match. -/
+ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
+   let outputs := prepareOutputs familyIndex family
+   if !family.cached.isEmpty then
+-    let source := prepareCached familyIndex family
+-    return (source.1 ++ outputs.1,source.2 ++ outputs.2)
++    let records := prepareCached familyIndex family
++    return (records.1 ++ outputs.1,records.2 ++ outputs.2)
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   if family.template.context.isNone then
+     return ([atomicUnit familyIndex source.length family],[])
+-  let some work := Matcher.atomText? family.owner.work | return ([],[])
+-  let positions := (family.windows ++ family.references).eraseDups
+-  if positions.isEmpty && family.synapticRanges.isEmpty && family.outputRanges.isEmpty then return ([],[])
+-  let decoded := (decodedToolText? source).map DecodedLayout.make
+-  let original := decoded.map (·.original) |>.getD (IndexedCharacters.make source)
+-  let records := contextRecordSpans source decoded
+-  let heads := contextStructureHeads source decoded
+-  let scopedHeads := contextStructureHeads source decoded true
+-  let aligned := fun range => match decoded with
+-    | none => some range
+-    | some layout => (decodedEvidenceUsing? layout range).map (·.original)
+-  let cues := ((rankedContextRanges source (work.length+1) positions).map fun range =>
+-    (range.start,range.stop)) ++ (family.synapticRanges ++ family.outputCues).map (fun (_,a,b) => (a,b))
+-  if cues.isEmpty then return ([],[])
+-  let some envelope := family.template.context |
+-    return ([{family := familyIndex,slice := family.template,ranges := [(0,source.length)]}],cues)
+-  let mut units := outputs.1
+-  let mut seen : Std.HashSet (List (Nat × Nat)) := {}
+-  for position in positions do
+-    let structural := (completeStructureContexts records
+-      (structureContextRanges source (work.length+1) [position] heads)).filterMap fun (priority,range) =>
+-        (aligned range).map fun original => (priority,original)
+-    -- Decode-safe data coordinates precede context expansion. JSON framing
+-    -- quotes and partial escapes are not mandatory presented source records.
+-    let requested := (rankedContextRanges source (work.length+1) [position]).filterMap aligned
+-    let dependencies := requested ++ structural.map Prod.snd
+-    let requirements := cueRequiredRanges records heads scopedHeads dependencies
+-    let some required := prepareRequiredCueViewsUsing records heads scopedHeads decoded dependencies | continue
+-    let richer := prepareCueViewsUsing records heads scopedHeads decoded dependencies
+-    for views in [required,required ++ richer] do
+-      let limit := (views.map fun view => view.range.stop-view.range.start).sum
+-      let selected := views.foldl (fun selected view =>
+-        offerContextView selected family.owner decoded view)
+-        (ContextSelection.empty : ContextSelection source limit)
+-      let fragments := (sourceOrderedEvidence selected.views).map fun view => ({
+-        first := view.range.start
+-        original := original.slice view.range.start (view.range.stop-view.range.start)
+-        decoded := match view with | .decoded _ => true | .original _ => false} : DeliveryFragment)
+-      let ranges := fragmentRanges fragments
+-      let demanded := requested.filterMap fun range => aligned (recordContextRange records range)
+-      if ranges.isEmpty || demanded.isEmpty ||
+-          !demanded.all (fun range => covers ranges range.start range.stop) ||
+-          !requirements.all (fun range => covers ranges range.start range.stop) then continue
+-      if seen.contains ranges then continue
+-      seen := seen.insert ranges
+-      let selectedCues := cues.flatMap fun (a,b) => ranges.filterMap fun (c,d) =>
+-        let first := max a c
+-        let last := min b d
+-        if first < last then some (first,last) else none
+-      let context := {envelope with fragments,cues := selectedCues}
+-      let slice := {family.template with context := some context,keys := context.keys,text := context.render}
+-      units := units ++ [{family := familyIndex,slice,ranges}]
+-  -- A complete citation names stored source rows, not all windows that
+-  -- intersect them. Offer that exact bounded data with its original scope;
+-  -- the unchanged selector still decides its value against current focus.
+-  if Matcher.nativeOutcome family.owner then
+-    for (_,spans) in family.referenceRanges ++ family.synapticRanges.map (fun (priority,a,b) => (priority,[(a,b)])) ++
+-        family.synapticUnits.map (fun spans => (0,spans)) do
+-      let some quoted := citationRecordRanges source spans | continue
+-      let requested := quoted.filterMap aligned
+-      if requested.length != quoted.length || requested.isEmpty then continue
+-      let requirements := requested.map (recordPrerequisite records heads scopedHeads)
+-      let views := requirements.filterMap fun range => match decoded with
+-        | none => some (EvidenceView.original range)
+-        | some layout => (decodedEvidenceUsing? layout range).map EvidenceView.decoded
+-      if views.length != requirements.length then continue
+-      let limit := (views.map fun view => view.range.stop-view.range.start).sum
+-      let selected := views.foldl (fun selected view =>
+-        offerContextView selected family.owner decoded view)
+-        (ContextSelection.empty : ContextSelection source limit)
+-      let fragments := (sourceOrderedEvidence selected.views).map fun view => ({
+-        first := view.range.start
+-        original := original.slice view.range.start (view.range.stop-view.range.start)
+-        decoded := match view with | .decoded _ => true | .original _ => false} : DeliveryFragment)
+-      let ranges := fragmentRanges fragments
+-      if !requested.all (fun range => covers ranges range.start range.stop) then continue
+-      let required := requirements.filterMap aligned
+-      if required.length != requirements.length ||
+-          !required.all (fun range => covers ranges range.start range.stop) then continue
+-      if seen.contains ranges then continue
+-      seen := seen.insert ranges
+-      let selectedCues := cues.flatMap fun (a,b) => ranges.filterMap fun (c,d) =>
+-        let first := max a c
+-        let last := min b d
+-        if first < last then some (first,last) else none
+-      let context := {envelope with fragments,cues := selectedCues}
+-      let slice := {family.template with context := some context,keys := context.keys,text := context.render}
+-      units := units ++ [{family := familyIndex,slice,ranges}]
+-  return (units,cues)
++  let records := prepareOriginalRecords familyIndex family
++  return (records.1 ++ outputs.1,records.2 ++ outputs.2)
+
+ def join (prior next : TransportSlice) : Option TransportSlice := do
+   match prior.context,next.context with
+@@ -6135,6 +6135,7 @@
+         if let some rows := canonicalRows[relationKey first.matched.edge.relation]? then
+           let shared : Synapses.CanonicalSource.Delivery.Part := {rows}
+           return ({slice with keys := [],text := "",context := none,shared := some shared},[])
++        if Matcher.nativeOutcome first.matched.edge then return (slice,[])
+       let prepared := prepareContextualSlicePlan planningReceipts windows slice anchors
+       let render := fun amount => (prepared.eval amount).map fun slice => {slice with anchors}
+       let levels := ownerContextLevels first.matched.edge windows anchors share allowance
+@@ -6165,6 +6166,10 @@
+             owner := some source.owner.relation,keys := [],text := "",shared := some shared
+             members := [],visibleKeys := []}
+           return (source.owner.relation,(slice,[]))
++        if Matcher.nativeOutcome source.owner then
++          let slice : TransportSlice := {
++            owner := some source.owner.relation,keys := [],text := "",members := [],visibleKeys := []}
++          return (source.owner.relation,(slice,[]))
+       let prepared := prepareContextualSupportPlan planningReceipts windows source anchors
+       let render := fun amount => (prepared.eval amount).map fun slice => {slice with anchors}
+       let levels := ownerContextLevels source.owner windows anchors share allowance
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -1906,7 +1906,12 @@
+       (``Eggshell.Plugin.SharedRangeAdapter.rankedCues, ``Eggshell.Plugin.meaningContext?),
+       (``Eggshell.Plugin.rankedContextRanges, ``Eggshell.Plugin.meaningContext?),
+       (``Eggshell.Plugin.meaningContextGroups, ``Eggshell.Plugin.meaningContext?),
+-      (``Eggshell.Plugin.SharedRangeAdapter.prepare, ``Eggshell.Plugin.rankedContextRanges),
++      (``Eggshell.Plugin.SharedRangeAdapter.prepare,
++        ``Eggshell.Plugin.SharedRangeAdapter.prepareOriginalRecords),
++      (``Eggshell.Plugin.SharedRangeAdapter.prepareOriginalRecords, ``Eggshell.Plugin.rankedContextRanges),
++      (``Eggshell.Plugin.SharedRangeAdapter.prepareOriginalRecords,
++        ``Eggshell.Plugin.SharedRangeAdapter.originalRecordFragment),
++      (``Eggshell.Plugin.SharedRangeAdapter.originalRecordFragment, ``Eggshell.IndexedCharacters.slice),
+       (``Eggshell.Plugin.SharedRangeAdapter.prepare, ``Eggshell.Plugin.SharedRangeAdapter.atomicUnit)] do
+     let some declaration := environment.find? caller | throwError "Missing source-window caller"
+     let some body := declaration.value? | throwError "Missing source-window implementation"

@@ -1,0 +1,182 @@
+--- a/Eggshell/SemanticMatcher.lean
++++ b/Eggshell/SemanticMatcher.lean
+@@ -357,14 +357,60 @@
+ theorem WindowPull.handles_bounded (pull : WindowPull document) :
+     pull.handles.length ≤ 32 := by
+   simpa [handles] using pull.bounded
++
++/-- Scored evidence is bounded by its immutable source directory, not by a
++foreground repair batch. Validating a rank never calls the source reader. -/
++structure WindowEvidence (document : Persistence.Store.SearchDocument) where
++  indices : List Nat
++  bounded : indices.length ≤ document.windows.length
++  distinct : hashDistinct indices = indices
++  within : indices.all (fun index => decide (index < document.windows.length)) = true
++
++def WindowEvidence.check? (document : Persistence.Store.SearchDocument) (indices : List Nat) :
++    Option (WindowEvidence document) :=
++  if valid : indices.length ≤ document.windows.length ∧ hashDistinct indices = indices ∧
++      indices.all (fun index => decide (index < document.windows.length)) = true then
++    some ⟨indices,valid.1,valid.2.1,valid.2.2⟩
++  else none
++
++def WindowEvidence.handles (evidence : WindowEvidence document) : List (Fin document.windows.length) :=
++  evidence.indices.attach.map fun index => ⟨index.val, by
++    have := (List.all_eq_true.mp evidence.within) index.val index.property
++    exact of_decide_eq_true this⟩
++
++theorem WindowEvidence.handles_exact (evidence : WindowEvidence document) :
++    evidence.handles.map Fin.val = evidence.indices := by simp [handles]
++
++theorem WindowEvidence.handles_bounded (evidence : WindowEvidence document) :
++    evidence.handles.length ≤ document.windows.length := by
++  simpa [handles] using evidence.bounded
++
++/-- Focus has already scored its finite admitted domain. A reply must preserve
++every original window, including lower ranks; no constant top-k is a domain. -/
++structure WindowOrder (document : Persistence.Store.SearchDocument) where
++  evidence : WindowEvidence document
++  complete : evidence.indices.mergeSort (· ≤ ·) = List.range document.windows.length
+
++def WindowOrder.check? (document : Persistence.Store.SearchDocument) (indices : List Nat) :
++    Option (WindowOrder document) := do
++  let evidence ← WindowEvidence.check? document indices
++  if complete : evidence.indices.mergeSort (· ≤ ·) = List.range document.windows.length then
++    some ⟨evidence,complete⟩ else none
++
++theorem WindowOrder.covers (order : WindowOrder document) (index : Nat)
++    (within : index < document.windows.length) : index ∈ order.evidence.indices := by
++  have sorted : index ∈ order.evidence.indices.mergeSort (· ≤ ·) := by
++    rw [order.complete]
++    exact List.mem_range.mpr within
++  exact List.mem_mergeSort.mp sorted
++
+ /-- Provider positions resolve in the requesting corpus, never to a provider
+ path or invented text. A nomination retains that ownership certificate. -/
+ structure IndexedNomination (documents : List Persistence.Store.SearchDocument) where
+   document : Persistence.Store.SearchDocument
+   owned : document ∈ documents
+   windows : List (Fin document.windows.length)
+-  bounded : windows.length ≤ 32
++  bounded : windows.length ≤ document.windows.length
+
+ def IndexedNomination.indices (nomination : IndexedNomination documents) : List Nat :=
+   nomination.windows.map Fin.val
+@@ -416,18 +462,18 @@
+         let owned := List.mem_of_getElem? present
+         let indices := (response.evidence.find? (·.document == index)).map (·.indices) |>.getD []
+         if indices.isEmpty then pure (nominations ++ [⟨document, owned, [], by simp⟩]) else
+-          let some pull := WindowPull.check? document indices |
++          let some pull := WindowEvidence.check? document indices |
+             throw "semantic evidence window lies outside its document"
+           pure (nominations ++ [⟨document, owned, pull.handles, pull.handles_bounded⟩])) []
+
+-/-- Common original window validation; a directory cannot grant ownership
+-or accept an out-of-range, repeated or oversized window choice. -/
++/-- Evidence validation has the actual directory bound. The separate repair
++capability still accepts at most 32 windows before reading source bytes. -/
+ def resolveIndexedNomination (found : Option {row // row ∈ documents})
+     (indices : List Nat) : Except String (Option (IndexedNomination documents)) := do
+   let some document := found | return none
+   if indices.isEmpty then
+     return some ⟨document.val, document.property, [], by simp⟩
+-  let some pull := WindowPull.check? document.val indices |
++  let some pull := WindowEvidence.check? document.val indices |
+     throw "semantic evidence window lies outside its document"
+   return some ⟨document.val, document.property, pull.handles, pull.handles_bounded⟩
+
+@@ -478,7 +524,7 @@
+         dsimp only
+         split
+         · rfl
+-        · cases checked : WindowPull.check? document.val
++        · cases checked : WindowEvidence.check? document.val
+             ((response.evidence.find? (·.document == index)).map (·.indices) |>.getD []) <;> rfl
+
+ def documentOwners (documents : List Persistence.Store.SearchDocument)
+@@ -558,6 +604,10 @@
+         throw (IO.userError "semantic evidence order is not the complete requesting corpus")
+       let related ← IO.ofExcept (indexedNominations documents response)
+       let ranking ← IO.ofExcept (indexedNominations documents {response with related := order.indices})
++      if purpose == "focus" then
++        for row in ranking do
++          let some _complete := WindowOrder.check? row.document row.indices |
++            throw (IO.userError "focus response omitted an already scored source window")
+       pure (some ⟨related, ranking, order⟩)
+   catch error =>
+     IO.eprintln s!"eggshell: indexed semantic matcher unavailable: {error}"
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -668,7 +668,20 @@
+ def WindowScore.add (state : WindowScore) (score : Float) (position : Nat) : WindowScore := {
+   best := some (state.best.map (fun previous => if score > previous then score else previous) |>.getD score)
+   positions := ((score, position) :: state.positions).mergeSort SearchRank.scoreOrder |>.take 16 }
++
++/-- Focus accumulates once and sorts once. It does not discard already scored
++original positions or repeatedly sort an ever-growing list for every row. -/
++def WindowScore.addComplete (state : WindowScore) (score : Float) (position : Nat) : WindowScore := {
++  best := (state.add score position).best
++  positions := (score,position) :: state.positions }
+
++theorem WindowScore.complete_best_unchanged (state : WindowScore) (score : Float) (position : Nat) :
++    (state.addComplete score position).best = (state.add score position).best := rfl
++
++theorem WindowScore.complete_retains (state : WindowScore) (score : Float) (position : Nat)
++    (prior : Float × Nat) (present : prior ∈ state.positions) :
++    prior ∈ (state.addComplete score position).positions := List.mem_cons_of_mem _ present
++
+ structure ScoringWindow where
+   document : Nat
+   position : Nat
+@@ -678,7 +691,8 @@
+ batch. Every window keeps its original document/position, and NumPy still
+ evaluates each original dot product independently in the same order. -/
+ def scoreWindows (options : Options) (child : Encoder) (queries : Json)
+-    (batch : Array ScoringWindow) (totals : Array WindowScore) : IO (Array WindowScore) := do
++    (batch : Array ScoringWindow) (totals : Array WindowScore)
++    (completeEvidence : Bool := false) : IO (Array WindowScore) := do
+   unless !batch.isEmpty && batch.size ≤ 256 do throw (IO.userError "invalid numerical scoring batch")
+   let started ← IO.monoMsNow
+   let response ← measuredExchange options child (Json.mkObj [
+@@ -713,7 +727,8 @@
+   for (value, window) in scores.toList.zip batch.toList do
+     let score ← IO.ofExcept (number value)
+     unless window.document < totals.size do throw (IO.userError "numerical score names a foreign document")
+-    totals := totals.modify window.document (·.add score window.position)
++    totals := totals.modify window.document fun state =>
++      if completeEvidence then state.addComplete score window.position else state.add score window.position
+   pure totals
+
+ def indexedEvidenceWindows (evidence : List (Nat × List Nat))
+@@ -739,6 +754,7 @@
+   let candidates ← IO.ofExcept (request.getObjValAs? (Array Json) "documents")
+   let lexical ← IO.ofExcept (request.getObjValAs? (List Nat) "lexical")
+   let anchors ← IO.ofExcept (request.getObjValAs? (List Nat) "anchors")
++  let completeEvidence := (request.getObjValAs? String "purpose").toOption == some "focus"
+   let mut scored : List (Float × Nat) := []
+   let mut evidence : List (Nat × List Nat) := []
+   if let some child := child then
+@@ -780,13 +796,20 @@
+           pending := pending.push ⟨index, offset + localIndex, vector⟩
+           if pending.size == 256 then
+             -- A cold source is rejected before this batch starts inference.
+-            totals ← scoreWindows options child (← queries) pending totals
++            totals ← scoreWindows options child (← queries) pending totals completeEvidence
+             pending := #[]
+-    if !pending.isEmpty then totals ← scoreWindows options child (← queries) pending totals
++    if !pending.isEmpty then totals ← scoreWindows options child (← queries) pending totals completeEvidence
+     for (result, index) in totals.toList.zipIdx do
+       let some score := result.best | throw (IO.userError "indexed candidate has no numerical score")
+       scored := (score, index) :: scored
+-      evidence := (index, result.positions.map Prod.snd) :: evidence
++      let positions := if completeEvidence then result.positions.mergeSort SearchRank.scoreOrder else result.positions
++      evidence := (index, positions.map Prod.snd) :: evidence
++  else if completeEvidence then
++    -- Lexical-only providers have no numerical ranking. Preserve the actual
++    -- source directory; the caller's lexical fusion orders these originals.
++    for (candidate,index) in candidates.toList.zipIdx do
++      let windows ← IO.ofExcept (candidate.getObjValAs? (List String) "windows")
++      evidence := (index,List.range windows.length) :: evidence
+   let selected ← selection options candidates lexical anchors scored.reverse
+   let related ← IO.ofExcept (selected.getObjValAs? (List Nat) "related")
+   -- All cached similarities were already computed. Keep their complete order

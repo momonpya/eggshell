@@ -3,7 +3,14 @@ import Lean.Data.Json.FromToJson
 open Lean
 
 private def base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-private def retired := #["advisory-prefix-20261026","selection-plan-20261026"]
+private def allowed := #["advisory-prefix-20261026","selection-plan-20261026",
+  "canonical-plan-20261026","record-catalog-20261026"]
+private def buildDependencies := #["complete-focus-20261026","record-focus-20261026"]
+
+private def targets (name : String) : Array String :=
+  if buildDependencies.contains name then
+    #["topic-1/work.egg","topic-1/data","prefix","contract/lib"]
+  else #["topic-1/work.egg","topic-1/data","checks","check-build","inspection","build","prefix","checkout","contract/lib"]
 
 private def digest (path : System.FilePath) : IO String := do
   let result ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",path.toString]}
@@ -31,7 +38,7 @@ private partial def guardsClosed (path : System.FilePath) : IO Unit := do
   for entry in ← path.readDir do
     let metadata ← entry.path.symlinkMetadata
     if metadata.type == .dir then
-      if !#["checkout","build","check-build","prefix","lib","work.egg","data"].contains entry.fileName then
+      if !#["checkout","build","check-build","inspection","prefix","lib","work.egg","data"].contains entry.fileName then
         guardsClosed entry.path
     else if metadata.type == .file && entry.fileName.endsWith ".guard.json" then
       let value ← IO.ofExcept (Json.parse (← IO.FS.readFile entry.path))
@@ -39,17 +46,23 @@ private partial def guardsClosed (path : System.FilePath) : IO Unit := do
           (value.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] do
         throw (IO.userError "prototype guard is not terminal and empty")
 
-private partial def rejectActiveLinks (path : System.FilePath) : IO Unit := do
+private partial def rejectActiveLinks (retired : Array String) (path : System.FilePath) : IO Unit := do
   for entry in ← path.readDir do
     let metadata ← entry.path.symlinkMetadata
-    if metadata.type == .dir then rejectActiveLinks entry.path
+    if metadata.type == .dir then rejectActiveLinks retired entry.path
     else if metadata.type == .symlink then
       let target ← IO.FS.realPath entry.path
       unless !retired.any (fun name => target.toString.startsWith ((base / name).toString ++ "/")) do
         throw (IO.userError "active checkout depends on retired prototype")
 
 def main (args : List String) : IO Unit := do
-  let [destination] := args | throw (IO.userError "RetireDeliveryPrototypes NEW-REPORT")
+  let activeName :: destination :: names := args |
+    throw (IO.userError "RetireDeliveryPrototypes ACTIVE-NAME NEW-REPORT OLD-NAME...")
+  let retired := names.toArray
+  unless !retired.isEmpty && retired.all (fun name => allowed.contains name || buildDependencies.contains name) &&
+      retired.toList.eraseDups.length == retired.size && !retired.contains activeName &&
+      !activeName.isEmpty && activeName.toList.all (fun char => char.isAlphanum || char == '-') do
+    throw (IO.userError "only explicit ended prototype names may be removed")
   let report := System.FilePath.mk destination
   unless report.isAbsolute && !(← report.pathExists) do throw (IO.userError "keep previous retirement evidence")
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","pid=,command="]}
@@ -58,13 +71,15 @@ def main (args : List String) : IO Unit := do
     unless (processes.stdout.splitOn (base / name).toString).length == 1 do
       throw (IO.userError "prototype still appears in a live process")
     guardsClosed (base / name)
-  let active := base / "canonical-plan-20261026"
-  rejectActiveLinks (active / "checkout")
+  let active := base / activeName
+  let forbidden := retired.flatMap fun name => (targets name).map (fun relative => name ++ "/" ++ relative)
+  rejectActiveLinks forbidden (active / "checkout")
+  rejectActiveLinks forbidden (active / "prefix")
   let response ← IO.FS.readFile (active / "build/runtime.rsp")
-  unless !retired.any (fun name => (response.splitOn (base / name).toString).length > 1) do
+  unless !forbidden.any (fun name => (response.splitOn (base / name).toString).length > 1) do
     throw (IO.userError "active link plan depends on retired object files")
   let mut removed := #[]
-  let mut targets : Array System.FilePath := #[]
+  let mut removals : Array System.FilePath := #[]
   let mut count := 0
   for name in retired do
     let root := base / name
@@ -86,24 +101,24 @@ def main (args : List String) : IO Unit := do
           IO.FS.writeBinFile target data
     let product := root / "prefix/libexec/eggshell"
     let productHash ← digest product
-    for relative in #["topic-1/work.egg","topic-1/data","checks","check-build","build","prefix","checkout","contract/lib"] do
+    for relative in targets name do
       let path := root / relative
       if !(← path.pathExists) then continue
       let size ← bytes path
       count := count+size
       removed := removed.push (Json.mkObj [("path",toJson path.toString),("logicalBytes",toJson size),
         ("prototypeProductSha256",toJson productHash)])
-      targets := targets.push path
+      removals := removals.push path
   IO.FS.writeFile report (Json.mkObj [("removed",toJson removed),("logicalBytes",toJson count),
     ("archives",toJson false),("activeCandidateRetained",toJson active.toString),
     ("state",toJson "inspected"),
     ("currentSeedAndSupportRetained",toJson true)]).pretty
   let mut completed : Array String := #[]
-  for path in targets do
+  for path in removals do
     unlinkTree path
     completed := completed.push path.toString
     IO.FS.writeFile (report.withExtension "result.json") (Json.mkObj [
-      ("state",toJson (if completed.size == targets.size then "finished" else "removing")),
+      ("state",toJson (if completed.size == removals.size then "finished" else "removing")),
       ("completed",toJson completed),("archives",toJson false)]).pretty
   IO.println (Json.mkObj [("removedTargets",toJson removed.size),("logicalBytes",toJson count),
     ("archives",toJson false)]).compress
