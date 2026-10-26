@@ -27,6 +27,7 @@
 ## 現在地
 
 - Leanの共有原文準備候補で、実seedの80同時要求は1回の準備・79件の共有待ちとなり原文不一致0、原文取得APIの最大1,004ms。1/4/16 DB×10/40/80条件と、出版/旧reader/非書込みfilesystem/期限切れ/権限境界の試験も通った。関連RSS最大1,294,640 KiB。ただし実フックは28,987msで未完了、必要原文0/4、回答実験0/6。百万窓・日次蓄積・NAS・総token改善・95%は未達/未検証。選択前の共有hit後にも束の行重複除去が二乗で繰り返されている。全registryの一括準備を不変blockの差分準備へ移す課題も残る。[shared-preparation.md](docs/shared-preparation.md)。
+- その後、束の行重複除去を順序まで一致するhash処理へ置き換えた隔離候補も検査した。変更済み通常moduleを親のobjectから再利用するharness欠陥を直し、ソース/object/link一致を確認した実行物afdc9d82…で、新規sessionの実フックは28,992ms・必要原文0/4のままだった。修正前の親と同じbinaryの試行と、sessionを再利用した363msの空応答は評価から除外した。同じ修正を成功前提で繰り返さず、取得/出版への内容対応と差分blockへ進む。[shared-bundle-projection.md](docs/shared-bundle-projection.md)。
 - 主に5万窓・単一利用の隔離候補を検証した段階。10〜80人、数年相当、NAS並行障害、100万窓超の実payload、総token改善は未合格。候補は未採用。
 - 字句のpostings/頻度差分と消費の逆引きは既存。残る全件処理は変更対象列挙と来歴再生であり、同じ索引を新設し直さない。
 - seedの52 RPC原本文はすべて保存済み。warm自身の中立な来歴出版がpinを古くする不具合を隔離修正し、同一入力のモデルなし比較で親失敗/候補成功、56 native来歴の欠落0を確認。再warm224ms。これは実フックやtoken改善の合格ではない。[snapshot-refresh.md](docs/snapshot-refresh.md)。
