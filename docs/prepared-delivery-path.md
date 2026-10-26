@@ -10,6 +10,8 @@
 
 さらに16秒付近に、同じ束縛の原文範囲を候補ごとに重複除去し直す処理を確認した。範囲を作成時に保持する別候補では1,024範囲×128照合が353→1msになったが、実フックはなお29,023msで本文なしだった。単独の高速化だけで前景経路の仕事量を変えていなかった。
 
+配送用のcacheにも非対称な経路がある。`CanonicalSource.prepare/observe?`はファイル行を対象にし、`observe?`は`.original`を扱わない。`SharedRangeAdapter.prepare`はcanonical行がないと`prepareOriginalRecords`へ進み、照会ごとに一般出力の原文単位を作る。一方、`ObservationContext.Prepared.catalog`には、ファイルの有無によらずJSON項目・複数行の文字列・一般テキストを列挙する実装が既にある。新しい抽出器を追加せず、この既存の列挙結果を出版時の原文viewと配送へつなぐ。
+
 ## 次の実装境界
 
 1. **原文の読み取り用viewを出版差分から作る。** 元観測digest、元座標/JSON項目、実bytes、操作と出典への参照を持つ不変recordを準備する。file aliasは任意。shell文法、ファイル座標、Gitの有無によって原文が候補から消えない。同じpayloadを共有しても、観測・権限・来歴の束縛は残す。
