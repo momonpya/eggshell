@@ -1,0 +1,78 @@
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -3,0 +4,2 @@
++public import tools.KeyPostings
++public import Eggshell.HashDistinct
+@@ -197,2 +199,2 @@
+-def Plan.receipt (plan : Plan) (text : String) : Json :=
+-  let delivery := Extraction.presented text plan.documents plan.rows
++def Plan.receiptWith (plan : Plan) (delivery : Extraction.Presentation) : Json :=
++  let bindings := KeyPostings.prepare (·.source) (plan.owners.flatMap (·.located))
+@@ -202 +204 @@
+-    some source).eraseDups.toArray
++    some source) |> hashDistinct |>.toArray
+@@ -209,2 +211 @@
+-      let bindings := plan.owners.flatMap fun owner => owner.located.filterMap fun located =>
+-        if located.source == source then some located.row.binding else none
++      let bindings := (bindings.lookup source).map (·.row.binding)
+@@ -229,0 +231,3 @@
++def Plan.receipt (plan : Plan) (text : String) : Json :=
++  plan.receiptWith (Extraction.presented text plan.documents plan.rows)
++
+--- a/Eggshell/SynapseBundles.lean
++++ b/Eggshell/SynapseBundles.lean
+@@ -139 +139 @@
+-  (plan.receipt text).setObjVal! "bundles" (toJson ((demands plan).map fun demand =>
++  (plan.receiptWith shown).setObjVal! "bundles" (toJson ((demands plan).map fun demand =>
+--- a/tools/KeyPostings.lean
++++ b/tools/KeyPostings.lean
+@@ -0,0 +1,49 @@
++module
++public import Std.Data.HashMap.Lemmas
++@[expose] public section
++namespace Eggshell.KeyPostings
++variable {κ α : Type} [BEq κ] [Hashable κ] [LawfulBEq κ]
++
++/-- A directory retains the exact input sequence for each full key.
++Hash collisions cannot merge keys or discard duplicate values. -/
++def directory (keyOf : α → κ) (values : Array α) : Std.HashMap κ (Array α) :=
++  values.foldl (fun found value => found.insert (keyOf value)
++    ((found[keyOf value]?.getD #[]).push value)) {}
++
++theorem directory_exact (keyOf : α → κ) (values : Array α) (key : κ) :
++    (directory keyOf values)[key]?.getD #[] = values.filterMap
++      (fun value => if keyOf value == key then some value else none) := by
++  have go : ∀ reversed : List α,
++      (directory keyOf reversed.reverse.toArray)[key]?.getD #[] =
++        reversed.reverse.toArray.filterMap (fun value => if keyOf value == key then some value else none) := by
++    intro reversed
++    induction reversed with
++    | nil => simp [directory]
++    | cons value previous ih =>
++        have step : (value :: previous).reverse.toArray = previous.reverse.toArray.push value := by simp
++        rw [step]
++        simp only [directory,Array.foldl_push,Std.HashMap.getElem?_insert]
++        by_cases same : keyOf value = key
++        · simpa [same,directory,Array.filterMap_push] using congrArg (fun rows => rows.push value) ih
++        · simpa [same,directory,Array.filterMap_push] using ih
++  simpa using go values.toList.reverse
++
++structure Index (keyOf : α → κ) (values : Array α) where
++  postings : Std.HashMap κ (Array α)
++  exact : ∀ key, postings[key]?.getD #[] = values.filterMap
++    (fun value => if keyOf value == key then some value else none)
++
++def prepare (keyOf : α → κ) (values : Array α) : Index keyOf values :=
++  ⟨directory keyOf values,directory_exact keyOf values⟩
++
++variable {keyOf : α → κ} {values : Array α}
++
++def Index.lookup (index : Index keyOf values) (key : κ) : Array α :=
++  index.postings[key]?.getD #[]
++
++omit [LawfulBEq κ] in
++theorem Index.lookup_exact (index : Index keyOf values) (key : κ) :
++    index.lookup key = values.filterMap (fun value => if keyOf value == key then some value else none) :=
++  index.exact key
++
++end Eggshell.KeyPostings

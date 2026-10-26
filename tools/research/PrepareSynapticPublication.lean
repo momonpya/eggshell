@@ -15,13 +15,25 @@ private def replace (source before after : String) : IO String := do
   return first ++ after ++ last
 
 def main (args : List String) : IO Unit := do
+  let prepared := args.head? == some "prepared"
   let receipt := args.head? == some "receipt"
-  let args := if receipt then args.tail else args
+  let args := if receipt || prepared then args.tail else args
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let root := base / (if receipt then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
-  let parent := base / (if receipt then "synaptic-publication-delta-20261027" else "captured-correspondence-20261026")
+  let root := base / (if prepared then "receipt-preparation-20261027" else if receipt then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
+  let parent := base / (if prepared then "receipt-row-postings-20261027" else if receipt then "synaptic-publication-delta-20261027" else "captured-correspondence-20261026")
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
+  if prepared && args == ["reference"] then
+    let source ← IO.FS.readFile (parent / "checkout/Eggshell/SynapseTransport.lean")
+    let body ← block source "def Plan.receipt" "end Eggshell.Synapses.Transport"
+    let body ← replace body "def Plan.receipt" "def receipt"
+    let bundleSource ← IO.FS.readFile (parent / "checkout/Eggshell/SynapseBundles.lean")
+    let bundle ← block bundleSource "def receipt" "end Eggshell.Synapses.Bundles"
+    let bundle ← replace bundle "def receipt" "def bundles"
+    let bundle ← replace bundle "plan.receipt text" "receipt plan text"
+    IO.FS.writeFile (System.FilePath.mk project / "tools/research/ReceiptPlanBefore.lean")
+      ("import Eggshell.SynapseBundles\nopen Lean Eggshell Eggshell.Synapses Eggshell.Synapses.Transport Eggshell.Synapses.Bundles\nnamespace Eggshell.Research.ReceiptPlanBefore\n" ++ body ++ bundle ++ "end Eggshell.Research.ReceiptPlanBefore\n")
+    return
   if receipt && args == ["reference"] then
     let source ← IO.FS.readFile (parent / "checkout/Eggshell/SynapseUsage.lean")
     let body ← block source "def sharedPresented" "/-- Verify actual packet bytes"
@@ -34,7 +46,7 @@ def main (args : List String) : IO Unit := do
     IO.FS.createDir root
     let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",(parent / "checkout").toString,(root / "checkout").toString]}
     unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
-    if receipt then return
+    if receipt || prepared then return
     let core := root / "checkout/Eggshell"
     let index ← IO.FS.readFile (core / "SynapseIndex.lean")
     let recommend ← IO.FS.readFile (core / "SynapseRecommend.lean")
@@ -68,12 +80,35 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile (core / "SynapticRoutingStore.lean") ("module\npublic import Eggshell.SynapticRouting\npublic import Eggshell.SynapticTopologyStore\n@[expose] public section\nnamespace Eggshell.Synapses.Routing.Store\nopen Lean DB Recommend\n" ++ manifest ++ reader ++ "\n" ++ scan ++ "end Eggshell.Synapses.Routing.Store\n")
     return
   let [mode,label] := args | throw (IO.userError "PrepareSynapticPublication fork | product|audit|hooks|run-audit|run-hooks LABEL")
-  unless ["product","audit","hooks","contract","checkpoint","source","profile","receipt-audit","run-audit","run-hooks","run-checkpoint","run-source","run-profile","run-receipt-audit"].contains mode && !label.isEmpty &&
+  if mode == "run-missing" then
+    IO.FS.writeFile (root / (label ++ "-settings.json")) (Json.mkObj [
+      ("command",toJson #["/usr/bin/env","LEAN_NUM_THREADS=1",toolchain ++ "/bin/lean","-j1","-M1536","--run",
+        project ++ "/tools/research/ExplainMissingNative.lean",(root / "fixed-source-hooks").toString,
+        (root / "explain-build/StudyMain").toString,(root / label).toString]),
+      ("cwd",toJson project),("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
+      ("ownedPrefixes",toJson #[root.toString]),("record",toJson (root / (label ++ ".guard.json")).toString)]).pretty
+    return
+  if mode == "warm-profile" then
+    let trial := root / "fixed-source-hooks"
+    IO.FS.writeFile (root / (label ++ "-settings.json")) (Json.mkObj [
+      ("command",toJson #["/usr/bin/env","LEAN_NUM_THREADS=1",
+        "EGGSHELL_PREFIX=" ++ (trial / "prefix").toString,
+        "EGGSHELL_DATA_ROOT=" ++ (trial / "data").toString,
+        "EGGSHELL_CONFIG=" ++ (trial / "config.toml").toString,
+        "EGGSHELL_PROFILE=work","OMP_NUM_THREADS=1","OPENBLAS_NUM_THREADS=1","MKL_NUM_THREADS=1",
+        "HF_HUB_OFFLINE=1","TOKENIZERS_PARALLELISM=false",
+        (trial / "prefix/libexec/eggshell").toString,"egg","warm","work"]),
+      ("cwd",toJson "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project"),
+      ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
+      ("ownedPrefixes",toJson #[root.toString]),("record",toJson (root / (label ++ ".guard.json")).toString)]).pretty
+    return
+  unless ["product","audit","hooks","contract","checkpoint","source","profile","explain","receipt-audit","run-audit","run-hooks","run-checkpoint","run-source","run-resume-source","run-profile","run-receipt-audit"].contains mode && !label.isEmpty &&
       label.toList.all (fun c => c.isAlphanum || c == '-') do throw (IO.userError "known mode and simple label required")
   if mode.startsWith "run-" then
-    let output := if mode == "run-profile" then root / "fixed-source-hooks" else root / label
+    let resume := mode == "run-resume-source"
+    let output := if mode == "run-profile" || resume then root / "fixed-source-hooks" else root / label
     let hooks := mode == "run-hooks"
-    let source := mode == "run-source"
+    let source := mode == "run-source" || resume
     let command := #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_DATA_ROOT=" ++
       (if hooks then output / "native/data" else output / "data").toString,
       (root / (if hooks then "hooks-build/StudyMain"
@@ -82,7 +117,7 @@ def main (args : List String) : IO Unit := do
         else if source then "source-build/StudyMain"
         else if mode == "run-checkpoint" then "checkpoint-build/StudyMain" else "audit-build/StudyMain")).toString] ++
       (if hooks then #[root.toString,output.toString,"routing"]
-        else if source then #[root.toString,output.toString] else #[output.toString])
+        else if source then #[root.toString,output.toString] ++ (if resume then #["resume"] else #[]) else #[output.toString])
     IO.FS.writeFile (root / (label ++ "-settings.json")) (Json.mkObj [
       ("command",toJson command),("cwd",toJson project),("limitRssKiB",toJson (3670016 : Nat)),
       ("minFreeKiB",toJson (2097152 : Nat)),("ownedPrefixes",toJson #[root.toString]),
@@ -99,11 +134,12 @@ def main (args : List String) : IO Unit := do
     |>.setObjVal! "output" (toJson (root / (mode ++ "-build")).toString)
     |>.setObjVal! "mainModule" (toJson (if mode == "product" then "Main"
       else if mode == "hooks" then "tools.research.CapturedHookAudit"
-      else if mode == "contract" then "tools.research.SynapticPublicationContractMain"
+      else if mode == "contract" then if prepared then "tools.research.ReceiptPreparationContractMain" else "tools.research.SynapticPublicationContractMain"
       else if mode == "checkpoint" then "tools.research.SynapticCheckpointAudit"
       else if mode == "source" then "tools.research.SynapticSourceHookAudit"
       else if mode == "profile" then "tools.research.ProfileSynapticSource"
-      else if mode == "receipt-audit" then "tools.research.ReceiptPostingsAudit"
+      else if mode == "explain" then "tools.research.DeliveryExplain"
+      else if mode == "receipt-audit" then if prepared then "tools.research.ReceiptPreparationAudit" else "tools.research.ReceiptPostingsAudit"
       else "tools.research.SynapticPublicationAudit"))
     |>.setObjVal! "force" (toJson (if mode == "contract" then #["Eggshell.ContractAudit"] else (#[] : Array String)))
     |>.setObjVal! "objectModules" (toJson (root / "objects.json").toString)

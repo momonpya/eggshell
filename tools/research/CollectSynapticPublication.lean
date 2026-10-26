@@ -25,18 +25,19 @@ private def commands (root : System.FilePath) : IO Json := do
   return toJson (result.qsort fun a b => a.1 < b.1)
 
 def main (args : List String) : IO Unit := do
-  let [mode] := args | throw (IO.userError "CollectSynapticPublication routing|receipt")
-  unless ["routing","receipt"].contains mode do throw (IO.userError "known candidate required")
+  let [mode] := args | throw (IO.userError "CollectSynapticPublication routing|receipt|prepared")
+  unless ["routing","receipt","prepared"].contains mode do throw (IO.userError "known candidate required")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let name := if mode == "routing" then "synaptic-publication-delta" else "receipt-row-postings"
+  let name := if mode == "routing" then "synaptic-publication-delta" else if mode == "prepared" then "receipt-preparation" else "receipt-row-postings"
   let root := base / (name ++ "-20261027")
-  let parent := base / (if mode == "routing" then "captured-correspondence-20261026" else "synaptic-publication-delta-20261027")
+  let parent := base / (if mode == "routing" then "captured-correspondence-20261026" else if mode == "prepared" then "receipt-row-postings-20261027" else "synaptic-publication-delta-20261027")
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let output := project / "docs/candidates" / name
   let records := output / "records"
   let files := if mode == "routing" then #["Eggshell/SynapseIndex.lean","Eggshell/SynapseRecommend.lean",
     "Eggshell/SynapticRouting.lean","Eggshell/SynapticRoutingStore.lean","Eggshell/SynapticTransport.lean",
     "Eggshell/SynapticTopology.lean","Eggshell/SynapticTopologyStore.lean"]
+    else if mode == "prepared" then #["Eggshell/SynapseTransport.lean","Eggshell/SynapseBundles.lean","tools/KeyPostings.lean"]
     else #["Eggshell/SynapseIndex.lean","Eggshell/SynapseUsage.lean","tools/SpanPostings.lean"]
   let response ← IO.FS.readFile (root / "product-build/runtime.rsp")
   let mut patch := ""
@@ -69,7 +70,7 @@ def main (args : List String) : IO Unit := do
       (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] do throw (IO.userError "candidate still active")
     guards := guards.push (entry.fileName,guard)
   write (records / "guards.json") (toJson (guards.qsort fun a b => a.1 < b.1)).pretty
-  for run in ["atomic-projection","actual-checkpoint","span-receipt"] do
+  for run in ["atomic-projection","actual-checkpoint","span-receipt","keyed-receipt","forced-receipt"] do
     copyIf (root / run / "results.json") (records / run / "results.json")
   let native := root / "native-atomic-routing"
   copyIf (native / "routing-hook.json") (records / "native/routing-hook.json")
@@ -87,18 +88,25 @@ def main (args : List String) : IO Unit := do
       for name in ["audit.json","body.txt","shutdown.json"] do copyIf (path / name) (records / "fixed-source" / s!"topic-{topic}" / name)
       write (records / "fixed-source" / s!"topic-{topic}/hook.json") (← commands path).pretty
     write (records / "profile/hook.json") (← commands (study / "profile-topic-2")).pretty
-    for label in ["selection","render"] do
+    for label in ["selection","render","warm"] do
       copyIf (study / (label ++ "-sample-process.json")) (records / "profile" / (label ++ "-sample-process.json"))
       let sample := study / (label ++ ".sample")
       if ← sample.pathExists then
         let frames := ((← IO.FS.readFile sample).splitOn "\n").filter (fun line =>
           ["l_Eggshell_","l_SharedCoverage_","l_List_fold"].any (fun text => line.contains text))
         write (records / "profile" / (label ++ ".frames.txt")) ("\n".intercalate (frames.take 140) ++ "\n")
+  for name in ["isolated-warm-profile.stdout","isolated-warm-profile.stderr"] do
+    copyIf (root / name) (records / "profile" / name)
   copyIf (root / "source-trace.json") (records / "source-trace.json")
+  let explained := root / "missing-unit-explanation"
+  if ← explained.pathExists then
+    for entry in ← explained.readDir do
+      if entry.fileName.endsWith ".json" then copyIf entry.path (records / "explanation" / entry.fileName)
   for name in ["Eggshell_ContractAudit-lean.stdout","tests_FullSearchOracle-lean.stdout",
-      "tools_research_SynapticPublicationContract-lean.stdout"] do
+      "tools_research_SynapticPublicationContract-lean.stdout","tools_research_ReceiptPreparationContract-lean.stdout"] do
     copyIf (root / "contract-build" / name) (records / "contracts" / name)
   copyIf (root / "receipt-audit-build/tools_research_ReceiptPostingsAudit-lean.stdout") (records / "contracts/span-postings.stdout")
+  copyIf (root / "receipt-audit-build/tools_research_ReceiptPreparationAudit-lean.stdout") (records / "contracts/key-postings.stdout")
   let artifact ← IO.Process.output {
     cmd := (base / "study-services-20261026/assessed-controller").toString
     args := #["artifacts",(root / "product-build/StudyMain").toString]}

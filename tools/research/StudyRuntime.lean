@@ -121,7 +121,7 @@ def startManaged (binary plugin : System.FilePath) (session : String) (path : Sy
 not infer ownership from a shared endpoint or terminate another chat's service.
 Publication startup prepares no source DB, vectors or answering context. -/
 def startPublisher (binary dataRoot : System.FilePath)
-    (environment : Array (String × Option String)) : IO Managed := do
+    (environment : Array (String × Option String)) (recoverDead : Bool := false) : IO Managed := do
   let dataRoot := dataRoot.normalize
   check (binary.isAbsolute && dataRoot.isAbsolute && dataRoot.toString != "/")
     "absolute isolated publisher paths required"
@@ -129,6 +129,15 @@ def startPublisher (binary dataRoot : System.FilePath)
     #[("EGGSHELL_DATA_ROOT",some dataRoot.toString)]) "publisher environment differs from its isolated scope"
   FileSystem.rejectSymlinkAncestors dataRoot
   let path := dataRoot / "publisher/endpoint.json"
+  if recoverDead then
+    Persistence.withLockWithin (dataRoot / "publisher/starting") 10000 do
+      if let some metadata ← FileSystem.symlinkMetadata? path then
+        check (metadata.type == .file) "stale publisher endpoint is not a regular file"
+        let endpoint ← IO.ofExcept (fromJson? (α := Plugin.Daemon.Endpoint) (← readJson path))
+        check (endpoint.session == "publisher" && !(← Numerical.alive endpoint.pid))
+          "cannot recover an endpoint whose publisher is still alive"
+        IO.FS.removeFile path
+        IO.println (Json.mkObj [("recoveredDeadStudyPublisherPid",toJson endpoint.pid)]).compress
   check ((← FileSystem.symlinkMetadata? path).isNone) "a publisher already owns this study scope"
   let child ← IO.Process.spawn {
     cmd := binary.toString,args := #["codex-publication-daemon"],env := environment

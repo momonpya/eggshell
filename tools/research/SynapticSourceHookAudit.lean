@@ -12,10 +12,14 @@ private def save (path : System.FilePath) (value : Json) : IO Unit := IO.FS.writ
 requirements are audit-only and never enter the hook's inputs. -/
 def main (args : List String) : IO UInt32 := do
   try
-    let [candidate,destination] := args | throw (IO.userError "SynapticSourceHookAudit CANDIDATE NEW-DIRECTORY")
+    let (candidate,destination,resume) ← match args with
+      | [candidate,destination] => pure (candidate,destination,false)
+      | [candidate,destination,"resume"] => pure (candidate,destination,true)
+      | _ => throw (IO.userError "SynapticSourceHookAudit CANDIDATE DIRECTORY [resume]")
     let root := System.FilePath.mk destination
-    check (root.isAbsolute && !(← root.pathExists)) "new fixed-source hook trial required"
-    IO.FS.createDir root
+    check (root.isAbsolute && (← root.pathExists) == resume) "new trial or explicit unfinished-trial resume required"
+    if !resume then IO.FS.createDir root
+    check (!(← (root / "results.json").pathExists) && !(← (root / "topic-1").pathExists)) "keep existing hook attempts"
     let study := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell/study-services-20261026"
     let definitionsBytes ← IO.FS.readBinFile (study / "task-definitions.json")
     check (Sha256.hex definitionsBytes == "e2f6b683c2d761734da43793eadf2a8be363f9d356124d3830fd4ab85538c9cf")
@@ -25,50 +29,73 @@ def main (args : List String) : IO UInt32 := do
     let definitions ← IO.ofExcept (Json.parse (← IO.FS.readFile (study / "task-definitions.json")) >>= Json.getArr?)
     let availability ← IO.ofExcept (oldAudit.getObjValAs? (Array Json) "availability")
     let database := root / "work.egg"
-    let sourceFiles ← StudyRuntime.checkpoint (study / "common-seed-1/source.egg") database
+    let sourceFiles ← if resume then StudyRuntime.files database
+      else StudyRuntime.checkpoint (study / "common-seed-1/source.egg") database
+    check (sourceFiles == (← StudyRuntime.files (study / "common-seed-1/source.egg"))) "source checkpoint bytes changed"
     let original ← DB.PageMap.pin database
     check (original.head.identity == "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de" &&
       original.head.revision == 31 && original.head.bytes == 45216846) "wrong original checkpoint"
-    save (root / "frozen-before-delivery.json") (toJson availability)
+    if resume then check ((← read (root / "frozen-before-delivery.json")) == toJson availability) "frozen requirements changed"
+    else save (root / "frozen-before-delivery.json") (toJson availability)
     let installRoot := root / "prefix"
     let binary := installRoot / "libexec/eggshell"
-    IO.FS.createDirAll binary.parent.get!
-    let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-c",candidate ++ "/product-build/StudyMain",binary.toString]}
-    check (copied.exitCode == 0) "could not select candidate product"
+    if !resume then
+      IO.FS.createDirAll binary.parent.get!
+      let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-c",candidate ++ "/product-build/StudyMain",binary.toString]}
+      check (copied.exitCode == 0) "could not select candidate product"
     let runtimeSha ← ArtifactHash.hex binary
+    check (runtimeSha == (← ArtifactHash.hex (.mk (candidate ++ "/product-build/StudyMain")))) "resume product differs"
     let plugin := installRoot / "share/eggshell/codex-plugin"
     let launcher := plugin / "bin/eggshelld"
-    IO.FS.createDirAll launcher.parent.get!
-    IO.FS.writeFile launcher (Install.pluginLauncher installRoot)
-    IO.setAccessRights launcher {
-      user := {read := true,write := true,execution := true}
-      group := {read := true,execution := true}
-      other := {read := true,execution := true} }
-    let link ← IO.Process.output {cmd := "/bin/ln",args := #["-s",
-      "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/prefix/share/eggshell/minilm",
-      (installRoot / "share/eggshell/minilm").toString]}
-    check (link.exitCode == 0) "could not select existing numerical boundary"
+    if !resume then
+      IO.FS.createDirAll launcher.parent.get!
+      IO.FS.writeFile launcher (Install.pluginLauncher installRoot)
+      IO.setAccessRights launcher {
+        user := {read := true,write := true,execution := true}
+        group := {read := true,execution := true}
+        other := {read := true,execution := true} }
+      let link ← IO.Process.output {cmd := "/bin/ln",args := #["-s",
+        "/Users/ovm/.codex/experiments/eggshell/numerical-owned-20261024/prefix/share/eggshell/minilm",
+        (installRoot / "share/eggshell/minilm").toString]}
+      check (link.exitCode == 0) "could not select existing numerical boundary"
     let data := root / "data"
-    IO.FS.createDir data
+    if !resume then IO.FS.createDir data
     let workspace := "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project"
     let configuration := root / "config.toml"
-    IO.FS.writeFile configuration ("default = \"work\"\nsemantic_matcher = " ++
+    let expectedConfig := "default = \"work\"\nsemantic_matcher = " ++
       (toJson #[binary.toString,"search-provider"]).compress ++ "\n[eggs]\nwork = " ++
-      (toJson database.toString).compress ++ "\n[profiles.work]\nread = [\"work\"]\nhandoff_chars = 120000\n")
+      (toJson database.toString).compress ++ "\n[profiles.work]\nread = [\"work\"]\nhandoff_chars = 120000\n"
+    if resume then check ((← IO.FS.readFile configuration) == expectedConfig) "resume config differs"
+    else IO.FS.writeFile configuration expectedConfig
     let environment := #[
       ("EGGSHELL_PREFIX",some installRoot.toString),("EGGSHELL_DATA_ROOT",some data.toString),
       ("EGGSHELL_CONFIG",some configuration.toString),("EGGSHELL_PROFILE",some "work"),
       ("PLUGIN_ROOT",some plugin.toString),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none),
       ("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),
       ("MKL_NUM_THREADS",some "1"),("HF_HUB_OFFLINE",some "1"),("TOKENIZERS_PARALLELISM",some "false")]
-    let publisher ← StudyRuntime.startPublisher binary data environment
+    let publisher ← StudyRuntime.startPublisher binary data environment resume
     let mut results := #[]
     try
-      IO.println "fixed-source warm starting"
-      (← IO.getStdout).flush
-      let warm ← StudyCommand.run binary.toString #["egg","warm","work"] environment workspace "" (root / "warm") 300000
-      check (warm.exitCode == 0) s!"fixed source warm failed: {warm.stderr}"
-      save (root / "warm-complete.json") (Json.mkObj [("runtimeSha256",toJson runtimeSha),("elapsedMs",toJson warm.elapsedMs)])
+      if resume then
+        let guard ← read (.mk candidate / "isolated-warm-profile.guard.json")
+        check ((guard.getObjValAs? String "state").toOption == some "finished" &&
+          (guard.getObjValAs? Nat "exitCode").toOption == some 0 &&
+          (guard.getObjValAs? Bool "guardTriggered").toOption == some false &&
+          (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[]) "isolated warm is not finished successfully"
+        let report ← read (.mk candidate / "isolated-warm-profile.stdout")
+        let databases ← IO.ofExcept (report.getObjValAs? (Array Json) "databases")
+        check (databases.size == 1 && databases.all (fun entry =>
+          ((entry.getObjValD "after").getObjValAs? Nat "missing").toOption == some 0 &&
+          ((entry.getObjValD "after").getObjValAs? Nat "invalid").toOption == some 0)) "recovered warm is incomplete"
+        save (root / "warm-complete.json") (Json.mkObj [("runtimeSha256",toJson runtimeSha),
+          ("elapsedMs",guard.getObjValD "elapsedMs"),("recoveredAfterRssStop",toJson true),
+          ("warmTimingDiagnosticOnly",toJson true)])
+      else
+        IO.println "fixed-source warm starting"
+        (← IO.getStdout).flush
+        let warm ← StudyCommand.run binary.toString #["egg","warm","work"] environment workspace "" (root / "warm") 300000
+        check (warm.exitCode == 0) s!"fixed source warm failed: {warm.stderr}"
+        save (root / "warm-complete.json") (Json.mkObj [("runtimeSha256",toJson runtimeSha),("elapsedMs",toJson warm.elapsedMs)])
       for topic in [1,2,3] do
         let some definition := definitions.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
           throw (IO.userError "missing question definition")

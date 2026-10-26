@@ -48,6 +48,8 @@
 
 ## 実行順と完了証拠
 
+受領確認の共有と範囲→bindings索引を隔離実装し、同じC7 seedの実フックが25.7〜25.9秒で本文を返した。凍結した必要原文は題材1/2/3で2/4・3/6・3/5、合計8/15（53.3%）、95%に不合格。段階説明で、未配送7件中6件が「選択済みの全原文範囲、費用0、実本文なし」と判明した。canonicalの空配列を`shared=some []`へ変え、空templateのatomicUnitが全範囲を名乗る経路を特定。次は非空共有payloadの型と原文recordへの分岐でこの虚偽被覆を除く。重み調整には戻らない。warmは一度RSS保護で停止し、同じ原文/runtimeの単独warmの回復後に実フックを監査した。全Factを一writerで更新する初期構築の保持メモリも有界化する。旧候補16対象をarchiveなしで削除。回答モデル0・6段階0/6・総token改善未測定・未採用。[receipt-preparation.md](docs/receipt-preparation.md)。
+
 配送受領の番号付き原文行×Readの走査を、照合条件・値・順序・重複を保つ範囲postingsへ隔離置換した。1,024行の独立比較は873→8ms、新規oracle/ContractAudit成功。しかし同じC7 seedの題材1/2/3は約29秒で0/4・0/6・0/5のまま。CPU sampleで次の全件処理が`Transport.Plan.receipt`の原文範囲×全所有者・全行の照合と判明したため、範囲bindingsの索引と本文確認の共有へ進む。重み変更では対処しない。回答モデル0・6段階0/6・未採用。[receipt-row-postings.md](docs/receipt-row-postings.md)。
 
 推薦用の整数接続を元のFact・postingsと同じPageMap/commitへ隔離統合した。追加/削除/再追加/私有feedbackで独立探索の全推薦列と一致し、4,101 Factへの1件追加37ms、取消・再送・旧pin・scopeを検査した。実seedの39,757共有/20私有Factでも27,825推薦の順序一致。通常warmからの小フックは探索完走・2/2配送・2,147ms。しかしC7固定seedの題材1/2/3は約29秒で全件未完了、0/4・0/6・0/5だった。題材2は数値2.8秒、探索/結合10.3秒、選択計画22.2秒まで進み、CPU sampleで選択の費用/価値計算と、返却前の受領検査の原文行×Read走査を特定した。次は同じ条件と順序を保つ範囲postingsで受領検査を直す。Build全体の差分化や95%の合格ではない。回答モデル0・6段階0/6・未採用。[synaptic-publication-delta.md](docs/synaptic-publication-delta.md)。
