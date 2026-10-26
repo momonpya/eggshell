@@ -1,0 +1,73 @@
+{
+  "productionAdoption": false,
+  "answeringModelCalls": 0,
+  "completedAnsweringStages": 0,
+  "requiredAnsweringStages": 6,
+  "tokenImprovementEstablished": false,
+  "checkpointProductSha256": "c7bdbb03c2c03cc03eaab44e144d6d378893d8b6c1e11ea7e108b76d4980c563",
+  "frozenTopicDbPresentItems": [4, 6, 5],
+  "missingOwner": "v5413273379768701678",
+  "rankOrigin": 0,
+  "nominationRank": 2,
+  "focusRank": 5,
+  "hydrated": true,
+  "variants": [
+    {
+      "name": "selection-plan",
+      "runtimeSha256": "8e484316cd9a5f0bb19336f880e54992195bc7501de3cda3301195f2638fa659",
+      "evidenceRoot": "/Users/ovm/.codex/experiments/eggshell/selection-plan-20261026",
+      "hookElapsedMs": [13124, 11775],
+      "stdoutSha256": ["b8b58afcb50f135e29049b022565b6c12357e685375f7b91f78267e3be8b4a20", "b8b58afcb50f135e29049b022565b6c12357e685375f7b91f78267e3be8b4a20"],
+      "delivered": [2, 2], "eligible": 4,
+      "ownerUnitCount": 42, "ownerSelectedUnits": 0,
+      "languageCandidateCovered": true,
+      "warningCandidateGaps": [[13667, 13748]],
+      "freshOracleAndContractAudit": true
+    },
+    {
+      "name": "canonical-plan",
+      "runtimeSha256": "12f34a131468ad526e2787748d39ec906d33760183837b642e188dbeb2c96800",
+      "evidenceRoot": "/Users/ovm/.codex/experiments/eggshell/canonical-plan-20261026",
+      "hookElapsedMs": [11095, 9779],
+      "stdoutSha256": ["2ea02c7356babcd7753dcb4b167691ab38e2a0f456d95ebb84319d4a07fd1f86", "2ea02c7356babcd7753dcb4b167691ab38e2a0f456d95ebb84319d4a07fd1f86"],
+      "delivered": [2, 2], "eligible": 4,
+      "ownerCanonicalRows": 838,
+      "ownerUnitCount": 21, "ownerSelectedUnits": 8,
+      "languageCandidateGaps": [[11653, 12212]],
+      "warningCandidateGaps": [[13394, 13748]],
+      "accepted": false
+    },
+    {
+      "name": "advisory-prefix",
+      "runtimeSha256": "3326a24b5f26724867ce44863764240c8b58cd129e67494f9b15973a0f008b49",
+      "evidenceRoot": "/Users/ovm/.codex/experiments/eggshell/advisory-prefix-20261026",
+      "hookElapsedMs": [20496, 21453],
+      "stdoutSha256": ["4ce13e48831c366d5dbf04be38092b90d19cb340feac0296d6de8b85fcfa562d", "8b687348586734c26530789be7475e8012fed20dd059671600fb9a3c7337f120"],
+      "admittedOffers": [413, 330],
+      "delivered": [2, 2], "eligible": 4,
+      "identicalStdout": false,
+      "accepted": false
+    }
+  ],
+  "sharedIndexAudit": {
+    "checkedFacts": 12695,
+    "privateUsageIncluded": false,
+    "rootReachabilityEstablished": false,
+    "languageOverlappingFacts": 1,
+    "warningOverlappingFacts": 0,
+    "artifactSha256": "c887027deb08b775a204dd82b87ea9d27b51759dc019a929cb04e87abb09e6f7"
+  },
+  "cleanup": {
+    "retired": ["advisory-prefix-20261026", "selection-plan-20261026"],
+    "targets": 13,
+    "logicalBytes": 1123226203,
+    "archives": false,
+    "activeSeedRetained": true,
+    "state": "finished"
+  },
+  "limitations": [
+    "Model-free same-checkpoint diagnosis, not changed-runtime new-seed acceptance",
+    "Full semantic scores and lexical posting admission are not yet recorded",
+    "No total-token, quality, team-scale, NAS or 95 percent acceptance"
+  ]
+}

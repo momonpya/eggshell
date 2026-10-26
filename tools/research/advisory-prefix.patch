@@ -1,0 +1,67 @@
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -105,14 +105,29 @@
+   usage : Option PageMap.Head := none
+   failure : Option String := none
+
+-/-- A partial walk never changes the original packet. Its receipt still
+-reports incompleteness rather than presenting an empty successful search. -/
++/-- Each offer carries a checked advisory witness. Ending the walk at a
++resource bound limits recall, not the validity of the prefix already read.
++Unavailability or an index exception still rejects the whole result. -/
+ def Result.admitted (result : Result) : Array Offer :=
+-  if result.complete && result.available && result.failure.isNone then result.offers else #[]
++  if result.available && result.failure.isNone then result.offers else #[]
+
+-theorem Result.incomplete_not_admitted (result : Result) (incomplete : result.complete = false) :
+-    result.admitted = #[] := by simp [admitted, incomplete]
++theorem Result.completeness_does_not_change_admission (result : Result) (complete : Bool) :
++    {result with complete}.admitted = result.admitted := rfl
++
++theorem Result.available_prefix_admitted (result : Result) (available : result.available = true)
++    (healthy : result.failure = none) : result.admitted = result.offers := by
++  simp [admitted,available,healthy]
+
++theorem Result.admitted_original (result : Result) (offer : Offer)
++    (present : offer ∈ result.admitted) : offer ∈ result.offers := by
++  unfold admitted at present
++  split at present
++  · exact present
++  · simp at present
++
++theorem Result.unavailable_not_admitted (result : Result) (unavailable : result.available = false) :
++    result.admitted = #[] := by simp [admitted,unavailable]
++
+ theorem Result.failed_not_admitted (result : Result) (failed : result.failure.isSome = true) :
+     result.admitted = #[] := by
+   cases found : result.failure <;> simp_all [admitted]
+@@ -181,7 +196,7 @@
+       requests := result.requests+1
+       facts := result.facts+found.checked.size
+       bytes := result.bytes+found.payloadBytes}
+-    if !found.complete then result := {result with complete := false}; break
++    if !found.complete then result := {result with complete := false}
+     for checked in found.checked do
+       let fact := checked.fact
+       let identity : {value : String // value = Index.contentKey fact} := ⟨Index.contentKey fact, rfl⟩
+@@ -207,6 +222,7 @@
+           result := addOffer result (.range value.source) task.priority fact identity
+           queue := queue.push ⟨.quoted value.source, task.priority⟩
+       | _, _ => pure ()
++    if !found.complete then break
+   -- A checked omission is the more direct observation. Positive citation
+   -- remains useful only where no omission of that same range was observed.
+   let missing := result.offers.foldl (fun ranges offer => match offer.fact with
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -7652,7 +7652,9 @@
+     found.insert (owner.database,relationKey owner.original.relation))
+     ({} : Std.HashSet (String × String))
+   let mut canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {}
+-  if recommendation && evidence.isNone && synaptic.complete then
++  -- Canonical rows are independently checked against the pinned source.
++  -- A bounded advisory walk does not invalidate their original bindings.
++  if recommendation && evidence.isNone then
+     for prepared in source.synaptic do
+       if let some ready := prepared.canonical then
+         let rows := Synapses.CanonicalSource.Delivery.byOwner ready.registry allowed

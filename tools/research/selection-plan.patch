@@ -1,0 +1,193 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -316,6 +316,8 @@
+   search : Option SearchTrace := none
+   equalitySelection : Option SelectionAudit.Reference := none
+   synapticComplete : Bool := true
++  /-- Private decision metadata, never rendered into the model's body. -/
++  selectionPlan : Option Json := none
+   deriving Lean.ToJson, Lean.FromJson
+
+ /-- A memo decoder may return only the exact canonical captured payload. -/
+@@ -5810,55 +5812,34 @@
+ carried unchanged outside this selector. The real final packet is checked.
+ The node-cost model is an admission aid, never permission to exceed the wire.
+ -/
+-def fit (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+-    (families : List Family) (mandatory : List TransportSlice := [])
+-    (bundles : Array Synapses.Bundles.Projected := #[]) : Option
+-      {slices : List TransportSlice //
+-        (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
+-        ∃ suffix, slices = mandatory ++ suffix} := do
+-  let families := families.map Family.contextualOutputs
+-  let templates := families.map (·.template) ++ mandatory
+-  let allCost := cost templates
+-  let dataCost := templates.foldl (fun total slice =>
+-    (total.1+slice.text.length+1,total.2+slice.text.utf8ByteSize+1)) (0,0)
+-  if allCost.1 < dataCost.1 || allCost.2 < dataCost.2 then none else do
+-    let fixedData := mandatory.foldl (fun total slice =>
+-      (total.1+slice.text.length+1,total.2+slice.text.utf8ByteSize+1)) (0,0)
+-    let sharedFrame := if families.any (fun family => !family.cached.isEmpty) then
+-      Synapses.CanonicalSource.Packet.wrapper ++ Synapses.CanonicalSource.Packet.footer ++ "\n" else ""
+-    let fixed := (allCost.1-dataCost.1+fixedData.1+sharedFrame.length,
+-      allCost.2-dataCost.2+fixedData.2+sharedFrame.utf8ByteSize)
+-    let prepared := families.zipIdx.map fun (family,index) => prepare index family
+-    let units := prepared.flatMap (·.1)
+-    let depth := max families.length (families.foldl (fun n family => max n (max family.windows.length family.references.length)) 0)
+-    let scale := (List.range depth).foldl (fun value rank => Nat.lcm value (61+rank)) 1
+-    let pieces := cuePieces scale families units
+-    let p ← problem families units pieces fixed ceiling
+-    let keys := (families.map fun family => relationKey family.owner.relation).toArray
+-    let mut candidates : Std.HashMap Synapses.Range (List (Fin units.toArray.size)) := {}
+-    for projected in bundles do
+-      for member in projected.members do
+-        if candidates.contains member.source then continue
+-        let choices := (List.finRange units.toArray.size).filter fun index =>
+-          memberCovered keys units.toArray [index] member
+-        candidates := candidates.insert member.source choices
+-    let recipes := ClosedCoverage.original p ++ (bundles.filterMap fun projected =>
+-      (bundlePlan? keys units.toArray p candidates projected).bind (bundleRecipe? keys units.toArray pieces p))
+-    let compiled := ClosedCoverage.compile p recipes
+-    let chosen ← SharedCoverage.choose? compiled
+-    let expanded := (ClosedCoverage.expand p recipes chosen.selected).map (·.val) |>.eraseDups
+-    let selected ← materialize units.toArray expanded
+-    let result := mandatory ++ selected
+-    if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
+-      some ⟨result,fits.1,fits.2,⟨selected,rfl⟩⟩
+-    else none
++abbrev Fitted (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
++    (mandatory : List TransportSlice) :=
++  {slices : List TransportSlice //
++    (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
++    ∃ suffix, slices = mandatory ++ suffix}
+
+-def fitHoisted (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
++/-- One execution owns both the decision and its explanation. Diagnostics
++reuse the exact candidate/cost arrays used for fitting, with no second solve
++or re-render and no human reference labels. -/
++structure Plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
++    (mandatory : List TransportSlice) where
++  families : Array Family
++  units : Array UnitPlan
++  problem : SharedCoverage.Problem
++  selected : List Nat
++  scale : Nat
++  result : Fitted ceiling cost mandatory
++
++theorem Plan.within_budget (plan : Plan ceiling cost mandatory) :
++    (cost plan.result.val).1 ≤ ceiling.1 ∧ (cost plan.result.val).2 ≤ ceiling.2 :=
++  ⟨plan.result.property.1,plan.result.property.2.1⟩
++
++theorem Plan.keeps_control (plan : Plan ceiling cost mandatory) :
++    ∃ suffix, plan.result.val = mandatory ++ suffix := plan.result.property.2.2
++
++def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+     (families : List Family) (mandatory : List TransportSlice := [])
+-    (bundles : Array Synapses.Bundles.Projected := #[]) : Option
+-      {slices : List TransportSlice //
+-        (cost slices).1 ≤ ceiling.1 ∧ (cost slices).2 ≤ ceiling.2 ∧
+-        ∃ suffix, slices = mandatory ++ suffix} := do
++    (bundles : Array Synapses.Bundles.Projected := #[]) : Option (Plan ceiling cost mandatory) := do
+   let families := families.map Family.contextualOutputs
+   let templates := families.map (·.template) ++ mandatory
+   let allCost := cost templates
+@@ -5894,11 +5875,39 @@
+     let selected ← materialize unitArray expanded
+     let result := mandatory ++ selected
+     if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
+-      some ⟨result,fits.1,fits.2,⟨selected,rfl⟩⟩
++      some {
++        families := families.toArray
++        units := unitArray
++        problem := p
++        selected := expanded
++        scale := scale
++        result := ⟨result,fits.1,fits.2,⟨selected,rfl⟩⟩ }
+     else none
+
+-@[csimp] theorem fit_hoisted_compiled : @fit = @fitHoisted := by
+-  rfl
++def fit (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
++    (families : List Family) (mandatory : List TransportSlice := [])
++    (bundles : Array Synapses.Bundles.Projected := #[]) : Option (Fitted ceiling cost mandatory) :=
++  (plan ceiling cost families mandatory bundles).map (·.result)
++
++def Plan.receipt (plan : Plan ceiling cost mandatory) : Json :=
++  let familyRows := plan.families.map fun family => Json.mkObj [
++    ("owner",toJson (relationKey family.owner.relation)),("work",toJson (relationKey family.owner.work)),
++    ("windows",toJson family.windows),("references",toJson family.references),
++    ("canonicalRows",toJson family.cached.size),("synapticRanges",toJson family.synapticRanges.length),
++    ("originalRanges",toJson family.outputRanges.length)]
++  let units := plan.units.mapIdx fun index unit => Id.run do
++    let offer := plan.problem.offers[index]?
++    let atoms := offer.map (·.closure.eraseDups) |>.getD []
++    let charged := atoms.foldl (fun total atom =>
++      (total.1+plan.problem.costs[atom].1,total.2+plan.problem.costs[atom].2)) (0,0)
++    let cues := offer.map (·.covers.eraseDups) |>.getD []
++    let benefit := cues.foldl (fun total cue => total+plan.problem.weights[cue]) 0
++    return Json.mkObj [("id",toJson index),("family",toJson unit.family),
++      ("ranges",toJson unit.ranges),("standaloneCost",toJson charged),("benefit",toJson benefit),
++      ("selected",toJson (plan.selected.contains index))]
++  Json.mkObj [("families",toJson familyRows),("units",toJson units),
++    ("fixedCost",toJson plan.problem.fixed),("limit",toJson plan.problem.limit),("scale",toJson plan.scale),
++    ("selected",toJson plan.selected)]
+
+ namespace RangeLocators
+
+@@ -6023,7 +6032,8 @@
+     (synapticRanges : List (Value × List (Nat × Nat × Nat)) := [])
+     (outputRanges : List (Value × List Synapses.Transport.OutputRange) := [])
+     (synapticBundles : Array Synapses.Bundles.Projected := #[])
+-    (canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {}) : Option Handoff :=
++    (canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {})
++    (captureSelection : Bool := false) : Option Handoff :=
+   let extraction := prepared.val
+   let attach := fun selected : Selected => {
+     selected with
+@@ -6293,10 +6303,11 @@
+     let reserved := fixedHeader.length + maximalTree.length + maximalSource.length + footer.length + statusReserve.1
+     let reservedBytes := fixedHeader.utf8ByteSize + maximalTree.utf8ByteSize +
+       maximalSource.utf8ByteSize + footer.utf8ByteSize + statusReserve.2
++    let selectionPlan := if meaningSelected && !enforce then
++      SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles
++      else none
+     let fittedSlices := if meaningSelected && !enforce then
+-      match SharedRangeAdapter.fit (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles with
+-      | some fitted => fitted.val
+-      | none => []
++      (selectionPlan.map (·.result.val)).getD []
+       else if meaningSelected then
+       -- Fund the current original-data contexts and the selected interpretation.
+       -- Other source-graph owners still compete within the same packet; native
+@@ -6455,6 +6466,7 @@
+         (controlDeltaSelection staged stagedVisible transportable newlyCovered)
+       let records := (sourceTable (visible ++ newlyCovered) ++ visibleSupport.flatMap (·.provenance)).eraseDups
+       let result : Handoff := {
++        selectionPlan := if captureSelection then selectionPlan.map (·.receipt) else none
+         text := if fullText = "" then deltaText else if deltaText = "" then fullText
+           else fullText ++ "\n\n" ++ deltaText
+         reason := s!"selected={selectedAll.length} visible={visible.length} " ++
+@@ -7662,6 +7674,13 @@
+           | .error _ => canonicalRows := canonicalRows.erase owner
+   Receipt.observe source.receipt "canonical-source-input" (toJson (source.synaptic.map fun prepared =>
+     (prepared.source.head.identity,prepared.canonical.map (fun ready => ready.metadata.rows),prepared.canonicalFailure)))
++  Receipt.observe source.receipt "delivery-domain" (Json.mkObj [
++    ("nominated",toJson (nominationRanking.map relationKey)),
++    ("focusRanking",toJson (focusedRanking.map relationKey)),
++    ("hydrated",toJson (focusDomain.map fun row => relationKey row.owner.relation)),
++    ("focusPositions",toJson (focusedRows.map fun (owner,positions) => (relationKey owner,positions))),
++    ("canonicalUsed",toJson (canonicalRows.toArray.map fun (owner,rows) => (owner,rows.size))),
++    ("synapticComplete",toJson synaptic.complete)])
+   -- The focused provider is an independent observation. Include its exact
+   -- durable owner/order/window reply before asking the memo to reuse a packet.
+   -- An unchanged first nomination alone cannot certify an unchanged focus.
+@@ -7726,7 +7745,9 @@
+     (outputRanges := synaptic.outputRanges)
+     (synapticBundles := synapticBundles)
+     (canonicalRows := canonicalRows)
++    (captureSelection := source.receipt.isSome)
+   let rendered := rendered.map fun handoff => {handoff with synapticComplete := synaptic.complete}
++  Receipt.observe source.receipt "selection-plan" ((rendered.bind (·.selectionPlan)).getD Json.null)
+   Receipt.observe source.receipt "synaptic-delivery"
+     (Synapses.Bundles.receipt synaptic synapticBundles ((rendered.map (·.text)).getD ""))
+   let rendered := rendered.map fun handoff =>

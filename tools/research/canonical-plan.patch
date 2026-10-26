@@ -1,0 +1,13 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -7664,7 +7664,9 @@
+     found.insert (owner.database,relationKey owner.original.relation))
+     ({} : Std.HashSet (String × String))
+   let mut canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {}
+-  if recommendation && evidence.isNone && synaptic.complete then
++  -- Independently validated source rows remain available when graph
++  -- expansion ends at its advisory resource bound.
++  if recommendation && evidence.isNone then
+     for prepared in source.synaptic do
+       if let some ready := prepared.canonical then
+         let rows := Synapses.CanonicalSource.Delivery.byOwner ready.registry allowed
