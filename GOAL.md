@@ -107,6 +107,10 @@ ownerと原文範囲から引く索引を隔離実装した。任意のbucket幅
 
 ### A：終了・再開と耐久契約
 
+2026-10-28の2つ目の候補では、現在focusだけを基礎価値へ入れ、過去引用は既存の完全に束縛されたrecipeの差分価値へ分離した。実際の束の選択は各1→7件、本文も変化したが、題材1/2/3は2/4・4/6・3/5のままだった。係数を調整せず不採用として撤回し、再build後のruntime/controller/sourceのSHAは元の基準と全て一致。201ファイル・365,941,461 logical bytesの終了済み試行を削除し、DB/圧縮archiveは追加0。[実選択への作用と不改善](docs/current-focus-credit.md)。
+
+次は同じ6問への値調整を止め、既存`purpose=pilot`経路で、基準runtimeを固定した新seed・両周6段階1反復と同時期freshを観測する。既知の欠落は隠さず記録し、95%や製品採用の基準を下げない。利用の根が0件のままモデル入場を止める運用では、実際の再消費や引用による三つ目の辺を検証できないためである。モデル実行前にnative空DBのproducer/ACK/終了/回復を同じruntimeで確認する。モデルは5.6-luna/xhigh、AGENTS無効、owned RSS<4 GiBを維持する。[モデル前に固定した有界pilot](docs/feedback-pilot.md)。
+
 2026-10-28、空き17.9 GiBと基準SHAの不変を確認して、事前固定したnative/advisory入力の表示短縮を検証した。題材1/2/3は2/4・3/6・3/5で、基準2/4・4/6・3/5より悪化。全問でsource/index/canonical manifest・候補ドメイン・凍結必要項目・compiled harnessは同一。題材2では短縮した別の原文が選ばれ、必要なtracked-input-languageが落ちた。表示短縮の幅や重みを調整せず撤回した。Leanの表示保存と既存prepare一致の検査は通ったが、採用理由にはしない。native再build後のruntime/controller/sourceのSHAは元の基準と全て一致。終了済み試行203ファイル・365,815,368 logical bytesを削除し、DB/圧縮archiveは追加0。回答model追加0、正式6段階0/6、token/品質/95%は未達。[全3問・証明・撤回](docs/compact-native-context.md)。
 
 投入ACK、元記録の出版、索引準備、配送ACKを型で分ける。取消せる背景処理と、原文/時系列/portable来歴の耐久記録を分ける。終了後のworker再起動を禁止し、queueを残して再開可能にする。終了超過だけで耐久済み生成を失敗にせず、残存processを無視して成功にもしない。

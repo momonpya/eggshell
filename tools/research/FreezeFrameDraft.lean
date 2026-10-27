@@ -7,14 +7,17 @@ private def read (path : System.FilePath) : IO Json :=
 
 def main (args : List String) : IO Unit := do
   let root := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell/verified-winner-20261027"
-  let output := System.FilePath.mk
+  let baseline := System.FilePath.mk
     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/compact-native-context"
+  let roles := args == ["reject-roles"] || args == ["verify-roles"]
+  let output := if roles then baseline.parent.get! / "current-focus-credit" else baseline
+  let measured := if roles then "candidate" else "compact"
   let source := root / "checkout/Eggshell/Handoff.lean"
-  let baselineSource := output.parent.get! / "verified-winner/final/contracts/Eggshell_Handoff.source"
+  let baselineSource := baseline.parent.get! / "verified-winner/final/contracts/Eggshell_Handoff.source"
   let original ← IO.ofExcept ((← read baselineSource).getArr?)
   let some first := original[0]? | throw (IO.userError "missing baseline source")
   let text ← IO.ofExcept first.getStr?
-  if args == ["verify"] then
+  if args == ["verify"] || args == ["verify-roles"] then
     let artifacts ← IO.Process.output {
       cmd := "/Users/ovm/.codex/experiments/eggshell/study-services-20261026/assessed-controller"
       args := #["artifacts",(root / "product-build/StudyMain").toString,
@@ -22,11 +25,11 @@ def main (args : List String) : IO Unit := do
     unless artifacts.exitCode == 0 do throw (IO.userError artifacts.stderr)
     IO.FS.createDirAll (output / "restored")
     IO.FS.writeFile (output / "restored/digests.json") artifacts.stdout
-    unless (← IO.ofExcept (Json.parse artifacts.stdout)) == (← read (output / "baseline/digests.json")) &&
+    unless (← IO.ofExcept (Json.parse artifacts.stdout)) == (← read (baseline / "baseline/digests.json")) &&
         (← read (root / "product-build/Eggshell_Handoff.source")) == (← read baselineSource) &&
         (← IO.FS.readFile source) == text do
       throw (IO.userError "baseline differs after rebuild; actual delivery replay is required")
-    let buildGuard ← read (root / "compile-baseline-after-frame.guard.json")
+    let buildGuard ← read (root / (if roles then "compile-baseline-after-roles.guard.json" else "compile-baseline-after-frame.guard.json"))
     unless buildGuard.getObjValD "state" == toJson "finished" &&
         buildGuard.getObjValD "exitCode" == toJson (0 : Nat) &&
         buildGuard.getObjValD "ownedPids" == toJson (#[] : Array Nat) do
@@ -37,8 +40,8 @@ def main (args : List String) : IO Unit := do
       |>.setObjVal! "sameBaselineRuntimeHarnessAndSourceSha256" (toJson true)
     IO.FS.writeFile (output / "outcome.json") result.pretty
     return
-  if args == ["reject"] then
-    let summary ← read (output / "compact/summary.json")
+  if args == ["reject"] || args == ["reject-roles"] then
+    let summary ← read (output / measured / "summary.json")
     let comparisons ← IO.ofExcept (summary.getObjValAs? (Array Json) "comparisons")
     unless comparisons.size == 3 && comparisons.all (fun row =>
         row.getObjValD "sameFrozenRequirementsSourceAndIndexes" == toJson true) do
@@ -54,22 +57,27 @@ def main (args : List String) : IO Unit := do
     unless patch.exitCode == 1 do throw (IO.userError "expected the measured rendering change")
     IO.FS.writeFile (output / "measured.patch") patch.stdout
     IO.FS.removeFile temporary
-    for name in ["compile-compact-native-context-available.guard.json",
+    let records := if roles then ["compile-current-focus-credit.guard.json",
+        "current-focus-proofs.guard.json","current-focus-proofs.stdout","current-focus-proofs.stderr"] else
+      ["compile-compact-native-context-available.guard.json",
         "compile-compact-native-context-proved.guard.json","compact-context-proofs.guard.json",
         "compact-context-proofs.stdout","compact-context-proofs.stderr",
         "compact-context-proofs-expanded.guard.json","compact-context-proofs-expanded.stdout",
-        "compact-context-proofs-expanded.stderr"] do
-      IO.FS.writeBinFile (output / "compact" / name) (← IO.FS.readBinFile (root / name))
+        "compact-context-proofs-expanded.stderr"]
+    for name in records do
+      IO.FS.writeBinFile (output / measured / name) (← IO.FS.readBinFile (root / name))
     IO.FS.writeFile source text
     unless (← IO.FS.readFile source) == text do throw (IO.userError "source restoration failed")
     IO.FS.writeFile (output / "outcome.json") (Json.mkObj [
-      ("state",toJson "rejected-delivery-regression"),("comparisons",toJson comparisons),
+      ("state",toJson (if roles then "rejected-no-delivery-improvement" else "rejected-delivery-regression")),
+      ("comparisons",toJson comparisons),
       ("sourceRestored",toJson true),("nativeBaselineRestorationVerified",toJson false),
-      ("candidateNativeBuildPassed",toJson true),("displayPreservationProofsChecked",toJson true),
+      ("candidateNativeBuildPassed",toJson true),
+      (if roles then "focusedCueRolesProofsChecked" else "displayPreservationProofsChecked",toJson true),
       ("candidateTokenImprovementMeasured",toJson false),("answeringModelCalls",toJson (0 : Nat)),
       ("newSeedStudy",toJson false),("adopted",toJson false)]).pretty
     return
-  unless args.isEmpty do throw (IO.userError "no arguments | reject | verify")
+  unless args.isEmpty do throw (IO.userError "no arguments | reject | verify | reject-roles | verify-roles")
   let guard ← read (root / "compile-compact-native-context.guard.json")
   unless guard.getObjValD "state" == toJson "finished" &&
       guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&

@@ -1,0 +1,51 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5211,10 +5211,29 @@
+       | none => some cue
+       | some previous => if cue.priority < previous.priority then some cue else found
+     else found) none
++
++/-- Only the current query focus earns independent base relevance.
++Historical references keep their existing total relevance, but must earn its
++increment through a completely bound recipe rather than pre-crediting it. -/
++def focusedCues (family : Family) : List RankedCue :=
++  rankedCues {family with references := [],referenceRanks := [],synapticRanges := [],outputRanges := []}
++
++theorem focused_cues_ignore_historical (family : Family) (references : List Nat)
++    (ranks : List (Nat × Nat)) (ranges : List (Nat × Nat × Nat))
++    (outputs : List Synapses.Transport.OutputRange) :
++    focusedCues {family with references,referenceRanks := ranks,synapticRanges := ranges,outputRanges := outputs} =
++      focusedCues family := rfl
+ 
++theorem focused_cues_without_windows (family : Family) (empty : family.windows = []) :
++    focusedCues family = [] := by
++  unfold focusedCues rankedCues
++  cases source : Matcher.atomText? family.owner.outcome <;>
++    cases work : Matcher.atomText? family.owner.work <;>
++    simp [Family.outputCues,empty]
++
+ def cachedCuePieces (scale familyIndex : Nat) (family : Family) : List CuePiece :=
+   let owner := relationKey family.owner.relation
+-  let base := rankedCues {family with synapticRanges := []}
++  let base := focusedCues family
+   let all := rankedCues family
+   family.cached.toList.flatMap fun row =>
+     let ranges := cachedBindings owner #[row]
+@@ -5254,7 +5273,7 @@
+ 
+ def cachedCuePiecesPrepared (scale familyIndex : Nat) (family : Family) : List CuePiece :=
+   let owner := relationKey family.owner.relation
+-  let base := rankCoefficients scale familyIndex (rankedCues {family with synapticRanges := []})
++  let base := rankCoefficients scale familyIndex (focusedCues family)
+   let all := rankCoefficients scale familyIndex (rankedCues family)
+   family.cached.toList.flatMap fun row =>
+     let ranges := cachedBindings owner #[row]
+@@ -5285,7 +5304,7 @@
+       | none => []
+     else
+     let ownerCues := rankedCues family
+-    let baseCues := rankedCues {family with synapticRanges := []}
++    let baseCues := focusedCues family
+     let endpoints := ((units.filter (·.family == familyIndex)).flatMap (fun unit =>
+         unit.ranges.flatMap fun (a,b) => [a,b]) ++
+       ownerCues.flatMap (fun cue => [cue.first,cue.last])).eraseDups.mergeSort (· ≤ ·)

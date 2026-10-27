@@ -1,0 +1,5 @@
+import Eggshell.Handoff
+
+#print axioms Eggshell.Plugin.SharedRangeAdapter.focused_cues_ignore_historical
+#print axioms Eggshell.Plugin.SharedRangeAdapter.focused_cues_without_windows
+#print axioms Eggshell.Plugin.SharedRangeAdapter.cached_cue_coefficients_compiled

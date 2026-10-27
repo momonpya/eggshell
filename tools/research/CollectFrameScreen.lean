@@ -40,11 +40,13 @@ private def stage (receipts : System.FilePath) (name : String) : IO Json := do
   pure result
 
 def main (args : List String) : IO Unit := do
-  let [arm] := args | throw (IO.userError "baseline | compact")
-  unless ["baseline","compact"].contains arm do throw (IO.userError "unknown fixed arm")
+  let [arm] := args | throw (IO.userError "baseline | compact | roles")
+  unless ["baseline","compact","roles"].contains arm do throw (IO.userError "unknown fixed arm")
+  let output := if arm == "roles" then docs.parent.get! / "current-focus-credit" else docs
+  let storedArm := if arm == "roles" then "candidate" else arm
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
   unless processes.exitCode == 0 do throw (IO.userError processes.stderr)
-  if arm == "compact" then
+  if arm != "baseline" then
     let artifacts ← IO.Process.output {
       cmd := "/Users/ovm/.codex/experiments/eggshell/study-services-20261026/assessed-controller"
       args := #["artifacts",(root / "product-build/StudyMain").toString,
@@ -56,17 +58,17 @@ def main (args : List String) : IO Unit := do
     let source ← IO.ofExcept ((← read (root / "product-build/Eggshell_Handoff.source")).getArr?)
     unless source[0]!.getStr?.toOption == some (← IO.FS.readFile (root / "checkout/Eggshell/Handoff.lean")) do
       throw (IO.userError "current Handoff differs from native compiled source")
-    IO.FS.createDirAll (docs / arm)
-    IO.FS.writeFile (docs / arm / "digests.json") artifacts.stdout
-    copy (root / "product-build/Eggshell_Handoff.source") (docs / arm / "Handoff.source")
-    copy (root / "product-build/build.json") (docs / arm / "build.json")
+    IO.FS.createDirAll (output / storedArm)
+    IO.FS.writeFile (output / storedArm / "digests.json") artifacts.stdout
+    copy (root / "product-build/Eggshell_Handoff.source") (output / storedArm / "Handoff.source")
+    copy (root / "product-build/build.json") (output / storedArm / "build.json")
   let mut deleted := #[]
   let mut results := #[]
   let mut comparisons := #[]
   for topic in [1,2,3] do
     let label := s!"frame-{arm}-{topic}"
     let trial := root / label
-    let target := docs / arm / s!"topic-{topic}"
+    let target := output / storedArm / s!"topic-{topic}"
     unless !(← target.pathExists) do throw (IO.userError "preserve captured study records")
     unless (processes.stdout.splitOn trial.toString).length == 1 do
       throw (IO.userError "trial process still uses its runtime")
@@ -78,8 +80,8 @@ def main (args : List String) : IO Unit := do
     unless result.getObjValD "topic" == toJson topic &&
         result.getObjValD "modelCalls" == toJson (0 : Nat) do
       throw (IO.userError "incorrect trial result")
-    if arm == "compact" then
-      let hashes ← IO.ofExcept ((← read (docs / arm / "digests.json")).getArr?)
+    if arm != "baseline" then
+      let hashes ← IO.ofExcept ((← read (output / storedArm / "digests.json")).getArr?)
       unless result.getObjValD "runtimeSha256" == hashes[0]!.getObjValD "sha256" do
         throw (IO.userError "trial runtime differs from the compiled candidate")
       let baseline := docs / "baseline" / s!"topic-{topic}"
@@ -111,7 +113,7 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile (target / "guard.json") guard.pretty
     results := results.push result
     deleted := deleted.push (trial.toString,← erase trial)
-  IO.FS.writeFile (docs / arm / "summary.json") (Json.mkObj [
+  IO.FS.writeFile (output / storedArm / "summary.json") (Json.mkObj [
     ("results",toJson results),("deletedTrialFiles",toJson deleted),
     ("comparisons",toJson comparisons),
     ("archiveCreated",toJson false),("newSeedStudy",toJson false),
