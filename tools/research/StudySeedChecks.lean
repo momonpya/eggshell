@@ -78,15 +78,25 @@ whole saved record or supported through a file-coordinate citation. -/
 private def literalSupport (source : DB.PageMap.Snapshot) (facts : Array Fact)
     (wanted : String) : IO Bool := do
   let reader ← Persistence.Store.NodeReader.new source
+  let index := LiteralSearch.prepare #[wanted]
   for fact in facts do
     let .supports support := fact | continue
-    if support.source.file?.isSome || support.read.quotations.contains (Quotes.digest wanted) then continue
+    if support.source.file?.isSome || !support.read.quotations.contains (Quotes.digest wanted) then continue
     let some id ← Build.ownerId? source support.binding.owner | continue
     let doc ← Build.document reader id
     let some raw := doc.source | continue
+    let some catalog := ObservationContext.recorded source.head.identity doc | continue
     let text := String.ofList ((raw.toList.drop support.binding.first).take
       (support.binding.limit-support.binding.first))
-    if (text.splitOn wanted).length > 1 then return true
+    if (text.splitOn wanted).length ≤ 1 then continue
+    -- Partial quotation deliberately replaces the parent's whole-spelling
+    -- digests with the matched quote. Verify strictness against the immutable
+    -- parent and require its checked projection to equal the persisted Read.
+    for parent in catalog.quotations do
+      if parent.text.length ≤ wanted.length then continue
+      for hit in LiteralSearch.first index parent.text do
+        let some witness := parent.locate? hit.first hit.limit | continue
+        if witness.read == support.read then return true
   return false
 
 /-- Freeze required DB-present source rows before a new chat's real hook runs.
@@ -203,13 +213,17 @@ def run (templatePath directory : String) (remote : Bool := false)
       ("consume", "printf NEEDED_SYMBOL"),
       ("other", "nl -ba src/source.cpp | sed -n '13,15p'"),
       ("reread", "nl -ba src/source.cpp | sed -n '10,12p'")]
-    let remoteCalls : Array Plugin.ToolEvent := if !remote then #[] else #[
+    let remoteCalls : Array Plugin.ToolEvent := (if !remote then #[] else #[
       {name := "mcp__catalog__lookup",useId := "remote-lookup",input := "{}"
        response := (toJson #[Json.mkObj [("id",toJson "RECORD_42"),
           ("uri",toJson "smb://customer/logs/boot.txt")]]).compress},
       {name := "mcp__catalog__inspect",useId := "remote-inspect"
        input := (Json.mkObj [("request",Json.mkObj [("record",toJson "RECORD_42")])]).compress
-       response := (Json.mkObj [("status",toJson "available")]).compress}]
+       response := (Json.mkObj [("status",toJson "available")]).compress}]) ++
+      (if remote && literal then #[
+        {name := "mcp__catalog__formula",useId := "remote-symbol",input := "{}"
+         response := (Json.mkObj [("formula",toJson "lookup(NEEDED_SYMBOL)")]).compress}]
+        else #[])
     let toolCount := commands.size+remoteCalls.size+(if generic then 1 else 0)
     let remoteConsumption := fun all => !remote || all.any (fun fact => match fact with
       | .consumed edge => edge.producer.useId == "remote-lookup" && edge.consumer.useId == "remote-inspect" &&

@@ -51,6 +51,9 @@ def main (args : List String) : IO UInt32 := do
     | ["trial",input,digest] => StudyTrial.run input digest
     | ["acquire",input,digest] => StudyAcquire.run input digest
     | "seed-checks" :: rest => StudySeedChecks.cliMain rest
+    | ["seed-checks-generic",input,directory] => do
+        StudySeedChecks.run input directory (remote := true) (literal := true) (generic := true)
+        return 0
     | "seed-audit" :: rest => NativeSeedAudit.cliMain rest; return 0
     | "seed-finalize" :: rest => NativeSeedFinalize.cliMain rest
     | "seal" :: rest => StudySeal.cliMain rest; return 0
