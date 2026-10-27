@@ -103,6 +103,8 @@ ownerと原文範囲から引く索引を隔離実装した。任意のbucket幅
 
 次の単独検証として、native/advisoryの原文contextで長いWork入力の反復を安定キーへの参照へ変える実表示の案を事前固定した。focus・価値・範囲・予算・認定は変更しない。これは失敗済みの「表示を保った費用モデルだけの変更」と区別する。ただしnative buildは空き2 GiBの保護条件で停止し、Handoffのコンパイル前だったため、証明・配送効果は未確認である。未検証変更を接続したままにせず基準sourceへ戻した。実行体/controllerのSHAは不変。終了済み試行のDB/cache/runtimeコピーは削除し、新しいDBやarchiveは作っていない。残る原seedと現準備済みDBを削って実験を続けず、保存先または追加の削除対象の回答を待つ。95%・数秒・総token・品質・80人の採用条件は未達、正式6段階0/6。[単独検証の記録](docs/compact-native-context.md)。
 
+同日の次の再確認でも空きは2 GiB未満で、実験は停止中だった。実験用と通常利用用MiniLMに同一の大きなファイルが10件あったため、同じdevice・owner・modeと全bytesの一致を確認したうえでhard linkへ統合した。対象は352,664,197 logical bytesで、モデル・runtime・controllerのSHAは前後一致、パスと設定も維持した。DBや派生索引は変更せず、archiveは作っていない。処理中のfreeは422,132→406,808 KiBで、物理空き容量の増加は確認できなかった。その後も他作業による容量消費が続き226,132 KiBとなったため、native build/フック/モデルは再開していない。logicalな重複整理を配送・速度・総tokenの改善と扱わない。[同一性と整理記録](docs/candidates/numerical-file-consolidation.json)。
+
 ### A：終了・再開と耐久契約
 
 投入ACK、元記録の出版、索引準備、配送ACKを型で分ける。取消せる背景処理と、原文/時系列/portable来歴の耐久記録を分ける。終了後のworker再起動を禁止し、queueを残して再開可能にする。終了超過だけで耐久済み生成を失敗にせず、残存processを無視して成功にもしない。
