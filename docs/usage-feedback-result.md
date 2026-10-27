@@ -18,9 +18,9 @@ sessionとpublisherは終了code 0、endpoint削除、残存owned process 0。�
 
 現ソースの`DB.PageMap.Writer.leaves`は通常leafをencoded 8,192 bytes以内に分割するが、一つのrowだけになっても入らなければ上記のエラーになる。物理pageの上限は65,536 bytesである。一方、`ContentMetadata.stage`と`ObservedRecords.stage`は64件ずつまとめたJSONを最大262,144 bytesまで許し、そのまま`writer.put`へ渡している。JSON自体の上限は、索引の一行へ収まる保証になっていない。
 
-この境界不整合はソースから確認できる。しかし、今回最初に失敗したrowのkeyとencoded byte数は既存のエラーに含まれず、まだ特定していない。ContentMetadataだけが原因と断定したり、8 KiBを一律に大きくして解決扱いにしたりしない。
+後続の同じ実checkpointのnative再生で、上限を超える7行を特定した。すべて`memo:content-alias:chunk:<digest>`で、encoded singletonは13,893〜15,829 bytes。隔離候補は既存の4 KiB payload保存へmetadata本体を出し、上限超過0・最大encoded行531 bytesで出版と原文読戻しを完了した。8 KiBの上限や元bytesは変えていない。[再現と修正の範囲](metadata-payload-repair.md)。
 
-次の一手は、残っている実checkpointをモデルなしで再生し、最初に失敗したrowを特定すること。原文・時系列・来歴を保持したまま、既存の検証付きpayload/chunk保存へ大きな記録を出し、B-treeのrowには有界な参照を置く修正を隔離で検証する。8 KiBの前後、64 KiB超、64件を超える原文記録、実際のcheckpointで、出版ACKと全bytesの読戻しを確認する。同じ失敗入力の再生が通るまで新しい回答モデルを呼ばない。修正runtimeを使う正式評価はseedから再開始し、最新AGENTSの総token比較を満たすまで本体・README・releaseへ採用しない。
+8 KiBの前後、64 KiB超、上限256 KiB、実際の700原文recordの保存と全bytesの読戻しは通った。残る実checkpoint、出版service経由のACKと日誌・索引の回復は別に確認する。別の`invalid or truncated list`警告も未解決なので、新しい回答モデルをまだ呼ばない。修正runtimeを使う正式評価はseedから再開始し、最新AGENTSの総token比較を満たすまで本体・README・releaseへ採用しない。
 
 ## 準備時の失敗も残す
 
