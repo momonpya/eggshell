@@ -42,6 +42,8 @@ def cliMain (args : List String) : IO UInt32 := do
     let thread ← StudyAdmission.readJson (root / "thread.json").toString
     let session ← IO.ofExcept ((← IO.ofExcept (thread.getObjVal? "thread")).getObjValAs? String "id")
     let data := root / "data"
+    check ((← IO.getEnv "EGGSHELL_DATA_ROOT") == some data.toString)
+      "finalization probes must use the seed's actual private root"
     let files := data / "sessions" / session
     let before ← queued files
     IO.FS.writeFile (output / "queued-before.json") ((toJson before).compress ++ "\n")
@@ -86,6 +88,21 @@ def cliMain (args : List String) : IO UInt32 := do
     let coverage ← IO.ofExcept (databases[0]!.getObjVal? "after")
     check ((coverage.getObjValAs? Nat "missing").toOption == some 0 &&
       (coverage.getObjValAs? Nat "invalid").toOption == some 0) "seed vectors remain incomplete"
+    let prepared ← DB.PageMap.pin (root / "work.egg")
+    let target : Eggshell.Plugin.IndexTarget := {
+      owner := DB.Sidecar.Owner.ofSnapshot prepared
+      command := [plan.runtime.path,"search-provider"]
+      storage := .database}
+    let numericalAndOriginalViews := !(← Eggshell.Warm.required target prepared)
+    let sharedSynapses := !(← Synapses.Build.required prepared .database)
+    let journalExists := (← Synapses.Journal.open? prepared).isSome
+    let journalReplayed := journalExists && !(← Synapses.Journal.required prepared .database)
+    IO.FS.writeFile (output / "view-readiness.json") (Json.mkObj [
+      ("source",toJson prepared.head),("numericalAndOriginalViews",toJson numericalAndOriginalViews),
+      ("sharedSynapses",toJson sharedSynapses),("privateJournalPresent",toJson journalExists),
+      ("privateJournalReplayed",toJson journalReplayed)]).compress
+    check (numericalAndOriginalViews && sharedSynapses && journalReplayed)
+      "seed preparation debt remains; retain the durable seed and finish preparation before model trials"
     let doctor ← StudyCommand.run plan.runtime.path #["egg","doctor"] environment
       plan.workspace "" (output / "doctor") 60000
     check (doctor.exitCode == 0) "frozen runtime doctor failed"

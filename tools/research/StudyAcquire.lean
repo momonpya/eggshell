@@ -124,9 +124,13 @@ private def report (kind : StudyAccounting.Acquisition) (scope : StudyAccounting
 /-- Acquire an independent seed or a contemporaneous fresh control. Empty
 database creation and absence of initial memory are checked separately from
 the normal memory-trial body/ACK admission, which remains mandatory there. -/
-def run (input digest : String) : IO UInt32 := do
+def run (input digest : String) (limits : Option StudyTrial.Limits := none) : IO UInt32 := do
+  if let some limits := limits then
+    check (limits.inclusiveTokens > 0 && limits.answerMs > 0 && limits.answerMs ≤ 900000)
+      "invalid frozen acquisition limits"
   StudyAdmission.verifyArtifact ⟨input,digest⟩
   let plan ← IO.ofExcept (fromJson? (α := Plan) (← StudyAdmission.readJson input))
+  check (plan.provider != "openai" || limits.isSome) "charged acquisition requires presealed token and time limits"
   let kind ← verify plan
   let guard ← StudyTrial.guard plan.runner plan.guardRecord ((← IO.monoMsNow)+3000)
   let root := System.FilePath.mk plan.output
@@ -136,6 +140,7 @@ def run (input digest : String) : IO UInt32 := do
   IO.FS.createDir root
   save root "plan.json" (toJson plan)
   save root "guard-admission.json" guard
+  save root "limits.json" (toJson limits)
   let prompt ← IO.FS.readFile (.mk plan.prompt.path)
   IO.FS.writeFile (root / "prompt.txt") prompt
   let data := root / "data"
@@ -202,16 +207,16 @@ def run (input digest : String) : IO UInt32 := do
           (data / "sessions" / id / "daemon.json") environment
         manager.set (some managed)
         save root "manager.json" (Json.mkObj [("session",toJson id),("pid",toJson (StudyRuntime.pid managed))])
+      let deadline := (← IO.monoMsNow)+(limits.map (·.answerMs)).getD 900000
       let turn ← StudyTransport.request client (.run .turnStart) (Json.mkObj [
         ("threadId",toJson id),("model",toJson plan.model),("effort",toJson plan.effort),
         ("input",toJson #[Json.mkObj [("type",toJson "text"),("text",toJson prompt)]])])
+        (deadline? := if limits.isSome then some deadline else none)
       save root "turn-start.json" turn
       let turnId ← IO.ofExcept ((← IO.ofExcept (turn.getObjVal? "turn")).getObjValAs? String "id")
       let scope : StudyAccounting.Scope := ⟨id,turnId,Sha256.hex ByteArray.empty⟩
       identity.set (some scope)
-      let completed ← StudyTransport.waitNotification client "turn/completed" fun params =>
-        (params.getObjValAs? String "threadId").toOption == some id &&
-        ((params.getObjVal? "turn").bind (·.getObjValAs? String "id")).toOption == some turnId
+      let completed ← StudyTrial.waitTurn client root id turnId limits deadline
       save root "completed.json" completed
       let (_,usage) ← report kind scope (root / "rpc/exchange.jsonl")
       check ((usage.getObjValAs? Bool "protocolPassed").toOption == some true) "acquisition generation or empty-context gate failed; retain cost"

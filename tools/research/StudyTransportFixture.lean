@@ -76,6 +76,15 @@ def main (args : List String) : IO UInt32 := do
       reply id (Json.mkObj [("thread",Json.mkObj [("id",toJson "fixture-thread")]),
         ("model",toJson "fixture"),("reasoningEffort",toJson "xhigh"),("instructionSources",toJson (#[] : Array Json))])
     else if method == "turn/start" then
+      if mode == "turn-hang" then
+        reply id (Json.mkObj [("turn",Json.mkObj [("id",toJson "fixture-turn")])])
+        continue
+      if mode == "wrong-usage" then
+        emit (Json.mkObj [("method",toJson "thread/tokenUsage/updated"),("params",Json.mkObj [
+          ("threadId",toJson "fixture-thread"),("turnId",toJson "other-turn"),
+          ("tokenUsage",Json.mkObj [("total",Json.mkObj [("totalTokens",toJson (1000000 : Nat)),
+            ("inputTokens",toJson (1000000 : Nat)),("outputTokens",toJson (0 : Nat)),
+            ("cachedInputTokens",toJson (0 : Nat)),("reasoningOutputTokens",toJson (0 : Nat))])])])])
       notice "hook/completed" [("run",Json.mkObj [("id",toJson "fixture-hook"),
         ("eventName",toJson "userPromptSubmit"),("status",toJson "completed"),("durationMs",toJson (12 : Nat)),
         ("entries",toJson #[Json.mkObj [("kind",toJson "context"),("text",toJson "fixture body")]])])]

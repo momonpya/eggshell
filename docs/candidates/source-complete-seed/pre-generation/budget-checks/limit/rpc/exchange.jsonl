@@ -1,0 +1,13 @@
+{"direction":"client","message":{"id":0,"method":"initialize","params":{"capabilities":{"experimentalApi":true},"clientInfo":{"name":"eggshell_study","title":"Eggshell study","version":"fixture"}}},"monotonic_ns":2989697104984541}
+{"direction":"server","message":{"id":0,"result":{"userAgent":"fixture"}},"monotonic_ns":2989697124230958}
+{"direction":"client","message":{"method":"initialized","params":{}},"monotonic_ns":2989697127098125}
+{"direction":"client","message":{"id":1,"method":"thread/start","params":{}},"monotonic_ns":2989697134647583}
+{"direction":"server","message":{"id":1,"result":{"instructionSources":[],"model":"fixture","reasoningEffort":"xhigh","thread":{"id":"fixture-thread"}}},"monotonic_ns":2989697134748333}
+{"direction":"client","message":{"id":2,"method":"turn/start","params":{}},"monotonic_ns":2989697142199250}
+{"direction":"server","message":{"method":"hook/completed","params":{"run":{"durationMs":12,"entries":[{"kind":"context","text":"fixture body"}],"eventName":"userPromptSubmit","id":"fixture-hook","status":"completed"},"threadId":"fixture-thread","turnId":"fixture-turn"}},"monotonic_ns":2989697142305583}
+{"direction":"server","message":{"method":"thread/tokenUsage/updated","params":{"threadId":"fixture-thread","tokenUsage":{"total":{"cachedInputTokens":80,"inputTokens":100,"outputTokens":10,"reasoningOutputTokens":4,"totalTokens":110}},"turnId":"fixture-turn"}},"monotonic_ns":2989697142341541}
+{"direction":"server","message":{"method":"item/completed","params":{"item":{"phase":"final_answer","text":"fixture answer","type":"agentMessage"},"threadId":"fixture-thread","turnId":"fixture-turn"}},"monotonic_ns":2989697142365416}
+{"direction":"server","message":{"method":"turn/completed","params":{"threadId":"fixture-thread","turn":{"id":"fixture-turn","status":"completed"},"turnId":"fixture-turn"}},"monotonic_ns":2989697142384166}
+{"direction":"server","message":{"id":2,"result":{"turn":{"id":"fixture-turn"}}},"monotonic_ns":2989697142393875}
+{"direction":"client","message":{"id":3,"method":"turn/interrupt","params":{"threadId":"fixture-thread","turnId":"fixture-turn"}},"monotonic_ns":2989697149890291}
+{"direction":"server","message":{"id":3,"result":{}},"monotonic_ns":2989697149933500}

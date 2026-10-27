@@ -19,6 +19,41 @@ private def save (directory : System.FilePath) (name : String) (json : Json) : I
   check (!(← path.pathExists)) "keep the previous trial evidence"
   IO.FS.writeFile path (json.compress ++ "\n")
 
+/-- Acquisition and memory trials use the same inclusive accounting and
+interruption path. Provider notifications can overshoot the observed limit. -/
+def waitTurn (client : StudyTransport.Client .generate) (directory : System.FilePath)
+    (id turnId : String) (limits : Option Limits) (deadline : Nat) : IO Json := do
+  let observe := fun message => do
+    let some limits := limits | return
+    if (message.getObjValAs? String "method").toOption != some "thread/tokenUsage/updated" then return
+    let params ← IO.ofExcept (message.getObjVal? "params")
+    if (params.getObjValAs? String "threadId").toOption != some id ||
+        (params.getObjValAs? String "turnId").toOption != some turnId then return
+    let usage ← IO.ofExcept (StudyAccounting.usage (← IO.ofExcept
+      (params.getObjVal? "tokenUsage" >>= (·.getObjVal? "total"))))
+    if usage.inclusive < limits.inclusiveTokens then return
+    save directory "budget-stop.json" (Json.mkObj [
+      ("reason",toJson "observed-inclusive-token-limit"),("limits",toJson limits),
+      ("observed",toJson usage.counters),("providerNotificationCanOvershoot",toJson true)])
+    let _ ← StudyTransport.request client (.run .interrupt)
+      (Json.mkObj [("threadId",toJson id),("turnId",toJson turnId)])
+      (deadline? := some ((← IO.monoMsNow)+5000))
+    throw (IO.userError "observed inclusive token limit reached; retain all charged usage")
+  try
+    StudyTransport.waitNotification client "turn/completed" (fun params =>
+      (params.getObjValAs? String "threadId").toOption == some id &&
+      ((params.getObjVal? "turn").bind (·.getObjValAs? String "id")).toOption == some turnId)
+      observe (deadline? := if limits.isSome then some deadline else none)
+  catch error =>
+    if limits.isSome && !(← (directory / "budget-stop.json").pathExists) then
+      save directory "budget-stop.json" (Json.mkObj [
+        ("reason",toJson error.toString),("limits",toJson limits)])
+      let _ ← StudyTransport.request client (.run .interrupt)
+        (Json.mkObj [("threadId",toJson id),("turnId",toJson turnId)])
+        (deadline? := some ((← IO.monoMsNow)+5000))
+      pure ()
+    throw error
+
 partial def guard (runner : StudyAdmission.Artifact) (recordPath : String) (deadline : Nat) : IO Json := do
   let path := System.FilePath.mk recordPath
   if !(← path.pathExists) then
@@ -146,36 +181,7 @@ def run (input digest : String) (limits : Option Limits := none) : IO UInt32 := 
       let turnId ← IO.ofExcept ((← IO.ofExcept (turn.getObjVal? "turn")).getObjValAs? String "id")
       let identity : StudyAccounting.Scope := ⟨id,turnId,admitted.bodySha256⟩
       scope.set (some identity)
-      let observe := fun message => do
-        let some limits := limits | return
-        if (message.getObjValAs? String "method").toOption != some "thread/tokenUsage/updated" then return
-        let params ← IO.ofExcept (message.getObjVal? "params")
-        if (params.getObjValAs? String "threadId").toOption != some id ||
-            (params.getObjValAs? String "turnId").toOption != some turnId then return
-        let usage ← IO.ofExcept (StudyAccounting.usage (← IO.ofExcept
-          (params.getObjVal? "tokenUsage" >>= (·.getObjVal? "total"))))
-        if usage.inclusive < limits.inclusiveTokens then return
-        save directory "budget-stop.json" (Json.mkObj [
-          ("reason",toJson "observed-inclusive-token-limit"),("limits",toJson limits),
-          ("observed",toJson usage.counters),("providerNotificationCanOvershoot",toJson true)])
-        let _ ← StudyTransport.request client (.run .interrupt)
-          (Json.mkObj [("threadId",toJson id),("turnId",toJson turnId)])
-          (deadline? := some ((← IO.monoMsNow)+5000))
-        throw (IO.userError "observed diagnostic token limit reached; retain all charged usage")
-      let completed ← try
-        StudyTransport.waitNotification client "turn/completed" (fun params =>
-          (params.getObjValAs? String "threadId").toOption == some id &&
-          ((params.getObjVal? "turn").bind (·.getObjValAs? String "id")).toOption == some turnId)
-          observe (deadline? := if limits.isSome then some deadline else none)
-        catch error =>
-          if limits.isSome && !(← (directory / "budget-stop.json").pathExists) then
-            save directory "budget-stop.json" (Json.mkObj [
-              ("reason",toJson error.toString),("limits",toJson limits)])
-            let _ ← StudyTransport.request client (.run .interrupt)
-              (Json.mkObj [("threadId",toJson id),("turnId",toJson turnId)])
-              (deadline? := some ((← IO.monoMsNow)+5000))
-            pure ()
-          throw error
+      let completed ← waitTurn client directory id turnId limits deadline
       save directory "completed.json" completed
       let beforeKeep ← StudyAccounting.replay identity (directory / "rpc/exchange.jsonl")
       check (((StudyAccounting.report identity beforeKeep).getObjValAs? Bool "protocolPassed").toOption == some true)

@@ -107,10 +107,13 @@ def sealSeed (root : String) : IO Unit := do
   IO.FS.createDirAll (directory / "study")
   save (directory / "seed-1.plan.json") (toJson plan)
   let artifact ← StudyPrepare.artifact (directory / "seed-1.plan.json")
+  let limits : StudyTrial.Limits := {inclusiveTokens := 5000000,answerMs := 900000}
+  save (directory / "seed-1.limits.json") (toJson limits)
+  let budget ← StudyPrepare.artifact (directory / "seed-1.limits.json")
   let settings := Json.mkObj [
     ("cwd",toJson root),("ownedPrefixes",toJson #[root]),("limitRssKiB",toJson (3670016 : Nat)),
     ("minFreeKiB",toJson (4194304 : Nat)),("record",toJson plan.guardRecord),
-    ("command",toJson #[(← IO.appPath).toString,"acquire",artifact.path,artifact.sha256])]
+    ("command",toJson #[(← IO.appPath).toString,"acquire-bounded",artifact.path,artifact.sha256,budget.path,budget.sha256])]
   save (directory / "seed-1.settings.json") settings
 
 def cliMain (args : List String) : IO UInt32 := do

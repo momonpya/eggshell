@@ -14,6 +14,7 @@ import tools.research.StudyTransportChecks
 import tools.research.PrepareMatchedSource
 import tools.research.StudyBootstrap
 import tools.research.StudyHistory
+import tools.research.StudyBudgetChecks
 
 open Lean Eggshell.Research
 
@@ -60,6 +61,10 @@ def main (args : List String) : IO UInt32 := do
         let limits ← IO.ofExcept (fromJson? (α := StudyTrial.Limits) (← StudyAdmission.readJson budget))
         StudyTrial.run input digest (some limits)
     | ["acquire",input,digest] => StudyAcquire.run input digest
+    | ["acquire-bounded",input,digest,budget,budgetDigest] => do
+        StudyAdmission.verifyArtifact ⟨budget,budgetDigest⟩
+        let limits ← IO.ofExcept (fromJson? (α := StudyTrial.Limits) (← StudyAdmission.readJson budget))
+        StudyAcquire.run input digest (some limits)
     | "seed-checks" :: rest => StudySeedChecks.cliMain rest
     | ["seed-checks-generic",input,directory] => do
         StudySeedChecks.run input directory (remote := true) (literal := true) (generic := true)
@@ -70,6 +75,9 @@ def main (args : List String) : IO UInt32 := do
     | "test-environment" :: rest => StudyEnvironmentChecks.cliMain rest; return 0
     | "test-command" :: rest => StudyCommandChecks.cliMain rest; return 0
     | "test-transport" :: rest => StudyTransportChecks.cliMain rest
+    | ["test-budgets",fixture,directory] => do
+        StudyBudgetChecks.run fixture directory
+        return 0
     | "prepare-matched-source" :: rest => PrepareMatchedSource.cliMain rest; return 0
     | ["prepare",input,directory] =>
         let _ ← StudyPrepare.prepare input directory
