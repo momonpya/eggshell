@@ -8,7 +8,7 @@ def main (args : List String) : IO Unit := do
   let root := base / "verified-winner-20261027"
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
-  unless ["product","audit","controller","run-audit","run-hook","profile"].contains mode && !label.isEmpty &&
+  unless ["product","audit","controller","signal","run-audit","run-hook","profile"].contains mode && !label.isEmpty &&
       label.toList.all (fun c => c.isAlphanum || c == '-') do throw (IO.userError "known mode/simple label required")
   let command ← if mode == "run-audit" then
     pure #[(root / "audit-build/StudyMain").toString,(root / "selector-input.json").toString,(root / label).toString]
@@ -37,7 +37,8 @@ def main (args : List String) : IO Unit := do
       |>.setObjVal! "core" (toJson (root / "checkout").toString)
       |>.setObjVal! "output" (toJson (root / (mode ++ "-build")).toString)
       |>.setObjVal! "mainModule" (toJson (if mode == "product" then "Main" else
-        if mode == "audit" then "tools.research.VerifiedWinnerAudit" else "tools.research.OnePreparedHook"))
+        if mode == "audit" then "tools.research.VerifiedWinnerAudit" else
+        if mode == "signal" then "tools.research.EvidenceSignalJoin" else "tools.research.OnePreparedHook"))
       |>.setObjVal! "baselineCore" (toJson (origin / "checkout").toString)
       |>.setObjVal! "baselineResponse" (toJson (baseline / "runtime.rsp").toString)
       |>.setObjVal! "baselineMain" (toJson (baseline / "Main.o").toString)
