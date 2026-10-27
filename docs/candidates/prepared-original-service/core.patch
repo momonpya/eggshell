@@ -1,0 +1,13 @@
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -62 +61,0 @@
+-  originalViews : Std.HashMap String ObservedRecordView.View := {}
+@@ -191 +190,2 @@
+-  -- One scoped acquisition serves graph binding and the final renderer.
++  -- Only the certified rows consumed by binding and rendering cross this
++  -- boundary. Unused original views must not decode and transfer every block.
+@@ -206,4 +205,0 @@
+-        let storedOriginals ← Plugin.Publication.Client.sourceRecords reference ids deadline
+-        for (owner,view) in storedOriginals do
+-          if let some view := view then
+-            plan := {plan with originalViews := plan.originalViews.insert owner view}
