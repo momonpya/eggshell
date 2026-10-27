@@ -1,0 +1,54 @@
+{"userCeilingRssKiB": 4194304,
+ "state": "finished",
+ "settings":
+ {"record":
+  "/Users/ovm/.codex/experiments/eggshell/verified-winner-20261027/compile-baseline-after-frame.guard.json",
+  "ownedPrefixes":
+  ["/Users/ovm/.codex/experiments/eggshell/verified-winner-20261027"],
+  "minFreeKiB": 2097152,
+  "limitRssKiB": 3670016,
+  "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+  "command":
+  ["/usr/bin/env",
+   "LEAN_NUM_THREADS=1",
+   "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+   "-j1",
+   "-M1536",
+   "--run",
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+   "/Users/ovm/.codex/experiments/eggshell/verified-winner-20261027/product-plan.json"]},
+ "samples": 502,
+ "sampledPeakRssKiB": 2588896,
+ "reason": null,
+ "peakProcesses":
+ [{"rssKiB": 497152,
+   "role": null,
+   "program":
+   "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+   "pid": 12353,
+   "parent": 12336,
+   "lane": null},
+  {"rssKiB": 2050208,
+   "role": null,
+   "program":
+   "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+   "pid": 12514,
+   "parent": 12353,
+   "lane": null},
+  {"rssKiB": 41536,
+   "role": "guard",
+   "program":
+   "/Users/ovm/.codex/experiments/eggshell/study-services-20261026/assessed-controller",
+   "pid": 12336,
+   "parent": 48938,
+   "lane": null}],
+ "ownedPids": [],
+ "limitRssKiB": 3670016,
+ "guardTriggered": false,
+ "guardSha256":
+ "4432bb7db70d0e821cd11fa019a664371e0cc89b716db3be4d6d90a747a6b4d6",
+ "guardPid": 12336,
+ "exitCode": 0,
+ "error": null,
+ "elapsedMs": 70035,
+ "childPid": 12353}

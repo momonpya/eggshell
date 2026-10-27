@@ -5,7 +5,7 @@ open Lean
 private def read (path : System.FilePath) : IO Json :=
   IO.FS.readFile path >>= fun text => IO.ofExcept (Json.parse text)
 
-def main : IO Unit := do
+def main (args : List String) : IO Unit := do
   let root := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell/verified-winner-20261027"
   let output := System.FilePath.mk
     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/compact-native-context"
@@ -14,6 +14,62 @@ def main : IO Unit := do
   let original ← IO.ofExcept ((← read baselineSource).getArr?)
   let some first := original[0]? | throw (IO.userError "missing baseline source")
   let text ← IO.ofExcept first.getStr?
+  if args == ["verify"] then
+    let artifacts ← IO.Process.output {
+      cmd := "/Users/ovm/.codex/experiments/eggshell/study-services-20261026/assessed-controller"
+      args := #["artifacts",(root / "product-build/StudyMain").toString,
+        (root / "controller-build/StudyMain").toString,source.toString]}
+    unless artifacts.exitCode == 0 do throw (IO.userError artifacts.stderr)
+    IO.FS.createDirAll (output / "restored")
+    IO.FS.writeFile (output / "restored/digests.json") artifacts.stdout
+    unless (← IO.ofExcept (Json.parse artifacts.stdout)) == (← read (output / "baseline/digests.json")) &&
+        (← read (root / "product-build/Eggshell_Handoff.source")) == (← read baselineSource) &&
+        (← IO.FS.readFile source) == text do
+      throw (IO.userError "baseline differs after rebuild; actual delivery replay is required")
+    let buildGuard ← read (root / "compile-baseline-after-frame.guard.json")
+    unless buildGuard.getObjValD "state" == toJson "finished" &&
+        buildGuard.getObjValD "exitCode" == toJson (0 : Nat) &&
+        buildGuard.getObjValD "ownedPids" == toJson (#[] : Array Nat) do
+      throw (IO.userError "baseline build is not terminal and successful")
+    IO.FS.writeFile (output / "restored/build.guard.json") buildGuard.pretty
+    let result := (← read (output / "outcome.json"))
+      |>.setObjVal! "nativeBaselineRestorationVerified" (toJson true)
+      |>.setObjVal! "sameBaselineRuntimeHarnessAndSourceSha256" (toJson true)
+    IO.FS.writeFile (output / "outcome.json") result.pretty
+    return
+  if args == ["reject"] then
+    let summary ← read (output / "compact/summary.json")
+    let comparisons ← IO.ofExcept (summary.getObjValAs? (Array Json) "comparisons")
+    unless comparisons.size == 3 && comparisons.all (fun row =>
+        row.getObjValD "sameFrozenRequirementsSourceAndIndexes" == toJson true) do
+      throw (IO.userError "capture all fixed-source comparisons before rejecting")
+    unless !(← (output / "outcome.json").pathExists) do throw (IO.userError "preserve the rejection record")
+    let temporary := root / "baseline-context-source.tmp"
+    unless !(← temporary.pathExists) do throw (IO.userError "unexpected temporary source")
+    IO.FS.writeFile temporary text
+    let patch ← IO.Process.output {
+      cmd := "/usr/bin/diff"
+      args := #["-u","--label","a/Eggshell/Handoff.lean","--label","b/Eggshell/Handoff.lean",
+        temporary.toString,source.toString]}
+    unless patch.exitCode == 1 do throw (IO.userError "expected the measured rendering change")
+    IO.FS.writeFile (output / "measured.patch") patch.stdout
+    IO.FS.removeFile temporary
+    for name in ["compile-compact-native-context-available.guard.json",
+        "compile-compact-native-context-proved.guard.json","compact-context-proofs.guard.json",
+        "compact-context-proofs.stdout","compact-context-proofs.stderr",
+        "compact-context-proofs-expanded.guard.json","compact-context-proofs-expanded.stdout",
+        "compact-context-proofs-expanded.stderr"] do
+      IO.FS.writeBinFile (output / "compact" / name) (← IO.FS.readBinFile (root / name))
+    IO.FS.writeFile source text
+    unless (← IO.FS.readFile source) == text do throw (IO.userError "source restoration failed")
+    IO.FS.writeFile (output / "outcome.json") (Json.mkObj [
+      ("state",toJson "rejected-delivery-regression"),("comparisons",toJson comparisons),
+      ("sourceRestored",toJson true),("nativeBaselineRestorationVerified",toJson false),
+      ("candidateNativeBuildPassed",toJson true),("displayPreservationProofsChecked",toJson true),
+      ("candidateTokenImprovementMeasured",toJson false),("answeringModelCalls",toJson (0 : Nat)),
+      ("newSeedStudy",toJson false),("adopted",toJson false)]).pretty
+    return
+  unless args.isEmpty do throw (IO.userError "no arguments | reject | verify")
   let guard ← read (root / "compile-compact-native-context.guard.json")
   unless guard.getObjValD "state" == toJson "finished" &&
       guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
