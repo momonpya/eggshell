@@ -37,20 +37,16 @@ No answering model, all-topic retry, or foreground repair. -/
 def main (args : List String) : IO Unit := do
   checkReadScope
   let (candidate,output,prepared,captureRanges,diagnostic) ← match args with
-    | [candidate,output] => pure (candidate,output,none,false,false)
-    | [candidate,output,prepared] => pure (candidate,output,some (System.FilePath.mk prepared),false,false)
-    | [candidate,output,prepared,"ranges"] => pure (candidate,output,some (System.FilePath.mk prepared),true,false)
-    | [candidate,output,prepared,"worker"] => pure (candidate,output,some (System.FilePath.mk prepared),false,true)
-    | _ => throw (IO.userError "candidate and new output directory; optional prepared checkpoint")
+    | [candidate,output,prepared] => pure (candidate,output,System.FilePath.mk prepared,false,false)
+    | [candidate,output,prepared,"ranges"] => pure (candidate,output,System.FilePath.mk prepared,true,false)
+    | [candidate,output,prepared,"worker"] => pure (candidate,output,System.FilePath.mk prepared,false,true)
+    | _ => throw (IO.userError "candidate, new output directory and explicit prepared checkpoint required")
   let root := System.FilePath.mk output
   check (!(← root.pathExists)) "keep previous actual hook"
   IO.FS.createDirAll root
   let study := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell/study-services-20261026"
   let old := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell/literal-support-20261026/required-replay/topic-1"
-  let database := (prepared.getD root) / "work.egg"
-  if prepared.isNone then
-    let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",(old / "work.egg").toString,database.toString]}
-    check (copied.exitCode == 0) "could not share prepared checkpoint extents"
+  let database := prepared / "work.egg"
   let original ← DB.PageMap.pin database
   check (original.head.identity == "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de" &&
     original.head.revision == 31 && original.head.bytes == 45216846) "wrong fixed source"

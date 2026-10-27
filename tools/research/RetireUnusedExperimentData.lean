@@ -10,8 +10,7 @@ private partial def retain (path : System.FilePath) (files : IO.Ref (Std.HashSet
   let kind ← try pure (← path.symlinkMetadata).type catch _ => return
   files.modify (·.insert path.toString)
   if kind == .symlink then
-    let resolved ← try pure (some (← IO.FS.realPath path)) catch _ => pure none
-    if let some resolved := resolved then retain resolved files
+    retain (← IO.FS.realPath path) files
   else if kind == .dir then
     for entry in ← path.readDir do retain entry.path files
 

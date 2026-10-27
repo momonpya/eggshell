@@ -1,0 +1,94 @@
+--- a/tools/PointBuckets.lean
++++ b/tools/PointBuckets.lean
+@@ -0,0 +1,32 @@
++module
++public import Std
++public import Init.Data.List.Nat.Range
++@[expose] public section
++
++namespace Eggshell.PointBuckets
++
++/-- A coarse key is only a necessary condition. The caller keeps its exact
++predicate, original IDs, duplicate handling and stable order. -/
++def key (width : Nat) (scope : String) (point : Nat) : String :=
++  scope ++ ":" ++ toString (point/width)
++
++def keys (width : Nat) (scope : String) (first limit : Nat) : List String :=
++  if first < limit then
++    (List.range' (first/width) ((limit-1)/width+1-first/width)).map fun bucket =>
++      scope ++ ":" ++ toString bucket
++  else []
++
++/-- Every point in the original half-open interval is nominated. This holds
++for every width, including the degenerate all-in-one width zero. -/
++theorem key_mem_keys (width : Nat) (scope : String) (first limit point : Nat)
++    (inside : first ≤ point ∧ point < limit) :
++    key width scope point ∈ keys width scope first limit := by
++  have ordered : first < limit := by omega
++  have lower : first/width ≤ point/width := Nat.div_le_div_right inside.1
++  have upper : point/width ≤ (limit-1)/width := Nat.div_le_div_right (by omega)
++  simp only [key,keys,if_pos ordered,List.mem_map]
++  refine ⟨point/width,?_,rfl⟩
++  simp only [List.mem_range'_1]
++  exact ⟨lower,by omega⟩
++
++end Eggshell.PointBuckets
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -29,0 +30 @@
++public import tools.PointBuckets
+@@ -5316,0 +5318,7 @@
++
++/-- Width changes only the amount of false-positive index work. The final
++acceptance predicate and its original candidate sequence do not change. -/
++def cueBucketWidth : Nat := 512
++
++def cueBucketKey (entry : CuePiece × Nat) : String :=
++  PointBuckets.key cueBucketWidth (cueFamilyKey entry) entry.1.first
+@@ -5317,0 +5326,17 @@
++def UnitPlan.bucketKeys (unit : UnitPlan) (width : Nat) : List String :=
++  unit.ranges.flatMap fun (first,limit) =>
++    PointBuckets.keys width (toString unit.family) first limit
++
++theorem UnitPlan.covered_first_bucket (unit : UnitPlan) (width first last : Nat)
++    (covered : unit.coversPrepared first last = true) :
++    PointBuckets.key width (toString unit.family) first ∈ unit.bucketKeys width := by
++  have ordered : first < last := by
++    by_cases h : first < last
++    · exact h
++    · simp [UnitPlan.coversPrepared,h] at covered
++  have whole : covers unit.ranges first last = true := by
++    simpa only [UnitPlan.prepared_covers_exact] using covered
++  obtain ⟨span,present,inside⟩ := covers_position unit.ranges first last first whole ⟨Nat.le_refl _,ordered⟩
++  exact List.mem_flatMap.mpr ⟨span,present,
++    PointBuckets.key_mem_keys width (toString unit.family) span.1 span.2 first inside⟩
++
+@@ -5652 +5677 @@
+-    (entries : Array (CuePiece × Nat)) (index : PreparedCueIndex.Prepared cueFamilyKey entries)
++    (entries : Array (CuePiece × Nat)) (index : PreparedCueIndex.Prepared cueBucketKey entries)
+@@ -5654 +5679 @@
+-  index.many (plan.indices.map fun i => toString units[i].family) (bonusPieceAccept keys units plan)
++  index.many (plan.indices.flatMap fun i => units[i].bucketKeys cueBucketWidth) (bonusPieceAccept keys units plan)
+@@ -5657 +5682 @@
+-    (entries : Array (CuePiece × Nat)) (index : PreparedCueIndex.Prepared cueFamilyKey entries)
++    (entries : Array (CuePiece × Nat)) (index : PreparedCueIndex.Prepared cueBucketKey entries)
+@@ -5665,3 +5690,7 @@
+-  have same : units[i].family = entry.1.family :=
+-    beq_iff_eq.mp (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp matched).1).1
+-  exact List.mem_map.mpr ⟨i,present,by simp only [cueFamilyKey,same]⟩
++  have pair := (Bool.and_eq_true_iff.mp matched).1
++  have same : units[i].family = entry.1.family := beq_iff_eq.mp (Bool.and_eq_true_iff.mp pair).1
++  have covered := (Bool.and_eq_true_iff.mp pair).2
++  apply List.mem_flatMap.mpr
++  refine ⟨i,present,?_⟩
++  simpa only [cueBucketKey,cueFamilyKey,same] using
++    units[i].covered_first_bucket cueBucketWidth entry.1.first entry.1.last covered
+@@ -5670 +5699 @@
+-    (entries : Array (CuePiece × Nat)) (index : PreparedCueIndex.Prepared cueFamilyKey entries)
++    (entries : Array (CuePiece × Nat)) (index : PreparedCueIndex.Prepared cueBucketKey entries)
+@@ -5681 +5710 @@
+-    (pieces : List CuePiece) (index : PreparedCueIndex.Prepared cueFamilyKey pieces.zipIdx.toArray)
++    (pieces : List CuePiece) (index : PreparedCueIndex.Prepared cueBucketKey pieces.zipIdx.toArray)
+@@ -5789 +5818 @@
+-    let pieceIndex := PreparedCueIndex.prepare cueFamilyKey indexedPieces
++    let pieceIndex := PreparedCueIndex.prepare cueBucketKey indexedPieces
