@@ -81,6 +81,8 @@ postingsを先に絞る実装は、候補ID列の一致をLeanで証明し、nat
 
 失敗した重み調整、予約枠、max-min、主張類似度、全体最適化などを同じ成功前提で再試行しない。過去の証拠は各docs/candidatesとGit履歴に残し、現在の手順と混ぜない。終了済みDB/cache/helper/runtimeは抽出後に削除し、archiveとして保管しない。現在の原seedと実際に依存するobject/interfaceは保持する。
 
+2026-10-27の追加清掃で、終了済み実験のDB・cache・account/plugin複製・失敗したhelper build・旧ベンチ生成物109,514ファイル、計663,265,328 logical bytesを削除した。圧縮/archiveは作っていない。実験領域とベンチ領域に残る`.egg`は原seedと現在の準備済みDBの2つ。現在のnative実行体・import/interface・source・数値runtimeの参照を先にたどり、保持した26,592ファイルの存在とサイズを削除後に照合した。削除量は実験改善や物理空き容量の増加量と同一視しない。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約
