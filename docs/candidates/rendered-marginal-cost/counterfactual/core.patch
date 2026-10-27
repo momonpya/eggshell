@@ -1,0 +1,347 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -19,0 +20 @@
++public import tools.research.MeasuredCoverage
+@@ -5714,0 +5716,179 @@
++
++/- The following meter is an isolated counterfactual. Whole original offers
++and recipes are unchanged. Its basis accounts for selected origin references
++and actual raw interval subtraction, without rendering losing proposals. -/
++structure PacketMeasure where
++  marks : TransportSlice → Nat
++  baseMarks : Nat
++  overhead : Nat → Nat × Nat
++
++namespace WireMeasure
++abbrev Cost := Nat × Nat
++def add (a b : Cost) : Cost := (a.1+b.1,a.2+b.2)
++def textCost (text : String) : Cost := (text.length,text.utf8ByteSize)
++
++structure Raw where
++  context : Option ContextDelivery
++  text : String
++  cost : Cost
++
++structure Offer where
++  nodes : Array Nat := #[]
++  raw : Array Nat := #[]
++  mask : Nat := 0
++
++structure Layout where
++  costs : Array Cost
++  offers : Array Offer
++  postings : Array (Array Nat)
++  units : Array UnitPlan
++  parts : Array (List Nat)
++  families : Nat
++
++structure State where
++  nodes : Std.HashSet Nat := {}
++  raw : Array (Option Raw)
++  body : Cost
++  slices : Nat
++  mask : Nat
++  headerMask : Option Nat := none
++  headers : Array Cost := #[]
++  headerCache : Std.HashMap Nat Cost := {}
++
++def total (state : State) (overhead : Cost) : Cost :=
++  add overhead (add state.body (state.slices-1,state.slices-1))
++
++def prepare (shape : PacketMeasure) (layout : Layout) (state : State) : State := Id.run do
++  if state.headerMask == some state.mask then return state
++  let mut cache := state.headerCache
++  let mut headers := #[]
++  for offer in layout.offers do
++    let mask := state.mask ||| offer.mask
++    let measured := match cache[mask]? with
++      | some value => value
++      | none => shape.overhead mask
++    cache := cache.insert mask measured
++    headers := headers.push measured
++  if !cache.contains state.mask then cache := cache.insert state.mask (shape.overhead state.mask)
++  return {state with headerMask := some state.mask,headers,headerCache := cache}
++
++def rawNext (prior : Option Raw) (slice : TransportSlice) : Option (Raw × Cost × Nat) := do
++  match prior with
++  | none =>
++    if let some context := slice.context then
++      let count := context.fragments.length
++      let cost := add (textCost (context.leading ++ context.sourceNotice ++ context.trailing))
++        (add (context.fragments.foldl (fun sum fragment => add sum (textCost (fragment.render context.compactCaptions))) (0,0))
++          (count-1,count-1))
++      if cost != textCost slice.text then none else
++        some (⟨some context,"",cost⟩,cost,1)
++    else some (⟨none,slice.text,textCost slice.text⟩,textCost slice.text,1)
++  | some old =>
++    match old.context,slice.context with
++    | none,none => if old.text == slice.text then some (old,(0,0),0) else none
++    | some context,some offered =>
++      if !(decide (offered.sameEnvelope context)) || !(context.fragments.all (fun fragment =>
++        offered.fragments.all (fun next => decide (next.agrees fragment)))) then none else do
++        let covered := context.fragments.filterMap fun fragment =>
++          if ordered : 0 < fragment.original.length then
++            some (⟨fragment.first,fragment.first+fragment.original.length,by omega⟩ : DeliveryInterval)
++          else none
++        let additional := offered.fragments.flatMap (·.remaining covered)
++        let count := context.fragments.length
++        let separators := (count+additional.length-1)-(count-1)
++        let extra := add (additional.foldl (fun sum fragment =>
++          add sum (textCost (fragment.render context.compactCaptions))) (0,0)) (separators,separators)
++        let context := {context with
++          planKey := offered.planKey,cues := context.cues ++ offered.cues
++          fragments := (context.fragments ++ additional).mergeSort (fun a b => a.first ≤ b.first)}
++        some (⟨some context,"",add old.cost extra⟩,extra,0)
++    | _,_ => none
++
++def quote (layout : Layout) (state : State) (index : Nat) :
++    Option (MeasuredCoverage.Delta × Array (Nat × Raw)) := do
++  let offer ← layout.offers[index]?
++  let mut body := (0,0)
++  for node in offer.nodes do
++    if !state.nodes.contains node then body := add body layout.costs[node]!
++  let mut raw := state.raw
++  let mut changed := #[]
++  let mut slices := if !state.nodes.contains 0 && offer.nodes.contains 0 then 1 else 0
++  for id in offer.raw do
++    let unit ← layout.units[id]?
++    let (next,extra,additional) ← rawNext raw[unit.family]! unit.slice
++    raw := raw.set! unit.family (some next)
++    changed := changed.push (unit.family,next)
++    body := add body extra
++    slices := slices+additional
++  return (⟨body,slices⟩,changed)
++
++def advance (layout : Layout) (state : State) (index : Nat) : Option State := do
++  let (delta,changed) ← quote layout state index
++  let offer ← layout.offers[index]?
++  let nodes := offer.nodes.foldl (fun found node => found.insert node) state.nodes
++  let raw := changed.foldl (fun found (family,value) => found.set! family (some value)) state.raw
++  return {state with
++    nodes,raw
++    body := add state.body delta.body
++    slices := state.slices+delta.slices
++    mask := state.mask ||| offer.mask}
++
++def layout (shape : PacketMeasure) (families : Nat) (units : Array UnitPlan)
++    (parts : Array (List Nat)) : Option Layout := do
++  let unitMasks := units.map fun unit => shape.marks unit.slice
++  let mut costs := #[textCost (Synapses.CanonicalSource.Packet.wrapper ++ Synapses.CanonicalSource.Packet.footer)]
++  let mut files : Std.HashMap Synapses.File Nat := {}
++  let mut rows : Std.HashMap Synapses.CanonicalSource.Key Nat := {}
++  let mut origins : Std.HashMap (Synapses.File × String) Nat := {}
++  let mut unitNodes := #[]
++  for unit in units do
++    let mut nodes := #[]
++    if let some shared := unit.slice.shared then
++      nodes := nodes.push 0
++      for row in shared.rows do
++        let file := row.key.file
++        let frameId := files[file]?.getD costs.size
++        if frameId == costs.size then
++          let frame := Synapses.CanonicalSource.Packet.fileFrame file #[]
++          let frameCost := textCost (frame.leading ++ frame.trailing)
++          unless 0 < frameCost.1 && 0 < frameCost.2 do none
++          costs := costs.push (frameCost.1-1,frameCost.2-1)
++          files := files.insert file frameId
++        nodes := nodes.push frameId
++        let rowId := rows[row.key]?.getD costs.size
++        if rowId == costs.size then
++          costs := costs.push (textCost (Synapses.CanonicalSource.Packet.rowText row))
++          rows := rows.insert row.key rowId
++        nodes := nodes.push rowId
++        if row.origins.isEmpty then none else do
++          for origin in row.origins do
++            let reference := (toJson (origin.binding.database,origin.binding.owner,origin.binding.work,origin.occurrence)).compress
++            let key := (file,reference)
++            let id := origins[key]?.getD costs.size
++            if id == costs.size then
++              let cost := textCost ((toJson reference).compress)
++              costs := costs.push (cost.1+1,cost.2+1)
++              origins := origins.insert key id
++            nodes := nodes.push id
++    unitNodes := unitNodes.push (hashDistinct nodes.toList).toArray
++  let mut offers := #[]
++  let mut features := #[]
++  for recipe in parts do
++    let mut nodes := []
++    let mut raw := #[]
++    let mut mask := 0
++    let mut owners := []
++    for id in recipe.eraseDups do
++      let unit ← units[id]?
++      mask := mask ||| unitMasks[id]!
++      nodes := nodes ++ unitNodes[id]!.toList
++      if unit.slice.shared.isNone then
++        raw := raw.push id
++        owners := (costs.size+unit.family) :: owners
++    let distinctNodes := (hashDistinct nodes).toArray
++    offers := offers.push ⟨distinctNodes,raw,mask⟩
++    features := features.push (hashDistinct (distinctNodes.toList ++ owners)).toArray
++  let mut posting := Array.replicate (costs.size+families) #[]
++  for id in [:features.size] do
++    for feature in features[id]! do posting := posting.modify feature (·.push id)
++  return ⟨costs,offers,posting,units,parts,families⟩
+@@ -5715,0 +5896,45 @@
++def affected (layout : Layout) (state : State) (index : Nat) : Array Nat := Id.run do
++  let some offer := layout.offers[index]? | return #[]
++  let mut features := offer.nodes.toList.filter (fun node => !state.nodes.contains node)
++  for id in offer.raw do
++    if let some unit := layout.units[id]? then features := (layout.costs.size+unit.family) :: features
++  let mut seen : Std.HashSet Nat := {}
++  let mut result := #[]
++  for feature in hashDistinct features do
++    for id in layout.postings[feature]! do
++      if !seen.contains id then
++        seen := seen.insert id
++        result := result.push id
++  return result
++
++def choose (shape : PacketMeasure) (cost : List TransportSlice → Cost) (families : Nat)
++    (units : Array UnitPlan) (parts : Array (List Nat)) (compiled : SharedCoverage.Problem)
++    (mandatory : List TransportSlice) : Option (List Nat × Json) := do
++  let layout ← layout shape families units parts
++  let initial : State := {
++    raw := Array.replicate families none
++    body := mandatory.foldl (fun sum slice => add sum (textCost slice.text)) (0,0)
++    slices := mandatory.length,mask := shape.baseMarks}
++  let meter : MeasuredCoverage.Meter State := {
++    initial,prepare := prepare shape layout
++    cost := fun state => total state (state.headerCache[state.mask]!.1,state.headerCache[state.mask]!.2)
++    quote := fun state index => (quote layout state index).map Prod.fst
++    afterCost := fun state index delta =>
++      add state.headers[index]! (add (add state.body delta.body)
++        (state.slices+delta.slices-1,state.slices+delta.slices-1))
++    advance := advance layout
++    affected := fun before _next index => affected layout before index
++    verify := fun state selected =>
++      let expanded := hashDistinct (selected.flatMap fun id => parts[id]!)
++      match materialize units expanded with
++      | none => false
++      | some slices => total state state.headerCache[state.mask]! == cost (mandatory ++ slices)}
++  let problem : MeasuredCoverage.Problem := {
++    weights := compiled.weights,cues := compiled.offers.map fun offer => (hashDistinct (offer.covers.map (·.val))).toArray
++    limit := compiled.limit}
++  let result ← MeasuredCoverage.choose? problem meter
++  let expanded := hashDistinct (result.selected.flatMap fun id => parts[id]!)
++  pure (expanded,Json.mkObj [("measured",toJson result),("wireNodes",toJson layout.costs.size),
++    ("compiledOffers",toJson compiled.offers.size),("causeRulesChanged",toJson false)])
++end WireMeasure
++
+@@ -5739,0 +5965 @@
++  measured : Json := Json.null
+@@ -5746,0 +5973,48 @@
++
++def creditSummary (scale : Nat) (families : List Family) (pieces : List CuePiece)
++    (directory : Array Nat × Array (Nat × Nat)) (compiled : SharedCoverage.Problem)
++    (selected : List Nat) : Json := Id.run do
++  let mut credited : Std.HashSet Nat := {}
++  for id in selected do
++    if let some offer := compiled.offers[id]? then
++      for cue in offer.covers do credited := credited.insert cue.val
++  let mut grouped : Std.HashMap Nat (Array (CuePiece × Nat)) := {}
++  for (piece,id) in pieces.zipIdx do
++    grouped := grouped.insert piece.family ((grouped[piece.family]?).getD #[] |>.push (piece,id))
++  let rows := families.zipIdx.map fun (family,index) => Id.run do
++    let direct := rankCoefficients scale index (rankedCues {family with
++      references := [],referenceRanks := [],synapticRanges := [],outputRanges := []})
++    let reference := rankCoefficients scale index (rankedCues {family with
++      windows := [],synapticRanges := [],outputRanges := []})
++    let graph := rankCoefficients scale index (rankedCues {family with
++      windows := [],references := [],referenceRanks := []})
++    let mut bases : Std.HashSet Nat := {}
++    let mut bonuses : Std.HashSet Nat := {}
++    let mut directBest := 0
++    let mut referenceBest := 0
++    let mut graphBest := 0
++    for (piece,id) in grouped[index]?.getD #[] do
++      let some cue := directory.1[id]? | continue
++      let base := cue*2
++      let bonus := base+1
++      if 0 < compiled.weights[base]! then bases := bases.insert base
++      if 0 < compiled.weights[bonus]! then bonuses := bonuses.insert bonus
++      let paid := (if credited.contains base then compiled.weights[base]! else 0) +
++        (if credited.contains bonus then compiled.weights[bonus]! else 0)
++      if paid < piece.weight || piece.weight == 0 then continue
++      if evaluateCoefficients piece.first piece.last direct == piece.weight then directBest := directBest+1
++      if evaluateCoefficients piece.first piece.last reference == piece.weight then referenceBest := referenceBest+1
++      if evaluateCoefficients piece.first piece.last graph == piece.weight then graphBest := graphBest+1
++    let total := fun (nodes : Std.HashSet Nat) => nodes.toArray.foldl (fun sum id => sum+compiled.weights[id]!) 0
++    let selectedTotal := fun (nodes : Std.HashSet Nat) => nodes.toArray.foldl
++      (fun sum id => sum+(if credited.contains id then compiled.weights[id]! else 0)) 0
++    return Json.mkObj [
++      ("owner",toJson (relationKey family.owner.relation)),("coordinates",toJson (if family.cached.isEmpty then "original" else "file")),
++      ("focusWindows",toJson family.windows.length),("referenceWindows",toJson family.references.length),
++      ("originalGraphRanges",toJson family.outputRanges.length),("fileGraphRanges",toJson family.synapticRanges.length),
++      ("candidateBaseValue",toJson (total bases)),("candidateBundleValue",toJson (total bonuses)),
++      ("selectedBaseValue",toJson (selectedTotal bases)),("selectedBundleValue",toJson (selectedTotal bonuses)),
++      ("fullyCreditedDirectBestPieces",toJson directBest),("fullyCreditedReferenceBestPieces",toJson referenceBest),
++      ("fullyCreditedGraphBestPieces",toJson graphBest)]
++  return Json.mkObj [("families",toJson rows),("familyCuesMayShareCanonicalPayload",toJson true),
++    ("strongestProducersMayTie",toJson true),("creditRulesChanged",toJson false)]
+@@ -5750 +6024,2 @@
+-    (bundles : Array Synapses.Bundles.Projected := #[]) (captureBindings : Bool := false) : Option (Plan ceiling cost mandatory) := do
++    (bundles : Array Synapses.Bundles.Projected := #[]) (captureBindings : Bool := false)
++    (measure : Option PacketMeasure := none) : Option (Plan ceiling cost mandatory) := do
+@@ -5794,2 +6069,12 @@
+-    let chosen ← SharedCoverage.choose? compiled
+-    let expanded := (ClosedCoverage.expand p recipes chosen.selected).map (·.val) |>.eraseDups
++    let (expanded,measured,selectedBundles,recipeSelection) ← match measure with
++      | none => do
++        let chosen ← SharedCoverage.choose? compiled
++        pure ((ClosedCoverage.expand p recipes chosen.selected).map (·.val) |>.eraseDups,Json.null,
++          chosen.selected.countP (fun index => p.offers.size ≤ index.val),chosen.selected.map (·.val))
++      | some shape => do
++        let parts := recipes.map fun recipe => recipe.parts.map (·.val)
++        let (expanded,report) ← WireMeasure.choose shape cost families.length unitArray parts compiled mandatory
++        let chosen ← (report.getObjValD "measured").getObjValAs? (List Nat) "selected" |>.toOption
++        pure (expanded,report,chosen.countP (fun index => p.offers.size ≤ index),chosen)
++    let measured := if measure.isSome then measured.setObjVal! "creditOrigins"
++      (creditSummary scale families pieces cueIndex compiled recipeSelection) else measured
+@@ -5808 +6093 @@
+-          ("selectedBundles",toJson (chosen.selected.countP (fun index => p.offers.size ≤ index.val)))]
++          ("selectedBundles",toJson selectedBundles),("wireMeasure",measured)]
+@@ -5809,0 +6095 @@
++        measured
+@@ -6243,3 +6529,2 @@
+-    let framesFor := fun (fitted : List TransportSlice) =>
+-      let visible := visibleFor fitted
+-      let support := supportFor fitted
++    let framesWith := fun (visible : List Selected)
++        (support : List (SourceSupport entryWorks sourceAll sourceUnions)) =>
+@@ -6263,0 +6549 @@
++    let framesFor := fun fitted => framesWith (visibleFor fitted) (supportFor fitted)
+@@ -6272,0 +6559,30 @@
++    let markedVisibility := visibility.map fun (selected,known,key) =>
++      (selected,known,key,relationKey selected.matched.edge.relation)
++    let markedSources := sourceKeys.map fun (source,whole,prefixKey) =>
++      (source,whole,prefixKey,relationKey source.owner.relation)
++    let mark := fun (slice : TransportSlice) => Id.run do
++      let shared := (slice.shared.map (·.owners)).getD []
++      let mut mask := 0
++      for ((selected,known,key,owner),index) in markedVisibility.zipIdx do
++        if known || slice.visibleKeys.contains key || (selected.applicability == .advisory &&
++            shared.contains owner) then
++          mask := mask ||| (1 <<< index)
++      for ((_source,whole,prefixKey,owner),index) in markedSources.zipIdx do
++        if slice.keys.contains whole || slice.keys.any (·.startsWith prefixKey) ||
++            shared.contains owner then
++          mask := mask ||| (1 <<< (visibility.length+index))
++      return mask
++    let baseMarks := mandatory.foldl (fun mask slice => mask ||| mark slice)
++      (mark {owner := none,keys := [],text := "",members := [],visibleKeys := []})
++    let overhead := fun (mask : Nat) =>
++      let visible := visibility.zipIdx.filterMap fun ((selected,_,_),index) =>
++        if mask &&& (1 <<< index) != 0 then some selected else none
++      let support := sourceKeys.zipIdx.filterMap fun ((source,_,_),index) =>
++        if mask &&& (1 <<< (visibility.length+index)) != 0 then some source else none
++      let frames := framesWith visible support
++      let text := assemble ("".intercalate (frames.map (·.text))) footer []
++      let status := if refreshSources then ownerStatusReserve
++        ((visible.map ownerKey ++ support.map (fun item => relationKey item.owner.relation)).eraseDups)
++        else (0,0)
++      policyPacketCost policy (text.length+status.1,text.utf8ByteSize+status.2)
++    let measurement : SharedRangeAdapter.PacketMeasure := {marks := mark,baseMarks,overhead}
+@@ -6291 +6607 @@
+-      SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles captureRanges
++      SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles captureRanges (some measurement)

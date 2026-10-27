@@ -1,4 +1,5 @@
 import tools.research.StudySeedChecks
+import tools.research.StudyWorkerProbe
 import Eggshell.Install
 import Eggshell.WindowOwners
 open Lean Eggshell Eggshell.Research
@@ -35,10 +36,11 @@ rebuild only the changed synaptic and original-source views, before the hook.
 No answering model, all-topic retry, or foreground repair. -/
 def main (args : List String) : IO Unit := do
   checkReadScope
-  let (candidate,output,prepared,captureRanges) ← match args with
-    | [candidate,output] => pure (candidate,output,none,false)
-    | [candidate,output,prepared] => pure (candidate,output,some (System.FilePath.mk prepared),false)
-    | [candidate,output,prepared,"ranges"] => pure (candidate,output,some (System.FilePath.mk prepared),true)
+  let (candidate,output,prepared,captureRanges,diagnostic) ← match args with
+    | [candidate,output] => pure (candidate,output,none,false,false)
+    | [candidate,output,prepared] => pure (candidate,output,some (System.FilePath.mk prepared),false,false)
+    | [candidate,output,prepared,"ranges"] => pure (candidate,output,some (System.FilePath.mk prepared),true,false)
+    | [candidate,output,prepared,"worker"] => pure (candidate,output,some (System.FilePath.mk prepared),false,true)
     | _ => throw (IO.userError "candidate and new output directory; optional prepared checkpoint")
   let root := System.FilePath.mk output
   check (!(← root.pathExists)) "keep previous actual hook"
@@ -117,23 +119,35 @@ def main (args : List String) : IO Unit := do
       let request := Json.mkObj [("hook_event_name",toJson "UserPromptSubmit"),("session_id",toJson session),
         ("turn_id",toJson "source-turn"),("cwd",toJson workspace),("prompt",toJson prompt),
         ("_eggshell_config",toJson config.toString)]
-      let output ← StudyCommand.run binary.toString #["codex-hook"] environment workspace (request.compress ++ "\n") (root / "hook") 35000
-      let reply ← IO.ofExcept (Json.parse output.stdout)
-      let body := ((reply.getObjValD "hookSpecificOutput").getObjValAs? String "additionalContext").toOption.getD ""
+      let commandRoot := root / (if diagnostic then "worker" else "hook")
+      let output ← if diagnostic then StudyWorkerProbe.run binary database data session workspace prompt environment commandRoot
+        else StudyCommand.run binary.toString #["codex-hook"] environment workspace (request.compress ++ "\n") commandRoot 35000
+      let body ← if diagnostic then do
+          let some last := (output.stdout.splitOn "\n" |>.filter (!·.isEmpty)).getLast? |
+            throw (IO.userError "worker did not return a frame")
+          let frame ← IO.ofExcept (Json.parse last >>= fromJson? (α := Plugin.Worker.SearchFrame))
+          let .reply _ handoff := frame | throw (IO.userError "worker did not complete")
+          pure (handoff.map (·.text) |>.getD "")
+        else do
+          let reply ← IO.ofExcept (Json.parse output.stdout)
+          pure (((reply.getObjValD "hookSpecificOutput").getObjValAs? String "additionalContext").toOption.getD "")
       IO.FS.writeFile (root / "body.txt") body
       let specification := Json.mkObj [("source",toJson database.toString),("workspace",toJson workspace),
         ("prompt",toJson prompt),("files",toJson sourceFiles),("required",definition.getObjValD "referenceRanges")]
       let auditInput := Json.mkObj [("source",specification),("database",toJson database.toString),
-        ("request",toJson (root / "hook/stdin").toString),("stdout",toJson (root / "hook/stdout").toString),
-        ("timing",toJson (root / "hook/record.json").toString),("body",toJson (root / "body.txt").toString)]
+        ("request",toJson (commandRoot / "stdin").toString),("stdout",toJson (commandRoot / "stdout").toString),
+        ("timing",toJson (commandRoot / "record.json").toString),("body",toJson (root / "body.txt").toString)]
       IO.FS.writeFile (root / "audit-input.json") auditInput.pretty
-      let audit ← NativeTrialAudit.inspect (root / "audit-input.json").toString
+      let audit ← if diagnostic then NativeTrialAudit.inspectWorker (root / "audit-input.json").toString
+        else NativeTrialAudit.inspect (root / "audit-input.json").toString
       check (audit.getObjValD "frozenEvidence" == required.getObjValD "frozenEvidence") "frozen denominator changed"
       IO.FS.writeFile (root / "audit.json") audit.pretty
-      IO.FS.writeFile (root / "result.json") (Json.mkObj [("actualHook",toJson true),
+      IO.FS.writeFile (root / "result.json") (Json.mkObj [("actualHook",toJson (!diagnostic)),
+        ("diagnosticOnly",toJson diagnostic),("latencyAcceptance",toJson (!diagnostic)),
+        ("deadlineMs",toJson (if diagnostic then (120000 : Nat) else 30000)),
         ("elapsedMs",toJson output.elapsedMs),("exitCode",toJson output.exitCode),
         ("runtimeSha256",toJson runtimeSha),("bodyBytes",toJson body.utf8ByteSize),
-        ("requiredDelivery",audit.getObjValD "requiredDelivery"),("modelCalls",toJson (0 : Nat)),
+        ("requiredDelivery",audit.getObjValD (if diagnostic then "coverageWithoutDeadline" else "requiredDelivery")),("modelCalls",toJson (0 : Nat)),
         ("newSeedStudy",toJson false),("adopted",toJson false)]).pretty
     finally StudyRuntime.stopManaged managed (root / "shutdown.json")
   finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")

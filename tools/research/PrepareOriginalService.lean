@@ -6,10 +6,13 @@ open Lean
 checkpoint; no answering model, new seed, or full warm is launched here. -/
 def main (args : List String) : IO Unit := do
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
+  let measured := args.head? == some "measured"
   let structural := args.head? == some "structure"
-  let args := if structural then args.tail else args
-  let parent := base / (if structural then "prepared-original-service-20261027" else "joint-range-bindings-20261027")
-  let root := base / (if structural then "shared-original-structure-20261027" else "prepared-original-service-20261027")
+  let args := if structural || measured then args.tail else args
+  let parent := base / (if measured then "shared-original-structure-20261027" else
+    if structural then "prepared-original-service-20261027" else "joint-range-bindings-20261027")
+  let root := base / (if measured then "rendered-marginal-cost-20261027" else
+    if structural then "shared-original-structure-20261027" else "prepared-original-service-20261027")
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
   if args == ["fork"] then
@@ -26,16 +29,17 @@ def main (args : List String) : IO Unit := do
       IO.FS.writeFile path text
     return
   let [mode,label] := args | throw (IO.userError "fork | MODE LABEL")
-  unless ["product","hook","audit","run-audit","run-hook"].contains mode && !label.isEmpty &&
+  unless ["product","hook","audit","run-audit","run-hook","run-worker"].contains mode && !label.isEmpty &&
       label.toList.all (fun c => c.isAlphanum || c == '-') do
     throw (IO.userError "known mode/simple label required")
   let command ← if mode == "run-audit" then
     pure #["/usr/bin/env","LEAN_NUM_THREADS=1",(root / "audit-build/StudyMain").toString,(root / label).toString]
-  else if mode == "run-hook" then
-    pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+  else if mode == "run-hook" || mode == "run-worker" then
+    pure (#["/usr/bin/env","LEAN_NUM_THREADS=1",
       "EGGSHELL_DATA_ROOT=" ++ (root / label / "data").toString,
       (root / "hook-build/StudyMain").toString,root.toString,(root / label).toString,
-      (base / "packet-delivery-ledger-20261027/one-prepared-hook").toString]
+      (base / "packet-delivery-ledger-20261027/one-prepared-hook").toString] ++
+        (if mode == "run-worker" then #["worker"] else #[]))
   else do
     let own := mode != "product"
     let baseline := if own then root / "product-build" else parent / "product-build"
@@ -54,7 +58,8 @@ def main (args : List String) : IO Unit := do
     let plan := (built.getObjValD "settings")
       |>.setObjVal! "core" (toJson (root / "checkout").toString)
       |>.setObjVal! "output" (toJson (root / (mode ++ "-build")).toString)
-      |>.setObjVal! "mainModule" (toJson (if mode == "audit" then "tools.research.OriginalStructureAudit"
+      |>.setObjVal! "mainModule" (toJson (if mode == "audit" then
+        if measured then "tools.research.MeasuredCoverageChecks" else "tools.research.OriginalStructureAudit"
         else if own then "tools.research.OnePreparedHook" else "Main"))
       |>.setObjVal! "baselineCore" (toJson (origin / "checkout").toString)
       |>.setObjVal! "baselineResponse" (toJson (baseline / "runtime.rsp").toString)
