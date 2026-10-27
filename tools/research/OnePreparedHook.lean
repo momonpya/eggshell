@@ -36,11 +36,15 @@ rebuild only the changed synaptic and original-source views, before the hook.
 No answering model, all-topic retry, or foreground repair. -/
 def main (args : List String) : IO Unit := do
   checkReadScope
-  let (candidate,output,prepared,captureRanges,diagnostic,captureInput) ← match args with
-    | [candidate,output,prepared] => pure (candidate,output,System.FilePath.mk prepared,false,false,false)
-    | [candidate,output,prepared,"ranges"] => pure (candidate,output,System.FilePath.mk prepared,true,false,false)
-    | [candidate,output,prepared,"worker"] => pure (candidate,output,System.FilePath.mk prepared,false,true,false)
-    | [candidate,output,prepared,"selector-input"] => pure (candidate,output,System.FilePath.mk prepared,false,true,true)
+  let (candidate,output,prepared,captureRanges,diagnostic,captureInput,topic) ← match args with
+    | [candidate,output,prepared] => pure (candidate,output,System.FilePath.mk prepared,false,false,false,2)
+    | [candidate,output,prepared,"ranges"] => pure (candidate,output,System.FilePath.mk prepared,true,false,false,2)
+    | [candidate,output,prepared,"worker"] => pure (candidate,output,System.FilePath.mk prepared,false,true,false,2)
+    | [candidate,output,prepared,"selector-input"] => pure (candidate,output,System.FilePath.mk prepared,false,true,true,2)
+    | [candidate,output,prepared,"topic",number] => do
+        let some topic := number.toNat? | throw (IO.userError "numeric topic required")
+        check (1 ≤ topic && topic ≤ 3) "topic is outside the fixed study"
+        pure (candidate,output,System.FilePath.mk prepared,false,false,false,topic)
     | _ => throw (IO.userError "candidate, new output directory and explicit prepared checkpoint required")
   let root := System.FilePath.mk output
   check (!(← root.pathExists)) "keep previous actual hook"
@@ -57,7 +61,7 @@ def main (args : List String) : IO Unit := do
   check (shared.exitCode == 0) "could not reuse private read preparation"
   let frozen ← read (study / "seed-1-complete-audit.json")
   let availability ← IO.ofExcept (frozen.getObjValAs? (Array Json) "availability")
-  let some required := availability.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some 2) |
+  let some required := availability.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
     throw (IO.userError "missing frozen topic")
   IO.FS.writeFile (root / "frozen-before-delivery.json") required.pretty
   let started ← IO.monoMsNow
@@ -103,7 +107,7 @@ def main (args : List String) : IO Unit := do
     ("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),
     ("MKL_NUM_THREADS",some "1"),("HF_HUB_OFFLINE",some "1"),("TOKENIZERS_PARALLELISM",some "false")]
   let definitions ← IO.ofExcept (Json.parse (← IO.FS.readFile (study / "task-definitions.json")) >>= Json.getArr?)
-  let some definition := definitions.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some 2) |
+  let some definition := definitions.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
     throw (IO.userError "missing fixed question")
   let prompt ← IO.FS.readFile (.mk (← IO.ofExcept ((definition.getObjValD "prompt").getObjValAs? String "path")))
   check (Sha256.hex prompt.toUTF8 == (← IO.ofExcept ((definition.getObjValD "prompt").getObjValAs? String "sha256")))
@@ -140,6 +144,7 @@ def main (args : List String) : IO Unit := do
       check (audit.getObjValD "frozenEvidence" == required.getObjValD "frozenEvidence") "frozen denominator changed"
       IO.FS.writeFile (root / "audit.json") audit.pretty
       IO.FS.writeFile (root / "result.json") (Json.mkObj [("actualHook",toJson (!diagnostic)),
+        ("topic",toJson topic),
         ("diagnosticOnly",toJson diagnostic),("latencyAcceptance",toJson (!diagnostic)),
         ("deadlineMs",toJson (if diagnostic then (120000 : Nat) else 30000)),
         ("elapsedMs",toJson output.elapsedMs),("exitCode",toJson output.exitCode),

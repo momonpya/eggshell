@@ -3,12 +3,17 @@ import Lean.Data.Json.FromToJson
 open Lean
 
 def main (args : List String) : IO Unit := do
-  let [mode,label] := args | throw (IO.userError "MODE LABEL")
+  let (mode,label,topic) ← match args with
+    | [mode,label] => pure (mode,label,none)
+    | [mode,label,"topic",number] => pure (mode,label,some number)
+    | _ => throw (IO.userError "MODE LABEL [topic NUMBER]")
+  unless topic.isNone || (mode == "run-hook" && topic.any (["1","2","3"].contains ·)) do
+    throw (IO.userError "explicit study topic applies only to a native hook")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let root := base / "verified-winner-20261027"
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
-  unless ["product","audit","controller","signal","run-audit","run-hook","profile"].contains mode && !label.isEmpty &&
+  unless ["product","audit","controller","signal","batch","run-audit","run-hook","profile"].contains mode && !label.isEmpty &&
       label.toList.all (fun c => c.isAlphanum || c == '-') do throw (IO.userError "known mode/simple label required")
   let command ← if mode == "run-audit" then
     pure #[(root / "audit-build/StudyMain").toString,(root / "selector-input.json").toString,(root / label).toString]
@@ -17,9 +22,10 @@ def main (args : List String) : IO Unit := do
       project ++ "/tools/research/ProfileCueHook.lean",root.toString,(root / label).toString,
       (base / "packet-delivery-ledger-20261027/one-prepared-hook").toString,"0"]
   else if mode == "run-hook" then
-    pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_DATA_ROOT=" ++ (root / label / "data").toString,
+    pure (#["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_DATA_ROOT=" ++ (root / label / "data").toString,
       (root / "controller-build/StudyMain").toString,root.toString,(root / label).toString,
-      (base / "packet-delivery-ledger-20261027/one-prepared-hook").toString]
+      (base / "packet-delivery-ledger-20261027/one-prepared-hook").toString] ++
+        (topic.toArray.flatMap fun number => #["topic",number]))
   else do
     let origin := root
     let baseline := origin / "product-build"
@@ -38,6 +44,7 @@ def main (args : List String) : IO Unit := do
       |>.setObjVal! "output" (toJson (root / (mode ++ "-build")).toString)
       |>.setObjVal! "mainModule" (toJson (if mode == "product" then "Main" else
         if mode == "audit" then "tools.research.VerifiedWinnerAudit" else
+        if mode == "batch" then "tools.research.BatchedBindingsAudit" else
         if mode == "signal" then "tools.research.EvidenceSignalJoin" else "tools.research.OnePreparedHook"))
       |>.setObjVal! "baselineCore" (toJson (origin / "checkout").toString)
       |>.setObjVal! "baselineResponse" (toJson (baseline / "runtime.rsp").toString)

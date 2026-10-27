@@ -1,0 +1,65 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -4261,7 +4261,32 @@
+     evidenceAdmissionPriority earlier false < evidenceAdmissionPriority later true := by
+   change 2 * earlier + 1 < 2 * later + 0
+   omega
++
++/-- Advisory native excerpts refer to their stored input without repeating its
++entire command. The DB retains the input; original fragments and conditions
++keep their existing typed transport. Completed control keeps its full input. -/
++def contextualWorkDisplay (owner : OutcomeEdge) (members : List Selected)
++    (work : String) : String :=
++  if Matcher.nativeOutcome owner && members.all (·.applicability == .advisory) then
++    "[Saved native input " ++ relationKey owner.work ++ "; full input remains in memory.]"
++  else work
++
++theorem completed_work_display_preserved (owner : OutcomeEdge) (members : List Selected)
++    (member : Selected) (present : member ∈ members)
++    (completed : member.applicability = .completed) (work : String) :
++    contextualWorkDisplay owner members work = work := by
++  unfold contextualWorkDisplay
++  split
++  next advisory =>
++    have found := List.all_eq_true.mp (Bool.and_eq_true_iff.mp advisory).2 member present
++    simp [completed] at found
++  next => rfl
+ 
++theorem non_native_work_display_preserved (owner : OutcomeEdge)
++    (notNative : Matcher.nativeOutcome owner = false) (members : List Selected)
++    (work : String) : contextualWorkDisplay owner members work = work := by
++  simp [contextualWorkDisplay,notNative]
++
+ /-- Render bounded original data for one existing owner, whether it was a
+ search entry or reached through the original All/Union graph. Control fields
+ are inherited from the caller; source contexts cannot manufacture Matches. -/
+@@ -4339,7 +4364,8 @@
+                     let context := {receipt with
+                       envelopeKey := "f:outcome:" ++ receipt.owner ++ ":" ++ receipt.outcome
+                       cues := selectedCues
+-                      leading := "WORK GRAPH " ++ relationKey owner.relation ++ "\n  WORK\n" ++ work ++
++                      leading := "WORK GRAPH " ++ relationKey owner.relation ++ "\n  WORK\n" ++
++                      contextualWorkDisplay owner slice.members work ++
+                       "\n" ++ connections ++ "\n  GROUNDED OUTCOME\n  EVIDENCE " ++ displayKey owner.outcome ++
+                       "\n  [Original result context; omitted ranges remain in memory. This is not the whole Outcome.]\n"
+                       trailing := "\n  TRACE\n" ++ "\n".intercalate (owner.observations.map renderObservation) ++
+@@ -4492,7 +4518,8 @@
+                     let context := {receipt with
+                       envelopeKey := "f:outcome:" ++ receipt.owner ++ ":" ++ receipt.outcome
+                       cues := selectedCues
+-                      leading := "WORK GRAPH " ++ relationKey owner.relation ++ "\n  WORK\n" ++ work ++
++                      leading := "WORK GRAPH " ++ relationKey owner.relation ++ "\n  WORK\n" ++
++                      contextualWorkDisplay owner slice.members work ++
+                       "\n" ++ connections ++ "\n  GROUNDED OUTCOME\n  EVIDENCE " ++ displayKey owner.outcome ++
+                       "\n  [Original result context; omitted ranges remain in memory. This is not the whole Outcome.]\n"
+                       trailing := "\n  TRACE\n" ++ "\n".intercalate (owner.observations.map renderObservation) ++
+@@ -4931,7 +4958,8 @@
+     some {
+       owner,outcome,sourceChars := source.length,envelopeKey := "f:outcome:" ++ owner ++ ":" ++ outcome
+       cues := [],fragments := []
+-      leading := "WORK GRAPH " ++ owner ++ "\n  WORK\n" ++ work ++ "\n" ++ connections ++
++      leading := "WORK GRAPH " ++ owner ++ "\n  WORK\n" ++
++        contextualWorkDisplay family.owner family.template.members work ++ "\n" ++ connections ++
+         "\n  GROUNDED OUTCOME\n  EVIDENCE " ++ displayKey family.owner.outcome ++
+         "\n  [Original tool excerpts; unselected data remains in memory.]\n"
+       trailing := "\n  TRACE\n" ++ "\n".intercalate (family.owner.observations.map renderObservation) ++

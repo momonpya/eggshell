@@ -1,0 +1,591 @@
+--- a/Eggshell/CanonicalSourcePrepared.lean
++++ b/Eggshell/CanonicalSourcePrepared.lean
+@@ -201,12 +201,10 @@
+   source : PageMap.Head
+   metadata : Cache.Manifest
+   reuse : Reuse
+-  index : Option PageMap.Head := none
+-  usageGranted : Bool := false
+   deriving ToJson, FromJson
+ 
+ def Access.identity (access : Access) : Json :=
+-  toJson (access.database,access.scope,access.source,access.metadata,access.index,access.usageGranted)
++  toJson (access.database,access.scope,access.source,access.metadata)
+ 
+ theorem Access.capability_not_identity (access : Access) (secret : String) :
+     ({access with capability := secret}).identity = access.identity := rfl
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -3,7 +3,6 @@
+ public import Eggshell.PublicationWire
+ public import Eggshell.Numerical
+ public import Eggshell.CanonicalSourcePrepared
+-public import Eggshell.SynapticQuery
+ 
+ @[expose] public section
+ 
+@@ -26,18 +25,18 @@
+ /-- An explicitly supplied data-side owner is useful to native clients and
+ does not require a writer registration for a read-only source. -/
+ def prepareSourceUsing (endpoint : Daemon.Endpoint) (source : PageMap.Snapshot)
+-    (storage : Sidecar.Storage) (deadline : Nat) (allowUsage : Bool := false) : IO (Option SourceReference) := do
++    (storage : Sidecar.Storage) (deadline : Nat) : IO (Option SourceReference) := do
+   let budget ← liveBudget deadline
+   let response ← Daemon.exchange endpoint "prepare-source" (Json.mkObj [
+     ("directory",toJson source.directory.toString),("source",toJson source.head),("storage",toJson storage),
+-    ("budgetMs",toJson budget),("allowUsage",toJson allowUsage)]) (budget := budget)
++    ("budgetMs",toJson budget)]) (budget := budget)
+   let value ← IO.ofExcept (Json.parse response)
+   if value == Json.null then return none
+   let access ← IO.ofExcept (fromJson? (α := Synapses.CanonicalSource.Shared.Access) value)
+   unless access.database == source.head.identity && access.source == source.head &&
+       access.metadata.source.identity == source.head.identity && Synapses.digest access.scope &&
+       Synapses.digest access.capability &&
+-      access.metadata.implementation == Synapses.CanonicalSource.Cache.implementation && access.usageGranted == allowUsage do
++      access.metadata.implementation == Synapses.CanonicalSource.Cache.implementation do
+     throw (IO.userError "prepared source reply changed its scope or source")
+   return some ⟨{endpoint with secret := access.capability},access⟩
+ 
+@@ -54,7 +53,6 @@
+   let access ← IO.ofExcept (fromJson? (α := Synapses.CanonicalSource.Shared.Access) value)
+   unless access.database == reference.access.database && access.scope == reference.access.scope &&
+       access.capability == reference.access.capability && access.source == source &&
+-      access.usageGranted == reference.access.usageGranted &&
+       access.metadata.implementation == Synapses.CanonicalSource.Cache.implementation do
+     throw (IO.userError "prepared source refresh changed its read authority")
+   return some ⟨reference.endpoint,access⟩
+@@ -81,23 +79,6 @@
+ def endpoint? : IO (Option Daemon.Endpoint) := do
+   readJson? ((← directory) / "endpoint.json") []
+ 
+-/-- The source capability names the service's already pinned original index.
+-Private usage needs an explicit grant made through local administration. -/
+-def synapses (reference : SourceReference) (request : Synapses.SharedQuery.Request) (deadline : Nat) :
+-    IO Synapses.SharedQuery.Reply := do
+-  let access := reference.access
+-  let some index := access.index | throw (IO.userError "shared synaptic view is not prepared")
+-  unless request.usage.isNone || access.usageGranted do throw (IO.userError "private usage is outside this read grant")
+-  let budget ← liveBudget deadline
+-  let response ← Daemon.exchange reference.endpoint "source-synapses" (Json.mkObj [
+-    ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
+-    ("metadata",toJson access.metadata),("index",toJson index),("request",toJson request),
+-    ("budgetMs",toJson budget)]) (budget := budget)
+-  let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.SharedQuery.Reply))
+-  unless result.source == access.source && result.index == index && result.usage == request.usage do
+-    throw (IO.userError "shared synaptic reply changed its pinned source or private publication")
+-  return result
+-
+ def sourceRecords (reference : SourceReference) (owners : Array String) (deadline : Nat) :
+     IO Synapses.ObservedRecordView.Projection := do
+   let access := reference.access
+@@ -152,8 +133,8 @@
+     throw (IO.userError "unreachable publisher startup")
+ 
+ def prepareSource (source : PageMap.Snapshot) (storage : Sidecar.Storage)
+-    (deadline : Nat) (allowUsage : Bool := false) : IO (Option SourceReference) := do
+-  prepareSourceUsing (← resolve) source storage deadline allowUsage
++    (deadline : Nat) : IO (Option SourceReference) := do
++  prepareSourceUsing (← resolve) source storage deadline
+ 
+ def register (endpoint : Daemon.Endpoint) (path : System.FilePath) (identity : String) : IO Project := do
+   let response ← Daemon.exchange endpoint "register" (Json.mkObj [
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -2,7 +2,6 @@
+ 
+ public import Eggshell.PublicationWire
+ public import Eggshell.CanonicalSourcePrepared
+-public import Eggshell.SynapticQuery
+ public import Std.Sync.Mutex
+ public import Init.System.Promise
+ 
+@@ -40,7 +39,6 @@
+   storage : Sidecar.Storage
+   scope : String
+   capability : String
+-  usageGranted : Bool
+ 
+ structure DeferredReply where
+   promise : IO.Promise (Except IO.Error Unit)
+@@ -106,13 +104,13 @@
+ /-- Read registration grants no publisher lease or source write authority.
+ Paths are accepted only through the existing local administration capability. -/
+ def readSource (server : Server) (path : System.FilePath) (database : String)
+-    (storage : Sidecar.Storage) (allowUsage : Bool) : IO ReadSource := server.sources.atomically do
++    (storage : Sidecar.Storage) : IO ReadSource := server.sources.atomically do
+   let sources ← get
+   if let some source := sources.find? (fun source => source.directory == path &&
+-      source.database == database && source.storage == storage && source.usageGranted == allowUsage) then return source
++      source.database == database && source.storage == storage) then return source
+   unless sources.size < 1024 do throw (IO.userError "prepared source registration is full")
+-  let scope := Sha256.hex (toJson (path.normalize.toString,database,storage,allowUsage)).compress.toUTF8
+-  let source : ReadSource := ⟨path,database,storage,scope,Blake3.hex (← IO.getRandomBytes 32),allowUsage⟩
++  let scope := Sha256.hex (toJson (path.normalize.toString,database,storage)).compress.toUTF8
++  let source : ReadSource := ⟨path,database,storage,scope,Blake3.hex (← IO.getRandomBytes 32)⟩
+   set (sources.push source)
+   return source
+ 
+@@ -134,8 +132,6 @@
+       capability := scope.capability
+       source := source.head
+       metadata := loaded.ready.metadata
+-      index := loaded.originals.map (·.index.head)
+-      usageGranted := scope.usageGranted
+       reuse}
+     return toJson access
+ 
+@@ -143,10 +139,9 @@
+   let path ← PageMap.absolute (.mk (← IO.ofExcept (payload.getObjValAs? String "directory")))
+   let head ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := PageMap.Head))
+   let storage ← IO.ofExcept (payload.getObjVal? "storage" >>= fromJson? (α := Sidecar.Storage))
+-  let allowUsage ← IO.ofExcept (payload.getObjValAs? Bool "allowUsage")
+   let current ← PageMap.pin path
+   unless current.head.identity == head.identity do throw (IO.userError "prepared source identity changed")
+-  let scope ← readSource server path head.identity storage allowUsage
++  let scope ← readSource server path head.identity storage
+   prepareRegistered server scope (some head) deadline
+ 
+ def scopedSource (server : Server) (secret : String) (payload : Json) : IO ReadSource := do
+@@ -179,9 +174,7 @@
+     throw (IO.userError "prepared source snapshot retired")
+   let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+   server.prepared.withReady pinned.snapshot path metadata deadline fun loaded reuse => do
+-    let access : CanonicalSource.Shared.Access := {
+-      database,scope := identity,capability := "",source := head,metadata,reuse
+-      index := loaded.originals.map (·.index.head),usageGranted := scope.usageGranted}
++    let access : CanonicalSource.Shared.Access := ⟨database,identity,"",head,metadata,reuse⟩
+     let result : CanonicalSource.Shared.Projection := ⟨access.identity,loaded.rows owners,reuse⟩
+     let value := toJson result
+     unless value.compress.utf8ByteSize ≤ (Daemon.maxFrameBytes-4096)/2 do
+@@ -216,41 +209,6 @@
+       rows := rows.push (owner,found)
+     return toJson ({source := head,rows,cache := ← server.structures.stats} : ObservedRecordView.Projection)
+ 
+-/-- Route and verify file origins against the same service-owned snapshot.
+-The existing reply admission bounds concurrent work and serialized buffers. -/
+-def sourceSynapses (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
+-  let scope ← scopedSource server secret payload
+-  let head ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := PageMap.Head))
+-  let metadata ← IO.ofExcept (payload.getObjVal? "metadata" >>= fromJson? (α := CanonicalSource.Cache.Manifest))
+-  let basis ← IO.ofExcept (payload.getObjVal? "index" >>= fromJson? (α := PageMap.Head))
+-  let request ← IO.ofExcept (payload.getObjVal? "request" >>= fromJson? (α := SharedQuery.Request))
+-  unless head.identity == scope.database && metadata.source.identity == scope.database &&
+-      metadata.implementation == CanonicalSource.Cache.implementation && digest metadata.payload &&
+-      request.answers.size ≤ 4096 && request.consumers.size ≤ 4096 && request.allowed.size ≤ 4096 &&
+-      request.answers.all (fun row => row.1.utf8ByteSize ≤ 256) &&
+-      request.allowed.all (fun owner => owner.utf8ByteSize ≤ 256) &&
+-      request.graphBudgetMs ≤ maxBudgetMs &&
+-      (request.query.isEmpty || digest request.query) do
+-    throw (IO.userError "invalid scoped synaptic request")
+-  unless request.usage.isNone || scope.usageGranted do
+-    throw (IO.userError "private usage was not granted to this source capability")
+-  let current ← PageMap.pin scope.directory
+-  let some pinned ← PageMap.HistoryReader.make? current head |
+-    throw (IO.userError "synaptic source snapshot retired")
+-  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+-  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded _ => do
+-    let some shared := loaded.originals | throw (IO.userError "original synaptic view is not prepared")
+-    unless shared.index.head == basis do throw (IO.userError "synaptic source capability changed its index publication")
+-    let usage ← request.usage.mapM fun expected => do
+-      let some reader ← Index.open? pinned.snapshot .user .usage |
+-        throw (IO.userError "private usage publication is unavailable")
+-      SharedQuery.atHead pinned.snapshot reader expected
+-    let result ← SharedQuery.execute head shared usage request deadline
+-    let value := toJson result
+-    unless value.compress.utf8ByteSize ≤ (Daemon.maxFrameBytes-4096)/2 do
+-      throw (IO.userError "synaptic projection exceeds its wire bound")
+-    return value
+-
+ def lease (path : System.FilePath) : IO FileSystem.ReadHandle := do
+   FileSystem.immutableExistingBytes path ByteArray.empty
+   let handle ← FileSystem.openRead path.toString
+@@ -448,18 +406,17 @@
+     let secret ← IO.ofExcept (json.getObjValAs? String "secret")
+     let kind ← IO.ofExcept (json.getObjValAs? String "kind")
+     let payload := json.getObjValD "payload"
+-    let deadline ← if ["prepare-source","refresh-source","source-rows","source-records","source-synapses"].contains kind then do
++    let deadline ← if ["prepare-source","refresh-source","source-rows","source-records"].contains kind then do
+         let budget ← IO.ofExcept (payload.getObjValAs? Nat "budgetMs")
+         pure (min deadline (deadline-maxBudgetMs+min budget maxBudgetMs))
+       else pure deadline
+     replyDeadline.set deadline
+-    let replyCharge := if ["source-rows","source-records","source-synapses"].contains kind then 16*1024*1024 else 65536
++    let replyCharge := if kind == "source-rows" || kind == "source-records" then 16*1024*1024 else 65536
+     reserveReply server replyCharge deadline
+     reservedReply.set replyCharge
+     let value ← if kind == "refresh-source" then refreshSource server secret payload deadline
+       else if kind == "source-rows" then sourceRows server secret payload deadline
+       else if kind == "source-records" then sourceRecords server secret payload deadline
+-      else if kind == "source-synapses" then sourceSynapses server secret payload deadline
+       else if kind == "publish" then do
+         let promise ← submit server secret payload deadline cancelled
+         awaitReply server client cancelled promise deadline
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -219,15 +219,11 @@
+     let readDeadline := deadline.getD ((← IO.monoMsNow)+5000)
+     let (canonical,canonicalFailure) ← try
+       let prepared ← readablePrepared? fun storage => Plugin.Publication.Client.prepareSource source storage
+-        readDeadline (allowUsage := true)
++        readDeadline
+       pure (prepared,if prepared.isNone then some "canonical-not-ready" else none)
+       catch error => pure (none,some s!"canonical-open: {error}")
+-    let opened ← readablePrepared? fun storage => Index.open? source storage .shared
+-    let shared ← match canonical.bind (·.access.index),opened with
+-      | some basis,some reader => pure (some (← SharedQuery.atHead source reader basis))
+-      | _,_ => pure opened
+-    return {
+-      source := source,shared
++    return {
++      source := source,shared := ← readablePrepared? fun storage => Index.open? source storage .shared
+       usage := ← Index.open? source .user .usage,canonical,canonicalFailure}
+   catch error => return {
+     source := source,shared := none,usage := none,failure := some s!"index-open: {error}"}
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -127,15 +127,6 @@
+   let mut plan : Plan := {}
+   let mut outputWitnesses : Array (String × Array Offer) := #[]
+   let assessedUnixMs ← ObservationAge.now
+-  let mut admitted : Array AdmittedOwner := #[]
+-  let mut originals : Std.HashMap (String × Original) (List Nat) := {}
+-  for owner in owners do
+-    let .ok document := owner.document | plan := {plan with unsupported := plan.unsupported+1}; continue
+-    let original := ObservationContext.OriginalOwner.prepare? document
+-    if let some original := original then
+-      let key := (owner.database,original.identity)
+-      originals := originals.insert key (admitted.size :: (originals[key]?.getD []))
+-    admitted := admitted.push ⟨owner,document,original⟩
+   for source in prepared do
+     let consumers := owners.flatMap fun owner =>
+       if owner.database != source.source.head.identity then #[] else
+@@ -143,23 +134,40 @@
+         if key == Persistence.selectionKey owner.original.relation then some priority else none
+       (Provenance.identities owner.original).flatMap fun occurrence =>
+         priorities.map fun priority => (occurrence,priority)
+-    let allowed := (hashDistinct (admitted.toList.filterMap fun item =>
+-      if item.owner.database == source.source.head.identity && item.document.native then
+-        some item.document.owner else none)).toArray
+-    let result ← Routed.collect source answers query (min deadline (graphDeadline.getD deadline)) consumers allowed
+-      (bindingDeadline := some deadline)
++    let result ← Routed.collect source answers query (min deadline (graphDeadline.getD deadline)) consumers
+     let (result,outputs) ← try pure (result,← Routed.outputOffers source result deadline)
+       catch error => pure ({result with complete := false,failure := some s!"output-witness: {error}"},#[])
+     outputWitnesses := outputWitnesses.push (source.source.head.identity,outputs)
+     plan := {plan with results := plan.results.push result}
+   let offers := plan.results.flatMap (·.admitted)
++  let mut admitted : Array AdmittedOwner := #[]
++  let mut originals : Std.HashMap (String × Original) (List Nat) := {}
++  for owner in owners do
++    let .ok document := owner.document | plan := {plan with unsupported := plan.unsupported+1}; continue
++    let original := ObservationContext.OriginalOwner.prepare? document
++    if let some original := original then
++      let key := (owner.database,original.identity)
++      originals := originals.insert key (admitted.size :: (originals[key]?.getD []))
++    admitted := admitted.push ⟨owner,document,original⟩
+   -- Prepend in the directory. Appending to a shared array here repeatedly
+   -- copies a growing owner's complete row list.
+   let mut origins : Std.HashMap (String × String) (List Routed.Located) := {}
+   for (source,result) in prepared.zip plan.results do
+     let database := source.source.head.identity
+     let scopedOffers := result.admitted
+-    let resolved := if result.complete && result.available && result.failure.isNone then result.bindings else {}
++    let wanted := (hashDistinct (scopedOffers.toList.filterMap fun offer => do
++      let source ← offer.target.source?
++      let .file _ := source.subject | none
++      some source)).toArray
++    let allowed := admitted.foldl (fun allowed item =>
++      if item.owner.database == database && item.document.native then allowed.insert item.document.owner
++      else allowed) ({} : Std.HashSet String)
++    let resolved ←
++      if result.complete && result.available && result.failure.isNone then
++        match source.shared with
++        | some shared => IndexedBindings.resolve shared wanted allowed deadline
++        | none => pure ({complete := false} : IndexedBindings.Resolved)
++      else pure ({} : IndexedBindings.Resolved)
+     plan := {plan with
+       bindingComplete := plan.bindingComplete && resolved.complete
+       bindingRequests := plan.bindingRequests+resolved.requests
+--- a/Eggshell/SynapticRoutingStore.lean
++++ b/Eggshell/SynapticRoutingStore.lean
+@@ -85,7 +85,6 @@
+   evidence : String
+   kind : Nat
+   group : Option Group
+-  deriving DecidableEq, BEq, ToJson, FromJson
+ 
+ inductive QuotedCause where
+   | quoted (group : Group)
+--- a/Eggshell/SynapticTransport.lean
++++ b/Eggshell/SynapticTransport.lean
+@@ -28,8 +28,6 @@
+   routing : Option PageMap.Head := none
+   usageRouting : Option PageMap.Head := none
+   failure : Option String := none
+-  bindings : IndexedBindings.Resolved := {}
+-  sharedReads : Json := Json.null
+ 
+ def Result.admitted (result : Result) : Array Hint :=
+   if result.complete && result.available && result.failure.isNone then result.hints else #[]
+@@ -42,8 +40,7 @@
+   ("requests",toJson result.nodes),("facts",toJson result.arcs),("bytes",toJson result.bytes),
+   ("index",toJson result.index),("usage",toJson result.usage),
+   ("routing",toJson result.routing),("usageRouting",toJson result.usageRouting),
+-  ("failure",toJson result.failure),("offers",toJson (result.admitted.map Hint.json))]
+-    |>.setObjVal! "sharedReads" result.sharedReads
++    ("failure",toJson result.failure),("offers",toJson (result.admitted.map Hint.json))]
+ 
+ def preferOmissions (hints : Array Hint) : Array Hint := Id.run do
+   let missing := hints.foldl (fun sources hint =>
+@@ -55,27 +52,26 @@
+ /-- Views are opened read-only and must match the already pinned original
+ index. Missing or stale preparation is explicit; a hook never rebuilds it. -/
+ def collect (prepared : Recommend.Prepared) (answers : Array (String × Nat))
+-    (query : String) (deadline : Nat) (consumers : Array (Occurrence × Nat))
+-    (allowed : Array String := #[]) (bindingDeadline : Option Nat := none) : IO Result := do
++    (query : String) (deadline : Nat) (consumers : Array (Occurrence × Nat)) : IO Result := do
+   let initial : Result := {index := prepared.shared.map (·.index.head),usage := prepared.usage.map (·.index.head)}
+   if prepared.failure.isSome then return {initial with complete := false,available := false,failure := prepared.failure}
+   let some shared := prepared.shared | return {initial with complete := false,available := false,failure := some "source-index-unavailable"}
+   try
+-    let some reference := prepared.canonical |
+-      return {initial with complete := false,available := false,failure := some "source-service-unprepared"}
+-    unless reference.access.index == some shared.index.head do throw (IO.userError "source service index differs from pinned recommendation input")
+-    let request : SharedQuery.Request := {
+-      answers,consumers,query,allowed,usage := prepared.usage.map (·.index.head)
+-      graphBudgetMs := deadline-(← IO.monoMsNow)}
+-    let walked ← Plugin.Publication.Client.synapses reference request (bindingDeadline.getD deadline)
+-    let some hints := walked.hints.decode | throw (IO.userError "source service hint has an invalid dictionary reference")
+-    let bindings ← IO.ofExcept (SharedQuery.checkedBindings shared.manifest.source.identity request walked)
++    let some routing ← Routing.Store.open? shared |
++      return {initial with complete := false,available := false,failure := some "routing-unprepared"}
++    let usage ← prepared.usage.mapM fun original => do
++      let some routing ← Routing.Store.open? original |
++        throw (IO.userError "private usage routing is unprepared")
++      pure routing
++    let mut roots := answers.map fun (owner,priority) =>
++      (Index.Key.answer shared.manifest.source.identity owner,priority)
++    roots := roots ++ consumers.map fun (consumer,priority) => (Index.Key.consumer consumer,priority)
++    if usage.isSome && digest query then roots := roots.push (.query query,0)
++    let walked ← Routing.Store.walk routing usage roots deadline
+     return {initial with
+-      hints,nodes := walked.nodes,arcs := walked.arcs,bytes := walked.bytes
+-      complete := walked.complete,available := walked.available,failure := walked.failure
+-      routing := walked.routing,usageRouting := walked.usageRouting,bindings
+-      sharedReads := Json.mkObj [("indexPageReads",toJson walked.indexPageReads),
+-        ("indexReadBytes",toJson walked.indexReadBytes),("cachedPages",toJson walked.cachedPages)]}
++      hints := if walked.complete then preferOmissions walked.hints else #[]
++      nodes := walked.nodes,arcs := walked.arcs,bytes := walked.bytes,complete := walked.complete
++      routing := some routing.snapshot.head,usageRouting := usage.map (·.snapshot.head)}
+   catch error => return {initial with complete := false,failure := some s!"routing-read: {error}"}
+ 
+ /-- A hint cannot supply coordinates. Original rows independently establish
+--- a/Eggshell/SynapticQuery.lean
++++ /dev/null
+@@ -1,206 +0,0 @@
+-module
+-public import Eggshell.SynapticRoutingStore
+-public import Eggshell.SynapticBindings
+-@[expose] public section
+-
+-namespace Eggshell.Synapses.SharedQuery
+-open Lean DB Recommend Routing.Store
+-
+-deriving instance Hashable for Target
+-
+-/-- One reply interns repeated targets and causes. Numeric indices are only
+-transport references; decoding checks every bound before returning hints. -/
+-structure HintRow where
+-  target : Nat
+-  priority : Nat
+-  evidence : Nat
+-  kind : Nat
+-  group : Option Nat
+-  deriving ToJson, FromJson
+-
+-structure Hints where
+-  targets : Array Target := #[]
+-  evidence : Array String := #[]
+-  groups : Array Group := #[]
+-  rows : Array HintRow := #[]
+-  deriving ToJson, FromJson
+-
+-def Hints.decode (table : Hints) : Option (Array Hint) := table.rows.mapM fun row => do
+-  let target ← table.targets[row.target]?
+-  let evidence ← table.evidence[row.evidence]?
+-  let group ← row.group.mapM fun id => table.groups[id]?
+-  pure ⟨target,row.priority,evidence,row.kind,group⟩
+-
+-structure Packed (original : Array Hint) where
+-  table : Hints
+-  roundtrip : table.decode = some original
+-
+-def intern [BEq α] [Hashable α] (values : Array α) (index : Std.HashMap α Nat)
+-    (value : α) : Array α × Std.HashMap α Nat × Nat :=
+-  if let some id := index[value]? then (values,index,id)
+-  else (values.push value,index.insert value values.size,values.size)
+-
+-/-- The linear validation is a certificate of the actual transported table.
+-It neither reparses a source nor runs another graph search. -/
+-def pack (original : Array Hint) : Except String (Packed original) := do
+-  let mut table : Hints := {}
+-  let mut targets : Std.HashMap Target Nat := {}
+-  let mut evidence : Std.HashMap String Nat := {}
+-  let mut groups : Std.HashMap Group Nat := {}
+-  for hint in original do
+-    let (values,index,target) := intern table.targets targets hint.target
+-    targets := index
+-    table := {table with targets := values}
+-    let (values,index,identity) := intern table.evidence evidence hint.evidence
+-    evidence := index
+-    table := {table with evidence := values}
+-    let group ← match hint.group with
+-      | none => pure none
+-      | some value =>
+-        let (values,index,id) := intern table.groups groups value
+-        groups := index
+-        table := {table with groups := values}
+-        pure (some id)
+-    table := {table with rows := table.rows.push ⟨target,hint.priority,identity,hint.kind,group⟩}
+-  if roundtrip : table.decode = some original then pure ⟨table,roundtrip⟩
+-  else throw "synaptic transport dictionary changed its hint sequence"
+-
+-theorem Packed.preserves_order (packed : Packed original) : packed.table.decode = some original := packed.roundtrip
+-
+-structure Request where
+-  answers : Array (String × Nat)
+-  consumers : Array (Occurrence × Nat)
+-  query : String
+-  allowed : Array String
+-  usage : Option PageMap.Head
+-  graphBudgetMs : Nat := 30000
+-  deriving ToJson, FromJson
+-
+-structure Binding where
+-  source : Range
+-  facts : Array Fact
+-  deriving ToJson, FromJson
+-
+-structure Reply where
+-  source : PageMap.Head
+-  index : PageMap.Head
+-  usage : Option PageMap.Head
+-  routing : Option PageMap.Head := none
+-  usageRouting : Option PageMap.Head := none
+-  hints : Hints := {}
+-  nodes : Nat := 0
+-  arcs : Nat := 0
+-  bytes : Nat := 0
+-  complete : Bool := true
+-  available : Bool := true
+-  failure : Option String := none
+-  bindings : Array Binding := #[]
+-  bindingComplete : Bool := true
+-  bindingRequests : Nat := 0
+-  bindingInspected : Nat := 0
+-  bindingBytes : Nat := 0
+-  bindingUnresolved : Nat := 0
+-  bindingUnusable : Nat := 0
+-  indexPageReads : Nat := 0
+-  indexReadBytes : Nat := 0
+-  cachedPages : Nat := 0
+-  deriving ToJson, FromJson
+-
+-def preferOmissions (hints : Array Hint) : Array Hint := Id.run do
+-  let missing := hints.foldl (fun sources hint =>
+-    if hint.kind == 3 || hint.kind == 4 then
+-      hint.target.source?.map sources.insert |>.getD sources else sources) ({} : Std.HashSet Range)
+-  return hints.filter fun hint => hint.kind != 5 || hint.target.source?.all (fun source => !missing.contains source)
+-
+-def wanted (hints : Array Hint) : Array Range :=
+-  (hashDistinct (hints.toList.filterMap fun hint => do
+-    let source ← hint.target.source?
+-    let .file _ := source.subject | none
+-    some source)).toArray
+-
+-/-- Retain the exact requested private publication when a writer advances.
+-The shared reader is already fixed by the service's scoped preparation. -/
+-def atHead (source : PageMap.Snapshot) (reader : Index.Reader) (head : PageMap.Head) : IO Index.Reader := do
+-  if reader.index.head == head then return reader
+-  unless head.identity == reader.index.head.identity && head.authority == reader.index.head.authority do
+-    throw (IO.userError "synaptic publication changed its file incarnation")
+-  let some retained ← PageMap.HistoryReader.make? reader.index head |
+-    throw (IO.userError "synaptic publication was retired")
+-  let some manifest ← Index.manifest? retained.snapshot |
+-    throw (IO.userError "synaptic historical publication has no manifest")
+-  unless manifest.implementation == Index.implementation && manifest.scope == reader.manifest.scope do
+-    throw (IO.userError "synaptic historical publication changed its scope")
+-  let same ← if manifest.scope == .shared then Index.sameSources source manifest.source else
+-    pure (manifest.source.identity == source.head.identity && manifest.source.authority == source.head.authority)
+-  unless same do throw (IO.userError "synaptic historical publication changed its source")
+-  return ⟨retained.snapshot,manifest⟩
+-
+-/-- The existing walk and source-posting verifier execute on one shared
+-pinned reader. Only the caller's explicitly granted usage reader is private. -/
+-def execute (source : PageMap.Head) (shared : Index.Reader) (usage : Option Index.Reader)
+-    (request : Request) (deadline : Nat) : IO Reply := do
+-  let initial : Reply := {source,index := shared.index.head,usage := usage.map (·.index.head)}
+-  let some routing ← Routing.Store.open? shared |
+-    return {initial with complete := false,available := false,failure := some "routing-unprepared"}
+-  let usageRouting ← usage.mapM fun original => do
+-    let some view ← Routing.Store.open? original |
+-      throw (IO.userError "private usage routing is unprepared")
+-    pure view
+-  let mut roots := request.answers.map fun (owner,priority) =>
+-    (Index.Key.answer shared.manifest.source.identity owner,priority)
+-  roots := roots ++ request.consumers.map fun (consumer,priority) => (Index.Key.consumer consumer,priority)
+-  if usageRouting.isSome && digest request.query then roots := roots.push (.query request.query,0)
+-  let beforeReads ← shared.index.reads.get
+-  let beforeBytes ← shared.index.readBytes.get
+-  let walked ← Routing.Store.walk routing usageRouting roots
+-    (min deadline ((← IO.monoMsNow)+request.graphBudgetMs))
+-  let hints := if walked.complete then preferOmissions walked.hints else #[]
+-  let packed ← IO.ofExcept (pack hints)
+-  let mut result : Reply := {initial with
+-    routing := some routing.snapshot.head,usageRouting := usageRouting.map (·.snapshot.head)
+-    hints := packed.table,nodes := walked.nodes,arcs := walked.arcs,bytes := walked.bytes,complete := walked.complete}
+-  let allowed := ({} : Std.HashSet String).insertMany request.allowed
+-  for source in wanted hints do
+-    if (← IO.monoMsNow) ≥ deadline || result.bindingBytes ≥ 32*1024*1024 then
+-      result := {result with bindingComplete := false}
+-      break
+-    let found ← IndexedBindings.lookup shared source allowed deadline (32*1024*1024-result.bindingBytes)
+-    result := {result with
+-      bindings := result.bindings.push ⟨source,found.origins.map (·.fact)⟩
+-      bindingComplete := result.bindingComplete && found.complete
+-      bindingRequests := result.bindingRequests+1
+-      bindingInspected := result.bindingInspected+found.inspected
+-      bindingBytes := result.bindingBytes+found.bytes
+-      bindingUnusable := result.bindingUnusable+found.unusable
+-      bindingUnresolved := result.bindingUnresolved + if found.origins.isEmpty then 1 else 0}
+-  let cache ← shared.index.cache.get
+-  return {
+-    result with
+-    indexPageReads := (← shared.index.reads.get)-beforeReads
+-    indexReadBytes := (← shared.index.readBytes.get)-beforeBytes
+-    cachedPages := cache.recent.size+cache.previous.size}
+-
+-/-- Reconstruct the same checked source origins on the client. Malformed
+-rows, extra owners and reordered/extra source bindings are rejected. -/
+-def checkedBindings (database : String) (request : Request) (reply : Reply) : Except String IndexedBindings.Resolved := do
+-  let some hints := reply.hints.decode | throw "synaptic hint dictionary has an invalid reference"
+-  let expected := wanted hints
+-  unless reply.bindings.map (·.source) == expected.extract 0 reply.bindingRequests &&
+-      reply.bindingRequests == reply.bindings.size &&
+-      (!reply.bindingComplete || reply.bindingRequests == expected.size) do
+-    throw "synaptic source binding domain changed"
+-  let allowed := ({} : Std.HashSet String).insertMany request.allowed
+-  let mut rows : Std.HashMap Range (Array Read) := {}
+-  for binding in reply.bindings do
+-    let mut originals := #[]
+-    for fact in binding.facts do
+-      let some origin := IndexedBindings.check? database allowed binding.source fact |
+-        throw "synaptic source binding has no original witness"
+-      originals := originals.push origin.read
+-    rows := rows.insert binding.source originals
+-  return {
+-    rows,complete := reply.bindingComplete,requests := reply.bindingRequests
+-    inspected := reply.bindingInspected,bytes := reply.bindingBytes
+-    unresolved := reply.bindingUnresolved,unusable := reply.bindingUnusable}
+-
+-end Eggshell.Synapses.SharedQuery
