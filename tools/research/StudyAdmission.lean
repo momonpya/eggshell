@@ -121,6 +121,16 @@ private def datum (artifact : Artifact) : IO Json := do
   let json ← readJson artifact.path
   IO.ofExcept (json.getObjVal? "data")
 
+/-- Both discovery implementations are product paths. Their receipt labels
+are distinct from the focus lane; unknown purposes never satisfy admission. -/
+def numericalLane? : String → Option String
+  | "discovery" | "keyed-discovery" => some "discovery"
+  | "focus" => some "focus"
+  | _ => none
+
+theorem keyed_discovery_is_discovery : numericalLane? "keyed-discovery" = some "discovery" := rfl
+theorem unrelated_purpose_is_rejected : numericalLane? "unrelated" = none := rfl
+
 /-- Stored receipts do not imply that cache files still exist. Inspect the
 current DB through the frozen runtime, without starting an encoder. -/
 def verifyLiveWarm (plan : Plan) : IO Json := do
@@ -221,7 +231,9 @@ def admit (path expectedSha256 : String) : IO Admitted := do
   for numerical in p.numerical do
     let receipt ← datum numerical
     let corpus ← IO.ofExcept (receipt.getObjVal? "corpus")
-    purposes := purposes.insert (← IO.ofExcept (corpus.getObjValAs? String "purpose"))
+    let purpose ← IO.ofExcept (corpus.getObjValAs? String "purpose")
+    let some lane := numericalLane? purpose | throw (IO.userError "unknown numerical receipt purpose")
+    purposes := purposes.insert lane
     let counters ← IO.ofExcept (receipt.getObjVal? "counters")
     let sources ← IO.ofExcept (counters.getObjVal? "source")
     let encoder ← IO.ofExcept (counters.getObjVal? "encoder")

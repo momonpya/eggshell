@@ -49,6 +49,10 @@ def main (args : List String) : IO UInt32 := do
         ResourceGuard.requireGenerationSpace (.mk directory)
         return 0
     | ["trial",input,digest] => StudyTrial.run input digest
+    | ["trial-bounded",input,digest,budget,budgetDigest] => do
+        StudyAdmission.verifyArtifact ⟨budget,budgetDigest⟩
+        let limits ← IO.ofExcept (fromJson? (α := StudyTrial.Limits) (← StudyAdmission.readJson budget))
+        StudyTrial.run input digest (some limits)
     | ["acquire",input,digest] => StudyAcquire.run input digest
     | "seed-checks" :: rest => StudySeedChecks.cliMain rest
     | ["seed-checks-generic",input,directory] => do

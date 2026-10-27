@@ -63,6 +63,31 @@ def cliMain (args : List String) : IO UInt32 := do
       (accounting.getObjValAs? Nat "observedInclusiveTokens").toOption == some 110)
       "native transport lost fixture body, final answer, or cumulative accounting"
     IO.FS.writeFile (.mk root / "synthetic-accounting.json") (accounting.compress ++ "\n")
+    let bounded := {settings fixture root "budget-observer" with command := #[fixture,"normal"]}
+    let observed ← IO.mkRef false
+    let stopped ← try
+      withClient .generate bounded fun client => do
+        let _ ← handshake client "fixture"
+        let _ ← request client (.run .turnStart) (Json.mkObj [])
+        let _ ← waitNotification client "turn/completed" (fun _ => true) (fun message => do
+          if (message.getObjValAs? String "method").toOption != some "thread/tokenUsage/updated" then return
+          let usage ← IO.ofExcept (message.getObjVal? "params" >>= (·.getObjVal? "tokenUsage") >>=
+            (·.getObjVal? "total") >>= Eggshell.Research.StudyAccounting.usage)
+          if usage.inclusive < 100 then return
+          observed.set true
+          let _ ← request client (.run .interrupt) (Json.mkObj [
+            ("threadId",toJson "fixture-thread"),("turnId",toJson "fixture-turn")])
+            (deadline? := some ((← IO.monoMsNow)+1000))
+          throw (IO.userError "fixture budget stop"))
+        pure ()
+      pure false
+      catch error => pure (error.toString.contains "fixture budget stop")
+    check (stopped && (← observed.get)) "buffered usage bypassed the observer before turn completion"
+    let boundedReplay ← Eggshell.Research.StudyAccounting.replay scope (.mk bounded.output / "exchange.jsonl")
+    check (boundedReplay.lastUsage.map (·.inclusive) == some 110)
+      "budget interruption discarded the observed inclusive cost"
+    let interruption ← IO.FS.readFile (.mk bounded.output / "exchange.jsonl")
+    check (interruption.contains "turn/interrupt") "budget observer did not send interruption"
     let before ← IO.FS.readBinFile (.mk successful.output / "exchange.jsonl")
     let mut reuseRejected := false
     try
@@ -110,6 +135,7 @@ def cliMain (args : List String) : IO UInt32 := do
         s!"reader/writer task remained live after {mode}"
       rejected := rejected.push mode
     let result := Json.mkObj [("normalLifecycle",toJson true),("bodyUsageAnswerReplayed",toJson true),
+      ("bufferedUsageObservedAndInterrupted",toJson stopped),
       ("scratchPreparedBeforeSpawn",toJson true),("invalidScratchRejectedBeforeSpawn",toJson scratchRejected),
       ("existingTranscriptPreserved",toJson true),
       ("detachedHelperStopped",toJson true),

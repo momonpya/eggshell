@@ -86,6 +86,6 @@ def main (args : List String) : IO UInt32 := do
         ("phase",toJson "final_answer"),("text",toJson "fixture answer")])]
       notice "turn/completed" [("turn",Json.mkObj [("id",toJson "fixture-turn"),("status",toJson "completed")])]
       reply id (Json.mkObj [("turn",Json.mkObj [("id",toJson "fixture-turn")])])
-    else if method == "thread/unsubscribe" then reply id (Json.mkObj [])
+    else if method == "thread/unsubscribe" || method == "turn/interrupt" then reply id (Json.mkObj [])
     else return 2
   return 0

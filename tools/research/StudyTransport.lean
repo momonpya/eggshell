@@ -217,11 +217,12 @@ private partial def receive (client : Client access) (deadline : Nat) : IO Json 
   IO.sleep 5
   receive client deadline
 
-def request (client : Client access) (method : Request access) (params : Json) : IO Json := do
+def request (client : Client access) (method : Request access) (params : Json)
+    (deadline? : Option Nat := none) : IO Json := do
   let id ← client.nextId.get
   client.nextId.set (id + 1)
   send client (Json.mkObj [("id",toJson id),("method",toJson method.method),("params",params)])
-  let deadline := (← IO.monoMsNow) + client.settings.timeoutMs
+  let deadline := deadline?.getD ((← IO.monoMsNow) + client.settings.timeoutMs)
   repeat
     let message ← receive client deadline
     if (message.getObjVal? "id").toOption.isSome then
@@ -240,17 +241,21 @@ def handshake (client : Client access) (version : String) : IO Json := do
   return hello
 
 def waitNotification (client : Client .generate) (method : String)
-    (accepts : Json → Bool) : IO Json := do
+    (accepts : Json → Bool) (observe : Json → IO Unit := fun _ => pure ())
+    (deadline? : Option Nat := none) : IO Json := do
+  let deadline := deadline?.getD ((← IO.monoMsNow) + client.settings.timeoutMs)
   let buffered ← client.notices.get
   client.notices.set #[]
   for message in buffered do
+    unless (← IO.monoMsNow) < deadline do throw (IO.userError "App Server notification deadline expired")
+    observe message
     if (message.getObjValAs? String "method").toOption != some method then continue
     if let .ok params := message.getObjVal? "params" then
       if accepts params then return params
-  let deadline := (← IO.monoMsNow) + client.settings.timeoutMs
   repeat
     let message ← receive client deadline
     if (message.getObjVal? "id").toOption.isSome then throw (IO.userError "unexpected RPC request/response while waiting for a turn")
+    observe message
     if (message.getObjValAs? String "method").toOption != some method then continue
     let params ← IO.ofExcept (message.getObjVal? "params")
     if accepts params then return params

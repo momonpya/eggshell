@@ -9,6 +9,11 @@ namespace Eggshell.Research.StudyTrial
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
+structure Limits where
+  inclusiveTokens : Nat
+  answerMs : Nat
+  deriving FromJson, ToJson
+
 private def save (directory : System.FilePath) (name : String) (json : Json) : IO Unit := do
   let path := directory / name
   check (!(← path.pathExists)) "keep the previous trial evidence"
@@ -61,7 +66,10 @@ private def capture (admitted : StudyAdmission.Admitted) (directory : System.Fil
   save directory "usage.json" report
   return report
 
-def run (input digest : String) : IO UInt32 := do
+def run (input digest : String) (limits : Option Limits := none) : IO UInt32 := do
+  if let some limits := limits then
+    check (limits.inclusiveTokens > 0 && limits.answerMs > 0 && limits.answerMs ≤ 900000)
+      "invalid frozen diagnostic limits"
   let started ← IO.monoMsNow
   let admitted ← StudyAdmission.admit input digest
   let plan := admitted.plan
@@ -72,6 +80,7 @@ def run (input digest : String) : IO UInt32 := do
   let directory := System.FilePath.mk plan.output
   IO.FS.createDir directory
   save directory "plan.json" (toJson plan)
+  save directory "limits.json" (toJson limits)
   save directory "guard-admission.json" guardRecord
   save directory "live-doctor.json" admitted.liveDoctor
   IO.FS.writeFile (directory / "prompt.txt") admitted.prompt
@@ -128,16 +137,45 @@ def run (input digest : String) : IO UInt32 := do
       let managed ← StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) id endpoint plan.environment
       manager.set (some managed)
       save directory "manager.json" (Json.mkObj [("pid",toJson (StudyRuntime.pid managed)),("session",toJson id)])
+      let deadline := (← IO.monoMsNow) + (limits.map (·.answerMs)).getD 900000
       let turn ← StudyTransport.request client (.run .turnStart) (Json.mkObj [("threadId",toJson id),
         ("model",toJson plan.model),("effort",toJson plan.effort),
         ("input",toJson #[Json.mkObj [("type",toJson "text"),("text",toJson admitted.prompt)]])])
+        (deadline? := if limits.isSome then some deadline else none)
       save directory "turn-start.json" turn
       let turnId ← IO.ofExcept ((← IO.ofExcept (turn.getObjVal? "turn")).getObjValAs? String "id")
       let identity : StudyAccounting.Scope := ⟨id,turnId,admitted.bodySha256⟩
       scope.set (some identity)
-      let completed ← StudyTransport.waitNotification client "turn/completed" fun params =>
-        (params.getObjValAs? String "threadId").toOption == some id &&
-        ((params.getObjVal? "turn").bind (·.getObjValAs? String "id")).toOption == some turnId
+      let observe := fun message => do
+        let some limits := limits | return
+        if (message.getObjValAs? String "method").toOption != some "thread/tokenUsage/updated" then return
+        let params ← IO.ofExcept (message.getObjVal? "params")
+        if (params.getObjValAs? String "threadId").toOption != some id ||
+            (params.getObjValAs? String "turnId").toOption != some turnId then return
+        let usage ← IO.ofExcept (StudyAccounting.usage (← IO.ofExcept
+          (params.getObjVal? "tokenUsage" >>= (·.getObjVal? "total"))))
+        if usage.inclusive < limits.inclusiveTokens then return
+        save directory "budget-stop.json" (Json.mkObj [
+          ("reason",toJson "observed-inclusive-token-limit"),("limits",toJson limits),
+          ("observed",toJson usage.counters),("providerNotificationCanOvershoot",toJson true)])
+        let _ ← StudyTransport.request client (.run .interrupt)
+          (Json.mkObj [("threadId",toJson id),("turnId",toJson turnId)])
+          (deadline? := some ((← IO.monoMsNow)+5000))
+        throw (IO.userError "observed diagnostic token limit reached; retain all charged usage")
+      let completed ← try
+        StudyTransport.waitNotification client "turn/completed" (fun params =>
+          (params.getObjValAs? String "threadId").toOption == some id &&
+          ((params.getObjVal? "turn").bind (·.getObjValAs? String "id")).toOption == some turnId)
+          observe (deadline? := if limits.isSome then some deadline else none)
+        catch error =>
+          if limits.isSome && !(← (directory / "budget-stop.json").pathExists) then
+            save directory "budget-stop.json" (Json.mkObj [
+              ("reason",toJson error.toString),("limits",toJson limits)])
+            let _ ← StudyTransport.request client (.run .interrupt)
+              (Json.mkObj [("threadId",toJson id),("turnId",toJson turnId)])
+              (deadline? := some ((← IO.monoMsNow)+5000))
+            pure ()
+          throw error
       save directory "completed.json" completed
       let beforeKeep ← StudyAccounting.replay identity (directory / "rpc/exchange.jsonl")
       check (((StudyAccounting.report identity beforeKeep).getObjValAs? Bool "protocolPassed").toOption == some true)
