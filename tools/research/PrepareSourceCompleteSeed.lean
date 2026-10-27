@@ -113,12 +113,46 @@ def main (args : List String) : IO Unit := do
     unless ancestry.getObjValD "complete" == toJson true do throw (IO.userError "fixture ancestry is unreadable")
     let _ ← call controller.toString #["bootstrap","seal-seed",root.toString]
     pure ()
-  | ["finalize"] =>
+  | "finalize" :: labels =>
+    let label ← match labels with
+      | [] => pure "seed-finalized"
+      | [label] => pure label
+      | _ => throw (IO.userError "one finalization report label")
+    unless !label.isEmpty && label.toList.all (fun c => c.isAlphanum || c == '-') do
+      throw (IO.userError "simple finalization label required")
     let finished ← IO.ofExcept (Json.parse (← IO.FS.readFile (root / "seed-1.guard.json")))
     unless finished.getObjValD "state" == toJson "finished" &&
         finished.getObjValD "ownedPids" == toJson (#[] : Array Nat) do
       throw (IO.userError "wait for the same seed acquisition to finish before finalizing")
-    guarded "seed-finalized" #[controller.toString,"seed-finalize",(root / "study/seed-1").toString,
-      (root / "seed-finalized").toString]
+    guarded label #[controller.toString,"seed-finalize",(root / "study/seed-1").toString,
+      (root / label).toString]
       #[("EGGSHELL_DATA_ROOT",some (root / "study/seed-1/data").toString)]
-  | _ => throw (IO.userError "init | budgets | probe | native | refresh-controller | seal | finalize")
+  | ["audit"] =>
+    let ready ← IO.ofExcept (Json.parse (← IO.FS.readFile (root / "seed-ready/result.json")))
+    unless ready.getObjValD "queuedAfter" == toJson (0 : Nat) do
+      throw (IO.userError "drain the same seed before freezing its source evidence")
+    let definitions := root / "task-definitions.json"
+    unless !(← definitions.pathExists) do throw (IO.userError "preserve the frozen task definitions")
+    IO.FS.writeBinFile definitions (← IO.FS.readBinFile
+      "/Users/ovm/.codex/experiments/eggshell/study-services-20261026/task-definitions.json")
+    guarded "seed-audit" #[controller.toString,"seed-audit",(root / "study/seed-1").toString,
+      definitions.toString,(root / "seed-ready/ready.egg").toString,(root / "seed-audit.json").toString]
+      #[("EGGSHELL_DATA_ROOT",some (root / "study/seed-1/data").toString)]
+  | ["journal-audit"] =>
+    guarded "seed-journal-audit" #[(built / "storage-events-build/StudyMain").toString,
+      (root / "study/seed-1").toString,(root / "seed-journal-audit.json").toString]
+      #[("EGGSHELL_DATA_ROOT",some (root / "study/seed-1/data").toString)]
+  | ["correct-monitor"] =>
+    let path := root / "seed-1.guard.json"
+    let previousGuard ← IO.ofExcept (Json.parse (← IO.FS.readFile path))
+    unless previousGuard.getObjValD "state" == toJson "finished" &&
+        previousGuard.getObjValD "exitCode" == toJson (1 : Nat) &&
+        previousGuard.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
+        !(← (root / "study/seed-1").pathExists) &&
+        !(← (root / "pre-generation-monitor.guard.json").pathExists) do
+      throw (IO.userError "only the terminal pre-generation monitor mismatch may be corrected")
+    IO.FS.rename path (root / "pre-generation-monitor.guard.json")
+    save (root / "monitor-correction.json") (Json.mkObj [("answeringModelCalls",toJson (0 : Nat)),
+      ("acquisitionOutputNotCreated",toJson true),("sealedPlanAndLimitsChanged",toJson false),
+      ("requiredGuardExecutable",toJson controller.toString)])
+  | _ => throw (IO.userError "init | budgets | probe | native | refresh-controller | seal | finalize | audit | journal-audit | correct-monitor")

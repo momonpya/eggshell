@@ -1,4 +1,28 @@
-# 保存修正後の新seed：実行前の固定条件
+# 保存修正後の新seed：取得と原文の凍結
+
+## 現在の実測
+
+同じ封印済みruntimeで、新しい空DB・新チャットから一度だけseedを取得した。gpt-5.6-luna/xhigh、AGENTS無効。入力4,104,042＋出力16,631＝**4,120,673 tokens**で、cached inputとreasoningは内数。これはseed費用であり、削減率ではない。82フックに失敗0、回答とsession/publisherの終了は正常、残存owned processは0。guardのpeak RSSは1,890,736 KiBだった。[取得記録](candidates/source-complete-seed/acquisition/result.json)、[集約](candidates/source-complete-seed/seed-summary.json)。
+
+最初の起動は監視用実行体の指定を誤り、チャットも回答も開始する前に拒否された。plan・上限・設定を変更せず、封印したcontroller自体へ監視を訂正した。実際の`turn/start`は一度だけである。[訂正記録](candidates/source-complete-seed/pre-generation-monitor/comparison.json)。
+
+保存済み50出版の全連鎖が正準に復号できた。最初のoff-hook確定では私有journalの準備債務が残ったため、耐久済みseedを保持して不合格とした。同じseedの残りを仕上げ、原文/数値view・共有synapse・私有journalの全準備が完了した。全体の数値coverageは1,523窓、valid 1,523、missing/invalid 0。再取得や回答の再試行はしていない。[初回拒否](candidates/source-complete-seed/first-finalization/view-readiness.json)、[完了](candidates/source-complete-seed/ready/view-readiness.json)、[全体coverage](candidates/source-complete-seed/ready/doctor.json)。
+
+題材の配送を見る前に、以前からの定義を新DBの原文と照合して凍結した。題材1は5/5、題材2は6/7、題材3は5/7がDBにある。DBにない3項目は未配送と混同せず、回答品質では別に確認する。**新seedの実配送率は未測定、正式モデル段階は0/6**である。旧seedの9/15を今回の値にはしない。[原文監査と凍結範囲](candidates/source-complete-seed/seed-audit.json)。
+
+## journal監査の境界
+
+RPCで確認できた完了command 37件には、native start/finish/portable originの欠落がない。一方、native全体は40 start/39 finishである。差の一件はPreToolUseだけが完了し、同じuse IDの実コマンド/完了/PostがRPCにない試行だった。直後に同一コマンドが別use IDで実行・正常終了している。元の開始に終了を捏造せず、これを「全nativeが閉鎖済み」とも記載しない。[読み取り専用監査](candidates/source-complete-seed/seed-journal-audit.json)。
+
+開始時の索引を捕捉できたのは40件中3件で、その3件は全て保持・利用可能だった。残る37件には開始時の索引がない。今の全view準備完了やjournal再生完了は、その過去の利用証拠を後付けで作らない。従って、次の初回再生で利用rootが出なくても、三つ目の辺の無効性を直ちに結論しない。新seedを当たり待ちで増やす理由にも使わない。
+
+次の検査は実際の`work.egg`・私有data root・既存derivedを保った状態で行う。source-onlyの写しは原文監査/復旧試験のために使い、過去の索引identityまで保持した利用履歴実験と同一視しない。
+
+## 旧データの削除
+
+新seedの耐久性と原文を検証後、終了したC7のsource/private family、利用診断のwork/data、出版再生のbefore.eggを削除した。3系統の`du`合計差は388,384 KiB。圧縮・archiveは作っていない。報告JSONとコードを残し、現在のseed・LLVM原典・実行中prefixが参照するMiniLM依存物は保持した。
+
+以下は取得前に固定した条件であり、上の実測を将来計画へ戻すものではない。
 
 2026-10-28。C7は出版1〜31の形式不整合により、現codecで過去snapshotを再生できないため、次の回答には使わない。[原因と事前検証](storage-publication-integration.md)。同じ6問への重み調整を再開せず、保存修正済みの現runtimeで空DB・新チャットからseedを一度取得する。
 

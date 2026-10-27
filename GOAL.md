@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-10-27更新。状態はactive。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。古い逐次追記を現在の指示として重ねず、この順序を優先する。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-10-28更新。状態はactive。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -26,86 +26,25 @@
 
 ## 現在地と次の順序
 
-**2026-10-28の新seed実行前準備：** 保存修正候補c255d235…を新prefixへ固定し、実際の5.6-luna/xhighの利用可否、全ランチャー、空DBの実フック8観測/17日誌、source-only回復、10出版全連鎖を確認した。seedは一度、総入力＋出力5,000,000と900,000 msを開始前に封印。取得とmemory trialの中断処理を共有し、合成peerでtoken超過・時間切れ・別turn通知の扱いを確認した。seed確定では、数値coverageだけでなくWarmの準備債務・共有synapse・私有journalの再生完了も検査する。準備不足だけで耐久済みseedを捨ててモデルから取り直さない。準備文書時点の回答model追加0、正式0/6であり、次は封印済みの新seedを一度取得する。候補は未採用、95%・数秒・総token・品質・80人は未達。[固定条件と封印](docs/source-complete-seed.md)。
+2026-10-28。利用者の再依頼でAstra / ultraへ現コード・保存修復後の実記録を渡し、読み取りのみで再相談した。必要原文の実配送より、中間処理・監査・準備の成功を進捗の単位にしていたことが停滞の主因。以下を唯一の直近順序とし、古い逐次計画を重ねない。[判断と根拠](docs/astra-fixed-system-review.md)。
 
-**2026-10-28のサービス統合と次の原因特定：** metadata修正候補で、実checkpointのpublication service経由のACK、元bytes・700原文record/座標・440内容対応の一致を確認した。直接stageと同じhead/rootを得た。実フックの小さな合成試行も8観測/17日誌、source-onlyからの導出・支持・共引用の再構築、原文2/2配送を通った。一方、C7の利用履歴再生で`invalid or truncated list`を再現。出版1〜31には現行codecが要求するaffected列がなく、32〜42にはある。元C7も出版31を読めず、この入力で次の回答を走らせない。以前のmodel前検査は、この全出版履歴の不整合を見逃していた。StudySourceによる親head全連鎖の正準復号をstudy準備・admission・seed確定へ接続し、旧C7/作業コピーの拒否と現runtimeの10出版fixtureの受理を確認した。初回97秒のsource側再構築はjournalのcomplete=falseであり、最初の研究検査器の誤った全体complete判定も訂正した。回答model追加0、正式0/6。次は固定した現runtimeの新seedと全view・日誌の完了を同じ検査で確認する。実入力の失敗を0usageやモデル分散へ帰さず、選択器の重みを再調整しない。終了済み合成DB/一時DB/build複製は削除。本体未採用、95%・数秒・総token・品質・80人の未達は変わらない。[統合と事前検証](docs/storage-publication-integration.md)。
+### 確認済みの現在地
 
-**2026-10-28の保存修正の進展：** 実checkpointを同じhead 37で再生し、原文aliasのJSON 7行（encoded 13,893〜15,829 bytes）が8 KiB leafへ直接入ることを原因として特定した。metadata本体を既存の検証付き4 KiB payloadへ出す隔離候補では、上限超過0・最大encoded行531 bytesで出版が完了し、元bytes・700原文record/座標・440内容対応が一致した。stage〜読戻し1,063 ms、捕捉の再検証を含むguard全体15,855 ms。未保存checkpoint全10件（再送込み、5所有者）も原文/座標/対応の読戻しとawaiting 0を確認し、再送はhead不変。256 KiBまでの境界・旧pin・再投入・破損拒否とLean検査も通った。候補のproducer stampは古い捕捉へ付け替えず、元の全入力指紋から実際に再計算して比較した。次はservice ACKと日誌回復・索引準備を別に検査する。別警告`invalid or truncated list`は未解決。終了済みDB/native/build複製は結果捕捉後に削除し、現在の不具合入力だけ保持。回答model追加0で、95%・総token・品質・正式0/6・80人の未達と本体未採用は変わらない。この段落を以下の過去の「失敗row未特定」より優先する。[保存の再現と隔離修正](docs/metadata-payload-repair.md)。
+- runtimeは保存修正済み隔離候補 `c255d23527bc4aba06c9fd38932f5cab446dd4d1c775472064e0c16d9a913860` に固定。MiniLM/抽出/順位/配送の追加調整はしない。
+- 空DB・新チャット・5.6-luna/xhigh・AGENTS無効のseedを一度取得。総入力＋出力4,120,673 tokensはseed費用。82フック失敗0、50出版の全連鎖正常、残存process 0。
+- 同じseedの準備債務をoff-hookで完了。全1,523窓の数値が有効、原文/共有synapse/私有journalも準備済み。
+- 配送前に必要原文を凍結。新DBに存在する分母は題材1/2/3で5/6/5件。DB不在3件は別記する。**新seedの配送率は未測定、正式モデル段階0/6、総token改善・品質・数秒・80人運用は未実証、本体未採用**。旧seedの9/15を今回の測定値にしない。
+- seedのnative start40件中、開始時indexを捕捉できたのは3件で、全て現在も利用可能。残る37件に過去の証拠を後付けしない。journal再生完了を全実利用の学習完了と呼ばない。Preのみの未対合1件は実コマンドの出力欠落と断定しない。
+- 終了済みC7・利用診断・出版再生のDB/cacheを削除。原文監査のための現在snapshotとlive DB/data/derivedは保持する。[取得・凍結・監査](docs/source-complete-seed.md)。
 
-**2026-10-28の実回答による更新：** 固定runtime・5.6-luna/xhighで題材2を一度だけ実行した。最初の本文は事前検査とバイト一致、13,736 ms・必要原文4/6。回答中に`one indexed row exceeds page budget; chunk its payload`が繰り返され、未保存checkpointが10件残った。観測総入力＋出力1,002,261で上限監視が中断し、最終課金量は未確認。既存usageは保持されたが追加は0、保存・索引が失敗しているため利用辺の効果の否定には使わず、あり／なし比較は行わない。追加の回答実行を止め、実checkpointをモデルなしで再生して最初の失敗rowを特定する。通常leaf 8 KiBに対し、原文/内容metadataは262 KiBまでを直接putする境界不整合があるが、今回のkeyとencoded byte数はまだ不明。大きな記録を既存の検証付きpayload保存へ出し、索引rowを有界にする候補を隔離検証する。出版ACK・全bytes・来歴・大きな実入力の再生が通ってから、新runtimeでseedから正式評価を再開する。本体採用・95%・総token・品質・期限・80人の条件は維持する。この段落を以下の過去計画より優先する。[実回答と保存失敗](docs/usage-feedback-result.md)。
+### 次の二段階
 
-**2026-10-28のAstra追加相談による優先判断：** 実用目標への進歩は不足している。表示短縮とfocus分離は撤回し、基準は9/15、約15〜18秒、正式0/6。新seed・両周6段階・freshの大きなpilotは実行前に停止する。次は既存C7の作業用コピーと固定runtimeで題材2を一度だけ回答させ、その後の同一snapshotから今回の私有usageだけを変えた実hookの対照を行う。原文・過去回答・eventsと既存usageは両側で一致させる。実再消費→利用辺→次回root→必要原文の実本文、を追い、辺の増加だけでは成功にしない。モデルのtoken/時間上限は開始前に封印し、当たり待ちのseed追加・回答再試行はしない。信号が出ないか、出ても本文が改善しなければこの仮説で拡大しない。95%・総token・品質・期限・80人の採用条件は維持する。この段落を以下の過去計画より優先する。[相談と一問診断](docs/astra-progress-review.md)。
+1. **モデルなしの初回実フック再生。** 固定runtimeと現在のlive `work.egg`、実data root、共有indexの過去headを保持し、題材1/2/3を新sessionで各一回再生する。追加の全warm・source-only再構築・新seedは行わない。本文、時間、owned RSSと、凍結16項目ごとの原文→推薦root/辺→束縛→候補→選択→実本文を記録する。凍結ラベルは監査専用で、推薦/選択へ入力しない。題材別95%には5/5・6/6・5/5が必要。
+2. **結果で次を分ける。** 未達なら最初の脱落一件から一つの原因だけを切り分け、旧重み/表示/束の再調整を繰り返さない。配送と時間が通ったら、一問の実回答で開始時index捕捉→実消費→usage追加→同じ質問の配送変化を診断する。回答後の同一snapshotから今回のusage追加分だけを除いた対照を使う。信号がなければ効果未観測で終了し、当たり待ちの回答再試行はしない。
 
-**2026-10-27の最新判断：** 利用者の明示依頼でAstra / ultraへ一度再相談した。通常実hook15,476 ms・必要原文4/6のままであり、進め方を変更する。必要原文の完全配送と「順位係数×被覆文字数」の代理目的が一致していない。三辺の到達と候補の存在を、必要性の識別や実配送と混同しない。既往の失敗を再試行せず、まず現在質問のfocus・原文の手掛かり・root/cause・要求範囲・選択価値を同じ実入力で一度結合する。凍結ラベルは後付け監査にのみ使う。ラベルなしで説明できる汎用規則が得られなければ、同じ6件への重み/閾値/束の再調整を止める。
+大きな6段階pilotは上の診断を飛ばして始めない。題材1/2/3と2周目の評価自体は取り消さない。初回再生は共有の導出/消費/共引用と実配送を検査できるが、質問hash完全一致の利用rootについて未経験topicへの一般化を証明しない。新しいselector方式、追加相談、準備用の汎用frameworkを先に増やさない。
 
-この信号の結合をLean/nativeで一度実行した。原文形式21所有者・11,270候補の全てで、復元した基礎価値と保存済み実入力が一致。直近フックとHandoff source stamp・選択ID列・予算・scaleを照合し、同じ5,118ノード/41,798辺を完走した。表の完成後にのみ凍結ラベルを重ね、欠落294文字/523文字が各代替の全域で過去引用priority 0に覆われ、現在質問の直接focus順位が最良値に残らないことを確認した。HLSLの一部は直接focusでも7位。信号不在とは扱わない。実選択862単位は共有ファイル行だけで、解析した原文形式の11,270候補は0選択だった。これは集約による信号消失と表示形式との関連の観測であり、それを変えれば95%になるという因果の実証ではない。現在質問の信号を独立に残すことと、表示座標に依存しない原文単位を次の設計条件にする。重み・予約枠・旧max-min・費用だけの再試行へ戻らず、汎用規則を先に明示する。回答model/selector/全warm追加0、正式0/6、本体未採用。[診断結果と範囲](docs/evidence-signals.md)。
-
-作業中の`source-synapses` RPC増築は隔離・未採用のまま止める。同じwalk/逐件lookupを移して辞書化/通信/再検査を加えるだけでは初回CPU削減の根拠がない。既存poolは496 MiB枠に各entry256 MiB以上を予約し、prepared snapshotを二つ保持できない。同一DBへの80要求試験を多数DB性能の実証にしない。速度の次候補は、既存source postingsへの要求をまとめた有界なB-tree走査に限定し、空結果/Fact/原文/順序の一致と仕事量/CPUの減少を一度のモデルなし対照再生で検証する。改善しなければ撤回する。95%の目標、認定の完全性、最新AGENTSの総token採用条件は変えない。[相談結果と停止規則](docs/astra-current-review.md)。この段落を、以下の過去経緯にある次手より優先する。
-
-- 引用位置を捨ててrecord全体を支持していた問題を隔離修正。同じC7の元観測/Work/引用の組363件を維持し、最大context45,221→286文字にした。検索時の原文再解析を、内容IDからの直接束縛と既存source postingsへ置換。4,096範囲×2観測の部品検査は10 msだが、実フック数秒/95%配送の達成ではない。[quotation-context.md](docs/quotation-context.md)。
-- 読取専用profileが有効なDB側viewを読まず私有側だけを探す不具合を隔離修正。C7・題材2の診断は必要原文4/6、数値経路completed、実hook22,129 ms。保存済みcanonical起源も最終packetの原文検証へ接続した後は21,638 ms、本文117,523 bytesは直前と一致、検証済み起源2,336件・未検証part0。同じcheckpointのview準備は151/114 msで再構築0。ただし初回の変更view構築161,948 msは別途発生した。13,645候補の構築/選択に12,728 msかかり、数秒/95%・総token改善・80並行利用は未達。全warm/回答model追加0回。未採用のまま候補構築の反復全走査を次に除く。[packet-delivery-ledger.md](docs/packet-delivery-ledger.md)。
-- 所有者postingと一度のclosure配列化へ置換し、元の候補/bonus列・problemとの完全一致をLeanで証明した。nativeの順序/重複/空/未登録・原文cue3,033件が一致。実hookは19,171 ms、同じruntimeのCPU標本付きは19,230 ms。さらに要求キー重複を除く案は19,213 msで追加改善なし。全て親と本文117,523 bytes一致、原文4/6、意味検索completed、再warm/回答model0。候補構築/選択には約9,950 ms残り、数秒/95%の達成ではない。標本で残った全体Listコピーとposting集合の再構築を次に除き、未配送2件の候補範囲→選択→実本文の消失段階を同じPlanから確認する。キー重複除去や撤回済みの細切れfrontierを繰り返さない。[prepared-cue-incidence.md](docs/prepared-cue-incidence.md)。
-
-全体はactive。候補は本体・README実績・releaseへ未採用。95%配送、総token改善、10〜80人・数年・NASの実証は未達。回答モデルの新しい比較は0回、題材1/2/3と2周目は0/6のまま。部品の証明やAPI負荷試験を全体の合格にしない。
-
-- 直近の原文view候補は、既存の汎用列挙をシナプスと同じ出版差分・DBサービスの共有読出しへ接続した。原文6,310範囲、DB境界、共有readerの物理再読0を検査。しかし題材2の実フックは12,644 msで空、実描画の予算確認等を直した後も13,338 ms・119,349 bytesで必要原文0/6。後者は同じ準備済みDB、新しいnative session、warm 0回であり、回答モデル実験ではない。細切れのfrontier選択は撤回する。focus 1,141→render complete 11,382 msの区間には、まだ原文の再束縛と全体診断が残る。直接選択の部品が速いことを実フックの数秒達成にしない。終了済み12対象のDB/cache/helper/runtimeは抽出後にarchiveなしで削除済み。[prepared-record-delivery.md](docs/prepared-record-delivery.md)。
-
-- 固定したC7 seedは原文45,216,846 bytes・revision 31、取得費用3,691,514総token、61フック失敗0。必要原文を配送前に題材別4/6/5件と凍結した。後から座標が付かないことを理由に分母を減らさない。[team-seed.md](docs/team-seed.md)、[original-evidence-audit.md](docs/original-evidence-audit.md)。
-- 内容対応はコマンドに依存せず取得/同一出版/差分無効化へ隔離接続済み。ファイル以外のMCP/JSON/一般テキストも元recordを保持する。3辺の整数接続は元Fact・postingsと同じcommitへ統合し、実seedの27,825推薦が独立完全探索と順序一致した。これは全warmの差分化や実配送の合格ではない。[captured-correspondence.md](docs/captured-correspondence.md)、[synaptic-publication-delta.md](docs/synaptic-publication-delta.md)。
-- 以前の実本文8/15件（53.3%）は不合格。その際に、未配送7件中6件が「選択済みの全範囲・費用0・本文なし」という虚偽被覆だった。共有payloadの非空性を型/復号境界で保証し、空なら任意ツールの原文recordへ渡す修正を隔離した。空payloadへ戻さない。[receipt-preparation.md](docs/receipt-preparation.md)、[nonempty-source-payload.md](docs/nonempty-source-payload.md)。
-- 限界費用/価値は、選択によって新しく覆われたnode/cueから影響候補だけを更新するLean部品を実装し、全選択順まで全再計算と一致することを証明した。公開入口を呼ぶnative比較は512候補・16,384cueで1,280→265ms。コンパイル時置換の2段登録による接続漏れも修正し、実Handoff objectの呼出先検査を実seed監査の起動条件へ加えた。[incremental-selection.md](docs/incremental-selection.md)、[incremental-dispatch.md](docs/incremental-dispatch.md)。
-- 直近のruntime ff2f9419…では、逆引きの共有配列コピーを先頭追加後の一括配列化へ、変更対象の巨大な重複展開を逐次収集へ隔離置換した。値・順序・重複まで証明し、全ハッシュ衝突もnativeで検査。8,192行の構築は50msから1ms未満。しかし同じC7の実フックは29,014/29,007/29,013msで未完了、実本文0/4・0/6・0/5。集計RSS最大1,850,224KiB、保護停止/残存0。別のCPU診断では全候補の比較が支配し、順位分母をLCMへまとめた巨大Nat積の比較が残る。配送・総tokenの合格にはしない。[streamed-incidence.md](docs/streamed-incidence.md)。
-- 題材2の別worker診断は33,345/32,608msで同じ本文117,761文字を生成したが、必要原文は両方3/6件だった。診断期限120秒を実フック30秒の合格へ転用しない。実入力は18,974候補を724回走査し、最大重み263bit・最大公約数1。欠落3件はすべて候補範囲にあり、最初に落ちた段階は選択。期限だけを直しても95%にはならない。raw recordとcanonical rowの費用共有の違いは未確定の調査対象であり、まだ原因と断定しない。[selector-observation.md](docs/selector-observation.md)。
-- 束縛の原文範囲も、照合ごとの重複除去を作成時の一度だけへ移した。元の範囲列との完全一致を証明し、1,024範囲×128照合は353→1ms。しかし実フックの題材2は29,023msで通知のみ、0/6件。1/3は未実行。部品の改善を実配送の改善とは扱わず、全体の経路変更へ進む。[bound-span-preparation.md](docs/bound-span-preparation.md)。
-- PageMapの分割判定で全pending行を先に符号化するメモリ増加は隔離修正済み。元の一commit、完全保存、取消/回復、旧pinを保持する。[bounded-leaf-encoding.md](docs/bounded-leaf-encoding.md)。共有準備APIの80同時要求では1回の準備・79件の共有待ちを検査したが、実フック全体の80並行利用や全registryの差分準備の証拠ではない。[shared-preparation.md](docs/shared-preparation.md)。
-
-実フックが失敗し続けたため、部品の高速化を積んで同じ一連のwarm・3題材を繰り返す順序を止める。通常のwarm済み照会は数秒で本文を返すことを目指し、30秒は上限として扱う。根本の経路変更は[prepared-delivery-path.md](docs/prepared-delivery-path.md)。木の候補は実配送0/15件・直近の親への速度改善なしで撤回し、DB/cache/runtimeも削除済み。[tournament-selection.md](docs/tournament-selection.md)。
-
-実際のPlanから候補/選択の原文範囲を追加診断した結果、未配送2件は候補の原文和集合に完全に存在し、該当2所有者の選択だけが0件だった。全1,114/1,220候補に正の基礎価値があり、最小候補にも共通枠込み1,743/1,500文字の初期費用が付く。候補不在や描画切断へ原因を戻さない。全体Listコピーを線形ログへ置換し、状態/順序/重複/失敗を含む完全一致を証明・native接続した。同じC7の通常実hook18,578 ms、本文117,523 bytesは親と一致、原文4/6のまま。診断付き18,159 msも別記し、単発差で数秒/95%/総token改善や80並行利用の達成を主張しない。[prepared-selection-domain.md](docs/prepared-selection-domain.md)。
-
-直近の実行順は次のとおり。
-
-複数単位から同じ元観測の引用範囲を束縛する隔離修正を実装・証明し、隙間/別所有者を拒否した。通常実hook18,222 ms・原文4/6、親と本文117,523 bytes一致。区間索引は170点/3,600範囲を全走査と照合したが、数秒/95%の実証ではない。原文4,421件中、複数単位の完全な代替19件、未束縛113件、選択用の束3,415件・選択1件を記録した。元のproducer窓を再結合して共通枠の費用を見せる追加案は19,224 ms・原文3/6へ悪化し、モデルを呼ばず撤回。合成入力の価値21→24を採用理由にしない。この窓の追加案を幅・順位・重みで再調整しない。[joint-range-bindings.md](docs/joint-range-bindings.md)。
-
-原文viewに接続しただけの細切れfrontierは必要原文の配送0/6で失敗している。共有viewの読出しと最終packetだけの受領検証、候補ごとの全piece走査・bundleごとのzipIdx再構築・List添字照会・closures全体コピーは置き換えた。残るposting集合の束ごとの再構築と、ファイルaliasの有無で異なる原文の共有費用/束を追う。単なる重み再調整や所有者の予約枠へ戻らず、出版時に準備する同じ原文record・来歴から扱う構造へ統合する。未配送2件の消失段階は選択と確定したが、共通枠の費用だけが決定原因とは未確定。速さだけで欠落を解決した扱いにしない。無駄な計算を除き、同じ全warmと題材の再走を診断の代用にしない。単純な費用関数の部品試験と、実描画・実フックの値を分ける。80人・日々増える履歴を対象に、処理量と実配送95%を同じ混合負荷で検証する。
-
-1. 失敗した実入力を抽出・準備・選択・描画の境界で固定・再生し、全候補の被覆選択が終わるまで本文を返せない構造を変更する。全走査との選択順一致を推薦の一律条件にせず、95%の必要原文配送と実速度で検証する。認定の完全性は維持する。
-2. Astra/ultraの読取りレビューで、未使用の全原文view取得と、rawの完全fragmentによる費用共有/描画の部分重複除去の不一致を確認した。まず未使用`sourceRecords`取得だけを除き、次に現行`prepareOriginalRecords`の分割・前提関係を維持した`PreparedOriginal`を出版差分から準備してサービス内で共有する。既存`ObservationContext.Prepared.catalog`と来歴を利用し、新しい抽出器を重ねない。既存viewのmember/lineへ単純に差し替える変更を等価最適化と呼ばない。その後、同じ候補・価値・recipe・順序・予算を固定し、実描画の追加費用だけに変える反実仮想を一度行う。raw/canonicalの共有基底を変える修正は、準備共有の等価最適化と分ける。費用不一致は確定したが、未配送2件の決定原因とは未確定。全viewをclientへ再転送せず、小さな参照と選択済み本文だけを返す。質問に依存する起点・展開は照会時に行い、原文と出典を含む有効候補を追加探索の期限切れだけで全て失わない。[prepared-original-service.md](docs/prepared-original-service.md)。
-
-未使用取得だけを削除した親は18,765 ms・原文4/6だった。次の隔離版では同じ原文分割・前提範囲を出版側のrecipeへ移し、全DB/接続で有界なメタデータcacheを共有した。native元観測だけを準備した初案は、過去回答191候補が未準備となって選択全体を拒否し、本文0/6で撤回した。表示の準備とnative権限を分け、過去回答を含む全30件・11,668候補の区間/順序/payload/cue/候補本文を旧ループと照合した。最終実hookは17,773 ms・原文4/6、本文117,523 bytesと選択ID/予算/scale/束の集計が親と一致。意味検索completed、全warm/回答model追加0、RSS最大2,041,120 KiB。単発でp99や総token改善を主張しない。原文の欠落2件は選択のままで、95%/数秒/80人は未達。[shared-original-structure.md](docs/shared-original-structure.md)。
-
-利用者の追加依頼でAstra/ultraへ一度再相談した。三辺の探索は完走しているが、original座標のgraph cueが`outputCues`を経てbase側でもcreditされ、file座標と扱いが異なる。欠落所有者の406/335 sourceはこの経路に該当する。ただし最新cue別creditは未記録で、これが欠落の決定原因とは未確定。OR代替の早期固定も見つかったが、同じC7の欠落741 sourceは全て代替1件なので、今回の欠落を理由にOR選択器を改修しない。順位係数×被覆文字数の代理価値と、必要項目の完全配送は別の目的である。別のGraphRAGへ乗り換えれば解消すると判断せず、まず実経路の不整合を検証する。[追加相談の根拠と判断](docs/prepared-original-service.md#astra--ultraへの追加相談と判断)。
-
-同じ候補ドメイン・価値生成・recipe・順序・tie・予算で、実描画に合わせた費用だけを使うLean再生を一度行った。最初の実hookは29,027ms・通知のみ0/6で不合格。120秒の別診断では46,711msで完走し、575選択・576prefixの費用が実際のmaterialize/packetCostと一致したが、必要原文は親4/6から3/6へ悪化した。ドメインJSONと主要入力集計/凍結分母は一致し、全配列の独立serialize照合は未実施。費用修正だけでは不十分という結果として不採用にし、費用調整を止める。診断の期限や部品検査112件を利用時の成功へ転用しない。[対照再生と撤回](docs/prepared-original-service.md#実描画費用だけを変えた対照再生の結果)。
-
-欠落所有者のoriginal graph範囲406/335件は、基礎価値側へ入り、束の候補追加価値と選択価値がいずれも0だった。この差を切り分けるため、座標型と独立したcause/requirementsを保存し、単独focusと、根拠一式が揃って初めて得るcreditを区別する配送契約を検証対象にした。共引用だけから必須のAND依存を作らず、利用の再読ラベルもその発生条件を残す。verifiedなfile aliasの有無による同じ理由のcreditの差も確認対象とした。以下が実装と検証の結果である。OR代替は今回一つしかないので、それを欠落原因とする改修は行わない。過去に失敗した文字数重みの除去・束優先・予約枠を名前だけ変えて再演しない。
-
-理由と要求範囲を運ぶ隔離候補をLeanで実装し、要求の充足・理由の同一性・座標への対応付けの不変性、共引用の独立した推薦、利用の種類、opaque JSON出力の選択をkernel/nativeで検査した。同じC7の題材2の実フックは18,527 ms・4/6で、親の17,773 ms・4/6と本文117,523 bytesがバイト一致した。内部unit ID列は異なり、新しい契約が使われたことも受領記録で確認したが、必要原文は戻らなかった。理由の保持だけを欠落の解決として採用しない。利用の3種類はこの照会で0であり、三辺すべての効果の実証とはしない。[検査と不改善の記録](docs/evidence-cause-contract.md)。
-
-別の1回はCPU観測に限定し、候補ドメイン受領後の現在のworkerを3秒samplingした。同じruntime/本文で、対象threadの2,083標本中582標本がbundle recipeの`PreparedCueIndex.many`配下にあり、owner postingsを毎回TreeSetへ詰め直す処理が確認できた。全実行の割合へ外挿しない。この反復構築を減らすため、必要条件で先に絞り原順序を保つ変更を検証対象にした。以下が結果である。費用やcreditの小変更を同じ欠落解消策として再試行しない。
-
-postingsを先に絞る実装は、候補ID列の一致をLeanで証明し、nativeの378ケースでも一致した。6,000行から小さい範囲を引く1,000照会の部品は86〜88 msから2〜3 msになったが、同じC7題材2の実フックは17,843 ms・4/6で、親の17,773 ms・4/6から全体の速度改善は確認できなかった。候補ドメイン・選択unit ID列・実本文は一致し、新しいnative呼出しが使われたことも確認済み。部品の速度差を本番の改善として採用しない。[検査と実フック](docs/filtered-postings.md)。
-
-ownerと原文範囲から引く索引を隔離実装した。任意のbucket幅で、元の全件filterと候補値・順序が一致することをLeanで証明し、native境界/被覆/順序検査を通した。6,000cueの部品は25〜26→2 msだが、同じC7題材2のnative実フックは17,628 ms・4/6で、親17,843 ms・4/6から全体の速度改善は確認できなかった。候補ドメイン・選択unit ID列・実本文117,523 bytesは一致した。focus→renderの12,512 msは残る。bucket幅・重みを再調整せず、同じruntimeのCPU観測から次の構造変更を決める。[実装と実フック](docs/range-postings.md)。数秒にする改修と、95%の必要原文を選ぶ改修は区別する。回答モデル追加0、正式6段階0/6、未採用。終了した試行のcache/runtimeコピーは捕捉後に削除し、現在の隔離runtimeと原seed/一つの準備済みDBだけを保持する。
-
-同じruntimeをfocus確認4秒後から5秒samplingした区間は、worker1,881標本中`Sparse.choose?`803・その内`Sparse.best`699、`PreparedCueIndex.many`3だった。全実行のCPU比率へ外挿しない。実際の最終選択入力を診断時だけ保存し、Problemの完全な復元とカウンタ付き走査の一致をLean証明した。17,060候補・795選択で13,579,760候補を走査し、順位比較12,932,170回に対し、未選択候補の更新対象は延べ4,220件、実際のscalar変更2,888件。421回は更新対象0件だった。[実入力と再生](docs/selector-input.md)。
-
-変更した葉だけを更新する選択器の全体をLeanで証明し、隔離版のHandoffへcsimp置換で接続した。`choose_exact`は全選択列の一致を保証し、依存axiomは標準3件のみ、sorry/native_decideなし。差分状態の二重計算も一度へ統一した。合成96ケースと実入力のnative照合が通り、同じ入力を交互に測った3周は全走査5,731/5,775/5,788 ms、候補1,566/1,556/1,572 ms。同じC7題材2の通常実フックは15,476 ms・原文4/6で、親17,628 msと本文117,523 bytes・選択unit ID列・候補ドメイン・凍結分母が一致した。focus→描画に9,648 ms残り、数秒/95%は未達。全warm/回答model追加0、正式6段階0/6、未採用。同じruntimeをfocus直後から5秒samplingした区間は、worker2,010標本中`Synapses.Transport.build`1,867、その内`Routed.collect`683・`IndexedBindings.resolve`665・canonical行merge287で、選択器は0。全実行の割合や速度の合格値へ転用しない。既存の型付きPageMap cacheを無視して別のKV層を追加せず、routing/source postingsのreader寿命・pageの再読とdecode・サービスの共有snapshotを確認する。既知の未配送2件の選択問題と区別する。[証明・native・実フック・CPU](docs/verified-winner.md)。
-
-予算超過後の「再適格化が必要」という前の説明は訂正する。現行の非負な原子の和集合モデルでは総費用は単調で、限界費用が下がっても予算超過からは復帰しない。`Budget.no_reactivation`で両予算について証明済み。限界費用低下による順位変化は差分更新し、古いscoreを上界とするlazy heapは使わない。byte/文字の固定比率による特例も使わない。
-
-選択前に複数予算で仮本文を描画してから同じ元範囲を候補へ再構築する処理は、原文/来歴/描画の共通planへ統合する際に除く。サービスの固定snapshotで質問に依存しない参照・前提・長さを共有し、照会は触れた整数IDと選択状態だけを持ち、本文は選択後に一度作る。全offer比較や巨大Nat積が残る計算構造と、現在のCPU支配率は区別する。古いscoreを上界としたlazy greedyは共有費用低下で不正確になるため採らない。単なる重み・予約枠・窓幅の再調整へ戻らない。サービス内で選択を終えて小さなclientへ選択済み本文だけを返す段階、差分出版の量に比例する検証、80接続の混合負荷は未完。
-
-費用対照の全prefix検証は独立した診断に限定し、利用時は最終本文の予算/原文検証を保つ。新しい診断を利用時の反復描画へ持ち込まない。不採用候補の実行cache/runtime/build/checkoutは、記録と実依存を確認して全て削除済み。DBの新規複製は作っていない。原seed、一つの現準備済みDB、直前候補の実依存と数値境界を保持し、archiveは作っていない。今回も回答model追加0、正式6段階0/6、総token/品質改善の採用条件は未達。
-
-3. 配送条件を通したruntimeを固定し、空DB/新規チャットのseedから題材1/2/3と2周目へ進む。途中でruntimeを替えた回答比較は混ぜない。旧固定seedのモデルなし診断を新seed実験と呼ばない。
-4. 同一snapshot・ソース・質問・model・effort・harnessで、現行と候補を事前固定した同数の複数反復で比較する。入力+出力、cached input、失敗分を含め、seed費用を別記する。品質・期限・総token改善の採用条件を全題材/両周で満たすまで未採用とする。
-
-失敗した重み調整、予約枠、max-min、主張類似度、全体最適化などを同じ成功前提で再試行しない。過去の証拠は各docs/candidatesとGit履歴に残し、現在の手順と混ぜない。終了済みDB/cache/helper/runtimeは抽出後に削除し、archiveとして保管しない。現在の原seedと実際に依存するobject/interfaceは保持する。
-
-2026-10-27の追加清掃で、終了済み実験のDB・cache・account/plugin複製・失敗したhelper build・旧ベンチ生成物109,514ファイル、計663,265,328 logical bytesを削除した。圧縮/archiveは作っていない。実験領域とベンチ領域に残る`.egg`は原seedと現在の準備済みDBの2つ。現在のnative実行体・import/interface・source・数値runtimeの参照を先にたどり、保持した26,592ファイルの存在とサイズを削除後に照合した。削除量は実験改善や物理空き容量の増加量と同一視しない。
-
-同日の再清掃では、現行候補が参照するsource/interface/objectを現行ディレクトリへ集約してから、旧実験のcheckout・実行体・検査build・cacheと旧デモ生成物19,206ファイル、933,992,237 logical bytesを削除した。旧候補のディレクトリを依存置き場として残さない。実験領域の`du`は2,060,380→1,506,928 KiBとなり、原seed・一つの準備済みDB・現行候補・必要な数値runtimeだけを残した。私有の準備済み索引も同じ現DBの配下へ移した。現用実行体のSHAを保持し、集約後のnative再リンク・起動とLeanの選択器の証明検査を通した。再リンク用の一時実行体も削除し、archiveは作っていない。これは保存場所の整理であり、配送・速度・総tokenの改善として採用しない。[削除記録](docs/candidates/cleanup-current.json)。
+この診断は採用の証拠ではない。採用にはAGENTSの同一snapshot/ソース/質問/model/effort/harness、事前同数複数反復、cached/失敗分を含む入力＋出力、品質とdeadlineの比較を引き続き要する。coreを修正する場合は別の未採用候補とし、その候補の正式評価ではseedからruntimeを一貫させる。
 
 ## 共有実用化までの契約
 
