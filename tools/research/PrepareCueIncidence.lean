@@ -4,8 +4,13 @@ open Lean
 
 def main (args : List String) : IO Unit := do
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let parent := base / "packet-delivery-ledger-20261027"
-  let root := base / "prepared-cue-incidence-20261027"
+  let selection := args.head? == some "selection"
+  let args := if selection then args.tail else args
+  let parent := base / (if selection then "prepared-cue-incidence-20261027" else "packet-delivery-ledger-20261027")
+  let root := base / (if selection then "prepared-selection-domain-20261027" else "prepared-cue-incidence-20261027")
+  let checkpoint := base / "packet-delivery-ledger-20261027/one-prepared-hook"
+  let auditMain := if selection then "tools.research.SelectionDomainAudit" else "tools.research.CueIncidenceAudit"
+  let auditObject := if selection then "tools_research_SelectionDomainAudit.o" else "tools_research_CueIncidenceAudit.o"
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
   if args == ["fork"] then
@@ -16,22 +21,22 @@ def main (args : List String) : IO Unit := do
     unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
     return
   let [mode,label] := args | throw (IO.userError "fork | MODE LABEL")
-  unless ["audit","product","hook","run-audit","run-hook","profile","proof"].contains mode && !label.isEmpty &&
+  unless ["audit","product","hook","run-audit","run-hook","run-trace","profile","proof"].contains mode && !label.isEmpty &&
       label.toList.all (fun c => c.isAlphanum || c == '-') do throw (IO.userError "known mode/simple label required")
   let command ← if mode == "profile" then
     pure #["/usr/bin/env","LEAN_NUM_THREADS=1",toolchain ++ "/bin/lean","-j1","-M1536","--run",
       project ++ "/tools/research/ProfileCueHook.lean",root.toString,(root / label).toString,
-      (parent / "one-prepared-hook").toString]
-  else if mode == "run-hook" then
-    pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_DATA_ROOT=" ++ (root / label / "data").toString,
+      checkpoint.toString]
+  else if mode == "run-hook" || mode == "run-trace" then
+    pure (#["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_DATA_ROOT=" ++ (root / label / "data").toString,
       (root / "hook-build/StudyMain").toString,root.toString,(root / label).toString,
-      (parent / "one-prepared-hook").toString]
+      checkpoint.toString] ++ if mode == "run-trace" then #["ranges"] else #[])
   else if mode == "run-audit" then
     pure #["/usr/bin/env","LEAN_NUM_THREADS=1",(root / "audit-build/StudyMain").toString,(root / label).toString]
   else if mode == "proof" then
     pure #["/usr/bin/env","LEAN_PATH=" ++ (parent / "product-build/lib").toString ++ ":" ++ toolchain ++ "/lib/lean",
       "LEAN_NUM_THREADS=1",toolchain ++ "/bin/lean","-j1","-M1536","-DwarningAsError=true",
-      (root / "checkout/tools/PreparedCueIndex.lean").toString]
+      "--root=" ++ (root / "checkout").toString,(root / "checkout/tools/PreparedCueIndex.lean").toString]
   else do
     let reuseAudit := mode != "audit" && (← (root / "audit-build/build.json").pathExists)
     let origin := if reuseAudit then root else parent
@@ -49,10 +54,10 @@ def main (args : List String) : IO Unit := do
     let plan := (built.getObjValD "settings")
       |>.setObjVal! "core" (toJson (root / "checkout").toString)
       |>.setObjVal! "output" (toJson (root / (mode ++ "-build")).toString)
-      |>.setObjVal! "mainModule" (toJson (if mode == "product" then "Main" else if mode == "hook" then "tools.research.OnePreparedHook" else "tools.research.CueIncidenceAudit"))
+      |>.setObjVal! "mainModule" (toJson (if mode == "product" then "Main" else if mode == "hook" then "tools.research.OnePreparedHook" else auditMain))
       |>.setObjVal! "baselineCore" (toJson (origin / "checkout").toString)
       |>.setObjVal! "baselineResponse" (toJson (baseline / "runtime.rsp").toString)
-      |>.setObjVal! "baselineMain" (toJson (baseline / (if reuseAudit then "tools_research_CueIncidenceAudit.o" else "Main.o")).toString)
+      |>.setObjVal! "baselineMain" (toJson (baseline / (if reuseAudit then auditObject else "Main.o")).toString)
       |>.setObjVal! "objectModules" (toJson (root / "objects.json").toString)
       |>.setObjVal! "force" (toJson (if mode == "product" then #["Main"] else (#[] : Array String)))
     IO.FS.writeFile (root / (mode ++ "-plan.json")) plan.pretty

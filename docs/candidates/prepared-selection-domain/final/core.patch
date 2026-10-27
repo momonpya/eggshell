@@ -1,0 +1,303 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -28,0 +29 @@
++public import tools.LinearOutput
+@@ -5880,24 +5881,38 @@
+-def problemPrepared (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
+-    (fixed ceiling : Nat × Nat) : Option SharedCoverage.Problem := do
+-  let frames : List (Nat × Nat) := families.map fun family => match family.template.context with
+-    | none => (0,0)
+-    | some context =>
+-      let text := context.leading ++ context.sourceNotice ++ context.trailing
+-      (text.length,text.utf8ByteSize)
+-  let mut costs := frames.toArray
+-  let mut payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
+-  let allRows ← (Synapses.CanonicalSource.Delivery.merge
+-    (families.toArray.flatMap (·.cached))).toOption
+-  let mut sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat := {}
+-  let mut fileIds : Std.HashMap Synapses.File Nat := {}
+-  for row in allRows do
+-    unless fileIds.contains row.key.file do
+-      let frame := Synapses.CanonicalSource.Packet.fileFrame row.key.file
+-        (allRows.filter (·.key.file == row.key.file))
+-      let text := frame.leading ++ frame.trailing
+-      fileIds := fileIds.insert row.key.file costs.size
+-      costs := costs.push (text.length,text.utf8ByteSize)
+-    let text := Synapses.CanonicalSource.Packet.rowText row
+-    sourceIds := sourceIds.insert row.key costs.size
+-    costs := costs.push (text.length,text.utf8ByteSize)
+-  let mut closures : List (List Nat) := []
++namespace LinearNodes
++
++abbrev Costs := Array (Nat × Nat)
++abbrev Payloads := Std.HashMap (Nat × Option (Nat × String × Bool)) Nat
++
++def step (fileIds : Std.HashMap Synapses.File Nat) (sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat)
++    (state : Costs × Payloads) (unit : UnitPlan) : Option ((Costs × Payloads) × List Nat) := do
++  let mut costs := state.1
++  let mut payloads := state.2
++  if let some shared := unit.slice.shared then
++    let mut closure := [unit.family]
++    for row in shared.rows do
++      let file ← fileIds[row.key.file]?
++      let payload ← sourceIds[row.key]?
++      closure := file :: payload :: closure
++    return ((costs,payloads),closure)
++  let parts := match unit.slice.context with
++    | none => [(none,unit.slice.text)]
++    | some context => context.fragments.map fun (fragment : DeliveryFragment) =>
++        (some (fragment.first,fragment.original,fragment.decoded),fragment.render context.compactCaptions)
++  let mut closure := [unit.family]
++  for (fragment,text) in parts do
++    let key := (unit.family,fragment)
++    let index := payloads[key]?.getD costs.size
++    if index == costs.size then
++      costs := costs.push (text.length+1,text.utf8ByteSize+1)
++      payloads := payloads.insert key index
++    closure := closure ++ [index]
++  return ((costs,payloads),closure)
++
++/-- Specification of the original preparation loop. It remains independent
++of the compiled output buffer for refinement and native differential checks. -/
++def reference (fileIds : Std.HashMap Synapses.File Nat) (sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat)
++    (units : List UnitPlan) (initial : Costs) (initialPayloads : Payloads) (initialRows : List (List Nat)) :
++    Option (Costs × Payloads × List (List Nat)) := do
++  let mut costs := initial
++  let mut payloads := initialPayloads
++  let mut closures := initialRows
+@@ -5916,2 +5931 @@
+-          (some (fragment.first,fragment.original,fragment.decoded),
+-            fragment.render context.compactCaptions)
++          (some (fragment.first,fragment.original,fragment.decoded),fragment.render context.compactCaptions)
+@@ -5926,0 +5941 @@
++  return (costs,payloads,closures)
+@@ -5927,0 +5943,44 @@
++theorem reference_linear (fileIds : Std.HashMap Synapses.File Nat)
++    (sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat) (units : List UnitPlan)
++    (costs : Costs) (payloads : Payloads) (rows : List (List Nat)) :
++    reference fileIds sourceIds units costs payloads rows =
++      LinearOutput.pairLoop (step fileIds sourceIds) units costs payloads rows := by
++  unfold reference LinearOutput.pairLoop
++  dsimp only
++  apply congrArg (fun action : Option (Costs × Payloads × List (List Nat)) =>
++    action >>= fun state => pure (state.1,state.2.1,state.2.2))
++  apply congrArg (fun update : UnitPlan → (Costs × Payloads × List (List Nat)) →
++      Option (ForInStep (Costs × Payloads × List (List Nat))) =>
++    forIn units (costs,payloads,rows) update)
++  funext unit state
++  rcases state with ⟨costs,payloads,rows⟩
++  cases shared : unit.slice.shared <;> simp [step,shared,Option.bind_assoc]
++
++end LinearNodes
++
++def problemPrepared (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
++    (fixed ceiling : Nat × Nat) : Option SharedCoverage.Problem := do
++  let frames : List (Nat × Nat) := families.map fun family => match family.template.context with
++    | none => (0,0)
++    | some context =>
++      let text := context.leading ++ context.sourceNotice ++ context.trailing
++      (text.length,text.utf8ByteSize)
++  let mut costs := frames.toArray
++  let payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
++  let allRows ← (Synapses.CanonicalSource.Delivery.merge
++    (families.toArray.flatMap (·.cached))).toOption
++  let mut sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat := {}
++  let mut fileIds : Std.HashMap Synapses.File Nat := {}
++  for row in allRows do
++    unless fileIds.contains row.key.file do
++      let frame := Synapses.CanonicalSource.Packet.fileFrame row.key.file
++        (allRows.filter (·.key.file == row.key.file))
++      let text := frame.leading ++ frame.trailing
++      fileIds := fileIds.insert row.key.file costs.size
++      costs := costs.push (text.length,text.utf8ByteSize)
++    let text := Synapses.CanonicalSource.Packet.rowText row
++    sourceIds := sourceIds.insert row.key costs.size
++    costs := costs.push (text.length,text.utf8ByteSize)
++  let preparedRows ← LinearOutput.pairLoop (LinearNodes.step fileIds sourceIds) units costs payloads []
++  costs := preparedRows.1
++  let closures := preparedRows.2.2
+@@ -5944,2 +6003,3 @@
+-  simp only [problem,problemPrepared,base_pieces_exact,List.getElem?_toArray]
+-  rfl
++  simp only [problem,problemPrepared,← LinearNodes.reference_linear,LinearNodes.reference,
++    base_pieces_exact,List.getElem?_toArray]
++  simp only [bind_assoc,pure_bind] <;> rfl
+@@ -6218,0 +6279,42 @@
++
++/-- Explicit diagnostics into the very same completed plan. These are
++planned original positions, never an assertion that bytes reached a model.
++Standalone base charges are explicit diagnostics; ranking and selection are
++never rerun and the ordinary query path does not call this function. -/
++def Plan.rangeReceipt (plan : Plan ceiling cost mandatory) : Json := Id.run do
++  let selected := ({} : Std.HashSet Nat).insertMany plan.selected
++  let entries := plan.units.mapIdx fun id unit => (unit,id)
++  let directory := KeyPostings.prepare (fun entry : UnitPlan × Nat => entry.1.family) entries
++  let packed := fun ranges => (CoverageIndex.prepare ranges).intervals.map fun span => (span.start,span.stop)
++  let families := plan.families.mapIdx fun id family => Id.run do
++    let entries := (directory.lookup id).toList
++    let chosen := entries.filter fun entry => selected.contains entry.2
++    let ranges := fun values => values.flatMap fun entry : UnitPlan × Nat => entry.1.ranges
++    let positive := entries.filterMap fun (_,index) => do
++      let offer ← plan.problem.offers[index]?
++      unless offer.covers.any (fun cue => 0 < plan.problem.weights[cue]) do none
++      let cost := offer.closure.eraseDups.foldl (fun total node =>
++        (total.1+plan.problem.costs[node].1,total.2+plan.problem.costs[node].2)) (0,0)
++      some (index,cost.1,cost.2)
++    let charge := fun (_id,chars,bytes) => max (chars*plan.problem.limit.2) (bytes*plan.problem.limit.1)
++    let cheapest := positive.foldl (fun found next => match found with
++      | none => some next
++      | some previous => if charge next < charge previous then some next else found)
++      (none : Option (Nat × Nat × Nat))
++    return Json.mkObj [
++      ("id",toJson id),("owner",toJson (relationKey family.owner.relation)),
++      ("work",toJson (relationKey family.owner.work)),("canonicalRows",toJson family.cached.size),
++      ("frameCost",toJson plan.problem.costs[id]?),
++      ("workChars",toJson ((Matcher.atomText? family.owner.work).getD "").length),
++      ("positiveBaseOffers",toJson positive.length),("minimumPositiveStandalone",toJson cheapest),
++      ("candidateUnits",toJson entries.length),("selectedUnits",toJson chosen.length),
++      ("candidateRanges",toJson (packed (ranges entries))),
++      ("selectedRanges",toJson (packed (ranges chosen))),
++      ("candidateOriginalRanges",toJson (packed (ranges (entries.filter (·.1.slice.context.isSome))))),
++      ("candidateSharedRanges",toJson (packed (ranges (entries.filter (·.1.slice.shared.isSome))))),
++      ("selectedOriginalRanges",toJson (packed (ranges (chosen.filter (·.1.slice.context.isSome))))),
++      ("selectedSharedRanges",toJson (packed (ranges (chosen.filter (·.1.slice.shared.isSome)))))]
++  return plan.receipt
++    |>.setObjVal! "rangeAudit" (toJson families)
++    |>.setObjVal! "rangeAuditKind" (toJson "planned-original-positions")
++    |>.setObjVal! "assertsActualDelivery" (toJson false)
+@@ -6344 +6446 @@
+-    (captureSelection : Bool := false) : Option Handoff :=
++    (captureSelection : Bool := false) (captureRanges : Bool := false) : Option Handoff :=
+@@ -6782 +6884,2 @@
+-        selectionPlan := if captureSelection then selectionPlan.map (·.receipt) else none
++        selectionPlan := if captureSelection then selectionPlan.map
++          (fun plan => if captureRanges then plan.rangeReceipt else plan.receipt) else none
+@@ -8035,0 +8139 @@
++  let captureRanges := (← IO.getEnv "EGGSHELL_TRACE_SELECTION_RANGES") == some "1"
+@@ -8058,0 +8163 @@
++    (captureRanges := captureRanges)
+--- a/tools/LinearOutput.lean
++++ b/tools/LinearOutput.lean
+@@ -0,0 +1,122 @@
++module
++public import Std
++@[expose] public section
++
++namespace Eggshell.LinearOutput
++
++variable {α β σ τ : Type}
++
++/-- A reference stateful output log; the tail append is intentionally explicit. -/
++def append (step : σ → α → Option (σ × β)) : List α → σ → List β → Option (σ × List β)
++  | [],state,rows => some (state,rows)
++  | value :: rest,state,rows => do
++    let (next,row) ← step state value
++    append step rest next (rows ++ [row])
++
++def prepend (step : σ → α → Option (σ × β)) : List α → σ → List β → Option (σ × List β)
++  | [],state,rows => some (state,rows)
++  | value :: rest,state,rows => do
++    let (next,row) ← step state value
++    prepend step rest next (row :: rows)
++
++theorem reversed_log (step : σ → α → Option (σ × β)) (values : List α) (state : σ) (rows : List β) :
++    append step values state rows.reverse =
++      (prepend step values state rows).map (fun result => (result.1,result.2.reverse)) := by
++  induction values generalizing state rows with
++  | nil => rfl
++  | cons value rest ih =>
++    cases outcome : step state value with
++    | none => simp [append,prepend,outcome]
++    | some result =>
++      rcases result with ⟨next,row⟩
++      simpa [append,prepend,outcome,List.reverse_cons] using ih next (row :: rows)
++
++def prepared (step : σ → α → Option (σ × β)) (values : List α) (state : σ) (rows : List β) :
++    Option (σ × List β) :=
++  (prepend step values state rows.reverse).map (fun result => (result.1,result.2.reverse))
++
++theorem append_prepared (step : σ → α → Option (σ × β)) (values : List α) (state : σ) (rows : List β) :
++    append step values state rows = prepared step values state rows := by
++  simpa only [prepared,List.reverse_reverse] using reversed_log step values state rows.reverse
++
++def loop (step : σ → α → Option (σ × β)) (values : List α) (state : σ) (rows : List β) :
++    Option (σ × List β) := do
++  let mut state := state
++  let mut rows := rows
++  for value in values do
++    let (next,row) ← step state value
++    state := next
++    rows := rows ++ [row]
++  return (state,rows)
++
++theorem loop_cons (step : σ → α → Option (σ × β)) (value : α) (rest : List α) (state : σ) (rows : List β) :
++    loop step (value :: rest) state rows = (do
++      let (next,row) ← step state value
++      loop step rest next (rows ++ [row])) := by
++  cases outcome : step state value with
++  | none => simp [loop,outcome]
++  | some result =>
++    rcases result with ⟨next,row⟩
++    simp [loop,outcome]
++
++theorem append_loop (step : σ → α → Option (σ × β)) (values : List α) (state : σ) (rows : List β) :
++    append step values state rows = loop step values state rows := by
++  induction values generalizing state rows with
++  | nil => rfl
++  | cons value rest ih =>
++    rw [append,loop_cons]
++    cases step state value <;> simp [ih]
++
++@[csimp] theorem loop_compiled : @loop = @prepared := by
++  funext α β σ step values state rows
++  rw [← append_loop,append_prepared]
++
++/-- A pair of mutable preparation fields keeps the original loop's state
++layout. Its output log still has the single shared linear implementation. -/
++def pairLoop (step : (σ × τ) → α → Option ((σ × τ) × β)) (values : List α)
++    (left : σ) (right : τ) (rows : List β) : Option (σ × τ × List β) := do
++  let mut left := left
++  let mut right := right
++  let mut rows := rows
++  for value in values do
++    let (next,row) ← step (left,right) value
++    left := next.1
++    right := next.2
++    rows := rows ++ [row]
++  return (left,right,rows)
++
++theorem pairLoop_cons (step : (σ × τ) → α → Option ((σ × τ) × β)) (value : α) (rest : List α)
++    (left : σ) (right : τ) (rows : List β) :
++    pairLoop step (value :: rest) left right rows = (do
++      let (next,row) ← step (left,right) value
++      pairLoop step rest next.1 next.2 (rows ++ [row])) := by
++  cases outcome : step (left,right) value with
++  | none => simp [pairLoop,outcome]
++  | some result =>
++    rcases result with ⟨⟨nextLeft,nextRight⟩,row⟩
++    simp [pairLoop,outcome]
++
++theorem pair_loop_agrees (step : (σ × τ) → α → Option ((σ × τ) × β)) (values : List α)
++    (left : σ) (right : τ) (rows : List β) :
++    pairLoop step values left right rows =
++      (loop step values (left,right) rows).map (fun result => (result.1.1,result.1.2,result.2)) := by
++  induction values generalizing left right rows with
++  | nil => rfl
++  | cons value rest ih =>
++    rw [pairLoop_cons,loop_cons]
++    cases outcome : step (left,right) value with
++    | none => simp
++    | some result =>
++      rcases result with ⟨⟨nextLeft,nextRight⟩,row⟩
++      simpa [outcome] using ih nextLeft nextRight (rows ++ [row])
++
++def pairPrepared (step : (σ × τ) → α → Option ((σ × τ) × β)) (values : List α)
++    (left : σ) (right : τ) (rows : List β) : Option (σ × τ × List β) :=
++  (prepared step values (left,right) rows).map (fun result => (result.1.1,result.1.2,result.2))
++
++@[csimp] theorem pair_loop_compiled : @pairLoop = @pairPrepared := by
++  funext α β σ τ step values left right rows
++  rw [pair_loop_agrees,loop_compiled]
++  rfl
++
++end Eggshell.LinearOutput

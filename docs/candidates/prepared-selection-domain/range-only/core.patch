@@ -1,0 +1,41 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -6218,0 +6219,27 @@
++
++/-- Explicit diagnostics into the very same completed plan. These are
++planned original positions, never an assertion that bytes reached a model.
++No charge, benefit, ranking or selection is recomputed. -/
++def Plan.rangeReceipt (plan : Plan ceiling cost mandatory) : Json := Id.run do
++  let selected := ({} : Std.HashSet Nat).insertMany plan.selected
++  let entries := plan.units.mapIdx fun id unit => (unit,id)
++  let directory := KeyPostings.prepare (fun entry : UnitPlan × Nat => entry.1.family) entries
++  let packed := fun ranges => (CoverageIndex.prepare ranges).intervals.map fun span => (span.start,span.stop)
++  let families := plan.families.mapIdx fun id family => Id.run do
++    let entries := (directory.lookup id).toList
++    let chosen := entries.filter fun entry => selected.contains entry.2
++    let ranges := fun values => values.flatMap fun entry : UnitPlan × Nat => entry.1.ranges
++    return Json.mkObj [
++      ("id",toJson id),("owner",toJson (relationKey family.owner.relation)),
++      ("work",toJson (relationKey family.owner.work)),("canonicalRows",toJson family.cached.size),
++      ("candidateUnits",toJson entries.length),("selectedUnits",toJson chosen.length),
++      ("candidateRanges",toJson (packed (ranges entries))),
++      ("selectedRanges",toJson (packed (ranges chosen))),
++      ("candidateOriginalRanges",toJson (packed (ranges (entries.filter (·.1.slice.context.isSome))))),
++      ("candidateSharedRanges",toJson (packed (ranges (entries.filter (·.1.slice.shared.isSome))))),
++      ("selectedOriginalRanges",toJson (packed (ranges (chosen.filter (·.1.slice.context.isSome))))),
++      ("selectedSharedRanges",toJson (packed (ranges (chosen.filter (·.1.slice.shared.isSome)))))]
++  return plan.receipt
++    |>.setObjVal! "rangeAudit" (toJson families)
++    |>.setObjVal! "rangeAuditKind" (toJson "planned-original-positions")
++    |>.setObjVal! "assertsActualDelivery" (toJson false)
+@@ -6344 +6371 @@
+-    (captureSelection : Bool := false) : Option Handoff :=
++    (captureSelection : Bool := false) (captureRanges : Bool := false) : Option Handoff :=
+@@ -6782 +6809,2 @@
+-        selectionPlan := if captureSelection then selectionPlan.map (·.receipt) else none
++        selectionPlan := if captureSelection then selectionPlan.map
++          (fun plan => if captureRanges then plan.rangeReceipt else plan.receipt) else none
+@@ -8035,0 +8064 @@
++  let captureRanges := (← IO.getEnv "EGGSHELL_TRACE_SELECTION_RANGES") == some "1"
+@@ -8058,0 +8088 @@
++    (captureRanges := captureRanges)

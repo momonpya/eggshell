@@ -40,15 +40,19 @@ def main (args : List String) : IO Unit := do
   let quotationEnded := args == ["quotation-ended"]
   let packetEnded := args == ["packet-ended"]
   let cueEnded := args == ["cue-ended"]
+  let selectionEnded := args == ["selection-ended"]
   let prepared := args == ["prepared-checks"] || ended
-  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || recordEnded || quotationEnded || packetEnded || cueEnded || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
+  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || recordEnded || quotationEnded || packetEnded || cueEnded || selectionEnded || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let report := project / "docs/candidates" / (if cueEnded then "prepared-cue-incidence" else if packetEnded then "packet-delivery-ledger" else if quotationEnded then "quotation-context" else if recordEnded then "prepared-record-delivery" else if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
-    (if old then "records/retirement-prior.json" else if ended then "records/retirement-finished.json" else "records/retirement.json")
+  let report := project / "docs/candidates" / (if selectionEnded then "prepared-selection-domain" else if cueEnded then "prepared-cue-incidence" else if packetEnded then "packet-delivery-ledger" else if quotationEnded then "quotation-context" else if recordEnded then "prepared-record-delivery" else if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
+    (if selectionEnded then "final/retirement.json" else if old then "records/retirement-prior.json" else if ended then "records/retirement-finished.json" else "records/retirement.json")
   unless !(← report.pathExists) do throw (IO.userError "keep retirement evidence")
   let mut targets := #[]
-  let runs := if cueEnded then #[("prepared-cue-incidence",#["checked-cue-order","unique-cue-order",
+  let runs := if selectionEnded then #[("prepared-selection-domain",#["original-range-trace","linear-fast-hook",
+      "linear-origin-hook","checked-linear-domain","hook-build","proof-lib","audit-build/StudyMain"]),
+      ("prepared-cue-incidence",#["product-build/StudyMain"])]
+    else if cueEnded then #[("prepared-cue-incidence",#["checked-cue-order","unique-cue-order",
       "indexed-prepared-hook","indexed-cpu-profile-checked","unique-key-hook","hook-build","audit-build/StudyMain"]),
       ("packet-delivery-ledger",#["product-build/StudyMain"])]
     else if packetEnded then #[("packet-delivery-ledger",#["checked-final-packet","saved-origin-packet",
@@ -90,7 +94,8 @@ def main (args : List String) : IO Unit := do
   for (name,runs) in runs do
     let root := base / (name ++ "-20261027")
     let collected := project / "docs/candidates" / name /
-      (if tournamentAttempt then "failed-eager-join/records/collection.json" else "records/collection.json")
+      (if name == "prepared-selection-domain" then "final/collection.json"
+       else if tournamentAttempt then "failed-eager-join/records/collection.json" else "records/collection.json")
     unless ← collected.pathExists do
       throw (IO.userError "collect small evidence before deleting an ended trial")
     for entry in ← root.readDir do
@@ -104,8 +109,8 @@ def main (args : List String) : IO Unit := do
       if ← path.pathExists then targets := targets.push path
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","pid=,command="]}
   unless processes.exitCode == 0 do throw (IO.userError "cannot inspect trial ownership")
-  if cueEnded then
-    let active := base / "prepared-cue-incidence-20261027"
+  if cueEnded || selectionEnded then
+    let active := base / (if selectionEnded then "prepared-selection-domain-20261027" else "prepared-cue-incidence-20261027")
     for directory in [active / "audit-build/lib",active / "product-build/lib",active / "checkout"] do
       protectLinks directory targets
     for build in ["audit-build","product-build"] do

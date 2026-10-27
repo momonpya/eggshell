@@ -35,9 +35,10 @@ rebuild only the changed synaptic and original-source views, before the hook.
 No answering model, all-topic retry, or foreground repair. -/
 def main (args : List String) : IO Unit := do
   checkReadScope
-  let (candidate,output,prepared) ← match args with
-    | [candidate,output] => pure (candidate,output,none)
-    | [candidate,output,prepared] => pure (candidate,output,some (System.FilePath.mk prepared))
+  let (candidate,output,prepared,captureRanges) ← match args with
+    | [candidate,output] => pure (candidate,output,none,false)
+    | [candidate,output,prepared] => pure (candidate,output,some (System.FilePath.mk prepared),false)
+    | [candidate,output,prepared,"ranges"] => pure (candidate,output,some (System.FilePath.mk prepared),true)
     | _ => throw (IO.userError "candidate and new output directory; optional prepared checkpoint")
   let root := System.FilePath.mk output
   check (!(← root.pathExists)) "keep previous actual hook"
@@ -98,6 +99,7 @@ def main (args : List String) : IO Unit := do
     ("EGGSHELL_PREFIX",some installRoot.toString),("EGGSHELL_DATA_ROOT",some data.toString),
     ("EGGSHELL_CONFIG",some config.toString),("EGGSHELL_PROFILE",some "work"),
     ("EGGSHELL_HANDOFF_TRACE",some (root / "handoff-trace.txt").toString),
+    ("EGGSHELL_TRACE_SELECTION_RANGES",if captureRanges then some "1" else none),
     ("PLUGIN_ROOT",some plugin.toString),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none),
     ("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),
     ("MKL_NUM_THREADS",some "1"),("HF_HUB_OFFLINE",some "1"),("TOKENIZERS_PARALLELISM",some "false")]
