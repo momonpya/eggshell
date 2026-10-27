@@ -4,12 +4,18 @@ open Lean
 /-- One unchanged-runtime diagnostic. Sample the actual worker after focus;
 no model, repeated warm, synthetic selector or product instrumentation. -/
 def main (args : List String) : IO Unit := do
-  let [candidate,trial,prepared] := args | throw (IO.userError "candidate, new trial, prepared checkpoint")
+  let (candidate,trial,prepared,delay) ← match args with
+    | [candidate,trial,prepared] => pure (candidate,trial,prepared,4000)
+    | [candidate,trial,prepared,delay] =>
+        let some delay := delay.toNat? | throw (IO.userError "numeric sampling delay required")
+        unless delay ≤ 5000 do throw (IO.userError "sampling delay exceeds bounded interval")
+        pure (candidate,trial,prepared,delay)
+    | _ => throw (IO.userError "candidate, new trial, prepared checkpoint, optional sampling delay")
   let root := System.FilePath.mk candidate
   let output := System.FilePath.mk trial
   unless !(← output.pathExists) do throw (IO.userError "preserve prior profile")
   let child ← IO.Process.spawn {
-    cmd := (root / "hook-build/StudyMain").toString,args := #[candidate,trial,prepared]
+    cmd := (root / "controller-build/StudyMain").toString,args := #[candidate,trial,prepared]
     env := #[("EGGSHELL_DATA_ROOT",some (output / "data").toString),("LEAN_NUM_THREADS",some "1")]
     stdout := .inherit,stderr := .inherit}
   let deadline := (← IO.monoMsNow)+60000
@@ -28,7 +34,7 @@ def main (args : List String) : IO Unit := do
       if pid.isSome then break
     IO.sleep 100
   let some worker := pid | throw (IO.userError "search ended before actual CPU profile")
-  IO.sleep 4000
+  IO.sleep delay.toUInt32
   let sampled ← IO.Process.output {
     cmd := "/usr/bin/sample",args := #[toString worker,"5","2","-file",(output / "search.sample.txt").toString]}
   IO.FS.writeFile (output / "sample.stdout") sampled.stdout
@@ -36,6 +42,6 @@ def main (args : List String) : IO Unit := do
   let exit ← child.wait
   IO.FS.writeFile (output / "profile.json") (Json.mkObj [
     ("worker",toJson worker),("sampleExitCode",toJson sampled.exitCode.toNat),("trialExitCode",toJson exit.toNat),
-    ("delayAfterFocusMs",toJson (4000 : Nat)),("sampleSeconds",toJson (5 : Nat)),
+    ("delayAfterFocusMs",toJson delay),("sampleSeconds",toJson (5 : Nat)),
     ("profiledTiming",toJson true),("modelCalls",toJson (0 : Nat))]).pretty
   unless exit == 0 && sampled.exitCode == 0 do throw (IO.userError "profile or actual hook failed")

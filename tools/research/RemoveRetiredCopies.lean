@@ -117,7 +117,12 @@ def main (args : List String) : IO Unit := do
       arguments := arguments.push original
       continue
     let path := System.FilePath.mk original
-    let moduleJson := objects[original]?.getD (toJson ("__native__." ++ path.fileStem.get!))
+    let moduleJson ← match objects[original]? with
+      | some name => pure name
+      | none =>
+        if original.endsWith "/inline-hash/Blake3.o" then pure (toJson "Eggshell.Blake3")
+        else if original.endsWith ".a" then pure (toJson ("__native__." ++ path.fileStem.get!))
+        else throw (IO.userError s!"native object requires an explicit module identity: {original}")
     let moduleName ← IO.ofExcept moduleJson.getStr?
     let target := if within active path then path else
       active / "product-build" / ("inherited_" ++ moduleName.replace "." "_" ++

@@ -8,10 +8,14 @@ def main (args : List String) : IO Unit := do
   let root := base / "verified-winner-20261027"
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
-  unless ["product","audit","controller","run-audit","run-hook"].contains mode && !label.isEmpty &&
+  unless ["product","audit","controller","run-audit","run-hook","profile"].contains mode && !label.isEmpty &&
       label.toList.all (fun c => c.isAlphanum || c == '-') do throw (IO.userError "known mode/simple label required")
   let command ← if mode == "run-audit" then
     pure #[(root / "audit-build/StudyMain").toString,(root / "selector-input.json").toString,(root / label).toString]
+  else if mode == "profile" then
+    pure #["/usr/bin/env","LEAN_NUM_THREADS=1",toolchain ++ "/bin/lean","-j1","-M1024","--run",
+      project ++ "/tools/research/ProfileCueHook.lean",root.toString,(root / label).toString,
+      (base / "packet-delivery-ledger-20261027/one-prepared-hook").toString,"0"]
   else if mode == "run-hook" then
     pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_DATA_ROOT=" ++ (root / label / "data").toString,
       (root / "controller-build/StudyMain").toString,root.toString,(root / label).toString,

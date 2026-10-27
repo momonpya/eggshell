@@ -1,0 +1,1003 @@
+--- /dev/null
++++ b/tools/StableWinnerIndex.lean
+@@ -0,0 +1,155 @@
++module
++public import Std
++@[expose] public section
++
++namespace StableWinnerIndex
++
++/-- A strict weak preference. Equal preferences retain the earlier leaf. -/
++structure Preference (α : Type) where
++  better : α → α → Bool
++  trans : ∀ a b c, better a b = true → better b c = true → better a c = true
++  negTrans : ∀ a b c, better a b ≠ true → better b c ≠ true → better a c ≠ true
++
++def merge (order : Preference α) : Option α → Option α → Option α
++  | none,right => right
++  | left,none => left
++  | some left,some right => if order.better right left then some right else some left
++
++@[simp] theorem merge_none_left (order : Preference α) (value : Option α) :
++    merge order none value = value := rfl
++
++@[simp] theorem merge_none_right (order : Preference α) (value : Option α) :
++    merge order value none = value := by cases value <;> rfl
++
++theorem merge_assoc (order : Preference α) (a b c : Option α) :
++    merge order (merge order a b) c = merge order a (merge order b c) := by
++  cases a with
++  | none => rfl
++  | some a =>
++    cases b with
++    | none => rfl
++    | some b =>
++      cases c with
++      | none => simp
++      | some c =>
++        by_cases ba : order.better b a = true
++        · by_cases cb : order.better c b = true
++          · have ca := order.trans c b a cb ba
++            simp [merge,ba,cb,ca]
++          · simp [merge,ba,cb]
++        · by_cases cb : order.better c b = true
++          · simp [merge,ba,cb]
++          · have ca := order.negTrans c b a cb ba
++            simp [merge,ba,cb,ca]
++
++def winner (order : Preference α) (values : List (Option α)) : Option α :=
++  values.foldl (merge order) none
++
++theorem fold_from (order : Preference α) (values : List (Option α)) (initial : Option α) :
++    values.foldl (merge order) initial = merge order initial (winner order values) := by
++  induction values generalizing initial with
++  | nil => simp [winner]
++  | cons head tail ih =>
++    simp only [List.foldl_cons,winner]
++    rw [ih,ih]
++    exact merge_assoc order initial head (winner order tail)
++
++theorem winner_append (order : Preference α) (left right : List (Option α)) :
++    winner order (left++right) = merge order (winner order left) (winner order right) := by
++  rw [winner,List.foldl_append,fold_from]
++  rfl
++
++theorem merge_mem (order : Preference α) (left right : Option α) (value : α)
++    (found : merge order left right = some value) : left = some value ∨ right = some value := by
++  cases left <;> cases right <;> simp_all [merge]
++  split at found <;> simp_all
++
++theorem winner_mem (order : Preference α) (values : List (Option α)) (value : α)
++    (found : winner order values = some value) : some value ∈ values := by
++  induction values with
++  | nil => simp [winner] at found
++  | cons head tail ih =>
++    rw [winner,List.foldl_cons,fold_from] at found
++    rcases merge_mem order head (winner order tail) value found with same | rest
++    · simp [same]
++    · exact List.mem_cons_of_mem _ (ih rest)
++
++/-- A cached tournament contains the proof of its cached winner in its type.
++Depth, rather than a mutable leaf count, fixes the update path. -/
++inductive Tree (order : Preference α) : Nat → Option α → Type
++  | leaf (value : Option α) : Tree order 0 value
++  | branch {depth : Nat} {leftBest rightBest : Option α}
++      (left : Tree order depth leftBest) (right : Tree order depth rightBest) :
++      Tree order (depth+1) (merge order leftBest rightBest)
++
++structure Cache (order : Preference α) (depth : Nat) where
++  best : Option α
++  tree : Tree order depth best
++
++variable {α : Type} {order : Preference α} {depth : Nat} {best : Option α}
++
++def Tree.values : {depth : Nat} → {best : Option α} → Tree order depth best → List (Option α)
++  | _,_,.leaf value => [value]
++  | _,_,.branch left right => left.values ++ right.values
++
++theorem Tree.values_length (tree : Tree order depth best) : tree.values.length = 2^depth := by
++  induction tree with
++  | leaf => simp [values]
++  | branch left right ihl ihr => simp [values,ihl,ihr,Nat.pow_succ,Nat.mul_two]
++
++theorem Tree.best_exact (tree : Tree order depth best) : winner order tree.values = best := by
++  induction tree with
++  | leaf => simp [winner,values]
++  | branch left right ihl ihr => rw [values,winner_append,ihl,ihr]
++
++def join (left right : Cache order depth) : Cache order (depth+1) :=
++  ⟨merge order left.best right.best,.branch left.tree right.tree⟩
++
++def Tree.updated : {depth : Nat} → {best : Option α} →
++    Tree order depth best → Nat → Option α → Cache order depth
++  | _,_,.leaf _,_,value => ⟨value,.leaf value⟩
++  | _,_,@Tree.branch _ _ depth _ _ left right,index,value =>
++    if index < 2^depth then join (left.updated index value) ⟨_,right⟩
++    else join ⟨_,left⟩ (right.updated (index-2^depth) value)
++
++theorem Tree.updated_values (tree : Tree order depth best) (index : Nat) (value : Option α)
++    (bounded : index < 2^depth) :
++    (tree.updated index value).tree.values = tree.values.set index value := by
++  induction tree generalizing index with
++  | leaf previous =>
++    have : index = 0 := by simpa using bounded
++    simp [updated,values,this]
++  | @branch depth leftBest rightBest left right ihl ihr =>
++    simp only [updated]
++    by_cases inside : index < 2^depth
++    · rw [if_pos inside]
++      simp only [join,values,ihl index inside]
++      rw [List.set_append_left index value (by simpa [left.values_length] using inside)]
++    · rw [if_neg inside]
++      have half := left.values_length
++      have rest : index-2^depth < 2^depth := by
++        simp only [Nat.pow_succ,Nat.mul_two] at bounded
++        omega
++      simp only [join,values,ihr (index-2^depth) rest]
++      rw [List.set_append_right index value (by omega)]
++      rw [half]
++
++def build (order : Preference α) (depth : Nat) (values : Array (Option α)) (first : Nat := 0) :
++    Cache order depth :=
++  match depth with
++  | 0 => let value := values[first]?.getD none; ⟨value,.leaf value⟩
++  | depth+1 => join (build order depth values first) (build order depth values (first+2^depth))
++
++theorem build_values (order : Preference α) (depth : Nat) (values : Array (Option α)) (first : Nat) :
++    (build order depth values first).tree.values =
++      (List.range (2^depth)).map (fun index => values[first+index]?.getD none) := by
++  induction depth generalizing first with
++  | zero => simp [build,Tree.values]
++  | succ depth ih =>
++    simp only [build,join,Tree.values,ih,Nat.pow_succ,Nat.mul_two,List.range_add,List.map_append,List.map_map]
++    congr 1
++    apply List.map_congr_left
++    intro index _
++    simp [Nat.add_assoc]
++
++end StableWinnerIndex
+--- /dev/null
++++ b/tools/SelectionRating.lean
+@@ -0,0 +1,53 @@
++module
++public import tools.StableWinnerIndex
++@[expose] public section
++namespace SharedCoverage.Rating
++
++structure Key (n : Nat) where
++  index : Fin n
++  gain : Nat
++  charge : Nat
++  deriving DecidableEq, BEq
++
++def better (a b : Key n) : Bool :=
++  if a.charge == 0 then b.charge != 0 || b.gain < a.gain
++  else if b.charge == 0 then false
++  else b.gain*a.charge < a.gain*b.charge
++
++theorem fraction_trans {a b c x y z : Nat} (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
++    (ab : b*x < a*y) (bc : c*y < b*z) : c*x < a*z := by
++  have first : (c*x)*y < (b*x)*z := by
++    simpa only [Nat.mul_assoc,Nat.mul_comm,Nat.mul_left_comm] using Nat.mul_lt_mul_of_pos_right bc hx
++  have second := Nat.mul_lt_mul_of_pos_right ab hz
++  have combined : (c*x)*y < (a*z)*y := by
++    simpa only [Nat.mul_assoc,Nat.mul_comm,Nat.mul_left_comm] using Nat.lt_trans first second
++  exact (Nat.mul_lt_mul_right hy).mp combined
++
++theorem fraction_neg_trans {a b c x y z : Nat} (_hx : 0 < x) (hy : 0 < y) (_hz : 0 < z)
++    (ab : ¬b*x < a*y) (bc : ¬c*y < b*z) : ¬c*x < a*z := by
++  have first : (a*z)*y ≤ (b*z)*x := by
++    simpa only [Nat.mul_assoc,Nat.mul_comm,Nat.mul_left_comm] using Nat.mul_le_mul_right z (Nat.le_of_not_gt ab)
++  have second := Nat.mul_le_mul_right x (Nat.le_of_not_gt bc)
++  have combined : (a*z)*y ≤ (c*x)*y := by
++    simpa only [Nat.mul_assoc,Nat.mul_comm,Nat.mul_left_comm] using Nat.le_trans first second
++  exact Nat.not_lt_of_ge (Nat.le_of_mul_le_mul_right combined hy)
++
++theorem better_trans (a b c : Key n) (ab : better a b = true) (bc : better b c = true) :
++    better a c = true := by
++  by_cases az : a.charge = 0 <;> by_cases bz : b.charge = 0 <;> by_cases cz : c.charge = 0
++  all_goals simp [better,az,bz,cz] at ab bc ⊢
++  all_goals try omega
++  exact fraction_trans (by omega) (by omega) (by omega) ab bc
++
++theorem better_neg_trans (a b c : Key n) (ab : better a b ≠ true) (bc : better b c ≠ true) :
++    better a c ≠ true := by
++  by_cases az : a.charge = 0 <;> by_cases bz : b.charge = 0 <;> by_cases cz : c.charge = 0
++  all_goals simp [better,az,bz,cz] at ab bc ⊢
++  all_goals try omega
++  exact Nat.le_of_not_gt (fraction_neg_trans (by omega) (by omega) (by omega)
++    (Nat.not_lt_of_ge ab) (Nat.not_lt_of_ge bc))
++
++def preference (n : Nat) : StableWinnerIndex.Preference (Key n) :=
++  ⟨better,better_trans,better_neg_trans⟩
++
++end SharedCoverage.Rating
+--- /dev/null
++++ b/tools/SelectionBudget.lean
+@@ -0,0 +1,58 @@
++module
++public import tools.SharedCoverage
++@[expose] public section
++
++namespace SharedCoverage.Budget
++
++private theorem fold_ge (p : Problem) (items : List (Fin p.costs.size)) (initial : Nat × Nat) :
++    initial.1 ≤ (items.foldl (fun total index =>
++      (total.1+p.costs[index].1,total.2+p.costs[index].2)) initial).1 ∧
++    initial.2 ≤ (items.foldl (fun total index =>
++      (total.1+p.costs[index].1,total.2+p.costs[index].2)) initial).2 := by
++  induction items generalizing initial with
++  | nil => simp
++  | cons head tail ih =>
++      simp only [List.foldl_cons]
++      have next := ih (initial.1+p.costs[head].1,initial.2+p.costs[head].2)
++      constructor <;> omega
++
++theorem cost_extension (p : Problem) (selected : List (Fin p.offers.size)) (added : Fin p.offers.size) :
++    (cost p selected).1 ≤ (cost p (selected++[added])).1 ∧
++    (cost p selected).2 ≤ (cost p (selected++[added])).2 := by
++  simp only [cost,nodes_append_one,List.foldl_append]
++  exact fold_ge p _ _
++
++theorem cost_swap (p : Problem) (selected : List (Fin p.offers.size)) (a b : Fin p.offers.size) :
++    cost p (selected++[a,b]) = cost p (selected++[b,a]) := by
++  have same : (nodes p (selected++[a,b])).Perm (nodes p (selected++[b,a])) := by
++    apply (List.perm_ext_iff_of_nodup (duplicate_payload_charged_once p _) (duplicate_payload_charged_once p _)).mpr
++    intro node
++    have swapped : (selected++[a,b]).Perm (selected++[b,a]) :=
++      List.Perm.append_left selected (List.Perm.swap b a [])
++    simpa only [nodes,List.mem_eraseDups] using
++      (List.Perm.flatMap_right (fun index => p.offers[index].closure) swapped).mem_iff (a := node)
++  unfold cost
++  apply same.foldl_eq'
++  intro x _ y _ z
++  apply Prod.ext <;> simp [Nat.add_comm,Nat.add_left_comm]
++
++/-- Shared marginal costs can decrease; total union costs cannot. An offer
++that already exceeded either budget never becomes feasible after more offers.
++This holds for both limits without assuming any byte/character ratio. -/
++theorem no_reactivation (p : Problem) (selected : List (Fin p.offers.size))
++    (candidate winner : Fin p.offers.size)
++    (before : ¬((cost p (selected++[candidate])).1 ≤ p.limit.1 ∧
++      (cost p (selected++[candidate])).2 ≤ p.limit.2)) :
++    ¬((cost p ((selected++[winner])++[candidate])).1 ≤ p.limit.1 ∧
++      (cost p ((selected++[winner])++[candidate])).2 ≤ p.limit.2) := by
++  have growth := cost_extension p (selected++[candidate]) winner
++  simp only [List.append_assoc,List.cons_append,List.nil_append] at growth ⊢
++  rw [cost_swap p selected candidate winner] at growth
++  intro after
++  apply before
++  exact ⟨Nat.le_trans growth.1 after.1,Nat.le_trans growth.2 after.2⟩
++
++end SharedCoverage.Budget
++
++#print axioms SharedCoverage.Budget.cost_extension
++#print axioms SharedCoverage.Budget.no_reactivation
+--- /dev/null
++++ b/tools/StableWinnerLaws.lean
+@@ -0,0 +1,147 @@
++module
++public import tools.SelectionRating
++@[expose] public section
++
++namespace StableWinnerIndex
++variable {α : Type} {order : Preference α}
++
++theorem winner_cons (head : Option α) (tail : List (Option α)) :
++    winner order (head::tail) = merge order head (winner order tail) := by
++  rw [winner,List.foldl_cons,fold_from]
++  rfl
++
++theorem merge_none_iff (left right : Option α) :
++    merge order left right = none ↔ left = none ∧ right = none := by
++  cases left <;> cases right <;> simp [merge]
++  split <;> simp
++
++theorem winner_none_iff (values : List (Option α)) :
++    winner order values = none ↔ ∀ value ∈ values, value = none := by
++  induction values with
++  | nil => simp [winner]
++  | cons head tail ih =>
++      rw [winner_cons,merge_none_iff,ih]
++      simp
++
++theorem asymmetric (irrefl : ∀ a, order.better a a = false) (a b : α)
++    (ab : order.better a b = true) : order.better b a ≠ true := by
++  intro ba
++  have impossible := order.trans a b a ab ba
++  rw [irrefl] at impossible
++  contradiction
++
++theorem merge_left_bound (irrefl : ∀ a, order.better a a = false)
++    (a result : α) (right : Option α) (found : merge order (some a) right = some result) :
++    order.better a result ≠ true := by
++  cases right with
++  | none => simp only [merge,Option.some.injEq] at found; subst result; simp [irrefl]
++  | some b =>
++      by_cases ba : order.better b a = true
++      · simp [merge,ba] at found
++        subst result
++        exact asymmetric irrefl b a ba
++      · simp [merge,ba] at found
++        subst result
++        simp [irrefl]
++
++theorem merge_right_bound (irrefl : ∀ a, order.better a a = false)
++    (b result : α) (left : Option α) (found : merge order left (some b) = some result) :
++    order.better b result ≠ true := by
++  cases left with
++  | none => simp only [merge,Option.some.injEq] at found; subst result; simp [irrefl]
++  | some a =>
++      by_cases ba : order.better b a = true
++      · simp [merge,ba] at found
++        subst result
++        simp [irrefl]
++      · simp [merge,ba] at found
++        subst result
++        exact ba
++
++theorem winner_bound (irrefl : ∀ a, order.better a a = false)
++    (values : List (Option α)) (result : α) (found : winner order values = some result)
++    (value : α) (present : some value ∈ values) : order.better value result ≠ true := by
++  induction values generalizing result with
++  | nil => simp at present
++  | cons head tail ih =>
++      rw [winner_cons] at found
++      rcases List.mem_cons.mp present with same | rest
++      · subst head
++        exact merge_left_bound irrefl value result _ found
++      · cases final : winner order tail with
++        | none =>
++            have absent := (winner_none_iff tail).mp final (some value) rest
++            contradiction
++        | some best =>
++            have below := ih best final rest
++            have after := merge_right_bound irrefl best result head (by simpa only [final] using found)
++            exact order.negTrans value best result below after
++
++def mask (accept : α → Bool) : Option α → Option α
++  | none => none
++  | some value => if accept value then some value else none
++
++theorem mask_some (accept : α → Bool) (entry : Option α) (value : α)
++    (found : mask accept entry = some value) : entry = some value ∧ accept value = true := by
++  cases entry with
++  | none => simp [mask] at found
++  | some original =>
++      cases accepted : accept original with
++      | false => simp [mask,accepted] at found
++      | true =>
++          have same : original = value := by simpa [mask,accepted] using found
++          subst original
++          exact ⟨rfl,accepted⟩
++
++theorem winner_mask_none (accept : α → Bool) (values : List (Option α))
++    (empty : winner order values = none) : winner order (values.map (mask accept)) = none := by
++  apply (winner_none_iff _).mpr
++  intro entry present
++  obtain ⟨original,member,rfl⟩ := List.mem_map.mp present
++  have absent := (winner_none_iff _).mp empty original member
++  simp [absent,mask]
++
++theorem winner_mask_preserved (irrefl : ∀ a, order.better a a = false)
++    (accept : α → Bool) (values : List (Option α)) (result : α)
++    (found : winner order values = some result) (kept : accept result = true) :
++    winner order (values.map (mask accept)) = some result := by
++  induction values with
++  | nil => simp [winner] at found
++  | cons head tail ih =>
++      rw [winner_cons] at found
++      simp only [List.map_cons,winner_cons]
++      cases head with
++      | none =>
++          simp only [merge] at found
++          simpa only [mask,merge] using ih found
++      | some a =>
++          cases last : winner order tail with
++          | none =>
++              simp only [last,merge,Option.some.injEq] at found
++              subst result
++              rw [winner_mask_none accept tail last]
++              simp [mask,kept,merge]
++          | some b =>
++              by_cases ba : order.better b a = true
++              · simp only [last,merge,ba,↓reduceIte,Option.some.injEq] at found
++                subst result
++                rw [ih last]
++                cases accepted : accept a <;> simp [mask,merge,accepted,ba]
++              · simp [last,merge,ba] at found
++                subst result
++                cases filtered : winner order (tail.map (mask accept)) with
++                | none => simp [mask,kept,merge]
++                | some c =>
++                    obtain ⟨entry,present,matched⟩ := List.mem_map.mp (winner_mem order _ c filtered)
++                    have original := (mask_some accept entry c matched).1
++                    rw [original] at present
++                    have lower := winner_bound irrefl tail b last c present
++                    have below := order.negTrans c b a lower ba
++                    simp [mask,kept,merge,below]
++
++end StableWinnerIndex
++
++namespace SharedCoverage.Rating
++theorem better_irrefl (value : Key n) : better value value = false := by
++  by_cases zero : value.charge = 0 <;> simp [better,zero]
++end SharedCoverage.Rating
+--- /dev/null
++++ b/tools/WinnerRatings.lean
+@@ -0,0 +1,110 @@
++module
++public import tools.DeferredCoverage
++public import tools.SelectionRating
++public import tools.StableWinnerLaws
++public import tools.SelectionBudget
++@[expose] public section
++namespace SharedCoverage.Deferred.VerifiedWinner
++open StableWinnerIndex
++variable {p : Problem} {prior : Selection p}
++
++def key (score : Score prior (evaluation prior)) : Rating.Key p.offers.size :=
++  ⟨score.index,score.gain,score.charge⟩
++
++def scorePreference (prior : Selection p) : Preference (Score prior (evaluation prior)) where
++  better := betterScore
++  trans a b c ab bc := by
++    exact Rating.better_trans (key a) (key b) (key c) ab bc
++  negTrans a b c ab bc := by
++    exact Rating.better_neg_trans (key a) (key b) (key c) ab bc
++
++theorem merge_key (left right : Option (Score prior (evaluation prior))) :
++    merge (Rating.preference p.offers.size) (left.map key) (right.map key) =
++      (merge (scorePreference prior) left right).map key := by
++  cases left <;> cases right <;> simp only [Option.map_none,Option.map_some,merge]
++  change (if betterScore _ _ then _ else _) = _
++  split <;> simp_all [scorePreference]
++
++theorem winner_key (values : List (Option (Score prior (evaluation prior)))) :
++    winner (Rating.preference p.offers.size) (values.map (Option.map key)) =
++      (winner (scorePreference prior) values).map key := by
++  have general : ∀ (initial : Option (Score prior (evaluation prior))),
++      (values.map (Option.map key)).foldl (merge (Rating.preference p.offers.size)) (initial.map key) =
++        (values.foldl (merge (scorePreference prior)) initial).map key := by
++    induction values with
++    | nil => intro _; rfl
++    | cons head tail ih =>
++      intro initial
++      simp only [List.map_cons,List.foldl_cons,merge_key]
++      exact ih _
++  exact general none
++
++def scores (prior : Selection p) (stored : Sparse.Values prior) : List (Option (Score prior (evaluation prior))) :=
++  (List.finRange p.offers.size).map (Sparse.score? prior stored (known prior))
++
++theorem scores_winner (stored : Sparse.Values prior) :
++    winner (scorePreference prior) (scores prior stored) = Sparse.best prior stored := by
++  have step : ∀ found index,
++      merge (scorePreference prior) found (Sparse.score? prior stored (known prior) index) =
++        Sparse.step prior stored (known prior) found index := by
++    intro found index
++    cases value : Sparse.score? prior stored (known prior) index <;> cases found <;>
++      simp [merge,Sparse.step,value,scorePreference]
++    split <;> simp_all
++  simp only [winner,scores,List.foldl_map,Sparse.best]
++  exact congrArg (fun f => (List.finRange p.offers.size).foldl f none) (funext fun found => funext fun index => step found index)
++
++theorem best_retract (stored : Sparse.Values prior) (score : Score prior (evaluation prior))
++    (found : Sparse.best prior stored = some score) :
++    Sparse.score? prior stored (known prior) score.index = some score := by
++  rw [← scores_winner stored] at found
++  have member := winner_mem (scorePreference prior) (scores prior stored) score found
++  obtain ⟨index,_,produced⟩ := List.mem_map.mp member
++  have identity : score.index = index := by
++    unfold Sparse.score? at produced
++    split at produced
++    · dsimp only at produced
++      split at produced
++      · split at produced
++        · exact (congrArg (fun s : Score prior (evaluation prior) => s.index) (Option.some.inj produced)).symm
++        · contradiction
++      · contradiction
++    · contradiction
++  simpa only [identity] using produced
++
++def ratingAt (prior : Selection p) (stored : Sparse.Values prior) (seen : Known prior)
++    (index : Nat) : Option (Rating.Key p.offers.size) :=
++  if bound : index < p.offers.size then
++    (Sparse.score? prior stored seen ⟨index,bound⟩).map key
++  else none
++
++theorem rating_prefix (stored : Sparse.Values prior) :
++    (List.range p.offers.size).map (ratingAt prior stored (known prior)) =
++      (scores prior stored).map (Option.map key) := by
++  apply List.ext_getElem
++  · simp [scores]
++  · intro index hleft hright
++    have bound : index < p.offers.size := by simpa using hleft
++    simp [scores,ratingAt,bound]
++
++theorem rating_winner (stored : Sparse.Values prior) (capacity : Nat) (bounded : p.offers.size ≤ capacity) :
++    winner (Rating.preference p.offers.size)
++      ((List.range capacity).map (ratingAt prior stored (known prior))) =
++        (Sparse.best prior stored).map key := by
++  have split : capacity = p.offers.size+(capacity-p.offers.size) := by omega
++  rw [split,List.range_add,List.map_append,winner_append,rating_prefix,winner_key,scores_winner]
++  have empty : winner (Rating.preference p.offers.size)
++      ((List.range (capacity-p.offers.size)).map
++        (fun index => ratingAt prior stored (known prior) (p.offers.size+index))) = none := by
++    have same : ∀ index, ratingAt prior stored (known prior) (p.offers.size+index) = none := by
++      intro index
++      simp only [ratingAt]
++      rw [dif_neg (by omega)]
++    simp only [same]
++    induction capacity-p.offers.size with
++    | zero => rfl
++    | succ n ih => simpa [List.range_succ,winner_append,winner] using ih
++  simp only [List.map_map,Function.comp_def,empty,merge_none_right]
++
++
++end SharedCoverage.Deferred.VerifiedWinner
+--- /dev/null
++++ b/tools/WinnerEntries.lean
+@@ -0,0 +1,112 @@
++module
++public import tools.WinnerRatings
++@[expose] public section
++
++namespace SharedCoverage.Deferred.VerifiedWinner
++variable {p : Problem} {prior : Selection p}
++
++def marginalKey (stored : Sparse.Values prior) (index : Fin p.offers.size) : Rating.Key p.offers.size :=
++  ⟨index,stored.gains[index],max (stored.costs[index].1*p.limit.2) (stored.costs[index].2*p.limit.1)⟩
++
++theorem rating_fin_iff (stored : Sparse.Values prior) (seen : Known prior)
++    (index : Fin p.offers.size) (value : Rating.Key p.offers.size) :
++    (Sparse.score? prior stored seen index).map key = some value ↔
++      index ∉ prior.selected ∧
++      ((stored.afterCost index).1 ≤ p.limit.1 ∧ (stored.afterCost index).2 ≤ p.limit.2) ∧
++      0 < stored.gains[index] ∧ marginalKey stored index = value := by
++  unfold Sparse.score?
++  dsimp only
++  split
++  · rename_i fresh
++    split
++    · rename_i fits
++      split
++      · rename_i positive
++        have positiveNat : 0 < stored.gains[index.val] := positive
++        have fitsNat : stored.base.beforeCost.1+stored.costs[index.val].1 ≤ p.limit.1 ∧
++            stored.base.beforeCost.2+stored.costs[index.val].2 ≤ p.limit.2 := fits
++        simp only [Option.map_some,Option.some.injEq]
++        simp [fresh,fitsNat,positiveNat,key,marginalKey,Sparse.Values.afterCost]
++      · rename_i positive
++        have notPositiveNat : ¬0 < stored.gains[index.val] := positive
++        simp [fresh,fits,notPositiveNat]
++    · rename_i fits
++      simp [fresh,fits]
++  · rename_i fresh
++    simp [fresh]
++
++theorem rating_at_index (stored : Sparse.Values prior) (seen : Known prior)
++    (index : Nat) (value : Rating.Key p.offers.size)
++    (found : ratingAt prior stored seen index = some value) : value.index.val = index := by
++  unfold ratingAt at found
++  split at found
++  · have data := (rating_fin_iff stored seen _ value).mp found
++    exact (congrArg (fun entry : Rating.Key p.offers.size => entry.index.val) data.2.2.2).symm
++  · contradiction
++
++theorem unchanged_valid_rating (stored : Sparse.Values prior) (next : Selection p)
++    (updated : Sparse.Values next) (winner index : Fin p.offers.size)
++    (extension : next.selected = prior.selected++[winner])
++    (sameCost : updated.costs[index] = stored.costs[index])
++    (sameGain : updated.gains[index] = stored.gains[index])
++    (value : Rating.Key p.offers.size)
++    (found : ratingAt next updated (known next) index.val = some value) :
++    ratingAt prior stored (known prior) index.val = some value := by
++  have current : (Sparse.score? next updated (known next) index).map key = some value := by
++    simpa only [ratingAt,dif_pos index.isLt] using found
++  have valid := (rating_fin_iff updated (known next) index value).mp current
++  have fresh : index ∉ prior.selected := by
++    intro member
++    apply valid.1
++    rw [extension]
++    exact List.mem_append_left _ member
++  have afterFits : (cost p (next.selected++[index])).1 ≤ p.limit.1 ∧
++      (cost p (next.selected++[index])).2 ≤ p.limit.2 := by
++    simpa only [updated.afterCost_exact,Evaluation.afterCost_exact] using valid.2.1
++  have beforeFits : (stored.afterCost index).1 ≤ p.limit.1 ∧
++      (stored.afterCost index).2 ≤ p.limit.2 := by
++    simp only [stored.afterCost_exact,Evaluation.afterCost_exact]
++    by_cases before : (cost p (prior.selected++[index])).1 ≤ p.limit.1 ∧
++        (cost p (prior.selected++[index])).2 ≤ p.limit.2
++    · exact before
++    · exact False.elim (Budget.no_reactivation p prior.selected index winner before
++        (by simpa only [extension] using afterFits))
++  have original : (Sparse.score? prior stored (known prior) index).map key = some value := by
++    apply (rating_fin_iff stored (known prior) index value).mpr
++    refine ⟨fresh,beforeFits,?_,?_⟩
++    · simpa only [sameGain] using valid.2.2.1
++    · simpa only [marginalKey,sameCost,sameGain] using valid.2.2.2
++  simpa only [ratingAt,dif_pos index.isLt] using original
++
++def affected (layout : Sparse.Layout p) (stored : Sparse.Values prior) (winner : Fin p.offers.size) :
++    List (Fin p.offers.size) :=
++  Eggshell.hashDistinct (winner ::
++    layout.nodes.changed stored.base.nodeIndex p.offers[winner].closure ++
++      layout.cues.changed stored.base.cueIndex p.offers[winner].covers)
++
++theorem unaffected_values (layout : Sparse.Layout p) (stored : Sparse.Values prior)
++    (next : Selection p) (winner index : Fin p.offers.size)
++    (extension : next.selected = prior.selected++[winner])
++    (absent : index ∉ affected layout stored winner) :
++    (stored.advance layout next winner extension).costs[index] = stored.costs[index] ∧
++    (stored.advance layout next winner extension).gains[index] = stored.gains[index] := by
++  have original : index ∉ winner ::
++      layout.nodes.changed stored.base.nodeIndex p.offers[winner].closure ++
++        layout.cues.changed stored.base.cueIndex p.offers[winner].covers := by
++    intro member
++    exact absent ((Eggshell.HashDistinct.mem _ _).mpr member)
++  have parts :
++      index ∉ layout.nodes.changed stored.base.nodeIndex p.offers[winner].closure ∧
++      index ∉ layout.cues.changed stored.base.cueIndex p.offers[winner].covers := by
++    have resolved : (index ≠ winner ∧
++        index ∉ layout.nodes.changed stored.base.nodeIndex p.offers[winner].closure) ∧
++        index ∉ layout.cues.changed stored.base.cueIndex p.offers[winner].covers := by
++      simpa only [List.mem_cons,List.mem_append,not_or] using original
++    exact ⟨resolved.1.2,resolved.2⟩
++  change (Sparse.patch stored.costs _ _)[index] = stored.costs[index] ∧
++    (Sparse.patch stored.gains _ _)[index] = stored.gains[index]
++  constructor
++  · rw [Sparse.patch_exact,if_neg parts.1]
++  · rw [Sparse.patch_exact,if_neg parts.2]
++
++end SharedCoverage.Deferred.VerifiedWinner
+--- /dev/null
++++ b/tools/WinnerCache.lean
+@@ -0,0 +1,149 @@
++module
++public import tools.WinnerEntries
++@[expose] public section
++
++namespace SharedCoverage.Deferred.VerifiedWinner
++open StableWinnerIndex
++variable {p : Problem} {prior : Selection p} {stored : Sparse.Values prior} {depth : Nat}
++
++/-- Stale, now-infeasible leaves are permitted. Every currently eligible
++candidate must be present with its current key at its original position. -/
++structure State (prior : Selection p) (stored : Sparse.Values prior) (depth : Nat) where
++  capacity : p.offers.size ≤ 2^depth
++  cache : Cache (Rating.preference p.offers.size) depth
++  identity : ∀ (position : Nat) (value : Rating.Key p.offers.size),
++    cache.tree.values[position]? = some (some value) → value.index.val = position
++  complete : ∀ (position : Nat) (value : Rating.Key p.offers.size), ratingAt prior stored (known prior) position = some value →
++    cache.tree.values[position]? = some (some value)
++
++def State.live (_state : State prior stored depth) (value : Rating.Key p.offers.size) : Bool :=
++  (ratingAt prior stored (known prior) value.index.val).isSome
++
++theorem State.masked_values (state : State prior stored depth) :
++    state.cache.tree.values.map (mask state.live) =
++      (List.range (2^depth)).map (ratingAt prior stored (known prior)) := by
++  apply List.ext_getElem?
++  intro position
++  by_cases bound : position < 2^depth
++  · have inside : position < state.cache.tree.values.length := by simpa only [Tree.values_length] using bound
++    let entry := state.cache.tree.values[position]'inside
++    have located : state.cache.tree.values[position]? = some entry := List.getElem?_eq_getElem inside
++    have pointwise : mask state.live entry = ratingAt prior stored (known prior) position := by
++      cases original : entry with
++      | none =>
++          cases current : ratingAt prior stored (known prior) position with
++          | none => rfl
++          | some value =>
++              have covered := state.complete position value current
++              rw [located,original] at covered
++              simp at covered
++      | some value =>
++          have identity := state.identity position value (by simpa only [original] using located)
++          cases current : ratingAt prior stored (known prior) position with
++          | none => simp [mask,State.live,identity,current]
++          | some wanted =>
++              have covered := state.complete position wanted current
++              rw [located,original] at covered
++              have same := Option.some.inj (Option.some.inj covered)
++              subst wanted
++              simp [mask,State.live,identity,current]
++    simp only [List.getElem?_map,located,Option.map_some,List.getElem?_range,bound]
++    exact congrArg some pointwise
++  · have outside : state.cache.tree.values.length ≤ position := by simpa only [Tree.values_length] using Nat.le_of_not_gt bound
++    simp [List.getElem?_map,List.getElem?_eq_none outside,bound]
++
++theorem State.best_lookup (state : State prior stored depth) (value : Rating.Key p.offers.size)
++    (found : state.cache.best = some value) : state.cache.tree.values[value.index.val]? = some (some value) := by
++  have member := winner_mem (Rating.preference p.offers.size) state.cache.tree.values value
++    (state.cache.tree.best_exact.trans found)
++  obtain ⟨position,located⟩ := List.mem_iff_getElem?.mp member
++  have identity := state.identity position value located
++  simpa only [identity] using located
++
++theorem key_injective (a b : Score prior (evaluation prior)) (same : key a = key b) : a = b := by
++  cases a
++  cases b
++  simp only [key,Rating.Key.mk.injEq] at same
++  rcases same with ⟨rfl,rfl,rfl⟩
++  rfl
++
++theorem State.current_key (state : State prior stored depth) (value : Rating.Key p.offers.size)
++    (found : state.cache.best = some value) (score : Score prior (evaluation prior))
++    (current : Sparse.score? prior stored (known prior) value.index = some score) : key score = value := by
++  have rated : ratingAt prior stored (known prior) value.index.val = some (key score) := by
++    simp only [ratingAt,dif_pos value.index.isLt,current,Option.map_some]
++  have covered := state.complete value.index.val (key score) rated
++  have located := state.best_lookup value found
++  exact Option.some.inj (Option.some.inj (covered.symm.trans located))
++
++theorem State.best_exact (state : State prior stored depth) (value : Rating.Key p.offers.size)
++    (found : state.cache.best = some value) (score : Score prior (evaluation prior))
++    (current : Sparse.score? prior stored (known prior) value.index = some score) :
++    Sparse.best prior stored = some score := by
++  have agreement := state.current_key value found score current
++  have kept : state.live value = true := by
++    simp only [State.live,ratingAt,dif_pos value.index.isLt,current,Option.map_some,Option.isSome_some]
++  have masked := winner_mask_preserved Rating.better_irrefl state.live state.cache.tree.values value
++    (state.cache.tree.best_exact.trans found) kept
++  rw [state.masked_values,rating_winner stored _ state.capacity] at masked
++  cases original : Sparse.best prior stored with
++  | none => simp only [original,Option.map_none] at masked; contradiction
++  | some previous =>
++      simp only [original,Option.map_some,Option.some.injEq] at masked
++      rw [key_injective previous score (masked.trans agreement.symm)]
++
++theorem State.empty_exact (state : State prior stored depth) (empty : state.cache.best = none) :
++    Sparse.best prior stored = none := by
++  have masked := winner_mask_none state.live state.cache.tree.values (state.cache.tree.best_exact.trans empty)
++  rw [state.masked_values,rating_winner stored _ state.capacity] at masked
++  cases original : Sparse.best prior stored with
++  | none => rfl
++  | some value => simp only [original,Option.map_some] at masked; contradiction
++
++def State.clear (state : State prior stored depth) (value : Rating.Key p.offers.size)
++    (absent : ratingAt prior stored (known prior) value.index.val = none) : State prior stored depth :=
++  let bound := Nat.lt_of_lt_of_le value.index.isLt state.capacity
++  let updated := state.cache.tree.updated value.index.val none
++  {capacity := state.capacity
++   cache := updated
++   identity := by
++    intro position entry found
++    rw [Tree.updated_values _ _ _ bound] at found
++    by_cases same : value.index.val = position
++    · subst position
++      have length : value.index.val < state.cache.tree.values.length := by simpa only [Tree.values_length] using bound
++      simp [List.getElem?_set_self length] at found
++    · rw [List.getElem?_set_ne same] at found
++      exact state.identity position entry found
++   complete := by
++    intro position entry current
++    rw [Tree.updated_values _ _ _ bound]
++    by_cases same : value.index.val = position
++    · rw [← same,absent] at current
++      contradiction
++    · rw [List.getElem?_set_ne same]
++      exact state.complete position entry current}
++
++private theorem count_clear (values : List (Option α)) (position : Nat) (value : α)
++    (present : values[position]? = some (some value)) :
++    (values.set position none).countP Option.isSome + 1 = values.countP Option.isSome := by
++  induction values generalizing position with
++  | nil => simp at present
++  | cons head tail ih =>
++      cases position with
++      | zero =>
++          simp only [List.getElem?_cons_zero,Option.some.injEq] at present
++          subst head
++          simp
++      | succ position =>
++          have next := ih position (by simpa only [List.getElem?_cons_succ] using present)
++          cases head <;> simp_all [List.set] <;> omega
++
++theorem State.clear_decreases (state : State prior stored depth) (value : Rating.Key p.offers.size)
++    (found : state.cache.best = some value) (absent : ratingAt prior stored (known prior) value.index.val = none) :
++    (state.clear value absent).cache.tree.values.countP Option.isSome < state.cache.tree.values.countP Option.isSome := by
++  rw [State.clear,Tree.updated_values _ _ _ (Nat.lt_of_lt_of_le value.index.isLt state.capacity)]
++  have changed := count_clear state.cache.tree.values value.index.val value (state.best_lookup value found)
++  omega
++
++end SharedCoverage.Deferred.VerifiedWinner
+--- /dev/null
++++ b/tools/WinnerSearch.lean
+@@ -0,0 +1,41 @@
++module
++public import tools.WinnerCache
++@[expose] public section
++
++namespace SharedCoverage.Deferred.VerifiedWinner
++variable {p : Problem} {prior : Selection p} {stored : Sparse.Values prior} {depth : Nat}
++
++/-- The returned candidate is the complete scan's exact result. The retained
++state may have removed newly infeasible leaves, without losing any live one. -/
++structure Resolution (prior : Selection p) (stored : Sparse.Values prior) (depth : Nat) where
++  score : Option (Score prior (evaluation prior))
++  state : State prior stored depth
++  exact : score = Sparse.best prior stored
++
++/-- Invalid roots are removed one at a time. The count in the termination
++proof is erased; no runtime list of every leaf is built to drive recursion. -/
++private theorem same_seen (left right : Known prior) (index : Fin p.offers.size) :
++    Sparse.score? prior stored left index = Sparse.score? prior stored right index := by
++  rw [Sparse.score_exact,Sparse.score_exact]
++  simp only [Deferred.score?]
++
++def State.resolveWith (state : State prior stored depth) (seen : Known prior) : Resolution prior stored depth :=
++  match found : state.cache.best with
++  | none => ⟨none,state,(state.empty_exact found).symm⟩
++  | some value =>
++    match current : Sparse.score? prior stored seen value.index with
++    | some score => ⟨some score,state,(state.best_exact value found score
++        (by rw [← same_seen seen (known prior) value.index]; exact current)).symm⟩
++    | none =>
++      have absent : ratingAt prior stored (known prior) value.index.val = none := by
++        simp only [ratingAt,dif_pos value.index.isLt,← same_seen seen (known prior) value.index,current,Option.map_none]
++      (state.clear value absent).resolveWith seen
++termination_by state.cache.tree.values.countP Option.isSome
++decreasing_by exact state.clear_decreases value found absent
++
++/-- Construct selected membership once, including when several now-infeasible
++roots must be removed during the same choice. -/
++def State.resolve (state : State prior stored depth) : Resolution prior stored depth :=
++  state.resolveWith (known prior)
++
++end SharedCoverage.Deferred.VerifiedWinner
+--- /dev/null
++++ b/tools/WinnerUpdates.lean
+@@ -0,0 +1,93 @@
++module
++public import tools.WinnerCache
++@[expose] public section
++
++namespace SharedCoverage.Deferred.VerifiedWinner
++open StableWinnerIndex
++variable {p : Problem} {prior : Selection p} {stored : Sparse.Values prior} {depth : Nat}
++
++def updateMany (_capacity : p.offers.size ≤ 2^depth)
++    (cache : Cache (Rating.preference p.offers.size) depth) (indices : List (Fin p.offers.size))
++    (replacement : Nat → Option (Rating.Key p.offers.size)) : Cache (Rating.preference p.offers.size) depth :=
++  indices.foldl (fun cache index => cache.tree.updated index.val (replacement index.val)) cache
++
++theorem updateMany_lookup (capacity : p.offers.size ≤ 2^depth)
++    (cache : Cache (Rating.preference p.offers.size) depth) (indices : List (Fin p.offers.size))
++    (replacement : Nat → Option (Rating.Key p.offers.size)) (query : Nat) :
++    (updateMany capacity cache indices replacement).tree.values[query]? =
++      if ∃ index ∈ indices, index.val = query then some (replacement query) else cache.tree.values[query]? := by
++  induction indices generalizing cache with
++  | nil => simp [updateMany]
++  | cons head tail ih =>
++      simp only [updateMany,List.foldl_cons] at *
++      rw [ih]
++      by_cases later : ∃ index ∈ tail, index.val = query
++      · simp [later]
++      · rw [if_neg later,Tree.updated_values _ _ _ (Nat.lt_of_lt_of_le head.isLt capacity)]
++        by_cases same : head.val = query
++        · subst query
++          have bound : head.val < cache.tree.values.length := by
++            simpa only [Tree.values_length] using Nat.lt_of_lt_of_le head.isLt capacity
++          simp [List.getElem?_set_self bound]
++        · simp [List.getElem?_set_ne same,later,same]
++
++def State.advance (state : State prior stored depth) (layout : Sparse.Layout p)
++    (next : Selection p) (winner : Fin p.offers.size) (extension : next.selected = prior.selected++[winner])
++    (updated : Sparse.Values next) (same : updated = stored.advance layout next winner extension) :
++    State next updated depth :=
++  let changed := affected layout stored winner
++  let seen := known next
++  let replacement := ratingAt next updated seen
++  let cache := updateMany state.capacity state.cache changed replacement
++  {capacity := state.capacity
++   cache
++   identity := by
++    intro position value found
++    rw [updateMany_lookup] at found
++    split at found
++    · have current := Option.some.inj found
++      exact rating_at_index updated (known next) position value current
++    · exact state.identity position value found
++   complete := by
++    intro position value current
++    rw [updateMany_lookup]
++    by_cases present : ∃ index ∈ changed, index.val = position
++    · rw [if_pos present]
++      exact congrArg some current
++    · rw [if_neg present]
++      have bound : position < p.offers.size := by
++        have identity := rating_at_index updated (known next) position value current
++        simpa only [← identity] using value.index.isLt
++      let query : Fin p.offers.size := ⟨position,bound⟩
++      have absent : query ∉ changed := by
++        intro member
++        exact present ⟨query,member,rfl⟩
++      have values : updated.costs[query] = stored.costs[query] ∧ updated.gains[query] = stored.gains[query] := by
++        rw [same]
++        exact unaffected_values layout stored next winner query extension absent
++      have original := unchanged_valid_rating stored next updated winner query extension values.1 values.2 value current
++      exact state.complete position value original}
++
++def State.initial (prior : Selection p) (stored : Sparse.Values prior) (depth : Nat)
++    (capacity : p.offers.size ≤ 2^depth) : State prior stored depth :=
++  let keys := ((List.range p.offers.size).map (ratingAt prior stored (known prior))).toArray
++  let cache := StableWinnerIndex.build (Rating.preference p.offers.size) depth keys
++  {capacity,cache
++   identity := by
++    intro position value found
++    by_cases inside : position < 2^depth
++    · by_cases real : position < p.offers.size
++      · have current : ratingAt prior stored (known prior) position = some value := by
++          simpa [cache,keys,build_values,List.getElem?_map,List.getElem?_range,inside,real] using found
++        exact rating_at_index stored (known prior) position value current
++      · simp [cache,keys,build_values,List.getElem?_map,inside,real] at found
++    · simp [cache,keys,build_values,List.getElem?_map,inside] at found
++   complete := by
++    intro position value current
++    have real : position < p.offers.size := by
++      have identity := rating_at_index stored (known prior) position value current
++      simpa only [← identity] using value.index.isLt
++    have inside := Nat.lt_of_lt_of_le real capacity
++    simp [cache,keys,build_values,List.getElem?_map,inside,real,current]}
++
++end SharedCoverage.Deferred.VerifiedWinner
+--- /dev/null
++++ b/tools/VerifiedWinnerCoverage.lean
+@@ -0,0 +1,55 @@
++module
++public import tools.WinnerSearch
++public import tools.WinnerUpdates
++@[expose] public section
++
++namespace SharedCoverage.Deferred.VerifiedWinner
++variable {p : Problem}
++
++def depth (p : Problem) : Nat := p.offers.size.log2+1
++
++def fill (layout : Sparse.Layout p) (fuel : Nat) (prior : Selection p) (stored : Sparse.Values prior)
++    (state : State prior stored (depth p)) : Selection p :=
++  match fuel with
++  | 0 => prior
++  | fuel+1 =>
++      let resolved := state.resolve
++      match resolved.score with
++      | none => prior
++      | some score =>
++          let next := score.proposal.result
++          let updated := stored.advance layout next score.index rfl
++          fill layout fuel next updated
++            (resolved.state.advance layout next score.index rfl updated rfl)
++
++theorem fill_exact (layout : Sparse.Layout p) (fuel : Nat) (prior : Selection p)
++    (stored : Sparse.Values prior) (state : State prior stored (depth p)) :
++    fill layout fuel prior stored state = SharedCoverage.fill fuel prior := by
++  induction fuel generalizing prior with
++  | zero => rfl
++  | succ fuel ih =>
++      rw [SharedCoverage.fill,← Sparse.best_exact stored,← state.resolve.exact]
++      cases found : state.resolve.score with
++      | none => simp only [fill,found,Option.map_none]
++      | some score =>
++          simpa only [fill,found,Option.map_some] using
++            (ih score.proposal.result (stored.advance layout _ score.index rfl)
++              (state.resolve.state.advance layout _ score.index rfl
++                (stored.advance layout _ score.index rfl) rfl))
++
++/-- The cached implementation retains exactly the full scan's ordered result.
++The state certificates and termination measure disappear during compilation. -/
++def choose? (p : Problem) : Option (Selection p) := do
++  let initial ← empty? p
++  let layout := Sparse.layout p
++  let stored := Sparse.values initial
++  let state := State.initial initial stored (depth p) (Nat.le_of_lt Nat.lt_log2_self)
++  pure (SharedCoverage.prefer (fill layout p.offers.size initial stored state) (SharedCoverage.bestSingleton initial))
++
++@[csimp] theorem choose_exact : @SharedCoverage.choose? = @choose? := by
++  rw [Sparse.choose_exact]
++  funext p
++  simp only [choose?,Sparse.choose?,fill_exact,Sparse.fill_exact]
++
++end SharedCoverage.Deferred.VerifiedWinner
++
