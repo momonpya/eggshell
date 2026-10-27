@@ -46,7 +46,6 @@ def main (args : List String) : IO Unit := do
   check (!(← root.pathExists)) "keep previous actual hook"
   IO.FS.createDirAll root
   let study := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell/study-services-20261026"
-  let old := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell/literal-support-20261026/required-replay/topic-1"
   let database := prepared / "work.egg"
   let original ← DB.PageMap.pin database
   check (original.head.identity == "76352b67a9c35002bff67dc3d3c3a01b7bd194e43e09f5f54714dde75df5a8de" &&
@@ -54,7 +53,7 @@ def main (args : List String) : IO Unit := do
   let sourceFiles ← StudyRuntime.files database
   let data := root / "data"
   IO.FS.createDir data
-  let shared ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",(old / "data/read-cache").toString,(data / "read-cache").toString]}
+  let shared ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",(prepared / "read-cache").toString,(data / "read-cache").toString]}
   check (shared.exitCode == 0) "could not reuse private read preparation"
   let frozen ← read (study / "seed-1-complete-audit.json")
   let availability ← IO.ofExcept (frozen.getObjValAs? (Array Json) "availability")

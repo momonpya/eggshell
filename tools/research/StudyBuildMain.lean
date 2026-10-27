@@ -43,6 +43,7 @@ private partial def inheritLibrary (source target : System.FilePath) : IO Unit :
   -- candidate libraries otherwise exceed the OS symlink limit despite a
   -- valid inherited object, and later cleanup can break an unrelated build.
   let actualSource ← IO.FS.realPath source
+  if (← IO.FS.realPath target) == actualSource then return
   for entry in ← actualSource.readDir do
     if !(← entry.path.pathExists) then continue
     let destination := target / entry.fileName
