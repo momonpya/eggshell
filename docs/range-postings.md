@@ -31,7 +31,7 @@ nativeで1,680点の境界検査、360件の被覆cue、60件の全件filterと�
 
 その区間のworker側1,881標本中、`Sparse.choose?`配下が803、`Sparse.best`配下が699。両者は包含するので足さない。`PreparedCueIndex.Prepared.many`配下は3標本だった。この区間を実行全体のCPU比率へ外挿しない。[観測と集計](candidates/range-postings/profile/observation.json)、[元のsample](candidates/range-postings/profile/search.sample.txt)。
 
-現行`Sparse.Values.advance`は逆引きから費用とgainを変更候補だけ再計算しているが、`Sparse.best`は毎回`List.finRange p.offers.size`を走査し、巨大整数の比の比較も繰り返している。過去の選択木が失敗したのは、勝者を木で保持しても毎回全葉を更新したためである。次は実入力で、各選択の変更候補数と比較回数を確認する。そのうえで、変更した葉とその祖先だけを更新する方法を検討する。共有費用は下がりうるので、古いscoreを上界としたlazy heapは使わない。残り予算による不適格化と、共有費用低下による再適格化も必要であり、単に旧木を再導入しない。これは次の検証計画であり、実装・速度改善・95%配送の証拠ではない。
+現行`Sparse.Values.advance`は逆引きから費用とgainを変更候補だけ再計算しているが、`Sparse.best`は毎回`List.finRange p.offers.size`を走査し、巨大整数の比の比較も繰り返している。過去の選択木が失敗したのは、勝者を木で保持しても毎回全葉を更新したためである。次は実入力で、各選択の変更候補数と比較回数を確認する。そのうえで、変更した葉とその祖先だけを更新する方法を検討する。共有限界費用は下がりうるので、古いscoreを上界としたlazy heapは使わない。当初ここで必要とした「予算超過後の再適格化」は、後続の`Budget.no_reactivation`の証明で否定された。非負な原子の総費用は単調であり、順位更新と予算適格性を混同しない。[後続の計測と訂正](selector-input.md)。単に旧木を再導入しない。
 
 ## 検証器と保存領域
 

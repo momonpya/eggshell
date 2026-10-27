@@ -36,10 +36,11 @@ rebuild only the changed synaptic and original-source views, before the hook.
 No answering model, all-topic retry, or foreground repair. -/
 def main (args : List String) : IO Unit := do
   checkReadScope
-  let (candidate,output,prepared,captureRanges,diagnostic) ← match args with
-    | [candidate,output,prepared] => pure (candidate,output,System.FilePath.mk prepared,false,false)
-    | [candidate,output,prepared,"ranges"] => pure (candidate,output,System.FilePath.mk prepared,true,false)
-    | [candidate,output,prepared,"worker"] => pure (candidate,output,System.FilePath.mk prepared,false,true)
+  let (candidate,output,prepared,captureRanges,diagnostic,captureInput) ← match args with
+    | [candidate,output,prepared] => pure (candidate,output,System.FilePath.mk prepared,false,false,false)
+    | [candidate,output,prepared,"ranges"] => pure (candidate,output,System.FilePath.mk prepared,true,false,false)
+    | [candidate,output,prepared,"worker"] => pure (candidate,output,System.FilePath.mk prepared,false,true,false)
+    | [candidate,output,prepared,"selector-input"] => pure (candidate,output,System.FilePath.mk prepared,false,true,true)
     | _ => throw (IO.userError "candidate, new output directory and explicit prepared checkpoint required")
   let root := System.FilePath.mk output
   check (!(← root.pathExists)) "keep previous actual hook"
@@ -98,6 +99,7 @@ def main (args : List String) : IO Unit := do
     ("EGGSHELL_CONFIG",some config.toString),("EGGSHELL_PROFILE",some "work"),
     ("EGGSHELL_HANDOFF_TRACE",some (root / "handoff-trace.txt").toString),
     ("EGGSHELL_TRACE_SELECTION_RANGES",if captureRanges then some "1" else none),
+    ("EGGSHELL_TRACE_SELECTOR_INPUT",if captureInput then some "1" else none),
     ("PLUGIN_ROOT",some plugin.toString),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none),
     ("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),
     ("MKL_NUM_THREADS",some "1"),("HF_HUB_OFFLINE",some "1"),("TOKENIZERS_PARALLELISM",some "false")]

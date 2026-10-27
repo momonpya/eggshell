@@ -1,0 +1,470 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -18,0 +19 @@
++public import tools.SharedCoverageInput
+@@ -5768,0 +5770 @@
++  selectorInput : Option Json := none
+@@ -5779 +5781,2 @@
+-    (bundles : Array Synapses.Bundles.Projected := #[]) (captureBindings : Bool := false) : Option (Plan ceiling cost mandatory) := do
++    (bundles : Array Synapses.Bundles.Projected := #[]) (captureBindings : Bool := false)
++    (captureInput : Bool := false) : Option (Plan ceiling cost mandatory) := do
+@@ -5838,0 +5842 @@
++        selectorInput := if captureInput then some (SharedCoverage.Input.encode compiled) else none
+@@ -6043 +6047,2 @@
+-    (captureSelection : Bool := false) (captureRanges : Bool := false) : Option Handoff :=
++    (captureSelection : Bool := false) (captureRanges : Bool := false)
++    (captureInput : Bool := false) : Option Handoff :=
+@@ -6320 +6325 @@
+-      SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles captureRanges
++      SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles captureRanges captureInput
+@@ -6483 +6488,5 @@
+-          (fun plan => if captureRanges then plan.rangeReceipt else plan.receipt) else none
++          (fun plan =>
++            let record := if captureRanges then plan.rangeReceipt else plan.receipt
++            match plan.selectorInput with
++            | none => record
++            | some input => record.setObjVal! "selectorInput" input) else none
+@@ -7738,0 +7748 @@
++  let captureInput := (← IO.getEnv "EGGSHELL_TRACE_SELECTOR_INPUT") == some "1"
+@@ -7763,0 +7774 @@
++    (captureInput := captureInput)
+--- a/tools/SharedCoverageInput.lean
++++ b/tools/SharedCoverageInput.lean
+@@ -0,0 +1,72 @@
++module
++public import tools.SharedCoverage
++public import Lean.Data.Json.FromToJson
++@[expose] public section
++
++namespace SharedCoverage.Input
++open Lean
++
++structure RawOffer where
++  closure : List Nat
++  covers : List Nat
++  deriving BEq, FromJson, ToJson
++
++structure RawProblem where
++  costs : Array (Nat × Nat)
++  weights : Array Nat
++  offers : Array RawOffer
++  fixed : Nat × Nat
++  limit : Nat × Nat
++  deriving BEq, FromJson, ToJson
++
++def ofOffer {nodes cues : Nat} (offer : Offer nodes cues) : RawOffer :=
++  {closure := offer.closure.map (·.val),covers := offer.covers.map (·.val)}
++
++def ofProblem (p : Problem) : RawProblem := {
++  costs := p.costs,weights := p.weights,fixed := p.fixed,limit := p.limit
++  offers := p.offers.map ofOffer}
++
++def checkedIndices (size : Nat) (indices : List Nat) : Except String (List (Fin size)) :=
++  indices.mapM fun index => if h : index < size then pure ⟨index,h⟩
++    else throw "selector input has an out-of-bounds feature"
++
++theorem checked_indices_values (indices : List (Fin size)) :
++    checkedIndices size (indices.map (·.val)) = .ok indices := by
++  induction indices with
++  | nil => rfl
++  | cons index rest ih =>
++      simp only [checkedIndices] at ih
++      simp only [List.map_cons,checkedIndices,List.mapM_cons,dif_pos index.isLt]
++      rw [ih]
++      rfl
++
++def RawOffer.decode (nodes cues : Nat) (raw : RawOffer) : Except String (Offer nodes cues) := do
++  let closure ← checkedIndices nodes raw.closure
++  let covers ← checkedIndices cues raw.covers
++  return {closure,covers}
++
++def RawProblem.decode (raw : RawProblem) : Except String Problem := do
++  let offers ← raw.offers.toList.mapM (RawOffer.decode raw.costs.size raw.weights.size)
++  return {costs := raw.costs,weights := raw.weights,offers := offers.toArray,fixed := raw.fixed,limit := raw.limit}
++
++theorem decode_offer {nodes cues : Nat} (offer : Offer nodes cues) :
++    (ofOffer offer).decode nodes cues = .ok offer := by
++  cases offer
++  simp only [ofOffer,RawOffer.decode,checked_indices_values]
++  rfl
++
++private theorem decode_offers {nodes cues : Nat} (offers : List (Offer nodes cues)) :
++    ((offers.map ofOffer).mapM (RawOffer.decode nodes cues)) = .ok offers := by
++  induction offers with
++  | nil => rfl
++  | cons head tail ih => simp only [List.map_cons,List.mapM_cons,decode_offer,ih]; rfl
++
++theorem decode_problem (p : Problem) : (ofProblem p).decode = .ok p := by
++  cases p with | mk costs weights offers fixed limit =>
++  change _ = Except.ok ({costs,weights,offers,fixed,limit} : Problem)
++  simp only [ofProblem,RawProblem.decode,Array.toList_map,decode_offers]
++  change Except.ok ({costs,weights,offers := offers.toList.toArray,fixed,limit} : Problem) = _
++  simp
++
++def encode (p : Problem) : Json := toJson (ofProblem p)
++end SharedCoverage.Input
+--- a/tools/StableWinnerIndex.lean
++++ b/tools/StableWinnerIndex.lean
+@@ -0,0 +1,155 @@
++module
++public import Std
++@[expose] public section
++
++namespace StableWinnerIndex
++
++/-- A strict weak preference. Equal preferences retain the earlier leaf. -/
++structure Preference (α : Type) where
++  better : α → α → Bool
++  trans : ∀ a b c, better a b = true → better b c = true → better a c = true
++  negTrans : ∀ a b c, better a b ≠ true → better b c ≠ true → better a c ≠ true
++
++def merge (order : Preference α) : Option α → Option α → Option α
++  | none,right => right
++  | left,none => left
++  | some left,some right => if order.better right left then some right else some left
++
++@[simp] theorem merge_none_left (order : Preference α) (value : Option α) :
++    merge order none value = value := rfl
++
++@[simp] theorem merge_none_right (order : Preference α) (value : Option α) :
++    merge order value none = value := by cases value <;> rfl
++
++theorem merge_assoc (order : Preference α) (a b c : Option α) :
++    merge order (merge order a b) c = merge order a (merge order b c) := by
++  cases a with
++  | none => rfl
++  | some a =>
++    cases b with
++    | none => rfl
++    | some b =>
++      cases c with
++      | none => simp
++      | some c =>
++        by_cases ba : order.better b a = true
++        · by_cases cb : order.better c b = true
++          · have ca := order.trans c b a cb ba
++            simp [merge,ba,cb,ca]
++          · simp [merge,ba,cb]
++        · by_cases cb : order.better c b = true
++          · simp [merge,ba,cb]
++          · have ca := order.negTrans c b a cb ba
++            simp [merge,ba,cb,ca]
++
++def winner (order : Preference α) (values : List (Option α)) : Option α :=
++  values.foldl (merge order) none
++
++theorem fold_from (order : Preference α) (values : List (Option α)) (initial : Option α) :
++    values.foldl (merge order) initial = merge order initial (winner order values) := by
++  induction values generalizing initial with
++  | nil => simp [winner]
++  | cons head tail ih =>
++    simp only [List.foldl_cons,winner]
++    rw [ih,ih]
++    exact merge_assoc order initial head (winner order tail)
++
++theorem winner_append (order : Preference α) (left right : List (Option α)) :
++    winner order (left++right) = merge order (winner order left) (winner order right) := by
++  rw [winner,List.foldl_append,fold_from]
++  rfl
++
++theorem merge_mem (order : Preference α) (left right : Option α) (value : α)
++    (found : merge order left right = some value) : left = some value ∨ right = some value := by
++  cases left <;> cases right <;> simp_all [merge]
++  split at found <;> simp_all
++
++theorem winner_mem (order : Preference α) (values : List (Option α)) (value : α)
++    (found : winner order values = some value) : some value ∈ values := by
++  induction values with
++  | nil => simp [winner] at found
++  | cons head tail ih =>
++    rw [winner,List.foldl_cons,fold_from] at found
++    rcases merge_mem order head (winner order tail) value found with same | rest
++    · simp [same]
++    · exact List.mem_cons_of_mem _ (ih rest)
++
++/-- A cached tournament contains the proof of its cached winner in its type.
++Depth, rather than a mutable leaf count, fixes the update path. -/
++inductive Tree (order : Preference α) : Nat → Option α → Type
++  | leaf (value : Option α) : Tree order 0 value
++  | branch {depth : Nat} {leftBest rightBest : Option α}
++      (left : Tree order depth leftBest) (right : Tree order depth rightBest) :
++      Tree order (depth+1) (merge order leftBest rightBest)
++
++structure Cache (order : Preference α) (depth : Nat) where
++  best : Option α
++  tree : Tree order depth best
++
++variable {α : Type} {order : Preference α} {depth : Nat} {best : Option α}
++
++def Tree.values : {depth : Nat} → {best : Option α} → Tree order depth best → List (Option α)
++  | _,_,.leaf value => [value]
++  | _,_,.branch left right => left.values ++ right.values
++
++theorem Tree.values_length (tree : Tree order depth best) : tree.values.length = 2^depth := by
++  induction tree with
++  | leaf => simp [values]
++  | branch left right ihl ihr => simp [values,ihl,ihr,Nat.pow_succ,Nat.mul_two]
++
++theorem Tree.best_exact (tree : Tree order depth best) : winner order tree.values = best := by
++  induction tree with
++  | leaf => simp [winner,values]
++  | branch left right ihl ihr => rw [values,winner_append,ihl,ihr]
++
++def join (left right : Cache order depth) : Cache order (depth+1) :=
++  ⟨merge order left.best right.best,.branch left.tree right.tree⟩
++
++def Tree.updated : {depth : Nat} → {best : Option α} →
++    Tree order depth best → Nat → Option α → Cache order depth
++  | _,_,.leaf _,_,value => ⟨value,.leaf value⟩
++  | _,_,@Tree.branch _ _ depth _ _ left right,index,value =>
++    if index < 2^depth then join (left.updated index value) ⟨_,right⟩
++    else join ⟨_,left⟩ (right.updated (index-2^depth) value)
++
++theorem Tree.updated_values (tree : Tree order depth best) (index : Nat) (value : Option α)
++    (bounded : index < 2^depth) :
++    (tree.updated index value).tree.values = tree.values.set index value := by
++  induction tree generalizing index with
++  | leaf previous =>
++    have : index = 0 := by simpa using bounded
++    simp [updated,values,this]
++  | @branch depth leftBest rightBest left right ihl ihr =>
++    simp only [updated]
++    by_cases inside : index < 2^depth
++    · rw [if_pos inside]
++      simp only [join,values,ihl index inside]
++      rw [List.set_append_left index value (by simpa [left.values_length] using inside)]
++    · rw [if_neg inside]
++      have half := left.values_length
++      have rest : index-2^depth < 2^depth := by
++        simp only [Nat.pow_succ,Nat.mul_two] at bounded
++        omega
++      simp only [join,values,ihr (index-2^depth) rest]
++      rw [List.set_append_right index value (by omega)]
++      rw [half]
++
++def build (order : Preference α) (depth : Nat) (values : Array (Option α)) (first : Nat := 0) :
++    Cache order depth :=
++  match depth with
++  | 0 => let value := values[first]?.getD none; ⟨value,.leaf value⟩
++  | depth+1 => join (build order depth values first) (build order depth values (first+2^depth))
++
++theorem build_values (order : Preference α) (depth : Nat) (values : Array (Option α)) (first : Nat) :
++    (build order depth values first).tree.values =
++      (List.range (2^depth)).map (fun index => values[first+index]?.getD none) := by
++  induction depth generalizing first with
++  | zero => simp [build,Tree.values]
++  | succ depth ih =>
++    simp only [build,join,Tree.values,ih,Nat.pow_succ,Nat.mul_two,List.range_add,List.map_append,List.map_map]
++    congr 1
++    apply List.map_congr_left
++    intro index _
++    simp [Nat.add_assoc]
++
++end StableWinnerIndex
+--- a/tools/SelectionRating.lean
++++ b/tools/SelectionRating.lean
+@@ -0,0 +1,53 @@
++module
++public import tools.StableWinnerIndex
++@[expose] public section
++namespace SharedCoverage.Rating
++
++structure Key (n : Nat) where
++  index : Fin n
++  gain : Nat
++  charge : Nat
++  deriving DecidableEq, BEq
++
++def better (a b : Key n) : Bool :=
++  if a.charge == 0 then b.charge != 0 || b.gain < a.gain
++  else if b.charge == 0 then false
++  else b.gain*a.charge < a.gain*b.charge
++
++theorem fraction_trans {a b c x y z : Nat} (hx : 0 < x) (hy : 0 < y) (hz : 0 < z)
++    (ab : b*x < a*y) (bc : c*y < b*z) : c*x < a*z := by
++  have first : (c*x)*y < (b*x)*z := by
++    simpa only [Nat.mul_assoc,Nat.mul_comm,Nat.mul_left_comm] using Nat.mul_lt_mul_of_pos_right bc hx
++  have second := Nat.mul_lt_mul_of_pos_right ab hz
++  have combined : (c*x)*y < (a*z)*y := by
++    simpa only [Nat.mul_assoc,Nat.mul_comm,Nat.mul_left_comm] using Nat.lt_trans first second
++  exact (Nat.mul_lt_mul_right hy).mp combined
++
++theorem fraction_neg_trans {a b c x y z : Nat} (_hx : 0 < x) (hy : 0 < y) (_hz : 0 < z)
++    (ab : ¬b*x < a*y) (bc : ¬c*y < b*z) : ¬c*x < a*z := by
++  have first : (a*z)*y ≤ (b*z)*x := by
++    simpa only [Nat.mul_assoc,Nat.mul_comm,Nat.mul_left_comm] using Nat.mul_le_mul_right z (Nat.le_of_not_gt ab)
++  have second := Nat.mul_le_mul_right x (Nat.le_of_not_gt bc)
++  have combined : (a*z)*y ≤ (c*x)*y := by
++    simpa only [Nat.mul_assoc,Nat.mul_comm,Nat.mul_left_comm] using Nat.le_trans first second
++  exact Nat.not_lt_of_ge (Nat.le_of_mul_le_mul_right combined hy)
++
++theorem better_trans (a b c : Key n) (ab : better a b = true) (bc : better b c = true) :
++    better a c = true := by
++  by_cases az : a.charge = 0 <;> by_cases bz : b.charge = 0 <;> by_cases cz : c.charge = 0
++  all_goals simp [better,az,bz,cz] at ab bc ⊢
++  all_goals try omega
++  exact fraction_trans (by omega) (by omega) (by omega) ab bc
++
++theorem better_neg_trans (a b c : Key n) (ab : better a b ≠ true) (bc : better b c ≠ true) :
++    better a c ≠ true := by
++  by_cases az : a.charge = 0 <;> by_cases bz : b.charge = 0 <;> by_cases cz : c.charge = 0
++  all_goals simp [better,az,bz,cz] at ab bc ⊢
++  all_goals try omega
++  exact Nat.le_of_not_gt (fraction_neg_trans (by omega) (by omega) (by omega)
++    (Nat.not_lt_of_ge ab) (Nat.not_lt_of_ge bc))
++
++def preference (n : Nat) : StableWinnerIndex.Preference (Key n) :=
++  ⟨better,better_trans,better_neg_trans⟩
++
++end SharedCoverage.Rating
+--- a/tools/ChangedWinnerCoverage.lean
++++ b/tools/ChangedWinnerCoverage.lean
+@@ -0,0 +1,87 @@
++module
++public import tools.DeferredCoverage
++public import tools.SelectionRating
++public import Lean.Data.Json.FromToJson
++@[expose] public section
++
++namespace SharedCoverage.Deferred.ChangedWinner
++open StableWinnerIndex
++variable {p : Problem} {prior : Selection p}
++
++structure Statistics where
++  rounds : Nat := 0
++  pointUpdates : Nat := 0
++  rejectedByCurrentBudget : Nat := 0
++  checkedWinners : Nat := 0
++  deriving Lean.ToJson
++
++def key (score : Score prior (evaluation prior)) : Rating.Key p.offers.size :=
++  ⟨score.index,score.gain,score.charge⟩
++
++def ratingAt (prior : Selection p) (stored : Sparse.Values prior) (seen : Known prior)
++    (index : Fin p.offers.size) : Option (Rating.Key p.offers.size) :=
++  (Sparse.score? prior stored seen index).map key
++
++/-- Only the changed leaf's ancestors are reconstructed. Other subtrees are
++shared; there is no refresh traversal over the remaining candidate leaves. -/
++def updateCache {α : Type} {order : Preference α} {depth : Nat}
++    (cache : Cache order depth) (index : Fin (2^depth)) (value : Option α) :
++    Cache order depth := cache.tree.updated index.val value
++
++theorem updateCache_exact {α : Type} {order : Preference α} {depth : Nat}
++    (cache : Cache order depth) (index : Fin (2^depth)) (value : Option α) :
++    (updateCache cache index value).tree.values = cache.tree.values.set index.val value :=
++  cache.tree.updated_values index.val value index.isLt
++
++/-- Research entry only: no csimp replacement or production caller is installed.
++Selection construction retains the existing freshness and dual-budget proofs.
++Full ordered-refinement proof is still required before production connection. -/
++def choose? (p : Problem) : Option (Selection p × Statistics) := do
++  let initial ← empty? p
++  let depth := (p.offers.size+1).log2+1
++  if capacity : p.offers.size ≤ 2^depth then
++    let layout := Sparse.layout p
++    let initialValues := Sparse.values initial
++    let seen := known initial
++    let keys := (List.finRange p.offers.size).map (ratingAt initial initialValues seen) |>.toArray
++    let mut tree := StableWinnerIndex.build (Rating.preference p.offers.size) depth keys
++    let mut state : (prior : Selection p) × Sparse.Values prior := ⟨initial,initialValues⟩
++    let mut stats : Statistics := {}
++    let mut stopped := false
++    for _ in [:p.offers.size+1] do
++      let prior := state.1
++      let stored := state.2
++      let seen := known prior
++      let mut winner : Option (Score prior (evaluation prior)) := none
++      for _ in [:p.offers.size+1] do
++        let some held := tree.best | break
++        stats := {stats with checkedWinners := stats.checkedWinners+1}
++        match Sparse.score? prior stored seen held.index with
++        | some score =>
++            if key score != held then failure
++            winner := some score
++            break
++        | none =>
++            let bounded : held.index.val < 2^depth := Nat.lt_of_lt_of_le held.index.isLt capacity
++            tree := updateCache tree ⟨held.index.val,bounded⟩ none
++            stats := {stats with
++              pointUpdates := stats.pointUpdates+1
++              rejectedByCurrentBudget := stats.rejectedByCurrentBudget+1}
++      let some score := winner | stopped := true; break
++      let next := score.proposal.result
++      let nodes := layout.nodes.changed stored.base.nodeIndex p.offers[score.index].closure
++      let cues := layout.cues.changed stored.base.cueIndex p.offers[score.index].covers
++      let changed := Eggshell.hashDistinct (score.index :: nodes ++ cues)
++      let updated := stored.advance layout next score.index rfl
++      let nextSeen := known next
++      for index in changed do
++        let bounded : index.val < 2^depth := Nat.lt_of_lt_of_le index.isLt capacity
++        tree := updateCache tree ⟨index.val,bounded⟩ (ratingAt next updated nextSeen index)
++        stats := {stats with pointUpdates := stats.pointUpdates+1}
++      stats := {stats with rounds := stats.rounds+1}
++      state := ⟨next,updated⟩
++    unless stopped do failure
++    return (SharedCoverage.prefer state.1 (SharedCoverage.bestSingleton initial),stats)
++  else none
++
++end SharedCoverage.Deferred.ChangedWinner
+--- a/tools/SelectionBudget.lean
++++ b/tools/SelectionBudget.lean
+@@ -0,0 +1,58 @@
++module
++public import tools.SharedCoverage
++@[expose] public section
++
++namespace SharedCoverage.Budget
++
++private theorem fold_ge (p : Problem) (items : List (Fin p.costs.size)) (initial : Nat × Nat) :
++    initial.1 ≤ (items.foldl (fun total index =>
++      (total.1+p.costs[index].1,total.2+p.costs[index].2)) initial).1 ∧
++    initial.2 ≤ (items.foldl (fun total index =>
++      (total.1+p.costs[index].1,total.2+p.costs[index].2)) initial).2 := by
++  induction items generalizing initial with
++  | nil => simp
++  | cons head tail ih =>
++      simp only [List.foldl_cons]
++      have next := ih (initial.1+p.costs[head].1,initial.2+p.costs[head].2)
++      constructor <;> omega
++
++theorem cost_extension (p : Problem) (selected : List (Fin p.offers.size)) (added : Fin p.offers.size) :
++    (cost p selected).1 ≤ (cost p (selected++[added])).1 ∧
++    (cost p selected).2 ≤ (cost p (selected++[added])).2 := by
++  simp only [cost,nodes_append_one,List.foldl_append]
++  exact fold_ge p _ _
++
++theorem cost_swap (p : Problem) (selected : List (Fin p.offers.size)) (a b : Fin p.offers.size) :
++    cost p (selected++[a,b]) = cost p (selected++[b,a]) := by
++  have same : (nodes p (selected++[a,b])).Perm (nodes p (selected++[b,a])) := by
++    apply (List.perm_ext_iff_of_nodup (duplicate_payload_charged_once p _) (duplicate_payload_charged_once p _)).mpr
++    intro node
++    have swapped : (selected++[a,b]).Perm (selected++[b,a]) :=
++      List.Perm.append_left selected (List.Perm.swap b a [])
++    simpa only [nodes,List.mem_eraseDups] using
++      (List.Perm.flatMap_right (fun index => p.offers[index].closure) swapped).mem_iff (a := node)
++  unfold cost
++  apply same.foldl_eq'
++  intro x _ y _ z
++  apply Prod.ext <;> simp [Nat.add_comm,Nat.add_left_comm]
++
++/-- Shared marginal costs can decrease; total union costs cannot. An offer
++that already exceeded either budget never becomes feasible after more offers.
++This holds for both limits without assuming any byte/character ratio. -/
++theorem no_reactivation (p : Problem) (selected : List (Fin p.offers.size))
++    (candidate winner : Fin p.offers.size)
++    (before : ¬((cost p (selected++[candidate])).1 ≤ p.limit.1 ∧
++      (cost p (selected++[candidate])).2 ≤ p.limit.2)) :
++    ¬((cost p ((selected++[winner])++[candidate])).1 ≤ p.limit.1 ∧
++      (cost p ((selected++[winner])++[candidate])).2 ≤ p.limit.2) := by
++  have growth := cost_extension p (selected++[candidate]) winner
++  simp only [List.append_assoc,List.cons_append,List.nil_append] at growth ⊢
++  rw [cost_swap p selected candidate winner] at growth
++  intro after
++  apply before
++  exact ⟨Nat.le_trans growth.1 after.1,Nat.le_trans growth.2 after.2⟩
++
++end SharedCoverage.Budget
++
++#print axioms SharedCoverage.Budget.cost_extension
++#print axioms SharedCoverage.Budget.no_reactivation
