@@ -1,0 +1,408 @@
+--- a/Eggshell/SynapticCause.lean
++++ b/Eggshell/SynapticCause.lean
+@@ -0,0 +1,151 @@
++module
++public import Eggshell.SynapticRoutingStore
++@[expose] public section
++
++namespace Eggshell.Synapses.Cause
++open Lean Recommend Routing.Store
++
++/-- Relation meaning survives coordinate projection. Coquotation associates
++records; it does not state that all coquoted records are prerequisites. -/
++inductive Role where
++  | support | consumption | association | omittedRead | omittedConsumed | cited
++  deriving Inhabited, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
++
++def Role.joint : Role → Bool
++  | .support | .consumption => true
++  | _ => false
++
++def Role.label : Role → String
++  | .support => "support" | .consumption => "consumption" | .association => "coquotation"
++  | .omittedRead => "omitted_then_read" | .omittedConsumed => "omitted_then_consumed"
++  | .cited => "delivered_then_cited"
++
++def role? : Nat → Option Role
++  | 0 => some .support | 1 => some .consumption | 2 => some .association
++  | 3 => some .omittedRead | 4 => some .omittedConsumed | 5 => some .cited | _ => none
++
++inductive Origin where
++  | group (group : Group)
++  | fact (evidence : String)
++  deriving DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
++
++structure Reason where
++  database : String
++  role : Role
++  origin : Origin
++  deriving DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
++
++/-- A dependency is grouped by its original reason; an association or use
++event retains its own source. Neither key depends on its display binding. -/
++structure Key where
++  reason : Reason
++  independentSource : Option Range
++  deriving DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
++
++def key? (database : String) (hint : Hint) : Option Key := do
++  let role ← role? hint.kind
++  if database.isEmpty || !digest hint.evidence then none else do
++    if role == .support then
++      let some (.claim claim) := hint.group | none
++      if claim.database != database then none else pure ()
++    if role == .association then
++      let some group := hint.group | none
++      let scope := match group with | .claim claim => claim.database | .answer scope _ => scope
++      if scope != database then none else pure ()
++    let source ← if role.joint then some none else hint.target.source?.map some
++    let origin := hint.group.map Origin.group |>.getD (.fact hint.evidence)
++    return ⟨⟨database,role,origin⟩,source⟩
++
++def Key.identity (key : Key) : String := Index.contentKey key
++def Key.joint (key : Key) : Bool := key.reason.role.joint
++
++def outputKey (database evidence : String) : Key :=
++  ⟨⟨database,.consumption,.fact evidence⟩,none⟩
++
++structure ScopedHint where
++  database : String
++  hint : Hint
++
++structure Demand where
++  reason : Key
++  key : String
++  keyExact : key = reason.identity
++  sources : Array Range
++  priority : Nat
++  witnesses : Array String
++
++def Demand.kind (demand : Demand) : String := demand.reason.reason.role.label
++
++/-- Output-only witnesses are bound separately to complete native fragments.
++Range requests include unavailable targets: binding cannot shrink a demand
++by silently discarding a source that failed to locate. -/
++def demands (inputs : Array ScopedHint) : Array Demand := Id.run do
++  let mut groups : Std.HashMap Key (List (Range × Nat × String)) := {}
++  for input in inputs do
++    let some key := key? input.database input.hint | continue
++    let some source := input.hint.target.source? | continue
++    groups := groups.insert key ((source,input.hint.priority,input.hint.evidence) :: (groups[key]?.getD []))
++  return (groups.toArray.map fun (reason,backward) =>
++    let rows := backward.reverse
++    let sources := rows.map (·.1) |>.eraseDups.toArray
++    let priority := rows.foldl (fun best row => min best row.2.1) ((rows.head?.map (·.2.1)).getD 0)
++    ⟨reason,reason.identity,rfl,sources,priority,(rows.map (·.2.2)).eraseDups.toArray⟩).qsort fun a b =>
++      if a.priority == b.priority then a.key < b.key else a.priority < b.priority
++
++/-- A recorded reason is credited only with its complete requested evidence.
++This is a recommendation contract, not a claim of semantic necessity. -/
++def Demand.credited (demand : Demand) (covered : Range → Bool) : Bool :=
++  !demand.sources.isEmpty && demand.sources.all covered
++
++theorem credited_requires_all (demand : Demand) (covered : Range → Bool)
++    (credit : demand.credited covered = true) (source : Range) (member : source ∈ demand.sources) :
++    covered source = true := by
++  exact (Array.all_eq_true'.mp (Bool.and_eq_true_iff.mp credit).2) source member
++
++theorem credited_binding_invariant (demand : Demand) (raw file : Range → Bool)
++    (same : ∀ source ∈ demand.sources, raw source = file source) :
++    demand.credited raw = demand.credited file := by
++  have sameAll : demand.sources.all raw = demand.sources.all file := by
++    have truths : demand.sources.all raw = true ↔ demand.sources.all file = true := by
++      constructor
++      · intro accepted
++        apply Array.all_eq_true'.mpr
++        intro source member
++        rw [← same source member]
++        exact Array.all_eq_true'.mp accepted source member
++      · intro accepted
++        apply Array.all_eq_true'.mpr
++        intro source member
++        rw [same source member]
++        exact Array.all_eq_true'.mp accepted source member
++    cases rawResult : demand.sources.all raw <;>
++      cases fileResult : demand.sources.all file <;> simp_all
++  simp only [Demand.credited,sameAll]
++
++def admits (causes : List Key) (reason : Key) (complete : Bool) : Bool :=
++  causes.contains reason && complete
++
++theorem admitted_requires_same_reason (causes : List Key) (reason : Key) (complete : Bool)
++    (accepted : admits causes reason complete = true) : reason ∈ causes := by
++  exact List.contains_iff_mem.mp (Bool.and_eq_true_iff.mp accepted).1
++
++theorem admitted_requires_completion (causes : List Key) (reason : Key) (complete : Bool)
++    (accepted : admits causes reason complete = true) : complete = true :=
++  (Bool.and_eq_true_iff.mp accepted).2
++
++theorem association_is_independent : Role.joint .association = false := rfl
++theorem omissions_do_not_imply_joint_dependencies :
++    Role.joint .omittedRead = false ∧ Role.joint .omittedConsumed = false := by decide
++
++structure Projection where
++  cause : Key
++  first : Nat
++  limit : Nat
++
++def Projection.rebind (projection : Projection) (first limit : Nat) : Projection :=
++  {projection with first,limit}
++
++theorem projection_preserves_cause (projection : Projection) (first limit : Nat) :
++    (projection.rebind first limit).cause = projection.cause := rfl
++
++end Eggshell.Synapses.Cause
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -6,0 +7 @@
++public import Eggshell.SynapticCause
+@@ -33,0 +35 @@
++  database : String
+@@ -52,0 +55 @@
++  causeInputs : Array Cause.ScopedHint := #[]
+@@ -92,0 +96,2 @@
++  cause : Cause.Key
++  target : Target
+@@ -93,0 +99,23 @@
++
++structure CausalRange where
++  priority : Nat
++  first : Nat
++  limit : Nat
++  cause : Cause.Key
++  deriving DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable
++
++def Plan.causalRanges (plan : Plan) : List (Value × List CausalRange) :=
++  plan.owners.toList.map fun owner =>
++    let located := owner.located.toList.filterMap fun located => do
++      let cause ← Cause.key? owner.database located.offer
++      some ({
++        priority := located.offer.priority
++        first := located.row.binding.first
++        limit := located.row.binding.limit
++        cause} : CausalRange)
++    let outputs := owner.outputs.toList.map fun located => ({
++      priority := located.offer.priority
++      first := located.fragment.binding.first
++      limit := located.fragment.binding.limit
++      cause := Cause.outputKey owner.database located.offer.identity} : CausalRange)
++    (owner.owner.relation,hashDistinct (located ++ outputs))
+@@ -99,0 +128 @@
++    let cause ← Cause.key? owner.database located.offer
+@@ -104 +133,2 @@
+-      path := (json.bind (·.cover? located.row.binding.first located.row.binding.limit)).map (·.path)})
++      path := (json.bind (·.cover? located.row.binding.first located.row.binding.limit)).map (·.path)
++      cause,target := located.offer.target})
+@@ -118 +148,3 @@
+-        limit := located.fragment.binding.limit,path := located.fragment.address.map (·.path)} : OutputRange)) ++
++        limit := located.fragment.binding.limit,path := located.fragment.address.map (·.path)
++        cause := Cause.outputKey owner.database located.offer.identity
++        target := located.offer.target} : OutputRange)) ++
+@@ -141 +173,3 @@
+-    plan := {plan with results := plan.results.push result}
++    plan := {plan with
++      results := plan.results.push result
++      causeInputs := plan.causeInputs ++ result.admitted.map (fun hint => ⟨source.source.head.identity,hint⟩)}
+@@ -269 +303 @@
+-      owners := plan.owners.push ⟨owner.original,document,located,outputs⟩}
++      owners := plan.owners.push ⟨owner.original,document,located,outputs,owner.database⟩}
+--- a/Eggshell/SynapseBundles.lean
++++ b/Eggshell/SynapseBundles.lean
+@@ -10,4 +10 @@
+-def bundleKind (hint : Hint) : String := match hint.group with
+-  | some (.claim _) => "claim"
+-  | some (.answer ..) => "answer"
+-  | none => Routing.Store.kindName hint.kind
++abbrev Demand := Cause.Demand
+@@ -15,7 +12 @@
+-structure Demand where
+-  key : String
+-  kind : String
+-  offers : Array Hint
+-  nonempty : offers.isEmpty = false
+-  sourcesOnly : offers.all (fun offer => offer.target.source?.isSome) = true
+-  same : offers.all (fun offer => offer.reasonKey == key && bundleKind offer == kind) = true
++def demands (plan : Transport.Plan) : Array Demand := Cause.demands plan.causeInputs
+@@ -23,24 +13,0 @@
+-def Demand.check? (key kind : String) (offers : Array Hint) : Option Demand :=
+-  if nonempty : offers.isEmpty = false then
+-    if sourcesOnly : offers.all (fun offer => offer.target.source?.isSome) = true then
+-      if same : offers.all (fun offer => offer.reasonKey == key && bundleKind offer == kind) = true then
+-        some ⟨key,kind,offers,nonempty,sourcesOnly,same⟩ else none
+-    else none
+-  else none
+-
+-def Demand.sources (demand : Demand) : Array Range :=
+-  (demand.offers.toList.filterMap (·.target.source?)).eraseDups.toArray
+-
+-def Demand.priority (demand : Demand) : Nat :=
+-  demand.offers.foldl (fun priority offer => min priority offer.priority)
+-    ((demand.offers[0]?).map (·.priority) |>.getD 0)
+-
+-def demands (plan : Transport.Plan) : Array Demand := Id.run do
+-  let mut groups : Std.HashMap (String × String) (Array Hint) := {}
+-  for offer in plan.results.flatMap (·.admitted) do
+-    if offer.target.source?.isNone then continue
+-    let key := (offer.reasonKey,bundleKind offer)
+-    groups := groups.insert key (groups[key]?.getD #[] |>.push offer)
+-  return (groups.toArray.filterMap fun ((key,kind),offers) => Demand.check? key kind offers).qsort fun a b =>
+-    if a.priority == b.priority then a.key < b.key else a.priority < b.priority
+-
+@@ -137 +104 @@
+-  (demands plan).filterMap (project? owners)
++  ((demands plan).filter (·.reason.joint)).filterMap (project? owners)
+@@ -147 +114,2 @@
+-      ("located",toJson (projected.any (·.demand.key == demand.key))),
++      ("joint",toJson demand.reason.joint),
++      ("located",if demand.reason.joint then toJson (projected.any (·.demand.key == demand.key)) else Json.null),
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -16,0 +17 @@
++  (include_str "SynapticCause.lean").toUTF8,
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -4900,0 +4901 @@
++  causalRanges : List Synapses.Transport.CausalRange := []
+@@ -4965,0 +4967 @@
++  localCauses : List Synapses.Cause.Projection := []
+@@ -4973,0 +4976 @@
++  causes : List Synapses.Cause.Key := []
+@@ -5115 +5118,4 @@
+-      units := units ++ [{family := familyIndex,slice,ranges := [(first,last)]}]
++      let localCauses := match range.target with
++        | .output _ => [{cause := range.cause,first,limit := last}]
++        | .range _ => []
++      units := units ++ [{family := familyIndex,slice,ranges := [(first,last)],localCauses}]
+@@ -5203 +5209,2 @@
+-      (family.synapticRanges ++ family.outputCues).map (fun (priority,first,last) => {priority,first,last})
++      family.causalRanges.map (fun cue =>
++        {priority := cue.priority,first := cue.first,last := cue.limit})
+@@ -5204,0 +5212,10 @@
++
++def baseRankedCues (family : Family) : List RankedCue :=
++  rankedCues {family with causalRanges := []} ++ family.causalRanges.filterMap fun cue =>
++    if !cue.cause.joint then
++      some {priority := cue.priority,first := cue.first,last := cue.limit} else none
++
++def causeCoefficients (scale familyIndex : Nat) (family : Family) :=
++  let ownerWeight := scale/(61+familyIndex)
++  family.causalRanges.filterMap fun cue => if cue.cause.joint then
++    some (cue,ownerWeight+scale/(61+cue.priority)) else none
+@@ -5205,0 +5223,6 @@
++def neededCauses (first last weight : Nat)
++    (causes : List (Synapses.Transport.CausalRange × Nat)) : List Synapses.Cause.Key :=
++  hashDistinct (causes.filterMap fun (cue,coefficient) =>
++    let overlap := min last cue.limit-max first cue.first
++    if 0 < overlap && overlap*coefficient == weight then some cue.cause else none)
++
+@@ -5215 +5238 @@
+-  let base := rankedCues {family with synapticRanges := []}
++  let base := baseRankedCues family
+@@ -5216,0 +5240 @@
++  let causes := causeCoefficients scale familyIndex family
+@@ -5226 +5250,3 @@
+-        some {family := familyIndex,first,last,weight,baseWeight,sourceKey := some row.key}
++        some {
++          family := familyIndex,first,last,weight,baseWeight,sourceKey := some row.key
++          causes := neededCauses first last weight causes}
+@@ -5255 +5281 @@
+-  let base := rankCoefficients scale familyIndex (rankedCues {family with synapticRanges := []})
++  let base := rankCoefficients scale familyIndex (baseRankedCues family)
+@@ -5256,0 +5283 @@
++  let causes := causeCoefficients scale familyIndex family
+@@ -5263 +5290,3 @@
+-        some {family := familyIndex,first,last,weight,baseWeight,sourceKey := some row.key}
++        some {
++          family := familyIndex,first,last,weight,baseWeight,sourceKey := some row.key
++          causes := neededCauses first last weight causes}
+@@ -5286 +5315,2 @@
+-    let baseCues := rankedCues {family with synapticRanges := []}
++    let baseCues := baseRankedCues family
++    let causes := causeCoefficients scale familyIndex family
+@@ -5296 +5326,4 @@
+-        pure {family := familyIndex,first,last,weight := max baseWeight graphWeight,baseWeight}
++        let weight := max baseWeight graphWeight
++        pure {
++          family := familyIndex,first,last,weight,baseWeight
++          causes := neededCauses first last weight causes}
+@@ -5625,0 +5659,15 @@
++
++def bonusPieceAccept (keys : Array String) (units : Array UnitPlan)
++    (plan : BundlePlan keys units) (entry : CuePiece × Nat) : Bool :=
++  entry.1.baseWeight < entry.1.weight &&
++    plan.indices.any fun index =>
++      let unit := units[index]
++      unit.family == entry.1.family && unit.coversPrepared entry.1.first entry.1.last &&
++        Synapses.Cause.admits entry.1.causes plan.projected.demand.reason
++          (plan.projected.members.any fun member => member.choices.any fun bound =>
++            keys[unit.family]? == some bound.owner && covers bound.spans entry.1.first entry.1.last)
++
++def strongestPieces (directory : Array Nat × Array (Nat × Nat))
++    (entries : List (CuePiece × Nat)) : List (CuePiece × Nat) :=
++  entries.filter fun (piece,id) => (directory.1[id]?.bind (directory.2[·]?)).any
++    (fun weight => weight.2 == piece.weight)
+@@ -5632,6 +5680,2 @@
+-  let bonus ← (pieces.zipIdx.filter fun (piece,_) => piece.baseWeight < piece.weight &&
+-    plan.indices.any fun index =>
+-      let unit := units[index]
+-      unit.family == piece.family && unit.coversPrepared piece.first piece.last &&
+-        plan.projected.members.any fun member => member.choices.any fun bound =>
+-          keys[unit.family]? == some bound.owner && covers bound.spans piece.first piece.last).mapM fun (_,id) => do
++  let eligible := strongestPieces directory (pieces.zipIdx.filter (bonusPieceAccept keys units plan))
++  let bonus ← eligible.mapM fun (_,id) => do
+@@ -5642,9 +5685,0 @@
+-def bonusPieceAccept (keys : Array String) (units : Array UnitPlan)
+-    (plan : BundlePlan keys units) (entry : CuePiece × Nat) : Bool :=
+-  entry.1.baseWeight < entry.1.weight &&
+-    plan.indices.any fun index =>
+-      let unit := units[index]
+-      unit.family == entry.1.family && unit.coversPrepared entry.1.first entry.1.last &&
+-        plan.projected.members.any fun member => member.choices.any fun bound =>
+-          keys[unit.family]? == some bound.owner && covers bound.spans entry.1.first entry.1.last
+-
+@@ -5675 +5710 @@
+-  let bonus ← (bonusPiecesPrepared keys units entries index plan).mapM fun (_,id) => do
++  let bonus ← (strongestPieces directory (bonusPiecesPrepared keys units entries index plan)).mapM fun (_,id) => do
+@@ -5686 +5720,0 @@
+-  rfl
+@@ -5695,0 +5730,20 @@
++
++/-- An opaque-output consumption witness already names one complete native
++fragment. It earns its reason only with that whole original unit; it is not
++silently discarded because it has no source-file Range posting. -/
++def localOutputRecipes (units : Array UnitPlan) (pieces : List CuePiece)
++    (directory : Array Nat × Array (Nat × Nat)) (p : SharedCoverage.Problem) : Array (ClosedCoverage.Recipe p) :=
++  (List.finRange units.size).toArray.filterMap fun index => do
++    let unit := units[index]
++    if unit.localCauses.isEmpty then none else do
++      let eligible := strongestPieces directory (pieces.zipIdx.filter fun (piece,_) =>
++        piece.baseWeight < piece.weight && piece.family == unit.family &&
++        unit.coversPrepared piece.first piece.last && unit.localCauses.any fun required =>
++          unit.coversPrepared required.first required.limit &&
++          required.first ≤ piece.first && piece.last ≤ required.limit &&
++          Synapses.Cause.admits piece.causes required.cause true)
++      let bonus ← eligible.mapM fun (_,id) => do
++        let cue ← directory.1[id]?
++        if h : cue*2+1 < p.weights.size then some (⟨cue*2+1,h⟩ : Fin p.weights.size) else none
++      if bonus.isEmpty then none else do
++        if h : index.val < p.offers.size then some {parts := [⟨index.val,h⟩],bonus} else none
+@@ -5790,0 +5845 @@
++    let localRecipes := localOutputRecipes unitArray pieces cueIndex p
+@@ -5792 +5847 @@
+-      (bundlePlan? keys unitArray p candidates projected).bind recipe)
++      (bundlePlan? keys unitArray p candidates projected).bind recipe) ++ localRecipes
+@@ -5808 +5863,7 @@
+-          ("selectedBundles",toJson (chosen.selected.countP (fun index => p.offers.size ≤ index.val)))]
++          ("selectedBundles",toJson (chosen.selected.countP (fun index => p.offers.size ≤ index.val))),
++          ("localOutputRecipes",toJson localRecipes.size),
++          ("causalRanges",toJson (families.foldl (fun n family => n+family.causalRanges.length) 0)),
++          ("causeRoles",toJson ([Synapses.Cause.Role.support,.consumption,.association,.omittedRead,.omittedConsumed,.cited].map
++            fun role => (role.label,families.foldl (fun n family =>
++              n+family.causalRanges.countP (·.cause.reason.role == role)) 0))),
++          ("causeContract",toJson true)]
+@@ -6010,0 +6072 @@
++    (causalRanges : List (Value × List Synapses.Transport.CausalRange) := [])
+@@ -6226,0 +6289 @@
++            causalRanges := (causalRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+@@ -7729,0 +7793 @@
++    (causalRanges := synaptic.causalRanges)

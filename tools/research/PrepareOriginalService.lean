@@ -2,16 +2,18 @@ import Lean.Data.Json.Parser
 import Lean.Data.Json.FromToJson
 open Lean
 
-/-- Isolated dead-transfer experiment. It reuses the one prepared source
+/-- Isolated original-evidence experiments reuse the one prepared source
 checkpoint; no answering model, new seed, or full warm is launched here. -/
 def main (args : List String) : IO Unit := do
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let measured := args.head? == some "measured"
+  let causal := args.head? == some "cause"
   let structural := args.head? == some "structure"
-  let args := if structural || measured then args.tail else args
-  let parent := base / (if measured then "shared-original-structure-20261027" else
+  let args := if structural || measured || causal then args.tail else args
+  let parent := base / (if measured || causal then "shared-original-structure-20261027" else
     if structural then "prepared-original-service-20261027" else "joint-range-bindings-20261027")
-  let root := base / (if measured then "rendered-marginal-cost-20261027" else
+  let root := base / (if causal then "evidence-cause-contract-20261027" else
+    if measured then "rendered-marginal-cost-20261027" else
     if structural then "shared-original-structure-20261027" else "prepared-original-service-20261027")
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
@@ -22,17 +24,22 @@ def main (args : List String) : IO Unit := do
       (parent / "checkout").toString,(root / "checkout").toString]}
     unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
     for file in ["SynapseTransport.lean","Handoff.lean","ObservedRecordView.lean","SynapseBuild.lean",
-        "SynapseIndex.lean","PublicationClient.lean","PublicationService.lean","CanonicalSourcePrepared.lean"] do
+        "SynapseIndex.lean","PublicationClient.lean","PublicationService.lean","CanonicalSourcePrepared.lean"] ++
+        (if causal then ["SynapseBundles.lean","SynapseRecommend.lean"] else []) do
       let path := root / "checkout/Eggshell" / file
       let text ← IO.FS.readFile path
       if (← path.symlinkMetadata).type == .symlink then IO.FS.removeFile path
       IO.FS.writeFile path text
     return
   let [mode,label] := args | throw (IO.userError "fork | MODE LABEL")
-  unless ["product","hook","audit","run-audit","run-hook","run-worker"].contains mode && !label.isEmpty &&
-      label.toList.all (fun c => c.isAlphanum || c == '-') do
+  unless ["product","hook","audit","run-audit","run-hook","run-worker","contract"].contains mode && !label.isEmpty &&
+      label.toList.all (fun c => c.isAlphanum || c == '-') && (mode != "contract" || causal) do
     throw (IO.userError "known mode/simple label required")
-  let command ← if mode == "run-audit" then
+  let command ← if mode == "contract" && causal then
+    pure #["/usr/bin/env","LEAN_PATH=" ++ (parent / "product-build/lib").toString,"LEAN_NUM_THREADS=1",
+      toolchain ++ "/bin/lean","--root=" ++ (root / "checkout").toString,"-j1","-M1536",
+      (root / "checkout/Eggshell/SynapticCause.lean").toString]
+  else if mode == "run-audit" then
     pure #["/usr/bin/env","LEAN_NUM_THREADS=1",(root / "audit-build/StudyMain").toString,(root / label).toString]
   else if mode == "run-hook" || mode == "run-worker" then
     pure (#["/usr/bin/env","LEAN_NUM_THREADS=1",
@@ -59,7 +66,8 @@ def main (args : List String) : IO Unit := do
       |>.setObjVal! "core" (toJson (root / "checkout").toString)
       |>.setObjVal! "output" (toJson (root / (mode ++ "-build")).toString)
       |>.setObjVal! "mainModule" (toJson (if mode == "audit" then
-        if measured then "tools.research.MeasuredCoverageChecks" else "tools.research.OriginalStructureAudit"
+        if causal then "tools.research.CauseContractChecks" else
+          if measured then "tools.research.MeasuredCoverageChecks" else "tools.research.OriginalStructureAudit"
         else if own then "tools.research.OnePreparedHook" else "Main"))
       |>.setObjVal! "baselineCore" (toJson (origin / "checkout").toString)
       |>.setObjVal! "baselineResponse" (toJson (baseline / "runtime.rsp").toString)
