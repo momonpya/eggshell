@@ -1,0 +1,157 @@
+--- a/tools/PreparedCueIndex.lean
++++ b/tools/PreparedCueIndex.lean
+@@ -0,0 +1,58 @@
++module
++public import tools.OwnerUnitPostings
++public import Init.Data.Array.OfFn
++@[expose] public section
++
++namespace Eggshell.PreparedCueIndex
++
++/-- An ordered posting index into one shared array. Every returned value is
++an original input; duplicates and input order survive narrowing. -/
++structure Prepared (keyOf : α → String) (values : Array α) where
++  index : OwnerUnitPostings.Index (fun i : Fin values.size => some (keyOf values[i.val]))
++
++def prepare (keyOf : α → String) (values : Array α) : Prepared keyOf values :=
++  ⟨OwnerUnitPostings.prepare (fun i => some (keyOf values[i.val]))⟩
++
++variable {α : Type} {keyOf : α → String} {values : Array α}
++
++private theorem filtered_values (values : Array α) (accept : α → Bool) :
++    ((List.finRange values.size).filter (fun i => accept values[i.val])).map (fun i => values[i.val]) =
++      values.toList.filter accept := by
++  change ((List.finRange values.size).filter (accept ∘ (fun i => values[i.val]))).map
++    (fun i => values[i.val]) = _
++  rw [← List.filter_map]
++  have rows : (List.finRange values.size).map (fun i => values[i.val]) = values.toList := by
++    simp only [List.finRange,List.map_ofFn,Function.comp_def]
++    rw [← Array.toList_ofFn,Array.ofFn_getElem]
++  rw [rows]
++
++def Prepared.one (prepared : Prepared keyOf values) (key : String) (accept : α → Bool) : List α :=
++  ((prepared.index.postings[key]?.getD []).filter (fun i => accept values[i.val])).map (fun i => values[i.val])
++
++theorem Prepared.one_exact (prepared : Prepared keyOf values) (key : String) (accept : α → Bool)
++    (necessary : ∀ value, accept value = true → keyOf value = key) :
++    prepared.one key accept = values.toList.filter accept := by
++  unfold Prepared.one
++  rw [prepared.index.exact,List.filter_filter]
++  have same : (fun i : Fin values.size => accept values[i.val] &&
++      (some (keyOf values[i.val]) == some key)) = (fun i => accept values[i.val]) := by
++    funext i
++    apply Bool.eq_iff_iff.mpr
++    simp only [Bool.and_eq_true,beq_iff_eq,Option.some.injEq]
++    exact ⟨And.left,fun accepted => ⟨accepted,necessary _ accepted⟩⟩
++  rw [same]
++  exact filtered_values values accept
++
++def Prepared.many (prepared : Prepared keyOf values) (keys : List String) (accept : α → Bool) : List α :=
++  (prepared.index.select keys (fun i => accept values[i.val])).map (fun i => values[i.val])
++
++theorem Prepared.many_exact (prepared : Prepared keyOf values) (keys : List String) (accept : α → Bool)
++    (necessary : ∀ value, accept value = true → keyOf value ∈ keys) :
++    prepared.many keys accept = values.toList.filter accept := by
++  unfold Prepared.many
++  rw [prepared.index.select_exact keys (fun i => accept values[i.val]) (by
++    intro i accepted
++    exact ⟨keyOf values[i.val],necessary values[i.val] accepted,rfl⟩)]
++  exact filtered_values values accept
++
++end Eggshell.PreparedCueIndex
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -27,0 +28 @@
++public import tools.PreparedCueIndex
+@@ -5799,0 +5801,18 @@
++
++def cueFamilyKey (entry : CuePiece × Nat) : String := toString entry.1.family
++
++def basePieceAccept (unit : UnitPlan) (entry : CuePiece × Nat) : Bool :=
++  entry.1.baseWeight > 0 && entry.1.family == unit.family &&
++    unit.ranges.any (fun (a,b) => a ≤ entry.1.first && entry.1.last ≤ b)
++
++def basePiecesPrepared (entries : Array (CuePiece × Nat))
++    (index : PreparedCueIndex.Prepared cueFamilyKey entries) (unit : UnitPlan) : List (CuePiece × Nat) :=
++  index.one (toString unit.family) (basePieceAccept unit)
++
++theorem base_pieces_exact (entries : Array (CuePiece × Nat))
++    (index : PreparedCueIndex.Prepared cueFamilyKey entries) (unit : UnitPlan) :
++    basePiecesPrepared entries index unit = entries.toList.filter (basePieceAccept unit) := by
++  apply PreparedCueIndex.Prepared.one_exact
++  intro entry accepted
++  simp only [basePieceAccept,Bool.and_eq_true,beq_iff_eq] at accepted
++  simp only [cueFamilyKey,accepted.1.2]
+@@ -5861 +5880 @@
+-def problemHoisted (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
++def problemPrepared (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
+@@ -5911 +5930,3 @@
+-  let indexedPieces := pieces.zipIdx
++  let indexedPieces := pieces.zipIdx.toArray
++  let pieceIndex := PreparedCueIndex.prepare cueFamilyKey indexedPieces
++  let closureArray := closures.toArray
+@@ -5913 +5934 @@
+-    let closure ← (closures[index]?.getD []).mapM fun id =>
++    let closure ← (closureArray[index]?.getD []).mapM fun id =>
+@@ -5915,2 +5936 @@
+-    let covers ← (indexedPieces.filter fun (piece,_) => piece.baseWeight > 0 && piece.family == unit.family &&
+-        unit.ranges.any (fun (a,b) => a ≤ piece.first && piece.last ≤ b)).mapM fun (_,id) => do
++    let covers ← (basePiecesPrepared indexedPieces pieceIndex unit).mapM fun (_,id) => do
+@@ -5922 +5942,3 @@
+-@[csimp] theorem problem_hoisted_compiled : @problem = @problemHoisted := by
++@[csimp] theorem problem_prepared_compiled : @problem = @problemPrepared := by
++  funext families units pieces fixed ceiling
++  simp only [problem,problemPrepared,base_pieces_exact,List.getElem?_toArray]
+@@ -5998,0 +6021,38 @@
++    let cue ← directory.1[id]?
++    if h : cue*2+1 < p.weights.size then some (⟨cue*2+1,h⟩ : Fin p.weights.size) else none
++  pure {parts,bonus}
++
++def bonusPieceAccept (keys : Array String) (units : Array UnitPlan)
++    (plan : BundlePlan keys units) (entry : CuePiece × Nat) : Bool :=
++  entry.1.baseWeight < entry.1.weight &&
++    plan.indices.any fun index =>
++      let unit := units[index]
++      unit.family == entry.1.family && unit.coversPrepared entry.1.first entry.1.last &&
++        plan.projected.members.any fun member => member.choices.any fun bound =>
++          keys[unit.family]? == some bound.owner && covers bound.spans entry.1.first entry.1.last
++
++def bonusPiecesPrepared (keys : Array String) (units : Array UnitPlan)
++    (entries : Array (CuePiece × Nat)) (index : PreparedCueIndex.Prepared cueFamilyKey entries)
++    (plan : BundlePlan keys units) : List (CuePiece × Nat) :=
++  index.many (plan.indices.map fun i => toString units[i].family) (bonusPieceAccept keys units plan)
++
++theorem bonus_pieces_exact (keys : Array String) (units : Array UnitPlan)
++    (entries : Array (CuePiece × Nat)) (index : PreparedCueIndex.Prepared cueFamilyKey entries)
++    (plan : BundlePlan keys units) :
++    bonusPiecesPrepared keys units entries index plan =
++      entries.toList.filter (bonusPieceAccept keys units plan) := by
++  apply PreparedCueIndex.Prepared.many_exact
++  intro entry accepted
++  have member := (Bool.and_eq_true_iff.mp accepted).2
++  obtain ⟨i,present,matched⟩ := List.any_eq_true.mp member
++  have same : units[i].family = entry.1.family :=
++    beq_iff_eq.mp (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp matched).1).1
++  exact List.mem_map.mpr ⟨i,present,by simp only [cueFamilyKey,same]⟩
++
++def bundleRecipeIndexed? (keys : Array String) (units : Array UnitPlan)
++    (entries : Array (CuePiece × Nat)) (index : PreparedCueIndex.Prepared cueFamilyKey entries)
++    (directory : Array Nat × Array (Nat × Nat))
++    (p : SharedCoverage.Problem) (plan : BundlePlan keys units) : Option (ClosedCoverage.Recipe p) := do
++  let parts ← plan.indices.mapM fun i =>
++    if h : i.val < p.offers.size then some (⟨i.val,h⟩ : Fin p.offers.size) else none
++  let bonus ← (bonusPiecesPrepared keys units entries index plan).mapM fun (_,id) => do
+@@ -6001,0 +6062,8 @@
++
++theorem bundle_recipe_indexed_exact (keys : Array String) (units : Array UnitPlan)
++    (pieces : List CuePiece) (index : PreparedCueIndex.Prepared cueFamilyKey pieces.zipIdx.toArray)
++    (directory : Array Nat × Array (Nat × Nat)) (p : SharedCoverage.Problem) (plan : BundlePlan keys units) :
++    bundleRecipeIndexed? keys units pieces.zipIdx.toArray index directory p plan =
++      bundleRecipePrepared? keys units pieces directory p plan := by
++  simp only [bundleRecipeIndexed?,bundleRecipePrepared?,bonus_pieces_exact]
++  rfl
+@@ -6099 +6167,3 @@
+-    let recipe := bundleRecipePrepared? keys unitArray pieces cueIndex p
++    let indexedPieces := pieces.zipIdx.toArray
++    let pieceIndex := PreparedCueIndex.prepare cueFamilyKey indexedPieces
++    let recipe := bundleRecipeIndexed? keys unitArray indexedPieces pieceIndex cueIndex p
