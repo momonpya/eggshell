@@ -67,6 +67,9 @@ def cliMain (args : List String) : IO UInt32 := do
         finally StudyRuntime.stopManaged publisher (output / "publisher-shutdown.json")
     let after ← queued files
     check after.isEmpty "queued source work remains after owned daemon exit"
+    let ancestry ← StudySource.inspect (root / "work.egg")
+    IO.FS.writeFile (output / "source-ancestry.json") (toJson ancestry).compress
+    StudySource.requireValid ancestry
     if drainOnly then
       let publication ← StudyRuntime.checkpoint (root / "work.egg") (output / "drained.egg")
       IO.FS.writeFile (output / "result.json") ((Json.mkObj [

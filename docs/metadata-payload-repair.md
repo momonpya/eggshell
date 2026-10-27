@@ -31,8 +31,8 @@ nativeのIO検査は0、1、4,095、4,096、4,097、8,191、8,192、8,193、65,5
 
 ## 限界と次の順序
 
-これはnative source compiler/stageと永続化の直接検査であり、RPC、日誌の回復、索引準備、配送の合格ではない。別に観測された`invalid or truncated list`は原因未確認で、今回の保存修正で解決したとは扱わない。
+この直接検査に続き、RPCによる同じ実入力の保存と、小さな実フック/source-only回復を検証した。別警告`invalid or truncated list`は、C7の出版1〜31に現行codecが要求するaffected列がなく、過去snapshotをたどれないことまで切り分けた。保存修正だけでその不整合も解決したとは扱わない。[後続の統合検査と事前拒否](storage-publication-integration.md)。
 
-次は出版service経由のACK、source-onlyの回復と索引準備をモデルなしで検査する。これらが通るまで回答モデルの追加実験は行わない。95%配送、数秒の実フック、総token改善、正式6段階、80人・多数DBの条件は未達であり、部品検査だけでは採用しない。
+次は固定した現runtimeの新seedについて、出版の全連鎖、全viewの準備、日誌の終了を確認する。これらの入力検査を通すまで下流の回答比較を行わない。95%配送、数秒の実フック、総token改善、正式6段階、80人・多数DBの条件は未達であり、部品検査だけでは採用しない。
 
 終了した再生用DBの複製とnativeの複製、合成検査のDB/buildは、結果とsource/digestを捕捉後に削除した。圧縮archiveは作っていない。元の失敗headのコピー一つ、現在のsource、未変更checkpointは、日誌回復と索引警告の調査に必要な入力として保持する。[削除と保持](candidates/storage-row/checks/cleanup.json)。

@@ -42,6 +42,12 @@ def main (args : List String) : IO UInt32 := do
         return 0
     | "guard" :: rest => ResourceGuard.cliMain rest
     | "runtime" :: rest => StudyRuntime.cliMain rest
+    | ["source-ancestry",database,report] => do
+        unless !(← (System.FilePath.mk report).pathExists) do throw (IO.userError "preserve ancestry evidence")
+        let result ← StudySource.inspect (.mk database)
+        IO.FS.writeFile report (toJson result).compress
+        IO.println (toJson result).compress
+        return 0
     | "history" :: rest => StudyHistory.cliMain rest; return 0
     | "audit" :: rest => NativeTrialAudit.cliMain rest; return 0
     | "replay" :: rest => StudyAccounting.cliMain rest

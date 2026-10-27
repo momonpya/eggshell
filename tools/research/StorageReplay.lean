@@ -55,7 +55,10 @@ private def recapture (pending : PendingTurn) (directory : System.FilePath) : IO
 inspection of the pending rows before the original writer flush. No model,
 encoder, selector, numerical warm or synthetic usage labels are invoked. -/
 def main (args : List String) : IO Unit := do
-  let [planPath,checkpoint,output] := args | throw (IO.userError "PLAN CHECKPOINT NEW-OUTPUT")
+  let (planPath,checkpoint,output,service) ← match args with
+    | [planPath,checkpoint,output] => pure (planPath,checkpoint,output,none)
+    | ["service",runtime,planPath,checkpoint,output] => pure (planPath,checkpoint,output,some runtime)
+    | _ => throw (IO.userError "[service RUNTIME] PLAN CHECKPOINT NEW-OUTPUT")
   let plan ← IO.ofExcept (fromJson? (α := StudyAdmission.Plan) (← StudyAdmission.readJson planPath))
   let directory := System.FilePath.mk output
   unless directory.isAbsolute && !(← directory.pathExists) do throw (IO.userError "new absolute replay output required")
@@ -78,28 +81,40 @@ def main (args : List String) : IO Unit := do
   let mut error : Option String := none
   let mut receipt : Json := .null
   try
-    let committed ← Persistence.appendPrepared database
-      (fun graph => do
-        let (compiled,promotion) ← NativePublication.compilePrepared graph database request
-        let some transaction := (Transaction.begin graph).stageValues? compiled.stagedValues.eraseDups |
-          throw "publication group contains an invalid Value"
-        return (transaction,promotion))
-      (fun intern _ => do
-        let changed ← NativePublication.stage request.items intern
-        let rows := (← intern.writer.pending.get).toList
-        let mut oversized := #[]
-        let mut largest := ("",0,0)
-        for row in rows do
-          let bytes := (DB.PageMap.encode (.leaf [row])).size
-          if largest.2.2 < bytes then largest := (row.1,(row.2.map ByteArray.size).getD 0,bytes)
-          if bytes > 8192 then
-            oversized := oversized.push (Json.mkObj [("key",toJson row.1),
-              ("valueBytes",toJson (row.2.map ByteArray.size |>.getD 0)),("encodedSingletonBytes",toJson bytes)])
-        save (directory / "staged-rows.json") (Json.mkObj [
-          ("rows",toJson rows.length),("oversized",toJson oversized),("largest",toJson largest),
-          ("physicalPageCapBytes",toJson (65536 : Nat)),("normalLeafCapBytes",toJson (8192 : Nat))])
-        return changed)
-    receipt := toJson (NativePublication.receipt request.items committed.head)
+    let published ← match service with
+      | some runtime => do
+        let installation := (System.FilePath.mk runtime).parent.get!.parent.get!
+        let environment := plan.environment.filter (·.1 != "EGGSHELL_PREFIX") ++
+          #[("EGGSHELL_PREFIX",some installation.toString)]
+        let publisher ← StudyRuntime.startPublisher (.mk runtime) (.mk plan.dataRoot) environment
+        try
+          let result ← Publication.Client.run pending database true
+          pure result.source
+        finally StudyRuntime.stopManaged publisher (directory / "publisher-shutdown.json")
+      | none => do
+        let committed ← Persistence.appendPrepared database
+          (fun graph => do
+            let (compiled,promotion) ← NativePublication.compilePrepared graph database request
+            let some transaction := (Transaction.begin graph).stageValues? compiled.stagedValues.eraseDups |
+              throw "publication group contains an invalid Value"
+            return (transaction,promotion))
+          (fun intern _ => do
+            let changed ← NativePublication.stage request.items intern
+            let rows := (← intern.writer.pending.get).toList
+            let mut oversized := #[]
+            let mut largest := ("",0,0)
+            for row in rows do
+              let bytes := (DB.PageMap.encode (.leaf [row])).size
+              if largest.2.2 < bytes then largest := (row.1,(row.2.map ByteArray.size).getD 0,bytes)
+              if bytes > 8192 then
+                oversized := oversized.push (Json.mkObj [("key",toJson row.1),
+                  ("valueBytes",toJson (row.2.map ByteArray.size |>.getD 0)),("encodedSingletonBytes",toJson bytes)])
+            save (directory / "staged-rows.json") (Json.mkObj [
+              ("rows",toJson rows.length),("oversized",toJson oversized),("largest",toJson largest),
+              ("physicalPageCapBytes",toJson (65536 : Nat)),("normalLeafCapBytes",toJson (8192 : Nat))])
+            return changed)
+        pure (NativePublication.receipt request.items committed.head)
+    receipt := toJson published
     let source ← DB.PageMap.pin database
     let reader ← Persistence.Store.NodeReader.new source
     let mut readback := #[]
@@ -139,6 +154,7 @@ def main (args : List String) : IO Unit := do
     ("before",toJson before.head),("after",toJson after.head),
     ("publishedHeadUnchanged",toJson (before.head == after.head)),
     ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("answeringModelCalls",toJson (0 : Nat)),
-    ("standardCompilerAndStage",toJson true),("modelOrQueryRulesAdded",toJson false)]
+    ("standardCompilerAndStage",toJson true),("publicationServiceUsed",toJson service.isSome),
+    ("modelOrQueryRulesAdded",toJson false)]
   save (directory / "result.json") result
   IO.println result.compress

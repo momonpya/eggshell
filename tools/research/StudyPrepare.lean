@@ -28,6 +28,9 @@ def prepare (templatePath directory : String) (live : Bool := false) : IO StudyA
   let original ← StudyRuntime.files (.mk template.sourceSnapshot)
   check (original == template.sourceFiles.qsort (fun a b => a.1 < b.1)) "source snapshot changed before preparation"
   IO.FS.createDir root
+  let ancestry ← StudySource.inspect (.mk template.sourceSnapshot)
+  write (root / "source-ancestry.json") (toJson ancestry)
+  StudySource.requireValid ancestry
   let data := if live then System.FilePath.mk template.dataRoot else root / "data"
   let config := if live then System.FilePath.mk template.configuration.path else root / "config.toml"
   for path in #[template.runtime.path,template.database] do

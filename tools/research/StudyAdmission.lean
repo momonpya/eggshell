@@ -4,6 +4,7 @@ import tools.research.StudyTransport
 import tools.research.StudyCommand
 import tools.research.ArtifactHash
 import Eggshell.Install
+import tools.research.StudySource
 
 open Lean Eggshell
 
@@ -188,6 +189,8 @@ def admit (path expectedSha256 : String) : IO Admitted := do
     clean.exitCode == 0 && clean.stdout.trimAscii.isEmpty) "source checkout changed"
   check (sorted plan.sourceFiles == (← StudyRuntime.files (.mk plan.sourceSnapshot)) &&
     sorted plan.databaseFiles == (← StudyRuntime.files (.mk plan.database))) "saved publication changed"
+  let _ ← StudySource.verify (.mk plan.sourceSnapshot)
+  let _ ← StudySource.verify (.mk plan.database)
   FileSystem.rejectSymlinkAncestors (.mk plan.dataRoot)
   check ((← tree (.mk plan.dataRoot)) == sorted plan.privateFiles) "private preparation changed"
   let config ← Config.parseFile (.mk plan.configuration.path)
