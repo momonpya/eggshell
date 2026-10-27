@@ -8,11 +8,13 @@ def main (args : List String) : IO Unit := do
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let measured := args.head? == some "measured"
   let causal := args.head? == some "cause"
+  let filtered := args.head? == some "filtered"
   let structural := args.head? == some "structure"
-  let args := if structural || measured || causal then args.tail else args
-  let parent := base / (if measured || causal then "shared-original-structure-20261027" else
+  let args := if structural || measured || causal || filtered then args.tail else args
+  let parent := base / (if measured || causal || filtered then "shared-original-structure-20261027" else
     if structural then "prepared-original-service-20261027" else "joint-range-bindings-20261027")
-  let root := base / (if causal then "evidence-cause-contract-20261027" else
+  let root := base / (if filtered then "filtered-postings-20261027" else
+    if causal then "evidence-cause-contract-20261027" else
     if measured then "rendered-marginal-cost-20261027" else
     if structural then "shared-original-structure-20261027" else "prepared-original-service-20261027")
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
@@ -23,6 +25,12 @@ def main (args : List String) : IO Unit := do
     let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",
       (parent / "checkout").toString,(root / "checkout").toString]}
     unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
+    if filtered then
+      let path := root / "checkout/tools/OwnerUnitPostings.lean"
+      let text ← IO.FS.readFile path
+      if (← path.symlinkMetadata).type == .symlink then IO.FS.removeFile path
+      IO.FS.writeFile path text
+      return
     for file in ["SynapseTransport.lean","Handoff.lean","ObservedRecordView.lean","SynapseBuild.lean",
         "SynapseIndex.lean","PublicationClient.lean","PublicationService.lean","CanonicalSourcePrepared.lean"] ++
         (if causal then ["SynapseBundles.lean","SynapseRecommend.lean"] else []) do
@@ -33,12 +41,12 @@ def main (args : List String) : IO Unit := do
     return
   let [mode,label] := args | throw (IO.userError "fork | MODE LABEL")
   unless ["product","hook","audit","run-audit","run-hook","run-worker","contract"].contains mode && !label.isEmpty &&
-      label.toList.all (fun c => c.isAlphanum || c == '-') && (mode != "contract" || causal) do
+      label.toList.all (fun c => c.isAlphanum || c == '-') && (mode != "contract" || causal || filtered) do
     throw (IO.userError "known mode/simple label required")
-  let command ← if mode == "contract" && causal then
+  let command ← if mode == "contract" then
     pure #["/usr/bin/env","LEAN_PATH=" ++ (parent / "product-build/lib").toString,"LEAN_NUM_THREADS=1",
       toolchain ++ "/bin/lean","--root=" ++ (root / "checkout").toString,"-j1","-M1536",
-      (root / "checkout/Eggshell/SynapticCause.lean").toString]
+      (root / "checkout" / (if filtered then "tools/OwnerUnitPostings.lean" else "Eggshell/SynapticCause.lean")).toString]
   else if mode == "run-audit" then
     pure #["/usr/bin/env","LEAN_NUM_THREADS=1",(root / "audit-build/StudyMain").toString,(root / label).toString]
   else if mode == "run-hook" || mode == "run-worker" then
@@ -66,7 +74,8 @@ def main (args : List String) : IO Unit := do
       |>.setObjVal! "core" (toJson (root / "checkout").toString)
       |>.setObjVal! "output" (toJson (root / (mode ++ "-build")).toString)
       |>.setObjVal! "mainModule" (toJson (if mode == "audit" then
-        if causal then "tools.research.CauseContractChecks" else
+        if filtered then "tools.research.FilteredPostingsChecks" else
+          if causal then "tools.research.CauseContractChecks" else
           if measured then "tools.research.MeasuredCoverageChecks" else "tools.research.OriginalStructureAudit"
         else if own then "tools.research.OnePreparedHook" else "Main"))
       |>.setObjVal! "baselineCore" (toJson (origin / "checkout").toString)

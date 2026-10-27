@@ -1,0 +1,55 @@
+--- a/tools/OwnerUnitPostings.lean
++++ b/tools/OwnerUnitPostings.lean
+@@ -57,0 +58,52 @@
++/-- Rejected entries do not enter the ordered union. This retains its exact
++original-ID order and duplicate handling, without building a large tree for
++every small evidence recipe. -/
++def Index.filteredUnion (index : Index ownerOf) (owners : List String)
++    (accept : Fin n → Bool) : Std.TreeSet (Fin n) compare :=
++  (∅ : Std.TreeSet (Fin n) compare).insertMany
++    (owners.flatMap fun owner => (index.postings[owner]?.getD []).filter accept)
++
++def Index.selectFiltered (index : Index ownerOf) (owners : List String)
++    (accept : Fin n → Bool) : List (Fin n) :=
++  (index.filteredUnion owners accept).toList
++
++theorem Index.filtered_union_mem (index : Index ownerOf) (owners : List String)
++    (accept : Fin n → Bool) (unit : Fin n) :
++    unit ∈ (index.filteredUnion owners accept).toList ↔
++      (∃ owner ∈ owners, ownerOf unit = some owner) ∧ accept unit = true := by
++  simp [Index.filteredUnion,index.exact,List.mem_flatMap]
++  constructor
++  · rintro ⟨owner,here,accepted,same⟩
++    exact ⟨⟨owner,here,same⟩,accepted⟩
++  · rintro ⟨⟨owner,here,same⟩,accepted⟩
++    exact ⟨owner,here,accepted,same⟩
++
++theorem Index.select_filtered_exact (index : Index ownerOf) (owners : List String)
++    (accept : Fin n → Bool) : index.select owners accept = index.selectFiltered owners accept := by
++  have distinct (tree : Std.TreeSet (Fin n) compare) : tree.toList.Nodup :=
++    tree.distinct_toList.imp (by
++      intro a b differs same
++      subst b
++      exact differs (by simp))
++  have ordered (tree : Std.TreeSet (Fin n) compare) :
++      tree.toList.Pairwise (fun a b => a.val ≤ b.val) :=
++    tree.ordered_toList.imp (by
++      intro a b before
++      exact Nat.le_of_lt (Nat.compare_eq_lt.mp before))
++  have sameMembers : ∀ unit, unit ∈ index.select owners accept ↔
++      unit ∈ index.selectFiltered owners accept := by
++    intro unit
++    simp only [Index.select,List.mem_filter,Index.union_mem,Index.selectFiltered,
++      Index.filtered_union_mem]
++  apply List.Perm.eq_of_pairwise (le := fun a b : Fin n => a.val ≤ b.val)
++  · intro a b _ _ ab ba
++    exact Fin.ext (Nat.le_antisymm ab ba)
++  · exact (ordered (index.union owners)).filter accept
++  · exact ordered (index.filteredUnion owners accept)
++  · exact (List.perm_ext_iff_of_nodup ((distinct (index.union owners)).filter accept)
++      (distinct (index.filteredUnion owners accept))).mpr sameMembers
++
++@[csimp] theorem select_filter_compiled : @Index.select = @Index.selectFiltered := by
++  funext n ownerOf index owners accept
++  exact index.select_filtered_exact owners accept
++
