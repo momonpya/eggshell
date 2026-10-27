@@ -1,0 +1,252 @@
+--- a/Eggshell/PacketReceipt.lean
++++ b/Eggshell/PacketReceipt.lean
+@@ -0,0 +1,117 @@
++module
++public import Eggshell.SynapseTransport
++public import tools.IndexedCharacters
++@[expose] public section
++
++namespace Eggshell.Synapses.PacketReceipt
++open Lean _root_.Eggshell.Synapses.Extraction
++
++/-- One character view per native original, independent of output syntax. -/
++structure Source (doc : Document) where
++  raw : String
++  saved : doc.source = some raw
++  native : doc.native = true
++  indexed : IndexedCharacters raw
++
++def Source.prepare? (doc : Document) : Option (Source doc) := do
++  let raw ← doc.source
++  if saved : doc.source = some raw then
++    if native : doc.native = true then some ⟨raw,saved,native,IndexedCharacters.make raw⟩ else none
++  else none
++
++/-- The original spelling is checked at its actual coordinates. Rendering
++may decode JSON escapes; it may never replace the original with a summary. -/
++structure Piece (source : Source doc) where
++  first : Nat
++  original : String
++  nonempty : original.isEmpty = false
++  within : first+original.length ≤ source.indexed.chars.size
++  literal : source.indexed.slice first original.length = original
++
++def Source.piece? (source : Source doc) (first : Nat) (original : String) : Option (Piece source) :=
++  if nonempty : original.isEmpty = false then
++    if within : first+original.length ≤ source.indexed.chars.size then
++      if literal : source.indexed.slice first original.length = original then
++        some ⟨first,original,nonempty,within,literal⟩ else none
++    else none
++  else none
++
++theorem Piece.original_slice {doc : Document} {source : Source doc} (piece : Piece source) :
++    ((source.raw.drop piece.first).take piece.original.length).copy = piece.original := by
++  rw [← IndexedCharacters.slice_exact source.indexed]
++  exact piece.literal
++
++structure Native where
++  document : Document
++  source : Source document
++
++def prepare (docs : Array Document) : Std.HashMap String Native :=
++  docs.foldl (fun found doc => match Source.prepare? doc with
++    | none => found
++    | some source => found.insert doc.owner ⟨doc,source⟩) {}
++
++def Piece.json {doc : Document} {source : Source doc} (piece : Piece source) : Json :=
++  Json.mkObj [("owner",toJson doc.owner),("work",toJson doc.work),
++    ("first",toJson piece.first),("limit",toJson (piece.first+piece.original.length)),
++    ("occurrences",toJson doc.occurrences),("originalBytesChecked",toJson true)]
++
++/-- Checking one selected shared row must not parse its owner's entire
++output. Both direct code and a saved numbered row are literal projections. -/
++def codeMatches (original : String) (number : Nat) (code : String) : Bool :=
++  (sharedCodes original).any fun spelling =>
++    spelling.text == code || numbered (if spelling.text.endsWith "\n" then
++      (spelling.text.dropEnd 1).copy else spelling.text) == some (number,code)
++
++structure Shared (saved : Array Read) (source : Source doc) (row : CanonicalSource.StoredRow) (origin : CanonicalSource.Origin) where
++  read : Read
++  present : read ∈ saved
++  valid : read.valid = true
++  sourceExact : read.source = ⟨.file row.key.file,row.key.line,row.key.line⟩
++  originBinding : read.binding = origin.binding
++  originOccurrence : read.occurrence = origin.occurrence
++  ownerExact : read.binding.owner = doc.owner
++  workExact : read.binding.work = doc.work
++  nativeOccurrence : doc.occurrences.contains read.occurrence = true
++  dependency : doc.files.contains row.key.file = true
++  within : read.binding.first < read.binding.limit ∧ read.binding.limit ≤ source.indexed.chars.size
++  spelling : codeMatches (source.indexed.slice read.binding.first
++    (read.binding.limit-read.binding.first)) row.key.line row.code = true
++
++def shared? {saved : Array Read} (source : Source doc) (row : CanonicalSource.StoredRow)
++    (origin : CanonicalSource.Origin) (savedRead : {read : Read // read ∈ saved}) : Option (Shared saved source row origin) :=
++  let read := savedRead.val
++  if valid : read.valid = true then
++    if sourceExact : read.source = ⟨.file row.key.file,row.key.line,row.key.line⟩ then
++      if binding : read.binding = origin.binding then
++        if occurrence : read.occurrence = origin.occurrence then
++          if owner : read.binding.owner = doc.owner then
++            if work : read.binding.work = doc.work then
++              if native : doc.occurrences.contains read.occurrence = true then
++                if dependency : doc.files.contains row.key.file = true then
++                  if within : read.binding.first < read.binding.limit ∧ read.binding.limit ≤ source.indexed.chars.size then
++                    if spelling : codeMatches (source.indexed.slice read.binding.first
++                        (read.binding.limit-read.binding.first)) row.key.line row.code = true then
++                      some ⟨read,savedRead.property,valid,sourceExact,binding,occurrence,owner,work,native,dependency,within,spelling⟩
++                    else none
++                  else none
++                else none
++              else none
++            else none
++          else none
++        else none
++      else none
++    else none
++  else none
++
++theorem Shared.same_native_origin {saved : Array Read} {doc : Document} {source : Source doc}
++    {row : CanonicalSource.StoredRow} {origin : CanonicalSource.Origin}
++    (witness : Shared saved source row origin) :
++    witness.read.binding = origin.binding ∧ witness.read.occurrence = origin.occurrence ∧
++      doc.occurrences.contains witness.read.occurrence = true :=
++  ⟨witness.originBinding,witness.originOccurrence,witness.nativeOccurrence⟩
++
++theorem Shared.original_saved_read {saved : Array Read} {doc : Document} {source : Source doc}
++    {row : CanonicalSource.StoredRow} {origin : CanonicalSource.Origin}
++    (witness : Shared saved source row origin) : witness.read ∈ saved := witness.present
++
++end Eggshell.Synapses.PacketReceipt
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -206,3 +206,14 @@
+-def prepare (source : PageMap.Snapshot) (writable : Bool) (deadline : Option Nat := none) : IO Prepared := do
+-  try
+-    let (storage, _) ← Sidecar.destination (Sidecar.Owner.ofSnapshot source) writable
++/-- Read existing authenticated views without selecting a write destination.
++A read-only profile may reuse DB-owned preparation. Private views remain the
++fallback when the shared directory is absent or not readable. -/
++def readablePrepared? (read : Sidecar.Storage → IO (Option α)) : IO (Option α) := do
++  for storage in [.database,.user] do
++    let found ← try read storage catch error => match error with
++      | .permissionDenied _ _ _ => pure none
++      | _ => throw error
++    if found.isSome then return found
++  return none
++
++def prepare (source : PageMap.Snapshot) (deadline : Option Nat := none) : IO Prepared := do
++  try
++    let readDeadline := deadline.getD ((← IO.monoMsNow)+5000)
+@@ -210,2 +221,2 @@
+-      let prepared ← Plugin.Publication.Client.prepareSource source storage
+-        (deadline.getD ((← IO.monoMsNow)+5000))
++      let prepared ← readablePrepared? fun storage => Plugin.Publication.Client.prepareSource source storage
++        readDeadline
+@@ -215 +226 @@
+-      source := source,shared := ← Index.open? source storage .shared
++      source := source,shared := ← readablePrepared? fun storage => Index.open? source storage .shared
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -36,0 +37 @@
++public import Eggshell.PacketReceipt
+@@ -404,0 +406,75 @@
++/-- The ledger is bound to the reconciled packet actually returned to the
++hook. An earlier selection or a modified envelope cannot label delivery. -/
++structure CapturedPacket (handoff : Handoff) where
++  packet : DeliveryPacket
++  saved : handoff.packet = some packet
++  exact : packet.render = (handoff.text.take (handoff.text.length-handoff.controlDeltaChars)).copy
++
++def Handoff.capturedPacket? (handoff : Handoff) : Option (CapturedPacket handoff) :=
++  match saved : handoff.packet with
++  | none => none
++  | some packet =>
++    if exact : packet.render = (handoff.text.take (handoff.text.length-handoff.controlDeltaChars)).copy then
++      some ⟨packet,saved,exact⟩ else none
++
++theorem CapturedPacket.exact_returned_body {handoff : Handoff} (captured : CapturedPacket handoff) :
++    captured.packet.render = (handoff.text.take (handoff.text.length-handoff.controlDeltaChars)).copy := captured.exact
++
++/-- Query-time diagnostics follow selected native pieces. They do not
++reparse the body, solve again, or scan every unselected recommendation. -/
++def Handoff.deliveryReceipt (handoff : Handoff) (plan : Synapses.Transport.Plan) : Json := Id.run do
++  let captured := handoff.capturedPacket?
++  let owners := (captured.map (fun captured => captured.packet.parts.flatMap (·.owners))).getD []
++    |>.foldl (fun found owner => found.insert owner) ({} : Std.HashSet String)
++  let native := Synapses.PacketReceipt.prepare (plan.documents.filter (fun doc => owners.contains doc.owner))
++  let reads := KeyPostings.prepare (fun saved : {read : Synapses.Read // read ∈ plan.rows} =>
++    (saved.val.binding,saved.val.occurrence)) (plan.rows.attach.filter fun saved => owners.contains saved.val.binding.owner)
++  let mut originals := #[]
++  let mut shared := #[]
++  let mut unverified := #[]
++  if let some captured := captured then
++    for (part,partIndex) in captured.packet.parts.zipIdx do
++      if let some context := part.context then
++        if part.text != context.render then unverified := unverified.push partIndex; continue
++        let some source := native[context.owner]? | unverified := unverified.push partIndex; continue
++        if context.sourceChars != source.source.indexed.chars.size then
++          unverified := unverified.push partIndex; continue
++        for fragment in context.fragments do
++          let some piece := source.source.piece? fragment.first fragment.original |
++            unverified := unverified.push partIndex; continue
++          originals := originals.push (piece.json.setObjVal! "part" (toJson partIndex)
++            |>.setObjVal! "decoded" (toJson fragment.presentation.2)
++            |>.setObjVal! "declaredPath" (toJson (fragment.path.map JsonScalars.pathJson)))
++      else if let some body := part.shared then
++        if part.text != body.render then unverified := unverified.push partIndex; continue
++        for row in body.rows do
++          for origin in row.origins do
++            let some source := native[origin.binding.owner]? | unverified := unverified.push partIndex; continue
++            let mut checked := false
++            for read in reads.lookup (origin.binding,origin.occurrence) do
++              if let some witness := Synapses.PacketReceipt.shared? source.source row origin read then
++                shared := shared.push (Json.mkObj [("part",toJson partIndex),("source",toJson witness.read.source),
++                  ("binding",toJson origin.binding),("occurrence",toJson origin.occurrence),
++                  ("originalBytesChecked",toJson true)])
++                checked := true
++                break
++            if !checked then unverified := unverified.push partIndex
++      else unverified := unverified.push partIndex
++  return Json.mkObj [
++    ("bodySha256",toJson (Sha256.hex handoff.text.toUTF8)),
++    ("bodyChars",toJson handoff.text.length),("bodyBytes",toJson handoff.text.utf8ByteSize),
++    ("packetVerified",toJson captured.isSome),("complete",toJson plan.complete),
++    ("completed",toJson handoff.completed),("advisory",toJson handoff.advisory),
++    ("localUnions",toJson handoff.localUnions),
++    ("inputs",toJson (plan.results.map fun result => Json.mkObj [
++      ("available",toJson result.available),("complete",toJson result.complete),
++      ("index",toJson result.index),("usage",toJson result.usage),
++      ("routing",toJson result.routing),("usageRouting",toJson result.usageRouting),
++      ("requests",toJson result.nodes),("facts",toJson result.arcs),("bytes",toJson result.bytes),
++      ("failure",toJson result.failure)])),
++    ("bindingRequests",toJson plan.bindingRequests),("bindingBytes",toJson plan.bindingBytes),
++    ("bindingUnresolved",toJson plan.bindingUnresolved),("observationAges",toJson plan.observations),
++    ("originalPieces",toJson originals),("sharedRows",toJson shared),
++    ("unverifiedParts",toJson unverified.toList.eraseDups),
++    ("fullCandidateAudit",toJson false)]
++
+@@ -6043 +6119 @@
+-def Plan.receipt (plan : Plan ceiling cost mandatory) : Json :=
++def Plan.fullReceipt (plan : Plan ceiling cost mandatory) : Json :=
+@@ -6062,0 +6139,8 @@
++/-- The hot path records the actual choices. Reconstructing every rejected
++candidate's charge and benefit is an explicit independent full audit. -/
++def Plan.receipt (plan : Plan ceiling cost mandatory) : Json :=
++  Json.mkObj [("families",toJson plan.families.size),("candidateUnits",toJson plan.units.size),
++    ("selected",toJson plan.selected),("fixedCost",toJson plan.problem.fixed),
++    ("limit",toJson plan.problem.limit),("scale",toJson plan.scale),
++    ("fullCandidateAudit",toJson false)]
++
+@@ -7904,2 +7988,4 @@
+-  Receipt.observe source.receipt "synaptic-delivery"
+-    (Synapses.Bundles.receipt synaptic synapticBundles ((rendered.map (·.text)).getD ""))
++  if let some id := source.receipt then
++    Receipt.observe (some id) "synaptic-delivery" ((rendered.map fun handoff =>
++      handoff.deliveryReceipt synaptic).getD (Json.mkObj [("bodyChars",toJson (0 : Nat)),
++        ("packetVerified",toJson false),("complete",toJson synaptic.complete)]))
+@@ -8358 +8443,0 @@
+-    let writable := selection.write.any (fun target => target.path.normalize == snapshot.directory.normalize)
+@@ -8362 +8447 @@
+-    try Synapses.Recommend.prepare snapshot writable (some preparationDeadline)
++    try Synapses.Recommend.prepare snapshot (some preparationDeadline)

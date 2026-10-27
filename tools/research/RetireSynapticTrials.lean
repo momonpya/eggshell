@@ -38,15 +38,19 @@ def main (args : List String) : IO Unit := do
   let spanEnded := args == ["span-ended"]
   let recordEnded := args == ["record-ended"]
   let quotationEnded := args == ["quotation-ended"]
+  let packetEnded := args == ["packet-ended"]
   let prepared := args == ["prepared-checks"] || ended
-  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || recordEnded || quotationEnded || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
+  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || recordEnded || quotationEnded || packetEnded || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let report := project / "docs/candidates" / (if quotationEnded then "quotation-context" else if recordEnded then "prepared-record-delivery" else if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
+  let report := project / "docs/candidates" / (if packetEnded then "packet-delivery-ledger" else if quotationEnded then "quotation-context" else if recordEnded then "prepared-record-delivery" else if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
     (if old then "records/retirement-prior.json" else if ended then "records/retirement-finished.json" else "records/retirement.json")
   unless !(← report.pathExists) do throw (IO.userError "keep retirement evidence")
   let mut targets := #[]
-  let runs := if quotationEnded then #[("quotation-context",#["audit-build","source-build","source-current-build",
+  let runs := if packetEnded then #[("packet-delivery-ledger",#["checked-final-packet","saved-origin-packet",
+      "canonical-origin-packet","actual-body-witness","payload-build","hook-build","audit-build/StudyMain",
+      "one-prepared-hook/data","one-prepared-hook/prefix","shared-reader-hook","canonical-reader-hook"])]
+    else if quotationEnded then #[("quotation-context",#["audit-build","source-build","source-current-build",
       "mapped-records","c7-source-comparison","c7-source-metadata","direct-origin-contracts",
       "scoped-origin-contracts","bindings-build/StudyMain"])]
     else if recordEnded then #[("prepared-record-delivery",#["fixed-source-hooks","checked-hook",
@@ -96,6 +100,16 @@ def main (args : List String) : IO Unit := do
       if ← path.pathExists then targets := targets.push path
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","pid=,command="]}
   unless processes.exitCode == 0 do throw (IO.userError "cannot inspect trial ownership")
+  if packetEnded then
+    let active := base / "packet-delivery-ledger-20261027"
+    for directory in [active / "audit-build/lib",active / "product-build/lib",active / "checkout"] do
+      protectLinks directory targets
+    for build in ["audit-build","product-build"] do
+      let response ← IO.FS.readFile (active / build / "runtime.rsp")
+      for target in targets do
+        unless (processes.stdout.splitOn target.toString).length == 1 &&
+            (response.splitOn target.toString).length == 1 do
+          throw (IO.userError "ended packet helper is live or still needed")
   if quotationEnded then
     let active := base / "quotation-context-20261027"
     protectLinks (active / "bindings-build/lib") targets
