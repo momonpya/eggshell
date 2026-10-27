@@ -6,8 +6,10 @@ open Lean
 checkpoint; no answering model, new seed, or full warm is launched here. -/
 def main (args : List String) : IO Unit := do
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
-  let parent := base / "joint-range-bindings-20261027"
-  let root := base / "prepared-original-service-20261027"
+  let structural := args.head? == some "structure"
+  let args := if structural then args.tail else args
+  let parent := base / (if structural then "prepared-original-service-20261027" else "joint-range-bindings-20261027")
+  let root := base / (if structural then "shared-original-structure-20261027" else "prepared-original-service-20261027")
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
   if args == ["fork"] then
@@ -16,22 +18,26 @@ def main (args : List String) : IO Unit := do
     let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",
       (parent / "checkout").toString,(root / "checkout").toString]}
     unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
-    let path := root / "checkout/Eggshell/SynapseTransport.lean"
-    let text ← IO.FS.readFile path
-    if (← path.symlinkMetadata).type == .symlink then IO.FS.removeFile path
-    IO.FS.writeFile path text
+    for file in ["SynapseTransport.lean","Handoff.lean","ObservedRecordView.lean","SynapseBuild.lean",
+        "SynapseIndex.lean","PublicationClient.lean","PublicationService.lean","CanonicalSourcePrepared.lean"] do
+      let path := root / "checkout/Eggshell" / file
+      let text ← IO.FS.readFile path
+      if (← path.symlinkMetadata).type == .symlink then IO.FS.removeFile path
+      IO.FS.writeFile path text
     return
   let [mode,label] := args | throw (IO.userError "fork | MODE LABEL")
-  unless ["product","hook","run-hook"].contains mode && !label.isEmpty &&
+  unless ["product","hook","audit","run-audit","run-hook"].contains mode && !label.isEmpty &&
       label.toList.all (fun c => c.isAlphanum || c == '-') do
     throw (IO.userError "known mode/simple label required")
-  let command ← if mode == "run-hook" then
+  let command ← if mode == "run-audit" then
+    pure #["/usr/bin/env","LEAN_NUM_THREADS=1",(root / "audit-build/StudyMain").toString,(root / label).toString]
+  else if mode == "run-hook" then
     pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
       "EGGSHELL_DATA_ROOT=" ++ (root / label / "data").toString,
       (root / "hook-build/StudyMain").toString,root.toString,(root / label).toString,
       (base / "packet-delivery-ledger-20261027/one-prepared-hook").toString]
   else do
-    let own := mode == "hook"
+    let own := mode != "product"
     let baseline := if own then root / "product-build" else parent / "product-build"
     let origin := if own then root else parent
     let library := root / "checkout/.lake/build/lib/lean"
@@ -48,7 +54,8 @@ def main (args : List String) : IO Unit := do
     let plan := (built.getObjValD "settings")
       |>.setObjVal! "core" (toJson (root / "checkout").toString)
       |>.setObjVal! "output" (toJson (root / (mode ++ "-build")).toString)
-      |>.setObjVal! "mainModule" (toJson (if own then "tools.research.OnePreparedHook" else "Main"))
+      |>.setObjVal! "mainModule" (toJson (if mode == "audit" then "tools.research.OriginalStructureAudit"
+        else if own then "tools.research.OnePreparedHook" else "Main"))
       |>.setObjVal! "baselineCore" (toJson (origin / "checkout").toString)
       |>.setObjVal! "baselineResponse" (toJson (baseline / "runtime.rsp").toString)
       |>.setObjVal! "baselineMain" (toJson (baseline / "Main.o").toString)

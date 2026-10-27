@@ -42,16 +42,21 @@ def main (args : List String) : IO Unit := do
   let cueEnded := args == ["cue-ended"]
   let selectionEnded := args == ["selection-ended"]
   let jointEnded := args == ["joint-ended"]
+  let structureEnded := args == ["structure-ended"]
+  let structureAttempt := args == ["structure-attempt"]
   let prepared := args == ["prepared-checks"] || ended
-  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || recordEnded || quotationEnded || packetEnded || cueEnded || selectionEnded || jointEnded || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
+  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || recordEnded || quotationEnded || packetEnded || cueEnded || selectionEnded || jointEnded || structureEnded || structureAttempt || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let report := project / "docs/candidates" / (if jointEnded then "joint-range-bindings" else if selectionEnded then "prepared-selection-domain" else if cueEnded then "prepared-cue-incidence" else if packetEnded then "packet-delivery-ledger" else if quotationEnded then "quotation-context" else if recordEnded then "prepared-record-delivery" else if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
-    (if jointEnded then "window-groups/retirement.json" else if selectionEnded then "final/retirement.json" else if old then "records/retirement-prior.json" else if ended then "records/retirement-finished.json" else "records/retirement.json")
+  let report := project / "docs/candidates" / (if structureEnded || structureAttempt then "shared-original-structure" else if jointEnded then "joint-range-bindings" else if selectionEnded then "prepared-selection-domain" else if cueEnded then "prepared-cue-incidence" else if packetEnded then "packet-delivery-ledger" else if quotationEnded then "quotation-context" else if recordEnded then "prepared-record-delivery" else if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
+    (if structureAttempt then "native-only/retirement.json" else if structureEnded then "final/retirement.json" else if jointEnded then "window-groups/retirement.json" else if selectionEnded then "final/retirement.json" else if old then "records/retirement-prior.json" else if ended then "records/retirement-finished.json" else "records/retirement.json")
   unless !(← report.pathExists) do throw (IO.userError "keep retirement evidence")
   let mut targets := #[]
   let mut audits := #[]
-  let runs := if jointEnded then #[("joint-range-bindings",#["joint-fast-hook","joint-origin-hook","checked-joint-bindings",
+  let runs := if structureAttempt then #[("shared-original-structure",#["prepared-structure-hook","audit-build/StudyMain","hook-build/StudyMain"])]
+    else if structureEnded then #[("shared-original-structure",#["complete-structure-hook","checked-structure","checked-all-structure","audit-build","hook-build"]),
+      ("prepared-original-service",#["product-build/StudyMain"])]
+    else if jointEnded then #[("joint-range-bindings",#["joint-fast-hook","joint-origin-hook","checked-joint-bindings",
       "window-fast-hook","window-origin-hook","checked-window-groups",
       "window-origin-hook-settings.json","restore-baseline.lean","restored-source.json",
       "gate-build","hook-build","audit-build/StudyMain"]),("prepared-selection-domain",#["product-build/StudyMain"])]
@@ -100,7 +105,9 @@ def main (args : List String) : IO Unit := do
   for (name,runs) in runs do
     let root := base / (name ++ "-20261027")
     let collected := project / "docs/candidates" / name /
-      (if jointEnded && name == "joint-range-bindings" then "window-groups/collection.json"
+      (if structureAttempt then "native-only/collection.json"
+       else if structureEnded then (if name == "shared-original-structure" then "final/collection.json" else "collection.json")
+       else if jointEnded && name == "joint-range-bindings" then "window-groups/collection.json"
        else if name == "prepared-selection-domain" then "final/collection.json"
        else if tournamentAttempt then "failed-eager-join/records/collection.json" else "records/collection.json")
     unless ← collected.pathExists do
@@ -111,12 +118,20 @@ def main (args : List String) : IO Unit := do
         unless (guard.getObjValAs? String "state").toOption == some "finished" &&
           (guard.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] do
           throw (IO.userError "candidate guard is still live")
-        if jointEnded then audits := audits.push (entry.path.toString,guard)
+        if jointEnded || structureEnded || structureAttempt then audits := audits.push (entry.path.toString,guard)
     for run in runs do
       let path := if run == "." then root else root / run
       if ← path.pathExists then targets := targets.push path
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","pid=,command="]}
   unless processes.exitCode == 0 do throw (IO.userError "cannot inspect trial ownership")
+  if structureEnded || structureAttempt then
+    let active := base / "shared-original-structure-20261027"
+    for directory in [active / "product-build/lib",active / "checkout"] do protectLinks directory targets
+    let response ← IO.FS.readFile (active / "product-build/runtime.rsp")
+    for target in targets do
+      unless (processes.stdout.splitOn target.toString).length == 1 &&
+          (response.splitOn target.toString).length == 1 do
+        throw (IO.userError "ended structure helper is live or still needed")
   if cueEnded || selectionEnded || jointEnded then
     let active := base / (if jointEnded then "joint-range-bindings-20261027" else if selectionEnded then "prepared-selection-domain-20261027" else "prepared-cue-incidence-20261027")
     for directory in [active / "audit-build/lib",active / "product-build/lib",active / "checkout"] do

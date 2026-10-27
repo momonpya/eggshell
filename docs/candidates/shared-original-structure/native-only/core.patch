@@ -1,0 +1,1458 @@
+--- a/Eggshell/OriginalStructure.lean
++++ b/Eggshell/OriginalStructure.lean
+@@ -0,0 +1,652 @@
++module
++public import Lean.Data.Json.Parser
++public import Lean.Data.Json.FromToJson
++public import tools.PairDecisions
++public import tools.IndexedCharacters
++@[expose] public section
++namespace Eggshell.Plugin
++open Lean
++
++/-- Publication intervals do not require allocating the whole source. -/
++structure DeliveryInterval where
++  start : Nat
++  stop : Nat
++  ordered : start < stop
++
++def DeliveryInterval.covers (range : DeliveryInterval) (position : Nat) : Prop :=
++  range.start ≤ position ∧ position < range.stop
++
++def DeliveryInterval.subtract (range covered : DeliveryInterval) : List DeliveryInterval :=
++  (if ordered : range.start < min range.stop covered.start then
++    [⟨range.start, min range.stop covered.start, ordered⟩] else []) ++
++  (if ordered : max range.start covered.stop < range.stop then
++    [⟨max range.start covered.stop, range.stop, ordered⟩] else [])
++
++theorem DeliveryInterval.subtract_covers (range covered : DeliveryInterval) (position : Nat) :
++    (∃ part ∈ range.subtract covered, part.covers position) ↔
++      range.covers position ∧ ¬covered.covers position := by
++  have := range.ordered
++  have := covered.ordered
++  unfold subtract
++  split <;> split <;> simp_all [covers] <;> omega
++
++def DeliveryInterval.subtractAll (range : DeliveryInterval) : List DeliveryInterval → List DeliveryInterval
++  | [] => [range]
++  | first :: rest => (range.subtract first).flatMap (·.subtractAll rest)
++
++theorem DeliveryInterval.subtractAll_covers (range : DeliveryInterval)
++    (covered : List DeliveryInterval) (position : Nat) :
++    (∃ part ∈ range.subtractAll covered, part.covers position) ↔
++      range.covers position ∧ ∀ prior ∈ covered, ¬prior.covers position := by
++  induction covered generalizing range with
++  | nil => simp [subtractAll]
++  | cons first rest ih =>
++      constructor
++      · rintro ⟨part, member, covers⟩
++        obtain ⟨middle, member, next⟩ := List.mem_flatMap.mp member
++        have tail := (ih middle).mp ⟨part, next, covers⟩
++        have head := (subtract_covers range first position).mp ⟨middle, member, tail.1⟩
++        exact ⟨head.1, by
++          intro prior member
++          rcases List.mem_cons.mp member with equal | member
++          · simpa [equal] using head.2
++          · exact tail.2 prior member⟩
++      · rintro ⟨covers, fresh⟩
++        obtain ⟨middle, member, covers⟩ := (subtract_covers range first position).mpr
++          ⟨covers, fresh first (by simp)⟩
++        obtain ⟨part, next, covers⟩ := (ih middle).mpr
++          ⟨covers, fun prior member => fresh prior (by simp [member])⟩
++        exact ⟨part, List.mem_flatMap.mpr ⟨middle, member, next⟩, covers⟩
++
++def DeliveryInterval.connected (left right : DeliveryInterval) : Prop :=
++  left.start ≤ right.stop ∧ right.start ≤ left.stop
++
++instance (left right : DeliveryInterval) : Decidable (left.connected right) :=
++  inferInstanceAs (Decidable (_ ∧ _))
++
++def DeliveryInterval.join (left right : DeliveryInterval)
++    (_ : left.connected right) : DeliveryInterval :=
++  ⟨min left.start right.start,max left.stop right.stop,
++    by have := left.ordered; have := right.ordered; omega⟩
++
++theorem DeliveryInterval.join_covers (left right : DeliveryInterval)
++    (connected : left.connected right) (position : Nat) :
++    (left.join right connected).covers position ↔ left.covers position ∨ right.covers position := by
++  simp only [join,covers]
++  unfold DeliveryInterval.connected at connected
++  omega
++
++def DeliveryInterval.coalesceFrom (current : DeliveryInterval) : List DeliveryInterval → List DeliveryInterval
++  | [] => [current]
++  | next :: rest => if connected : current.connected next then
++      coalesceFrom (current.join next connected) rest
++    else current :: coalesceFrom next rest
++
++theorem DeliveryInterval.coalesceFrom_covers (current : DeliveryInterval)
++    (rest : List DeliveryInterval) (position : Nat) :
++    (∃ part ∈ coalesceFrom current rest,part.covers position) ↔
++      current.covers position ∨ ∃ part ∈ rest,part.covers position := by
++  induction rest generalizing current with
++  | nil => simp [coalesceFrom]
++  | cons next rest ih =>
++    simp only [coalesceFrom]
++    split
++    · rw [ih,join_covers]; simp [or_assoc]
++    · simp only [List.mem_cons,exists_eq_or_imp]; rw [ih]
++
++def DeliveryInterval.coalesce (ranges : List DeliveryInterval) : List DeliveryInterval :=
++  match ranges.mergeSort (fun left right => left.start ≤ right.start) with
++  | [] => []
++  | first :: rest => coalesceFrom first rest
++
++theorem DeliveryInterval.coalesce_covers (ranges : List DeliveryInterval) (position : Nat) :
++    (∃ part ∈ coalesce ranges,part.covers position) ↔ ∃ part ∈ ranges,part.covers position := by
++  have sorted : (∃ part ∈ ranges.mergeSort (fun left right => left.start ≤ right.start),part.covers position) ↔
++      ∃ part ∈ ranges,part.covers position := by simp
++  cases publication : ranges.mergeSort (fun left right => left.start ≤ right.start) with
++  | nil => simpa [coalesce,publication] using sorted
++  | cons first rest => simpa [coalesce,publication,coalesceFrom_covers] using sorted
++
++theorem DeliveryInterval.subtractAll_empty (range : DeliveryInterval) (prior : List DeliveryInterval) :
++    (range.subtractAll prior).isEmpty = true ↔
++      ¬ ∃ position,range.covers position ∧ ∀ part ∈ prior,¬part.covers position := by
++  constructor
++  · intro empty ⟨position,inside,fresh⟩
++    obtain ⟨part,member,_⟩ := (subtractAll_covers range prior position).mpr ⟨inside,fresh⟩
++    have missing : range.subtractAll prior = [] := List.isEmpty_iff.mp empty
++    simp [missing] at member
++  · intro none
++    cases output : range.subtractAll prior with
++    | nil => rfl
++    | cons part rest =>
++      exfalso
++      apply none
++      have member : part ∈ range.subtractAll prior := by simp [output]
++      exact ⟨part.start,(subtractAll_covers range prior part.start).mp
++        ⟨part,member,Nat.le_refl _,part.ordered⟩⟩
++
++theorem DeliveryInterval.subtractAll_empty_same_union (range : DeliveryInterval)
++    (left right : List DeliveryInterval)
++    (same : ∀ position,(∃ part ∈ left,part.covers position) ↔ ∃ part ∈ right,part.covers position) :
++    (range.subtractAll left).isEmpty = (range.subtractAll right).isEmpty := by
++  apply Bool.eq_iff_iff.mpr
++  change (range.subtractAll left).isEmpty = true ↔ (range.subtractAll right).isEmpty = true
++  rw [subtractAll_empty,subtractAll_empty]
++  apply not_congr
++  apply exists_congr
++  intro position
++  apply and_congr_right
++  intro _
++  simpa only [not_exists,not_and] using not_congr (same position)
++
++
++/-- A decoded tool string is accepted only when serializing it recreates the
++entire immutable stored value. This changes display, never the Outcome identity. -/
++structure DecodedToolText (source : String) where
++  text : String
++  exact : (Json.str text).compress = source
++
++def decodedToolText? (source : String) : Option (DecodedToolText source) := do
++  let .ok (.str text) := Json.parse source | none
++  if exact : (Json.str text).compress = source then some ⟨text, exact⟩ else none
++
++
++theorem decoded_tool_text_recreates_source (decoded : DecodedToolText source) :
++    (Json.str decoded.text).compress = source := decoded.exact
++
++
++/-- Certified contiguous original characters around a meaning-ranked window.
++This is evidence for an existing graph owner, not a new Outcome or completion. -/
++structure EvidenceRange (source : String) where
++  start : Nat
++  stop : Nat
++  ordered : start < stop
++  within : stop ≤ source.length
++  bounded : stop - start ≤ 2048
++
++theorem EvidenceRange.coordinates_injective (left right : EvidenceRange source)
++    (first : left.start = right.start) (last : left.stop = right.stop) : left = right := by
++  cases left
++  cases right
++  cases first
++  cases last
++  rfl
++
++instance : BEq (EvidenceRange source) where
++  beq left right := left.start == right.start && left.stop == right.stop
++
++instance : LawfulBEq (EvidenceRange source) where
++  eq_of_beq := by
++    intro left right same
++    exact EvidenceRange.coordinates_injective left right
++      (eq_of_beq (Bool.and_eq_true_iff.mp same).1) (eq_of_beq (Bool.and_eq_true_iff.mp same).2)
++  rfl := by intro range; simp [BEq.beq]
++
++instance : Hashable (EvidenceRange source) where
++  hash range := hash (range.start, range.stop)
++
++def EvidenceRange.text (range : EvidenceRange source) : String :=
++  ((source.drop range.start).take (range.stop - range.start)).copy
++
++theorem EvidenceRange.source_exact (range : EvidenceRange source) :
++    range.text.toList = (source.toList.drop range.start).take (range.stop - range.start) := by
++  simp [text]
++
++theorem EvidenceRange.text_bounded (range : EvidenceRange source) :
++    range.text.length ≤ 2048 := by
++  have bounded := range.bounded
++  rw [← String.length_toList, range.source_exact]
++  simp only [List.length_take, List.length_drop, String.length_toList]
++  omega
++
++def EvidenceRange.around? (source : String) (center : Nat) : Option (EvidenceRange source) :=
++  let start := min (center - 1024) (source.length - 2048)
++  let stop := min source.length (start + 2048)
++  if valid : start < stop ∧ stop ≤ source.length ∧ stop - start ≤ 2048 then
++    some ⟨start, stop, valid.1, valid.2.1, valid.2.2⟩
++  else none
++
++/-- A connected source interval before transport segmentation. Its extent is
++not a range-count limit: dense meaning positions share one interval, while
++separate positions keep their individual ownership and numerical priority. -/
++structure ContextSpan (source : String) where
++  start : Nat
++  stop : Nat
++  ordered : start < stop
++  within : stop ≤ source.length
++
++def ContextSpan.covers (span : ContextSpan source) (position : Nat) : Prop :=
++  span.start ≤ position ∧ position < span.stop
++
++def EvidenceRange.covers (range : EvidenceRange source) (position : Nat) : Prop :=
++  range.start ≤ position ∧ position < range.stop
++
++instance (span : ContextSpan source) (position : Nat) : Decidable (span.covers position) :=
++  inferInstanceAs (Decidable (_ ∧ _))
++
++instance (range : EvidenceRange source) (position : Nat) : Decidable (range.covers position) :=
++  inferInstanceAs (Decidable (_ ∧ _))
++
++
++def ContextSpan.ranges (span : ContextSpan source) : List (EvidenceRange source) :=
++  if bounded : span.stop - span.start ≤ 2048 then
++    [⟨span.start, span.stop, span.ordered, span.within, bounded⟩]
++  else
++    let first : EvidenceRange source := ⟨span.start, span.start + 2048,
++      by omega, by have := span.within; omega, by omega⟩
++    let tail : ContextSpan source := ⟨span.start + 2048, span.stop,
++      by omega, span.within⟩
++    first :: tail.ranges
++termination_by span.stop - span.start
++
++/-- Segmentation is exact even for a dense cluster longer than one transport
++range. It is not truncation to the first 2048 characters. -/
++theorem ContextSpan.ranges_cover (span : ContextSpan source) (position : Nat) :
++    (∃ range ∈ span.ranges, range.covers position) ↔ span.covers position := by
++  rw [ContextSpan.ranges]
++  split
++  · simp [EvidenceRange.covers, ContextSpan.covers]
++  · simp only [List.mem_cons, exists_eq_or_imp]
++    rw [ContextSpan.ranges_cover]
++    simp only [EvidenceRange.covers, ContextSpan.covers]
++    omega
++termination_by span.stop - span.start
++
++
++def encodedTextBody (text : String) : String :=
++  (((Json.str text).compress.drop 1).dropEnd 1).copy
++
++theorem encoded_text_body_exact (text : String) :
++    encodedTextBody text =
++      String.ofList (((Json.str text).compress.toList.drop 1).dropLast) := by
++  apply String.ext
++  simp [encodedTextBody, List.dropLast_eq_take]
++
++
++def encodedCharacterWidths (chars : List Char) : List (Nat × Nat) :=
++  chars.zipIdx.map fun (char, index) => (index, (encodedTextBody (String.singleton char)).length)
++
++def scalarPrefixHolds (source content : String) (first second : Nat) : Prop :=
++  (source.take first).copy = "\"" ++ encodedTextBody ((content.take second).copy)
++
++instance : DecidableRel (scalarPrefixHolds source content) := fun first second =>
++  inferInstanceAs (Decidable ((source.take first).copy =
++    "\"" ++ encodedTextBody ((content.take second).copy)))
++
++def scalarPrefixDepth (source content : String) : Nat :=
++  ((source.length + 1) * (content.length + 1)).log2 + 1
++
++abbrev ScalarPrefixMemo (source content : String) :=
++  PairDecisions (scalarPrefixHolds source content) (content.length + 1) (scalarPrefixDepth source content)
++
++/-- Request-local layout of one immutable scalar. The expensive canonical
++encoding of each character is prepared once, not for each budget/range. -/
++structure DecodedLayout (source : String) where
++  decoded : DecodedToolText source
++  chars : List Char
++  charsExact : chars = decoded.text.toList
++  widths : List (Nat × Nat)
++  widthsExact : widths = encodedCharacterWidths chars
++  original : IndexedCharacters source
++  content : IndexedCharacters decoded.text
++  prefixes : ScalarPrefixMemo source decoded.text
++
++def DecodedLayout.make (decoded : DecodedToolText source) : DecodedLayout source :=
++  let chars := decoded.text.toList
++  ⟨decoded, chars, rfl, encodedCharacterWidths chars, rfl,
++    IndexedCharacters.make source, ⟨chars.toArray, rfl⟩,
++    PairDecisions.make _ (decoded.text.length + 1) (scalarPrefixDepth source decoded.text)⟩
++
++theorem DecodedLayout.is_canonical (layout : DecodedLayout source) :
++    layout = make layout.decoded := by
++  cases layout with
++  | mk decoded chars charsExact widths widthsExact original content prefixes =>
++    subst chars
++    subst widths
++    rw [IndexedCharacters.is_canonical original, IndexedCharacters.is_canonical content,
++      PairDecisions.is_canonical prefixes]
++    rfl
++
++/-- Recorded line boundaries in the original scalar, including JSON escape
++widths. These are presentation spans, not file identity or relevance gates. -/
++def contextRecordSpans (source : String) (layout : Option (DecodedLayout source)) :
++    List (ContextSpan source) := Id.run do
++  let units := match layout with
++    | some value => value.chars.zip (value.widths.map Prod.snd)
++    | none => source.toList.map fun char => (char, 1)
++  let mut position := if layout.isSome then 1 else 0
++  let mut first := position
++  let mut spans := []
++  for (char, width) in units do
++    position := position + width
++    if char == '\n' then
++      if valid : first < position ∧ position ≤ source.length then
++        spans := (⟨first, position, valid.1, valid.2⟩ : ContextSpan source) :: spans
++      first := position
++  if valid : first < position ∧ position ≤ source.length then
++    spans := (⟨first, position, valid.1, valid.2⟩ : ContextSpan source) :: spans
++  return spans.reverse
++
++
++/-- Prefer complete adjacent records when they fit one bounded range. A very
++long single record retains the explicitly partial original representation. -/
++def recordContextRange (records : List (ContextSpan source)) (range : EvidenceRange source) :
++    EvidenceRange source :=
++  let start := ((records.find? fun record =>
++    record.start ≤ range.start && range.start < record.stop).map (·.start)).getD range.start
++  let stop := ((records.find? fun record =>
++    record.start < range.stop && range.stop ≤ record.stop).map (·.stop)).getD range.stop
++  if valid : start ≤ range.start ∧ range.stop ≤ stop ∧ start < stop ∧
++      stop ≤ source.length ∧ stop - start ≤ 2048 then
++    ⟨start, stop, valid.2.2.1, valid.2.2.2.1, valid.2.2.2.2⟩
++  else range
++
++theorem record_context_retains_original (records : List (ContextSpan source))
++    (range : EvidenceRange source) (position : Nat) (covered : range.covers position) :
++    (recordContextRange records range).covers position := by
++  unfold recordContextRange
++  dsimp only
++  split
++  · rename_i bounds
++    simp only [EvidenceRange.covers] at *
++    exact ⟨Nat.le_trans bounds.1 covered.1, Nat.lt_of_lt_of_le covered.2 bounds.2.1⟩
++  · exact covered
++
++
++/-- Original offsets are accumulated while scanning, including canonical
++JSON escape widths. Numbered tool-output gaps reset the structural hint, so
++an earlier file or disjoint read cannot supply the next section's header. -/
++def contextStructureHeads (source : String) (layout : Option (DecodedLayout source))
++    (scopeLabels : Bool := false) :
++    List (Nat × Option Nat) := Id.run do
++  let units := match layout with
++    | some value => value.chars.zip (value.widths.map Prod.snd)
++    | none => source.toList.map fun char => (char, 1)
++  let mut position := if layout.isSome then 1 else 0
++  let mut first := position
++  let mut line : List Char := []
++  let mut rows : List (Nat × String) := []
++  for (char, width) in units do
++    if char == '\n' then
++      rows := (first, String.ofList line.reverse) :: rows
++      line := []
++      first := position + width
++    else line := char :: line
++    position := position + width
++  if !line.isEmpty then rows := (first, String.ofList line.reverse) :: rows
++  let mut previous : Option Nat := none
++  let mut previousDelimiter : Option Char := none
++  let mut scopes : List (Nat × Nat) := []
++  let mut heads : List (Nat × Option Nat) := []
++  let ordered := rows.reverse
++  let mut paragraph : Bool := ordered.length > 1
++  for (offset, text) in ordered do
++    let trimmed := text.toList.dropWhile (· == ' ')
++    let digits := trimmed.takeWhile Char.isDigit
++    let rest := trimmed.drop digits.length
++    -- `nl` uses a tab and `rg -n` uses a colon. Both carry original line
++    -- numbers; sparse hits and a change of representation break adjacency.
++    -- Otherwise a following file's grep result can borrow the preceding
++    -- file's function header and consume its whole context allowance.
++    let delimiter := rest.head?.filter (fun char => char == '\t' || char == ':')
++    let numbered := !digits.isEmpty && delimiter.isSome
++    let number := if numbered then (String.ofList digits).toNat? else none
++    let body := if numbered then String.ofList (rest.drop 1) else text
++    if number.isSome && (number != previous.map (· + 1) || delimiter != previousDelimiter) then
++      scopes := []
++      heads := (offset, none) :: heads
++      paragraph := true
++    let blank := (body.toList.dropWhile (fun char => char == ' ' || char == '\t')).isEmpty
++    let paragraphStart := paragraph && body.toList.head?.any (fun char => char != ' ' && char != '\t')
++    -- Paragraph starts and explicit headings apply to prose, records and
++    -- tool text as well as source code. Shape hints never admit a candidate,
++    -- infer a relation or certify syntax/meaning. Single unstructured lines
++    -- have no paragraph boundary; their ranked nearby context is sufficient.
++    -- Indented scope labels belong to the original record too. Their
++    -- conditions must precede a selected result, just as prose headings do.
++    -- Numbered gaps above still reset this local hint; no relation or
++    -- completion authority is inferred from indentation or punctuation.
++    let label := String.ofList (body.toList.dropWhile (fun char => char == ' ' || char == '\t'))
++    let scopeLabel := scopeLabels && label.endsWith ":" && label.toList.head?.any Char.isAlpha
++    let indentation := (body.toList.takeWhile (fun char => char == ' ' || char == '\t')).length
++    -- A monotone indentation stack prevents an earlier branch from lending
++    -- its label to a following function or sibling record. Retain a still
++    -- enclosing label when only an inner scope ends.
++    if !blank && !scopeLabel then
++      let enclosing := scopes.dropWhile (fun row => indentation <= row.1)
++      if enclosing.length != scopes.length then
++        heads := (offset, enclosing.head?.map Prod.snd) :: heads
++      scopes := enclosing
++    if scopeLabel && 0 < indentation then
++      scopes := (indentation, offset) :: scopes.dropWhile (fun row => indentation <= row.1)
++    if paragraphStart || body.startsWith "# " || body.startsWith "##" || scopeLabel ||
++        (body.toList.head?.any Char.isAlpha && (body.contains '(' || body.endsWith ":")) then
++      heads := (offset, some offset) :: heads
++    paragraph := blank
++    previous := number
++    previousDelimiter := if numbered then delimiter else none
++  return heads.reverse
++
++
++/-- A nearby recorded paragraph/function start is part of the observation,
++not optional peripheral data. This keeps a result with its invocation or
++precondition, using only bounded original positions from the same section. -/
++def prerequisiteContextRange (records : List (ContextSpan source))
++    (heads : List (Nat × Option Nat)) (range : EvidenceRange source) : EvidenceRange source :=
++  let complete := recordContextRange records range
++  let preceding := (heads.takeWhile (fun row => row.1 ≤ complete.start)).reverse
++  let first := preceding.head?.bind Prod.snd |>.getD complete.start
++  let lower := ((heads.filter fun row => row.2.isNone && row.1 ≤ complete.start).getLast?).map
++    Prod.fst |>.getD 0
++  -- Inputs and results may be separated by a blank record. The immediately
++  -- preceding bounded paragraph is retained, without crossing a file/read gap.
++  let prior := (preceding.dropWhile (fun row => first ≤ row.1)).head?.bind Prod.snd
++  let start := match prior with
++    | some position => if lower ≤ position && complete.stop - position ≤ 2048 then position else first
++    | none => first
++  if valid : start ≤ complete.start ∧ start < complete.stop ∧
++      complete.stop - start ≤ 2048 then
++    ⟨start, complete.stop, valid.2.1, complete.within, valid.2.2⟩
++  else complete
++
++theorem prerequisite_context_keeps_cue (records : List (ContextSpan source))
++    (heads : List (Nat × Option Nat)) (range : EvidenceRange source) (position : Nat)
++    (covered : range.covers position) :
++    (prerequisiteContextRange records heads range).covers position := by
++  have complete := record_context_retains_original records range position covered
++  unfold prerequisiteContextRange
++  dsimp only
++  split
++  · rename_i valid
++    change _ ≤ position ∧ position < (recordContextRange records range).stop
++    exact ⟨Nat.le_trans valid.1 complete.1, complete.2⟩
++  · exact complete
++
++
++
++namespace SharedRangeAdapter
++/-- A source record keeps its original paragraph and bounded scope entry.
++The fixed-width surrounding display is an enrichment, not a prerequisite of
++this smaller advisory offer. This creates no Match or completion authority. -/
++def recordPrerequisite (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (record : EvidenceRange source) :
++    EvidenceRange source :=
++  let prior := prerequisiteContextRange records heads record
++  let scope := prerequisiteContextRange records scopedHeads record
++  if valid : scope.start < prior.start ∧ prior.stop-scope.start ≤ 2048 then
++    ⟨scope.start,prior.stop,Nat.lt_trans valid.1 prior.ordered,prior.within,valid.2⟩
++  else prior
++
++theorem record_prerequisite_retains_source (records : List (ContextSpan source))
++    (heads scopedHeads : List (Nat × Option Nat)) (record : EvidenceRange source)
++    (position : Nat) (inside : record.covers position) :
++    (recordPrerequisite records heads scopedHeads record).covers position := by
++  have retained := prerequisite_context_keeps_cue records heads record position inside
++  unfold recordPrerequisite
++  dsimp only
++  split
++  · rename_i valid
++    change _ ≤ position ∧ position < (prerequisiteContextRange records heads record).stop
++    exact ⟨Nat.le_trans (Nat.le_of_lt valid.1) retained.1,retained.2⟩
++  · exact retained
++
++
++/-- One whole-scalar check permits display decoding at recorded character
++boundaries. This is presentation evidence, never a file alias or Work proof. -/
++structure ScalarLayout (source : String) where
++  layout : DecodedLayout source
++  canonical : source = (toJson layout.decoded.text).compress
++
++def ScalarLayout.check? (source : String) : Option (ScalarLayout source) := do
++  let decoded ← decodedToolText? source
++  let layout := DecodedLayout.make decoded
++  if canonical : source = (toJson layout.decoded.text).compress then
++    some ⟨layout,canonical⟩ else none
++
++def ScalarLayout.boundaries (prepared : ScalarLayout source) : Std.HashSet Nat := Id.run do
++  let mut position := 1
++  let mut result := ({} : Std.HashSet Nat).insert position
++  for (_,width) in prepared.layout.widths do
++    position := position+width
++    result := result.insert position
++  return result
++
++
++
++end SharedRangeAdapter
++
++namespace OriginalStructure
++
++/-- A publication recipe names original positions. It carries no query value,
++file alias, graph admission or completion authority. -/
++structure Span where
++  first : Nat
++  limit : Nat
++  decoded : Bool
++  deriving BEq, Hashable
++
++instance : ToJson Span where
++  toJson span := toJson (span.first,span.limit,span.decoded)
++instance : FromJson Span where
++  fromJson? value := do
++    let (first,limit,decoded) ← fromJson? (α := Nat × Nat × Bool) value
++    return ⟨first,limit,decoded⟩
++
++def Span.range? (span : Span) (source : String) : Option (EvidenceRange source) :=
++  if valid : span.first < span.limit ∧ span.limit ≤ source.length ∧ span.limit-span.first ≤ 2048 then
++    some ⟨span.first,span.limit,valid.1,valid.2.1,valid.2.2⟩ else none
++
++/-- A caller computes character count once. The source-size proof is erased,
++so checking each recipe never rescans its owner's entire UTF-8 string. -/
++def Span.rangeUsing? (span : Span) (source : String) (characters : Nat)
++    (exact : characters = source.length) : Option (EvidenceRange source) :=
++  if valid : span.first < span.limit ∧ span.limit ≤ characters ∧ span.limit-span.first ≤ 2048 then
++    some ⟨span.first,span.limit,valid.1,by simpa [exact] using valid.2.1,valid.2.2⟩ else none
++
++theorem Span.range_using_exact (span : Span) (source : String) (characters : Nat)
++    (exact : characters = source.length) : span.rangeUsing? source characters exact = span.range? source := by
++  subst characters
++  rfl
++
++def Span.ofRange (range : EvidenceRange source) (decoded : Bool) : Span :=
++  ⟨range.start,range.stop,decoded⟩
++
++theorem Span.range_roundtrip (range : EvidenceRange source) (decoded : Bool) :
++    (ofRange range decoded).range? source = some range := by
++  simp only [ofRange,range?,range.ordered,range.within,range.bounded,and_self,↓reduceDIte]
++
++theorem Span.range_positions (span : Span) (source : String) (range : EvidenceRange source)
++    (found : span.range? source = some range) :
++    range.start = span.first ∧ range.stop = span.limit := by
++  unfold range? at found
++  split at found
++  · cases found; exact ⟨rfl,rfl⟩
++  · contradiction
++
++def intervals (spans : Array Span) : List DeliveryInterval :=
++  spans.toList.filterMap fun span =>
++    if ordered : span.first < span.limit then some ⟨span.first,span.limit,ordered⟩ else none
++
++def complete (characters : Nat) (spans : Array Span) : Bool :=
++  if positive : 0 < characters then
++    (DeliveryInterval.subtractAll ⟨0,characters,positive⟩ (intervals spans)).isEmpty
++  else true
++
++/-- A published complete recipe domain cannot omit any original position,
++regardless of tool name, file alias or the query's hints. -/
++theorem complete_position (characters : Nat) (spans : Array Span) (position : Nat)
++    (ready : complete characters spans = true) (inside : position < characters) :
++    ∃ span ∈ spans, span.first ≤ position ∧ position < span.limit := by
++  classical
++  unfold complete at ready
++  split at ready
++  · rename_i positive
++    have whole := (DeliveryInterval.subtractAll_empty ⟨0,characters,positive⟩ (intervals spans)).mp ready
++    apply Classical.byContradiction
++    intro missing
++    apply whole
++    refine ⟨position,⟨Nat.zero_le _,inside⟩,?_⟩
++    intro interval member contains
++    unfold intervals at member
++    obtain ⟨span,belongs,found⟩ := List.mem_filterMap.mp member
++    by_cases ordered : span.first < span.limit
++    · simp only [ordered,↓reduceDIte,Option.some.injEq] at found
++      subst interval
++      exact missing ⟨span,by simpa using belongs,contains⟩
++    · simp [ordered] at found
++  · omega
++
++structure Record (source : String) where
++  range : EvidenceRange source
++  decoded : Bool
++
++/-- The renderer's original immutable partition and prerequisite rules,
++including uncovered gaps. Query windows and weights do not occur here. -/
++def catalogue (source : String) : Array (Record source) := Id.run do
++  if positive : 0 < source.length then
++    let wholeSpan : ContextSpan source := ⟨0,source.length,positive,Nat.le_refl _⟩
++    let scalar := SharedRangeAdapter.ScalarLayout.check? source
++    let layout := scalar.map (·.layout)
++    let boundaries := scalar.map SharedRangeAdapter.ScalarLayout.boundaries |>.getD {}
++    let records := contextRecordSpans source layout
++    let heads := contextStructureHeads source layout
++    let scopedHeads := contextStructureHeads source layout true
++    let covered := records.map fun record =>
++      (⟨record.start,record.stop,record.ordered⟩ : DeliveryInterval)
++    let whole : DeliveryInterval := ⟨wholeSpan.start,wholeSpan.stop,wholeSpan.ordered⟩
++    let gaps := (whole.subtractAll covered).attach.map fun gap =>
++      (⟨gap.val.start,gap.val.stop,gap.val.ordered,by
++        have inside : gap.val.covers (gap.val.stop-1) := by
++          have := gap.val.ordered
++          simp only [DeliveryInterval.covers]
++          omega
++        have contained := ((DeliveryInterval.subtractAll_covers whole covered (gap.val.stop-1)).mp
++          ⟨gap.val,gap.property,inside⟩).1
++        have bound := wholeSpan.within
++        simp only [DeliveryInterval.covers,whole] at contained
++        omega⟩ : ContextSpan source)
++    let mut result := #[]
++    let mut seen : Std.HashSet (Nat × Nat) := {}
++    for record in records ++ gaps do
++      for part in record.ranges do
++        let required := SharedRangeAdapter.recordPrerequisite records heads scopedHeads part
++        if seen.contains (required.start,required.stop) then continue
++        seen := seen.insert (required.start,required.stop)
++        result := result.push ⟨required,scalar.isSome && boundaries.contains required.start &&
++          boundaries.contains required.stop⟩
++    return result
++  else return #[]
++
++def prepare (source : String) : Array Span :=
++  (catalogue source).map fun record => Span.ofRange record.range record.decoded
++
++theorem prepared_span_has_original_range (source : String) (span : Span)
++    (present : span ∈ prepare source) :
++    ∃ range : EvidenceRange source, span.range? source = some range := by
++  obtain ⟨record,_,same⟩ := Array.mem_map.mp present
++  subst span
++  exact ⟨record.range,Span.range_roundtrip ..⟩
++
++end OriginalStructure
++
++end Eggshell.Plugin
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -2,0 +3 @@
++public import Eggshell.OriginalStructure
+@@ -196,132 +196,0 @@
+-/-- Publication intervals do not require allocating the whole source. -/
+-structure DeliveryInterval where
+-  start : Nat
+-  stop : Nat
+-  ordered : start < stop
+-
+-def DeliveryInterval.covers (range : DeliveryInterval) (position : Nat) : Prop :=
+-  range.start ≤ position ∧ position < range.stop
+-
+-def DeliveryInterval.subtract (range covered : DeliveryInterval) : List DeliveryInterval :=
+-  (if ordered : range.start < min range.stop covered.start then
+-    [⟨range.start, min range.stop covered.start, ordered⟩] else []) ++
+-  (if ordered : max range.start covered.stop < range.stop then
+-    [⟨max range.start covered.stop, range.stop, ordered⟩] else [])
+-
+-theorem DeliveryInterval.subtract_covers (range covered : DeliveryInterval) (position : Nat) :
+-    (∃ part ∈ range.subtract covered, part.covers position) ↔
+-      range.covers position ∧ ¬covered.covers position := by
+-  have := range.ordered
+-  have := covered.ordered
+-  unfold subtract
+-  split <;> split <;> simp_all [covers] <;> omega
+-
+-def DeliveryInterval.subtractAll (range : DeliveryInterval) : List DeliveryInterval → List DeliveryInterval
+-  | [] => [range]
+-  | first :: rest => (range.subtract first).flatMap (·.subtractAll rest)
+-
+-theorem DeliveryInterval.subtractAll_covers (range : DeliveryInterval)
+-    (covered : List DeliveryInterval) (position : Nat) :
+-    (∃ part ∈ range.subtractAll covered, part.covers position) ↔
+-      range.covers position ∧ ∀ prior ∈ covered, ¬prior.covers position := by
+-  induction covered generalizing range with
+-  | nil => simp [subtractAll]
+-  | cons first rest ih =>
+-      constructor
+-      · rintro ⟨part, member, covers⟩
+-        obtain ⟨middle, member, next⟩ := List.mem_flatMap.mp member
+-        have tail := (ih middle).mp ⟨part, next, covers⟩
+-        have head := (subtract_covers range first position).mp ⟨middle, member, tail.1⟩
+-        exact ⟨head.1, by
+-          intro prior member
+-          rcases List.mem_cons.mp member with equal | member
+-          · simpa [equal] using head.2
+-          · exact tail.2 prior member⟩
+-      · rintro ⟨covers, fresh⟩
+-        obtain ⟨middle, member, covers⟩ := (subtract_covers range first position).mpr
+-          ⟨covers, fresh first (by simp)⟩
+-        obtain ⟨part, next, covers⟩ := (ih middle).mpr
+-          ⟨covers, fun prior member => fresh prior (by simp [member])⟩
+-        exact ⟨part, List.mem_flatMap.mpr ⟨middle, member, next⟩, covers⟩
+-
+-def DeliveryInterval.connected (left right : DeliveryInterval) : Prop :=
+-  left.start ≤ right.stop ∧ right.start ≤ left.stop
+-
+-instance (left right : DeliveryInterval) : Decidable (left.connected right) :=
+-  inferInstanceAs (Decidable (_ ∧ _))
+-
+-def DeliveryInterval.join (left right : DeliveryInterval)
+-    (_ : left.connected right) : DeliveryInterval :=
+-  ⟨min left.start right.start,max left.stop right.stop,
+-    by have := left.ordered; have := right.ordered; omega⟩
+-
+-theorem DeliveryInterval.join_covers (left right : DeliveryInterval)
+-    (connected : left.connected right) (position : Nat) :
+-    (left.join right connected).covers position ↔ left.covers position ∨ right.covers position := by
+-  simp only [join,covers]
+-  unfold DeliveryInterval.connected at connected
+-  omega
+-
+-def DeliveryInterval.coalesceFrom (current : DeliveryInterval) : List DeliveryInterval → List DeliveryInterval
+-  | [] => [current]
+-  | next :: rest => if connected : current.connected next then
+-      coalesceFrom (current.join next connected) rest
+-    else current :: coalesceFrom next rest
+-
+-theorem DeliveryInterval.coalesceFrom_covers (current : DeliveryInterval)
+-    (rest : List DeliveryInterval) (position : Nat) :
+-    (∃ part ∈ coalesceFrom current rest,part.covers position) ↔
+-      current.covers position ∨ ∃ part ∈ rest,part.covers position := by
+-  induction rest generalizing current with
+-  | nil => simp [coalesceFrom]
+-  | cons next rest ih =>
+-    simp only [coalesceFrom]
+-    split
+-    · rw [ih,join_covers]; simp [or_assoc]
+-    · simp only [List.mem_cons,exists_eq_or_imp]; rw [ih]
+-
+-def DeliveryInterval.coalesce (ranges : List DeliveryInterval) : List DeliveryInterval :=
+-  match ranges.mergeSort (fun left right => left.start ≤ right.start) with
+-  | [] => []
+-  | first :: rest => coalesceFrom first rest
+-
+-theorem DeliveryInterval.coalesce_covers (ranges : List DeliveryInterval) (position : Nat) :
+-    (∃ part ∈ coalesce ranges,part.covers position) ↔ ∃ part ∈ ranges,part.covers position := by
+-  have sorted : (∃ part ∈ ranges.mergeSort (fun left right => left.start ≤ right.start),part.covers position) ↔
+-      ∃ part ∈ ranges,part.covers position := by simp
+-  cases publication : ranges.mergeSort (fun left right => left.start ≤ right.start) with
+-  | nil => simpa [coalesce,publication] using sorted
+-  | cons first rest => simpa [coalesce,publication,coalesceFrom_covers] using sorted
+-
+-theorem DeliveryInterval.subtractAll_empty (range : DeliveryInterval) (prior : List DeliveryInterval) :
+-    (range.subtractAll prior).isEmpty = true ↔
+-      ¬ ∃ position,range.covers position ∧ ∀ part ∈ prior,¬part.covers position := by
+-  constructor
+-  · intro empty ⟨position,inside,fresh⟩
+-    obtain ⟨part,member,_⟩ := (subtractAll_covers range prior position).mpr ⟨inside,fresh⟩
+-    have missing : range.subtractAll prior = [] := List.isEmpty_iff.mp empty
+-    simp [missing] at member
+-  · intro none
+-    cases output : range.subtractAll prior with
+-    | nil => rfl
+-    | cons part rest =>
+-      exfalso
+-      apply none
+-      have member : part ∈ range.subtractAll prior := by simp [output]
+-      exact ⟨part.start,(subtractAll_covers range prior part.start).mp
+-        ⟨part,member,Nat.le_refl _,part.ordered⟩⟩
+-
+-theorem DeliveryInterval.subtractAll_empty_same_union (range : DeliveryInterval)
+-    (left right : List DeliveryInterval)
+-    (same : ∀ position,(∃ part ∈ left,part.covers position) ↔ ∃ part ∈ right,part.covers position) :
+-    (range.subtractAll left).isEmpty = (range.subtractAll right).isEmpty := by
+-  apply Bool.eq_iff_iff.mpr
+-  change (range.subtractAll left).isEmpty = true ↔ (range.subtractAll right).isEmpty = true
+-  rw [subtractAll_empty,subtractAll_empty]
+-  apply not_congr
+-  apply exists_congr
+-  intro position
+-  apply and_congr_right
+-  intro _
+-  simpa only [not_exists,not_and] using not_congr (same position)
+-
+@@ -2101,10 +1969,0 @@
+-
+-/-- A decoded tool string is accepted only when serializing it recreates the
+-entire immutable stored value. This changes display, never the Outcome identity. -/
+-structure DecodedToolText (source : String) where
+-  text : String
+-  exact : (Json.str text).compress = source
+-
+-def decodedToolText? (source : String) : Option (DecodedToolText source) := do
+-  let .ok (.str text) := Json.parse source | none
+-  if exact : (Json.str text).compress = source then some ⟨text, exact⟩ else none
+@@ -2116,3 +1974,0 @@
+-
+-theorem decoded_tool_text_recreates_source (decoded : DecodedToolText source) :
+-    (Json.str decoded.text).compress = source := decoded.exact
+@@ -2606,66 +2461,0 @@
+-
+-/-- Certified contiguous original characters around a meaning-ranked window.
+-This is evidence for an existing graph owner, not a new Outcome or completion. -/
+-structure EvidenceRange (source : String) where
+-  start : Nat
+-  stop : Nat
+-  ordered : start < stop
+-  within : stop ≤ source.length
+-  bounded : stop - start ≤ 2048
+-
+-theorem EvidenceRange.coordinates_injective (left right : EvidenceRange source)
+-    (first : left.start = right.start) (last : left.stop = right.stop) : left = right := by
+-  cases left
+-  cases right
+-  cases first
+-  cases last
+-  rfl
+-
+-instance : BEq (EvidenceRange source) where
+-  beq left right := left.start == right.start && left.stop == right.stop
+-
+-instance : LawfulBEq (EvidenceRange source) where
+-  eq_of_beq := by
+-    intro left right same
+-    exact EvidenceRange.coordinates_injective left right
+-      (eq_of_beq (Bool.and_eq_true_iff.mp same).1) (eq_of_beq (Bool.and_eq_true_iff.mp same).2)
+-  rfl := by intro range; simp [BEq.beq]
+-
+-instance : Hashable (EvidenceRange source) where
+-  hash range := hash (range.start, range.stop)
+-
+-def EvidenceRange.text (range : EvidenceRange source) : String :=
+-  ((source.drop range.start).take (range.stop - range.start)).copy
+-
+-theorem EvidenceRange.source_exact (range : EvidenceRange source) :
+-    range.text.toList = (source.toList.drop range.start).take (range.stop - range.start) := by
+-  simp [text]
+-
+-theorem EvidenceRange.text_bounded (range : EvidenceRange source) :
+-    range.text.length ≤ 2048 := by
+-  have bounded := range.bounded
+-  rw [← String.length_toList, range.source_exact]
+-  simp only [List.length_take, List.length_drop, String.length_toList]
+-  omega
+-
+-def EvidenceRange.around? (source : String) (center : Nat) : Option (EvidenceRange source) :=
+-  let start := min (center - 1024) (source.length - 2048)
+-  let stop := min source.length (start + 2048)
+-  if valid : start < stop ∧ stop ≤ source.length ∧ stop - start ≤ 2048 then
+-    some ⟨start, stop, valid.1, valid.2.1, valid.2.2⟩
+-  else none
+-
+-/-- A connected source interval before transport segmentation. Its extent is
+-not a range-count limit: dense meaning positions share one interval, while
+-separate positions keep their individual ownership and numerical priority. -/
+-structure ContextSpan (source : String) where
+-  start : Nat
+-  stop : Nat
+-  ordered : start < stop
+-  within : stop ≤ source.length
+-
+-def ContextSpan.covers (span : ContextSpan source) (position : Nat) : Prop :=
+-  span.start ≤ position ∧ position < span.stop
+-
+-def EvidenceRange.covers (range : EvidenceRange source) (position : Nat) : Prop :=
+-  range.start ≤ position ∧ position < range.stop
+@@ -2673,6 +2462,0 @@
+-instance (span : ContextSpan source) (position : Nat) : Decidable (span.covers position) :=
+-  inferInstanceAs (Decidable (_ ∧ _))
+-
+-instance (range : EvidenceRange source) (position : Nat) : Decidable (range.covers position) :=
+-  inferInstanceAs (Decidable (_ ∧ _))
+-
+@@ -2778,11 +2561,0 @@
+-
+-def ContextSpan.ranges (span : ContextSpan source) : List (EvidenceRange source) :=
+-  if bounded : span.stop - span.start ≤ 2048 then
+-    [⟨span.start, span.stop, span.ordered, span.within, bounded⟩]
+-  else
+-    let first : EvidenceRange source := ⟨span.start, span.start + 2048,
+-      by omega, by have := span.within; omega, by omega⟩
+-    let tail : ContextSpan source := ⟨span.start + 2048, span.stop,
+-      by omega, span.within⟩
+-    first :: tail.ranges
+-termination_by span.stop - span.start
+@@ -2790,13 +2562,0 @@
+-/-- Segmentation is exact even for a dense cluster longer than one transport
+-range. It is not truncation to the first 2048 characters. -/
+-theorem ContextSpan.ranges_cover (span : ContextSpan source) (position : Nat) :
+-    (∃ range ∈ span.ranges, range.covers position) ↔ span.covers position := by
+-  rw [ContextSpan.ranges]
+-  split
+-  · simp [EvidenceRange.covers, ContextSpan.covers]
+-  · simp only [List.mem_cons, exists_eq_or_imp]
+-    rw [ContextSpan.ranges_cover]
+-    simp only [EvidenceRange.covers, ContextSpan.covers]
+-    omega
+-termination_by span.stop - span.start
+-
+@@ -3015,3 +2774,0 @@
+-
+-def encodedTextBody (text : String) : String :=
+-  (((Json.str text).compress.drop 1).dropEnd 1).copy
+@@ -3019,6 +2775,0 @@
+-theorem encoded_text_body_exact (text : String) :
+-    encodedTextBody text =
+-      String.ofList (((Json.str text).compress.toList.drop 1).dropLast) := by
+-  apply String.ext
+-  simp [encodedTextBody, List.dropLast_eq_take]
+-
+@@ -3047,28 +2797,0 @@
+-
+-def encodedCharacterWidths (chars : List Char) : List (Nat × Nat) :=
+-  chars.zipIdx.map fun (char, index) => (index, (encodedTextBody (String.singleton char)).length)
+-
+-def scalarPrefixHolds (source content : String) (first second : Nat) : Prop :=
+-  (source.take first).copy = "\"" ++ encodedTextBody ((content.take second).copy)
+-
+-instance : DecidableRel (scalarPrefixHolds source content) := fun first second =>
+-  inferInstanceAs (Decidable ((source.take first).copy =
+-    "\"" ++ encodedTextBody ((content.take second).copy)))
+-
+-def scalarPrefixDepth (source content : String) : Nat :=
+-  ((source.length + 1) * (content.length + 1)).log2 + 1
+-
+-abbrev ScalarPrefixMemo (source content : String) :=
+-  PairDecisions (scalarPrefixHolds source content) (content.length + 1) (scalarPrefixDepth source content)
+-
+-/-- Request-local layout of one immutable scalar. The expensive canonical
+-encoding of each character is prepared once, not for each budget/range. -/
+-structure DecodedLayout (source : String) where
+-  decoded : DecodedToolText source
+-  chars : List Char
+-  charsExact : chars = decoded.text.toList
+-  widths : List (Nat × Nat)
+-  widthsExact : widths = encodedCharacterWidths chars
+-  original : IndexedCharacters source
+-  content : IndexedCharacters decoded.text
+-  prefixes : ScalarPrefixMemo source decoded.text
+@@ -3076,60 +2798,0 @@
+-def DecodedLayout.make (decoded : DecodedToolText source) : DecodedLayout source :=
+-  let chars := decoded.text.toList
+-  ⟨decoded, chars, rfl, encodedCharacterWidths chars, rfl,
+-    IndexedCharacters.make source, ⟨chars.toArray, rfl⟩,
+-    PairDecisions.make _ (decoded.text.length + 1) (scalarPrefixDepth source decoded.text)⟩
+-
+-theorem DecodedLayout.is_canonical (layout : DecodedLayout source) :
+-    layout = make layout.decoded := by
+-  cases layout with
+-  | mk decoded chars charsExact widths widthsExact original content prefixes =>
+-    subst chars
+-    subst widths
+-    rw [IndexedCharacters.is_canonical original, IndexedCharacters.is_canonical content,
+-      PairDecisions.is_canonical prefixes]
+-    rfl
+-
+-/-- Recorded line boundaries in the original scalar, including JSON escape
+-widths. These are presentation spans, not file identity or relevance gates. -/
+-def contextRecordSpans (source : String) (layout : Option (DecodedLayout source)) :
+-    List (ContextSpan source) := Id.run do
+-  let units := match layout with
+-    | some value => value.chars.zip (value.widths.map Prod.snd)
+-    | none => source.toList.map fun char => (char, 1)
+-  let mut position := if layout.isSome then 1 else 0
+-  let mut first := position
+-  let mut spans := []
+-  for (char, width) in units do
+-    position := position + width
+-    if char == '\n' then
+-      if valid : first < position ∧ position ≤ source.length then
+-        spans := (⟨first, position, valid.1, valid.2⟩ : ContextSpan source) :: spans
+-      first := position
+-  if valid : first < position ∧ position ≤ source.length then
+-    spans := (⟨first, position, valid.1, valid.2⟩ : ContextSpan source) :: spans
+-  return spans.reverse
+-
+-/-- Prefer complete adjacent records when they fit one bounded range. A very
+-long single record retains the explicitly partial original representation. -/
+-def recordContextRange (records : List (ContextSpan source)) (range : EvidenceRange source) :
+-    EvidenceRange source :=
+-  let start := ((records.find? fun record =>
+-    record.start ≤ range.start && range.start < record.stop).map (·.start)).getD range.start
+-  let stop := ((records.find? fun record =>
+-    record.start < range.stop && range.stop ≤ record.stop).map (·.stop)).getD range.stop
+-  if valid : start ≤ range.start ∧ range.stop ≤ stop ∧ start < stop ∧
+-      stop ≤ source.length ∧ stop - start ≤ 2048 then
+-    ⟨start, stop, valid.2.2.1, valid.2.2.2.1, valid.2.2.2.2⟩
+-  else range
+-
+-theorem record_context_retains_original (records : List (ContextSpan source))
+-    (range : EvidenceRange source) (position : Nat) (covered : range.covers position) :
+-    (recordContextRange records range).covers position := by
+-  unfold recordContextRange
+-  dsimp only
+-  split
+-  · rename_i bounds
+-    simp only [EvidenceRange.covers] at *
+-    exact ⟨Nat.le_trans bounds.1 covered.1, Nat.lt_of_lt_of_le covered.2 bounds.2.1⟩
+-  · exact covered
+-
+@@ -3241,74 +2903,0 @@
+-
+-/-- Original offsets are accumulated while scanning, including canonical
+-JSON escape widths. Numbered tool-output gaps reset the structural hint, so
+-an earlier file or disjoint read cannot supply the next section's header. -/
+-def contextStructureHeads (source : String) (layout : Option (DecodedLayout source))
+-    (scopeLabels : Bool := false) :
+-    List (Nat × Option Nat) := Id.run do
+-  let units := match layout with
+-    | some value => value.chars.zip (value.widths.map Prod.snd)
+-    | none => source.toList.map fun char => (char, 1)
+-  let mut position := if layout.isSome then 1 else 0
+-  let mut first := position
+-  let mut line : List Char := []
+-  let mut rows : List (Nat × String) := []
+-  for (char, width) in units do
+-    if char == '\n' then
+-      rows := (first, String.ofList line.reverse) :: rows
+-      line := []
+-      first := position + width
+-    else line := char :: line
+-    position := position + width
+-  if !line.isEmpty then rows := (first, String.ofList line.reverse) :: rows
+-  let mut previous : Option Nat := none
+-  let mut previousDelimiter : Option Char := none
+-  let mut scopes : List (Nat × Nat) := []
+-  let mut heads : List (Nat × Option Nat) := []
+-  let ordered := rows.reverse
+-  let mut paragraph : Bool := ordered.length > 1
+-  for (offset, text) in ordered do
+-    let trimmed := text.toList.dropWhile (· == ' ')
+-    let digits := trimmed.takeWhile Char.isDigit
+-    let rest := trimmed.drop digits.length
+-    -- `nl` uses a tab and `rg -n` uses a colon. Both carry original line
+-    -- numbers; sparse hits and a change of representation break adjacency.
+-    -- Otherwise a following file's grep result can borrow the preceding
+-    -- file's function header and consume its whole context allowance.
+-    let delimiter := rest.head?.filter (fun char => char == '\t' || char == ':')
+-    let numbered := !digits.isEmpty && delimiter.isSome
+-    let number := if numbered then (String.ofList digits).toNat? else none
+-    let body := if numbered then String.ofList (rest.drop 1) else text
+-    if number.isSome && (number != previous.map (· + 1) || delimiter != previousDelimiter) then
+-      scopes := []
+-      heads := (offset, none) :: heads
+-      paragraph := true
+-    let blank := (body.toList.dropWhile (fun char => char == ' ' || char == '\t')).isEmpty
+-    let paragraphStart := paragraph && body.toList.head?.any (fun char => char != ' ' && char != '\t')
+-    -- Paragraph starts and explicit headings apply to prose, records and
+-    -- tool text as well as source code. Shape hints never admit a candidate,
+-    -- infer a relation or certify syntax/meaning. Single unstructured lines
+-    -- have no paragraph boundary; their ranked nearby context is sufficient.
+-    -- Indented scope labels belong to the original record too. Their
+-    -- conditions must precede a selected result, just as prose headings do.
+-    -- Numbered gaps above still reset this local hint; no relation or
+-    -- completion authority is inferred from indentation or punctuation.
+-    let label := String.ofList (body.toList.dropWhile (fun char => char == ' ' || char == '\t'))
+-    let scopeLabel := scopeLabels && label.endsWith ":" && label.toList.head?.any Char.isAlpha
+-    let indentation := (body.toList.takeWhile (fun char => char == ' ' || char == '\t')).length
+-    -- A monotone indentation stack prevents an earlier branch from lending
+-    -- its label to a following function or sibling record. Retain a still
+-    -- enclosing label when only an inner scope ends.
+-    if !blank && !scopeLabel then
+-      let enclosing := scopes.dropWhile (fun row => indentation <= row.1)
+-      if enclosing.length != scopes.length then
+-        heads := (offset, enclosing.head?.map Prod.snd) :: heads
+-      scopes := enclosing
+-    if scopeLabel && 0 < indentation then
+-      scopes := (indentation, offset) :: scopes.dropWhile (fun row => indentation <= row.1)
+-    if paragraphStart || body.startsWith "# " || body.startsWith "##" || scopeLabel ||
+-        (body.toList.head?.any Char.isAlpha && (body.contains '(' || body.endsWith ":")) then
+-      heads := (offset, some offset) :: heads
+-    paragraph := blank
+-    previous := number
+-    previousDelimiter := if numbered then delimiter else none
+-  return heads.reverse
+@@ -3554,34 +3142,0 @@
+-/-- A nearby recorded paragraph/function start is part of the observation,
+-not optional peripheral data. This keeps a result with its invocation or
+-precondition, using only bounded original positions from the same section. -/
+-def prerequisiteContextRange (records : List (ContextSpan source))
+-    (heads : List (Nat × Option Nat)) (range : EvidenceRange source) : EvidenceRange source :=
+-  let complete := recordContextRange records range
+-  let preceding := (heads.takeWhile (fun row => row.1 ≤ complete.start)).reverse
+-  let first := preceding.head?.bind Prod.snd |>.getD complete.start
+-  let lower := ((heads.filter fun row => row.2.isNone && row.1 ≤ complete.start).getLast?).map
+-    Prod.fst |>.getD 0
+-  -- Inputs and results may be separated by a blank record. The immediately
+-  -- preceding bounded paragraph is retained, without crossing a file/read gap.
+-  let prior := (preceding.dropWhile (fun row => first ≤ row.1)).head?.bind Prod.snd
+-  let start := match prior with
+-    | some position => if lower ≤ position && complete.stop - position ≤ 2048 then position else first
+-    | none => first
+-  if valid : start ≤ complete.start ∧ start < complete.stop ∧
+-      complete.stop - start ≤ 2048 then
+-    ⟨start, complete.stop, valid.2.1, complete.within, valid.2.2⟩
+-  else complete
+-
+-theorem prerequisite_context_keeps_cue (records : List (ContextSpan source))
+-    (heads : List (Nat × Option Nat)) (range : EvidenceRange source) (position : Nat)
+-    (covered : range.covers position) :
+-    (prerequisiteContextRange records heads range).covers position := by
+-  have complete := record_context_retains_original records range position covered
+-  unfold prerequisiteContextRange
+-  dsimp only
+-  split
+-  · rename_i valid
+-    change _ ≤ position ∧ position < (recordContextRange records range).stop
+-    exact ⟨Nat.le_trans valid.1 complete.1, complete.2⟩
+-  · exact complete
+-
+@@ -5348,0 +4904 @@
++  original : Option (Array OriginalStructure.Span) := none
+@@ -5475,25 +5030,0 @@
+-/-- A source record keeps its original paragraph and bounded scope entry.
+-The fixed-width surrounding display is an enrichment, not a prerequisite of
+-this smaller advisory offer. This creates no Match or completion authority. -/
+-def recordPrerequisite (records : List (ContextSpan source))
+-    (heads scopedHeads : List (Nat × Option Nat)) (record : EvidenceRange source) :
+-    EvidenceRange source :=
+-  let prior := prerequisiteContextRange records heads record
+-  let scope := prerequisiteContextRange records scopedHeads record
+-  if valid : scope.start < prior.start ∧ prior.stop-scope.start ≤ 2048 then
+-    ⟨scope.start,prior.stop,Nat.lt_trans valid.1 prior.ordered,prior.within,valid.2⟩
+-  else prior
+-
+-theorem record_prerequisite_retains_source (records : List (ContextSpan source))
+-    (heads scopedHeads : List (Nat × Option Nat)) (record : EvidenceRange source)
+-    (position : Nat) (inside : record.covers position) :
+-    (recordPrerequisite records heads scopedHeads record).covers position := by
+-  have retained := prerequisite_context_keeps_cue records heads record position inside
+-  unfold recordPrerequisite
+-  dsimp only
+-  split
+-  · rename_i valid
+-    change _ ≤ position ∧ position < (prerequisiteContextRange records heads record).stop
+-    exact ⟨Nat.le_trans (Nat.le_of_lt valid.1) retained.1,retained.2⟩
+-  · exact retained
+-
+@@ -5587,20 +5117,0 @@
+-
+-/-- One whole-scalar check permits display decoding at recorded character
+-boundaries. This is presentation evidence, never a file alias or Work proof. -/
+-structure ScalarLayout (source : String) where
+-  layout : DecodedLayout source
+-  canonical : source = (toJson layout.decoded.text).compress
+-
+-def ScalarLayout.check? (source : String) : Option (ScalarLayout source) := do
+-  let decoded ← decodedToolText? source
+-  let layout := DecodedLayout.make decoded
+-  if canonical : source = (toJson layout.decoded.text).compress then
+-    some ⟨layout,canonical⟩ else none
+-
+-def ScalarLayout.boundaries (prepared : ScalarLayout source) : Std.HashSet Nat := Id.run do
+-  let mut position := 1
+-  let mut result := ({} : Std.HashSet Nat).insert position
+-  for (_,width) in prepared.layout.widths do
+-    position := position+width
+-    result := result.insert position
+-  return result
+@@ -5629,23 +5140,4 @@
+-  let some wholeSpan := (if positive : 0 < source.length then
+-    some (⟨0,source.length,positive,Nat.le_refl _⟩ : ContextSpan source) else none) | return ([],[])
+-  let scalar := ScalarLayout.check? source
+-  let layout := scalar.map (·.layout)
+-  let original := layout.map (·.original) |>.getD (IndexedCharacters.make source)
+-  let boundaries := scalar.map ScalarLayout.boundaries |>.getD {}
+-  let records := contextRecordSpans source layout
+-  let heads := contextStructureHeads source layout
+-  let scopedHeads := contextStructureHeads source layout true
+-  let covered := records.map fun record =>
+-    (⟨record.start,record.stop,record.ordered⟩ : DeliveryInterval)
+-  let whole : DeliveryInterval := ⟨wholeSpan.start,wholeSpan.stop,wholeSpan.ordered⟩
+-  let gaps := (whole.subtractAll covered).attach.map fun gap =>
+-    (⟨gap.val.start,gap.val.stop,gap.val.ordered,by
+-      have inside : gap.val.covers (gap.val.stop-1) := by
+-        have := gap.val.ordered
+-        simp only [DeliveryInterval.covers]
+-        omega
+-      have contained := ((DeliveryInterval.subtractAll_covers whole covered (gap.val.stop-1)).mp
+-        ⟨gap.val,gap.property,inside⟩).1
+-      have bound := wholeSpan.within
+-      simp only [DeliveryInterval.covers,whole] at contained
+-      omega⟩ : ContextSpan source)
++  let some prepared := family.original | return ([],[])
++  if source.isEmpty then return ([],[])
++  let characters := source.length
++  let original := IndexedCharacters.make source
+@@ -5657,17 +5149,12 @@
+-  let mut seen : Std.HashSet (Nat × Nat) := {}
+-  for record in records ++ gaps do
+-    for part in record.ranges do
+-      let required := recordPrerequisite records heads scopedHeads part
+-      if seen.contains (required.start,required.stop) then continue
+-      seen := seen.insert (required.start,required.stop)
+-      let fragment := originalRecordFragment original required
+-        (scalar.isSome && boundaries.contains required.start && boundaries.contains required.stop)
+-      let ranges := [(required.start,required.stop)]
+-      let selectedCues := cues.filterMap fun (a,b) =>
+-        let first := max a required.start
+-        let last := min b required.stop
+-        if first < last then some (first,last) else none
+-      let context := {envelope with fragments := [fragment],cues := selectedCues}
+-      let slice := {family.template with context := some context,keys := context.keys,text := context.render}
+-      units := units ++ [{family := familyIndex,slice,ranges}]
+-  return (units,cues)
++  for span in prepared do
++    let some required := span.rangeUsing? source characters rfl | return ([],[])
++    let fragment := originalRecordFragment original required span.decoded
++    let ranges := [(required.start,required.stop)]
++    let selectedCues := cues.filterMap fun (a,b) =>
++      let first := max a required.start
++      let last := min b required.stop
++      if first < last then some (first,last) else none
++    let context := {envelope with fragments := [fragment],cues := selectedCues}
++    let slice := {family.template with context := some context,keys := context.keys,text := context.render}
++    units := {family := familyIndex,slice,ranges} :: units
++  return (units.reverse,cues)
+@@ -6264,0 +5752 @@
++  let false := families.any (fun family => family.cached.isEmpty && family.template.context.isSome && family.original.isNone) | none
+@@ -6524,0 +6013 @@
++    (originalStructures : Std.HashMap String Synapses.ObservedRecordView.Geometry := {})
+@@ -6742 +6231,2 @@
+-            cached := canonicalRows[originalKey]?.getD #[]} : SharedRangeAdapter.Family) else []
++            cached := canonicalRows[originalKey]?.getD #[]
++            original := (originalStructures[originalKey]?).map (·.spans)} : SharedRangeAdapter.Family) else []
+@@ -8162,0 +7653 @@
++  let originalStructures := synaptic.originalStructures
+@@ -8240,0 +7732 @@
++    (originalStructures := originalStructures)
+--- a/Eggshell/ObservedRecordView.lean
++++ b/Eggshell/ObservedRecordView.lean
+@@ -2,0 +3,2 @@
++public import Eggshell.OriginalStructure
++public import Std.Sync.Mutex
+@@ -10,5 +12 @@
+-structure Span where
+-  first : Nat
+-  limit : Nat
+-  decoded : Bool
+-  deriving BEq, Hashable
++abbrev Span := Plugin.OriginalStructure.Span
+@@ -16,7 +13,0 @@
+-instance : ToJson Span where
+-  toJson span := toJson (span.first,span.limit,span.decoded)
+-instance : FromJson Span where
+-  fromJson? value := do
+-    let (first,limit,decoded) ← fromJson? (α := Nat × Nat × Bool) value
+-    return ⟨first,limit,decoded⟩
+-
+@@ -30,0 +22 @@
++  recipes : Nat
+@@ -32,0 +25,5 @@
++structure Geometry where
++  header : Header
++  spans : Array Span
++  deriving ToJson, FromJson
++
+@@ -47,0 +45,3 @@
++def recipeSize := 128
++def recipeKey (digest : String) := "observed-view:recipe:" ++ digest
++def recipeRef (owner : String) (index : Nat) := "observed-view:recipe-ref:" ++ owner ++ ":" ++ toString index
+@@ -52 +51,0 @@
+-  let prepared ← ObservedRecords.prepare raw
+@@ -54,6 +53,3 @@
+-  let spans := prepared.records.filterMap fun record =>
+-    if record.spellings.isEmpty || record.limit-record.first > blockChars then none else
+-    some (⟨record.first,record.limit,
+-      record.spellings.any fun spelling => spelling.first == record.first &&
+-        spelling.limit == record.limit &&
+-        (spelling.projection == .stringBody || spelling.projection == .stringBodyLine)⟩ : Span)
++  let spans := Plugin.OriginalStructure.prepare raw
++  unless Plugin.OriginalStructure.complete characters.size spans do
++    throw "original recipe domain omitted source positions"
+@@ -63 +59 @@
+-    document.occurrences,characters.size,blocks.size⟩,spans,blocks⟩
++    document.occurrences,characters.size,blocks.size,spans.size⟩,spans,blocks⟩
+@@ -71,2 +67 @@
+-    let block : Block := ⟨view.blocks[index]!,view.spans.filter fun span =>
+-      span.first < (index+1)*blockChars && index*blockChars < span.limit⟩
++    let block : Block := ⟨view.blocks[index]!,#[]⟩
+@@ -79,0 +75,9 @@
++  for page in [: (view.spans.size+recipeSize-1)/recipeSize] do
++    let spans := view.spans.extract (page*recipeSize) ((page+1)*recipeSize)
++    let bytes := (toJson spans).compress.toUTF8
++    unless bytes.size ≤ 16384 do throw (IO.userError "original recipe page exceeds its bound")
++    let digest := Sha256.hex bytes
++    if let some previous ← writer.get (recipeKey digest) then
++      unless previous == bytes do throw (IO.userError "conflicting original recipe page")
++    else writer.put (recipeKey digest) (some bytes)
++    writer.put (recipeRef document.owner page) (some digest.toUTF8)
+@@ -84 +88 @@
+-def load? (index : PageMap.Snapshot) (database owner : String) : IO (Option View) := do
++def geometry? (index : PageMap.Snapshot) (database owner : String) (deadline : Nat) : IO (Option Geometry) := do
+@@ -92 +95,0 @@
+-  let mut blocks := #[]
+@@ -93,0 +97,19 @@
++  for page in [: (header.recipes+recipeSize-1)/recipeSize] do
++    unless (← IO.monoMsNow) < deadline do throw (IO.userError "original recipe acquisition expired")
++    let some pointer ← index.get (recipeRef owner page) | throw (IO.userError "missing original recipe pointer")
++    let some digest := String.fromUTF8? pointer | throw (IO.userError "invalid original recipe pointer")
++    let some bytes ← index.get (recipeKey digest) | throw (IO.userError "missing original recipe page")
++    unless bytes.size ≤ 16384 && Sha256.hex bytes == digest do throw (IO.userError "invalid original recipe digest")
++    let rows ← ObservedRecords.decode (α := Array Span) bytes
++    unless rows.size == min recipeSize (header.recipes-page*recipeSize) && rows.all (fun span =>
++        span.first < span.limit && span.limit ≤ header.characters && span.limit-span.first ≤ blockChars) do
++      throw (IO.userError "invalid original recipe extent")
++    spans := spans ++ rows
++  unless Plugin.OriginalStructure.complete header.characters spans do
++    throw (IO.userError "stored original recipe domain is incomplete")
++  return some ⟨header,spans⟩
++
++def load? (index : PageMap.Snapshot) (database owner : String) : IO (Option View) := do
++  let some geometry ← geometry? index database owner ((← IO.monoMsNow)+30000) | return none
++  let header := geometry.header
++  let mut blocks := #[]
+@@ -107 +128,0 @@
+-    spans := spans ++ block.spans
+@@ -109 +130 @@
+-  return some ⟨header,(hashDistinct spans.toList).toArray,blocks⟩
++  return some ⟨header,geometry.spans,blocks⟩
+@@ -110,0 +132,55 @@
++def geometryCapacity : Nat := 16*1024*1024
++
++structure CachedGeometry where
++  geometry : Option Geometry
++  charge : Nat
++  stamp : Nat
++
++structure CacheState where
++  entries : Std.HashMap String CachedGeometry := {}
++  bytes : Nat := 0
++  clock : Nat := 0
++  loads : Nat := 0
++  hits : Nat := 0
++
++/-- One bounded metadata cache is shared across all source scopes. A miss is
++single-flight under this short metadata lock; no payload block is decoded. -/
++abbrev Cache := Std.Mutex CacheState
++
++def Cache.new : IO Cache := Std.Mutex.new {}
++
++def Cache.acquire (cache : Cache) (index : PageMap.Snapshot) (database owner : String) (deadline : Nat) :
++    IO (Option Geometry) := cache.atomically do
++  unless (← IO.monoMsNow) < deadline do throw (IO.userError "original recipe cache wait expired")
++  let identity := (toJson (index.head,database,owner)).compress
++  let state ← get
++  let clock := state.clock+1
++  if let some found := state.entries[identity]? then
++    set {state with
++      clock,hits := state.hits+1
++      entries := state.entries.insert identity {found with stamp := clock}}
++    return found.geometry
++  let found ← geometry? index database owner deadline
++  let charge := (toJson found).compress.utf8ByteSize*4+256
++  let mut state := {state with clock,loads := state.loads+1}
++  if charge ≤ geometryCapacity then
++    while state.bytes+charge > geometryCapacity || state.entries.size ≥ 512 do
++      let some (key,value) := (state.entries.toArray.qsort fun a b => a.2.stamp < b.2.stamp)[0]? |
++        throw (IO.userError "original recipe cache accounting failed")
++      state := {state with entries := state.entries.erase key,bytes := state.bytes-value.charge}
++    state := {state with entries := state.entries.insert identity ⟨found,charge,clock⟩,bytes := state.bytes+charge}
++  set state
++  return found
++
++def Cache.stats (cache : Cache) : IO Json := cache.atomically do
++  let state ← get
++  return Json.mkObj [("loads",toJson state.loads),("hits",toJson state.hits),
++    ("chargedBytes",toJson state.bytes),("capacity",toJson geometryCapacity),
++    ("entries",toJson state.entries.size)]
++
++structure Projection where
++  source : PageMap.Head
++  rows : Array (String × Option Geometry)
++  cache : Json
++  deriving ToJson, FromJson
++
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -29,0 +30 @@
++    (include_str "OriginalStructure.lean").toUTF8,
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -61,0 +62,2 @@
++  originalStructures : Std.HashMap String ObservedRecordView.Geometry := {}
++  originalCache : Array Json := #[]
+@@ -190,2 +192,2 @@
+-  -- Only the certified rows consumed by binding and rendering cross this
+-  -- boundary. Unused original views must not decode and transfer every block.
++  -- Certified rows and compact prepared recipes cross this boundary. Original
++  -- payload blocks remain in the data-side service; no full view is decoded.
+@@ -205,0 +208,14 @@
++        let structures ← Plugin.Publication.Client.sourceRecords reference ids deadline
++        plan := {plan with originalCache := plan.originalCache.push structures.cache}
++        for (owner,found) in structures.rows do
++          let some geometry := found | continue
++          let some witness := admitted.find? (fun item => item.owner.database == source.source.head.identity &&
++            item.document.owner == owner) | throw (IO.userError "original recipe has no admitted owner")
++          let some original := witness.original | throw (IO.userError "original recipe lacks native identity")
++          unless geometry.header.work == witness.document.work && geometry.header.original == original.identity &&
++              geometry.header.characters == original.identity.chars &&
++              geometry.header.occurrences == witness.document.occurrences &&
++              geometry.spans.all (fun span => span.first < span.limit &&
++                span.limit ≤ geometry.header.characters && span.limit-span.first ≤ 2048) do
++            throw (IO.userError "original recipe crossed its native content or occurrence")
++          plan := {plan with originalStructures := plan.originalStructures.insert owner geometry}
+@@ -263,0 +280,2 @@
++    ("originalRecipeCache",toJson plan.originalCache),
++    ("originalRecipeOwners",toJson plan.originalStructures.size),
+--- a/Eggshell/CanonicalSourcePrepared.lean
++++ b/Eggshell/CanonicalSourcePrepared.lean
+@@ -58 +58,3 @@
+-def capacity : Nat := 512*1024*1024
++-- The original-recipe cache is global across entries and shares this service
++-- budget; it is not another 16 MiB reservation for each DB or connection.
++def capacity : Nat := 512*1024*1024-ObservedRecordView.geometryCapacity
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -83 +83 @@
+-    IO (Array (String × Option Synapses.ObservedRecordView.View)) := do
++    IO Synapses.ObservedRecordView.Projection := do
+@@ -90,3 +90,3 @@
+-  let (head,rows) ← IO.ofExcept (Json.parse response >>=
+-    fromJson? (α := PageMap.Head × Array (String × Option Synapses.ObservedRecordView.View)))
+-  unless head == access.source && rows.map Prod.fst == owners do
++  let result ← IO.ofExcept (Json.parse response >>=
++    fromJson? (α := Synapses.ObservedRecordView.Projection))
++  unless result.source == access.source && result.rows.map Prod.fst == owners do
+@@ -94 +94 @@
+-  for (owner,found) in rows do
++  for (owner,found) in result.rows do
+@@ -98 +98 @@
+-  return rows
++  return result
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -52,0 +53 @@
++  structures : ObservedRecordView.Cache
+@@ -200 +201 @@
+-    let mut rows : Array (String × Option ObservedRecordView.View) := #[]
++    let mut rows : Array (String × Option ObservedRecordView.Geometry) := #[]
+@@ -204 +205 @@
+-      let found ← ObservedRecordView.load? original.index scope.database owner
++      let found ← server.structures.acquire original.index scope.database owner deadline
+@@ -209 +210 @@
+-    return toJson (head,rows)
++    return toJson ({source := head,rows,cache := ← server.structures.stats} : ObservedRecordView.Projection)
+@@ -475 +476,2 @@
+-    ← Std.Mutex.new #[],← CanonicalSource.Shared.Pool.new,← Std.Mutex.new 0,← Std.Mutex.new #[]⟩
++    ← Std.Mutex.new #[],← CanonicalSource.Shared.Pool.new,← ObservedRecordView.Cache.new,
++    ← Std.Mutex.new 0,← Std.Mutex.new #[]⟩
