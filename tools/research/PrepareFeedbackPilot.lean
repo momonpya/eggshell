@@ -83,8 +83,9 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile (trial / "initial-digests.json") hashes
     let _ ← call "/bin/cp" #["-cR",(study / "prompts").toString,(trial / "prompts").toString]
     let config := "model = \"gpt-5.6-luna\"\nmodel_reasoning_effort = \"xhigh\"\n" ++
-      "project_doc_max_bytes = 0\napproval_policy = \"never\"\nsandbox_mode = \"read-only\"\n" ++
-      "[features]\nplugins = true\nhooks = true\nremote_plugin = false\nmulti_agent = false\n"
+      "project_doc_max_bytes = 0\napproval_policy = \"never\"\ndefault_permissions = \"pilot\"\n" ++
+      "[features]\nplugins = true\nhooks = true\nremote_plugin = false\nmulti_agent = false\n" ++
+      "\n[permissions.pilot]\nextends = \":read-only\"\n[permissions.pilot.network]\nenabled = false\n"
     IO.FS.writeFile (trial / "account/config.toml") config
     let _ ← call "/bin/chmod" #["600",(trial / "account/config.toml").toString]
     -- Only reuse the credential reference. Never read or copy its contents.

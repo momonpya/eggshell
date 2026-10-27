@@ -1,0 +1,9 @@
+You are running one fixed LLVM source investigation.
+
+The immutable source workspace is /Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project.
+
+Use only the fixed source workspace and condition context delivered by hooks. Do not use web, external memories, plugins, sub-agents, or files outside this workspace. Do not modify the source.
+
+TASK
+
+For Clang driver option parsing and tool-chain selection in the fixed llvm-project snapshot, trace the public API, configuration, or downstream impact. Combine the first two task results, inspect clang/lib/Driver/Driver.cpp, clang/lib/Driver/ToolChains, and check clang/test/Driver. Explain compatibility assumptions, affected callers or documentation, migration/rollout implications, and the smallest additional test needed. Do not treat a similar name or path as proof of equivalence. Respond in ja.
