@@ -1,0 +1,629 @@
+--- a/Eggshell/QuotationContext.lean
++++ b/Eggshell/QuotationContext.lean
+@@ -0,0 +1,107 @@
++module
++public import Eggshell.SynapseSource
++public import Eggshell.Sha256
++@[expose] public section
++
++namespace Eggshell.Synapses.QuotationContext
++open Lean _root_.Eggshell.Synapses.Extraction
++
++structure Source where
++  raw : String
++  characters : Array Char
++  exact : characters = raw.toList.toArray
++  fingerprint : String
++  fingerprintExact : fingerprint = Sha256.hex raw.toUTF8
++
++def Source.make (raw : String) : Source := ⟨raw,raw.toList.toArray,rfl,Sha256.hex raw.toUTF8,rfl⟩
++def Source.slice (source : Source) (first limit : Nat) : String :=
++  String.ofList (source.characters.extract first limit).toList
++
++theorem Source.slice_exact (source : Source) (first limit : Nat) :
++    source.slice first limit = String.ofList (source.raw.toList.drop first |>.take (limit-first)) := by
++  simp [Source.slice,source.exact]
++
++def encoded (text : String) : String :=
++  String.ofList ((toJson text).compress.toList.drop 1 |>.dropLast)
++
++structure Projection (source : Source) (text : String) where
++  characters : Array Char
++  exact : characters = text.toList.toArray
++  offsets : Array Nat
++  count : offsets.size = characters.size+1
++  lines : Array TextLine
++  multiline : Bool
++  first : Nat
++  limit : Nat
++
++/-- A projection is recognized by exact bytes, not by a tool/provider name.
++JSON member prefixes and a trimmed final newline remain in the containing
++record; the offset map refers only to this checked spelling. -/
++def prepare? (source : Source) (first limit : Nat) (text : String) : Option (Projection source text) := do
++  if first ≥ limit || limit > source.characters.size then none else do
++    let raw := source.slice first limit
++    let (base,escaped) ←
++      if raw == text || raw == text ++ "\n" then some (first,false)
++      else do
++        let quoted := (toJson text).compress
++        if raw == quoted then some (first+1,true)
++        else if raw == encoded text || raw == encoded (text ++ "\n") then some (first,true)
++        else if raw.endsWith quoted then some (limit-quoted.length+1,true)
++        else if !text.isEmpty && raw.endsWith text then some (limit-text.length,false)
++        else none
++    let characters := text.toList.toArray
++    let mut offsets := #[base]
++    let mut position := base
++    for character in characters do
++      position := position + if escaped then (encoded (String.singleton character)).length else 1
++      offsets := offsets.push position
++    if position > limit || base < first then none else do
++      if count : offsets.size = characters.size+1 then
++        some ⟨characters,rfl,offsets,count,textLines text,text.contains '\n',first,limit⟩
++      else none
++
++structure Located (source : Source) (quote : String) where
++  first : Nat
++  limit : Nat
++  contextFirst : Nat
++  contextLimit : Nat
++  within : contextFirst ≤ first ∧ first < limit ∧ limit ≤ contextLimit ∧
++    contextLimit ≤ source.characters.size
++  literal : source.slice first limit = quote ∨ source.slice first limit = encoded quote
++
++/-- The enclosing logical rows are already prepared. A multiline quote
++keeps every intervening row; this is independent of source language. -/
++def row? (lines : Array TextLine) (position : Nat) : Option TextLine := Id.run do
++  let mut lower := 0
++  let mut upper := lines.size
++  while lower < upper do
++    let middle := lower+(upper-lower)/2
++    if (lines[middle]?).any (fun line => line.limit ≤ position) then lower := middle+1
++    else upper := middle
++  return (lines[lower]?).filter fun line => line.first ≤ position && position < line.limit
++
++def Projection.locate? (projection : Projection source text) (first limit : Nat) :
++    Option (Located source (String.ofList (projection.characters.extract first limit).toList)) := do
++  if first ≥ limit || limit > projection.characters.size then none else do
++    let a ← projection.offsets[first]?
++    let b ← projection.offsets[limit]?
++    let (c,d) ← if projection.multiline then do
++        let start ← row? projection.lines first
++        let stop ← row? projection.lines (limit-1)
++        some (← projection.offsets[start.first]?,← projection.offsets[stop.limit]?)
++      else some (projection.first,projection.limit)
++    let quote := String.ofList (projection.characters.extract first limit).toList
++    if within : c ≤ a ∧ a < b ∧ b ≤ d ∧ d ≤ source.characters.size then
++      if literal : source.slice a b = quote ∨ source.slice a b = encoded quote then
++        some ⟨a,b,c,d,within,literal⟩ else none
++    else none
++
++theorem Located.literal_is_original {source : Source} {text : String} (located : Located source text) :
++    source.slice located.first located.limit = text ∨
++      source.slice located.first located.limit = encoded text := located.literal
++
++theorem Located.context_contains_match {source : Source} {text : String} (located : Located source text) :
++    located.contextFirst ≤ located.first ∧ located.limit ≤ located.contextLimit :=
++  ⟨located.within.1,located.within.2.2.1⟩
++
++end Eggshell.Synapses.QuotationContext
+--- a/Eggshell/ObservationContext.lean
++++ b/Eggshell/ObservationContext.lean
+@@ -4,6 +4,7 @@
+ public import Eggshell.Sha256
+ public import Eggshell.SynapseQuotes
+ public import tools.LiteralSearch
++public import Eggshell.QuotationContext
+ 
+ @[expose] public section
+ 
+@@ -25,6 +26,63 @@
+ 
+ def originalSubject (work raw : String) : Original := ⟨work,Sha256.hex raw.toUTF8,raw.length⟩
+ 
++/-- The original identity requires hashing once, not JSON/command parsing.
++The same pinned native observation can then bind any valid stored interval. -/
++structure OriginalOwner (doc : Document) where
++  raw : String
++  original : doc.source = some raw
++  identity : Original
++  identityExact : identity = originalSubject doc.work raw
++  native : doc.native = true
++
++def OriginalOwner.prepare? (doc : Document) : Option (OriginalOwner doc) := do
++  let raw ← doc.source
++  if original : doc.source = some raw then
++    if native : doc.native = true then some ⟨raw,original,originalSubject doc.work raw,rfl,native⟩ else none
++  else none
++
++structure OriginalOwner.Bound (owner : OriginalOwner doc) (database : String) (source : Range) where
++  read : Read
++  valid : read.valid = true
++  sourceExact : read.source = source
++  databaseExact : read.binding.database = database
++  ownerExact : read.binding.owner = doc.owner
++  workExact : read.binding.work = doc.work
++  nativeOrigin : doc.occurrences.contains read.occurrence = true
++  sourceIdentity : source.subject = .original owner.identity
++  withinOriginal : read.binding.limit ≤ owner.raw.length
++  firstExact : read.binding.first = source.first-1
++  limitExact : read.binding.limit = source.last
++
++def OriginalOwner.bind (owner : OriginalOwner doc) (database : String) (source : Range) :
++    Array (owner.Bound database source) := Id.run do
++  if sourceIdentity : source.subject = .original owner.identity then
++    if sourceValid : source.valid = true then
++      have inBounds : source.last ≤ owner.raw.length := by
++        have checked := sourceValid
++        simp only [Range.valid,sourceIdentity,Bool.and_eq_true,decide_eq_true_eq] at checked
++        simpa [owner.identityExact,originalSubject] using checked.2
++      let mut result := #[]
++      for occurrence in doc.occurrences do
++        let read : Read := ⟨occurrence,source,⟨database,doc.owner,doc.work,source.first-1,source.last⟩,#[]⟩
++        if valid : read.valid = true then
++          if origin : doc.occurrences.contains occurrence = true then
++            result := result.push ⟨read,valid,rfl,rfl,rfl,rfl,origin,sourceIdentity,inBounds,rfl,rfl⟩
++      return result
++    else return #[]
++  else return #[]
++
++theorem OriginalOwner.Bound.same_native_owner {doc : Document} {owner : OriginalOwner doc}
++    {database : String} {source : Range} (bound : owner.Bound database source) :
++    bound.read.binding.owner = doc.owner ∧ bound.read.binding.work = doc.work ∧
++      doc.occurrences.contains bound.read.occurrence = true :=
++  ⟨bound.ownerExact,bound.workExact,bound.nativeOrigin⟩
++
++theorem OriginalOwner.Bound.same_requested_range {doc : Document} {owner : OriginalOwner doc}
++    {database : String} {source : Range} (bound : owner.Bound database source) :
++    bound.read.source = source ∧ bound.read.binding.first = source.first-1 ∧
++      bound.read.binding.limit = source.last := ⟨bound.sourceExact,bound.firstExact,bound.limitExact⟩
++
+ structure Prepared (doc : Document) where
+   raw : String
+   original : doc.source = some raw
+@@ -156,20 +214,79 @@
+ structure Quotation where
+   read : Read
+   text : String
++  mapping : Option (Sigma fun source : QuotationContext.Source => QuotationContext.Projection source text) := none
++  anchor : Option (Nat × Nat) := none
+ 
++def Prepared.quotationSource (prepared : Prepared doc) : QuotationContext.Source :=
++  ⟨prepared.raw,prepared.rawChars,prepared.rawCharsExact,prepared.identity.content,by
++    simpa [originalSubject] using congrArg Original.content prepared.identityExact⟩
++
++def Quotation.prepare (source : QuotationContext.Source) (read : Read)
++    (first limit : Nat) (text : String) : Quotation :=
++  ⟨read,text,(QuotationContext.prepare? source first limit text).map (fun projection => ⟨source,projection⟩),none⟩
++
++structure QuotationWitness (parent : Read) where
++  read : Read
++  first : Nat
++  limit : Nat
++  valid : read.valid = true
++  sourceWithin : parent.source.contains read.source = true
++  bindingWithin : parent.binding.first ≤ read.binding.first ∧ read.binding.limit ≤ parent.binding.limit
++  origin : read.occurrence = parent.occurrence ∧ read.binding.database = parent.binding.database ∧
++    read.binding.owner = parent.binding.owner ∧ read.binding.work = parent.binding.work
++
++def Quotation.locate? (item : Quotation) (first limit : Nat) : Option (QuotationWitness item.read) := do
++  let ⟨source,projection⟩ ← item.mapping
++  let located ← projection.locate? first limit
++  let a := if projection.multiline then located.contextFirst else item.read.binding.first
++  let b := if projection.multiline then located.contextLimit else item.read.binding.limit
++  if !(a ≤ located.first && located.limit ≤ b && b ≤ source.characters.size) then none else do
++    let target ← match item.read.source.subject with
++      | .file _ => some item.read.source
++      | .original original =>
++        if original.content == source.fingerprint && original.chars == source.characters.size then
++          some (Range.original original a b) else none
++    let read : Read := {item.read with
++      source := target,binding := {item.read.binding with first := a,limit := b}
++      quotations := #[Quotes.digest (String.ofList (projection.characters.extract first limit).toList)]}
++    if valid : read.valid = true then
++      if inside : item.read.source.contains read.source = true then
++        if bounds : item.read.binding.first ≤ read.binding.first ∧ read.binding.limit ≤ item.read.binding.limit then
++          some ⟨read,located.first,located.limit,valid,inside,bounds,by exact ⟨rfl,rfl,rfl,rfl⟩⟩
++        else none
++      else none
++    else none
++
++theorem quotation_witness_preserves_origin {read : Read} (witness : QuotationWitness read) :
++    witness.read.occurrence = read.occurrence ∧ witness.read.binding.database = read.binding.database ∧
++      witness.read.binding.owner = read.binding.owner ∧ witness.read.binding.work = read.binding.work := witness.origin
++
+ /-- Scan the actual reachable record spellings for all of an answer's literal
+ quotes together. A matching identifier may occur inside a row/member; it need
+ not equal the entire enclosing record. Duplicate aliases do not multiply a
+ read's support. These are advisory citations, never execution certificates. -/
+ def quoteMatches (index : LiteralSearch.Index patterns) (spellings : Array Quotation) : Array Quotation := Id.run do
+-  let mut seen : Std.HashSet (Read × String) := {}
++  let mut seen : Std.HashMap (Occurrence × String × String × String × Nat × Nat × String) Nat := {}
+   let mut result := #[]
+   for item in spellings do
+     for hit in LiteralSearch.first index item.text do
+       let text := patterns[hit.pattern]
+-      if seen.contains (item.read,text) then continue
+-      seen := seen.insert (item.read,text)
+-      result := result.push ⟨item.read,text⟩
++      let witness := item.locate? hit.first hit.limit
++      let read := witness.map (·.read) |>.getD item.read
++      let anchor := witness.map (fun found => (found.first,found.limit))
++      let first := anchor.map Prod.fst |>.getD read.binding.first
++      let limit := anchor.map Prod.snd |>.getD read.binding.limit
++      let key := (read.occurrence,read.binding.database,read.binding.owner,read.binding.work,first,limit,text)
++      let next : Quotation := ⟨read,text,none,anchor⟩
++      if let some previous := seen[key]? then
++        let some prior := result[previous]? | continue
++        let width := read.binding.limit-read.binding.first
++        let oldWidth := prior.read.binding.limit-prior.read.binding.first
++        if width < oldWidth || (width == oldWidth && read.source.file?.isSome && prior.read.source.file?.isNone) then
++          result := result.set! previous next
++      else
++        seen := seen.insert key result.size
++        result := result.push next
+   return result
+ 
+ structure Catalog where
+@@ -205,7 +322,8 @@
+   let payload := String.ofList (prepared.rawChars.extract first limit).toList
+   return {
+     located := catalog.located.push ⟨read,#[⟨read.source,first,limit⟩],#[read],payload⟩
+-    quotations := catalog.quotations ++ spellings.map (fun text => ⟨read,text⟩)}
++    quotations := catalog.quotations ++ spellings.map (fun text =>
++      Quotation.prepare prepared.quotationSource read first limit text)}
+ 
+ /-- Enumerate source members/rows once during indexing, independently of tool
+ names, command syntax and the presence of files. The immutable subject hash,
+@@ -272,6 +390,7 @@
+       let claim : Claim := ⟨database,doc.owner,decoded.offsets[position]!,decoded.offsets[limit]!⟩
+       for quote in Quotes.extract paragraph do
+         for read in byText[quote.text]?.getD #[] do
++          graph ← graph.insert (.read read)
+           let support ← Support.checked read read.source claim
+           graph ← graph.insert (.supports support)
+           graph ← graph.insert (.coquoted (.claim claim) read.source)
+--- a/Eggshell/ObservedRecords.lean
++++ b/Eggshell/ObservedRecords.lean
+@@ -197,6 +197,7 @@
+   let characters := raw.toList.toArray
+   let some occurrence := doc.occurrences[0]? | throw "missing original record occurrence"
+   let original := ObservationContext.originalSubject doc.work raw
++  let quoteSource : QuotationContext.Source := ⟨raw,characters,rfl,original.content,rfl⟩
+   let mut result : ObservationContext.Catalog := {}
+   for record in records do
+     unless record.first < record.limit && record.limit ≤ characters.size do throw "invalid original record interval"
+@@ -215,7 +216,10 @@
+     let payload := String.ofList (characters.extract record.first record.limit).toList
+     result := {
+       located := result.located.push ⟨read,#[⟨read.source,record.first,record.limit⟩],#[read],payload⟩
+-      quotations := result.quotations ++ texts.filterMap (fun text => if text.isEmpty then none else some ⟨read,text⟩) }
++      quotations := result.quotations ++ record.spellings.filterMap (fun spelling => do
++        let text ← project characters spelling
++        if text.isEmpty then none else
++          some (ObservationContext.Quotation.prepare quoteSource read spelling.first spelling.limit text)) }
+   return result
+ 
+ /-- One source-owned directory lookup; no source repair or external file read.
+--- a/Eggshell/ContentMetadata.lean
++++ b/Eggshell/ContentMetadata.lean
+@@ -107,6 +107,7 @@
+   let some occurrence := doc.occurrences[0]? | throw "missing original occurrence"
+   let characters := raw.toList.toArray
+   let mut result : ObservationContext.Catalog := {}
++  let quoteSource := QuotationContext.Source.make raw
+   for alias in captured.aliases do
+     let some code := ContentCapture.code? characters alias | throw "content alias lost literal equality"
+     let read : Read := {
+@@ -116,7 +117,8 @@
+     unless read.valid do throw "content alias has an invalid original binding"
+     result := {
+       located := result.located.push ⟨read,#[⟨read.source,alias.first,alias.limit⟩],#[read],code⟩
+-      quotations := result.quotations.push ⟨read,code⟩}
++      quotations := result.quotations.push
++        (ObservationContext.Quotation.prepare quoteSource read alias.first alias.limit code)}
+   return result
+ 
+ end Eggshell.ContentMetadata
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -24,6 +24,7 @@
+     (include_str "JsonScalars.lean").toUTF8,
+     (include_str "SynapseQuotes.lean").toUTF8,
+     (include_str "ObservationContext.lean").toUTF8,(include_str "Sha256.lean").toUTF8,
++    (include_str "QuotationContext.lean").toUTF8,
+     (include_str "ObservedRecords.lean").toUTF8,
+     (include_str "ObservedRecordView.lean").toUTF8,
+     (include_str "../tools/LiteralSearch.lean").toUTF8,
+--- a/Eggshell/SynapticBindings.lean
++++ b/Eggshell/SynapticBindings.lean
+@@ -0,0 +1,107 @@
++module
++public import Eggshell.SynapseIndex
++public import Eggshell.HashDistinct
++@[expose] public section
++
++namespace Eggshell.Synapses.IndexedBindings
++open Lean DB
++
++/-- Source bindings already exist in source postings. Quotation selector keys
++do not distinguish original observations or duplicate their payload. -/
++def candidate? : Fact → Option Read
++  | .read read => some {read with quotations := #[]}
++  | .supports support => some {
++      occurrence := support.read.occurrence
++      source := support.source
++      binding := support.binding
++      quotations := #[]}
++  | _ => none
++
++structure Origin (database : String) (allowed : Std.HashSet String) (source : Range) where
++  fact : Fact
++  factValid : fact.valid = true
++  read : Read
++  projection : candidate? fact = some read
++  valid : read.valid = true
++  sourceExact : read.source = source
++  databaseExact : read.binding.database = database
++  admitted : allowed.contains read.binding.owner = true
++
++def check? (database : String) (allowed : Std.HashSet String) (source : Range) (fact : Fact) :
++    Option (Origin database allowed source) := do
++  if factValid : fact.valid = true then
++    match projection : candidate? fact with
++    | none => none
++    | some read =>
++      if valid : read.valid = true then
++        if same : read.source = source then
++          if sameDatabase : read.binding.database = database then
++            if admitted : allowed.contains read.binding.owner = true then
++              some ⟨fact,factValid,read,projection,valid,same,sameDatabase,admitted⟩ else none
++          else none
++        else none
++      else none
++  else none
++
++theorem Origin.only_admitted_owner (origin : Origin database allowed source) :
++    allowed.contains origin.read.binding.owner = true := origin.admitted
++
++theorem Origin.same_source (origin : Origin database allowed source) :
++    origin.read.source = source := origin.sourceExact
++
++theorem Origin.same_database (origin : Origin database allowed source) :
++    origin.read.binding.database = database := origin.databaseExact
++
++structure Lookup (database : String) (allowed : Std.HashSet String) (source : Range) where
++  origins : Array (Origin database allowed source)
++  complete : Bool
++  index : PageMap.Head
++  inspected : Nat
++  bytes : Nat
++  unusable : Nat
++
++/-- One exact source-posting lookup, no Work/body restoration or source
++parser. This returns advisory metadata, never a Match or completion proof. -/
++def lookup (reader : Index.Reader) (source : Range) (allowed : Std.HashSet String)
++    (deadline : Nat) (byteLimit : Nat := 8*1024*1024) :
++    IO (Lookup reader.manifest.source.identity allowed source) := do
++  let found ← reader.lookup (.source source) 32768 deadline (some byteLimit)
++  let mut origins := #[]
++  let mut seen : Std.HashSet Read := {}
++  let mut unusable := 0
++  for checked in found.checked do
++    if (candidate? checked.fact).any (fun read => !read.valid) then unusable := unusable+1
++    let some origin := check? reader.manifest.source.identity allowed source checked.fact | continue
++    if seen.contains origin.read then continue
++    seen := seen.insert origin.read
++    origins := origins.push origin
++  return ⟨origins,found.complete && unusable == 0,found.index,found.checked.size,found.payloadBytes,unusable⟩
++
++structure Resolved where
++  rows : Std.HashMap Range (Array Read) := {}
++  complete : Bool := true
++  requests : Nat := 0
++  inspected : Nat := 0
++  bytes : Nat := 0
++  unresolved : Nat := 0
++  unusable : Nat := 0
++
++def resolve (reader : Index.Reader) (wanted : Array Range) (allowed : Std.HashSet String)
++    (deadline : Nat) : IO Resolved := do
++  let mut result : Resolved := {}
++  for source in (hashDistinct wanted.toList).toArray do
++    if (← IO.monoMsNow) ≥ deadline || result.bytes ≥ 32*1024*1024 then
++      return {result with complete := false}
++    let found ← lookup reader source allowed deadline (32*1024*1024-result.bytes)
++    let rows := found.origins.map (·.read)
++    result := {
++      rows := result.rows.insert source rows
++      complete := result.complete && found.complete
++      requests := result.requests+1
++      inspected := result.inspected+found.inspected
++      bytes := result.bytes+found.bytes
++      unusable := result.unusable+found.unusable
++      unresolved := result.unresolved + if rows.isEmpty then 1 else 0}
++  return result
++
++end Eggshell.Synapses.IndexedBindings
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.SynapticTransport
+ public import tools.KeyPostings
+ public import Eggshell.HashDistinct
++public import Eggshell.SynapticBindings
+ 
+ @[expose] public section
+ 
+@@ -31,6 +32,13 @@
+   located : Array Routed.Located
+   outputs : Array (LocatedOutput document)
+ 
++/-- Hydration and the original identity are prepared once per admitted owner.
++Binding a graph interval does not parse or hash the same body again. -/
++structure AdmittedOwner where
++  owner : Owner
++  document : Document
++  original : Option (ObservationContext.OriginalOwner document)
++
+ structure Observation where
+   database : String
+   owner : String
+@@ -52,6 +60,10 @@
+   canonicalReuse : Array (String × CanonicalSource.Shared.Reuse × CanonicalSource.Shared.Reuse) := #[]
+   canonicalFailure : Array (String × String) := #[]
+   originalViews : Std.HashMap String ObservedRecordView.View := {}
++  bindingComplete : Bool := true
++  bindingRequests : Nat := 0
++  bindingBytes : Nat := 0
++  bindingUnresolved : Nat := 0
+ 
+ /-- A file coordinate alone is insufficient. Every returned row is checked
+ against this original owner's literal bytes, Work and native occurrence. -/
+@@ -73,8 +85,19 @@
+       if read.valid then result := result.push read
+   return result
+ 
+-def Plan.complete (plan : Plan) : Bool := plan.results.all (·.complete)
++def Plan.complete (plan : Plan) : Bool := plan.bindingComplete && plan.results.all (·.complete)
+ 
++/-- An exact source-posting origin can be attached only to this already
++admitted owner. Stored offsets are still bounded by its original body and
++the native occurrence; the index cannot nominate another Work here. -/
++def boundTo (database : String) (document : Document) (identity : Original) (read : Read) : Bool :=
++  document.native && read.valid && read.binding.database == database &&
++    read.binding.owner == document.owner && read.binding.work == document.work &&
++    document.occurrences.contains read.occurrence && read.binding.limit ≤ identity.chars &&
++    match read.source.subject with
++    | .original original => original == identity
++    | .file _ => true
++
+ def Plan.ranges (plan : Plan) : List (Value × List (Nat × Nat × Nat)) :=
+   plan.owners.toList.map fun owner =>
+     (owner.owner.relation, (owner.located.toList.filterMap fun located =>
+@@ -114,8 +137,9 @@
+         limit := located.fragment.binding.limit,path := located.fragment.address.map (·.path)} : OutputRange)) ++
+       shared.toList).eraseDups)
+ 
+-/-- Stored original rows are the only source of transport coordinates.
+-Neither a graph hint nor its priority may invent a range or an owner. -/
++/-- Original intervals bind to their immutable native output identity; file
++coordinates bind through the existing source postings. A graph hint cannot
++nominate a different Work, occurrence or out-of-body interval. -/
+ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat))
+     (owners : Array Owner) (query : String) (deadline : Nat)
+     (graphDeadline : Option Nat := none) : IO Plan := do
+@@ -135,6 +159,55 @@
+     outputWitnesses := outputWitnesses.push (source.source.head.identity,outputs)
+     plan := {plan with results := plan.results.push result}
+   let offers := plan.results.flatMap (·.admitted)
++  let mut admitted : Array AdmittedOwner := #[]
++  let mut originals : Std.HashMap (String × Original) (List Nat) := {}
++  for owner in owners do
++    let .ok document := owner.document | plan := {plan with unsupported := plan.unsupported+1}; continue
++    let original := ObservationContext.OriginalOwner.prepare? document
++    if let some original := original then
++      let key := (owner.database,original.identity)
++      originals := originals.insert key (admitted.size :: (originals[key]?.getD []))
++    admitted := admitted.push ⟨owner,document,original⟩
++  -- Prepend in the directory. Appending to a shared array here repeatedly
++  -- copies a growing owner's complete row list.
++  let mut origins : Std.HashMap (String × String) (List Routed.Located) := {}
++  for (source,result) in prepared.zip plan.results do
++    let database := source.source.head.identity
++    let scopedOffers := result.admitted
++    let wanted := (hashDistinct (scopedOffers.toList.filterMap fun hint => do
++      let range ← hint.target.source?
++      let .file _ := range.subject | none
++      some range)).toArray
++    let allowed := admitted.foldl (fun allowed item =>
++      if item.owner.database == database && item.document.native then
++        allowed.insert item.document.owner else allowed) ({} : Std.HashSet String)
++    let resolved ← if wanted.isEmpty then pure ({} : IndexedBindings.Resolved)
++      else if let some index := source.shared then IndexedBindings.resolve index wanted allowed deadline
++      else pure {complete := false,unresolved := wanted.size}
++    plan := {plan with
++      bindingComplete := plan.bindingComplete && resolved.complete
++      bindingRequests := plan.bindingRequests+resolved.requests
++      bindingBytes := plan.bindingBytes+resolved.bytes
++      bindingUnresolved := plan.bindingUnresolved+resolved.unresolved}
++    let mut unresolved : Std.HashSet Range := {}
++    for offer in scopedOffers do
++      let .range target := offer.target | continue
++      if exact : offer.target = .range target then
++        let mut rows := #[]
++        match target.subject with
++        | .file _ => rows := resolved.rows[target]?.getD #[]
++        | .original identity =>
++          for index in originals[(database,identity)]?.getD [] do
++            let some item := admitted[index]? | continue
++            let some original := item.original | continue
++            rows := rows ++ (original.bind database target).map (·.read)
++          if rows.isEmpty then unresolved := unresolved.insert target
++        for row in rows do
++          if contained : target.contains row.source = true then
++            let located : Routed.Located := ⟨offer,target,exact,row,contained⟩
++            let key := (database,row.binding.owner)
++            origins := origins.insert key (located :: (origins[key]?.getD []))
++    plan := {plan with bindingUnresolved := plan.bindingUnresolved+unresolved.size}
+   -- One scoped acquisition serves graph binding and the final renderer.
+   -- A graph resource limit cannot erase independently verified source rows.
+   for source in prepared do
+@@ -150,8 +223,8 @@
+           let merged ← IO.ofExcept (CanonicalSource.Delivery.merge ((plan.canonical[owner]?.getD #[]) ++ rows))
+           plan := {plan with canonical := if merged.isEmpty then plan.canonical.erase owner
+             else plan.canonical.insert owner merged}
+-        let originals ← Plugin.Publication.Client.sourceRecords reference ids deadline
+-        for (owner,view) in originals do
++        let storedOriginals ← Plugin.Publication.Client.sourceRecords reference ids deadline
++        for (owner,view) in storedOriginals do
+           if let some view := view then
+             plan := {plan with originalViews := plan.originalViews.insert owner view}
+       catch error =>
+@@ -160,20 +233,18 @@
+   if offers.isEmpty then return plan
+   -- Query-invariant across owners. Computing this same ordered set inside
+   -- each owner was quadratic work repeated for every hydrated observation.
+-  let wanted := (offers.toList.filterMap (·.target.source?)).eraseDups.toArray
+-  for owner in owners do
++  for item in admitted do
+     if (← IO.monoMsNow) ≥ deadline then
+       return {plan with results := plan.results.map fun result =>
+         {result with complete := false,failure := some "binding-deadline"}}
+-    let .ok document := owner.document | plan := {plan with unsupported := plan.unsupported+1}; continue
+-    let recorded := recordedRows owner.database document
+-    let context := ObservationContext.prepare? document
+-    let originalRows := wanted.filterMap fun source => context.bind (·.bindSource? owner.database source)
+-    let capturedRows := canonicalReads owner.database document (plan.canonical[document.owner]?.getD #[])
+-    let rows := recorded.toOption.getD #[] ++ capturedRows ++ originalRows
+-    let located := Routed.locate offers rows
++    let owner := item.owner
++    let document := item.document
++    let located := (origins[(owner.database,document.owner)]?.getD []).reverse.toArray.filter fun located =>
++      item.original.any (fun original => boundTo owner.database document original.identity located.row)
++    let rows := (hashDistinct (located.toList.map (·.row))).toArray
+     let witnesses := outputWitnesses.flatMap fun (database,offers) =>
+       if database == owner.database then offers else #[]
++    let context := if witnesses.isEmpty then none else ObservationContext.prepare? document
+     let outputs := context.map (Recommend.locateOutputsUsing witnesses owner.database) |>.getD #[]
+     -- Metadata is fetched only for offered native origins, once per occurrence,
+     -- with a fixed cap and the existing request deadline. It cannot block or
+@@ -198,7 +269,7 @@
+       documents := plan.documents.push document
+       rows := plan.rows ++ rows
+       unlocatedFileOwners := plan.unlocatedFileOwners +
+-        if !document.files.isEmpty && recorded.toOption.isNone then 1 else 0
++        if !document.files.isEmpty && located.isEmpty then 1 else 0
+       owners := plan.owners.push ⟨owner.original,document,located,outputs⟩}
+   return plan
+ 
+@@ -210,6 +281,8 @@
+     some source) |> hashDistinct |>.toArray
+   Json.mkObj [
+     ("complete", toJson plan.complete), ("unsupportedOwners", toJson plan.unsupported),
++    ("bindingComplete",toJson plan.bindingComplete),("bindingRequests",toJson plan.bindingRequests),
++    ("bindingBytes",toJson plan.bindingBytes),("bindingUnresolved",toJson plan.bindingUnresolved),
+     ("unlocatedFileOwners",toJson plan.unlocatedFileOwners),
+     ("observationAges",toJson plan.observations),
+     ("inputs", toJson (plan.results.map Routed.Result.receipt)),

@@ -26,6 +26,8 @@
 
 ## 現在地と次の順序
 
+- 引用位置を捨ててrecord全体を支持していた問題を隔離修正。同じC7の元観測/Work/引用の組363件を維持し、最大context45,221→286文字にした。検索時の原文再解析を、内容IDからの直接束縛と既存source postingsへ置換。4,096範囲×2観測の部品検査は10 msだが、実フック数秒/95%配送の達成ではない。新規model/全warmは0回。実フックは前候補13,338 ms・題材2 0/6件のまま。最終選択/描画と全体診断を次に詰める。[quotation-context.md](docs/quotation-context.md)。
+
 全体はactive。候補は本体・README実績・releaseへ未採用。95%配送、総token改善、10〜80人・数年・NASの実証は未達。回答モデルの新しい比較は0回、題材1/2/3と2周目は0/6のまま。部品の証明やAPI負荷試験を全体の合格にしない。
 
 - 直近の原文view候補は、既存の汎用列挙をシナプスと同じ出版差分・DBサービスの共有読出しへ接続した。原文6,310範囲、DB境界、共有readerの物理再読0を検査。しかし題材2の実フックは12,644 msで空、実描画の予算確認等を直した後も13,338 ms・119,349 bytesで必要原文0/6。後者は同じ準備済みDB、新しいnative session、warm 0回であり、回答モデル実験ではない。細切れのfrontier選択は撤回する。focus 1,141→render complete 11,382 msの区間には、まだ原文の再束縛と全体診断が残る。直接選択の部品が速いことを実フックの数秒達成にしない。終了済み12対象のDB/cache/helper/runtimeは抽出後にarchiveなしで削除済み。[prepared-record-delivery.md](docs/prepared-record-delivery.md)。

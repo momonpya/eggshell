@@ -37,15 +37,19 @@ def main (args : List String) : IO Unit := do
   let tournamentEnded := args == ["tournament-ended"]
   let spanEnded := args == ["span-ended"]
   let recordEnded := args == ["record-ended"]
+  let quotationEnded := args == ["quotation-ended"]
   let prepared := args == ["prepared-checks"] || ended
-  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || recordEnded || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
+  unless prepared || payload || fold || old || sparse || dispatch || streaming || observing || tournamentAttempt || tournamentEnded || spanEnded || recordEnded || quotationEnded || args.isEmpty do throw (IO.userError "RetireSynapticTrials: known ended trial required")
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
   let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let report := project / "docs/candidates" / (if recordEnded then "prepared-record-delivery" else if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
+  let report := project / "docs/candidates" / (if quotationEnded then "quotation-context" else if recordEnded then "prepared-record-delivery" else if spanEnded then "bound-span-preparation" else if tournamentEnded then "tournament-selection" else if tournamentAttempt then "tournament-selection/failed-eager-join" else if observing then "selector-observation" else if streaming then "streamed-incidence" else if dispatch then "incremental-dispatch" else if sparse then "incremental-selection" else if old then "bounded-leaf-encoding" else if fold then "selector-weight-fold" else if payload then "nonempty-source-payload" else if prepared then "receipt-preparation" else "receipt-row-postings") /
     (if old then "records/retirement-prior.json" else if ended then "records/retirement-finished.json" else "records/retirement.json")
   unless !(← report.pathExists) do throw (IO.userError "keep retirement evidence")
   let mut targets := #[]
-  let runs := if recordEnded then #[("prepared-record-delivery",#["fixed-source-hooks","checked-hook",
+  let runs := if quotationEnded then #[("quotation-context",#["audit-build","source-build","source-current-build",
+      "mapped-records","c7-source-comparison","c7-source-metadata","direct-origin-contracts",
+      "scoped-origin-contracts","bindings-build/StudyMain"])]
+    else if recordEnded then #[("prepared-record-delivery",#["fixed-source-hooks","checked-hook",
       "source-build","audit-build","inspect-build","budget-build","replay-build","raw-record-points",
       "point-diagnosis","variable-frames","ranked-variable-frames","product-build/StudyMain"])]
     else if spanEnded then #[("bound-span-preparation",#["fixed-source-hooks","source-build","audit-build","repeated-bindings"])]
@@ -92,6 +96,15 @@ def main (args : List String) : IO Unit := do
       if ← path.pathExists then targets := targets.push path
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","pid=,command="]}
   unless processes.exitCode == 0 do throw (IO.userError "cannot inspect trial ownership")
+  if quotationEnded then
+    let active := base / "quotation-context-20261027"
+    protectLinks (active / "bindings-build/lib") targets
+    protectLinks (active / "checkout") targets
+    let response ← IO.FS.readFile (active / "bindings-build/runtime.rsp")
+    for target in targets do
+      unless (processes.stdout.splitOn target.toString).length == 1 &&
+          (response.splitOn target.toString).length == 1 do
+        throw (IO.userError "ended quotation helper is live or still needed")
   for name in ["captured-correspondence-20261026","synaptic-publication-delta-20261027",
       "receipt-row-postings-20261027","receipt-preparation-20261027","nonempty-source-payload-20261027",
       "selector-weight-fold-20261027","bounded-leaf-encoding-20261027","incremental-selection-20261027",
