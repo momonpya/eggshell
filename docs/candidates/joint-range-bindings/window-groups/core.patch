@@ -1,0 +1,284 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -29,0 +30 @@
++public import tools.RangeReach
+@@ -5426,0 +5428,25 @@
++
++theorem covers_position (ranges : List (Nat × Nat)) (first last position : Nat)
++    (covered : covers ranges first last = true) (inside : first ≤ position ∧ position < last) :
++    ∃ range ∈ ranges, range.1 ≤ position ∧ position < range.2 := by
++  classical
++  unfold covers at covered
++  split at covered
++  · rename_i ordered
++    change (DeliveryInterval.subtractAll ⟨first,last,ordered⟩ (validCoverage ranges)).isEmpty = true at covered
++    apply Classical.byContradiction
++    intro missing
++    have fresh : ∀ prior ∈ validCoverage ranges, ¬prior.covers position := by
++      intro prior present contains
++      obtain ⟨⟨a,b⟩,member,found⟩ := List.mem_filterMap.mp present
++      by_cases valid : a < b
++      · simp only [valid,↓reduceDIte,Option.some.injEq] at found
++        subst prior
++        exact missing ⟨(a,b),member,contains⟩
++      · simp [valid] at found
++    have remaining := (DeliveryInterval.subtractAll_covers ⟨first,last,ordered⟩
++      (validCoverage ranges) position).mpr ⟨inside,fresh⟩
++    have empty : DeliveryInterval.subtractAll ⟨first,last,ordered⟩ (validCoverage ranges) = [] :=
++      List.isEmpty_iff.mp covered
++    simp [empty] at remaining
++  · simp at covered
+@@ -6005,0 +6032,4 @@
++
++def ownerUnitRanges (keys : Array String) (units : Array UnitPlan)
++    (indices : List (Fin units.size)) (owner : String) : List (Nat × Nat) :=
++  (indices.filter (fun index => keys[units[index].family]? == some owner)).flatMap fun index => units[index].ranges
+@@ -6006,0 +6037,3 @@
++/-- One immutable original binding may span several independently rendered
++units. Their union must cover every requested position; another owner's
++bytes can never close a gap in this binding. -/
+@@ -6009,4 +6042,3 @@
+-  indices.any fun index =>
+-    let unit := units[index]
+-    member.choices.any fun bound => keys[unit.family]? == some bound.owner &&
+-      bound.spans.all (fun (a,b) => unit.coversPrepared a b)
++  member.choices.any fun bound =>
++    indices.any (fun index => keys[units[index].family]? == some bound.owner) &&
++    bound.spans.all (fun (a,b) => covers (ownerUnitRanges keys units indices bound.owner) a b)
+@@ -6016,0 +6049,16 @@
++theorem member_covered_positions (keys : Array String) (units : Array UnitPlan)
++    (indices : List (Fin units.size)) (member : Synapses.Bundles.Member)
++    (checked : memberCovered keys units indices member = true) :
++    ∃ bound ∈ member.choices, ∀ span ∈ bound.spans, ∀ position,
++      span.1 ≤ position ∧ position < span.2 →
++      ∃ index ∈ indices, keys[units[index].family]? = some bound.owner ∧
++        ∃ range ∈ units[index].ranges, range.1 ≤ position ∧ position < range.2 := by
++  obtain ⟨bound,present,valid⟩ := Array.any_eq_true'.mp checked
++  refine ⟨bound,present,?_⟩
++  intro span member position inside
++  have full := (List.all_eq_true.mp (Bool.and_eq_true_iff.mp valid).2) span member
++  obtain ⟨range,fromOwner,contains⟩ := covers_position _ _ _ position full inside
++  obtain ⟨index,selected,fromUnit⟩ := List.mem_flatMap.mp fromOwner
++  have selected := List.mem_filter.mp selected
++  exact ⟨index,selected.1,beq_iff_eq.mp selected.2,range,fromUnit,contains⟩
++
+@@ -6021 +6069 @@
+-  simp only [memberCovered,List.any_cons,List.any_nil,Bool.or_false] at covered
++  simp only [memberCovered] at covered
+@@ -6024 +6072 @@
+-    simpa only [Bool.and_eq_true,beq_iff_eq] using (Bool.and_eq_true_iff.mp valid).1
++    simpa only [List.any_cons,List.any_nil,Bool.or_false,beq_iff_eq] using (Bool.and_eq_true_iff.mp valid).1
+@@ -6044,7 +6092,8 @@
+-def unitCharge (p : SharedCoverage.Problem) (known : Std.HashSet (Fin p.costs.size))
+-    (index : Nat) : Nat :=
+-  let atoms := (p.offers[index]?).map (·.closure) |>.getD []
+-  let fresh := atoms.eraseDups.filter (!known.contains ·)
+-  let cost := fresh.foldl (fun total atom =>
+-    (total.1+p.costs[atom].1,total.2+p.costs[atom].2)) (0,0)
+-  max (cost.1*p.limit.2) (cost.2*p.limit.1)
++def ownerReach (keys : Array String) (units : Array UnitPlan) :
++    Std.HashMap String (RangeReach.Prepared (Fin units.size)) := Id.run do
++  let mut rows : Std.HashMap String (Array (RangeReach.Entry (Fin units.size))) := {}
++  for index in List.finRange units.size do
++    let some owner := keys[units[index].family]? | continue
++    for (first,limit) in units[index].ranges do
++      rows := rows.insert owner (rows[owner]?.getD #[] |>.push ⟨first,limit,index⟩)
++  return rows.toArray.foldl (fun found (owner,ranges) => found.insert owner (RangeReach.prepare ranges)) {}
+@@ -6051,0 +6101,58 @@
++/-- Complete alternatives are built from the same original owner. The fast
++reach index proposes fragments; the original interval checker admits them. -/
++def memberChoices (keys : Array String) (units : Array UnitPlan)
++    (reach : Std.HashMap String (RangeReach.Prepared (Fin units.size)))
++    (member : Synapses.Bundles.Member) : List (List (Fin units.size)) :=
++  member.choices.toList.filterMap fun bound => do
++    let index ← reach[bound.owner]?
++    let parts ← bound.spans.mapM fun (first,last) => index.cover? first last
++    let parts := parts.flatten.eraseDups
++    if memberCovered keys units parts member then some parts else none
++
++structure RangePlan (keys : Array String) (units : Array UnitPlan) (owner : String) (first last : Nat) where
++  indices : List (Fin units.size)
++  complete : covers (ownerUnitRanges keys units indices owner) first last = true
++
++def rangePlan? (keys : Array String) (units : Array UnitPlan)
++    (reach : Std.HashMap String (RangeReach.Prepared (Fin units.size)))
++    (owner : String) (first last : Nat) : Option (RangePlan keys units owner first last) := do
++  let index ← reach[owner]?
++  let indices := (← index.cover? first last).eraseDups
++  if complete : covers (ownerUnitRanges keys units indices owner) first last = true then
++    some ⟨indices,complete⟩ else none
++
++theorem RangePlan.original_positions (plan : RangePlan keys units owner first last)
++    (position : Nat) (inside : first ≤ position ∧ position < last) :
++    ∃ index ∈ plan.indices, keys[units[index].family]? = some owner ∧
++      ∃ range ∈ units[index].ranges, range.1 ≤ position ∧ position < range.2 := by
++  obtain ⟨range,present,contains⟩ := covers_position _ _ _ position plan.complete inside
++  obtain ⟨index,selected,fromUnit⟩ := List.mem_flatMap.mp present
++  have selected := List.mem_filter.mp selected
++  exact ⟨index,selected.1,beq_iff_eq.mp selected.2,range,fromUnit,contains⟩
++
++def RangePlan.recipe? (plan : RangePlan keys units owner first last) (p : SharedCoverage.Problem) :
++    Option (ClosedCoverage.Recipe p) := do
++  let parts ← plan.indices.mapM fun index =>
++    if h : index.val < p.offers.size then some (⟨index.val,h⟩ : Fin p.offers.size) else none
++  return {parts}
++
++/-- Independent producer windows keep their existing cue values. Recombining
++their original parts exposes shared entry costs without reserving a frame,
++inventing a vote, or forcing any owner into the selected packet. -/
++def sourceRangeRecipes (families : List Family) (keys : Array String) (units : Array UnitPlan)
++    (reach : Std.HashMap String (RangeReach.Prepared (Fin units.size))) (p : SharedCoverage.Problem) :
++    Array (ClosedCoverage.Recipe p) := Id.run do
++  let mut seen : Std.HashSet (List Nat) := {}
++  let mut recipes := #[]
++  for family in families do
++    let owner := relationKey family.owner.relation
++    for cue in rankedCues {family with synapticRanges := []} do
++      let some plan := rangePlan? keys units reach owner cue.first cue.last | continue
++      if plan.indices.length ≤ 1 then continue
++      let identity := (plan.indices.map (·.val)).mergeSort (· ≤ ·)
++      if seen.contains identity then continue
++      seen := seen.insert identity
++      let some recipe := plan.recipe? p | continue
++      recipes := recipes.push recipe
++  return recipes
++
+@@ -6055 +6162 @@
+-    (candidates : Std.HashMap Synapses.Range (List (Fin units.size)))
++    (candidates : Std.HashMap Synapses.Range (List (List (Fin units.size))))
+@@ -6061,5 +6168,15 @@
+-    let chosen ← choices.foldl (fun found index => match found with
+-      | none => some index
+-      | some previous => if unitCharge p known index.val < unitCharge p known previous.val then some index else found) none
+-    indices := indices ++ [chosen]
+-    for atom in (p.offers[chosen.val]?).map (·.closure) |>.getD [] do known := known.insert atom
++    let charge := fun choice => Id.run do
++      let mut atoms := known
++      let mut cost := (0,0)
++      for index in choice do
++        for atom in (p.offers[index.val]?).map (·.closure) |>.getD [] do
++          if atoms.contains atom then continue
++          atoms := atoms.insert atom
++          cost := (cost.1+p.costs[atom].1,cost.2+p.costs[atom].2)
++      return max (cost.1*p.limit.2) (cost.2*p.limit.1)
++    let chosen ← choices.foldl (fun found choice => match found with
++      | none => some choice
++      | some previous => if charge choice < charge previous then some choice else found) none
++    indices := indices ++ chosen
++    for index in chosen do
++      for atom in (p.offers[index.val]?).map (·.closure) |>.getD [] do known := known.insert atom
+@@ -6180,0 +6298,2 @@
++  bindingStats : Json := Json.null
++  bindingAudit : Array Json := #[]
+@@ -6191 +6310 @@
+-    (bundles : Array Synapses.Bundles.Projected := #[]) : Option (Plan ceiling cost mandatory) := do
++    (bundles : Array Synapses.Bundles.Projected := #[]) (captureBindings : Bool := false) : Option (Plan ceiling cost mandatory) := do
+@@ -6212,3 +6331,5 @@
+-    let directory := OwnerUnitPostings.prepare (fun index : Fin unitArray.size => keys[unitArray[index].family]?)
+-    let mut universes : Std.HashMap (List String) (List (Fin unitArray.size)) := {}
+-    let mut candidates : Std.HashMap Synapses.Range (List (Fin unitArray.size)) := {}
++    let reach := ownerReach keys unitArray
++    let mut candidates : Std.HashMap Synapses.Range (List (List (Fin unitArray.size))) := {}
++    let mut bindingAudit := #[]
++    let mut fragmented := 0
++    let mut uncovered := 0
+@@ -6218,7 +6339,6 @@
+-        let owners := memberOwners member
+-        let eligible := match universes[owners]? with
+-          | some found => found
+-          | none => (directory.union owners).toList
+-        universes := universes.insert owners eligible
+-        let choices := eligible.filter fun index =>
+-          memberCovered keys unitArray [index] member
++        let choices := memberChoices keys unitArray reach member
++        fragmented := fragmented + choices.countP (fun choice => choice.length > 1)
++        if choices.isEmpty then uncovered := uncovered+1
++        if captureBindings then
++          bindingAudit := bindingAudit.push (Json.mkObj [("source",toJson member.source),
++            ("owners",toJson (memberOwners member)),("alternatives",toJson (choices.map (·.map (·.val))))])
+@@ -6230,2 +6350,4 @@
+-    let recipes := ClosedCoverage.original p ++ (bundles.filterMap fun projected =>
+-      (bundlePlan? keys unitArray p candidates projected).bind recipe)
++    let synapticRecipes := bundles.filterMap fun projected =>
++      (bundlePlan? keys unitArray p candidates projected).bind recipe
++    let rangeRecipes := sourceRangeRecipes families keys unitArray reach p
++    let recipes := ClosedCoverage.original p ++ synapticRecipes ++ rangeRecipes
+@@ -6243,0 +6366,8 @@
++        bindingStats := Json.mkObj [("sources",toJson candidates.size),("fragmentedAlternatives",toJson fragmented),
++          ("uncoveredSources",toJson uncovered),("projectedBundles",toJson bundles.size),
++          ("preparedBundles",toJson synapticRecipes.size),("windowGroups",toJson rangeRecipes.size),
++          ("selectedBundles",toJson (chosen.selected.countP (fun index =>
++            p.offers.size ≤ index.val && index.val < p.offers.size+synapticRecipes.size))),
++          ("selectedWindowGroups",toJson (chosen.selected.countP (fun index =>
++            p.offers.size+synapticRecipes.size ≤ index.val)))]
++        bindingAudit
+@@ -6278 +6408 @@
+-    ("fullCandidateAudit",toJson false)]
++    ("fullCandidateAudit",toJson false),("jointBindings",plan.bindingStats)]
+@@ -6317,0 +6448 @@
++    |>.setObjVal! "bindingAudit" (toJson plan.bindingAudit)
+@@ -6722 +6853 @@
+-      SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles
++      SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) packetCost families mandatory synapticBundles captureRanges
+--- a/tools/RangeReach.lean
++++ b/tools/RangeReach.lean
+@@ -0,0 +1,59 @@
++module
++public import Std
++@[expose] public section
++
++namespace Eggshell.RangeReach
++
++/-- Original intervals with opaque payload identities. No source equivalence
++or completion authority is inferred by this recommendation index. -/
++structure Entry (α : Type) where
++  first : Nat
++  limit : Nat
++  value : α
++
++structure Prepared (α : Type) where
++  starts : Array Nat
++  farthest : Array (Entry α)
++
++/-- The prefix maximum answers a furthest-reaching interval query with one
++binary search. Preparation happens once per owner, not once per citation. -/
++def prepare (entries : Array (Entry α)) : Prepared α := Id.run do
++  let ordered := (entries.filter (fun entry => entry.first < entry.limit)).qsort
++    (fun left right => if left.first == right.first then left.limit > right.limit else left.first < right.first)
++  let mut starts := #[]
++  let mut farthest := #[]
++  let mut best := none
++  for entry in ordered do
++    let current := match best with
++      | none => entry
++      | some prior => if prior.limit < entry.limit then entry else prior
++    starts := starts.push entry.first
++    farthest := farthest.push current
++    best := some current
++  return ⟨starts,farthest⟩
++
++def Prepared.lookup? (prepared : Prepared α) (point : Nat) : Option (Entry α) := Id.run do
++  let mut lower := 0
++  let mut upper := prepared.starts.size
++  while lower < upper do
++    let middle := (lower+upper)/2
++    let some start := prepared.starts[middle]? | return none
++    if start ≤ point then lower := middle+1 else upper := middle
++  if lower == 0 then return none
++  let some found := prepared.farthest[lower-1]? | return none
++  if found.first ≤ point && point < found.limit then return some found else return none
++
++def Prepared.coverFuel (prepared : Prepared α) : Nat → Nat → Nat → Option (List α)
++  | 0,first,last => if last ≤ first then some [] else none
++  | fuel+1,first,last => do
++    if last ≤ first then return []
++    let found ← prepared.lookup? first
++    if first < found.limit then
++      let rest ← prepared.coverFuel fuel (min last found.limit) last
++      return found.value :: rest
++    else none
++
++def Prepared.cover? (prepared : Prepared α) (first last : Nat) : Option (List α) :=
++  if first < last then prepared.coverFuel prepared.farthest.size first last else none
++
++end Eggshell.RangeReach

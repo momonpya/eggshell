@@ -1,0 +1,24 @@
+--- a/tests/SynapseBundleGateTests.lean
++++ b/tests/SynapseBundleGateTests.lean
+@@ -31 +31 @@
+-  let mut offers := #[]
++  let mut hints : Array Routing.Store.Hint := #[]
+@@ -36 +36,3 @@
+-    offers := offers.push offer
++    hints := hints.push {
++      target := offer.target,priority := offer.priority,evidence := Index.contentKey fact,
++      kind := Routing.Store.kind fact,group := some (.claim claim)}
+@@ -38,3 +40,3 @@
+-    results := #[{offers}]
+-    owners := #[⟨a.original,aDoc,Recommend.locate offers aRows,#[]⟩,
+-      ⟨b.original,bDoc,Recommend.locate offers bRows,#[]⟩]}
++    results := #[{hints}]
++    owners := #[⟨a.original,aDoc,Routed.locate hints aRows,#[]⟩,
++      ⟨b.original,bDoc,Routed.locate hints bRows,#[]⟩]}
+@@ -63,0 +66 @@
++  let reach := SharedRangeAdapter.ownerReach keys units
+@@ -65,2 +68,2 @@
+-    ((List.finRange units.size).filter fun index => SharedRangeAdapter.memberCovered keys units [index] member))
+-    ({} : Std.HashMap Range (List (Fin units.size)))
++    (SharedRangeAdapter.memberChoices keys units reach member))
++    ({} : Std.HashMap Range (List (List (Fin units.size))))

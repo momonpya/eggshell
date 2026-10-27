@@ -4,13 +4,14 @@ open Lean
 
 def main (args : List String) : IO Unit := do
   let base := System.FilePath.mk "/Users/ovm/.codex/experiments/eggshell"
+  let joint := args.head? == some "joint"
   let selection := args.head? == some "selection"
-  let args := if selection then args.tail else args
-  let parent := base / (if selection then "prepared-cue-incidence-20261027" else "packet-delivery-ledger-20261027")
-  let root := base / (if selection then "prepared-selection-domain-20261027" else "prepared-cue-incidence-20261027")
+  let args := if selection || joint then args.tail else args
+  let parent := base / (if joint then "prepared-selection-domain-20261027" else if selection then "prepared-cue-incidence-20261027" else "packet-delivery-ledger-20261027")
+  let root := base / (if joint then "joint-range-bindings-20261027" else if selection then "prepared-selection-domain-20261027" else "prepared-cue-incidence-20261027")
   let checkpoint := base / "packet-delivery-ledger-20261027/one-prepared-hook"
-  let auditMain := if selection then "tools.research.SelectionDomainAudit" else "tools.research.CueIncidenceAudit"
-  let auditObject := if selection then "tools_research_SelectionDomainAudit.o" else "tools_research_CueIncidenceAudit.o"
+  let auditMain := if joint then "tools.research.JointRangeAudit" else if selection then "tools.research.SelectionDomainAudit" else "tools.research.CueIncidenceAudit"
+  let auditObject := if joint then "tools_research_JointRangeAudit.o" else if selection then "tools_research_SelectionDomainAudit.o" else "tools_research_CueIncidenceAudit.o"
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let toolchain := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"
   if args == ["fork"] then
@@ -21,7 +22,7 @@ def main (args : List String) : IO Unit := do
     unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
     return
   let [mode,label] := args | throw (IO.userError "fork | MODE LABEL")
-  unless ["audit","product","hook","run-audit","run-hook","run-trace","profile","proof"].contains mode && !label.isEmpty &&
+  unless ["audit","gate","run-gate","product","hook","run-audit","run-hook","run-trace","profile","proof"].contains mode && !label.isEmpty &&
       label.toList.all (fun c => c.isAlphanum || c == '-') do throw (IO.userError "known mode/simple label required")
   let command ← if mode == "profile" then
     pure #["/usr/bin/env","LEAN_NUM_THREADS=1",toolchain ++ "/bin/lean","-j1","-M1536","--run",
@@ -33,6 +34,8 @@ def main (args : List String) : IO Unit := do
       checkpoint.toString] ++ if mode == "run-trace" then #["ranges"] else #[])
   else if mode == "run-audit" then
     pure #["/usr/bin/env","LEAN_NUM_THREADS=1",(root / "audit-build/StudyMain").toString,(root / label).toString]
+  else if mode == "run-gate" then
+    pure #["/usr/bin/env","LEAN_NUM_THREADS=1",(root / "gate-build/StudyMain").toString]
   else if mode == "proof" then
     pure #["/usr/bin/env","LEAN_PATH=" ++ (parent / "product-build/lib").toString ++ ":" ++ toolchain ++ "/lib/lean",
       "LEAN_NUM_THREADS=1",toolchain ++ "/bin/lean","-j1","-M1536","-DwarningAsError=true",
@@ -54,7 +57,7 @@ def main (args : List String) : IO Unit := do
     let plan := (built.getObjValD "settings")
       |>.setObjVal! "core" (toJson (root / "checkout").toString)
       |>.setObjVal! "output" (toJson (root / (mode ++ "-build")).toString)
-      |>.setObjVal! "mainModule" (toJson (if mode == "product" then "Main" else if mode == "hook" then "tools.research.OnePreparedHook" else auditMain))
+      |>.setObjVal! "mainModule" (toJson (if mode == "product" then "Main" else if mode == "hook" then "tools.research.OnePreparedHook" else if mode == "gate" then "tests.SynapseBundleGateTests" else auditMain))
       |>.setObjVal! "baselineCore" (toJson (origin / "checkout").toString)
       |>.setObjVal! "baselineResponse" (toJson (baseline / "runtime.rsp").toString)
       |>.setObjVal! "baselineMain" (toJson (baseline / (if reuseAudit then auditObject else "Main.o")).toString)
