@@ -26,6 +26,10 @@
 
 ## 現在地と次の順序
 
+**2026-10-27の最新判断：** 利用者の明示依頼でAstra / ultraへ一度再相談した。通常実hook15,476 ms・必要原文4/6のままであり、進め方を変更する。必要原文の完全配送と「順位係数×被覆文字数」の代理目的が一致していない。三辺の到達と候補の存在を、必要性の識別や実配送と混同しない。既往の失敗を再試行せず、まず現在質問のfocus・原文の手掛かり・root/cause・要求範囲・選択価値を同じ実入力で一度結合する。凍結ラベルは後付け監査にのみ使う。ラベルなしで説明できる汎用規則が得られなければ、同じ6件への重み/閾値/束の再調整を止める。
+
+作業中の`source-synapses` RPC増築は隔離・未採用のまま止める。同じwalk/逐件lookupを移して辞書化/通信/再検査を加えるだけでは初回CPU削減の根拠がない。既存poolは496 MiB枠に各entry256 MiB以上を予約し、prepared snapshotを二つ保持できない。同一DBへの80要求試験を多数DB性能の実証にしない。速度の次候補は、既存source postingsへの要求をまとめた有界なB-tree走査に限定し、空結果/Fact/原文/順序の一致と仕事量/CPUの減少を一度のモデルなし対照再生で検証する。改善しなければ撤回する。95%の目標、認定の完全性、最新AGENTSの総token採用条件は変えない。[相談結果と停止規則](docs/astra-current-review.md)。この段落を、以下の過去経緯にある次手より優先する。
+
 - 引用位置を捨ててrecord全体を支持していた問題を隔離修正。同じC7の元観測/Work/引用の組363件を維持し、最大context45,221→286文字にした。検索時の原文再解析を、内容IDからの直接束縛と既存source postingsへ置換。4,096範囲×2観測の部品検査は10 msだが、実フック数秒/95%配送の達成ではない。[quotation-context.md](docs/quotation-context.md)。
 - 読取専用profileが有効なDB側viewを読まず私有側だけを探す不具合を隔離修正。C7・題材2の診断は必要原文4/6、数値経路completed、実hook22,129 ms。保存済みcanonical起源も最終packetの原文検証へ接続した後は21,638 ms、本文117,523 bytesは直前と一致、検証済み起源2,336件・未検証part0。同じcheckpointのview準備は151/114 msで再構築0。ただし初回の変更view構築161,948 msは別途発生した。13,645候補の構築/選択に12,728 msかかり、数秒/95%・総token改善・80並行利用は未達。全warm/回答model追加0回。未採用のまま候補構築の反復全走査を次に除く。[packet-delivery-ledger.md](docs/packet-delivery-ledger.md)。
 - 所有者postingと一度のclosure配列化へ置換し、元の候補/bonus列・problemとの完全一致をLeanで証明した。nativeの順序/重複/空/未登録・原文cue3,033件が一致。実hookは19,171 ms、同じruntimeのCPU標本付きは19,230 ms。さらに要求キー重複を除く案は19,213 msで追加改善なし。全て親と本文117,523 bytes一致、原文4/6、意味検索completed、再warm/回答model0。候補構築/選択には約9,950 ms残り、数秒/95%の達成ではない。標本で残った全体Listコピーとposting集合の再構築を次に除き、未配送2件の候補範囲→選択→実本文の消失段階を同じPlanから確認する。キー重複除去や撤回済みの細切れfrontierを繰り返さない。[prepared-cue-incidence.md](docs/prepared-cue-incidence.md)。
