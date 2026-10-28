@@ -58,6 +58,53 @@ def main (args : List String) : IO Unit := do
   let driver := base / (if spelling then "spelling-driver-build/StudyMain" else if origin then "origin-driver-build/StudyMain" else if residual then "residual-driver-build/StudyMain" else if compact then "compact-driver-build/StudyMain" else "driver-build/StudyMain")
   let executable := installation / "libexec/eggshell"
   let runner := originalSeed / "controller/StudyMain"
+  if origin && mode == "context-run" then
+    let receipt := seed / "study/seed-1/data/receipts/2a63d2af1a9c30f461f47db7883f779862ce2966c72e998146be9006af232370"
+    saveGuard base ("context-signal-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT=" ++ (seed / "study/seed-1/data").toString,
+      (base / "origin-context-build/StudyMain").toString,
+      (seed / "study/seed-1/work.egg").toString,(receipt / "selection-plan.json").toString,
+      (receipt / "delivery-domain.json").toString,(base / ("context-signal-" ++ label ++ ".json")).toString]
+      #[base.toString]
+    return
+  if origin && mode == "context-retire" then
+    let records := System.FilePath.mk project / "docs/candidates/record-context-signal"
+    unless !(← (records / "retirement.json").pathExists) do
+      throw (IO.userError "preserve earlier context retirement")
+    let guards := #["origin-context-signal","origin-context-built","origin-context-finite","context-signal-fixed"]
+    for name in guards do
+      let report ← IO.ofExcept (Json.parse (← IO.FS.readFile (base / (name ++ ".guard.json"))))
+      unless report.getObjValD "state" == toJson "finished" &&
+          report.getObjValD "ownedPids" == toJson (#[] : Array Nat) do
+        throw (IO.userError "a context diagnostic process is not terminal")
+    let report ← IO.ofExcept (Json.parse (← IO.FS.readFile (base / "context-signal-fixed.guard.json")))
+    unless report.getObjValD "exitCode" == toJson (0 : Nat) do
+      throw (IO.userError "preserve a successful signal report before retirement")
+    let target := base / "origin-context-build"
+    let processes ← call "/bin/ps" #["-axo","command="]
+    unless (← target.symlinkMetadata).type == .dir &&
+        (processes.splitOn target.toString).length == 1 do
+      throw (IO.userError "context build is not an ended directory")
+    noLinksInto (base / "checkout") #[target]
+    noLinksInto (base / "origin-driver-build/lib") #[target]
+    let retained := #[executable,driver,originalSeed / "prefix/libexec/eggshell",
+      originalSeed / "controller/StudyMain"]
+    let hashes ← call "/usr/bin/shasum" (#["-a","256"] ++ retained.map (·.toString))
+    IO.FS.createDirAll (records / "guards")
+    copyFile (base / "context-signal-fixed.json") (records / "signal.json")
+    copyFile (target / "build.json") (records / "build.json")
+    for name in guards do
+      copyFile (base / (name ++ ".guard.json")) (records / "guards" / (name ++ ".json"))
+    let ended ← call "/usr/bin/shasum" #["-a","256",(target / "StudyMain").toString]
+    let counts ← retireFiles target
+    unless hashes == (← call "/usr/bin/shasum" (#["-a","256"] ++ retained.map (·.toString))) do
+      throw (IO.userError "a retained executable changed during context retirement")
+    IO.FS.writeFile (records / "retirement.json") (Json.mkObj [
+      ("deletedPath",toJson target.toString),("files",toJson counts.1),("logicalBytes",toJson counts.2),
+      ("retiredDigest",toJson ended),("retainedDigestsUnchanged",toJson hashes),
+      ("databasesDeleted",toJson (0 : Nat)),("archiveCreated",toJson false)]).pretty
+    IO.println s!"Removed ended context build: {counts.1} files, {counts.2} logical bytes"
+    return
   if spelling && mode == "retire" then
     let records := System.FilePath.mk project / "docs/candidates/spelling-rank-origin"
     unless !(← records.pathExists) do throw (IO.userError "preserve earlier retirement")
@@ -336,7 +383,8 @@ def main (args : List String) : IO Unit := do
       ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (3670016 : Nat)),
       ("minFreeKiB",toJson (2097152 : Nat)),("record",toJson (base / ("verification-" ++ label ++ ".guard.json")).toString)]).pretty
     return
-  let baseline := if spelling then base / (if mode == "driver" then "spelling-product-build"
+  let baseline := if origin && mode == "context" then base / "origin-driver-build"
+    else if spelling then base / (if mode == "driver" then "spelling-product-build"
       else if mode == "product" then "spelling-checks-build" else "origin-driver-build")
     else if origin then base / (if mode == "driver" then "origin-product-build"
       else if mode == "product" then "origin-prepare-build"
@@ -366,6 +414,7 @@ def main (args : List String) : IO Unit := do
   let objectMap := base / (if spelling then "spelling-objects.json" else if origin then "origin-objects.json" else if residual then "residual-objects.json" else if compact then "compact-objects.json" else "objects.json")
   IO.FS.writeFile objectMap objects.compress
   let entry ← match mode with
+    | "context" => pure "tools.research.RecordContextSignal"
     | "checks" => pure (if spelling then "tools.research.SpellingRankChecks" else if origin then "tools.research.CitationOriginChecks" else "tools.research.SourceProjectionChecks")
     | "product" => pure "Main"
     | "driver" => pure "tools.research.SeedDeliveryReplay"
