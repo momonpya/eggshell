@@ -1,0 +1,226 @@
+--- a/tools/SharedCoverage.lean
++++ b/tools/SharedCoverage.lean
+@@ -167,6 +167,73 @@
+   simp only [List.removeAll, List.elem_eq_contains, cached.cuesExact _]
+   rfl
+ 
++def Evaluation.freshNodes (cached : Evaluation prior) (index : Fin p.offers.size) :=
++  Eggshell.hashDistinct (p.offers[index].closure.filter fun node => !cached.nodeIndex.contains node)
++
++def Evaluation.freshCues (cached : Evaluation prior) (index : Fin p.offers.size) :=
++  Eggshell.hashDistinct (p.offers[index].covers.filter fun cue => !cached.cueIndex.contains cue)
++
++theorem Evaluation.freshNodes_exact (cached : Evaluation prior) (index : Fin p.offers.size) :
++    cached.freshNodes index = (p.offers[index].closure.removeAll (nodes p prior.selected)).eraseDups := by
++  simp only [Evaluation.freshNodes,Eggshell.HashDistinct.reference,List.removeAll,List.elem_eq_contains,
++    cached.nodesExact _]
++
++theorem Evaluation.freshCues_exact (cached : Evaluation prior) (index : Fin p.offers.size) :
++    cached.freshCues index = (p.offers[index].covers.removeAll (cues p prior.selected)).eraseDups := by
++  simp only [Evaluation.freshCues,Eggshell.HashDistinct.reference,List.removeAll,List.elem_eq_contains,
++    cached.cuesExact _]
++
++/-- The immutable membership maps and totals extend only by newly paid payloads
++and newly covered cues. No previous offer or complete selection is enumerated. -/
++def Evaluation.advance (cached : Evaluation prior) (next : Selection p) (index : Fin p.offers.size)
++    (extension : next.selected = prior.selected++[index]) : Evaluation next := {
++  nodeIndex := (cached.freshNodes index).foldl (fun known node => known.insert node ()) cached.nodeIndex
++  nodesExact := by
++    intro node
++    rw [Eggshell.HashDistinct.fold_contains,cached.nodesExact,extension,nodes_append_one,List.contains_append,
++      cached.freshNodes_exact]
++  cueIndex := (cached.freshCues index).foldl (fun known cue => known.insert cue ()) cached.cueIndex
++  cuesExact := by
++    intro cue
++    rw [Eggshell.HashDistinct.fold_contains,cached.cuesExact,extension,cues_append_one,List.contains_append,
++      cached.freshCues_exact]
++  beforeCost := cached.afterCost index
++  costExact := by rw [cached.afterCost_exact,extension]
++  beforeBenefit := cached.afterBenefit index
++  benefitExact := by rw [cached.afterBenefit_exact,extension] }
++
++theorem Evaluation.ext_data (left right : Evaluation prior)
++    (nodes : left.nodeIndex = right.nodeIndex) (cues : left.cueIndex = right.cueIndex)
++    (cost : left.beforeCost = right.beforeCost) (benefit : left.beforeBenefit = right.beforeBenefit) : left = right := by
++  cases left
++  cases right
++  cases nodes
++  cases cues
++  cases cost
++  cases benefit
++  rfl
++
++/-- Strong equality includes the exact canonical hash-map representation, not
++merely membership. Existing ordered selection refinements remain applicable. -/
++theorem Evaluation.advance_exact (cached : Evaluation prior) (next : Selection p) (index : Fin p.offers.size)
++    (extension : next.selected = prior.selected++[index]) (canonical : cached = evaluation prior) :
++    cached.advance next index extension = evaluation next := by
++  apply Evaluation.ext_data
++  · change (cached.freshNodes index).foldl (fun known node => known.insert node ()) cached.nodeIndex =
++      (nodes p next.selected).foldl (fun known node => known.insert node ()) {}
++    rw [extension,nodes_append_one,List.foldl_append,← cached.freshNodes_exact]
++    rw [canonical]
++    rfl
++  · change (cached.freshCues index).foldl (fun known cue => known.insert cue ()) cached.cueIndex =
++      (cues p next.selected).foldl (fun known cue => known.insert cue ()) {}
++    rw [extension,cues_append_one,List.foldl_append,← cached.freshCues_exact]
++    rw [canonical]
++    rfl
++  · change cached.afterCost index = cost p next.selected
++    rw [cached.afterCost_exact,extension]
++  · change cached.afterBenefit index = benefit p next.selected
++    rw [cached.afterBenefit_exact,extension]
++
+ def extendCached? (prior : Selection p) (cached : Evaluation prior)
+     (index : Fin p.offers.size) : Option (Selection p) :=
+   if fresh : index ∉ prior.selected then
+--- a/tools/DeferredCoverage.lean
++++ b/tools/DeferredCoverage.lean
+@@ -1,6 +1,7 @@
+ module
+ public import tools.SharedCoverage
+ public import tools.KeyPostings
++public import tools.DistinctPostings
+ @[expose] public section
+ 
+ namespace SharedCoverage.Deferred
+@@ -347,19 +348,17 @@
+     (seen : Std.HashMap (Fin d) Unit) (added : List (Fin d)) : List (Fin n) :=
+   hashDistinct (layout.touched (added.filter fun feature => !seen.contains feature))
+ 
+-/-- Stream postings into one membership set. Do not build a large list of
+-duplicate affected offers merely to throw the duplicates away afterwards. -/
++/-- Each fresh feature's complete posting is consumed once. Repeated shared
++frame nodes cannot cause repeated traversal of a large inverse posting. -/
+ def Incidence.changedStreaming {features : Fin n → List (Fin d)} (layout : Incidence features)
+     (seen : Std.HashMap (Fin d) Unit) (added : List (Fin d)) : List (Fin n) :=
+   let input := added.filter fun feature => !seen.contains feature
+-  let result := input.foldl (fun state feature => (layout.lookup feature).foldl HashDistinct.step state) ({},[])
+-  result.2.reverse
++  DistinctPostings.collect layout.lookup input
+ 
+ @[csimp] theorem Incidence.changed_streaming_exact : @Incidence.changed = @Incidence.changedStreaming := by
+   funext n d features layout seen added
+-  unfold changed changedStreaming Incidence.touched hashDistinct
+-  rw [List.foldl_flatMap]
+-  rfl
++  unfold changed changedStreaming Incidence.touched
++  rw [DistinctPostings.collect_exact]
+ 
+ theorem Incidence.unchanged {features : Fin n → List (Fin d)} (layout : Incidence features)
+     (seen : Std.HashMap (Fin d) Unit) (added : List (Fin d)) (offer : Fin n)
+@@ -383,16 +382,17 @@
+ def Values.advance (stored : Values prior) (layout : Layout p) (next : Selection p)
+     (winner : Fin p.offers.size) (extension : next.selected = prior.selected++[winner]) : Values next :=
+   let before := stored.base
+-  let after := evaluation next
++  let after := before.advance next winner extension
++  have afterExact : after = evaluation next := before.advance_exact next winner extension stored.baseExact
+   {base := after
+-   baseExact := rfl
++   baseExact := afterExact
+    costs := patch stored.costs (rawCost after) (layout.nodes.changed before.nodeIndex p.offers[winner].closure)
+    gains := patch stored.gains (rawGain after) (layout.cues.changed before.cueIndex p.offers[winner].covers)
+    costsExact := by
+     intro query
+     rw [patch_exact]
+     split
+-    · rfl
++    · rw [afterExact]
+     · rename_i absent
+       rw [stored.costsExact]
+       simp only [before,stored.baseExact] at absent
+@@ -403,7 +403,7 @@
+     intro query
+     rw [patch_exact]
+     split
+-    · rfl
++    · rw [afterExact]
+     · rename_i absent
+       rw [stored.gainsExact]
+       simp only [before,stored.baseExact] at absent
+--- a/tools/DistinctPostings.lean
++++ b/tools/DistinctPostings.lean
+@@ -0,0 +1,82 @@
++module
++public import Eggshell.HashDistinct
++@[expose] public section
++
++namespace Eggshell.DistinctPostings
++
++variable [BEq α] [LawfulBEq α] [Hashable α]
++variable [BEq β] [LawfulBEq β] [Hashable β]
++
++abbrev Output (β : Type) [BEq β] [Hashable β] := Std.HashMap β Unit × List β
++
++theorem fold_contains (input : List β) (state : Output β) (query : β) :
++    (input.foldl HashDistinct.step state).1.contains query =
++      (state.1.contains query || input.contains query) := by
++  induction input generalizing state with
++  | nil => simp
++  | cons head tail ih =>
++    rw [List.foldl_cons, ih]
++    by_cases found : state.1.contains head = true
++    · by_cases same : query = head
++      · subst query
++        simp [HashDistinct.step, found]
++      · simp [HashDistinct.step, found, same]
++    · simp [HashDistinct.step, found, Std.HashMap.contains_insert,
++        BEq.comm, Bool.or_assoc, Bool.or_left_comm]
++
++omit [LawfulBEq β] in
++theorem fold_unchanged (input : List β) (state : Output β)
++    (known : ∀ item ∈ input, state.1.contains item = true) :
++    input.foldl HashDistinct.step state = state := by
++  induction input with
++  | nil => rfl
++  | cons head tail ih =>
++    simpa only [List.foldl_cons, HashDistinct.step, known head (by simp), ite_true]
++      using ih (fun item member => known item (by simp [member]))
++
++/-- Looking up a feature again cannot add an offer: its complete posting was
++already consumed. Both membership sets use full identities after hashing. -/
++def walk (lookup : α → List β) : List α → Std.HashMap α Unit → Output β → Output β
++  | [], _, output => output
++  | feature :: rest, seen, output =>
++    if seen.contains feature then walk lookup rest seen output
++    else walk lookup rest (seen.insert feature ()) ((lookup feature).foldl HashDistinct.step output)
++
++theorem walk_exact (lookup : α → List β) (input : List α)
++    (seen : Std.HashMap α Unit) (output : Output β)
++    (known : ∀ feature, seen.contains feature = true →
++      ∀ item ∈ lookup feature, output.1.contains item = true) :
++    walk lookup input seen output = (input.flatMap lookup).foldl HashDistinct.step output := by
++  induction input generalizing seen output with
++  | nil => rfl
++  | cons feature rest ih =>
++    simp only [walk, List.flatMap_cons, List.foldl_append]
++    split
++    · next found =>
++      rw [fold_unchanged _ _ (known feature found)]
++      exact ih seen output known
++    · rw [ih]
++      intro query present item member
++      rw [fold_contains]
++      by_cases same : query = feature
++      · subst query
++        have present : (lookup feature).contains item = true := List.contains_iff_mem.mpr member
++        simp only [present, Bool.or_true]
++      · have before : seen.contains query = true := by
++          have different : (feature == query) = false := beq_eq_false_iff_ne.mpr (Ne.symm same)
++          simpa only [Std.HashMap.contains_insert, different, Bool.false_or] using present
++        simp [known query before item member]
++
++def collect (lookup : α → List β) (input : List α) : List β :=
++  (walk lookup input {} ({},[])).2.reverse
++
++/-- First encounter order, including ties, is identical to flattening every
++posting and deduplicating only at the end. No rank or candidate is dropped. -/
++theorem collect_exact (lookup : α → List β) (input : List α) :
++    collect lookup input = hashDistinct (input.flatMap lookup) := by
++  unfold collect
++  rw [walk_exact lookup input {} ({},[]) (by simp)]
++  rw [HashDistinct.reference]
++  exact HashDistinct.loop_reference _ {} [] (by simp [HashDistinct.Seen])
++
++end Eggshell.DistinctPostings
