@@ -36,7 +36,11 @@ Leanでframeの上限、進行、元bytesのprefixを保つことを証明した
 
 現在の本文には入力言語の状態・HLSL分岐全体・末尾の警告が入った。ToolChainのキャッシュキーは7103〜7106行がある一方、凍結範囲の先頭7101〜7102行がない。入力言語判定128〜137行も未配送。位置だけを届けたことや部分的なコードを、全項目の合格へ数え直さない。[実本文](candidates/source-projection-budget/compact/topic-1/body.txt)。
 
-次は、この最初の欠落が正の候補価値を持つ単位になったか、選択で落ちたかを、現在の質問・引用/導出・元範囲・単位/価値/費用で結ぶ。8,548単位のうち選択されなかったものの詳細は通常receiptには全て残らないので、候補化と選択をまだ断定しない。旧来の重み・表示幅・束の再調整へ戻らず、必要な診断だけを行う。題材2/3・大きなpilot・新seed・追加の回答モデルへ広げない。
+次に同じproductを新sessionで一度だけ診断実行した。実行単位はoutputディレクトリのhashもsession IDに含め、同じruntimeの過去historyを再利用しない。`TRACE_SELECTION_RANGES`と`TRACE_SELECTOR_INPUT`を付けた同じ実フックのplanを、実行後に凍結された原文位置へ結んだ。診断なしの実行と8,548単位・予算・選択ID・配送本文SHAが完全一致し、凍結原典も変化していない。診断実行は19,004 ms、3/5のまま、RSS peak 727,712 KiB・残存0。時間の改善としては扱わない。
+
+欠けた2件はいずれも候補範囲の和集合に存在していた。ToolChain所有者は159単位すべて、入力言語判定の所有者は254単位すべてに正の基礎offerがあり、実際には65単位・86単位が選ばれたが、必要な原文区間は覆われなかった。これで最初の欠落は**選択**と確定した。原文位置の再抽出や所有者の上位件数調整へ戻る理由はない。[範囲を含む独立監査](candidates/source-projection-budget/missing-range-diagnosis.json)、[診断実行](candidates/source-projection-budget/range-trace/result.json)、[終了・資源](candidates/source-projection-budget/range-trace/guard.json)。
+
+次はこの2件の単位境界とcue/依存の閉包を調べる。旧来の重み・表示幅・束の再調整へ戻らない。題材2/3・大きなpilot・新seed・追加の回答モデルへ広げない。候補の改善は配送3/5までであり、総token改善の採用条件は未達のまま。
 
 候補は隔離checkoutで実装した。[ソース差分](candidates/source-projection-budget/candidate.patch)。実行準備では旧protocolでリンクしたdriverの拒否、link mapの不足、隔離accountのmarketplace登録の衝突も記録した。protocol拒否はフック前で、異なる実装を許す条件緩和はしていない。native試験は正しいprotocolでリンクしたdriverと、hash検証済みの明示したplugin launcherを使う。compact prefixのbundleは検査済みだが、この試行でCodex marketplaceへの登録成功は主張しない。
 

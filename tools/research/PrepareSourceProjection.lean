@@ -28,12 +28,15 @@ def main (args : List String) : IO Unit := do
   let hookPlan := base / (if compact then "compact-hook-plan.json" else "hook-plan.json")
   let executable := installation / "libexec/eggshell"
   let runner := seed / "controller/StudyMain"
-  if mode == "replay" then
-    saveGuard base ("topic-1-" ++ label) #["/usr/bin/env","-u","CODEX_THREAD_ID","-u","CODEX_TURN_ID",
-      "LEAN_NUM_THREADS=1","EGGSHELL_DATA_ROOT=" ++ (seed / "study/seed-1/data").toString,
+  if mode == "replay" || mode == "trace" then
+    let diagnostics := if mode == "trace" then
+      #["EGGSHELL_TRACE_SELECTION_RANGES=1","EGGSHELL_TRACE_SELECTOR_INPUT=1"] else #[]
+    let command := #["/usr/bin/env","-u","CODEX_THREAD_ID","-u","CODEX_TURN_ID",
+      "LEAN_NUM_THREADS=1"] ++ diagnostics ++ #[
+      "EGGSHELL_DATA_ROOT=" ++ (seed / "study/seed-1/data").toString,
       (base / (if compact then "compact-driver-build/StudyMain" else "driver-build/StudyMain")).toString,seed.toString,
       (base / ("topic-1-" ++ label)).toString,"topic-1",hookPlan.toString]
-      #[base.toString,seed.toString]
+    saveGuard base ("topic-1-" ++ label) command #[base.toString,seed.toString]
     return
   if mode == "install" then
     for directory in #[installation / "libexec",base / "account",base / "tmp",installation / "share/eggshell/minilm"] do

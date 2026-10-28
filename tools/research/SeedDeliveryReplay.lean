@@ -5,7 +5,7 @@ import Eggshell.Warm
 
 open Lean Eggshell Eggshell.Research
 
-/-- Three first-hook measurements on the acquired live seed. No warm, restore,
+/-- First-hook measurements on the acquired live seed. No warm, restore,
 answering model, label-derived recommendation, or source publication. -/
 def main (args : List String) : IO Unit := do
   let (rootPath,outputPath,firstTopic,lastTopic,candidate) ← match args with
@@ -73,7 +73,10 @@ def main (args : List String) : IO Unit := do
     for topic in [firstTopic:lastTopic] do
       let directory := output / s!"topic-{topic}"
       IO.FS.createDir directory
-      let session := if candidate.isSome then s!"source-replay-{(runtime.sha256.take 16).toString}-topic-{topic}"
+      -- A repeated diagnostic must get a fresh native history even when the
+      -- product is unchanged. The new output directory identifies the run.
+      let runKey := (Sha256.hex output.toString.toUTF8).take 12 |>.toString
+      let session := if candidate.isSome then s!"source-replay-{(runtime.sha256.take 16).toString}-{runKey}-topic-{topic}"
         else s!"seed-initial-replay-topic-{topic}"
       let prompt ← IO.FS.readFile (root / s!"prompts/topic-{topic}.txt")
       let managed ← StudyRuntime.startManaged (.mk runtime.path) (.mk plugin) session
