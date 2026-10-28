@@ -8,7 +8,7 @@
 
 保存済み50出版の全連鎖が正準に復号できた。最初のoff-hook確定では私有journalの準備債務が残ったため、耐久済みseedを保持して不合格とした。同じseedの残りを仕上げ、原文/数値view・共有synapse・私有journalの全準備が完了した。全体の数値coverageは1,523窓、valid 1,523、missing/invalid 0。再取得や回答の再試行はしていない。[初回拒否](candidates/source-complete-seed/first-finalization/view-readiness.json)、[完了](candidates/source-complete-seed/ready/view-readiness.json)、[全体coverage](candidates/source-complete-seed/ready/doctor.json)。
 
-題材の配送を見る前に、以前からの定義を新DBの原文と照合して凍結した。題材1は5/5、題材2は6/7、題材3は5/7がDBにある。DBにない3項目は未配送と混同せず、回答品質では別に確認する。現在の隔離候補による題材1の実配送は**3/5・18,065 ms、正式モデル段階は0/6**である。旧seedの9/15を今回の値にはしない。[原文監査と凍結範囲](candidates/source-complete-seed/seed-audit.json)、[実配送と修正候補](source-projection-budget.md)。
+題材の配送を見る前に、以前からの定義を新DBの原文と照合して凍結した。題材1は5/5、題材2は6/7、題材3は5/7がDBにある。DBにない3項目は未配送と混同せず、回答品質では別に確認する。通信/位置metadata候補の題材1は3/5・18,065 msだった。後続の引用/出所の修正候補では**4/5・18,858 ms、正式モデル段階は0/6**。旧seedの9/15を今回の値にはしない。[原文監査と凍結範囲](candidates/source-complete-seed/seed-audit.json)、[最新の実配送](citation-origin-repair.md)。
 
 保存破損を疑った追加監査では、全50出版の復号と39完了イベントの日誌→DB全文/Work一致を再確認した。原文座標索引5,787行も39ファイルの指紋・行番号・本文に一致した。今回未配送の2件の生stdoutはDBまで一致する。一方で、別の大きな応答にはフック前の切り詰めがあり、全生出力を完全取得したseedとは言えない。[生ログ照合と未確認部分](seed-storage-integrity.md)。
 

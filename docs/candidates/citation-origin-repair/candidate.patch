@@ -1,0 +1,204 @@
+--- a/Eggshell/Synapses.lean
++++ b/Eggshell/Synapses.lean
+@@ -150,6 +150,12 @@
+ def Claim.valid (claim : Claim) : Bool :=
+   !claim.database.isEmpty && !claim.answer.isEmpty && claim.first < claim.limit
+ 
++/-- Coordinate citations and matching spellings have different evidence:
++the latter nominate possible sources without claiming they are jointly used. -/
++inductive SupportBasis where
++  | citation | spelling
++  deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
++
+ structure Support where
+   read : Read
+   source : Range
+@@ -157,6 +163,7 @@
+   binding : Binding
+   /-- The original citation can be wider than the part present in this read. -/
+   cited : Range := source
++  basis : SupportBasis := .citation
+   deriving Inhabited, Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, Hashable, ToJson, FromJson
+ 
+ def Support.valid (support : Support) : Bool :=
+@@ -169,9 +176,22 @@
+ 
+ /-- The constructor checks the exact saved read covers the cited source range. -/
+ def Support.checked (read : Read) (source : Range) (claim : Claim)
+-    (binding : Binding := read.binding) (cited : Range := source) : Except String Support :=
+-  let support := Support.mk read source claim binding cited
++    (binding : Binding := read.binding) (cited : Range := source)
++    (basis : SupportBasis := .citation) : Except String Support :=
++  let support := Support.mk read source claim binding cited basis
+   if support.valid then .ok support else .error "citation is not covered by its recorded read"
++
++theorem Support.checked_basis {read : Read} {source cited : Range} {claim : Claim}
++    {binding : Binding} {basis : SupportBasis} {support : Support}
++    (accepted : Support.checked read source claim binding cited basis = .ok support) :
++    support.basis = basis := by
++  unfold Support.checked at accepted
++  dsimp only at accepted
++  split at accepted
++  next =>
++    cases accepted
++    rfl
++  next => contradiction
+ 
+ theorem Support.checked_covers {read : Read} {source : Range} {claim : Claim}
+     {binding : Binding} {cited : Range} {support : Support}
+--- a/Eggshell/SynapseSource.lean
++++ b/Eggshell/SynapseSource.lean
+@@ -172,14 +172,26 @@
+   return candidates.fold (fun result _ files =>
+     if files.size == 1 then result ++ files.toArray else result) #[]
+ 
+-def parseBounds (text : String) : Option (Nat × Nat) := do
++/-- A line marker belongs to a number, never to arbitrary path/text bytes. -/
++def lineNumber (text : String) : Option Nat :=
++  (if text.startsWith "L" then (text.drop 1).toString else text).toNat?
++
++def parseBounds (text : String) : Option (Nat × Nat) :=
+   let normalized := (text.replace "–" "-").replace "—" "-"
+   let parts := normalized.splitOn "-"
+-  let first ← (← parts.head?).toNat?
+-  let last ← if parts.length == 1 then some first else if parts.length == 2 then
+-      ((parts[1]!).dropWhile (· == 'L')).toString.toNat? else none
+-  if 0 < first && first ≤ last then some (first, last) else none
++  let parsed : Option (Nat × Nat) := do
++    let first ← lineNumber (← parts.head?)
++    let last ← if parts.length == 1 then some first else if parts.length == 2 then
++        lineNumber parts[1]! else none
++    some (first,last)
++  parsed.filter fun (first,last) => 0 < first && first ≤ last
+ 
++theorem parseBounds_valid {text : String} {first last : Nat}
++    (accepted : parseBounds text = some (first,last)) : 0 < first ∧ first ≤ last := by
++  unfold parseBounds at accepted
++  have valid := (Option.filter_eq_some_iff.mp accepted).2
++  simpa using valid
++
+ def readPlans (command : String) (files : Array File) : Except String (Array Range) := do
+   let some segments := SourceEvidence.sequenceSegments? command | throw "unsupported read sequence"
+   let mut plans := #[]
+@@ -358,7 +370,7 @@
+       let mut last := last
+       if displayed.length == 2 then
+         let bounds := String.ofList ((displayed[1]!).toList.takeWhile
+-          (fun c => c.isDigit || c == '-' || c == '–' || c == '—'))
++          (fun c => c.isDigit || c == 'L' || c == '-' || c == '–' || c == '—'))
+         let (a, b) ← parseBounds bounds
+         if a != first || (first != last && b != last) then return ← none
+         last := b
+--- a/Eggshell/ObservationContext.lean
++++ b/Eggshell/ObservationContext.lean
+@@ -374,7 +374,7 @@
+ def locate (database : String) (doc : Document) (trace : Trace) : Array LocatedRead :=
+   locateUsing database doc trace ((recorded database doc).getD {})
+ 
+-/-- Exact quoted spellings provide advisory support/coquotation. The caller
++/-- Exact quoted spellings provide advisory source alternatives. The caller
+ restricts the catalog to the answer's actual All-reachable source owners.
+ This records an observed citation, not the truth or causality of a claim. -/
+ def addQuotedAnswer (database : String) (doc : Document) (spellings : Array Quotation)
+@@ -391,10 +391,8 @@
+       for quote in Quotes.extract paragraph do
+         for read in byText[quote.text]?.getD #[] do
+           graph ← graph.insert (.read read)
+-          let support ← Support.checked read read.source claim
++          let support ← Support.checked read read.source claim (basis := .spelling)
+           graph ← graph.insert (.supports support)
+-          graph ← graph.insert (.coquoted (.claim claim) read.source)
+-          graph ← graph.insert (.coquoted (.answer database doc.owner) read.source)
+     position := limit+2
+   return graph
+ 
+--- a/Eggshell/SynapticTopology.lean
++++ b/Eggshell/SynapticTopology.lean
+@@ -91,6 +91,16 @@
+ end Recommend
+ namespace Routing
+ open Recommend
++
++/-- A literal match preserves its source without inventing joint dependence.
++Explicit citations and observed coquotation retain their original groups. -/
++def jointGroup : Fact → Option Group
++  | .supports support => if support.basis == .citation then some (.claim support.claim) else none
++  | .coquoted group _ => some group
++  | _ => none
++
++theorem spelling_has_no_joint_group (support : Support) (literal : support.basis = .spelling) :
++    jointGroup (.supports support) = none := by simp [jointGroup,literal]
+ /-- One step in the existing advisory relation. No original output, command
+ grammar, similarity score, or human reference list enters this projection. -/
+ structure Step where
+@@ -101,8 +111,9 @@
+ def project (key : Index.Key) (fact : Fact) : Step :=
+   match key, fact with
+   | .answer .., .supports support =>
+-    ⟨#[.range support.source], #[.group (.claim support.claim),
+-      .consumer support.read.occurrence, .quoted support.source]⟩
++    ⟨#[.range support.source],
++      (jointGroup (.supports support)).toArray.map Index.Key.group ++
++      #[.consumer support.read.occurrence, .quoted support.source]⟩
+   | .consumer _, .consumed edge =>
+     ⟨if edge.rows.isEmpty then #[.output edge.producer] else edge.rows.map Target.range,
+       edge.rows.map Index.Key.quoted |>.push (.consumer edge.producer)⟩
+--- a/Eggshell/SynapticTopologyStore.lean
++++ b/Eggshell/SynapticTopologyStore.lean
+@@ -32,13 +32,13 @@
+ def decode (payload : ByteArray) : IO Arc := do
+   unless payload.size ≤ Index.payloadLimit do throw (IO.userError "routing arc exceeds its bound")
+   let (arc,rest) ← IO.ofExcept (arcCodec.decode payload.toList)
+-  unless rest.isEmpty && encode arc == payload && digest arc.evidence && arc.kind < 6 &&
++  unless rest.isEmpty && encode arc == payload && digest arc.evidence && arc.kind < 7 &&
+       (arc.kind == 0 || arc.kind == 2) == arc.group.isSome do
+     throw (IO.userError "invalid or noncanonical routing arc")
+   return arc
+ 
+ def kind : Fact → Nat
+-  | .supports _ => 0
++  | .supports support => if support.basis == .citation then 0 else 6
+   | .consumed _ => 1
+   | .coquoted .. => 2
+   | .used usage => match usage.kind with
+@@ -50,6 +50,7 @@
+ def kindName : Nat → String
+   | 0 => "support" | 1 => "consumption" | 2 => "coquotation"
+   | 3 => "omitted_then_read" | 4 => "omitted_then_consumed"
++  | 6 => "spelling"
+   | _ => "delivered_then_cited"
+ 
+ structure Node where
+@@ -121,10 +122,7 @@
+     let id ← internNode writer key
+     let targets ← step.targets.mapM (internDestination writer)
+     let next ← step.next.mapM (internNode writer)
+-    let group ← match fact with
+-      | .supports support => pure (some (← internNode writer (.group (.claim support.claim))))
+-      | .coquoted group _ => pure (some (← internNode writer (.group group)))
+-      | _ => pure none
++    let group ← (Routing.jointGroup fact).mapM (fun group => internNode writer (.group group))
+     let arc : Arc := ⟨identity,kind fact,group,targets,next⟩
+     let payload := encode arc
+     unless payload.size ≤ Index.payloadLimit do throw (IO.userError "routing arc exceeds its bound")
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -52,7 +52,7 @@
+   cases kind : offer.fact <;> simp_all [carries,beq_iff_eq]
+ 
+ def Offer.kind (offer : Offer) : String := match offer.fact with
+-  | .supports _ => "support"
++  | .supports support => if support.basis == .citation then "support" else "spelling"
+   | .consumed _ => "consumption"
+   | .coquoted _ _ => "coquotation"
+   | .used usage => usage.kind.label
+@@ -165,7 +165,8 @@
+       match task.key, fact with
+       | .answer .., .supports support =>
+         result := addOffer result (.range support.source) task.priority fact identity
+-        queue := queue.push ⟨.group (.claim support.claim), task.priority⟩
++        for group in Routing.jointGroup fact do
++          queue := queue.push ⟨.group group, task.priority⟩
+         queue := queue.push ⟨.consumer support.read.occurrence, task.priority⟩
+         queue := queue.push ⟨.quoted support.source, task.priority⟩
+       | .consumer _, .consumed edge =>

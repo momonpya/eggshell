@@ -39,19 +39,77 @@ private partial def noLinksInto (path : System.FilePath) (targets : Array System
 
 def main (args : List String) : IO Unit := do
   let [requestedMode,label] := args | throw (IO.userError "checks|product ATTEMPT")
+  let origin := requestedMode.startsWith "origin-"
   let residual := requestedMode.startsWith "residual-"
-  let compact := residual || requestedMode.startsWith "compact-"
-  let mode := if residual then (requestedMode.drop 9).toString
+  let compact := origin || residual || requestedMode.startsWith "compact-"
+  let mode := if origin then (requestedMode.drop 7).toString else if residual then (requestedMode.drop 9).toString
     else if compact then (requestedMode.drop 8).toString else requestedMode
   let base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028"
   let previous : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/verified-winner-20261027"
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let seed : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028"
-  let installation := base / (if residual then "residual-prefix" else if compact then "compact-prefix" else "prefix")
-  let hookPlan := base / (if residual then "residual-hook-plan.json" else if compact then "compact-hook-plan.json" else "hook-plan.json")
-  let driver := base / (if residual then "residual-driver-build/StudyMain" else if compact then "compact-driver-build/StudyMain" else "driver-build/StudyMain")
+  let originalSeed : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028"
+  let seed := if origin then base / "origin-seed" else originalSeed
+  let installation := base / (if origin then "origin-prefix" else if residual then "residual-prefix" else if compact then "compact-prefix" else "prefix")
+  let hookPlan := base / (if origin then "origin-hook-plan.json" else if residual then "residual-hook-plan.json" else if compact then "compact-hook-plan.json" else "hook-plan.json")
+  let driver := base / (if origin then "origin-driver-build/StudyMain" else if residual then "residual-driver-build/StudyMain" else if compact then "compact-driver-build/StudyMain" else "driver-build/StudyMain")
   let executable := installation / "libexec/eggshell"
-  let runner := seed / "controller/StudyMain"
+  let runner := originalSeed / "controller/StudyMain"
+  if origin && mode == "retire-tools" then
+    let records := System.FilePath.mk project / "docs/candidates/citation-origin-repair"
+    let output := records / "retired-tools.json"
+    unless !(← output.pathExists) do throw (IO.userError "preserve earlier tool retirement")
+    for name in #["result.json","topic-1/body.txt","checks.json","prepared.json","canonical.json","usage-query.json"] do
+      unless ← (records / name).pathExists do throw (IO.userError "seal actual trial evidence before retirement")
+    for name in #["checks.guard.json","topic-1/guard.json","trace/guard.json","usage-query.guard.json"] do
+      let report ← IO.ofExcept (Json.parse (← IO.FS.readFile (records / name)))
+      unless report.getObjValD "state" == toJson "finished" && report.getObjValD "ownedPids" == toJson (#[] : Array Nat) do
+        throw (IO.userError "a checked tool or trial is still active")
+    let targets := #[base / "origin-checks-build/StudyMain",base / "origin-prepare-build/StudyMain"]
+    let processes ← call "/bin/ps" #["-axo","command="]
+    for target in targets do
+      unless (← target.symlinkMetadata).type == .file && (processes.splitOn target.toString).length == 1 do
+        throw (IO.userError "a tool is still referenced or is not a regular executable")
+    noLinksInto (base / "checkout") targets
+    noLinksInto (base / "origin-driver-build/lib") targets
+    let current := #[executable,driver,base / "compact-prefix/libexec/eggshell"]
+    let hashes ← call "/usr/bin/shasum" (#["-a","256"] ++ current.map (·.toString))
+    let ended ← call "/usr/bin/shasum" (#["-a","256"] ++ targets.map (·.toString))
+    let mut bytes := 0
+    for target in targets do bytes := bytes + (← target.symlinkMetadata).byteSize.toNat
+    for target in targets do IO.FS.removeFile target
+    unless hashes == (← call "/usr/bin/shasum" (#["-a","256"] ++ current.map (·.toString))) do
+      throw (IO.userError "current executable changed during tool retirement")
+    IO.FS.writeFile output (Json.mkObj [("deletedPaths",toJson (targets.map (·.toString))),
+      ("logicalBytes",toJson bytes),("retiredDigests",toJson ended),("currentDigestsUnchanged",toJson hashes),
+      ("objectsAndInterfacesRetainedForCurrentCandidate",toJson true),
+      ("currentCandidateAndBaselineDatabasesRetained",toJson true),("archiveCreated",toJson false)]).pretty
+    IO.println s!"Removed two ended audit executables ({bytes} logical bytes); current candidate retained"
+    return
+  if origin && mode == "check-run" then
+    saveGuard base ("origin-check-run-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      (base / "origin-checks-build/StudyMain").toString,
+      (originalSeed / "study/seed-1/answer.txt").toString,
+      project ++ "/docs/candidates/seed-storage-integrity/integrity.json",
+      (base / ("origin-checks-" ++ label ++ ".json")).toString] #[base.toString]
+    return
+  if origin && mode == "prepare-run" then
+    saveGuard base ("origin-prepare-run-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT=" ++ (seed / "study/seed-1/data").toString,
+      (base / "origin-prepare-build/StudyMain").toString,originalSeed.toString,seed.toString,
+      (base / ("origin-prepared-" ++ label ++ ".json")).toString] #[base.toString]
+    return
+  if origin && mode == "canonical-run" then
+    saveGuard base ("origin-canonical-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT=" ++ (seed / "study/seed-1/data").toString,
+      (base / "origin-prepare-build/StudyMain").toString,"canonical",(seed / "study/seed-1/work.egg").toString,
+      (base / ("origin-canonical-" ++ label ++ ".json")).toString] #[base.toString]
+    return
+  if origin && mode == "usage-run" then
+    saveGuard base ("origin-usage-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT=" ++ (seed / "study/seed-1/data").toString,
+      (base / "origin-prepare-build/StudyMain").toString,"usage-query",(seed / "study/seed-1/work.egg").toString,
+      (seed / "prompts/topic-1.txt").toString,(base / ("origin-usage-" ++ label ++ ".json")).toString] #[base.toString]
+    return
   if mode == "retire-residual" then
     let records := System.FilePath.mk project / "docs/candidates"
     let output := records / "residual-original-domain/retirement.json"
@@ -123,17 +181,18 @@ def main (args : List String) : IO Unit := do
     saveGuard base ("topic-1-" ++ label) command #[base.toString,seed.toString]
     return
   if mode == "install" then
-    for directory in #[installation / "libexec",base / "account",base / "tmp",installation / "share/eggshell/minilm"] do
+    let account := base / (if origin then "origin-account" else "account")
+    for directory in #[installation / "libexec",account,base / "tmp",installation / "share/eggshell/minilm"] do
       IO.FS.createDirAll directory
-    let product := base / (if residual then "residual-product-build" else if compact then "compact-product-build" else "product-build")
+    let product := base / (if origin then "origin-product-build" else if residual then "residual-product-build" else if compact then "compact-product-build" else "product-build")
     let _ ← call "/bin/cp" #["-c",(product / "StudyMain").toString,executable.toString]
-    for entry in ← (seed / "prefix/share/eggshell/minilm").readDir do
+    for entry in ← (originalSeed / "prefix/share/eggshell/minilm").readDir do
       let target := installation / "share/eggshell/minilm" / entry.fileName
       unless !(← target.pathExists) do throw (IO.userError "candidate dependency already exists")
       let _ ← call "/bin/ln" #["-s",(← IO.FS.realPath entry.path).toString,target.toString]
       pure ()
     saveGuard base ("install-" ++ label) #["/usr/bin/env","-u","CODEX_THREAD_ID","-u","CODEX_TURN_ID",
-      "CODEX_HOME=" ++ (base / "account").toString,"EGGSHELL_PREFIX=" ++ installation.toString,
+      "CODEX_HOME=" ++ account.toString,"EGGSHELL_PREFIX=" ++ installation.toString,
       "EGGSHELL_DATA_ROOT=" ++ (base / "install-data").toString,"TMPDIR=" ++ (base / "tmp").toString,
       "LEAN_NUM_THREADS=1",executable.toString,"install","codex"] #[base.toString]
     return
@@ -170,7 +229,10 @@ def main (args : List String) : IO Unit := do
       ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (3670016 : Nat)),
       ("minFreeKiB",toJson (2097152 : Nat)),("record",toJson (base / ("verification-" ++ label ++ ".guard.json")).toString)]).pretty
     return
-  let baseline := if residual then base / (if mode == "driver" then "residual-product-build" else "compact-product-build")
+  let baseline := if origin then base / (if mode == "driver" then "origin-product-build"
+      else if mode == "product" then "origin-prepare-build"
+      else if mode == "prepare" then "origin-checks-build" else "compact-driver-build")
+    else if residual then base / (if mode == "driver" then "residual-product-build" else "compact-product-build")
     else if compact then base / (if mode == "integrity" || mode == "bundle-bindings" then "compact-driver-build"
       else if mode == "driver" then "compact-product-build" else "product-build")
     else previous / "storage-build"
@@ -192,14 +254,15 @@ def main (args : List String) : IO Unit := do
     for row in ← IO.ofExcept ((checked.getObjValD "modules").getArr?) do
       objects := objects.setObjVal! (← IO.ofExcept (row.getObjValAs? String "object")) (row.getObjValD "module")
     parents := #[parent.toString,(base / "checks-build").toString,baseline.toString]
-  let objectMap := base / (if residual then "residual-objects.json" else if compact then "compact-objects.json" else "objects.json")
+  let objectMap := base / (if origin then "origin-objects.json" else if residual then "residual-objects.json" else if compact then "compact-objects.json" else "objects.json")
   IO.FS.writeFile objectMap objects.compress
   let entry ← match mode with
-    | "checks" => pure "tools.research.SourceProjectionChecks"
+    | "checks" => pure (if origin then "tools.research.CitationOriginChecks" else "tools.research.SourceProjectionChecks")
     | "product" => pure "Main"
     | "driver" => pure "tools.research.SeedDeliveryReplay"
     | "integrity" => pure "tools.research.SeedStorageIntegrity"
     | "bundle-bindings" => pure "tools.research.BundleBindingsAudit"
+    | "prepare" => pure "tools.research.CitationOriginPrepare"
     | _ => throw (IO.userError "known projection build mode required")
   let plan := (built.getObjValD "settings")
     |>.setObjVal! "core" (toJson (base / "checkout").toString)
