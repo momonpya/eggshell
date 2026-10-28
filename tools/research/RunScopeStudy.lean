@@ -30,27 +30,30 @@ private def run (label cmd : String) (args : Array String)
 private def stageHelper (label : String) (args : Array String) : IO Unit :=
   run label lean (#["--run",project ++ "/tools/research/ScopeTokenStages.lean"] ++ args)
 
-def main : IO Unit := do
+def main (args : List String) : IO Unit := do
   let gate ← IO.ofExcept (Json.parse (← IO.FS.readFile (root / "native-gate.guard.json")))
   unless (gate.getObjValAs? Nat "exitCode").toOption == some 0 &&
       (gate.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] do
     throw (IO.userError "successful completed native gate required")
+  let attempt := if args == ["replacement-seed"] then "2" else "1"
+  let acquisition := root / ("study/seed-" ++ attempt)
   let env : Array (String × Option String) := #[
-    ("EGGSHELL_DATA_ROOT",some (root / "study/seed-1/data").toString),
+    ("EGGSHELL_DATA_ROOT",some (acquisition / "data").toString),
     ("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),
     ("MKL_NUM_THREADS",some "1"),("TOKENIZERS_PARALLELISM",some "false"),("HF_HUB_OFFLINE",some "1")]
-  run "seal-seed" controller #["bootstrap","seal-seed",root.toString] env
-  run "seed" controller #["guard",(root / "seed-1.settings.json").toString] env
+  if attempt == "1" then
+    run "seal-seed" controller #["bootstrap","seal-seed",root.toString] env
+  run ("seed-" ++ attempt) controller #["guard",(root / ("seed-" ++ attempt ++ ".settings.json")).toString] env
   let finalize := Json.mkObj [
     ("record",toJson (root / "finalize.guard.json").toString),("cwd",toJson project),
     ("ownedPrefixes",toJson #[root.toString]),("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
-    ("command",toJson #[controller,"seed-finalize",(root / "study/seed-1").toString,(root / "seed-ready").toString])]
+    ("command",toJson #[controller,"seed-finalize",acquisition.toString,(root / "seed-ready").toString])]
   IO.FS.writeFile (root / "finalize.settings.json") finalize.pretty
   run "finalize" controller #["guard",(root / "finalize.settings.json").toString] env
-  run "seed-audit" controller #["seed-audit",(root / "study/seed-1").toString,
+  run "seed-audit" controller #["seed-audit",acquisition.toString,
     (root / "task-definitions.json").toString,(root / "seed-ready/ready.egg").toString,(root / "source-audit.json").toString] env
   run "freeze-seed" controller #["history","freeze",(root / "seed-ready/ready.egg").toString,
-    (root / "study/seed-1/data").toString,(root / "initial-history").toString] env
+    (acquisition / "data").toString,(root / "initial-history").toString] env
   for rep in [0:2] do
     stageHelper s!"fork-r{rep}" #["fork",toString rep]
     for stage in [1:7] do

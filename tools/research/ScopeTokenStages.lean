@@ -51,6 +51,29 @@ private def gate : IO Unit := do
   save (root / "native-gate-current.settings.json") (guarded #[controller,"seed-checks-generic",
     (root / "native-gate-input.json").toString,(root / "native-gate").toString] (root / "native-gate.guard.json"))
 
+private def replacementSeed : IO Unit := do
+  let failure ← read (root / "study/seed-1/failure.json")
+  unless (failure.getObjValAs? String "runError").toOption == some "observed inclusive token limit reached; retain all charged usage" do
+    throw (IO.userError "this replacement is only for the insufficient seed cap")
+  let original ← read (root / "seed-1.plan.json")
+  let mut plan := original.setObjVal! "label" (toJson "new-native-seed-2")
+  plan := plan.setObjVal! "output" (toJson (root / "study/seed-2").toString)
+  plan := plan.setObjVal! "guardRecord" (toJson (root / "seed-2.guard.json").toString)
+  save (root / "seed-2.plan.json") plan
+  save (root / "seed-2.limits.json") (Json.mkObj [("inclusiveTokens",toJson (15000000 : Nat)),("answerMs",toJson (900000 : Nat))])
+  let sealed ← artifact (root / "seed-2.plan.json")
+  let limits ← artifact (root / "seed-2.limits.json")
+  save (root / "seed-2.settings.json") (guarded #[controller,"acquire-bounded",← string sealed "path",← string sealed "sha256",
+    ← string limits "path",← string limits "sha256"] (root / "seed-2.guard.json"))
+  save (root / "active-seed.json") (Json.mkObj [
+    ("acquisition",toJson (root / "study/seed-2").toString),("plan",toJson (root / "seed-2.plan.json").toString),
+    ("failedAttempt",← artifact (root / "study/seed-1/failure.json")),
+    ("failedUsage",← field failure "usage"),("reason",toJson "seed-only token cap increased before memory measurements; no runtime or prompt change")])
+  unless !(← (root / "study/seed-2").pathExists) do throw (IO.userError "second acquisition already started")
+  for extension in #["json","stdout","stderr"] do
+    let path := root / ("driver/seed-2." ++ extension)
+    if ← path.pathExists then IO.FS.rename path (root / ("driver/seed-2.before-plan." ++ extension))
+
 private def fork (rep : Nat) : IO Unit := do
   unless rep < 2 do throw (IO.userError "only the two predeclared repetitions")
   let manifest ← artifact (root / "initial-history/history.json")
@@ -74,7 +97,8 @@ private def stage (rep number : Nat) : IO Unit := do
   IO.FS.createDir directory
   run #["history","freeze",(branch / "work.egg").toString,(branch / "data").toString,(directory / "history").toString]
   let history ← read (directory / "history/history.json")
-  let plan ← read (root / "seed-1.plan.json")
+  let active ← read (root / "active-seed.json")
+  let plan ← read (.mk (← string active "plan"))
   let topic := (number-1)%3+1
   let rows ← IO.ofExcept ((← read (root / "task-definitions.json")).getArr?)
   let some definition := rows.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
@@ -151,9 +175,10 @@ private def collect (rep number : Nat) : IO Unit := do
         ("savingsPercent",toJson saved),("usage",total),("knownOmissions",← field result "knownOmissions"),
         ("initialBodyMatched",← field usage "initialBodyMatched"),("finalUsageKnown",← field usage "finalUsageKnown"),
         ("terminal",← artifact terminal),("audit",audit)])
-  let seed ← read (root / "study/seed-1/result.json")
+  let active ← read (root / "active-seed.json")
+  let seed ← read (System.FilePath.mk (← string active "acquisition") / "result.json")
   save (root / s!"results-r{rep}-stage{number}.json") (Json.mkObj [
-    ("cells",toJson cells),("seedUsage",← field seed "usage"),("freshIsHistorical",toJson true),
+    ("cells",toJson cells),("seedUsage",← field seed "usage"),("failedSeedUsage",← field active "failedUsage"),("freshIsHistorical",toJson true),
     ("causalAdoptionComparison",toJson false),("productionAdoption",toJson false),
     ("failedChargedAttemptsIncluded",toJson true)])
   for cell in cells do
@@ -173,6 +198,7 @@ def main (args : List String) : IO Unit := do
   match args with
   | ["definitions"] => definitions
   | ["gate"] => gate
+  | ["replacement-seed"] => replacementSeed
   | ["fork",rep] => fork (← natural rep)
   | ["stage",rep,number] => stage (← natural rep) (← natural number)
   | ["seal-trial",rep,number] => sealTrial (← natural rep) (← natural number)
