@@ -1,0 +1,175 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5054,6 +5054,19 @@
+ def cachedBindings (owner : String) (rows : Array Synapses.CanonicalSource.StoredRow) : List (Nat × Nat) :=
+   hashDistinct (rows.toList.flatMap fun row => row.origins.toList.filterMap fun origin =>
+     if origin.binding.owner == owner then some (origin.binding.first,origin.binding.limit) else none)
++
++/-- Aliases share their payload; they do not erase the rest of an observation. -/
++def originalResiduals (length : Nat) (known : List DeliveryInterval) : List DeliveryInterval :=
++  if nonempty : 0 < length then (⟨0,length,nonempty⟩ : DeliveryInterval).subtractAll known else []
++
++theorem original_residuals_exact (length position : Nat) (known : List DeliveryInterval) :
++    (∃ part ∈ originalResiduals length known,part.covers position) ↔
++      position < length ∧ ∀ prior ∈ known,¬prior.covers position := by
++  unfold originalResiduals
++  split
++  · simpa [DeliveryInterval.covers] using
++      (DeliveryInterval.subtractAll_covers ⟨0,length,by assumption⟩ known position)
++  · simp_all
+ 
+ def prepareCached (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+@@ -5161,6 +5174,30 @@
+     units := {family := familyIndex,slice,ranges} :: units
+   return (units.reverse,cues)
+ 
++/-- Only the complement of file aliases uses the original-output envelope.
++The complement is complete and bounded; neither a shell decoder nor a gold
++range decides which original characters remain available. -/
++def prepareResiduals (familyIndex : Nat) (family : Family) : List UnitPlan := Id.run do
++  let some source := Matcher.atomText? family.owner.outcome | return []
++  let rawFamily := {family with cached := #[],template := {family.template with shared := none}}
++  let some envelope := rawFamily.contextualOutputs.template.context | return []
++  let owner := relationKey family.owner.relation
++  let known := (CoverageIndex.prepare (cachedBindings owner family.cached)).intervals
++  let original := IndexedCharacters.make source
++  let mut units := []
++  for part in originalResiduals source.length known do
++    if within : part.stop ≤ source.length then
++      let span : ContextSpan source := ⟨part.start,part.stop,part.ordered,within⟩
++      for range in span.ranges do
++        let fragment := originalRecordFragment original range false
++        let ranges := [(range.start,range.stop)]
++        let context := {envelope with fragments := [fragment],cues := ranges}
++        let slice : TransportSlice := {family.template with
++          shared := none,context := some context
++          keys := context.keys,text := context.render,members := [],visibleKeys := []}
++        units := units ++ [{family := familyIndex,slice,ranges}]
++  return units
++
+ /-- Prepare the immutable record/structure index once per owner. Each query
+ window gets its own complete local dependency closure, not a prefix of the
+ other windows of this owner. This creates no control Match. -/
+@@ -5168,7 +5205,7 @@
+   let outputs := prepareOutputs familyIndex family
+   if !family.cached.isEmpty then
+     let records := prepareCached familyIndex family
+-    return (records.1 ++ outputs.1,records.2 ++ outputs.2)
++    return (records.1 ++ prepareResiduals familyIndex family ++ outputs.1,records.2 ++ outputs.2)
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   if family.template.context.isNone then
+     return ([atomicUnit familyIndex source.length family],[])
+@@ -5271,19 +5308,8 @@
+ /-- Complete projections receive one owner-level demand. Disjoint original
+ position cells receive the best producer window rank covering that cell.
+ Context expansion and overlapping windows cannot create duplicate votes. -/
+-def cuePieces (scale : Nat) (families : List Family)
++def positionedCuePieces (scale familyIndex : Nat) (family : Family)
+     (units : List UnitPlan) : List CuePiece :=
+-  families.zipIdx.flatMap fun (family,familyIndex) =>
+-    if !family.cached.isEmpty then cachedCuePieces scale familyIndex family else
+-    -- A complete projection has one owner-level demand, independent of
+-    -- its length and of absent numerical positions. No cue is added to the
+-    -- transported metadata. Context fragments retain positioned demands.
+-    if family.template.context.isNone then
+-      match Matcher.atomText? family.owner.outcome with
+-      | some source => if source.isEmpty then [] else
+-          [{family := familyIndex,first := 0,last := source.length,weight := scale/(61+familyIndex)}]
+-      | none => []
+-    else
+     let ownerCues := rankedCues family
+     let baseCues := rankedCues {family with synapticRanges := []}
+     let endpoints := ((units.filter (·.family == familyIndex)).flatMap (fun unit =>
+@@ -5297,6 +5323,21 @@
+         let graphWeight := (last-first)*(scale/(61+familyIndex)+scale/(61+cue.priority))
+         pure {family := familyIndex,first,last,weight := max baseWeight graphWeight,baseWeight}
+ 
++def cuePieces (scale : Nat) (families : List Family)
++    (units : List UnitPlan) : List CuePiece :=
++  families.zipIdx.flatMap fun (family,familyIndex) =>
++    if !family.cached.isEmpty then
++      let raw := units.filter fun unit => unit.family == familyIndex && unit.slice.shared.isNone
++      cachedCuePieces scale familyIndex family ++
++        (positionedCuePieces scale familyIndex family raw).filter fun piece =>
++          raw.any (fun unit => unit.coversPrepared piece.first piece.last)
++    else if family.template.context.isNone then
++      match Matcher.atomText? family.owner.outcome with
++      | some source => if source.isEmpty then [] else
++          [{family := familyIndex,first := 0,last := source.length,weight := scale/(61+familyIndex)}]
++      | none => []
++    else positionedCuePieces scale familyIndex family units
++
+ /-- Multiple original witnesses of one source row share one relevance cell.
+ The strongest existing producer weight survives; duplicating an observation
+ does not manufacture another vote. -/
+@@ -5357,14 +5398,24 @@
+   simp only [basePieceAccept,Bool.and_eq_true,beq_iff_eq] at accepted
+   simp only [cueFamilyKey,accepted.1.2]
+ 
+-def problem (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
+-    (fixed ceiling : Nat × Nat) : Option SharedCoverage.Problem := do
+-  let frames : List (Nat × Nat) := families.map fun family => match family.template.context with
++/-- Raw and shared payloads are different renderers. Only a raw unit pays
++its owner's original envelope; shared units pay their file frame instead. -/
++def familyFrameCosts (families : List Family) (units : List UnitPlan) : Array (Nat × Nat) := Id.run do
++  let frame := fun context : Option ContextDelivery => match context with
+     | none => (0,0)
+     | some context =>
+       let text := context.leading ++ context.sourceNotice ++ context.trailing
+       (text.length,text.utf8ByteSize)
+-  let mut costs := frames.toArray
++  let mut costs := (families.map fun family => frame family.template.context).toArray
++  for unit in units do
++    if unit.slice.shared.isSome then continue
++    let size := frame unit.slice.context
++    costs := costs.modify unit.family fun previous => (max previous.1 size.1,max previous.2 size.2)
++  return costs
++
++def problem (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
++    (fixed ceiling : Nat × Nat) : Option SharedCoverage.Problem := do
++  let mut costs := familyFrameCosts families units
+   let mut payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
+   let allRows ← (Synapses.CanonicalSource.Delivery.merge
+     (families.toArray.flatMap (·.cached))).toOption
+@@ -5383,7 +5434,7 @@
+   let mut closures : List (List Nat) := []
+   for unit in units do
+     if let some shared := unit.slice.shared then
+-      let mut closure := [unit.family]
++      let mut closure := []
+       for row in shared.rows do
+         let file ← fileIds[row.key.file]?
+         let payload ← sourceIds[row.key]?
+@@ -5427,7 +5478,7 @@
+   let mut costs := state.1
+   let mut payloads := state.2
+   if let some shared := unit.slice.shared then
+-    let mut closure := [unit.family]
++    let mut closure := []
+     for row in shared.rows do
+       let file ← fileIds[row.key.file]?
+       let payload ← sourceIds[row.key]?
+@@ -5457,7 +5508,7 @@
+   let mut closures := initialRows
+   for unit in units do
+     if let some shared := unit.slice.shared then
+-      let mut closure := [unit.family]
++      let mut closure := []
+       for row in shared.rows do
+         let file ← fileIds[row.key.file]?
+         let payload ← sourceIds[row.key]?
+@@ -5499,12 +5550,7 @@
+ 
+ def problemPrepared (families : List Family) (units : List UnitPlan) (pieces : List CuePiece)
+     (fixed ceiling : Nat × Nat) : Option SharedCoverage.Problem := do
+-  let frames : List (Nat × Nat) := families.map fun family => match family.template.context with
+-    | none => (0,0)
+-    | some context =>
+-      let text := context.leading ++ context.sourceNotice ++ context.trailing
+-      (text.length,text.utf8ByteSize)
+-  let mut costs := frames.toArray
++  let mut costs := familyFrameCosts families units
+   let payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
+   let allRows ← (Synapses.CanonicalSource.Delivery.merge
+     (families.toArray.flatMap (·.cached))).toOption
