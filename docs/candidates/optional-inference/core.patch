@@ -1,0 +1,23 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -19,7 +19,7 @@
+ public import tools.SharedCoverageInput
+ public import tools.VerifiedWinnerCoverage
+ public import Eggshell.CanonicalSourceRecords
+-public import tools.research.ReferenceRequirements
++public import tools.research.OriginalPayloadBasis
+ public import tools.research.ScopeAlternatives
+ public import tools.ClosedCoverage
+ public import tools.FocusWindows
+@@ -5831,9 +5831,8 @@
+       (bundlePlan? keys unitArray p candidates projected).bind recipe)
+     let compiled := ClosedCoverage.compile p recipes
+     let originalRows ← (Synapses.CanonicalSource.Delivery.merge (families.toArray.flatMap (·.cached))).toOption
+-    let requirements ← Eggshell.Research.ReferenceRequirements.prepare families.length originalRows p
+-    let dependencies : SharedCoverage.Problem := {compiled with offers := requirements.offers compiled.offers}
+-    let scopes ← Eggshell.Research.ScopeAlternatives.prepare dependencies families.length requirements.sourceRows requirements.dependencies
++    let requirements ← Eggshell.Research.OriginalPayloadBasis.prepare families.length originalRows p
++    let scopes ← Eggshell.Research.ScopeAlternatives.prepare compiled families.length requirements.sourceRows requirements.dependencies
+     let conditioned := scopes.problem
+     let chosen ← SharedCoverage.choose? conditioned
+     let selectedRecipes := chosen.selected.filterMap fun index =>

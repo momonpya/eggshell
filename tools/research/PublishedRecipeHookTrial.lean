@@ -30,6 +30,8 @@ def main (args : List String) : IO Unit := do
   let study : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028"
   let root := study / "shared-snapshot"
   let name := args.headD "trial"
+  let runtime := (args[1]?).getD ((root / "product-build/StudyMain").toString)
+  let prepared := System.FilePath.mk ((args[2]?).getD ((study / "study/seed-2/work.egg").toString))
   unless name.toList.all (fun c => c.isAlphanum || c == '-') do throw (IO.userError "safe new trial name required")
   let target := root / name
   unless !(← target.pathExists) do throw (IO.userError "preserve previous trial")
@@ -38,12 +40,12 @@ def main (args : List String) : IO Unit := do
   let database := target / "work.egg"
   let original ← StudyRuntime.files database
   let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",
-    (study / "study/seed-2/work.egg/derived").toString,(database / "derived").toString]}
+    (prepared / "derived").toString,(database / "derived").toString]}
   unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
   let installation := root / "prefix"
   let binary := installation / "libexec/eggshell"
   IO.FS.createDirAll binary.parent.get!
-  IO.FS.writeBinFile binary (← IO.FS.readBinFile (root / "product-build/StudyMain"))
+  IO.FS.writeBinFile binary (← IO.FS.readBinFile (.mk runtime))
   IO.setAccessRights binary {
     user := {read := true,write := true,execution := true}
     group := {read := true,execution := true}
