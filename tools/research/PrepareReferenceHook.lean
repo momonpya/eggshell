@@ -37,6 +37,34 @@ def main (args : List String) : IO Unit := do
   let runtime := installation / "libexec/eggshell"
   let controller : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/controller/StudyMain"
   let data := seed / "study/seed-1/data"
+  if mode == "retire-legacy-executables" then
+    let report := base / ("retired-legacy-executables-" ++ label ++ ".json")
+    unless !(← report.pathExists) do throw (IO.userError "preserve prior legacy cleanup")
+    let legacy : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/verified-winner-20261027"
+    let targets := (#["close-build","controller-build","product-build","storage-build","storage-controller-build",
+      "storage-fixture-build","study-build","transport-build","usage-build"].map
+        (fun name => legacy / System.FilePath.mk name / "StudyMain")) ++
+      #[base / "reference-hook-scope-build/StudyMain",base / "scope-hook-product-build/StudyMain",
+        "/Users/ovm/.codex/experiments/eggshell/feedback-pilot-20261028/controller/StudyMain"]
+    let retained := #[runtime,base / "origin-prefix/libexec/eggshell",base / "reference-hook-driver-build/StudyMain",controller,
+      base / "scope-hook-prefix/libexec/eggshell",
+      "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/prefix/libexec/eggshell"]
+    let hashes ← call "/usr/bin/shasum" (#["-a","256"] ++ retained.map (·.toString))
+    let processes ← call "/bin/ps" #["-axo","command="]
+    let mut removed := (0,0)
+    for path in targets do
+      unless (processes.splitOn path.toString).length == 1 do throw (IO.userError "a legacy executable is active")
+      if ← path.pathExists then
+        let count ← removeEnded path
+        removed := (removed.1+count.1,removed.2+count.2)
+    unless hashes == (← call "/usr/bin/shasum" (#["-a","256"] ++ retained.map (·.toString))) do
+      throw (IO.userError "a required runtime changed")
+    IO.FS.writeFile report (Json.mkObj [("deletedPaths",toJson (targets.map (·.toString))),
+      ("deletedFiles",toJson removed.1),("deletedLogicalBytes",toJson removed.2),
+      ("retainedHashes",toJson hashes),("interfacesAndObjectsRetained",toJson true),
+      ("databaseRemoved",toJson false),("archiveCreated",toJson false)]).pretty
+    IO.println s!"Removed {removed.1} ended legacy executables, {removed.2} logical bytes"
+    return
   if mode == "retire-executables" then
     let report := base / ("reference-unused-executables-" ++ label ++ ".json")
     unless !(← report.pathExists) do throw (IO.userError "preserve cleanup record")
@@ -95,12 +123,14 @@ def main (args : List String) : IO Unit := do
       ("archiveCreated",toJson false),("productionAdoption",toJson false)]).pretty
     IO.println "Preserved model-free scope result and removed ended replay executable"
     return
-  if mode == "scope-run" then
-    guard ("scope-run-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+  if mode == "scope-run" || mode == "scope-parity" then
+    let command := #["/usr/bin/env","LEAN_NUM_THREADS=1",
       "EGGSHELL_DATA_ROOT=" ++ data.toString, (base / "reference-hook-scope-build/StudyMain").toString,
       (seed / "study/seed-1/work.egg").toString, (project / "docs/candidates/reference-hook/trace").toString,
       (project / "docs/candidates/reference-hook/three-topics").toString,
-      (base / ("reference-scope-" ++ label ++ ".json")).toString]
+      (base / ("reference-scope-" ++ label ++ ".json")).toString] ++
+      (if mode == "scope-parity" then #[(project / "docs/candidates/scope-alternatives/selector.json").toString] else #[])
+    guard ("scope-run-" ++ label) command
     return
   if mode == "trace-seal" then
     let records := project / "docs/candidates/reference-hook/trace"

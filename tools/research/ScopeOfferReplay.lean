@@ -1,4 +1,4 @@
-import tools.research.ReferenceRequirements
+import tools.research.ScopeAlternatives
 import Eggshell.CanonicalSourceCache
 import tools.SharedCoverageInput
 import tools.VerifiedWinnerCoverage
@@ -20,77 +20,23 @@ private def covers (ranges : List (Nat × Nat)) (first last : Nat) : Bool :=
   last ≤ ((ranges.mergeSort fun a b => a.1 ≤ b.1).foldl
     (fun frontier (a,b) => if a ≤ frontier then max frontier b else frontier) first)
 
-private def shapes (rows : Array StoredRow) : Array (Block rows.size) := Id.run do
-  let order := (List.finRange rows.size).mergeSort fun a b =>
-    if rows[a].key.file == rows[b].key.file then rows[a].key.line ≤ rows[b].key.line
-    else (toJson rows[a].key.file).compress ≤ (toJson rows[b].key.file).compress
-  let mut run : Array (Char × Fin rows.size) := #[]
-  let mut previous : Option (Fin rows.size) := none
-  let mut tokens := #[]
-  let mut runId := 0
-  for index in order do
-    let row := rows[index]
-    if !(previous.any fun prior => rows[prior].key.file == row.key.file && rows[prior].key.line+1 == row.key.line) then
-      tokens := tokens ++ lex run runId
-      run := #[]
-      runId := runId+1
-    run := run ++ ((row.code ++ "\n").toList.toArray.map (fun c => (c,index)))
-    previous := some index
-  blocks (tokens ++ lex run runId)
-
 /-- No query or expected ranges enter construction. Existing cue credit is
 available only after paying every atom of its existing conditioned offer. -/
 private def alternatives (p : SharedCoverage.Problem) (familyCount : Nat)
     (prepared : Prepared p) : IO (Array (SharedCoverage.Offer p.costs.size p.weights.size) × Json) := do
-  let rows := prepared.sourceRows.map Prod.fst
-  let sourceAtoms := Std.HashSet.ofArray (prepared.sourceRows.map Prod.snd)
-  let mut frames : Std.HashMap File (Fin p.costs.size) := {}
-  for (row,atom) in prepared.sourceRows do
-    if frames.contains row.key.file then continue
-    let index := atom.val-1
-    let frame := Packet.fileFrame row.key.file (rows.filter (·.key.file == row.key.file))
-    require (0 < atom.val && p.costs[index]? == some
-      ((frame.leading ++ frame.trailing).length,(frame.leading ++ frame.trailing).utf8ByteSize))
-      "scope frame differs from the actual payload basis"
-    if h : index < p.costs.size then frames := frames.insert row.key.file ⟨index,h⟩
-    else throw (IO.userError "scope frame outside the payload basis")
-  let freeFrames := (List.finRange p.costs.size).filter fun atom =>
-    atom.val < familyCount && p.costs[atom] == (0,0)
-  let mut byAnchor : Std.HashMap (Fin p.costs.size) (List (Fin p.offers.size)) := {}
-  for index in List.finRange p.offers.size do
-    if let some anchor := p.offers[index].closure.find? sourceAtoms.contains then
-      byAnchor := byAnchor.insert anchor (index :: byAnchor[anchor]?.getD [])
-  let candidates := shapes rows
-  let mut offers := #[]
-  let mut reports := #[]
-  let mut inspected := 0
-  for shape in candidates do
-    let first := rows[shape.first].key
-    let last := rows[shape.last].key
-    let body := prepared.sourceRows.filter fun (row,_) => row.key.file == first.file &&
-      first.line ≤ row.key.line && row.key.line ≤ last.line
-    require (body.size == last.line+1-first.line) "a scope crosses a source gap"
-    let some frame := frames[first.file]? | throw (IO.userError "scope has no source frame")
-    let atoms := frame :: body.toList.map Prod.snd
-    let closure := hashDistinct (freeFrames ++ atoms ++ atoms.flatMap
-      (fun atom => prepared.dependencies[atom]?.getD []))
-    let paid := Std.HashSet.ofList closure
-    let possible := hashDistinct (closure.flatMap (fun atom => byAnchor[atom]?.getD []))
-    inspected := inspected+possible.length
-    let included := possible.filter fun index => p.offers[index].closure.all paid.contains
-    let covers := hashDistinct (included.flatMap fun index => p.offers[index].covers)
-    if covers.isEmpty then continue
-    let charge := closure.foldl (fun total atom =>
-      (total.1 + p.costs[atom].1,total.2 + p.costs[atom].2)) p.fixed
-    if p.limit.1 < charge.1 || p.limit.2 < charge.2 then continue
-    require (included.all fun index => p.offers[index].closure.all paid.contains)
-      "a scope obtained credit without the existing payload requirements"
-    offers := offers.push {closure,covers}
-    reports := reports.push (Json.mkObj [("first",toJson first),("last",toJson last),
-      ("rows",toJson body.size),("atoms",toJson closure.length),("standaloneCost",toJson charge),
-      ("containedOffers",toJson (included.map (·.val))),("cues",toJson covers.length)])
-  return (offers,Json.mkObj [("recognizedScopes",toJson candidates.size),
-    ("addedScopes",toJson offers.size),("indexedContainmentChecks",toJson inspected),
+  let some plan := Eggshell.Research.ScopeAlternatives.prepare p familyCount prepared.sourceRows prepared.dependencies |
+    throw (IO.userError "scope module rejected the actual source basis")
+  let reports ← plan.scopes.mapM fun scope => do
+    let paid := Std.HashSet.ofList scope.offer.closure
+    require (scope.contained.all fun index => p.offers[index].closure.all paid.contains)
+      "an extracted scope obtained credit without the existing payload requirements"
+    let charge := scope.offer.closure.foldl (fun total atom =>
+      (total.1+p.costs[atom].1,total.2+p.costs[atom].2)) p.fixed
+    return Json.mkObj [("first",toJson scope.first),("last",toJson scope.last),
+      ("rows",toJson scope.rows),("atoms",toJson scope.offer.closure.length),("standaloneCost",toJson charge),
+      ("containedOffers",toJson (scope.contained.map (·.val))),("cues",toJson scope.offer.covers.length)]
+  return (plan.scopes.map (·.offer),Json.mkObj [("recognizedScopes",toJson plan.recognized),
+    ("addedScopes",toJson plan.scopes.size),("indexedContainmentChecks",toJson plan.containmentChecks),
     ("creditRequiresFullExistingClosure",toJson true),("scopes",toJson reports)])
 
 private def covered (rows : Array StoredRow) (alternatives : Array Range) : Bool :=
@@ -100,8 +46,10 @@ private def covered (rows : Array StoredRow) (alternatives : Array Range) : Bool
       row.key.file == file && row.key.line == range.first+offset
 
 def main (args : List String) : IO Unit := do
-  let [database,tracePath,ordinaryPath,output] := args |
-    throw (IO.userError "DATABASE ACTUAL-TRACE ORDINARY-REPORTS NEW-OUTPUT")
+  let (database,tracePath,ordinaryPath,output,prior) ← match args with
+    | [database,tracePath,ordinaryPath,output] => pure (database,tracePath,ordinaryPath,output,none)
+    | [database,tracePath,ordinaryPath,output,prior] => pure (database,tracePath,ordinaryPath,output,some prior)
+    | _ => throw (IO.userError "DATABASE ACTUAL-TRACE ORDINARY-REPORTS NEW-OUTPUT [PRIOR-REPLAY]")
   require (!(← System.FilePath.pathExists output)) "preserve earlier scope replay"
   let source ← DB.PageMap.pin (.mk database)
   let some ready ← Cache.open? source .database | throw (IO.userError "canonical view is not prepared")
@@ -170,6 +118,13 @@ def main (args : List String) : IO Unit := do
       ("construction",construction),("requirements",toJson requirements),
       ("candidateSourceRows",toJson (selectedRows.map (·.key)))])
     IO.println s!"Completed model-free scope replay for topic {topic}"
+  if let some prior := prior then
+    let previous : Array Json ← field (← read (.mk prior)) "topics"
+    require (previous.size == topics.size) "parity topic count changed"
+    for (before,after) in previous.zip topics do
+      for key in #["candidateCost","candidateSourceRows","requirements"] do
+        require (before.getObjValD key == after.getObjValD key) "pure module changed the prior scope replay"
   IO.FS.writeFile output (Json.mkObj [("source",toJson source.head),("canonical",toJson ready.metadata),
     ("topics",toJson topics),("actualDeliveryAsserted",toJson false),("productionAdoption",toJson false),
+    ("matchesPriorReplay",toJson prior.isSome),
     ("answeringModelCalls",toJson (0 : Nat)),("warmCalls",toJson (0 : Nat))]).pretty

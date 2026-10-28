@@ -37,3 +37,35 @@ scopeが既存offerのcueを受け取れるのは、そのofferに原文行が�
 これは原文の選択の結果であり、実フックの描画、初回/履歴ありの両周、token削減、品質、95%の一般化、数秒、80人の合格ではない。次は同じ構成を純粋Lean moduleへ切り出し、実原文の集合と費用がこの再生に一致するかを確認してから、隔離フックへ接続する。元のf69e3e06と9f5755d5は保持する。凍結ラベルを候補の構成へ渡さず、語/重み/範囲の追加調整もしない。
 
 [再生と選択原文](candidates/scope-alternatives/selector.json)、[guardと最初の診断失敗](candidates/scope-alternatives/guards/)、[旧重複実行体約675 MBの削除](candidates/scope-alternatives/old-executables-cleanup.json)、[終了した再生実行体の削除](candidates/scope-alternatives/completed.json)を保存した。DBや圧縮archiveは追加していない。候補は未採用。
+
+## 同じ構成の実フックへの接続条件
+
+純粋moduleは元offer・cost・weight・fixed・limitを保持する。切出し前後の全3題材で選択原文と費用が完全一致した場合だけ、新しい隔離sourceと準備済みDBのコピーで実フックへ接続する。正本の元DBやf69のviewを上書きしない。
+
+結合済みの参照条件の候補へscopeを追加し、元のrecipeとして展開できる選択だけを従来の展開器へ渡す。scopeで選ばれた原文行は、同じcanonical materialize経路へ一緒に渡す。新しい描画様式や本文の要約は作らない。最終描画の実文字/byte上限とmandatory controlの保持は既存の証明/実検査を維持する。
+
+新runtimeを固定して、モデルなしで題材1から1→2→3の新sessionへ初回本文を配送する。原文の存在と凍結5/6/5項目は保持し、描画bytes・出典・時間・RSS・source facts/page prefixの不変を監査する。必要なcanonical viewだけoff-hookで準備し、数値warm/再埋め込み/新seed/回答モデルは追加しない。失敗すればその結果を残し、未検証のまま製品へ取り込まない。
+
+## 純粋moduleの一致と初回の実本文
+
+`ScopeAlternatives`へ切り出したnative再生は、全3題材で切出し前の選択原文、費用、各凍結項目の選択結果が完全一致した。元offer、cost、weight、fixed、limitの保持はLeanで証明した。scopeは原文の包含の選択肢であり、e-classのUnionやcompletedは生成しない。構文候補の意味上の必要性は証明していない。
+
+その同じ構成を、別source/DBコピーの隔離実行体`b86fb5240f0a381c05a842b3bb81284ddc9cc30b5baf787b0a633b3efc220207`へ接続した。元のf69e3e06と9f5755d5の実行体/DBは保持している。新runtime固定、各題材は新sessionである。
+
+| 題材 | DBにある必要原文の実配送 | UserPromptSubmit | 本文bytes | 本文SHA-256 |
+| --- | --- | --- | --- | --- |
+| 1 | **5/5** | 14,241 ms | 116,772 | `6597630329cfc6886be40d25f1b493d3c26a6f10fa3dd38b58cc40f41ba59145` |
+| 2 | **6/6** | 14,114 ms | 116,432 | `1c38c50babe84a3653190cdb20d9c8baad8c39a8cf203696d1e40df115603880` |
+| 3 | **5/5** | 14,388 ms | 116,180 | `7ea3c37502ba3bf1ec41a65b9c3cd42b1d50bca01945bcefdefe3d95bb340486` |
+
+原文と出典を実bytesで監査し、16/16を初回本文で確認した。DB不在の3項目は別記して分母外とし、配送済みとは扱わない。全3題材でsource factsと出版済みpage prefixが一致、回答モデル/warm/再埋め込みは追加0。canonicalの準備は118 ms、changedOwners/hydrated 0、原文4,243行とpayload hashは基準と同じで、必要な全索引のreadyを確認した。
+
+再生controller全体72,684 msには起動/終了と原文の独立監査も含み、単体フックの時間ではない。実フックのguardは終了0・残存PID 0、RSS標本最大1,808,032 KiB。build/prepare/installを含む一連の最大標本は2,737,648 KiBで、4 GiB未満。最初のinstallはディスク空き2 GiBのguardで停止した。旧重複実行体12個・1,288,401,248 logical bytesを削除し、同じ実行体のinstallだけ再開して完了した。停止をフック成功へ加算していない。
+
+全3題材の`search.json`は`semantic=completed`、`warmRequests=0`で、字句fallbackだけの成功ではない。RPCは13,481/13,320/13,627 ms、client側managerは2/1/1 msだった。題材1の数値処理はdiscovery 651 msとfocus 312 msで、ソースの再埋め込みは0。残る遅延の多くをエンコーダの初期化と決めつけず、service内の候補構成・選択・描画の内訳を次に分ける。offlineの選択4秒台を実フックの正確な段階時間として差し引かない。
+
+元の短いofferを全て保持し、全payload条件を包含する場合だけ既存のcueを共有したことで、追加weightなしに欠けた処理の連携が戻った。この固定snapshotでの一系列の結果であり、保留質問・コード以外・2周目・80人・数年の実証ではない。14秒なので数秒の目標も未達で、総token/品質の正式6段階は0/6、候補は未採用のまま。
+
+次は実受領の段階別時間から残る約14秒の内訳を取り、元の選択と実本文を保つ高速化を切り分ける。最終のモデル比較は、同一snapshot/モデル/effort/harnessと初回/履歴あり×題材1/2/3の事前同数複数反復で行う。cached inputと失敗試行を含む総入力+出力token、品質、deadlineの改善を確認してから採用する。正式な新seed以降は同じruntimeへ固定し、今回のモデルなし確認を正式6段階へ加算しない。
+
+[実本文・原文監査・受領・runtime条件](candidates/scope-hook/result.json)、[隔離Handoffの差分](candidates/scope-hook/candidate.patch)、[純粋moduleの一致](candidates/scope-hook/pure-replay.json)を保存した。終了した3session cacheとprepare実行体19ファイル・108,271,552 logical bytesは削除し、必要な現在の候補DB/runtimeだけを保持した。[整理とSHA不変](candidates/scope-hook/completed.json)。圧縮archiveは作っていない。

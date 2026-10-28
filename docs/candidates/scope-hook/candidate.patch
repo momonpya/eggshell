@@ -1,0 +1,26 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/reference-hook-checkout/Eggshell/Handoff.lean b/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/scope-hook-checkout/Eggshell/Handoff.lean
+index cca6f78..0f11456 100644
+--- a/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/reference-hook-checkout/Eggshell/Handoff.lean
++++ b/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/scope-hook-checkout/Eggshell/Handoff.lean
+@@ -20,6 +20,7 @@ public import tools.SharedCoverageInput
+ public import tools.VerifiedWinnerCoverage
+ public import Eggshell.CanonicalSourceRecords
+ public import tools.research.ReferenceRequirements
++public import tools.research.ScopeAlternatives
+ public import tools.ClosedCoverage
+ public import tools.FocusWindows
+ public import tools.SourceWindow
+@@ -5828,9 +5829,11 @@ def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+     let compiled := ClosedCoverage.compile p recipes
+     let originalRows ← (Synapses.CanonicalSource.Delivery.merge (families.toArray.flatMap (·.cached))).toOption
+     let requirements ← Eggshell.Research.ReferenceRequirements.prepare families.length originalRows p
+-    let conditioned : SharedCoverage.Problem := {compiled with offers := requirements.offers compiled.offers}
++    let dependencies : SharedCoverage.Problem := {compiled with offers := requirements.offers compiled.offers}
++    let scopes ← Eggshell.Research.ScopeAlternatives.prepare dependencies families.length requirements.sourceRows requirements.dependencies
++    let conditioned := scopes.problem
+     let chosen ← SharedCoverage.choose? conditioned
+-    let selectedRecipes ← chosen.selected.mapM fun index =>
++    let selectedRecipes := chosen.selected.filterMap fun index =>
+       if h : index.val < compiled.offers.size then some (⟨index.val,h⟩ : Fin compiled.offers.size) else none
+     let expanded := (ClosedCoverage.expand p recipes selectedRecipes).map (·.val) |>.eraseDups
+     let requiredRows := requirements.selectedRows ((SharedCoverage.nodes conditioned chosen.selected).map (·.val))
