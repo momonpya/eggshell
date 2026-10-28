@@ -1,0 +1,84 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -4906,7 +4906,8 @@
+   original : Option (Array OriginalStructure.Span) := none
+ 
+ def Family.outputCues (family : Family) : List (Nat × Nat × Nat) :=
+-  family.outputRanges.map fun range => (range.priority,range.first,range.limit)
++  family.outputRanges.filterMap fun range =>
++    range.priority.map fun priority => (priority,range.first,range.limit)
+ 
+ /-- Whole advisory projections also need an original envelope before their
+ output fields can compete. Completed members and shared source packets keep
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -79,14 +79,36 @@
+     | .original original => original == identity
+     | .file file => document.files.contains file
+ 
++/-- A spelling witness locates candidate data. It does not assert that the
++answer cited that data, and therefore carries no inherited answer rank. -/
++def rankingPriority (kind priority : Nat) : Option Nat :=
++  if kind == 6 then none else some priority
++
++theorem spelling_has_no_answer_rank (priority : Nat) :
++    rankingPriority 6 priority = none := by simp [rankingPriority]
++
++theorem spelling_support_has_no_answer_rank (support : Support)
++    (spelling : support.basis = .spelling) (priority : Nat) :
++    rankingPriority (Routing.Store.kind (.supports support)) priority = none := by
++  simp [rankingPriority,Routing.Store.kind,spelling]
++
++theorem citation_retains_answer_rank (support : Support)
++    (citation : support.basis = .citation) (priority : Nat) :
++    rankingPriority (Routing.Store.kind (.supports support)) priority = some priority := by
++  simp [rankingPriority,Routing.Store.kind,citation]
++
++theorem other_reason_retains_rank (kind priority : Nat) (other : kind ≠ 6) :
++    rankingPriority kind priority = some priority := by simp [rankingPriority,other]
++
+ def Plan.ranges (plan : Plan) : List (Value × List (Nat × Nat × Nat)) :=
+   plan.owners.toList.map fun owner =>
+-    (owner.owner.relation, (owner.located.toList.filterMap fun located =>
+-      if located.source.file?.isNone then none else some
+-      (located.offer.priority, located.row.binding.first, located.row.binding.limit)).eraseDups)
++    (owner.owner.relation, (owner.located.toList.filterMap fun located => do
++      if located.source.file?.isNone then none else do
++        let priority ← rankingPriority located.offer.kind located.offer.priority
++        some (priority, located.row.binding.first, located.row.binding.limit)).eraseDups)
+ 
+ structure OutputRange where
+-  priority : Nat
++  priority : Option Nat
+   first : Nat
+   limit : Nat
+   path : Option (List JsonScalars.Segment)
+@@ -98,7 +120,7 @@
+   return owner.located.filterMap fun located => do
+     let .original _ := located.source.subject | none
+     some (located.source,{
+-      priority := located.offer.priority
++      priority := rankingPriority located.offer.kind located.offer.priority
+       first := located.row.binding.first
+       limit := located.row.binding.limit
+       path := (json.bind (·.cover? located.row.binding.first located.row.binding.limit)).map (·.path)})
+@@ -107,14 +129,17 @@
+   let mut originals : Std.HashMap Range (Value × OutputRange) := {}
+   for owner in plan.owners do
+     for (source,range) in owner.originalRanges do
+-      if (originals[source]?).all (fun prior => range.priority < prior.2.priority) then
++      if (originals[source]?).all (fun prior => match range.priority,prior.2.priority with
++          | some next,some previous => next < previous
++          | some _,none => true
++          | _,_ => false) then
+         originals := originals.insert source (owner.owner.relation,range)
+   return plan.owners.toList.map fun owner =>
+     let shared := originals.toArray.filterMap fun (_,origin,range) =>
+       if origin == owner.owner.relation then some range else none
+     let shared := shared.qsort fun a b => if a.first == b.first then a.limit < b.limit else a.first < b.first
+     (owner.owner.relation, ((owner.outputs.toList.map fun located =>
+-      ({priority := located.offer.priority,first := located.fragment.binding.first
++      ({priority := some located.offer.priority,first := located.fragment.binding.first
+         limit := located.fragment.binding.limit,path := located.fragment.address.map (·.path)} : OutputRange)) ++
+       shared.toList).eraseDups)
+ 

@@ -7,6 +7,9 @@ private def call (command : String) (args : Array String) : IO String := do
   unless result.exitCode == 0 do throw (IO.userError result.stderr)
   return result.stdout
 
+private def copyFile (source destination : System.FilePath) : IO Unit := do
+  IO.FS.writeBinFile destination (← IO.FS.readBinFile source)
+
 private def saveGuard (base : System.FilePath) (label : String) (command : Array String)
     (owned : Array String) : IO Unit := do
   let path := base / (label ++ ".settings.json")
@@ -39,21 +42,125 @@ private partial def noLinksInto (path : System.FilePath) (targets : Array System
 
 def main (args : List String) : IO Unit := do
   let [requestedMode,label] := args | throw (IO.userError "checks|product ATTEMPT")
-  let origin := requestedMode.startsWith "origin-"
+  let spelling := requestedMode.startsWith "spelling-"
+  let origin := spelling || requestedMode.startsWith "origin-"
   let residual := requestedMode.startsWith "residual-"
   let compact := origin || residual || requestedMode.startsWith "compact-"
-  let mode := if origin then (requestedMode.drop 7).toString else if residual then (requestedMode.drop 9).toString
+  let mode := if spelling then (requestedMode.drop 9).toString else if origin then (requestedMode.drop 7).toString else if residual then (requestedMode.drop 9).toString
     else if compact then (requestedMode.drop 8).toString else requestedMode
   let base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028"
   let previous : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/verified-winner-20261027"
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let originalSeed : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028"
   let seed := if origin then base / "origin-seed" else originalSeed
-  let installation := base / (if origin then "origin-prefix" else if residual then "residual-prefix" else if compact then "compact-prefix" else "prefix")
-  let hookPlan := base / (if origin then "origin-hook-plan.json" else if residual then "residual-hook-plan.json" else if compact then "compact-hook-plan.json" else "hook-plan.json")
-  let driver := base / (if origin then "origin-driver-build/StudyMain" else if residual then "residual-driver-build/StudyMain" else if compact then "compact-driver-build/StudyMain" else "driver-build/StudyMain")
+  let installation := base / (if spelling then "spelling-prefix" else if origin then "origin-prefix" else if residual then "residual-prefix" else if compact then "compact-prefix" else "prefix")
+  let hookPlan := base / (if spelling then "spelling-hook-plan.json" else if origin then "origin-hook-plan.json" else if residual then "residual-hook-plan.json" else if compact then "compact-hook-plan.json" else "hook-plan.json")
+  let driver := base / (if spelling then "spelling-driver-build/StudyMain" else if origin then "origin-driver-build/StudyMain" else if residual then "residual-driver-build/StudyMain" else if compact then "compact-driver-build/StudyMain" else "driver-build/StudyMain")
   let executable := installation / "libexec/eggshell"
   let runner := originalSeed / "controller/StudyMain"
+  if spelling && mode == "retire" then
+    let records := System.FilePath.mk project / "docs/candidates/spelling-rank-origin"
+    unless !(← records.pathExists) do throw (IO.userError "preserve earlier retirement")
+    let receipt := "070f3f03e68ace6d089a201247da8c4875d600a3f6c9a5a9c530f14fc6ac631c"
+    let trial := base / "topic-1-rank-origin-trace"
+    let sources := seed / "study/seed-1/data/receipts" / receipt
+    let session := "source-replay-1281087465d1b7fa-6ced12c6cc51-topic-1"
+    let result ← IO.ofExcept (Json.parse (← IO.FS.readFile (trial / "topic-1/result.json")))
+    unless (result.getObjValD "requiredDelivery").getObjValD "delivered" == toJson (4 : Nat) do
+      throw (IO.userError "retire only the measured rejected result")
+    let guards := #["spelling-checks-trial","spelling-checks-checked","spelling-check-run-checked",
+      "spelling-product-checked","spelling-driver-checked","install-role","topic-1-rank-origin-trace",
+      "spelling-audit-" ++ receipt]
+    for name in guards do
+      let guard ← IO.ofExcept (Json.parse (← IO.FS.readFile (base / (name ++ ".guard.json"))))
+      unless guard.getObjValD "state" == toJson "finished" &&
+          guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) do
+        throw (IO.userError "a recorded process is not terminal")
+    let targets := #["spelling-checks-build","spelling-product-build","spelling-driver-build",
+      "spelling-prefix","spelling-account","topic-1-rank-origin-trace"].map (base / System.FilePath.mk ·)
+    let targets := targets ++ #[seed / "study/seed-1/data/sessions" / session,sources]
+    let processes ← call "/bin/ps" #["-axo","command="]
+    for target in targets do
+      unless (← target.symlinkMetadata).type == .dir &&
+          (processes.splitOn target.toString).length == 1 do
+        throw (IO.userError "ended target changed or has a live process")
+    IO.FS.createDirAll (records / "topic-1/UserPromptSubmit")
+    IO.FS.createDirAll (records / "receipts")
+    IO.FS.createDirAll (records / "guards")
+    for name in #["result.json","topic-1/result.json","topic-1/audit-report.json","topic-1/audit-input.json",
+        "topic-1/body.txt","topic-1/UserPromptSubmit/stdin","topic-1/UserPromptSubmit/stdout",
+        "topic-1/UserPromptSubmit/stderr","topic-1/UserPromptSubmit/record.json"] do
+      copyFile (trial / name) (records / name)
+    for entry in ← sources.readDir do
+      if (← entry.path.symlinkMetadata).type == .file then
+        copyFile entry.path (records / "receipts" / entry.fileName)
+    for name in guards do
+      copyFile (base / (name ++ ".guard.json")) (records / "guards" / (name ++ ".json"))
+    copyFile (base / "spelling-checks-checked.json") (records / "checks.json")
+    copyFile (base / ("spelling-comparison-" ++ receipt ++ ".json")) (records / "comparison.json")
+    for name in #["checks","product","driver"] do
+      copyFile (base / ("spelling-" ++ name ++ "-build/build.json")) (records / (name ++ "-build.json"))
+    let handoff := base / "checkout/Eggshell/Handoff.lean"
+    let modified ← IO.FS.readFile handoff
+    let before := "def Family.outputCues (family : Family) : List (Nat × Nat × Nat) :=\n  family.outputRanges.map fun range => (range.priority,range.first,range.limit)"
+    let after := "def Family.outputCues (family : Family) : List (Nat × Nat × Nat) :=\n  family.outputRanges.filterMap fun range =>\n    range.priority.map fun priority => (priority,range.first,range.limit)"
+    unless (modified.splitOn after).length == 2 do throw (IO.userError "unexpected Handoff changes")
+    let restored := modified.replace after before
+    unless restored.replace before after == modified do throw (IO.userError "non-reversible Handoff change")
+    let temporary := base / "spelling-handoff-baseline.lean"
+    unless !(← temporary.pathExists) do throw (IO.userError "temporary baseline already exists")
+    IO.FS.writeFile temporary restored
+    let transport := base / "checkout/Eggshell/SynapseTransport.lean"
+    let baselineTransport := previous / "checkout/Eggshell/SynapseTransport.lean"
+    let mut patch := ""
+    for (name,old,next) in [("Handoff.lean",temporary,handoff),
+        ("SynapseTransport.lean",baselineTransport,transport)] do
+      let difference ← IO.Process.output {cmd := "/usr/bin/diff",args :=
+        #["-u","-L","a/Eggshell/" ++ name,"-L","b/Eggshell/" ++ name,old.toString,next.toString]}
+      unless difference.exitCode == 1 do throw (IO.userError "expected a concrete candidate diff")
+      patch := patch ++ difference.stdout
+    IO.FS.writeFile (records / "candidate.patch") patch
+    let kept := #[base / "origin-prefix/libexec/eggshell",base / "origin-driver-build/StudyMain",
+      originalSeed / "prefix/libexec/eggshell"]
+    let current ← call "/usr/bin/shasum" (#["-a","256"] ++ kept.map (·.toString))
+    let rejected ← call "/usr/bin/shasum" #["-a","256",executable.toString,driver.toString]
+    IO.FS.writeFile handoff restored
+    copyFile baselineTransport transport
+    IO.FS.removeFile temporary
+    let library := base / "checkout/.lake/build/lib/lean"
+    unless (← library.symlinkMetadata).type == .symlink do throw (IO.userError "expected candidate library link")
+    IO.FS.removeFile library
+    let _ ← call "/bin/ln" #["-s",(base / "origin-driver-build/lib").toString,library.toString]
+    let _ ← call "/usr/bin/git" #["-C",(base / "checkout").toString,"apply","--check",(records / "candidate.patch").toString]
+    noLinksInto (base / "checkout") targets
+    noLinksInto (base / "origin-driver-build/lib") targets
+    let mut counts := (0,0)
+    for target in targets do
+      let next ← retireFiles target
+      counts := (counts.1+next.1,counts.2+next.2)
+    unless current == (← call "/usr/bin/shasum" (#["-a","256"] ++ kept.map (·.toString))) do
+      throw (IO.userError "a retained runtime changed during retirement")
+    IO.FS.writeFile (records / "retirement.json") (Json.mkObj [
+      ("deletedPaths",toJson (targets.map (·.toString))),("files",toJson counts.1),
+      ("logicalBytes",toJson counts.2),("currentDigestsUnchanged",toJson current),
+      ("retiredDigests",toJson rejected),("candidateSourceRestored",toJson true),
+      ("newDatabaseCreated",toJson false),("archiveCreated",toJson false),
+      ("answeringModelCalls",toJson (0 : Nat)),("productionAdoption",toJson false)]).pretty
+    IO.println s!"Retired {counts.1} ended files ({counts.2} logical bytes); retained candidate unchanged"
+    return
+  if spelling && mode == "audit" then
+    saveGuard base ("spelling-audit-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean","-M1024","--run",
+      project ++ "/tools/research/SpellingRankAudit.lean",
+      project ++ "/docs/candidates/citation-origin-repair/trace/selection-plan.json",
+      (seed / "study/seed-1/data/receipts" / label / "selection-plan.json").toString,
+      (base / ("spelling-comparison-" ++ label ++ ".json")).toString] #[base.toString]
+    return
+  if spelling && mode == "check-run" then
+    saveGuard base ("spelling-check-run-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      (base / "spelling-checks-build/StudyMain").toString,
+      (base / ("spelling-checks-" ++ label ++ ".json")).toString] #[base.toString]
+    return
   if origin && mode == "retire-tools" then
     let records := System.FilePath.mk project / "docs/candidates/citation-origin-repair"
     let output := records / "retired-tools.json"
@@ -181,10 +288,10 @@ def main (args : List String) : IO Unit := do
     saveGuard base ("topic-1-" ++ label) command #[base.toString,seed.toString]
     return
   if mode == "install" then
-    let account := base / (if origin then "origin-account" else "account")
+    let account := base / (if spelling then "spelling-account" else if origin then "origin-account" else "account")
     for directory in #[installation / "libexec",account,base / "tmp",installation / "share/eggshell/minilm"] do
       IO.FS.createDirAll directory
-    let product := base / (if origin then "origin-product-build" else if residual then "residual-product-build" else if compact then "compact-product-build" else "product-build")
+    let product := base / (if spelling then "spelling-product-build" else if origin then "origin-product-build" else if residual then "residual-product-build" else if compact then "compact-product-build" else "product-build")
     let _ ← call "/bin/cp" #["-c",(product / "StudyMain").toString,executable.toString]
     for entry in ← (originalSeed / "prefix/share/eggshell/minilm").readDir do
       let target := installation / "share/eggshell/minilm" / entry.fileName
@@ -229,7 +336,9 @@ def main (args : List String) : IO Unit := do
       ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (3670016 : Nat)),
       ("minFreeKiB",toJson (2097152 : Nat)),("record",toJson (base / ("verification-" ++ label ++ ".guard.json")).toString)]).pretty
     return
-  let baseline := if origin then base / (if mode == "driver" then "origin-product-build"
+  let baseline := if spelling then base / (if mode == "driver" then "spelling-product-build"
+      else if mode == "product" then "spelling-checks-build" else "origin-driver-build")
+    else if origin then base / (if mode == "driver" then "origin-product-build"
       else if mode == "product" then "origin-prepare-build"
       else if mode == "prepare" then "origin-checks-build" else "compact-driver-build")
     else if residual then base / (if mode == "driver" then "residual-product-build" else "compact-product-build")
@@ -254,10 +363,10 @@ def main (args : List String) : IO Unit := do
     for row in ← IO.ofExcept ((checked.getObjValD "modules").getArr?) do
       objects := objects.setObjVal! (← IO.ofExcept (row.getObjValAs? String "object")) (row.getObjValD "module")
     parents := #[parent.toString,(base / "checks-build").toString,baseline.toString]
-  let objectMap := base / (if origin then "origin-objects.json" else if residual then "residual-objects.json" else if compact then "compact-objects.json" else "objects.json")
+  let objectMap := base / (if spelling then "spelling-objects.json" else if origin then "origin-objects.json" else if residual then "residual-objects.json" else if compact then "compact-objects.json" else "objects.json")
   IO.FS.writeFile objectMap objects.compress
   let entry ← match mode with
-    | "checks" => pure (if origin then "tools.research.CitationOriginChecks" else "tools.research.SourceProjectionChecks")
+    | "checks" => pure (if spelling then "tools.research.SpellingRankChecks" else if origin then "tools.research.CitationOriginChecks" else "tools.research.SourceProjectionChecks")
     | "product" => pure "Main"
     | "driver" => pure "tools.research.SeedDeliveryReplay"
     | "integrity" => pure "tools.research.SeedStorageIntegrity"
