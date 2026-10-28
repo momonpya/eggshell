@@ -59,6 +59,11 @@ private def definitions : IO Unit := do
     return row.setObjVal! "prompt" (← artifact (root / s!"prompts/topic-{topic}.txt"))
   save (root / "task-definitions.json") (toJson updated)
 
+private def prepareFeedbackBuild : IO Unit := do
+  let original ← read (root / "drain-build.guard-settings.json")
+  save (root / "drain-feedback-build.guard-settings.json")
+    (original.setObjVal! "record" (toJson (root / "drain-feedback-build.guard.json").toString))
+
 private def gate : IO Unit := do
   let _ ← artifact (.mk controller)
   IO.FS.writeFile (root / "controller/build.json") (← IO.FS.readFile (root / "controller-build/build.json"))
@@ -299,6 +304,7 @@ private def natural (value : String) : IO Nat :=
 def main (args : List String) : IO Unit := do
   match args with
   | ["definitions"] => definitions
+  | ["prepare-feedback-build"] => prepareFeedbackBuild
   | ["gate"] => gate
   | ["replacement-seed"] => replacementSeed
   | ["resume-before-turn"] => resumeBeforeTurn

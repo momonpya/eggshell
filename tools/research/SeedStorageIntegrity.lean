@@ -43,8 +43,10 @@ private def sha (text : String) : String := Sha256.hex text.toUTF8
 /-- Compare independent native terminal output against journal ingress, then
 against immutable DB originals. No selector, warm, publication or model call. -/
 def main (args : List String) : IO UInt32 := do
-  let [acquisitionPath,snapshotPath,outputPath] := args |
-    throw (IO.userError "ACQUISITION FROZEN-SNAPSHOT NEW-REPORT")
+  let (acquisitionPath,snapshotPath,outputPath,exportPath) ← match args with
+    | [a,s,o] => pure (a,s,o,none)
+    | [a,s,o,e] => pure (a,s,o,some e)
+    | _ => throw (IO.userError "ACQUISITION FROZEN-SNAPSHOT NEW-REPORT [NEW-ORIGINALS-EXPORT]")
   let root := System.FilePath.mk acquisitionPath
   let output := System.FilePath.mk outputPath
   unless !(← output.pathExists) && (← IO.getEnv "EGGSHELL_DATA_ROOT") == some (root / "data").toString do
@@ -139,6 +141,13 @@ def main (args : List String) : IO UInt32 := do
   let some canonical ← CanonicalSource.Cache.open? live .database |
     throw (IO.userError "existing canonical source view is unavailable")
   let rows := canonical.registry.store
+  if let some path := exportPath then
+    unless !(← System.FilePath.pathExists path) do throw (IO.userError "preserve original export")
+    IO.FS.writeFile path (Json.mkObj [
+      ("sourceHead",toJson frozen.head),("canonicalRows",toJson rows),
+      ("documents",toJson (documents.map fun doc => Json.mkObj [
+        ("owner",toJson doc.owner),("work",toJson doc.work),
+        ("source",toJson doc.source),("workText",toJson doc.workText)]))]).compress
   let files := rows.map (·.key.file) |>.toList.eraseDups.toArray
   let mut fileAudit := #[]
   let mut incorrectRows := 0

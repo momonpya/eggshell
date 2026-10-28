@@ -1,4 +1,5 @@
 import tools.research.StudyAdmission
+import Eggshell.Warm
 open Lean Eggshell Eggshell.Research
 
 private def queued (session : System.FilePath) : IO (Array String) := do
@@ -10,8 +11,29 @@ private def queued (session : System.FilePath) : IO (Array String) := do
       if file.fileName.endsWith ".json" then rows := rows.push file.path.toString
   return rows
 
+private def feedback (input output : String) : IO Unit := do
+  let plan ← IO.ofExcept (fromJson? (α := StudyAdmission.Plan) (← StudyAdmission.readJson input))
+  StudyAdmission.verifyArtifact plan.runtime
+  unless (← IO.getEnv "EGGSHELL_DATA_ROOT") == some plan.dataRoot do
+    throw (IO.userError "feedback preparation requires the actual private history")
+  let root := System.FilePath.mk output
+  unless root.isAbsolute && !(← root.pathExists) do throw (IO.userError "new feedback report required")
+  IO.FS.createDir root
+  let before ← StudyRuntime.files (.mk plan.database)
+  let source ← DB.PageMap.pin (.mk plan.database)
+  let (_,result) ← Warm.refreshSource source .database ((← IO.monoMsNow)+600000)
+  let after ← StudyRuntime.files (.mk plan.database)
+  unless before == after do throw (IO.userError "background preparation changed original publication files")
+  IO.FS.writeFile (root / "result.json") (Json.mkObj [
+    ("runtime",toJson plan.runtime),("journal",toJson result),("sourceFilesUnchanged",toJson true),
+    ("answeringModelCalls",toJson (0 : Nat)),("hookBudgetChanged",toJson false),
+    ("preparationBudgetMs",toJson (600000 : Nat))]).pretty
+
 def main (args : List String) : IO UInt32 := do
   try
+    if let ["feedback",input,output] := args then
+      feedback input output
+      return 0
     let [input,output] := args | throw (IO.userError "DrainStudyHistory MEASURED-PLAN NEW-REPORT")
     let plan ← IO.ofExcept (fromJson? (α := StudyAdmission.Plan) (← StudyAdmission.readJson input))
     StudyAdmission.verifyArtifact plan.runtime

@@ -40,6 +40,19 @@ private def run (label cmd : String) (args : Array String)
 private def stageHelper (label : String) (args : Array String) : IO Unit :=
   run label lean (#["--run",project ++ "/tools/research/ScopeTokenStages.lean"] ++ args)
 
+private def prepareFeedback (rep stage : Nat) (env : Array (String × Option String)) : IO Unit := do
+  let directory := root / s!"r{rep}/stage{stage}"
+  let scopedEnvironment := env.filter (fun item => item.1 != "EGGSHELL_DATA_ROOT" && item.1 != "EGGSHELL_CONFIG") ++ #[
+    ("EGGSHELL_DATA_ROOT",some (root / s!"r{rep}/data").toString),
+    ("EGGSHELL_CONFIG",some (root / s!"r{rep}/config.toml").toString)]
+  let settings := directory / "feedback.settings.json"
+  IO.FS.writeFile settings (Json.mkObj [
+    ("record",toJson (directory / "feedback.guard.json").toString),("cwd",toJson project),
+    ("ownedPrefixes",toJson #[root.toString]),("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
+    ("command",toJson #[(root / "drain-controller-build/StudyMain").toString,"feedback",(directory / "trial/plan.json").toString,
+      (directory / "feedback").toString])]).pretty
+  run s!"feedback-r{rep}-stage{stage}" controller #["guard",settings.toString] scopedEnvironment
+
 private def drain (rep stage : Nat) (env : Array (String × Option String)) : IO Unit := do
   let directory := root / s!"r{rep}/stage{stage}"
   let settings := directory / "drain.settings.json"
@@ -48,7 +61,11 @@ private def drain (rep stage : Nat) (env : Array (String × Option String)) : IO
     ("ownedPrefixes",toJson #[root.toString]),("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
     ("command",toJson #[(root / "drain-controller-build/StudyMain").toString,(directory / "trial/plan.json").toString,
       (directory / "drain").toString])]).pretty
-  run s!"drain-r{rep}-stage{stage}" controller #["guard",settings.toString] env
+  let scopedEnvironment := env.filter (fun item => item.1 != "EGGSHELL_DATA_ROOT" && item.1 != "EGGSHELL_CONFIG") ++ #[
+    ("EGGSHELL_DATA_ROOT",some (root / s!"r{rep}/data").toString),
+    ("EGGSHELL_CONFIG",some (root / s!"r{rep}/config.toml").toString)]
+  run s!"drain-r{rep}-stage{stage}" controller #["guard",settings.toString] scopedEnvironment
+  prepareFeedback rep stage env
 
 private def memory (resume : Bool) (env : Array (String × Option String)) (firstStage : Nat := 1) : IO Unit := do
   for rep in [0:2] do
@@ -70,6 +87,8 @@ private def memory (resume : Bool) (env : Array (String × Option String)) (firs
   announce "all twelve predeclared memory cells completed"
 
 def main (args : List String) : IO Unit := do
+  if ← (root / "measurement-paused.json").pathExists then
+    throw (IO.userError "answering-model measurements are paused for the seed-to-body delivery audit")
   let gate ← IO.ofExcept (Json.parse (← IO.FS.readFile (root / "native-gate.guard.json")))
   unless (gate.getObjValAs? Nat "exitCode").toOption == some 0 &&
       (gate.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] do
@@ -92,6 +111,21 @@ def main (args : List String) : IO Unit := do
       IO.FS.rename (root / ("driver/draft-r0-stage2." ++ extension))
         (root / ("driver/draft-r0-stage2.before-drain." ++ extension))
     memory true env 2
+    return
+  if args == ["continue-feedback"] then
+    prepareFeedback 0 1 env
+    let directory := root / "r0/stage2"
+    IO.FS.rename (directory / "preparation") (directory / "preparation-before-feedback")
+    IO.FS.rename (directory / "prepare.guard.json") (directory / "prepare-before-feedback.guard.json")
+    for extension in #["json","stdout","stderr"] do
+      IO.FS.rename (root / ("driver/prepare-r0-stage2." ++ extension))
+        (root / ("driver/prepare-r0-stage2.before-feedback." ++ extension))
+    run "prepare-r0-stage2" controller #["guard",(directory / "prepare.settings.json").toString] env
+    stageHelper "seal-r0-stage2" #["seal-trial","0","2"]
+    run "trial-r0-stage2" controller #["guard",(directory / "trial.settings.json").toString] env
+    stageHelper "collect-r0-stage2" #["collect","0","2"]
+    drain 0 2 env
+    memory true env 3
     return
   if attempt == "1" then
     run "seal-seed" controller #["bootstrap","seal-seed",root.toString] env
