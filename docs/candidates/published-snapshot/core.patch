@@ -1,0 +1,1117 @@
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -4,6 +4,7 @@
+ public import Eggshell.FileSystem
+ public import Eggshell.Blake3
+ public import Std.Data.HashMap.Lemmas
++public import Std.Sync.Mutex
+ import all Init.Data.Ord.String
+ import all Init.System.ST
+ 
+@@ -191,7 +192,89 @@
+     (located : cache.lookup ref.offset = some cached) (different : cached.ref ≠ ref) :
+     cache.find ref = none := by
+   simp [find, located, different]
++
++/-- One service-wide page budget. A namespace includes the authenticated read
++scope, absolute directory and immutable file incarnation. An offset alone is
++never a cross-database cache key. The complete descriptor is checked on hits. -/
++abbrev SharedPageKey := String × String × String × String × Nat
++
++structure SharedPageCache where
++  recent : Std.HashMap SharedPageKey CachedPage := {}
++  previous : Std.HashMap SharedPageKey CachedPage := {}
++  recentBounded : recent.size ≤ 1024 := by simp
++  previousBounded : previous.size ≤ 1024 := by simp
++
++def SharedPageCache.capacity : Nat := 2*1024*65536
++
++def SharedPageCache.lookup (cache : SharedPageCache) (key : SharedPageKey) : Option CachedPage :=
++  cache.recent[key]?.orElse fun _ => cache.previous[key]?
++
++def SharedPageCache.find (cache : SharedPageCache) (key : SharedPageKey) (ref : Ref) : Option (Loaded ref) := do
++  let cached ← cache.lookup key
++  if same : cached.ref = ref then some (same ▸ cached.loaded) else none
++
++def SharedPageCache.touch (cache : SharedPageCache) (key : SharedPageKey) (page : CachedPage) : SharedPageCache :=
++  if fits : cache.recent.size < 1024 ∨ key ∈ cache.recent then
++    ⟨cache.recent.insert key page,cache.previous,by
++      by_cases present : key ∈ cache.recent
++      · simpa only [Std.HashMap.size_insert,if_pos present] using cache.recentBounded
++      · have room := fits.resolve_right present
++        simp only [Std.HashMap.size_insert,if_neg present]
++        omega,cache.previousBounded⟩
++  else
++    ⟨({} : Std.HashMap SharedPageKey CachedPage).insert key page,cache.recent,
++      by simp [Std.HashMap.size_insert],cache.recentBounded⟩
++
++theorem SharedPageCache.touch_bounded (cache : SharedPageCache) (key : SharedPageKey) (page : CachedPage) :
++    ((cache.touch key page).recent.size+(cache.touch key page).previous.size)*65536 ≤ capacity := by
++  have := (cache.touch key page).recentBounded
++  have := (cache.touch key page).previousBounded
++  unfold capacity
++  omega
++
++theorem SharedPageCache.touch_recent (cache : SharedPageCache) (key : SharedPageKey) (page : CachedPage) :
++    (cache.touch key page).lookup key = some page := by
++  by_cases fits : cache.recent.size < 1024 ∨ key ∈ cache.recent
++  <;> simp [touch,fits,lookup]
++
++theorem SharedPageCache.find_rejects (cache : SharedPageCache) (key : SharedPageKey)
++    (ref : Ref) (cached : CachedPage) (located : cache.lookup key = some cached) (different : cached.ref ≠ ref) :
++    cache.find key ref = none := by
++  simp [find,located,different]
++
++structure SharedPages where
++  cache : SharedPageCache := {}
++  hits : Nat := 0
++  misses : Nat := 0
++
++structure PagePool where
++  state : Std.Mutex SharedPages
++
++def PagePool.new : IO PagePool := return ⟨← Std.Mutex.new {}⟩
++
++def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Option (Loaded ref)) :=
++  pool.state.atomically do
++    let state ← get
++    if let some loaded := state.cache.find key ref then
++      set {state with cache := state.cache.touch key ⟨ref,loaded⟩,hits := state.hits+1}
++      return some loaded
++    set {state with misses := state.misses+1}
++    return none
+ 
++def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage) : IO Unit :=
++  if page.ref.bytes ≤ 65536 then
++    pool.state.atomically (modify fun state => {state with cache := state.cache.touch key page})
++  else throw (IO.userError "shared page exceeds its verified block bound")
++
++def PagePool.stats (pool : PagePool) : IO Json := pool.state.atomically do
++  let state ← get
++  return Json.mkObj [("pages",toJson (state.cache.recent.size+state.cache.previous.size)),
++    ("capacityBytes",toJson SharedPageCache.capacity),("hits",toJson state.hits),("misses",toJson state.misses)]
++
++structure SharedReader where
++  pool : PagePool
++  scope : String
++
+ def validIdentity (identity : String) : Bool :=
+   identity.length == 64 && identity.toList.all (fun c =>
+     ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f'))
+@@ -439,14 +522,41 @@
+   readBytes : IO.Ref Nat
+   cache : IO.Ref PageCache
+   trace : IO.Ref (Option ReadTrace)
++  sharedPages : Option SharedReader := none
+ 
++def Snapshot.pageKey (snapshot : Snapshot) (scope : String) (ref : Ref) : SharedPageKey :=
++  (scope,snapshot.directory.toString,snapshot.head.identity,snapshot.head.authority,ref.offset)
++
++theorem Snapshot.pageKey_scope (snapshot : Snapshot) (a b : String) (ref : Ref) (different : a ≠ b) :
++    snapshot.pageKey a ref ≠ snapshot.pageKey b ref := by
++  intro equal
++  exact different (congrArg Prod.fst equal)
++
++/-- The private cache is emptied when a service attaches its shared budget.
++The old reader value is immutable; existing borrowers retain their own pin. -/
++def Snapshot.sharePages (snapshot : Snapshot) (pool : PagePool) (scope : String) : IO Snapshot := do
++  return {snapshot with cache := ← IO.mkRef {},sharedPages := some ⟨pool,scope⟩}
++
++def Snapshot.cached? (snapshot : Snapshot) (ref : Ref) : IO (Option (Loaded ref)) := do
++  if let some shared := snapshot.sharedPages then
++    shared.pool.find (snapshot.pageKey shared.scope ref) ref
++  else
++    let found := (← snapshot.cache.get).find ref
++    if let some loaded := found then snapshot.cache.modify (·.touch ⟨ref,loaded⟩)
++    return found
++
++def Snapshot.cachePage (snapshot : Snapshot) (page : CachedPage) : IO Unit := do
++  if let some shared := snapshot.sharedPages then
++    shared.pool.insert (snapshot.pageKey shared.scope page.ref) page
++  else snapshot.cache.modify (·.touch page)
++
+ def Snapshot.observe (snapshot : Snapshot) (operation : ReadObservation) : IO Unit :=
+   snapshot.trace.modify (·.map (·.add operation))
+ 
+ /-- A bounded asynchronous source pull shares the same immutable image and
+ read observations, but cannot mark the controller's page cache as shared. -/
+ def Snapshot.forkReader (snapshot : Snapshot) : IO Snapshot := do
+-  pure {snapshot with cache := ← IO.mkRef {}}
++  pure {snapshot with cache := ← IO.mkRef {},sharedPages := none}
+ 
+ def absolute (path : System.FilePath) : IO System.FilePath := do
+   let cwd ← IO.currentDir
+@@ -476,7 +586,7 @@
+         throw (IO.userError "truncated or foreign DB pages")
+       -- Opening a shared or filesystem-read-only publication never changes
+       -- its permissions. Creation owns access-mode initialization.
+-      pure (some ⟨directory, head, handle, ← IO.mkRef 0, ← IO.mkRef 0, ← IO.mkRef {}, ← IO.mkRef none⟩)
++      pure (some ⟨directory, head, handle, ← IO.mkRef 0, ← IO.mkRef 0, ← IO.mkRef {}, ← IO.mkRef none,none⟩)
+ 
+ def pin (directory : System.FilePath) : IO Snapshot := do
+   let some snapshot ← open? directory | throw (IO.userError "memory DB does not exist")
+@@ -486,9 +596,7 @@
+   unless 0 < ref.bytes && ref.bytes ≤ 65536 && magic.size ≤ ref.offset &&
+       ref.offset + ref.bytes ≤ snapshot.head.bytes do
+     throw (IO.userError "index page is outside its pinned committed extent")
+-  if let some loaded := (← snapshot.cache.get).find ref then
+-    snapshot.cache.modify (·.touch ⟨ref, loaded⟩)
+-    return loaded
++  if let some loaded ← snapshot.cached? ref then return loaded
+   let mut bytes := ByteArray.empty
+   while bytes.size < ref.bytes do
+     let count := min 4096 (ref.bytes - bytes.size)
+@@ -502,7 +610,7 @@
+   let page ← IO.ofExcept (decode bytes)
+   if valid : agrees ref page = true then
+     let loaded : Loaded ref := ⟨page, valid⟩
+-    snapshot.cache.modify (·.touch ⟨ref, loaded⟩)
++    snapshot.cachePage ⟨ref,loaded⟩
+     pure loaded
+   else throw (IO.userError "DB page differs from its directory descriptor")
+ 
+--- a/Eggshell/CanonicalSource.lean
++++ b/Eggshell/CanonicalSource.lean
+@@ -275,6 +275,7 @@
+   statistics : Statistics
+   owners : Nat
+   hydrated : Nat
++  changed : Std.HashSet String
+ 
+ /-- Exact publication history determines candidate changes and source-receipt
+ owners. Old contributions are removed against the old pinned original, then
+@@ -307,7 +308,7 @@
+       let next ← addPublishedDocument source id document registry statistics
+       registry := next.1
+       statistics := next.2
+-  return some ⟨registry,statistics,ids.length,previous.length+current.length⟩
++  return some ⟨registry,statistics,ids.length,previous.length+current.length,owners⟩
+ 
+ def Registry.summary (registry : Registry) (statistics : Statistics) : Json :=
+   let aliases := registry.atoms.fold (fun count _ atom => count+atom.origins.size) 0
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -1,5 +1,5 @@
+ module
+-public import Eggshell.CanonicalSource
++public import Eggshell.CanonicalSourceRecipe
+ @[expose] public section
+ 
+ namespace Eggshell.Synapses.CanonicalSource.Cache
+@@ -7,6 +7,8 @@
+ 
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.canonical-source".toUTF8 [
+   (include_str "CanonicalSource.lean").toUTF8,(include_str "CanonicalSourceCache.lean").toUTF8,
++  (include_str "CanonicalSourceRecipe.lean").toUTF8,(include_str "CanonicalSourceRecords.lean").toUTF8,
++  (include_str "CanonicalSourceDelivery.lean").toUTF8,
+   (include_str "SynapseSource.lean").toUTF8,(include_str "SynapseProvenance.lean").toUTF8,
+   (include_str "SynapseBuild.lean").toUTF8,ContentCapture.implementation.toUTF8])
+ 
+@@ -16,6 +18,8 @@
+   payload : String
+   rows : Nat
+   statistics : Statistics
++  recipes : Option PageMap.Head := none
++  bindings : Option PageMap.Head := none
+   deriving BEq, ToJson, FromJson
+ 
+ def directory (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO System.FilePath := do
+@@ -36,6 +40,20 @@
+   metadata : Manifest
+   registry : Registry
+ 
++/-- A ready publication pins its paged execution layout. Loading this header
++does not read or decode the DB-wide canonical payload. Old ready roots remain
++usable while newer recipes are published into the append-only file. -/
++def preparedAt? (source : PageMap.Snapshot) (path : System.FilePath) (metadata : Manifest) :
++    IO (Option PageMap.Snapshot) := do
++  unless metadata.implementation == implementation && (← Index.sameSources source metadata.source) do return none
++  let some root := metadata.recipes | return none
++  let some current ← PageMap.open? (path / "recipes") | return none
++  let some reader ← PageMap.HistoryReader.make? current root | return none
++  let expected := (toJson (metadata.source,metadata.implementation,metadata.payload,metadata.bindings)).compress.toUTF8
++  unless (← reader.snapshot.get "manifest") == some expected do
++    throw (IO.userError "prepared source layout differs from its pinned publication")
++  return some reader.snapshot
++
+ /-- Ready data is DB-owned and tied to its original source publication and
+ implementation. Reading never creates a directory or warms a cold DB. -/
+ def atSource? (source : PageMap.Snapshot) (path : System.FilePath) (metadata : Manifest) : IO (Option Ready) := do
+@@ -43,6 +61,7 @@
+       metadata.rows ≤ metadata.statistics.originalRows &&
+       metadata.statistics.unsupportedOwners ≤ metadata.statistics.nativeOwners &&
+       (← Index.sameSources source metadata.source) do return none
++  if (← preparedAt? source path metadata).isNone then return none
+   let bytes ← FileSystem.boundedBytes (path / (metadata.payload ++ ".json")) (32*1024*1024)
+   unless Sha256.hex bytes == metadata.payload do throw (IO.userError "canonical source payload digest mismatch")
+   let rows ← decode (α := Array StoredRow) bytes
+@@ -97,16 +116,18 @@
+       match old with
+       | none => pure none
+       | some old => rebase source metadata.source old.registry metadata.statistics
+-  let (registry,statistics,mode,changed,hydrated) ← match rebased with
+-    | some next => pure (next.registry,next.statistics,"publication-delta",next.owners,next.hydrated)
++  let (registry,statistics,mode,changed,hydrated,changedIds) ← match rebased with
++    | some next => pure (next.registry,next.statistics,"publication-delta",next.owners,next.hydrated,some next.changed)
+     | none => do
+       let (registry,statistics) ← build source
+-      pure (registry,statistics,"rebuilt",0,0)
++      pure (registry,statistics,"rebuilt",0,0,none)
+   let rows := registry.store
+   let bytes := (toJson rows).compress.toUTF8
+   unless bytes.size ≤ 32*1024*1024 do throw (IO.userError "canonical source cache exceeds byte bound")
+-  let metadata : Manifest := ⟨source.head,implementation,Sha256.hex bytes,rows.size,statistics⟩
+-  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun sidecar => do
++  let bindings ← Index.open? source storage .shared
++  let metadata : Manifest := ⟨source.head,implementation,Sha256.hex bytes,rows.size,statistics,none,
++    bindings.map (·.index.head)⟩
++  let metadata ← Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun sidecar => do
+     let current ← (Sidecar.Owner.ofSnapshot source).pin
+     unless ← Index.sameSources current source.head 4096 do
+       throw (IO.userError "original source changed during canonical preparation")
+@@ -122,7 +143,22 @@
+       unless existing == some bytes do FileSystem.atomicExistingBytes payload bytes
+     else if ← payload.pathExists then FileSystem.atomicExistingBytes payload bytes
+     else FileSystem.immutableExistingBytes payload bytes
+-    FileSystem.atomicExistingBytes (path / "manifest.json") (toJson metadata).compress.toUTF8) storage
++    let recipePath := path / "recipes"
++    let recipeIndex ← match ← PageMap.open? recipePath with
++      | some index => pure index
++      | none => PageMap.create recipePath ("canonical-layout:" ++ source.head.identity)
++    let all := registry.atoms.fold (fun found _ atom => atom.origins.fold
++      (fun found origin => found.insert (origin.binding.database,origin.binding.owner)) found) {}
++    let owners := Delivery.byOwner registry all
++    let dirty := changedIds.getD (Std.HashSet.ofArray (owners.toArray.map Prod.fst))
++    let (_,recipeHead,_) ← PageMap.withWriter recipeIndex fun writer => do
++      for owner in dirty do
++        let stored ← IO.ofExcept (Recipe.compile (owners[owner]?.getD #[]))
++        Recipe.write writer owner stored
++      writer.put "manifest" (some (toJson (metadata.source,metadata.implementation,metadata.payload,metadata.bindings)).compress.toUTF8)
++    let metadata := {metadata with recipes := some recipeHead}
++    FileSystem.atomicExistingBytes (path / "manifest.json") (toJson metadata).compress.toUTF8
++    return metadata) storage
+   return ⟨mode,metadata,(← IO.monoMsNow)-started,changed,hydrated⟩
+ 
+ end Eggshell.Synapses.CanonicalSource.Cache
+--- a/Eggshell/CanonicalSourceRecipe.lean
++++ b/Eggshell/CanonicalSourceRecipe.lean
+@@ -0,0 +1,94 @@
++module
++public import Eggshell.CanonicalSourceRecords
++public import Eggshell.CanonicalSourceDelivery
++@[expose] public section
++
++namespace Eggshell.Synapses.CanonicalSource.Recipe
++open Lean DB
++
++/-- Publication-time layout only. Query cues, relevance, budgets, selections
++and authority never enter this representation. -/
++structure Entry where
++  indices : List Nat
++  before : Option Nat
++  after : Nat
++  deriving BEq,ReflBEq,LawfulBEq,Hashable,ToJson,FromJson
++
++def Entry.ofRecord (record : Records.Record rows) : Entry :=
++  ⟨record.indices.map Fin.val,record.before.map Fin.val,record.after.val⟩
++
++def Entry.check? (rows : Array StoredRow) (entry : Entry) : Except String (Records.Record rows) := do
++  let indices ← entry.indices.mapM fun index =>
++    if inside : index < rows.size then pure (⟨index,inside⟩ : Fin rows.size)
++    else throw "prepared record index is outside its original rows"
++  let before ← entry.before.mapM fun index =>
++    if inside : index < rows.size then pure (⟨index,inside⟩ : Fin rows.size)
++    else throw "prepared predecessor is outside its original rows"
++  if inside : entry.after < rows.size then
++    let some record := Records.check? rows indices before ⟨entry.after,inside⟩ |
++      throw "prepared record differs from its original layout"
++    return record
++  else throw "prepared successor is outside its original rows"
++
++structure Stored where
++  rows : Array StoredRow
++  records : List Entry
++  deriving BEq,ToJson,FromJson
++
++def compile (parts : Array StoredRow) : Except String Stored := do
++  let rows ← Delivery.merge parts
++  return ⟨rows,(Records.prepare rows).map Entry.ofRecord⟩
++
++structure Checked (rows : Array StoredRow) where
++  records : List (Records.Record rows)
++  catalogue : List (List (Fin rows.size))
++  exact : catalogue = Records.catalogue rows records
++
++def check (rows : Array StoredRow) (entries : List Entry) : Except String (Checked rows) := do
++  let records ← entries.mapM (Entry.check? rows)
++  return ⟨records,Records.catalogue rows records,rfl⟩
++
++theorem Checked.catalogue_complete (prepared : Checked rows) (index : Fin rows.size) :
++    index ∈ prepared.catalogue.flatten := by
++  rw [prepared.exact]
++  exact Records.catalogue_complete rows prepared.records index
++
++/-- Federation remaps already published records by original row identity.
++It never invents a boundary by parsing the combined output, nor loses the
++singleton domain of rows that have no bounded original record. -/
++def reindex (source target : Array StoredRow) (entries : List Entry) : Except String (List Entry) := do
++  let positions := target.toList.zipIdx.foldl (fun found (row,position) => found.insert row.key position)
++    ({} : Std.HashMap Key Nat)
++  let resolve := fun (index : Nat) => (do
++    let some row := source[index]? | throw "federated record is outside its source"
++    let some position := positions[row.key]? | throw "federation lost a published original row"
++    let some selected := target[position]? | throw "federated row directory is inconsistent"
++    unless selected.code == row.code do throw "federation changed original code"
++    return position : Except String Nat)
++  entries.mapM fun entry => return ⟨← entry.indices.mapM resolve,← entry.before.mapM resolve,← resolve entry.after⟩
++
++def combine (left right merged : Array StoredRow) (a b : List Entry) : Except String (List Entry) := do
++  let entries := hashDistinct ((← reindex left merged a) ++ (← reindex right merged b))
++  let _ ← check merged entries
++  return entries
++
++def name (owner : String) := "owner:" ++ owner
++
++def read? (snapshot : PageMap.Snapshot) (owner : String) : IO (Option Stored) := do
++  let key := name owner
++  let descriptor ← snapshot.get key
++  if descriptor.isNone then return none
++  let size ← IO.ofExcept (PageMap.payloadSize descriptor)
++  unless size ≤ 32*1024*1024 do throw (IO.userError "prepared owner exceeds reply bound")
++  let bytes ← snapshot.readPayload key
++  unless bytes.size ≤ 32*1024*1024 do throw (IO.userError "prepared owner exceeds reply bound")
++  let some text := String.fromUTF8? bytes | throw (IO.userError "prepared owner is not UTF-8")
++  let stored ← IO.ofExcept (Json.parse text >>= fromJson? (α := Stored))
++  return some stored
++
++def write (writer : PageMap.Writer) (owner : String) (stored : Stored) : IO Unit := do
++  let bytes := (toJson stored).compress.toUTF8
++  unless bytes.size ≤ 32*1024*1024 do throw (IO.userError "prepared owner exceeds reply bound")
++  Persistence.Store.putPayload writer (name owner) bytes
++
++end Eggshell.Synapses.CanonicalSource.Recipe
+--- a/Eggshell/CanonicalSourcePrepared.lean
++++ b/Eggshell/CanonicalSourcePrepared.lean
+@@ -18,30 +18,25 @@
+   return allowed
+ 
+ structure Loaded where
+-  ready : Cache.Ready
+-  owners : Std.HashMap String (Array StoredRow)
+-  exact : owners = Delivery.byOwner ready.registry (allOwners ready.registry)
++  metadata : Cache.Manifest
++  recipes : PageMap.Snapshot
+   /-- Opened once for the pinned preparation, sharing the bounded PageMap
+   -- block cache across sessions. No per-session original record rebuild. -/
+   originals : Option Index.Reader := none
+ 
+-/-- All owners are projected once. Filtering the request then performs point
+-lookups; neither a full registry nor another customer's state crosses the wire. -/
+-def Loaded.make (ready : Cache.Ready) : Loaded :=
+-  ⟨ready,Delivery.byOwner ready.registry (allOwners ready.registry),rfl,none⟩
++/-- Publication compiled each owner. Requests fetch bounded immutable payloads;
++they do not reconstruct the full registry or derive record boundaries. -/
++def Loaded.rows (loaded : Loaded) (owners : Array String) (deadline : Nat) : IO (Array (String × Recipe.Stored)) := do
++  let mut rows := #[]
++  let mut total := 0
++  for owner in owners do
++    unless (← IO.monoMsNow) < deadline do throw (IO.userError "prepared original projection expired")
++    if let some descriptor ← loaded.recipes.get (Recipe.name owner) then
++      total := total+(← IO.ofExcept (PageMap.payloadSize (some descriptor)))
++      unless total ≤ 16*1024*1024 do throw (IO.userError "prepared original projection exceeds reply budget")
++    rows := rows.push (owner,(← Recipe.read? loaded.recipes owner).getD ⟨#[],[]⟩)
++  return rows
+ 
+-theorem Loaded.lookup_exact (loaded : Loaded) (owner : String) :
+-    loaded.owners[owner]? =
+-      (Delivery.byOwner loaded.ready.registry (allOwners loaded.ready.registry))[owner]? := by
+-  rw [loaded.exact]
+-
+-def Loaded.rows (loaded : Loaded) (owners : Array String) : Array (String × Array StoredRow) :=
+-  owners.map fun owner => (owner,loaded.owners[owner]?.getD #[])
+-
+-theorem Loaded.requested_domain (loaded : Loaded) (owners : Array String) :
+-    (loaded.rows owners).map Prod.fst = owners := by
+-  simp [Loaded.rows,Array.map_map,Function.comp_def]
+-
+ structure Budget (capacity : Nat) where
+   used : Nat := 0
+   within : used ≤ capacity := by omega
+@@ -57,7 +52,7 @@
+ 
+ -- The original-recipe cache is global across entries and shares this service
+ -- budget; it is not another 16 MiB reservation for each DB or connection.
+-def capacity : Nat := 512*1024*1024-ObservedRecordView.geometryCapacity
++def capacity : Nat := 512*1024*1024-ObservedRecordView.geometryCapacity-PageMap.SharedPageCache.capacity
+ def maxLoads : Nat := 2
+ def maxEntries : Nat := 128
+ 
+@@ -84,8 +79,9 @@
+ structure Pool where
+   state : Std.Mutex State
+   tasks : Std.Mutex (Array (Task (Except IO.Error Unit)))
++  pages : PageMap.PagePool
+ 
+-def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new #[]⟩
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new #[],← PageMap.PagePool.new⟩
+ 
+ inductive Admission where
+   | borrowed (entry : Entry)
+@@ -213,6 +209,7 @@
+   identity : Json
+   rows : Array (String × Array StoredRow)
+   reuse : Reuse
++  layouts : Array (String × List Recipe.Entry) := #[]
+   deriving ToJson, FromJson
+ 
+ /-- Payload bytes are verified only by the preparation owner. Admission
+@@ -224,11 +221,9 @@
+   let identity := key path metadata
+   if let some entry ← pool.borrow? identity then
+     return (entry,if entry.loading then .joined else .hit)
+-  let payload := path / (metadata.payload ++ ".json")
+-  let bytes := (← payload.metadata).byteSize.toNat
+-  unless bytes ≤ 32*1024*1024 do throw (IO.userError "prepared source payload exceeds its bound")
+-  -- Include the original view's bounded page cache in service admission.
+-  let charge := bytes*8+metadata.rows*1024+65536+256*1024*1024
++  -- Original-view pages use the one service-wide budget above. There is no
++  -- per-DB or per-connection reservation and no unaccounted private cache.
++  let charge := 512*1024
+   unless charge ≤ capacity do throw (IO.userError "prepared source footprint exceeds service capacity")
+   repeat
+     unless (← IO.monoMsNow) < deadline do throw (IO.userError "prepared source admission expired")
+@@ -237,10 +232,23 @@
+     | .borrowed entry => return (entry,if entry.loading then .joined else .hit)
+     | .start entry =>
+         try
+-          pool.launch identity entry bytes do
+-            let some ready ← Cache.atSource? source path metadata |
++          pool.launch identity entry 0 do
++            let some recipes ← Cache.preparedAt? source path metadata |
+               throw (IO.userError "prepared source no longer matches its publication")
+-            return {Loaded.make ready with originals := ← Index.openShared? source}
++            let recipes ← recipes.sharePages pool.pages path.normalize.toString
++            let original ← metadata.bindings.bindM fun root => do
++              let some current ← PageMap.open? (path.parent.get! / "synapses" / Index.Scope.directory .shared) |
++                throw (IO.userError "pinned original binding index is missing")
++              let some pinned ← PageMap.HistoryReader.make? current root |
++                throw (IO.userError "pinned original binding index was retired")
++              let some manifest ← Index.manifest? pinned.snapshot |
++                throw (IO.userError "pinned original binding manifest is missing")
++              unless manifest.implementation == Index.implementation && manifest.scope == .shared &&
++                  (← Index.sameSources source manifest.source) do
++                throw (IO.userError "original binding index changed its source scope")
++              let index ← pinned.snapshot.sharePages pool.pages path.normalize.toString
++              return some (⟨index,manifest⟩ : Index.Reader)
++            return ⟨metadata,recipes,original⟩
+         catch error => pool.finish identity entry 0 (.error error.toString)
+         return (entry,.loaded)
+   throw (IO.userError "unreachable prepared source admission")
+@@ -267,13 +275,15 @@
+       unless ← entry.promise.isResolved do entry.promise.resolve (.error "prepared source service stopped")
+   for task in ← pool.tasks.atomically get do IO.cancel task
+ 
+-def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
+-  let state ← get
+-  return Json.mkObj [("entries",toJson state.entries.size),("chargedBytes",toJson state.budget.used),
+-    ("capacity",toJson capacity),("active",toJson state.active),("loads",toJson state.loads),
+-    ("hits",toJson state.hits),("joins",toJson state.joins),("evictions",toJson state.evictions),
+-    ("verifiedPayloadBytes",toJson state.readBytes),("closed",toJson state.closed),
+-    ("accountedExact",toJson (state.budget.used ==
+-      state.entries.fold (fun total _ entry => total+entry.charge) 0))]
++def Pool.stats (pool : Pool) : IO Json := do
++  let pages ← pool.pages.stats
++  pool.state.atomically do
++    let state ← get
++    return Json.mkObj [("entries",toJson state.entries.size),("chargedBytes",toJson state.budget.used),
++      ("capacity",toJson capacity),("pages",pages),("active",toJson state.active),("loads",toJson state.loads),
++      ("hits",toJson state.hits),("joins",toJson state.joins),("evictions",toJson state.evictions),
++      ("verifiedPayloadBytes",toJson state.readBytes),("closed",toJson state.closed),
++      ("accountedExact",toJson (state.budget.used ==
++        state.entries.fold (fun total _ entry => total+entry.charge) 0))]
+ 
+ end Eggshell.Synapses.CanonicalSource.Shared
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.PublicationWire
+ public import Eggshell.Numerical
+ public import Eggshell.CanonicalSourcePrepared
++public import Eggshell.SynapticBindings
+ 
+ @[expose] public section
+ 
+@@ -66,7 +67,8 @@
+     ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
+     ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+   let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.CanonicalSource.Shared.Projection))
+-  unless result.identity == reference.identity && result.rows.map Prod.fst == owners do
++  unless result.identity == reference.identity && result.rows.map Prod.fst == owners &&
++      result.layouts.map Prod.fst == owners do
+     throw (IO.userError "prepared source projection changed its owner domain")
+   for (owner,rows) in result.rows do
+     unless rows.all (fun row => row.origins.all (fun origin =>
+@@ -74,11 +76,43 @@
+       throw (IO.userError "prepared source projection crossed its owner scope")
+     let _ ← IO.ofExcept (Synapses.CanonicalSource.load access.database rows)
+     pure ()
++  for ((_,rows),(_,entries)) in result.rows.zip result.layouts do
++    let _ ← IO.ofExcept (Synapses.CanonicalSource.Recipe.check rows entries)
++    pure ()
+   return result
+ 
+ def endpoint? : IO (Option Daemon.Endpoint) := do
+   readJson? ((← directory) / "endpoint.json") []
+ 
++def sourceBindings (reference : SourceReference) (wanted : Array Synapses.Range)
++    (allowed : Std.HashSet String) (deadline : Nat) : IO Synapses.IndexedBindings.Resolved := do
++  let access := reference.access
++  let budget ← liveBudget deadline
++  let response ← Stream.exchange reference.endpoint "source-bindings" (Json.mkObj [
++    ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
++    ("metadata",toJson access.metadata),("wanted",toJson wanted),("allowed",toJson allowed.toArray),
++    ("budgetMs",toJson budget)]) budget
++  let found ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.IndexedBindings.Projection))
++  unless found.identity == reference.identity && some found.index == access.metadata.bindings do
++    throw (IO.userError "original bindings changed their prepared publication")
++  let wanted := Std.HashSet.ofArray wanted
++  unless found.rows.size == wanted.size &&
++      (Std.HashSet.ofArray (found.rows.map Prod.fst)).size == wanted.size do
++    throw (IO.userError "original binding reply changed its requested range domain")
++  let mut rows := {}
++  for (source,values) in found.rows do
++    unless wanted.contains source && values.all (fun read => read.valid && read.source == source &&
++        read.binding.database == access.database && allowed.contains read.binding.owner) do
++      throw (IO.userError "original binding reply crossed its requested domain")
++    rows := rows.insert source values
++  return {
++    rows
++    complete := found.complete
++    requests := found.requests
++    bytes := found.bytes
++    unresolved := found.unresolved
++    unusable := found.unusable}
++
+ def sourceRecords (reference : SourceReference) (owners : Array String) (deadline : Nat) :
+     IO Synapses.ObservedRecordView.Projection := do
+   let access := reference.access
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.PublicationWire
+ public import Eggshell.CanonicalSourcePrepared
++public import Eggshell.SynapticBindings
+ public import Std.Sync.Mutex
+ public import Init.System.Promise
+ 
+@@ -131,7 +132,7 @@
+       scope := scope.scope
+       capability := scope.capability
+       source := source.head
+-      metadata := loaded.ready.metadata
++      metadata := loaded.metadata
+       reuse}
+     return toJson access
+ 
+@@ -175,7 +176,10 @@
+   let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+   server.prepared.withReady pinned.snapshot path metadata deadline fun loaded reuse => do
+     let access : CanonicalSource.Shared.Access := ⟨database,identity,"",head,metadata,reuse⟩
+-    let result : CanonicalSource.Shared.Projection := ⟨access.identity,loaded.rows owners,reuse⟩
++    let prepared ← loaded.rows owners deadline
++    let result : CanonicalSource.Shared.Projection := ⟨access.identity,
++      prepared.map (fun (owner,recipe) => (owner,recipe.rows)),reuse,
++      prepared.map (fun (owner,recipe) => (owner,recipe.records))⟩
+     return toJson result
+ 
+ /-- The identical authenticated read scope serves generic original output.
+@@ -212,6 +216,33 @@
+   unless ← FileSystem.tryReadLock handle true do throw (IO.userError "another publisher owns this database")
+   return handle
+ 
++def sourceBindings (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
++  let scope ← scopedSource server secret payload
++  let head ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := PageMap.Head))
++  let metadata ← IO.ofExcept (payload.getObjVal? "metadata" >>= fromJson? (α := CanonicalSource.Cache.Manifest))
++  let wanted ← IO.ofExcept (payload.getObjValAs? (Array Range) "wanted")
++  let allowed ← IO.ofExcept (payload.getObjValAs? (Array String) "allowed")
++  unless wanted.size ≤ 32768 && allowed.size ≤ 4096 && head.identity == scope.database &&
++      metadata.source.identity == scope.database && metadata.implementation == CanonicalSource.Cache.implementation &&
++      digest metadata.payload do throw (IO.userError "invalid prepared binding request")
++  let current ← PageMap.pin scope.directory
++  let some pinned ← PageMap.HistoryReader.make? current head |
++    throw (IO.userError "original binding source snapshot retired")
++  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
++  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded _ => do
++    let some original := loaded.originals | throw (IO.userError "original bindings are not prepared")
++    let result ← IndexedBindings.resolve original wanted (Std.HashSet.ofArray allowed) deadline
++    let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,"",head,metadata,.hit⟩
++    return toJson ({
++      identity := access.identity
++      index := original.index.head
++      rows := result.rows.toArray
++      complete := result.complete
++      requests := result.requests
++      bytes := result.bytes
++      unresolved := result.unresolved
++      unusable := result.unusable} : IndexedBindings.Projection)
++
+ /-- Registration is local administrator authority. Project capabilities grant
+ only scoped publication; they cannot register paths or control the service. -/
+ def register (server : Server) (payload : Json) : IO Project := do
+@@ -403,19 +434,21 @@
+     let json ← IO.ofExcept (Json.parse text)
+     let secret ← IO.ofExcept (json.getObjValAs? String "secret")
+     let kind ← IO.ofExcept (json.getObjValAs? String "kind")
+-    streamed.set (kind == "source-rows" || kind == "source-records")
++    let streamedRead := ["source-rows","source-records","source-bindings"].contains kind
++    streamed.set streamedRead
+     let payload := json.getObjValD "payload"
+-    let deadline ← if ["prepare-source","refresh-source","source-rows","source-records"].contains kind then do
++    let deadline ← if ["prepare-source","refresh-source","source-rows","source-records","source-bindings"].contains kind then do
+         let budget ← IO.ofExcept (payload.getObjValAs? Nat "budgetMs")
+         pure (min deadline (deadline-maxBudgetMs+min budget maxBudgetMs))
+       else pure deadline
+     replyDeadline.set deadline
+-    let replyCharge := if kind == "source-rows" || kind == "source-records" then Stream.maxBytes else 65536
++    let replyCharge := if streamedRead then Stream.maxBytes else 65536
+     reserveReply server replyCharge deadline
+     reservedReply.set replyCharge
+     let value ← if kind == "refresh-source" then refreshSource server secret payload deadline
+       else if kind == "source-rows" then sourceRows server secret payload deadline
+       else if kind == "source-records" then sourceRecords server secret payload deadline
++      else if kind == "source-bindings" then sourceBindings server secret payload deadline
+       else if kind == "publish" then do
+         let promise ← submit server secret payload deadline cancelled
+         awaitReply server client cancelled promise deadline
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -127,12 +127,45 @@
+   writer.put name (some bytes)
+   return true
+ 
++/-- Compile the existing source-posting projection in the same publication
++as its fact. Search consumes this small row, not the enclosing claim text and
++its JSON/content-address validation again for every reader. -/
++def bindingCandidate? : Fact → Option Read
++  | .read read => some {read with quotations := #[]}
++  | .supports support => some {
++      occurrence := support.read.occurrence
++      source := support.source
++      binding := support.binding
++      quotations := #[]}
++  | _ => none
++
++structure StoredBinding where
++  fact : String
++  read : Read
++  deriving ToJson,FromJson
++
++def bindingPrefix (source : Range) := "binding:" ++ contentKey source ++ ":"
++def bindingName (source : Range) (fact : String) := bindingPrefix source ++ fact
++
++def prepareBinding (writer : PageMap.Writer) (fact : Fact) : IO Unit := do
++  if let some read := bindingCandidate? fact then
++    unless read.valid do throw (IO.userError "invalid published original binding")
++    let stored : StoredBinding := ⟨contentKey fact,read⟩
++    let _ ← putImmutable writer (bindingName read.source stored.fact) (← checkedBytes stored)
++
++theorem compiled_read_preserves_binding (read : Read) :
++    (bindingCandidate? (.read read)).map (·.binding) = some read.binding := rfl
++
++theorem compiled_support_preserves_binding (support : Support) :
++    (bindingCandidate? (.supports support)).map (·.binding) = some support.binding := rfl
++
+ def insert (writer : PageMap.Writer) (database : String) (scope : Scope) (fact : Fact) : IO Bool := do
+   unless scope.accepts fact && belongs database fact && fact.valid do
+     throw (IO.userError "invalid fact or wrong synaptic privacy/DB scope")
+   if let .used usage := fact then
+     let _ ← putImmutable writer (eventName usage.event) (← checkedBytes usage)
+   let inserted ← putImmutable writer (factName fact) (← checkedBytes fact)
++  prepareBinding writer fact
+   Routing.Store.insert writer fact
+   for key in addresses fact do
+     let posting : Posting := ⟨key, contentKey fact⟩
+@@ -145,6 +178,8 @@
+   unless previous == (toJson fact).compress.toUTF8 do
+     throw (IO.userError "retired synaptic object differs from its content address")
+   Routing.Store.erase writer fact
++  if let some read := bindingCandidate? fact then
++    writer.put (bindingName read.source (contentKey fact)) none
+   writer.put name none
+   for key in addresses fact do writer.put (postingName key fact) none
+   -- Retiring a recommendation does not permit relabelling an observed event.
+--- a/Eggshell/SynapticBindings.lean
++++ b/Eggshell/SynapticBindings.lean
+@@ -8,41 +8,32 @@
+ 
+ /-- Source bindings already exist in source postings. Quotation selector keys
+ do not distinguish original observations or duplicate their payload. -/
+-def candidate? : Fact → Option Read
+-  | .read read => some {read with quotations := #[]}
+-  | .supports support => some {
+-      occurrence := support.read.occurrence
+-      source := support.source
+-      binding := support.binding
+-      quotations := #[]}
+-  | _ => none
++abbrev candidate? := Index.bindingCandidate?
+ 
+ structure Origin (database : String) (allowed : Std.HashSet String) (source : Range) where
+-  fact : Fact
+-  factValid : fact.valid = true
+   read : Read
+-  projection : candidate? fact = some read
+   valid : read.valid = true
+   sourceExact : read.source = source
+   databaseExact : read.binding.database = database
+   admitted : allowed.contains read.binding.owner = true
+ 
+-def check? (database : String) (allowed : Std.HashSet String) (source : Range) (fact : Fact) :
++def checkRead? (database : String) (allowed : Std.HashSet String) (source : Range) (read : Read) :
+     Option (Origin database allowed source) := do
+-  if factValid : fact.valid = true then
+-    match projection : candidate? fact with
+-    | none => none
+-    | some read =>
+-      if valid : read.valid = true then
+-        if same : read.source = source then
+-          if sameDatabase : read.binding.database = database then
+-            if admitted : allowed.contains read.binding.owner = true then
+-              some ⟨fact,factValid,read,projection,valid,same,sameDatabase,admitted⟩ else none
+-          else none
+-        else none
++  if valid : read.valid = true then
++    if same : read.source = source then
++      if sameDatabase : read.binding.database = database then
++        if admitted : allowed.contains read.binding.owner = true then
++          some ⟨read,valid,same,sameDatabase,admitted⟩ else none
+       else none
++    else none
+   else none
+ 
++def check? (database : String) (allowed : Std.HashSet String) (source : Range) (fact : Fact) :
++    Option (Origin database allowed source) := do
++  if !fact.valid then none else do
++    let read ← candidate? fact
++    checkRead? database allowed source read
++
+ theorem Origin.only_admitted_owner (origin : Origin database allowed source) :
+     allowed.contains origin.read.binding.owner = true := origin.admitted
+ 
+@@ -60,22 +51,62 @@
+   bytes : Nat
+   unusable : Nat
+ 
++structure Scan where
++  rows : Array Index.StoredBinding := #[]
++  inspected : Nat := 0
++  bytes : Nat := 0
++  complete : Bool := true
++
++def scanAt (snapshot : PageMap.Snapshot) (ref : PageMap.Ref) (source : Range) (keyRange : PageMap.KeyRange)
++    (deadline byteLimit : Nat) (initial : Scan) : IO Scan := do
++  if !initial.complete then return initial
++  if (← IO.monoMsNow) ≥ deadline then return {initial with complete := false}
++  let loaded ← snapshot.load ref
++  let mut result := initial
++  match loaded.page with
++  | .leaf rows =>
++    for row in keyRange.select rows do
++      let some bytes := row.2 | continue
++      if result.inspected ≥ 32768 || result.bytes+bytes.size > byteLimit || (← IO.monoMsNow) ≥ deadline then
++        return {result with complete := false}
++      let binding ← Index.decode (α := Index.StoredBinding) bytes
++      unless row.1 == keyRange.lower ++ binding.fact && binding.read.source == source && binding.read.valid do
++        throw (IO.userError "prepared binding differs from its pinned source posting")
++      result := {result with
++        rows := result.rows.push binding
++        inspected := result.inspected+1
++        bytes := result.bytes+bytes.size}
++    return result
++  | .branch children =>
++    for child in children do
++      if keyRange.overlaps child then
++        if _smaller : child.height < ref.height then
++          result ← scanAt snapshot child source keyRange deadline byteLimit result
++        else throw (IO.userError "prepared binding directory height did not decrease")
++        if !result.complete then return result
++    return result
++termination_by ref.height
++
+ /-- One exact source-posting lookup, no Work/body restoration or source
+ parser. This returns advisory metadata, never a Match or completion proof. -/
+ def lookup (reader : Index.Reader) (source : Range) (allowed : Std.HashSet String)
+     (deadline : Nat) (byteLimit : Nat := 8*1024*1024) :
+     IO (Lookup reader.manifest.source.identity allowed source) := do
+-  let found ← reader.lookup (.source source) 32768 deadline (some byteLimit)
++  let base := "binding:" ++ Index.contentKey source
++  let range : PageMap.KeyRange := ⟨base ++ ":",base ++ ";"⟩
++  let found ← match reader.index.head.root with
++    | none => pure ({} : Scan)
++    | some root => scanAt reader.index root source range deadline byteLimit {}
+   let mut origins := #[]
+   let mut seen : Std.HashSet Read := {}
+   let mut unusable := 0
+-  for checked in found.checked do
+-    if (candidate? checked.fact).any (fun read => !read.valid) then unusable := unusable+1
+-    let some origin := check? reader.manifest.source.identity allowed source checked.fact | continue
++  for stored in found.rows do
++    if !stored.read.valid then unusable := unusable+1
++    let some origin := checkRead? reader.manifest.source.identity allowed source stored.read | continue
+     if seen.contains origin.read then continue
+     seen := seen.insert origin.read
+     origins := origins.push origin
+-  return ⟨origins,found.complete && unusable == 0,found.index,found.checked.size,found.payloadBytes,unusable⟩
++  return ⟨origins,found.complete && unusable == 0,reader.index.head,found.inspected,found.bytes,unusable⟩
+ 
+ structure Resolved where
+   rows : Std.HashMap Range (Array Read) := {}
+@@ -86,6 +117,17 @@
+   unresolved : Nat := 0
+   unusable : Nat := 0
+ 
++structure Projection where
++  identity : Json
++  index : PageMap.Head
++  rows : Array (Range × Array Read)
++  complete : Bool
++  requests : Nat
++  bytes : Nat
++  unresolved : Nat
++  unusable : Nat
++  deriving ToJson,FromJson
++
+ def resolve (reader : Index.Reader) (wanted : Array Range) (allowed : Std.HashSet String)
+     (deadline : Nat) : IO Resolved := do
+   let mut result : Resolved := {}
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -57,6 +57,7 @@
+   unlocatedFileOwners : Nat := 0
+   observations : Array Observation := #[]
+   canonical : Std.HashMap String (Array CanonicalSource.StoredRow) := {}
++  canonicalLayouts : Std.HashMap String (List CanonicalSource.Recipe.Entry) := {}
+   canonicalReuse : Array (String × CanonicalSource.Shared.Reuse × CanonicalSource.Shared.Reuse) := #[]
+   canonicalFailure : Array (String × String) := #[]
+   originalStructures : Std.HashMap String ObservedRecordView.Geometry := {}
+@@ -164,8 +165,8 @@
+       else allowed) ({} : Std.HashSet String)
+     let resolved ←
+       if result.complete && result.available && result.failure.isNone then
+-        match source.shared with
+-        | some shared => IndexedBindings.resolve shared wanted allowed deadline
++        match source.canonical with
++        | some reference => Plugin.Publication.Client.sourceBindings reference wanted allowed deadline
+         | none => pure ({complete := false} : IndexedBindings.Resolved)
+       else pure ({} : IndexedBindings.Resolved)
+     plan := {plan with
+@@ -205,7 +206,19 @@
+         let reuse := (source.source.head.identity,reference.access.reuse,found.reuse)
+         plan := {plan with canonicalReuse := plan.canonicalReuse.push reuse}
+         for (owner,rows) in found.rows do
+-          let merged ← IO.ofExcept (CanonicalSource.Delivery.merge ((plan.canonical[owner]?.getD #[]) ++ rows))
++          let previous := plan.canonical[owner]?.getD #[]
++          let merged ← if previous.isEmpty then pure rows else
++            IO.ofExcept (CanonicalSource.Delivery.merge (previous ++ rows))
++          let layout := found.layouts.find? (·.1 == owner) |>.map Prod.snd
++          if previous.isEmpty then
++            if let some layout := layout then
++              plan := {plan with canonicalLayouts := plan.canonicalLayouts.insert owner layout}
++          else if merged != previous then
++            let some old := plan.canonicalLayouts[owner]? |
++              throw (IO.userError "federated original is missing its published layout")
++            let some incoming := layout | throw (IO.userError "federated source omitted its layout")
++            let combined ← IO.ofExcept (CanonicalSource.Recipe.combine previous rows merged old incoming)
++            plan := {plan with canonicalLayouts := plan.canonicalLayouts.insert owner combined}
+           plan := {plan with canonical := if merged.isEmpty then plan.canonical.erase owner
+             else plan.canonical.insert owner merged}
+         let structures ← Plugin.Publication.Client.sourceRecords reference ids deadline
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -4905,6 +4905,7 @@
+   synapticUnits : List (List (Nat × Nat)) := []
+   provenance : List SourceEvidence.Record := []
+   cached : Array Synapses.CanonicalSource.StoredRow := #[]
++  cachedLayout : Option (List Synapses.CanonicalSource.Recipe.Entry) := none
+   original : Option (Array OriginalStructure.Span) := none
+ 
+ def Family.outputCues (family : Family) : List (Nat × Nat × Nat) :=
+@@ -5061,7 +5062,9 @@
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   let some work := Matcher.atomText? family.owner.work | return ([],[])
+   let owner := relationKey family.owner.relation
+-  let records := Synapses.CanonicalSource.Records.prepare family.cached
++  let some layout := family.cachedLayout | return ([],[])
++  let some prepared := (Synapses.CanonicalSource.Recipe.check family.cached layout).toOption | return ([],[])
++  let records := prepared.records
+   let focused := (family.windows ++ family.references).eraseDups.filterMap fun position =>
+     (meaningContext? source (work.length+1) position 0).map fun view => (view.span.start,view.span.stop)
+   let groups := family.referenceRanges.map Prod.snd ++
+@@ -5069,7 +5072,7 @@
+   -- Hints decorate a complete immutable record domain. They may combine
+   -- records, but cannot make an unhinted original row unavailable to fitting.
+   -- Payloads and file frames are still charged once by the shared problem.
+-  let catalogue := (Synapses.CanonicalSource.Records.catalogue family.cached records).map fun indices =>
++  let catalogue := prepared.catalogue.map fun indices =>
+     (indices.map fun index => family.cached[index]).toArray
+   let combined := groups.map fun spans =>
+     let requested := (List.finRange family.cached.size).filter fun index =>
+@@ -6060,6 +6063,7 @@
+     (outputRanges : List (Value × List Synapses.Transport.OutputRange) := [])
+     (synapticBundles : Array Synapses.Bundles.Projected := #[])
+     (canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {})
++    (canonicalLayouts : Std.HashMap String (List Synapses.CanonicalSource.Recipe.Entry) := {})
+     (originalStructures : Std.HashMap String Synapses.ObservedRecordView.Geometry := {})
+     (captureSelection : Bool := false) (captureRanges : Bool := false)
+     (captureInput : Bool := false) : Option Handoff :=
+@@ -6280,6 +6284,7 @@
+                 if bound.owner == originalKey then some bound.spans else none
+             provenance := (contextRows.find? (·.1.relation == owner.relation)).map Prod.snd |>.getD []
+             cached := canonicalRows[originalKey]?.getD #[]
++            cachedLayout := canonicalLayouts[originalKey]?
+             original := (originalStructures[originalKey]?).map (·.spans)} : SharedRangeAdapter.Family) else []
+     let locations := SharedRangeAdapter.RangeLocators.combine
+       ((families.filter (·.cached.isEmpty)).flatMap SharedRangeAdapter.RangeLocators.prepare)
+@@ -7785,6 +7790,7 @@
+     (outputRanges := synaptic.outputRanges)
+     (synapticBundles := synapticBundles)
+     (canonicalRows := canonicalRows)
++    (canonicalLayouts := synaptic.canonicalLayouts)
+     (originalStructures := originalStructures)
+     (captureSelection := source.receipt.isSome)
+     (captureRanges := captureRanges)
+--- a/Eggshell/JsonScalars.lean
++++ b/Eggshell/JsonScalars.lean
+@@ -55,10 +55,10 @@
+ def scalarLiteral (text : String) : Bool :=
+   (Json.parse text).toOption.any fun value => primitive value && value.compress == text
+ 
+-/-- One canonical scan records literal coordinates, immediate member starts
+-and shared ancestor paths. Keys provide context but never become witnesses. -/
+-def scan (json : Json) (raw : String) : Except String (Array Scalar) := do
+-  unless json.compress == raw do throw "noncanonical structured observation"
++/-- Keep the caller's canonical equality decision outside every hot loop.
++Otherwise specialization can capture that decision as a mutable-loop Boolean
++and compare the complete original string again at each character. -/
++@[noinline] def scanCanonical (raw : String) : Except String (Array Scalar) := do
+   let chars := raw.toList.toArray
+   let mut position := 0
+   let mut result := #[]
+@@ -117,6 +117,12 @@
+       result := result.push ⟨first,position,literal,none,#[],path,contextFirst⟩
+   return result
+ 
++/-- One canonical scan records literal coordinates, immediate member starts
++and shared ancestor paths. Keys provide context but never become witnesses. -/
++def scan (json : Json) (raw : String) : Except String (Array Scalar) := do
++  unless json.compress == raw do throw "noncanonical structured observation"
++  scanCanonical raw
++
+ def values (raw : String) : Except String (Array Scalar) := do scan (← Json.parse raw) raw
+ 
+ def Scalar.prefixExact (scalar : Scalar) (raw : Array Char) : Bool :=
+--- a/Eggshell/ContentMetadata.lean
++++ b/Eggshell/ContentMetadata.lean
+@@ -23,6 +23,27 @@
+ def chunkKey (digest : String) := "memo:content-alias:chunk:" ++ digest
+ def chunkCount : Nat := 64
+ 
++/-- Capture's producer is historical provenance. Rebuilding an extractor does
++not revoke an original correspondence committed by that producer. Its data
++projection, source digest and owning publication are checked independently. -/
++def Header.boundTo (header : Header) (database : String) (doc : Document) (raw : String) : Bool :=
++  decide (Synapses.digest header.implementation = true ∧ doc.native = true ∧
++    header.database = database ∧ header.owner = doc.owner ∧ header.work = doc.work ∧
++    header.original = Sha256.hex raw.toUTF8)
++
++theorem Header.bound_original (header : Header) (database : String) (doc : Document) (raw : String)
++    (checked : header.boundTo database doc raw = true) :
++    header.database = database ∧ header.owner = doc.owner ∧ header.work = doc.work ∧
++      header.original = Sha256.hex raw.toUTF8 := by
++  exact (of_decide_eq_true checked).2.2
++
++theorem Header.producer_is_provenance (header : Header) (database : String) (doc : Document)
++    (raw producer : String) (oldValid : Synapses.digest header.implementation = true)
++    (newValid : Synapses.digest producer = true) :
++    ({header with implementation := producer}).boundTo database doc raw =
++      header.boundTo database doc raw := by
++  simp [Header.boundTo,oldValid,newValid]
++
+ structure Line (raw : String) where
+   alias : ContentCapture.Alias
+   code : String
+@@ -79,10 +100,8 @@
+ def load? (source : PageMap.Snapshot) (id : Nat) (doc : Document) : IO (Option ContentCapture.Captured) := do
+   let some payload ← MetadataBytes.get? source (ownerKey id) | return none
+   let header ← ObservedRecords.decode (α := Header) payload.bytes
+-  if header.implementation != ContentCapture.implementation then return none
+   let some raw := doc.source | throw (IO.userError "content metadata lost original native output")
+-  unless doc.native && header.database == source.head.identity && header.owner == doc.owner &&
+-      header.work == doc.work && header.original == Sha256.hex raw.toUTF8 do
++  unless header.boundTo source.head.identity doc raw do
+     throw (IO.userError "content correspondence belongs to another original")
+   let mut aliases := #[]
+   for digest in header.chunks do
+--- a/Eggshell/Storage/sync.c
++++ b/Eggshell/Storage/sync.c
+@@ -78,10 +78,7 @@
+     return fd;
+ }
+ 
+-static lean_obj_res egg_open_regular(b_lean_obj_arg path, int access) {
+-    int error = 0;
+-    int fd = egg_open_fd(path, access, 0, &error);
+-    if (fd < 0) return egg_read_error(error);
++static lean_obj_res egg_read_adopt(int fd) {
+     egg_read_handle *handle = malloc(sizeof(*handle));
+     if (!handle) { close(fd); return egg_read_error(ENOMEM); }
+     handle->fd = fd;
+@@ -89,11 +86,46 @@
+     return lean_io_result_mk_ok(lean_alloc_external(egg_read_class, handle));
+ }
+ 
++static lean_obj_res egg_open_regular(b_lean_obj_arg path, int access) {
++    int error = 0;
++    int fd = egg_open_fd(path, access, 0, &error);
++    if (fd < 0) return egg_read_error(error);
++    return egg_read_adopt(fd);
++}
++
+ LEAN_EXPORT lean_obj_res eggshell_read_open(b_lean_obj_arg path, lean_obj_arg world) {
+     (void)world;
+     return egg_open_regular(path, O_RDONLY);
++}
++
++LEAN_EXPORT lean_obj_res eggshell_read_directory_open(b_lean_obj_arg path, lean_obj_arg world) {
++    (void)world;
++    const char *text = lean_string_cstr(path);
++    if (lean_string_size(path) == 2 && text[0] == '/' && text[1] == 0) {
++        int root = open("/", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
++        return root < 0 ? egg_read_error(errno) : egg_read_adopt(root);
++    }
++    int error = 0;
++    int fd = egg_open_fd(path, O_RDONLY | O_DIRECTORY, 1, &error);
++    if (fd < 0) return egg_read_error(error);
++    return egg_read_adopt(fd);
+ }
+ 
++LEAN_EXPORT lean_obj_res eggshell_read_open_at(b_lean_obj_arg directory, b_lean_obj_arg name, lean_obj_arg world) {
++    (void)world;
++    const char *leaf = lean_string_cstr(name);
++    if (!leaf[0] || strlen(leaf) + 1 != lean_string_size(name) || strchr(leaf, '/') ||
++            !strcmp(leaf, ".") || !strcmp(leaf, "..")) return egg_read_error(EINVAL);
++    egg_read_handle *parent = lean_get_external_data(directory);
++    int fd = openat(parent->fd, leaf, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
++    if (fd < 0) return egg_read_error(errno);
++    struct stat info;
++    int error = fstat(fd, &info) < 0 ? errno : 0;
++    if (!error && (!S_ISREG(info.st_mode) || info.st_size < 0)) error = EINVAL;
++    if (error) { close(fd); return egg_read_error(error); }
++    return egg_read_adopt(fd);
++}
++
+ LEAN_EXPORT lean_obj_res eggshell_read_try_lock(b_lean_obj_arg object, uint8_t exclusive,
+         lean_obj_arg world) {
+     (void)world;

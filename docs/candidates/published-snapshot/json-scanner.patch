@@ -1,0 +1,30 @@
+--- a/Eggshell/JsonScalars.lean
++++ b/Eggshell/JsonScalars.lean
+@@ -55,10 +55,10 @@
+ def scalarLiteral (text : String) : Bool :=
+   (Json.parse text).toOption.any fun value => primitive value && value.compress == text
+ 
+-/-- One canonical scan records literal coordinates, immediate member starts
+-and shared ancestor paths. Keys provide context but never become witnesses. -/
+-def scan (json : Json) (raw : String) : Except String (Array Scalar) := do
+-  unless json.compress == raw do throw "noncanonical structured observation"
++/-- Keep the caller's canonical equality decision outside every hot loop.
++Otherwise specialization can capture that decision as a mutable-loop Boolean
++and compare the complete original string again at each character. -/
++@[noinline] def scanCanonical (raw : String) : Except String (Array Scalar) := do
+   let chars := raw.toList.toArray
+   let mut position := 0
+   let mut result := #[]
+@@ -117,6 +117,12 @@
+       result := result.push ⟨first,position,literal,none,#[],path,contextFirst⟩
+   return result
+ 
++/-- One canonical scan records literal coordinates, immediate member starts
++and shared ancestor paths. Keys provide context but never become witnesses. -/
++def scan (json : Json) (raw : String) : Except String (Array Scalar) := do
++  unless json.compress == raw do throw "noncanonical structured observation"
++  scanCanonical raw
++
+ def values (raw : String) : Except String (Array Scalar) := do scan (← Json.parse raw) raw
+ 
+ def Scalar.prefixExact (scalar : Scalar) (raw : Array Char) : Bool :=
