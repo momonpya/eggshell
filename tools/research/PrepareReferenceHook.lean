@@ -44,6 +44,71 @@ def main (args : List String) : IO Unit := do
       ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (3670016 : Nat)),
       ("minFreeKiB",toJson (2097152 : Nat)),
       ("record",toJson (base / ("reference-hook-" ++ name ++ ".guard.json")).toString)]).pretty
+  if mode == "trace-seal" then
+    let records := project / "docs/candidates/reference-hook/trace"
+    unless !(← (records / "completed.json").pathExists) do throw (IO.userError "preserve sealed trace evidence")
+    let save (source target : System.FilePath) : IO Unit := do
+      unless !(← target.pathExists) do throw (IO.userError "preserve earlier trace record")
+      IO.FS.createDirAll target.parent.get!
+      let value ← read source
+      let text := value.compress
+      unless (← IO.ofExcept (Json.parse text)) == value do throw (IO.userError "trace JSON value changed")
+      IO.FS.writeFile target text
+    for name in #["reference-trace-audit", "reference-hook-trace-audit-parsed",
+        "reference-hook-audit-native", "reference-hook-trace-audit-native",
+        "reference-hook-replay-selection-trace"] do
+      let path := base / (name ++ ".guard.json")
+      let report ← read path
+      unless report.getObjValD "state" == toJson "finished" && report.getObjValD "ownedPids" == toJson (#[] : Array Nat) do
+        throw (IO.userError "a trace process has not stopped")
+      save path (records / "guards" / (name ++ ".json"))
+    let result := base / "reference-hook-topic-1-selection-trace"
+    let integrity ← read (result / "result.json")
+    unless integrity.getObjValD "sourceFactsUnchanged" == toJson true &&
+        integrity.getObjValD "originalPagePrefixUnchanged" == toJson true do
+      throw (IO.userError "trace source integrity is not verified")
+    save (result / "result.json") (records / "result.json")
+    save (base / "reference-selection-audit-native.json") (records / "selection-audit.json")
+    let mut sessions := #[]
+    for topic in [1:4] do
+      let directory := result / s!"topic-{topic}"
+      let request ← IO.ofExcept (Json.parse (← IO.FS.readFile (directory / "UserPromptSubmit/stdin")))
+      let session : String ← IO.ofExcept (request.getObjValAs? String "session_id")
+      unless (System.FilePath.mk session).fileName == some session do throw (IO.userError "invalid trace session name")
+      sessions := sessions.push (data / "sessions" / session)
+      for entry in ← (data / "receipts").readDir do
+        if !(← (entry.path / "request.json").pathExists) then continue
+        let header := (← read (entry.path / "request.json")).getObjValD "data"
+        if header.getObjValD "session" != toJson session || header.getObjValD "event" != toJson "UserPromptSubmit" then continue
+        for name in #["request.json", "selection-plan.json", "delivery-domain.json"] do
+          save (entry.path / name) (records / s!"topic-{topic}" / name)
+    let targets := #[base / "reference-hook-audit-build/StudyMain"] ++ sessions
+    let retained := #[runtime, base / "origin-prefix/libexec/eggshell", base / "reference-hook-driver-build/StudyMain", controller]
+    let hashes ← call "/usr/bin/shasum" (#["-a", "256"] ++ retained.map (·.toString))
+    let processes ← call "/bin/ps" #["-axo", "command="]
+    let mut removed := (0,0)
+    for path in targets do
+      unless (processes.splitOn path.toString).length == 1 do throw (IO.userError "a trace artifact is active")
+      if ← path.pathExists then
+        let count ← removeEnded path
+        removed := (removed.1 + count.1, removed.2 + count.2)
+    unless hashes == (← call "/usr/bin/shasum" (#["-a", "256"] ++ retained.map (·.toString))) do
+      throw (IO.userError "a retained runtime changed")
+    IO.FS.writeFile (records / "completed.json") (Json.mkObj [("retainedHashes",toJson hashes),
+      ("deletedPaths",toJson (targets.map (·.toString))), ("deletedFiles",toJson removed.1),
+      ("deletedLogicalBytes",toJson removed.2), ("archiveCreated",toJson false),
+      ("answeringModelCalls",toJson (0 : Nat)), ("productionAdoption",toJson false)]).pretty
+    IO.println s!"Preserved trace evidence; deleted {removed.1} ended files, {removed.2} logical bytes"
+    return
+  if mode == "trace-audit" then
+    guard ("trace-audit-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT=" ++ data.toString,
+      (base / "reference-hook-audit-build/StudyMain").toString,
+      (seed / "study/seed-1/work.egg").toString,
+      (base / "reference-hook-topic-1-initial-three").toString,
+      (base / "reference-hook-topic-1-selection-trace").toString,
+      (base / ("reference-selection-audit-" ++ label ++ ".json")).toString]
+    return
   if mode == "seal" then
     let records := project / "docs/candidates/reference-hook"
     unless !(← (records / "completed.json").pathExists) do throw (IO.userError "preserve sealed native evidence")
@@ -183,18 +248,19 @@ def main (args : List String) : IO Unit := do
     unless !(← path.pathExists) do throw (IO.userError "preserve candidate conditions")
     IO.FS.writeFile path candidate.pretty
     return
-  if mode == "replay" || mode == "trace" || mode == "topics" then
+  if mode == "replay" || mode == "trace" || mode == "topics" || mode == "topics-trace" then
     guard ("replay-" ++ label) (#["/usr/bin/env","-u","CODEX_THREAD_ID","-u","CODEX_TURN_ID","LEAN_NUM_THREADS=1"] ++
-      (if mode == "trace" then #["EGGSHELL_TRACE_SELECTION_RANGES=1","EGGSHELL_TRACE_SELECTOR_INPUT=1"] else #[]) ++
+      (if mode == "trace" || mode == "topics-trace" then #["EGGSHELL_TRACE_SELECTION_RANGES=1","EGGSHELL_TRACE_SELECTOR_INPUT=1"] else #[]) ++
       #["EGGSHELL_DATA_ROOT=" ++ data.toString,(base / "reference-hook-driver-build/StudyMain").toString,
         seed.toString,(base / ("reference-hook-topic-1-" ++ label)).toString,
-        (if mode == "topics" then "topics-1-3" else "topic-1"),(base / "reference-hook-plan.json").toString])
+        (if mode == "topics" || mode == "topics-trace" then "topics-1-3" else "topic-1"),(base / "reference-hook-plan.json").toString])
     return
   let entry ← match mode with
     | "product" => pure "Main"
     | "checks" => pure "tools.research.ReferenceHookChecks"
     | "prepare" => pure "tools.research.CitationOriginPrepare"
     | "driver" => pure "tools.research.SeedDeliveryReplay"
+    | "audit" => pure "tools.research.ReferenceTraceAudit"
     | _ => throw (IO.userError "unknown reference hook mode")
   let alternatives := if mode == "product" then
       #[base / "reference-hook-checks-build",base / "origin-driver-build"]
