@@ -1,0 +1,252 @@
+--- /dev/null
++++ b/Eggshell/PublicationStream.lean
+@@ -0,0 +1,82 @@
++module
++
++public import Eggshell.DaemonWire
++public import Eggshell.Blake3
++public import Init.Data.ByteArray.Lemmas
++
++@[expose] public section
++
++namespace Eggshell.Plugin.Publication.Stream
++open Lean Std Async TCP
++
++/-- A logical projection uses the reserved reply budget. Each physical frame
++stays small and carries raw bytes without another JSON-string wrapping. -/
++def maxBytes : Nat := 16*1024*1024
++def chunkBytes : Nat := 1024*1024
++def next (bytes : ByteArray) (offset : Nat) := min bytes.size (offset+chunkBytes)
++def fragment (bytes : ByteArray) (offset : Nat) := bytes.extract offset (next bytes offset)
++
++theorem fragment_bounded (bytes : ByteArray) (offset : Nat) :
++    (fragment bytes offset).size ≤ chunkBytes := by
++  simp only [fragment,ByteArray.size_extract,next]
++  omega
++
++theorem fragment_advances (bytes : ByteArray) (offset : Nat) (more : offset < bytes.size) :
++    offset < next bytes offset := by
++  simp only [next,chunkBytes]
++  omega
++
++theorem fragment_preserves_prefix (bytes : ByteArray) (offset : Nat) (valid : offset ≤ bytes.size) :
++    bytes.extract 0 offset ++ fragment bytes offset = bytes.extract 0 (next bytes offset) := by
++  have grows : offset ≤ next bytes offset := by simp only [next]; omega
++  ext1
++  simp only [fragment,ByteArray.data_append,ByteArray.data_extract]
++  rw [Array.extract_append_extract]
++  simp [Nat.max_eq_right grows]
++
++/-- The service supplies its existing deadline, cancellation and reservation
++aware sender. It finishes each frame before admitting the next. -/
++def send (frame : ByteArray → IO Unit) (reply : Except String String) : IO Unit := do
++  match reply with
++  | .error message => frame (Daemon.response (.error message)).compress.toUTF8
++  | .ok text =>
++    let bytes := text.toUTF8
++    unless bytes.size ≤ maxBytes do
++      frame (Daemon.response (.error "source projection exceeds reserved reply budget")).compress.toUTF8
++      return
++    frame (Json.mkObj [("ok",toJson true),("bytes",toJson bytes.size),
++      ("digest",toJson (Blake3.hex (Blake3.hash bytes)))]).compress.toUTF8
++    let mut offset := 0
++    while offset < bytes.size do
++      frame (fragment bytes offset)
++      offset := next bytes offset
++
++def receiveWith (frame : IO ByteArray) : IO String := do
++  let header ← frame
++  let some text := String.fromUTF8? header | throw (IO.userError "invalid source stream header")
++  let value ← IO.ofExcept (Json.parse text)
++  unless value.getObjValD "ok" == toJson true do
++    throw (IO.userError ((value.getObjValAs? String "error").toOption.getD "source stream failed"))
++  let size ← IO.ofExcept (value.getObjValAs? Nat "bytes")
++  let digest ← IO.ofExcept (value.getObjValAs? String "digest")
++  unless size ≤ maxBytes do throw (IO.userError "source stream exceeds reserved reply budget")
++  let mut bytes := ByteArray.emptyWithCapacity size
++  while bytes.size < size do
++    let part ← frame
++    unless !part.isEmpty && part.size ≤ chunkBytes && part.size ≤ size-bytes.size do
++      throw (IO.userError "invalid source stream extent")
++    bytes := bytes ++ part
++  unless Blake3.hex (Blake3.hash bytes) == digest do throw (IO.userError "source stream digest mismatch")
++  let some result := String.fromUTF8? bytes | throw (IO.userError "source stream is not UTF-8")
++  return result
++
++def receive (client : Socket.Client) (deadline : Nat) : IO String :=
++  receiveWith (Daemon.receiveFrameBefore client deadline)
++
++def exchange (endpoint : Daemon.Endpoint) (kind : String) (payload : Json) (budget : Nat) : IO String := do
++  let deadline := (← IO.monoMsNow)+budget
++  let client ← Daemon.connect endpoint
++  Daemon.sendFrame client (Daemon.request endpoint.secret kind payload).compress.toUTF8
++  receive client deadline
++
++end Eggshell.Plugin.Publication.Stream
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.NativePublication
+ public import Eggshell.DaemonWire
++public import Eggshell.PublicationStream
+ public import Eggshell.CanonicalSourcePrepared
+ public import Eggshell.ObservedRecordView
+ 
+@@ -85,6 +86,7 @@
+ source protocol can share one owner across clients built from the same code. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
+   (include_str "PublicationWire.lean").toUTF8,(include_str "PublicationClient.lean").toUTF8,
++  (include_str "PublicationStream.lean").toUTF8,
+   (include_str "PublicationService.lean").toUTF8,(include_str "NativePublication.lean").toUTF8,
+   (include_str "CanonicalSourcePrepared.lean").toUTF8,(include_str "DaemonWire.lean").toUTF8,
+   (include_str "PluginModel.lean").toUTF8,(include_str "DB/PageMap.lean").toUTF8,
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -62,9 +62,9 @@
+   let access := reference.access
+   let owners := (hashDistinct owners.toList).toArray
+   let budget ← liveBudget deadline
+-  let response ← Daemon.exchange reference.endpoint "source-rows" (Json.mkObj [
++  let response ← Stream.exchange reference.endpoint "source-rows" (Json.mkObj [
+     ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
+-    ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) (budget := budget)
++    ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+   let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.CanonicalSource.Shared.Projection))
+   unless result.identity == reference.identity && result.rows.map Prod.fst == owners do
+     throw (IO.userError "prepared source projection changed its owner domain")
+@@ -84,9 +84,9 @@
+   let access := reference.access
+   let owners := (hashDistinct owners.toList).toArray
+   let budget ← liveBudget deadline
+-  let response ← Daemon.exchange reference.endpoint "source-records" (Json.mkObj [
++  let response ← Stream.exchange reference.endpoint "source-records" (Json.mkObj [
+     ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
+-    ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) (budget := budget)
++    ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+   let result ← IO.ofExcept (Json.parse response >>=
+     fromJson? (α := Synapses.ObservedRecordView.Projection))
+   unless result.source == access.source && result.rows.map Prod.fst == owners do
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -176,10 +176,7 @@
+   server.prepared.withReady pinned.snapshot path metadata deadline fun loaded reuse => do
+     let access : CanonicalSource.Shared.Access := ⟨database,identity,"",head,metadata,reuse⟩
+     let result : CanonicalSource.Shared.Projection := ⟨access.identity,loaded.rows owners,reuse⟩
+-    let value := toJson result
+-    unless value.compress.utf8ByteSize ≤ (Daemon.maxFrameBytes-4096)/2 do
+-      throw (IO.userError "prepared source projection exceeds its wire bound")
+-    return value
++    return toJson result
+ 
+ /-- The identical authenticated read scope serves generic original output.
+ The prepared index snapshot is shared; no query repairs or normalizes it. -/
+@@ -205,7 +202,7 @@
+       let found ← server.structures.acquire original.index scope.database owner deadline
+       let value := toJson (owner,found)
+       size := size+value.compress.utf8ByteSize
+-      unless size ≤ (Daemon.maxFrameBytes-4096)/2 do throw (IO.userError "original record projection exceeds wire bound")
++      unless size ≤ Stream.maxBytes-4096 do throw (IO.userError "original record projection exceeds reserved reply budget")
+       rows := rows.push (owner,found)
+     return toJson ({source := head,rows,cache := ← server.structures.stats} : ObservedRecordView.Projection)
+ 
+@@ -387,6 +384,7 @@
+   let reserved ← IO.mkRef (0 : Nat)
+   let reservedReply ← IO.mkRef (0 : Nat)
+   let cancelled ← IO.mkRef false
++  let streamed ← IO.mkRef false
+   let deadline := (← IO.monoMsNow)+maxBudgetMs
+   let replyDeadline ← IO.mkRef deadline
+   let reply ← try
+@@ -405,13 +403,14 @@
+     let json ← IO.ofExcept (Json.parse text)
+     let secret ← IO.ofExcept (json.getObjValAs? String "secret")
+     let kind ← IO.ofExcept (json.getObjValAs? String "kind")
++    streamed.set (kind == "source-rows" || kind == "source-records")
+     let payload := json.getObjValD "payload"
+     let deadline ← if ["prepare-source","refresh-source","source-rows","source-records"].contains kind then do
+         let budget ← IO.ofExcept (payload.getObjValAs? Nat "budgetMs")
+         pure (min deadline (deadline-maxBudgetMs+min budget maxBudgetMs))
+       else pure deadline
+     replyDeadline.set deadline
+-    let replyCharge := if kind == "source-rows" || kind == "source-records" then 16*1024*1024 else 65536
++    let replyCharge := if kind == "source-rows" || kind == "source-records" then Stream.maxBytes else 65536
+     reserveReply server replyCharge deadline
+     reservedReply.set replyCharge
+     let value ← if kind == "refresh-source" then refreshSource server secret payload deadline
+@@ -429,13 +428,15 @@
+         | "stats" => stats server
+         | "shutdown" => server.stopping.set true; pure (toJson true)
+         | _ => throw (IO.userError "unknown publication operation")
+-    pure (Daemon.response (.ok value.compress))
+-    catch error => pure (Daemon.response (.error error.toString))
++    pure (.ok value.compress : Except String String)
++    catch error => pure (.error error.toString)
+   try
+     if (← reservedReply.get) == 0 then
+       reserveReply server 65536 (min deadline ((← IO.monoMsNow)+100))
+       reservedReply.set 65536
+-    sendReply server client reply.compress.toUTF8 (← replyDeadline.get) reservedReply
++    let send := fun bytes => do sendReply server client bytes (← replyDeadline.get) reservedReply
++    if ← streamed.get then Stream.send send reply
++    else send (Daemon.response reply).compress.toUTF8
+   finally
+     cancelled.set true
+     let bytes ← reserved.get
+--- a/Eggshell/CanonicalSourceDelivery.lean
++++ b/Eggshell/CanonicalSourceDelivery.lean
+@@ -107,6 +107,45 @@
+     return origins.fold (fun found owner references => found.insert owner
+       ((found[owner]?).getD #[] |>.push ⟨key,atom.code,references⟩)) found) {}
+ 
++namespace Locations
++
++structure Group where
++  subject : Subject
++  ranges : List (Nat × Nat)
++  deriving ToJson, FromJson
++
++def expand (groups : List Group) : List Range :=
++  groups.flatMap fun group => group.ranges.map fun (first,last) => ⟨group.subject,first,last⟩
++
++def prepend (range : Range) : List Group → List Group
++  | [] => [⟨range.subject,[(range.first,range.last)]⟩]
++  | group::rest =>
++    if range.subject = group.subject then {group with ranges := (range.first,range.last)::group.ranges}::rest
++    else ⟨range.subject,[(range.first,range.last)]⟩::group::rest
++
++theorem prepend_exact (range : Range) (groups : List Group) :
++    expand (prepend range groups) = range::expand groups := by
++  cases groups with
++  | nil => cases range; rfl
++  | cons group rest =>
++    simp only [prepend]
++    split
++    · cases range; cases group; simp_all [expand]
++    · cases range; rfl
++
++def pack (ranges : List Range) : List Group := ranges.foldr prepend []
++
++/-- File metadata is shared without omitting, widening, reordering or
++inventing a single locator interval. This is unrelated to evidence credit. -/
++theorem expand_pack (ranges : List Range) : expand (pack ranges) = ranges := by
++  induction ranges with
++  | nil => rfl
++  | cons first rest ih =>
++    change expand (prepend first (pack rest)) = first::rest
++    rw [prepend_exact,ih]
++
++end Locations
++
+ /-- Positions are explicitly labelled metadata and never counted as code
+ delivery. Keep the original available domain fixed while receipts subtract. -/
+ def locators (rows : Array StoredRow) : String := Id.run do
+@@ -122,6 +161,7 @@
+     ranges := ranges.push ⟨row.key.file,row.key.line,row.key.line⟩
+   if ranges.isEmpty then return ""
+   return "\nSAVED SOURCE POSITIONS\nPositions alone are not delivered code; CODE blocks contain the delivered rows.\n" ++
+-    "\n".intercalate (ranges.toList.map fun range => (toJson range).compress) ++ "\nEND SAVED SOURCE POSITIONS\n"
++    "\n".intercalate ((Locations.pack ranges.toList).map fun group => (toJson group).compress) ++
++    "\nEND SAVED SOURCE POSITIONS\n"
+ 
+ end Eggshell.Synapses.CanonicalSource.Delivery

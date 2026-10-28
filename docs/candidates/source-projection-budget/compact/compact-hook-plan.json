@@ -1,0 +1,190 @@
+{"workspace":
+ "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project",
+ "sourceCommit": "6dfe1677ab8dffbc6ec13d53a1e0215d75147689",
+ "runtime":
+ {"sha256": "3e360e458e6ea2b2be22d6faf2f7310506a6c7a0a5b7dade1a3795edf3cfe02a",
+  "path":
+  "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/compact-prefix/libexec/eggshell"},
+ "runner":
+ {"sha256": "d4efe7aa36134647f9fac204c2887d54d40c95ab0d084022093d60a72729301b",
+  "path":
+  "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/controller/StudyMain"},
+ "provider": "openai",
+ "prompt":
+ {"sha256": "1c6b807d6fecb736b89c3270e019d09556e385ed18e256bac98a330f2e9a93c0",
+  "path":
+  "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/prompts/topic-0.txt"},
+ "pluginRoot":
+ "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/compact-prefix/plugins/eggshell",
+ "pluginFiles":
+ [{"sha256": "8a3106cfe35e8c63082f8d8ef18416a90f050995d9bc12052c4f51aa6bc29500",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/compact-prefix/plugins/eggshell/.codex-plugin/plugin.json"},
+  {"sha256": "0f5099f94cab800f663ed5e1d6ee7c40bc21d55e8da21c1ab5b90e26fcd3eb75",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/compact-prefix/plugins/eggshell/.eggshell-owner"},
+  {"sha256": "83591d9124b9f5906a0b9bc79c847221f4aeb7304264e2abee8cb0b8221dfcad",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/compact-prefix/plugins/eggshell/bin/egg"},
+  {"sha256": "83591d9124b9f5906a0b9bc79c847221f4aeb7304264e2abee8cb0b8221dfcad",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/compact-prefix/plugins/eggshell/bin/eggshelld"},
+  {"sha256": "cb31e217d8aa28ccd924033fa017daf43f3edb515e0e49aeb1fbf236b568a999",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/compact-prefix/plugins/eggshell/hooks/hooks.json"}],
+ "output":
+ "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/study/seed-1",
+ "nativeCli":
+ {"sha256": "1da3f4e0e96028b8a771814293c3033dafd1971f943f6c7e79b0897fe705f590",
+  "path":
+  "/Users/ovm/.nodebrew/current/lib/node_modules/@openai/codex/node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/bin/codex"},
+ "model": "gpt-5.6-luna",
+ "label": "new-native-seed-1",
+ "kind": "seed",
+ "harness":
+ [{"sha256": "3d3aafbd5b07f8bd0b5d79148e2170f0731c967d3014d0dc176d93b3c73cf04c",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/ArtifactHash.lean"},
+  {"sha256": "4b39a4eea43805cc8f2fc9473857e9ccc54fa1c1ac5b5995ca423395e8ec9cae",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/RequiredDelivery.lean"},
+  {"sha256": "a03570245119d2a63226f5e5bea987409fdbb7f5344123000e6da313f85866e1",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/OriginalEvidence.lean"},
+  {"sha256": "7ef60cecb9e598b42d464ee1d15e23a16f3d9ed35bae32032892d4f79cecb4d9",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/NativeTrialAudit.lean"},
+  {"sha256": "2b9864244a659c0af5b8889a16f72a6b9e49bd254dd71110615a834edfb3e72b",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyRuntime.lean"},
+  {"sha256": "5c3f9cdd557971b46cc13df1d4c5967a2a9791c7f8da33e49ba510a5d087e335",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/ResourceGuard.lean"},
+  {"sha256": "b43fc5ddf55bb68d9e3edd51edb1fcec4744e1d9564ef1df12f79ba18aad789e",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyEnvironment.lean"},
+  {"sha256": "286424e0641babb5f817f48f93739e7a16ee29621ed7f6006a68713d421e131f",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyTransport.lean"},
+  {"sha256": "8a6d1e437ce1c4d2c4f47f9f28ea3422a00ebf13b0767e8868116c08e07d4fd6",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyCommand.lean"},
+  {"sha256": "8e9c7229c2ec85d9eae4b5ecf40412dbd1195c32b0ea464dc458eb3ecbe3da79",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudySource.lean"},
+  {"sha256": "ab898aa43ac792f287cb93aa3d6061e6033d0029c43b39570d27b513b6472076",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyAdmission.lean"},
+  {"sha256": "210807ff05b524253011e75dfc356418e54b244d734c49970772f3a9051a3e91",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyAccounting.lean"},
+  {"sha256": "80eab45f34a397cfd96ae40f2409adc9a69e6d54a20840b029443773692fd3a5",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyTrial.lean"},
+  {"sha256": "17b28d905fdd9601fc76343b11c17f7c0580d75acbbb67f3eee49f57ca423ef7",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyPrepare.lean"},
+  {"sha256": "128f006f6af1f9906bb4a8864a4ee664649e00fcaa786c4d3302e12d7f3ed476",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyAdmissionChecks.lean"},
+  {"sha256": "ae9d90a96de86f0ea781fec067e7ac9d7110ff3892d612c288917f4692462a12",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyAcquire.lean"},
+  {"sha256": "9191eeacb9df121af7a9d8a084ad2e919060b8c0e8b837ed9d5faf343e5fd8f4",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/NativeSeedAudit.lean"},
+  {"sha256": "f5b38e2a48363ec3b777cee6205ace38481c9b285b1be9e7449a2cf52cf5d83c",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/NativeSeedFinalize.lean"},
+  {"sha256": "71a5dc52d4b267ccd26323940e593b83004b119716df017650b388b3bd71d843",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudySeedChecks.lean"},
+  {"sha256": "ac319f3052aeaac09e8ecfa3cb6cc76d9c92d3d94d703833d38f5d22543f8878",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudySeal.lean"},
+  {"sha256": "d994582dc1e1561dedc40b7617ab8a3c992b35d9a0119e2d58c7a34aee07c767",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyCommandChecks.lean"},
+  {"sha256": "cd3ee6bdbe3b6bdbecfa73f10967f2f7604413aa95ec66a4102ca4c30a164c43",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyEnvironmentChecks.lean"},
+  {"sha256": "928af65047b89130ddf4861053319c52993ef7110f8f3b0bc4916d13a23033e7",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyTransportChecks.lean"},
+  {"sha256": "adc40aa210e45c2d463b15dbefa0b664dffc850c630d3009918bd0148fa481db",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/PrepareMatchedSource.lean"},
+  {"sha256": "a7cf161220b6736ee6f90024bd7ad21aa735eeedaf7f81748a5e2b28213d20db",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBootstrap.lean"},
+  {"sha256": "7168cc368d6740cf24f12d233b1c5e1683ff21aa56339fda6c99e3c80283e959",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyHistory.lean"},
+  {"sha256": "1bc4ef4014269bc753c867f3fc7c182683febf7db980184787309e7d62f800f7",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBudgetChecks.lean"},
+  {"sha256": "4c5cf6d5de3d4fe4cc6865cf902b8fe3ce0d7c251abeefa5d74547477e484445",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyMain.lean"},
+  {"sha256": "8d8b3b7ecc9bdd186ca9234abd802a209d54e6ed32844d83034bc9641b344191",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean"},
+  {"sha256": "f450b5fceb7f00ea36314b1a2ea01d75f0cd0ef021a2df5028568fb9795692e9",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/benchmarks/reseed-delivery-contract.json"},
+  {"sha256": "75577221c430eba2e03231c11b76795fa1a4a96a8127a974783fc89c64825094",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/benchmarks/llvm-three-topics.json"},
+  {"sha256": "ce88b5260251b30eecfb6313bb15dd19427aa8f9ef6d344e2f25c272323f6112",
+   "path":
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/benchmarks/readme-memory-facts.json"}],
+ "guardRecord":
+ "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/seed-1.guard.json",
+ "gate":
+ {"shutdown":
+  {"sha256": "6b1d2bfa7595eea8fdecdcd830197430f7c567f04ae53fd31f3de9d846b15c51",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/native-gate/shutdown.json"},
+  "report":
+  {"sha256": "6967916bb82f111be3c1ee19e99a99e8b8e7595663d4ee9aa71e90080e3ce4ee",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/native-gate/result.json"},
+  "recovery":
+  {"sha256": "9055249a1f697f2fb81e8a7f559ba60f96b1681c9488907fa6ecd249101dff63",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/native-gate/recovery.json"},
+  "publisherShutdown":
+  {"sha256": "9e03bb7045434df25da4ac2df6f242eb2b520e38c75fb37d883b286824336ccb",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/native-gate/publisher-shutdown.json"},
+  "guard":
+  {"sha256": "411424b37320bb1c392f8f86b9836e7cf93ebc35761e5552c0f4a8f5689d32f1",
+   "path":
+   "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/native-gate.guard.json"}},
+ "environment":
+ [["CODEX_HOME",
+   "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/account"],
+  ["TMPDIR",
+   "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/tmp"],
+  ["EGGSHELL_DATA_ROOT",
+   "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/native-gate/data"],
+  ["HF_HUB_OFFLINE", "1"],
+  ["LEAN_NUM_THREADS", "1"],
+  ["OMP_NUM_THREADS", "1"],
+  ["OPENBLAS_NUM_THREADS", "1"],
+  ["MKL_NUM_THREADS", "1"],
+  ["TOKENIZERS_PARALLELISM", "false"],
+  ["CODEX_THREAD_ID", null],
+  ["CODEX_TURN_ID", null],
+  ["EGGSHELL_PREFIX",
+   "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/compact-prefix"],
+  ["PLUGIN_ROOT",
+   "/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/compact-prefix/plugins/eggshell"]],
+ "effort": "xhigh",
+ "cliWrapper":
+ {"sha256": "134063e133f0b4244fa3b251acf973d4fe4b4aeeacbdc135211bf480f59f1477",
+  "path": "/Users/ovm/.nodebrew/current/bin/codex"},
+ "accountConfiguration":
+ {"sha256": "d32782ada9937451de5e4aaa2b8345e1fbd2a33b6f526d9d526c12d2cdc23fce",
+  "path":
+  "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/account/config.toml"}}

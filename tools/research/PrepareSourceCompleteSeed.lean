@@ -142,6 +142,14 @@ def main (args : List String) : IO Unit := do
     guarded "seed-journal-audit" #[(built / "storage-events-build/StudyMain").toString,
       (root / "study/seed-1").toString,(root / "seed-journal-audit.json").toString]
       #[("EGGSHELL_DATA_ROOT",some (root / "study/seed-1/data").toString)]
+  | ["delivery"] =>
+    guarded "initial-delivery" #[(built / "storage-delivery-build/StudyMain").toString,
+      root.toString,(root / "initial-delivery").toString]
+      #[("EGGSHELL_DATA_ROOT",some (root / "study/seed-1/data").toString)]
+  | ["delivery-continue"] =>
+    guarded "initial-delivery-continue" #[(built / "storage-delivery-build/StudyMain").toString,
+      root.toString,(root / "initial-delivery").toString,"continue-2"]
+      #[("EGGSHELL_DATA_ROOT",some (root / "study/seed-1/data").toString)]
   | ["correct-monitor"] =>
     let path := root / "seed-1.guard.json"
     let previousGuard ← IO.ofExcept (Json.parse (← IO.FS.readFile path))

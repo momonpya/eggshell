@@ -18,6 +18,7 @@ def main (args : List String) : IO Unit := do
     | "journal" => pure "tools.research.JournalReadDiagnosis"
     | "fixture" => pure "tools.research.StudyTransportFixture"
     | "events" => pure "tools.research.SeedJournalAudit"
+    | "delivery" => pure "tools.research.SeedDeliveryReplay"
     | _ => throw (IO.userError "known storage integration mode required")
   let base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/verified-winner-20261027"
   let project := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
