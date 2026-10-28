@@ -1,0 +1,54 @@
+diff --git a/tools/research/ReferenceRequirements.lean b/tools/research/ReferenceRequirements.lean
+index 2e2e968..bc1dc0c 100644
+--- a/tools/research/ReferenceRequirements.lean
++++ b/tools/research/ReferenceRequirements.lean
+@@ -158,9 +158,8 @@ structure Prepared (p : SharedCoverage.Problem) where
+ 
+ /-- Reconstruct the existing original payload basis and reject any mismatch.
+ The parser does not invent payloads or change the existing wire costs. -/
+-def prepare (familyCount : Nat) (rows : Array StoredRow) (p : SharedCoverage.Problem) : Option (Prepared p) := do
++def prepareBasis (familyCount : Nat) (rows : Array StoredRow) (p : SharedCoverage.Problem) : Option (Prepared p) := do
+   let mut fileAtoms : Std.HashMap File (Fin p.costs.size) := {}
+-  let mut rowAtoms : Std.HashMap (Fin rows.size) (Fin p.costs.size × Fin p.costs.size) := {}
+   let mut sourceRows := #[]
+   let mut cursor := familyCount
+   let checkedAtom (index : Nat) (text : String) : Option (Fin p.costs.size) := do
+@@ -173,21 +172,33 @@ def prepare (familyCount : Nat) (rows : Array StoredRow) (p : SharedCoverage.Pro
+       let atom ← checkedAtom cursor (frame.leading ++ frame.trailing)
+       fileAtoms := fileAtoms.insert row.key.file atom
+       cursor := cursor+1
+-    let file ← fileAtoms[row.key.file]?
++    let _ ← fileAtoms[row.key.file]?
+     let atom ← checkedAtom cursor (Packet.rowText row)
+-    rowAtoms := rowAtoms.insert index (file,atom)
+     sourceRows := sourceRows.push (row,atom)
+     cursor := cursor+1
++  return ⟨sourceRows,{},0,0⟩
++
++/-- Speculative lexical dependencies are an explicit optional experiment;
++validating the original row/cost basis does not require parsing source code. -/
++def prepare (familyCount : Nat) (rows : Array StoredRow) (p : SharedCoverage.Problem) : Option (Prepared p) := do
++  let basis ← prepareBasis familyCount rows p
+   let graph := prepareGraph rows
++  let mut frames : Std.HashMap File (Fin p.costs.size) := {}
++  for (row,atom) in basis.sourceRows do
++    if frames.contains row.key.file then continue
++    if bound : atom.val-1 < p.costs.size then
++      frames := frames.insert row.key.file ⟨atom.val-1,bound⟩
++    else none
+   let mut dependencies : Std.HashMap (Fin p.costs.size) (List (Fin p.costs.size)) := {}
+   for start in graph.direct.keys do
+-    let (_,atom) ← rowAtoms[start]?
++    let (_,atom) ← basis.sourceRows[start.val]?
+     let mut required := []
+     for index in graph.closure start do
+-      let (frame,payload) ← rowAtoms[index]?
++      let (row,payload) ← basis.sourceRows[index.val]?
++      let frame ← frames[row.key.file]?
+       required := frame :: payload :: required
+     dependencies := dependencies.insert atom (hashDistinct required)
+-  return ⟨sourceRows,dependencies,graph.blockCount,graph.callCount⟩
++  return {basis with dependencies,blocks := graph.blockCount,calls := graph.callCount}
+ 
+ def Prepared.offers (prepared : Prepared p) (offers : Array (SharedCoverage.Offer p.costs.size cues)) :=
+   offers.map fun offer => {offer with closure := hashDistinct (offer.closure ++

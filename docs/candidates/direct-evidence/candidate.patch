@@ -1,0 +1,185 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 0f11456..715901f 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5828,9 +5828,9 @@ def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+       (bundlePlan? keys unitArray p candidates projected).bind recipe)
+     let compiled := ClosedCoverage.compile p recipes
+     let originalRows ← (Synapses.CanonicalSource.Delivery.merge (families.toArray.flatMap (·.cached))).toOption
+-    let requirements ← Eggshell.Research.ReferenceRequirements.prepare families.length originalRows p
+-    let dependencies : SharedCoverage.Problem := {compiled with offers := requirements.offers compiled.offers}
+-    let scopes ← Eggshell.Research.ScopeAlternatives.prepare dependencies families.length requirements.sourceRows requirements.dependencies
++    let requirements ← Eggshell.Research.ReferenceRequirements.prepareBasis families.length originalRows p
++    -- Lexical call/definition guesses are optional context, not required evidence.
++    let scopes ← Eggshell.Research.ScopeAlternatives.prepare compiled families.length requirements.sourceRows {}
+     let conditioned := scopes.problem
+     let chosen ← SharedCoverage.choose? conditioned
+     let selectedRecipes := chosen.selected.filterMap fun index =>
+@@ -5843,7 +5843,7 @@ def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+       some {
+         families := families.toArray
+         units := unitArray
+-        problem := {p with offers := requirements.offers p.offers}
++        problem := p
+         selected := expanded
+         scale := scale
+         bindingStats := Json.mkObj [("sources",toJson candidates.size),("fragmentedAlternatives",toJson fragmented),
+@@ -6285,12 +6285,8 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+       ((families.filter (·.cached.isEmpty)).flatMap SharedRangeAdapter.RangeLocators.prepare)
+     let sharedDomain := (Synapses.CanonicalSource.Delivery.merge
+       (families.toArray.flatMap (·.cached))).toOption.getD #[]
+-    let sharedLocations := Synapses.CanonicalSource.Delivery.locators sharedDomain
+-    let locationText := SharedRangeAdapter.RangeLocators.render locations ++ sharedLocations
+     let sharedPlan := "p:shared:" ++ Synapses.Index.contentKey
+       (requestQuestion.getD current,sharedDomain.map (·.key))
+-    let locationKey := "f:locations:" ++ relationKey (.text locationText)
+-    let locationFrame : DeliveryFrame := {key := locationKey,text := locationText}
+     let framesFor := fun (fitted : List TransportSlice) =>
+       let visible := visibleFor fitted
+       let support := supportFor fitted
+@@ -6311,7 +6307,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+         owners := owners.map (fun owner => relationKey owner.relation)
+         text := sourceText }
+       let sourceFrames := if !meaningSelected || owners.isEmpty then [] else [sourceFrame]
+-      policyFrame :: (sourceFrames ++ if locationText.isEmpty then [] else [locationFrame])
++      policyFrame :: sourceFrames
+     let packetCost := fun (fitted : List TransportSlice) =>
+       let visible := visibleFor fitted
+       let support := supportFor fitted
+@@ -6464,11 +6460,26 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+     let visible := visibleFor fittedSlices
+     let newlyCovered := checkpointed.filter (graphVisibleFor fittedSlices)
+     let visibleSupport := supportFor fittedSlices
+-    let remainingLocations := SharedRangeAdapter.RangeLocators.render
+-      (SharedRangeAdapter.RangeLocators.remaining locations fittedSlices) ++ sharedLocations
+-    let frames := (framesFor fittedSlices).filter (·.key != locationKey)
++    -- Actual evidence takes priority over optional navigation. A position is
++    -- emitted only as a complete file group, never by truncating its bytes.
++    let presented := Std.HashSet.ofList (fittedSlices.flatMap fun slice =>
++      (slice.shared.map (fun part => part.rows.toList.map (·.key))).getD [])
++    let omitted := sharedDomain.filter fun row => !presented.contains row.key
++    let files := hashDistinct (omitted.toList.map (·.key.file))
++    let sharedLocations := files.map fun file =>
++      Synapses.CanonicalSource.Delivery.locators (omitted.filter (·.key.file == file))
++    let legacy := SharedRangeAdapter.RangeLocators.remaining locations fittedSlices
++    let legacyFiles := (legacy.map (·.file)).eraseDups
++    let locatorGroups := sharedLocations ++ legacyFiles.map (fun file =>
++      SharedRangeAdapter.RangeLocators.render (legacy.filter (·.file == file)))
++    let baseCost := packetCost fittedSlices
++    let remainingLocations := locatorGroups.foldl (fun prior group =>
++      let next := prior ++ group
++      if baseCost.1 + next.length ≤ budget &&
++          baseCost.2 + next.utf8ByteSize ≤ byteBudget.getD (budget*4) then next else prior) ""
++    let frames := framesFor fittedSlices
+     let frames := frames ++ if remainingLocations.isEmpty then [] else
+-      [{locationFrame with text := remainingLocations}]
++      [{key := "f:locations:" ++ relationKey (.text remainingLocations),text := remainingLocations}]
+     let header := "".intercalate (frames.map (·.text))
+     let deliveredNow :=
+       (fittedKeys ++ newlyCovered.map deliveryKey).eraseDups
+diff --git a/Eggshell/CanonicalSourcePacket.lean b/Eggshell/CanonicalSourcePacket.lean
+index b773282..4387432 100644
+--- a/Eggshell/CanonicalSourcePacket.lean
++++ b/Eggshell/CanonicalSourcePacket.lean
+@@ -28,7 +28,7 @@ def fileFrame (file : File) (rows : Array StoredRow) : FileFrame :=
+   let origins := rows.foldl (fun found row => row.origins.foldl (fun found origin =>
+     found.insert (origin.binding.database,origin.binding.owner,origin.binding.work,origin.occurrence)) found)
+     ({} : Std.HashSet (String × String × String × Occurrence))
+-  let references := origins.toArray.map (fun origin => (toJson origin).compress) |>.qsort (· < ·)
++  let references := origins.toArray.map toJson |>.qsort (fun a b => a.compress < b.compress)
+   ⟨file,"SOURCE " ++ (toJson file).compress ++ "\nORIGINAL READS " ++
+     (toJson references).compress ++ "\nCODE\n","END SOURCE\n"⟩
+ 
+diff --git a/Eggshell/CanonicalSourceDelivery.lean b/Eggshell/CanonicalSourceDelivery.lean
+index 3c060a4..e003bed 100644
+--- a/Eggshell/CanonicalSourceDelivery.lean
++++ b/Eggshell/CanonicalSourceDelivery.lean
+@@ -161,7 +161,9 @@ def locators (rows : Array StoredRow) : String := Id.run do
+     ranges := ranges.push ⟨row.key.file,row.key.line,row.key.line⟩
+   if ranges.isEmpty then return ""
+   return "\nSAVED SOURCE POSITIONS\nPositions alone are not delivered code; CODE blocks contain the delivered rows.\n" ++
+-    "\n".intercalate ((Locations.pack ranges.toList).map fun group => (toJson group).compress) ++
++    "\n".intercalate ((Locations.pack ranges.toList).map fun group =>
++      (toJson group.subject).compress ++ " lines=" ++ ",".intercalate (group.ranges.map fun (first,last) =>
++        if first == last then toString first else s!"{first}-{last}")) ++
+     "\nEND SAVED SOURCE POSITIONS\n"
+ 
+ end Eggshell.Synapses.CanonicalSource.Delivery
+diff --git a/Eggshell/SynapseUsage.lean b/Eggshell/SynapseUsage.lean
+index 746b769..4a18bfa 100644
+--- a/Eggshell/SynapseUsage.lean
++++ b/Eggshell/SynapseUsage.lean
+@@ -52,9 +52,7 @@ def sharedSpellings (body : String) : Array SharedSpelling := Id.run do
+       let some file := (Json.parse fileLine >>= fromJson? (α := File)).toOption | continue
+       if !file.valid || !originsLine.startsWith "ORIGINAL READS " then continue
+       let encoded := String.ofList (originsLine.toList.drop "ORIGINAL READS ".length)
+-      let some origins := (Json.parse encoded >>= fromJson? (α := Array String)).toOption | continue
+-      let origins := origins.filterMap fun origin =>
+-        (Json.parse origin >>= fromJson? (α := String × String × String × Occurrence)).toOption
++      let some origins := (Json.parse encoded >>= fromJson? (α := Array (String × String × String × Occurrence))).toOption | continue
+       for line in codeLines do
+         let some (number,code) := numbered line | continue
+         found := found.push ⟨file,number,code,origins⟩
+diff --git a/Eggshell/Storage/sync.c b/Eggshell/Storage/sync.c
+index 916a868..5295238 100644
+--- a/Eggshell/Storage/sync.c
++++ b/Eggshell/Storage/sync.c
+@@ -78,10 +78,7 @@ static int egg_open_fd(b_lean_obj_arg path, int access, int directory, int *fail
+     return fd;
+ }
+ 
+-static lean_obj_res egg_open_regular(b_lean_obj_arg path, int access) {
+-    int error = 0;
+-    int fd = egg_open_fd(path, access, 0, &error);
+-    if (fd < 0) return egg_read_error(error);
++static lean_obj_res egg_read_adopt(int fd) {
+     egg_read_handle *handle = malloc(sizeof(*handle));
+     if (!handle) { close(fd); return egg_read_error(ENOMEM); }
+     handle->fd = fd;
+@@ -89,11 +86,46 @@ static lean_obj_res egg_open_regular(b_lean_obj_arg path, int access) {
+     return lean_io_result_mk_ok(lean_alloc_external(egg_read_class, handle));
+ }
+ 
++static lean_obj_res egg_open_regular(b_lean_obj_arg path, int access) {
++    int error = 0;
++    int fd = egg_open_fd(path, access, 0, &error);
++    if (fd < 0) return egg_read_error(error);
++    return egg_read_adopt(fd);
++}
++
+ LEAN_EXPORT lean_obj_res eggshell_read_open(b_lean_obj_arg path, lean_obj_arg world) {
+     (void)world;
+     return egg_open_regular(path, O_RDONLY);
+ }
+ 
++LEAN_EXPORT lean_obj_res eggshell_read_directory_open(b_lean_obj_arg path, lean_obj_arg world) {
++    (void)world;
++    const char *text = lean_string_cstr(path);
++    if (lean_string_size(path) == 2 && text[0] == '/' && text[1] == 0) {
++        int root = open("/", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
++        return root < 0 ? egg_read_error(errno) : egg_read_adopt(root);
++    }
++    int error = 0;
++    int fd = egg_open_fd(path, O_RDONLY | O_DIRECTORY, 1, &error);
++    if (fd < 0) return egg_read_error(error);
++    return egg_read_adopt(fd);
++}
++
++LEAN_EXPORT lean_obj_res eggshell_read_open_at(b_lean_obj_arg directory, b_lean_obj_arg name, lean_obj_arg world) {
++    (void)world;
++    const char *leaf = lean_string_cstr(name);
++    if (!leaf[0] || strlen(leaf) + 1 != lean_string_size(name) || strchr(leaf, '/') ||
++            !strcmp(leaf, ".") || !strcmp(leaf, "..")) return egg_read_error(EINVAL);
++    egg_read_handle *parent = lean_get_external_data(directory);
++    int fd = openat(parent->fd, leaf, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
++    if (fd < 0) return egg_read_error(errno);
++    struct stat info;
++    int error = fstat(fd, &info) < 0 ? errno : 0;
++    if (!error && (!S_ISREG(info.st_mode) || info.st_size < 0)) error = EINVAL;
++    if (error) { close(fd); return egg_read_error(error); }
++    return egg_read_adopt(fd);
++}
++
+ LEAN_EXPORT lean_obj_res eggshell_read_try_lock(b_lean_obj_arg object, uint8_t exclusive,
+         lean_obj_arg world) {
+     (void)world;
