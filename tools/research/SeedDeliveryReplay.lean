@@ -12,7 +12,8 @@ def main (args : List String) : IO Unit := do
     | [rootPath,outputPath] => pure (rootPath,outputPath,1,4,none)
     | [rootPath,outputPath,"continue-2"] => pure (rootPath,outputPath,2,4,none)
     | [rootPath,outputPath,"topic-1",plan] => pure (rootPath,outputPath,1,2,some plan)
-    | _ => throw (IO.userError "SEED-ROOT OUTPUT [continue-2 | topic-1 PLAN]")
+    | [rootPath,outputPath,"topics-1-3",plan] => pure (rootPath,outputPath,1,4,some plan)
+    | _ => throw (IO.userError "SEED-ROOT OUTPUT [continue-2 | topic-1 PLAN | topics-1-3 PLAN]")
   let root := System.FilePath.mk rootPath
   let output := System.FilePath.mk outputPath
   unless root.isAbsolute && output.isAbsolute &&

@@ -1,0 +1,103 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/checkout/Eggshell/Handoff.lean b/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/reference-hook-checkout/Eggshell/Handoff.lean
+index dbe21c9..cca6f78 100644
+--- a/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/checkout/Eggshell/Handoff.lean
++++ b/Users/ovm/.codex/experiments/eggshell/bounded-source-replies-20261028/reference-hook-checkout/Eggshell/Handoff.lean
+@@ -19,6 +19,7 @@ public import tools.SharedCoverage
+ public import tools.SharedCoverageInput
+ public import tools.VerifiedWinnerCoverage
+ public import Eggshell.CanonicalSourceRecords
++public import tools.research.ReferenceRequirements
+ public import tools.ClosedCoverage
+ public import tools.FocusWindows
+ public import tools.SourceWindow
+@@ -5724,9 +5725,10 @@ theorem bundle_recipe_preparation_exact (keys : Array String) (units : Array Uni
+     bundleRecipePrepared? keys units pieces (cueDirectory pieces) p plan =
+       bundleRecipe? keys units pieces p plan := rfl
+ 
+-def materialize (units : Array UnitPlan) (indices : List Nat) : Option (List TransportSlice) := do
++def materialize (units : Array UnitPlan) (indices : List Nat)
++    (requiredRows : Array Synapses.CanonicalSource.StoredRow := #[]) : Option (List TransportSlice) := do
+   let mut rows : List (Nat × TransportSlice) := []
+-  let mut sharedRows := #[]
++  let mut sharedRows := requiredRows
+   for index in indices do
+     let unit ← units[index]?
+     if let some shared := unit.slice.shared then
+@@ -5768,6 +5770,7 @@ structure Plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat
+   bindingStats : Json := Json.null
+   bindingAudit : Array Json := #[]
+   selectorInput : Option Json := none
++  requiredRows : Array Synapses.CanonicalSource.StoredRow := #[]
+ 
+ theorem Plan.within_budget (plan : Plan ceiling cost mandatory) :
+     (cost plan.result.val).1 ≤ ceiling.1 ∧ (cost plan.result.val).2 ≤ ceiling.2 :=
+@@ -5823,15 +5826,21 @@ def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+     let recipes := ClosedCoverage.original p ++ (bundles.filterMap fun projected =>
+       (bundlePlan? keys unitArray p candidates projected).bind recipe)
+     let compiled := ClosedCoverage.compile p recipes
+-    let chosen ← SharedCoverage.choose? compiled
+-    let expanded := (ClosedCoverage.expand p recipes chosen.selected).map (·.val) |>.eraseDups
+-    let selected ← materialize unitArray expanded
++    let originalRows ← (Synapses.CanonicalSource.Delivery.merge (families.toArray.flatMap (·.cached))).toOption
++    let requirements ← Eggshell.Research.ReferenceRequirements.prepare families.length originalRows p
++    let conditioned : SharedCoverage.Problem := {compiled with offers := requirements.offers compiled.offers}
++    let chosen ← SharedCoverage.choose? conditioned
++    let selectedRecipes ← chosen.selected.mapM fun index =>
++      if h : index.val < compiled.offers.size then some (⟨index.val,h⟩ : Fin compiled.offers.size) else none
++    let expanded := (ClosedCoverage.expand p recipes selectedRecipes).map (·.val) |>.eraseDups
++    let requiredRows := requirements.selectedRows ((SharedCoverage.nodes conditioned chosen.selected).map (·.val))
++    let selected ← materialize unitArray expanded requiredRows
+     let result := mandatory ++ selected
+     if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
+       some {
+         families := families.toArray
+         units := unitArray
+-        problem := p
++        problem := {p with offers := requirements.offers p.offers}
+         selected := expanded
+         scale := scale
+         bindingStats := Json.mkObj [("sources",toJson candidates.size),("fragmentedAlternatives",toJson fragmented),
+@@ -5839,7 +5848,8 @@ def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+           ("preparedBundles",toJson (recipes.size-p.offers.size)),
+           ("selectedBundles",toJson (chosen.selected.countP (fun index => p.offers.size ≤ index.val)))]
+         bindingAudit
+-        selectorInput := if captureInput then some (SharedCoverage.Input.encode compiled) else none
++        selectorInput := if captureInput then some (SharedCoverage.Input.encode conditioned) else none
++        requiredRows
+         result := ⟨result,fits.1,fits.2,⟨selected,rfl⟩⟩ }
+     else none
+ 
+@@ -5874,7 +5884,8 @@ def Plan.receipt (plan : Plan ceiling cost mandatory) : Json :=
+   Json.mkObj [("families",toJson plan.families.size),("candidateUnits",toJson plan.units.size),
+     ("selected",toJson plan.selected),("fixedCost",toJson plan.problem.fixed),
+     ("limit",toJson plan.problem.limit),("scale",toJson plan.scale),
+-    ("fullCandidateAudit",toJson false),("jointBindings",plan.bindingStats)]
++    ("fullCandidateAudit",toJson false),("jointBindings",plan.bindingStats),
++    ("requiredSourceRows",toJson plan.requiredRows.size)]
+ 
+ /-- Explicit diagnostics into the very same completed plan. These are
+ planned original positions, never an assertion that bytes reached a model.
+@@ -5888,6 +5899,9 @@ def Plan.rangeReceipt (plan : Plan ceiling cost mandatory) : Json := Id.run do
+   let families := plan.families.mapIdx fun id family => Id.run do
+     let entries := (directory.lookup id).toList
+     let chosen := entries.filter fun entry => selected.contains entry.2
++    let required := plan.requiredRows.toList.flatMap fun row => row.origins.toList.filterMap fun origin =>
++      if origin.binding.owner == relationKey family.owner.relation then
++        some (origin.binding.first,origin.binding.limit) else none
+     let ranges := fun values => values.flatMap fun entry : UnitPlan × Nat => entry.1.ranges
+     let positive := entries.filterMap fun (_,index) => do
+       let offer ← plan.problem.offers[index]?
+@@ -5908,11 +5922,11 @@ def Plan.rangeReceipt (plan : Plan ceiling cost mandatory) : Json := Id.run do
+       ("positiveBaseOffers",toJson positive.length),("minimumPositiveStandalone",toJson cheapest),
+       ("candidateUnits",toJson entries.length),("selectedUnits",toJson chosen.length),
+       ("candidateRanges",toJson (packed (ranges entries))),
+-      ("selectedRanges",toJson (packed (ranges chosen))),
++      ("selectedRanges",toJson (packed (ranges chosen ++ required))),
+       ("candidateOriginalRanges",toJson (packed (ranges (entries.filter (·.1.slice.context.isSome))))),
+       ("candidateSharedRanges",toJson (packed (ranges (entries.filter (·.1.slice.shared.isSome))))),
+       ("selectedOriginalRanges",toJson (packed (ranges (chosen.filter (·.1.slice.context.isSome))))),
+-      ("selectedSharedRanges",toJson (packed (ranges (chosen.filter (·.1.slice.shared.isSome)))))]
++      ("selectedSharedRanges",toJson (packed (ranges (chosen.filter (·.1.slice.shared.isSome)) ++ required)))]
+   return plan.receipt
+     |>.setObjVal! "bindingAudit" (toJson plan.bindingAudit)
+     |>.setObjVal! "rangeAudit" (toJson families)
