@@ -37,6 +37,30 @@ def main (args : List String) : IO Unit := do
   let runtime := installation / "libexec/eggshell"
   let controller : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/controller/StudyMain"
   let data := seed / "study/seed-1/data"
+  if mode == "retire-executables" then
+    let report := base / ("reference-unused-executables-" ++ label ++ ".json")
+    unless !(← report.pathExists) do throw (IO.userError "preserve cleanup record")
+    let targets := #["checks-build/StudyMain", "compact-driver-build/StudyMain", "compact-product-build/StudyMain",
+      "driver-build/StudyMain", "origin-product-build/StudyMain", "compact-prefix/libexec/eggshell"].map
+      (fun name => base / System.FilePath.mk name)
+    let retained := #[runtime, base / "origin-prefix/libexec/eggshell", base / "origin-driver-build/StudyMain",
+      base / "reference-hook-driver-build/StudyMain", controller]
+    let hashes ← call "/usr/bin/shasum" (#["-a", "256"] ++ retained.map (·.toString))
+    let processes ← call "/bin/ps" #["-axo", "command="]
+    let mut removed := (0,0)
+    for path in targets do
+      unless (processes.splitOn path.toString).length == 1 do throw (IO.userError "an old executable is active")
+      if ← path.pathExists then
+        let count ← removeEnded path
+        removed := (removed.1 + count.1, removed.2 + count.2)
+    unless hashes == (← call "/usr/bin/shasum" (#["-a", "256"] ++ retained.map (·.toString))) do
+      throw (IO.userError "a retained runtime changed")
+    IO.FS.writeFile report (Json.mkObj [("deletedPaths",toJson (targets.map (·.toString))),
+      ("deletedFiles",toJson removed.1), ("deletedLogicalBytes",toJson removed.2),
+      ("retainedHashes",toJson hashes), ("interfacesAndObjectsRetained",toJson true),
+      ("databaseRemoved",toJson false), ("archiveCreated",toJson false)]).pretty
+    IO.println s!"Removed {removed.1} inactive duplicate executables, {removed.2} logical bytes"
+    return
   let guard (name : String) (command : Array String) : IO Unit := do
     let output := base / ("reference-hook-" ++ name ++ ".settings.json")
     unless !(← output.pathExists) do throw (IO.userError "preserve earlier guard settings")
@@ -44,6 +68,40 @@ def main (args : List String) : IO Unit := do
       ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (3670016 : Nat)),
       ("minFreeKiB",toJson (2097152 : Nat)),
       ("record",toJson (base / ("reference-hook-" ++ name ++ ".guard.json")).toString)]).pretty
+  if mode == "scope-offline-seal" then
+    let records := project / "docs/candidates/scope-alternatives"
+    let save (source target : System.FilePath) : IO Unit := do
+      unless !(← target.pathExists) do throw (IO.userError "preserve earlier scope record")
+      IO.FS.createDirAll target.parent.get!
+      let value ← read source
+      let text := value.compress
+      unless (← IO.ofExcept (Json.parse text)) == value do throw (IO.userError "scope JSON value changed")
+      IO.FS.writeFile target text
+    for name in #["scope-native","scope-run-initial","scope-source-basis","scope-run-source-basis"] do
+      let path := base / ("reference-hook-" ++ name ++ ".guard.json")
+      let report ← read path
+      unless report.getObjValD "state" == toJson "finished" && report.getObjValD "ownedPids" == toJson (#[] : Array Nat) do
+        throw (IO.userError "a scope process has not stopped")
+      save path (records / "guards" / (name ++ ".json"))
+    save (base / "reference-scope-source-basis.json") (records / "selector.json")
+    save (base / "reference-unused-executables-before-scope.json") (records / "old-executables-cleanup.json")
+    let executable := base / "reference-hook-scope-build/StudyMain"
+    let processes ← call "/bin/ps" #["-axo","command="]
+    unless (processes.splitOn executable.toString).length == 1 do throw (IO.userError "scope replay is active")
+    let hashes ← call "/usr/bin/shasum" #["-a","256",executable.toString,runtime.toString]
+    let removed ← removeEnded executable
+    IO.FS.writeFile (records / "completed.json") (Json.mkObj [("executableHashes",toJson hashes),
+      ("deletedFiles",toJson removed.1),("deletedLogicalBytes",toJson removed.2),
+      ("archiveCreated",toJson false),("productionAdoption",toJson false)]).pretty
+    IO.println "Preserved model-free scope result and removed ended replay executable"
+    return
+  if mode == "scope-run" then
+    guard ("scope-run-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT=" ++ data.toString, (base / "reference-hook-scope-build/StudyMain").toString,
+      (seed / "study/seed-1/work.egg").toString, (project / "docs/candidates/reference-hook/trace").toString,
+      (project / "docs/candidates/reference-hook/three-topics").toString,
+      (base / ("reference-scope-" ++ label ++ ".json")).toString]
+    return
   if mode == "trace-seal" then
     let records := project / "docs/candidates/reference-hook/trace"
     unless !(← (records / "completed.json").pathExists) do throw (IO.userError "preserve sealed trace evidence")
@@ -261,6 +319,7 @@ def main (args : List String) : IO Unit := do
     | "prepare" => pure "tools.research.CitationOriginPrepare"
     | "driver" => pure "tools.research.SeedDeliveryReplay"
     | "audit" => pure "tools.research.ReferenceTraceAudit"
+    | "scope" => pure "tools.research.ScopeOfferReplay"
     | _ => throw (IO.userError "unknown reference hook mode")
   let alternatives := if mode == "product" then
       #[base / "reference-hook-checks-build",base / "origin-driver-build"]
