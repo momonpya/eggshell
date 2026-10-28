@@ -31,6 +31,26 @@ private def guarded (command : Array String) (record : System.FilePath) (minimum
     ("ownedPrefixes",toJson #[root.toString,controller]),("limitRssKiB",toJson (3670016 : Nat)),
     ("minFreeKiB",toJson minimum)]
 
+private def retireDeadPublisher (plan : Json) (directory : System.FilePath) : IO Json := do
+  let data ← string plan "dataRoot"
+  let endpoint := System.FilePath.mk data / "publisher/endpoint.json"
+  if !(← endpoint.pathExists) then return plan
+  let record ← read endpoint
+  let pid ← IO.ofExcept (record.getObjValAs? Nat "pid")
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","pid="]}
+  unless process.exitCode == 1 && process.stdout.trimAscii.isEmpty do
+    throw (IO.userError "refuse to retire a live publisher endpoint")
+  let files ← IO.ofExcept (plan.getObjValAs? (Array (String × String)) "privateFiles")
+  let some previous := files.find? (·.1 == "publisher/endpoint.json") |
+    throw (IO.userError "stale endpoint was not in the sealed private snapshot")
+  let sealed ← artifact endpoint
+  unless (sealed.getObjValAs? String "sha256").toOption == some previous.2 do
+    throw (IO.userError "publisher endpoint changed after preparation")
+  IO.FS.rename endpoint (directory / "retired-dead-publisher.endpoint.json")
+  save (directory / "retired-dead-publisher.json") (Json.mkObj [
+    ("pid",toJson pid),("wasAlive",toJson false),("sourceFactsChanged",toJson false)])
+  return plan.setObjVal! "privateFiles" (toJson (files.filter (·.1 != "publisher/endpoint.json")))
+
 private def definitions : IO Unit := do
   let template ← read "/Users/ovm/.codex/experiments/eggshell/source-complete-seed-20261028/task-definitions.json"
   let rows ← IO.ofExcept template.getArr?
@@ -110,7 +130,8 @@ private def stage (rep number : Nat) : IO Unit := do
     fun key => (key,prototype)) ++ [("session",toJson "pending"),("numerical",toJson (#[] : Array Json))])
   let mut fields := []
   for key in #["model","effort","workspace","sourceCommit","runner","cliWrapper","nativeCli","runtime","accountConfiguration","harness","pluginRoot","pluginFiles"] do
-    fields := fields ++ [(key,← field plan key)]
+    let value ← if key == "accountConfiguration" then read (root / "measurement-account.json") else field plan key
+    fields := fields ++ [(key,value)]
   let baseEnv ← IO.ofExcept (plan.getObjValAs? (Array (String × Option String)) "environment")
   let updates : Array (String × Option String) := #[
     ("EGGSHELL_CONFIG",some (branch / "config.toml").toString),("EGGSHELL_DATA_ROOT",some (branch / "data").toString),
@@ -137,11 +158,92 @@ private def sealTrial (rep number : Nat) : IO Unit := do
   unless (guardReport.getObjValAs? Nat "exitCode").toOption == some 0 &&
       (guardReport.getObjValAs? (Array Nat) "ownedPids").toOption == some #[] do
     throw (IO.userError "preparation did not terminate successfully")
-  let plan ← artifact (directory / "preparation/plan.json")
+  let prepared ← read (directory / "preparation/plan.json")
+  let qualified ← retireDeadPublisher prepared directory
+  save (directory / "preparation/drained-plan.json") qualified
+  let plan ← artifact (directory / "preparation/drained-plan.json")
   save (directory / "limits.json") (Json.mkObj [("inclusiveTokens",toJson (5000000 : Nat)),("answerMs",toJson (900000 : Nat))])
   let limits ← artifact (directory / "limits.json")
   save (directory / "trial.settings.json") (guarded #[controller,"trial-bounded",← string plan "path",← string plan "sha256",
     ← string limits "path",← string limits "sha256"] (directory / "trial.guard.json"))
+
+private def resumeBeforeTurn : IO Unit := do
+  let directory := root / "r0/stage1"
+  let failure ← read (directory / "trial/failure.json")
+  unless (failure.getObjValAs? String "runError").toOption == some "a publisher already owns this study scope" do
+    throw (IO.userError "only the known stale publisher failure can resume here")
+  let exchange ← IO.FS.readFile (directory / "trial/rpc/exchange.jsonl")
+  unless !(exchange.contains "turn/start") do throw (IO.userError "generation already started; preserve its usage")
+  let original ← read (directory / "preparation/qualified-plan.json")
+  let plan ← retireDeadPublisher original directory
+  save (directory / "preparation/drained-qualified-plan.json") plan
+  let sealed ← artifact (directory / "preparation/drained-qualified-plan.json")
+  let limits ← artifact (directory / "limits.json")
+  save (directory / "drained-trial.settings.json") (guarded #[controller,"trial-bounded",← string sealed "path",← string sealed "sha256",
+    ← string limits "path",← string limits "sha256"] (directory / "trial.guard.json"))
+  IO.FS.rename (directory / "trial") (directory / "trial-preturn-publisher-failure")
+  IO.FS.rename (directory / "trial.guard.json") (directory / "trial-preturn-publisher-failure.guard.json")
+  for extension in #["json","stdout","stderr"] do
+    IO.FS.rename (root / ("driver/trial-r0-stage1." ++ extension))
+      (root / ("driver/trial-r0-stage1.preturn-publisher-failure." ++ extension))
+  save (directory / "preturn-publisher-failure.json") (Json.mkObj [
+    ("answeringModelCalls",toJson (0 : Nat)),("runtimeChanged",toJson false),("failure",failure)])
+
+private def retireUnstartedSession : IO Unit := do
+  let directory := root / "r0/stage1"
+  let before := directory / "trial-preturn-publisher-failure"
+  let exchange ← IO.FS.readFile (before / "rpc/exchange.jsonl")
+  unless !(exchange.contains "turn/start") do throw (IO.userError "a model turn already started")
+  let thread ← read (before / "thread.json")
+  let session ← field thread "thread" >>= (fun value => string value "id")
+  unless !session.contains '/' && !session.isEmpty do throw (IO.userError "invalid session")
+  let path := root / "r0/data/sessions" / session
+  let record ← read (path / "daemon.json")
+  let pid ← IO.ofExcept (record.getObjValAs? Nat "pid")
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","pid="]}
+  unless process.exitCode == 1 && process.stdout.trimAscii.isEmpty do throw (IO.userError "session is still alive")
+  let files ← path.readDir
+  for entry in files do
+    let metadata ← entry.path.symlinkMetadata
+    unless metadata.type == .file && (entry.fileName == "daemon.json" ||
+        (entry.fileName.endsWith ".guard" && metadata.byteSize == 0)) do
+      throw (IO.userError "unstarted session contains durable history; do not remove it")
+  for entry in files do IO.FS.removeFile entry.path
+  IO.FS.removeDir path
+  save (directory / "unstarted-session-cleanup.json") (Json.mkObj [
+    ("session",toJson session),("pid",toJson pid),("wasAlive",toJson false),
+    ("answeringModelCalls",toJson (0 : Nat)),("durableHistoryRemoved",toJson false)])
+  IO.FS.rename (directory / "trial.guard.json") (directory / "trial-preadmission-session-failure.guard.json")
+  for extension in #["json","stdout","stderr"] do
+    IO.FS.rename (root / ("driver/trial-r0-stage1." ++ extension))
+      (root / ("driver/trial-r0-stage1.preadmission-session-failure." ++ extension))
+
+private def retireUnstartedEnd : IO Unit := do
+  let directory := root / "r0/stage1"
+  let before := directory / "trial-preturn-publisher-failure"
+  unless !((← IO.FS.readFile (before / "rpc/exchange.jsonl")).contains "turn/start") do
+    throw (IO.userError "a model turn already started")
+  let thread ← read (before / "thread.json")
+  let session ← field thread "thread" >>= (fun value => string value "id")
+  let receipts := root / "r0/data/receipts"
+  let mut removed := #[]
+  for receipt in ← receipts.readDir do
+    let request ← read (receipt.path / "request.json")
+    let data ← field request "data"
+    if (data.getObjValAs? String "session").toOption != some session then continue
+    unless (data.getObjValAs? String "event").toOption == some "SessionEnd" do
+      throw (IO.userError "unstarted session contains another event")
+    for file in ← receipt.path.readDir do
+      unless (← file.path.symlinkMetadata).type == .file do throw (IO.userError "unexpected receipt data")
+      removed := removed.push (← artifact file.path)
+    for file in ← receipt.path.readDir do IO.FS.removeFile file.path
+    IO.FS.removeDir receipt.path
+  save (directory / "unstarted-session-end-cleanup.json") (Json.mkObj [
+    ("session",toJson session),("answeringModelCalls",toJson (0 : Nat)),("removed",toJson removed)])
+  IO.FS.rename (directory / "trial.guard.json") (directory / "trial-preadmission-receipt-failure.guard.json")
+  for extension in #["json","stdout","stderr"] do
+    IO.FS.rename (root / ("driver/trial-r0-stage1." ++ extension))
+      (root / ("driver/trial-r0-stage1.preadmission-receipt-failure." ++ extension))
 
 private def collect (rep number : Nat) : IO Unit := do
   let baseline ← read "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/fresh-baseline-reuse.json"
@@ -199,6 +301,9 @@ def main (args : List String) : IO Unit := do
   | ["definitions"] => definitions
   | ["gate"] => gate
   | ["replacement-seed"] => replacementSeed
+  | ["resume-before-turn"] => resumeBeforeTurn
+  | ["retire-unstarted-session"] => retireUnstartedSession
+  | ["retire-unstarted-end"] => retireUnstartedEnd
   | ["fork",rep] => fork (← natural rep)
   | ["stage",rep,number] => stage (← natural rep) (← natural number)
   | ["seal-trial",rep,number] => sealTrial (← natural rep) (← natural number)
