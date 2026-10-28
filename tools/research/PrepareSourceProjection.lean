@@ -58,6 +58,32 @@ def main (args : List String) : IO Unit := do
   let driver := base / (if spelling then "spelling-driver-build/StudyMain" else if origin then "origin-driver-build/StudyMain" else if residual then "residual-driver-build/StudyMain" else if compact then "compact-driver-build/StudyMain" else "driver-build/StudyMain")
   let executable := installation / "libexec/eggshell"
   let runner := originalSeed / "controller/StudyMain"
+  if origin && mode == "reference-format" then
+    let records := System.FilePath.mk project / "docs/candidates/reference-closure"
+    let output := records / "serialization.json"
+    unless !(← output.pathExists) do throw (IO.userError "preserve earlier serialization audit")
+    let paths := #[records / "read.json",records / "selector.json"]
+    let before ← call "/usr/bin/shasum" (#["-a","256"] ++ paths.map (·.toString))
+    for path in paths do
+      let original ← IO.ofExcept (Json.parse (← IO.FS.readFile path))
+      let compact := original.compress
+      unless (← IO.ofExcept (Json.parse compact)) == original do
+        throw (IO.userError "audit JSON changed during compact serialization")
+      IO.FS.writeFile path compact
+    let after ← call "/usr/bin/shasum" (#["-a","256"] ++ paths.map (·.toString))
+    IO.FS.writeFile output (Json.mkObj [("originalDigests",toJson before),("storedDigests",toJson after),
+      ("exactLeanJsonValuesUnchanged",toJson true),("archiveCreated",toJson false)]).pretty
+    IO.println "Stored complete audit JSON without indentation; exact Lean JSON values unchanged"
+    return
+  if origin && (mode == "reference-run" || mode == "reference-shadow") then
+    let receipt := seed / "study/seed-1/data/receipts/2a63d2af1a9c30f461f47db7883f779862ce2966c72e998146be9006af232370"
+    saveGuard base ("reference-closure-" ++ label) (#["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT=" ++ (seed / "study/seed-1/data").toString,
+      (base / "origin-reference-build/StudyMain").toString,
+      (seed / "study/seed-1/work.egg").toString,(receipt / "selection-plan.json").toString,
+      (base / ("reference-closure-" ++ label ++ ".json")).toString] ++
+      (if mode == "reference-shadow" then #["shadow"] else #[])) #[base.toString]
+    return
   if origin && mode == "context-run" then
     let receipt := seed / "study/seed-1/data/receipts/2a63d2af1a9c30f461f47db7883f779862ce2966c72e998146be9006af232370"
     saveGuard base ("context-signal-" ++ label) #["/usr/bin/env","LEAN_NUM_THREADS=1",
@@ -67,20 +93,25 @@ def main (args : List String) : IO Unit := do
       (receipt / "delivery-domain.json").toString,(base / ("context-signal-" ++ label ++ ".json")).toString]
       #[base.toString]
     return
-  if origin && mode == "context-retire" then
-    let records := System.FilePath.mk project / "docs/candidates/record-context-signal"
+  if origin && (mode == "context-retire" || mode == "reference-retire") then
+    let reference := mode == "reference-retire"
+    let records := System.FilePath.mk project / "docs/candidates" /
+      (if reference then "reference-closure" else "record-context-signal")
     unless !(← (records / "retirement.json").pathExists) do
       throw (IO.userError "preserve earlier context retirement")
-    let guards := #["origin-context-signal","origin-context-built","origin-context-finite","context-signal-fixed"]
+    let guards := if reference then #["origin-reference-initial","origin-reference-finite","reference-closure-fixed",
+      "origin-reference-shadow","reference-closure-trial","origin-reference-production-chooser","reference-closure-production"]
+      else #["origin-context-signal","origin-context-built","origin-context-finite","context-signal-fixed"]
     for name in guards do
       let report ← IO.ofExcept (Json.parse (← IO.FS.readFile (base / (name ++ ".guard.json"))))
       unless report.getObjValD "state" == toJson "finished" &&
           report.getObjValD "ownedPids" == toJson (#[] : Array Nat) do
         throw (IO.userError "a context diagnostic process is not terminal")
-    let report ← IO.ofExcept (Json.parse (← IO.FS.readFile (base / "context-signal-fixed.guard.json")))
+    let completed := if reference then "reference-closure-fixed" else "context-signal-fixed"
+    let report ← IO.ofExcept (Json.parse (← IO.FS.readFile (base / (completed ++ ".guard.json"))))
     unless report.getObjValD "exitCode" == toJson (0 : Nat) do
       throw (IO.userError "preserve a successful signal report before retirement")
-    let target := base / "origin-context-build"
+    let target := base / (if reference then "origin-reference-build" else "origin-context-build")
     let processes ← call "/bin/ps" #["-axo","command="]
     unless (← target.symlinkMetadata).type == .dir &&
         (processes.splitOn target.toString).length == 1 do
@@ -91,7 +122,16 @@ def main (args : List String) : IO Unit := do
       originalSeed / "controller/StudyMain"]
     let hashes ← call "/usr/bin/shasum" (#["-a","256"] ++ retained.map (·.toString))
     IO.FS.createDirAll (records / "guards")
-    copyFile (base / "context-signal-fixed.json") (records / "signal.json")
+    if reference then
+      for (name,saved) in #[("fixed","read"),("production","selector")] do
+        let path := base / ("reference-closure-" ++ name ++ ".json")
+        if ← path.pathExists then
+          let destination := records / (saved ++ ".json")
+          if ← destination.pathExists then
+            unless (← IO.FS.readBinFile path) == (← IO.FS.readBinFile destination) do
+              throw (IO.userError "an earlier reference report differs")
+          else copyFile path destination
+    else copyFile (base / "context-signal-fixed.json") (records / "signal.json")
     copyFile (target / "build.json") (records / "build.json")
     for name in guards do
       copyFile (base / (name ++ ".guard.json")) (records / "guards" / (name ++ ".json"))
@@ -103,7 +143,7 @@ def main (args : List String) : IO Unit := do
       ("deletedPath",toJson target.toString),("files",toJson counts.1),("logicalBytes",toJson counts.2),
       ("retiredDigest",toJson ended),("retainedDigestsUnchanged",toJson hashes),
       ("databasesDeleted",toJson (0 : Nat)),("archiveCreated",toJson false)]).pretty
-    IO.println s!"Removed ended context build: {counts.1} files, {counts.2} logical bytes"
+    IO.println s!"Removed ended read-only audit build: {counts.1} files, {counts.2} logical bytes"
     return
   if spelling && mode == "retire" then
     let records := System.FilePath.mk project / "docs/candidates/spelling-rank-origin"
@@ -383,7 +423,7 @@ def main (args : List String) : IO Unit := do
       ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (3670016 : Nat)),
       ("minFreeKiB",toJson (2097152 : Nat)),("record",toJson (base / ("verification-" ++ label ++ ".guard.json")).toString)]).pretty
     return
-  let baseline := if origin && mode == "context" then base / "origin-driver-build"
+  let baseline := if origin && (mode == "context" || mode == "reference") then base / "origin-driver-build"
     else if spelling then base / (if mode == "driver" then "spelling-product-build"
       else if mode == "product" then "spelling-checks-build" else "origin-driver-build")
     else if origin then base / (if mode == "driver" then "origin-product-build"
@@ -414,6 +454,7 @@ def main (args : List String) : IO Unit := do
   let objectMap := base / (if spelling then "spelling-objects.json" else if origin then "origin-objects.json" else if residual then "residual-objects.json" else if compact then "compact-objects.json" else "objects.json")
   IO.FS.writeFile objectMap objects.compress
   let entry ← match mode with
+    | "reference" => pure "tools.research.ReferenceClosureAudit"
     | "context" => pure "tools.research.RecordContextSignal"
     | "checks" => pure (if spelling then "tools.research.SpellingRankChecks" else if origin then "tools.research.CitationOriginChecks" else "tools.research.SourceProjectionChecks")
     | "product" => pure "Main"
