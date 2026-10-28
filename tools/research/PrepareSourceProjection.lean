@@ -28,6 +28,13 @@ def main (args : List String) : IO Unit := do
   let hookPlan := base / (if compact then "compact-hook-plan.json" else "hook-plan.json")
   let executable := installation / "libexec/eggshell"
   let runner := seed / "controller/StudyMain"
+  if mode == "integrity-run" then
+    saveGuard base ("seed-integrity-" ++ label) #["/usr/bin/env","-u","CODEX_THREAD_ID","-u","CODEX_TURN_ID",
+      "LEAN_NUM_THREADS=1","EGGSHELL_DATA_ROOT=" ++ (seed / "study/seed-1/data").toString,
+      (base / "compact-integrity-build/StudyMain").toString,(seed / "study/seed-1").toString,
+      (seed / "seed-ready/ready.egg").toString,(base / ("seed-integrity-" ++ label ++ ".json")).toString]
+      #[base.toString]
+    return
   if mode == "replay" || mode == "trace" then
     let diagnostics := if mode == "trace" then
       #["EGGSHELL_TRACE_SELECTION_RANGES=1","EGGSHELL_TRACE_SELECTOR_INPUT=1"] else #[]
@@ -86,7 +93,8 @@ def main (args : List String) : IO Unit := do
       ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (3670016 : Nat)),
       ("minFreeKiB",toJson (2097152 : Nat)),("record",toJson (base / ("verification-" ++ label ++ ".guard.json")).toString)]).pretty
     return
-  let baseline := if compact then base / (if mode == "driver" then "compact-product-build" else "product-build")
+  let baseline := if compact then base / (if mode == "integrity" then "compact-driver-build"
+      else if mode == "driver" then "compact-product-build" else "product-build")
     else previous / "storage-build"
   let built ← IO.ofExcept (Json.parse (← IO.FS.readFile (baseline / "build.json")))
   if compact then
@@ -112,6 +120,7 @@ def main (args : List String) : IO Unit := do
     | "checks" => pure "tools.research.SourceProjectionChecks"
     | "product" => pure "Main"
     | "driver" => pure "tools.research.SeedDeliveryReplay"
+    | "integrity" => pure "tools.research.SeedStorageIntegrity"
     | _ => throw (IO.userError "known projection build mode required")
   let plan := (built.getObjValD "settings")
     |>.setObjVal! "core" (toJson (base / "checkout").toString)

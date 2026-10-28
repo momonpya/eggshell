@@ -1,0 +1,1679 @@
+{"seedQuestionExactOwners": ["v6056859620862157676"],
+ "sameFrozenOriginalFacts": true,
+ "rpcTerminalsWithoutJournalFinish": [],
+ "rpcOutputUnavailable": 1,
+ "rpcOutputExact": 34,
+ "rpcOutputDifferent": 2,
+ "readOnly": true,
+ "planEventsExact": 0,
+ "originalDocuments": 42,
+ "nativeTerminals": 37,
+ "nativePlanEvents":
+ [{"turnId": "01a17fa7-a737-7113-b530-53335b389480",
+   "threadId": "01a17fa7-a507-7e53-a7b5-255061a5a762",
+   "plan":
+   [{"step": "対象スナップショットと主要ファイル構成を確認", "status": "inProgress"},
+    {"step": "Driver.cpp の引数解析・ツールチェーン選択フローを追跡", "status": "pending"},
+    {"step": "ToolChains 実装と状態不変条件を確認", "status": "pending"},
+    {"step": "clang/test/Driver で検証境界を照合", "status": "pending"},
+    {"step": "観測と推論を分離して日本語で報告", "status": "pending"}],
+   "explanation": null},
+  {"turnId": "01a17fa7-a737-7113-b530-53335b389480",
+   "threadId": "01a17fa7-a507-7e53-a7b5-255061a5a762",
+   "plan":
+   [{"step": "対象スナップショットと主要ファイル構成を確認", "status": "completed"},
+    {"step": "Driver.cpp の引数解析・ツールチェーン選択フローを追跡", "status": "completed"},
+    {"step": "ToolChains 実装と状態不変条件を確認", "status": "completed"},
+    {"step": "clang/test/Driver で検証境界を照合", "status": "completed"},
+    {"step": "観測と推論を分離して日本語で報告", "status": "inProgress"}],
+   "explanation":
+   "主要な解析・target triple・ホスト/オフロードTC分岐と、対応するDriverテストを照合済み。最終整理へ進む。"}],
+ "missingOriginals": 0,
+ "journalFinishesWithoutRpcTerminal": 2,
+ "journalFinishes": 39,
+ "ingress":
+ [{"useId": "exec-f2e98b9a-f026-43a9-bf21-11b2cdb10ce6",
+   "tool": "update_plan",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v15127513773298066646",
+     "bodySha256":
+     "53df1c0978995ecc26b627c269c0d42897011229a9bd572d1a537515bed32522",
+     "bodyBytesExact": true,
+     "bodyBytes": 14}],
+   "responseSha256":
+   "53df1c0978995ecc26b627c269c0d42897011229a9bd572d1a537515bed32522",
+   "responsePreview": "\"Plan updated\"",
+   "responseBytes": 14,
+   "planInput":
+   {"plan":
+    [{"step": "対象スナップショットと主要ファイル構成を確認", "status": "in_progress"},
+     {"step": "Driver.cpp の引数解析・ツールチェーン選択フローを追跡", "status": "pending"},
+     {"step": "ToolChains 実装と状態不変条件を確認", "status": "pending"},
+     {"step": "clang/test/Driver で検証境界を照合", "status": "pending"},
+     {"step": "観測と推論を分離して日本語で報告", "status": "pending"}]},
+   "planEventExact": false,
+   "nativeTerminals": []},
+  {"useId": "exec-3c53ca72-56af-498a-a50f-fef603c35379",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v10605036053333916878",
+     "bodySha256":
+     "c0bade9b2988bef20e047b6036b1388985487b5bc0195e11e9dc4e1327294966",
+     "bodyBytesExact": true,
+     "bodyBytes": 20464}],
+   "responseSha256":
+   "c0bade9b2988bef20e047b6036b1388985487b5bc0195e11e9dc4e1327294966",
+   "responsePreview": "",
+   "responseBytes": 20464,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [19941,
+        ["5f6fa528d5235b619cdc273f6b41b4b917b6c720f93476ab56caf98028ca59bd",
+         "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project\nclang/lib/Driver/OffloadBundler.cpp\nclang/lib/Driver/CreateASTUnitFromAr"]]]],
+     "outputSha256":
+     "5f6fa528d5235b619cdc273f6b41b4b917b6c720f93476ab56caf98028ca59bd",
+     "outputBytes": 19941,
+     "nativeCommand":
+     "/bin/bash -lc \"pwd && rg --files clang/lib/Driver clang/test/Driver | sed -n '1,160p' && printf '\\\\n--- Driver.cpp size/anchors ---\\\\n' && wc -l clang/lib/Driver/Driver.cpp && rg -n \\\"BuildCompilation|Parse|ToolChain|ToolChains|getToolChain|set|ArgList|DerivedArgList|Compilation\\\" clang/lib/Driver/Driver.cpp | sed -n '1,240p'\"",
+     "hookInput":
+     {"command":
+      "pwd && rg --files clang/lib/Driver clang/test/Driver | sed -n '1,160p' && printf '\\n--- Driver.cpp size/anchors ---\\n' && wc -l clang/lib/Driver/Driver.cpp && rg -n \"BuildCompilation|Parse|ToolChain|ToolChains|getToolChain|set|ArgList|DerivedArgList|Compilation\" clang/lib/Driver/Driver.cpp | sed -n '1,240p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-a4acdf31-ca0d-4f9f-84f2-880493760cfa",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v5009631054489517349",
+     "bodySha256":
+     "ace8a83bfd12252618c880194aed7ce06c3445dca503b3c336cec5ce01ce2316",
+     "bodyBytesExact": true,
+     "bodyBytes": 22482}],
+   "responseSha256":
+   "ace8a83bfd12252618c880194aed7ce06c3445dca503b3c336cec5ce01ce2316",
+   "responsePreview": "",
+   "responseBytes": 22482,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [19890,
+        ["8c3096ab8faf7150313a21a029288b7b1cac5c94c92843814bd8dcb36df15e10",
+         "   120\u0009#if LLVM_ON_UNIX\n   121\u0009#include <unistd.h> // getpid\n   122\u0009#endif\n   123\u0009\n   124\u0009using namespace clang::driver;\n   125\u0009using namesp"]]]],
+     "outputSha256":
+     "8c3096ab8faf7150313a21a029288b7b1cac5c94c92843814bd8dcb36df15e10",
+     "outputBytes": 19890,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '120,540p'\"",
+     "hookInput":
+     {"command": "nl -ba clang/lib/Driver/Driver.cpp | sed -n '120,540p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-dfa5d08b-fcff-4bbb-87aa-05305b3ad377",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v13746292159453441333",
+     "bodySha256":
+     "3bdf48cee1a642f2d963dc0819babb67b3c76971b2aa2c3777867b07e09090f2",
+     "bodyBytesExact": true,
+     "bodyBytes": 19024}],
+   "responseSha256":
+   "3bdf48cee1a642f2d963dc0819babb67b3c76971b2aa2c3777867b07e09090f2",
+   "responsePreview": "",
+   "responseBytes": 19024,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [16778,
+        ["a7f89cdb39b13315cc485cbf2f1b70244b9b7fa78c9ac854edb82e683c24f50a",
+         "   537\u0009// Add a default value of -mlinker-version=, if one was given and the user\n   538\u0009// didn't specify one.\n   539\u0009#if defined(HOST_LINK"]]]],
+     "outputSha256":
+     "a7f89cdb39b13315cc485cbf2f1b70244b9b7fa78c9ac854edb82e683c24f50a",
+     "outputBytes": 16778,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '537,900p'\"",
+     "hookInput":
+     {"command": "nl -ba clang/lib/Driver/Driver.cpp | sed -n '537,900p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-67745b8e-f865-4c97-a4d5-c1a4c6b3632f",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v1613312402326087211",
+     "bodySha256":
+     "f7b1762e0e3d1505b8feac33cf36c4dd92d8f93751f79eb9ec61c056725610a1",
+     "bodyBytesExact": true,
+     "bodyBytes": 18690}],
+   "responseSha256":
+   "f7b1762e0e3d1505b8feac33cf36c4dd92d8f93751f79eb9ec61c056725610a1",
+   "responsePreview": "",
+   "responseBytes": 18690,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [16476,
+        ["78ef2465e0061677387e68e8d9f6cf66c63e676a4974b712a2b28651d3418011",
+         "  1010\u0009  return Triples;\n  1011\u0009}\n  1012\u0009\n  1013\u0009void Driver::CreateOffloadingDeviceToolChains(Compilation &C,\n  1014\u0009                      "]]]],
+     "outputSha256":
+     "78ef2465e0061677387e68e8d9f6cf66c63e676a4974b712a2b28651d3418011",
+     "outputBytes": 16476,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '1010,1375p'\"",
+     "hookInput":
+     {"command": "nl -ba clang/lib/Driver/Driver.cpp | sed -n '1010,1375p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-460b7b3b-3517-47ae-b9f8-ba1172c6c91f",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v2753964685161787729",
+     "bodySha256":
+     "8f4f27268ebd62afec58ba68a506df2324a93fe76e6a2c1fd39a2a19ac41ce83",
+     "bodyBytesExact": true,
+     "bodyBytes": 26341}],
+   "responseSha256":
+   "8f4f27268ebd62afec58ba68a506df2324a93fe76e6a2c1fd39a2a19ac41ce83",
+   "responsePreview": "",
+   "responseBytes": 26341,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [23229,
+        ["58331c0b8e33df395c00c32195a1280cfb73af12a976f52345a43c1317ce2a00",
+         "  1360\u0009bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {\n  1361\u0009  // Disable default config if CLANG_NO_DEFAULT_CONF"]]]],
+     "outputSha256":
+     "58331c0b8e33df395c00c32195a1280cfb73af12a976f52345a43c1317ce2a00",
+     "outputBytes": 23229,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '1360,1865p'\"",
+     "hookInput":
+     {"command": "nl -ba clang/lib/Driver/Driver.cpp | sed -n '1360,1865p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-cc8cd776-62ed-458b-bae4-a3aeac41f56f",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v16504889021136719705",
+     "bodySha256":
+     "97ef1aa78d8977c38201df1fd5f85747a776e8c1d782d805ee55d2083c107b6d",
+     "bodyBytesExact": true,
+     "bodyBytes": 25015}],
+   "responseSha256":
+   "97ef1aa78d8977c38201df1fd5f85747a776e8c1d782d805ee55d2083c107b6d",
+   "responsePreview": "",
+   "responseBytes": 25015,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [24721,
+        ["e117c1dee76684c0655fd56aebbde08de94efcc220aa663ebb73796130e14c3f",
+         "clang/include/clang/Driver/Action.h:349:    const ToolChain *getToolChain() const { return &HostToolChain; }\nclang/include/clang/Driver/Tool"]]]],
+     "outputSha256":
+     "e117c1dee76684c0655fd56aebbde08de94efcc220aa663ebb73796130e14c3f",
+     "outputBytes": 24721,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -n \\\"Driver::(getToolChain|getOffloadToolChain|getToolChain)|getToolChain\\\\(\\\" clang/lib/Driver clang/include/clang/Driver | sed -n '1,240p'\"",
+     "hookInput":
+     {"command":
+      "rg -n \"Driver::(getToolChain|getOffloadToolChain|getToolChain)|getToolChain\\(\" clang/lib/Driver clang/include/clang/Driver | sed -n '1,240p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-a54bcbf7-c47c-4c87-9b8e-6f27277a9232",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v12515648621070944963",
+     "bodySha256":
+     "1ad986e704b77661bb241278a90a3c80c846feadd5886050b5976b7c2ac27168",
+     "bodyBytesExact": true,
+     "bodyBytes": 12545}],
+   "responseSha256":
+   "1ad986e704b77661bb241278a90a3c80c846feadd5886050b5976b7c2ac27168",
+   "responsePreview": "",
+   "responseBytes": 12545,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [11035,
+        ["29542889aeb7e59871f360dd586643341834b60d9b9df7a2ff7f8872d7051ec2",
+         "  6940\u0009      //  StringRef modules = [&] {\n  6941\u0009      //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());\n  6942\u0009     "]]]],
+     "outputSha256":
+     "29542889aeb7e59871f360dd586643341834b60d9b9df7a2ff7f8872d7051ec2",
+     "outputBytes": 11035,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '6940,7185p'\"",
+     "hookInput":
+     {"command": "nl -ba clang/lib/Driver/Driver.cpp | sed -n '6940,7185p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-4e829156-965c-4b21-ae42-7f13f1691413",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v838467078362448421",
+     "bodySha256":
+     "77979cea516db6ddda22f9ec539b1df38f2839f6b6c14e63dab7b1b957ee705e",
+     "bodyBytesExact": true,
+     "bodyBytes": 9404}],
+   "responseSha256":
+   "77979cea516db6ddda22f9ec539b1df38f2839f6b6c14e63dab7b1b957ee705e",
+   "responsePreview": "",
+   "responseBytes": 9404,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [8340,
+        ["f5c36c2db0524cc1b47f6bd18df2481f01dc02550992546d58d4cc527b2ff6a6",
+         "  7170\u0009    case llvm::Triple::Solaris:\n  7171\u0009      TC = std::make_unique<toolchains::Solaris>(*this, Target, Args);\n  7172\u0009      break;\n  7"]]]],
+     "outputSha256":
+     "f5c36c2db0524cc1b47f6bd18df2481f01dc02550992546d58d4cc527b2ff6a6",
+     "outputBytes": 8340,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '7170,7345p'\"",
+     "hookInput":
+     {"command": "nl -ba clang/lib/Driver/Driver.cpp | sed -n '7170,7345p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-48f6e1f3-c330-476a-9b13-547e0865fef6",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v17443863648576836719",
+     "bodySha256":
+     "0dc6c102fbcbde06109924ab432d5761eb5aa4b35fb90f7f8850cab9f7f4cd02",
+     "bodyBytesExact": true,
+     "bodyBytes": 26745}],
+   "responseSha256":
+   "0dc6c102fbcbde06109924ab432d5761eb5aa4b35fb90f7f8850cab9f7f4cd02",
+   "responsePreview": "",
+   "responseBytes": 26745,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [23455,
+        ["4b732a65e8b21abe090c56e34e86cf87eb1f8888beca42304782832743209323",
+         "   620\u0009  ///\n   621\u0009  /// \\param TC - The provided tool chain for additional information on\n   622\u0009  /// directories to search.\n   623\u0009  //\n"]]]],
+     "outputSha256":
+     "4b732a65e8b21abe090c56e34e86cf87eb1f8888beca42304782832743209323",
+     "outputBytes": 23455,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/include/clang/Driver/Driver.h | sed -n '620,810p' && nl -ba clang/include/clang/Driver/ToolChain.h | sed -n '70,235p' && nl -ba clang/lib/Driver/ToolChain.cpp | sed -n '30,205p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/include/clang/Driver/Driver.h | sed -n '620,810p' && nl -ba clang/include/clang/Driver/ToolChain.h | sed -n '70,235p' && nl -ba clang/lib/Driver/ToolChain.cpp | sed -n '30,205p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-01ab4bc0-547a-49bb-8b43-72fa6f24beb6",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v11214383141306750715",
+     "bodySha256":
+     "ea7a6285aaea221c60207061eb9a0539107ef50d679dd05bd8cdedb10f161151",
+     "bodyBytesExact": true,
+     "bodyBytes": 8604}],
+   "responseSha256":
+   "ea7a6285aaea221c60207061eb9a0539107ef50d679dd05bd8cdedb10f161151",
+   "responsePreview": "",
+   "responseBytes": 8604,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [8382,
+        ["2b8250806a2197ea63cfa9947bebf3b100b7948a9065add4bdccc1e44aaabedb",
+         "clang/test/Driver/AS_SECURE_LOG_FILE.s\nclang/test/Driver/B-opt.c\nclang/test/Driver/DTLTO/dtlto.c\nclang/test/Driver/DTLTO/ps5-dtlto.c\nclang/t"]]]],
+     "outputSha256":
+     "2b8250806a2197ea63cfa9947bebf3b100b7948a9065add4bdccc1e44aaabedb",
+     "outputBytes": 8382,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -l -g '*.c' -g '*.cpp' -g '*.s' -g '*.ll' -g '*.h' -g '*.cl' -g '*.hip' -g '*.cu' -g '*.m' -g '*.mm' -g '*.f90' -- '--driver-mode|--target=|-target | -m32|-m64|-mx32|-arch |--gcc-toolchain|-ccc-install-dir|-###|resource-dir|sysroot|fuse-ld|clang-cl|clang-dxc' clang/test/Driver | sort | sed -n '1,220p'\"",
+     "hookInput":
+     {"command":
+      "rg -l -g '*.c' -g '*.cpp' -g '*.s' -g '*.ll' -g '*.h' -g '*.cl' -g '*.hip' -g '*.cu' -g '*.m' -g '*.mm' -g '*.f90' -- '--driver-mode|--target=|-target | -m32|-m64|-mx32|-arch |--gcc-toolchain|-ccc-install-dir|-###|resource-dir|sysroot|fuse-ld|clang-cl|clang-dxc' clang/test/Driver | sort | sed -n '1,220p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-522707b3-e754-4dde-95b3-9db7c14ad3d9",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v6959772268206873015",
+     "bodySha256":
+     "89247f70eb044a4df3bbdfa609073901835a6b2e5ed4597af9931038e5eb9536",
+     "bodyBytesExact": true,
+     "bodyBytes": 9203}],
+   "responseSha256":
+   "89247f70eb044a4df3bbdfa609073901835a6b2e5ed4597af9931038e5eb9536",
+   "responsePreview": "",
+   "responseBytes": 9203,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256":
+     "c016bb42980fb8d05bfc704da3af822bad38147b655462a747a4ac6eb0191c6b",
+     "streamedBytes": 8981,
+     "responseStringFields":
+     [["response",
+       [8981,
+        ["c016bb42980fb8d05bfc704da3af822bad38147b655462a747a4ac6eb0191c6b",
+         "clang/test/Driver/Inputs/config/config-4.cfg\nclang/test/Driver/Inputs/config/i386-qqq.cfg\nclang/test/Driver/Inputs/config/i386-qqq3.cfg\nclan"]]]],
+     "outputSha256":
+     "c016bb42980fb8d05bfc704da3af822bad38147b655462a747a4ac6eb0191c6b",
+     "outputBytes": 8981,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -l -- '--driver-mode|clang-cl|clang-dxc|--target=|-target |-m32|-m64|-mx32|gcc-toolchain|ccc-install-dir|fuse-ld|resource-dir|sysroot' clang/test/Driver | sort | rg '(driver|toolchain|target|mode|clang-cl|windows|linux|darwin|gnu|multilib|arch|sysroot|gcc|config|unknown|unknown)' | sed -n '1,220p'\"",
+     "hookInput":
+     {"command":
+      "rg -l -- '--driver-mode|clang-cl|clang-dxc|--target=|-target |-m32|-m64|-mx32|gcc-toolchain|ccc-install-dir|fuse-ld|resource-dir|sysroot' clang/test/Driver | sort | rg '(driver|toolchain|target|mode|clang-cl|windows|linux|darwin|gnu|multilib|arch|sysroot|gcc|config|unknown|unknown)' | sed -n '1,220p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-ba5be552-c307-4176-bbea-615cbaca3c6a",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v967448771681139951",
+     "bodySha256":
+     "b1c24ea1a30fb630ee0ed60f9486f6a70fcd7a932d9bcf614d0293710c8d5d0c",
+     "bodyBytesExact": true,
+     "bodyBytes": 5730}],
+   "responseSha256":
+   "b1c24ea1a30fb630ee0ed60f9486f6a70fcd7a932d9bcf614d0293710c8d5d0c",
+   "responsePreview": "",
+   "responseBytes": 5730,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [5468,
+        ["947c136847d112f04738a8181e786678cbe31aab83fcef68f650c7298f6854cf",
+         "Xarch.c\naarch64-a64fx.c\naarch64-a64fx.c\naarch64-ampere1.c\naarch64-ampere1a.c\naarch64-ampere1b.c\naarch64-ampere1c.c\naarch64-apple-a10.c\naarch"]]]],
+     "outputSha256":
+     "947c136847d112f04738a8181e786678cbe31aab83fcef68f650c7298f6854cf",
+     "outputBytes": 5468,
+     "nativeCommand":
+     "/bin/bash -lc \"rg --files clang/test/Driver | sed 's#\"'^.*/##'\"' | sort | rg -i 'driver|option|toolchain|target|config|mode|unknown|clang-cl|cl-|windows|biarch|sysroot|gcc|multilib|arch' | sed -n '1,260p'\"",
+     "hookInput":
+     {"command":
+      "rg --files clang/test/Driver | sed 's#^.*/##' | sort | rg -i 'driver|option|toolchain|target|config|mode|unknown|clang-cl|cl-|windows|biarch|sysroot|gcc|multilib|arch' | sed -n '1,260p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-b55fe9f0-4087-4914-ae08-3da346218ecb",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v13704706033897465947",
+     "bodySha256":
+     "9ef23221fae05a902ff34086ab6f521a4499a33928cc63cf60a36e997752e0ff",
+     "bodyBytesExact": true,
+     "bodyBytes": 2532}],
+   "responseSha256":
+   "9ef23221fae05a902ff34086ab6f521a4499a33928cc63cf60a36e997752e0ff",
+   "responsePreview": "",
+   "responseBytes": 2532,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [2460,
+        ["f91530fe0bd05c00e1b99641b25cdec2d6168f3b2582e53802e4d26cab1f6352",
+         "clang/test/Driver/cl-eh.cpp\nclang/test/Driver/cl-inputs.c\nclang/test/Driver/driverkit-exceptions.cpp\nclang/test/Driver/cl-cc-flags.c\nclang/t"]]]],
+     "outputSha256":
+     "f91530fe0bd05c00e1b99641b25cdec2d6168f3b2582e53802e4d26cab1f6352",
+     "outputBytes": 2460,
+     "nativeCommand":
+     "/bin/bash -lc \"rg --files clang/test/Driver | rg -i '/(driver|options|config|toolchain|target|mode|unknown|clang-cl|cl-|sysroot|biarch|arch|multilib)[\"'^/]*'\"\\\\.(c|cpp|m|mm|s|ll|cl|cu|hip|yaml)\"'$'\"' | sed -n '1,260p'\"",
+     "hookInput":
+     {"command":
+      "rg --files clang/test/Driver | rg -i '/(driver|options|config|toolchain|target|mode|unknown|clang-cl|cl-|sysroot|biarch|arch|multilib)[^/]*\\.(c|cpp|m|mm|s|ll|cl|cu|hip|yaml)$' | sed -n '1,260p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-59660209-879e-4ed5-a86b-7176885ad6b1",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v8705872571790909745",
+     "bodySha256":
+     "887624a3c8691ac71d67e482974520d12b42f9c31d98362674a3b4a1a9612a72",
+     "bodyBytesExact": true,
+     "bodyBytes": 44615}],
+   "responseSha256":
+   "887624a3c8691ac71d67e482974520d12b42f9c31d98362674a3b4a1a9612a72",
+   "responsePreview": "",
+   "responseBytes": 44615,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [40109,
+        ["75909d1e992c7aa8f052c3e46d2f57308976b4fa16daa93c9344d972e3fe82d9",
+         "Warning: truncated output (original token count: 15342)\nTotal output lines: 1023\n\n--- clang/test/Driver/driver-only.c\n     1\u0009// RUN: rm -rf "]]]],
+     "outputSha256":
+     "5d7a6b0abbd53bc8bdfd6ae371a8d0073826671b7593aab43fd5d8de43b86b0c",
+     "outputBytes": 61366,
+     "nativeCommand":
+     "/bin/bash -lc 'for f in clang/test/Driver/driver-only.c clang/test/Driver/unknown-arg.c clang/test/Driver/target.c clang/test/Driver/target-override.c clang/test/Driver/biarch.c clang/test/Driver/sysroot.c clang/test/Driver/sysroot-flags.c clang/test/Driver/config-file.c clang/test/Driver/config-file3.c clang/test/Driver/config-file4.c clang/test/Driver/cl-options.c clang/test/Driver/cl-x86-flags.c clang/test/Driver/cl-cc-flags.c; do echo \"--- $f\"; nl -ba \"$f\" | sed -n '\"'1,220p'; done\"",
+     "hookInput":
+     {"command":
+      "for f in clang/test/Driver/driver-only.c clang/test/Driver/unknown-arg.c clang/test/Driver/target.c clang/test/Driver/target-override.c clang/test/Driver/biarch.c clang/test/Driver/sysroot.c clang/test/Driver/sysroot-flags.c clang/test/Driver/config-file.c clang/test/Driver/config-file3.c clang/test/Driver/config-file4.c clang/test/Driver/cl-options.c clang/test/Driver/cl-x86-flags.c clang/test/Driver/cl-cc-flags.c; do echo \"--- $f\"; nl -ba \"$f\" | sed -n '1,220p'; done"},
+     "hookContainsCompleteNativeSuffix": false,
+     "equalResponseFields": [],
+     "differences":
+     [{"nativeTail":
+       "eck-prefix=UNAVAILABLE %s\n    35\u0009// RUN: %clang_cl -Wno-msvc-not-found --target=thumbv7-windows-msvc /Gv -### -- %s 2>&1 | FileCheck --check-prefix=UNAVAILABLE %s\n    36\u0009\n    37\u0009// UNAVAILABLE-NOT: error:\n    38\u0009// UNAVAILABLE-NOT: warning:\n    39\u0009// UNAVAILABLE-NOT: -fdefault-calling-conv=\n    40\u0009\n",
+       "nativeAtDifference":
+       "--- clang/test/Driver/driver-only.c\n     1\u0009// RUN: rm -rf %t\n     2\u0009// RUN: mkdir %t\n     3\u0009\n     4\u0009// Check that -fdriver-only doesn't actually run the generated -cc1 job.\n     5\u0009//\n     6\u0009// RUN: %clang -c %s -o %t/a.o -fdriver-only\n     7\u0009// RUN: not cat %t/a.o\n     8\u0009\n     9\u0009// Check that -fdriver-only respects errors.\n    10\u0009//\n    11\u0009// RUN: not %clang -c %s -fdriver-only -target i386-apple-darwin9 -m32 -Xarch_i386 -o\n    12\u0009\n    13\u0009// Check that -fdriver-only respects -v.\n    14\u0009//\n    15",
+       "hookTail":
+       "eck-prefix=UNAVAILABLE %s\n    35\u0009// RUN: %clang_cl -Wno-msvc-not-found --target=thumbv7-windows-msvc /Gv -### -- %s 2>&1 | FileCheck --check-prefix=UNAVAILABLE %s\n    36\u0009\n    37\u0009// UNAVAILABLE-NOT: error:\n    38\u0009// UNAVAILABLE-NOT: warning:\n    39\u0009// UNAVAILABLE-NOT: -fdefault-calling-conv=\n    40\u0009\n",
+       "hookAtDifference":
+       "Warning: truncated output (original token count: 15342)\nTotal output lines: 1023\n\n--- clang/test/Driver/driver-only.c\n     1\u0009// RUN: rm -rf %t\n     2\u0009// RUN: mkdir %t\n     3\u0009\n     4\u0009// Check that -fdriver-only doesn't actually run the generated -cc1 job.\n     5\u0009//\n     6\u0009// RUN: %clang -c %s -o %t/a.o -fdriver-only\n     7\u0009// RUN: not cat %t/a.o\n     8\u0009\n     9\u0009// Check that -fdriver-only respects errors.\n    10\u0009//\n    11\u0009// RUN: not %clang -c %s -fdriver-only -target i386-apple-darwin9 -m32 -Xarc",
+       "firstDifferentCharacter": 0,
+       "field": "response"}]}]},
+  {"useId": "exec-a4b57c81-ec4f-4d39-8299-270e4d1d4712",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v14427429166023216783",
+     "bodySha256":
+     "960f383a7c77e9459b8632991e9fdd5043c5a8cace1a7fbbd803e5b08ac297d1",
+     "bodyBytesExact": true,
+     "bodyBytes": 5731}],
+   "responseSha256":
+   "960f383a7c77e9459b8632991e9fdd5043c5a8cace1a7fbbd803e5b08ac297d1",
+   "responsePreview": "",
+   "responseBytes": 5731,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [5676,
+        ["91f66b7d54a34066ec6e021c22e49855afd63f6a4313bd06c29ccf4828636123",
+         "clang/lib/Driver/ToolChains/HLSL.cpp:396:HLSLToolChain::HLSLToolChain(const Driver &D, const llvm::Triple &Triple,\nclang/lib/Driver/ToolChai"]]]],
+     "outputSha256":
+     "91f66b7d54a34066ec6e021c22e49855afd63f6a4313bd06c29ccf4828636123",
+     "outputBytes": 5676,
+     "nativeCommand":
+     "/bin/bash -lc 'rg -n \"''^(toolchains::)?(Linux|DarwinClang|AppleMachO|MachO|Generic_GCC|Generic_ELF|MinGW|MSVCToolChain|CrossWindowsToolChain|BareMetal|CudaToolChain|AMDGPUToolChain|NVPTXToolChain|HLSLToolChain|SPIRVToolChain)::|class (Linux|DarwinClang|AppleMachO|MachO|Generic_GCC|Generic_ELF|MinGW|MSVCToolChain|CrossWindowsToolChain|BareMetal|CudaToolChain|AMDGPUToolChain|NVPTXToolChain|HLSLToolChain|SPIRVToolChain)\" clang/lib/Driver/ToolChains clang/include/clang/Driver/ToolChain.h | sed -n '\"'1,260p'\"",
+     "hookInput":
+     {"command":
+      "rg -n \"^(toolchains::)?(Linux|DarwinClang|AppleMachO|MachO|Generic_GCC|Generic_ELF|MinGW|MSVCToolChain|CrossWindowsToolChain|BareMetal|CudaToolChain|AMDGPUToolChain|NVPTXToolChain|HLSLToolChain|SPIRVToolChain)::|class (Linux|DarwinClang|AppleMachO|MachO|Generic_GCC|Generic_ELF|MinGW|MSVCToolChain|CrossWindowsToolChain|BareMetal|CudaToolChain|AMDGPUToolChain|NVPTXToolChain|HLSLToolChain|SPIRVToolChain)\" clang/lib/Driver/ToolChains clang/include/clang/Driver/ToolChain.h | sed -n '1,260p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-f703863b-6164-4f84-9a15-ed4ee14b156a",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v15148708874654014252",
+     "bodySha256":
+     "08f59d624874ff2dd5e5b6003bac7ffc24ff57fa39a07f78e6acfd278eda305f",
+     "bodyBytesExact": true,
+     "bodyBytes": 4890}],
+   "responseSha256":
+   "08f59d624874ff2dd5e5b6003bac7ffc24ff57fa39a07f78e6acfd278eda305f",
+   "responsePreview": "",
+   "responseBytes": 4890,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [4834,
+        ["e82124b528b993d71e1aac6a67b53a85d5f7b250ba5ff6b80973907b6c8bba54",
+         "clang/include/clang/Driver/Driver.h:100:  enum DriverMode {\nclang/include/clang/Driver/Driver.h:477:                                        "]]]],
+     "outputSha256":
+     "e82124b528b993d71e1aac6a67b53a85d5f7b250ba5ff6b80973907b6c8bba54",
+     "outputBytes": 4834,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -n \\\"getOptionVisibilityMask|getDriverMode\\\\(|Driver::getDriverMode|DriverMode\\\" clang/lib/Driver/Driver.cpp clang/lib/Driver/*.cpp clang/include/clang/Driver/Driver.h | sed -n '1,220p'\"",
+     "hookInput":
+     {"command":
+      "rg -n \"getOptionVisibilityMask|getDriverMode\\(|Driver::getDriverMode|DriverMode\" clang/lib/Driver/Driver.cpp clang/lib/Driver/*.cpp clang/include/clang/Driver/Driver.h | sed -n '1,220p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-eff665ea-65ab-48a5-9a4b-d49934527c91",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v2064597356712123713",
+     "bodySha256":
+     "8bf2a1b270de60a01a5e17e1688128d2f8c5e76549a2ff90cc3efa784dd6d993",
+     "bodyBytesExact": true,
+     "bodyBytes": 14407}],
+   "responseSha256":
+   "8bf2a1b270de60a01a5e17e1688128d2f8c5e76549a2ff90cc3efa784dd6d993",
+   "responsePreview": "",
+   "responseBytes": 14407,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [12614,
+        ["68518e6f518c80b3a03f603d5938a5d5f3d55496d027dda41ae5b1e3c3ef00c1",
+         "  7395\u0009  if (!Str.empty())\n  7396\u0009    HadExtra = true;\n  7397\u0009  return true;\n  7398\u0009}\n  7399\u0009\n  7400\u0009/// Parse digits from a string \\p Str a"]]]],
+     "outputSha256":
+     "68518e6f518c80b3a03f603d5938a5d5f3d55496d027dda41ae5b1e3c3ef00c1",
+     "outputBytes": 12614,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '7395,7520p' && nl -ba clang/include/clang/Driver/Driver.h | sed -n '90,145p;430,510p;820,845p' && rg -n \\\"getTargetAndModeFromProgramName\\\" clang/lib/Driver clang/include/clang/Driver | sed -n '1,80p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/Driver.cpp | sed -n '7395,7520p' && nl -ba clang/include/clang/Driver/Driver.h | sed -n '90,145p;430,510p;820,845p' && rg -n \"getTargetAndModeFromProgramName\" clang/lib/Driver clang/include/clang/Driver | sed -n '1,80p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-6c646142-0b40-4524-8415-e09693140d32",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v14689896715931987015",
+     "bodySha256":
+     "05b9c0cbf2c607d1ca35e103fbf381c63120eef0a05899e980c1df6e71cfb12f",
+     "bodyBytesExact": true,
+     "bodyBytes": 14221}],
+   "responseSha256":
+   "05b9c0cbf2c607d1ca35e103fbf381c63120eef0a05899e980c1df6e71cfb12f",
+   "responsePreview": "",
+   "responseBytes": 14221,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [12586,
+        ["8941424ca64d3339fa09e9aeb5eb9f04d279d2bca8a11a4afc2a5719efa07767",
+         "   620\u0009\n   621\u0009  // If there is a match, the function tries to identify a target as prefix.\n   622\u0009  // E.g. \"x86_64-linux-clang\" as interpr"]]]],
+     "outputSha256":
+     "8941424ca64d3339fa09e9aeb5eb9f04d279d2bca8a11a4afc2a5719efa07767",
+     "outputBytes": 12586,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/ToolChain.cpp | sed -n '620,715p' && nl -ba clang/include/clang/Driver/ToolChain.h | sed -n '350,420p;235,330p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/ToolChain.cpp | sed -n '620,715p' && nl -ba clang/include/clang/Driver/ToolChain.h | sed -n '350,420p;235,330p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-2604a22c-980f-43d4-b15a-cecc8198300d",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v5223237790925145400",
+     "bodySha256":
+     "816ddab96fdc7bb1e86e686bbf2047971618a1967167609543e85af4214aef38",
+     "bodyBytesExact": true,
+     "bodyBytes": 19197}],
+   "responseSha256":
+   "816ddab96fdc7bb1e86e686bbf2047971618a1967167609543e85af4214aef38",
+   "responsePreview": "",
+   "responseBytes": 19197,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [16783,
+        ["d57b8dee868e79079995c41b6a424a013802d5f695dc633a494f934c19777222",
+         "  3030\u0009              GCCVersion::Parse(ActiveVersion.second);\n  3031\u0009          SelectedInstallation.GCCInstallPath = GentooPath;\n  3032\u0009    "]]]],
+     "outputSha256":
+     "d57b8dee868e79079995c41b6a424a013802d5f695dc633a494f934c19777222",
+     "outputBytes": 16783,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/ToolChains/Gnu.cpp | sed -n '3030,3125p;3470,3535p' && nl -ba clang/lib/Driver/ToolChains/Linux.cpp | sed -n '205,325p' && nl -ba clang/lib/Driver/ToolChains/Darwin.cpp | sed -n '980,1040p;1310,1365p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/ToolChains/Gnu.cpp | sed -n '3030,3125p;3470,3535p' && nl -ba clang/lib/Driver/ToolChains/Linux.cpp | sed -n '205,325p' && nl -ba clang/lib/Driver/ToolChains/Darwin.cpp | sed -n '980,1040p;1310,1365p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-5591b5ef-86f5-42f9-bdec-b78999ae0417",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v9652633903680051794",
+     "bodySha256":
+     "59e8a423de86655d42f3179ea028bbad92a56e68809d8950c59aa19140d29c86",
+     "bodyBytesExact": true,
+     "bodyBytes": 22690}],
+   "responseSha256":
+   "59e8a423de86655d42f3179ea028bbad92a56e68809d8950c59aa19140d29c86",
+   "responsePreview": "",
+   "responseBytes": 22690,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [20098,
+        ["d28396cc26bc7991593ccbead11c65cd86658fa7d534100f3c491c617ec10e39",
+         "   500\u0009  C.addCommand(std::move(LinkCmd));\n   501\u0009}\n   502\u0009\n   503\u0009void tools::ARM64XObjcopy::ConstructJob(Compilation &C, const JobAction &"]]]],
+     "outputSha256":
+     "d28396cc26bc7991593ccbead11c65cd86658fa7d534100f3c491c617ec10e39",
+     "outputBytes": 20098,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/ToolChains/MSVC.cpp | sed -n '500,590p;1110,1165p' && nl -ba clang/lib/Driver/ToolChains/MinGW.cpp | sed -n '500,575p;600,670p' && nl -ba clang/lib/Driver/ToolChains/BareMetal.cpp | sed -n '205,285p;285,335p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/ToolChains/MSVC.cpp | sed -n '500,590p;1110,1165p' && nl -ba clang/lib/Driver/ToolChains/MinGW.cpp | sed -n '500,575p;600,670p' && nl -ba clang/lib/Driver/ToolChains/BareMetal.cpp | sed -n '205,285p;285,335p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-74b55d0e-34e3-4a9a-bda3-7e2c3715fb43",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v15048929543361584601",
+     "bodySha256":
+     "5146a90f1ac1dd73853474ba94058a6c75a25e72a1171c905db0de6e3617c45a",
+     "bodyBytesExact": true,
+     "bodyBytes": 30262}],
+   "responseSha256":
+   "5146a90f1ac1dd73853474ba94058a6c75a25e72a1171c905db0de6e3617c45a",
+   "responsePreview": "",
+   "responseBytes": 30262,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [29944,
+        ["d5877e6caf70f893cdb5486c2db6e022e1593791e70f66722ad60b5158e83e14",
+         "clang/test/Driver/cl-cc-flags.c:4:// RUN: %clang_cl --target=i686-windows-msvc /Gd -### -- %s 2>&1 | FileCheck --check-prefix=CDECL %s\nclang"]]]],
+     "outputSha256":
+     "d5877e6caf70f893cdb5486c2db6e022e1593791e70f66722ad60b5158e83e14",
+     "outputBytes": 29944,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -n -- '--driver-mode|clang-dxc|clang-cl|%clang_cl|%clang_dxc' clang/test/Driver | sed -n '1,240p'\"",
+     "hookInput":
+     {"command":
+      "rg -n -- '--driver-mode|clang-dxc|clang-cl|%clang_cl|%clang_dxc' clang/test/Driver | sed -n '1,240p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-391aafda-eae2-4942-8e8d-d07c9fc253a1",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v8033611394994951430",
+     "bodySha256":
+     "ca3741011a7afc0844d3667c19be37648d49c64a9858a476ec04daa3b24e4b94",
+     "bodyBytesExact": true,
+     "bodyBytes": 16481}],
+   "responseSha256":
+   "ca3741011a7afc0844d3667c19be37648d49c64a9858a476ec04daa3b24e4b94",
+   "responsePreview": "",
+   "responseBytes": 16481,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [14883,
+        ["17cd0b841ae06f554519b6f7f9ac8b53668d82340be0c7e85149a6e2d93b7c2c",
+         "     1\u0009// REQUIRES: arm-registered-target\n     2\u0009// UNSUPPORTED: system-windows\n     3\u0009// UNSUPPORTED: llvm-driver\n     4\u0009\n     5\u0009// RUN: mk"]]]],
+     "outputSha256":
+     "17cd0b841ae06f554519b6f7f9ac8b53668d82340be0c7e85149a6e2d93b7c2c",
+     "outputBytes": 14883,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/test/Driver/parse-progname.c | sed -n '1,110p' && nl -ba clang/test/Driver/config-file3.c | sed -n '95,190p' && nl -ba clang/test/Driver/cl-options.c | sed -n '1,45p;220,245p' && nl -ba clang/test/Driver/dxc_debug.hlsl | sed -n '1,35p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/test/Driver/parse-progname.c | sed -n '1,110p' && nl -ba clang/test/Driver/config-file3.c | sed -n '95,190p' && nl -ba clang/test/Driver/cl-options.c | sed -n '1,45p;220,245p' && nl -ba clang/test/Driver/dxc_debug.hlsl | sed -n '1,35p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-a0da64dd-12fd-42fc-a227-5aeadae0ed30",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v5169508519026866249",
+     "bodySha256":
+     "485ee2dc1c5d0947379f714b0b1b7e497e04c0234e9e96bd9ff4cde85bef4296",
+     "bodyBytesExact": true,
+     "bodyBytes": 203}],
+   "responseSha256":
+   "485ee2dc1c5d0947379f714b0b1b7e497e04c0234e9e96bd9ff4cde85bef4296",
+   "responsePreview": "",
+   "responseBytes": 203,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [193,
+        ["e32fa944ccb19dd950c3778fdd94a462fa450c1fe885f60fac233081e24c9d55",
+         "rg: regex parse error:\n    (?:\"-triple\"|Target:|gcc{{|ld{{|link\\.exe|ld\\.lld|clang -cc1|Configuration file:)\n                             ^\n"]]]],
+     "outputSha256":
+     "e32fa944ccb19dd950c3778fdd94a462fa450c1fe885f60fac233081e24c9d55",
+     "outputBytes": 193,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -l -- '\\\"-triple\\\"|Target:|gcc{{|ld{{|link\\\\.exe|ld\\\\.lld|clang -cc1|Configuration file:' clang/test/Driver | sort | rg -v '/Inputs/' | sed -n '1,220p'\"",
+     "hookInput":
+     {"command":
+      "rg -l -- '\"-triple\"|Target:|gcc{{|ld{{|link\\.exe|ld\\.lld|clang -cc1|Configuration file:' clang/test/Driver | sort | rg -v '/Inputs/' | sed -n '1,220p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-944d619b-b2cc-4d34-a2f0-c5a10fad87f1",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v7026621631206622064",
+     "bodySha256":
+     "02bc20c08bfb382a37cef8c9cf7e2a50556cb4b06844c45663c387e7dd03dc1f",
+     "bodyBytesExact": true,
+     "bodyBytes": 6755}],
+   "responseSha256":
+   "02bc20c08bfb382a37cef8c9cf7e2a50556cb4b06844c45663c387e7dd03dc1f",
+   "responsePreview": "",
+   "responseBytes": 6755,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256":
+     "05727a32e6471ab5aa217e8449801ebd97a2dcc641bf2c77f330e0b7af2c756a",
+     "streamedBytes": 6133,
+     "responseStringFields":
+     [["response",
+       [6576,
+        ["73b42adbbd5c66d79ce6464046939890e98e83e86402abdcee303da582346721",
+         "clang/test/Driver/parse-progname.c\nclang/test/Driver/print-supported-cpus.c\nclang/test/Driver/target-override.c\nclang/test/Driver/target.c\nc"]]]],
+     "outputSha256":
+     "05727a32e6471ab5aa217e8449801ebd97a2dcc641bf2c77f330e0b7af2c756a",
+     "outputBytes": 6133,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -l -F 'Target:' clang/test/Driver | sed -n '1,120p' && rg -l -F '\\\"-triple\\\"' clang/test/Driver | sed -n '1,160p' && rg -l -F 'Configuration file:' clang/test/Driver | sed -n '1,120p'\"",
+     "hookInput":
+     {"command":
+      "rg -l -F 'Target:' clang/test/Driver | sed -n '1,120p' && rg -l -F '\"-triple\"' clang/test/Driver | sed -n '1,160p' && rg -l -F 'Configuration file:' clang/test/Driver | sed -n '1,120p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": [],
+     "differences":
+     [{"nativeTail":
+       "rwin-sdk-vs-os-version.c\nclang/test/Driver/hip-toolchain-opt.hip\nclang/test/Driver/avr-toolchain.c\nclang/test/Driver/hip-toolchain-rdc.hip\nclang/test/Driver/config-file3.c\nclang/test/Driver/config-zos1.c\nclang/test/Driver/config-file4.c\nclang/test/Driver/config-file.c\nclang/test/Driver/config-zos.c\n",
+       "nativeAtDifference":
+       "amdgpu-unwind.cl\nclang/test/Driver/aix-ld.c\nclang/test/Driver/baremetal-multilib.yaml\nclang/test/Driver/cl-options.c\nclang/test/Driver/aarch64-carmel.c\nclang/test/Driver/darwin-sdkroot.c\nclang/test/Driver/spirv-amd-toolchain.c\nclang/test/Driver/loongarch-toolchain.c\nclang/test/Driver/hip-sanitize-options.hip\nclang/test/Driver/aarch64-cortex-a320.c\nclang/test/Driver/aarch64-v9a.c\nclang/test/Driver/openmp-system-arch.c\nclang/test/Driver/rocm-device-libs.cl\nclang/test/Driver/arm-target-as-march-mcp",
+       "hookTail":
+       "rwin-sdk-vs-os-version.c\nclang/test/Driver/hip-toolchain-opt.hip\nclang/test/Driver/avr-toolchain.c\nclang/test/Driver/hip-toolchain-rdc.hip\nclang/test/Driver/config-file3.c\nclang/test/Driver/config-zos1.c\nclang/test/Driver/config-file4.c\nclang/test/Driver/config-file.c\nclang/test/Driver/config-zos.c\n",
+       "hookAtDifference":
+       "parse-progname.c\nclang/test/Driver/print-supported-cpus.c\nclang/test/Driver/target-override.c\nclang/test/Driver/target.c\nclang/test/Driver/x86_m16.c\nclang/test/Driver/print-supported-cpus-aarch64.c\nclang/test/Driver/darwin-embedded.c\nclang/test/Driver/lanai-toolchain.c\nclang/test/Driver/program-path-priority.c\nclang/test/Driver/aix-maix.c\nclang/test/Driver/default-toolchain.c\nclang/test/Driver/aix-default-target-triple.c\nclang/test/Driver/amdgpu-unwind.cl\nclang/test/Driver/aix-ld.c\nclang/test/Dr",
+       "firstDifferentCharacter": 18,
+       "field": "response"}]}]},
+  {"useId": "exec-2f83adb1-36d9-436c-8de5-2210ed633cfb",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v12031134853511683742",
+     "bodySha256":
+     "eb45bc3e0785e7252f8c7b6444cbe62ff16ea8e6913a0a13d7a26e8edad8706c",
+     "bodyBytesExact": true,
+     "bodyBytes": 22465}],
+   "responseSha256":
+   "eb45bc3e0785e7252f8c7b6444cbe62ff16ea8e6913a0a13d7a26e8edad8706c",
+   "responsePreview": "",
+   "responseBytes": 22465,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [19928,
+        ["4a0e2755ce4b816e45a2373d66f07dea816c505ac7d0c7c215a2086087b04525",
+         "     1\u0009// RUN: %clang -target i386-unknown-unknown -m64 -v 2> %t\n     2\u0009// RUN: grep 'Target: x86_64-unknown-unknown' %t\n     3\u0009\n     4\u0009// R"]]]],
+     "outputSha256":
+     "4a0e2755ce4b816e45a2373d66f07dea816c505ac7d0c7c215a2086087b04525",
+     "outputBytes": 19928,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/test/Driver/default-toolchain.c | sed -n '1,220p' && nl -ba clang/test/Driver/program-path-priority.c | sed -n '1,180p' && nl -ba clang/test/Driver/linux-ld.c | sed -n '1,160p' && nl -ba clang/test/Driver/cross-linux.c | sed -n '1,140p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/test/Driver/default-toolchain.c | sed -n '1,220p' && nl -ba clang/test/Driver/program-path-priority.c | sed -n '1,180p' && nl -ba clang/test/Driver/linux-ld.c | sed -n '1,160p' && nl -ba clang/test/Driver/cross-linux.c | sed -n '1,140p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-70327a2c-f3aa-49b6-93eb-c27f837947ae",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v7857308678932378236",
+     "bodySha256":
+     "dc5ff64a372d939555cfdab72e9f049f903ffb558c7a9b7687d8b7b3d99343bf",
+     "bodyBytesExact": true,
+     "bodyBytes": 12489}],
+   "responseSha256":
+   "dc5ff64a372d939555cfdab72e9f049f903ffb558c7a9b7687d8b7b3d99343bf",
+   "responsePreview": "",
+   "responseBytes": 12489,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [11145,
+        ["0150c5db6b9b9c4156fe521f9f63d263d120cce76873728107123d86c3c58128",
+         "  6120\u0009    // initialization is performed before processing the offload action.\n  6121\u0009    // FIXME: Remove when darwin's toolchain is initi"]]]],
+     "outputSha256":
+     "0150c5db6b9b9c4156fe521f9f63d263d120cce76873728107123d86c3c58128",
+     "outputBytes": 11145,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '6120,6265p;6270,6345p' && rg -n \\\"TranslateArgs\\\\(|getTool\\\\(|getToolChain\\\\(.*getTool\\\" clang/lib/Driver/Driver.cpp | sed -n '1,180p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/Driver.cpp | sed -n '6120,6265p;6270,6345p' && rg -n \"TranslateArgs\\(|getTool\\(|getToolChain\\(.*getTool\" clang/lib/Driver/Driver.cpp | sed -n '1,180p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-18c676a6-0451-4594-98ad-5cfdfd37a144",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v4418741372576964671",
+     "bodySha256":
+     "a202b6003f8f18acd4368f0292c60f4fd0d4dbaa7ec63d90e347f1dc16c880d6",
+     "bodyBytesExact": true,
+     "bodyBytes": 5762}],
+   "responseSha256":
+   "a202b6003f8f18acd4368f0292c60f4fd0d4dbaa7ec63d90e347f1dc16c880d6",
+   "responsePreview": "",
+   "responseBytes": 5762,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [5169,
+        ["27b73ced27720a0370d4d3fead690a9332282ef402ae9fa61bcb139cb6ab3710",
+         "clang/include/clang/Driver/Compilation.h:247:  /// getArgsForToolChain - Return the derived argument list for the\nclang/include/clang/Driver"]]]],
+     "outputSha256":
+     "27b73ced27720a0370d4d3fead690a9332282ef402ae9fa61bcb139cb6ab3710",
+     "outputBytes": 5169,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -n \\\"getArgsForToolChain|TranslateArgs|TranslateOpenMPTargetArgs\\\" clang/lib/Driver/Compilation.cpp clang/include/clang/Driver/Compilation.h clang/lib/Driver/Driver.cpp | sed -n '1,180p' && nl -ba clang/lib/Driver/Compilation.cpp | sed -n '60,155p'\"",
+     "hookInput":
+     {"command":
+      "rg -n \"getArgsForToolChain|TranslateArgs|TranslateOpenMPTargetArgs\" clang/lib/Driver/Compilation.cpp clang/include/clang/Driver/Compilation.h clang/lib/Driver/Driver.cpp | sed -n '1,180p' && nl -ba clang/lib/Driver/Compilation.cpp | sed -n '60,155p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-dc36be2d-42f8-4e13-8c07-9c0727c19ed5",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v14200885991434771158",
+     "bodySha256":
+     "cf97e681a101a0264a5b28c914b7e43430695af9482442a7d87dd96118c3cefb",
+     "bodyBytesExact": true,
+     "bodyBytes": 14770}],
+   "responseSha256":
+   "cf97e681a101a0264a5b28c914b7e43430695af9482442a7d87dd96118c3cefb",
+   "responsePreview": "",
+   "responseBytes": 14770,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [13114,
+        ["ddcc7ab6a64990d099487d335e53b141f6e725c7637ee3bec685d6370fba55c3",
+         "  2890\u0009  return Id;\n  2891\u0009}\n  2892\u0009\n  2893\u0009// Print the action graphs in a compilation C.\n  2894\u0009// For example \"clang -c file1.c file2.c\" "]]]],
+     "outputSha256":
+     "ddcc7ab6a64990d099487d335e53b141f6e725c7637ee3bec685d6370fba55c3",
+     "outputBytes": 13114,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '2890,3015p;3090,3185p;3200,3250p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/Driver.cpp | sed -n '2890,3015p;3090,3185p;3200,3250p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-2ec28199-61b5-4759-a91e-3dad42683717",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v1681828738322606799",
+     "bodySha256":
+     "56fc9da43dd69fd834f374f56218e7a8873676f8954834cb14403211bc4a6256",
+     "bodyBytesExact": true,
+     "bodyBytes": 5176}],
+   "responseSha256":
+   "56fc9da43dd69fd834f374f56218e7a8873676f8954834cb14403211bc4a6256",
+   "responsePreview": "",
+   "responseBytes": 5176,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [4702,
+        ["9afdff8f6bbd6e9194345a7f839ee0998996a1646646a156b0977175610c2ca0",
+         "  3240\u0009        if (Ty == types::TY_INVALID) {\n  3241\u0009          Ty = InputType;\n  3242\u0009          InputTypeArg->claim();\n  3243\u0009        }\n  32"]]]],
+     "outputSha256":
+     "9afdff8f6bbd6e9194345a7f839ee0998996a1646646a156b0977175610c2ca0",
+     "outputBytes": 4702,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '3240,3310p' && rg -n \\\"argument_unused|CheckUnused|isClaimed|claim\\\" clang/lib/Driver/Driver.cpp | sed -n '1,180p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/Driver.cpp | sed -n '3240,3310p' && rg -n \"argument_unused|CheckUnused|isClaimed|claim\" clang/lib/Driver/Driver.cpp | sed -n '1,180p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-bda41d0e-928a-42c7-b61e-5f4eab46310d",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v4493021396169764495",
+     "bodySha256":
+     "d66d9195989e64ccbec296f6b7604613e53f1e40d9a2f3190d764182175a3edf",
+     "bodyBytesExact": true,
+     "bodyBytes": 7264}],
+   "responseSha256":
+   "d66d9195989e64ccbec296f6b7604613e53f1e40d9a2f3190d764182175a3edf",
+   "responsePreview": "",
+   "responseBytes": 7264,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [6388,
+        ["7551204e1ff9a034686b9e7c377fbb6d1c9a0dd895b5a4c4737ff1beed3fc2b5",
+         "  5600\u0009        Out << ',';\n  5601\u0009        llvm::sys::printArg(Out, LinkingOutput, true);\n  5602\u0009        Out << ',' << ProcStat->TotalTime.co"]]]],
+     "outputSha256":
+     "7551204e1ff9a034686b9e7c377fbb6d1c9a0dd895b5a4c4737ff1beed3fc2b5",
+     "outputBytes": 6388,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '5600,5685p' && nl -ba clang/lib/Driver/Driver.cpp | sed -n '5420,5475p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/Driver.cpp | sed -n '5600,5685p' && nl -ba clang/lib/Driver/Driver.cpp | sed -n '5420,5475p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-eaac9807-2845-4194-aa81-1c0ca88aae4c",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v3234797028443459218",
+     "bodySha256":
+     "b6e46143126b43608b769c9174f593142958b710ef03f806cb3cca394153d3de",
+     "bodyBytesExact": true,
+     "bodyBytes": 4703}],
+   "responseSha256":
+   "b6e46143126b43608b769c9174f593142958b710ef03f806cb3cca394153d3de",
+   "responsePreview": "",
+   "responseBytes": 4703,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [4188,
+        ["8c648c2473ed952a016c4c5af41b3c0edcaba8a6afadaeb8283a0794f9ab8399",
+         "  5467\u0009void Driver::BuildJobs(Compilation &C) const {\n  5468\u0009  llvm::PrettyStackTraceString CrashInfo(\"Building compilation jobs\");\n  5469\u0009\n"]]]],
+     "outputSha256":
+     "8c648c2473ed952a016c4c5af41b3c0edcaba8a6afadaeb8283a0794f9ab8399",
+     "outputBytes": 4188,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/Driver.cpp | sed -n '5680,5715p;5467,5515p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/Driver.cpp | sed -n '5680,5715p;5467,5515p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-ee73a1ad-33ca-4861-9170-4733ac797780",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v13744783661680513120",
+     "bodySha256":
+     "ba8fd8c308abf36bc9cf4bc1d338bca89bb40686f47555aa58d1a5e7b566e2f2",
+     "bodyBytesExact": true,
+     "bodyBytes": 15170}],
+   "responseSha256":
+   "ba8fd8c308abf36bc9cf4bc1d338bca89bb40686f47555aa58d1a5e7b566e2f2",
+   "responsePreview": "",
+   "responseBytes": 15170,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [13410,
+        ["73475fb17aa0c2c1c37290a9c151f0378b937d2ff4e5cf23399a6264a8d50573",
+         "   730\u0009    // No PTX feature specified; let the backend choose based on the target SM.\n   731\u0009    break;\n   732\u0009  }\n   733\u0009  if (PtxFeature)"]]]],
+     "outputSha256":
+     "73475fb17aa0c2c1c37290a9c151f0378b937d2ff4e5cf23399a6264a8d50573",
+     "outputBytes": 13410,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/lib/Driver/ToolChains/Cuda.cpp | sed -n '730,805p;870,925p' && nl -ba clang/lib/Driver/ToolChains/AMDGPU.cpp | sed -n '665,730p' && nl -ba clang/lib/Driver/ToolChains/HLSL.cpp | sed -n '385,445p' && nl -ba clang/lib/Driver/ToolChains/SPIRV.cpp | sed -n '185,225p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/lib/Driver/ToolChains/Cuda.cpp | sed -n '730,805p;870,925p' && nl -ba clang/lib/Driver/ToolChains/AMDGPU.cpp | sed -n '665,730p' && nl -ba clang/lib/Driver/ToolChains/HLSL.cpp | sed -n '385,445p' && nl -ba clang/lib/Driver/ToolChains/SPIRV.cpp | sed -n '185,225p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-aa5ef3ad-0f18-40d0-ae1b-306ea69339e4",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v8215670279332028025",
+     "bodySha256":
+     "5f42a58138a04a3235c9d3aabb01f68a37a7ba2ddd53ba0c0d56fa1e8b01b0c0",
+     "bodyBytesExact": true,
+     "bodyBytes": 832}],
+   "responseSha256":
+   "5f42a58138a04a3235c9d3aabb01f68a37a7ba2ddd53ba0c0d56fa1e8b01b0c0",
+   "responsePreview":
+   "\"git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead\\ngit: error: couldn't create cache file '/tmp/xcrun_db-3WdSoWjc' (errno=Operation not permitted)\\ngit: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead\\ngit: error: couldn't create cache file '/tmp/xcrun_db-rl6mkk3v' (errno=Operation not permitted)\\n6dfe1677ab8d\\ngit: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead\\ngit: error: couldn't create cache file '/tmp/xcrun_db-i1OGfU9R' (errno=Operation not permitted)\\ngit: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead\\ngit: error: couldn't create cache file '/tmp/xcrun_db-hEv50MGG' (errno=Operation not permitted)\\n\"",
+   "responseBytes": 832,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"outputUnavailable": true,
+     "nativeItem":
+     {"type": "commandExecution",
+      "status": "completed",
+      "source": "unifiedExecStartup",
+      "processId": "32546",
+      "id": "exec-aa5ef3ad-0f18-40d0-ae1b-306ea69339e4",
+      "exitCode": 0,
+      "durationMs": 560,
+      "cwd":
+      "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project",
+      "commandActions":
+      [{"type": "unknown",
+        "command":
+        "git rev-parse --short=12 HEAD && git status --short --untracked-files=no"}],
+      "command":
+      "/bin/bash -lc 'git rev-parse --short=12 HEAD && git status --short --untracked-files=no'",
+      "aggregatedOutput": null}}]},
+  {"useId": "exec-0498ef22-ea30-4819-99d5-aa74db79c691",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v657204012105989020",
+     "bodySha256":
+     "13e09ef27c426c3f5c2022d566396902de23e774afa08e4d2f7e13afa07fd872",
+     "bodyBytesExact": true,
+     "bodyBytes": 24254}],
+   "responseSha256":
+   "13e09ef27c426c3f5c2022d566396902de23e774afa08e4d2f7e13afa07fd872",
+   "responsePreview": "",
+   "responseBytes": 24254,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [22061,
+        ["b028c9b94f79e2fe292c1cc37bf58b9d1cdc18bf5f1b9dc10ebe262c4c595d3d",
+         "     1\u0009///\n     2\u0009/// Perform several driver tests for OpenMP offloading\n     3\u0009///\n     4\u0009\n     5\u0009/// #####################################"]]]],
+     "outputSha256":
+     "b028c9b94f79e2fe292c1cc37bf58b9d1cdc18bf5f1b9dc10ebe262c4c595d3d",
+     "outputBytes": 22061,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/test/Driver/openmp-offload.c | sed -n '1,150p' && nl -ba clang/test/Driver/cuda-options.cu | sed -n '1,90p' && nl -ba clang/test/Driver/amdgpu-toolchain.c | sed -n '1,100p' && nl -ba clang/test/Driver/dxc_spirv.hlsl | sed -n '1,80p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/test/Driver/openmp-offload.c | sed -n '1,150p' && nl -ba clang/test/Driver/cuda-options.cu | sed -n '1,90p' && nl -ba clang/test/Driver/amdgpu-toolchain.c | sed -n '1,100p' && nl -ba clang/test/Driver/dxc_spirv.hlsl | sed -n '1,80p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-bf01e97b-5801-4930-88f3-d5dc01cc6e4a",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v10366638859975862946",
+     "bodySha256":
+     "0a58095687ef457794eab4c1ddaf679d55bd24839d4be71bfa21e75c0a411aad",
+     "bodyBytesExact": true,
+     "bodyBytes": 6733}],
+   "responseSha256":
+   "0a58095687ef457794eab4c1ddaf679d55bd24839d4be71bfa21e75c0a411aad",
+   "responsePreview": "",
+   "responseBytes": 6733,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [6272,
+        ["41421073d79964156c26e8329be6afcfbbe5f9d18bb52086b21fa408dbf5bcc2",
+         "clang/include/clang/Driver/Driver.h:100:  enum DriverMode {\nclang/include/clang/Driver/Driver.h:176:  ParsedClangName ClangNameParts;\nclang/"]]]],
+     "outputSha256":
+     "41421073d79964156c26e8329be6afcfbbe5f9d18bb52086b21fa408dbf5bcc2",
+     "outputBytes": 6272,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -n \\\"ClangNameParts|TargetPrefix|TargetIsValid|DriverMode\\\" clang/lib/Driver/Driver.cpp clang/include/clang/Driver/Driver.h | sed -n '1,200p' && nl -ba clang/lib/Driver/Driver.cpp | sed -n '1870,1935p'\"",
+     "hookInput":
+     {"command":
+      "rg -n \"ClangNameParts|TargetPrefix|TargetIsValid|DriverMode\" clang/lib/Driver/Driver.cpp clang/include/clang/Driver/Driver.h | sed -n '1,200p' && nl -ba clang/lib/Driver/Driver.cpp | sed -n '1870,1935p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-6d04a8de-394d-4492-b7c3-f8357d61fa68",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v12566301784100542872",
+     "bodySha256":
+     "85c6d4d194fda75ad55f4f5ad53d74e30a7329b3aaa50565967df431b6d6de58",
+     "bodyBytesExact": true,
+     "bodyBytes": 3836}],
+   "responseSha256":
+   "85c6d4d194fda75ad55f4f5ad53d74e30a7329b3aaa50565967df431b6d6de58",
+   "responsePreview": "",
+   "responseBytes": 3836,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256":
+     "11649073717fc5df7a3df26b34e49ab5c9febb03c6af157d66879b562afd78ef",
+     "streamedBytes": 3766,
+     "responseStringFields":
+     [["response",
+       [3766,
+        ["11649073717fc5df7a3df26b34e49ab5c9febb03c6af157d66879b562afd78ef",
+         "clang/tools/driver/driver.cpp:95:static void insertTargetAndModeArgs(const ParsedClangName &NameParts,\nclang/tools/driver/driver.cpp:362:  a"]]]],
+     "outputSha256":
+     "11649073717fc5df7a3df26b34e49ab5c9febb03c6af157d66879b562afd78ef",
+     "outputBytes": 3766,
+     "nativeCommand":
+     "/bin/bash -lc \"rg -n \\\"setTargetAndMode|TargetAndModeFromProgramName|ParsedClangName\\\" clang | sed -n '1,160p'\"",
+     "hookInput":
+     {"command":
+      "rg -n \"setTargetAndMode|TargetAndModeFromProgramName|ParsedClangName\" clang | sed -n '1,160p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-f58f037a-c93b-4537-b44c-3db2cb393641",
+   "tool": "Bash",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v751677068042477895",
+     "bodySha256":
+     "85db8d946f517f4ef0694b9889bbbb1d063e12f67ae33dd06bac4824e1ea0620",
+     "bodyBytesExact": true,
+     "bodyBytes": 4480}],
+   "responseSha256":
+   "85db8d946f517f4ef0694b9889bbbb1d063e12f67ae33dd06bac4824e1ea0620",
+   "responsePreview": "",
+   "responseBytes": 4480,
+   "planInput": null,
+   "planEventExact": false,
+   "nativeTerminals":
+   [{"streamedSha256": null,
+     "streamedBytes": null,
+     "responseStringFields":
+     [["response",
+       [4012,
+        ["f9083495c5ac72184bcdefc4513dbd1a7a0f787c39335a70d97dd73a0f634bb4",
+         "    80\u0009  return llvm::sys::fs::getMainExecutable(Argv0, P);\n    81\u0009}\n    82\u0009\n    83\u0009static const char *GetStableCStr(llvm::StringSet<> &Save"]]]],
+     "outputSha256":
+     "f9083495c5ac72184bcdefc4513dbd1a7a0f787c39335a70d97dd73a0f634bb4",
+     "outputBytes": 4012,
+     "nativeCommand":
+     "/bin/bash -lc \"nl -ba clang/tools/driver/driver.cpp | sed -n '80,125p;345,375p'\"",
+     "hookInput":
+     {"command":
+      "nl -ba clang/tools/driver/driver.cpp | sed -n '80,125p;345,375p'"},
+     "hookContainsCompleteNativeSuffix": true,
+     "equalResponseFields": ["response"],
+     "differences": []}]},
+  {"useId": "exec-dbb3d80b-709a-4461-9e58-b0ce74a3eda7",
+   "tool": "update_plan",
+   "stored":
+   [{"workBytesExact": true,
+     "owner": "v15276609906218208368",
+     "bodySha256":
+     "53df1c0978995ecc26b627c269c0d42897011229a9bd572d1a537515bed32522",
+     "bodyBytesExact": true,
+     "bodyBytes": 14}],
+   "responseSha256":
+   "53df1c0978995ecc26b627c269c0d42897011229a9bd572d1a537515bed32522",
+   "responsePreview": "\"Plan updated\"",
+   "responseBytes": 14,
+   "planInput":
+   {"plan":
+    [{"step": "対象スナップショットと主要ファイル構成を確認", "status": "completed"},
+     {"step": "Driver.cpp の引数解析・ツールチェーン選択フローを追跡", "status": "completed"},
+     {"step": "ToolChains 実装と状態不変条件を確認", "status": "completed"},
+     {"step": "clang/test/Driver で検証境界を照合", "status": "completed"},
+     {"step": "観測と推論を分離して日本語で報告", "status": "in_progress"}],
+    "explanation":
+    "主要な解析・target triple・ホスト/オフロードTC分岐と、対応するDriverテストを照合済み。最終整理へ進む。"},
+   "planEventExact": false,
+   "nativeTerminals": []}],
+ "incorrectCanonicalRows": 0,
+ "finalAnswerExactOwners": ["v6056859620862157676"],
+ "dbWorkMismatches": 0,
+ "dbBodyMismatches": 0,
+ "comparisonComplete": false,
+ "canonicalRows": 5787,
+ "canonicalFiles":
+ [{"rows": 98,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/linux-ld.c",
+    "fingerprint":
+    "a5a9b6a9b05b8fa796a6b78cadc9becfe287d8fea25c0044d70ef6d237a71c4c",
+    "bytes": 105653}},
+  {"rows": 119,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/cl-x86-flags.c",
+    "fingerprint":
+    "a22635756f8dffeed16ea8ec7ec3b06b1b82c9eccc16b110f13ac2f331b20509",
+    "bytes": 11982}},
+  {"rows": 2,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/include/clang/Driver/Compilation.h",
+    "fingerprint":
+    "7553fe8cd5438f3166d9e5b565db31e2e84d27afcd28346ffd377e6da68cb2e8",
+    "bytes": 12862}},
+  {"rows": 22,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/sysroot-flags.c",
+    "fingerprint":
+    "6b148e6fda6279cd9f574b28d605462ba302224c428b469ba0ba5faab4fbc139",
+    "bytes": 1300}},
+  {"rows": 40,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/cuda-options.cu",
+    "fingerprint":
+    "cd7abfb28e55fcbb04544bd13d47c757b11975b1199f249685dad1def50870c7",
+    "bytes": 14243}},
+  {"rows": 150,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/Gnu.cpp",
+    "fingerprint":
+    "b765616538249b64c59fac8b59ad356573f44900266249d57bf9263ab098f28d",
+    "bytes": 143552}},
+  {"rows": 23,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/dxc_debug.hlsl",
+    "fingerprint":
+    "b2ac29d15fcbb40a93f8d755877aacf447f608c955165d5108e7bd3abb1323ff",
+    "bytes": 1498}},
+  {"rows": 58,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/Compilation.cpp",
+    "fingerprint":
+    "43ff4526c530a1f450fbb1895088be7f620e74de269eb2cde73af0c968532914",
+    "bytes": 15252}},
+  {"rows": 100,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/config-file3.c",
+    "fingerprint":
+    "b935e0927bbe2a62827d6165cd2e4ba43639c924d83ac405f9e630c3eb3df1d5",
+    "bytes": 15364}},
+  {"rows": 106,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/openmp-offload.c",
+    "fingerprint":
+    "bd90524b625c43176d092217e972dfbf1a676e2224049d5cdd19ac8eef587f81",
+    "bytes": 15540}},
+  {"rows": 117,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/Darwin.cpp",
+    "fingerprint":
+    "2fbc9960259cdea268085d5f64867fd18e2a49c3caa012fda2ad92ee439216ba",
+    "bytes": 161188}},
+  {"rows": 25,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/biarch.c",
+    "fingerprint":
+    "10b59493e79647082cfe7c78dff4cff96d73355ff25bf82192e8c2d437cb7f12",
+    "bytes": 1901}},
+  {"rows": 25,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/cl-cc-flags.c",
+    "fingerprint":
+    "33828543b6360623a471534753d6754be5d2ef32c3074bd64a0528b34c165108",
+    "bytes": 1967}},
+  {"rows": 77,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/tools/driver/driver.cpp",
+    "fingerprint":
+    "7dfe3efddca46d66fc9292bbdd509f97f42ff3f9ba2c0feb9df2ccdec54167c5",
+    "bytes": 20103}},
+  {"rows": 61,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/HLSL.cpp",
+    "fingerprint":
+    "639266167f73b9c6c78646f2993ee1026a892da5633ccc7e3e37f7ffdf20b494",
+    "bytes": 22660}},
+  {"rows": 14,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/cross-linux.c",
+    "fingerprint":
+    "2fe9020d2e0734c917909b1249082f48dd766cd3624b065e279e69615ad0b5f4",
+    "bytes": 2340}},
+  {"rows": 4,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/default-toolchain.c",
+    "fingerprint":
+    "973d662638748a1211d21fa0e4552fbce05df5f38bac0ac183b626a46fb3be7b",
+    "bytes": 246}},
+  {"rows": 131,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/BareMetal.cpp",
+    "fingerprint":
+    "041a6c925f94668711fed384e6649c05c911d77497d69ad20b6ad33c50391afd",
+    "bytes": 25574}},
+  {"rows": 53,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/parse-progname.c",
+    "fingerprint":
+    "0fd3706b946efe00dc9420bac5277951440d44e432afde4ec5ee02c0753bb948",
+    "bytes": 2617}},
+  {"rows": 2786,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/Driver.cpp",
+    "fingerprint":
+    "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+    "bytes": 303314}},
+  {"rows": 3,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/target.c",
+    "fingerprint":
+    "62273358e92bd10b4e74277c9a85d962e13b49a329eac7c2a5c6fad7f65abdc4",
+    "bytes": 334}},
+  {"rows": 198,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/include/clang/Driver/Driver.h",
+    "fingerprint":
+    "e6db48c4809a2a56036d834183135f7e2b34277859a7f0f438b622177323a76d",
+    "bytes": 33831}},
+  {"rows": 119,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/MinGW.cpp",
+    "fingerprint":
+    "780203bc528bf6336585aaa7f7953daf95c967e8d244ec6016524eca4e16f457",
+    "bytes": 35325}},
+  {"rows": 290,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/include/clang/Driver/ToolChain.h",
+    "fingerprint":
+    "eabc29a17a6ea6d0887641fdcfcd2bc2120495c3508809185c8c33c74de3feae",
+    "bytes": 37426}},
+  {"rows": 139,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/cl-options.c",
+    "fingerprint":
+    "51a9392545e78972f6ee31916c97f4ca63864e34ebe207319447ff1fd9fbc15f",
+    "bytes": 38578}},
+  {"rows": 121,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/Linux.cpp",
+    "fingerprint":
+    "770e14fb859d1b556181ac987df7e9b140194f9f63b33b43899eb028f795ed06",
+    "bytes": 38935}},
+  {"rows": 43,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/amdgpu-toolchain.c",
+    "fingerprint":
+    "d77b2d5087eeea0f1c527e3ef89189665a80cd306a8d3acac5c15b3206bcd7ee",
+    "bytes": 4119}},
+  {"rows": 132,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/Cuda.cpp",
+    "fingerprint":
+    "3f4458e0637ba456c1b918aab6dab7182b51f9d913151afab75bd255feb79b5e",
+    "bytes": 42203}},
+  {"rows": 111,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/MSVC.cpp",
+    "fingerprint":
+    "191cbfdb11ac7366c5ff2be8d135912360aab40463f669e0e09c75a8bc2a9734",
+    "bytes": 47455}},
+  {"rows": 65,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/unknown-arg.c",
+    "fingerprint":
+    "5593089159bdc2ec6d6362328b8173224714e9c112123a7208d058f0b26b91cf",
+    "bytes": 4774}},
+  {"rows": 65,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/AMDGPU.cpp",
+    "fingerprint":
+    "8e40d7aecdb2782ff7172eafb0899cd6a7f6833509f154055c9c92a7c1aa735e",
+    "bytes": 50774}},
+  {"rows": 12,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/driver-only.c",
+    "fingerprint":
+    "f31a6e915c9205d754454cf688607cbaf82d9563f3c5fc06c412026e95349d5e",
+    "bytes": 601}},
+  {"rows": 81,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/config-file.c",
+    "fingerprint":
+    "ea537e1fa0af1a9338117c4116cfe8250e826c3a828c1c12a62b87236fd1aa06",
+    "bytes": 6136}},
+  {"rows": 102,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/program-path-priority.c",
+    "fingerprint":
+    "0275d77cbc125ef5f6b4bc70921b257cd92fcf8238815f916825e70c27c55b74",
+    "bytes": 6591}},
+  {"rows": 9,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/dxc_spirv.hlsl",
+    "fingerprint":
+    "a106b6abe722b45aed0bcb8d820c06f5d4772598cbb4313f3f0a8c08c4941a2e",
+    "bytes": 729}},
+  {"rows": 234,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChain.cpp",
+    "fingerprint":
+    "eeb1f26660eca2fba2b91def378abbfd48aa83d6079a565d807ff6e6837d7c4e",
+    "bytes": 76713}},
+  {"rows": 12,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/target-override.c",
+    "fingerprint":
+    "245ee5272dd072062a2cf2345616a3d7e437cc8d981913ec75c0817764188f2d",
+    "bytes": 778}},
+  {"rows": 14,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/test/Driver/sysroot.c",
+    "fingerprint":
+    "94eaec5a9548d815814f4384d993cade8337345e13f36d1ab35562aecfd6708c",
+    "bytes": 880}},
+  {"rows": 26,
+   "incorrectLineNumbers": [],
+   "fingerprintExact": true,
+   "file":
+   {"relative": "clang/lib/Driver/ToolChains/SPIRV.cpp",
+    "fingerprint":
+    "8e7655b38897ef3559d44ca5152c6bac24dcfca42a580ff074749604451225ed",
+    "bytes": 8804}}],
+ "canonicalCoordinatesConsistent": true,
+ "answeringModelCalls": 0,
+ "allJournalIngressPreservedInDB": true,
+ "adopted": false}
