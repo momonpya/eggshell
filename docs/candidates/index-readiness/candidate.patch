@@ -1,0 +1,136 @@
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -101,21 +101,58 @@
+   index : PageMap.Snapshot
+   manifest : Manifest
+ 
+-/-- Opening never creates an index or prepares a directory inside a shared DB. -/
+-def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope : Scope) : IO (Option Reader) := do
+-  if scope == .usage && storage != .user then return none
+-  let path ← directory source storage scope
+-  let some index ← PageMap.open? path | return none
+-  let some metadata ← manifest? index | return none
+-  unless metadata.implementation == implementation && metadata.scope == scope do return none
++/-- Absence, preparation debt and rejected metadata are different states.
++The observed metadata is diagnostic data, never authority for a Read. -/
++inductive Unavailability where
++  | privateDestination
++  | missingIndex
++  | missingManifest (head : PageMap.Head)
++  | implementationMismatch (producer : String)
++  | scopeMismatch (actual : Scope)
++  | provenanceMismatch
++  | sourceNotCovered (indexed : PageMap.Head)
++  deriving BEq, ToJson, FromJson
++
++inductive Opening where
++  | ready (reader : Reader)
++  | unavailable (reason : Unavailability)
++
++def Opening.reader? : Opening → Option Reader
++  | .ready reader => some reader
++  | .unavailable _ => none
++
++def Opening.reason? : Opening → Option Unavailability
++  | .ready _ => none
++  | .unavailable reason => some reason
++
++theorem Opening.available_iff_no_reason (opening : Opening) :
++    opening.reader?.isSome = !opening.reason?.isSome := by
++  cases opening <;> rfl
++
++/-- One validation pass returns either the usable pin or its rejection reason.
++Opening never prepares a directory or writes inside the selected DB. Read and
++decode failures remain IO errors; they are not reported as ordinary absence. -/
++def inspect (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope : Scope) : IO Opening := do
++  if scope == .usage && storage != .user then return .unavailable .privateDestination
++  let path ← directory source storage scope
++  let some index ← PageMap.open? path | return .unavailable .missingIndex
++  let some metadata ← manifest? index | return .unavailable (.missingManifest index.head)
++  unless metadata.implementation == implementation do
++    return .unavailable (.implementationMismatch metadata.implementation)
++  unless metadata.scope == scope do return .unavailable (.scopeMismatch metadata.scope)
+   if scope == .shared then
+-    unless (← index.get "provenance") == some (toJson (← Provenance.stamp source)).compress.toUTF8 do return none
+-    unless ← sameSources source metadata.source do return none
++    unless (← index.get "provenance") == some (toJson (← Provenance.stamp source)).compress.toUTF8 do
++      return .unavailable .provenanceMismatch
++    unless ← sameSources source metadata.source do return .unavailable (.sourceNotCovered metadata.source)
+   else
+     unless metadata.source.identity == source.head.identity &&
+-        metadata.source.authority == source.head.authority do return none
+-  return some ⟨index, metadata⟩
++        metadata.source.authority == source.head.authority do
++      return .unavailable (.sourceNotCovered metadata.source)
++  return .ready ⟨index, metadata⟩
+ 
++def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope : Scope) : IO (Option Reader) := do
++  return (← inspect source storage scope).reader?
++
+ def openShared? (source : PageMap.Snapshot) : IO (Option Reader) := do
+   if let some reader ← open? source .database .shared then return some reader
+   open? source .user .shared
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -33,14 +33,32 @@
+   uncertain : Bool
+   archive : Option String := none
+   archived : Option PageMap.Head := none
+-  deriving BEq, FromJson
++  indexUnavailable : Array (Sidecar.Storage × Index.Unavailability) := #[]
++  deriving BEq
+ 
++instance : FromJson Knowledge where
++  fromJson? value := do
++    -- Immutable earlier events contain no observed rejection reason. An
++    -- absent field stays unknown; it must not fabricate a current diagnosis.
++    let indexUnavailable ← match value.getObjVal? "indexUnavailable" with
++      | .ok reasons => fromJson? reasons
++      | .error _ => pure #[]
++    return {
++      source := ← fromJson? (value.getObjValD "source")
++      indexed := ← fromJson? (value.getObjValD "indexed")
++      acknowledged := ← fromJson? (value.getObjValD "acknowledged")
++      uncertain := ← fromJson? (value.getObjValD "uncertain")
++      archive := ← fromJson? (value.getObjValD "archive")
++      archived := ← fromJson? (value.getObjValD "archived")
++      indexUnavailable}
++
+ instance : ToJson Knowledge where
+   toJson known := Json.mkObj ([
+     ("source",toJson known.source),("indexed",toJson known.indexed),
+     ("acknowledged",toJson known.acknowledged),("uncertain",toJson known.uncertain),
+     ("archive",toJson known.archive)] ++
+-    known.archived.toList.map (fun head => ("archived",toJson head)))
++    known.archived.toList.map (fun head => ("archived",toJson head)) ++
++    if known.indexUnavailable.isEmpty then [] else [("indexUnavailable",toJson known.indexUnavailable)])
+ 
+ inductive Payload where
+   | start (occurrence : Occurrence) (work query : String) (knowledge : Knowledge)
+@@ -225,15 +243,20 @@
+ 
+ def knowledge (source : PageMap.Snapshot) (known : List String) (uncertain : Bool)
+     (archive : Option String := none) : IO Knowledge := do
+-  let indexed ← if let some reader ← Index.open? source .database .shared then
+-      pure (some ({head := reader.index.head, storage := .database, producer := reader.manifest.implementation} : IndexAt))
+-    else if let some reader ← Index.open? source .user .shared then
+-      pure (some ({head := reader.index.head, storage := .user, producer := reader.manifest.implementation} : IndexAt))
+-    else pure none
++  let mut indexed := none
++  let mut unavailable := #[]
++  for storage in [Sidecar.Storage.database,.user] do
++    match ← Index.inspect source storage .shared with
++    | .ready reader =>
++      indexed := some ({head := reader.index.head, storage, producer := reader.manifest.implementation} : IndexAt)
++      break
++    | .unavailable reason => unavailable := unavailable.push (storage,reason)
+   let archived ← archive.bindM fun path => do
+     if (.mk path : System.FilePath).normalize == source.directory.normalize then return some source.head
+     return (← PageMap.open? (.mk path)).map (·.head)
+-  return ⟨source.head, indexed, known, uncertain, archive, archived⟩
++  return {
++    source := source.head,indexed,acknowledged := known,uncertain,archive,archived
++    indexUnavailable := unavailable}
+ 
+ def originalAt? (source : PageMap.Snapshot) (head : PageMap.Head) : IO (Option PageMap.Snapshot) := do
+   let some retained ← PageMap.HistoryReader.make? source head | return none
