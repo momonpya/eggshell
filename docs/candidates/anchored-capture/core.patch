@@ -1,0 +1,772 @@
+--- a/Eggshell/ContentCapture.lean
++++ b/Eggshell/ContentCapture.lean
+@@ -1,5 +1,6 @@
+ module
+ public import Eggshell.ObservedRecords
++public import Eggshell.ContentRuns
+ public import tools.ContentCorrespondence
+ @[expose] public section
+ 
+@@ -32,9 +33,41 @@
+   (include_str "ContentCapture.lean").toUTF8,
+   (include_str "ContentMetadata.lean").toUTF8,(include_str "SourceEvidence.lean").toUTF8,
+   (include_str "FileSystem.lean").toUTF8,
++  (include_str "ContentRuns.lean").toUTF8,
+   (include_str "../tools/ContentCorrespondence.lean").toUTF8,
+   Synapses.ObservedRecords.implementation.toUTF8])
+ 
++def Captured.digest (captured : Captured) : String := Sha256.hex (toJson captured).compress.toUTF8
++
++/-- Explicit preparation may add a derived correspondence without changing
++the recorded producer or pretending to have captured an operation again. -/
++structure Supplement where
++  parent : String
++  parentProducer : String
++  original : String
++  implementation : String
++  aliases : Array Alias := #[]
++  sealed : Bool := false
++  failure : Option String := none
++  deriving ToJson, FromJson
++
++def Supplement.boundTo (supplement : Supplement) (captured : Captured) (raw : String) : Bool :=
++  decide (supplement.parent = captured.digest ∧ supplement.original = Sha256.hex raw.toUTF8 ∧
++    supplement.parentProducer = captured.implementation ∧ Synapses.digest supplement.implementation = true)
++
++theorem Supplement.bound_original (supplement : Supplement) (captured : Captured) (raw : String)
++    (checked : supplement.boundTo captured raw = true) :
++    supplement.parent = captured.digest ∧ supplement.original = Sha256.hex raw.toUTF8 := by
++  unfold Supplement.boundTo at checked
++  have binding := of_decide_eq_true checked
++  exact ⟨binding.1,binding.2.1⟩
++
++theorem Supplement.producer_is_provenance (supplement : Supplement) (captured : Captured)
++    (raw producer : String) (oldValid : Synapses.digest supplement.implementation = true)
++    (newValid : Synapses.digest producer = true) :
++    ({supplement with implementation := producer}).boundTo captured raw = supplement.boundTo captured raw := by
++  simp [Supplement.boundTo,oldValid,newValid]
++
+ structure Output where
+   spelling : Synapses.ObservedRecords.Spelling
+   text : String
+@@ -52,7 +85,8 @@
+       if seen.contains key then continue
+       seen := seen.insert key
+       let some text := Synapses.ObservedRecords.project characters spelling | continue
+-      unless !text.isEmpty && !text.contains '\n' do continue
++      unless !text.contains '\n' do continue
++      if text.isEmpty && spelling.projection == .string then continue
+       result := result.push ⟨spelling,text⟩
+   return result
+ 
+@@ -121,7 +155,7 @@
+       simp [find?,vacant,traced] at found
+       simpa [found.2] using found.1
+ 
+-def Trie.selected? (trie : Trie) (state : State) (output : Output) : Option (Position × Nat) := Id.run do
++def Trie.matched? (trie : Trie) (state : State) (output : Output) : Option (Candidate × Nat) := Id.run do
+   let mut node := 0
+   let mut depth := 0
+   let characters := output.text.toList.toArray
+@@ -134,30 +168,40 @@
+     let expected := fun _ => String.ofList (characters.extract (characters.size-depth) characters.size).toList
+     if candidate != .absent && trie.key? node == some (expected ()) then
+       found := some (candidate,depth)
+-  match found with
+-  | some (.one position,count) => return some (position,count)
+-  | _ => return none
++  return found
+ 
++def Trie.selected? (trie : Trie) (state : State) (output : Output) : Option (Position × Nat) :=
++  match trie.matched? state output with
++  | some (.one position,count) => some (position,count)
++  | _ => none
++
+ def escapedWidth (text : String) : Nat := (toJson text).compress.length-2
+ 
+ def alias? (inputs : Array SourceEvidence.File) (characters : Array Char) (output : Output)
+     (position : Position) (chars : Nat) : Option Alias := do
+   let file ← inputs[position.1]?
+   let content ← file.content
+-  if chars == 0 || output.text.length < chars || position.2 == 0 then none else do
+-    let code := suffix output.text chars
+-    let preceding := String.ofList (output.text.toList.take (output.text.length-chars))
+-    let encoded := match output.spelling.projection with
+-      | .string | .stringBody | .stringBodyLine => true
+-      | _ => false
+-    let base := output.spelling.first + if output.spelling.projection == .string then 1 else 0
+-    let first := base + if encoded then escapedWidth preceding else preceding.length
+-    let limit := first + if encoded then escapedWidth code else code.length
+-    let literal := String.ofList (characters.extract first limit).toList
+-    let expected := if encoded then String.ofList ((toJson code).compress.toList.drop 1 |>.dropLast) else code
+-    if first < limit && limit ≤ output.spelling.limit && literal == expected then
+-      some ⟨⟨file.relative,content.root,content.bytes⟩,position.2,output.spelling,chars,first,limit⟩
+-    else none
++  if output.text.length < chars || position.2 == 0 then none else do
++    if chars == 0 then
++      if output.text.isEmpty && output.spelling.first < output.spelling.limit &&
++          Synapses.ObservedRecords.project characters output.spelling == some "" then
++        some ⟨⟨file.relative,content.root,content.bytes⟩,position.2,output.spelling,0,
++          output.spelling.first,output.spelling.limit⟩
++      else none
++    else do
++      let code := suffix output.text chars
++      let preceding := String.ofList (output.text.toList.take (output.text.length-chars))
++      let encoded := match output.spelling.projection with
++        | .string | .stringBody | .stringBodyLine => true
++        | _ => false
++      let base := output.spelling.first + if output.spelling.projection == .string then 1 else 0
++      let first := base + if encoded then escapedWidth preceding else preceding.length
++      let limit := first + if encoded then escapedWidth code else code.length
++      let literal := String.ofList (characters.extract first limit).toList
++      let expected := if encoded then String.ofList ((toJson code).compress.toList.drop 1 |>.dropLast) else code
++      if first < limit && limit ≤ output.spelling.limit && literal == expected then
++        some ⟨⟨file.relative,content.root,content.bytes⟩,position.2,output.spelling,chars,first,limit⟩
++      else none
+ 
+ /-- JSON leaves and a general literal lexer supply path hints. The executable
+ name is not a discriminator. Only regular files inside the workspace survive;
+@@ -205,8 +249,8 @@
+ /-- The same held descriptor supplies fingerprint pages and line records.
+ Uniqueness is accepted only after every named input reaches stable EOF with
+ its pre-call content fingerprint. Long irrelevant lines allocate no buffer. -/
+-def scan (workspace : System.FilePath) (file : SourceEvidence.File) (fileIndex : Nat)
+-    (trie : Trie) (initial : State) (deadline : Nat) : IO (Option State) := do
++def scanUsing (workspace : System.FilePath) (file : SourceEvidence.File) (fileIndex maxLine : Nat)
++    (observe : α → Position → String → α) (initial : α) (deadline : Nat) : IO (Option α) := do
+   let some expected := file.content | return none
+   let some relative := SourceEvidence.Relative.check? file.relative | return none
+   let path := workspace / relative.text
+@@ -214,7 +258,6 @@
+   let handle ← FileSystem.openRead path.toString
+   let before ← FileSystem.readVersion handle
+   unless before.bytes == expected.bytes do return none
+-  let maxLine := trie.outputs.foldl (fun size row => max size row.text.utf8ByteSize) 0
+   let mut root : SourceEvidence.Root :=
+     ⟨Blake3.digest "eggshell.source.file".toUTF8 [Blake3.u64le before.bytes],Blake3.hashSegments_size _⟩
+   let mut offset := 0
+@@ -232,7 +275,7 @@
+     for byte in page do
+       if byte == 10 then
+         if !omitted then
+-          if let some text := String.fromUTF8? pending then state := trie.observe state (fileIndex,line) text
++          if let some text := String.fromUTF8? pending then state := observe state (fileIndex,line) text
+         pending := ByteArray.empty
+         omitted := false
+         line := line+1
+@@ -240,42 +283,125 @@
+         if pending.size < maxLine then pending := pending.push byte
+         else pending := ByteArray.empty; omitted := true
+   if !pending.isEmpty && !omitted then
+-    if let some text := String.fromUTF8? pending then state := trie.observe state (fileIndex,line) text
++    if let some text := String.fromUTF8? pending then state := observe state (fileIndex,line) text
+   let after ← FileSystem.readVersion handle
+   let current ← FileSystem.readVersion (← FileSystem.openRead path.toString)
+   unless (← IO.monoMsNow) < deadline && FileSystem.stableRead before after current offset &&
+       Blake3.hex root.val == expected.root do return none
+   return some state
+ 
+-def finish (workspace : System.FilePath) (captured : SourceEvidence.Capture)
+-    (raw : String) (deadline : Nat) : IO Captured := do
+-  let inputs := captured.record.files.toArray
+-  let failed := fun reason => ({implementation,inputs := #[],complete := false,aliases := #[],failure := some reason} : Captured)
+-  unless captured.record.valid && captured.record.files == captured.probes.map (·.file) do
+-    return failed "input-not-captured"
+-  unless raw.utf8ByteSize ≤ 2*1024*1024 do return failed "output-budget"
+-  let rows := outputs raw
+-  let trie := Trie.prepare rows
+-  let characters := raw.toList.toArray
+-  let mut state := trie.start
+-  for fileIndex in [:inputs.size] do
+-    let some file := inputs[fileIndex]? | return failed "input-domain"
+-    let result ← try scan workspace file fileIndex trie state deadline catch _ => pure none
+-    let some next := result | return failed "input-not-sealed"
+-    state := next
+-  let aliases := rows.filterMap fun row => do
+-    let (position,chars) ← trie.selected? state row
+-    alias? inputs characters row position chars
+-  let referenced := inputs.filter fun input => aliases.any fun alias =>
+-    input.relative == alias.file.relative && input.content == some ⟨alias.file.bytes,alias.file.fingerprint⟩
+-  return ⟨implementation,referenced,true,aliases,none⟩
++def scan (workspace : System.FilePath) (file : SourceEvidence.File) (fileIndex : Nat)
++    (trie : Trie) (initial : State) (deadline : Nat) : IO (Option State) :=
++  scanUsing workspace file fileIndex (trie.outputs.foldl (fun size row => max size row.text.utf8ByteSize) 0)
++    trie.observe initial deadline
+ 
+ def code? (characters : Array Char) (alias : Alias) : Option String := do
+   let text ← Synapses.ObservedRecords.project characters alias.spelling
+-  if alias.chars == 0 || alias.chars > text.length then none else do
++  if alias.chars > text.length then none else do
+     let code := suffix text alias.chars
+     let reconstructed ← alias? #[⟨alias.file.relative,some ⟨alias.file.bytes,alias.file.fingerprint⟩⟩]
+       characters ⟨alias.spelling,text⟩ (0,alias.line) alias.chars
+     if reconstructed == alias then some code else none
+ 
++/-- Recorded coordinates are fixed anchors. An input export can omit files,
++so rescanning that export must never create a new globally unique anchor. -/
++def recordedAnchors (aliases : Array Alias) : Std.HashMap Synapses.ObservedRecords.Spelling (Option Alias) :=
++  aliases.foldl (fun directory alias => directory.insert alias.spelling
++    (match directory[alias.spelling]? with
++      | none => some alias
++      | some previous => previous.bind fun old => if old == alias then some old else none)) {}
++
++def correlate (workspace : System.FilePath) (inputs : Array SourceEvidence.File) (raw : String)
++    (recorded : Option (Array Alias)) (deadline : Nat) : IO (Option (Array Alias × Option String)) := do
++  let rows := outputs raw
++  let trie := Trie.prepare rows
++  let characters := raw.toList.toArray
++  let mut state := trie.start
++  for fileIndex in [:inputs.size] do
++    let some file := inputs[fileIndex]? | return none
++    let result ← try scan workspace file fileIndex trie state deadline catch _ => pure none
++    let some next := result | return none
++    state := next
++  let classified := rows.map (trie.matched? state)
++  let known := recordedAnchors (recorded.getD #[])
++  let lines := rows.mapIdx fun index row =>
++    let matched := classified[index]?.join
++    let previous := known[row.spelling]?.join
++    let count := (previous.map (·.chars)).or (matched.map Prod.snd)
++    let code := if row.text.isEmpty then some "" else count.map (suffix row.text)
++    let anchor := if recorded.isSome then previous.bind fun alias => do
++        let file ← inputs.findIdx? fun input => input.relative == alias.file.relative &&
++          input.content == some ⟨alias.file.bytes,alias.file.fingerprint⟩
++        some (file,alias.line)
++      else matched.bind fun (candidate,_) => match candidate with
++        | .one position => some position
++        | _ => none
++    ({spelling := row.spelling,code,anchor} : ContentRuns.Line)
++  let probes := ContentRuns.probes characters lines
++  let requests := ContentRuns.wanted lines probes
++  let requestedFiles := Std.HashSet.ofList (requests.keys.map Prod.fst)
++  let mut samples : ContentRuns.Samples := {}
++  let mut refinement := Array.replicate rows.size Candidate.absent
++  let mut refinementFailure := none
++  if !probes.isEmpty then
++    let maxLine := rows.foldl (fun size row => max size row.text.utf8ByteSize) 0
++    let mut sealed := true
++    for fileIndex in [:inputs.size] do
++      let some file := inputs[fileIndex]? | do
++        sealed := false
++        break
++      if !requestedFiles.contains fileIndex then continue
++      let next ← try
++        scanUsing workspace file fileIndex maxLine (ContentRuns.observe requests) samples deadline
++      catch _ => pure none
++      let some next := next | do
++        sealed := false
++        break
++      samples := next
++    if sealed then refinement := ContentRuns.refine lines probes samples
++    else refinementFailure := some "run-refinement-unsealed"
++  let mut aliases := #[]
++  for index in [:rows.size] do
++    let some row := rows[index]? | continue
++    if recorded.isSome && known.contains row.spelling then continue
++    let matched := classified[index]?.join
++    let position := if recorded.isSome then none else matched.bind (fun (candidate,_) => match candidate with
++      | .one position => some position
++      | _ => none)
++    let some position := position.or (match refinement[index]? with
++      | some (.one position) => some position
++      | _ => none) | continue
++    let chars := if row.text.isEmpty then 0 else (matched.map Prod.snd).getD 0
++    if let some alias := alias? inputs characters row position chars then
++      aliases := aliases.push alias
++  return some (aliases,refinementFailure)
++
++def finish (workspace : System.FilePath) (captured : SourceEvidence.Capture)
++    (raw : String) (deadline : Nat) : IO Captured := do
++  let inputs := captured.record.files.toArray
++  let failed := fun reason => ({implementation,inputs := #[],complete := false,aliases := #[],failure := some reason} : Captured)
++  unless captured.record.valid && captured.record.files == captured.probes.map (·.file) do
++    return failed "input-not-captured"
++  unless raw.utf8ByteSize ≤ 2*1024*1024 do return failed "output-budget"
++  let some (aliases,failure) ← correlate workspace inputs raw none deadline | return failed "input-not-sealed"
++  let referenced := inputs.filter fun input => aliases.any fun alias =>
++    input.relative == alias.file.relative && input.content == some ⟨alias.file.bytes,alias.file.fingerprint⟩
++  return ⟨implementation,referenced,true,aliases,failure⟩
++
++def refineSaved (workspace : System.FilePath) (captured : Captured) (raw : String)
++    (deadline : Nat) : IO Supplement := do
++  let result : Supplement := {
++    parent := captured.digest
++    parentProducer := captured.implementation
++    original := Sha256.hex raw.toUTF8
++    implementation}
++  let characters := raw.toList.toArray
++  unless captured.complete && raw.utf8ByteSize ≤ 2*1024*1024 && captured.aliases.all (fun alias =>
++      alias.file.valid && 0 < alias.line && (code? characters alias).isSome && captured.inputs.any (fun input =>
++        input.relative == alias.file.relative && input.content == some ⟨alias.file.bytes,alias.file.fingerprint⟩)) do
++    return {result with failure := some "unbound-recorded-anchors"}
++  let some (aliases,failure) ← correlate workspace captured.inputs raw (some captured.aliases) deadline |
++    return {result with failure := some "recorded-input-not-sealed"}
++  return {result with aliases,sealed := failure.isNone,failure}
++
+ end Eggshell.ContentCapture
+--- a/Eggshell/ContentMetadata.lean
++++ b/Eggshell/ContentMetadata.lean
+@@ -137,4 +137,92 @@
+         (ObservationContext.Quotation.prepare quoteSource read alias.first alias.limit code)}
+   return result
+ 
++/-- A separately prepared supplement is bound to the unchanged original
++capture. It contributes advisory coordinates, never a replacement producer. -/
++def catalogSupplement (database : String) (doc : Document) (captured : ContentCapture.Captured)
++    (supplement : ContentCapture.Supplement) : Except String ObservationContext.Catalog := do
++  let some raw := doc.source | throw "supplement lost original body"
++  unless supplement.sealed && supplement.boundTo captured raw &&
++      supplement.aliases.all (validAlias captured.inputs raw.toList.toArray) do
++    throw "unbound or unsealed content supplement"
++  catalog database doc {
++    implementation := supplement.implementation
++    inputs := captured.inputs
++    complete := true
++    aliases := supplement.aliases}
++
++/-- A prepared supplement lives with the synaptic publication that used it.
++Its original owner header is never rewritten. -/
++structure SupplementHeader where
++  original : Header
++  parent : String
++  parentProducer : String
++  deriving ToJson, FromJson
++
++def supplementKey (id : Nat) := "memo:content-supplement:owner:" ++ toString id
++def supplementStampKey := "memo:content-supplement:stamp"
++
++def supplementStamp (prepared : PageMap.Snapshot) : IO (Option String) := do
++  let some bytes ← prepared.get supplementStampKey | return none
++  let some stamp := String.fromUTF8? bytes | throw (IO.userError "invalid supplement stamp")
++  unless Synapses.digest stamp do throw (IO.userError "invalid supplement address")
++  return some stamp
++
++/-- Only explicit preparation supplies additions. The same transaction owns
++their chunks, directory, stamp, source postings and original read views. -/
++def stageSupplement (writer : PageMap.Writer) (database : String) (id : Nat) (doc : Document)
++    (captured : ContentCapture.Captured) (supplement : ContentCapture.Supplement) : IO Unit := do
++  let _ ← IO.ofExcept (catalogSupplement database doc captured supplement)
++  let mut chunks := #[]
++  for index in [: (supplement.aliases.size+chunkCount-1)/chunkCount] do
++    let aliases := supplement.aliases.extract (index*chunkCount) ((index+1)*chunkCount)
++    let bytes := (toJson aliases).compress.toUTF8
++    let digest := Sha256.hex bytes
++    let _ ← MetadataBytes.put writer (chunkKey digest) (← IO.ofExcept (MetadataBytes.checked bytes)) true
++    chunks := chunks.push digest
++  let header : SupplementHeader := {
++    original := ⟨database,doc.owner,doc.work,supplement.original,supplement.implementation,
++      captured.inputs,true,none,supplement.aliases.size,chunks⟩
++    parent := supplement.parent
++    parentProducer := supplement.parentProducer}
++  let bytes := (toJson header).compress.toUTF8
++  if ← MetadataBytes.put writer (supplementKey id) (← IO.ofExcept (MetadataBytes.checked bytes)) then
++    let previous ← writer.get supplementStampKey
++    let stamp := Sha256.hex (((previous.getD ByteArray.empty) ++ (toJson id).compress.toUTF8) ++ bytes)
++    writer.put supplementStampKey (some stamp.toUTF8)
++
++/-- Read committed coordinates only. No filesystem correspondence scan is
++reachable from this loader. The original DB/owner/Work/body/producer all bind it. -/
++def loadSupplement? (prepared : PageMap.Snapshot) (database : String) (id : Nat) (doc : Document)
++    (captured : ContentCapture.Captured) : IO (Option ContentCapture.Supplement) := do
++  let some payload ← MetadataBytes.get? prepared (supplementKey id) | return none
++  let header ← ObservedRecords.decode (α := SupplementHeader) payload.bytes
++  let some raw := doc.source | throw (IO.userError "supplement lost original native output")
++  unless header.original.boundTo database doc raw && header.original.inputs == captured.inputs do
++    throw (IO.userError "supplement belongs to another original")
++  let mut aliases := #[]
++  for digest in header.original.chunks do
++    unless Synapses.digest digest do throw (IO.userError "invalid supplement block address")
++    let some payload ← MetadataBytes.get? prepared (chunkKey digest) | throw (IO.userError "missing supplement block")
++    unless Sha256.hex payload.bytes == digest do throw (IO.userError "changed supplement block")
++    let rows ← ObservedRecords.decode (α := Array ContentCapture.Alias) payload.bytes
++    unless rows.size ≤ chunkCount do throw (IO.userError "foreign supplement block extent")
++    aliases := aliases ++ rows
++  unless aliases.size == header.original.aliases do throw (IO.userError "incomplete supplement directory")
++  let supplement : ContentCapture.Supplement := {
++    parent := header.parent
++    parentProducer := header.parentProducer
++    original := header.original.original
++    implementation := header.original.implementation
++    aliases
++    sealed := true}
++  let _ ← IO.ofExcept (catalogSupplement database doc captured supplement)
++  return some supplement
++
++def supplemented (prepared : Option PageMap.Snapshot) (database : String) (id : Nat)
++    (doc : Document) (captured : ContentCapture.Captured) : IO ContentCapture.Captured := do
++  let some prepared := prepared | return captured
++  let some extra ← loadSupplement? prepared database id doc captured | return captured
++  return {captured with aliases := captured.aliases ++ extra.aliases}
++
+ end Eggshell.ContentMetadata
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -119,6 +119,8 @@
+   reader : NodeReader snapshot
+   cache : IO.Ref (Std.HashMap Nat Document)
+   catalogs : IO.Ref (Std.HashMap Nat ObservationContext.Catalog)
++  prepared : Option PageMap.Snapshot := none
++  additions : Std.HashMap Nat ContentCapture.Supplement := {}
+ 
+ def Documents.get (documents : Documents snapshot) (id : Nat) : IO Document := do
+   if let some doc := (← documents.cache.get)[id]? then return doc
+@@ -139,7 +141,17 @@
+   let files := (recordedReads snapshot.head.identity doc).toOption.getD #[]
+   let captured ← match ← ContentMetadata.load? snapshot id doc with
+     | none => pure ({} : ObservationContext.Catalog)
+-    | some captured => IO.ofExcept (ContentMetadata.catalog snapshot.head.identity doc captured)
++    | some captured => do
++      let extra ← match documents.additions[id]? with
++        | some extra => pure (some extra)
++        | none => documents.prepared.bindM fun prepared =>
++          ContentMetadata.loadSupplement? prepared snapshot.head.identity id doc captured
++      let original ← IO.ofExcept (ContentMetadata.catalog snapshot.head.identity doc captured)
++      match extra with
++      | none => pure original
++      | some extra =>
++        let added ← IO.ofExcept (ContentMetadata.catalogSupplement snapshot.head.identity doc captured extra)
++        pure {located := original.located ++ added.located,quotations := original.quotations ++ added.quotations}
+   let catalog := {original with
+     located := files ++ captured.located ++ original.located
+     quotations := captured.quotations ++ original.quotations}
+@@ -162,12 +174,14 @@
+ 
+ /-- The background extractor keeps only metadata between publications. A new
+ answer hydrates its cited original reads, never every unrelated source body. -/
+-def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Result := do
++def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage)
++    (additions : Array (Nat × ContentCapture.Supplement) := #[]) : IO Result := do
+   let started ← IO.monoMsNow
+-  if let some ready ← Index.open? snapshot storage .shared then
+-    return {
+-      mode := "warm", source := snapshot.head, index := ready.index.head
+-      facts := ready.manifest.facts, elapsedMs := (← IO.monoMsNow) - started}
++  if additions.isEmpty then
++    if let some ready ← Index.open? snapshot storage .shared then
++      return {
++        mode := "warm", source := snapshot.head, index := ready.index.head
++        facts := ready.manifest.facts, elapsedMs := (← IO.monoMsNow) - started}
+   let path ← Index.directory snapshot storage .shared
+   let previous ← PageMap.open? path
+   let metadata ← previous.bindM Index.manifest?
+@@ -179,9 +193,21 @@
+   Index.checkFacts snapshot.head.identity .shared old
+   let catalog ← entries snapshot
+   let all ← topology snapshot
+-  let changed := delta.getD {}
++  let mut changed := delta.getD {}
++  let mut preparedAdditions := {}
++  for (id,extra) in additions do
++    unless !preparedAdditions.contains id && extra.sealed && catalog.any (·.id == id) do
++      throw (IO.userError "supplement does not name one live original owner")
++    let located ← locateOutcome snapshot id
++    changed := {changed with owners := changed.owners.insert id,works := changed.works.insert located.header.work}
++    preparedAdditions := preparedAdditions.insert id extra
+   let affectedWorks := closure (reverse all) changed.works.toArray
+-  let documents : Documents snapshot := ⟨← NodeReader.new snapshot, ← IO.mkRef {}, ← IO.mkRef {}⟩
++  let documents : Documents snapshot := {
++    reader := ← NodeReader.new snapshot
++    cache := ← IO.mkRef {}
++    catalogs := ← IO.mkRef {}
++    prepared := previous
++    additions := preparedAdditions}
+   let mut readOwners := #[]
+   let mut answerOwners := #[]
+   let mut retiredReads : Std.HashSet String := {}
+@@ -289,6 +315,10 @@
+     for owner in retiredReads do writer.put (ObservedRecordView.ownerKey owner) none
+     for entry in readOwners ++ answerOwners do
+       let document ← documents.get entry.id
++      if let some extra := preparedAdditions[entry.id]? then
++        let some captured ← ContentMetadata.load? snapshot entry.id document |
++          throw (IO.userError "supplement lost its recorded parent")
++        ContentMetadata.stageSupplement writer snapshot.head.identity entry.id document captured extra
+       if document.source.isSome then
+         ObservedRecordView.stage writer snapshot.head.identity document
+   let head ← if incremental then
+--- a/Eggshell/CanonicalSource.lean
++++ b/Eggshell/CanonicalSource.lean
+@@ -235,10 +235,11 @@
+   return (registry,statistics)
+ 
+ def addPublishedDocument (source : PageMap.Snapshot) (id : Nat) (document : Document)
+-    (registry : Registry) (statistics : Statistics) : IO (Registry × Statistics) := do
++    (registry : Registry) (statistics : Statistics) (prepared : Option PageMap.Snapshot := none) : IO (Registry × Statistics) := do
+   let unsupported := statistics.unsupportedOwners
+   let (registry,statistics) ← IO.ofExcept (addDocument registry statistics source.head.identity document)
+   let some captured ← ContentMetadata.load? source id document | return (registry,statistics)
++  let captured ← ContentMetadata.supplemented prepared source.head.identity id document captured
+   let some raw := document.source | throw (IO.userError "captured original source is unavailable")
+   let characters := raw.toList.toArray
+   let mut registry := registry
+@@ -258,14 +259,14 @@
+   if !captured.aliases.isEmpty then statistics := {statistics with unsupportedOwners := unsupported}
+   return (registry,statistics)
+ 
+-def build (source : PageMap.Snapshot) : IO (Registry × Statistics) := do
++def build (source : PageMap.Snapshot) (prepared : Option PageMap.Snapshot := none) : IO (Registry × Statistics) := do
+   let reader ← Persistence.Store.NodeReader.new source
+   let mut registry : Registry := {}
+   let mut statistics : Statistics := {}
+   for entry in ← Build.entries source do
+     let document ← Build.document reader entry.id
+     if document.native then
+-      let next ← addPublishedDocument source entry.id document registry statistics
++      let next ← addPublishedDocument source entry.id document registry statistics prepared
+       registry := next.1
+       statistics := next.2
+   return (registry,statistics)
+@@ -282,7 +283,7 @@
+ current originals are reinserted by the same checked row extractor as build.
+ Provenance timing/usage metadata is not an input to original source rows. -/
+ def rebase (source : PageMap.Snapshot) (before : PageMap.Head) (registry : Registry)
+-    (statistics : Statistics) : IO (Option Rebased) := do
++    (statistics : Statistics) (prepared : Option PageMap.Snapshot := none) : IO (Option Rebased) := do
+   let some _ ← SourceDelta.read? source before | return none
+   let some history ← PageMap.HistoryReader.make? source before | return none
+   let some changes ← Build.changes source before | return none
+@@ -298,14 +299,14 @@
+     let document ← Build.document oldReader entry.owner
+     owners := owners.insert document.owner
+     if document.native then
+-      let (_,contribution) ← addPublishedDocument history.snapshot entry.owner document {} {}
++      let (_,contribution) ← addPublishedDocument history.snapshot entry.owner document {} {} prepared
+       statistics ← IO.ofExcept (statistics.subtract contribution)
+   let documents ← current.mapM fun entry => return (entry.owner,← Build.document newReader entry.owner)
+   for (_,document) in documents do owners := owners.insert document.owner
+   let mut registry := registry.withoutOwners owners
+   for (id,document) in documents do
+     if document.native then
+-      let next ← addPublishedDocument source id document registry statistics
++      let next ← addPublishedDocument source id document registry statistics prepared
+       registry := next.1
+       statistics := next.2
+   return some ⟨registry,statistics,ids.length,previous.length+current.length,owners⟩
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -20,6 +20,7 @@
+   statistics : Statistics
+   recipes : Option PageMap.Head := none
+   bindings : Option PageMap.Head := none
++  supplements : Option String := none
+   deriving BEq, ToJson, FromJson
+ 
+ def directory (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO System.FilePath := do
+@@ -49,7 +50,7 @@
+   let some root := metadata.recipes | return none
+   let some current ← PageMap.open? (path / "recipes") | return none
+   let some reader ← PageMap.HistoryReader.make? current root | return none
+-  let expected := (toJson (metadata.source,metadata.implementation,metadata.payload,metadata.bindings)).compress.toUTF8
++  let expected := (toJson (metadata.source,metadata.implementation,metadata.payload,metadata.bindings,metadata.supplements)).compress.toUTF8
+   unless (← reader.snapshot.get "manifest") == some expected do
+     throw (IO.userError "prepared source layout differs from its pinned publication")
+   return some reader.snapshot
+@@ -71,6 +72,9 @@
+ def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO (Option Ready) := do
+   let path ← directory source storage
+   let some metadata ← manifest? path | return none
++  let prepared ← Index.open? source storage .shared
++  let stamp ← prepared.bindM fun prepared => ContentMetadata.supplementStamp prepared.index
++  unless metadata.supplements == stamp do return none
+   atSource? source path metadata
+ 
+ /-- Scheduling reads bounded metadata only. Consumption still authenticates
+@@ -80,7 +84,10 @@
+     try
+       let path ← directory source storage
+       let some metadata ← manifest? path | continue
++      let prepared ← Index.open? source storage .shared
++      let stamp ← prepared.bindM fun prepared => ContentMetadata.supplementStamp prepared.index
+       if metadata.implementation == implementation && digest metadata.payload &&
++          metadata.supplements == stamp &&
+           metadata.rows ≤ metadata.statistics.originalRows &&
+           metadata.statistics.unsupportedOwners ≤ metadata.statistics.nativeOwners &&
+           (← Index.sameSources source metadata.source) &&
+@@ -108,29 +115,34 @@
+     return {mode := "warm",metadata := ready.metadata,elapsedMs := (← IO.monoMsNow)-started}
+   let path ← directory source storage
+   let previous ← try manifest? path catch _ => pure none
+-  let rebased ← match previous with
++  let bindings ← Index.open? source storage .shared
++  let prepared := bindings.map (·.index)
++  let stamp ← prepared.bindM ContentMetadata.supplementStamp
++  let rebased ← match previous.filter (fun metadata => metadata.supplements == stamp) with
+     | none => pure none
+     | some metadata => do
+       let some history ← PageMap.HistoryReader.make? source metadata.source | pure none
+       let old ← try atSource? history.snapshot path metadata catch _ => pure none
+       match old with
+       | none => pure none
+-      | some old => rebase source metadata.source old.registry metadata.statistics
++      | some old => rebase source metadata.source old.registry metadata.statistics prepared
+   let (registry,statistics,mode,changed,hydrated,changedIds) ← match rebased with
+     | some next => pure (next.registry,next.statistics,"publication-delta",next.owners,next.hydrated,some next.changed)
+     | none => do
+-      let (registry,statistics) ← build source
++      let (registry,statistics) ← build source prepared
+       pure (registry,statistics,"rebuilt",0,0,none)
+   let rows := registry.store
+   let bytes := (toJson rows).compress.toUTF8
+   unless bytes.size ≤ 32*1024*1024 do throw (IO.userError "canonical source cache exceeds byte bound")
+-  let bindings ← Index.open? source storage .shared
+   let metadata : Manifest := ⟨source.head,implementation,Sha256.hex bytes,rows.size,statistics,none,
+-    bindings.map (·.index.head)⟩
++    bindings.map (·.index.head),stamp⟩
+   let metadata ← Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun sidecar => do
+     let current ← (Sidecar.Owner.ofSnapshot source).pin
+     unless ← Index.sameSources current source.head 4096 do
+       throw (IO.userError "original source changed during canonical preparation")
++    let latest ← Index.open? source storage .shared
++    unless (← latest.bindM fun latest => ContentMetadata.supplementStamp latest.index) == stamp do
++      throw (IO.userError "supplement publication changed during canonical preparation")
+     let path ← Sidecar.childDirectory sidecar.directory "canonical-source"
+     if let some previous ← try manifest? path catch _ => pure none then
+       unless previous.source.identity == source.head.identity && previous.source.authority == source.head.authority do
+@@ -155,7 +167,7 @@
+       for owner in dirty do
+         let stored ← IO.ofExcept (Recipe.compile (owners[owner]?.getD #[]))
+         Recipe.write writer owner stored
+-      writer.put "manifest" (some (toJson (metadata.source,metadata.implementation,metadata.payload,metadata.bindings)).compress.toUTF8)
++      writer.put "manifest" (some (toJson (metadata.source,metadata.implementation,metadata.payload,metadata.bindings,metadata.supplements)).compress.toUTF8)
+     let metadata := {metadata with recipes := some recipeHead}
+     FileSystem.atomicExistingBytes (path / "manifest.json") (toJson metadata).compress.toUTF8
+     return metadata) storage
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -126,6 +126,9 @@
+   let some metadata ← CanonicalSource.Cache.manifest? cachePath | return Json.null
+   unless metadata.implementation == CanonicalSource.Cache.implementation &&
+       digest metadata.payload && (← Index.sameSources source metadata.source) do return Json.null
++  let prepared ← Index.open? source scope.storage .shared
++  let stamp ← prepared.bindM fun prepared => ContentMetadata.supplementStamp prepared.index
++  unless metadata.supplements == stamp do return Json.null
+   server.prepared.withReady source cachePath metadata deadline fun loaded reuse => do
+     let access : CanonicalSource.Shared.Access := {
+       database := source.head.identity
+--- a/Eggshell/ContentRuns.lean
++++ b/Eggshell/ContentRuns.lean
+@@ -0,0 +1,124 @@
++module
++public import Eggshell.ObservedRecords
++public import tools.ContentCorrespondence
++@[expose] public section
++
++namespace Eggshell.ContentRuns
++open Synapses.ObservedRecords ContentCorrespondence
++
++structure Line where
++  spelling : Spelling
++  code : Option String
++  anchor : Option Position
++
++structure Probe (size : Nat) where
++  file : Nat
++  first : Nat
++  rows : Array (Fin size)
++  backwards : Bool
++
++/-- Only neighboring records in one literal representation can extend an
++anchor. JSON punctuation, missing output, and unmatched records break runs. -/
++def adjacent (characters : Array Char) (left right : Line) : Bool := Id.run do
++  unless left.code.isSome && right.code.isSome && left.spelling.limit == right.spelling.first &&
++      left.spelling.projection == right.spelling.projection do return false
++  let projection ← match left.spelling.projection with
++    | .rawLine => pure Projection.raw
++    | .stringBodyLine => pure Projection.stringBody
++    | _ => return false
++  return ((project characters {left.spelling with projection}).map (·.endsWith "\n")).getD false
++
++/-- Each ambiguous gap is visited only from its immediate unique neighbors.
++No whole input file, pairwise alignment table or guessed line number is used. -/
++def probes (characters : Array Char) (lines : Array Line) : Array (Probe lines.size) := Id.run do
++  let mut result := #[]
++  for projection in [Projection.rawLine,Projection.stringBodyLine] do
++    let order := (((List.finRange lines.size).filter fun index =>
++      lines[index].spelling.projection == projection).mergeSort fun a b =>
++        lines[a].spelling.first ≤ lines[b].spelling.first).toArray
++    for place in [:order.size] do
++      let some center := order[place]? | continue
++      let some position := lines[center].anchor | continue
++      let mut first := place
++      while 0 < first do
++        let some previous := order[first-1]? | break
++        let some next := order[first]? | break
++        unless lines[previous].anchor.isNone && adjacent characters lines[previous] lines[next] do break
++        first := first-1
++      first := max first (place+1-position.2)
++      if first < place then
++        result := result.push ⟨position.1,position.2-(place-first),order.extract first (place+1),true⟩
++      let mut last := place+1
++      while last < order.size do
++        let some previous := order[last-1]? | break
++        let some next := order[last]? | break
++        unless lines[next].anchor.isNone && adjacent characters lines[previous] lines[next] do break
++        last := last+1
++      if place+1 < last then
++        result := result.push ⟨position.1,position.2,order.extract place last,false⟩
++  return result
++
++abbrev Wanted := Std.HashMap Position (Std.HashSet String)
++abbrev Samples := Std.HashMap Position String
++
++def wanted (lines : Array Line) (probes : Array (Probe lines.size)) : Wanted := Id.run do
++  let mut requests : Wanted := {}
++  for probe in probes do
++    for (index,offset) in probe.rows.zipIdx do
++      let some code := lines[index].code | continue
++      let position := (probe.file,probe.first+offset)
++      requests := requests.insert position ((requests[position]?.getD {}).insert code)
++  return requests
++
++/-- Keep only acquired rows equal to a requested output row. Retained input
++bytes are bounded by the output runs, even if unrelated input rows are huge. -/
++def observe (wanted : Wanted) (samples : Samples) (position : Position) (text : String) : Samples :=
++  if (wanted[position]?.getD {}).contains text then samples.insert position text else samples
++
++/-- Reuse the checked anchored-run kernel on the bounded acquired segment.
++The adapter supplies the globally unique anchor and absolute file position. -/
++def checkedRun? (source output : Array String) (anchorIndex : Nat) :
++    Option (Run #[source] output 0 0 0 output.size) := do
++  if within : anchorIndex < output.size then
++    let index ← ContentCorrespondence.prepare? #[source]
++    let anchor ← index.unique? output[anchorIndex]
++    if position : anchor.position = (0,anchorIndex) then
++      let checked ← anchoredRun? index output ⟨anchorIndex,within⟩ anchor 0 output.size
++      pure (by simpa only [position,Prod.fst,Prod.snd,Nat.sub_zero,Nat.sub_self] using checked.original)
++    else none
++  else none
++
++theorem checked_run_original (run : Run #[source] output 0 0 0 output.size)
++    (offset : Fin output.size) :
++    source[offset.val]? = some output[offset] := by
++  have bound : output.size ≤ source.size := by simpa using run.sourceEnd
++  have within : offset.val < source.size := Nat.lt_of_lt_of_le offset.isLt bound
++  have same : source[offset.val] = output[offset] := by simpa using run.original offset
++  simp only [Array.getElem?_eq_getElem within,same]
++
++/-- A mismatch ends an anchored prefix; matches beyond that gap cannot be
++borrowed. Conflicting verified anchors remain ambiguous rather than win by order. -/
++def refine (lines : Array Line) (probes : Array (Probe lines.size)) (samples : Samples) : Array Candidate := Id.run do
++  let mut result := Array.replicate lines.size Candidate.absent
++  for probe in probes do
++    let mut count := 0
++    for step in [:probe.rows.size] do
++      let offset := if probe.backwards then probe.rows.size-1-step else step
++      let some index := probe.rows[offset]? | break
++      let some expected := lines[index].code | break
++      unless samples[(probe.file,probe.first+offset)]? == some expected do break
++      count := count+1
++    if count < 2 then continue
++    let start := if probe.backwards then probe.rows.size-count else 0
++    let selected := probe.rows.extract start (start+count)
++    let some expected := selected.mapM (fun index => lines[index].code) | continue
++    let some original := selected.mapIdxM (fun offset _ => samples[(probe.file,probe.first+start+offset)]?) | continue
++    let anchorIndex := if probe.backwards then expected.size-1 else 0
++    let some _ := checkedRun? original expected anchorIndex | continue
++    for (index,offset) in selected.zipIdx do
++      if lines[index].anchor.isSome then continue
++      result := result.modify index.val (fun previous =>
++        previous.join (.one (probe.file,probe.first+start+offset)))
++  return result
++
++end Eggshell.ContentRuns
