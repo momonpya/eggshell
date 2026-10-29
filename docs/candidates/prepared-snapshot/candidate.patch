@@ -1,0 +1,142 @@
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -103,11 +103,16 @@
+   index : PageMap.Snapshot
+   manifest : Manifest
+ 
+-/-- Opening never creates an index or prepares a directory inside a shared DB. -/
+-def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope : Scope) : IO (Option Reader) := do
+-  if scope == .usage && storage != .user then return none
+-  let path ← directory source storage scope
+-  let some index ← PageMap.open? path | return none
++/-- The directory names an exact original publication, not a revision counter.
++The value repeats the full source head so digest collisions are not equality. -/
++def retainedName (source : PageMap.Head) : String := "prepared:" ++ contentKey source
++
++structure Retained where
++  source : PageMap.Head
++  index : PageMap.Head
++  deriving ToJson, FromJson
++
++def atSource? (source index : PageMap.Snapshot) (scope : Scope) : IO (Option Reader) := do
+   let some metadata ← manifest? index | return none
+   unless metadata.implementation == implementation && metadata.scope == scope do return none
+   if scope == .shared then
+@@ -118,6 +123,31 @@
+         metadata.source.authority == source.head.authority do return none
+   return some ⟨index, metadata⟩
+ 
++/-- Opening never creates an index or warms a source. A background publication
++may advance after a reader captured its source; the prior complete root remains
++addressable with one directory lookup and the same original validation. -/
++def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope : Scope) : IO (Option Reader) := do
++  if scope == .usage && storage != .user then return none
++  let path ← directory source storage scope
++  let some index ← PageMap.open? path | return none
++  if let some ready ← atSource? source index scope then return some ready
++  if scope != .shared then return none
++  let some bytes ← index.get (retainedName source.head) | return none
++  let saved ← decode (α := Retained) bytes
++  unless saved.source == source.head do
++    throw (IO.userError "retained index directory changed its exact original source")
++  let some pinned ← PageMap.HistoryReader.make? index saved.index |
++    throw (IO.userError "retained index directory names an unavailable root")
++  atSource? source pinned.snapshot scope
++
++def retainPrepared (index : PageMap.Snapshot) (previous : Option Manifest)
++    (source : PageMap.Head) (scope : Scope) (writer : PageMap.Writer) : IO Unit := do
++  if scope != .shared then return
++  let some previous := previous | return
++  if previous.source == source || previous.implementation != implementation || previous.scope != scope then return
++  let bytes ← checkedBytes ({source := previous.source, index := index.head} : Retained)
++  writer.put (retainedName previous.source) (some bytes)
++
+ def openShared? (source : PageMap.Snapshot) : IO (Option Reader) := do
+   if let some reader ← open? source .database .shared then return some reader
+   open? source .user .shared
+@@ -214,6 +244,7 @@
+           previous.scope == scope do throw (IO.userError "stale synaptic index update")
+     else if expected.isSome then throw (IO.userError "missing synaptic index update base")
+     let (_, head, _) ← PageMap.withWriter index fun writer => do
++      retainPrepared index previous source.head scope writer
+       let mut count := previous.map (·.facts) |>.getD 0
+       for fact in delta.removed do
+         if ← erase writer fact then count := count-1
+@@ -242,12 +273,14 @@
+   checkFacts source.head.identity scope facts
+   Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun _ => do
+     let index ← prepare source storage scope
+-    if let some previous ← manifest? index then
++    let previous ← manifest? index
++    if let some previous := previous then
+       if scope == .shared && previous.source.revision > source.head.revision then
+         throw (IO.userError "older source cannot replace a later synaptic publication")
+     let wanted := facts.foldl (fun wanted fact => wanted.insert (factName fact)) ({} : Std.HashSet String)
+     let old ← allFacts index
+     let (_, head, _) ← PageMap.withWriter index fun writer => do
++      retainPrepared index previous source.head scope writer
+       for fact in old do
+         if !wanted.contains (factName fact) then let _ ← erase writer fact; pure ()
+       for fact in facts do let _ ← insert writer source.head.identity scope fact; pure ()
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -37,6 +37,18 @@
+   if !(← file.pathExists) then return none
+   some <$> (FileSystem.boundedBytes file 131072 >>= decode)
+ 
++/-- The latest header is only a fast path. Old, already prepared readers use
++the exact-source directory committed with the newer immutable recipe root. -/
++def manifestAt? (source : PageMap.Snapshot) (path : System.FilePath) : IO (Option Manifest) := do
++  let some latest ← manifest? path | return none
++  if ← Index.sameSources source latest.source then return some latest
++  let some recipes ← PageMap.open? (path / "recipes") | return none
++  let some bytes ← recipes.get (Index.retainedName source.head) | return none
++  let saved ← decode (α := Manifest) bytes
++  unless saved.source == source.head do
++    throw (IO.userError "retained canonical directory changed its exact original source")
++  return some saved
++
+ structure Ready where
+   metadata : Manifest
+   registry : Registry
+@@ -71,7 +83,7 @@
+ 
+ def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO (Option Ready) := do
+   let path ← directory source storage
+-  let some metadata ← manifest? path | return none
++  let some metadata ← manifestAt? source path | return none
+   let prepared ← Index.open? source storage .shared
+   let stamp ← prepared.bindM fun prepared => ContentMetadata.supplementStamp prepared.index
+   unless metadata.supplements == stamp do return none
+@@ -83,7 +95,7 @@
+   for storage in [.database,.user] do
+     try
+       let path ← directory source storage
+-      let some metadata ← manifest? path | continue
++      let some metadata ← manifestAt? source path | continue
+       let prepared ← Index.open? source storage .shared
+       let stamp ← prepared.bindM fun prepared => ContentMetadata.supplementStamp prepared.index
+       if metadata.implementation == implementation && digest metadata.payload &&
+@@ -163,7 +175,11 @@
+       (fun found origin => found.insert (origin.binding.database,origin.binding.owner)) found) {}
+     let owners := Delivery.byOwner registry all
+     let dirty := changedIds.getD (Std.HashSet.ofArray (owners.toArray.map Prod.fst))
++    let previous ← manifest? path
+     let (_,recipeHead,_) ← PageMap.withWriter recipeIndex fun writer => do
++      if let some previous := previous then
++        if previous.source != source.head && previous.implementation == implementation && previous.recipes.isSome then
++          writer.put (Index.retainedName previous.source) (some (← Index.checkedBytes previous))
+       for owner in dirty do
+         let stored ← IO.ofExcept (Recipe.compile (owners[owner]?.getD #[]))
+         Recipe.write writer owner stored
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -123,7 +123,7 @@
+     throw (IO.userError "requested prepared source snapshot is unavailable")
+   let source := pinned.snapshot
+   let cachePath ← CanonicalSource.Cache.directory source scope.storage
+-  let some metadata ← CanonicalSource.Cache.manifest? cachePath | return Json.null
++  let some metadata ← CanonicalSource.Cache.manifestAt? source cachePath | return Json.null
+   unless metadata.implementation == CanonicalSource.Cache.implementation &&
+       digest metadata.payload && (← Index.sameSources source metadata.source) do return Json.null
+   let prepared ← Index.open? source scope.storage .shared
