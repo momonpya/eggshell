@@ -1,0 +1,178 @@
+--- a/Eggshell/SynapseExtraction.lean
++++ b/Eggshell/SynapseExtraction.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.Synapses
+ public import Eggshell.SearchUnicode
+ public import Eggshell.JsonScalars
++public import Eggshell.HashDistinct
+ public import tools.RetrievalCategories
+ 
+ @[expose] public section
+@@ -281,7 +282,8 @@
+   for fact in trace.graph.snapshot do
+     match fact with
+     | .consumed edge =>
+-      let projected := project (rows[edge.producer]?.getD {}) edge.outputFirst edge.outputLimit
++      let projected := _root_.Eggshell.hashDistinct
++        (project (rows[edge.producer]?.getD {}) edge.outputFirst edge.outputLimit).toList |>.toArray
+       facts := facts.push (.consumed {edge with rows := projected})
+     | other => facts := facts.push other
+   return {trace with rows, graph := ← Graph.ofFacts facts}
+--- a/Eggshell/ObservationContext.lean
++++ b/Eggshell/ObservationContext.lean
+@@ -355,22 +355,42 @@
+ def recorded (database : String) (doc : Document) : Option Catalog := do
+   return (← prepare? doc).catalog database
+ 
+-/-- File certification remains optional. General rows are located only when
+-the actual completed call has the complete saved invocation and output. -/
+-def locateUsing (database : String) (doc : Document) (trace : Trace)
++/-- Returned coordinates describe observed bytes, not which rows the caller
++requested. The catalog comes from original, validated publication metadata. -/
++def returnedUsing (database : String) (doc : Document) (trace : Trace)
+     (catalog : Catalog) : Array LocatedRead := Id.run do
+-  let mut result := (locateReads database doc trace).toOption.getD #[]
++  let mut result := #[]
++  if !doc.native then return result
+   let some raw := doc.source | return result
+   let .ok (input,format) := invocationData (doc.workText.getD "") | return result
+-  let native := catalog.located.filter (·.read.source.file?.isNone)
+   for occurrence in doc.occurrences do
+     let some started := trace.starts[occurrence]? | continue
+     if started.command != input || started.format != format || trace.finished[occurrence]? != some raw then continue
+-    for located in native do
++    for located in catalog.located do
+       let read := {located.read with occurrence}
++      if !read.valid || read.binding.database != database || read.binding.owner != doc.owner ||
++          read.binding.work != doc.work || raw.length < read.binding.limit then continue
+       result := result.push {located with read,originalRows := #[read]}
+   return result
++
++structure Locations where
++  requested : Array LocatedRead
++  returned : Array LocatedRead
+ 
++def Locations.all (locations : Locations) : Array LocatedRead := locations.requested ++ locations.returned
++
++/-- Complete observed invocation/output admits cached coordinates. Requested
++file-read feedback keeps its separate policy; returned MCP fields do not all
++become "missing then read" merely because their output was observed. -/
++def locationsUsing (database : String) (doc : Document) (trace : Trace) (catalog : Catalog) : Locations :=
++  ⟨(locateReads database doc trace).toOption.getD #[],returnedUsing database doc trace catalog⟩
++
++theorem locations_requested_exact (database : String) (doc : Document) (trace : Trace) (catalog : Catalog) :
++    (locationsUsing database doc trace catalog).requested = (locateReads database doc trace).toOption.getD #[] := rfl
++
++def locateUsing (database : String) (doc : Document) (trace : Trace) (catalog : Catalog) : Array LocatedRead :=
++  (locationsUsing database doc trace catalog).all
++
+ def locate (database : String) (doc : Document) (trace : Trace) : Array LocatedRead :=
+   locateUsing database doc trace ((recorded database doc).getD {})
+ 
+--- a/Eggshell/ContentMetadata.lean
++++ b/Eggshell/ContentMetadata.lean
+@@ -225,4 +225,28 @@
+   let some extra ← loadSupplement? prepared database id doc captured | return captured
+   return {captured with aliases := captured.aliases ++ extra.aliases}
+ 
++/-- One background source catalog owns both literal records and already
++validated file correspondences. No command parser or live file matching is
++used to reconstruct cached aliases. Supplements remain bound to their parent. -/
++def addFileCoordinates (snapshot : PageMap.Snapshot) (id : Nat) (doc : Document)
++    (original : ObservationContext.Catalog)
++    (prepared : Option PageMap.Snapshot := none) (addition : Option ContentCapture.Supplement := none) :
++    IO ObservationContext.Catalog := do
++  let captured ← match ← load? snapshot id doc with
++    | none => pure ({} : ObservationContext.Catalog)
++    | some parent => do
++        let extra ← match addition with
++          | some extra => pure (some extra)
++          | none => prepared.bindM fun index => loadSupplement? index snapshot.head.identity id doc parent
++        let original ← IO.ofExcept (catalog snapshot.head.identity doc parent)
++        match extra with
++        | none => pure original
++        | some extra =>
++            let added ← IO.ofExcept (catalogSupplement snapshot.head.identity doc parent extra)
++            pure {located := original.located ++ added.located,quotations := original.quotations ++ added.quotations}
++  return {
++    original with
++    located := captured.located ++ original.located
++    quotations := captured.quotations ++ original.quotations}
++
+ end Eggshell.ContentMetadata
+--- a/Eggshell/SynapseProvenance.lean
++++ b/Eggshell/SynapseProvenance.lean
+@@ -277,11 +277,12 @@
+       let raw := doc.source.getD ""
+       let format := if (Json.parse raw).isOk then DataFormat.json else .text
+       trace ← IO.ofExcept (trace.finish event.origin.occurrence event.time raw format)
+-      let catalog ← match ← ObservedRecords.load? source event.origin.owner doc with
++      let original ← match ← ObservedRecords.load? source event.origin.owner doc with
+         | some catalog => pure catalog
+         | none => do
+-            let prepared ← IO.ofExcept (ObservedRecords.prepare raw)
+-            IO.ofExcept (ObservedRecords.catalog source.head.identity doc prepared.records)
++            let records ← IO.ofExcept (ObservedRecords.prepare raw)
++            IO.ofExcept (ObservedRecords.catalog source.head.identity doc records.records)
++      let catalog ← ContentMetadata.addFileCoordinates source event.origin.owner doc original
+       let reads := ObservationContext.locateUsing source.head.identity doc trace catalog
+       let rows := reads.filter (·.read.occurrence == event.origin.occurrence) |>.flatMap (·.rows)
+       locations := locations.insert event.origin.occurrence rows
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -142,26 +142,11 @@
+     | some catalog => pure catalog
+     | none => do
+         let some raw := doc.source | throw (IO.userError "original record body is missing")
+-        let prepared ← IO.ofExcept (ObservedRecords.prepare raw)
+-        IO.ofExcept (ObservedRecords.catalog snapshot.head.identity doc prepared.records)
+-  -- File aliases are additional coordinates, never the original domain gate.
++        let records ← IO.ofExcept (ObservedRecords.prepare raw)
++        IO.ofExcept (ObservedRecords.catalog snapshot.head.identity doc records.records)
++  let mapped ← ContentMetadata.addFileCoordinates snapshot id doc original documents.prepared documents.additions[id]?
+   let files := (recordedReads snapshot.head.identity doc).toOption.getD #[]
+-  let captured ← match ← ContentMetadata.load? snapshot id doc with
+-    | none => pure ({} : ObservationContext.Catalog)
+-    | some captured => do
+-      let extra ← match documents.additions[id]? with
+-        | some extra => pure (some extra)
+-        | none => documents.prepared.bindM fun prepared =>
+-          ContentMetadata.loadSupplement? prepared snapshot.head.identity id doc captured
+-      let original ← IO.ofExcept (ContentMetadata.catalog snapshot.head.identity doc captured)
+-      match extra with
+-      | none => pure original
+-      | some extra =>
+-        let added ← IO.ofExcept (ContentMetadata.catalogSupplement snapshot.head.identity doc captured extra)
+-        pure {located := original.located ++ added.located,quotations := original.quotations ++ added.quotations}
+-  let catalog := {original with
+-    located := files ++ captured.located ++ original.located
+-    quotations := captured.quotations ++ original.quotations}
++  let catalog := {mapped with located := files ++ mapped.located}
+   documents.catalogs.modify (·.insert id catalog)
+   return catalog
+ 
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -520,15 +520,18 @@
+       -- Foreign private work can label usage of this DB's memory, but cannot
+       -- publish its terms or consumption edges into the shared DB lane.
+       trace := acceptPublishedOutput localId trace completed
+-      let located := ObservationContext.locate recorded.head.identity doc completed
++      let prepared := if recorded.head.identity == source.head.identity then hint.map (·.index) else none
++      let original := (ObservationContext.recorded recorded.head.identity doc).getD {}
++      let catalog ← ContentMetadata.addFileCoordinates recorded id doc original prepared
++      let located := ObservationContext.locationsUsing recorded.head.identity doc completed catalog
+       observedLocations := observedLocations.insert occurrence
+-        ((ObservationContext.locate recorded.head.identity doc observed).flatMap (·.rows))
+-      if currentOriginal then locations := locations.insert occurrence (located.flatMap (·.rows))
++        ((ObservationContext.locateUsing recorded.head.identity doc observed catalog).flatMap (·.rows))
++      if currentOriginal then locations := locations.insert occurrence (located.all.flatMap (·.rows))
+       -- A general result does not state which part was requested as a read.
+       -- Locate all its consumption witnesses, but do not label every returned
+       -- field "missing then read". Native usage needs its own consumption/ACK
+       -- evidence; the certified file-read policy stays explicit here.
+-      let reads := located.filter (·.read.source.file?.isSome)
++      let reads := located.requested
+       if !reads.isEmpty then
+         if let some (query, known, _) := starts[occurrence]? then
+           let storedIndex ← readIndex? source known hint
