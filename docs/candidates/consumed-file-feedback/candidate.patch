@@ -1,0 +1,45 @@
+--- a/Eggshell/SynapseUsage.lean
++++ b/Eggshell/SynapseUsage.lean
+@@ -306,2 +306,3 @@
+-/-- A native usage label may cover only an actual located consumption witness.
+-The native row remains tied to its original Work and response digest. -/
++/-- A consumption label may cover only an actual located, immutable source.
++File coordinates retain their fingerprint; general output retains its Work
++and response digest. Neither kind labels an unconsumed sibling field. -/
+@@ -311 +312 @@
+-  native : source.file?.isNone = true
++  sourceValid : source.valid = true
+@@ -316 +317 @@
+-    if native : source.file?.isNone = true then
++    if sourceValid : source.valid = true then
+@@ -318 +319 @@
+-        some ⟨source,valid,native,consumed⟩ else none
++        some ⟨source,valid,sourceValid,consumed⟩ else none
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -328 +328,2 @@
+-def presentation (source : PageMap.Snapshot) (known : Knowledge) : IO Presentation := do
++def presentation (source : PageMap.Snapshot) (known : Knowledge)
++    (prepared : Option PageMap.Snapshot := none) : IO Presentation := do
+@@ -341 +342,3 @@
+-      let some catalog := ObservationContext.recorded snapshot.head.identity doc | continue
++      let some original := ObservationContext.recorded snapshot.head.identity doc | continue
++      let index := if snapshot.head.identity == source.head.identity then prepared else none
++      let catalog ← ContentMetadata.addFileCoordinates snapshot id doc original index
+@@ -417 +420 @@
+-    let shown := presentationWithShared known storedReads (← presentation source known)
++    let shown := presentationWithShared known storedReads (← presentation source known (some indexed.reader.index))
+@@ -550 +553 @@
+-          let shown := presentationWithShared known storedReads (← presentation source known)
++          let shown := presentationWithShared known storedReads (← presentation source known (some index.reader.index))
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -159 +159,2 @@
+-    if let some previous ← try manifest? path catch _ => pure none then
++    let prior ← try manifest? path catch _ => pure none
++    if let some previous := prior then
+@@ -178 +178,0 @@
+-    let previous ← manifest? path
+@@ -180 +180 @@
+-      if let some previous := previous then
++      if let some previous := prior then

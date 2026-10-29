@@ -1,4 +1,5 @@
 import Eggshell.SynapseJournal
+import tools.research.ConsumedFileFeedbackFixtures
 open Lean Eggshell Eggshell.DB Eggshell.Synapses
 
 #print axioms ObservationContext.locations_requested_exact
@@ -21,6 +22,16 @@ private def coordinates (source : PageMap.Snapshot) (occurrence : Occurrence)
   let original := (ObservationContext.recorded source.head.identity document).getD {}
   let catalog ← ContentMetadata.addFileCoordinates source id document original
   let locations := ObservationContext.locationsUsing source.head.identity document trace catalog
+  let files := locations.returned.flatMap (·.originalRows) |>.filter (·.source.file?.isSome)
+  if let some row := files[0]? then
+    let result := Persistence.selectionKey (.text raw)
+    let key := s!"e:{document.owner}:{result}:{row.binding.first}:{row.binding.limit}"
+    let known : Journal.Knowledge := {source := source.head, indexed := none, acknowledged := [key], uncertain := false}
+    let shown ← Journal.presentation source known
+    check (covered row.source shown.ranges) "raw excerpt ACK did not preserve its cached file correspondence"
+    let bad : Journal.Knowledge := {known with acknowledged :=
+      [s!"e:{document.owner}:wrong-result:{row.binding.first}:{row.binding.limit}"]}
+    check ((← Journal.presentation source bad).ranges.isEmpty) "a foreign raw-result ACK acquired file ranges"
   let wrongInput := if command.2 == .json then (Json.mkObj [("unobserved", toJson true)]).compress else "unobserved invocation"
   let wrong ← IO.ofExcept (({} : Extraction.Trace).start occurrence 0 wrongInput command.2)
   let wrong ← IO.ofExcept (wrong.finish occurrence 1 raw (if (Json.parse raw).isOk then .json else .text))
@@ -34,6 +45,7 @@ private def coordinates (source : PageMap.Snapshot) (occurrence : Occurrence)
     ("legacyFileRows", toJson (legacy.toOption.map (·.size) |>.getD 0)),
     ("requestedFileRows", toJson locations.requested.size),
     ("projectedFileRows", toJson ((locations.all.flatMap (·.rows)).countP (·.source.file?.isSome))),
+    ("rawExcerptAckProjectionChecked", toJson (!files.isEmpty)),
     ("wrongInvocationAndOutputRejected", toJson true),
     ("capturedInputs", toJson (captured.map (·.inputs.size) |>.getD 0)),
     ("capturedAliases", toJson (captured.map (·.aliases.size) |>.getD 0)),
@@ -43,6 +55,7 @@ private def coordinates (source : PageMap.Snapshot) (occurrence : Occurrence)
 native harness so the descriptor-based file IO uses its actual linked boundary.
 No feedback replay, provider, preparation or journal edit occurs. -/
 def main (args : List String) : IO Unit := do
+  Eggshell.Research.ConsumedFileFeedback.fixtures
   let (database, data, session, destination, replay, inspectCoordinates) ← match args with
     | [database, data, session, destination] => pure (database, data, session, destination, false, false)
     | [database, data, session, destination, "replay"] => pure (database, data, session, destination, true, false)

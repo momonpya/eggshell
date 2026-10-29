@@ -1,0 +1,10 @@
+{
+  "runtimeSha256BeforeRepair": "826f5b42e506d88280da006e6c909ab67ccf0b2910c1dfb808f27ff5dd88faa3",
+  "exitCode": 1,
+  "elapsedMs": 192568,
+  "message": "noncanonical source cache record",
+  "actualPromptSubmitHooks": 0,
+  "answeringModelCalls": 0,
+  "cause": "refresh rejected an obsolete derived manifest, then read that same manifest again without the existing cold-rebuild handling",
+  "repair": "reuse the validated prior manifest within the same publication claim; keep strict read verification and rebuild derived data from the source"
+}

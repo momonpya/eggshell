@@ -29,8 +29,17 @@ private def cacheLifecycle (root : System.FilePath) (doc : Extraction.Document)
       (← CanonicalSource.Cache.preparedAt? source path before.metadata).isSome &&
       (← DB.PageMap.pin root).head == source.head do
     throw (IO.userError "supplement preparation did not preserve source and pinned readers")
+  IO.FS.writeFile (path / "manifest.json") (toJson after.metadata).pretty
+  let rejected ← try let _ ← CanonicalSource.Cache.manifest? path; pure false catch _ => pure true
+  unless rejected do throw (IO.userError "noncanonical manifest was accepted by the read path")
+  let repaired ← CanonicalSource.Cache.refresh source .database
+  unless repaired.mode == "rebuilt" && (← CanonicalSource.Cache.open? source .database).isSome &&
+      (← CanonicalSource.Cache.preparedAt? source path before.metadata).isSome &&
+      (← DB.PageMap.pin root).head == source.head do
+    throw (IO.userError "derived manifest repair failed or changed the original source")
   return Json.mkObj [("staleReadyRejected",toJson true),("pinnedReaderRetained",toJson true),
-    ("newReadyPublished",toJson true),("originalUnchanged",toJson true)]
+    ("newReadyPublished",toJson true),("originalUnchanged",toJson true),
+    ("noncanonicalManifestReadRejected",toJson true),("derivedManifestRebuilt",toJson true)]
 
 private def frameChecks : IO Unit := do
   let file : File := ⟨"src.cc",String.ofList (List.replicate 64 'a'),6⟩
