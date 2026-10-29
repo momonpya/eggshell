@@ -1,0 +1,217 @@
+--- a/Eggshell/SourceLexicalPolicy.lean
++++ b/Eggshell/SourceLexicalPolicy.lean
+@@ -0,0 +1,39 @@
++module
++public import Eggshell.SearchRank
++public import Eggshell.Sha256
++public import Eggshell.DB.PageMap
++@[expose] public section
++
++namespace Eggshell.SourceLexicalPolicy
++
++/-- The publication producer and reader share actual policy bytes. A primary
++index made by an unrecorded grammar is not silently treated as complete. -/
++def contract : String := Sha256.hex (
++  (include_str "SourceLexicalPolicy.lean").toUTF8 ++
++  (include_str "SearchRank.lean").toUTF8 ++
++  (include_str "SearchUnicode.lean").toUTF8 ++
++  (include_str "../tools/RetrievalGrams.lean").toUTF8 ++
++  (include_str "../tools/RetrievalCategories.lean").toUTF8)
++
++def name : String := "searchPolicy"
++
++def ready (stored : Option ByteArray) (population : Nat) : Bool :=
++  stored == some contract.toUTF8 || (stored.isNone && population == 0)
++
++theorem unrecorded_nonempty_rejected (population : Nat) (nonempty : population ≠ 0) :
++    ready none population = false := by
++  simp [ready, nonempty]
++
++def require (read : String → IO (Option ByteArray)) (population : Nat) : IO Unit := do
++  unless ready (← read name) population do
++    throw (IO.userError "source lexical policy is absent or differs from its publication producer")
++
++/-- Called inside the same source transaction as membership, postings and
++frequencies. Existing mixed-policy candidates cannot acquire a ready stamp. -/
++def record (writer : DB.PageMap.Writer) (population : Nat) : IO Unit := do
++  let stored ← writer.get name
++  unless ready stored population do
++    throw (IO.userError "cannot append to an unverified or different source lexical policy")
++  if stored.isNone then writer.put name (some contract.toUTF8)
++
++end Eggshell.SourceLexicalPolicy
+--- a/Eggshell/SourceLexical.lean
++++ b/Eggshell/SourceLexical.lean
+@@ -0,0 +1,84 @@
++module
++public import Eggshell.GraphStore
++@[expose] public section
++
++namespace Eggshell.SourceLexical
++open Lean DB Persistence.Store
++
++structure Reader (source : Snapshot) where
++  roots : Nat
++  population : Nat
++
++def open? (source : Snapshot) : IO (Option (Reader source)) := do
++  let population ← getNat source.get "candidates"
++  unless SourceLexicalPolicy.ready (← source.get SourceLexicalPolicy.name) population do return none
++  return some ⟨← getNat source.get "roots", population⟩
++
++structure Status where
++  contract : String
++  roots : Nat
++  candidates : Nat
++  deriving ToJson
++
++/-- This probes one immutable source publication. It creates no sidecar and
++never scans, tokenizes or hydrates existing candidates. -/
++def status (source : Snapshot) : IO Status := do
++  let some reader ← open? source | throw (IO.userError "atomic source lexical index is unavailable")
++  return ⟨SourceLexicalPolicy.contract, reader.roots, reader.population⟩
++
++def ready (source : Snapshot) : IO Bool := return (← open? source).isSome
++
++structure Posting where
++  rows : List (Nat × Nat)
++  frequency : Nat
++  complete : rows.length = frequency
++
++/-- Authoritative postings already share the source commit. Nomination reads
++only the requested term directory; consumed owners are checked separately. -/
++def posting (reader : Reader source) (term : String) : IO Posting := do
++  let some found ← findTerm? source source.get term | return ⟨[],0,rfl⟩
++  let rows ← directory source (key "searchPosting" found.id)
++  let frequency ← getNat source.get (key "searchFrequency" found.id)
++  if complete : rows.length = frequency then
++    unless frequency ≤ reader.population && rows.all (fun row => row.1 < reader.roots) &&
++        (Std.HashSet.ofList (rows.map Prod.snd)).size == rows.length do
++      throw (IO.userError "invalid source lexical population or owner order")
++    return ⟨rows,frequency,complete⟩
++  else throw (IO.userError "source lexical posting frequency disagrees")
++
++structure OwnerWitness (owner ordinal : Nat) where
++  indexed : Option ByteArray
++  member : Option ByteArray
++  candidate : Option ByteArray
++  indexExact : payloadSize indexed = .ok owner
++  memberExact : payloadSize member = .ok ordinal
++  candidateExact : payloadSize candidate = .ok 1
++
++def OwnerWitness.check? (owner ordinal : Nat) (indexed member candidate : Option ByteArray) :
++    Option (OwnerWitness owner ordinal) := do
++  match a : payloadSize indexed, b : payloadSize member, c : payloadSize candidate with
++  | .ok found, .ok sourceOrdinal, .ok live =>
++    if sameOwner : found = owner then
++      if sameOrdinal : sourceOrdinal = ordinal then
++        if candidateLive : live = 1 then
++          some ⟨indexed,member,candidate,by simpa only [sameOwner] using a,
++            by simpa only [sameOrdinal] using b,by simpa only [candidateLive] using c⟩
++        else none
++      else none
++    else none
++  | _,_,_ => none
++
++theorem OwnerWitness.source_checks (witness : OwnerWitness owner ordinal) :
++    payloadSize witness.indexed = .ok owner ∧ payloadSize witness.member = .ok ordinal ∧
++      payloadSize witness.candidate = .ok 1 :=
++  ⟨witness.indexExact,witness.memberExact,witness.candidateExact⟩
++
++def original (source : Snapshot) (owner ordinal : Nat) : IO (OwnerWitness owner ordinal) := do
++  let indexed ← source.get (key "searchCandidate" ordinal)
++  let member ← source.get (key "member" owner)
++  let candidate ← source.get (key "candidate" owner)
++  let some checked := OwnerWitness.check? owner ordinal indexed member candidate |
++    throw (IO.userError "source lexical owner disagrees with its original publication")
++  return checked
++
++end Eggshell.SourceLexical
+--- a/Eggshell/GraphStore.lean
++++ b/Eggshell/GraphStore.lean
+@@ -8,0 +9 @@
++public import Eggshell.SourceLexicalPolicy
+@@ -1315,0 +1317 @@
++      SourceLexicalPolicy.record intern.writer (← getNat intern.writer.get "candidates")
+@@ -1404,0 +1407 @@
++    SourceLexicalPolicy.require writer.get (← getNat writer.get "candidates")
+--- a/Eggshell/LexicalReads.lean
++++ b/Eggshell/LexicalReads.lean
+@@ -2,0 +3 @@
++public import Eggshell.SourceLexical
+@@ -254,0 +256,23 @@
++
++/-- Both source-side posting lists and ordinals belong to one pinned commit.
++No separately prepared lexical corpus is required after publication. -/
++def sourceQuery (source : PageMap.Snapshot) (receipt : Option String := none) : IO Query := do
++  let some reader ← SourceLexical.open? source |
++    throw (IO.userError "atomic source lexical index is unavailable")
++  let ordinals ← IO.mkRef ({} : Std.HashMap Nat Nat)
++  return {
++    posting := fun unit => do
++      let found ← SourceLexical.posting reader unit
++      for (ordinal,owner) in found.rows do
++        if let some previous := (← ordinals.get)[owner]? then
++          unless previous == ordinal do throw (IO.userError "source lexical postings disagree about owner order")
++        ordinals.modify (·.insert owner ordinal)
++      return (found.rows.map Prod.snd,found.frequency)
++    ordinal := fun owner => do
++      let some ordinal := (← ordinals.get)[owner]? |
++        throw (IO.userError "source lexical ordinal was not nominated")
++      let _ ← SourceLexical.original source owner ordinal
++      return ordinal
++    report := Receipt.observe receipt ("source-lexical-" ++ source.head.identity) (Json.mkObj [
++      ("source",toJson source.head),("contract",toJson SourceLexicalPolicy.contract),
++      ("candidates",toJson reader.population),("derivedWarmCalls",toJson (0 : Nat))]) }
+@@ -258,4 +282 @@
+-  if (← getNat source.get "candidates") == 0 then return fun _ => pure ([],0)
+-  let some reader ← RetrievalResearch.Index.open? source |
+-    throw (IO.userError "dictionary-free lexical index is pending explicit/background warm")
+-  make reader receipt
++  return (← sourceQuery source receipt).posting
+@@ -264,6 +285 @@
+-  if (← getNat source.get "candidates") == 0 then
+-    return {posting := fun _ => pure ([],0),ordinal := fun _ => throw (IO.userError "empty lexical domain")}
+-  if let some reader ← RetrievalResearch.Index.open? source then return ← query reader receipt
+-  return {
+-    posting := ← RetrievalResearch.Index.coarseLookup source receipt
+-    ordinal := fun owner => getNat source.get (key "member" owner) }
++  sourceQuery source receipt
+--- a/Eggshell/LexicalAdvice.lean
++++ b/Eggshell/LexicalAdvice.lean
+@@ -4,0 +5 @@
++public import Eggshell.SourceLexical
+@@ -41,11 +42,3 @@
+-def posting (reader : RetrievalResearch.Index.Reader source) (term : String) : IO Posting := do
+-  let some found ← findTerm? reader.index reader.index.get term | return ⟨[],0,rfl⟩
+-  let rows ← directory reader.index (key "posting" found.id)
+-  let frequency ← getNat reader.index.get (key "frequency" found.id)
+-  if complete : rows.length = frequency then
+-    unless frequency ≤ reader.expected.candidates &&
+-        rows.all (fun row => row.1 < reader.expected.roots) &&
+-        (Std.HashSet.ofList (rows.map Prod.snd)).size == rows.length do
+-      throw (IO.userError "invalid advisory lexical posting population or order")
+-    return ⟨rows,frequency,complete⟩
+-  else throw (IO.userError "advisory lexical posting frequency disagrees")
++def posting (reader : SourceLexical.Reader source) (term : String) : IO Posting := do
++  let found ← SourceLexical.posting reader term
++  return ⟨found.rows,found.frequency,found.complete⟩
+@@ -55 +48 @@
+-  reader : RetrievalResearch.Index.Reader source
++  reader : SourceLexical.Reader source
+@@ -67,2 +60,2 @@
+-  let some reader ← RetrievalResearch.Index.open? source |
+-    throw (IO.userError "advisory lexical index is pending explicit/background warm")
++  let some reader ← SourceLexical.open? source |
++    throw (IO.userError "atomic source lexical index is unavailable")
+@@ -90 +83 @@
+-    (rankPrepared text rows.toList contains (frequencies.getD · 0) anchors reader.expected.candidates).filterMap (rows[·]?)
++    (rankPrepared text rows.toList contains (frequencies.getD · 0) anchors reader.population).filterMap (rows[·]?)
+@@ -111,6 +104 @@
+-    let indexed ← result.reader.index.get (key "owner" owner)
+-    let member ← source.get (key "member" owner)
+-    let candidate ← source.get (key "candidate" owner)
+-    let some _checked := LexicalReads.OwnerWitness.check? ordinal indexed member candidate |
+-      throw (IO.userError "consumed lexical hint disagrees with its original source")
+-    pure ()
++    let _ ← SourceLexical.original source owner ordinal

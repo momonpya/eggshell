@@ -1,0 +1,38 @@
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -4,0 +5 @@
++public import Eggshell.SourceLexical
+@@ -95 +96 @@
+-  unless ← RetrievalResearch.Index.ready snapshot do return true
++  unless ← SourceLexical.ready snapshot do return true
+@@ -306 +307 @@
+-  lexical : RetrievalResearch.Index.Result
++  lexical : SourceLexical.Status
+@@ -335 +336 @@
+-  let lexical ← RetrievalResearch.Index.warm snapshot target.storage
++  let lexical ← SourceLexical.status snapshot
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -531 +531 @@
+-  let _ ← RetrievalResearch.Index.warm pinned target.storage
++  let _ ← SourceLexical.status pinned
+--- a/Eggshell/FederatedSearch.lean
++++ b/Eggshell/FederatedSearch.lean
+@@ -4,0 +5 @@
++public import Eggshell.LexicalReads
+@@ -301 +302 @@
+-    let ids ← if semantic then pure (← RetrievalResearch.Index.strictPosting snapshot unit).1 else do
++    let ids ← if semantic then pure (← (← LexicalReads.strictLookup snapshot) unit).1 else do
+@@ -316,2 +317,2 @@
+-    let read ← if strict then RetrievalResearch.Index.strictLookup sources[source]
+-      else RetrievalResearch.Index.coarseLookup sources[source] receipt
++    let read ← if strict then LexicalReads.strictLookup sources[source] receipt
++      else LexicalReads.coarseLookup sources[source] receipt
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -378 +378 @@
+-        #[``Eggshell.RetrievalResearch.Index.open?, ``Eggshell.LexicalAdvice.posting,
++        #[``Eggshell.SourceLexical.open?, ``Eggshell.LexicalAdvice.posting,
+@@ -383 +383 @@
+-        #[``Eggshell.LexicalReads.OwnerWitness.check?, ``Eggshell.SourceDelta.documents],#[]),
++        #[``Eggshell.SourceLexical.OwnerWitness.check?, ``Eggshell.SourceDelta.documents],#[]),

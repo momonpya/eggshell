@@ -9,15 +9,19 @@ private def read (path : System.FilePath) : IO Json :=
 /-- Retain dependency evidence for every object in the current candidate,
 checked reference, default parent and negative audit fixture. Source stamps,
 native objects and all interfaces remain untouched. -/
-def main : IO Unit := do
+def main (args : List String) : IO Unit := do
+  unless args.isEmpty || args == ["source-lexical"] do throw (IO.userError "unknown retained dependency scope")
+  let current := args == ["source-lexical"]
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot"
-  let output : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/runtime-integration/retired-unused-dependencies.json"
+  let output : System.FilePath := if current then
+    "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/source-lexical/retired-unused-dependencies.json"
+    else "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/runtime-integration/retired-unused-dependencies.json"
   unless !(← output.pathExists) do throw (IO.userError "preserve prior dependency retirement")
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
   unless processes.exitCode == 0 && (processes.stdout.splitOn "StudyBuildMain.lean").length == 1 do
     throw (IO.userError "wait for the native builder")
-  let parents := #["maintenance-build","trace-cache-build","dependency-checked-runtime-build",
-    "product-build","cached-usage-runtime-build"]
+  let parents := if current then #["source-lexical-build","fact-deferred-runtime-build","product-build","cached-usage-runtime-build"]
+    else #["maintenance-build","trace-cache-build","dependency-checked-runtime-build","product-build","cached-usage-runtime-build"]
   let mut retained : Std.HashSet String := {}
   for name in parents do
     let parent := root / System.FilePath.mk name
@@ -33,6 +37,9 @@ def main : IO Unit := do
   let mut targets : Array (String × Nat) := #[]
   for directory in ← root.readDir do
     if !directory.fileName.endsWith "-build" || (← directory.path.symlinkMetadata).type != .dir then continue
+    -- The stopped integration build has not published a final link response.
+    -- Its completed module metadata remains necessary for resuming the build.
+    if current && directory.fileName == "source-lexical-integration-build" then continue
     if (processes.stdout.splitOn directory.path.toString).length != 1 then continue
     for entry in ← directory.path.readDir do
       if !entry.fileName.endsWith ".dependencies" || (← entry.path.symlinkMetadata).type != .file then continue

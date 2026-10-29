@@ -1,0 +1,52 @@
+{"userCeilingRssKiB": 4194304,
+ "state": "finished",
+ "settings":
+ {"record":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/source-lexical-integration-build-3132590481588625.guard.json",
+  "ownedPrefixes":
+  ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot"],
+  "minFreeKiB": 2097152,
+  "limitRssKiB": 3670016,
+  "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+  "command":
+  ["/usr/bin/env",
+   "LEAN_NUM_THREADS=1",
+   "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+   "--run",
+   "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/source-lexical-integration-build.settings.json"]},
+ "samples": 417,
+ "sampledPeakRssKiB": 1348432,
+ "reason": "disk-space",
+ "peakProcesses":
+ [{"rssKiB": 714672,
+   "role": null,
+   "program":
+   "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+   "pid": 59488,
+   "parent": 57893,
+   "lane": null},
+  {"rssKiB": 587472,
+   "role": null,
+   "program":
+   "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+   "pid": 57893,
+   "parent": 57879,
+   "lane": null},
+  {"rssKiB": 46288,
+   "role": "guard",
+   "program":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/controller-build/StudyMain",
+   "pid": 57879,
+   "parent": 48938,
+   "lane": null}],
+ "ownedPids": [],
+ "limitRssKiB": 3670016,
+ "guardTriggered": true,
+ "guardSha256":
+ "f88aa1622fbcc50d24168fa9d8264843699376e68a6e428767496746c92daf3c",
+ "guardPid": 57879,
+ "exitCode": 137,
+ "error": null,
+ "elapsedMs": 57309,
+ "childPid": 57893}
