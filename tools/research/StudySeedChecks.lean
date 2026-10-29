@@ -157,6 +157,8 @@ private def recall (plan : Input) (root source : System.FilePath)
   let result ← IO.ofExcept (report.getObjVal? "requiredDelivery")
   check ((result.getObjValAs? Nat "eligible").toOption == some 2) "recall denominator lacks frozen DB-present originals"
   check ((result.getObjValAs? Bool "targetMet").toOption == some true) "actual readonly hook omitted required fixture evidence"
+  check (((report.getObjValD "availableDelivery").getObjValAs? Bool "targetMet").toOption == some true)
+    "actual readonly hook omitted fully or partially stored fixture evidence"
 
 /-- The fixture writes no relations. Only real hooks, a real shell, the save
 worker and the index worker may create its observations and consumption. -/

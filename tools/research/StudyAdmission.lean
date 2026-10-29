@@ -216,6 +216,8 @@ def admit (path expectedSha256 : String) : IO Admitted := do
     check ((auditInput.getObjValAs? String key).toOption == some artifact.path) s!"audit references another {key}"
   let audit ← NativeTrialAudit.inspect p.auditInput.path
   check (audit == (← readJson p.auditReport.path)) "native source/code audit is stale"
+  check (((audit.getObjValD "availableDelivery").getObjValAs? Bool "targetMet").toOption == some true)
+    "actual preflight failed 98% delivery of fully or partially stored required evidence"
   check ((audit.getObjValAs? Nat "originalRows").toOption.any (· > 0)) "no original memory observations"
   let body ← IO.FS.readFile (.mk p.body.path)
   check (!body.trimAscii.isEmpty && !(body.contains "EGGSHELL SEARCH INCOMPLETE")) "preflight did not deliver a memory body"

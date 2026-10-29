@@ -3,6 +3,7 @@ import Eggshell.SynapseUsage
 import Eggshell.ContentMetadata
 import tools.research.ArtifactHash
 import tools.research.RequiredDelivery
+import tools.research.AvailableDelivery
 import tools.research.OriginalEvidence
 import Eggshell.Worker
 
@@ -74,6 +75,40 @@ private def originals (source : DB.PageMap.Snapshot) (workspace : System.FilePat
     if let .ok found := Extraction.recordedRows source.head.identity doc then rows := rows ++ found
   return (documents,rows)
 
+/-- Freeze every DB-backed obligation before running a hook. This also keeps
+partial observations that the historical complete-range metric excludes. -/
+def freezeAvailable (value : Json) : IO AvailableDelivery.Frozen := do
+  let specification ← IO.ofExcept (fromJson? (α := Source) value)
+  for (name,expected) in specification.files do
+    check ((← ArtifactHash.hex (.mk specification.source / name)) == expected) "immutable source bytes changed"
+  let source ← DB.PageMap.pin (.mk specification.source)
+  let (documents,rows) ← originals source (.mk specification.workspace)
+  let resolved ← OriginalEvidence.resolve (.mk specification.workspace) source.head.identity
+    documents rows specification.required
+  IO.ofExcept (AvailableDelivery.freeze (resolved.requirements.map fun item =>
+    ⟨item.name,item.alternatives⟩) (resolved.reads.map (·.source)))
+
+/-- Reanalyse retained bytes whose hash was already recorded by an actual
+native hook audit. This is not another hook execution or latency sample. -/
+def replayAvailable (value : Json) (bodyPath expectedHash : String) : IO Json := do
+  let specification ← IO.ofExcept (fromJson? (α := Source) value)
+  for (name,expected) in specification.files do
+    check ((← ArtifactHash.hex (.mk specification.source / name)) == expected) "immutable source bytes changed"
+  let source ← DB.PageMap.pin (.mk specification.source)
+  let (documents,rows) ← originals source (.mk specification.workspace)
+  let resolved ← OriginalEvidence.resolve (.mk specification.workspace) source.head.identity
+    documents rows specification.required
+  let requirements := resolved.requirements.map fun item => (⟨item.name,item.alternatives⟩ : RequiredDelivery.Requirement)
+  let legacy ← IO.ofExcept (RequiredDelivery.freeze requirements (resolved.reads.map (·.source)))
+  let available ← IO.ofExcept (AvailableDelivery.freeze requirements (resolved.reads.map (·.source)))
+  let body ← IO.FS.readFile (.mk bodyPath)
+  check (Sha256.hex body.toUTF8 == expectedHash) "retained actual body hash changed"
+  let shown := Extraction.presented body documents resolved.reads
+  return Json.mkObj [("source",toJson source.head),("bodySha256",toJson expectedHash),
+    ("frozenEvidence",toJson legacy),("requiredDelivery",toJson (RequiredDelivery.assess legacy shown.ranges)),
+    ("availableEvidence",toJson available),("availableDelivery",toJson (AvailableDelivery.assess available shown.ranges)),
+    ("retainedActualBody",toJson true),("newHookCalls",toJson (0 : Nat)),("latencySample",toJson false)]
+
 def inspect (input : String) : IO Json := do
   let bytes ← IO.FS.readBinFile (.mk input)
   let some text := String.fromUTF8? bytes | throw (IO.userError "trial input encoding")
@@ -97,6 +132,8 @@ def inspect (input : String) : IO Json := do
   -- The denominator is determined from the immutable source before inspecting
   -- delivery bytes. A later failed candidate cannot shrink it.
   let frozen ← IO.ofExcept (RequiredDelivery.freeze (alternatives.map fun (name,_,targets) =>
+    ⟨name,targets⟩) (rows.map (·.source)))
+  let available ← IO.ofExcept (AvailableDelivery.freeze (alternatives.map fun (name,_,targets) =>
     ⟨name,targets⟩) (rows.map (·.source)))
   let request ← readJson trial.request
   check ((request.getObjValAs? String "hook_event_name").toOption == some "UserPromptSubmit" &&
@@ -132,6 +169,7 @@ def inspect (input : String) : IO Json := do
     ("originalOutputBindings",toJson resolved.bindings),
     ("stdoutSha256",toJson (Sha256.hex stdout.toUTF8)),("bodySha256",toJson (Sha256.hex body.toUTF8)),
     ("frozenEvidence",toJson frozen),("requiredDelivery",toJson (RequiredDelivery.assess frozen shown.ranges)),
+    ("availableEvidence",toJson available),("availableDelivery",toJson (AvailableDelivery.assess available shown.ranges)),
     ("requirements",toJson requirements)]
 
 /-- Body coverage from an explicitly unbounded worker diagnostic is distinct
@@ -162,6 +200,8 @@ def inspectWorker (input : String) : IO Json := do
     documents fileRows specification.required
   let frozen ← IO.ofExcept (RequiredDelivery.freeze (resolved.requirements.map fun item =>
     ⟨item.name,item.alternatives⟩) (resolved.reads.map (·.source)))
+  let available ← IO.ofExcept (AvailableDelivery.freeze (resolved.requirements.map fun item =>
+    ⟨item.name,item.alternatives⟩) (resolved.reads.map (·.source)))
   let after ← DB.PageMap.pin (.mk trial.database)
   check (after.head == before.head) "worker diagnostic changed the source publication"
   let body := handoff.map (·.text) |>.getD ""
@@ -171,7 +211,9 @@ def inspectWorker (input : String) : IO Json := do
     ("specSha256",toJson (Sha256.hex bytes)),("stdoutSha256",toJson (Sha256.hex stdout.toUTF8)),
     ("bodySha256",toJson (Sha256.hex body.toUTF8)),("bodyChars",toJson body.length),
     ("elapsedMs",timing.getObjValD "elapsedMs"),("frozenEvidence",toJson frozen),
-    ("coverageWithoutDeadline",toJson (RequiredDelivery.assess frozen shown.ranges))]
+    ("coverageWithoutDeadline",toJson (RequiredDelivery.assess frozen shown.ranges)),
+    ("availableEvidence",toJson available),
+    ("availableCoverageWithoutDeadline",toJson (AvailableDelivery.assess available shown.ranges))]
 
 /-- Source extraction and literal code/fingerprint comparison stay in Lean.
 The orchestrator can seal the report, then replay it without trusting labels. -/

@@ -67,6 +67,13 @@ def prepare (templatePath directory : String) (live : Bool := false) : IO StudyA
   let doctor ← StudyCommand.run template.runtime.path #["egg","doctor"] environment template.workspace "" (root / "doctor") 60000
   check (doctor.exitCode == 0) "native doctor failed"
   let prompt ← IO.FS.readFile (.mk template.prompt.path)
+  let prototype ← StudyAdmission.readJson template.preparation.auditInput.path
+  let originalSource ← IO.ofExcept (prototype.getObjVal? "source")
+  let required ← IO.ofExcept (originalSource.getObjVal? "required")
+  let auditSource := Json.mkObj [("source",toJson template.sourceSnapshot),("workspace",toJson template.workspace),
+    ("prompt",toJson prompt),("files",toJson original),("required",required)]
+  let frozenAvailable ← NativeTrialAudit.freezeAvailable auditSource
+  write (root / "available-evidence.json") (toJson frozenAvailable)
   let mut lastBody : Option String := none
   let mut finalSession := ""
   let mut finalCall := root
@@ -111,17 +118,15 @@ def prepare (templatePath directory : String) (live : Bool := false) : IO StudyA
     if entry.fileName.startsWith "numerical-" && entry.fileName.endsWith ".json" then
       numerical := numerical.push (← artifact entry.path)
   let auditInput := root / "audit-input.json"
-  let prototype ← StudyAdmission.readJson template.preparation.auditInput.path
-  let originalSource ← IO.ofExcept (prototype.getObjVal? "source")
-  let required ← IO.ofExcept (originalSource.getObjVal? "required")
-  let source := Json.mkObj [("source",toJson template.sourceSnapshot),("workspace",toJson template.workspace),
-    ("prompt",toJson prompt),("files",toJson original),("required",required)]
   let hook := finalCall / "UserPromptSubmit"
-  write auditInput (Json.mkObj [("source",source),("database",toJson template.database),
+  write auditInput (Json.mkObj [("source",auditSource),("database",toJson template.database),
     ("request",toJson (hook / "stdin").toString),("stdout",toJson (hook / "stdout").toString),
     ("timing",toJson (hook / "record.json").toString),("body",toJson (finalCall / "body.txt").toString)])
   let auditReport := root / "audit-report.json"
-  write auditReport (← NativeTrialAudit.inspect auditInput.toString)
+  let audit ← NativeTrialAudit.inspect auditInput.toString
+  check (audit.getObjValD "availableEvidence" == toJson frozenAvailable)
+    "available evidence changed after viewing the delivery"
+  write auditReport audit
   let p : StudyAdmission.Preparation := {
     input := ← artifact (hook / "stdin"),stdout := ← artifact (hook / "stdout"),timing := ← artifact (hook / "record.json")
     body := ← artifact (finalCall / "body.txt"),state := ← artifact (data / "sessions" / finalSession / "state.json")

@@ -1,5 +1,6 @@
 import Lean.Data.Json.Parser
 import Lean.Data.Json.FromToJson
+import tools.research.NativeTrialAudit
 
 open Lean
 
@@ -71,6 +72,12 @@ def main (args : List String) : IO Unit := do
     save (stage / "frozen-evidence.json") (sourceTopic.getObjValD "frozenEvidence")
     let prototype := stage / "audit-prototype.json"
     save prototype (Json.mkObj [("source",Json.mkObj [("required",topic.getObjValD "referenceRanges")])])
+    let promptPath ← IO.ofExcept ((topic.getObjValD "prompt").getObjValAs? String "path")
+    let availabilitySource := Json.mkObj [("source",toJson (common / "source.egg").toString),
+      ("workspace",seed.getObjValD "workspace"),("prompt",toJson (← IO.FS.readFile (.mk promptPath))),
+      ("files",history.getObjValD "sourceFiles"),("required",topic.getObjValD "referenceRanges")]
+    let frozen ← Eggshell.Research.NativeTrialAudit.freezeAvailable availabilitySource
+    save (stage / "available-evidence.json") (toJson frozen)
     let placeholder ← artifact prototype
     let config := stage / "config.toml"
     let runtime ← IO.ofExcept ((seed.getObjValD "runtime").getObjValAs? String "path")
@@ -82,7 +89,7 @@ def main (args : List String) : IO Unit := do
     for item in ← IO.ofExcept (seed.getObjValAs? (Array Json) "harness") do
       harness := harness.push (← artifact (.mk (← IO.ofExcept (item.getObjValAs? String "path"))))
     let project := System.FilePath.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research"
-    for name in #["OriginalEvidence.lean","NativeTrialAudit.lean","NativeSeedAudit.lean","PrepareMemoryPilot.lean"] do
+    for name in #["OriginalEvidence.lean","NativeTrialAudit.lean","AvailableDelivery.lean","NativeSeedAudit.lean","PrepareMemoryPilot.lean"] do
       harness := harness.push (← artifact (project / name))
     let pluginRoot ← IO.ofExcept (seed.getObjValAs? String "pluginRoot")
     let env ← environment (seed.getObjValD "environment") #[
@@ -113,6 +120,9 @@ def main (args : List String) : IO Unit := do
       throw (IO.userError "delivery denominator changed after viewing the handoff")
     unless ((report.getObjValD "requiredDelivery").getObjValAs? Bool "targetMet").toOption == some true do
       throw (IO.userError "actual preflight misses frozen required original evidence; no answering model admitted")
+    unless report.getObjValD "availableEvidence" == (← read (stage / "available-evidence.json")) &&
+        ((report.getObjValD "availableDelivery").getObjValAs? Bool "targetMet").toOption == some true do
+      throw (IO.userError "actual preflight misses frozen fully or partially stored evidence; no answering model admitted")
     let planFile := stage / "preparation/plan.json"
     let digest ← IO.ofExcept ((← artifact planFile).getObjValAs? String "sha256")
     save (stage / "trial.settings.json") (settings (stage / "trial.guard.json")
