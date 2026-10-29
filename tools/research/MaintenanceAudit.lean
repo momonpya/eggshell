@@ -2,6 +2,7 @@ module
 import all Eggshell.NativePublication
 import all Eggshell.SynapseBuild
 import all tools.research.SynapseBuildOracle
+import tools.research.FactDeltaChecks
 public meta import Lean
 open Lean Eggshell Eggshell.DB Eggshell.Plugin Eggshell.Synapses
 
@@ -46,6 +47,10 @@ run_meta do
 
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
+
+private def projection (index : PageMap.Snapshot) : IO (Array (String × Option ByteArray)) :=
+  index.foldRange ⟨"", "\x7f"⟩ (fun found row => pure (if
+    ["fact:","lookup:","binding:","route:"].any (fun marker => row.1.startsWith marker) then found.push row else found)) #[]
 
 private def reject (action : IO α) (message : String) : IO Unit := do
   let failed ← try let _ ← action; pure false catch _ => pure true
@@ -126,10 +131,13 @@ private def verify (source : PageMap.Snapshot) : IO Json := do
     ("allFactsEqualFullRebuild",toJson true),("consumptionEqualFullReplay",toJson true)]
 
 public def main (args : List String) : IO Unit := do
+  if let ["inspectDelta",path,destination] := args then
+    return ← Eggshell.Research.FactDeltaChecks.inspect (.mk path) (.mk destination)
   let [destination] := args | throw (IO.userError "fresh absolute fixture directory required")
   let output := System.FilePath.mk destination
   check (!(← output.pathExists) && (← Paths.dataRoot) == output / "private") "isolated fresh data root required"
   IO.FS.createDir output
+  let exactDelta ← Eggshell.Research.FactDeltaChecks.run (output / "fact-delta.egg")
   let path := output / "source.egg"
   let _ ← Persistence.create path
   for i in [:8] do
@@ -202,16 +210,32 @@ public def main (args : List String) : IO Unit := do
   let removed ← verify retired
   check (removed.getObjValD "consumption" == baseline.getObjValD "consumption")
     "retired producer left an old consumption edge"
+  let some unchangedBefore ← Index.open? retired .database .shared | throw (IO.userError "pre-notification view missing")
+  let priorProjection ← projection unchangedBefore.index
+  let priorFacts ← Index.allFacts unchangedBefore.index
+  let some original := (← Provenance.records retired)[0]? | throw (IO.userError "no real owner for unchanged notification")
+  let _ ← PageMap.withWriter retired fun writer =>
+    Persistence.Store.writeChange writer {added := [],removed := [],unionsChanged := false,affected := [original.origin.owner]}
+  let notifiedSource ← PageMap.pin path
+  check (notifiedSource.head != retired.head) "unchanged notification did not create a publication boundary"
+  let notified ← verify notifiedSource
+  let some unchangedAfter ← Index.open? notifiedSource .database .shared | throw (IO.userError "notified view not ready")
+  check ((← Index.allFacts unchangedAfter.index) == priorFacts &&
+    (← projection unchangedAfter.index) == priorProjection)
+    "unchanged affected owner rewrote logical fact/posting/binding/routing rows"
+  let noFactDelta := Index.Delta.between priorFacts (← Index.allFacts unchangedAfter.index)
+  check (noFactDelta.added.isEmpty && noFactDelta.removed.isEmpty) "unchanged notification retained fact updates"
   let foreign ← PageMap.create (output / "foreign.egg") "foreign trace-cache DB"
-  let some currentIndex ← Index.open? retired .database .shared | throw (IO.userError "current index missing")
+  let some currentIndex ← Index.open? notifiedSource .database .shared | throw (IO.userError "current index missing")
   let foreignReader ← Persistence.Store.NodeReader.new foreign
   reject (TraceCache.prepare foreign currentIndex.index {} (Provenance.document foreignReader))
     "another project's trace cache was accepted"
   let finalHead := currentIndex.index.head
-  let warm ← Build.refresh retired .database
+  let warm ← Build.refresh notifiedSource .database
   check (warm.mode == "warm" && warm.index == finalHead) "unchanged warm appended cache pages"
-  let report := Json.mkObj [("baseline",baseline),("delayedOriginal",delayed),("separateClock",clocks),
-    ("unrelatedSession",isolated),("retiredProducer",removed),
+  let report := Json.mkObj [("exactFactDelta",exactDelta),("baseline",baseline),("delayedOriginal",delayed),("separateClock",clocks),
+    ("unrelatedSession",isolated),("retiredProducer",removed),("unchangedAffectedPublication",notified),
+    ("unchangedAffectedFactPostingBindingAndRoutingRows",toJson true),
     ("sourceChainHolesRejected",toJson true),("omittedChangedOwnerRejected",toJson true),
     ("missingCachedOriginalRejected",toJson true),
     ("foreignDatabaseRejected",toJson true),("oldPinsUnchanged",toJson true),

@@ -33,3 +33,5 @@
 終了した2コピーのDB/cache、補助実行体2つ、試験用installは削除し、原seed・実モデル試行の原記録・モデル・比較用full runtime・必要なsource/object/interfaceは保持する。圧縮archiveは作らない。[削除](candidates/consumed-file-feedback/retired.json)。
 
 同条件の総token・品質・期限の比較は未実施。98%、80人の8時間利用、通常差分warmの追従性を達成したとは扱わない。
+
+続く候補では、未変更factの再投入と未使用の引用投影を除き、同じ固定workflowのwarmと実フックまで完了した。最新の配送も2/3のままである。ここに記録した失敗と、その後の修復を区別する。[続く修正と実配送](preparation-reuse.md)。

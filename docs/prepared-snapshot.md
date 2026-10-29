@@ -12,6 +12,6 @@
 
 read入口から準備・出版・Unionへ到達しないことをLeanの依存検査で確認した。IO全体の等価性を証明したとはしない。[境界](candidates/prepared-snapshot/boundaries.stdout)。実際の試験entrypointが使う94個のnative objectの依存入力は整合し、既知の不整合な旧runtimeを拒否した。[native](candidates/prepared-snapshot/native-closure.json)。ビルド中の名前修飾とfixtureの古い位置引数による型検査失敗2件は、成功した検査に混ぜずguard記録を残した。[全build guard](candidates/prepared-snapshot/build-guards.json)。
 
-**未準備の新規差分を照会へ含める経路は未実装**。今回直したのは、準備済みAを背景更新Bのために見失う競合である。過去の準備directoryの保持・compactionも、使用中のpinを壊さない容量回収が必要なまま。新しいMain runtimeの実フックはまだ実行していない。直前の固定snapshotでの必要配送2/3、98%未達、回答モデル停止は維持する。総token・品質比較なしで本体・README実績・releaseへ採用しない。[判定](candidates/prepared-snapshot/decision.json)。
+**未準備の新規差分を照会へ含める経路は未実装**。今回直したのは、準備済みAを背景更新Bのために見失う競合である。過去の準備directoryの保持・compactionも、使用中のpinを壊さない容量回収が必要なまま。この部品試験時点では新しいMain runtimeの実フックは未実施だった。その後、Mainへ接続した固定snapshotの実フックは18,806 msで完了したが、必要配送2/3・98%未達である。[後続の実runtime](preparation-reuse.md)。回答モデル停止を維持し、総token・品質比較なしで本体・README実績・releaseへ採用しない。[部品試験時の判定](candidates/prepared-snapshot/decision.json)。
 
 終了したfixture DB/cacheと補助実行体は削除し、archiveは作っていない。元seed・モデル・比較元runtimeと、隔離source/object/interfaceは保持した。[削除](candidates/prepared-snapshot/retired.json)。

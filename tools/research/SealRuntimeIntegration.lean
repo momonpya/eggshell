@@ -33,16 +33,24 @@ private partial def remove (path : System.FilePath) : IO Unit := do
   else IO.FS.removeFile path
 
 def main (args : List String) : IO Unit := do
+  let revised := args.contains "fact-deferred"
+  let operation := args.filter (· != "fact-deferred")
   let study : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028"
   let root := study / "shared-snapshot"
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-  let output := project / "docs/candidates/runtime-integration"
-  let trial := root / "maintenance-prepared-hook"
-  if args == ["retire"] then
+  let output := project / (if revised then "docs/candidates/deferred-quotation/runtime" else "docs/candidates/runtime-integration")
+  let trial := root / (if revised then "fact-deferred-prepared-hook" else "maintenance-prepared-hook")
+  let runtimeLabel := if revised then "fact-deferred-runtime" else "maintenance-runtime"
+  let hookLabel := if revised then "fact-deferred-hook" else "maintenance-hook"
+  let hookGuard := if revised then output.parent.get! / "actual-hook.guard.json" else output / "hook.guard.json"
+  let closure := if revised then output.parent.get! / "native-closure.json" else output / "native-closure.json"
+  let closureGuard := if revised then output.parent.get! / "native-closure.guard.json" else output / "native-closure.guard.json"
+  IO.FS.createDirAll output
+  if operation == ["retire"] then
     unless (← (output / "decision.json").pathExists) && !(← (output / "retired.json").pathExists) do
       throw (IO.userError "seal delivery evidence before retiring its DB and caches")
-    finished (output / "hook.guard.json")
-    let targets := #[trial, root / "maintenance-hook-build/StudyMain", root / "prefix"]
+    finished hookGuard
+    let targets := #[trial, root / System.FilePath.mk (hookLabel ++ "-build/StudyMain"), root / "prefix"]
     let processes ← IO.Process.output {cmd := "/bin/ps", args := #["-axo", "command="]}
     unless processes.exitCode == 0 && targets.all (fun path =>
         (processes.stdout.splitOn path.toString).length == 1) do
@@ -65,16 +73,16 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile (output / "retired.json") (report.setObjVal! "completed" (toJson true)).pretty
     IO.println "Deleted ended trial DB, caches, helper executable and temporary install; no archive"
     return
-  unless args.isEmpty && !(← (output / "decision.json").pathExists) do
+  unless operation.isEmpty && !(← (output / "decision.json").pathExists) do
     throw (IO.userError "preserve prior runtime integration evidence")
-  finished (output / "hook.guard.json")
-  finished (output / "native-closure.guard.json")
-  for label in ["maintenance-runtime", "maintenance-hook"] do
+  finished hookGuard
+  finished closureGuard
+  for label in [runtimeLabel, hookLabel] do
     let settings ← read (root / System.FilePath.mk (label ++ "-build.guard-settings.json"))
     let path ← IO.ofExcept (settings.getObjValAs? String "record")
     finished (.mk path)
     IO.FS.writeFile (output / System.FilePath.mk (label ++ "-build.guard.json")) (← IO.FS.readFile (.mk path))
-  let closure ← read (output / "native-closure.json")
+  let closure ← read closure
   unless (closure.getObjValD "repairedBuild").getObjValD "consistent" == toJson true &&
       (closure.getObjValD "staleBuild").getObjValD "consistent" == toJson false do
     throw (IO.userError "native closure audit is not a positive and negative check")
@@ -85,11 +93,12 @@ def main (args : List String) : IO Unit := do
   let mandatory ← read (trial / "mandatory-audit.json")
   unless mandatory.getObjValD "availableEvidence" == (← read (trial / "available-before-delivery.json")) do
     throw (IO.userError "available obligations changed after delivery")
-  let runtimeHash ← digest (root / "maintenance-runtime-build/StudyMain")
+  let runtimeHash ← digest (root / System.FilePath.mk (runtimeLabel ++ "-build/StudyMain"))
   unless (← digest (root / "prefix/libexec/eggshell")) == runtimeHash do
     throw (IO.userError "executed install differs from the audited runtime")
   let body ← IO.FS.readFile (trial / "body.txt")
-  let bodyEqual := body == (← IO.FS.readFile (project / "docs/candidates/source-knowledge/body.txt"))
+  let reference := if revised then "docs/candidates/runtime-integration/body.txt" else "docs/candidates/source-knowledge/body.txt"
+  let bodyEqual := body == (← IO.FS.readFile (project / System.FilePath.mk reference))
   for (origin, target) in [
       ("body.txt", "body.txt"), ("history-input.json", "history-input.json"),
       ("available-before-delivery.json", "available-before-delivery.json"),
@@ -114,5 +123,6 @@ def main (args : List String) : IO Unit := do
     ("actualSessionStartHooks", toJson (1 : Nat)), ("answeringModelCalls", toJson (0 : Nat)),
     ("tokenImprovementMeasured", toJson false), ("qualityComparisonMeasured", toJson false),
     ("eightyUserSustainedLoadMeasured", toJson false), ("goalAchieved", toJson false),
-    ("components", toJson #["trace-cache", "maintenance-delta"])]).pretty
+    ("components", toJson (if revised then #["trace-cache", "maintenance-delta", "prepared-snapshot",
+      "cached-file-coordinates", "consumed-file-feedback", "fact-delta", "deferred-quotation"] else #["trace-cache", "maintenance-delta"]))]).pretty
   IO.println "Sealed the actual fixed-snapshot hook, frozen obligations and audited candidate runtime"

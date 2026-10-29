@@ -1,0 +1,22 @@
+--- a/Eggshell/ObservationContext.lean
++++ b/Eggshell/ObservationContext.lean
+@@ -217 +217 @@
+-  mapping : Option (Sigma fun source : QuotationContext.Source => QuotationContext.Projection source text) := none
++  mapping : Thunk (Option (Sigma fun source : QuotationContext.Source => QuotationContext.Projection source text)) := Thunk.pure none
+@@ -226 +226 @@
+-  ⟨read,text,(QuotationContext.prepare? source first limit text).map (fun projection => ⟨source,projection⟩),none⟩
++  ⟨read,text,Thunk.mk (fun _ => (QuotationContext.prepare? source first limit text).map (fun projection => ⟨source,projection⟩)),none⟩
+@@ -227,0 +228,7 @@
++/-- Forcing the memoized projection yields exactly the former eager value.
++Read/ACK consumers need no character-offset map at all. -/
++theorem Quotation.prepared_mapping_exact (source : QuotationContext.Source) (read : Read)
++    (first limit : Nat) (text : String) :
++    (Quotation.prepare source read first limit text).mapping.get =
++      (QuotationContext.prepare? source first limit text).map (fun projection => ⟨source,projection⟩) := rfl
++
+@@ -239 +246 @@
+-  let ⟨source,projection⟩ ← item.mapping
++  let ⟨source,projection⟩ ← item.mapping.get
+@@ -280 +287 @@
+-      let next : Quotation := ⟨read,text,none,anchor⟩
++      let next : Quotation := ⟨read,text,Thunk.pure none,anchor⟩

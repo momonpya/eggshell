@@ -1,0 +1,38 @@
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -223,0 +224,12 @@
++
++/-- Compare only the affected old/new domain. Existing identical facts keep
++their postings and routing arcs without point-reading every derived key.
++The remaining array order is the original canonical order. -/
++def Delta.between (before after : Array Fact) : Delta :=
++  let previous := Std.HashSet.ofList before.toList
++  let wanted := Std.HashSet.ofList after.toList
++  {removed := before.filter (!wanted.contains ·), added := after.filter (!previous.contains ·)}
++
++theorem Delta.between_added (before after : Array Fact) (fact : Fact) :
++    fact ∈ (between before after).added ↔ fact ∈ after ∧ fact ∉ before := by
++  simp [between, Std.HashSet.contains_ofList]
+@@ -224,0 +237,10 @@
++theorem Delta.between_removed (before after : Array Fact) (fact : Fact) :
++    fact ∈ (between before after).removed ↔ fact ∈ before ∧ fact ∉ after := by
++  simp [between, Std.HashSet.contains_ofList]
++
++theorem Delta.between_exact (before after : Array Fact) (fact : Fact) :
++    ((fact ∈ before ∧ fact ∉ (between before after).removed) ∨ fact ∈ (between before after).added) ↔
++      fact ∈ after := by
++  by_cases old : fact ∈ before <;> by_cases next : fact ∈ after <;>
++    simp [between_added, between_removed, old, next]
++
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -351,5 +351,4 @@
+-  let head ← if incremental then
+-      let wanted := graph.facts
+-      Index.publishDelta snapshot storage .shared (metadata.map (·.source)) {
+-        removed := old.filter (!wanted.contains ·)
+-        added := facts } prepareRecords
++  let head ← if incremental then do
++      Index.checkFacts snapshot.head.identity .shared facts
++      Index.publishDelta snapshot storage .shared (metadata.map (·.source))
++        (Index.Delta.between old facts) prepareRecords

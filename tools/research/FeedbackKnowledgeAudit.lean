@@ -98,9 +98,11 @@ def main (args : List String) : IO Unit := do
   let replayed ← if replay then do
       let began ← IO.monoMsNow
       let hint ← Journal.preparedHint? source
+      let locatorCache ← StoredReadLookup.create
       let ordered := observed.qsort fun a b => if a.clock.domain == b.clock.domain then
           a.clock.nanos < b.clock.nanos else a.clock.domain < b.clock.domain
-      let result ← Journal.replay source ordered (began + 120000) hint
+      let result ← Journal.replay source ordered (began + 120000) hint (some locatorCache)
+      let locatorState ← locatorCache.state.get
       check (result.usage.size ≤ 65536) "bounded read-only replay report exceeded its fact budget"
       pure (Json.mkObj [("elapsedMs", toJson ((← IO.monoMsNow) - began)),
         ("locatorSource", toJson (hint.map (·.manifest.source))),
@@ -110,6 +112,8 @@ def main (args : List String) : IO Unit := do
         ("fileRangeReferences", toJson (result.consumed.foldl (fun count fact => match fact with
           | .consumed edge => count + edge.rows.countP (·.file?.isSome)
           | _ => count) 0)),
+        ("locatorCache", Json.mkObj [("hits", toJson locatorState.hits), ("misses", toJson locatorState.misses),
+          ("entries", toJson locatorState.entries.size), ("rows", toJson locatorState.rows), ("bytes", toJson locatorState.bytes)]),
         ("usage", toJson result.usage)])
     else pure Json.null
   let some after ← Journal.open? source | throw (IO.userError "journal disappeared during read-only audit")
