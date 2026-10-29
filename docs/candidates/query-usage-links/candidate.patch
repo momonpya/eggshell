@@ -1,0 +1,158 @@
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -18,6 +18,7 @@
+     (include_str "Synapses.lean").toUTF8, (include_str "SynapseExtraction.lean").toUTF8,
+     (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
+     (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
++    (include_str "SynapseQueryLinks.lean").toUTF8,
+     (include_str "SynapseProvenance.lean").toUTF8, (include_str "ObservationAge.lean").toUTF8,
+     (include_str "ContentCapture.lean").toUTF8,(include_str "ContentMetadata.lean").toUTF8,
+     (include_str "MetadataBytes.lean").toUTF8,
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -1,6 +1,7 @@
+ module
+ 
+ public import Eggshell.SynapseIndex
++public import Eggshell.SynapseQueryLinks
+ 
+ @[expose] public section
+ 
+@@ -308,13 +309,17 @@
+   -- the immutable original read view. Queries never normalize these bodies.
+   let prepareRecords := fun writer : PageMap.Writer => do
+     if !incremental then
++      QueryLinks.clear writer
+       let pinned ← writer.snapshot
+       let prior ← pinned.foldRange ⟨"observed-view:owner:","observed-view:owner;"⟩
+         (fun keys row => pure (keys.push row.1)) (#[] : Array String)
+       for key in prior do writer.put key none
++    else
++      for node in changed.owners do QueryLinks.erase writer node
+     for owner in retiredReads do writer.put (ObservedRecordView.ownerKey owner) none
+     for entry in readOwners ++ answerOwners do
+       let document ← documents.get entry.id
++      QueryLinks.stage writer snapshot.head.identity entry.id document
+       if let some extra := preparedAdditions[entry.id]? then
+         let some captured ← ContentMetadata.load? snapshot entry.id document |
+           throw (IO.userError "supplement lost its recorded parent")
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -1,6 +1,7 @@
+ module
+ 
+ public import Eggshell.SynapseIndex
++public import Eggshell.SynapseQueryLinks
+ public import Eggshell.SynapseUsage
+ public import Eggshell.UsageCache
+ public import Eggshell.ObservationContext
+@@ -122,6 +123,8 @@
+     (deadline : Nat) (limits : Limits := {}) (consumers : Array (Occurrence × Nat) := #[]) : IO Result := do
+   let database := shared.manifest.source.identity
+   let mut roots := answers.map fun (answer, priority) => ({key := .answer database answer, priority} : Task)
++  if usage.isSome then
++    roots := roots ++ (← QueryLinks.roots shared answers).map fun (key,priority) => ⟨key,priority⟩
+   roots := roots ++ initial.map (fun source => ⟨.quoted source, 0⟩)
+   roots := roots ++ consumers.map (fun (consumer,priority) => ⟨.consumer consumer,priority⟩)
+   if usage.isSome && digest query then roots := roots.push ⟨.query query, 0⟩
+--- a/Eggshell/SynapticTransport.lean
++++ b/Eggshell/SynapticTransport.lean
+@@ -65,6 +65,7 @@
+       pure routing
+     let mut roots := answers.map fun (owner,priority) =>
+       (Index.Key.answer shared.manifest.source.identity owner,priority)
++    if usage.isSome then roots := roots ++ (← QueryLinks.roots shared answers)
+     roots := roots ++ consumers.map fun (consumer,priority) => (Index.Key.consumer consumer,priority)
+     if usage.isSome && digest query then roots := roots.push (.query query,0)
+     let walked ← Routing.Store.walk routing usage roots deadline
+--- /dev/null
++++ b/Eggshell/SynapseQueryLinks.lean
+@@ -0,0 +1,88 @@
++module
++public import Eggshell.SynapseIndex
++@[expose] public section
++
++namespace Eggshell.Synapses.QueryLinks
++open Lean DB
++
++/-- The source already stores the parent's exact question as its Work.
++Only its digest is copied to the shared advisory directory. Private usage
++facts and the user's current question never enter this directory. -/
++structure Link where
++  node : Nat
++  database : String
++  owner : String
++  work : String
++  query : String
++  deriving BEq, ToJson, FromJson
++
++structure Original (doc : Extraction.Document) where
++  prompt : String
++  workText : doc.workText = some prompt
++  answer : doc.native = false
++
++def original? (doc : Extraction.Document) : Option (Original doc) :=
++  if answer : doc.native = false then
++    match workText : doc.workText with
++    | none => none
++    | some prompt => some ⟨prompt,workText,answer⟩
++  else none
++
++def Original.link (original : Original doc) (database : String) (node : Nat) : Link :=
++  ⟨node,database,doc.owner,doc.work,Sha256.hex original.prompt.toUTF8⟩
++
++theorem Original.exact_question (original : Original doc) (database : String) (node : Nat) :
++    ∃ prompt, doc.workText = some prompt ∧
++      (original.link database node).query = Sha256.hex prompt.toUTF8 :=
++  ⟨original.prompt,original.workText,rfl⟩
++
++theorem Original.same_owner (original : Original doc) (database : String) (node : Nat) :
++    (original.link database node).owner = doc.owner := rfl
++
++def ownerName (owner : String) := "query-link:owner:" ++ owner
++def nodeName (node : Nat) := "query-link:node:" ++ toString node
++
++def Link.valid (link : Link) : Bool :=
++  digest link.database && digest link.query &&
++    (Persistence.SelectionKey.check? link.owner).isSome &&
++    (Persistence.SelectionKey.check? link.work).isSome
++
++def erase (writer : PageMap.Writer) (node : Nat) : IO Unit := do
++  let some bytes ← writer.get (nodeName node) | return
++  let owner ← Index.decode (α := String) bytes
++  let some bytes ← writer.get (ownerName owner) | throw (IO.userError "question link lost its owner")
++  let link ← Index.decode (α := Link) bytes
++  unless link.valid && link.owner == owner && link.node == node do
++    throw (IO.userError "question link differs from its source node")
++  writer.put (ownerName owner) none
++  writer.put (nodeName node) none
++
++def clear (writer : PageMap.Writer) : IO Unit := do
++  let snapshot ← writer.snapshot
++  let names ← snapshot.foldRange ⟨"query-link:","query-link;"⟩
++    (fun names row => pure (names.push row.1)) (#[] : Array String)
++  for name in names do writer.put name none
++
++def stage (writer : PageMap.Writer) (database : String) (node : Nat)
++    (doc : Extraction.Document) : IO Unit := do
++  erase writer node
++  let some original := original? doc | return
++  let link := original.link database node
++  unless link.valid do throw (IO.userError "invalid original question link")
++  writer.put (ownerName link.owner) (some (← Index.checkedBytes link))
++  writer.put (nodeName node) (some (← Index.checkedBytes link.owner))
++
++/-- Reading a prepared question link does not hydrate an Outcome or execute
++any historical operation. A nominated owner grants advisory priority only. -/
++def roots (index : Index.Reader) (answers : Array (String × Nat)) : IO (Array (Index.Key × Nat)) := do
++  unless index.manifest.scope == .shared do throw (IO.userError "question links require a shared source view")
++  let mut found := #[]
++  for (owner,priority) in answers do
++    let some bytes ← index.index.get (ownerName owner) | continue
++    let link ← Index.decode (α := Link) bytes
++    unless link.valid && link.database == index.manifest.source.identity && link.owner == owner do
++      throw (IO.userError "foreign original question link")
++    found := found.push (.query link.query,priority)
++  return found
++
++end Eggshell.Synapses.QueryLinks

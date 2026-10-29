@@ -70,6 +70,9 @@ def main (args : List String) : IO Unit := do
     (prepared / "derived").toString,(database / "derived").toString]}
   unless copied.exitCode == 0 do throw (IO.userError copied.stderr)
   let source ← DB.PageMap.pin database
+  let mandatorySpec := (← read (study / "r0/stage1/preparation/audit-input.json")).getObjValD "source"
+  let mandatoryBefore ← NativeTrialAudit.freezeAvailable mandatorySpec
+  IO.FS.writeFile (target / "available-before-delivery.json") (toJson mandatoryBefore).pretty
   let derivation ← read supplements
   unless derivation.getObjValD "source" == toJson source.head do
     throw (IO.userError "supplement preparation differs from the frozen source")
@@ -184,7 +187,14 @@ def main (args : List String) : IO Unit := do
           IO.FS.writeFile (target / "audit-input.json") input.pretty
           let audit ← NativeTrialAudit.inspect (target / "audit-input.json").toString
           IO.FS.writeFile (target / "audit.json") audit.pretty
+          let mandatoryInput := input.setObjVal! "source" mandatorySpec
+          IO.FS.writeFile (target / "mandatory-audit-input.json") mandatoryInput.pretty
+          let mandatory ← NativeTrialAudit.inspect (target / "mandatory-audit-input.json").toString
+          unless mandatory.getObjValD "availableEvidence" == toJson mandatoryBefore do
+            throw (IO.userError "DB-backed delivery obligations changed after opening the body")
+          IO.FS.writeFile (target / "mandatory-audit.json") mandatory.pretty
           IO.println (Json.mkObj [("delivery",audit.getObjValD "requiredDelivery"),
+            ("availableDelivery",mandatory.getObjValD "availableDelivery"),
             ("elapsedMs",toJson result.elapsedMs),("modelCalls",toJson (0 : Nat))]).compress
     finally StudyRuntime.stopManaged managed (target / "shutdown.json")
   finally StudyRuntime.stopManaged publisher (target / "publisher-shutdown.json")
