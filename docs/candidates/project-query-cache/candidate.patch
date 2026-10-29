@@ -1,0 +1,91 @@
+--- a/Eggshell/SemanticMatcher.lean
++++ b/Eggshell/SemanticMatcher.lean
+@@ -12,6 +12,25 @@
+ 
+ open Lean
+ 
++/-- Only the built-in provider accepts this private-cache namespace. The
++selected write DB supplies it; the order of readable sources never does. -/
++def projectCommand (command : List String) (database : Option System.FilePath) : List String :=
++  match command with
++  | executable :: "search-provider" :: arguments =>
++      executable :: "search-provider" :: (arguments ++ match database with
++        | some path => ["--query-db", path.normalize.toString]
++        | none => ["--query-transient"])
++  | _ => command
++
++theorem project_command_uses_selected_database (executable : String) (arguments : List String)
++    (database : System.FilePath) :
++    projectCommand (executable :: "search-provider" :: arguments) (some database) =
++      executable :: "search-provider" :: (arguments ++ ["--query-db", database.normalize.toString]) := rfl
++
++theorem project_command_without_writer_is_transient (executable : String) (arguments : List String) :
++    projectCommand (executable :: "search-provider" :: arguments) none =
++      executable :: "search-provider" :: (arguments ++ ["--query-transient"]) := rfl
++
+ structure Item where
+   id : String
+   text : String
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -118,6 +118,8 @@
+ 
+ structure Options where
+   cache : System.FilePath
++  queryDatabase : Option System.FilePath := none
++  queryTemporary : Option System.FilePath := none
+   fallback : Option System.FilePath := none
+   privateWrite : Option System.FilePath := none
+   owner : Option DB.Sidecar.Owner := none
+@@ -155,6 +157,11 @@
+ def parse (defaults : Options) : List String → Except String Options
+   | [] => .ok defaults
+   | "--cache" :: v :: rest => parse { defaults with cache := .mk v } rest
++  | "--query-db" :: v :: rest =>
++      if (System.FilePath.mk v).isAbsolute then
++        parse { defaults with queryDatabase := some (.mk v) } rest
++      else .error "query DB must be absolute"
++  | "--query-transient" :: rest => parse { defaults with queryDatabase := none } rest
+   | "--model-cache" :: v :: rest => parse { defaults with models := .mk v } rest
+   | "--model" :: v :: rest => parse { defaults with model := v } rest
+   | "--mode" :: v :: rest =>
+@@ -193,8 +200,16 @@
+             privateWrite := some overlay.semantic, owner := some owner}
+ 
+ def queryOptions (options : Options) : IO Options := do
++  let cache ← match options.queryDatabase with
++    | some path => do
++        let source ← DB.PageMap.pin path
++        let sidecar ← DB.Sidecar.prepare (DB.Sidecar.Owner.ofSnapshot source) .user
++        pure (sidecar.directory / "queries")
++    | none => match options.queryTemporary with
++      | some path => pure path
++      | none => throw (IO.userError "query temporary storage is unavailable")
+   pure {options with
+-    cache := (← Paths.dataRoot) / "queries"
++    cache
+     owner := none, fallback := none, privateWrite := none}
+ 
+ abbrev Encoder := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .inherit }
+@@ -894,7 +909,8 @@
+ def run (args : List String) : IO UInt32 := IO.FS.withTempDir fun scratch => do
+   let scratch ← IO.FS.realPath scratch
+   let layout := MiniLM.layout (← Paths.installRoot)
+-  let options ← IO.ofExcept (parse { cache := scratch, models := layout.models } args)
++  let options ← IO.ofExcept (parse {
++    cache := scratch, queryTemporary := some (scratch / "queries"), models := layout.models } args)
+   let child ← if options.mode == "lexical" then pure none else some <$> encoder options
+   let previous ← IO.mkRef (none : Option RetainedCorpus)
+   try
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -8159,6 +8159,9 @@
+     (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none)
+     (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[])
+     (upstreamDeadline : Option Nat := none) : IO (Option Handoff) := do
++  let selection : Config.Selection := {selection with
++    semanticMatcher := selection.semanticMatcher.map (fun command =>
++      SemanticMatcher.projectCommand command (selection.write.map (·.path)))}
+   if selection.read.isEmpty then return none
+   unless selection.read.length == snapshots.length do
+     throw (IO.userError "source snapshot arity mismatch")
