@@ -1,0 +1,186 @@
+--- /dev/null
++++ b/Eggshell/StoredReadEvidence.lean
+@@ -0,0 +1,83 @@
++module
++public import Eggshell.SynapseBuild
++@[expose] public section
++
++namespace Eggshell.Synapses.StoredReadEvidence
++open Lean DB Persistence.Store _root_.Eggshell.Synapses.Extraction
++
++def implementation : String := Blake3.hex (Blake3.digest "eggshell.stored-read-evidence".toUTF8 [
++  (include_str "StoredReadEvidence.lean").toUTF8,(include_str "ContentMetadata.lean").toUTF8,
++  (include_str "ObservedRecords.lean").toUTF8])
++
++/-- Quote digests do not change the original range or observation identity. -/
++def core (read : Read) : Read := {read with quotations := #[]}
++
++structure Owner where
++  doc : Document
++  raw : String
++  original : doc.source = some raw
++  native : doc.native = true
++  reads : Array Read
++  byCore : Std.HashMap Read {read : Read // read ∈ reads}
++
++structure Witness (candidate : Read) where
++  owner : Owner
++  saved : {read : Read // read ∈ owner.reads}
++  same : core candidate = core saved.val
++
++theorem Witness.original_member (witness : Witness candidate) : witness.saved.val ∈ witness.owner.reads :=
++  witness.saved.property
++
++theorem Witness.same_source (witness : Witness candidate) : candidate.source = witness.saved.val.source := by
++  simpa [core] using congrArg Read.source witness.same
++
++theorem Witness.same_binding (witness : Witness candidate) : candidate.binding = witness.saved.val.binding := by
++  simpa [core] using congrArg Read.binding witness.same
++
++theorem Witness.same_occurrence (witness : Witness candidate) : candidate.occurrence = witness.saved.val.occurrence := by
++  simpa [core] using congrArg Read.occurrence witness.same
++
++structure Prepared (source : PageMap.Snapshot) where
++  documents : Build.Documents source
++  owners : IO.Ref (Std.HashMap String (Option Owner))
++
++/-- The pinned pre-read publication owns these documents. A later prepared
++index is only a locator; it cannot supply originals absent from this source. -/
++def prepare (source : PageMap.Snapshot) (index : PageMap.Snapshot) : IO (Prepared source) := do
++  let reader ← NodeReader.new source
++  let cache ← IO.mkRef ({} : Std.HashMap Nat Document)
++  let catalogs ← IO.mkRef ({} : Std.HashMap Nat ObservationContext.Catalog)
++  let owners ← IO.mkRef ({} : Std.HashMap String (Option Owner))
++  return {documents := {reader,cache,catalogs,prepared := some index},owners}
++
++def Prepared.loadOwner? (prepared : Prepared source) (owner : String) : IO (Option Owner) := do
++  let some id ← Build.ownerId? source owner | return none
++  let doc ← prepared.documents.get id
++  let some raw := doc.source | return none
++  if original : doc.source = some raw then
++    if native : doc.native = true then
++      let catalog ← prepared.documents.catalog id
++      let reads := catalog.located.flatMap (·.originalRows)
++      let byCore := reads.attach.foldl
++        (fun found row => found.insert (core row.val) row) {}
++      return some {doc,raw,original,native,reads,byCore}
++    else return none
++  else return none
++
++def Prepared.owner? (prepared : Prepared source) (owner : String) : IO (Option Owner) := do
++  if let some known := (← prepared.owners.get)[owner]? then return known
++  let found ← prepared.loadOwner? owner
++  prepared.owners.modify (·.insert owner found)
++  return found
++
++def Prepared.check? (prepared : Prepared source) (candidate : Read) : IO (Option (Witness candidate)) := do
++  unless candidate.valid && candidate.binding.database == source.head.identity &&
++      (Persistence.SelectionKey.check? candidate.binding.owner).isSome do return none
++  let some owner ← prepared.owner? candidate.binding.owner | return none
++  unless owner.doc.owner == candidate.binding.owner && owner.doc.work == candidate.binding.work &&
++      owner.doc.occurrences.contains candidate.occurrence do return none
++  let some saved := owner.byCore[core candidate]? | return none
++  if same : core candidate = core saved.val then return some ⟨owner,saved,same⟩
++  else return none
++
++end Eggshell.Synapses.StoredReadEvidence
+--- a/Eggshell/UsageCache.lean
++++ b/Eggshell/UsageCache.lean
+@@ -1,6 +1,7 @@
+ module
+ public import Eggshell.SynapseIndex
+ public import Eggshell.SharedReadReceipt
++public import Eggshell.StoredReadEvidence
+ @[expose] public section
+ 
+ namespace Eggshell.Synapses.UsageCache
+@@ -9,7 +10,7 @@
+ /-- Labels are a derived interpretation of immutable journal events. A new
+ classifier cannot append to the old classifier's immutable event witnesses. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.usage-classifier".toUTF8 [
+-  Index.implementation.toUTF8,SharedReadReceipt.implementation.toUTF8,
++  Index.implementation.toUTF8,SharedReadReceipt.implementation.toUTF8,StoredReadEvidence.implementation.toUTF8,
+   (include_str "UsageCache.lean").toUTF8,(include_str "SynapseJournal.lean").toUTF8,
+   (include_str "SynapseUsage.lean").toUTF8,(include_str "PluginModel.lean").toUTF8,
+   (include_str "SynapseLive.lean").toUTF8])
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -4,6 +4,7 @@
+ public import Eggshell.SynapseUsage
+ public import Eggshell.SharedReadReceipt
+ public import Eggshell.UsageCache
++public import Eggshell.StoredReadEvidence
+ public import Eggshell.PluginModel
+ 
+ @[expose] public section
+@@ -244,12 +245,32 @@
+       saved.head.bytes ≤ current.head.bytes do return none
+   let index := {current with head := saved.head}
+   let some manifest ← Index.manifest? index | return none
+-  unless manifest.implementation == saved.producer && saved.producer == Index.implementation &&
+-      manifest.scope == .shared && manifest.source.identity == source.head.identity do return none
++  unless digest saved.producer && manifest.implementation == saved.producer &&
++      manifest.scope == .shared && manifest.source.identity == source.head.identity &&
++      manifest.source.authority == source.head.authority do return none
+   let some original ← originalAt? source known.source | return none
+   unless ← Index.sameSources original manifest.source do return none
++  unless (← index.get "provenance") == some (toJson (← Provenance.stamp original)).compress.toUTF8 do return none
+   return some ⟨index, manifest⟩
+ 
++/-- Historical index facts are navigation, not evidence by themselves. Every
++returned Read must equal an original catalog row at the pre-read publication. -/
++def storedReadsAt? (source : PageMap.Snapshot) (known : Knowledge) (index : Index.Reader)
++    (subjects : Std.HashSet Subject) (excluded : Occurrence) (deadline : Nat) : IO (Option (Array Read)) := do
++  let some original ← originalAt? source known.source | return none
++  let prepared ← StoredReadEvidence.prepare original index.index
++  let mut stored := #[]
++  for subject in subjects do
++    let found ← index.lookup (.subject subject) 100000 deadline
++    unless found.complete do throw (IO.userError "incomplete historical stored-read evidence")
++    for fact in found.facts do
++      let .read read := fact | continue
++      if read.occurrence == excluded then continue
++      if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "historical stored-read validation deadline")
++      let some witness ← prepared.check? read | return none
++      stored := stored.push witness.saved.val
++  return some stored
++
+ def ownerKeys (known : List String) : Array String :=
+   (known.filterMap fun value => match value.splitOn ":" with
+     | ["h", owner] | ["g", owner, _] | ["e", owner, _, _, _] => some owner
+@@ -355,13 +376,8 @@
+       result := {result with unknown := result.unknown+1}; continue
+     let some indexed := indexed | throw (IO.userError "missing checked pre-read index")
+     let subjects := uses.foldl (fun subjects (_,range) => subjects.insert range.subject) ({} : Std.HashSet Subject)
+-    let mut storedReads := #[]
+-    for subject in subjects do
+-      let found ← indexed.lookup (.subject subject) 100000 deadline
+-      unless found.complete do throw (IO.userError "incomplete native stored-read evidence")
+-      storedReads := storedReads ++ found.facts.filterMap (fun fact => match fact with
+-        | .read read => if read.occurrence != producer then some read else none
+-        | _ => none)
++    let some storedReads ← storedReadsAt? source known indexed subjects producer deadline |
++      result := {result with unknown := result.unknown+1}; continue
+     let stored := storedReads.map (·.source)
+     let shown := presentationWithShared known storedReads (← presentation source known)
+     for (edge,requested) in uses do
+@@ -482,15 +498,10 @@
+           unless completeKnowledge known storedIndex.isSome do
+             result := {result with unknown := result.unknown+1}
+             continue
+-          let mut storedReads := #[]
+-          if let some index := storedIndex then
+-            let files := reads.foldl (fun files read => files.insert read.read.source.subject) ({} : Std.HashSet Subject)
+-            for file in files do
+-              let found ← index.lookup (.subject file) 100000 deadline
+-              unless found.complete do throw (IO.userError "incomplete stored-read evidence")
+-              storedReads := storedReads ++ found.facts.filterMap (fun fact => match fact with
+-                | .read read => if read.occurrence != occurrence then some read else none
+-                | _ => none)
++          let some index := storedIndex | throw (IO.userError "missing checked pre-read index")
++          let files := reads.foldl (fun files read => files.insert read.read.source.subject) ({} : Std.HashSet Subject)
++          let some storedReads ← storedReadsAt? source known index files occurrence deadline |
++            result := {result with unknown := result.unknown+1}; continue
+           let stored := storedReads.map (·.source)
+           let shown := presentationWithShared known storedReads (← presentation source known)
+           let feedback : Feedback := ({graph := usage, delivered := shown} : Feedback).start occurrence
