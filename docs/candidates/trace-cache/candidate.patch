@@ -1,0 +1,278 @@
+--- a/Eggshell/SynapseProvenance.lean
++++ b/Eggshell/SynapseProvenance.lean
+@@ -242,8 +242,7 @@
+ 
+ /-- Reconstruct only from DB-owned original bodies and observed intervals.
+ Allocation ordinals validate storage; only actual times determine consumption. -/
+-def derive (source : PageMap.Snapshot) : IO Derived := do
+-  let stored ← records source
++def deriveRecords (source : PageMap.Snapshot) (stored : Array Stored) : IO Derived := do
+   if stored.isEmpty then return {}
+   let reader ← NodeReader.new source
+   let mut docs : Std.HashMap Nat Document := {}
+@@ -289,4 +288,7 @@
+   let located ← IO.ofExcept (trace.locate locations)
+   return {result with graph := ← IO.ofExcept (result.graph.merge located.graph)}
+ 
++def derive (source : PageMap.Snapshot) : IO Derived := do
++  deriveRecords source (← records source)
++
+ end Eggshell.Synapses.Provenance
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -19,6 +19,7 @@
+     (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
+     (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
+     (include_str "SynapseProvenance.lean").toUTF8, (include_str "ObservationAge.lean").toUTF8,
++    (include_str "SynapseTraceCache.lean").toUTF8,
+     (include_str "ContentCapture.lean").toUTF8,(include_str "ContentMetadata.lean").toUTF8,
+     (include_str "MetadataBytes.lean").toUTF8,
+     (include_str "../tools/ContentCorrespondence.lean").toUTF8,
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -1,6 +1,7 @@
+ module
+ 
+ public import Eggshell.SynapseIndex
++public import Eggshell.SynapseTraceCache
+ 
+ @[expose] public section
+ 
+@@ -109,6 +110,8 @@
+   consumptionRebuilt : Bool := false
+   provenanceOriginals : Nat := 0
+   provenanceIgnored : Nat := 0
++  provenanceGroups : Nat := 0
++  provenanceRecordsRead : Nat := 0
+   answers : Nat := 0
+   unsupported : Nat := 0
+   facts : Nat := 0
+@@ -238,13 +241,18 @@
+         if !doc.native then
+           let entry := catalog.find? (·.id == id)
+           if let some entry := entry then answerOwners := answerOwners.push entry
+-  let stamp := (toJson (← Provenance.stamp snapshot)).compress.toUTF8
+-  let previousStamp ← previous.bindM (·.get "provenance")
+-  -- A new answer does not change previously observed call order or row
+-  -- projections. Reuse those facts only if their origin stamp and source
+-  -- metadata are unchanged; otherwise replay from the pinned originals.
+-  let keepConsumption := incremental && readOwners.isEmpty && !changed.removed && previousStamp == some stamp
+-  let mut graph ← IO.ofExcept (Graph.ofFacts (old.filter (retain retiredReads retiredAnswers keepConsumption)))
++  let traces ← if incremental then
++      match previous with
++      | some previous => TraceCache.prepare snapshot previous changed.owners documents.get
++      | none => throw (IO.userError "incremental trace preparation lost its prior pin")
++    else TraceCache.rebuild snapshot
++  for fact in old do
++    if let .consumed edge := fact then
++      unless TraceCache.group edge.producer == TraceCache.group edge.consumer do
++        throw (IO.userError "cached consumption crosses original session/turn replay partitions")
++  let mut graph ← IO.ofExcept (Graph.ofFacts (old.filter fun fact => match fact with
++    | .consumed edge => incremental && !TraceCache.affected traces.changed edge
++    | other => retain retiredReads retiredAnswers true other))
+   for entry in readOwners do
+     let catalog ← documents.catalog entry.id
+     if catalog.located.isEmpty then unsupported := unsupported+1
+@@ -301,12 +309,13 @@
+     match ObservationContext.addQuotedAnswer snapshot.head.identity doc spellings graph with
+     | .ok next => graph := next
+     | .error _ => unsupported := unsupported + 1
+-  let portable ← if keepConsumption then pure ({} : Provenance.Derived) else Provenance.derive snapshot
++  let portable ← Provenance.deriveRecords snapshot traces.replay
+   graph ← IO.ofExcept (graph.merge portable.graph)
+   let facts := graph.snapshot
+   -- The same changed-owner feed and the same atomic index publication own
+   -- the immutable original read view. Queries never normalize these bodies.
+   let prepareRecords := fun writer : PageMap.Writer => do
++    TraceCache.stage writer traces
+     if !incremental then
+       let pinned ← writer.snapshot
+       let prior ← pinned.foldRange ⟨"observed-view:owner:","observed-view:owner;"⟩
+@@ -331,7 +340,8 @@
+   return {
+     mode := if incremental then "incremental" else "rebuild", source := snapshot.head, index := head
+     candidates := catalog.size, hydrated := (← documents.cache.get).size, answers := answerOwners.size,
+-    consumptionRebuilt := !keepConsumption,provenanceOriginals := portable.originals,provenanceIgnored := portable.ignored,
++    consumptionRebuilt := !traces.replay.isEmpty,provenanceOriginals := portable.originals,provenanceIgnored := portable.ignored
++    provenanceGroups := traces.changed.size,provenanceRecordsRead := traces.replay.size
+     unsupported, facts := facts.size, elapsedMs := (← IO.monoMsNow) - started}
+ 
+ end Eggshell.Synapses.Build
+--- /dev/null
++++ b/Eggshell/SynapseTraceCache.lean
+@@ -0,0 +1,175 @@
++module
++public import Eggshell.SynapseIndex
++
++@[expose] public section
++namespace Eggshell.Synapses.TraceCache
++open Lean DB Persistence.Store
++
++/-- Replay partitions still include the clock domain. Cache buckets combine
++domains of the same session/turn so an occurrence can locate its whole bucket. -/
++structure Group where
++  session : String
++  turn : String
++  deriving BEq, ReflBEq, LawfulBEq, DecidableEq, Hashable, ToJson, FromJson
++
++def group (occurrence : Occurrence) : Group := ⟨occurrence.session,occurrence.turn⟩
++def Group.prefix (group : Group) : String := "trace-origin:" ++ Index.contentKey group
++def Group.marker (group : Group) : String := "trace-group:" ++ Index.contentKey group
++def ownerKey (id : Nat) : String := "trace-owner:" ++ toString id
++def stateKey : String := "trace-state"
++
++def groupStep (state : Provenance.State) (value : Provenance.Stored) : Provenance.State :=
++  ⟨state.count+1,Index.contentKey (state.digest,value)⟩
++
++def affected (groups : Std.HashSet Group) (edge : Consumption) : Bool :=
++  groups.contains (group edge.consumer)
++
++theorem retained_consumer_unchanged (groups : Std.HashSet Group) (edge : Consumption)
++    (retained : affected groups edge = false) :
++    groups.contains (group edge.consumer) = false := retained
++
++structure Update where
++  state : Provenance.State
++  changed : Std.HashSet Group
++  added : Array Provenance.Stored
++  replay : Array Provenance.Stored
++  rebuild : Bool
++
++/-- Only actual appended source records can advance the covered chain. A
++missing record rejects the update before any derived publication is attempted. -/
++def extendList (previous : Provenance.State) : List Provenance.Stored → Except String Provenance.State
++  | [] => .ok previous
++  | value :: rest =>
++    if value.origin.valid && value.ordinal == previous.count && value.previous == previous.digest then
++      extendList ⟨previous.count+1,Provenance.contentKey value⟩ rest
++    else .error "trace cache does not cover a contiguous original provenance chain"
++
++def extend (previous : Provenance.State) (added : Array Provenance.Stored) : Except String Provenance.State :=
++  extendList previous added.toList
++
++theorem extend_empty (state : Provenance.State) : extend state #[] = .ok state := rfl
++
++theorem extendList_count (values : List Provenance.Stored) (previous next : Provenance.State)
++    (complete : extendList previous values = .ok next) : next.count = previous.count+values.length := by
++  induction values generalizing previous next with
++  | nil => simp [extendList] at complete; subst next; simp
++  | cons value rest ih =>
++    unfold extendList at complete
++    split at complete
++    · have count : next.count = previous.count+1+rest.length := ih _ _ complete
++      simp only [List.length_cons]
++      omega
++    · cases complete
++
++theorem extend_count (previous next : Provenance.State) (values : Array Provenance.Stored)
++    (complete : extend previous values = .ok next) : next.count = previous.count+values.size := by
++  simpa [extend] using extendList_count values.toList previous next complete
++
++def checkStored (source : PageMap.Snapshot) (value : Provenance.Stored) : IO Unit := do
++  unless value.origin.valid do throw (IO.userError "invalid trace-cache original")
++  let some bytes ← source.get (Provenance.name value.origin.occurrence) |
++    throw (IO.userError "trace-cache original is not in the pinned source")
++  unless (← Provenance.decode (α := Provenance.Stored) bytes) == value do
++    throw (IO.userError "trace-cache original differs from the pinned source")
++
++def rebuild (source : PageMap.Snapshot) : IO Update := do
++  let values ← Provenance.records source
++  return {
++    state := ← Provenance.state source
++    changed := Std.HashSet.ofArray (values.map (fun value => group value.origin.occurrence))
++    added := values,replay := values,rebuild := true}
++
++def prepare (source : PageMap.Snapshot) (previous : PageMap.Snapshot)
++    (owners : Std.HashSet Nat) (document : Nat → IO Extraction.Document) : IO Update := do
++  let some manifest ← Index.manifest? previous | throw (IO.userError "trace cache has no source manifest")
++  unless manifest.scope == .shared && manifest.implementation == Index.implementation &&
++      manifest.source.identity == source.head.identity && manifest.source.authority == source.head.authority do
++    throw (IO.userError "trace cache belongs to another database, scope or producer")
++  let some stateBytes ← previous.get stateKey | throw (IO.userError "trace cache has no covered source chain")
++  let base ← Provenance.decode (α := Provenance.State) stateBytes
++  let current ← Provenance.state source
++  unless base.count ≤ current.count do throw (IO.userError "trace cache is ahead of its pinned source")
++  let mut changed : Std.HashSet Group := {}
++  let mut priorGroups : Std.HashSet Group := {}
++  let mut added : Std.HashMap Nat Provenance.Stored := {}
++  for id in owners do
++    if let some bytes ← previous.get (ownerKey id) then
++      let groups ← Provenance.decode (α := Array Group) bytes
++      for key in groups do
++        changed := changed.insert key
++        priorGroups := priorGroups.insert key
++    if (← source.get (Persistence.Store.key "member" id)).isNone then continue
++    let doc ← document id
++    if !doc.native then continue
++    for occurrence in doc.occurrences do
++      let some bytes ← source.get (Provenance.name occurrence) | continue
++      let stored ← Provenance.decode (α := Provenance.Stored) bytes
++      unless stored.origin.valid && stored.origin.owner == id && stored.origin.occurrence == occurrence &&
++          stored.ordinal < current.count do throw (IO.userError "trace-cache lookup has a foreign original owner")
++      changed := changed.insert (group occurrence)
++      if base.count ≤ stored.ordinal then
++        if let some prior := added[stored.ordinal]? then
++          unless prior == stored do throw (IO.userError "conflicting appended trace-cache ordinal")
++        added := added.insert stored.ordinal stored
++  let additions := added.toArray.map (·.2) |>.qsort (fun a b => a.ordinal < b.ordinal)
++  unless (← IO.ofExcept (extend base additions)) == current do
++    throw (IO.userError "changed owners omit appended original provenance")
++  let mut replay : Std.HashMap Nat Provenance.Stored := added
++  for key in changed do
++    let values ← previous.foldRange ⟨key.prefix ++ ":",key.prefix ++ ";"⟩
++        (fun rows row => do
++          let some bytes := row.2 | return rows
++          let value ← Provenance.decode (α := Provenance.Stored) bytes
++          unless row.1 == Persistence.Store.key key.prefix value.ordinal && group value.origin.occurrence == key do
++            throw (IO.userError "trace-cache posting has another replay group")
++          return rows.push value) (#[] : Array Provenance.Stored)
++    let values := values.qsort (fun a b => a.ordinal < b.ordinal)
++    let expected ← match ← previous.get key.marker with
++      | some bytes => Provenance.decode (α := Provenance.State) bytes
++      | none =>
++        if priorGroups.contains key then throw (IO.userError "trace-cache owner has no complete replay group")
++        pure ({} : Provenance.State)
++    unless values.foldl groupStep {} == expected do
++      throw (IO.userError "trace-cache replay group is incomplete or changed")
++    for value in values do
++      let ordinal := value.ordinal
++      unless ordinal < base.count do throw (IO.userError "trace-cache posting is beyond its covered chain")
++      checkStored source value
++      if let some prior := replay[ordinal]? then
++        unless prior == value do throw (IO.userError "trace-cache ordinal belongs to multiple originals")
++      replay := replay.insert ordinal value
++  return {
++    state := current,changed,added := additions
++    replay := replay.toArray.map (·.2) |>.qsort (fun a b => a.ordinal < b.ordinal)
++    rebuild := false}
++
++/-- These metadata postings and their covered frontier use the same atomic
++publication as the consumption facts. No plaintext input or output is copied. -/
++def stage (writer : PageMap.Writer) (update : Update) : IO Unit := do
++  if update.rebuild then
++    let snapshot ← writer.snapshot
++    for (first,last) in [("trace-origin:","trace-origin;"),("trace-owner:","trace-owner;"),
++        ("trace-group:","trace-group;")] do
++      let keys ← snapshot.foldRange ⟨first,last⟩
++        (fun keys row => pure (keys.push row.1)) (#[] : Array String)
++      for key in keys do writer.put key none
++  for value in update.added do
++    let key := group value.origin.occurrence
++    let posting := Persistence.Store.key key.prefix value.ordinal
++    let bytes ← Provenance.bytes value
++    if let some previous ← writer.get posting then
++      unless previous == bytes do throw (IO.userError "trace-cache original was rewritten")
++    else
++      writer.put posting (some bytes)
++      let previous ← match ← writer.get key.marker with
++        | none => pure ({} : Provenance.State)
++        | some bytes => Provenance.decode (α := Provenance.State) bytes
++      writer.put key.marker (some (← Provenance.bytes (groupStep previous value)))
++    let owner := ownerKey value.origin.owner
++    let previous ← match ← writer.get owner with
++      | none => pure #[]
++      | some bytes => Provenance.decode (α := Array Group) bytes
++    if !previous.contains key then writer.put owner (some (← Provenance.bytes (previous.push key)))
++  writer.put stateKey (some (← Provenance.bytes update.state))
++
++end Eggshell.Synapses.TraceCache
