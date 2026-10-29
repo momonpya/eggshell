@@ -1,0 +1,8 @@
+--- a/Eggshell/KeyedSearchProvider.lean
++++ b/Eggshell/KeyedSearchProvider.lean
+@@ -196,0 +197 @@
++  let scratch ← IO.FS.realPath scratch
+@@ -198 +199,2 @@
+-  let options ← IO.ofExcept (SearchProvider.parse {cache := scratch,models := layout.models} arguments)
++  let options ← IO.ofExcept (SearchProvider.parse {
++    cache := scratch, queryTemporary := some (scratch / "queries"), models := layout.models } arguments)

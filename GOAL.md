@@ -31,7 +31,7 @@
 
 隔離候補は、[原文からの利用判定](docs/source-knowledge.md)、[来歴の差分再生](docs/trace-cache.md)、[変更owner/Workだけを扱う保守索引](docs/maintenance-delta.md)を接続した状態。製品・README実績・releaseには未採用。実リンク対象185モジュールの依存整合性と、既知の不整合な旧runtimeを拒否する検査が通った。
 
-同じ固定source（identity `d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812`、revision 40）・質問・追加座標で最新の実フックを確認した。UserPromptSubmitは18,806 ms、本文は直前の19,216 msの実本文と全bytes一致。配送前に凍結したDB内の必要根拠は**2/3で不合格**。部分保存3097行を分母から外さない。広い引用診断27/47を必須根拠の分母へすり替えない。元source・元75イベント不変、関連RSS標本最大1,692,048 KiB、終了0・残存PID0。単発でありp99ではない。[最新の準備・実配送](docs/preparation-reuse.md)、[直前の実runtime](docs/runtime-integration.md)。
+LLVMの同じ固定source（identity `d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812`、revision 40）・質問・追加座標で最新の実フックを確認した。UserPromptSubmitは18,806 ms、本文は直前の19,216 msの実本文と全bytes一致。配送前に凍結したDB内の必要根拠は**2/3で不合格**。部分保存3097行を分母から外さない。広い引用診断27/47を必須根拠の分母へすり替えない。元source・元75イベント不変、関連RSS標本最大1,692,048 KiB、終了0・残存PID0。単発でありp99ではない。[最新の準備・実配送](docs/preparation-reuse.md)、[直前の実runtime](docs/runtime-integration.md)。
 
 初回の実装変更による全体再構築は175,786 ms、構築済みシナプス索引の再利用確認は6 msだった。初回の利用ラベル再生を含むwarm全体は41,621 ms、その後の同じ利用索引の確認は221 ms・再処理0ターン。フック・通常差分・初期構築を混ぜず、warm全体の差分化完了や80人運用の証拠にしない。
 
@@ -47,11 +47,15 @@
 
 full runtime `55e76407`はwarmの利用再生が62,953 msで期限超過となった。続く隔離候補で、影響範囲の新旧factの集合差だけを出版し、未変更fact/postingsの再投入を除いた。妥当性・scope検査を維持し、完全再構築と全fact/postings/binding/routing・旧pinを照合した。引用の文字投影も実際に使うときだけ評価するようにし、同じ元seed再生は49,659→37,619 ms、利用fact240件全て一致。cacheは約4 MBで容量不足ではなかった。新full runtime `62d637b7`は185 native objectが整合し、warm55,805 ms、実フック18,806 msで成功したが、配送は2/3のまま。単発の準備修復を総token・通常差分・80人性能の改善としない。長いターンの一般的な有界進捗は未解決。終了したDB/cacheと補助実行体は削除し、archiveなし。[修正・監査・削除](docs/preparation-reuse.md)。
 
-新規出版に対する字句の準備依存を一つ除いた。原DBにも同じ2-gramのpostingsと頻度が原子的に保存されていたため、別の派生字句索引を待たずに読む隔離候補を実装した。producerの実バイトに結び付いたpolicyを候補と同じ出版で記録し、未記録の非空DBをreadyにしない。40→41→33→35候補の各状態で原文全件採点と112組の全順位が一致し、新規記録はwarmなしで3 msで検索できた。80並行読取りも小規模nativeで通ったが、実フックや80人の継続負荷の合格ではない。実リンク36モジュールが整合。通常サービスの接続・既存ContractAuditを含むビルドはdisk保護条件で終了137となり未検証。接続差分を検査済み部品と分け、現行runtime `62d637b7`を保持した。旧非空DBの再索引、vector・3辺・原文の未吸収差分、実配送は未完了。放棄済みseed1、旧bounded/source-complete実験のDB/cache、不要な原DBコピー・実行体と未使用依存cacheを削除し、archiveなし。元seed2・固定原典・失敗試行のusage/raw RPCは保持した。整理後も実空きは2 GiB未満で、ビルド保護条件を下げていない。[字句の出版内索引と未完了範囲](docs/source-published-lexical.md)。
+新規出版に対する字句の準備依存を一つ除いた。原DBにも同じ2-gramのpostingsと頻度が原子的に保存されていたため、別の派生字句索引を待たずに読む隔離候補を実装した。producerの実バイトに結び付いたpolicyを候補と同じ出版で記録し、未記録の非空DBをreadyにしない。40→41→33→35候補の各状態で原文全件採点と112組の全順位が一致し、新規記録はwarmなしで3 msで検索できた。80並行読取りも小規模nativeで通ったが、80人の継続負荷の合格ではない。実リンク36モジュールが整合。最初の通常ビルドはdisk保護条件で停止したが、下記の整理後に接続を完了した。旧非空DBの再索引、vector・3辺・原文の未吸収差分は未完了。放棄済みseed1、旧bounded/source-complete実験のDB/cache、不要な原DBコピー・実行体と未使用依存cacheを削除し、archiveなし。元seed2・固定原典・失敗試行のusage/raw RPCを保持し、ビルド保護条件を下げていない。[字句の出版内索引と未完了範囲](docs/source-published-lexical.md)。
+
+その後、実験ビルダーが全依存の原ソースを重複保存していた記録をdigestへ置き換え、462ファイル680,397,283→2,774,534 bytesとした。変更していないnative監査器の全判定は前後一致し、include byte変更・中断後のABI再構築も検査した。空き条件を維持したまま通常サービス・ContractAudit・Mainのビルドと接続検査が完了した。[実験ビルドの修正](docs/build-input-digests.md)。
+
+新しい小規模の実Pre/Post/Stopで8原文・17イベント・15行対応を保存し、別私有rootのsource-only回復を確認したが、最初の別チャット配送は0/2だった。原因は`keyed-search-provider`で質問vector用一時cacheを初期化せず、数値検索がエラーになっていたこと。同じ保存source・workspace・質問・2凍結根拠で初期化だけを直した隔離runtime `bc358133`は、意味検索完了・実フック3,031 ms・原文2/2となった。Main187 objectと検査器197 objectはnative依存が整合し、guard最大RSS1,599,488 KiB・残存0。利用ラベルは0で、80人性能・LLVMの2/3・総token改善・品質を改善したとは扱わない。32件それぞれの当時の原因とも断定しない。回答モデル追加0・本体未採用を維持する。[失敗と修正後の実記録](docs/source-published-lexical.md)。
 
 次の順序を固定する。
 
-1. 検査済みfull runtime `62d637b7`と、新しい字句の部品候補を混同しない。字句候補は通常サービス接続のビルドとContractAuditが未完了で、再開前に実際の空き容量を確認する。ビルド/DB/modelの2 GiB保護条件を下げない。未知のpolicyを持つ元seedへ印だけを付けない。未変更fact/postingsを再投入する修正を繰り返さない。通常差分と長いターンの利用再生が有界に進むことも必要で、単発のwarm成功で代用しない。
+1. LLVMで検査したfull runtime `62d637b7`と、小規模の実フックまで通した隔離runtime `bc358133`を混同しない。通常サービス接続とContractAuditは完了したが、旧非空DBの再索引と未吸収差分は未完了である。ビルド/DB/modelの2 GiB保護条件を下げない。未知のpolicyを持つ元seedへ印だけを付けない。未変更fact/postingsを再投入する修正を繰り返さない。通常差分と長いターンの利用再生が有界に進むことも必要で、単発のwarmや小規模2/2で代用しない。
 2. 固定snapshotで残る選択脱落と、出版後に索引が使えなくなる問題を分けて扱う。[選択段階の証拠](docs/available-evidence.md)を出発点に、失敗済みの費用・表示・係数・予約枠・歴史的質問の橋渡しを再試行しない。候補にある原文を描画だけで戻せるとは扱わない。
 3. DBサービスが準備済みsnapshotを保持し、照会でpinした出版までの未吸収差分と合わせて扱う。原文・字句・3辺・vector・認定索引の被覆境界を明示する。古いsnapshotだけを返したり、索引の検証を外したりして新しい記憶を落とさない。質問に依存しない準備は出版差分で進め、フックで全体再構築しない。
 4. 実DBへの追加・更新・削除で準備債務と実フックを測り、完全再構築器との一致、3辺、旧pin、複数DB、権限、80接続を検査する。小さな合成fixtureの79〜98 msを80人性能にしない。

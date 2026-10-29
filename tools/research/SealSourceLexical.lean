@@ -44,6 +44,24 @@ private partial def size (path : System.FilePath) : IO Nat := do
   for entry in ← path.readDir do bytes := bytes+(← size entry.path)
   return bytes
 
+private def collectTrial (original destination : System.FilePath) : IO Unit := do
+  IO.FS.createDirAll destination
+  for entry in ← original.readDir do
+    let kind := (← entry.path.symlinkMetadata).type
+    if kind == .file && (entry.fileName.endsWith ".json" || entry.fileName == "recall-body.txt") then
+      IO.FS.writeFile (destination / entry.fileName) (← IO.FS.readFile entry.path)
+    else if kind == .dir && (← (entry.path / "record.json").pathExists) then
+      IO.FS.createDir (destination / entry.fileName)
+      for name in ["record.json","stdin","stdout","stderr"] do
+        IO.FS.writeFile (destination / entry.fileName / name) (← IO.FS.readFile (entry.path / name))
+  let receipts := original / "recall-data/receipts"
+  if ← receipts.pathExists then
+    IO.FS.createDir (destination / "receipts")
+    for receipt in ← receipts.readDir do
+      for entry in ← receipt.path.readDir do
+        if entry.fileName.endsWith ".json" then
+          IO.FS.writeFile (destination / "receipts" / entry.fileName) (← IO.FS.readFile entry.path)
+
 private partial def retiredSeedData (path : System.FilePath) : IO (Array System.FilePath) := do
   if !(← path.pathExists) || (← path.symlinkMetadata).type != .dir then return #[]
   let mut targets := #[]
@@ -59,6 +77,169 @@ private partial def retiredSeedData (path : System.FilePath) : IO (Array System.
 
 def main (args : List String) : IO Unit := do
   IO.FS.createDirAll output
+  if args == ["seal-runtime-records"] then
+    finished (output / "native-query-hook.guard.json")
+    let old := root / "source-lexical-native/trial"
+    let checked := root / "source-lexical-query-native/trial"
+    let status ← read (output / "native-query-status.json")
+    let identity ← IO.ofExcept ((status.getObjValD "source").getObjValAs? String "identity")
+    let mut absent : Array String := #[]
+    for data in [old / "data",old / "recovery-data",old / "recall-data",checked / "recall-data"] do
+      let path := data / "read-cache" / identity / "lexical"
+      unless !(← path.pathExists) do throw (IO.userError "actual hook data root contains duplicate lexical index")
+      absent := absent.push path.toString
+    IO.FS.writeFile (output / "actual-private-lexical.json") (Json.mkObj [
+      ("actualDataRootsChecked",toJson absent),("allAbsent",toJson true)]).pretty
+    IO.FS.writeFile (output / "native-lifecycle/source.cpp") (← IO.FS.readFile (old / "src/source.cpp"))
+    let mut guards := #[]
+    for entry in ← root.readDir do
+      if entry.fileName.startsWith "source-lexical-" && entry.fileName.endsWith ".guard.json" then
+        guards := guards.push (← read entry.path)
+    IO.FS.writeFile (output / "all-integration-build-guards.json") (Json.arr guards).pretty
+    let artifact ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",(root / "source-lexical-query-runtime-build/StudyMain").toString]}
+    unless artifact.exitCode == 0 do throw (IO.userError "current native runtime artifact missing")
+    IO.FS.writeFile (output / "current-runtime.sha256") artifact.stdout
+    IO.println "Sealed actual private-root checks, current runtime and full build stop history"
+    return
+  if args == ["retire-native-fixtures"] then
+    finished (output / "native-query-hook.guard.json")
+    unless (← (output / "actual-private-lexical.json").pathExists) &&
+        (← (output / "native-query-recall/recall-audit.json").pathExists) &&
+        !(← (output / "retired-native-fixtures.json").pathExists) do throw (IO.userError "seal native fixtures before retirement")
+    let targets := #[root / "source-lexical-native",root / "source-lexical-query-native",root / "source-lexical-query-hook-build/StudyMain"]
+    let mut rows := #[]
+    for target in targets do
+      let arguments := if (← target.symlinkMetadata).type == .dir then #["-t","+D",target.toString] else #["-t",target.toString]
+      let opened ← IO.Process.output {cmd := "/usr/sbin/lsof",args := arguments}
+      unless opened.exitCode == 1 && opened.stdout.trimAscii.isEmpty do throw (IO.userError "native fixture still open")
+      rows := rows.push (target.toString,← size target)
+    let report := Json.mkObj [("targets",toJson rows),("archiveCreated",toJson false),
+      ("originalSeedSourceModelAndValidatedBaselineRetained",toJson true),
+      ("currentQueryRuntimeSourcesObjectsAndInterfacesRetained",toJson true)]
+    IO.FS.writeFile (output / "retired-native-fixtures.json") (report.setObjVal! "completed" (toJson false)).pretty
+    for target in targets do remove target
+    IO.FS.writeFile (output / "retired-native-fixtures.json") (report.setObjVal! "completed" (toJson true)).pretty
+    IO.println "Deleted finished native fixture DB/cache/install and helper executable, without archives"
+    return
+  if args == ["retire-checked-helpers"] then
+    unless (← (output / "native-lifecycle/recall-audit.json").pathExists) &&
+        (← (output / "ordinary-integration-executed.stdout").pathExists) &&
+        !(← (output / "retired-checked-helpers.json").pathExists) do throw (IO.userError "retain completed native checks before retirement")
+    let targets := #[root / "source-lexical-integration-build/StudyMain",root / "source-lexical-hook-build/StudyMain",
+      root / "source-lexical-runtime-build/StudyMain",root / "source-lexical-native/prefix",root / "build-input-digest-resume"]
+    let mut rows := #[]
+    for target in targets do
+      let arguments := if (← target.symlinkMetadata).type == .dir then #["-t","+D",target.toString] else #["-t",target.toString]
+      let opened ← IO.Process.output {cmd := "/usr/sbin/lsof",args := arguments}
+      unless opened.exitCode == 1 && opened.stdout.trimAscii.isEmpty do throw (IO.userError "completed native helper is still in use")
+      rows := rows.push (target.toString,← size target)
+    let report := Json.mkObj [("targets",toJson rows),("archiveCreated",toJson false),
+      ("currentQueryRuntimeAndOriginalModelSeedBaselineSourceObjectsInterfacesRetained",toJson true)]
+    IO.FS.writeFile (output / "retired-checked-helpers.json") (report.setObjVal! "completed" (toJson false)).pretty
+    for target in targets do remove target
+    IO.FS.writeFile (output / "retired-checked-helpers.json") (report.setObjVal! "completed" (toJson true)).pretty
+    IO.println "Deleted completed helper executables, their temporary install and ABI fixture without archiving"
+    return
+  if args == ["seal-lifecycle-failure"] then
+    let guard ← read (output / "native-hook.guard.json")
+    unless guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (1 : Nat) &&
+        guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
+        !(← (output / "native-lifecycle").pathExists) do throw (IO.userError "preserve finished failed native lifecycle")
+    collectTrial (root / "source-lexical-native/trial") (output / "native-lifecycle")
+    IO.println "Preserved actual native save/recovery success and readonly delivery failure separately"
+    return
+  if args == ["prepare-query-lifecycle"] then
+    for label in ["source-lexical-query-runtime","source-lexical-query-hook"] do buildFinished label
+    unless (← (output / "native-lifecycle/recall-audit.json").pathExists) &&
+        !(← (root / "source-lexical-query-native").pathExists) &&
+        !(← (output / "native-query-hook.guard.json").pathExists) do throw (IO.userError "preserve first attempt and use fresh query-cache check")
+    IO.FS.writeFile (root / "source-lexical-query-native.guard-settings.json") (Json.mkObj [
+      ("record",toJson (output / "native-query-hook.guard.json").toString),("cwd",toJson project.toString),
+      ("ownedPrefixes",toJson #[root.toString]),("minFreeKiB",toJson (2097152 : Nat)),("limitRssKiB",toJson (3670016 : Nat)),
+      ("command",toJson #["/usr/bin/env","LEAN_NUM_THREADS=1",
+        "EGGSHELL_DATA_ROOT=" ++ (root / "source-lexical-query-native/trial/data").toString,
+        (root / "source-lexical-query-hook-build/StudyMain").toString,
+        (root / "source-lexical-query-runtime-build/StudyMain").toString,(root / "source-lexical-query-native").toString,
+        (root / "source-lexical-native/trial/output.egg").toString,(root / "source-lexical-native/trial").toString])]).pretty
+    IO.println "Prepared fixed-source native recall with isolated query transient cache"
+    return
+  if args == ["verify-query-native"] then
+    for label in ["source-lexical-query-runtime","source-lexical-query-hook"] do
+      buildFinished label
+      let destination := output / System.FilePath.mk (label ++ "-closure.json")
+      unless !(← destination.pathExists) do throw (IO.userError "preserve query runtime native audit")
+      let audited ← IO.Process.output {
+        cmd := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean"
+        args := #["-M1024","--run",(project / "tools/research/StudyBuildClosureAudit.lean").toString,
+          (root / "cached-usage-runtime-build").toString,(root / System.FilePath.mk (label ++ "-build")).toString,destination.toString]}
+      unless audited.exitCode == 0 do throw (IO.userError audited.stderr)
+      let settings ← read (root / System.FilePath.mk (label ++ "-build.guard-settings.json"))
+      IO.FS.writeFile (output / System.FilePath.mk (label ++ "-build.guard.json"))
+        (← IO.FS.readFile (.mk (← IO.ofExcept (settings.getObjValAs? String "record"))))
+    let some (prior,_) ← source? (← objects (root / "source-lexical-runtime-build")) "KeyedSearchProvider" |
+      throw (IO.userError "prior keyed provider source witness is absent")
+    let before := root / "source-lexical-prior-keyed.lean"
+    IO.FS.writeFile before prior
+    let difference ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/Eggshell/KeyedSearchProvider.lean",
+      "--label","b/Eggshell/KeyedSearchProvider.lean",before.toString,(root / "core/Eggshell/KeyedSearchProvider.lean").toString]}
+    unless difference.exitCode == 1 do throw (IO.userError "isolated query-cache change missing")
+    IO.FS.writeFile (output / "query-cache.patch") difference.stdout
+    IO.FS.removeFile before
+    IO.println "Verified query runtime and harness native closures and preserved isolated initialization fix"
+    return
+  if args == ["seal-query-lifecycle"] then
+    finished (output / "native-query-hook.guard.json")
+    let trial := root / "source-lexical-query-native/trial"
+    let previous ← read (output / "native-lifecycle/recall-required-before-delivery.json")
+    let current ← read (trial / "recall-required-before-delivery.json")
+    for key in ["files","workspace","prompt","required"] do
+      unless previous.getObjValD key == current.getObjValD key do throw (IO.userError "fixed-source native recall conditions changed")
+    let audited ← read (trial / "recall-audit.json")
+    unless audited.getObjValD "sameSourceFacts" == toJson true &&
+        audited.getObjValD "samePublishedPagePrefix" == toJson true &&
+        (audited.getObjValD "availableDelivery").getObjValD "delivered" == toJson (2 : Nat) do
+      throw (IO.userError "native readonly recall did not preserve source and deliver both originals")
+    unless !(← (output / "native-query-recall").pathExists) do throw (IO.userError "preserve native query recall evidence")
+    collectTrial trial (output / "native-query-recall")
+    IO.FS.writeFile (output / "native-query-status.json") (← IO.FS.readFile (root / "source-lexical-query-native/source-lexical.json"))
+    IO.println "Sealed same-source native hook recall; this is no answering-model or adoption comparison"
+    return
+  if args == ["prepare-lifecycle"] then
+    for label in ["source-lexical-integration","source-lexical-runtime","source-lexical-hook"] do buildFinished label
+    unless !(← (root / "source-lexical-native").pathExists) && !(← (output / "native-hook.guard.json").pathExists) do
+      throw (IO.userError "preserve previous actual native lifecycle")
+    IO.FS.writeFile (root / "source-lexical-native.guard-settings.json") (Json.mkObj [
+      ("record",toJson (output / "native-hook.guard.json").toString),("cwd",toJson project.toString),
+      ("ownedPrefixes",toJson #[root.toString]),("minFreeKiB",toJson (2097152 : Nat)),("limitRssKiB",toJson (3670016 : Nat)),
+      ("command",toJson #["/usr/bin/env","LEAN_NUM_THREADS=1",
+        "EGGSHELL_DATA_ROOT=" ++ (root / "source-lexical-native/trial/data").toString,
+        (root / "source-lexical-hook-build/StudyMain").toString,
+        (root / "source-lexical-runtime-build/StudyMain").toString,(root / "source-lexical-native").toString])]).pretty
+    IO.println "Prepared actual isolated native hooks, source-only recovery and readonly recall"
+    return
+  if args == ["verify-integrated-native"] then
+    for label in ["source-lexical-integration","source-lexical-runtime","source-lexical-hook"] do
+      buildFinished label
+      let destination := output / System.FilePath.mk (label ++ "-closure.json")
+      unless !(← destination.pathExists) do throw (IO.userError "preserve prior integrated native audit")
+      let audited ← IO.Process.output {
+        cmd := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean"
+        args := #["-M1024","--run",(project / "tools/research/StudyBuildClosureAudit.lean").toString,
+          (root / "cached-usage-runtime-build").toString,(root / System.FilePath.mk (label ++ "-build")).toString,destination.toString]}
+      unless audited.exitCode == 0 do throw (IO.userError audited.stderr)
+      IO.FS.writeFile (output / System.FilePath.mk (label ++ ".stdout")) audited.stdout
+      let settings ← read (root / System.FilePath.mk (label ++ "-build.guard-settings.json"))
+      IO.FS.writeFile (output / System.FilePath.mk (label ++ "-build.guard.json"))
+        (← IO.FS.readFile (.mk (← IO.ofExcept (settings.getObjValAs? String "record"))))
+    IO.FS.writeFile (output / "ordinary-integration.stdout")
+      (← IO.FS.readFile (root / "source-lexical-integration-build/tools_research_SourceLexicalIntegrationAudit-lean.stdout"))
+    IO.FS.writeFile (output / "contract-audit.stdout")
+      (← IO.FS.readFile (root / "source-lexical-integration-build/Eggshell_ContractAudit-lean.stdout"))
+    let executed ← IO.Process.output {cmd := (root / "source-lexical-integration-build/StudyMain").toString}
+    unless executed.exitCode == 0 do throw (IO.userError "compiled integration audit did not execute")
+    IO.FS.writeFile (output / "ordinary-integration-executed.stdout") executed.stdout
+    IO.println "Audited actual integration, product runtime and native harness object closures"
+    return
   if args == ["retire-earlier-seeds"] then
     unless !(← (output / "retired-earlier-seeds.json").pathExists) do throw (IO.userError "preserve earlier-seed retirement")
     let base := study.parent.get!

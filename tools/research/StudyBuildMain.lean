@@ -88,6 +88,17 @@ private def sourceStamp (path : System.FilePath) (source : String) : IO String :
     included := included.push (name,bytes)
   return (toJson (source,included)).compress
 
+private def validDigest (value : String) : Bool :=
+  value.length == 64 && value.toList.all (fun c => ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f'))
+
+/-- Keep each compiled module's full .source witness, but reference its exact
+UTF-8 bytes by SHA-256 in transitive closures. No shell evaluates source text. -/
+private def stampDigest (value : String) : IO String := do
+  let result ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256"]} (some value)
+  let digest := (result.stdout.splitOn " ").headD ""
+  check (result.exitCode == 0 && validDigest digest) "cannot digest native input stamp"
+  return digest
+
 private def run (settings : Settings) (label command : String) (args : Array String) : IO Unit := do
   let library := settings.output ++ "/lib:" ++ settings.core ++ "/.lake/build/lib/lean:" ++ settings.toolchain ++ "/lib/lean"
   let result ← IO.Process.output {cmd := command,args,env := #[("LEAN_PATH",some library)]}
@@ -103,13 +114,15 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
   let source := (if name.startsWith "tools.research." then settings.project else settings.core) ++ "/" ++ path ++ ".lean"
   if !(← System.FilePath.pathExists source) then
     check (← System.FilePath.pathExists (settings.toolchain ++ "/lib/lean/" ++ path ++ ".olean")) s!"missing module: {name}"
+    let stamp ← stampDigest (toJson (settings.toolchain,name)).compress
     state.modify fun s => {s with
       done := s.done.insert name false,active := s.active.erase name
-      inputStamps := s.inputStamps.insert name (toJson (settings.toolchain,name)).compress
+      inputStamps := s.inputStamps.insert name stamp
       closures := s.closures.insert name (({} : Std.HashSet String).insert name)}
     return false
   let text ← IO.FS.readFile source
   let stamp ← sourceStamp (.mk source) text
+  let inputDigest ← stampDigest stamp
   let mut changed := false
   let mut closure := ({} : Std.HashSet String).insert name
   for dependency in imports text do
@@ -117,7 +130,7 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
     for included in (← state.get).closures[dependency]?.getD {} do
       closure := closure.insert included
   state.modify fun s => {s with
-    inputStamps := s.inputStamps.insert name stamp
+    inputStamps := s.inputStamps.insert name inputDigest
     closures := s.closures.insert name closure}
   -- A failed build may already have refreshed a dependency. Its compile flag
   -- is false on retry, so it cannot establish whether a cached parent is new.
@@ -245,6 +258,64 @@ def build (input : String) : IO Unit := do
   IO.FS.writeFile (settings.output ++ "/build.json") (Json.mkObj [
     ("settings",toJson settings),("modules",toJson state.records),("newPythonOrRuby",toJson false)]).pretty
 
+private partial def dependencyFiles (root : System.FilePath) : IO (Array System.FilePath) := do
+  let mut files := #[]
+  for entry in ← root.readDir do
+    let kind := (← entry.path.symlinkMetadata).type
+    if kind == .dir && !["numerical-owned-20261024",".git","node_modules","models","lib"].contains entry.fileName then
+      files := files ++ (← dependencyFiles entry.path)
+    else if kind == .file && entry.fileName.endsWith ".dependencies" &&
+        (← (entry.path.withExtension "source").pathExists) then files := files.push entry.path
+  return files
+
+/-- One-time in-place compaction of research build metadata. Full .source,
+objects, interfaces, runtime binaries and DBs are never modified. Equality of
+all observed input strings is preserved by checking the reverse digest map. -/
+def compactDependencies (directory report : System.FilePath) : IO Unit := do
+  check (directory == .mk "/Users/ovm/.codex/experiments/eggshell" && !(← report.pathExists))
+    "explicit research metadata root and fresh report required"
+  let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (processes.exitCode == 0 && (processes.stdout.splitOn "StudyBuildMain.lean").length ≤ 2)
+    "another native builder may be using dependency metadata"
+  let mut known : Std.HashMap String String := {}
+  let mut reversed : Std.HashMap String String := {}
+  let mut plans : Array (System.FilePath × String × String × Nat) := #[]
+  for path in ← dependencyFiles directory do
+    let original ← IO.FS.readFile path
+    let values : Array (String × String) ← IO.ofExcept (fromJson? (← IO.ofExcept (Json.parse original)))
+    let mut encoded := #[]
+    for (name,value) in values do
+      let digest ← if validDigest value then pure value else do
+        if let some existing := known[value]? then pure existing else do
+          let digest ← stampDigest value
+          if let some previous := reversed[digest]? then
+            check (previous == value) "distinct observed input stamps have the same digest"
+          known := known.insert value digest
+          reversed := reversed.insert digest value
+          pure digest
+      encoded := encoded.push (name,digest)
+    let compact := (toJson encoded).compress
+    if compact != original then plans := plans.push (path,← stampDigest original,compact,original.utf8ByteSize)
+  IO.FS.createDirAll report.parent.get!
+  let entries := plans.map fun (path,before,after,bytes) => Json.mkObj [
+    ("path",toJson path.toString),("beforeSha256",toJson before),
+    ("beforeBytes",toJson bytes),("afterBytes",toJson after.utf8ByteSize)]
+  let record := Json.mkObj [("files",Json.arr entries),("uniqueInputStamps",toJson known.size),
+    ("observedDigestCollisions",toJson (0 : Nat)),("fileCount",toJson plans.size),
+    ("beforeBytes",toJson (plans.foldl (fun total row => total+row.2.2.2) 0)),
+    ("afterBytes",toJson (plans.foldl (fun total row => total+row.2.2.1.utf8ByteSize) 0)),
+    ("sourceObjectsInterfacesRuntimesAndDatabasesUnchanged",toJson true),("archiveCreated",toJson false)]
+  IO.FS.writeFile report (record.setObjVal! "completed" (toJson false)).pretty
+  for (path,before,after,_) in plans do
+    check ((← stampDigest (← IO.FS.readFile path)) == before) "dependency metadata changed during compaction"
+    let temporary := path.withExtension "dependencies.compacting"
+    check (!(← temporary.pathExists)) "unexpected metadata compaction temporary"
+    IO.FS.writeFile temporary after
+    IO.FS.rename temporary path
+  IO.FS.writeFile report (record.setObjVal! "completed" (toJson true)).pretty
+  IO.println (Json.mkObj [("files",toJson plans.size),("uniqueInputStamps",toJson known.size),
+    ("beforeBytes",record.getObjValD "beforeBytes"),("afterBytes",record.getObjValD "afterBytes")]).compress
+
 end Eggshell.Research.StudyBuild
 open Eggshell.Research.StudyBuild
 
@@ -293,6 +364,17 @@ private def resumeAudit (directory : String) : IO Unit := do
 
 def main (args : List String) : IO UInt32 := do
   try
+    if let ["compact-dependencies",directory,report] := args then
+      compactDependencies (.mk directory) (.mk report)
+      return 0
+    if args == ["digest-check"] then
+      let digest ← stampDigest "abc"
+      check (digest == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad") "SHA-256 boundary disagrees"
+      let first ← stampDigest (toJson ("source",#[ ("payload","日本語\n") ])).compress
+      let second ← stampDigest (toJson ("source",#[ ("payload","日本語\nchanged") ])).compress
+      check (first != second) "included-byte change did not change its digest"
+      IO.println "Native source metadata digest boundary passed"
+      return 0
     if let ["resume-check",directory] := args then
       resumeAudit directory
       return 0
