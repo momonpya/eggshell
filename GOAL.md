@@ -51,6 +51,8 @@
 
 消費辺の全元来歴再生を、変更session/turnのpostingsからの再生へ置き換える隔離候補を、実際の原文・時刻の出版と`Build.refresh`へ接続した。初期8群16観測に対し、遅れて出版されたproducerは17件中3件、別sessionの追加は19件中1件だけ再生し、全5状態で全fact集合と全来歴の独立再生による消費辺が一致した。削除、別時計領域、変更ownerの欠落、序数の穴、cache posting欠落、他DB、旧pin、変更なしwarmも検査した。支持は非空、共引用0のfixtureであり全3辺の実運用検証ではない。小さなfixtureのrefreshは71〜80 msだが、フック/80人性能にはしない。既存fact・候補header・Allの全件読取りと、準備済みsnapshot＋未処理差分のサービス経路は残る。次はその全件処理を、元のowner/Workの索引とfactの更新対象の逆引きへ置き換える。固定snapshotの選択脱落も別に残し、古いsnapshotへ固定して98%の分母を減らさない。本体未採用、実フック/回答model追加0、総token/品質/98%/80人は未達。[差分来歴再生と限界](docs/trace-cache.md)。
 
+続く隔離候補で、シナプスの差分更新から全fact・全candidate header・全All headerの走査を除いた。元DBのWork/Allの索引、保存済みnodeHashと衝突bucket、追加した保守用factのpostingsを使い、元ownerの数値Work IDも照合する。保守キーが推薦の辺を追加しないこととreadOwnerの対応をLeanで証明した。凍結した前実装の全件再構築と、全5状態の全fact集合・全Workの両方向閉包が一致した。別質問への1観測追加では全29候補のうち2候補、保守用の旧fact 0行、All header 2件を扱った。小さなfixtureの79 msであり、実フックや80人性能にしない。無関係なfactは不変索引に残し、巨大で広い影響範囲を定数時間と約束しない。字句など他のwarm、実DBでの増加/更新/フック、準備済みsnapshot＋未処理差分のサービス経路は残る。固定snapshotの最新実配送2/3は改善しておらず、実フック/回答model追加0、総token/品質/98%/80人は未達。本体未採用のまま、次は実際のruntimeでこの候補を接続・検査する。[差分更新と凍結した比較器](docs/maintenance-delta.md)。
+
 共有行ACKを利用辺へ復元し、分類器に対応する私有索引と再生checkpointを扱う候補も検証済み。実本文からの模擬確認済みキー1,521 Readと、派生索引を失った12ターンの8件・4件再生を確認した。実seedの共有行ACKは0なので、この修正自体をseedの配送改善とは扱わない。[共有行と派生再生](docs/shared-read-receipt.md)。
 
 質問ベクトルの共通cacheも、選択済みの一つのwrite DBに対応する私有cacheへ分離する候補を検証済み。read DBの順序へ依存せず、元DB不変・別プロジェクト間miss・新チャットhitを確認した。本体未採用。[境界と結果](docs/project-query-cache.md)。

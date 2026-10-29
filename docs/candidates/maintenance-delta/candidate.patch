@@ -1,0 +1,365 @@
+--- a/Eggshell/SynapticTopology.lean
++++ b/Eggshell/SynapticTopology.lean
+@@ -31,9 +31,13 @@
+   | quotation (digest : String)
+   | query (digest : String)
+   | usage (source : Range)
++  | readOwner (database owner : String)
++  | answerOwner (database owner : String)
++  | readWork (database work : String)
++  | observedTurn (session turn : String)
+   deriving Repr, DecidableEq, BEq, ReflBEq, LawfulBEq, ToJson, FromJson
+ 
+-def addresses : Fact → Array Key
++def advisoryAddresses : Fact → Array Key
+   | .read recorded => #[.owner recorded.binding.database recorded.binding.owner, .source recorded.source, .subject recorded.source.subject] ++
+       recorded.quotations.map Key.quotation
+   | .supports support => #[
+@@ -42,6 +46,33 @@
+   | .coquoted group source => #[.group group, .quoted source]
+   | .used usage => #[.query usage.query, .usage usage.source]
+ 
++/-- Maintenance postings locate exactly the data replaced by an update.
++They do not add advisory reachability or change the evidence being stored. -/
++def maintenanceAddresses : Fact → Array Key
++  | .read read => #[.readOwner read.binding.database read.binding.owner,.readWork read.binding.database read.binding.work]
++  | .supports support => #[.readOwner support.read.binding.database support.read.binding.owner,
++      .answerOwner support.claim.database support.claim.answer]
++  | .coquoted (.answer database answer) _ => #[.answerOwner database answer]
++  | .coquoted (.claim claim) _ => #[.answerOwner claim.database claim.answer]
++  | .consumed edge => #[.observedTurn edge.consumer.session edge.consumer.turn]
++  | .used _ => #[]
++
++def addresses (fact : Fact) : Array Key := advisoryAddresses fact ++ maintenanceAddresses fact
++
++def maintenanceKey : Key → Bool
++  | .readOwner .. | .answerOwner .. | .readWork .. | .observedTurn .. => true
++  | _ => false
++
++theorem read_owner_address (database owner : String) (fact : Fact) :
++    Key.readOwner database owner ∈ addresses fact ↔
++      match fact with
++      | .read read => database = read.binding.database ∧ owner = read.binding.owner
++      | .supports support => database = support.read.binding.database ∧ owner = support.read.binding.owner
++      | _ => False := by
++  cases fact with
++  | coquoted group source => cases group <;> simp [addresses,advisoryAddresses,maintenanceAddresses]
++  | _ => simp [addresses,advisoryAddresses,maintenanceAddresses]
++
+ def contentKey [ToJson α] (value : α) : String :=
+   Blake3.hex (Blake3.digest "eggshell.synaptic-object".toUTF8 [(toJson value).compress.toUTF8])
+ 
+@@ -125,6 +156,10 @@
+       ⟨#[.range value.source], #[.quoted value.source]⟩ else {}
+   | _, _ => {}
+ 
++theorem maintenance_no_route (key : Index.Key) (fact : Fact) (maintenance : Index.maintenanceKey key = true) :
++    project key fact = {} := by
++  cases key <;> cases fact <;> simp_all [Index.maintenanceKey,project]
++
+ /-- Projection cannot invent a recommended target. Control authority remains
+ outside this module: a supported target is still only an advisory witness. -/
+ theorem project_carries (key : Index.Key) (fact : Fact) (target : Target)
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -20,6 +20,7 @@
+     (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
+     (include_str "SynapseProvenance.lean").toUTF8, (include_str "ObservationAge.lean").toUTF8,
+     (include_str "SynapseTraceCache.lean").toUTF8,
++    (include_str "SynapseMaintenance.lean").toUTF8,
+     (include_str "ContentCapture.lean").toUTF8,(include_str "ContentMetadata.lean").toUTF8,
+     (include_str "MetadataBytes.lean").toUTF8,
+     (include_str "../tools/ContentCorrespondence.lean").toUTF8,
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.SynapseIndex
+ public import Eggshell.SynapseTraceCache
++public import Eggshell.SynapseMaintenance
+ 
+ @[expose] public section
+ 
+@@ -112,6 +113,9 @@
+   provenanceIgnored : Nat := 0
+   provenanceGroups : Nat := 0
+   provenanceRecordsRead : Nat := 0
++  scopedCandidates : Nat := 0
++  maintenanceFactRows : Nat := 0
++  maintenanceAllHeaders : Nat := 0
+   answers : Nat := 0
+   unsupported : Nat := 0
+   facts : Nat := 0
+@@ -191,26 +195,31 @@
+   let compatible := metadata.filter fun value => value.implementation == Index.implementation && value.scope == .shared
+   let delta ← compatible.bindM fun value => changes snapshot value.source
+   let incremental := delta.isSome
+-  let previousFacts ← if incremental then previous.mapM Index.allFacts else pure none
+-  let old := previousFacts.getD #[]
+-  Index.checkFacts snapshot.head.identity .shared old
+-  let catalog ← entries snapshot
+-  let all ← topology snapshot
++  let priorReader := match previous,compatible with
++    | some index,some manifest => some ({index,manifest} : Index.Reader)
++    | _,_ => none
+   let mut changed := delta.getD {}
+   let mut preparedAdditions := {}
+   for (id,extra) in additions do
+-    unless !preparedAdditions.contains id && extra.sealed && catalog.any (·.id == id) do
++    unless !preparedAdditions.contains id && extra.sealed && (← Maintenance.entry? snapshot id).isSome do
+       throw (IO.userError "supplement does not name one live original owner")
+     let located ← locateOutcome snapshot id
+     changed := {changed with owners := changed.owners.insert id,works := changed.works.insert located.header.work}
+     preparedAdditions := preparedAdditions.insert id extra
+-  let affectedWorks := closure (reverse all) changed.works.toArray
+   let documents : Documents snapshot := {
+     reader := ← NodeReader.new snapshot
+     cache := ← IO.mkRef {}
+     catalogs := ← IO.mkRef {}
+     prepared := previous
+     additions := preparedAdditions}
++  let view ← Maintenance.View.new snapshot
++  let affectedWorks ← if incremental then view.closure true changed.works.toArray else pure {}
++  let catalog ← if incremental then do
++      let selectedDocs ← supportDocuments snapshot affectedWorks.toList
++      pure (selectedDocs.toArray.map fun entry => ({id := entry.owner,work := entry.work} : Entry))
++    else entries snapshot
++  let all ← if incremental then pure {} else topology snapshot
++  let touched : Option Maintenance.Facts ← if incremental then priorReader.mapM Maintenance.Facts.new else pure none
+   let mut readOwners := #[]
+   let mut answerOwners := #[]
+   let mut retiredReads : Std.HashSet String := {}
+@@ -229,50 +238,74 @@
+     let value ← readNode snapshot snapshot.get id
+     retiredReads := retiredReads.insert (Persistence.selectionKey value)
+     retiredAnswers := retiredAnswers.insert (Persistence.selectionKey value)
+-  -- A source retraction also invalidates its former answer/coquotation groups.
+-  for fact in old do
+-    if let .supports support := fact then
+-      if retiredReads.contains support.read.binding.owner then
+-        retiredAnswers := retiredAnswers.insert support.claim.answer
++  -- Find dependent answers through the changed original owner, never by
++  -- decoding every fact in an unrelated project history.
++  if let some touched := touched then
++    for owner in retiredReads do touched.include (.readOwner snapshot.head.identity owner)
++    for fact in ← touched.snapshot do
++      if let .supports support := fact then retiredAnswers := retiredAnswers.insert support.claim.answer
+   for answer in retiredAnswers do
+     if let some id ← ownerId? snapshot answer then
+-      if !answerOwners.any (·.id == id) && catalog.any (·.id == id) then
++      if !answerOwners.any (·.id == id) then
++        let some entry ← Maintenance.entry? snapshot id | continue
+         let doc ← documents.get id
+         if !doc.native then
+-          let entry := catalog.find? (·.id == id)
+-          if let some entry := entry then answerOwners := answerOwners.push entry
++          answerOwners := answerOwners.push ⟨entry.owner,entry.work⟩
+   let traces ← if incremental then
+       match previous with
+       | some previous => TraceCache.prepare snapshot previous changed.owners documents.get
+       | none => throw (IO.userError "incremental trace preparation lost its prior pin")
+     else TraceCache.rebuild snapshot
++  if let some touched := touched then
++    for answer in retiredAnswers do touched.include (.answerOwner snapshot.head.identity answer)
++    for group in traces.changed do touched.include (.observedTurn group.session group.turn)
++  let old : Array Fact ← match touched with | none => pure #[] | some facts => facts.snapshot
+   for fact in old do
+     if let .consumed edge := fact then
+       unless TraceCache.group edge.producer == TraceCache.group edge.consumer do
+         throw (IO.userError "cached consumption crosses original session/turn replay partitions")
+-  let mut graph ← IO.ofExcept (Graph.ofFacts (old.filter fun fact => match fact with
+-    | .consumed edge => incremental && !TraceCache.affected traces.changed edge
+-    | other => retain retiredReads retiredAnswers true other))
++  let mut graph : Graph := .empty
+   for entry in readOwners do
++    let doc ← documents.get entry.id
++    view.workKeys.modify (·.insert entry.work doc.work)
+     let catalog ← documents.catalog entry.id
+     if catalog.located.isEmpty then unsupported := unsupported+1
+     for read in catalog.reads do graph ← IO.ofExcept (graph.insert (.read read))
+-  let reads := graph.snapshot.filterMap fun fact => match fact with | .read read => some read | _ => none
+-  let mut workIds : Std.HashMap String Nat := {}
+-  for entry in catalog do
+-    if let some doc := (← documents.cache.get)[entry.id]? then workIds := workIds.insert doc.work entry.work
+-  -- Resolve only recorded read owners whose metadata was reused.
++  let newReads := graph.snapshot.filterMap fun fact => match fact with | .read read => some read | _ => none
++  let mut workReads : Std.HashMap Nat (Array Read) := {}
+   let mut readIds : Std.HashMap String Nat := {}
+-  for read in reads do
+-    if readIds.contains read.binding.owner then continue
+-    if let some id ← ownerId? snapshot read.binding.owner then
+-      let located ← locateOutcome snapshot id
+-      workIds := workIds.insert read.binding.work located.header.work
+-      readIds := readIds.insert read.binding.owner id
++  let mut readWorks : Std.HashMap String Nat := {}
+   for entry in answerOwners do
+     let doc ← documents.get entry.id
+-    let route := closure all #[entry.work]
+-    let available := reads.filter fun read => (workIds[read.binding.work]?).any route.contains
++    let route ← if incremental then view.closure false #[entry.work] else pure (closure all #[entry.work])
++    let mut availableSet : Std.HashSet Read := {}
++    for work in route do
++      let key ← view.workKey work
++      let reads ← match workReads[work]? with
++        | some reads => pure reads
++        | none => do
++          let old ← if incremental then
++              match priorReader with
++              | some reader => Maintenance.readsAt reader key
++              | none => throw (IO.userError "incremental Work lookup lost its source index")
++            else pure #[]
++          let current := old.filter (fun read => !retiredReads.contains read.binding.owner) ++
++            newReads.filter (fun read => read.binding.work == key)
++          for read in current do
++            let actual ← match readWorks[read.binding.owner]? with
++              | some work => pure work
++              | none => do
++                let some id ← ownerId? snapshot read.binding.owner |
++                  throw (IO.userError "Work read posting names a retired original owner")
++                let located ← locateOutcome snapshot id
++                readIds := readIds.insert read.binding.owner id
++                readWorks := readWorks.insert read.binding.owner located.header.work
++                pure located.header.work
++            unless actual == work do throw (IO.userError "ambiguous Work key in maintenance read posting")
++          workReads := workReads.insert work current
++          pure current
++      for read in reads do availableSet := availableSet.insert read
++    let available := availableSet.toArray
+     let files := available.foldl (fun files read =>
+       (read.source.file?.map files.insert).getD files) ({} : Std.HashSet File)
+     let citations := ((layout (doc.source.getD "")).map fun decoded =>
+@@ -332,16 +365,20 @@
+         ObservedRecordView.stage writer snapshot.head.identity document
+   let head ← if incremental then
+       let wanted := graph.facts
+-      let previous := old.foldl (fun set fact => set.insert fact) ({} : Std.HashSet Fact)
+       Index.publishDelta snapshot storage .shared (metadata.map (·.source)) {
+         removed := old.filter (!wanted.contains ·)
+-        added := facts.filter (!previous.contains ·) } prepareRecords
++        added := facts } prepareRecords
+     else Index.replace snapshot storage .shared facts prepareRecords
++  let some committed ← PageMap.open? path | throw (IO.userError "committed synaptic index disappeared")
++  let some current ← Index.manifest? {committed with head} | throw (IO.userError "committed synaptic manifest missing")
+   return {
+     mode := if incremental then "incremental" else "rebuild", source := snapshot.head, index := head
+-    candidates := catalog.size, hydrated := (← documents.cache.get).size, answers := answerOwners.size,
++    candidates := ← getNat snapshot.get "candidates", scopedCandidates := catalog.size
++    hydrated := (← documents.cache.get).size, answers := answerOwners.size
++    maintenanceFactRows := ← match touched with | none => pure 0 | some touched => touched.inspected.get
++    maintenanceAllHeaders := ← view.headersRead.get
+     consumptionRebuilt := !traces.replay.isEmpty,provenanceOriginals := portable.originals,provenanceIgnored := portable.ignored
+     provenanceGroups := traces.changed.size,provenanceRecordsRead := traces.replay.size
+-    unsupported, facts := facts.size, elapsedMs := (← IO.monoMsNow) - started}
++    unsupported, facts := current.facts, elapsedMs := (← IO.monoMsNow) - started}
+ 
+ end Eggshell.Synapses.Build
+--- /dev/null
++++ b/Eggshell/SynapseMaintenance.lean
+@@ -0,0 +1,107 @@
++module
++public import Eggshell.SynapseTraceCache
++
++@[expose] public section
++namespace Eggshell.Synapses.Maintenance
++open Lean DB Persistence.Store
++
++structure View (source : PageMap.Snapshot) where
++  forward : IO.Ref (Std.HashMap Nat (Array Nat))
++  backward : IO.Ref (Std.HashMap Nat (Array Nat))
++  workKeys : IO.Ref (Std.HashMap Nat String)
++  headersRead : IO.Ref Nat
++
++def View.new (source : PageMap.Snapshot) : IO (View source) := do
++  return ⟨← IO.mkRef {},← IO.mkRef {},← IO.mkRef {},← IO.mkRef 0⟩
++
++/-- Numeric Work references are read from the same live All directories used
++by the source producer. No Work/Outcome payload is decoded to follow an edge. -/
++def View.neighbors (view : View source) (reverse : Bool) (work : Nat) : IO (Array Nat) := do
++  let cache := if reverse then view.backward else view.forward
++  if let some found := (← cache.get)[work]? then return found
++  let population ← getNat source.get "alls"
++  unless (← getNat source.get "indexedAllReferences") == population do
++    throw (IO.userError "All reference index is incomplete")
++  let tag := if reverse then "allChild" else "allParent"
++  let mut found := #[]
++  for (ordinal,id) in ← directory source (key tag work) do
++    let member ← IO.ofExcept (payloadSize (← source.get (key "member" id)))
++    unless (← IO.ofExcept (payloadSize (← source.get (key "root" member)))) == id &&
++        (← IO.ofExcept (payloadSize (← source.get (key "allOrdinal" id)))) == ordinal &&
++        (← IO.ofExcept (payloadSize (← source.get (key "all" ordinal)))) == id && ordinal < population do
++      throw (IO.userError "maintenance All posting differs from its live source")
++    let some header := AllHeader.fromFrame? (← readFrame source source.get id) |
++      throw (IO.userError "maintenance All posting has no checked frame")
++    unless (← IO.ofExcept (payloadSize (← source.get (key "allParentOf" id)))) == header.parent do
++      throw (IO.userError "maintenance All parent inverse differs from its source")
++    view.headersRead.modify (·+1)
++    if reverse then
++      unless header.children.contains work do throw (IO.userError "maintenance child is absent from its original frame")
++      found := found.push header.parent
++    else
++      unless header.parent == work do throw (IO.userError "maintenance parent is absent from its original frame")
++      found := found ++ header.children.toArray
++  cache.modify (·.insert work found)
++  return found
++
++def View.closure (view : View source) (reverse : Bool) (roots : Array Nat) : IO (Std.HashSet Nat) := do
++  let mut queue := roots
++  let mut position := 0
++  let mut seen := {}
++  while position < queue.size do
++    let current := queue[position]!
++    position := position+1
++    if seen.contains current then continue
++    seen := seen.insert current
++    queue := queue ++ (← view.neighbors reverse current)
++  return seen
++
++/-- The source already stores nomination hashes with collision buckets.
++Read that metadata instead of decoding a potentially large Work or child.
++Callers still verify each returned original owner's numeric Work identity. -/
++def View.workKey (view : View source) (work : Nat) : IO String := do
++  if let some found := (← view.workKeys.get)[work]? then return found
++  let found := "v" ++ toString (← nodeHash source work)
++  view.workKeys.modify (·.insert work found)
++  return found
++
++def entry? (source : PageMap.Snapshot) (id : Nat) : IO (Option SearchDocument) := do
++  let some member ← source.get (key "member" id) | return none
++  let ordinal ← IO.ofExcept (payloadSize (some member))
++  if (← getNat source.get (key "candidate" id)) != 1 then return none
++  unless (← IO.ofExcept (payloadSize (← source.get (key "searchCandidate" ordinal)))) == id do
++    throw (IO.userError "maintenance owner differs from its source candidate ordinal")
++  let located ← locateOutcome source id
++  return some ⟨id,located.header.work,[],some (Sidecar.Owner.ofSnapshot source)⟩
++
++structure Facts where
++  reader : Index.Reader
++  seen : IO.Ref (Std.HashSet String)
++  values : IO.Ref (Std.HashSet Fact)
++  inspected : IO.Ref Nat
++
++def Facts.new (reader : Index.Reader) : IO Facts := do
++  return ⟨reader,← IO.mkRef {},← IO.mkRef {},← IO.mkRef 0⟩
++
++/-- Complete background bucket lookup. Exceeding a bound is an error, never a
++successful negative. No all-fact tree scan is reachable through this path. -/
++def Facts.include (facts : Facts) (key : Index.Key) : IO Unit := do
++  let name := (toJson key).compress
++  if (← facts.seen.get).contains name then return
++  let found ← facts.reader.lookup key (facts.reader.manifest.facts+1) (2^64)
++  unless found.complete do throw (IO.userError "incomplete background maintenance posting")
++  facts.inspected.modify (·+found.facts.size)
++  for fact in found.facts do facts.values.modify (·.insert fact)
++  facts.seen.modify (·.insert name)
++
++def Facts.snapshot (facts : Facts) : IO (Array Fact) := do
++  return (← facts.values.get).toArray
++
++def readsAt (reader : Index.Reader) (work : String) : IO (Array Read) := do
++  let found ← reader.lookup (.readWork reader.manifest.source.identity work) (reader.manifest.facts+1) (2^64)
++  unless found.complete do throw (IO.userError "incomplete background Work read posting")
++  found.facts.mapM fun fact => match fact with
++    | .read read => pure read
++    | _ => throw (IO.userError "Work read posting contains another fact kind")
++
++end Eggshell.Synapses.Maintenance
