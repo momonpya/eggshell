@@ -1,0 +1,95 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/Handoff.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/prepared-original-keys-core/Eggshell/Handoff.lean	2026-10-30 08:20:50
+@@ -31,6 +31,7 @@
+ public import tools.OwnerUnitPostings
+ public import tools.PreparedCueIndex
+ public import tools.PointBuckets
++public import tools.PreparedIdentity
+ public import tools.LinearOutput
+ public import tools.RangeReach
+ public import Eggshell.GeometryMemo
+@@ -5058,7 +5059,8 @@
+   hashDistinct (rows.toList.flatMap fun row => row.origins.toList.filterMap fun origin =>
+     if origin.binding.owner == owner then some (origin.binding.first,origin.binding.limit) else none)
+ 
+-def prepareCached (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
++def prepareCachedUsing (rowKey : Synapses.CanonicalSource.Key → String)
++    (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   let some work := Matcher.atomText? family.owner.work | return ([],[])
+   let owner := relationKey family.owner.relation
+@@ -5089,11 +5091,16 @@
+     seen := seen.insert ranges
+     let some shared := Synapses.CanonicalSource.Delivery.Part.check? rows | continue
+     let slice : TransportSlice := {
+-      owner := some family.owner.relation,keys := shared.keys,text := "",shared := some shared
++      owner := some family.owner.relation
++      keys := (if shared.plan.isEmpty then [] else [shared.plan]) ++ shared.rows.toList.map (fun row => rowKey row.key)
++      text := "",shared := some shared
+       members := [],visibleKeys := []}
+     units := units ++ [{family := familyIndex,slice,ranges}]
+   return (units,focused ++ family.synapticRanges.map fun (_,a,b) => (a,b))
+ 
++def prepareCached (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) :=
++  prepareCachedUsing Synapses.CanonicalSource.Delivery.rowKey familyIndex family
++
+ theorem shared_source_unit_has_no_control (family : Nat)
+     (part : Synapses.CanonicalSource.Delivery.Part) :
+     ({family,slice := {owner := none,keys := part.keys,text := "",shared := some part,members := [],visibleKeys := []},ranges := []} :
+@@ -5169,16 +5176,45 @@
+ /-- Prepare the immutable record/structure index once per owner. Each query
+ window gets its own complete local dependency closure, not a prefix of the
+ other windows of this owner. This creates no control Match. -/
+-def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
++def prepareUsing (rowKey : Synapses.CanonicalSource.Key → String)
++    (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
+   let outputs := prepareOutputs familyIndex family
+   if !family.cached.isEmpty then
+-    let records := prepareCached familyIndex family
++    let records := prepareCachedUsing rowKey familyIndex family
+     return (records.1 ++ outputs.1,records.2 ++ outputs.2)
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   if family.template.context.isNone then
+     return ([atomicUnit familyIndex source.length family],[])
+   let records := prepareOriginalRecords familyIndex family
+   return (records.1 ++ outputs.1,records.2 ++ outputs.2)
++
++def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) :=
++  prepareUsing Synapses.CanonicalSource.Delivery.rowKey familyIndex family
++
++def prepareFamilies (families : List Family) :=
++  families.zipIdx.map fun (family,index) => prepare index family
++
++def prepareFamiliesCached (families : List Family) :=
++  let files := (families.flatMap fun family => family.cached.toList.map (fun row => row.key.file)).toArray
++  let identities := PreparedIdentity.prepare (fun file : Synapses.File => Synapses.Index.contentKey file) files
++  let rowKey := fun key : Synapses.CanonicalSource.Key =>
++    "c:" ++ PreparedIdentity.get identities key.file ++ ":" ++ toString key.line
++  families.zipIdx.map fun (family,index) => prepareUsing rowKey index family
++
++@[csimp] theorem prepare_families_compiled : @prepareFamilies = @prepareFamiliesCached := by
++  funext families
++  unfold prepareFamilies prepareFamiliesCached
++  dsimp only
++  have same : (λ key : Synapses.CanonicalSource.Key =>
++      "c:" ++ PreparedIdentity.get (PreparedIdentity.prepare
++        (fun file : Synapses.File => Synapses.Index.contentKey file)
++        (families.flatMap fun family => family.cached.toList.map (fun row => row.key.file)).toArray) key.file ++
++      ":" ++ toString key.line) = Synapses.CanonicalSource.Delivery.rowKey := by
++    funext key
++    rw [PreparedIdentity.get_exact]
++    rfl
++  rw [same]
++  rfl
+ 
+ def join (prior next : TransportSlice) : Option TransportSlice := do
+   match prior.context,next.context with
+@@ -5800,7 +5836,7 @@
+       Synapses.CanonicalSource.Packet.wrapper ++ Synapses.CanonicalSource.Packet.footer ++ "\n" else ""
+     let fixed := (allCost.1-dataCost.1+fixedData.1+sharedFrame.length,
+       allCost.2-dataCost.2+fixedData.2+sharedFrame.utf8ByteSize)
+-    let prepared := families.zipIdx.map fun (family,index) => prepare index family
++    let prepared := prepareFamilies families
+     let units := prepared.flatMap (·.1)
+     let unitArray := units.toArray
+     let depth := max families.length (families.foldl (fun n family => max n (max family.windows.length family.references.length)) 0)

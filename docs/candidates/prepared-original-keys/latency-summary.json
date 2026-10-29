@@ -1,0 +1,405 @@
+{"scope":
+ "Two actual first-prompt hooks per topic and arm. Observation gaps include IO, computation and receipt serialization, not per-function CPU time. Not answering-model first/second rounds, token improvement, p99 or eighty-user sustained load.",
+ "rows":
+ [{"topic": 1,
+   "runtimeSha256":
+   "d11c80efad039aeb6669c87b914e42f129aded1e40bef46881e75adec078ff53",
+   "repetition": 0,
+   "receipt":
+   "6712396476efbfeb936857a724deaacc14c3e7cd733e29881da957c486337f9a",
+   "numericalElapsedSumMs": 1111,
+   "numerical":
+   [{"purpose": "keyed-discovery", "elapsedMs": 746},
+    {"purpose": "focus", "elapsedMs": 365}],
+   "focusObservedToDomainObservedMs": 6472,
+   "elapsedMs": 17018,
+   "domainObservedToSelectionObservedMs": 5447,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["loaded", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "098a283dac9194d1c83196fba0ad8c4f601cfca6bb7b37bf8cbc16e88d11d481",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": ["tracked-input-language"],
+    "missing": [["tracked-input-language"]],
+    "eligible": 3,
+    "delivered": 2,
+    "absent": ["input-language-predicate", "trailing-language-warning"]},
+   "arm": "baseline"},
+  {"topic": 2,
+   "runtimeSha256":
+   "d11c80efad039aeb6669c87b914e42f129aded1e40bef46881e75adec078ff53",
+   "repetition": 0,
+   "receipt":
+   "a065596ea446fea7201d7d9f19c2278c55d190d829a519e427a6e28f4c0465a0",
+   "numericalElapsedSumMs": 1074,
+   "numerical":
+   [{"purpose": "focus", "elapsedMs": 372},
+    {"purpose": "keyed-discovery", "elapsedMs": 702}],
+   "focusObservedToDomainObservedMs": 6029,
+   "elapsedMs": 16124,
+   "domainObservedToSelectionObservedMs": 5365,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["hit", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "8f8b16887bc747340fddd61107ef15dd50f3f976c6c4b6f828984583b71fe3ba",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": ["tracked-input-language"],
+    "missing":
+    [["tracked-input-language"], ["dumpmachine-reports-toolchain-triple"]],
+    "eligible": 7,
+    "delivered": 5,
+    "absent": []},
+   "arm": "baseline"},
+  {"topic": 3,
+   "runtimeSha256":
+   "d11c80efad039aeb6669c87b914e42f129aded1e40bef46881e75adec078ff53",
+   "repetition": 0,
+   "receipt":
+   "40641289e9d90a12d74d05426a381d5a3490d57a9e29f528518f8f61960bc3ee",
+   "numericalElapsedSumMs": 1083,
+   "numerical":
+   [{"purpose": "keyed-discovery", "elapsedMs": 706},
+    {"purpose": "focus", "elapsedMs": 377}],
+   "focusObservedToDomainObservedMs": 5887,
+   "elapsedMs": 16478,
+   "domainObservedToSelectionObservedMs": 5849,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["hit", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "2ef81d7e039d4764e4a8b602779f41f54b930edba239a5a3bd2a5c8a6e0e11c8",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": [],
+    "missing": [["syntax-only-compile-cutoff"]],
+    "eligible": 4,
+    "delivered": 3,
+    "absent":
+    ["trailing-language-warning",
+     "syntax-only-no-output-action",
+     "frontend-job-construction"]},
+   "arm": "baseline"},
+  {"topic": 1,
+   "runtimeSha256":
+   "a156ac9902c77167c8b1b9d550a8efd863cecba6adf1c66de5046e1c56fe83e2",
+   "repetition": 0,
+   "receipt":
+   "03c4dc27eaec1e3bced987e2b4225cf1775c8d8bb6c83622901f55d67dc449bf",
+   "numericalElapsedSumMs": 1108,
+   "numerical":
+   [{"purpose": "focus", "elapsedMs": 369},
+    {"purpose": "keyed-discovery", "elapsedMs": 739}],
+   "focusObservedToDomainObservedMs": 6529,
+   "elapsedMs": 16271,
+   "domainObservedToSelectionObservedMs": 4907,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["loaded", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "098a283dac9194d1c83196fba0ad8c4f601cfca6bb7b37bf8cbc16e88d11d481",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": ["tracked-input-language"],
+    "missing": [["tracked-input-language"]],
+    "eligible": 3,
+    "delivered": 2,
+    "absent": ["input-language-predicate", "trailing-language-warning"]},
+   "arm": "candidate"},
+  {"topic": 2,
+   "runtimeSha256":
+   "a156ac9902c77167c8b1b9d550a8efd863cecba6adf1c66de5046e1c56fe83e2",
+   "repetition": 0,
+   "receipt":
+   "b595a789b9ec6dc9023b2770242332936dbba53701c3c650296001a787b80065",
+   "numericalElapsedSumMs": 1089,
+   "numerical":
+   [{"purpose": "focus", "elapsedMs": 375},
+    {"purpose": "keyed-discovery", "elapsedMs": 714}],
+   "focusObservedToDomainObservedMs": 6079,
+   "elapsedMs": 15611,
+   "domainObservedToSelectionObservedMs": 4807,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["hit", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "8f8b16887bc747340fddd61107ef15dd50f3f976c6c4b6f828984583b71fe3ba",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": ["tracked-input-language"],
+    "missing":
+    [["tracked-input-language"], ["dumpmachine-reports-toolchain-triple"]],
+    "eligible": 7,
+    "delivered": 5,
+    "absent": []},
+   "arm": "candidate"},
+  {"topic": 3,
+   "runtimeSha256":
+   "a156ac9902c77167c8b1b9d550a8efd863cecba6adf1c66de5046e1c56fe83e2",
+   "repetition": 0,
+   "receipt":
+   "aeea0895ecc3d6e16c93351f77262bd6cfbbe1f1a00d22fe0800ed35a2c20515",
+   "numericalElapsedSumMs": 1135,
+   "numerical":
+   [{"purpose": "focus", "elapsedMs": 386},
+    {"purpose": "keyed-discovery", "elapsedMs": 749}],
+   "focusObservedToDomainObservedMs": 6140,
+   "elapsedMs": 16436,
+   "domainObservedToSelectionObservedMs": 5382,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["hit", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "2ef81d7e039d4764e4a8b602779f41f54b930edba239a5a3bd2a5c8a6e0e11c8",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": [],
+    "missing": [["syntax-only-compile-cutoff"]],
+    "eligible": 4,
+    "delivered": 3,
+    "absent":
+    ["trailing-language-warning",
+     "syntax-only-no-output-action",
+     "frontend-job-construction"]},
+   "arm": "candidate"},
+  {"topic": 1,
+   "runtimeSha256":
+   "a156ac9902c77167c8b1b9d550a8efd863cecba6adf1c66de5046e1c56fe83e2",
+   "repetition": 1,
+   "receipt":
+   "8d9ff5896bb920e1d466fc12a5522f10c6c326d6671f1a2b46c4f126850418ab",
+   "numericalElapsedSumMs": 1108,
+   "numerical":
+   [{"purpose": "focus", "elapsedMs": 367},
+    {"purpose": "keyed-discovery", "elapsedMs": 741}],
+   "focusObservedToDomainObservedMs": 6441,
+   "elapsedMs": 16170,
+   "domainObservedToSelectionObservedMs": 4924,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["loaded", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "098a283dac9194d1c83196fba0ad8c4f601cfca6bb7b37bf8cbc16e88d11d481",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": ["tracked-input-language"],
+    "missing": [["tracked-input-language"]],
+    "eligible": 3,
+    "delivered": 2,
+    "absent": ["input-language-predicate", "trailing-language-warning"]},
+   "arm": "candidate"},
+  {"topic": 2,
+   "runtimeSha256":
+   "a156ac9902c77167c8b1b9d550a8efd863cecba6adf1c66de5046e1c56fe83e2",
+   "repetition": 1,
+   "receipt":
+   "a9bb7bcf4961899296c661ca572017ce0f1980d8bcf66c90c02b8a04fefafece",
+   "numericalElapsedSumMs": 1131,
+   "numerical":
+   [{"purpose": "focus", "elapsedMs": 387},
+    {"purpose": "keyed-discovery", "elapsedMs": 744}],
+   "focusObservedToDomainObservedMs": 6176,
+   "elapsedMs": 16070,
+   "domainObservedToSelectionObservedMs": 4938,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["hit", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "8f8b16887bc747340fddd61107ef15dd50f3f976c6c4b6f828984583b71fe3ba",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": ["tracked-input-language"],
+    "missing":
+    [["tracked-input-language"], ["dumpmachine-reports-toolchain-triple"]],
+    "eligible": 7,
+    "delivered": 5,
+    "absent": []},
+   "arm": "candidate"},
+  {"topic": 3,
+   "runtimeSha256":
+   "a156ac9902c77167c8b1b9d550a8efd863cecba6adf1c66de5046e1c56fe83e2",
+   "repetition": 1,
+   "receipt":
+   "a16a1ae35b2f6654a4e8a2f0e85ca090dbee9d8d4dbb1806c993a4cd99bd10aa",
+   "numericalElapsedSumMs": 1073,
+   "numerical":
+   [{"purpose": "focus", "elapsedMs": 374},
+    {"purpose": "keyed-discovery", "elapsedMs": 699}],
+   "focusObservedToDomainObservedMs": 5970,
+   "elapsedMs": 15987,
+   "domainObservedToSelectionObservedMs": 5299,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["hit", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "2ef81d7e039d4764e4a8b602779f41f54b930edba239a5a3bd2a5c8a6e0e11c8",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": [],
+    "missing": [["syntax-only-compile-cutoff"]],
+    "eligible": 4,
+    "delivered": 3,
+    "absent":
+    ["trailing-language-warning",
+     "syntax-only-no-output-action",
+     "frontend-job-construction"]},
+   "arm": "candidate"},
+  {"topic": 1,
+   "runtimeSha256":
+   "d11c80efad039aeb6669c87b914e42f129aded1e40bef46881e75adec078ff53",
+   "repetition": 1,
+   "receipt":
+   "a919d00c9e59f6a47d72047aae7112c9c02a6cf918d958ea9556c8ae575cecb6",
+   "numericalElapsedSumMs": 1107,
+   "numerical":
+   [{"purpose": "keyed-discovery", "elapsedMs": 735},
+    {"purpose": "focus", "elapsedMs": 372}],
+   "focusObservedToDomainObservedMs": 6603,
+   "elapsedMs": 16799,
+   "domainObservedToSelectionObservedMs": 5514,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["loaded", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "098a283dac9194d1c83196fba0ad8c4f601cfca6bb7b37bf8cbc16e88d11d481",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": ["tracked-input-language"],
+    "missing": [["tracked-input-language"]],
+    "eligible": 3,
+    "delivered": 2,
+    "absent": ["input-language-predicate", "trailing-language-warning"]},
+   "arm": "baseline"},
+  {"topic": 2,
+   "runtimeSha256":
+   "d11c80efad039aeb6669c87b914e42f129aded1e40bef46881e75adec078ff53",
+   "repetition": 1,
+   "receipt":
+   "d04ad00ddbd72b5cb3ae0b46fdefa3079ee41ad79bf143a7ff316e528dad92e5",
+   "numericalElapsedSumMs": 1082,
+   "numerical":
+   [{"purpose": "focus", "elapsedMs": 372},
+    {"purpose": "keyed-discovery", "elapsedMs": 710}],
+   "focusObservedToDomainObservedMs": 6005,
+   "elapsedMs": 15975,
+   "domainObservedToSelectionObservedMs": 5342,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["hit", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "8f8b16887bc747340fddd61107ef15dd50f3f976c6c4b6f828984583b71fe3ba",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": ["tracked-input-language"],
+    "missing":
+    [["tracked-input-language"], ["dumpmachine-reports-toolchain-triple"]],
+    "eligible": 7,
+    "delivered": 5,
+    "absent": []},
+   "arm": "baseline"},
+  {"topic": 3,
+   "runtimeSha256":
+   "d11c80efad039aeb6669c87b914e42f129aded1e40bef46881e75adec078ff53",
+   "repetition": 1,
+   "receipt":
+   "2e702fdf39da9df9fb798b951c7bc8b5eb06fbb76601736e1d2279cb555d9b62",
+   "numericalElapsedSumMs": 1102,
+   "numerical":
+   [{"purpose": "keyed-discovery", "elapsedMs": 718},
+    {"purpose": "focus", "elapsedMs": 384}],
+   "focusObservedToDomainObservedMs": 6113,
+   "elapsedMs": 16953,
+   "domainObservedToSelectionObservedMs": 5872,
+   "completed": 0,
+   "canonicalReuse":
+   ["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    ["hit", "hit"]],
+   "candidateUnits": 8640,
+   "bodyUnchanged": true,
+   "bodySha256":
+   "2ef81d7e039d4764e4a8b602779f41f54b930edba239a5a3bd2a5c8a6e0e11c8",
+   "bindingRequests": 2139,
+   "bindingBytes": 4578774,
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": false,
+    "partialNames": [],
+    "missing": [["syntax-only-compile-cutoff"]],
+    "eligible": 4,
+    "delivered": 3,
+    "absent":
+    ["trailing-language-warning",
+     "syntax-only-no-output-action",
+     "frontend-job-construction"]},
+   "arm": "baseline"}],
+ "answeringModelCalls": 0,
+ "adopted": false}
