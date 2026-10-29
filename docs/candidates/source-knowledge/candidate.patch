@@ -1,0 +1,465 @@
+--- a/Eggshell/StoredReadEvidence.lean
++++ b/Eggshell/StoredReadEvidence.lean
+@@ -57,7 +57,7 @@
+   if original : doc.source = some raw then
+     if native : doc.native = true then
+       let catalog ← prepared.documents.catalog id
+-      let reads := catalog.located.flatMap (·.originalRows)
++      let reads := catalog.reads ++ catalog.located.flatMap (·.originalRows)
+       let byCore := reads.attach.foldl
+         (fun found row => found.insert (core row.val) row) {}
+       return some {doc,raw,original,native,reads,byCore}
+--- /dev/null
++++ b/Eggshell/StoredReadLookup.lean
+@@ -0,0 +1,53 @@
++module
++public import Eggshell.SynapseIndex
++@[expose] public section
++
++namespace Eggshell.Synapses.StoredReadLookup
++open DB
++
++structure Entry where
++  head : PageMap.Head
++  subject : Subject
++  rows : Array Read
++
++structure State where
++  entries : Std.HashMap String Entry := {}
++  bytes : Nat := 0
++  rows : Nat := 0
++  hits : Nat := 0
++  misses : Nat := 0
++
++/-- Per-replay, bounded locator cache. These rows still require validation
++against each operation's pre-read source publication; they grant no authority. -/
++structure Cache where
++  state : IO.Ref State
++  maxBytes : Nat := 16777216
++  maxRows : Nat := 16384
++
++def create : IO Cache := do return ⟨← IO.mkRef {},16777216,16384⟩
++
++def Cache.lookup (cache : Cache) (index : Index.Reader) (subject : Subject)
++    (deadline : Nat) : IO (Array Read) := do
++  if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "historical stored-read lookup deadline")
++  let key := Index.contentKey (index.index.head,subject)
++  if let some entry := (← cache.state.get).entries[key]? then
++    unless entry.head == index.index.head && entry.subject == subject do
++      throw (IO.userError "ambiguous stored-read locator cache key")
++    cache.state.modify fun state => {state with hits := state.hits+1}
++    return entry.rows
++  let found ← index.lookup (.subject subject) 100000 deadline
++  unless found.complete do throw (IO.userError "incomplete historical stored-read evidence")
++  let rows := found.facts.filterMap fun fact => match fact with
++    | .read row => some row
++    | _ => none
++  cache.state.modify fun state =>
++    let next := {state with misses := state.misses+1}
++    if state.bytes+found.payloadBytes ≤ cache.maxBytes && state.rows+rows.size ≤ cache.maxRows &&
++        state.entries.size < 128 then
++      {next with
++        entries := state.entries.insert key ⟨index.index.head,subject,rows⟩,
++        bytes := state.bytes+found.payloadBytes,rows := state.rows+rows.size}
++    else next
++  return rows
++
++end Eggshell.Synapses.StoredReadLookup
+--- a/Eggshell/UsageCache.lean
++++ b/Eggshell/UsageCache.lean
+@@ -12,6 +12,7 @@
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.usage-classifier".toUTF8 [
+   Index.implementation.toUTF8,SharedReadReceipt.implementation.toUTF8,StoredReadEvidence.implementation.toUTF8,
+   (include_str "UsageCache.lean").toUTF8,(include_str "SynapseJournal.lean").toUTF8,
++  (include_str "StoredReadLookup.lean").toUTF8,
+   (include_str "SynapseUsage.lean").toUTF8,(include_str "PluginModel.lean").toUTF8,
+   (include_str "SynapseLive.lean").toUTF8])
+ 
+@@ -30,13 +31,10 @@
+       (← index.get "classifier") == some implementation.toUTF8 do return none
+   return some ⟨index,metadata⟩
+ 
+-/-- Only this turn's labels are inserted. The PageMap transaction commits the
+-facts, routing and classifier marker together; raw events remain elsewhere. -/
+-def publish (source : PageMap.Snapshot) (facts : Array Fact) : IO PageMap.Head := do
+-  Index.checkFacts source.head.identity .usage facts
+-  if facts.isEmpty then
+-    if let some current ← open? source then return current.index.head
+-  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun sidecar => do
++/-- Initialize only rebuildable private state. -/
++def ensure (source : PageMap.Snapshot) : IO Index.Reader := do
++  if let some reader ← open? source then return reader
++  let _ ← Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun sidecar => do
+     let parent ← Sidecar.childDirectory sidecar.directory "synapses"
+     let path := parent / name
+     let index ← match ← PageMap.open? path with
+@@ -49,27 +47,109 @@
+           previous.source.authority == source.head.authority &&
+           (← index.get "classifier") == some implementation.toUTF8 do
+         throw (IO.userError "usage cache has a different classifier or source")
++    if previous.isSome then return index.head
+     let (_,head,_) ← PageMap.withWriter index fun writer => do
+-      let mut count := previous.map (·.facts) |>.getD 0
+-      for fact in facts do
+-        if ← Index.insert writer source.head.identity .usage fact then count := count+1
+-      Routing.Store.finish writer count
+-      let metadata : Index.Manifest := ⟨source.head,Index.implementation,.usage,count⟩
++      Routing.Store.finish writer 0
++      let metadata : Index.Manifest := ⟨source.head,Index.implementation,.usage,0⟩
+       let bytes ← Index.checkedBytes metadata
+       if (← writer.get "manifest") != some bytes then writer.put "manifest" (some bytes)
+       if (← writer.get "classifier") != some implementation.toUTF8 then
+         writer.put "classifier" (some implementation.toUTF8)
+     return head) .user
+-
+-def ensure (source : PageMap.Snapshot) : IO Index.Reader := do
+-  if let some reader ← open? source then return reader
+-  let _ ← publish source #[]
+   let some reader ← open? source | throw (IO.userError "usage cache did not become ready")
+   return reader
+ 
++structure Input where
++  session : String
++  turn : String
++  source : PageMap.Head
++  view : String
++  count : Nat
++  deriving BEq,ToJson,FromJson
++
++def Input.owns (input : Input) (usage : Usage) : Bool :=
++  usage.event.occurrence.session == input.session && usage.event.occurrence.turn == input.turn
++
++structure State where
++  input : String
++  result : String
++  facts : Nat
++  deriving ToJson,FromJson
++
++/-- Consumption publications do not change the read projection. Its source,
++implementation and correspondence supplements do; rebuilding changes identity. -/
++def readViewIdentity (shared : Index.Reader) : IO String := do
++  return Index.contentKey (shared.index.head.identity,shared.manifest.source,
++    shared.manifest.implementation,← ContentMetadata.supplementStamp shared.index)
++
++/-- A derived classification may change when its verified input changes.
++Replace only this turn, atomically with routing and event guards. Identical
++input must still have an identical result; the original journal is never edited. -/
++def publish (source : PageMap.Snapshot) (input : Input) (facts : Array Fact) : IO PageMap.Head := do
++  unless input.source == source.head && !input.session.isEmpty && !input.turn.isEmpty && digest input.view do
++    throw (IO.userError "invalid usage replay input")
++  Index.checkFacts source.head.identity .usage facts
++  let mut unique : Std.HashMap String Fact := {}
++  for fact in facts do
++    let .used usage := fact | throw (IO.userError "usage publication contains a shared fact")
++    unless input.owns usage do throw (IO.userError "usage event belongs to another turn")
++    let key := Index.contentKey fact
++    if let some previous := unique[key]? then
++      unless previous == fact do throw (IO.userError "conflicting usage content address")
++    unique := unique.insert key fact
++  let wanted := unique.toArray.qsort (fun left right => left.1 < right.1)
++  let next : State := ⟨Index.contentKey input,Index.contentKey (wanted.map Prod.fst),wanted.size⟩
++  let scope := "scope:" ++ Index.contentKey (input.session,input.turn)
++  let stateKey := scope ++ ":state"
++  let factBase := scope ++ ":fact:"
++  let _ ← ensure source
++  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun _ => do
++    let some current ← open? source | throw (IO.userError "usage cache disappeared")
++    let previous ← (← current.index.get stateKey).mapM (Index.decode (α := State))
++    if let some previous := previous then
++      if previous.input == next.input then
++        unless previous.result == next.result && previous.facts == next.facts do
++          throw (IO.userError "conflicting usage result for identical replay inputs")
++        return current.index.head
++    let sameFacts := previous.any (fun old => old.result == next.result && old.facts == next.facts)
++    let retired ← if sameFacts then pure #[] else
++      current.index.foldRange ⟨factBase,scope ++ ":fact;"⟩ (fun found row => do
++        let some bytes := row.2 | return found
++        let id ← Index.decode (α := String) bytes
++        unless row.1 == factBase ++ id do throw (IO.userError "foreign usage scope posting")
++        let some bytes ← current.index.get ("fact:" ++ id) | throw (IO.userError "usage scope lost its fact")
++        let fact ← Index.decode (α := Fact) bytes
++        let .used usage := fact | throw (IO.userError "usage scope refers to a shared fact")
++        unless Index.contentKey fact == id && usage.valid && input.owns usage do
++          throw (IO.userError "usage scope has a foreign event")
++        return found.push fact) #[]
++    unless sameFacts || retired.size == (previous.map (·.facts) |>.getD 0) do
++      throw (IO.userError "incomplete usage scope retirement")
++    unless retired.size ≤ current.manifest.facts do throw (IO.userError "invalid usage scope count")
++    let (_,head,_) ← PageMap.withWriter current.index fun writer => do
++      let mut count := current.manifest.facts
++      if !sameFacts then
++        for fact in retired do
++          let .used usage := fact | throw (IO.userError "invalid retired usage")
++          unless (← writer.get (Index.eventName usage.event)) == some (← Index.checkedBytes usage) do
++            throw (IO.userError "usage event differs from its retired scope")
++          unless ← Index.erase writer fact do throw (IO.userError "usage fact disappeared")
++          writer.put (Index.eventName usage.event) none
++          writer.put (factBase ++ Index.contentKey fact) none
++          count := count-1
++        for (id,fact) in wanted do
++          if ← Index.insert writer source.head.identity .usage fact then count := count+1
++          writer.put (factBase ++ id) (some (← Index.checkedBytes id))
++      Routing.Store.finish writer count
++      let metadata : Index.Manifest := ⟨source.head,Index.implementation,.usage,count⟩
++      let bytes ← Index.checkedBytes metadata
++      if (← writer.get "manifest") != some bytes then writer.put "manifest" (some bytes)
++      writer.put stateKey (some (← Index.checkedBytes next))
++    return head) .user
++
+ /-- Recreating either derived index invalidates replay checkpoints even if
+ the original journal and source publication have not changed. -/
+-def replayIdentity (shared usage : Index.Reader) : String :=
+-  Index.contentKey (shared.index.head.identity,usage.index.head.identity)
++def replayIdentity (shared usage : Index.Reader) : IO String := do
++  return Index.contentKey (← readViewIdentity shared,usage.index.head.identity)
+ 
+ end Eggshell.Synapses.UsageCache
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -5,6 +5,7 @@
+ public import Eggshell.SharedReadReceipt
+ public import Eggshell.UsageCache
+ public import Eggshell.StoredReadEvidence
++public import Eggshell.StoredReadLookup
+ public import Eggshell.PluginModel
+ 
+ @[expose] public section
+@@ -109,8 +110,8 @@
+     accepted.receivedUnixMs = previous.receivedUnixMs := by
+   rw [retry_keeps_first_observation previous next accepted result]
+ 
+-def completeKnowledge (known : Knowledge) (indexed : Bool) : Bool :=
+-  !known.uncertain && indexed && (known.archive.isNone || known.archived.isSome)
++def completeKnowledge (known : Knowledge) (checked : Bool) : Bool :=
++  !known.uncertain && checked && (known.archive.isNone || known.archived.isSome)
+ 
+ theorem complete_knowledge_is_confirmed (known : Knowledge) (indexed : Bool)
+     (complete : completeKnowledge known indexed = true) : known.uncertain = false ∧ indexed = true := by
+@@ -235,8 +236,13 @@
+   return ⟨source.head, indexed, known, uncertain, archive, archived⟩
+ 
+ def originalAt? (source : PageMap.Snapshot) (head : PageMap.Head) : IO (Option PageMap.Snapshot) := do
+-  if (← Build.changes source head).isNone then return none
+-  return some {source with head}
++  let some retained ← PageMap.HistoryReader.make? source head | return none
++  if head == source.head then return some retained.snapshot
++  -- The immutable primary publication at r+1 records the exact head at r.
++  -- Reading that one B-tree entry needs no changed-owner/delta reconstruction.
++  let publication ← try some <$> readPublication source (head.revision+1) catch _ => pure none
++  unless publication.any (·.parent == head) do return none
++  return some retained.snapshot
+ 
+ def indexAt? (source : PageMap.Snapshot) (known : Knowledge) : IO (Option Index.Reader) := do
+   let some saved := known.indexed | return none
+@@ -253,22 +259,49 @@
+   unless (← index.get "provenance") == some (toJson (← Provenance.stamp original)).compress.toUTF8 do return none
+   return some ⟨index, manifest⟩
+ 
++inductive ReadIndexOrigin where
++  | captured | prepared
++  deriving BEq,ToJson
++
++structure ReadIndex where
++  reader : Index.Reader
++  origin : ReadIndexOrigin
++
++/-- Current preparation is a locator, not a claim about what was indexed at
++the start. Its published source/provenance is checked without rebuilding it. -/
++def preparedHint? (source : PageMap.Snapshot) : IO (Option Index.Reader) := do
++  for storage in [Sidecar.Storage.database,.user] do
++    let some index ← PageMap.open? (← Index.directory source storage .shared) | continue
++    let some manifest ← Index.manifest? index | continue
++    unless manifest.scope == .shared && digest manifest.implementation &&
++        manifest.source.identity == source.head.identity &&
++        manifest.source.authority == source.head.authority do continue
++    let some original ← originalAt? source manifest.source | continue
++    unless (← index.get "provenance") == some (toJson (← Provenance.stamp original)).compress.toUTF8 do continue
++    return some ⟨index,manifest⟩
++  return none
++
++def readIndex? (source : PageMap.Snapshot) (known : Knowledge) (hint : Option Index.Reader) :
++    IO (Option ReadIndex) := do
++  if let some index ← indexAt? source known then return some ⟨index,.captured⟩
++  if (← originalAt? source known.source).isNone then return none
++  return hint.map (fun index => ⟨index,.prepared⟩)
++
+ /-- Historical index facts are navigation, not evidence by themselves. Every
+ returned Read must equal an original catalog row at the pre-read publication. -/
+ def storedReadsAt? (source : PageMap.Snapshot) (known : Knowledge) (index : Index.Reader)
+-    (subjects : Std.HashSet Subject) (excluded : Occurrence) (deadline : Nat) : IO (Option (Array Read)) := do
++    (subjects : Std.HashSet Subject) (excluded : Occurrence) (deadline : Nat)
++    (strict : Bool := true) (cache : Option StoredReadLookup.Cache := none) : IO (Option (Array Read)) := do
+   let some original ← originalAt? source known.source | return none
+   let prepared ← StoredReadEvidence.prepare original index.index
+   let mut stored := #[]
+   for subject in subjects do
+-    let found ← index.lookup (.subject subject) 100000 deadline
+-    unless found.complete do throw (IO.userError "incomplete historical stored-read evidence")
+-    for fact in found.facts do
+-      let .read read := fact | continue
++    let cache ← match cache with | some value => pure value | none => StoredReadLookup.create
++    for read in ← cache.lookup index subject deadline do
+       if read.occurrence == excluded then continue
+       if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "historical stored-read validation deadline")
+-      let some witness ← prepared.check? read | return none
+-      stored := stored.push witness.saved.val
++      if let some witness ← prepared.check? read then stored := stored.push witness.saved.val
++      else if strict then return none
+   return some stored
+ 
+ def ownerKeys (known : List String) : Array String :=
+@@ -352,7 +385,8 @@
+   return candidates
+ 
+ def nativeFeedback (source : PageMap.Snapshot) (starts : Starts) (facts : Array Fact)
+-    (graph : Graph) (deadline : Nat) : IO NativeFeedback := do
++    (graph : Graph) (deadline : Nat) (hint : Option Index.Reader := none)
++    (cache : Option StoredReadLookup.Cache := none) : IO NativeFeedback := do
+   let candidates := nativeCandidates facts
+   let mut witnesses : Std.HashMap WitnessAt (Std.HashSet (Occurrence × Option Range)) := {}
+   for fact in facts do
+@@ -371,12 +405,13 @@
+   for (producer,uses) in groups do
+     if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "native usage deadline")
+     let some (query,known,_) := starts[producer]? | result := {result with unknown := result.unknown+1}; continue
+-    let indexed ← indexAt? source known
++    let indexed ← readIndex? source known hint
+     unless completeKnowledge known indexed.isSome do
+       result := {result with unknown := result.unknown+1}; continue
+     let some indexed := indexed | throw (IO.userError "missing checked pre-read index")
+     let subjects := uses.foldl (fun subjects (_,range) => subjects.insert range.subject) ({} : Std.HashSet Subject)
+-    let some storedReads ← storedReadsAt? source known indexed subjects producer deadline |
++    let some storedReads ← storedReadsAt? source known indexed.reader subjects producer deadline
++        (indexed.origin == .captured) cache |
+       result := {result with unknown := result.unknown+1}; continue
+     let stored := storedReads.map (·.source)
+     let shown := presentationWithShared known storedReads (← presentation source known)
+@@ -406,7 +441,12 @@
+ 
+ /-- All original body/row work happens in the background. A finish without
+ an exact published native owner remains pending instead of inventing evidence. -/
+-def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat) : IO Replay := do
++def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat)
++    (preparedHint : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none) : IO Replay := do
++  let cache ← match readCache with | some cache => pure cache | none => StoredReadLookup.create
++  let hint ← match preparedHint with
++    | some reader => pure (some reader)
++    | none => preparedHint? source
+   let mut result : Replay := {}
+   let mut trace : Trace := {}
+   let mut domain := ""
+@@ -420,7 +460,7 @@
+     if domain != value.clock.domain then
+       let projected ← IO.ofExcept (trace.locate locations)
+       let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+-      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline
++      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache)
+       usage := feedback.graph
+       result := {result with consumed := result.consumed ++ projected.graph.snapshot}
+       result := {result with
+@@ -491,7 +531,7 @@
+       let reads := located.filter (·.read.source.file?.isSome)
+       if !reads.isEmpty then
+         if let some (query, known, _) := starts[occurrence]? then
+-          let storedIndex ← indexAt? source known
++          let storedIndex ← readIndex? source known hint
+           -- Missing/unverifiable pre-read knowledge cannot earn a read label.
+           -- Do not decode every acknowledged original only to discard the
+           -- resulting presentation after the same eligibility decision.
+@@ -500,12 +540,20 @@
+             continue
+           let some index := storedIndex | throw (IO.userError "missing checked pre-read index")
+           let files := reads.foldl (fun files read => files.insert read.read.source.subject) ({} : Std.HashSet Subject)
+-          let some storedReads ← storedReadsAt? source known index files occurrence deadline |
++          let some storedReads ← storedReadsAt? source known index.reader files occurrence deadline
++              (index.origin == .captured) (some cache) |
+             result := {result with unknown := result.unknown+1}; continue
+           let stored := storedReads.map (·.source)
+           let shown := presentationWithShared known storedReads (← presentation source known)
++          -- A later locator can show positive old evidence, not prove absence.
++          -- Restrict these labels to the verified old/requested intersection.
++          let requested := if index.origin == .captured then reads.map (·.read.source) else
++            reads.flatMap (fun read => omittedRanges read.read.source stored #[])
++          if requested.isEmpty then
++            result := {result with unknown := result.unknown+1}
++            continue
+           let feedback : Feedback := ({graph := usage, delivered := shown} : Feedback).start occurrence
+-          let feedback ← IO.ofExcept (feedback.completedRead occurrence query (reads.map (·.read.source)) stored)
++          let feedback ← IO.ofExcept (feedback.completedRead occurrence query requested stored)
+           usage := feedback.graph
+     | .answer occurrence query text known =>
+       if known.uncertain then result := {result with unknown := result.unknown+1}; continue
+@@ -514,7 +562,7 @@
+       usage := feedback.graph
+   let projected ← IO.ofExcept (trace.locate locations)
+   let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+-  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline
++  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache)
+   return {result with
+     consumed := result.consumed ++ projected.graph.snapshot, usage := feedback.graph.snapshot
+     unknown := result.unknown+feedback.unknown,ambiguousNativeUses := result.ambiguousNativeUses+feedback.ambiguous}
+@@ -549,7 +597,7 @@
+   let some reader ← Index.open? source storage .shared | return true
+   let some usage ← UsageCache.open? source | return true
+   let some previous ← checkpoint? journal ("checkpoint:" ++ lane storage) | return true
+-  return !(← previous.sameInput source (UsageCache.replayIdentity reader usage) (← getNat journal.get "count"))
++  return !(← previous.sameInput source (← UsageCache.replayIdentity reader usage) (← getNat journal.get "count"))
+ 
+ structure Result where
+   turns : Nat := 0
+@@ -561,7 +609,8 @@
+   ambiguousNativeUses : Nat := 0
+   deriving ToJson, FromJson
+ 
+-def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (result : Replay) (deadline : Nat) : IO Unit := do
++def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (result : Replay) (deadline : Nat)
++    (input : UsageCache.Input) : IO Unit := do
+   let some shared ← Index.open? source storage .shared | throw (IO.userError "synaptic source index is not warm")
+   let mut old := #[]
+   for consumer in result.consumers.toList.eraseDups do
+@@ -572,18 +621,21 @@
+   let wanted := result.consumed.foldl (fun set fact => set.insert fact) ({} : Std.HashSet Fact)
+   let _ ← Index.publishDelta source storage .shared (some shared.manifest.source) {
+     removed := old.filter (!wanted.contains ·), added := result.consumed.filter (!previous.contains ·) }
+-  let _ ← UsageCache.publish source result.usage
++  if result.pending == 0 then
++    let _ ← UsageCache.publish source input result.usage
++    pure ()
+   pure ()
+ 
+ /-- Background replay is bounded by turns and a deadline. Publication is
+ idempotent; checkpoint failure leaves the same immutable events replayable. -/
+ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline : Nat)
+-    (limit : Nat := 8) : IO Result := do
++    (limit : Nat := 8) (readCache : Option StoredReadLookup.Cache := none) : IO Result := do
+   let _ ← Build.refresh source storage
+   let some journal ← open? source | return {}
+   let some reader ← Index.open? source storage .shared | throw (IO.userError "synaptic source index is not warm")
+   let usage ← UsageCache.ensure source
+-  let replayIdentity := UsageCache.replayIdentity reader usage
++  let replayIdentity ← UsageCache.replayIdentity reader usage
++  let readView ← UsageCache.readViewIdentity reader
+   let count ← getNat journal.get "count"
+   let expected : Checkpoint := ⟨source.head, replayIdentity, count, implementation⟩
+   let checkpointKey := "checkpoint:" ++ lane storage
+@@ -597,6 +649,7 @@
+     unless row.1 == "turn:" ++ turn.name do throw (IO.userError "foreign event turn directory")
+     return turns.push turn) #[]
+   let mut result : Result := {}
++  let cache ← match readCache with | some cache => pure cache | none => StoredReadLookup.create
+   for turn in turns do
+     let checkpoint : Checkpoint := ⟨source.head, replayIdentity, ← getNat journal.get ("latest:" ++ turn.name), implementation⟩
+     let turnKey := "processed:" ++ lane storage ++ ":" ++ turn.name
+@@ -605,9 +658,10 @@
+     if result.turns ≥ limit || (← IO.monoMsNow) ≥ deadline then
+       result := {result with complete := false}
+       break
+-    let replayed ← replay source (← turnEntries journal turn) deadline
++    let replayed ← replay source (← turnEntries journal turn) deadline (some reader) (some cache)
+     if storage == .database then Provenance.requirePublished source replayed.origins
+-    publish source storage replayed deadline
++    publish source storage replayed deadline {
++      session := turn.session,turn := turn.turn,source := source.head,view := readView,count := checkpoint.count}
+     if replayed.pending == 0 then mark source turnKey checkpoint
+     else result := {result with complete := false}
+     result := {result with

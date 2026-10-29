@@ -53,9 +53,43 @@ public def main (args : List String) : IO Unit := do
   let mut rejected := 0
   let mut pins := 0
   let mut futureRejected := 0
+  -- Independent oracle walks the complete primary parent chain once. It
+  -- neither calls originalAt? nor reconstructs every changed owner per test.
+  let mut ancestorHeads := #[source.head]
+  let mut ancestor := source.head
+  while ancestor.revision > 0 do
+    let publication ← Persistence.Store.readPublication source ancestor.revision
+    check (publication.parent.revision+1 == ancestor.revision) "primary parent chain skipped a revision"
+    ancestor := publication.parent
+    ancestorHeads := ancestorHeads.push ancestor
+  let mut originalHeads : Array DB.PageMap.Head := #[]
+  let mut rejectedHeads := 0
   for ordinal in List.range (← Persistence.Store.getNat journal.get "count") do
     let entry ← Journal.entry journal ordinal
     let .start _ _ _ known := entry.payload | continue
+    if !originalHeads.contains known.source then
+      originalHeads := originalHeads.push known.source
+      check ((← Journal.originalAt? source known.source).isSome &&
+        ancestorHeads.contains known.source) "direct source pin differs from full publication ancestry"
+      let mutations := #[
+        {known.source with identity := wrong},
+        {known.source with authority := "foreign-authority"},
+        {known.source with revision := known.source.revision+1},
+        {known.source with bytes := known.source.bytes+1},
+        {known.source with root := known.source.root.map fun root => {root with checksum := wrong}}]
+      for changed in mutations do
+        if changed == known.source then continue
+        check ((← Journal.originalAt? source changed).isNone &&
+          !ancestorHeads.contains changed) "forged source pin passed a publication ancestry check"
+        rejectedHeads := rejectedHeads+1
+      let artificial := {known with indexed := none}
+      let hint ← Journal.preparedHint? source
+      let some located ← Journal.readIndex? source artificial hint |
+        throw (IO.userError "later prepared index was not available as a locator")
+      check (located.origin == .prepared && artificial.indexed.isNone &&
+        (← Journal.indexAt? source artificial).isNone) "later locator fabricated a captured historical index"
+      check (← Journal.readIndex? source {artificial with source := {known.source with identity := wrong}} hint).isNone
+        "later locator manufactured a foreign pre-read publication"
     let some saved := known.indexed | continue
     let some indexed ← Journal.indexAt? source known | throw (IO.userError "retained historical index was rejected")
     check (saved.producer != Index.implementation) "fixture no longer exercises a historical producer"
@@ -106,6 +140,8 @@ public def main (args : List String) : IO Unit := do
     ("historicalPinsAccepted",toJson pins),("originalReadsVerified",toJson accepted),
     ("changedReadsRejected",toJson rejected),("futureOwnersRejected",toJson futureRejected),
     ("forgedManifestIdentityRejected",toJson true),("uncertaintyGatePreserved",toJson true),
+    ("originalHeadsMatchFullAncestry",toJson originalHeads.size),("forgedOriginalHeadsRejected",toJson rejectedHeads),
+    ("preparedLocatorDoesNotFabricateCapturedIndex",toJson true),
     ("sourceJournalAndIndexUnchanged",toJson true),("modelCalls",toJson (0 : Nat)),
     ("actualHookCalls",toJson (0 : Nat)),("adopted",toJson false)]
   IO.FS.writeFile output report.pretty

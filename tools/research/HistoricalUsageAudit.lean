@@ -15,6 +15,7 @@ def main (args : List String) : IO Unit := do
   check (source.head == frozen.head) "original DB differs from the frozen source snapshot"
   let some journal ← Journal.open? source | throw (IO.userError "original native journal missing")
   let count ← Persistence.Store.getNat journal.get "count"
+  let hint ← Journal.preparedHint? source
   let mut entries := #[]
   let mut starts := 0
   let mut recordedIndexes := 0
@@ -22,6 +23,7 @@ def main (args : List String) : IO Unit := do
   let mut startsWithSharedKeys := 0
   let mut sharedKeys := 0
   let mut uncertain := 0
+  let mut preparedStarts := 0
   let mut rejected : Std.HashMap String Nat := {}
   for ordinal in List.range count do
     let entry ← Journal.entry journal ordinal
@@ -29,6 +31,8 @@ def main (args : List String) : IO Unit := do
     if let .start _ _ _ known := entry.payload then
       starts := starts+1
       if known.indexed.isSome then recordedIndexes := recordedIndexes+1
+      if let some selected ← Journal.readIndex? source known hint then
+        if selected.origin == .prepared then preparedStarts := preparedStarts+1
       if (← Journal.indexAt? source known).isSome then readableIndexes := readableIndexes+1
       else if let some saved := known.indexed then
         let current ← DB.PageMap.open? (← Index.directory source saved.storage .shared)
@@ -60,7 +64,9 @@ def main (args : List String) : IO Unit := do
         metadata.source.authority == source.head.authority) "persisted private usage has a foreign source"
       Index.allFacts persisted
   let started ← IO.monoMsNow
-  let replayed ← Journal.replay source entries (started+60000)
+  let readCache ← StoredReadLookup.create
+  let replayed ← Journal.replay source entries (started+60000) none (some readCache)
+  let cacheState ← readCache.state.get
   let classify := fun (facts : Array Fact) (kind : UsageKind) => facts.foldl (fun count fact => match fact with
     | .used usage => count + if usage.kind == kind then 1 else 0
     | _ => count) (0 : Nat)
@@ -70,6 +76,12 @@ def main (args : List String) : IO Unit := do
       | _ => none
     | _ => none
   let changed := comparisons.filter (fun (old,current) => old != current)
+  let uncaptured := entries.foldl (fun known entry => match entry.payload with
+    | .start occurrence _ _ input => if input.indexed.isNone then known.insert occurrence else known
+    | _ => known) ({} : Std.HashSet Occurrence)
+  let sourceOnlyLabels := replayed.usage.filter (fun fact => match fact with
+    | .used value => uncaptured.contains value.event.occurrence
+    | _ => false)
   let sourceAfter ← DB.PageMap.pin source.directory
   let journalAfter ← DB.PageMap.pin journal.directory
   check (sourceAfter.head == source.head && journalAfter.head == journal.head)
@@ -82,12 +94,16 @@ def main (args : List String) : IO Unit := do
     ("source",toJson source.head),("journal",toJson journal.head),("entries",toJson count),
     ("starts",toJson starts),("recordedPreReadIndexes",toJson recordedIndexes),
     ("readablePreReadIndexes",toJson readableIndexes),("uncertainStarts",toJson uncertain),
+    ("preparedHintStarts",toJson preparedStarts),("labelsWithoutCapturedIndex",toJson sourceOnlyLabels.size),
     ("preReadIndexRejections",toJson (rejected.toArray.qsort (fun a b => a.1 < b.1))),
     ("startsWithSharedRowKeys",toJson startsWithSharedKeys),("acknowledgedSharedKeys",toJson sharedKeys),
     ("legacyUsageIndexAvailable",toJson legacy.isSome),("kinds",Json.arr kinds),
     ("matchedPersistedEvents",toJson comparisons.size),("changedPersistedEvents",toJson changed.size),
     ("pending",toJson replayed.pending),("unknown",toJson replayed.unknown),
     ("elapsedMs",toJson ((← IO.monoMsNow)-started)),
+    ("lookupCacheHits",toJson cacheState.hits),("lookupCacheMisses",toJson cacheState.misses),
+    ("lookupCacheRows",toJson cacheState.rows),("lookupCacheBytes",toJson cacheState.bytes),
+    ("usageDigest",toJson (Index.contentKey (replayed.usage.map Index.contentKey |>.qsort (· < ·)))),
     ("sourceAndRawJournalUnchanged",toJson true),("actualHookCalls",toJson (0 : Nat)),
     ("originalIndexLocationUsed",toJson true),("frozenSourceHeadExact",toJson true),
     ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]

@@ -114,20 +114,23 @@ private def cacheLifecycle (output : System.FilePath) : IO Json := do
     event := {occurrence := ⟨"session","turn","read"⟩,ordinal := 0}
     query := String.ofList (List.replicate 64 'e'),source := ⟨file,10,10⟩,kind := .omittedThenRead}
   let corrected := {old with kind := .reread}
+  let input : UsageCache.Input := {
+    session := "session",turn := "turn",source := source.head,
+    view := String.ofList (List.replicate 64 'a'),count := 1}
   check old.valid "invalid persisted usage fixture"
   let _ ← Index.replace source .user .usage #[.used old]
   let some legacy ← Index.open? source .user .usage | throw (IO.userError "legacy usage cache missing")
   check (← UsageCache.open? source).isNone "new reader accepted an old classifier"
-  let _ ← UsageCache.publish source #[.used corrected]
+  let _ ← UsageCache.publish source input #[.used corrected]
   let some current ← UsageCache.open? source | throw (IO.userError "current usage classifier missing")
   check ((← Index.allFacts current.index) == #[.used corrected]) "corrected classification did not persist"
   check ((← Index.allFacts legacy.index) == #[.used old]) "old pinned classifier was rewritten"
-  let _ ← UsageCache.publish source #[.used corrected,.used corrected]
+  let _ ← UsageCache.publish source input #[.used corrected,.used corrected]
   let some repeated ← UsageCache.open? source | throw (IO.userError "replayed usage cache missing")
   check (repeated.manifest.facts == 1 && (← Index.allFacts repeated.index) == #[.used corrected])
     "replaying the same event inflated usage counts"
   let conflictRejected ← try
-      let _ ← UsageCache.publish source #[.used old]
+      let _ ← UsageCache.publish source input #[.used old]
       pure false
     catch _ => pure true
   check conflictRejected "one classifier relabelled its own immutable event"
@@ -135,12 +138,67 @@ private def cacheLifecycle (output : System.FilePath) : IO Json := do
   check (after.index.head == repeated.index.head) "failed classification conflict published partial data"
   let found ← after.lookup (.query old.query) 100 ((← IO.monoMsNow)+5000)
   check (found.complete && found.facts == #[.used corrected]) "private usage postings differ from the corrected label"
+  let changedInput := {input with count := 2}
+  let _ ← UsageCache.publish source changedInput #[.used old]
+  let some changed ← UsageCache.open? source | throw (IO.userError "updated scope missing")
+  check (changed.manifest.facts == 1 && (← Index.allFacts changed.index) == #[.used old])
+    "changed evidence appended to old classification instead of replacing it"
+  check ((← Index.allFacts repeated.index) == #[.used corrected]) "scope replacement changed an old pin"
+  let other : Usage := {corrected with event := {corrected.event with occurrence := ⟨"session","other","read"⟩}}
+  let _ ← UsageCache.publish source {input with turn := "other"} #[.used other]
+  let _ ← UsageCache.publish source {changedInput with count := 3} #[]
+  let some emptied ← UsageCache.open? source | throw (IO.userError "empty scope publication missing")
+  check (emptied.manifest.facts == 1 && (← Index.allFacts emptied.index) == #[.used other])
+    "empty replay failed to retire its scope or erased another turn"
+  let badScope ← try
+      let _ ← UsageCache.publish source {input with turn := "not-this-turn"} #[.used old]
+      pure false
+    catch _ => pure true
+  check badScope "a replay rewrote another turn's event"
+  let conflictAtomic ← try
+      let _ ← UsageCache.publish source {input with count := 4} #[.used corrected,.used old]
+      pure false
+    catch _ => pure true
+  let some intact ← UsageCache.open? source | throw (IO.userError "failed replacement lost the cache")
+  check (conflictAtomic && intact.index.head == emptied.index.head) "failed scope replacement changed publication"
   check ((← DB.PageMap.pin source.directory).head == source.head) "usage cache changed the source DB"
   check (!(← (source.directory / "derived").pathExists)) "usage labels entered a shared DB sidecar"
   return Json.mkObj [("legacyClassifierRejected",toJson true),("correctedLabelPersisted",toJson true),
     ("legacyPinPreserved",toJson true),("idempotentCount",toJson repeated.manifest.facts),
     ("sameClassifierConflictRejected",toJson true),("failedWriteAtomic",toJson true),
+    ("changedInputReplacesScope",toJson true),("emptyScopeRetired",toJson true),
+    ("otherTurnsPreserved",toJson true),("crossTurnRejected",toJson true),("replacementFailureAtomic",toJson true),
     ("postingsUseCorrectedLabel",toJson true),("sourceUnchanged",toJson true),("privateOnly",toJson true)]
+
+private def locatorCacheLifecycle (output : System.FilePath) : IO Json := do
+  let source ← DB.PageMap.create (output / "locator-fixture.egg") "locator-fixture"
+  let file : File := ⟨"source.txt",String.ofList (List.replicate 64 'd'),100⟩
+  let row : Read := {
+    occurrence := ⟨"session","turn","old"⟩,source := ⟨file,10,10⟩,
+    binding := ⟨source.head.identity,"owner","work",0,1⟩}
+  let _ ← Index.replace source .database .shared #[.read row]
+  let some before ← Index.openShared? source | throw (IO.userError "locator fixture index missing")
+  let cache ← StoredReadLookup.create
+  let deadline := (← IO.monoMsNow)+10000
+  let first ← cache.lookup before row.source.subject deadline
+  let second ← cache.lookup before row.source.subject deadline
+  check (first == #[row] && second == first && (← cache.state.get).hits == 1 &&
+      (← cache.state.get).misses == 1) "identical pinned lookup did not reuse verified locator rows"
+  let additional := {row with occurrence := ⟨"session","turn","new"⟩}
+  let _ ← Index.replace source .database .shared #[.read row,.read additional]
+  let some after ← Index.openShared? source | throw (IO.userError "updated locator index missing")
+  let changed ← cache.lookup after row.source.subject deadline
+  let retained ← cache.lookup before row.source.subject deadline
+  check (changed.size == 2 && changed.contains row && changed.contains additional && retained == first &&
+      (← cache.state.get).misses == 2) "locator cache ignored the pinned head or invalidated an old reader"
+  let uncached ← StoredReadLookup.create
+  let uncached := {uncached with maxRows := 0}
+  check ((← uncached.lookup after row.source.subject deadline) == changed &&
+      (← uncached.lookup after row.source.subject deadline) == changed &&
+      (← uncached.state.get).entries.isEmpty && (← uncached.state.get).misses == 2)
+    "locator cache capacity changed lookup results"
+  return Json.mkObj [("samePinReused",toJson true),("changedPinMisses",toJson true),
+    ("oldPinPreserved",toJson true),("boundedCacheMatchesUncached",toJson true)]
 
 private def replayRecovery (output : System.FilePath) : IO Json := do
   let source ← DB.PageMap.create (output / "replay-fixture.egg") "replay-fixture"
@@ -195,9 +253,10 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (output / "actual-body.json") actual.pretty
   let times ← scale source.head
   let persistence ← cacheLifecycle output
+  let locators ← locatorCacheLifecycle output
   let recovery ← replayRecovery output
   let report := Json.mkObj [("fixtures",tested),("realBody",actual),("scale",toJson times),
-    ("persistence",persistence),("recovery",recovery),
+    ("persistence",persistence),("locators",locators),("recovery",recovery),
     ("answeringModelCalls",toJson (0 : Nat)),("actualHookCalls",toJson (0 : Nat)),
     ("productionAdoption",toJson false),("goalAchieved",toJson false)]
   IO.FS.writeFile (output / "result.json") report.pretty

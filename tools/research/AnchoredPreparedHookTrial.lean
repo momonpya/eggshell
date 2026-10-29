@@ -3,6 +3,7 @@ import tools.research.StudyCommand
 import tools.research.StudyHistory
 import tools.research.NativeTrialAudit
 import Eggshell.Install
+import Eggshell.SynapseJournal
 open Lean Eggshell Eggshell.Research Eggshell.Synapses
 
 private def read (p : System.FilePath) : IO Json := IO.FS.readFile p >>= fun s => IO.ofExcept (Json.parse s)
@@ -57,6 +58,7 @@ def main (args : List String) : IO Unit := do
   let runtime := (args[1]?).getD ((root / "product-build/StudyMain").toString)
   let prepared := System.FilePath.mk ((args[2]?).getD ((study / "study/seed-2/work.egg").toString))
   let supplements := System.FilePath.mk ((args[3]?).getD ((root / "anchored-capture/seed-refinement.json").toString))
+  let prepareUsage := args[4]? == some "usage"
   unless name.toList.all (fun c => c.isAlphanum || c == '-') do throw (IO.userError "safe new trial name required")
   let target := root / name
   unless !(← target.pathExists) do throw (IO.userError "preserve previous trial")
@@ -133,6 +135,34 @@ def main (args : List String) : IO Unit := do
   try
     let warm ← StudyCommand.run binary.toString #["egg","warm","work"] environment workspace "" (target / "warm") 240000
     unless warm.exitCode == 0 do throw (IO.userError "candidate preparation did not complete")
+    if prepareUsage then
+      unless (← Paths.dataRoot) == data do throw (IO.userError "usage preparation requires the isolated trial data root")
+      let some journal ← Journal.open? source | throw (IO.userError "common input lost its native journal")
+      let originalJournal := journal.head
+      let began ← IO.monoMsNow
+      let replayed ← Journal.refresh source .database (began+120000) 64
+      unless replayed.complete && replayed.pending == 0 && !(← Journal.required source) do
+        throw (IO.userError "private usage preparation did not complete")
+      let some usage ← UsageCache.open? source | throw (IO.userError "prepared usage index is missing")
+      let facts ← Index.allFacts usage.index
+      let mut queries := #[]
+      for number in [1,2,3] do
+        let prompt ← IO.FS.readFile (study / "prompts" / s!"topic-{number}.txt")
+        let query := Sha256.hex prompt.toUTF8
+        let found ← usage.lookup (.query query) 100000 ((← IO.monoMsNow)+5000)
+        unless found.complete do throw (IO.userError "incomplete fixed-query usage audit")
+        queries := queries.push (Json.mkObj [("topic",toJson number),("query",toJson query),
+          ("directUsageFacts",toJson found.facts.size)])
+      let some after ← Journal.open? source | throw (IO.userError "usage preparation lost the raw journal")
+      let count ← Persistence.Store.getNat journal.get "count"
+      for ordinal in [:count] do
+        unless (← Journal.entry journal ordinal) == (← Journal.entry after ordinal) do
+          throw (IO.userError "usage preparation changed an original native observation")
+      IO.FS.writeFile (target / "usage-preparation.json") (Json.mkObj [
+        ("result",toJson replayed),("elapsedMs",toJson ((← IO.monoMsNow)-began)),
+        ("usageHead",toJson usage.index.head),("facts",toJson facts.size),("queries",Json.arr queries),
+        ("rawJournalBefore",toJson originalJournal),("rawJournalAfter",toJson after.head),
+        ("originalEntriesExact",toJson true)]).pretty
     let session := "published-recipes-" ++ name
     let managed ← StudyRuntime.startManaged binary plugin session (data / "sessions" / session / "daemon.json") environment
     try

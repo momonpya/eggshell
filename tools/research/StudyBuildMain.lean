@@ -26,6 +26,7 @@ structure State where
   objects : Std.HashMap String String := {}
   records : Array Json := #[]
   inheritedStamps : Std.HashMap String String := {}
+  inheritedDependencies : Std.HashMap String System.FilePath := {}
   inputStamps : Std.HashMap String String := {}
   closures : Std.HashMap String (Std.HashSet String) := {}
 
@@ -151,7 +152,19 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
           let previous := System.FilePath.mk (baseline ++ "/" ++ path ++ ".lean")
           if !(← previous.pathExists) then pure false else
             pure ((← sourceStamp previous (← IO.FS.readFile previous)) == stamp)
-  let inherited ← if name.startsWith "tools.research." || name.startsWith "tests." || !matchedStamp then pure false else
+  -- A different executable's response deliberately omits the selected entry
+  -- point. An inherited interface alone cannot provide its native `main`.
+  -- The response may combine objects from several ancestors. Matching this
+  -- module's source does not show that its native callers used today's ABI.
+  -- Validate the actual object's complete input closure, not the last build's
+  -- change flag. Unstamped objects must be rebuilt.
+  let matchedDependencies ← match (← state.get).inheritedDependencies[name]? with
+    | none => pure false
+    | some path => do
+      let previous ← IO.FS.readFile path
+      pure (previous == dependencyStamp)
+  let inherited ← if name == settings.mainModule || name.startsWith "tools.research." ||
+      name.startsWith "tests." || !matchedStamp || !matchedDependencies then pure false else
     System.FilePath.pathExists (settings.core ++ "/.lake/build/lib/lean/" ++ path ++ ".olean")
   if !hasLocal && inherited && !changed && !settings.force.contains name then
     state.modify fun s => {s with done := s.done.insert name false,active := s.active.erase name}
@@ -189,6 +202,7 @@ def build (input : String) : IO Unit := do
   inheritLibrary (.mk (settings.core ++ "/.lake/build/lib/lean")) (.mk (settings.output ++ "/lib"))
   let objectMap ← IO.ofExcept ((← readJson settings.objectModules).getObj?)
   let mut inheritedStamps : Std.HashMap String String := {}
+  let mut inheritedDependencies : Std.HashMap String System.FilePath := {}
   for row in (← IO.FS.readFile settings.baselineResponse).splitOn "\n" do
     if row.trimAscii.isEmpty then continue
     let path ← IO.ofExcept (Json.parse row >>= Json.getStr?)
@@ -197,7 +211,9 @@ def build (input : String) : IO Unit := do
     let cache := (System.FilePath.mk path).withExtension "source"
     if ← cache.pathExists then
       inheritedStamps := inheritedStamps.insert name (← IO.FS.readFile cache)
-  let state ← IO.mkRef ({inheritedStamps} : State)
+    let dependencies := (System.FilePath.mk path).withExtension "dependencies"
+    if ← dependencies.pathExists then inheritedDependencies := inheritedDependencies.insert name dependencies
+  let state ← IO.mkRef ({inheritedStamps,inheritedDependencies} : State)
   let _ ← visit settings state settings.mainModule
   let state ← state.get
   let mut modules : Std.HashMap String String := {}
