@@ -1,0 +1,11 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationWire.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/prepared-bindings-core/Eggshell/PublicationWire.lean	2026-10-30 10:35:57
+@@ -89,6 +89,8 @@
+   (include_str "PublicationStream.lean").toUTF8,
+   (include_str "PublicationService.lean").toUTF8,(include_str "NativePublication.lean").toUTF8,
+   (include_str "CanonicalSourcePrepared.lean").toUTF8,(include_str "DaemonWire.lean").toUTF8,
++  (include_str "SynapticBindings.lean").toUTF8,
++  (include_str "../tools/PreparedBindingCache.lean").toUTF8,(include_str "../tools/ByteBudgetCache.lean").toUTF8,
+   (include_str "PluginModel.lean").toUTF8,(include_str "DB/PageMap.lean").toUTF8,
+   (include_str "DB/Sidecar.lean").toUTF8,
+   CanonicalSource.Cache.implementation.toUTF8,Index.implementation.toUTF8])

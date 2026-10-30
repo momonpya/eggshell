@@ -1,0 +1,12 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationService.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/prepared-bindings-core/Eggshell/PublicationService.lean	2026-10-30 10:35:57
+@@ -234,7 +234,8 @@
+   let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+   server.prepared.withReady pinned.snapshot path metadata deadline fun loaded _ => do
+     let some original := loaded.originals | throw (IO.userError "original bindings are not prepared")
+-    let result ← IndexedBindings.resolve original wanted (Std.HashSet.ofArray allowed) deadline
++    let namespaceKey := (toJson (scope.scope,CanonicalSource.Shared.key path metadata)).compress
++    let result ← server.prepared.bindings.resolve namespaceKey original wanted (Std.HashSet.ofArray allowed) deadline
+     let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,"",head,metadata,.hit⟩
+     return toJson ({
+       identity := access.identity

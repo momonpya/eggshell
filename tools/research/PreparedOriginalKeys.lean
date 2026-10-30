@@ -32,8 +32,9 @@ private partial def remove (path : System.FilePath) : IO Unit := do
     IO.FS.removeDir path
   else IO.FS.removeFile path
 
-private def summarize (blocks : Bool := false) : IO Unit := do
-  let saved := if blocks then project / "docs/candidates/service-block-cache" else evidence
+private def summarize (blocks : Bool := false) (bindings : Bool := false) : IO Unit := do
+  let saved := if bindings then project / "docs/candidates/prepared-bindings" else
+    if blocks then project / "docs/candidates/service-block-cache" else evidence
   finished (saved / "trial.guard.json")
   let records := saved / "trial"
   let result ← read (records / "result.json")
@@ -99,10 +100,12 @@ private def summarize (blocks : Bool := false) : IO Unit := do
         check (newMisses ≥ oldMisses) "shared page counters restarted during an arm"
         pure (measured.setObjVal! "sharedPageMisses" (toJson (newMisses-oldMisses))
           |>.setObjVal! "sharedPagesAfter" current
+          |>.setObjVal! "preparedBindingsAfter" ((after.getObjValD "preparedSources").getObjValD "bindings")
           |>.setObjVal! "preparedSourceLoads" ((after.getObjValD "preparedSources").getObjValD "loads"))
       else pure measured
     measurements := measurements.push measured
-    let directory := root / (if blocks then "service-block-cache-trial" else "prepared-original-keys-trial") / arm / "data/sessions" / session
+    let directory := root / (if bindings then "prepared-bindings-trial" else
+      if blocks then "service-block-cache-trial" else "prepared-original-keys-trial") / arm / "data/sessions" / session
     let pending ← read (directory / "pending.json")
     let deferred ← entries (directory / "deferred")
     let checkpoints ← entries (directory / "checkpoints")
@@ -156,6 +159,23 @@ def main (args : List String) : IO Unit := do
     return
   if args == ["summarize"] then return ← summarize
   if args == ["summarize-cache"] then return ← summarize true
+  if args == ["summarize-bindings"] then return ← summarize true true
+  if args == ["retire-bindings-trial"] then
+    let saved := project / "docs/candidates/prepared-bindings"
+    finished (saved / "trial.guard.json")
+    check ((← (saved / "latency-summary.json").pathExists) && (← (saved / "lifecycle.json").pathExists) &&
+      !(← (saved / "retired-trial.json").pathExists)) "seal actual decoded-binding hooks before deleting their fixtures"
+    let targets := #[root / "prepared-bindings-trial",root / "prepared-bindings-trial-build/StudyMain"]
+    for path in targets do
+      let options := if (← path.symlinkMetadata).type == .dir then #["-t","+D",path.toString] else #["-t",path.toString]
+      let opened ← IO.Process.output {cmd := "/usr/sbin/lsof",args := options}
+      check (opened.exitCode == 1 && opened.stdout.trimAscii.isEmpty) "measured binding fixture is still open"
+    let report := Json.mkObj [("targets",toJson targets),("archiveCreated",toJson false),
+      ("originalSourceJournalModelControlCandidateAndNativeInputsRetained",toJson true)]
+    IO.FS.writeFile (saved / "retired-trial.json") (report.setObjVal! "completed" (toJson false)).pretty
+    for path in targets do remove path
+    IO.FS.writeFile (saved / "retired-trial.json") (report.setObjVal! "completed" (toJson true)).pretty
+    return
   if args == ["retire-cache-trial"] then
     let saved := project / "docs/candidates/service-block-cache"
     finished (saved / "trial.guard.json")

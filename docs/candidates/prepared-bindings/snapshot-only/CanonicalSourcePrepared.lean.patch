@@ -1,0 +1,48 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/CanonicalSourcePrepared.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/prepared-bindings-core/Eggshell/CanonicalSourcePrepared.lean	2026-10-30 10:35:57
+@@ -3,6 +3,7 @@
+ public import Eggshell.CanonicalSourceCache
+ public import Eggshell.CanonicalSourceDelivery
+ public import Std.Sync.Mutex
++public import tools.PreparedBindingCache
+ public import Init.System.Promise
+ 
+ @[expose] public section
+@@ -52,7 +53,7 @@
+ 
+ -- The original-recipe cache is global across entries and shares this service
+ -- budget; it is not another 16 MiB reservation for each DB or connection.
+-def capacity : Nat := 512*1024*1024-ObservedRecordView.geometryCapacity-PageMap.SharedPageCache.capacity
++def capacity : Nat := 512*1024*1024-ObservedRecordView.geometryCapacity-PageMap.SharedPageCache.capacity-IndexedBindings.Prepared.capacity
+ def maxLoads : Nat := 2
+ def maxEntries : Nat := 128
+ 
+@@ -80,8 +81,9 @@
+   state : Std.Mutex State
+   tasks : Std.Mutex (Array (Task (Except IO.Error Unit)))
+   pages : PageMap.PagePool
++  bindings : IndexedBindings.Prepared.Pool
+ 
+-def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new #[],← PageMap.PagePool.new⟩
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new #[],← PageMap.PagePool.new,← IndexedBindings.Prepared.Pool.new⟩
+ 
+ inductive Admission where
+   | borrowed (entry : Entry)
+@@ -273,14 +275,16 @@
+     set {state with closed := true,entries := {},budget := {},active := 0}
+     for (_,entry) in state.entries do
+       unless ← entry.promise.isResolved do entry.promise.resolve (.error "prepared source service stopped")
++  pool.bindings.close
+   for task in ← pool.tasks.atomically get do IO.cancel task
+ 
+ def Pool.stats (pool : Pool) : IO Json := do
+   let pages ← pool.pages.stats
++  let bindings ← pool.bindings.stats
+   pool.state.atomically do
+     let state ← get
+     return Json.mkObj [("entries",toJson state.entries.size),("chargedBytes",toJson state.budget.used),
+-      ("capacity",toJson capacity),("pages",pages),("active",toJson state.active),("loads",toJson state.loads),
++      ("capacity",toJson capacity),("pages",pages),("bindings",bindings),("active",toJson state.active),("loads",toJson state.loads),
+       ("hits",toJson state.hits),("joins",toJson state.joins),("evictions",toJson state.evictions),
+       ("verifiedPayloadBytes",toJson state.readBytes),("closed",toJson state.closed),
+       ("accountedExact",toJson (state.budget.used ==

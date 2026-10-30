@@ -31,3 +31,5 @@
 guard全体287,185 ms、関連RSS標本最大1,692,048 KiB、終了0・残存PID0。元sourceと元75イベントは不変。追加の回答モデル0、総token・品質比較0、80人継続負荷・p99は未測定。[guard](candidates/deferred-quotation/actual-hook.guard.json)。この成功は準備と再利用の修復であり、残る選択脱落の修復ではない。
 
 終了したfixture・試行DB/cache・補助実行体・試験用installは削除し、archiveは作っていない。最後の試行では約745 MBの論理bytesを削除した。元seed・モデル・比較用runtime・現在の隔離runtimeと必要なsource/object/interfaceは保持した。[fixture](candidates/fact-delta/retired.json)、[引用試験](candidates/deferred-quotation/retired.json)、[実フック](candidates/deferred-quotation/runtime/retired.json)。
+
+後続のread-only質問cache修復と共有保持候補へ進んだ後、旧`62d637b7`の実行体も削除した。実行記録と必要なnative入力は保持している。[削除](candidates/prepared-bindings/retired-previous-runtime.json)。

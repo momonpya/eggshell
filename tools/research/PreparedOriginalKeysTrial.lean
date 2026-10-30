@@ -102,13 +102,16 @@ private def profileReuse : IO Unit := do
 def main (args : List String) : IO Unit := do
   if args == ["reuse-service"] then return ← profileReuse
   let profileService := args == ["profile-service"]
-  let blockCache := args == ["block-cache"]
+  let bindingsCache := args == ["bindings-cache"]
+  let blockCache := args == ["block-cache"] || bindingsCache
   check (args.isEmpty || profileService || blockCache) "explicit paired cache trial or unchanged-service profile required"
   let study : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028"
-  let label := if blockCache then "service-block-cache-trial" else if profileService then "source-service-profile" else "prepared-original-keys-trial"
+  let label := if bindingsCache then "prepared-bindings-trial" else
+    if blockCache then "service-block-cache-trial" else if profileService then "source-service-profile" else "prepared-original-keys-trial"
   let root := study / "shared-snapshot" / label
   let candidates : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates"
-  let records := candidates / (if blockCache then "service-block-cache" else if profileService then "source-service-profile" else "prepared-original-keys") / "trial"
+  let records := candidates / (if bindingsCache then "prepared-bindings" else
+    if blockCache then "service-block-cache" else if profileService then "source-service-profile" else "prepared-original-keys") / "trial"
   check (!(← root.pathExists) && !(← records.pathExists)) "fresh paired key-reuse trial required"
   IO.FS.createDirAll root
   IO.FS.createDirAll records
@@ -135,12 +138,14 @@ def main (args : List String) : IO Unit := do
     questions := questions.push (topic,prompt,spec,frozen)
   IO.FS.writeFile (records / "frozen-before-delivery.json") (toJson (questions.map fun (topic,_,spec,available) =>
     Json.mkObj [("topic",toJson topic),("specification",spec),("available",toJson available)])).pretty
+  let sourcePreparers ← if bindingsCache then read (records.parent.get! / "source-preparers.json") else pure Json.null
   IO.FS.writeFile (records / "protocol.json") (Json.mkObj [
     ("repetitions",toJson (if profileService then 1 else (2 : Nat))),
     ("topics",toJson (questions.map fun (topic,_,_,_) => topic)),("allFreshSessions",toJson true),
     ("armOrder",toJson (if profileService then #[#["baseline"]] else #[#["baseline","candidate"],#["candidate","baseline"]])),
     ("diagnosticServiceProfile",toJson profileService),
     ("sameHistoryManifestSha256",toJson manifestHash),("source",toJson pinned.head),
+    ("sourcePreparers",sourcePreparers),
     ("answeringModelCalls",toJson (0 : Nat)),("tokenComparison",toJson false),("adopted",toJson false)]).pretty
   let derivation ← read (study / "shared-snapshot/anchored-capture/seed-refinement.json")
   check (derivation.getObjValD "source" == toJson pinned.head) "coordinate supplement changed source"
@@ -155,34 +160,13 @@ def main (args : List String) : IO Unit := do
     if profileService then #[("EGGSHELL_HANDOFF_TRACE",some (records / "handoff.trace").toString)] else #[]
   let mut arms := #[]
   let definitions := [("baseline","query-cache-baseline-build"),
-    ("candidate",if blockCache then "service-block-cache-build" else "prepared-original-keys-build")]
+    ("candidate",if bindingsCache then "prepared-bindings-build" else
+      if blockCache then "service-block-cache-build" else "prepared-original-keys-build")]
   for (name,runtime) in (if profileService then definitions.take 1 else definitions) do
     let arm := root / name
     let _ ← StudyHistory.fork ⟨manifest.toString,manifestHash⟩ arm
     let database := arm / "work.egg"
     check ((← StudyRuntime.files database) == original) "arm fork changed source bytes"
-    let preparedSource := if blockCache then study / "shared-snapshot/source-service-profile/baseline/work.egg/derived"
-      else study / "study/seed-2/work.egg/derived"
-    let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",preparedSource.toString,
-      (database / "derived").toString]}
-    check (copied.exitCode == 0) "cannot retain existing immutable vector preparation"
-    let source ← DB.PageMap.pin database
-    let reader ← Persistence.Store.NodeReader.new source
-    let mut supplements := #[]
-    for (id,owner,supplement) in additions do
-      check ((← Build.document reader id).owner == owner) "supplement crossed source owners"
-      if supplement.sealed then supplements := supplements.push (id,supplement)
-    let prepared ← Build.refresh source .database supplements
-    let destination := records / name
-    IO.FS.createDirAll destination
-    IO.FS.writeFile (destination / "prepared-source.json") (toJson prepared).pretty
-    let installation := arm / "prefix"
-    let (binary,plugin) ← install (study / "shared-snapshot" / runtime / "StudyMain") installation (study / "prefix/share/eggshell/minilm")
-    let writeConfig := arm / "prepare.toml"
-    let config := arm / "readonly.toml"
-    IO.FS.writeFile writeConfig (configuration binary database true)
-    IO.FS.writeFile config (configuration binary database false)
-    let env := environment arm installation plugin writeConfig
     let runtimeDescriptor ←
       if blockCache then do
         let descriptors ← IO.ofExcept ((← read (records.parent.get! / "runtime-descriptors.json")).getArr?)
@@ -192,6 +176,46 @@ def main (args : List String) : IO Unit := do
         check (declared.binary == (study / "shared-snapshot" / runtime / "StudyMain").toString) "runtime descriptor crossed its arm"
         pure (some declared)
       else pure none
+    let preparedSource := if blockCache && !bindingsCache then study / "shared-snapshot/source-service-profile/baseline/work.egg/derived"
+      else study / "study/seed-2/work.egg/derived"
+    let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",preparedSource.toString,
+      (database / "derived").toString]}
+    check (copied.exitCode == 0) "cannot retain existing immutable vector preparation"
+    let destination := records / name
+    IO.FS.createDirAll destination
+    if bindingsCache then
+      let rows ← IO.ofExcept ((← read (records.parent.get! / "source-preparers.json")).getArr?)
+      let some row := rows.find? (fun row => row.getObjValD "arm" == toJson name) |
+        throw (IO.userError "source preparer for this arm was not frozen")
+      let descriptor := row.getObjValD "preparer"
+      let program ← IO.ofExcept (descriptor.getObjValAs? String "binary")
+      check (program == (study / "shared-snapshot" / ("source-prepare-" ++ name ++ "-build/StudyMain")).toString &&
+        descriptor.getObjValD "sha256" == toJson (← ArtifactHash.hex (.mk program))) "source preparer crossed its audited arm"
+      let output := destination / "prepared-source.json"
+      let response ← StudyCommand.run program #[database.toString,
+        (study / "shared-snapshot/anchored-capture/seed-refinement.json").toString,output.toString]
+        #[("EGGSHELL_DATA_ROOT",some (arm / "data").toString),("LEAN_NUM_THREADS",some "1")]
+        workspace.toString "" (destination / "prepare") 240000
+      check (response.exitCode == 0) "the arm's own source preparer failed"
+      let some expected := runtimeDescriptor | throw (IO.userError "source preparer has no frozen runtime contract")
+      check ((← read output).getObjValD "preparerGeneration" == toJson expected.generation)
+        "source preparation and runtime used different producer implementations"
+    else
+      let source ← DB.PageMap.pin database
+      let reader ← Persistence.Store.NodeReader.new source
+      let mut supplements := #[]
+      for (id,owner,supplement) in additions do
+        check ((← Build.document reader id).owner == owner) "supplement crossed source owners"
+        if supplement.sealed then supplements := supplements.push (id,supplement)
+      let prepared ← Build.refresh source .database supplements
+      IO.FS.writeFile (destination / "prepared-source.json") (toJson prepared).pretty
+    let installation := arm / "prefix"
+    let (binary,plugin) ← install (study / "shared-snapshot" / runtime / "StudyMain") installation (study / "prefix/share/eggshell/minilm")
+    let writeConfig := arm / "prepare.toml"
+    let config := arm / "readonly.toml"
+    IO.FS.writeFile writeConfig (configuration binary database true)
+    IO.FS.writeFile config (configuration binary database false)
+    let env := environment arm installation plugin writeConfig
     let publisher ← StudyRuntime.startPublisher binary (arm / "data") env (expectedRuntime := runtimeDescriptor)
     try
       let warmed ← StudyCommand.run binary.toString #["egg","warm","work"] env workspace.toString "" (destination / "warm") 240000

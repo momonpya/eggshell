@@ -5,7 +5,6 @@ open Lean
 
 private def root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot"
 private def project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
-private def report : System.FilePath := project / "docs/candidates/service-block-cache/unlinked-build-cache.json"
 
 private def check (ok : Bool) (message : String) : IO Unit :=
   unless ok do throw (IO.userError message)
@@ -37,11 +36,18 @@ private partial def generated (path : System.FilePath) : IO (Array (String × Na
   return result
 
 def main (args : List String) : IO Unit := do
-  check (args.isEmpty || args == ["apply"]) "explicit plan or apply only"
+  check (args.isEmpty || args == ["apply"] || args == ["bindings"] || args == ["bindings","apply"] ||
+    args == ["bindings-exact"] || args == ["bindings-exact","apply"])
+    "explicit plan or apply only"
+  let exactInputs := args.contains "bindings-exact"
+  let bindings := args.contains "bindings" || exactInputs
+  let report := project / (if exactInputs then "docs/candidates/prepared-bindings/exact-native-input-cache.json" else
+    if bindings then "docs/candidates/prepared-bindings/unlinked-build-cache.json" else
+    "docs/candidates/service-block-cache/unlinked-build-cache.json")
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
   check (processes.exitCode == 0 && (processes.stdout.splitOn "StudyBuildMain.lean").length == 1)
     "wait for native builds before removing their caches"
-  if args == ["apply"] then
+  if args.contains "apply" then
     let plan ← read report
     check (plan.getObjValD "completed" == toJson false) "preserve the completed retirement record"
     let targets ← IO.ofExcept (plan.getObjValAs? (Array (String × Nat)) "targets")
@@ -56,12 +62,27 @@ def main (args : List String) : IO Unit := do
     return
   check (!(← report.pathExists)) "preserve the existing retirement plan"
   let seen ← IO.mkRef ({} : Std.HashSet String)
-  let builds := #["product-build","fact-deferred-runtime-build","query-cache-baseline-build",
+  let builds := if exactInputs then #["query-cache-baseline-build","cached-usage-runtime-build",
+    "prepared-bindings-build","prepared-bindings-trial-build","source-prepare-baseline-build",
+    "source-prepare-candidate-build","source-lexical-integration-build","source-lexical-query-runtime-build"] else
+    if bindings then #["product-build","query-cache-baseline-build","cached-usage-runtime-build",
+    "prepared-bindings-build","prepared-bindings-trial-build","source-prepare-baseline-build",
+    "source-prepare-candidate-build","source-lexical-integration-build","source-lexical-query-runtime-build"] else
+    #["product-build","fact-deferred-runtime-build","query-cache-baseline-build",
     "cached-usage-runtime-build","service-block-cache-build","service-block-cache-trial-build",
     "source-lexical-integration-build","source-lexical-query-runtime-build"]
   let paths := (builds.map (fun name => root / System.FilePath.mk name)).push (root.parent.get! / "controller-build")
   for build in paths do
-    interfaces (build / "lib") seen
+    if exactInputs && !(#["source-lexical-integration-build","source-lexical-query-runtime-build"].contains build.fileName.get!) then
+      if ← (build / "build.json").pathExists then
+        let built ← read (build / "build.json")
+        let mainName ← IO.ofExcept ((built.getObjValD "settings").getObjValAs? String "mainModule")
+        let dependencies ← read (build / (mainName.replace "." "_" ++ ".dependencies"))
+        let modules : Array (String × String) ← IO.ofExcept (fromJson? dependencies)
+        for (name,_) in modules do
+          for suffix in [".olean",".olean.private",".olean.server",".ilean"] do
+            protectFile (build / "lib" / (name.replace "." "/" ++ suffix)) seen
+    else interfaces (build / "lib") seen
     let response := build / "runtime.rsp"
     if !(← response.pathExists) then continue
     for line in (← IO.FS.readFile response).splitOn "\n" do

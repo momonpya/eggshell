@@ -58,3 +58,5 @@ native186 objectの依存が整合し、既知の不整合な旧runtimeを拒否
 ## 終了した生成物の削除
 
 現在のnative link・interfaceとopen fileから参照されない旧生成物2,470ファイル、論理818,413,012 bytesを削除した。元DB・原ソース・モデル・現行と候補の実行体・必要なnative入力は保持し、archiveは作っていない。[削除対象と完了](candidates/service-block-cache/unlinked-build-cache.json)。比較後も、本文・監査・時刻・digestを保存してから、終了した比較とCPU診断のDB/cache/install・比較helper実行体を削除した。[完了記録](candidates/service-block-cache/retired-trial.json)。削除済みfixtureで現在も再実行できるとは扱わない。
+
+その後、[原文対応の共有保持候補](prepared-bindings.md)へ進む際に、比較を終えた`f9c6d934`の実行体も削除した。上記は当時の保持状態であり、現在この旧実行体が残っているという意味ではない。実測・source/object/interface等の必要入力と現行対照は保持している。[追加削除](candidates/prepared-bindings/retired-previous-candidate.json)。

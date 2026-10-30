@@ -1,0 +1,45 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseIndex.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/prepared-bindings-core/Eggshell/SynapseIndex.lean	2026-10-30 10:54:08
+@@ -178,12 +178,33 @@
+ 
+ def bindingPrefix (source : Range) := "binding:" ++ contentKey source ++ ":"
+ def bindingName (source : Range) (fact : String) := bindingPrefix source ++ fact
++
++structure BindingChange where
++  source : Range
++  publication : Nat
++  deriving ToJson,FromJson
++
++def bindingChangeName (source : Range) := "binding-change:" ++ contentKey source
++
++/-- A producer-owned point dependency, committed with the exact posting changes.
++The counter is the existing transaction revision, not a format version. -/
++def touchBinding (writer : PageMap.Writer) (source : Range) : IO Unit :=
++  writer.put (bindingChangeName source) (some ((toJson
++    (⟨source,writer.base.head.revision+1⟩ : BindingChange)).compress.toUTF8))
+ 
++def bindingChange? (snapshot : PageMap.Snapshot) (source : Range) : IO (Option BindingChange) := do
++  let some bytes ← snapshot.get (bindingChangeName source) | return none
++  let change ← decode (α := BindingChange) bytes
++  unless change.source == source && 0 < change.publication && change.publication ≤ snapshot.head.revision do
++    throw (IO.userError "prepared binding change differs from its exact range or publication")
++  return some change
++
+ def prepareBinding (writer : PageMap.Writer) (fact : Fact) : IO Unit := do
+   if let some read := bindingCandidate? fact then
+     unless read.valid do throw (IO.userError "invalid published original binding")
+     let stored : StoredBinding := ⟨contentKey fact,read⟩
+-    let _ ← putImmutable writer (bindingName read.source stored.fact) (← checkedBytes stored)
++    let inserted ← putImmutable writer (bindingName read.source stored.fact) (← checkedBytes stored)
++    if inserted || (← writer.get (bindingChangeName read.source)).isNone then touchBinding writer read.source
+ 
+ theorem compiled_read_preserves_binding (read : Read) :
+     (bindingCandidate? (.read read)).map (·.binding) = some read.binding := rfl
+@@ -212,6 +233,7 @@
+   Routing.Store.erase writer fact
+   if let some read := bindingCandidate? fact then
+     writer.put (bindingName read.source (contentKey fact)) none
++    touchBinding writer read.source
+   writer.put name none
+   for key in addresses fact do writer.put (postingName key fact) none
+   -- Retiring a recommendation does not permit relabelling an observed event.

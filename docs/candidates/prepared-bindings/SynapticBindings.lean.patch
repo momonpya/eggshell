@@ -1,0 +1,60 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapticBindings.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/prepared-bindings-core/Eggshell/SynapticBindings.lean	2026-10-30 10:35:57
+@@ -89,14 +89,16 @@
+ 
+ /-- One exact source-posting lookup, no Work/body restoration or source
+ parser. This returns advisory metadata, never a Match or completion proof. -/
+-def lookup (reader : Index.Reader) (source : Range) (allowed : Std.HashSet String)
+-    (deadline : Nat) (byteLimit : Nat := 8*1024*1024) :
+-    IO (Lookup reader.manifest.source.identity allowed source) := do
++def rawLookup (reader : Index.Reader) (source : Range) (deadline byteLimit : Nat) : IO Scan := do
+   let base := "binding:" ++ Index.contentKey source
+   let range : PageMap.KeyRange := ⟨base ++ ":",base ++ ";"⟩
+   let found ← match reader.index.head.root with
+     | none => pure ({} : Scan)
+     | some root => scanAt reader.index root source range deadline byteLimit {}
++  return found
++
++def checked (reader : Index.Reader) (source : Range) (allowed : Std.HashSet String)
++    (found : Scan) : Lookup reader.manifest.source.identity allowed source := Id.run do
+   let mut origins := #[]
+   let mut seen : Std.HashSet Read := {}
+   let mut unusable := 0
+@@ -108,6 +110,11 @@
+     origins := origins.push origin
+   return ⟨origins,found.complete && unusable == 0,reader.index.head,found.inspected,found.bytes,unusable⟩
+ 
++def lookup (reader : Index.Reader) (source : Range) (allowed : Std.HashSet String)
++    (deadline : Nat) (byteLimit : Nat := 8*1024*1024) :
++    IO (Lookup reader.manifest.source.identity allowed source) := do
++  return checked reader source allowed (← rawLookup reader source deadline byteLimit)
++
+ structure Resolved where
+   rows : Std.HashMap Range (Array Read) := {}
+   complete : Bool := true
+@@ -128,13 +135,13 @@
+   unusable : Nat
+   deriving ToJson,FromJson
+ 
+-def resolve (reader : Index.Reader) (wanted : Array Range) (allowed : Std.HashSet String)
+-    (deadline : Nat) : IO Resolved := do
++def resolveUsing (reader : Index.Reader) (wanted : Array Range) (allowed : Std.HashSet String)
++    (deadline : Nat) (pull : Range → Nat → IO Scan) : IO Resolved := do
+   let mut result : Resolved := {}
+   for source in (hashDistinct wanted.toList).toArray do
+     if (← IO.monoMsNow) ≥ deadline || result.bytes ≥ 32*1024*1024 then
+       return {result with complete := false}
+-    let found ← lookup reader source allowed deadline (32*1024*1024-result.bytes)
++    let found := checked reader source allowed (← pull source (32*1024*1024-result.bytes))
+     let rows := found.origins.map (·.read)
+     result := {
+       rows := result.rows.insert source rows
+@@ -146,4 +153,8 @@
+       unresolved := result.unresolved + if rows.isEmpty then 1 else 0}
+   return result
+ 
++def resolve (reader : Index.Reader) (wanted : Array Range) (allowed : Std.HashSet String)
++    (deadline : Nat) : IO Resolved :=
++  resolveUsing reader wanted allowed deadline (fun source byteLimit => rawLookup reader source deadline byteLimit)
++
+ end Eggshell.Synapses.IndexedBindings
