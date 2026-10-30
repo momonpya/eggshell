@@ -1,0 +1,223 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseIndex.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/owner-bindings-core/Eggshell/SynapseIndex.lean
+index 35720ac..501e99d 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseIndex.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/owner-bindings-core/Eggshell/SynapseIndex.lean
+@@ -4,6 +4,7 @@ public import Eggshell.GraphStore
+ public import Eggshell.SynapseProvenance
+ public import Eggshell.SynapticTopologyStore
+ public import Eggshell.ObservedRecordView
++public import tools.research.OwnerBindingLayout
+ 
+ @[expose] public section
+ 
+@@ -17,6 +18,7 @@ def implementation : String :=
+     (include_str "../tools/SpanPostings.lean").toUTF8,
+     (include_str "Synapses.lean").toUTF8, (include_str "SynapseExtraction.lean").toUTF8,
+     (include_str "SynapseSource.lean").toUTF8, (include_str "SynapseUsage.lean").toUTF8,
++    (include_str "../tools/research/OwnerBindingLayout.lean").toUTF8,
+     (include_str "SynapseIndex.lean").toUTF8, (include_str "SynapseBuild.lean").toUTF8,
+     (include_str "SynapseProvenance.lean").toUTF8, (include_str "ObservationAge.lean").toUTF8,
+     (include_str "SynapseTraceCache.lean").toUTF8,
+@@ -176,14 +178,15 @@ structure StoredBinding where
+   read : Read
+   deriving ToJson,FromJson
+ 
+-def bindingPrefix (source : Range) := "binding:" ++ contentKey source ++ ":"
+-def bindingName (source : Range) (fact : String) := bindingPrefix source ++ fact
++def ownerBindingName (read : Read) (fact : String) :=
++  Eggshell.Research.OwnerBindingLayout.name read.binding.owner
++    (Eggshell.Research.OwnerBindingLayout.project fact read)
+ 
+ def prepareBinding (writer : PageMap.Writer) (fact : Fact) : IO Unit := do
+   if let some read := bindingCandidate? fact then
+     unless read.valid do throw (IO.userError "invalid published original binding")
+-    let stored : StoredBinding := ⟨contentKey fact,read⟩
+-    let _ ← putImmutable writer (bindingName read.source stored.fact) (← checkedBytes stored)
++    let stored := Eggshell.Research.OwnerBindingLayout.project (contentKey fact) read
++    let _ ← putImmutable writer (ownerBindingName read stored.fact) (← checkedBytes stored)
+ 
+ theorem compiled_read_preserves_binding (read : Read) :
+     (bindingCandidate? (.read read)).map (·.binding) = some read.binding := rfl
+@@ -211,7 +214,7 @@ def erase (writer : PageMap.Writer) (fact : Fact) : IO Bool := do
+     throw (IO.userError "retired synaptic object differs from its content address")
+   Routing.Store.erase writer fact
+   if let some read := bindingCandidate? fact then
+-    writer.put (bindingName read.source (contentKey fact)) none
++    writer.put (ownerBindingName read (contentKey fact)) none
+   writer.put name none
+   for key in addresses fact do writer.put (postingName key fact) none
+   -- Retiring a recommendation does not permit relabelling an observed event.
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapticBindings.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/owner-bindings-core/Eggshell/SynapticBindings.lean
+index d38068d..5d79b50 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapticBindings.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/owner-bindings-core/Eggshell/SynapticBindings.lean
+@@ -51,14 +51,35 @@ structure Lookup (database : String) (allowed : Std.HashSet String) (source : Ra
+   bytes : Nat
+   unusable : Nat
+ 
+-structure Scan where
+-  rows : Array Index.StoredBinding := #[]
++structure Resolved where
++  rows : Std.HashMap Range (Array Read) := {}
++  complete : Bool := true
++  requests : Nat := 0
+   inspected : Nat := 0
+   bytes : Nat := 0
++  unresolved : Nat := 0
++  unusable : Nat := 0
++
++structure Projection where
++  identity : Json
++  index : PageMap.Head
++  rows : Array (Range × Array Read)
++  complete : Bool
++  requests : Nat
++  bytes : Nat
++  unresolved : Nat
++  unusable : Nat
++  deriving ToJson,FromJson
++
++structure OwnerScan where
++  rows : Array Index.StoredBinding := #[]
++  counts : Std.HashMap Range Nat := {}
++  bytes : Nat := 0
+   complete : Bool := true
+ 
+-def scanAt (snapshot : PageMap.Snapshot) (ref : PageMap.Ref) (source : Range) (keyRange : PageMap.KeyRange)
+-    (deadline byteLimit : Nat) (initial : Scan) : IO Scan := do
++def scanOwnerAt (snapshot : PageMap.Snapshot) (ref : PageMap.Ref) (database owner : String)
++    (file : Bool) (wanted : Std.HashSet Range) (keyRange : PageMap.KeyRange)
++    (deadline : Nat) (initial : OwnerScan) : IO OwnerScan := do
+   if !initial.complete then return initial
+   if (← IO.monoMsNow) ≥ deadline then return {initial with complete := false}
+   let loaded ← snapshot.load ref
+@@ -67,82 +88,68 @@ def scanAt (snapshot : PageMap.Snapshot) (ref : PageMap.Ref) (source : Range) (k
+   | .leaf rows =>
+     for row in keyRange.select rows do
+       let some bytes := row.2 | continue
+-      if result.inspected ≥ 32768 || result.bytes+bytes.size > byteLimit || (← IO.monoMsNow) ≥ deadline then
++      if (← IO.monoMsNow) ≥ deadline then return {result with complete := false}
++      let stored ← Index.decode (α := Eggshell.Research.OwnerBindingLayout.Row) bytes
++      let read := stored.restore database owner
++      unless digest stored.fact && stored.owner == owner && row.1 == keyRange.lower ++ stored.fact && read.valid &&
++          Eggshell.Research.OwnerBindingLayout.fileKind read.source.subject == file do
++        throw (IO.userError "owner binding differs from its pinned inventory")
++      unless wanted.contains read.source do continue
++      let count := result.counts[read.source]?.getD 0
++      if count ≥ 32768 || result.bytes+bytes.size > 32*1024*1024 then
+         return {result with complete := false}
+-      let binding ← Index.decode (α := Index.StoredBinding) bytes
+-      unless row.1 == keyRange.lower ++ binding.fact && binding.read.source == source && binding.read.valid do
+-        throw (IO.userError "prepared binding differs from its pinned source posting")
+       result := {result with
+-        rows := result.rows.push binding
+-        inspected := result.inspected+1
++        rows := result.rows.push ⟨stored.fact,read⟩
++        counts := result.counts.insert read.source (count+1)
+         bytes := result.bytes+bytes.size}
+     return result
+   | .branch children =>
+     for child in children do
+       if keyRange.overlaps child then
+         if _smaller : child.height < ref.height then
+-          result ← scanAt snapshot child source keyRange deadline byteLimit result
+-        else throw (IO.userError "prepared binding directory height did not decrease")
++          result ← scanOwnerAt snapshot child database owner file wanted keyRange deadline result
++        else throw (IO.userError "owner binding directory height did not decrease")
+         if !result.complete then return result
+     return result
+ termination_by ref.height
+ 
+-/-- One exact source-posting lookup, no Work/body restoration or source
+-parser. This returns advisory metadata, never a Match or completion proof. -/
+-def lookup (reader : Index.Reader) (source : Range) (allowed : Std.HashSet String)
+-    (deadline : Nat) (byteLimit : Nat := 8*1024*1024) :
+-    IO (Lookup reader.manifest.source.identity allowed source) := do
+-  let base := "binding:" ++ Index.contentKey source
+-  let range : PageMap.KeyRange := ⟨base ++ ":",base ++ ";"⟩
+-  let found ← match reader.index.head.root with
+-    | none => pure ({} : Scan)
+-    | some root => scanAt reader.index root source range deadline byteLimit {}
+-  let mut origins := #[]
+-  let mut seen : Std.HashSet Read := {}
+-  let mut unusable := 0
+-  for stored in found.rows do
+-    if !stored.read.valid then unusable := unusable+1
+-    let some origin := checkRead? reader.manifest.source.identity allowed source stored.read | continue
+-    if seen.contains origin.read then continue
+-    seen := seen.insert origin.read
+-    origins := origins.push origin
+-  return ⟨origins,found.complete && unusable == 0,reader.index.head,found.inspected,found.bytes,unusable⟩
+-
+-structure Resolved where
+-  rows : Std.HashMap Range (Array Read) := {}
+-  complete : Bool := true
+-  requests : Nat := 0
+-  inspected : Nat := 0
+-  bytes : Nat := 0
+-  unresolved : Nat := 0
+-  unusable : Nat := 0
+-
+-structure Projection where
+-  identity : Json
+-  index : PageMap.Head
+-  rows : Array (Range × Array Read)
+-  complete : Bool
+-  requests : Nat
+-  bytes : Nat
+-  unresolved : Nat
+-  unusable : Nat
+-  deriving ToJson,FromJson
+-
+ def resolve (reader : Index.Reader) (wanted : Array Range) (allowed : Std.HashSet String)
+     (deadline : Nat) : IO Resolved := do
+-  let mut result : Resolved := {}
+-  for source in (hashDistinct wanted.toList).toArray do
+-    if (← IO.monoMsNow) ≥ deadline || result.bytes ≥ 32*1024*1024 then
+-      return {result with complete := false}
+-    let found ← lookup reader source allowed deadline (32*1024*1024-result.bytes)
+-    let rows := found.origins.map (·.read)
+-    result := {
++  let requests := (hashDistinct wanted.toList).toArray
++  if requests.isEmpty then return {}
++  if (← IO.monoMsNow) ≥ deadline then return {complete := false}
++  let domains := Std.HashSet.ofArray requests
++  let file := requests.any (fun source => Eggshell.Research.OwnerBindingLayout.fileKind source.subject)
++  let original := requests.any (fun source => !Eggshell.Research.OwnerBindingLayout.fileKind source.subject)
++  let mut found : OwnerScan := {}
++  for owner in allowed.toArray do
++    for kind in [true,false] do
++      if (kind && !file) || (!kind && !original) then continue
++      let base := Eggshell.Research.OwnerBindingLayout.postingPrefix owner kind
++      if let some root := reader.index.head.root then
++        found ← scanOwnerAt reader.index root reader.manifest.source.identity owner kind domains
++          ⟨base,base.dropEnd 1 |>.copy |>.append ";"⟩ deadline found
++      if !found.complete then break
++    if !found.complete then break
++  let mut grouped : Std.HashMap Range (Array Read) := {}
++  let mut seen : Std.HashSet Read := {}
++  -- The former source postings are ordered by fact id. Restore that order
++  -- before erasing repeated Read witnesses, independently of owner iteration.
++  for stored in found.rows.qsort (fun left right => left.fact < right.fact) do
++    let read := stored.read
++    let some checked := checkRead? reader.manifest.source.identity allowed read.source read | continue
++    if seen.contains checked.read then continue
++    seen := seen.insert checked.read
++    grouped := grouped.insert read.source ((grouped[read.source]?.getD #[]).push read)
++  let mut result : Resolved := {
++    complete := found.complete
++    requests := requests.size
++    inspected := found.rows.size
++    bytes := found.bytes}
++  for source in requests do
++    let rows := grouped[source]?.getD #[]
++    result := {result with
+       rows := result.rows.insert source rows
+-      complete := result.complete && found.complete
+-      requests := result.requests+1
+-      inspected := result.inspected+found.inspected
+-      bytes := result.bytes+found.bytes
+-      unusable := result.unusable+found.unusable
+       unresolved := result.unresolved + if rows.isEmpty then 1 else 0}
+   return result
+ 

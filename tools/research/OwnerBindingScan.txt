@@ -1,0 +1,81 @@
+structure OwnerScan where
+  rows : Array Index.StoredBinding := #[]
+  counts : Std.HashMap Range Nat := {}
+  bytes : Nat := 0
+  complete : Bool := true
+
+def scanOwnerAt (snapshot : PageMap.Snapshot) (ref : PageMap.Ref) (database owner : String)
+    (file : Bool) (wanted : Std.HashSet Range) (keyRange : PageMap.KeyRange)
+    (deadline : Nat) (initial : OwnerScan) : IO OwnerScan := do
+  if !initial.complete then return initial
+  if (← IO.monoMsNow) ≥ deadline then return {initial with complete := false}
+  let loaded ← snapshot.load ref
+  let mut result := initial
+  match loaded.page with
+  | .leaf rows =>
+    for row in keyRange.select rows do
+      let some bytes := row.2 | continue
+      if (← IO.monoMsNow) ≥ deadline then return {result with complete := false}
+      let stored ← Index.decode (α := Eggshell.Research.OwnerBindingLayout.Row) bytes
+      let read := stored.restore database owner
+      unless digest stored.fact && stored.owner == owner && row.1 == keyRange.lower ++ stored.fact && read.valid &&
+          Eggshell.Research.OwnerBindingLayout.fileKind read.source.subject == file do
+        throw (IO.userError "owner binding differs from its pinned inventory")
+      unless wanted.contains read.source do continue
+      let count := result.counts[read.source]?.getD 0
+      if count ≥ 32768 || result.bytes+bytes.size > 32*1024*1024 then
+        return {result with complete := false}
+      result := {result with
+        rows := result.rows.push ⟨stored.fact,read⟩
+        counts := result.counts.insert read.source (count+1)
+        bytes := result.bytes+bytes.size}
+    return result
+  | .branch children =>
+    for child in children do
+      if keyRange.overlaps child then
+        if _smaller : child.height < ref.height then
+          result ← scanOwnerAt snapshot child database owner file wanted keyRange deadline result
+        else throw (IO.userError "owner binding directory height did not decrease")
+        if !result.complete then return result
+    return result
+termination_by ref.height
+
+def resolve (reader : Index.Reader) (wanted : Array Range) (allowed : Std.HashSet String)
+    (deadline : Nat) : IO Resolved := do
+  let requests := (hashDistinct wanted.toList).toArray
+  if requests.isEmpty then return {}
+  if (← IO.monoMsNow) ≥ deadline then return {complete := false}
+  let domains := Std.HashSet.ofArray requests
+  let file := requests.any (fun source => Eggshell.Research.OwnerBindingLayout.fileKind source.subject)
+  let original := requests.any (fun source => !Eggshell.Research.OwnerBindingLayout.fileKind source.subject)
+  let mut found : OwnerScan := {}
+  for owner in allowed.toArray do
+    for kind in [true,false] do
+      if (kind && !file) || (!kind && !original) then continue
+      let base := Eggshell.Research.OwnerBindingLayout.postingPrefix owner kind
+      if let some root := reader.index.head.root then
+        found ← scanOwnerAt reader.index root reader.manifest.source.identity owner kind domains
+          ⟨base,base.dropEnd 1 |>.copy |>.append ";"⟩ deadline found
+      if !found.complete then break
+    if !found.complete then break
+  let mut grouped : Std.HashMap Range (Array Read) := {}
+  let mut seen : Std.HashSet Read := {}
+  -- The former source postings are ordered by fact id. Restore that order
+  -- before erasing repeated Read witnesses, independently of owner iteration.
+  for stored in found.rows.qsort (fun left right => left.fact < right.fact) do
+    let read := stored.read
+    let some checked := checkRead? reader.manifest.source.identity allowed read.source read | continue
+    if seen.contains checked.read then continue
+    seen := seen.insert checked.read
+    grouped := grouped.insert read.source ((grouped[read.source]?.getD #[]).push read)
+  let mut result : Resolved := {
+    complete := found.complete
+    requests := requests.size
+    inspected := found.rows.size
+    bytes := found.bytes}
+  for source in requests do
+    let rows := grouped[source]?.getD #[]
+    result := {result with
+      rows := result.rows.insert source rows
+      unresolved := result.unresolved + if rows.isEmpty then 1 else 0}
+  return result
