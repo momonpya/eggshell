@@ -1,0 +1,23 @@
+--- a/Eggshell/Blake3.lean
++++ b/Eggshell/Blake3.lean
+@@ -1,6 +1,7 @@
+ module
+ 
+ import Std
++public import tools.research.RegisterMix
+ 
+ @[expose] public section
+ 
+@@ -37,6 +38,12 @@
+   let state := modifyAt state c fun value => value + state[d]!
+   state.set! b (rotateRight (state[b]! ^^^ state[c]!) 7)
+ 
++@[csimp] theorem register_mix_compiled : @g = @Eggshell.Research.RegisterMix.optimized := by
++  funext state a b c d mx my
++  change Eggshell.Research.RegisterMix.reference state a b c d mx my =
++    Eggshell.Research.RegisterMix.optimized state a b c d mx my
++  exact (Eggshell.Research.RegisterMix.optimized_exact state a b c d mx my).symm
++
+ def round (state : Array UInt32) (message : Array UInt32) : Array UInt32 :=
+   let words := state ++ message
+   let words := g words 0 4 8 12 16 17

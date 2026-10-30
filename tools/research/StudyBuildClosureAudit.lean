@@ -46,6 +46,15 @@ private def inspect (directory : System.FilePath) : IO Json := do
     ("failures",Json.arr failures),("consistent",toJson failures.isEmpty)]
 
 def main (args : List String) : IO Unit := do
+  if let ["inspect",build,output] := args then
+    let path := System.FilePath.mk output
+    unless !(← path.pathExists) do throw (IO.userError "preserve native closure evidence")
+    let report ← inspect (.mk build)
+    IO.FS.writeFile path report.pretty
+    unless report.getObjValD "consistent" == toJson true do
+      throw (IO.userError "native link inputs are inconsistent")
+    IO.println report.compress
+    return
   let [oldBuild,newBuild,output] := args | throw (IO.userError "old build, repaired build and new output required")
   let path := System.FilePath.mk output
   unless !(← path.pathExists) do throw (IO.userError "preserve native closure evidence")
