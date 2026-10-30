@@ -1,0 +1,47 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/Handoff.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/workgraph-wire-core/Eggshell/Handoff.lean	2026-10-30 23:25:32
+@@ -44,6 +44,7 @@
+ public import Eggshell.SynapseBundles
+ public import Eggshell.PacketReceipt
+ public import Eggshell.CanonicalSourceDelivery
++public import tools.research.WorkGraphWire
+ public import tools.RetrievalIndex
+ 
+ public import tools.QueryLiterals
+@@ -6295,6 +6296,12 @@
+       (requestQuestion.getD current,sharedDomain.map (·.key))
+     let locationKey := "f:locations:" ++ relationKey (.text locationText)
+     let locationFrame : DeliveryFrame := {key := locationKey,text := locationText}
++    let maximumGraphEdges := Eggshell.Research.WorkGraphWire.related sourceAll sourceUnions nominated
++      (selectedAll.map (·.matched.edge) ++ surrounding.map (·.owner))
++      (surrounding.flatMap (·.route.works)) ++ selectedAll.map (fun selected =>
++        Eggshell.Research.WorkGraphWire.Edge.projection selected.matched.edge selected.matched.projectedEdge
++          selected.matched.projectedEdge_has_owner_provenance)
++    let graphLabels := Eggshell.Research.WorkGraphWire.prepareEdgeLabels readable relationKey maximumGraphEdges
+     let framesFor := fun (fitted : List TransportSlice) =>
+       let visible := visibleFor fitted
+       let support := supportFor fitted
+@@ -6308,8 +6315,11 @@
+       -- All/Union once per child adds no information and cannot consume the
+       -- budget intended for original observations. This is display sharing,
+       -- never a new equivalence or completion judgment.
+-      let sourceText := renderSourceNeighborhood sourceAll sourceUnions nominated owners
+-        (support.flatMap (·.route.works)) true
++      let graphEdges := Eggshell.Research.WorkGraphWire.related sourceAll sourceUnions nominated owners
++        (support.flatMap (·.route.works)) ++ visible.map (fun selected =>
++          Eggshell.Research.WorkGraphWire.Edge.projection selected.matched.edge selected.matched.projectedEdge
++            selected.matched.projectedEdge_has_owner_provenance)
++      let sourceText := (Eggshell.Research.WorkGraphWire.prepare readable relationKey graphEdges graphLabels).render
+       let sourceFrame : DeliveryFrame := {
+         key := "f:links:" ++ relationKey (.text sourceText)
+         owners := owners.map (fun owner => relationKey owner.relation)
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationWire.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/workgraph-wire-core/Eggshell/PublicationWire.lean	2026-10-30 23:25:32
+@@ -85,6 +85,7 @@
+ /-- Installation paths and copy mtimes are not service generations. The same
+ source protocol can share one owner across clients built from the same code. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
++  (include_str "../tools/research/WorkGraphWire.lean").toUTF8,
+   (include_str "PublicationWire.lean").toUTF8,(include_str "PublicationClient.lean").toUTF8,
+   (include_str "PublicationStream.lean").toUTF8,
+   (include_str "PublicationService.lean").toUTF8,(include_str "NativePublication.lean").toUTF8,

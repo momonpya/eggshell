@@ -8,6 +8,8 @@
 
 一方、自然言語の質問に関連した原文の配送は`Handoff.SharedRangeAdapter`の別の最適化である。`cachedCuePieces`は元の所有者順位・窓順位と重なった文字数から価値を作る。`problem`はbaseとgraphの増分を分け、単独の原文offerも残す。`bundleRecipeIndexed?`と`ClosedCoverage.compile`は、束の増分を得るなら全ての部品を支払うことを保証する。しかし、選んだ仕事/結果に関係する全原文が、個別の点数にかかわらず必ず配送されるという条件にはなっていない。
 
+`GraphStore.searchText`は元のWork本文とOutcome本文の両方を検索対象にしている。Workを索引に入れ忘れている、という診断ではない。検索への入場、グラフ上の関連、原文の最終選択、受け手が仕事の意味を解決できることは別の検査である。既存のWork用検索を二重に追加しない。
+
 固定した題材1の[選択入力](candidates/prepared-bindings/resumed/cue-capture/receipts/43ba2a13af5aae5fc34557e5b8747cafce13fa0063d0da7356b09f43de8cd9ca/selection-plan.json)では、原文8,640単位、準備済みgraph bundle 2,412、選択bundleは1だった。この件数は必要根拠のrecallではない。未配送67文字の原文にもgraph増分はあるが、baseの0.9335%にとどまる。[元の正確な整数監査](candidates/prepared-bindings/resumed/cue-inspection.json)。関連の信号を失っていなくても、最後の競争で原文が脱落し得る。
 
 [実配送本文](candidates/register-hash/hooks/baseline/rep-0/body.txt)には`SELECTED WORK GRAPH`、`RELATED SOURCE GRAPH`、原典のAllの子へのlink、実際のCODEがある。グラフを完全に捨てた通常の文章検索ではない。ただし`renderSourceNeighborhood`が示すのは、表示した元の所有者と関係する子へのlinkである。グラフの構造が本文にあることは、その隣の原文も本文にあることの証明にはならない。
@@ -27,3 +29,5 @@
 前回の固定価格診断も、この問題を別のsolverで解決したものではない。部分問題の同点の幅の外に未配送があり、同じ代理目的のsolver・重み・予約の再試行へは戻らない。次は、元のWorkの内容とOutcome/Allの関係を受け手が解決できる表現を作り、選んだ仕事/結果の既知の根拠を、個別の推薦点数で切り落とさない条件を先に明示する。単なる表示ラベルの追加を98%達成とは扱わない。既に失敗した全文閉包、予約、call名から定義全体を必須にする案を、新しい名前で繰り返さない。
 
 速度は別の未達である。原文のキー・対応・描画用構造は質問に依存せず、所有者や抜粋ごとの再ハッシュ・再復元を除く。今回の[キー共有候補](canonical-key-directory.md)はこの経路だけの検査であり、配送漏れや80人継続利用を解決したと扱わない。
+
+その後の[内容付きグラフ表現の隔離検査](workgraph-wire.md)は、実本文の25 Workと139参照を解決できたが、必要原文2/3、実フック16.7〜16.9秒のままだった。表示だけの修正も必要性の選択を改善した証拠にはならない。同じ表現を少し変えて再試行せず、未採用で停止する。
