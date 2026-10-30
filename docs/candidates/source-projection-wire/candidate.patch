@@ -1,0 +1,50 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationClient.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/source-projection-wire-core/Eggshell/PublicationClient.lean	2026-10-31 00:21:01
+@@ -3,6 +3,7 @@
+ public import Eggshell.PublicationWire
+ public import Eggshell.Numerical
+ public import Eggshell.CanonicalSourcePrepared
++public import tools.research.SourceProjectionWire
+ public import Eggshell.SynapticBindings
+ 
+ @[expose] public section
+@@ -66,7 +67,9 @@
+   let response ← Stream.exchange reference.endpoint "source-rows" (Json.mkObj [
+     ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
+     ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+-  let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.CanonicalSource.Shared.Projection))
++  let wire ← IO.ofExcept (Json.parse response >>= fromJson? (α := Eggshell.Research.SourceProjectionWire.Wire))
++  let some result := Eggshell.Research.SourceProjectionWire.unpack wire |
++    throw (IO.userError "prepared source projection has an invalid dictionary reference")
+   unless result.identity == reference.identity && result.rows.map Prod.fst == owners &&
+       result.layouts.map Prod.fst == owners do
+     throw (IO.userError "prepared source projection changed its owner domain")
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationService.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/source-projection-wire-core/Eggshell/PublicationService.lean	2026-10-31 00:21:01
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.PublicationWire
+ public import Eggshell.CanonicalSourcePrepared
++public import tools.research.SourceProjectionWire
+ public import Eggshell.SynapticBindings
+ public import Std.Sync.Mutex
+ public import Init.System.Promise
+@@ -183,7 +184,7 @@
+     let result : CanonicalSource.Shared.Projection := ⟨access.identity,
+       prepared.map (fun (owner,recipe) => (owner,recipe.rows)),reuse,
+       prepared.map (fun (owner,recipe) => (owner,recipe.records))⟩
+-    return toJson result
++    return toJson (Eggshell.Research.SourceProjectionWire.pack result)
+ 
+ /-- The identical authenticated read scope serves generic original output.
+ The prepared index snapshot is shared; no query repairs or normalizes it. -/
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationWire.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/source-projection-wire-core/Eggshell/PublicationWire.lean	2026-10-31 00:21:01
+@@ -85,6 +85,7 @@
+ /-- Installation paths and copy mtimes are not service generations. The same
+ source protocol can share one owner across clients built from the same code. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
++  (include_str "../tools/research/SourceProjectionWire.lean").toUTF8,
+   (include_str "PublicationWire.lean").toUTF8,(include_str "PublicationClient.lean").toUTF8,
+   (include_str "PublicationStream.lean").toUTF8,
+   (include_str "PublicationService.lean").toUTF8,(include_str "NativePublication.lean").toUTF8,
