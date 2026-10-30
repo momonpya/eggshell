@@ -1,0 +1,262 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationClient.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/PublicationClient.lean
+index c413f8b..e915435 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationClient.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/PublicationClient.lean
+@@ -3,6 +3,7 @@ module
+ public import Eggshell.PublicationWire
+ public import Eggshell.Numerical
+ public import Eggshell.CanonicalSourcePrepared
++public import tools.research.PreparedSourceReader
+ public import Eggshell.SynapticBindings
+ 
+ @[expose] public section
+@@ -67,19 +68,7 @@ def sourceRows (reference : SourceReference) (owners : Array String) (deadline :
+     ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
+     ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+   let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.CanonicalSource.Shared.Projection))
+-  unless result.identity == reference.identity && result.rows.map Prod.fst == owners &&
+-      result.layouts.map Prod.fst == owners do
+-    throw (IO.userError "prepared source projection changed its owner domain")
+-  for (owner,rows) in result.rows do
+-    unless rows.all (fun row => row.origins.all (fun origin =>
+-        origin.binding.database == access.database && origin.binding.owner == owner)) do
+-      throw (IO.userError "prepared source projection crossed its owner scope")
+-    let _ ← IO.ofExcept (Synapses.CanonicalSource.load access.database rows)
+-    pure ()
+-  for ((_,rows),(_,entries)) in result.rows.zip result.layouts do
+-    let _ ← IO.ofExcept (Synapses.CanonicalSource.Recipe.check rows entries)
+-    pure ()
+-  return result
++  Synapses.PreparedSource.checkedRows access owners result
+ 
+ def endpoint? : IO (Option Daemon.Endpoint) := do
+   readJson? ((← directory) / "endpoint.json") []
+@@ -93,25 +82,7 @@ def sourceBindings (reference : SourceReference) (wanted : Array Synapses.Range)
+     ("metadata",toJson access.metadata),("wanted",toJson wanted),("allowed",toJson allowed.toArray),
+     ("budgetMs",toJson budget)]) budget
+   let found ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.IndexedBindings.Projection))
+-  unless found.identity == reference.identity && some found.index == access.metadata.bindings do
+-    throw (IO.userError "original bindings changed their prepared publication")
+-  let wanted := Std.HashSet.ofArray wanted
+-  unless found.rows.size == wanted.size &&
+-      (Std.HashSet.ofArray (found.rows.map Prod.fst)).size == wanted.size do
+-    throw (IO.userError "original binding reply changed its requested range domain")
+-  let mut rows := {}
+-  for (source,values) in found.rows do
+-    unless wanted.contains source && values.all (fun read => read.valid && read.source == source &&
+-        read.binding.database == access.database && allowed.contains read.binding.owner) do
+-      throw (IO.userError "original binding reply crossed its requested domain")
+-    rows := rows.insert source values
+-  return {
+-    rows
+-    complete := found.complete
+-    requests := found.requests
+-    bytes := found.bytes
+-    unresolved := found.unresolved
+-    unusable := found.unusable}
++  Synapses.PreparedSource.checkedBindings access wanted allowed found
+ 
+ def sourceRecords (reference : SourceReference) (owners : Array String) (deadline : Nat) :
+     IO Synapses.ObservedRecordView.Projection := do
+@@ -123,13 +94,22 @@ def sourceRecords (reference : SourceReference) (owners : Array String) (deadlin
+     ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+   let result ← IO.ofExcept (Json.parse response >>=
+     fromJson? (α := Synapses.ObservedRecordView.Projection))
+-  unless result.source == access.source && result.rows.map Prod.fst == owners do
+-    throw (IO.userError "original record projection changed its requested source or owner domain")
+-  for (owner,found) in result.rows do
+-    if let some view := found then
+-      unless view.header.database == access.database && view.header.owner == owner do
+-        throw (IO.userError "original record view crossed its read scope")
+-  return result
++  Synapses.PreparedSource.checkedRecords access owners result
++
++def SourceReference.reader (reference : SourceReference) : Synapses.PreparedSource.Reader :=
++  {access := reference.access,rows := sourceRows reference,bindings := sourceBindings reference,records := sourceRecords reference}
++
++theorem SourceReference.reader_identity (reference : SourceReference) : reference.reader.identity = reference.identity := rfl
++
++theorem SourceReference.reader_rows (reference : SourceReference) (owners : Array String) (deadline : Nat) :
++    reference.reader.rows owners deadline = sourceRows reference owners deadline := rfl
++
++theorem SourceReference.reader_bindings (reference : SourceReference) (wanted : Array Synapses.Range)
++    (allowed : Std.HashSet String) (deadline : Nat) :
++    reference.reader.bindings wanted allowed deadline = sourceBindings reference wanted allowed deadline := rfl
++
++theorem SourceReference.reader_records (reference : SourceReference) (owners : Array String) (deadline : Nat) :
++    reference.reader.records owners deadline = sourceRecords reference owners deadline := rfl
+ 
+ def ready (endpoint : Daemon.Endpoint) : IO Unit := do
+   unless endpoint.session == "publisher" && endpoint.compatible (← generation) do
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationService.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/PublicationService.lean
+index a6811be..e1f98b5 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationService.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/PublicationService.lean
+@@ -2,6 +2,7 @@ module
+ 
+ public import Eggshell.PublicationWire
+ public import Eggshell.CanonicalSourcePrepared
++public import tools.research.PreparedSourceReader
+ public import Eggshell.SynapticBindings
+ public import Std.Sync.Mutex
+ public import Init.System.Promise
+@@ -179,11 +180,7 @@ def sourceRows (server : Server) (secret : String) (payload : Json) (deadline :
+   let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+   server.prepared.withReady pinned.snapshot path metadata deadline fun loaded reuse => do
+     let access : CanonicalSource.Shared.Access := ⟨database,identity,"",head,metadata,reuse⟩
+-    let prepared ← loaded.rows owners deadline
+-    let result : CanonicalSource.Shared.Projection := ⟨access.identity,
+-      prepared.map (fun (owner,recipe) => (owner,recipe.rows)),reuse,
+-      prepared.map (fun (owner,recipe) => (owner,recipe.records))⟩
+-    return toJson result
++    return toJson (← PreparedSource.rowsAt access loaded owners deadline)
+ 
+ /-- The identical authenticated read scope serves generic original output.
+ The prepared index snapshot is shared; no query repairs or normalizes it. -/
+@@ -201,17 +198,8 @@ def sourceRecords (server : Server) (secret : String) (payload : Json) (deadline
+     throw (IO.userError "original source snapshot retired")
+   let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+   server.prepared.withReady pinned.snapshot path metadata deadline fun loaded _ => do
+-    let some original := loaded.originals | throw (IO.userError "original record view is not prepared")
+-    let mut rows : Array (String × Option ObservedRecordView.Geometry) := #[]
+-    let mut size := 0
+-    for owner in owners do
+-      unless (← IO.monoMsNow) < deadline do throw (IO.userError "original record projection expired")
+-      let found ← server.structures.acquire original.index scope.database owner deadline
+-      let value := toJson (owner,found)
+-      size := size+value.compress.utf8ByteSize
+-      unless size ≤ Stream.maxBytes-4096 do throw (IO.userError "original record projection exceeds reserved reply budget")
+-      rows := rows.push (owner,found)
+-    return toJson ({source := head,rows,cache := ← server.structures.stats} : ObservedRecordView.Projection)
++    let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,"",head,metadata,.hit⟩
++    return toJson (← PreparedSource.recordsAt server.structures access loaded owners deadline Stream.maxBytes)
+ 
+ def lease (path : System.FilePath) : IO FileSystem.ReadHandle := do
+   FileSystem.immutableExistingBytes path ByteArray.empty
+@@ -233,18 +221,31 @@ def sourceBindings (server : Server) (secret : String) (payload : Json) (deadlin
+     throw (IO.userError "original binding source snapshot retired")
+   let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+   server.prepared.withReady pinned.snapshot path metadata deadline fun loaded _ => do
+-    let some original := loaded.originals | throw (IO.userError "original bindings are not prepared")
+-    let result ← IndexedBindings.resolve original wanted (Std.HashSet.ofArray allowed) deadline
+     let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,"",head,metadata,.hit⟩
+-    return toJson ({
+-      identity := access.identity
+-      index := original.index.head
+-      rows := result.rows.toArray
+-      complete := result.complete
+-      requests := result.requests
+-      bytes := result.bytes
+-      unresolved := result.unresolved
+-      unusable := result.unusable} : IndexedBindings.Projection)
++    return toJson (← PreparedSource.bindingsAt access loaded wanted (Std.HashSet.ofArray allowed) deadline)
++
++/-- The caller must already own the query's admission. A scoped read
++capability is authenticated before borrowing a pinned prepared source.
++Use the handle only inside this continuation. No self-RPC is performed. -/
++def withSourceReader (server : Server) (secret : String) (payload : Json) (deadline : Nat)
++    (use : PreparedSource.Reader → IO α) : IO α := do
++  unless !(← server.stopping.get) && (← IO.monoMsNow) < deadline do
++    throw (IO.userError "prepared local reader expired or stopped")
++  let scope ← scopedSource server secret payload
++  let head ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := PageMap.Head))
++  let metadata ← IO.ofExcept (payload.getObjVal? "metadata" >>= fromJson? (α := CanonicalSource.Cache.Manifest))
++  unless head.identity == scope.database && metadata.source.identity == scope.database &&
++      metadata.implementation == CanonicalSource.Cache.implementation && digest metadata.payload do
++    throw (IO.userError "invalid prepared local reader request")
++  let current ← PageMap.pin scope.directory
++  let some pinned ← PageMap.HistoryReader.make? current head |
++    throw (IO.userError "prepared local source snapshot retired")
++  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
++  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded reuse => do
++    let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,scope.capability,head,metadata,reuse⟩
++    let slot ← IO.mkRef (some loaded)
++    try use (PreparedSource.borrowed access slot server.structures server.stopping deadline Stream.maxBytes)
++    finally slot.set none
+ 
+ /-- Registration is local administrator authority. Project capabilities grant
+ only scoped publication; they cannot register paths or control the service. -/
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationWire.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/PublicationWire.lean
+index 554d349..c13281a 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationWire.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/PublicationWire.lean
+@@ -85,6 +85,7 @@ def directory : IO System.FilePath := do
+ /-- Installation paths and copy mtimes are not service generations. The same
+ source protocol can share one owner across clients built from the same code. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
++  (include_str "../tools/research/PreparedSourceReader.lean").toUTF8,
+   (include_str "PublicationWire.lean").toUTF8,(include_str "PublicationClient.lean").toUTF8,
+   (include_str "PublicationStream.lean").toUTF8,
+   (include_str "PublicationService.lean").toUTF8,(include_str "NativePublication.lean").toUTF8,
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseRecommend.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/SynapseRecommend.lean
+index 29d09d0..caceb4a 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseRecommend.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/SynapseRecommend.lean
+@@ -202,7 +202,7 @@ structure Prepared where
+   shared : Option Index.Reader
+   usage : Option Index.Reader
+   failure : Option String := none
+-  canonical : Option Plugin.Publication.Client.SourceReference := none
++  canonical : Option PreparedSource.Reader := none
+   canonicalFailure : Option String := none
+ 
+ /-- Read existing authenticated views without selecting a write destination.
+@@ -222,7 +222,7 @@ def prepare (source : PageMap.Snapshot) (deadline : Option Nat := none) : IO Pre
+     let (canonical,canonicalFailure) ← try
+       let prepared ← readablePrepared? fun storage => Plugin.Publication.Client.prepareSource source storage
+         readDeadline
+-      pure (prepared,if prepared.isNone then some "canonical-not-ready" else none)
++      pure (prepared.map Plugin.Publication.Client.SourceReference.reader,if prepared.isNone then some "canonical-not-ready" else none)
+       catch error => pure (none,some s!"canonical-open: {error}")
+     return {
+       source := source,shared := ← readablePrepared? fun storage => Index.open? source storage .shared
+@@ -230,6 +230,18 @@ def prepare (source : PageMap.Snapshot) (deadline : Option Nat := none) : IO Pre
+   catch error => return {
+     source := source,shared := none,usage := none,failure := some s!"index-open: {error}"}
+ 
++def Prepared.withReader? (prepared : Prepared) (reader : PreparedSource.Reader) : Option Prepared :=
++  if reader.access.database == prepared.source.head.identity && reader.access.source == prepared.source.head then
++    some {prepared with canonical := some reader,canonicalFailure := none} else none
++
++theorem Prepared.reader_keeps_indexes (prepared result : Prepared) (reader : PreparedSource.Reader)
++    (found : prepared.withReader? reader = some result) :
++    result.source = prepared.source ∧ result.shared = prepared.shared ∧ result.usage = prepared.usage ∧ result.failure = prepared.failure := by
++  unfold Prepared.withReader? at found
++  split at found
++  · cases found; exact ⟨rfl,rfl,rfl,rfl⟩
++  · cases found
++
+ def Prepared.identity (prepared : Prepared) : Json :=
+   toJson (implementation,prepared.source.head.identity, prepared.source.head.authority,
+     prepared.shared.map (·.index.head), prepared.usage.map (·.index.head), prepared.failure,
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseTransport.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/SynapseTransport.lean
+index a000aaa..b21f790 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseTransport.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/local-reader-core/Eggshell/SynapseTransport.lean
+@@ -166,7 +166,7 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+     let resolved ←
+       if result.complete && result.available && result.failure.isNone then
+         match source.canonical with
+-        | some reference => Plugin.Publication.Client.sourceBindings reference wanted allowed deadline
++        | some reference => reference.bindings wanted allowed deadline
+         | none => pure ({complete := false} : IndexedBindings.Resolved)
+       else pure ({} : IndexedBindings.Resolved)
+     plan := {plan with
+@@ -202,7 +202,7 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+         let ids := owners.filterMap fun owner =>
+           if owner.database == source.source.head.identity then
+             some (Persistence.selectionKey owner.original.relation) else none
+-        let found ← Plugin.Publication.Client.sourceRows reference ids deadline
++        let found ← reference.rows ids deadline
+         let reuse := (source.source.head.identity,reference.access.reuse,found.reuse)
+         plan := {plan with canonicalReuse := plan.canonicalReuse.push reuse}
+         for (owner,rows) in found.rows do
+@@ -221,7 +221,7 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+             plan := {plan with canonicalLayouts := plan.canonicalLayouts.insert owner combined}
+           plan := {plan with canonical := if merged.isEmpty then plan.canonical.erase owner
+             else plan.canonical.insert owner merged}
+-        let structures ← Plugin.Publication.Client.sourceRecords reference ids deadline
++        let structures ← reference.records ids deadline
+         plan := {plan with originalCache := plan.originalCache.push structures.cache}
+         for (owner,found) in structures.rows do
+           let some geometry := found | continue
