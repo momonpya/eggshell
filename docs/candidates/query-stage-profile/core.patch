@@ -1,0 +1,140 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/Handoff.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-stage-core/Eggshell/Handoff.lean
+index 8aaca7d..1a9a01b 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/Handoff.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-stage-core/Eggshell/Handoff.lean
+@@ -7,6 +7,7 @@ public import Eggshell.WorkInference
+ public import Eggshell.WorkClassLookup
+ public import Eggshell.LexicalReads
+ public import Eggshell.Receipt
++public import tools.research.QueryStageProbe
+ 
+ public import Std.Data.HashSet.Lemmas
+ public import Std.Data.TreeMap.Lemmas
+@@ -5058,7 +5059,7 @@ def cachedBindings (owner : String) (rows : Array Synapses.CanonicalSource.Store
+   hashDistinct (rows.toList.flatMap fun row => row.origins.toList.filterMap fun origin =>
+     if origin.binding.owner == owner then some (origin.binding.first,origin.binding.limit) else none)
+ 
+-def prepareCached (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
++def prepareCached (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Eggshell.Research.QueryStageProbe.measure "source.prepareCached" fun _ => Id.run do
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   let some work := Matcher.atomText? family.owner.work | return ([],[])
+   let owner := relationKey family.owner.relation
+@@ -5786,7 +5787,7 @@ theorem Plan.keeps_control (plan : Plan ceiling cost mandatory) :
+ def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+     (families : List Family) (mandatory : List TransportSlice := [])
+     (bundles : Array Synapses.Bundles.Projected := #[]) (captureBindings : Bool := false)
+-    (captureInput : Bool := false) : Option (Plan ceiling cost mandatory) := do
++    (captureInput : Bool := false) : Option (Plan ceiling cost mandatory) := Eggshell.Research.QueryStageProbe.measure "plan.total" fun _ => do
+   let families := families.map Family.contextualOutputs
+   let false := families.any (fun family => family.cached.isEmpty && family.template.context.isSome && family.original.isNone) | none
+   let templates := families.map (·.template) ++ mandatory
+@@ -5800,15 +5801,15 @@ def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+       Synapses.CanonicalSource.Packet.wrapper ++ Synapses.CanonicalSource.Packet.footer ++ "\n" else ""
+     let fixed := (allCost.1-dataCost.1+fixedData.1+sharedFrame.length,
+       allCost.2-dataCost.2+fixedData.2+sharedFrame.utf8ByteSize)
+-    let prepared := families.zipIdx.map fun (family,index) => prepare index family
++    let prepared := Eggshell.Research.QueryStageProbe.measure "plan.units" fun _ => families.zipIdx.map fun (family,index) => prepare index family
+     let units := prepared.flatMap (·.1)
+     let unitArray := units.toArray
+     let depth := max families.length (families.foldl (fun n family => max n (max family.windows.length family.references.length)) 0)
+     let scale := (List.range depth).foldl (fun value rank => Nat.lcm value (61+rank)) 1
+-    let pieces := cuePieces scale families units
+-    let p ← problem families units pieces fixed ceiling
++    let pieces := Eggshell.Research.QueryStageProbe.measure "plan.cues" fun _ => cuePieces scale families units
++    let p ← Eggshell.Research.QueryStageProbe.measure "plan.problem" fun _ => problem families units pieces fixed ceiling
+     let keys := (families.map fun family => relationKey family.owner.relation).toArray
+-    let reach := ownerReach keys unitArray
++    let reach := Eggshell.Research.QueryStageProbe.measure "plan.ownerReach" fun _ => ownerReach keys unitArray
+     let mut candidates : Std.HashMap Synapses.Range (List (List (Fin unitArray.size))) := {}
+     let mut bindingAudit := #[]
+     let mut fragmented := 0
+@@ -5827,19 +5828,19 @@ def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+     let indexedPieces := pieces.zipIdx.toArray
+     let pieceIndex := PreparedCueIndex.prepare cueBucketKey indexedPieces
+     let recipe := bundleRecipeIndexed? keys unitArray indexedPieces pieceIndex cueIndex p
+-    let recipes := ClosedCoverage.original p ++ (bundles.filterMap fun projected =>
++    let recipes := Eggshell.Research.QueryStageProbe.measure "plan.recipes" fun _ => ClosedCoverage.original p ++ (bundles.filterMap fun projected =>
+       (bundlePlan? keys unitArray p candidates projected).bind recipe)
+-    let compiled := ClosedCoverage.compile p recipes
++    let compiled := Eggshell.Research.QueryStageProbe.measure "plan.compile" fun _ => ClosedCoverage.compile p recipes
+     let originalRows ← (Synapses.CanonicalSource.Delivery.merge (families.toArray.flatMap (·.cached))).toOption
+-    let requirements ← Eggshell.Research.OriginalPayloadBasis.prepare families.length originalRows p
+-    let scopes ← Eggshell.Research.ScopeAlternatives.prepare compiled families.length requirements.sourceRows requirements.dependencies
++    let requirements ← Eggshell.Research.QueryStageProbe.measure "plan.originalBasis" fun _ => Eggshell.Research.OriginalPayloadBasis.prepare families.length originalRows p
++    let scopes ← Eggshell.Research.QueryStageProbe.measure "plan.scopes" fun _ => Eggshell.Research.ScopeAlternatives.prepare compiled families.length requirements.sourceRows requirements.dependencies
+     let conditioned := scopes.problem
+-    let chosen ← SharedCoverage.choose? conditioned
++    let chosen ← Eggshell.Research.QueryStageProbe.measure "plan.choose" fun _ => SharedCoverage.choose? conditioned
+     let selectedRecipes := chosen.selected.filterMap fun index =>
+       if h : index.val < compiled.offers.size then some (⟨index.val,h⟩ : Fin compiled.offers.size) else none
+     let expanded := (ClosedCoverage.expand p recipes selectedRecipes).map (·.val) |>.eraseDups
+     let requiredRows := requirements.selectedRows ((SharedCoverage.nodes conditioned chosen.selected).map (·.val))
+-    let selected ← materialize unitArray expanded requiredRows
++    let selected ← Eggshell.Research.QueryStageProbe.measure "plan.materialize" fun _ => materialize unitArray expanded requiredRows
+     let result := mandatory ++ selected
+     if fits : (cost result).1 ≤ ceiling.1 ∧ (cost result).2 ≤ ceiling.2 then
+       some {
+@@ -7701,7 +7702,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+   let advisoryNow ← IO.monoMsNow
+   let advisoryDeadline := source.upstreamDeadline.getD (advisoryNow+30000)
+   let synaptic ← if recommendation && evidence.isNone then
+-    Synapses.Transport.build source.synaptic
++    Eggshell.Research.QueryStageProbe.observe "transport.total" <| Synapses.Transport.build source.synaptic
+       ((synapticRoots nominationRanking nominatedOwners).toArray.map fun (owner,priority) =>
+         (relationKey owner,priority))
+       synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) advisoryDeadline
+@@ -7767,7 +7768,7 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+     else pure []
+   let captureRanges := (← IO.getEnv "EGGSHELL_TRACE_SELECTION_RANGES") == some "1"
+   let captureInput := (← IO.getEnv "EGGSHELL_TRACE_SELECTOR_INPUT") == some "1"
+-  let rendered := renderAutomatic staged selection.handoffChars current delivered enforce stagedVisible discovery
++  let rendered := Eggshell.Research.QueryStageProbe.measure "render.total" fun _ => renderAutomatic staged selection.handoffChars current delivered enforce stagedVisible discovery
+     ⟨extraction, rfl⟩
+     (provenance := provenance) (refreshSources := refreshSources)
+     (nominated := nominated.map (·.relation) ++ semanticOwners.staged)
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseTransport.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-stage-core/Eggshell/SynapseTransport.lean
+index a000aaa..2ba6d1f 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseTransport.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-stage-core/Eggshell/SynapseTransport.lean
+@@ -1,4 +1,5 @@
+ module
++public import tools.research.QueryStageProbe
+ 
+ public import Eggshell.SynapticTransport
+ public import tools.KeyPostings
+@@ -135,7 +136,7 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+         if key == Persistence.selectionKey owner.original.relation then some priority else none
+       (Provenance.identities owner.original).flatMap fun occurrence =>
+         priorities.map fun priority => (occurrence,priority)
+-    let result ← Routed.collect source answers query (min deadline (graphDeadline.getD deadline)) consumers
++    let result ← Eggshell.Research.QueryStageProbe.observe "transport.routing" <| Routed.collect source answers query (min deadline (graphDeadline.getD deadline)) consumers
+     let (result,outputs) ← try pure (result,← Routed.outputOffers source result deadline)
+       catch error => pure ({result with complete := false,failure := some s!"output-witness: {error}"},#[])
+     outputWitnesses := outputWitnesses.push (source.source.head.identity,outputs)
+@@ -166,7 +167,7 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+     let resolved ←
+       if result.complete && result.available && result.failure.isNone then
+         match source.canonical with
+-        | some reference => Plugin.Publication.Client.sourceBindings reference wanted allowed deadline
++        | some reference => Eggshell.Research.QueryStageProbe.observe "transport.bindings" <| Plugin.Publication.Client.sourceBindings reference wanted allowed deadline
+         | none => pure ({complete := false} : IndexedBindings.Resolved)
+       else pure ({} : IndexedBindings.Resolved)
+     plan := {plan with
+@@ -202,7 +203,7 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+         let ids := owners.filterMap fun owner =>
+           if owner.database == source.source.head.identity then
+             some (Persistence.selectionKey owner.original.relation) else none
+-        let found ← Plugin.Publication.Client.sourceRows reference ids deadline
++        let found ← Eggshell.Research.QueryStageProbe.observe "transport.rows" <| Plugin.Publication.Client.sourceRows reference ids deadline
+         let reuse := (source.source.head.identity,reference.access.reuse,found.reuse)
+         plan := {plan with canonicalReuse := plan.canonicalReuse.push reuse}
+         for (owner,rows) in found.rows do
+@@ -221,7 +222,7 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+             plan := {plan with canonicalLayouts := plan.canonicalLayouts.insert owner combined}
+           plan := {plan with canonical := if merged.isEmpty then plan.canonical.erase owner
+             else plan.canonical.insert owner merged}
+-        let structures ← Plugin.Publication.Client.sourceRecords reference ids deadline
++        let structures ← Eggshell.Research.QueryStageProbe.observe "transport.records" <| Plugin.Publication.Client.sourceRecords reference ids deadline
+         plan := {plan with originalCache := plan.originalCache.push structures.cache}
+         for (owner,found) in structures.rows do
+           let some geometry := found | continue

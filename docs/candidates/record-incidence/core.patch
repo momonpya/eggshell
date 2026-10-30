@@ -1,0 +1,165 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/CanonicalSourceRecipe.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/CanonicalSourceRecipe.lean
+index 7ea0d79..5585108 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/CanonicalSourceRecipe.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/CanonicalSourceRecipe.lean
+@@ -1,5 +1,6 @@
+ module
+ public import Eggshell.CanonicalSourceRecords
++public import tools.research.RecordIncidence
+ public import Eggshell.CanonicalSourceDelivery
+ @[expose] public section
+ 
+@@ -30,23 +31,39 @@ def Entry.check? (rows : Array StoredRow) (entry : Entry) : Except String (Recor
+     return record
+   else throw "prepared successor is outside its original rows"
+ 
++structure Layout where
++  entries : List Entry
++  incidence : Array (List Nat)
++  deriving BEq, ToJson, FromJson
++
+ structure Stored where
+   rows : Array StoredRow
+-  records : List Entry
+-  deriving BEq,ToJson,FromJson
++  layout : Layout
++  deriving BEq, ToJson, FromJson
+ 
+ def compile (parts : Array StoredRow) : Except String Stored := do
+   let rows ← Delivery.merge parts
+-  return ⟨rows,(Records.prepare rows).map Entry.ofRecord⟩
++  let records := Records.prepare rows
++  return ⟨rows,⟨records.map Entry.ofRecord,RecordIncidence.wire (records.map (·.indices))⟩⟩
+ 
+ structure Checked (rows : Array StoredRow) where
+   records : List (Records.Record rows)
+   catalogue : List (List (Fin rows.size))
+   exact : catalogue = Records.catalogue rows records
++  incidence : RecordIncidence.Index (records.map (·.indices))
++
++def check (rows : Array StoredRow) (layout : Layout) : Except String (Checked rows) := do
++  let records ← layout.entries.mapM (Entry.check? rows)
++  let incidence ← RecordIncidence.checkWire (records.map (·.indices)) layout.incidence
++  return ⟨records,Records.catalogue rows records,rfl,incidence⟩
++
++def Checked.close (prepared : Checked rows) (requested : List (Fin rows.size)) : Array StoredRow :=
++  ((prepared.incidence.close requested).map (fun index => rows[index])).toArray
+ 
+-def check (rows : Array StoredRow) (entries : List Entry) : Except String (Checked rows) := do
+-  let records ← entries.mapM (Entry.check? rows)
+-  return ⟨records,Records.catalogue rows records,rfl⟩
++theorem Checked.close_exact (prepared : Checked rows) (requested : List (Fin rows.size)) :
++    prepared.close requested = Records.close rows prepared.records requested := by
++  simp only [Checked.close,Records.close,Records.closeIndices,RecordIncidence.close_exact]
++  simp [List.filter_map,List.flatMap_def,Function.comp_def]
+ 
+ theorem Checked.catalogue_complete (prepared : Checked rows) (index : Fin rows.size) :
+     index ∈ prepared.catalogue.flatten := by
+@@ -67,10 +84,12 @@ def reindex (source target : Array StoredRow) (entries : List Entry) : Except St
+     return position : Except String Nat)
+   entries.mapM fun entry => return ⟨← entry.indices.mapM resolve,← entry.before.mapM resolve,← resolve entry.after⟩
+ 
+-def combine (left right merged : Array StoredRow) (a b : List Entry) : Except String (List Entry) := do
+-  let entries := hashDistinct ((← reindex left merged a) ++ (← reindex right merged b))
+-  let _ ← check merged entries
+-  return entries
++def combine (left right merged : Array StoredRow) (a b : Layout) : Except String Layout := do
++  let entries := hashDistinct ((← reindex left merged a.entries) ++ (← reindex right merged b.entries))
++  let records ← entries.mapM (Entry.check? merged)
++  let layout : Layout := ⟨entries,RecordIncidence.wire (records.map (·.indices))⟩
++  let _ ← check merged layout
++  return layout
+ 
+ def name (owner : String) := "owner:" ++ owner
+ 
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/CanonicalSourcePrepared.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/CanonicalSourcePrepared.lean
+index f1bba42..9760330 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/CanonicalSourcePrepared.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/CanonicalSourcePrepared.lean
+@@ -34,7 +34,7 @@ def Loaded.rows (loaded : Loaded) (owners : Array String) (deadline : Nat) : IO
+     if let some descriptor ← loaded.recipes.get (Recipe.name owner) then
+       total := total+(← IO.ofExcept (PageMap.payloadSize (some descriptor)))
+       unless total ≤ 16*1024*1024 do throw (IO.userError "prepared original projection exceeds reply budget")
+-    rows := rows.push (owner,(← Recipe.read? loaded.recipes owner).getD ⟨#[],[]⟩)
++    rows := rows.push (owner,(← Recipe.read? loaded.recipes owner).getD ⟨#[],⟨[],#[]⟩⟩)
+   return rows
+ 
+ structure Budget (capacity : Nat) where
+@@ -209,7 +209,7 @@ structure Projection where
+   identity : Json
+   rows : Array (String × Array StoredRow)
+   reuse : Reuse
+-  layouts : Array (String × List Recipe.Entry) := #[]
++  layouts : Array (String × Recipe.Layout) := #[]
+   deriving ToJson, FromJson
+ 
+ /-- Payload bytes are verified only by the preparation owner. Admission
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationService.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/PublicationService.lean
+index a6811be..9de8ee4 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationService.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/PublicationService.lean
+@@ -182,7 +182,7 @@ def sourceRows (server : Server) (secret : String) (payload : Json) (deadline :
+     let prepared ← loaded.rows owners deadline
+     let result : CanonicalSource.Shared.Projection := ⟨access.identity,
+       prepared.map (fun (owner,recipe) => (owner,recipe.rows)),reuse,
+-      prepared.map (fun (owner,recipe) => (owner,recipe.records))⟩
++      prepared.map (fun (owner,recipe) => (owner,recipe.layout))⟩
+     return toJson result
+ 
+ /-- The identical authenticated read scope serves generic original output.
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseTransport.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/SynapseTransport.lean
+index a000aaa..a8ae69c 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/SynapseTransport.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/SynapseTransport.lean
+@@ -57,7 +57,7 @@ structure Plan where
+   unlocatedFileOwners : Nat := 0
+   observations : Array Observation := #[]
+   canonical : Std.HashMap String (Array CanonicalSource.StoredRow) := {}
+-  canonicalLayouts : Std.HashMap String (List CanonicalSource.Recipe.Entry) := {}
++  canonicalLayouts : Std.HashMap String CanonicalSource.Recipe.Layout := {}
+   canonicalReuse : Array (String × CanonicalSource.Shared.Reuse × CanonicalSource.Shared.Reuse) := #[]
+   canonicalFailure : Array (String × String) := #[]
+   originalStructures : Std.HashMap String ObservedRecordView.Geometry := {}
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/Handoff.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/Handoff.lean
+index 8aaca7d..5f9f428 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/Handoff.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/Handoff.lean
+@@ -4905,7 +4905,7 @@ structure Family where
+   synapticUnits : List (List (Nat × Nat)) := []
+   provenance : List SourceEvidence.Record := []
+   cached : Array Synapses.CanonicalSource.StoredRow := #[]
+-  cachedLayout : Option (List Synapses.CanonicalSource.Recipe.Entry) := none
++  cachedLayout : Option Synapses.CanonicalSource.Recipe.Layout := none
+   original : Option (Array OriginalStructure.Span) := none
+ 
+ def Family.outputCues (family : Family) : List (Nat × Nat × Nat) :=
+@@ -5079,7 +5079,7 @@ def prepareCached (familyIndex : Nat) (family : Family) : List UnitPlan × List
+       let row := family.cached[index]
+       row.origins.any fun origin => origin.binding.owner == owner && spans.any fun (a,b) =>
+         a < origin.binding.limit && origin.binding.first < b
+-    Synapses.CanonicalSource.Records.close family.cached records requested
++    prepared.close requested
+   let mut seen : Std.HashSet (List (Nat × Nat)) := {}
+   let mut units := []
+   for rows in catalogue ++ combined do
+@@ -6062,7 +6062,7 @@ def renderAutomatic (staged : List Value) (budget : Nat) (current : String)
+     (outputRanges : List (Value × List Synapses.Transport.OutputRange) := [])
+     (synapticBundles : Array Synapses.Bundles.Projected := #[])
+     (canonicalRows : Std.HashMap String (Array Synapses.CanonicalSource.StoredRow) := {})
+-    (canonicalLayouts : Std.HashMap String (List Synapses.CanonicalSource.Recipe.Entry) := {})
++    (canonicalLayouts : Std.HashMap String Synapses.CanonicalSource.Recipe.Layout := {})
+     (originalStructures : Std.HashMap String Synapses.ObservedRecordView.Geometry := {})
+     (captureSelection : Bool := false) (captureRanges : Bool := false)
+     (captureInput : Bool := false) : Option Handoff :=
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/CanonicalSourceCache.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/CanonicalSourceCache.lean
+index 17b8c7e..d63e4f8 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/CanonicalSourceCache.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/record-incidence-core/Eggshell/CanonicalSourceCache.lean
+@@ -7,6 +7,7 @@ open Lean DB
+ 
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.canonical-source".toUTF8 [
+   (include_str "CanonicalSource.lean").toUTF8,(include_str "CanonicalSourceCache.lean").toUTF8,
++  (include_str "../tools/research/RecordIncidence.lean").toUTF8,
+   (include_str "CanonicalSourceRecipe.lean").toUTF8,(include_str "CanonicalSourceRecords.lean").toUTF8,
+   (include_str "CanonicalSourceDelivery.lean").toUTF8,
+   (include_str "SynapseSource.lean").toUTF8,(include_str "SynapseProvenance.lean").toUTF8,
