@@ -97,6 +97,14 @@ structure Managed where
   private path : System.FilePath
   private expectedShutdown : String := ""
 
+/-- A comparison arm fixes the runtime and its independently compiled
+publication contract before launching it. Never infer this from its endpoint. -/
+structure PublisherRuntime where
+  binary : String
+  sha256 : String
+  generation : String
+  deriving ToJson, FromJson
+
 def startManaged (binary plugin : System.FilePath) (session : String) (path : System.FilePath)
     (environment : Array (String × Option String)) : IO Managed := do
   let _ ← IO.ofExcept (Plugin.safeSession session)
@@ -121,7 +129,16 @@ def startManaged (binary plugin : System.FilePath) (session : String) (path : Sy
 not infer ownership from a shared endpoint or terminate another chat's service.
 Publication startup prepares no source DB, vectors or answering context. -/
 def startPublisher (binary dataRoot : System.FilePath)
-    (environment : Array (String × Option String)) (recoverDead : Bool := false) : IO Managed := do
+    (environment : Array (String × Option String)) (recoverDead : Bool := false)
+    (expectedRuntime : Option PublisherRuntime := none) : IO Managed := do
+  let expected ← match expectedRuntime with
+    | none => Plugin.Publication.generation
+    | some runtime => do
+      let valid := fun text : String => text.length == 64 && text.toList.all (fun c =>
+        ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f'))
+      check (valid runtime.sha256 && valid runtime.generation &&
+        (← ArtifactHash.hex binary) == runtime.sha256) "publisher runtime differs from its frozen descriptor"
+      pure runtime.generation
   let dataRoot := dataRoot.normalize
   check (binary.isAbsolute && dataRoot.isAbsolute && dataRoot.toString != "/")
     "absolute isolated publisher paths required"
@@ -145,7 +162,7 @@ def startPublisher (binary dataRoot : System.FilePath)
   let exit ← IO.mkRef none
   try
     let endpoint ← ready child "publisher" path exit ((← IO.monoMsNow)+10000)
-    check (endpoint.compatible (← Plugin.Publication.generation))
+    check (endpoint.compatible expected)
       "publisher implementation differs from the frozen protocol"
     let pong ← Plugin.Daemon.exchange endpoint "ping" (budget := 1000)
     check (pong == "true") "owned publisher rejected readiness"

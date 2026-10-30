@@ -32,9 +32,10 @@ private partial def remove (path : System.FilePath) : IO Unit := do
     IO.FS.removeDir path
   else IO.FS.removeFile path
 
-private def summarize : IO Unit := do
-  finished (evidence / "trial.guard.json")
-  let records := evidence / "trial"
+private def summarize (blocks : Bool := false) : IO Unit := do
+  let saved := if blocks then project / "docs/candidates/service-block-cache" else evidence
+  finished (saved / "trial.guard.json")
+  let records := saved / "trial"
   let result ← read (records / "result.json")
   check (result.getObjValD "allBodiesUnchanged" == toJson true &&
     result.getObjValD "originalSourcesUnchanged" == toJson true) "paired actual output or source changed"
@@ -76,7 +77,7 @@ private def summarize : IO Unit := do
       "ordered observation boundaries and two numerical stages required"
     let delivery ← data "synaptic-delivery.json"
     let selection ← data "selection-plan.json"
-    measurements := measurements.push (trial.setObjVal! "receipt" (toJson receipt.fileName)
+    let measured := trial.setObjVal! "receipt" (toJson receipt.fileName)
       |>.setObjVal! "numerical" (Json.arr numerical)
       |>.setObjVal! "numericalElapsedSumMs" (toJson numericMs)
       |>.setObjVal! "focusObservedToDomainObservedMs" (toJson (domain-focusEnd))
@@ -85,8 +86,23 @@ private def summarize : IO Unit := do
       |>.setObjVal! "bindingBytes" (delivery.getObjValD "bindingBytes")
       |>.setObjVal! "completed" (delivery.getObjValD "completed")
       |>.setObjVal! "canonicalReuse" (← data "canonical-source-reuse.json")
-      |>.setObjVal! "candidateUnits" (selection.getObjValD "candidateUnits"))
-    let directory := root / "prepared-original-keys-trial" / arm / "data/sessions" / session
+      |>.setObjVal! "candidateUnits" (selection.getObjValD "candidateUnits")
+    let measured ← if blocks then do
+        let run := records / arm / s!"rep-{repetition}"
+        let before ← read (if topic == 1 then run / "service-before.json" else
+          run / s!"topic-{topic-1}/service-after.json")
+        let after ← read (run / s!"topic-{topic}/service-after.json")
+        let prior := (before.getObjValD "preparedSources").getObjValD "pages"
+        let current := (after.getObjValD "preparedSources").getObjValD "pages"
+        let oldMisses ← IO.ofExcept (prior.getObjValAs? Nat "misses")
+        let newMisses ← IO.ofExcept (current.getObjValAs? Nat "misses")
+        check (newMisses ≥ oldMisses) "shared page counters restarted during an arm"
+        pure (measured.setObjVal! "sharedPageMisses" (toJson (newMisses-oldMisses))
+          |>.setObjVal! "sharedPagesAfter" current
+          |>.setObjVal! "preparedSourceLoads" ((after.getObjValD "preparedSources").getObjValD "loads"))
+      else pure measured
+    measurements := measurements.push measured
+    let directory := root / (if blocks then "service-block-cache-trial" else "prepared-original-keys-trial") / arm / "data/sessions" / session
     let pending ← read (directory / "pending.json")
     let deferred ← entries (directory / "deferred")
     let checkpoints ← entries (directory / "checkpoints")
@@ -103,17 +119,63 @@ private def summarize : IO Unit := do
     sessions := sessions.push (Json.mkObj [("session",toJson session),("shutdown",shutdown),
       ("pending",Json.mkObj pendingFields),("deferredEntries",toJson deferred.size),
       ("checkpointEntries",toJson checkpoints.size)])
-  IO.FS.writeFile (evidence / "latency-summary.json") (Json.mkObj [
+  IO.FS.writeFile (saved / "latency-summary.json") (Json.mkObj [
     ("rows",Json.arr measurements),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false),
     ("scope",toJson "Two actual first-prompt hooks per topic and arm. Observation gaps include IO, computation and receipt serialization, not per-function CPU time. Not answering-model first/second rounds, token improvement, p99 or eighty-user sustained load.")]).pretty
-  IO.FS.writeFile (evidence / "lifecycle.json") (Json.mkObj [("sessions",Json.arr sessions),
-    ("observedTerminalWarning",toJson "Eggshell retained queued work: timed out waiting for keys-baseline-1-2/state.guard"),
-    ("interpretation",toJson "A state-lock timeout was observed. Final deferred/checkpoint directories are empty, pending prompt turns have no tools/in-flight outputs, every session acknowledged exit zero and the guard has no surviving processes. This is not a correction or a proof of the transient lock's cause; no turnStop or answer generation was performed."),
+  IO.FS.writeFile (saved / "lifecycle.json") (Json.mkObj [("sessions",Json.arr sessions),
+    ("observedTerminalWarning",if blocks then Json.null else
+      toJson "Eggshell retained queued work: timed out waiting for keys-baseline-1-2/state.guard"),
+    ("interpretation",toJson (if blocks then
+      "Final queues and process exits only; this does not prove the absence of historical transient contention. No turnStop or answer generation was performed." else
+      "A state-lock timeout was observed. Final deferred/checkpoint directories are empty, pending prompt turns have no tools/in-flight outputs, every session acknowledged exit zero and the guard has no surviving processes. This is not a correction or a proof of the transient lock's cause; no turnStop or answer generation was performed.")),
     ("originalSourcesUnchanged",toJson true)]).pretty
   IO.println "Sealed twelve paired hooks, phase gaps and final empty-output queue metadata; no adoption claim"
 
 def main (args : List String) : IO Unit := do
+  if args == ["retire-profile-executables"] then
+    let saved := project / "docs/candidates/source-service-profile"
+    finished (saved / "trial.guard.json")
+    finished (saved / "reuse.guard.json")
+    let measured ← read (saved / "reuse/result.json")
+    check (measured.getObjValD "originalSourceUnchanged" == toJson true &&
+      !(← (saved / "retired-executables.json").pathExists)) "seal the finished service profiles before deleting executables"
+    let targets := #[root / "source-service-profile-build/StudyMain",root / "source-cache-reuse-build/StudyMain",
+      root / "prepared-original-keys-build/StudyMain"]
+    let mut bytes := 0
+    for path in targets do
+      let opened ← IO.Process.output {cmd := "/usr/sbin/lsof",args := #["-t",path.toString]}
+      check (opened.exitCode == 1 && opened.stdout.trimAscii.isEmpty) "a retired measured executable is still open"
+      bytes := bytes+(← path.symlinkMetadata).byteSize.toNat
+    let record := Json.mkObj [("targets",toJson targets),("logicalBytes",toJson bytes),
+      ("archiveCreated",toJson false),("originalSourceModelControlRuntimeAndNativeInputsRetained",toJson true),
+      ("preparedReadonlyControlFixtureForImminentBlockCacheComparisonRetained",toJson true)]
+    IO.FS.writeFile (saved / "retired-executables.json") (record.setObjVal! "completed" (toJson false)).pretty
+    for path in targets do IO.FS.removeFile path
+    IO.FS.writeFile (saved / "retired-executables.json") (record.setObjVal! "completed" (toJson true)).pretty
+    IO.println "Deleted three completed helper/unadopted executables; retained only the next comparison's prepared source fixture"
+    return
   if args == ["summarize"] then return ← summarize
+  if args == ["summarize-cache"] then return ← summarize true
+  if args == ["retire-cache-trial"] then
+    let saved := project / "docs/candidates/service-block-cache"
+    finished (saved / "trial.guard.json")
+    finished (project / "docs/candidates/source-service-profile/trial.guard.json")
+    finished (project / "docs/candidates/source-service-profile/reuse.guard.json")
+    check ((← (saved / "latency-summary.json").pathExists) && (← (saved / "lifecycle.json").pathExists) &&
+      !(← (saved / "retired-trial.json").pathExists)) "seal actual paired cache hooks before deleting their fixtures"
+    let targets := #[root / "service-block-cache-trial",root / "source-service-profile",
+      root / "service-block-cache-trial-build/StudyMain"]
+    for path in targets do
+      let args := if (← path.symlinkMetadata).type == .dir then #["-t","+D",path.toString] else #["-t",path.toString]
+      let opened ← IO.Process.output {cmd := "/usr/sbin/lsof",args}
+      check (opened.exitCode == 1 && opened.stdout.trimAscii.isEmpty) "measured cache fixture is still open"
+    let report := Json.mkObj [("targets",toJson targets),("archiveCreated",toJson false),
+      ("originalSourceJournalModelControlCandidateAndNativeInputsRetained",toJson true)]
+    IO.FS.writeFile (saved / "retired-trial.json") (report.setObjVal! "completed" (toJson false)).pretty
+    for path in targets do remove path
+    IO.FS.writeFile (saved / "retired-trial.json") (report.setObjVal! "completed" (toJson true)).pretty
+    IO.println "Deleted finished profile and cache-trial DB/cache/install and the helper executable; no archive"
+    return
   if args == ["retire"] then
     finished (evidence / "trial.guard.json")
     check ((← (evidence / "latency-summary.json").pathExists) && (← (evidence / "lifecycle.json").pathExists) &&
@@ -130,17 +192,25 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile (evidence / "retired.json") (report.setObjVal! "completed" (toJson true)).pretty
     IO.println "Deleted completed paired DB/cache/install and helper executable; no archive"
     return
-  if args == ["prepare-trial-build"] then
-    let guard ← read (evidence / "build.guard.json")
+  if args == ["prepare-trial-build"] || args == ["prepare-profile-build"] || args == ["prepare-reuse-build"] ||
+      args == ["prepare-cache-trial-build"] then
+    let blocks := args == ["prepare-cache-trial-build"]
+    let reuse := args == ["prepare-reuse-build"]
+    let profile := !blocks && args != ["prepare-trial-build"]
+    let saved := if blocks then project / "docs/candidates/service-block-cache" else
+      if profile then project / "docs/candidates/source-service-profile" else evidence
+    IO.FS.createDirAll saved
+    let guard ← read ((if blocks then saved else evidence) / "build.guard.json")
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
       guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "candidate runtime must finish before linking trial"
-    let parent := root / "prepared-original-keys-build"
+    let parent := root / (if blocks then "service-block-cache-build" else if reuse then "source-service-profile-build" else "prepared-original-keys-build")
     let build ← read (parent / "build.json")
     let prior := build.getObjValD "settings"
     let mut modules ← IO.ofExcept ((← read (.mk (← IO.ofExcept (prior.getObjValAs? String "objectModules")))).getObj?)
     for entry in ← IO.ofExcept (build.getObjValAs? (Array Json) "modules") do
       modules := modules.insert (← IO.ofExcept (entry.getObjValAs? String "object")) (entry.getObjValD "module")
-    let label := "prepared-original-keys-trial"
+    let label := if blocks then "service-block-cache-trial" else if reuse then "source-cache-reuse" else
+      if profile then "source-service-profile" else "prepared-original-keys-trial"
     let map := root / (label ++ "-objects.json")
     IO.FS.writeFile map (Json.obj modules).pretty
     let settings := prior.setObjVal! "objectModules" (toJson map.toString)
@@ -148,39 +218,50 @@ def main (args : List String) : IO Unit := do
       |>.setObjVal! "baselineMain" (toJson (parent / "Main.o").toString)
       |>.setObjVal! "output" (toJson (root / (label ++ "-build")).toString)
       |>.setObjVal! "mainModule" (toJson "tools.research.PreparedOriginalKeysTrial")
-    let library := candidate / ".lake/build/lib/lean"
+    let library := (if blocks then root / "service-block-cache-core" else candidate) / ".lake/build/lib/lean"
     check ((← library.symlinkMetadata).type == .symlink) "candidate interface link missing"
     IO.FS.removeFile library
     let linked ← IO.Process.output {cmd := "/bin/ln",args := #["-s",(parent / "lib").toString,library.toString]}
     check (linked.exitCode == 0) "cannot reuse consistent candidate interfaces"
     IO.FS.writeFile (root / (label ++ "-build.settings.json")) settings.pretty
     IO.FS.writeFile (root / (label ++ "-build.guard-settings.json")) (Json.mkObj [
-      ("record",toJson (evidence / "trial-build.guard.json").toString),("cwd",toJson project.toString),
+      ("record",toJson (saved / (if reuse then "reuse-build.guard.json" else "trial-build.guard.json")).toString),("cwd",toJson project.toString),
       ("ownedPrefixes",toJson #[root.toString]),("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
       ("command",toJson #["/usr/bin/env","LEAN_NUM_THREADS=1", "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
         "-M1024","--run",(project / "tools/research/StudyBuildMain.lean").toString,(root / (label ++ "-build.settings.json")).toString])]).pretty
-    let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-u",(root / "query-cache-baseline-core/Eggshell/Handoff.lean").toString,
-      (candidate / "Eggshell/Handoff.lean").toString]}
-    check (patch.exitCode == 1) "candidate patch absent"
-    IO.FS.writeFile (evidence / "core.patch") patch.stdout
-    IO.println "Prepared paired fixed-source actual hook harness; two fresh repetitions per topic and arm"
+    unless profile || blocks do
+      let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-u",(root / "query-cache-baseline-core/Eggshell/Handoff.lean").toString,
+        (candidate / "Eggshell/Handoff.lean").toString]}
+      check (patch.exitCode == 1) "candidate patch absent"
+      IO.FS.writeFile (evidence / "core.patch") patch.stdout
+    IO.println (if profile then "Prepared unchanged-runtime data-side CPU diagnosis" else
+      "Prepared paired fixed-source actual hook harness; two fresh repetitions per topic and arm")
     return
-  if args == ["prepare-trial"] then
-    let guard ← read (evidence / "trial-build.guard.json")
+  if args == ["prepare-trial"] || args == ["prepare-profile"] || args == ["prepare-reuse"] ||
+      args == ["prepare-cache-trial"] then
+    let blocks := args == ["prepare-cache-trial"]
+    let reuse := args == ["prepare-reuse"]
+    let profile := !blocks && args != ["prepare-trial"]
+    let saved := if blocks then project / "docs/candidates/service-block-cache" else
+      if profile then project / "docs/candidates/source-service-profile" else evidence
+    let label := if blocks then "service-block-cache-trial" else if reuse then "source-cache-reuse" else
+      if profile then "source-service-profile" else "prepared-original-keys-trial"
+    let guard ← read (saved / (if reuse then "reuse-build.guard.json" else "trial-build.guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
       guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "trial native build must finish before use"
     let audited ← IO.Process.output {
       cmd := "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean"
       args := #["-M1024","--run",(project / "tools/research/StudyBuildClosureAudit.lean").toString,
-        (root / "cached-usage-runtime-build").toString,(root / "prepared-original-keys-trial-build").toString,
-        (evidence / "trial-native-closure.json").toString]}
+        (root / "cached-usage-runtime-build").toString,(root / (label ++ "-build")).toString,
+        (saved / (if reuse then "reuse-native-closure.json" else "trial-native-closure.json")).toString]}
     check (audited.exitCode == 0) "paired native harness dependencies differ"
-    IO.FS.writeFile (root / "prepared-original-keys-trial.guard-settings.json") (Json.mkObj [
-      ("record",toJson (evidence / "trial.guard.json").toString),("cwd",toJson project.toString),
+    IO.FS.writeFile (root / (label ++ ".guard-settings.json")) (Json.mkObj [
+      ("record",toJson (saved / (if reuse then "reuse.guard.json" else "trial.guard.json")).toString),("cwd",toJson project.toString),
       ("ownedPrefixes",toJson #[root.toString]),("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
-      ("command",toJson #["/usr/bin/env","LEAN_NUM_THREADS=1",
-        "EGGSHELL_DATA_ROOT=" ++ (root / "prepared-original-keys-trial/data").toString,
-        (root / "prepared-original-keys-trial-build/StudyMain").toString])]).pretty
+      ("command",toJson (#["/usr/bin/env","LEAN_NUM_THREADS=1",
+        "EGGSHELL_DATA_ROOT=" ++ (root / label / "data").toString,
+        (root / (label ++ "-build/StudyMain")).toString] ++
+        (if blocks then #["block-cache"] else if reuse then #["reuse-service"] else if profile then #["profile-service"] else #[])))]).pretty
     IO.println "Prepared guarded paired actual hooks without answering models or adoption claims"
     return
   check (args == ["prepare"] && !(← candidate.pathExists)) "fresh explicit original-key candidate required"

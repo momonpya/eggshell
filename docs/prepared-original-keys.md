@@ -37,3 +37,5 @@ nativeの全186 objectの依存は整合し、既知の不整合な旧runtimeを
 guardは終了0、残存process0、関連RSS標本最大2,271,584 KiB。試行の最後に`keys-baseline-1-2/state.guard`待ちのtimeout警告が1件出た。最終点の全12sessionは正常終了をACKし、deferred/checkpointsは0件、pendingのtools/inFlightも0件だった。pendingには回答・Stopを実行していない空のprompt turnが残る。この最終監査だけで、一時的なロック競合の原因を特定・修正したとは扱わない。[終了監査](candidates/prepared-original-keys/lifecycle.json)、[guard](candidates/prepared-original-keys/trial.guard.json)。
 
 記録抽出と使用中ファイルがないことの確認後、比較用のDB・cache・installと補助実行体を削除した。archiveは作っていない。元source・原典journal・モデル・比較対照と候補のruntime/実入力は次の診断用に保持する。削除した比較DBを現在もそのまま開けるとは主張しない。[削除記録](candidates/prepared-original-keys/retired.json)。
+
+同日後続の[共有page poolの比較](service-block-cache.md)へ進んだ後、この未採用キー候補`a156ac99`の実行体も削除した。現在必要なnative入力と原source・対照runtime、小さい実測記録は保持する。[実行体の削除完了](candidates/source-service-profile/retired-executables.json)。

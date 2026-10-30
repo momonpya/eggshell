@@ -1,0 +1,109 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/DB/PageMap.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/service-block-cache-core/Eggshell/DB/PageMap.lean	2026-10-30 09:08:35
+@@ -4,6 +4,7 @@
+ public import Eggshell.FileSystem
+ public import Eggshell.Blake3
+ public import Std.Data.HashMap.Lemmas
++public import tools.ByteBudgetCache
+ public import Std.Sync.Mutex
+ import all Init.Data.Ord.String
+ import all Init.System.ST
+@@ -193,49 +194,43 @@
+     cache.find ref = none := by
+   simp [find, located, different]
+ 
+-/-- One service-wide page budget. A namespace includes the authenticated read
+-scope, absolute directory and immutable file incarnation. An offset alone is
+-never a cross-database cache key. The complete descriptor is checked on hits. -/
++/-- One service-wide byte budget. Keys keep read scope, absolute directory,
++file incarnation and authority. Complete references are still checked on hits. -/
+ abbrev SharedPageKey := String × String × String × String × Nat
+ 
+-structure SharedPageCache where
+-  recent : Std.HashMap SharedPageKey CachedPage := {}
+-  previous : Std.HashMap SharedPageKey CachedPage := {}
+-  recentBounded : recent.size ≤ 1024 := by simp
+-  previousBounded : previous.size ≤ 1024 := by simp
++def sharedPageCapacity : Nat := 2*1024*65536
+ 
+-def SharedPageCache.capacity : Nat := 2*1024*65536
++/-- The charge includes decoded row/child cells and descriptor overhead as
++well as bytes. It is an allocation estimate, not a theorem about native RSS. -/
++def CachedPage.charge (page : CachedPage) : Nat :=
++  512+2*page.ref.bytes+256*(match page.loaded.page with
++    | .leaf rows => rows.length
++    | .branch children => children.length)
+ 
++abbrev SharedPageCache := ByteBudgetCache.Cache SharedPageKey CachedPage (sharedPageCapacity/2)
++
++def SharedPageCache.capacity : Nat := sharedPageCapacity
++
+ def SharedPageCache.lookup (cache : SharedPageCache) (key : SharedPageKey) : Option CachedPage :=
+-  cache.recent[key]?.orElse fun _ => cache.previous[key]?
++  cache.find? key
+ 
+ def SharedPageCache.find (cache : SharedPageCache) (key : SharedPageKey) (ref : Ref) : Option (Loaded ref) := do
+   let cached ← cache.lookup key
+   if same : cached.ref = ref then some (same ▸ cached.loaded) else none
+ 
+ def SharedPageCache.touch (cache : SharedPageCache) (key : SharedPageKey) (page : CachedPage) : SharedPageCache :=
+-  if fits : cache.recent.size < 1024 ∨ key ∈ cache.recent then
+-    ⟨cache.recent.insert key page,cache.previous,by
+-      by_cases present : key ∈ cache.recent
+-      · simpa only [Std.HashMap.size_insert,if_pos present] using cache.recentBounded
+-      · have room := fits.resolve_right present
+-        simp only [Std.HashMap.size_insert,if_neg present]
+-        omega,cache.previousBounded⟩
+-  else
+-    ⟨({} : Std.HashMap SharedPageKey CachedPage).insert key page,cache.recent,
+-      by simp [Std.HashMap.size_insert],cache.recentBounded⟩
++  ByteBudgetCache.Cache.touch cache ⟨key,page,page.charge⟩
+ 
+ theorem SharedPageCache.touch_bounded (cache : SharedPageCache) (key : SharedPageKey) (page : CachedPage) :
+-    ((cache.touch key page).recent.size+(cache.touch key page).previous.size)*65536 ≤ capacity := by
+-  have := (cache.touch key page).recentBounded
+-  have := (cache.touch key page).previousBounded
+-  unfold capacity
+-  omega
++    ByteBudgetCache.allocated (cache.touch key page).recent.slots +
++      ByteBudgetCache.allocated (cache.touch key page).previous.slots ≤ capacity := by
++  simpa [capacity,sharedPageCapacity] using (cache.touch key page).allocated_bounded
+ 
+-theorem SharedPageCache.touch_recent (cache : SharedPageCache) (key : SharedPageKey) (page : CachedPage) :
++theorem SharedPageCache.touch_recent (cache : SharedPageCache) (key : SharedPageKey) (page : CachedPage)
++    (fits : page.charge ≤ sharedPageCapacity/2) :
+     (cache.touch key page).lookup key = some page := by
+-  by_cases fits : cache.recent.size < 1024 ∨ key ∈ cache.recent
+-  <;> simp [touch,fits,lookup]
++  have found := ByteBudgetCache.Cache.touch_recent cache ⟨key,page,page.charge⟩ fits
++  simp [lookup,touch,ByteBudgetCache.Cache.find?,found]
+ 
+ theorem SharedPageCache.find_rejects (cache : SharedPageCache) (key : SharedPageKey)
+     (ref : Ref) (cached : CachedPage) (located : cache.lookup key = some cached) (different : cached.ref ≠ ref) :
+@@ -256,7 +251,11 @@
+   pool.state.atomically do
+     let state ← get
+     if let some loaded := state.cache.find key ref then
+-      set {state with cache := state.cache.touch key ⟨ref,loaded⟩,hits := state.hits+1}
++      -- A recent hit is read-only. Do not copy a bucket table or allocate
++      -- another ownership slot for every B-tree level of every lookup.
++      let cache := if (state.cache.recent.find? key).isSome then state.cache
++        else state.cache.touch key ⟨ref,loaded⟩
++      set {state with cache,hits := state.hits+1}
+       return some loaded
+     set {state with misses := state.misses+1}
+     return none
+@@ -268,7 +267,12 @@
+ 
+ def PagePool.stats (pool : PagePool) : IO Json := pool.state.atomically do
+   let state ← get
+-  return Json.mkObj [("pages",toJson (state.cache.recent.size+state.cache.previous.size)),
++  let cache := state.cache
++  return Json.mkObj [("pages",toJson (cache.recent.index.size+cache.previous.index.size)),
++    ("retainedSlots",toJson (cache.recent.slots.size+cache.previous.slots.size)),
++    ("chargedBytes",toJson (cache.recent.bytes+cache.previous.bytes)),
++    ("retainedPageBytes",toJson ((cache.recent.slots ++ cache.previous.slots).foldl
++      (fun total slot => total+slot.value.ref.bytes) 0)),
+     ("capacityBytes",toJson SharedPageCache.capacity),("hits",toJson state.hits),("misses",toJson state.misses)]
+ 
+ structure SharedReader where
