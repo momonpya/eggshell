@@ -1,0 +1,92 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/Handoff.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/canonical-keys-core/Eggshell/Handoff.lean
+index 8aaca7d..9ca5ad7 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/Handoff.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/canonical-keys-core/Eggshell/Handoff.lean
+@@ -44,6 +44,7 @@ public import Eggshell.SynapseTransport
+ public import Eggshell.SynapseBundles
+ public import Eggshell.PacketReceipt
+ public import Eggshell.CanonicalSourceDelivery
++public import tools.research.CanonicalKeyDirectory
+ public import tools.RetrievalIndex
+ 
+ public import tools.QueryLiterals
+@@ -5058,7 +5059,8 @@ def cachedBindings (owner : String) (rows : Array Synapses.CanonicalSource.Store
+   hashDistinct (rows.toList.flatMap fun row => row.origins.toList.filterMap fun origin =>
+     if origin.binding.owner == owner then some (origin.binding.first,origin.binding.limit) else none)
+ 
+-def prepareCached (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
++def prepareCachedUsing (rowKeys : Synapses.CanonicalSource.Delivery.Part → List String)
++    (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   let some work := Matcher.atomText? family.owner.work | return ([],[])
+   let owner := relationKey family.owner.relation
+@@ -5089,11 +5091,18 @@ def prepareCached (familyIndex : Nat) (family : Family) : List UnitPlan × List
+     seen := seen.insert ranges
+     let some shared := Synapses.CanonicalSource.Delivery.Part.check? rows | continue
+     let slice : TransportSlice := {
+-      owner := some family.owner.relation,keys := shared.keys,text := "",shared := some shared
++      owner := some family.owner.relation,keys := rowKeys shared,text := "",shared := some shared
+       members := [],visibleKeys := []}
+     units := units ++ [{family := familyIndex,slice,ranges}]
+   return (units,focused ++ family.synapticRanges.map fun (_,a,b) => (a,b))
+ 
++def prepareCached := prepareCachedUsing Synapses.CanonicalSource.Delivery.Part.keys
++
++theorem prepareCachedUsing_exact (directory : Eggshell.Research.CanonicalKeyDirectory.Prepared) :
++    prepareCachedUsing directory.keys = prepareCached := by
++  rw [directory.keys_exact]
++  rfl
++
+ theorem shared_source_unit_has_no_control (family : Nat)
+     (part : Synapses.CanonicalSource.Delivery.Part) :
+     ({family,slice := {owner := none,keys := part.keys,text := "",shared := some part,members := [],visibleKeys := []},ranges := []} :
+@@ -5169,10 +5178,11 @@ def prepareOriginalRecords (familyIndex : Nat) (family : Family) :
+ /-- Prepare the immutable record/structure index once per owner. Each query
+ window gets its own complete local dependency closure, not a prefix of the
+ other windows of this owner. This creates no control Match. -/
+-def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
++def prepareUsing (rowKeys : Synapses.CanonicalSource.Delivery.Part → List String)
++    (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat × Nat) := Id.run do
+   let outputs := prepareOutputs familyIndex family
+   if !family.cached.isEmpty then
+-    let records := prepareCached familyIndex family
++    let records := prepareCachedUsing rowKeys familyIndex family
+     return (records.1 ++ outputs.1,records.2 ++ outputs.2)
+   let some source := Matcher.atomText? family.owner.outcome | return ([],[])
+   if family.template.context.isNone then
+@@ -5180,6 +5190,13 @@ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat 
+   let records := prepareOriginalRecords familyIndex family
+   return (records.1 ++ outputs.1,records.2 ++ outputs.2)
+ 
++def prepare := prepareUsing Synapses.CanonicalSource.Delivery.Part.keys
++
++theorem prepareUsing_exact (directory : Eggshell.Research.CanonicalKeyDirectory.Prepared) :
++    prepareUsing directory.keys = prepare := by
++  rw [directory.keys_exact]
++  rfl
++
+ def join (prior next : TransportSlice) : Option TransportSlice := do
+   match prior.context,next.context with
+   | some left,some right =>
+@@ -5800,7 +5817,8 @@ def plan (ceiling : Nat × Nat) (cost : List TransportSlice → Nat × Nat)
+       Synapses.CanonicalSource.Packet.wrapper ++ Synapses.CanonicalSource.Packet.footer ++ "\n" else ""
+     let fixed := (allCost.1-dataCost.1+fixedData.1+sharedFrame.length,
+       allCost.2-dataCost.2+fixedData.2+sharedFrame.utf8ByteSize)
+-    let prepared := families.zipIdx.map fun (family,index) => prepare index family
++    let fileKeys := Eggshell.Research.CanonicalKeyDirectory.prepare (families.toArray.flatMap (·.cached))
++    let prepared := families.zipIdx.map fun (family,index) => prepareUsing fileKeys.keys index family
+     let units := prepared.flatMap (·.1)
+     let unitArray := units.toArray
+     let depth := max families.length (families.foldl (fun n family => max n (max family.windows.length family.references.length)) 0)
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationWire.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/canonical-keys-core/Eggshell/PublicationWire.lean
+index 554d349..bbb0357 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/PublicationWire.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/canonical-keys-core/Eggshell/PublicationWire.lean
+@@ -85,6 +85,7 @@ def directory : IO System.FilePath := do
+ /-- Installation paths and copy mtimes are not service generations. The same
+ source protocol can share one owner across clients built from the same code. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
++  (include_str "../tools/research/CanonicalKeyDirectory.lean").toUTF8,
+   (include_str "PublicationWire.lean").toUTF8,(include_str "PublicationClient.lean").toUTF8,
+   (include_str "PublicationStream.lean").toUTF8,
+   (include_str "PublicationService.lean").toUTF8,(include_str "NativePublication.lean").toUTF8,
