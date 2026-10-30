@@ -1,0 +1,15 @@
+{
+  "setupAttempt": {
+    "command": "lean -M512 --run tools/research/PrepareLayoutFrameAudit.lean",
+    "exitCode": 1,
+    "reason": "kernel excessive memory consumption; setup emitted no settings"
+  },
+  "repair": {
+    "guard": "setup.guard.json",
+    "boundedGlobalRssKiB": 3670016
+  },
+  "buildRepairs": [
+    "explicit dependent binders and current list membership lemma",
+    "qualified closure function and documents from immutable DB rather than absent FromJson instance"
+  ]
+}
