@@ -22,6 +22,7 @@ structure Result where
   phases : Nat
   augmentations : Nat
   flowCutChecked : Bool
+  residual : Array Nat
 
 def check (ok : Bool) (message : String) : IO Unit :=
   unless ok do throw (IO.userError message)
@@ -51,6 +52,22 @@ def levels (network : Network) (adjacent : Array (Array Nat))
     for edge in adjacent[vertex]! do
       let next := destination network edge
       if capacities[edge]! > 0 && found[next]! == network.vertices then
+        found := found.set! next (found[vertex]!+1)
+        queue := queue.push next
+  return found
+
+/-- Traverse incoming positive residual arcs from the sink. -/
+def reverseLevels (network : Network) (adjacent : Array (Array Nat))
+    (capacities : Array Nat) : Array Nat := Id.run do
+  let mut found := (Array.replicate network.vertices network.vertices).set! network.sink 0
+  let mut queue := #[network.sink]
+  let mut cursor := 0
+  while cursor < queue.size do
+    let vertex := queue[cursor]!
+    cursor := cursor+1
+    for edge in adjacent[vertex]! do
+      let next := destination network edge
+      if capacities[reverse edge]! > 0 && found[next]! == network.vertices then
         found := found.set! next (found[vertex]!+1)
         queue := queue.push next
   return found
@@ -134,6 +151,36 @@ def solve (network : Network) (deadline : Nat) : IO Result := do
       augmentations := augmentations+1
   let accepted := certificate network (← capacities.get) selected value
   check accepted "closure-flow certificate failed"
-  return ⟨selected,value,phases,augmentations,accepted⟩
+  return ⟨selected,value,phases,augmentations,accepted,← capacities.get⟩
+
+def maximumSource (network : Network) (result : Result) : IO (Array Bool) := do
+  let maximum := (reverseLevels network (adjacency network) result.residual).map (· == network.vertices)
+  check (certificate network result.residual maximum result.value) "maximal source cut certificate failed"
+  check (result.selected.zip maximum |>.all fun (lower,upper) => !lower || upper)
+    "cut extremes are not nested"
+  return maximum
+
+/-- An oracle for diagnosis only: close specified vertices through the
+positive residual graph, retaining the original minimal source side. -/
+def extendSource (network : Network) (result : Result) (seeds : Array Nat) : IO (Array Bool) := do
+  check (seeds.all (· < network.vertices)) "residual extension crossed its network"
+  let adjacent := adjacency network
+  let mut selected := result.selected
+  let mut queue := #[]
+  for seed in seeds do
+    if !selected[seed]! then
+      selected := selected.set! seed true
+      queue := queue.push seed
+  let mut cursor := 0
+  while cursor < queue.size do
+    let vertex := queue[cursor]!
+    cursor := cursor+1
+    for edge in adjacent[vertex]! do
+      let next := destination network edge
+      if result.residual[edge]! > 0 && !selected[next]! then
+        selected := selected.set! next true
+        queue := queue.push next
+  check (certificate network result.residual selected result.value) "residual extension is not a minimum cut"
+  return selected
 
 end Eggshell.Research.ClosureFlow
