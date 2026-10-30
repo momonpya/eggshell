@@ -141,4 +141,6 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 検証済みの区切りでhook-ingress-supervisorへpush。author/committerはmomonoya。終了した実験DB/cacheは抽出後に削除し、圧縮/archiveとして残さない。コード・実測・配送記録・digestを残し、削除済み入力で現在も再検証できるとは主張しない。実利用の記憶は勝手に消さない。
 
+利用者の追加指示で、終了済みの詳細ログ・受領・トレース・旧コピーとキャッシュも削除した。879個の生成物ルート/ファイル、論理447,764,622 bytes、archiveなし。現在の原典DB2個・対照/候補runtimeのSHA-256一致と必要nativeリンク入力の存在を削除後にも確認した。空きの観測値は約2.5 GiBで、二arm準備の起動条件3 GiBには未到達。過去に「raw RPCを保持」と記録した方針は、現在使わないものについてこの削除で置き換えた。[削除範囲と検査](docs/artifact-cleanup.md)。
+
 全体goalはblocked（実験用の容量待ち）。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。
