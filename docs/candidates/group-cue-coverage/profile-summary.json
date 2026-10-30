@@ -1,0 +1,30 @@
+{
+  "candidateAdopted": false,
+  "answeringModelCalls": 0,
+  "query": 2,
+  "outsideDeclaredLatencyComparison": true,
+  "capturedBodyUnchanged": true,
+  "profiledBodyUnchanged": true,
+  "bodySha256": "5473cb30646e22f6a33e0f3bf235b296072e50907f296a526a6eb84176533768",
+  "capturedHookMs": 19377,
+  "profiledHookMs": 18252,
+  "originalTrialNumericalMs": [770, 387],
+  "sampleStartedAfterQueryMs": 8000,
+  "sampleDurationSeconds": 5,
+  "sampleIntervalMs": 5,
+  "sampleCommandExitCode": 0,
+  "wholeHookTimeAttribution": false,
+  "publisherCpuProfiled": false,
+  "sourceRowsAlreadyUsesBatchApi": true,
+  "bindingRequestsIsNotRpcCount": true,
+  "observedStacks": [
+    ["Transport.build", "Publication.Client.sourceRows", "Stream.receiveWith", "Daemon.receiveExactly"],
+    ["Transport.build", "Publication.Client.sourceRows", "Stream.receiveWith", "Blake3.hashSegments"],
+    ["renderAutomatic", "SharedRangeAdapter.plan", "prepareCached", "Part.keys", "Delivery.rowKey", "Index.contentKey", "Blake3.hashSegments"],
+    ["CanonicalSource.Delivery.merge", "CanonicalSource.Registry.store", "Array.qsort"]
+  ],
+  "profileGuardPeakRssKiB": 1908672,
+  "profileGuardExitCode": 0,
+  "profileGuardOwnedPids": [],
+  "limitation": "One five-second diagnostic sample; not whole-hook CPU percentages, p99, a token comparison or an 80-user benchmark."
+}

@@ -1,0 +1,38 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/query-cache-baseline-core/Eggshell/Handoff.lean	2026-10-30 01:45:12
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/group-cue-core/Eggshell/Handoff.lean	2026-10-30 17:50:03
+@@ -22,6 +22,7 @@
+ public import tools.research.OriginalPayloadBasis
+ public import tools.research.ScopeAlternatives
+ public import tools.ClosedCoverage
++public import tools.research.GroupCueCoverage
+ public import tools.FocusWindows
+ public import tools.SourceWindow
+ public import Eggshell.AdvisoryFrontier
+@@ -5833,7 +5834,15 @@
+     let originalRows ← (Synapses.CanonicalSource.Delivery.merge (families.toArray.flatMap (·.cached))).toOption
+     let requirements ← Eggshell.Research.OriginalPayloadBasis.prepare families.length originalRows p
+     let scopes ← Eggshell.Research.ScopeAlternatives.prepare compiled families.length requirements.sourceRows requirements.dependencies
+-    let conditioned := scopes.problem
++    let mut groupFrames := Std.HashSet.ofList (List.range families.length)
++    let mut groupFiles : Std.HashSet Synapses.File := {}
++    for (row,atom) in requirements.sourceRows do
++      unless groupFiles.contains row.key.file do
++        groupFrames := groupFrames.insert (atom.val-1)
++        groupFiles := groupFiles.insert row.key.file
++    let groupValues ← (Eggshell.Research.GroupCueCoverage.prepare
++      (SharedCoverage.Input.ofProblem scopes.problem) p.offers.size compiled.offers.size 512 groupFrames).toOption
++    let conditioned ← groupValues.problem.decode.toOption
+     let chosen ← SharedCoverage.choose? conditioned
+     let selectedRecipes := chosen.selected.filterMap fun index =>
+       if h : index.val < compiled.offers.size then some (⟨index.val,h⟩ : Fin compiled.offers.size) else none
+@@ -5851,7 +5860,9 @@
+         bindingStats := Json.mkObj [("sources",toJson candidates.size),("fragmentedAlternatives",toJson fragmented),
+           ("uncoveredSources",toJson uncovered),("projectedBundles",toJson bundles.size),
+           ("preparedBundles",toJson (recipes.size-p.offers.size)),
+-          ("selectedBundles",toJson (chosen.selected.countP (fun index => p.offers.size ≤ index.val)))]
++          ("selectedBundles",toJson (chosen.selected.countP (fun index => p.offers.size ≤ index.val))),
++          ("physicalGroupCells",toJson groupValues.groups.size),
++          ("groupContainmentChecks",toJson groupValues.candidateChecks)]
+         bindingAudit
+         selectorInput := if captureInput then some (SharedCoverage.Input.encode conditioned) else none
+         requiredRows
