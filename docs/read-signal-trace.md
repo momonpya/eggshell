@@ -27,4 +27,27 @@ tracked-input-languageの3辺は`ToolChain`/`Args`のidentifier一致である�
 
 最初の軽い診断も、空き2 GiB条件で子processの起動前に拒否された。現在の比較ハーネスが各arm自身のruntimeを使い、このprefixからはモデルdirectoryだけを使うことを確認し、終了したseed取得時の旧runtime `b86fb524`（120,078,224 logical bytes）とowner印を削除した。開いているprocessはなく、凍結seed planのSHAと一致していた。原DB、原日誌、raw RPC/usage、モデル、現行`d11c80ef`と候補`5c268d36`は保持した。圧縮archiveはない。[拒否](candidates/read-signal-trace/startup-refusal.json)、[削除](candidates/read-signal-trace/retired-seed-runtime.json)。旧seedを同じ実行体で再実行できるという意味ではない。次の新seedでは選んだruntimeを改めて設置し、先にSHAを固定する。
 
-削除により軽い診断は実行できたが、二armの準備を新たに作る3 GiBの余裕には届いていない。native来歴の追加検査、共有保持候補の実フック、未配送根拠の改善、総token・品質の採用比較、80人の継続負荷は未完了。実配送は2/3・5/7・3/4のまま、98%未達である。
+削除により軽い診断は実行できたが、二armの準備を新たに作る3 GiBの余裕には届かなかった。その後に行えたnative来歴の検査は次節へ記す。共有保持候補の実フック、未配送根拠の改善、総token・品質の採用比較、80人の継続負荷は未完了。実配送は2/3・5/7・3/4のまま、98%未達である。
+
+## 元DBのnative来歴と原文束縛を点検した
+
+終了済みr0の作業DBには、保持中のstage2 snapshotと同一のhead・全83,251,326 page bytesと、約322 MiBの派生cacheが残っていた。比較を終えて開いたfileがないことを確認してから、作業DBコピーを削除した。r0全体のallocated表示は578,064→166,744 KiBとなった。これはcloneを含む表示であり、その差を物理的な空き回復量とは扱わない。原DBとprivate learning・RPC/usageは保持した。[直接照合と削除](candidates/read-signal-trace/retired-r0-work.json)。
+
+確保した範囲で、前回と同じSHAの[来歴点検ソース](../tools/research/ReadSignalOrigins.lean)をnativeでビルドした。対象3つのconsumer Occurrenceは全て、元DBの正しいnative Work/Outcomeへ結び付いていた。ToolChain/Argsの2 consumerはinventoryの対応と一致し、以前不明だった`n`のconsumerも`v6260915982950187979`と確認できた。このconsumerは題材2の直接の推薦8件にはない。これは保存された接続先の検証であり、当時のroot列やhintの観測ではない。[結果](candidates/read-signal-trace/native-origins.json)。
+
+さらに[製品の`Transport.boundTo`そのものを使う点検](../tools/research/ReadBindingInventory.lean)で、原DBの3所有者から文書と元出典を復元し、未配送項目に重なる延べ41件のReadを調べた。題材1の1件、題材2の1+12件、題材3の27件は全て現行の検査を通った。捕捉済みContentMetadataのファイル集合を仮に加えても、通るReadは同じ41件だった。**この範囲では、ファイル情報の欠落で原文束縛が拒否される仮説を棄却する。** メタデータ接続をもう一度直す製品変更は加えない。[全述語結果](candidates/read-signal-trace/binding-inventory.json)。
+
+| native検査 | 整合した実リンクobject | build ms / RSS最大 KiB | 実行 ms / RSS最大 KiB |
+| --- | ---: | ---: | ---: |
+| consumerの来歴 | 44 | 19,783 / 1,958,400 | 5,243 / 84,928 |
+| 原文束縛の述語 | 106 | 22,302 / 2,033,248 | 5,410 / 95,296 |
+
+最初の束縛検査buildにはhelper自身の名前衝突・構文誤りがあり、失敗記録を残して修正した。最終2 buildと2実行は終了0・残存0。既知の不整合runtimeを拒否し、実際にlinkした依存の整合を検査した。解釈実行のheap制限を増やしたものではない。3.5 GiBのRSS停止・2 GiBの空き停止は維持した。実行時間は診断の起動・DBの点照会・検査を含み、製品フックや80人負荷の遅延値へ転用しない。[来歴native依存](candidates/read-signal-trace/native-closure.json)、[来歴guard](candidates/read-signal-trace/native.guard.json)、[束縛native依存](candidates/read-signal-trace/binding-native-closure.json)、[束縛guard](candidates/read-signal-trace/binding-native.guard.json)。
+
+元seedとモデル実行後の両snapshotについて、全source fileのSHAを凍結manifestへ照合した。現行`d11c80ef`・候補`5c268d36`の実行体SHAも不変だった。結果・native入力の小さい証拠を保存し、終了した2つのhelper実行体とbuild cacheは削除した。archiveはない。[原典とruntime](candidates/read-signal-trace/native-seal.json)、[来歴helperの削除](candidates/read-signal-trace/retired-native-origin-build.json)、[束縛helperの削除](candidates/read-signal-trace/retired-native-binding-build.json)。
+
+## 現在のブロック
+
+原DBの対象接続先と束縛述語は確認できたが、実フックでのroot→hint→原文対応→cue→選択は未確認のままである。今回の点検を配送改善と扱わず、新規フック/回答モデルは0、本体未採用を維持する。
+
+終了済み生成物の追加削除後も、空きは2,221,676 KiB（約2.12 GiB）で、二armの準備の起動条件3 GiBへ届かない。稼働中の実験jobはない。同じ容量条件が3回のgoalターンで続いたため、goalは`blocked`へ更新した。目的・98%・30秒・80人の範囲は変更していない。再開には現在volumeの空き3 GiB以上、または十分な空きのある実験用volumeの指定が必要である。準備途中で止まる同じ構築を再起動せず、未記録のhintを推測で埋めない。[ブロック監査](candidates/read-signal-trace/storage-blocked-audit.json)。

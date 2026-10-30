@@ -1,0 +1,41 @@
+{
+  "blockingCondition": "insufficient local storage for the next isolated preparation and actual-hook comparison",
+  "consecutiveGoalTurns": [
+    {
+      "commit": "ad7efe9",
+      "classification": "progress",
+      "evidence": "docs/candidates/prepared-bindings/storage-setup-stopped.guard.json",
+      "actualCandidateHookCalls": 0,
+      "capacityBlockRemained": true
+    },
+    {
+      "commit": "dd82974",
+      "classification": "progress",
+      "evidence": "docs/candidates/read-signal-trace/startup-refusal.json",
+      "capacityBlockRemained": true
+    },
+    {
+      "classification": "progress",
+      "evidence": "docs/candidates/read-signal-trace/native-seal.json",
+      "progress": "retired the byte-identical r0 working DB and completed native provenance/binding inspections",
+      "capacityBlockRemained": true
+    }
+  ],
+  "availableKiBAfterCompletedHelperCleanup": 2221676,
+  "continuousStopFloorKiB": 2097152,
+  "comparisonStartupMinimumFreeKiB": 3145728,
+  "additionalFreeKiBToStartupMinimum": 924052,
+  "confirmedLiveExperimentalJobs": [],
+  "otherVolumeAvailable": false,
+  "finishedTrialDbsAndCachesRetired": true,
+  "additionalSafeLargeDisposalIdentified": false,
+  "originalSourceAndPostModelSourceShaVerified": true,
+  "currentControlAndCandidateRuntimeShaVerified": true,
+  "limitsLowered": false,
+  "newActualHookCalls": 0,
+  "answeringModelCalls": 0,
+  "latestActualDelivery": [[1, 2, 3], [2, 5, 7], [3, 3, 4]],
+  "goalComplete": false,
+  "goalScopeUnchanged": true,
+  "neededExternalChange": "at least 3 GiB free on the current volume, or a supplied writable experiment volume with adequate free space"
+}

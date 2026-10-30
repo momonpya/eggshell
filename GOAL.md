@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-10-30更新。状態はactive。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-10-30更新。状態はblocked（実験用の空き容量不足）。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -77,6 +77,10 @@ full runtime `55e76407`はwarmの利用再生が62,953 msで期限超過とな�
 
 その後、同じ実フック・辺監査・原文inventoryをLeanで照合した。題材3の未配送範囲は推薦順位3・focus順位4の所有者にあり、具体化済みだった。題材1の3097行も具体化済みで、消費先の一つは推薦順位7に入っていた。支持・共引用0を捏造せず、消費のtermがToolChain/Argsまたは1文字のnであることも残した。通常受領にはroot列・各hintの入場・却下offerのcue内訳がなく、消費辺の存在だけでは価値まで伝わったとは確定できない。この照合は8,484 ms・RSS最大647,552 KiB・終了0・残存0、新規フック/DB/cache/回答モデル0で、配送率は変わらない。native来歴の点検draftはLean解釈時のkernel制限で実行前に止まり、制限を増やさず削除した。現在経路が使わない旧seed runtime`b86fb524`（論理120,078,224 bytes）もSHAと非稼働を確認して削除した。[新しい照合・不明な段階・停止](docs/read-signal-trace.md)。
 
+終了したr0作業DBに残っていた約322 MiBの派生物と、保持中stage2 snapshotに全bytes一致する作業コピーも削除した。確保した範囲で同じ来歴点検ソースをnativeビルドし、対象3つのconsumerが元DBの正しいnative Work/Outcome/Occurrenceを持つことを確認した。さらに製品の`Transport.boundTo`そのものを使い、未配送4セルに重なる延べ41 Readが全て現行の検査を通ることを確認した。捕捉済みファイル情報を加える案も41件のままで、この情報不足を原因とする修正は行わない。実リンク44/106 objectは整合、実行は5,243/5,410 ms・RSS最大84,928/95,296 KiB・終了0・残存0。原典2 snapshot全fileと現行/候補runtimeのSHAを確認し、終了した2 helper実行体・build cacheは削除した。新規フック/回答モデル0で、配送率は変わらない。
+
+同じ容量不足が3回のgoalターンで継続し、追加削除後も空き2,221,676 KiB（約2.12 GiB）で二arm準備の3 GiB起動条件を満たさない。稼働中の実験jobはない。全体goalをblockedへ更新した。原典・モデル・現行/候補と必要な依存を消さずに続行するには、現在volumeの空き3 GiB以上、または十分な保存先の指定が必要である。実配送は2/3・5/7・3/4、98%・総token改善・80人の継続負荷は未達。次の順序は再開後のものとし、同じ準備を容量不足のまま繰り返さない。[native結果とブロック](docs/read-signal-trace.md)、[監査](docs/candidates/read-signal-trace/storage-blocked-audit.json)。
+
 次の順序を固定する。
 
 1. 十分な保存先を確保してから、範囲別Readを共有保持する`5c268d36`と対照`d11c80ef`の実フックを、各arm自身の準備器・同じ固定source/履歴/3・7・4の凍結根拠で比較する。停止済みのDBは削除したので新しい試行として行い、停止記録は上書きしない。総tokenの採用比較とは分ける。次に、sessionへ残る不変構造の再構成、範囲別JSON転送と原文blobの再検証を測り、共有できる構造をpublication差分で準備する。pinしたsource/view・scope・完全な依存検査を保つ。旧poolの再miss修正や過去に効果の安定しなかったB-tree batch、cue directory共通化を再実装せず、cache/索引を二重化しない。速度や部品試験だけで候補を本体採用しない。LLVMのread-only修復と、別のprimary字句候補`bc358133`を混同しない。旧非空DBの再索引と未吸収差分は未完了。保護条件を下げず、未知のpolicyを持つ元seedへ印だけを付けない。
@@ -137,4 +141,4 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 検証済みの区切りでhook-ingress-supervisorへpush。author/committerはmomonoya。終了した実験DB/cacheは抽出後に削除し、圧縮/archiveとして残さない。コード・実測・配送記録・digestを残し、削除済み入力で現在も再検証できるとは主張しない。実利用の記憶は勝手に消さない。
 
-全体goalはactive。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。
+全体goalはblocked（実験用の容量待ち）。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。
