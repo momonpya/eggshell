@@ -32,6 +32,16 @@
 
 親と子の時間を加算しない。Transportの終了はrenderの開始より前なので、この2工程は重複しない。合計9.905秒、フック全体との差6.683秒は未細分化である。[同じ実行の受領時系列](candidates/query-stage-profile/receipt-timeline.json)では数値検索は727/353 msで双方completedだった。初期のkeyed-requestからlexical-adviceまで1,893 msあるが、その差を字句採点だけのCPU時間とは扱わない。
 
+## 「取得4.3秒・描画5秒」の説明の訂正
+
+この数字を、準備済み本文の読出しと文字列描画だけの費用として説明するのは誤りである。4.319秒はbindings 2.457秒とrows 1.863秒の合計、4.957秒はplan 4.004秒を含む。選択した原文の具体化は0.163秒であり、残りを描画の不可避な費用にはできない。
+
+同じ対照runtimeのソースで次を確認した。`CanonicalSource.Shared.Loaded`が保持するのはmanifest、paged snapshot、original indexのreaderである。`Loaded.rows`は同じownerでも`Recipe.read?`を呼び、owner payloadを読みJSONから復号する。サービスの`sourceRows`はそれを再びJSONへ直列化する。clientの`sourceRows`は原文の`load`と`Recipe.check`を行い、`Handoff.SharedRangeAdapter.prepareCached`も`Recipe.check`からcatalogueを受け取り、共有原文の単位を組み立てる。`problem`は原文を再併合してfile frame・行費用・closureを作る。既存の`problem_prepared_compiled`は証明付きの線形実装への置換なので、単に未使用の`problemPrepared`を呼べば直る問題ではない。
+
+したがって、ページcacheのhitは、復号済みの原文、検査済みのlayout、費用構造まで再利用できていることを意味しない。これらのquery不変部分を同じpublication/view/scopeでサービス内共有する責任が残る。質問・私有usage・予算・鮮度に依存する候補の装飾、最終選択と表示まで全て静的cacheへ入れるのも誤りである。今回の計測だけで、これら全てのCPU時間の内訳、cache移設後の全フック秒数、80人での性能は確定しない。
+
+現時点で修正完了や数秒化は未確認。元原文・全選択結果・本文bytesを保つ隔離経路で、この重複準備を除くことを次の優先作業とする。本文の容量拡張、重み・上位件数の調整、探索だけのservice移設を繰り返さない。総token等の採用条件も緩めない。
+
 この結果から、シナプス探索だけ、record閉包だけ、選択器だけを主因とする診断は支持されない。少なくとも原文解決・取得、候補準備と選択、まだ細分化していない検索周辺を分けて扱う必要がある。探索のRPC接続だけを再調整したり、単体で十数msの閉包に別の索引を足したりしない。sourceBindings/sourceRowsは既にbatch APIであり、内部要求数をRPC数と呼ばない。
 
 質問に依存しないsource binding・元行ID・描画単位・費用は、同じsource/view/scopeに結び付いたサービス内の準備済み構造として再利用する対象である。query依存の現在の仕事・私有usage・鮮度と混同しない。全フックの約40%は未細分化なので、準備の移設だけで数秒になるとはまだ断定しない。配送では入口の関連度と、利用する仕事/結果の根拠を保持する条件を分ける必要がある。98%を達成した実装はまだない。
