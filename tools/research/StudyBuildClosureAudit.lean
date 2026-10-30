@@ -17,7 +17,9 @@ private def inspect (directory : System.FilePath) : IO Json := do
     (directory / (mainName.replace "." "_" ++ ".dependencies"))))
   let inputs := expected.foldl (fun found (name,stamp) => found.insert name stamp)
     ({} : Std.HashMap String String)
-  let mapping ← read (.mk (← IO.ofExcept (settings.getObjValAs? String "objectModules")))
+  let effective := directory / "object-mapping.json"
+  let mapping ← if ← effective.pathExists then read effective
+    else read (.mk (← IO.ofExcept (settings.getObjValAs? String "objectModules")))
   let mut modules : Std.HashMap String String := {}
   for (path,name) in (← IO.ofExcept mapping.getObj?).toArray do
     modules := modules.insert path (← IO.ofExcept name.getStr?)

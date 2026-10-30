@@ -209,11 +209,39 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
       ("module",toJson name),("source",toJson source),("object",toJson object),("compiled",toJson compiled)])}
   return !matchedStamp || changed
 
+/-- A derived runtime can have native objects that were not in its own input
+map. Its recorded link inputs, rather than a caller's manually merged map,
+identify those modules. Reject contradictory names before compiling. -/
+private def effectiveObjectMap (settings : Settings) : IO Json := do
+  let mut objects ← IO.ofExcept ((← readJson settings.objectModules).getObj?)
+  let response : System.FilePath := .mk settings.baselineResponse
+  if response.fileName == some "runtime.rsp" then
+    let directory := response.parent.get!
+    let manifest := directory / "build.json"
+    if ← manifest.pathExists then
+      let parent ← readJson manifest.toString
+      let output : String ← IO.ofExcept ((parent.getObjValD "settings").getObjValAs? _ "output")
+      check ((System.FilePath.mk output).normalize == directory.normalize) "baseline native manifest belongs to another output"
+      let mut linked : Std.HashSet String := {}
+      for row in (← IO.FS.readFile response).splitOn "\n" do
+        if row.trimAscii.isEmpty then continue
+        linked := linked.insert (← IO.ofExcept (Json.parse row >>= Json.getStr?))
+      for row in ← IO.ofExcept (parent.getObjValAs? (Array Json) "modules") do
+        let path : String ← IO.ofExcept (row.getObjValAs? _ "object")
+        if !linked.contains path then continue
+        let name : String ← IO.ofExcept (row.getObjValAs? _ "module")
+        if let some previous := objects[path]? then
+          check (previous == toJson name) "contradictory baseline native module mapping"
+        objects := objects.insert path (toJson name)
+  return Json.obj objects
+
 def build (input : String) : IO Unit := do
   let settings ← IO.ofExcept (fromJson? (α := Settings) (← readJson input))
   IO.FS.createDirAll settings.output
   inheritLibrary (.mk (settings.core ++ "/.lake/build/lib/lean")) (.mk (settings.output ++ "/lib"))
-  let objectMap ← IO.ofExcept ((← readJson settings.objectModules).getObj?)
+  let effective ← effectiveObjectMap settings
+  IO.FS.writeFile (settings.output ++ "/object-mapping.json") effective.pretty
+  let objectMap ← IO.ofExcept effective.getObj?
   let mut inheritedStamps : Std.HashMap String String := {}
   let mut inheritedDependencies : Std.HashMap String System.FilePath := {}
   for row in (← IO.FS.readFile settings.baselineResponse).splitOn "\n" do
@@ -357,8 +385,27 @@ private def resumeAudit (directory : String) : IO Unit := do
   check (after.exitCode == 0 && after.stdout.trimAscii == "3" && compiled "Box" == some false &&
       compiled "Middle" == some true && (← IO.FS.readFile (core / "Middle.lean")) == middle)
     "resumed build reused a parent with the old field layout"
+  let derived : Settings := {settings with
+    output := (root / "derived").toString
+    baselineResponse := (root / "build/runtime.rsp").toString
+    baselineMain := (root / "build/Main.o").toString
+    baselineCore := some core.toString}
+  IO.FS.writeFile (root / "derived-plan.json") (toJson derived).pretty
+  build (root / "derived-plan.json").toString
+  let derivedResult ← IO.Process.output {cmd := (root / "derived/StudyMain").toString}
+  check (derivedResult.exitCode == 0 && derivedResult.stdout.trimAscii == "3")
+    "derived build duplicated an object omitted by the caller's empty map"
+  let conflict := Json.mkObj [((root / "build/Box.o").toString,toJson "WrongModule")]
+  IO.FS.writeFile (root / "objects.json") conflict.pretty
+  let mut conflictRejected := false
+  try
+    let _ ← effectiveObjectMap derived
+    pure ()
+  catch _ => conflictRejected := true
+  check conflictRejected "contradictory native module mapping was accepted"
   IO.FS.writeFile (root / "results.json") (Json.mkObj [
     ("dependencyCachedOnRetry",toJson true),("unchangedParentRecompiled",toJson true),
+    ("omittedDerivedNativeObjectsRecovered",toJson true),("contradictoryNativeMappingRejected",toJson true),
     ("runtimeValueBefore",toJson before.stdout.trimAscii.copy),("runtimeValueAfter",toJson after.stdout.trimAscii.copy),
     ("staleLayoutWouldReturn",toJson (10 : Nat)),("answeringModelCalls",toJson (0 : Nat))]).pretty
 
