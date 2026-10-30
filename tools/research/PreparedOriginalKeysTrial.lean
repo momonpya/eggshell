@@ -102,7 +102,8 @@ private def profileReuse : IO Unit := do
 def main (args : List String) : IO Unit := do
   if args == ["reuse-service"] then return ← profileReuse
   let profileService := args == ["profile-service"]
-  let bindingsCache := args == ["bindings-cache"]
+  let resumed := args == ["bindings-cache-resumed"]
+  let bindingsCache := args == ["bindings-cache"] || resumed
   let blockCache := args == ["block-cache"] || bindingsCache
   check (args.isEmpty || profileService || blockCache) "explicit paired cache trial or unchanged-service profile required"
   let study : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028"
@@ -110,8 +111,9 @@ def main (args : List String) : IO Unit := do
     if blockCache then "service-block-cache-trial" else if profileService then "source-service-profile" else "prepared-original-keys-trial"
   let root := study / "shared-snapshot" / label
   let candidates : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates"
-  let records := candidates / (if bindingsCache then "prepared-bindings" else
+  let evidence := candidates / (if bindingsCache then "prepared-bindings" else
     if blockCache then "service-block-cache" else if profileService then "source-service-profile" else "prepared-original-keys") / "trial"
+  let records := if resumed then candidates / "prepared-bindings/resumed/trial" else evidence
   check (!(← root.pathExists) && !(← records.pathExists)) "fresh paired key-reuse trial required"
   IO.FS.createDirAll root
   IO.FS.createDirAll records
@@ -122,7 +124,7 @@ def main (args : List String) : IO Unit := do
   let pinned ← DB.PageMap.pin common
   let workspace : System.FilePath := "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project"
   let definitions ← IO.ofExcept ((← read (study / "task-definitions.json")).getArr?)
-  let previous : Array Json ← IO.ofExcept ((← read (records.parent.get!.parent.get! / "query-cache-llvm/records/frozen-before-delivery.json")).getArr?)
+  let previous : Array Json ← IO.ofExcept ((← read (candidates / "query-cache-llvm/records/frozen-before-delivery.json")).getArr?)
   let mut questions : Array (Nat × String × Json × AvailableDelivery.Frozen) := #[]
   for topic in (if profileService then [2] else [1,2,3]) do
     let some definition := definitions.find? (fun row => (row.getObjValAs? Nat "topic").toOption == some topic) |
@@ -144,6 +146,7 @@ def main (args : List String) : IO Unit := do
     ("topics",toJson (questions.map fun (topic,_,_,_) => topic)),("allFreshSessions",toJson true),
     ("armOrder",toJson (if profileService then #[#["baseline"]] else #[#["baseline","candidate"],#["candidate","baseline"]])),
     ("diagnosticServiceProfile",toJson profileService),
+    ("diagnosticRangeAudit",toJson resumed),
     ("sameHistoryManifestSha256",toJson manifestHash),("source",toJson pinned.head),
     ("sourcePreparers",sourcePreparers),
     ("answeringModelCalls",toJson (0 : Nat)),("tokenComparison",toJson false),("adopted",toJson false)]).pretty
@@ -157,6 +160,7 @@ def main (args : List String) : IO Unit := do
     ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none),("LEAN_NUM_THREADS",some "1"),
     ("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),("MKL_NUM_THREADS",some "1"),
     ("HF_HUB_OFFLINE",some "1"),("TOKENIZERS_PARALLELISM",some "false")] ++
+    (if resumed then #[("EGGSHELL_TRACE_SELECTION_RANGES",some "1")] else #[]) ++
     if profileService then #[("EGGSHELL_HANDOFF_TRACE",some (records / "handoff.trace").toString)] else #[]
   let mut arms := #[]
   let definitions := [("baseline","query-cache-baseline-build"),

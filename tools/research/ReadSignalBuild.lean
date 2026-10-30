@@ -52,12 +52,13 @@ def main (args : List String) : IO Unit := do
       ("allNativeJobsTerminal",toJson true),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).pretty
     return
   let bindings := args == ["bindings-build"] || args == ["bindings-run"]
-  let label := if bindings then "read-binding-inventory-native" else "read-signal-origins-native"
-  let recordPrefix := if bindings then "binding-native" else "native"
-  let mainModule := if bindings then "tools.research.ReadBindingInventory" else "tools.research.ReadSignalOrigins"
+  let roots := args == ["roots-build"] || args == ["roots-run"]
+  let label := if roots then "read-root-projection-native" else if bindings then "read-binding-inventory-native" else "read-signal-origins-native"
+  let recordPrefix := if roots then "roots-native" else if bindings then "binding-native" else "native"
+  let mainModule := if roots then "tools.research.ReadRootProjection" else if bindings then "tools.research.ReadBindingInventory" else "tools.research.ReadSignalOrigins"
   let parent := root / "query-cache-baseline-build"
   let output := root / (label ++ "-build")
-  if args == ["prepare-run"] || args == ["bindings-run"] then
+  if args == ["prepare-run"] || args == ["bindings-run"] || args == ["roots-run"] then
     let guard ← read (evidence / (recordPrefix ++ "-build.guard.json"))
     unless guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
         guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) && guard.getObjValD "guardTriggered" == toJson false do
@@ -71,12 +72,13 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile (root / (label ++ ".guard-settings.json")) (Json.mkObj [
       ("record",toJson (evidence / (recordPrefix ++ ".guard.json")).toString),("cwd",toJson project.toString),
       ("ownedPrefixes",toJson #[root.toString]),("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
-      ("command",toJson #["/usr/bin/env","LEAN_NUM_THREADS=1",(output / "StudyMain").toString,
+      ("command",toJson (#["/usr/bin/env","LEAN_NUM_THREADS=1",(output / "StudyMain").toString,
         (root.parent.get! / "r0/stage1/history/source.egg").toString,
-        (if bindings then project / "docs/candidates/query-cache-llvm/missing-support.json" else evidence / "result.json").toString,
-        (evidence / (if bindings then "binding-inventory.json" else "native-origins.json")).toString])]).pretty
+        (if bindings then project / "docs/candidates/query-cache-llvm/missing-support.json" else evidence / "result.json").toString] ++
+        (if roots then #[(project / "docs/candidates/query-cache-llvm/missing-support.json").toString] else #[]) ++
+        #[(evidence / (if roots then "root-projection.json" else if bindings then "binding-inventory.json" else "native-origins.json")).toString]))]).pretty
     return
-  unless args.isEmpty || args == ["bindings-build"] do throw (IO.userError "fresh native build or prepare-run required")
+  unless args.isEmpty || args == ["bindings-build"] || args == ["roots-build"] do throw (IO.userError "fresh native build or prepare-run required")
   unless !(← output.pathExists) && !(← (evidence / (recordPrefix ++ "-build.guard.json")).pathExists) do
     throw (IO.userError "preserve the previous native provenance audit")
   let build ← read (parent / "build.json")

@@ -51,3 +51,11 @@ tracked-input-languageの3辺は`ToolChain`/`Args`のidentifier一致である�
 原DBの対象接続先と束縛述語は確認できたが、実フックでのroot→hint→原文対応→cue→選択は未確認のままである。今回の点検を配送改善と扱わず、新規フック/回答モデルは0、本体未採用を維持する。
 
 終了済み生成物の追加削除後も、空きは2,221,676 KiB（約2.12 GiB）で、二armの準備の起動条件3 GiBへ届かない。稼働中の実験jobはない。同じ容量条件が3回のgoalターンで続いたため、goalは`blocked`へ更新した。目的・98%・30秒・80人の範囲は変更していない。再開には現在volumeの空き3 GiB以上、または十分な空きのある実験用volumeの指定が必要である。準備途中で止まる同じ構築を再起動せず、未記録のhintを推測で埋めない。[ブロック監査](candidates/read-signal-trace/storage-blocked-audit.json)。
+
+## 再開後：元DBから探索起点と単独辺を投影した
+
+利用者がgoalをactiveへ戻した後、空きを再確認したところ約43 GiBあり、準備の容量ブロックは解消していた。直前の427 MiBの削除だけによる増加とは主張しない。3 GiBの開始条件・2 GiBの連続停止・3.5 GiBのRSS停止は維持する。
+
+[ReadRootProjection](../tools/research/ReadRootProjection.lean)は、同じ記録済みの推薦・具体化一覧から、元DBの完全なnative ownerとOccurrenceを読み、製品の`Plugin.synapticRoots`、`Routing.project`、`Offer.check?`を呼ぶ。題材1のToolChain消費先は直接のconsumer rootを持ち、その単独辺から3097行へのofferが1件生成される。残る2本は直接rootではない。題材2の対象consumerはどれも直接rootではなく、題材3の未配送範囲には対象の消費辺自体がない。[結果](candidates/read-signal-trace/root-projection.json)。
+
+これは製品規則を使った起点の再計算と単独辺の投影であり、当時のキューや全グラフの再実行ではない。直接rootがないことから推移的にも到達しないとは結論しない。既存の公開bodyやselectorは変更せず、回答モデル・DB/cacheの書込み0。helperの型誤りを修正してからnative依存を監査し実行した。続いて、容量が回復したため実フックの範囲監査へ進む。
