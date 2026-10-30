@@ -1,0 +1,111 @@
+{"sourceFiles":
+ [["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812.pages",
+   "83a365c2c7a33b30ec4f1e0d0a327eb5bd26153091ca2075faaf3be95dfa9a1b"],
+  ["head", "c9f76191cb46224f00c93e9196eab9a005e11b0cd98fc9746534dd73bb57b141"],
+  ["publisher.guard",
+   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"],
+  ["writer",
+   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]],
+ "runtime":
+ {"sha256": "dcf5a8d9517ac5a37e7d20aa6bea594ec8739194b66b8d2e4a6d145c3ff6196a",
+  "generation":
+  "e205266dca437694e5f1ec57b4d5627a5a71c340f977796f931aeedcc7015669",
+  "binary":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/routing-scope-runtime-build/StudyMain"},
+ "frozen":
+ {"topic": 1,
+  "specification":
+  {"workspace":
+   "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project",
+   "source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/r0/stage1/history/source.egg",
+   "required":
+   [{"path": "clang/lib/Driver/Driver.cpp",
+     "name": "toolchain-cache-key",
+     "last": 7106,
+     "first": 7101},
+    {"path": "clang/lib/Driver/Driver.cpp",
+     "name": "tracked-input-language",
+     "last": 3104,
+     "first": 3097},
+    {"path": "clang/lib/Driver/Driver.cpp",
+     "name": "complete-hlsl-branch-scope",
+     "last": 7252,
+     "first": 7244},
+    {"path": "clang/lib/Driver/Driver.cpp",
+     "name": "input-language-predicate",
+     "last": 137,
+     "first": 128},
+    {"path": "clang/lib/Driver/Driver.cpp",
+     "name": "trailing-language-warning",
+     "last": 3135,
+     "first": 3131}],
+   "prompt":
+   "You are running one fixed LLVM source investigation.\n\nThe immutable source workspace is /Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project.\n\nUse only the fixed source workspace and condition context delivered by hooks. Do not use web, external memories, plugins, sub-agents, or files outside this workspace. Do not modify the source.\n\nTASK\n\nUsing the preceding investigation and the fixed llvm-project snapshot, investigate this edge case: target and language options that change the selected tool chain or forwarded arguments. Reproduce it with the relevant files in clang/test/Driver or a minimal fixture. Make an isolated fix only when the evidence requires one. If changing code, list every changed file and run the narrowest applicable repository test; if no fix is justified, give the evidence and leave the source unchanged. Report test output and unresolved conditions in ja.\n",
+   "files":
+   [["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812.pages",
+     "83a365c2c7a33b30ec4f1e0d0a327eb5bd26153091ca2075faaf3be95dfa9a1b"],
+    ["head",
+     "c9f76191cb46224f00c93e9196eab9a005e11b0cd98fc9746534dd73bb57b141"],
+    ["publisher.guard",
+     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"],
+    ["writer",
+     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]]},
+  "available":
+  {"units":
+   [{"partialNames": [],
+     "names": ["toolchain-cache-key"],
+     "alternatives":
+     [[{"subject":
+        {"original":
+         {"original":
+          {"work": "v11297236551237525391",
+           "content":
+           "8717fcd0ef852e76bbe3df63207e1fca26b8f07ccf553544d07a8b3f63305cb9",
+           "chars": 16861}}},
+        "last": 4349,
+        "first": 4056}],
+      [{"subject":
+        {"file":
+         {"file":
+          {"relative": "clang/lib/Driver/Driver.cpp",
+           "fingerprint":
+           "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+           "bytes": 303314}}},
+        "last": 7106,
+        "first": 7101}]]},
+    {"partialNames": ["tracked-input-language"],
+     "names": ["tracked-input-language"],
+     "alternatives":
+     [[{"subject":
+        {"file":
+         {"file":
+          {"relative": "clang/lib/Driver/Driver.cpp",
+           "fingerprint":
+           "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+           "bytes": 303314}}},
+        "last": 3097,
+        "first": 3097}]]},
+    {"partialNames": [],
+     "names": ["complete-hlsl-branch-scope"],
+     "alternatives":
+     [[{"subject":
+        {"original":
+         {"original":
+          {"work": "v11297236551237525391",
+           "content":
+           "8717fcd0ef852e76bbe3df63207e1fca26b8f07ccf553544d07a8b3f63305cb9",
+           "chars": 16861}}},
+        "last": 12413,
+        "first": 11891}],
+      [{"subject":
+        {"file":
+         {"file":
+          {"relative": "clang/lib/Driver/Driver.cpp",
+           "fingerprint":
+           "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+           "bytes": 303314}}},
+        "last": 7252,
+        "first": 7244}]]}],
+   "absent": ["input-language-predicate", "trailing-language-warning"]}},
+ "arm": "candidate"}

@@ -100,7 +100,7 @@ def main : IO Unit := do
      "  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded reuse => do\n" ++
      "    let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,scope.capability,head,metadata,reuse⟩\n" ++
      "    let slot ← IO.mkRef (some loaded)\n" ++
-     "    try use (PreparedSource.borrowed access slot server.structures server.stopping deadline Stream.maxBytes)\n" ++
+     "    try use (PreparedSource.borrowed access slot pinned.snapshot server.prepared.pages path.normalize.toString server.structures server.stopping deadline Stream.maxBytes)\n" ++
      "    finally slot.set none\n\n")
   let helper := "tools/research/PreparedSourceReader.lean"
   let wire ← IO.FS.readFile (original / "Eggshell/PublicationWire.lean")

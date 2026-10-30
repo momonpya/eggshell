@@ -1,6 +1,7 @@
 module
 public import Eggshell.CanonicalSourcePrepared
 public import Eggshell.SynapticBindings
+public import tools.research.PrivateRoutingView
 @[expose] public section
 
 namespace Eggshell.Synapses.PreparedSource
@@ -13,6 +14,7 @@ structure Reader where
   rows : Array String → Nat → IO CanonicalSource.Shared.Projection
   bindings : Array Range → Std.HashSet String → Nat → IO IndexedBindings.Resolved
   records : Array String → Nat → IO ObservedRecordView.Projection
+  routing : Option (Routing.PrivateView.Request → Nat → IO Routing.PrivateView.Reply) := none
 
 def Reader.identity (reader : Reader) : Json := reader.access.identity
 
@@ -114,9 +116,26 @@ def recordsAt (cache : ObservedRecordView.Cache) (access : CanonicalSource.Share
     rows := rows.push (owner,found)
   return ⟨access.source,rows,← cache.stats⟩
 
+def routingAt (source : PageMap.Snapshot) (pages : PageMap.PagePool) (scope : String)
+    (loaded : CanonicalSource.Shared.Loaded) (request : Routing.PrivateView.Request)
+    (deadline : Nat) : IO Routing.PrivateView.Reply := do
+  let some original := loaded.originals | throw (IO.userError "routing source is not prepared")
+  let original ← if original.index.head == request.basis then pure original else do
+    let current ← PageMap.pin original.index.directory
+    let some pinned ← PageMap.HistoryReader.make? current request.basis |
+      throw (IO.userError "requested routing index is retired")
+    let some manifest ← Index.manifest? pinned.snapshot | throw (IO.userError "routing index has no manifest")
+    unless manifest.scope == .shared && manifest.implementation == Index.implementation &&
+        (← Index.sameSources source manifest.source) do
+      throw (IO.userError "routing index has a different source scope")
+    pure (⟨← pinned.snapshot.sharePages pages scope,manifest⟩ : Index.Reader)
+  let some routing ← Routing.Store.open? original | throw (IO.userError "routing source is cold")
+  Routing.PrivateView.execute routing request deadline
+
 /-- The service clears this slot before releasing its pool borrow. An escaped
 callback cannot read or retain the Loaded value after that continuation. -/
 def borrowed (access : CanonicalSource.Shared.Access) (slot : IO.Ref (Option CanonicalSource.Shared.Loaded))
+    (source : PageMap.Snapshot) (pages : PageMap.PagePool) (scope : String)
     (cache : ObservedRecordView.Cache) (stopping : IO.Ref Bool) (outerDeadline maxBytes : Nat) : Reader :=
   let budget := fun requested => do
     let cutoff := min outerDeadline requested
@@ -135,10 +154,14 @@ def borrowed (access : CanonicalSource.Shared.Access) (slot : IO.Ref (Option Can
    records := fun owners requested => do
      let (cutoff,loaded) ← budget requested
      let owners := (hashDistinct owners.toList).toArray
-     checkedRecords access owners (← recordsAt cache access loaded owners cutoff maxBytes)}
+     checkedRecords access owners (← recordsAt cache access loaded owners cutoff maxBytes)
+   routing := some fun request requested => do
+     let (cutoff,loaded) ← budget requested
+     routingAt source pages scope loaded request cutoff}
 
 theorem borrowed_identity (access : CanonicalSource.Shared.Access) (slot : IO.Ref (Option CanonicalSource.Shared.Loaded))
+    (source : PageMap.Snapshot) (pages : PageMap.PagePool) (scope : String)
     (cache : ObservedRecordView.Cache) (stopping : IO.Ref Bool) (deadline maxBytes : Nat) :
-    (borrowed access slot cache stopping deadline maxBytes).identity = access.identity := rfl
+    (borrowed access slot source pages scope cache stopping deadline maxBytes).identity = access.identity := rfl
 
 end Eggshell.Synapses.PreparedSource

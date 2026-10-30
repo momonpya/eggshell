@@ -59,10 +59,12 @@ BLAKE3のmixを8回の配列更新から4回へ置き換える全域関数等式
 
 同日、remote呼出しへの依存をchecked readerへ分け、認証・scope・pin・pool borrowを保ったservice内の直接readをLean候補で実装した。実R40の38 owner、17,373範囲、一般record、同じ入力からのTransport計画（1,753 offer・28原文owner・全根拠bundle）が旧JSON handler経路と一致した。read-only、更新後の旧pin、期限/停止/権限拒否、終了後のhandle拒否と例外時のborrow解放も通った。source/shared/私有usageの保持を証明し、関連RSS最大約1.02 GiBだった。ただし実入力のusageは未存在、通信はhandler内比較でsocketではない。通常フックの実行場所はまだ移しておらず、sessionでの再構築と最終選択は残る。単発の診断Transport 1,573/929 msを全フックの改善とせず、98%/総token/80人利用の未達を維持する。選択コード全bytes不変、本体未採用。[実装と限界](docs/prepared-source-reader.md)。
 
+checked readerを足場に、同じ探索ループへ呼出元のquery-specificな私有利用辺を渡し、候補runtimeの通常prepared routingをread capability経由のDBサービスへ接続した。実seedの80 socket要求は異なる私有履歴を混ぜず元ループと一致し、p95 322 ms・最大323 ms、共有準備1回だった。ただし返却候補は各1件であり、重い検索や全フックの数字ではない。原文準備を更新せず新しいrouting出版を読め、旧pinも保った。実フックの同条件AB/BA・各arm2回は本文全bytes一致・必要原文2/3で、対照16,795/16,559 msに対し候補17,304/16,978 msだった。全回9,816 arcの探索がcompleteで、2,139 binding要求とcanonical readerまで通っていた。探索をサービスへ移しただけでは、遅い最終処理と選択漏れは解消しなかった。本体未採用、回答モデル追加0。[実装・部品検査と否定的な全体結果](docs/scoped-routing-service.md)。
+
 次の順序を固定する。
 
 1. 選んだ仕事/結果を利用するための既知の根拠を、個別の推薦点数で切り落とさない条件を定める。元Workと投影の可解決な表現だけでは2/3を改善しなかったので、その表示調整を繰り返さない。Allの関連を全て必要依存へ昇格させず、支持・消費・共起のどの事実が利用に必要な条件を表すかを区別する。既に終了した表示閉包・出典共有・固定cut前線や同点SCC、同じ代理目的の別solver・価格・予約・重み調整へ戻らない。元Problemの不可能性を証明したとは扱わず、支持のない既知の3種類まで新しい辺があると仮定しない。推薦を認定へ昇格させず、MCP・一般テキストも保持する。
-2. 質問によらない行キー・ownerの原文対応・描画用単位を、同じsource/view/scopeに結び付けた準備済み構造としてサービスで共有する。転送の辞書化を16秒の主修正とせず、`Recipe.read?`の再復号とsessionでの再構築を残したまま完了にしない。checked readerの境界とlocalの同値検査を足場に、通常照会の入口から準備と計画の責任をserviceへ移す。呼出元の私有usageをserviceの利用者のものへ差し替えず、認証された私有scopeとの統合を先に明示する。自分へのRPCやcacheの二重実装を避け、軽いsession clientへ進める。完全な依存・digest検査を外して高速化しない。出版差分と未吸収差分、旧pin、read-only、複数DBの扱いを保つ。
+2. 質問によらない行キー・ownerの原文対応・描画用単位を、同じsource/view/scopeに結び付けた準備済み構造としてサービスで共有する。共有グラフ探索のservice接続は全フックの時間を短くしなかったので、その接続やpacketの微調整を繰り返さない。`Recipe.read?`の再復号、原文併合、catalogueと候補構築、最終描画をsessionに残したまま完了にしない。checked readerと私有利用辺の照合済み境界を使い、通常照会の入口から準備と計画の責任をserviceへ移す。呼出元の私有usageをserviceの利用者のものへ差し替えず、完全な依存・digest検査を外さない。出版差分と未吸収差分、旧pin、read-only、複数DBの扱いを保つ。
 3. 同じ固定入力から原文・選択・実本文の対応を再監査する。凍結正解は選択後にだけ読む。最初の退行で止め、失敗した価値調整・予約枠・引用閉包・max-min・MIPへ戻らない。配送と速度は別々に測る。現時点で次候補の実配送改善はない。
 4. 回答モデルは停止を維持する。配送監査後、同じruntimeの新seedから題材1/2/3と2周目を行う。採用には同じ保存snapshot/source/質問/model/effort/harnessによる同数複数反復、cached inputと失敗を含む総token改善、品質維持、deadlineを要する。証明・cache hit・本文一致・配送増だけで本体やREADME実績へ入れない。
 5. 実DBの追加・更新・削除で準備債務と実フックを測り、完全再構築との一致、3辺、独立した完全e-class認定、権限、旧pin、複数DB、80接続を検査する。小さなAPI試験やcompleted=0の読解課題を、80人の日常利用・認定再利用の実証にしない。

@@ -1,0 +1,29 @@
+/-- Operations for one pinned immutable lane. No write or certification
+operation is exposed. The private lane may be a request-local read capsule. -/
+structure ReadView where
+  manifest : Manifest
+  locate : Index.Key → IO (Option Nat × Nat)
+  scan : Nat → Nat → Nat → Nat → IO Scan
+  destination : Nat → IO (Target × Nat)
+  group : Nat → IO (Group × Nat)
+  nodeBytes : Nat → IO (Option ByteArray)
+
+def Reader.readView (reader : Reader) : ReadView := {
+  manifest := reader.manifest
+  locate := reader.locate
+  scan := fun node limit bytes deadline => match reader.snapshot.head.root with
+    | none => pure {}
+    | some ref => scanAt reader ref node limit bytes deadline {}
+  destination := reader.destination
+  group := reader.group
+  nodeBytes := fun id => reader.snapshot.get (nodeName id)}
+
+theorem Reader.readView_manifest (reader : Reader) : reader.readView.manifest = reader.manifest := rfl
+theorem Reader.readView_locate (reader : Reader) (key : Index.Key) :
+    reader.readView.locate key = reader.locate key := rfl
+theorem Reader.readView_destination (reader : Reader) (id : Nat) :
+    reader.readView.destination id = reader.destination id := rfl
+theorem Reader.readView_group (reader : Reader) (id : Nat) :
+    reader.readView.group id = reader.group id := rfl
+theorem Reader.readView_node (reader : Reader) (id : Nat) :
+    reader.readView.nodeBytes id = reader.snapshot.get (nodeName id) := rfl
