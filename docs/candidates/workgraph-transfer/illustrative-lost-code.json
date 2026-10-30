@@ -1,0 +1,66 @@
+{
+  "kind": "illustrative_original_rows_not_necessity_labels",
+  "file": "clang/lib/Driver/ToolChains/MSVC.cpp",
+  "rows": [
+    {
+      "line": 561,
+      "code": "Tool *MSVCToolChain::getTool(Action::ActionClass AC) const {",
+      "inBaseline": true,
+      "inCandidate": false
+    },
+    {
+      "line": 562,
+      "code": "  switch (AC) {",
+      "inBaseline": true,
+      "inCandidate": false
+    },
+    {
+      "line": 563,
+      "code": "  case Action::ObjcopyJobClass:",
+      "inBaseline": true,
+      "inCandidate": false
+    },
+    {
+      "line": 564,
+      "code": "    if (!Objcopy)",
+      "inBaseline": true,
+      "inCandidate": false
+    },
+    {
+      "line": 565,
+      "code": "      Objcopy.reset(new tools::ARM64XObjcopy(*this));",
+      "inBaseline": true,
+      "inCandidate": false
+    },
+    {
+      "line": 566,
+      "code": "    return Objcopy.get();",
+      "inBaseline": true,
+      "inCandidate": false
+    },
+    {
+      "line": 567,
+      "code": "  default:",
+      "inBaseline": true,
+      "inCandidate": true
+    },
+    {
+      "line": 568,
+      "code": "    return ToolChain::getTool(AC);",
+      "inBaseline": true,
+      "inCandidate": false
+    },
+    {
+      "line": 569,
+      "code": "  }",
+      "inBaseline": true,
+      "inCandidate": true
+    },
+    {
+      "line": 570,
+      "code": "}",
+      "inBaseline": true,
+      "inCandidate": true
+    }
+  ]
+}
