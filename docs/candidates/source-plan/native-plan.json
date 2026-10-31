@@ -1,0 +1,12 @@
+{"topics": [1, 2, 3],
+ "stopOnChangedBodyOrDenominator": true,
+ "source": "R40 plus unchanged sealed supplement",
+ "order": "topic-major, repetition-major, baseline then candidate",
+ "limits": {"minFreeKiB": 2097152, "aggregateRssKiB": 3670016},
+ "independentAudit":
+ "one candidate topic-1 hook with reference construction enabled, excluded from timings",
+ "hookDeadlineMs": 30000,
+ "freshSessionsPerTopicAndArm": 2,
+ "arms": ["baseline", "candidate"],
+ "answeringModelCalls": 0,
+ "adopted": false}
