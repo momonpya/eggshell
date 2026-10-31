@@ -10,6 +10,10 @@ runtime 186、helper 197のnative依存はそれぞれ整合した。実runtime 
 
 最新の指示に従い、本文拡張の経路は終了し、原文の復号・検査・費用構造の再構築を照会経路から除く作業を先にする。終了したfork、runtime/helper build、実験DBとcacheは削除し、圧縮archiveを作らない。原典・利用中のモデル・必要な対照runtimeは保持する。小さいコード・実測・本文・digest・[削除記録](candidates/complete-work/retired.json)だけを残す。
 
+## 受領境界の後続監査
+
+後続の監査で、選択計画は38 familyだったのに、実本文には6 ownerしか残っていなかったことが分かった。`DeliveryPart.remaining`が2,048文字を超えるfragmentを含むcontext全体を拒否し、`DeliveryFragment.remaining`と受領座標のdecoderにも同じ幅の制限があった。`CompleteOriginal.prepare`の完全な区間はこの制限を満たすとは限らなかった。完全なlayoutとpacket費用の証明だけでは、受領処理後の完全性を保証していなかった。0/3を選択器だけの失敗と断定しない。保存済みの38元結果と6件の実本文を使い、旧制限が落とす32 ownerと実際に消えた32 ownerの完全な一致を確認した。修正後の受領境界は38件を保持する。[独立監査と通常フックの回帰確認](receipt-reconciliation.md)。容量・重み・候補を変えてこの試行を再開してはいない。
+
 ## 今回の介入
 
 vector・synapseで入場したWork群について、元のWork/Outcome/来歴を一組として渡す。元結果の各断片の点数では再選別しない。全ての元結果と実際のgraph/policy/鮮度のframeを含むpacketが上限内に収まる場合だけ、この経路を使う。原文は保存された元Outcomeから取り、別のソースを読み足したり要約したりしない。データ側のAllの関連を、現在の質問の完了認定へ昇格させない。

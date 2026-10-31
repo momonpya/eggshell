@@ -40,4 +40,10 @@ StudyBuildMainは、選んだnativeオブジェクトの生成元にあるregula
 
 負の照会の反復、壊れた記述子の拒否、旧pinの保持、原文取得の失敗をcompleteにしないことも確認した。native依存166件はビルダーhashを含め整合し、原典・対照runtimeは前後不変、guard終了0・所有process0だった。関連RSS最大は1,859,296 KiB。fixtureの最初の試行はmacOSの`/var` symlinkを権限検査が拒否したので、試験で作った一時ディレクトリをrealPathで解決して再実行した。製品のsymlink拒否規則は緩めていない。[native整合](candidates/checked-original/negative-native-closure-realpath.json)、[guard](candidates/checked-original/negative-realpath.guard.json)、[ビルダー試験](candidates/checked-original/builder-interface-result.json)。
 
-修正版の通常フックの本文一致、98%配送、総token改善、品質、80人の継続運用は未確認。上の失敗した実フックを722 msのAPI値で置き換えない。次は新しいビルダーで通常runtime/producerを揃えて、原典・準備を再利用し、新規sessionの実本文を再検証する。終了したhelper・baseline DB・builder fixtureは削除する。candidateの準備済みDBはこの修正版フック確認に必要な入力としてだけ保持し、試験後に削除する。
+## 修正後の通常フック
+
+新しい生成規則でruntimeとhelperを揃え、DBの準備を取り直さず、新規session・新しい私有領域で通常フックを確認した。17,353 msで本文が返り、保存済みの対照本文と全bytes一致した。凍結した必要原文は2/3のままで、未配送は67文字の`tracked-input-language`だった。対照の17,226 msに対する速度改善は確認できず、配送改善とも扱わない。[結果](candidates/checked-original/replay/result.json)、[固定した入力](candidates/checked-original/replay/sealed.json)。
+
+runtimeのSHA-256は`53716df19cd6d36cdc65c4b039503455a1a73ac01d0894e9a80f2cb0e68064bb`。native closureはruntime 187件が整合し、原典は不変、sessionとpublicationの両daemonは終了ACK・process終了・endpoint削除を確認した。guard終了0、所有process 0、関連RSS最大2,599,568 KiBだった。これは空応答の退行を直した一回の回帰確認であり、性能比較、実際のモデルcontext、98%、p99、総token改善や80人継続利用の確認ではない。回答モデルは0回。[guard](candidates/checked-original/replay-run.guard.json)。
+
+次の原文損失の調査では、過去の全元結果候補が38 familyを選んだ後、受領のreconciliationで6 ownerしか残していないことが分かった。別の問題として追い、通常経路の2/3と混同しない。終了した試行のDB/cache/helperは小さい記録を確定してから削除し、圧縮archiveは作らない。
