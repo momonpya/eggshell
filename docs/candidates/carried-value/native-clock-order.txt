@@ -1,0 +1,11 @@
+The sampled object was inspected with nm, otool -tvV, and otool -rvV before retirement.
+Object: carried-value-audit-build/tools_research_CarriedSelectionAudit.o
+Function: _l___private_tools_research_CarriedSelectionAudit_0__timed
+0x2870: call _lean_io_mono_nanos_now
+0x2884: candidate branch calls _l_SharedCoverage_CarriedSelectionValue_bestSingleton
+0x288c: reference branch calls _l___private_tools_research_CarriedSelectionAudit_0__reference
+0x2894: convert selected Fin ordinals to Nat list
+0x2898: call _lean_st_mk_ref
+0x28a0: call _lean_io_mono_nanos_now
+Both computations are between clock reads, forced through the IO reference before the second read.
+This validates the local timing boundary, not real-hook latency or token improvement.

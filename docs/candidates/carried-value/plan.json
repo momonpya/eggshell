@@ -1,0 +1,15 @@
+{"realProblemReplay": false,
+ "proof":
+ "Full function equality for arbitrary Problem, initial Selection and pending order; compiler substitution only for bestSingleton.",
+ "productRuntimeChanged": false,
+ "native":
+ "100 synthetic cases, empty/nonempty initial, duplicate atoms, zero weights, both limits and large Nat weights. One synthetic 2048-node/8640-offer workload, AB/BA for three repetitions, with IO-forced evaluation.",
+ "hookCalls": 0,
+ "change":
+ "Carry the certified benefit of the current singleton winner. Preserve every offer, budgets, tie and ordered result. No storage cache or selection policy change.",
+ "cause":
+ "Current unchanged-runtime publisher sample shows singletonScan repeatedly evaluating the same best selection's cue union. RecordIncidence is rejected and not retried.",
+ "answeringModelCalls": 0,
+ "adoption":
+ "The controlled same-snapshot initial/history x three-topic total-token, quality and deadline gate remains required. Synthetic speed and proofs cannot adopt this into the product.",
+ "adopted": false}
