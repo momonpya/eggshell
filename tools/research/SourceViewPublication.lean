@@ -6,15 +6,24 @@ public import tools.research.PreparedSourceView
 namespace Eggshell.Synapses.CanonicalSource.Cache
 open Lean DB Persistence.Store
 
+def producerDependencies : String × String :=
+  (Index.implementation,PublishedPlanMetadata.implementation)
+
+theorem producer_index_exact : producerDependencies.1 = Index.implementation := rfl
+theorem producer_cost_exact : producerDependencies.2 = PublishedPlanMetadata.implementation := rfl
+
 def implementation : String := Blake3.hex (Blake3.digest "eggshell.canonical-source".toUTF8 [
+  producerDependencies.1.toUTF8,producerDependencies.2.toUTF8,
   (include_str "SourceViewPublication.lean").toUTF8,
   (include_str "PreparedSourceView.lean").toUTF8,
   (include_str "OwnerPalette.lean").toUTF8,
+  (include_str "SourceProjectionDictionary.lean").toUTF8,
   (include_str "PreparedFileUnits.lean").toUTF8,
   (include_str "PublishedPlanMetadata.lean").toUTF8,
   (include_str "../../Eggshell/CanonicalSource.lean").toUTF8,
   (include_str "../../Eggshell/CanonicalSourceRecipe.lean").toUTF8,
   (include_str "../../Eggshell/CanonicalSourceRecords.lean").toUTF8,
+  (include_str "../../Eggshell/CanonicalSourceDelivery.lean").toUTF8,
   (include_str "ScopeAlternatives.lean").toUTF8,
   (include_str "ReferenceRequirements.lean").toUTF8])
 

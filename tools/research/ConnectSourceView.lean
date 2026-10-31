@@ -12,25 +12,34 @@ private def save (path : System.FilePath) (source : String) : IO Unit := do
   if ← path.pathExists then IO.FS.removeFile path
   IO.FS.writeFile path source
 
-def main : IO Unit := do
+def main (args : List String) : IO Unit := do
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot"
   let parent := root / "published-plan-core"
-  let core := root / "prepared-view-core"
-  let records := project / "docs/candidates/prepared-view"
-  ensure (← core.pathExists) "isolated source-view package is missing"
-  for name in ["PreparedRangeCoverage","SharedMetadataCache","PreparedSourceView","PreparedSourceViewAudit","PreparedFileIdentities"] do
+  let [name] := args | throw (IO.userError "a fresh isolated package name is required")
+  ensure (!name.isEmpty && name.toList.all (fun c => c.isAlphanum || c == '-')) "invalid source-view package name"
+  let core := root / (name ++ "-core")
+  let output := root / (name ++ "-runtime-build")
+  let records := project / "docs/candidates" / name
+  if !(← core.pathExists) then
+    let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-cR",parent.toString,core.toString]}
+    ensure (copied.exitCode == 0) "cannot isolate source-view package"
+  ensure (!(← (records / "runtime.json").pathExists)) "preserve the sealed observed runtime"
+  IO.FS.createDirAll records
+  for name in ["PreparedRangeCoverage","SharedMetadataCache","PreparedSourceView","PreparedSourceViewAudit","PreparedFileIdentities","BindingValueCodec","BindingPageScan"] do
     save (core / "tools/research" / (name ++ ".lean")) (← IO.FS.readFile (project / "tools/research" / (name ++ ".lean")))
   let mut cache ← IO.FS.readFile (project / "tools/research/SourceViewPublication.lean")
   for (before,after) in [
     ("include_str \"SourceViewPublication.lean\"","include_str \"CanonicalSourceCache.lean\""),
     ("include_str \"PreparedSourceView.lean\"","include_str \"../tools/research/PreparedSourceView.lean\""),
     ("include_str \"OwnerPalette.lean\"","include_str \"../tools/research/OwnerPalette.lean\""),
+    ("include_str \"SourceProjectionDictionary.lean\"","include_str \"../tools/research/SourceProjectionDictionary.lean\""),
     ("include_str \"PreparedFileUnits.lean\"","include_str \"../tools/research/PreparedFileUnits.lean\""),
     ("include_str \"PublishedPlanMetadata.lean\"","include_str \"../tools/research/PublishedPlanMetadata.lean\""),
     ("include_str \"../../Eggshell/CanonicalSource.lean\"","include_str \"CanonicalSource.lean\""),
     ("include_str \"../../Eggshell/CanonicalSourceRecipe.lean\"","include_str \"CanonicalSourceRecipe.lean\""),
     ("include_str \"../../Eggshell/CanonicalSourceRecords.lean\"","include_str \"CanonicalSourceRecords.lean\""),
+    ("include_str \"../../Eggshell/CanonicalSourceDelivery.lean\"","include_str \"CanonicalSourceDelivery.lean\""),
     ("include_str \"ScopeAlternatives.lean\"","include_str \"../tools/research/ScopeAlternatives.lean\""),
     ("include_str \"ReferenceRequirements.lean\"","include_str \"../tools/research/ReferenceRequirements.lean\"")]
     do cache ← once cache before after
@@ -39,6 +48,36 @@ def main : IO Unit := do
      "  (include_str \"SynapseBuild.lean\").toUTF8,(include_str \"SynapseProvenance.lean\").toUTF8,\n" ++
      "  ContentCapture.implementation.toUTF8,")
   save (core / "Eggshell/CanonicalSourceCache.lean") cache
+  let mut index ← IO.FS.readFile (parent / "Eggshell/SynapseIndex.lean")
+  index ← once index "public import Eggshell.ObservedRecordView\n"
+    "public import Eggshell.ObservedRecordView\npublic import tools.research.BindingValueCodec\n"
+  index ← once index "    (include_str \"SynapseIndex.lean\").toUTF8,"
+    ("    (include_str \"../tools/research/BindingValueCodec.lean\").toUTF8,\n" ++
+     "    (include_str \"DB/Wire.lean\").toUTF8,\n    (include_str \"SynapseIndex.lean\").toUTF8,")
+  let originalBinding ← between index "def prepareBinding (writer" "theorem compiled_read_preserves_binding"
+  index ← once index originalBinding ((← IO.FS.readFile (project / "tools/research/BindingIndex.lean.inc")) ++ "\n\n")
+  index ← once index "      retainPrepared index previous source.head scope writer\n      for fact in old do"
+    ("      retainPrepared index previous source.head scope writer\n" ++
+     "      if previous.any (fun old => old.implementation != implementation) then\n" ++
+     "        -- Replace only this derived projection; old immutable roots keep their old payloads.\n" ++
+     "        let _ ← index.foldRange ⟨\"binding:\",\"binding;\"⟩ (fun (count : Nat) row => do\n" ++
+     "          writer.put row.1 none\n" ++
+     "          if count % 256 == 255 then writer.flush\n" ++
+     "          return count+1) 0\n" ++
+     "        writer.flush\n" ++
+     "      for fact in old do")
+  save (core / "Eggshell/SynapseIndex.lean") index
+  let mut bindings ← IO.FS.readFile (parent / "Eggshell/SynapticBindings.lean")
+  bindings ← once bindings "let binding ← Index.decode (α := Index.StoredBinding) bytes"
+    "let binding ← Index.decodeBinding bytes"
+  save (core / "Eggshell/SynapticBindings.lean") bindings
+  let mut wire ← IO.FS.readFile (parent / "Eggshell/PublicationWire.lean")
+  wire ← once wire "  (include_str \"PublicationWire.lean\").toUTF8,"
+    ("  (include_str \"../tools/research/BindingPageScan.lean\").toUTF8,\n" ++
+     "  (include_str \"../tools/research/BindingValueCodec.lean\").toUTF8,\n" ++
+     "  (include_str \"../tools/research/SharedMetadataCache.lean\").toUTF8,\n" ++
+     "  (include_str \"PublicationWire.lean\").toUTF8,")
+  save (core / "Eggshell/PublicationWire.lean") wire
   let mut arena ← IO.FS.readFile (parent / "tools/research/PreparedOwnerArena.lean")
   arena ← once arena "def capacity : Nat := 304*1024*1024" "def capacity : Nat := 240*1024*1024"
   arena := arena.replace "Snapshot headers keep 64 MiB, geometry 16 MiB,\nand PageMap pages 128 MiB; these resident owners use the remaining 304 MiB."
@@ -107,6 +146,10 @@ def main : IO Unit := do
   handoff ← once handoff "namespace RangeLocators" (pieces ++ problem ++ selection ++ "\nnamespace RangeLocators")
   save (core / "Eggshell/Handoff.lean") handoff
   let mut service ← IO.FS.readFile (parent / "Eggshell/PublicationService.lean")
+  service ← once service "public import Eggshell.Handoff\n"
+    "public import Eggshell.Handoff\npublic import tools.research.BindingPageScan\n"
+  service ← once service "let result ← IndexedBindings.resolve original wanted (Std.HashSet.ofArray allowed) deadline"
+    "let result ← BindingPageScan.resolve original wanted (Std.HashSet.ofArray allowed) deadline"
   service := service.replace "loaded.withOwner owner deadline (fun ready => pure ready.palette.bytes)"
     "loaded.withMetadata owner deadline (fun ready => pure ready.bytes)"
     |>.replace "loaded.withOwner owner deadline (fun ready => pure ready.palette.json)"
@@ -115,21 +158,21 @@ def main : IO Unit := do
   let replacement ← IO.FS.readFile (project / "tools/research/SourceViewService.lean.inc")
   service ← once service old (replacement ++ "\n")
   save (core / "Eggshell/PublicationService.lean") service
-  let baseline := root / "published-plan-runtime-build"
+  let baseline := root / "prepared-view-runtime-build"
   let settings := Json.mkObj [
     ("project",toJson core.toString),("core",toJson core.toString),
     ("baselineCore",toJson (root / "query-cache-baseline-core").toString),
-    ("output",toJson (root / "prepared-view-runtime-build").toString),
+    ("output",toJson output.toString),
     ("toolchain",toJson "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0"),
     ("objectModules",toJson (baseline / "object-mapping.json").toString),
     ("baselineResponse",toJson (baseline / "runtime.rsp").toString),
     ("baselineMain",toJson (baseline / "Main.o").toString),
     ("parents",toJson #[baseline.toString]),("force",toJson (#[] : Array String)),("mainModule",toJson "Main")]
-  let settingsPath := root / "prepared-view-runtime.settings.json"
+  let settingsPath := root / (name ++ "-runtime.settings.json")
   IO.FS.writeFile settingsPath settings.compress
   let mut attempt := 1
   while ← (records / s!"runtime-build-{attempt}.guard.json").pathExists do attempt := attempt+1
-  IO.FS.writeFile (root / "prepared-view-runtime-build.guard.settings.json") (Json.mkObj [
+  IO.FS.writeFile (root / (name ++ "-runtime-build.guard.settings.json")) (Json.mkObj [
     ("cwd",toJson project.toString),("ownedPrefixes",toJson #[root.toString]),
     ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat)),
     ("record",toJson (records / s!"runtime-build-{attempt}.guard.json").toString),

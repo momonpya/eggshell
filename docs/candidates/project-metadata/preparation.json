@@ -1,0 +1,282 @@
+{"wholeWarm":
+ {"stdoutSha256":
+  "1c687d843138455a471112e892c5438cbb8f0951e6cc31901300cb7d1bd4ff51",
+  "exitCode": 0,
+  "elapsedMs": 81650},
+ "warm":
+ {"databases":
+  [{"windowOwners":
+    {"writtenBytes": 147010,
+     "removed": 0,
+     "occurrences": 1726,
+     "mode": "full-source",
+     "elapsedMs": 49,
+     "changedOwners": 38,
+     "added": 1726},
+    "scope": "full-source",
+    "requested": 0,
+    "publications": 0,
+    "projections":
+    {"writtenBytes": 0,
+     "rows": 1768,
+     "reused": 1768,
+     "requested": 1768,
+     "produced": 0,
+     "mode": "warm",
+     "elapsedMs": 943,
+     "bytes": 5431296,
+     "added": 0},
+    "planReason": "no-usable-history",
+    "partition":
+    {"writtenBytes": 0,
+     "trainingMs": 0,
+     "touchedCells": 0,
+     "retainedMetadataProbes": 0,
+     "removedKeys": 0,
+     "readMs": 0,
+     "projectionRows": 0,
+     "points": 1726,
+     "peakSampleRows": 0,
+     "mode": "warm",
+     "elapsedMs": 4,
+     "changedOwners": 0,
+     "cells": 1,
+     "assignmentMs": 0,
+     "addedKeys": 0},
+    "lexical":
+    {"stamp":
+     {"roots": 107,
+      "database":
+      "d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+      "contract":
+      "849baae4653225602802e65fd3b2e76b72e83b1459a27042e48098da58251bcc",
+      "candidates": 38,
+      "authority":
+      "ee423bbfccef985e76542460bf8852f6f00b2f375701593aa525d5d8c27c7a8b"},
+     "removed": 0,
+     "hydrated": 38,
+     "batches": 2,
+     "added": 38},
+    "elapsedMs": 81362,
+    "changedOwners": 0,
+    "canonical":
+    {"mode": "owner-stream",
+     "metadata":
+     {"supplements":
+      "2d1687f1313acfd1116569aa4416e1cab31117c56378763105905aa917ac007d",
+      "statistics":
+      {"unsupportedOwners": 9,
+       "rejectedRows": 0,
+       "originalRows": 14202,
+       "nativeOwners": 37},
+      "source":
+      {"root":
+       {"rows": 131485,
+        "offset": 50588562,
+        "last": "workSurfaces:95:0",
+        "height": 3,
+        "first": "all:0",
+        "checksum":
+        "5cdf41688a30c4a9e5dad692ca4ce519bde3fd5351e79afa44c22165fa0f8718",
+        "bytes": 2665},
+       "revision": 40,
+       "identity":
+       "d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+       "bytes": 50591227,
+       "authority":
+       "[\"atom\",[110,101,119,45,110,97,116,105,118,101,45,115,101,101,100,45,50]]"},
+      "rows": 9168,
+      "recipes":
+      {"root":
+       {"rows": 2321,
+        "offset": 9348489,
+        "last": "view-owner:v8330187482539733746:0",
+        "height": 2,
+        "first": "owner:v10328308992684323389",
+        "checksum":
+        "de4dff0331326af6da9e2e2ebbda54750589910d9bf7e67e43def3c3862ab378",
+        "bytes": 1083},
+       "revision": 1,
+       "identity":
+       "96ac4f379346dfcb4d1bfebcc87527b35ba707c5bb1fc9cd590c3a02d70ec4f1",
+       "bytes": 9349572,
+       "authority":
+       "canonical-layout:d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812"},
+      "payload":
+      "fd8db6e7b9ce1093e317a5707698972432760c4721e10017259e0898390fda08",
+      "implementation":
+      "660cf1cb20954d9a708f35be6ef0bfcf91046f9591a6e6d19d442231754b3d49",
+      "bindings":
+      {"root":
+       {"rows": 268932,
+        "offset": 113141302,
+        "last": "trace-state",
+        "height": 3,
+        "first":
+        "binding:00010e3e40c9c47dfb53aef5c7f04f0a8312533d89c1a335b64c1cddef94c070:bbbb9345a3e86510c0da1b13b37a59a84c38ceb05ea18ce7592b9faadf653dbf",
+        "checksum":
+        "afef849701962e12231fca45f5faa975f41ff4b5798d60bb4eb450ef1c5f7a3d",
+        "bytes": 5771},
+       "revision": 2,
+       "identity":
+       "9757cef4a38e97807a02f17a877568862d87593a1d5c6f3d25f2de15d150e671",
+       "bytes": 113147073,
+       "authority":
+       "advisory:d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812:recommendations"}},
+     "hydrated": 37,
+     "elapsedMs": 2847,
+     "changedOwners": 38},
+    "before":
+    {"windows": 1768,
+     "valid": 1768,
+     "revision": 40,
+     "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+     "missing": 0,
+     "invalid": 0,
+     "input":
+     {"windows": 1768,
+      "visibleCharacters": 751609,
+      "vectors": 4022,
+      "tokens": 386774,
+      "tokenizerMappedCharacters": 751609,
+      "embeddedCharacters": 751609,
+      "characters": 882935},
+     "focusContract":
+     "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+     "focus":
+     {"windows": 1720,
+      "valid": 1720,
+      "missing": 0,
+      "invalid": 0,
+      "input":
+      {"windows": 1720,
+       "visibleCharacters": 731395,
+       "vectors": 3908,
+       "tokens": 376492,
+       "tokenizerMappedCharacters": 731395,
+       "embeddedCharacters": 731395,
+       "characters": 860008}},
+     "encoderContract":
+     "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+     "discovery":
+     {"windows": 1726,
+      "valid": 1726,
+      "missing": 0,
+      "invalid": 0,
+      "input":
+      {"windows": 1726,
+       "visibleCharacters": 741461,
+       "vectors": 3959,
+       "tokens": 381716,
+       "tokenizerMappedCharacters": 741461,
+       "embeddedCharacters": 741461,
+       "characters": 870971}},
+     "database":
+     {"directory":
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/project-metadata-trial/candidate/work.egg",
+      "database":
+      "d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812"}},
+    "batches": 0,
+    "after":
+    {"windows": 1768,
+     "valid": 1768,
+     "revision": 40,
+     "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+     "missing": 0,
+     "invalid": 0,
+     "input":
+     {"windows": 1768,
+      "visibleCharacters": 751609,
+      "vectors": 4022,
+      "tokens": 386774,
+      "tokenizerMappedCharacters": 751609,
+      "embeddedCharacters": 751609,
+      "characters": 882935},
+     "focusContract":
+     "e8fc7b369bb6f1ead6cb09284c6181c58a996fe931c8fc261dcf8d11706389d0",
+     "focus":
+     {"windows": 1720,
+      "valid": 1720,
+      "missing": 0,
+      "invalid": 0,
+      "input":
+      {"windows": 1720,
+       "visibleCharacters": 731395,
+       "vectors": 3908,
+       "tokens": 376492,
+       "tokenizerMappedCharacters": 731395,
+       "embeddedCharacters": 731395,
+       "characters": 860008}},
+     "encoderContract":
+     "1417508ca8aee8ee45bff632925ff6a23447d0d1a766d1c7411b775bc10a83f4",
+     "discovery":
+     {"windows": 1726,
+      "valid": 1726,
+      "missing": 0,
+      "invalid": 0,
+      "input":
+      {"windows": 1726,
+       "visibleCharacters": 741461,
+       "vectors": 3959,
+       "tokens": 381716,
+       "tokenizerMappedCharacters": 741461,
+       "embeddedCharacters": 741461,
+       "characters": 870971}},
+     "database":
+     {"directory":
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/project-metadata-trial/candidate/work.egg",
+      "database":
+      "d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812"}}}]},
+ "sourceIndex":
+ {"unsupported": 0,
+  "source":
+  {"root":
+   {"rows": 131485,
+    "offset": 50588562,
+    "last": "workSurfaces:95:0",
+    "height": 3,
+    "first": "all:0",
+    "checksum":
+    "5cdf41688a30c4a9e5dad692ca4ce519bde3fd5351e79afa44c22165fa0f8718",
+    "bytes": 2665},
+   "revision": 40,
+   "identity":
+   "d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+   "bytes": 50591227,
+   "authority":
+   "[\"atom\",[110,101,119,45,110,97,116,105,118,101,45,115,101,101,100,45,50]]"},
+  "scopedCandidates": 38,
+  "provenanceRecordsRead": 37,
+  "provenanceOriginals": 37,
+  "provenanceIgnored": 0,
+  "provenanceGroups": 1,
+  "preparerGeneration":
+  "ea1b8fa4d194137b56b2357d4a5a469bb0cfb98db9c25a070b6e4847b463e1dd",
+  "mode": "rebuild",
+  "maintenanceFactRows": 0,
+  "maintenanceAllHeaders": 0,
+  "index":
+  {"root":
+   {"rows": 268811,
+    "offset": 111387895,
+    "last": "trace-state",
+    "height": 3,
+    "first":
+    "binding:00010e3e40c9c47dfb53aef5c7f04f0a8312533d89c1a335b64c1cddef94c070:bbbb9345a3e86510c0da1b13b37a59a84c38ceb05ea18ce7592b9faadf653dbf",
+    "checksum":
+    "f708a06f76ca514744b1b769eb57bf9049d42da0021b7c5e20f6dfca5ea6b17d",
+    "bytes": 5556},
+   "revision": 1,
+   "identity":
+   "9757cef4a38e97807a02f17a877568862d87593a1d5c6f3d25f2de15d150e671",
+   "bytes": 111393451,
+   "authority":
+   "advisory:d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812:recommendations"},
+  "hydrated": 38,
+  "facts": 28616,
+  "elapsedMs": 66808,
+  "consumptionRebuilt": true,
+  "candidates": 38,
+  "answers": 1},
+ "freshDiagnosticFork": true,
+ "dailyDeltaMeasurement": false}
