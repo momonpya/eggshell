@@ -37,3 +37,5 @@ arenaの会計上の使用量は116,512,128 bytes、試験全体の関連RSS最�
 初回のnative試行は、試験器がinlineであるべき`manifest`をpayload descriptorとして書いたため、既存の準備整合性検査で拒否された。試験器を実際の保存形式へ直し、全payloadのdigestとCache.atSource?の成功も確認してから、別の出力先で上記の試行を行った。これはcandidateの容量や正解に合わせた変更ではない。初期の構文・型エラーとこのnative失敗も記録に残す。[最初のnative失敗](candidates/prepared-owner-arena/audit-exit.json)。
 
 実フック0、回答モデル0、選択の変更0、token改善の検証0、本体未採用である。終了した試験DB/cacheは削除し、現在の接続作業に使うsource forkとnative buildは保持する。圧縮archiveは作らない。[試験DBの削除](candidates/prepared-owner-arena/retired-trials.json)。
+
+後段を通常フックへつないだ後、未確認だった負の照会で退行が見つかった。原文のfile-ownerだけを持つ上の28件の試験では、ファイル行索引を持たないownerを含めていなかった。`payloadSize none`を呼んでしまい、同じDBの原文取得全体を止める不具合だった。存在しない記述子と破損した記述子を区別する共通関数で修正し、全ownerが混在する実DBで再確認している。上のAPI実測は残すが、通常フックの成功とは数えない。[原因・失敗と汎用修正](checked-original.md)。

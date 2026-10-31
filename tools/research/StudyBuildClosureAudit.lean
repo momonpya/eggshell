@@ -39,6 +39,10 @@ private def inspect (directory : System.FilePath) : IO Json := do
       failures := failures.push (Json.mkObj [("module",toJson name),("reason",toJson "native dependency evidence missing")])
       continue
     let dependencies : Array (String × String) ← IO.ofExcept (fromJson? (← read evidence))
+    if let some builder := inputs["@builder"]? then
+      unless (Std.HashMap.ofArray dependencies)["@builder"]? == some builder do
+        failures := failures.push (Json.mkObj [("module",toJson name),
+          ("reason",toJson "native producer builder identity missing or different")])
     let changed := dependencies.filterMap fun (dependency,stamp) =>
       if inputs[dependency]? == some stamp then none else some dependency
     unless changed.isEmpty do

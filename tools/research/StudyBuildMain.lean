@@ -67,6 +67,39 @@ private def detachInterfaces (path : System.FilePath) : IO Unit := do
 private def modulePath (name : String) := (name.replace "." "/")
 private def stem (name : String) := name.replace "." "_"
 
+/-- Bind the interface bundle of the native object actually selected by the
+response. A package's frozen .lake tree can have an older constructor layout
+even when the inherited object's source/dependency stamps are current. -/
+private def inheritModuleInterface (dependencyFile : System.FilePath) (name output : String) : IO Bool := do
+  let original := dependencyFile.parent.get! / "lib" / modulePath name
+  let interface := original.withExtension "olean"
+  unless ← interface.pathExists do return false
+  unless (← interface.symlinkMetadata).type == .file do return false
+  let destination := System.FilePath.mk (output ++ "/lib/" ++ modulePath name)
+  IO.FS.createDirAll destination.parent.get!
+  detachInterfaces destination
+  let basename := original.fileName.get!
+  for entry in ← original.parent.get!.readDir do
+    if entry.fileName.startsWith (basename ++ ".") && !(← entry.path.isDir) then
+      let target := destination.parent.get! / entry.fileName
+      if ← target.pathExists then IO.FS.removeFile target
+      let actual ← IO.FS.realPath entry.path
+      let linked ← IO.Process.output {cmd := "/bin/ln",args := #["-s",actual.toString,target.toString]}
+      check (linked.exitCode == 0) "cannot bind selected native producer interface"
+  return true
+
+private def localArtifactsReady (object library cached dependencies stamp dependencyStamp : String) : IO Bool := do
+  unless ← System.FilePath.pathExists object do return false
+  unless ← System.FilePath.pathExists library do return false
+  if (← (System.FilePath.mk library).symlinkMetadata).type == .symlink then return false
+  unless ← System.FilePath.pathExists cached do return false
+  unless ← System.FilePath.pathExists dependencies do return false
+  return (← IO.FS.readFile cached) == stamp && (← IO.FS.readFile dependencies) == dependencyStamp
+
+private def hasOwnInterface (library : String) : IO Bool := do
+  unless ← System.FilePath.pathExists library do return false
+  return (← (System.FilePath.mk library).symlinkMetadata).type != .symlink
+
 private def imports (source : String) : Array String :=
   source.splitOn "\n" |>.filterMap (fun row =>
     let row := row.trimAscii.toString
@@ -124,7 +157,7 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
   let stamp ← sourceStamp (.mk source) text
   let inputDigest ← stampDigest stamp
   let mut changed := false
-  let mut closure := ({} : Std.HashSet String).insert name
+  let mut closure := (({} : Std.HashSet String).insert name).insert "@builder"
   for dependency in imports text do
     changed := (← visit settings state dependency) || changed
     for included in (← state.get).closures[dependency]?.getD {} do
@@ -142,14 +175,8 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
   let cached := settings.output ++ "/" ++ stem name ++ ".source"
   let dependencies := settings.output ++ "/" ++ stem name ++ ".dependencies"
   let localLibrary := settings.output ++ "/lib/" ++ path ++ ".olean"
-  let localReady ← if !(← System.FilePath.pathExists object) then pure false
-    else if !(← System.FilePath.pathExists localLibrary) then pure false
-    else if !(← System.FilePath.pathExists cached) then pure false
-    else if !(← System.FilePath.pathExists dependencies) then pure false
-    else pure ((← IO.FS.readFile cached) == stamp && (← IO.FS.readFile dependencies) == dependencyStamp)
-  let hasLocal ← if ← System.FilePath.pathExists localLibrary then
-    pure ((← (System.FilePath.mk localLibrary).symlinkMetadata).type != .symlink)
-    else pure false
+  let localReady ← localArtifactsReady object localLibrary cached dependencies stamp dependencyStamp
+  let hasLocal ← hasOwnInterface localLibrary
   -- Research sources live in the changing project, rather than the frozen
   -- candidate checkout. An inherited interface cannot establish their bytes.
   -- Compile them locally once; the local source cache handles later reuse.
@@ -176,12 +203,13 @@ private partial def visit (settings : Settings) (state : IO.Ref State) (name : S
     | some path => do
       let previous ← IO.FS.readFile path
       pure (previous == dependencyStamp)
-  let inherited ← if name == settings.mainModule || name.startsWith "tools.research." ||
-      name.startsWith "tests." || !matchedStamp || !matchedDependencies then pure false else
-    System.FilePath.pathExists (settings.core ++ "/.lake/build/lib/lean/" ++ path ++ ".olean")
+  let inherited := name != settings.mainModule && !name.startsWith "tools.research." &&
+    !name.startsWith "tests." && matchedStamp && matchedDependencies
   if !hasLocal && inherited && !changed && !settings.force.contains name then
-    state.modify fun s => {s with done := s.done.insert name false,active := s.active.erase name}
-    return false
+    if let some dependencyFile := (← state.get).inheritedDependencies[name]? then
+      if ← inheritModuleInterface dependencyFile name settings.output then
+        state.modify fun s => {s with done := s.done.insert name false,active := s.active.erase name}
+        return false
   let compiled := !localReady
   if compiled then
     -- Inherited source links may resolve outside the selected package root.
@@ -254,7 +282,10 @@ def build (input : String) : IO Unit := do
       inheritedStamps := inheritedStamps.insert name (← IO.FS.readFile cache)
     let dependencies := (System.FilePath.mk path).withExtension "dependencies"
     if ← dependencies.pathExists then inheritedDependencies := inheritedDependencies.insert name dependencies
-  let state ← IO.mkRef ({inheritedStamps,inheritedDependencies} : State)
+  let builderStamp ← stampDigest (include_str "StudyBuildMain.lean")
+  let state ← IO.mkRef ({
+    inheritedStamps,inheritedDependencies,
+    inputStamps := ({} : Std.HashMap String String).insert "@builder" builderStamp} : State)
   let _ ← visit settings state settings.mainModule
   let state ← state.get
   let mut modules : Std.HashMap String String := {}
@@ -369,6 +400,8 @@ private def resumeAudit (directory : String) : IO Unit := do
   build plan.toString
   let before ← IO.Process.output {cmd := (root / "build/StudyMain").toString}
   check (before.exitCode == 0 && before.stdout.trimAscii == "3") "invalid initial layout fixture"
+  let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-R",(root / "build/lib").toString,(root / "old-interfaces").toString]}
+  check (copied.exitCode == 0) "cannot freeze old fixture interfaces"
   IO.FS.writeFile (core / "Box.lean") "module\n@[expose] public section\nstructure Box where\n  y : Nat\n  x : Nat\n"
   IO.FS.writeFile (core / "Broken.lean") "module\n#check deliberately_missing_name\n"
   IO.FS.writeFile (core / "Main.lean") "import Box\nimport Broken\nimport Middle\ndef main : IO Unit := IO.println (toString (answer ⟨9,2⟩))\n"
@@ -390,11 +423,14 @@ private def resumeAudit (directory : String) : IO Unit := do
     baselineResponse := (root / "build/runtime.rsp").toString
     baselineMain := (root / "build/Main.o").toString
     baselineCore := some core.toString}
+  inheritLibrary (root / "old-interfaces") (core / ".lake/build/lib/lean")
   IO.FS.writeFile (root / "derived-plan.json") (toJson derived).pretty
   build (root / "derived-plan.json").toString
   let derivedResult ← IO.Process.output {cmd := (root / "derived/StudyMain").toString}
   check (derivedResult.exitCode == 0 && derivedResult.stdout.trimAscii == "3")
     "derived build duplicated an object omitted by the caller's empty map"
+  check ((← IO.FS.realPath (root / "derived/lib/Box.olean")) == (← IO.FS.realPath (root / "build/lib/Box.olean")))
+    "derived build kept the old package interface instead of its native producer"
   let conflict := Json.mkObj [((root / "build/Box.o").toString,toJson "WrongModule")]
   IO.FS.writeFile (root / "objects.json") conflict.pretty
   let mut conflictRejected := false
@@ -406,6 +442,7 @@ private def resumeAudit (directory : String) : IO Unit := do
   IO.FS.writeFile (root / "results.json") (Json.mkObj [
     ("dependencyCachedOnRetry",toJson true),("unchangedParentRecompiled",toJson true),
     ("omittedDerivedNativeObjectsRecovered",toJson true),("contradictoryNativeMappingRejected",toJson true),
+    ("selectedNativeInterfaceBound",toJson true),("stalePackageInterfaceRejected",toJson true),
     ("runtimeValueBefore",toJson before.stdout.trimAscii.copy),("runtimeValueAfter",toJson after.stdout.trimAscii.copy),
     ("staleLayoutWouldReturn",toJson (10 : Nat)),("answeringModelCalls",toJson (0 : Nat))]).pretty
 

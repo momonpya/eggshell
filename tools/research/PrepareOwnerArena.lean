@@ -28,7 +28,7 @@ def main : IO Unit := do
      "    (use : PreparedOwnerArena.Ready → IO α) : IO α := do\n" ++
      "  unless (← IO.monoMsNow) < deadline do throw (IO.userError \"prepared owner request expired\")\n" ++
      "  let descriptor ← loaded.recipes.get (Recipe.name owner)\n" ++
-     "  let bytes ← IO.ofExcept (PageMap.payloadSize descriptor)\n" ++
+     "  let bytes ← IO.ofExcept (PreparedOwnerArena.payloadBytes descriptor)\n" ++
      "  loaded.owners.withReady loaded.identity loaded.metadata.source.identity owner bytes deadline (do\n" ++
      "    let stored := (← Recipe.read? loaded.recipes owner).getD ⟨#[],[]⟩\n" ++
      "    IO.ofExcept (PreparedOwnerArena.prepare loaded.metadata.source.identity owner stored)) use\n\n" ++
@@ -36,7 +36,7 @@ def main : IO Unit := do
      "  let mut result := #[]\n  let mut total := 0\n" ++
      "  for owner in owners do\n" ++
      "    let descriptor ← loaded.recipes.get (Recipe.name owner)\n" ++
-     "    total := total+(← IO.ofExcept (PageMap.payloadSize descriptor))\n" ++
+     "    total := total+(← IO.ofExcept (PreparedOwnerArena.payloadBytes descriptor))\n" ++
      "    unless total ≤ 16*1024*1024 do throw (IO.userError \"prepared original projection exceeds reply budget\")\n" ++
      "    let stored ← loaded.withOwner owner deadline (fun ready => pure ready.stored)\n" ++
      "    result := result.push (owner,stored)\n  return result\n\n")

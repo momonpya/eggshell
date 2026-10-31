@@ -49,6 +49,16 @@ def maxLoads : Nat := 2
 is still authoritative: this is an accounting bound, not a Lean-heap theorem. -/
 def charge (payloadBytes : Nat) : Nat := 65536+16*payloadBytes
 
+/-- No canonical file rows is a valid negative lookup. A present malformed
+descriptor remains an error; it must never masquerade as an empty result. -/
+def payloadBytes : Option ByteArray → Except String Nat
+  | none => .ok 0
+  | some bytes => PageMap.payloadSize (some bytes)
+
+theorem absent_payload_size : payloadBytes none = .ok 0 := rfl
+theorem present_payload_size (bytes : ByteArray) :
+    payloadBytes (some bytes) = PageMap.payloadSize (some bytes) := rfl
+
 structure Budget where
   used : Nat := 0
   within : used ≤ capacity := by decide
