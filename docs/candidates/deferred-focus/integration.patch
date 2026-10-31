@@ -1,0 +1,46 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/carried-value-core/Eggshell/Handoff.lean	2026-10-31 18:15:37
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/deferred-focus-core/Eggshell/Handoff.lean	2026-10-31 20:03:59
+@@ -6790,10 +6790,6 @@
+       let first ← slice.members.head?
+       let positions := (semanticEvidence.find? (·.1 == first.matched.edge.relation)).map Prod.snd
+       let referenced := (referenceEvidence.find? (·.1 == first.matched.edge.relation)).map Prod.snd |>.getD []
+-      let hint := QueryLiterals.focus (requestQuestion.getD current)
+-        (evidenceSearchWindows first.matched.edge) (sourceContextWindows (positions.getD []) referenced)
+-      let windows := hint.windows
+-      let anchors := hint.anchors
+       if !lookupContextAllowed (enforce && requestQuestion.isSome) meaningSelected first.blocks positions then none else do
+       if meaningSelected && first.applicability == .advisory then
+         if let some shared := (canonicalRecipes[relationKey first.matched.edge.relation]?).bind
+@@ -6802,6 +6798,10 @@
+         if let some shell := canonicalShells[relationKey first.matched.edge.relation]? then
+           return ({slice with keys := [],text := "",context := none,shared := none,shell := some shell},[])
+         if Matcher.nativeOutcome first.matched.edge then return (slice,[])
++      let hint := QueryLiterals.focus (requestQuestion.getD current)
++        (evidenceSearchWindows first.matched.edge) (sourceContextWindows (positions.getD []) referenced)
++      let windows := hint.windows
++      let anchors := hint.anchors
+       let prepared := prepareContextualSlicePlan planningReceipts windows slice anchors
+       let render := fun amount => (prepared.eval amount).map fun slice => {slice with anchors}
+       let levels := ownerContextLevels first.matched.edge windows anchors share allowance
+@@ -6820,10 +6820,6 @@
+     let neighbors := surrounding.filterMap fun source => do
+       let positions := (semanticEvidence.find? (·.1 == source.owner.relation)).map Prod.snd
+       let referenced := (referenceEvidence.find? (·.1 == source.owner.relation)).map Prod.snd |>.getD []
+-      let hint := QueryLiterals.focus (requestQuestion.getD current)
+-        (evidenceSearchWindows source.owner) (sourceContextWindows (positions.getD []) referenced)
+-      let windows := hint.windows
+-      let anchors := hint.anchors
+       if !lookupContextAllowed (enforce && requestQuestion.isSome) meaningSelected false positions then none else do
+       if meaningSelected then
+         if let some shared := (canonicalRecipes[relationKey source.owner.relation]?).bind
+@@ -6841,6 +6837,10 @@
+           let slice : TransportSlice := {
+             owner := some source.owner.relation,keys := [],text := "",members := [],visibleKeys := []}
+           return (source.owner.relation,(slice,[]))
++      let hint := QueryLiterals.focus (requestQuestion.getD current)
++        (evidenceSearchWindows source.owner) (sourceContextWindows (positions.getD []) referenced)
++      let windows := hint.windows
++      let anchors := hint.anchors
+       let prepared := prepareContextualSupportPlan planningReceipts windows source anchors
+       let render := fun amount => (prepared.eval amount).map fun slice => {slice with anchors}
+       let levels := ownerContextLevels source.owner windows anchors share allowance
