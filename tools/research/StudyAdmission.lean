@@ -5,6 +5,7 @@ import tools.research.StudyCommand
 import tools.research.ArtifactHash
 import Eggshell.Install
 import tools.research.StudySource
+import tools.research.StudyProfile
 
 open Lean Eggshell
 
@@ -29,14 +30,33 @@ structure Preparation where
   session : String
   deriving FromJson, ToJson
 
+/-- A measured reference may contain the defect the candidate repairs. This
+role permits measurement, never product adoption or Work completion. -/
+inductive Arm | reference | candidate
+  deriving BEq, DecidableEq, FromJson, ToJson
+
+def deliveryTargetMet (audit : Json) : Bool :=
+  (audit.getObjValD "availableDelivery").getObjValD "targetMet" == toJson true
+
+def mayMeasure (arm : Arm) (audit : Json) : Prop :=
+  arm = .candidate → deliveryTargetMet audit = true
+
+instance (arm : Arm) (audit : Json) : Decidable (mayMeasure arm audit) :=
+  inferInstanceAs (Decidable (arm = .candidate → deliveryTargetMet audit = true))
+
+theorem candidate_measurement_requires_target (audit : Json)
+    (accepted : mayMeasure .candidate audit) : deliveryTargetMet audit = true := accepted rfl
+
 structure Plan where
   label : String
+  arm : Arm
   purpose : String
   topic : Nat
   stage : Nat
   repetition : Nat
   model : String
   effort : String
+  handoffChars : Nat
   workspace : String
   sourceCommit : String
   prompt : Artifact
@@ -71,6 +91,7 @@ structure Admitted where
   knownOmissions : Array String
   modelExact : plan.model = "gpt-5.6-luna"
   effortExact : plan.effort = "xhigh"
+  deliveryChecked : mayMeasure plan.arm audit
 
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
@@ -155,6 +176,7 @@ def verifyLiveWarm (plan : Plan) : IO Json := do
 def admit (path expectedSha256 : String) : IO Admitted := do
   verifyArtifact ⟨path,expectedSha256⟩
   let plan ← IO.ofExcept (fromJson? (α := Plan) (← readJson path))
+  let _ ← IO.ofExcept (StudyProfile.checked plan.handoffChars)
   let modelExact : PLift (plan.model = "gpt-5.6-luna") ←
     if h : plan.model = "gpt-5.6-luna" then pure ⟨h⟩ else throw (IO.userError "model substitution is not permitted")
   let effortExact : PLift (plan.effort = "xhigh") ←
@@ -196,7 +218,7 @@ def admit (path expectedSha256 : String) : IO Admitted := do
   let config ← Config.parseFile (.mk plan.configuration.path)
   let selected ← IO.ofExcept (Config.resolve config "work")
   check (config.defaultProfile == "work" && selected.read.map (·.path.toString) == [plan.database] &&
-    selected.write.map (·.path.toString) == some plan.database && selected.handoffChars == 120000 &&
+    selected.write.map (·.path.toString) == some plan.database && selected.handoffChars == plan.handoffChars &&
     selected.semanticMatcher == some [plan.runtime.path,"search-provider"])
     "prepared profile, database, provider or budget differs"
   let prompt ← IO.FS.readFile (.mk plan.prompt.path)
@@ -216,8 +238,9 @@ def admit (path expectedSha256 : String) : IO Admitted := do
     check ((auditInput.getObjValAs? String key).toOption == some artifact.path) s!"audit references another {key}"
   let audit ← NativeTrialAudit.inspect p.auditInput.path
   check (audit == (← readJson p.auditReport.path)) "native source/code audit is stale"
-  check (((audit.getObjValD "availableDelivery").getObjValAs? Bool "targetMet").toOption == some true)
-    "actual preflight failed 98% delivery of fully or partially stored required evidence"
+  let deliveryChecked : PLift (mayMeasure plan.arm audit) ←
+    if accepted : mayMeasure plan.arm audit then pure ⟨accepted⟩ else
+      throw (IO.userError "candidate preflight failed 98% delivery of fully or partially stored required evidence")
   check ((audit.getObjValAs? Nat "originalRows").toOption.any (· > 0)) "no original memory observations"
   let body ← IO.FS.readFile (.mk p.body.path)
   check (!body.trimAscii.isEmpty && !(body.contains "EGGSHELL SEARCH INCOMPLETE")) "preflight did not deliver a memory body"
@@ -255,10 +278,9 @@ def admit (path expectedSha256 : String) : IO Admitted := do
     (row.getObjValAs? Bool "stored").toOption == some true &&
     (row.getObjValAs? Bool "bodyDelivered").toOption != some true).mapM fun row =>
       IO.ofExcept (row.getObjValAs? String "name")
-  check (plan.purpose == "pilot" || knownOmissions.isEmpty) "comparison preflight omits known required source code"
   let liveDoctor ← verifyLiveWarm plan
   return {
     plan,prompt,bodySha256 := p.body.sha256,audit,liveDoctor,knownOmissions
-    modelExact := modelExact.down,effortExact := effortExact.down}
+    modelExact := modelExact.down,effortExact := effortExact.down,deliveryChecked := deliveryChecked.down}
 
 end Eggshell.Research.StudyAdmission

@@ -9,6 +9,7 @@ namespace Eggshell.Research.StudySeedChecks
 
 structure Input where
   runtime : StudyAdmission.Artifact
+  handoffChars : Nat
   pluginRoot : String
   pluginFiles : Array StudyAdmission.Artifact
   environment : Array (String × Option String)
@@ -23,10 +24,8 @@ private def replaceEnv (original updates : Array (String × Option String)) :=
 private def save (path : System.FilePath) (value : Json) : IO Unit :=
   IO.FS.writeFile path (value.compress ++ "\n")
 
-private def config (binary database : String) : String :=
-  "default = \"work\"\nsemantic_matcher = " ++
-  (toJson #[binary,"search-provider"]).compress ++ "\n[eggs]\nwork = " ++
-  (toJson database).compress ++ "\n[profiles.work]\nread = [\"work\"]\nwrite = \"work\"\nhandoff_chars = 120000\n"
+private def config (binary database : String) (chars : Nat) : IO String := do
+  return StudyProfile.render binary database (← IO.ofExcept (StudyProfile.checked chars))
 
 private def origins (database : System.FilePath) (count : Nat) : IO Unit := do
   let deadline := (← IO.monoMsNow)+20000
@@ -118,9 +117,8 @@ def recall (plan : Input) (root source : System.FilePath)
         ("first",toJson (14 : Nat)),("last",toJson (14 : Nat))]])]
   save (root / "recall-required-before-delivery.json") frozen
   let configuration := root / "recall-config.toml"
-  IO.FS.writeFile configuration ("default = \"work\"\nsemantic_matcher = " ++
-    (toJson #[plan.runtime.path,"search-provider"]).compress ++ "\n[eggs]\nwork = " ++
-    (toJson source.toString).compress ++ "\n[profiles.work]\nread = [\"work\"]\nhandoff_chars = 120000\n")
+  IO.FS.writeFile configuration (StudyProfile.render plan.runtime.path source.toString
+    (← IO.ofExcept (StudyProfile.checked plan.handoffChars)) false)
   let data := root / "recall-data"
   IO.FS.createDir data
   let session := "native-recall-preflight"
@@ -185,7 +183,7 @@ def run (templatePath directory : String) (remote : Bool := false)
   let initial ← DB.PageMap.create database (Persistence.valueToJson (.text "native-seed-fixture")).compress
   check ((← Build.entries initial).isEmpty) "synthetic seed did not start with an empty database"
   let configuration := root / "config.toml"
-  IO.FS.writeFile configuration (config plan.runtime.path database.toString)
+  IO.FS.writeFile configuration (← config plan.runtime.path database.toString plan.handoffChars)
   let session := "native-empty-seed"
   let turn := "seed-turn"
   let environment := replaceEnv plan.environment #[
@@ -317,7 +315,7 @@ def run (templatePath directory : String) (remote : Bool := false)
   let recoveryData := root / "recovery-data"
   IO.FS.createDir recoveryData
   let recoveryConfig := root / "recovery-config.toml"
-  IO.FS.writeFile recoveryConfig (config plan.runtime.path copied.toString)
+  IO.FS.writeFile recoveryConfig (← config plan.runtime.path copied.toString plan.handoffChars)
   let recoveredEnvironment := replaceEnv environment #[
     ("EGGSHELL_DATA_ROOT",some recoveryData.toString),("EGGSHELL_CONFIG",some recoveryConfig.toString),
     ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]

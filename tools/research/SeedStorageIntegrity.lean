@@ -140,7 +140,19 @@ def main (args : List String) : IO UInt32 := do
   let workspace ← IO.ofExcept (plan.getObjValAs? String "workspace")
   let some canonical ← CanonicalSource.Cache.open? live .database |
     throw (IO.userError "existing canonical source view is unavailable")
-  let rows := canonical.registry.store
+  let directory ← CanonicalSource.Cache.directory live .database
+  let some projection ← CanonicalSource.Cache.preparedAt? live directory canonical.metadata |
+    throw (IO.userError "canonical source projection does not match its manifest")
+  -- The product no longer materializes a global registry. Stream its pinned
+  -- per-owner recipes for this independent, read-only storage audit instead.
+  let mut originalRows := #[]
+  for document in documents do
+    let some stored ← CanonicalSource.Recipe.read? projection document.owner | continue
+    let _ ← IO.ofExcept (CanonicalSource.Recipe.check stored.rows stored.records)
+    originalRows := originalRows ++ stored.rows
+  unless originalRows.size == canonical.metadata.rows do
+    throw (IO.userError "canonical owner recipes do not cover the manifest row count")
+  let rows ← IO.ofExcept (CanonicalSource.Delivery.merge originalRows)
   if let some path := exportPath then
     unless !(← System.FilePath.pathExists path) do throw (IO.userError "preserve original export")
     IO.FS.writeFile path (Json.mkObj [

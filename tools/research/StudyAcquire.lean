@@ -17,6 +17,7 @@ structure Plan where
   label : String
   model : String
   effort : String
+  handoffChars : Nat
   provider : String
   workspace : String
   sourceCommit : String
@@ -77,6 +78,7 @@ def verifyNativeGate (runtime gate guard shutdown recovered publisherShutdown : 
     throw "native gate cleanup or portable source-only recovery failed"
 
 private def verify (plan : Plan) : IO StudyAccounting.Acquisition := do
+  let _ ← IO.ofExcept (StudyProfile.checked plan.handoffChars)
   check (plan.model == "gpt-5.6-luna" && plan.effort == "xhigh") "fixed Luna/xhigh required"
   check (plan.provider == "openai" || plan.provider == "synthetic") "explicit acquisition provider required"
   let kind ← match plan.kind with
@@ -151,10 +153,8 @@ def run (input digest : String) (limits : Option StudyTrial.Limits := none) : IO
     let empty ← DB.PageMap.create database (Persistence.valueToJson (.text plan.label)).compress
     check ((← Synapses.Build.entries empty).isEmpty) "seed database is not empty"
     save root "input-files.json" (toJson (← StudyRuntime.checkpoint database (root / "input.egg")))
-    IO.FS.writeFile config ("default = \"work\"\nsemantic_matcher = " ++
-      (toJson #[plan.runtime.path,"search-provider"]).compress ++ "\n[eggs]\nwork = " ++
-      (toJson database.toString).compress ++
-      "\n[profiles.work]\nread = [\"work\"]\nwrite = \"work\"\nhandoff_chars = 120000\n")
+    let budget ← IO.ofExcept (StudyProfile.checked plan.handoffChars)
+    IO.FS.writeFile config (StudyProfile.render plan.runtime.path database.toString budget)
   let environment := replaceEnv plan.environment #[
     ("EGGSHELL_DATA_ROOT",some data.toString),("EGGSHELL_CONFIG",some config.toString),
     ("EGGSHELL_PROFILE",some "work"),("PLUGIN_ROOT",some plan.pluginRoot),

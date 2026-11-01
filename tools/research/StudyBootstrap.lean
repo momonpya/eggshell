@@ -52,7 +52,8 @@ private def environment (root : System.FilePath) : Array (String × Option Strin
   ("OPENBLAS_NUM_THREADS",some "1"),("MKL_NUM_THREADS",some "1"),("TOKENIZERS_PARALLELISM",some "false"),
   ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
 
-def seedInput (root : String) : IO Unit := do
+def seedInput (root : String) (handoffChars : Nat) : IO Unit := do
+  let _ ← IO.ofExcept (StudyProfile.checked handoffChars)
   let directory := System.FilePath.mk root
   let trusted ← StudyAdmission.readJson (directory / "hooks-trusted.json").toString
   let runtime ← IO.ofExcept (trusted.getObjValAs? StudyAdmission.Artifact "runtime")
@@ -61,7 +62,7 @@ def seedInput (root : String) : IO Unit := do
   let files ← StudyAdmission.tree (.mk pluginRoot)
   let pluginFiles := files.map fun (relative,digest) =>
     ({path := (System.FilePath.mk pluginRoot / relative).toString,sha256 := digest} : StudyAdmission.Artifact)
-  let input : StudySeedChecks.Input := {runtime,pluginRoot,pluginFiles,environment := environment directory}
+  let input : StudySeedChecks.Input := {runtime,handoffChars,pluginRoot,pluginFiles,environment := environment directory}
   save (directory / "native-gate-input.json") (toJson input)
 
 def sealSeed (root : String) : IO Unit := do
@@ -83,6 +84,7 @@ def sealSeed (root : String) : IO Unit := do
     label := "new-native-seed-1"
     model := "gpt-5.6-luna"
     effort := "xhigh"
+    handoffChars := input.handoffChars
     provider := "openai"
     workspace := "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project"
     sourceCommit := "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
@@ -112,7 +114,7 @@ def sealSeed (root : String) : IO Unit := do
   let budget ← StudyPrepare.artifact (directory / "seed-1.limits.json")
   let settings := Json.mkObj [
     ("cwd",toJson root),("ownedPrefixes",toJson #[root]),("limitRssKiB",toJson (3670016 : Nat)),
-    ("minFreeKiB",toJson (4194304 : Nat)),("record",toJson plan.guardRecord),
+    ("minFreeKiB",toJson (2097152 : Nat)),("record",toJson plan.guardRecord),
     ("command",toJson #[(← IO.appPath).toString,"acquire-bounded",artifact.path,artifact.sha256,budget.path,budget.sha256])]
   save (directory / "seed-1.settings.json") settings
 
@@ -120,9 +122,11 @@ def cliMain (args : List String) : IO UInt32 := do
   try
     match args with
     | ["trust-hooks",root] => trustHooks root
-    | ["seed-input",root] => seedInput root
+    | ["seed-input",root,chars] => do
+        let some budget := chars.toNat? | throw (IO.userError "positive handoff characters required")
+        seedInput root budget
     | ["seal-seed",root] => sealSeed root
-    | _ => throw (IO.userError "StudyBootstrap trust-hooks|seed-input|seal-seed ROOT")
+    | _ => throw (IO.userError "StudyBootstrap trust-hooks|seal-seed ROOT | seed-input ROOT CHARS")
     return 0
   catch error => IO.eprintln error.toString; return 1
 

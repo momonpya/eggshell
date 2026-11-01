@@ -21,6 +21,7 @@ private def write (path : System.FilePath) (json : Json) : IO Unit :=
 chats and exact-source audit. No App Server turn or answering model is invoked. -/
 def prepare (templatePath directory : String) (live : Bool := false) : IO StudyAdmission.Plan := do
   let template ← IO.ofExcept (fromJson? (α := StudyAdmission.Plan) (← StudyAdmission.readJson templatePath))
+  let budget ← IO.ofExcept (StudyProfile.checked template.handoffChars)
   let root := System.FilePath.mk directory
   check (root.isAbsolute && !(← root.pathExists)) "keep the existing preparation"
   for artifact in #[template.prompt,template.runtime,template.accountConfiguration] ++ template.pluginFiles do
@@ -35,10 +36,7 @@ def prepare (templatePath directory : String) (live : Bool := false) : IO StudyA
   let config := if live then System.FilePath.mk template.configuration.path else root / "config.toml"
   for path in #[template.runtime.path,template.database] do
     check (!(path.contains '"') && !(path.contains '\\') && !(path.contains '\n')) "unsupported TOML path quoting"
-  let source := "default = \"work\"\nsemantic_matcher = " ++
-    (toJson #[template.runtime.path,"search-provider"]).compress ++ "\n[eggs]\nwork = " ++
-    (toJson template.database).compress ++
-    "\n[profiles.work]\nread = [\"work\"]\nwrite = \"work\"\nhandoff_chars = 120000\n"
+  let source := StudyProfile.render template.runtime.path template.database budget
   if live then
     StudyAdmission.verifyArtifact template.configuration
     check (data.isAbsolute && (← data.pathExists) && (← IO.FS.readFile config) == source)
@@ -57,15 +55,6 @@ def prepare (templatePath directory : String) (live : Bool := false) : IO StudyA
     ("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),("OPENBLAS_NUM_THREADS",some "1"),
     ("MKL_NUM_THREADS",some "1"),("TOKENIZERS_PARALLELISM",some "false"),("HF_HUB_OFFLINE",some "1")]
   if !live then StudyRuntime.restore (.mk template.sourceSnapshot) (.mk template.database)
-  let warm ← StudyCommand.run template.runtime.path #["egg","warm","work"] environment template.workspace "" (root / "warm") 240000
-  check (warm.exitCode == 0) "explicit source warm failed"
-  let warmed ← IO.ofExcept (Json.parse warm.stdout >>= (·.getObjValAs? (Array Json) "databases"))
-  check (warmed.size == 1) "warm returned another database set"
-  let coverage ← IO.ofExcept (warmed[0]!.getObjVal? "after")
-  check ((coverage.getObjValAs? Nat "missing").toOption == some 0 &&
-    (coverage.getObjValAs? Nat "invalid").toOption == some 0) "source warm is incomplete"
-  let doctor ← StudyCommand.run template.runtime.path #["egg","doctor"] environment template.workspace "" (root / "doctor") 60000
-  check (doctor.exitCode == 0) "native doctor failed"
   let prompt ← IO.FS.readFile (.mk template.prompt.path)
   let prototype ← StudyAdmission.readJson template.preparation.auditInput.path
   let originalSource ← IO.ofExcept (prototype.getObjVal? "source")
@@ -74,35 +63,48 @@ def prepare (templatePath directory : String) (live : Bool := false) : IO StudyA
     ("prompt",toJson prompt),("files",toJson original),("required",required)]
   let frozenAvailable ← NativeTrialAudit.freezeAvailable auditSource
   write (root / "available-evidence.json") (toJson frozenAvailable)
-  let mut lastBody : Option String := none
   let mut finalSession := ""
   let mut finalCall := root
-  for index in [0:2] do
-    let session := s!"prepare-{template.label}-{index}"
-    let call := root / s!"chat-{index}"
-    IO.FS.createDir call
-    let endpoint := data / "sessions" / session / "daemon.json"
-    let managed ← StudyRuntime.startManaged (.mk template.runtime.path) (.mk template.pluginRoot) session endpoint environment
-    try
-      let mut body := ""
-      for event in #["SessionStart","UserPromptSubmit"] do
-        let fields := [("hook_event_name",toJson event),("session_id",toJson session),("turn_id",toJson "first"),
-          ("cwd",toJson template.workspace),("_eggshell_config",toJson config.toString)]
-        let request := Json.mkObj (if event == "UserPromptSubmit" then fields ++ [("prompt",toJson prompt)] else fields)
-        let result ← StudyCommand.run template.runtime.path #["codex-hook"] environment template.workspace
-          (request.compress ++ "\n") (call / event) 35000
-        check (result.exitCode == 0 && result.elapsedMs < 30000) "native preparation hook failed or expired"
-        if event == "UserPromptSubmit" then
-          let reply ← IO.ofExcept (Json.parse result.stdout)
-          body ← IO.ofExcept (reply.getObjVal? "hookSpecificOutput" >>= (·.getObjValAs? String "additionalContext"))
-      check (!body.trimAscii.isEmpty && !(body.contains "EGGSHELL SEARCH INCOMPLETE")) "new chat did not deliver source memory"
-      if let some previous := lastBody then check (previous == body) "new chat changed the fixed-source preflight body"
-      lastBody := some body
-      IO.FS.writeFile (call / "body.txt") body
-      finalSession := session
-      finalCall := call
-    finally
-      StudyRuntime.stopManaged managed (call / "shutdown.json")
+  let publisher ← StudyRuntime.startPublisher (.mk template.runtime.path) data environment
+  try
+    let warm ← StudyCommand.run template.runtime.path #["egg","warm","work"] environment template.workspace "" (root / "warm") 240000
+    check (warm.exitCode == 0) "explicit source warm failed"
+    let warmed ← IO.ofExcept (Json.parse warm.stdout >>= (·.getObjValAs? (Array Json) "databases"))
+    check (warmed.size == 1) "warm returned another database set"
+    let coverage ← IO.ofExcept (warmed[0]!.getObjVal? "after")
+    check ((coverage.getObjValAs? Nat "missing").toOption == some 0 &&
+      (coverage.getObjValAs? Nat "invalid").toOption == some 0) "source warm is incomplete"
+    let doctor ← StudyCommand.run template.runtime.path #["egg","doctor"] environment template.workspace "" (root / "doctor") 60000
+    check (doctor.exitCode == 0) "native doctor failed"
+    let mut lastBody : Option String := none
+    for index in [0:2] do
+      let session := s!"prepare-{template.label}-{index}"
+      let call := root / s!"chat-{index}"
+      IO.FS.createDir call
+      let endpoint := data / "sessions" / session / "daemon.json"
+      let managed ← StudyRuntime.startManaged (.mk template.runtime.path) (.mk template.pluginRoot) session endpoint environment
+      try
+        let mut body := ""
+        for event in #["SessionStart","UserPromptSubmit"] do
+          let fields := [("hook_event_name",toJson event),("session_id",toJson session),("turn_id",toJson "first"),
+            ("cwd",toJson template.workspace),("_eggshell_config",toJson config.toString)]
+          let request := Json.mkObj (if event == "UserPromptSubmit" then fields ++ [("prompt",toJson prompt)] else fields)
+          let result ← StudyCommand.run template.runtime.path #["codex-hook"] environment template.workspace
+            (request.compress ++ "\n") (call / event) 35000
+          check (result.exitCode == 0 && result.elapsedMs < 30000) "native preparation hook failed or expired"
+          if event == "UserPromptSubmit" then
+            let reply ← IO.ofExcept (Json.parse result.stdout)
+            body ← IO.ofExcept (reply.getObjVal? "hookSpecificOutput" >>= (·.getObjValAs? String "additionalContext"))
+        check (!body.trimAscii.isEmpty && !(body.contains "EGGSHELL SEARCH INCOMPLETE")) "new chat did not deliver source memory"
+        if let some previous := lastBody then check (previous == body) "new chat changed the fixed-source preflight body"
+        lastBody := some body
+        IO.FS.writeFile (call / "body.txt") body
+        finalSession := session
+        finalCall := call
+      finally
+        StudyRuntime.stopManaged managed (call / "shutdown.json")
+  finally
+    StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
   let mut receipt : Option System.FilePath := none
   for entry in ← (data / "receipts").readDir do
     let request := entry.path / "request.json"
