@@ -35,7 +35,7 @@ Postが受け取った入力・応答は30/30件がDBとbyte一致した。canon
 
 2本目の最初の起動は、予定外の `eggshell@openai-curated-remote` の7フックが見つかり、`initialize`・`model/list`・`hooks/list`だけで拒否した。`thread/start`・`turn/start`は0。元のusageのunknownは0に書き換えない。別runtimeの混入を許可せず、隔離accountでこのpluginだけを明示的に無効にした。公式文書の[plugin設定](https://developers.openai.com/plugins/build/plugins#enable-or-disable-a-plugin-for-a-repo)を確認し、同じ実CLIで、予定した8フックだけが有効・trustedになることをモデルなしで確認した。runtime・測定harness・モデル・質問・限度・予定した8フックは変更していない。未実行の残り計画のaccount sealを明示的に更新し、拒否された計画・RPC・usageは[修復記録](candidates/fixed-frame-study/isolation-repair.json)に保持した。新seed1は元から同じ8フックだけで取得されている。
 
-題材の総トークン比較は各block0/6、全体0/18で、結果を先取りしない。
+2本目の取得は3,172,905総token、181フック失敗0で完了した。Post入力・応答89/89件がDBとbyte一致し、独立したcanonical 9168行にも矛盾はなかった。ただし通常の準備が完走しない。利用シナプスの同じ再生関数は、読み取り専用の診断予算で167717 msかかり、consumed 1955件・usage 228件を生成した。3本目と題材のモデル投入は保留し、[再生と準備の契約](replay-preparation-contract.md)に従って、不変のReadViewとACK投影を先に準備する経路を実装する。題材の総トークン比較は各block0/6、全体0/18で、結果を先取りしない。
 
 終了した検査DB/cacheと不要な二つの実行体、計543ファイル・235,834,318論理bytesを削除した。archiveは作っていない。稼働するseed、封印済み入力、必要なnative object/interfaceは保持した。
 

@@ -29,7 +29,7 @@
 
 ## 現在地と次の順序
 
-2026-11-02。[パケット価格の契約監査](docs/packet-price-contract.md)を経て、[固定した配送契約の総トークン比較](docs/fixed-frame-token-study.md)を開始した。全体goalはactive。現行本体とREADME実績への変更は未採用。新seed1の出版・索引準備と来歴監査が通り、必要範囲を4/7/6件で配送前に凍結した。Postの入力・応答30/30件はDBとbyte一致したが、App Serverの端末出力との表現差4件は保持する。新seed2を取得中。題材のモデル比較は各block0/6、全体0/18。
+2026-11-02。[固定した配送契約の比較](docs/fixed-frame-token-study.md)で新seedを2本取得した。全体goalはactive、候補は未採用。新seed2は181フック失敗0、Pre/Post/portable origin各89件の欠落0、Post入力・応答89/89がDBとbyte一致した。必要原文は配送前に4/7/6件で凍結済み。一方、利用シナプスの準備が60秒を超え、3本目と題材のモデル投入を保留した。読み取り専用の同じ関数は167717 msでconsumed 1955/usage 228を生成した。これは通常warmや30秒フックの達成ではない。[再生と準備の契約](docs/replay-preparation-contract.md)に従い、不変の原文・ReadView・ACK投影を出版/配送時に確定し、過去turnを無関係な出版で再計算しない経路を先に実装する。題材のモデル比較は各block0/6、全体0/18。
 
 前段では、入場済みownerの独立原文basis 8,276行と実候補domainを照合し、題材1の67文字の宣言は候補4件まで存在するが120,000 charsを使い切った実選択で落ちたと確認した。[転送・選択の監査](docs/transport-and-selection-audit.md)。この欠落を保存破損や時間切れに戻さない。凍結した分母3/7/4を維持し、67文字を入力言語の状態全体の保存とは扱わない。
 
