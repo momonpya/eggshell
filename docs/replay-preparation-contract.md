@@ -36,3 +36,24 @@ ReadViewの再利用はscope・原文入力・実装・依存が一致した場�
 - 保存・準備が完走し、実フックの98%/30秒条件を確認してからモデルへ戻る。runtimeを変更する場合は、固定runtimeで新seedからやり直す。題材1/2/3と2周目、同じsnapshotでの両arm比較、総token・品質・deadlineという採用条件は維持する。
 
 既存sourceは現在の不具合の再現入力として保持し、終了したDB/cacheや不要な実行体は削除する。候補の成功、総token改善、製品への採用はまだ主張しない。
+
+## 隔離部品で確認した結果
+
+2026-11-02。`ReadCatalog.lean` と `Journal` の隔離overlayを実装した。原文検証用のprojectionには元catalogのmembershipを保持し、ACKには実際のkeysで選んだ原文範囲と入力footprintだけを保持する。Read/ACKに不要な本文断片と引用用の遅延mappingは保持しない。64 MiBの共有枠の内訳は検証用3/4、ACK用1/4で、枠から外れたものも参照経路で計算し、事実を省略しない。
+
+再利用は同じpinの履歴に限る。pointの不存在、完全range、payloadのdescriptorを含む入力を照合する。同じ開いたファイルの不変blobは初回に検証し、再利用時は参照が要求publicationのextentに収まることを確認する。`nodes/roots/outcomes` はこの所有者loaderで番号の上限検査にだけ使われるため、増加で無効化せず、forward/reverse rowとmetadataは完全一致を保つ。件数増加でも検査済み番号が範囲内に残ること、元catalogのmembership、ACKの判定が元の関数と一致することをLeanで証明した。任意IO計算のmemo完全性や共有負荷全体の証明ではない。
+
+同じseed2、全89件、書き込みなしの単発診断:
+
+| 経路 | 再生時間 | 参照との一致 | 判定 |
+| --- | ---: | --- | --- |
+| 固定runtimeの参照関数 | 167717 ms | consumed 1955 / usage 228 | 診断用参照 |
+| 最初の共有catalog | 258626 msで中止 | 未完了 | 遅延悪化で不採用 |
+| Read投影だけに縮小 | 278438 ms | 全factとstatus一致 | 遅延悪化で不採用 |
+| ACK投影と操作内owner表を共有 | 88725 ms | 全factとstatus一致 | 部品検証のみ、製品未採用 |
+
+縮小だけの案は全消去106回、catalog生成4777回だった。最後の案は生成553回、ACK投影247回・再利用5571回。解析/本文hashを行ごとに行わず、ownerごとのACK predicateとして一度作る。検索候補を省く、重みを変える、予算を増やす変更はしていない。
+
+小さな実PageMapのpublication検査では、無関係なgraph追加とACK追加による旧catalog再生成0、以前はなかった座標metadataの追加で旧catalogとACKを拒否、旧pinで同じ原文へ回復、別projectを拒否、80同時要求を生成1回/再利用79回に集約、枠超過時のcache保持0を確認した。80人の継続負荷や実フックの検査ではない。
+
+`preparePublication` は差分ownerを受ける部品APIで、現在は製品のpublisherから呼ばれていない。最終reconcile後のACK保存とservice共有、閉じたturnのcheckpoint更新、Warmのdebt表示も未接続である。既存の60秒を増やしていない。新モデル実行0、比較0/18と採用条件を維持する。[コード・negativeを含む検証記録](candidates/read-catalog/README.md)。

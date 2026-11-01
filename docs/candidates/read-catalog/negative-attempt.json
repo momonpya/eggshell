@@ -1,0 +1,65 @@
+{"stoppedForRegression": true,
+ "selectedSampleLines":
+ ["                    576 l_Eggshell_Synapses_Journal_storedReadsAt_x3f  (in StudyMain) + 972  [0x10070d258]",
+  "                          !       564 l_Eggshell_Synapses_ReadCatalog_getLocked_x3f  (in StudyMain) + 4272  [0x1007d98c4]",
+  "                          !       : 282 l_Eggshell_Synapses_ReadCatalog_compile  (in StudyMain) + 844  [0x1007d3f68]",
+  "                          !       : 145 l_Eggshell_Synapses_ReadCatalog_compile  (in StudyMain) + 1260  [0x1007d4108]",
+  "                          !       : 76 l_Eggshell_Synapses_ReadCatalog_compile  (in StudyMain) + 1108  [0x1007d4070]",
+  "                          !       : 22 l_Eggshell_Synapses_ReadCatalog_compile  (in StudyMain) + 3364  [0x1007d4940]",
+  "                          !       : 17 l_Eggshell_Synapses_ReadCatalog_compile  (in StudyMain) + 456  [0x1007d3de4]",
+  "                          !       : 17 l_Eggshell_Synapses_ReadCatalog_compile  (in StudyMain) + 3360  [0x1007d493c]"],
+ "sampleSha256":
+ "303b2bb7ba207df399c6c3189dd9e8654288e19a6b68563614d28f16f629367e",
+ "sampleIsFullTimeBreakdown": false,
+ "runtimeSha256":
+ "930667e5a52a6c5af16dc5b6c8f664ca80f9fb25394bf39f74cae556128b585f",
+ "readCatalogSourceSha256":
+ "6a905d0e3b081700cdc78802e85f3e5402189e9431357798493940826cc78502",
+ "guard":
+ {"userCeilingRssKiB": 4194304,
+  "state": "finished",
+  "settings":
+  {"record":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/seed-2-read-catalog.guard.json",
+   "ownedPrefixes":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+   "minFreeKiB": 2097152,
+   "limitRssKiB": 3670016,
+   "cwd":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+   "command":
+   ["/usr/bin/env",
+    "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/study/seed-2-isolated/data",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-catalog-build/StudyMain",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/study/seed-2-isolated",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/seed-2-replay-readonly.json",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/seed-2-read-catalog.json"]},
+  "samples": 1940,
+  "sampledPeakRssKiB": 230512,
+  "reason": null,
+  "peakProcesses":
+  [{"rssKiB": 180352,
+    "role": null,
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-catalog-build/StudyMain",
+    "pid": 96959,
+    "parent": 96940,
+    "lane": null},
+   {"rssKiB": 50160,
+    "role": "guard",
+    "program": "controller/StudyMain",
+    "pid": 96940,
+    "parent": 96928,
+    "lane": null}],
+  "ownedPids": [],
+  "limitRssKiB": 3670016,
+  "guardTriggered": false,
+  "guardSha256":
+  "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+  "guardPid": 96940,
+  "exitCode": 143,
+  "error": null,
+  "elapsedMs": 258626,
+  "childPid": 96959},
+ "completedReferenceComparison": false,
+ "adopted": false}

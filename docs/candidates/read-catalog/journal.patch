@@ -1,0 +1,161 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -6,6 +6,7 @@
+ public import Eggshell.UsageCache
+ public import Eggshell.StoredReadEvidence
+ public import Eggshell.StoredReadLookup
++public import Eggshell.ReadCatalog
+ public import Eggshell.PluginModel
+ 
+ @[expose] public section
+@@ -122,7 +123,8 @@
+ 
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.synaptic-journal".toUTF8 [
+   Index.implementation.toUTF8, UsageCache.implementation.toUTF8, SharedReadReceipt.implementation.toUTF8, (include_str "SynapseJournal.lean").toUTF8,
+-  (include_str "PluginModel.lean").toUTF8, (include_str "SynapseLive.lean").toUTF8])
++  (include_str "PluginModel.lean").toUTF8, (include_str "SynapseLive.lean").toUTF8,
++  (include_str "ReadCatalog.lean").toUTF8])
+ 
+ def directory (source : PageMap.Snapshot) : IO System.FilePath := do
+   return (← Sidecar.locate source .user).directory / "synapses" / "events"
+@@ -291,7 +293,8 @@
+ returned Read must equal an original catalog row at the pre-read publication. -/
+ def storedReadsAt? (source : PageMap.Snapshot) (known : Knowledge) (index : Index.Reader)
+     (subjects : Std.HashSet Subject) (excluded : Occurrence) (deadline : Nat)
+-    (strict : Bool := true) (cache : Option StoredReadLookup.Cache := none) : IO (Option (Array Read)) := do
++    (strict : Bool := true) (cache : Option StoredReadLookup.Cache := none)
++    (catalogs : Option ReadCatalog.Pool := none) : IO (Option (Array Read)) := do
+   let some original ← originalAt? source known.source | return none
+   let prepared ← StoredReadEvidence.prepare original index.index
+   let mut stored := #[]
+@@ -300,6 +303,16 @@
+     for read in ← cache.lookup index subject deadline do
+       if read.occurrence == excluded then continue
+       if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "historical stored-read validation deadline")
++      -- Keep the existing operation-local owner table. The project pool is
++      -- consulted once per owner here, never once for every located row.
++      if read.valid && read.binding.database == original.head.identity &&
++          (Persistence.SelectionKey.check? read.binding.owner).isSome &&
++          !(← prepared.owners.get).contains read.binding.owner then
++        let projected ← catalogs.bindM fun pool => do
++          let some id ← Build.ownerId? original read.binding.owner | return none
++          pool.get? known.source (some index.index.head) id
++        if let some projection := projected then
++          prepared.owners.modify (·.insert read.binding.owner projection.evidence)
+       if let some witness ← prepared.check? read then stored := stored.push witness.saved.val
+       else if strict then return none
+   return some stored
+@@ -325,8 +338,12 @@
+     | _ => none
+   whole || ({bindings := spans.toArray} : Presentation).coversBinding row.binding
+ 
++theorem compiled_acknowledgment_exact (keys : List String) (doc : Document) (row : Read) :
++    (ReadCatalog.acknowledgment keys doc).accepts row = acknowledged keys doc row := rfl
++
+ def presentation (source : PageMap.Snapshot) (known : Knowledge)
+-    (prepared : Option PageMap.Snapshot := none) : IO Presentation := do
++    (prepared : Option PageMap.Snapshot := none)
++    (catalogs : Option ReadCatalog.Pool := none) : IO Presentation := do
+   let some original ← originalAt? source known.source | return {}
+   let archive ← known.archive.bindM fun path => do
+     let some head := known.archived | return none
+@@ -338,11 +355,16 @@
+     let reader ← NodeReader.new snapshot
+     for owner in ownerKeys known.acknowledged do
+       let some id ← Build.ownerId? snapshot owner | continue
++      let index := if snapshot.head.identity == source.head.identity then prepared else none
++      let projected ← if snapshot.directory == source.directory then
++          catalogs.bindM (fun pool => pool.acknowledged? snapshot.head (index.map (·.head)) id known.acknowledged)
++        else pure none
++      if let some projected := projected then ranges := ranges ++ projected; continue
+       let doc ← Build.document reader id
+       let some original := ObservationContext.recorded snapshot.head.identity doc | continue
+-      let index := if snapshot.head.identity == source.head.identity then prepared else none
+       let catalog ← ContentMetadata.addFileCoordinates snapshot id doc original index
+-      ranges := ranges ++ (catalog.located.flatMap (·.originalRows) |>.filter (acknowledged known.acknowledged doc) |>.map (·.source))
++      let ack := ReadCatalog.acknowledgment known.acknowledged doc
++      ranges := ranges ++ (catalog.located.flatMap (·.originalRows) |>.filter ack.accepts |>.map (·.source))
+   return {ranges := compactRanges ranges}
+ 
+ /-- Shared file rows acknowledge just those original lines, not an entire
+@@ -389,7 +411,8 @@
+ 
+ def nativeFeedback (source : PageMap.Snapshot) (starts : Starts) (facts : Array Fact)
+     (graph : Graph) (deadline : Nat) (hint : Option Index.Reader := none)
+-    (cache : Option StoredReadLookup.Cache := none) : IO NativeFeedback := do
++    (cache : Option StoredReadLookup.Cache := none)
++    (catalogs : Option ReadCatalog.Pool := none) : IO NativeFeedback := do
+   let candidates := nativeCandidates facts
+   let mut witnesses : Std.HashMap WitnessAt (Std.HashSet (Occurrence × Option Range)) := {}
+   for fact in facts do
+@@ -414,10 +437,10 @@
+     let some indexed := indexed | throw (IO.userError "missing checked pre-read index")
+     let subjects := uses.foldl (fun subjects (_,range) => subjects.insert range.subject) ({} : Std.HashSet Subject)
+     let some storedReads ← storedReadsAt? source known indexed.reader subjects producer deadline
+-        (indexed.origin == .captured) cache |
++        (indexed.origin == .captured) cache catalogs |
+       result := {result with unknown := result.unknown+1}; continue
+     let stored := storedReads.map (·.source)
+-    let shown := presentationWithShared known storedReads (← presentation source known (some indexed.reader.index))
++    let shown := presentationWithShared known storedReads (← presentation source known (some indexed.reader.index) catalogs)
+     for (edge,requested) in uses do
+       -- Without a pre-existing original there was no missed memory to label.
+       unless covered requested stored do continue
+@@ -445,11 +468,19 @@
+ /-- All original body/row work happens in the background. A finish without
+ an exact published native owner remains pending instead of inventing evidence. -/
+ def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat)
+-    (preparedHint : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none) : IO Replay := do
++    (preparedHint : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none)
++    (catalogPool : Option ReadCatalog.Pool := none) : IO Replay := do
+   let cache ← match readCache with | some cache => pure cache | none => StoredReadLookup.create
+   let hint ← match preparedHint with
+     | some reader => pure (some reader)
+     | none => preparedHint? source
++  let catalogs ← match catalogPool with
++    | some pool => do
++      unless pool.source.directory == source.directory && pool.source.head.identity == source.head.identity &&
++          pool.source.head.authority == source.head.authority do
++        throw (IO.userError "foreign project read catalog pool")
++      pure pool
++    | none => ReadCatalog.create source (hint.map (·.index))
+   let mut result : Replay := {}
+   let mut trace : Trace := {}
+   let mut domain := ""
+@@ -463,7 +494,7 @@
+     if domain != value.clock.domain then
+       let projected ← IO.ofExcept (trace.locate locations)
+       let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+-      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache)
++      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache) (some catalogs)
+       usage := feedback.graph
+       result := {result with consumed := result.consumed ++ projected.graph.snapshot}
+       result := {result with
+@@ -547,10 +578,10 @@
+           let some index := storedIndex | throw (IO.userError "missing checked pre-read index")
+           let files := reads.foldl (fun files read => files.insert read.read.source.subject) ({} : Std.HashSet Subject)
+           let some storedReads ← storedReadsAt? source known index.reader files occurrence deadline
+-              (index.origin == .captured) (some cache) |
++              (index.origin == .captured) (some cache) (some catalogs) |
+             result := {result with unknown := result.unknown+1}; continue
+           let stored := storedReads.map (·.source)
+-          let shown := presentationWithShared known storedReads (← presentation source known (some index.reader.index))
++          let shown := presentationWithShared known storedReads (← presentation source known (some index.reader.index) (some catalogs))
+           -- A later locator can show positive old evidence, not prove absence.
+           -- Restrict these labels to the verified old/requested intersection.
+           let requested := if index.origin == .captured then reads.map (·.read.source) else
+@@ -563,12 +594,12 @@
+           usage := feedback.graph
+     | .answer occurrence query text known =>
+       if known.uncertain then result := {result with unknown := result.unknown+1}; continue
+-      let shown ← presentation source known
++      let shown ← presentation source known none (some catalogs)
+       let feedback ← IO.ofExcept (({graph := usage, delivered := shown} : Feedback).answer occurrence query text)
+       usage := feedback.graph
+   let projected ← IO.ofExcept (trace.locate locations)
+   let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+-  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache)
++  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache) (some catalogs)
+   return {result with
+     consumed := result.consumed ++ projected.graph.snapshot, usage := feedback.graph.snapshot
+     unknown := result.unknown+feedback.unknown,ambiguousNativeUses := result.ambiguousNativeUses+feedback.ambiguous}
