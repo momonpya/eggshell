@@ -1,0 +1,99 @@
+{"shutdowns":
+ [{"stopElapsedMs": 49,
+   "service": "session",
+   "processExited": true,
+   "pid": 15961,
+   "phase": "stopped",
+   "endpointRemoved": true,
+   "daemonExitCode": 0,
+   "acknowledged": true},
+  {"stopElapsedMs": 30,
+   "service": "publication",
+   "processExited": true,
+   "pid": 15874,
+   "phase": "stopped",
+   "endpointRemoved": true,
+   "daemonExitCode": 0,
+   "acknowledged": true},
+  {"stopElapsedMs": 6,
+   "service": "publication",
+   "processExited": true,
+   "pid": 71584,
+   "phase": "stopped",
+   "endpointRemoved": true,
+   "daemonExitCode": 0,
+   "acknowledged": true}],
+ "serviceProfiles":
+ [{"stage": "source-bindings-profile",
+   "receipt":
+   "1f347e15a85f735fbf94f11dc318a86cd2866cdaa56803fbe2f28eaea0ca2dc9",
+   "pid": 15874,
+   "observedMs": 3392186479,
+   "data":
+   {"targets": 2139,
+    "scanMs": 1476,
+    "prepareMs": 1,
+    "pages": 2161,
+    "leaves": 2062,
+    "complete": true,
+    "bytes": 2831056}},
+  {"stage": "source-plan-profile",
+   "receipt":
+   "732eaafbfa005bc8a6f6220798c795ea36337ca8baa1374892564cda2a6a4002",
+   "pid": 15874,
+   "observedMs": 3392189915,
+   "data":
+   {"viewMs": 0,
+    "validationMs": 8,
+    "unitsMs": 233,
+    "units": 8640,
+    "sourceRows": 8276,
+    "selectionMs": 1002,
+    "pieces": 15567,
+    "owners": 38,
+    "incomingRows": 9168,
+    "domainMs": 9,
+    "captureInput": false}}],
+ "sameParentBody": true,
+ "runtime":
+ {"sha256": "ce2459c4a77afe1ef41c2103fc9a328c22d5cea5b88e93061975a6483848b8c5",
+  "generation":
+  "52f8c37475c67559b2d98baf8eeb4891acdb5c2c8e4ee879623729110e886964",
+  "binary":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/selection-frames-runtime-build/StudyMain"},
+ "modelCalls": 0,
+ "elapsedMs": 13948,
+ "bodySha256":
+ "098a283dac9194d1c83196fba0ad8c4f601cfca6bb7b37bf8cbc16e88d11d481",
+ "bodyReference":
+ "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/source-plan/bodies/topic-1.txt",
+ "beforeGold":
+ {"sourceFiles":
+  [["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812.pages",
+    "83a365c2c7a33b30ec4f1e0d0a327eb5bd26153091ca2075faaf3be95dfa9a1b"],
+   ["head", "c9f76191cb46224f00c93e9196eab9a005e11b0cd98fc9746534dd73bb57b141"],
+   ["publisher.guard",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"],
+   ["writer",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]],
+  "runtime":
+  {"sha256": "ce2459c4a77afe1ef41c2103fc9a328c22d5cea5b88e93061975a6483848b8c5",
+   "generation":
+   "52f8c37475c67559b2d98baf8eeb4891acdb5c2c8e4ee879623729110e886964",
+   "binary":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/selection-frames-runtime-build/StudyMain"},
+  "questionSha256":
+  "16ca09fc26a183ab45433d48f82fba8629f05c716cfd7d2eb0e245f501cabe9b",
+  "goldRead": false,
+  "elapsedMs": 13948,
+  "bodySha256":
+  "098a283dac9194d1c83196fba0ad8c4f601cfca6bb7b37bf8cbc16e88d11d481"},
+ "availableDelivery":
+ {"targetPercent": 98,
+  "targetMet": false,
+  "partialNames": ["tracked-input-language"],
+  "missing": [["tracked-input-language"]],
+  "eligible": 3,
+  "delivered": 2,
+  "absent": ["input-language-predicate", "trailing-language-warning"]},
+ "adopted": false}

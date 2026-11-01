@@ -29,7 +29,13 @@
 
 ## 現在地と次の順序
 
-最新位置は[準備済みの原文を使う前に窓を作らない隔離候補](docs/deferred-evidence-focus.md)の実接続検査終了である。entryと周辺観測で、出版済みrecipe/shell/native原文を使う早期returnの前にも従来の窓を作り質問を照合していた。使われない計算を2か所で分岐の後へ移した。必要なfallbackとFamilyの窓生成、元のメタデータ、[同じbest候補の値を保持する変更](docs/carried-selection-value.md)は維持した。別の窓索引やquery-range cacheは追加していない。
+2026-11-01の最新位置は[証明による読出し計算の省略](docs/certified-read-plans.md)と、小さいservice profileによる実フックの計測である。要求範囲を一度だけ有界の平衡木へ変換し、ページごとの配列filterと葉ごとの線形探索を省く候補をLeanで実装した。任意の範囲列・キーで最初の一致と順序、重なり判定が全件走査と一致することを証明し、実readerで6条件×3組の原文・順序・counter・ページ数/葉数が一致した。ただし温まった2,361範囲で従来134/127 ms・候補131/133 ms、混合2,381範囲でも改善はない。この候補は未採用とし、全フックへ積み増さない。初回のcold/warm差1,099→131 msを速度改善と扱わない。新DB/cache・seed・回答モデルは0。
+
+親と本文が全byte一致する計測版の実フックは**13,948 ms・必要根拠2/3**だった。service内のbinding走査1,476 ms、候補構築233 ms、domain構築9 ms、選択1,002 ms。全体の残り約11.2秒はこれら以外で、転送・復号・前後処理の配分は未確定である。以前のnominations→canonical、domain→selectionの区間を、特定関数のCPU時間と扱わない。大きい選択記録を一つの8MiB frameへ入れた旧observerは保存に失敗した。上限を上げず1024行ごとの分割observerを実装/ビルドしたが、その実フックと再組立て試験はまだ未実行。小さいprofileの通常試行と混同しない。
+
+次は、最終的な計算の大半が未分類のまま選択器やcacheを作り替えず、clientのrequest構築・stream転送/検証・JSON復号・準備済みprojectionの検査・原文fetch/描画を小さな時間/bytes記録で分ける。支配的な仕事に対して、検証済みsnapshot/leaseの不変条件と生産側の型から、直接読出しが仕様と等しいことを証明して計算を省く。権限・snapshot・digest・変更した入力の鮮度確認を、証明なしに外さない。98%配送、総token改善、品質維持、80人の継続利用は未達/未検証のまま。ユーザーの再開指示後も、採用条件と4GiB未満のメモリ制約は維持する。
+
+直前の位置は[準備済みの原文を使う前に窓を作らない隔離候補](docs/deferred-evidence-focus.md)の実接続検査終了である。entryと周辺観測で、出版済みrecipe/shell/native原文を使う早期returnの前にも従来の窓を作り質問を照合していた。使われない計算を2か所で分岐の後へ移した。必要なfallbackとFamilyの窓生成、元のメタデータ、[同じbest候補の値を保持する変更](docs/carried-selection-value.md)は維持した。別の窓索引やquery-range cacheは追加していない。
 
 直前のCarriedSelectionValueでは、任意のProblem・初期Selection・候補順について元関数全体との等式をLeanで証明し、呼出し元のVerifiedWinnerCoverageを実際に再コンパイルした。質問依存のbenefitは出版時の固定値にせず、その問い合わせ内で保持する。100合成例で選択列が一致し、2,048 node/8,640 offerの合成例は元2.727〜2.752秒・候補6.89〜7.04 msだった。この倍率を実DB/フックへ外挿しない。
 
@@ -41,7 +47,7 @@ runtime `a20a4154d826360e956b60732ef4d77908befce32548ef7a1ac9d84a34af2784`の題
 
 native依存はruntime203/helper212 objectが整合し、終了ACK・process終了・endpoint削除を確認した。終了した試行DB/cache/helper/full logs等519,590,934 logical bytesを削除し、archiveは作っていない。保護原典/runtimeのSHAは削除前後で不変、利用中native入力758件を保持した。今回の数値discovery/focusは707/446 msでcompleted。受領時刻のnominations→canonical-source-inputは4,800 ms、delivery-domain→selection-planは3,658 msであり、検索後の費用も未解決。特定関数のCPU時間とは扱わない。
 
-比較基準はidentity `d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812`、revision 40。配送前に凍結した分母は題材1/2/3の**3/7/4**を維持する。3097行は67文字の関数宣言の部分保存であり、変数や入力言語の状態全体がDBにあるとは扱わない。未配送のまま分母に残す。最後の全3題材の実配送は**2/3・5/7・3/4（10/14）**で、今回が題材2/3を改善したとは言わない。全canonical候補/全元出力は14/14を表現できるので、今回の4欠落をDB不在や意味検索の時間切れと説明しない。
+比較基準はidentity `d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812`、revision 40。配送前に凍結した分母は題材1/2/3の**3/7/4**を維持する。3097行は67文字の関数宣言の部分保存であり、変数や入力言語の状態全体がDBにあるとは扱わない。未配送のまま分母に残す。最後の全3題材の実配送は**2/3・5/7・3/4（10/14）**で、今回が題材2/3を改善したとは言わない。独立に復元したcanonical basisと全元出力は14/14を表現できる。これは実入場した候補の全keyとの一致を監査した結果ではない。今回のservice domainは8,276行で独立basisと件数は等しいが、件数だけで同一性は断定しない。欠落をDB不在や意味検索の時間切れと決めつけない。
 
 全共有Factを新たに監査する前に既存の[全辺監査](docs/candidates/query-cache-llvm/support-summary.json)を照合した。共有28,616 Factでは、残る欠落3種類（tracked-input-languageは2題材で欠落）にsupportsは0件だった。同じ監査を繰り返して選択信号を増やしたことにしない。消費Fact 1,262件の強い依存0件も、共有索引のsupports全体が0件という意味へ広げない。identifier等の弱い辺を必要依存へ格上げしない。
 

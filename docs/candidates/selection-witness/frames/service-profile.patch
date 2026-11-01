@@ -1,0 +1,75 @@
+--- selection-witness-core/Eggshell/PublicationService.lean	2026-10-31 18:15:37
++++ selection-frames-core/Eggshell/PublicationService.lean	2026-10-31 21:24:10
+@@ -358,8 +358,13 @@
+         rows := rows.push ({owner := wanted.owner,indices := wanted.indices,rows := original} : OwnerPalette.Fetched)
+       parts := parts.push (part.source,({identity := request.access.identity,parts := rows} : OwnerPalette.Reply))
+     return toJson ({identities := requests.map (·.access.identity),parts} : SourceViewBatch.Reply)
++
++def profile (stage : String) (fields : List (String × Json)) : IO Unit := do
++  if (← IO.getEnv "EGGSHELL_TRACE_SERVICE_PROFILE") == some "1" then
++    Receipt.observe (some (← Receipt.fresh)) stage (Json.mkObj fields)
+ 
+ def sourcePlan (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
++  let started ← IO.monoMsNow
+   let requests ← batchRequests server secret payload
+   let lease ← IO.ofExcept (payload.getObjValAs? String "lease")
+   let query ← IO.ofExcept (payload.getObjVal? "selector" >>= fromJson? (α := SharedRangeAdapter.ServiceQuery))
+@@ -369,9 +374,11 @@
+       query.files.all (fun part => query.owners[part.family]? == some part.owner) &&
+       (hashDistinct (query.files.toList.map (·.family))).length == query.files.size do
+     throw (IO.userError "invalid prepared selector domain")
++  let validated ← IO.monoMsNow
+   server.palettes.withView lease (SourceViewBatch.key requests) fun view => do
+     checkedBatchView requests view
+     let deadline := min deadline view.deadline
++    let acquired ← IO.monoMsNow
+     let mut units := #[]
+     let mut pieces := []
+     let mut rows := #[]
+@@ -410,10 +417,22 @@
+         units := units.push {
+           shape := {family,ranges := unit.ranges},generic := some index,contextual := unit.contextual}
+       unless units.size ≤ 65536 do throw (IO.userError "prepared selector exceeds its unit budget")
++    let _ ← (← IO.mkRef (units,pieces,rows,headers)).get
++    let constructed ← IO.monoMsNow
+     let originals ← IO.ofExcept (PreparedSourceView.join rows headers)
+     let source ← IO.ofExcept (PreparedSourceView.domain originals headers query.frameCosts)
++    let source ← (← IO.mkRef source).get
++    let domainReady ← IO.monoMsNow
+     let some choice := SharedRangeAdapter.selectView query units pieces source |
+       throw (IO.userError "prepared original selector did not produce a valid selection")
++    let choice ← (← IO.mkRef choice).get
++    let selected ← IO.monoMsNow
++    profile "source-plan-profile" [("validationMs",toJson (validated-started)),
++      ("viewMs",toJson (acquired-validated)),("unitsMs",toJson (constructed-acquired)),
++      ("domainMs",toJson (domainReady-constructed)),("selectionMs",toJson (selected-domainReady)),
++      ("owners",toJson query.owners.size),("units",toJson units.size),("pieces",toJson pieces.length),
++      ("incomingRows",toJson rows.size),("sourceRows",toJson source.rows.size),
++      ("captureInput",toJson query.captureInput)]
+     unless (← IO.monoMsNow) < deadline do throw (IO.userError "prepared selector expired")
+     return Json.mkObj [("identities",toJson (requests.map (·.access.identity))),
+       ("lease",toJson lease),("choice",toJson choice)]
+@@ -451,6 +470,7 @@
+   return handle
+ 
+ def sourceBindings (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
++  let started ← IO.monoMsNow
+   let scope ← scopedSource server secret payload
+   let head ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := PageMap.Head))
+   let metadata ← IO.ofExcept (payload.getObjVal? "metadata" >>= fromJson? (α := CanonicalSource.Cache.Manifest))
+@@ -465,7 +485,14 @@
+   let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+   server.prepared.withReady pinned.snapshot path metadata deadline fun loaded _ => do
+     let some original := loaded.originals | throw (IO.userError "original bindings are not prepared")
+-    let result ← BindingPageScan.resolve original wanted (Std.HashSet.ofArray allowed) deadline
++    let acquired ← IO.monoMsNow
++    let report ← BindingPageScan.resolveReport original wanted (Std.HashSet.ofArray allowed) deadline
++    let result := report.resolved
++    let scanned ← IO.monoMsNow
++    profile "source-bindings-profile" [("prepareMs",toJson (acquired-started)),
++      ("scanMs",toJson (scanned-acquired)),("targets",toJson wanted.size),
++      ("pages",toJson report.pages),("leaves",toJson report.leaves),
++      ("bytes",toJson result.bytes),("complete",toJson result.complete)]
+     let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,"",head,metadata,.hit⟩
+     return toJson ({
+       identity := access.identity
