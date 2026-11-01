@@ -1,0 +1,763 @@
+{"topic": 2,
+ "shutdown":
+ [{"stopElapsedMs": 54,
+   "service": "session",
+   "processExited": true,
+   "pid": 24989,
+   "phase": "stopped",
+   "endpointRemoved": true,
+   "daemonExitCode": 0,
+   "acknowledged": true},
+  {"stopElapsedMs": 29,
+   "service": "publication",
+   "processExited": true,
+   "pid": 24899,
+   "phase": "stopped",
+   "endpointRemoved": true,
+   "daemonExitCode": 0,
+   "acknowledged": true}],
+ "serviceProfiles":
+ [{"stage": "stream-exchange-profile",
+   "receipt":
+   "f7508e73605f3cdf0aac4a931ccc75d61d6dcde67417e401f37d75062d5b71ac",
+   "pid": 25522,
+   "observedMs": 3406307455,
+   "data":
+   {"startedMs": 3406305650,
+    "sendMs": 0,
+    "responseBytes": 1850689,
+    "requestBytes": 421373,
+    "receiveMs": 1803,
+    "kind": "source-bindings",
+    "finishedMs": 3406307455,
+    "encodeMs": 2,
+    "connectMs": 0}},
+  {"stage": "render-automatic-profile",
+   "receipt":
+   "ad818e8beaa9175a3bdb763f49d87366e53a1f62e3e05cb8050bd46cb7993887",
+   "pid": 25522,
+   "observedMs": 3406315647,
+   "data":
+   {"startedMs": 3406308815,
+    "serviceAndFinishMs": 6496,
+    "prepareMs": 336,
+    "finishedMs": 3406315647}},
+  {"stage": "source-plan-profile",
+   "receipt":
+   "69480bf0261a8b187b0c918d633616d09ee62736c3cc44af9f79e5322dc57e7a",
+   "pid": 24899,
+   "observedMs": 3406311532,
+   "data":
+   {"viewMs": 0,
+    "validationMs": 8,
+    "unitsMs": 241,
+    "units": 8640,
+    "sourceRows": 8276,
+    "selectionMs": 1939,
+    "pieces": 15567,
+    "owners": 38,
+    "incomingRows": 9168,
+    "domainMs": 9,
+    "captureInput": false}},
+  {"stage": "stream-receive-profile",
+   "receipt":
+   "2bbf8c8f73adc3abfc3492ea03544e9bee4b3411b2bb63896089af339375c80a",
+   "pid": 25522,
+   "observedMs": 3406313599,
+   "data":
+   {"verifyMs": 493,
+    "utf8Ms": 12,
+    "startedMs": 3406311749,
+    "payloadMs": 12,
+    "kind": "source-fetch-many",
+    "headerMs": 1333,
+    "finishedMs": 3406313599,
+    "bytes": 6453100}},
+  {"stage": "stream-receive-profile",
+   "receipt":
+   "834ad4fcf9aba021f64074d811e82850144e1de35b0fb73e2f1fab1e7ed252a6",
+   "pid": 25522,
+   "observedMs": 3406307453,
+   "data":
+   {"verifyMs": 141,
+    "utf8Ms": 3,
+    "startedMs": 3406305652,
+    "payloadMs": 4,
+    "kind": "source-bindings",
+    "headerMs": 1653,
+    "finishedMs": 3406307453,
+    "bytes": 1850689}},
+  {"stage": "client-profile",
+   "receipt":
+   "53288234083c27396b18c920ed718e65250c3a120a760e6d7d127fe6dd1d977b",
+   "pid": 25522,
+   "observedMs": 3406307960,
+   "data":
+   {"validationMs": 1,
+    "startedMs": 3406307600,
+    "responseBytes": 587657,
+    "requestAndExchangeMs": 347,
+    "kind": "source-palettes",
+    "finishedMs": 3406307960,
+    "decodeMs": 12}},
+  {"stage": "stream-exchange-profile",
+   "receipt":
+   "7a7692123dcdd2831c28cc9e470cfb02ab4b367b557727078dda0e577ac68759",
+   "pid": 25522,
+   "observedMs": 3406311736,
+   "data":
+   {"startedMs": 3406309176,
+    "sendMs": 1,
+    "responseBytes": 1229793,
+    "requestBytes": 2318329,
+    "receiveMs": 2472,
+    "kind": "source-plan",
+    "finishedMs": 3406311736,
+    "encodeMs": 87,
+    "connectMs": 0}},
+  {"stage": "stream-exchange-profile",
+   "receipt":
+   "724a7211572dc8cc12cb2404169c91da8c1b615b78d5b8eeeaedfda341e8065b",
+   "pid": 25522,
+   "observedMs": 3406307946,
+   "data":
+   {"startedMs": 3406307600,
+    "sendMs": 0,
+    "responseBytes": 587657,
+    "requestBytes": 3440,
+    "receiveMs": 345,
+    "kind": "source-palettes",
+    "finishedMs": 3406307946,
+    "encodeMs": 0,
+    "connectMs": 1}},
+  {"stage": "client-profile",
+   "receipt":
+   "d6af7b8cee9a705673832f28d38680bf2992f5cfda9b21250337935d945f6755",
+   "pid": 25522,
+   "observedMs": 3406314045,
+   "data":
+   {"validationMs": 397,
+    "startedMs": 3406311748,
+    "responseBytes": 6453100,
+    "requestAndExchangeMs": 1854,
+    "kind": "source-fetch-many",
+    "finishedMs": 3406314044,
+    "decodeMs": 45}},
+  {"stage": "server-envelope-profile",
+   "receipt":
+   "4eb7ae7f62883936023413ea94cfdbbb892b7d8d61ebc905ac5df4ce16cfaa61",
+   "pid": 24899,
+   "observedMs": 3406307166,
+   "data":
+   {"startedMs": 3406305650,
+    "responseBytes": 1850689,
+    "requestBytes": 421373,
+    "receiveMs": 3,
+    "kind": "source-bindings",
+    "finishedMs": 3406307166,
+    "dispatchAndEncodeMs": 1510,
+    "decodeMs": 3,
+    "admitMs": 0}},
+  {"stage": "client-profile",
+   "receipt":
+   "e59c1d1d4d2e8041ed54c2d9bfd228c36feca17c90f0b91278e3fb30af692e68",
+   "pid": 25522,
+   "observedMs": 3406311743,
+   "data":
+   {"validationMs": 0,
+    "startedMs": 3406309175,
+    "responseBytes": 1229793,
+    "requestAndExchangeMs": 2561,
+    "kind": "source-plan",
+    "finishedMs": 3406311743,
+    "decodeMs": 7}},
+  {"stage": "render-client-profile",
+   "receipt":
+   "3e856e536ce7fbccf3a79478f6a30aff38492a871b1921746f66adeda06c47fd",
+   "pid": 25522,
+   "observedMs": 3406315646,
+   "data":
+   {"startedMs": 3406309151,
+    "sourceKeys": 7369,
+    "selectMs": 2568,
+    "queryMs": 24,
+    "materializeMs": 511,
+    "finishedMs": 3406315646,
+    "finishMs": 1090,
+    "fetchRequestMs": 2,
+    "fetchMs": 2297,
+    "choiceDecodeMs": 3}},
+  {"stage": "stream-exchange-profile",
+   "receipt":
+   "3cdb5a563cebc207d344593c0ad868a854419e0b4cd33f881593c10bf1b973d8",
+   "pid": 25522,
+   "observedMs": 3406307596,
+   "data":
+   {"startedMs": 3406307478,
+    "sendMs": 0,
+    "responseBytes": 244391,
+    "requestBytes": 3317,
+    "receiveMs": 118,
+    "kind": "source-records",
+    "finishedMs": 3406307596,
+    "encodeMs": 0,
+    "connectMs": 0}},
+  {"stage": "client-profile",
+   "receipt":
+   "71ffbb8c56a82068ee8ee4b7aa83b5c9a177b7379b116a9f1b0e42f7831ae10f",
+   "pid": 25522,
+   "observedMs": 3406307600,
+   "data":
+   {"validationMs": 0,
+    "startedMs": 3406307478,
+    "responseBytes": 244391,
+    "requestAndExchangeMs": 118,
+    "kind": "source-records",
+    "finishedMs": 3406307599,
+    "decodeMs": 3}},
+  {"stage": "server-envelope-profile",
+   "receipt":
+   "b79589625c365fff82348851da7db94aee8e272284235bb0ed22864929b43339",
+   "pid": 24899,
+   "observedMs": 3406307555,
+   "data":
+   {"startedMs": 3406307480,
+    "responseBytes": 244391,
+    "requestBytes": 3317,
+    "receiveMs": 0,
+    "kind": "source-records",
+    "finishedMs": 3406307555,
+    "dispatchAndEncodeMs": 75,
+    "decodeMs": 0,
+    "admitMs": 0}},
+  {"stage": "stream-receive-profile",
+   "receipt":
+   "cf12991929673207a7fa850bd0579e071261c714c8ef66c79886910adf7de039",
+   "pid": 25522,
+   "observedMs": 3406307595,
+   "data":
+   {"verifyMs": 18,
+    "utf8Ms": 1,
+    "startedMs": 3406307478,
+    "payloadMs": 1,
+    "kind": "source-records",
+    "headerMs": 97,
+    "finishedMs": 3406307595,
+    "bytes": 244391}},
+  {"stage": "stream-exchange-profile",
+   "receipt":
+   "51dca6ce4e99fab3f72d606357e06b3e30b93f61a37037ec717bb9a71923b988",
+   "pid": 25522,
+   "observedMs": 3406313602,
+   "data":
+   {"startedMs": 3406311748,
+    "sendMs": 0,
+    "responseBytes": 6453100,
+    "requestBytes": 34570,
+    "receiveMs": 1853,
+    "kind": "source-fetch-many",
+    "finishedMs": 3406313602,
+    "encodeMs": 0,
+    "connectMs": 1}},
+  {"stage": "server-envelope-profile",
+   "receipt":
+   "8a93b2519f93e4da86350bb11334d1e1262daaa95bedf9210e300bebad8ff8e2",
+   "pid": 24899,
+   "observedMs": 3406312592,
+   "data":
+   {"startedMs": 3406311749,
+    "responseBytes": 6453100,
+    "requestBytes": 34570,
+    "receiveMs": 0,
+    "kind": "source-fetch-many",
+    "finishedMs": 3406312592,
+    "dispatchAndEncodeMs": 842,
+    "decodeMs": 1,
+    "admitMs": 0}},
+  {"stage": "stream-receive-profile",
+   "receipt":
+   "e9a190c5d1a1337885796e08e445897a32653e45ac596707a3a3576e9f1b6a22",
+   "pid": 25522,
+   "observedMs": 3406311735,
+   "data":
+   {"verifyMs": 93,
+    "utf8Ms": 2,
+    "startedMs": 3406309264,
+    "payloadMs": 3,
+    "kind": "source-plan",
+    "headerMs": 2372,
+    "finishedMs": 3406311734,
+    "bytes": 1229793}},
+  {"stage": "server-envelope-profile",
+   "receipt":
+   "66869c74924f432206a6c30c1b881932c07951aabe28ba595fe3ab9358185752",
+   "pid": 24899,
+   "observedMs": 3406307853,
+   "data":
+   {"startedMs": 3406307601,
+    "responseBytes": 587657,
+    "requestBytes": 3440,
+    "receiveMs": 1,
+    "kind": "source-palettes",
+    "finishedMs": 3406307853,
+    "dispatchAndEncodeMs": 251,
+    "decodeMs": 0,
+    "admitMs": 0}},
+  {"stage": "source-bindings-profile",
+   "receipt":
+   "a4ed117b35a21faa68854d551ceae30073a6e114ab823b264e5e2ecd69106e46",
+   "pid": 24899,
+   "observedMs": 3406307153,
+   "data":
+   {"targets": 2139,
+    "scanMs": 1496,
+    "prepareMs": 1,
+    "pages": 2161,
+    "leaves": 2062,
+    "complete": true,
+    "bytes": 2831056}},
+  {"stage": "stream-receive-profile",
+   "receipt":
+   "837fe84fe5c9e4fb520055a563ebb0f29704bea86db5d8a924c78b110852d4eb",
+   "pid": 25522,
+   "observedMs": 3406307945,
+   "data":
+   {"verifyMs": 45,
+    "utf8Ms": 1,
+    "startedMs": 3406307601,
+    "payloadMs": 1,
+    "kind": "source-palettes",
+    "headerMs": 297,
+    "finishedMs": 3406307945,
+    "bytes": 587657}},
+  {"stage": "client-profile",
+   "receipt":
+   "f7b9114afdd9092030013acdb6819bc0a75eb4bcc4cad418c15c1f2b631e8d53",
+   "pid": 25522,
+   "observedMs": 3406307474,
+   "data":
+   {"validationMs": 4,
+    "startedMs": 3406305648,
+    "responseBytes": 1850689,
+    "requestAndExchangeMs": 1807,
+    "kind": "source-bindings",
+    "finishedMs": 3406307474,
+    "decodeMs": 15}},
+  {"stage": "server-envelope-profile",
+   "receipt":
+   "9b2de80632ac466885ebac60d60cda1e86a8723cb724f32bd68a159dc0c8d983",
+   "pid": 24899,
+   "observedMs": 3406311541,
+   "data":
+   {"startedMs": 3406309177,
+    "responseBytes": 1229793,
+    "requestBytes": 2318329,
+    "receiveMs": 92,
+    "kind": "source-plan",
+    "finishedMs": 3406311540,
+    "dispatchAndEncodeMs": 2208,
+    "decodeMs": 63,
+    "admitMs": 0}}],
+ "result":
+ {"sameParentBody": false,
+  "repetition": "0",
+  "nativeDeliveryAudit":
+  {"source":
+   {"root":
+    {"rows": 131485,
+     "offset": 50588562,
+     "last": "workSurfaces:95:0",
+     "height": 3,
+     "first": "all:0",
+     "checksum":
+     "5cdf41688a30c4a9e5dad692ca4ce519bde3fd5351e79afa44c22165fa0f8718",
+     "bytes": 2665},
+    "revision": 40,
+    "identity":
+    "d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812",
+    "bytes": 50591227,
+    "authority":
+    "[\"atom\",[110,101,119,45,110,97,116,105,118,101,45,115,101,101,100,45,50]]"},
+   "retainedActualBody": true,
+   "requiredDelivery":
+   {"targetPercent": 95,
+    "targetMet": true,
+    "missing": [],
+    "initiallyUnavailable": ["tracked-input-language"],
+    "eligible": 6,
+    "delivered": 6},
+   "newHookCalls": 0,
+   "latencySample": false,
+   "frozenEvidence":
+   {"units":
+    [{"names": ["toolchain-cache-key"],
+      "alternatives":
+      [{"subject":
+        {"original":
+         {"original":
+          {"work": "v11297236551237525391",
+           "content":
+           "8717fcd0ef852e76bbe3df63207e1fca26b8f07ccf553544d07a8b3f63305cb9",
+           "chars": 16861}}},
+        "last": 4349,
+        "first": 4056},
+       {"subject":
+        {"file":
+         {"file":
+          {"relative": "clang/lib/Driver/Driver.cpp",
+           "fingerprint":
+           "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+           "bytes": 303314}}},
+        "last": 7106,
+        "first": 7101}]},
+     {"names": ["complete-hlsl-branch-scope"],
+      "alternatives":
+      [{"subject":
+        {"original":
+         {"original":
+          {"work": "v11297236551237525391",
+           "content":
+           "8717fcd0ef852e76bbe3df63207e1fca26b8f07ccf553544d07a8b3f63305cb9",
+           "chars": 16861}}},
+        "last": 12413,
+        "first": 11891},
+       {"subject":
+        {"file":
+         {"file":
+          {"relative": "clang/lib/Driver/Driver.cpp",
+           "fingerprint":
+           "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+           "bytes": 303314}}},
+        "last": 7252,
+        "first": 7244}]},
+     {"names": ["mode-before-parse-and-config"],
+      "alternatives":
+      [{"subject":
+        {"file":
+         {"file":
+          {"relative": "clang/lib/Driver/Driver.cpp",
+           "fingerprint":
+           "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+           "bytes": 303314}}},
+        "last": 1466,
+        "first": 1450},
+       {"subject":
+        {"original":
+         {"original":
+          {"work": "v17818128585098212818",
+           "content":
+           "6ea27c145cf7e3bd619e1cfd28681d7d7b492a46ffe5a04834276bcb62c2a308",
+           "chars": 45349}}},
+        "last": 25626,
+        "first": 24822},
+       {"subject":
+        {"original":
+         {"original":
+          {"work": "v16322101741795144893",
+           "content":
+           "5b85381a9b76ee807ae586373569e11e70ef83e05d9d8cfdc79bd3dea75f7f60",
+           "chars": 9847}}},
+        "last": 1167,
+        "first": 363}]},
+     {"names": ["clang-cl-pass-through-reparse"],
+      "alternatives":
+      [{"subject":
+        {"file":
+         {"file":
+          {"relative": "clang/lib/Driver/Driver.cpp",
+           "fingerprint":
+           "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+           "bytes": 303314}}},
+        "last": 1497,
+        "first": 1479},
+       {"subject":
+        {"original":
+         {"original":
+          {"work": "v16322101741795144893",
+           "content":
+           "5b85381a9b76ee807ae586373569e11e70ef83e05d9d8cfdc79bd3dea75f7f60",
+           "chars": 9847}}},
+        "last": 2771,
+        "first": 1758},
+       {"subject":
+        {"original":
+         {"original":
+          {"work": "v17818128585098212818",
+           "content":
+           "6ea27c145cf7e3bd619e1cfd28681d7d7b492a46ffe5a04834276bcb62c2a308",
+           "chars": 45349}}},
+        "last": 27230,
+        "first": 26217}]},
+     {"names": ["dumpmachine-reports-toolchain-triple"],
+      "alternatives":
+      [{"subject":
+        {"file":
+         {"file":
+          {"relative": "clang/lib/Driver/Driver.cpp",
+           "fingerprint":
+           "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+           "bytes": 303314}}},
+        "last": 2573,
+        "first": 2570},
+       {"subject":
+        {"original":
+         {"original":
+          {"work": "v1105537842393681289",
+           "content":
+           "41af67b140ddb79e9f4e0f72c1c1f417e646795eb87879ccc05d455e13de1ba0",
+           "chars": 10220}}},
+        "last": 639,
+        "first": 440}]},
+     {"names": ["default-toolchain-selection"],
+      "alternatives":
+      [{"subject":
+        {"file":
+         {"file":
+          {"relative": "clang/lib/Driver/Driver.cpp",
+           "fingerprint":
+           "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+           "bytes": 303314}}},
+        "last": 1700,
+        "first": 1699},
+       {"subject":
+        {"original":
+         {"original":
+          {"work": "v17818128585098212818",
+           "content":
+           "6ea27c145cf7e3bd619e1cfd28681d7d7b492a46ffe5a04834276bcb62c2a308",
+           "chars": 45349}}},
+        "last": 38058,
+        "first": 37931},
+       {"subject":
+        {"original":
+         {"original":
+          {"work": "v16322101741795144893",
+           "content":
+           "5b85381a9b76ee807ae586373569e11e70ef83e05d9d8cfdc79bd3dea75f7f60",
+           "chars": 9847}}},
+        "last": 3972,
+        "first": 3845}]}],
+    "initiallyUnavailable": ["tracked-input-language"]},
+   "bodySha256":
+   "d747d178ecfb1252d146239533f76f8fdf4caa18c4866b2681728268b35e6094",
+   "availableEvidence":
+   {"units":
+    [{"partialNames": [],
+      "names": ["toolchain-cache-key"],
+      "alternatives":
+      [[{"subject":
+         {"original":
+          {"original":
+           {"work": "v11297236551237525391",
+            "content":
+            "8717fcd0ef852e76bbe3df63207e1fca26b8f07ccf553544d07a8b3f63305cb9",
+            "chars": 16861}}},
+         "last": 4349,
+         "first": 4056}],
+       [{"subject":
+         {"file":
+          {"file":
+           {"relative": "clang/lib/Driver/Driver.cpp",
+            "fingerprint":
+            "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+            "bytes": 303314}}},
+         "last": 7106,
+         "first": 7101}]]},
+     {"partialNames": ["tracked-input-language"],
+      "names": ["tracked-input-language"],
+      "alternatives":
+      [[{"subject":
+         {"file":
+          {"file":
+           {"relative": "clang/lib/Driver/Driver.cpp",
+            "fingerprint":
+            "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+            "bytes": 303314}}},
+         "last": 3097,
+         "first": 3097}]]},
+     {"partialNames": [],
+      "names": ["complete-hlsl-branch-scope"],
+      "alternatives":
+      [[{"subject":
+         {"original":
+          {"original":
+           {"work": "v11297236551237525391",
+            "content":
+            "8717fcd0ef852e76bbe3df63207e1fca26b8f07ccf553544d07a8b3f63305cb9",
+            "chars": 16861}}},
+         "last": 12413,
+         "first": 11891}],
+       [{"subject":
+         {"file":
+          {"file":
+           {"relative": "clang/lib/Driver/Driver.cpp",
+            "fingerprint":
+            "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+            "bytes": 303314}}},
+         "last": 7252,
+         "first": 7244}]]},
+     {"partialNames": [],
+      "names": ["mode-before-parse-and-config"],
+      "alternatives":
+      [[{"subject":
+         {"file":
+          {"file":
+           {"relative": "clang/lib/Driver/Driver.cpp",
+            "fingerprint":
+            "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+            "bytes": 303314}}},
+         "last": 1466,
+         "first": 1450}],
+       [{"subject":
+         {"original":
+          {"original":
+           {"work": "v17818128585098212818",
+            "content":
+            "6ea27c145cf7e3bd619e1cfd28681d7d7b492a46ffe5a04834276bcb62c2a308",
+            "chars": 45349}}},
+         "last": 25626,
+         "first": 24822}],
+       [{"subject":
+         {"original":
+          {"original":
+           {"work": "v16322101741795144893",
+            "content":
+            "5b85381a9b76ee807ae586373569e11e70ef83e05d9d8cfdc79bd3dea75f7f60",
+            "chars": 9847}}},
+         "last": 1167,
+         "first": 363}]]},
+     {"partialNames": [],
+      "names": ["clang-cl-pass-through-reparse"],
+      "alternatives":
+      [[{"subject":
+         {"file":
+          {"file":
+           {"relative": "clang/lib/Driver/Driver.cpp",
+            "fingerprint":
+            "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+            "bytes": 303314}}},
+         "last": 1497,
+         "first": 1479}],
+       [{"subject":
+         {"original":
+          {"original":
+           {"work": "v16322101741795144893",
+            "content":
+            "5b85381a9b76ee807ae586373569e11e70ef83e05d9d8cfdc79bd3dea75f7f60",
+            "chars": 9847}}},
+         "last": 2771,
+         "first": 1758}],
+       [{"subject":
+         {"original":
+          {"original":
+           {"work": "v17818128585098212818",
+            "content":
+            "6ea27c145cf7e3bd619e1cfd28681d7d7b492a46ffe5a04834276bcb62c2a308",
+            "chars": 45349}}},
+         "last": 27230,
+         "first": 26217}]]},
+     {"partialNames": [],
+      "names": ["dumpmachine-reports-toolchain-triple"],
+      "alternatives":
+      [[{"subject":
+         {"file":
+          {"file":
+           {"relative": "clang/lib/Driver/Driver.cpp",
+            "fingerprint":
+            "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+            "bytes": 303314}}},
+         "last": 2573,
+         "first": 2570}],
+       [{"subject":
+         {"original":
+          {"original":
+           {"work": "v1105537842393681289",
+            "content":
+            "41af67b140ddb79e9f4e0f72c1c1f417e646795eb87879ccc05d455e13de1ba0",
+            "chars": 10220}}},
+         "last": 639,
+         "first": 440}]]},
+     {"partialNames": [],
+      "names": ["default-toolchain-selection"],
+      "alternatives":
+      [[{"subject":
+         {"file":
+          {"file":
+           {"relative": "clang/lib/Driver/Driver.cpp",
+            "fingerprint":
+            "a460990e036a141e51648862f350ea7be127e4b80de74cceeaa98316f828c3c6",
+            "bytes": 303314}}},
+         "last": 1700,
+         "first": 1699}],
+       [{"subject":
+         {"original":
+          {"original":
+           {"work": "v17818128585098212818",
+            "content":
+            "6ea27c145cf7e3bd619e1cfd28681d7d7b492a46ffe5a04834276bcb62c2a308",
+            "chars": 45349}}},
+         "last": 38058,
+         "first": 37931}],
+       [{"subject":
+         {"original":
+          {"original":
+           {"work": "v16322101741795144893",
+            "content":
+            "5b85381a9b76ee807ae586373569e11e70ef83e05d9d8cfdc79bd3dea75f7f60",
+            "chars": 9847}}},
+         "last": 3972,
+         "first": 3845}]]}],
+    "absent": []},
+   "availableDelivery":
+   {"targetPercent": 98,
+    "targetMet": true,
+    "partialNames": ["tracked-input-language"],
+    "missing": [],
+    "eligible": 7,
+    "delivered": 7,
+    "absent": []}},
+  "elapsedMs": 20595,
+  "bodySha256":
+  "d747d178ecfb1252d146239533f76f8fdf4caa18c4866b2681728268b35e6094",
+  "availableDelivery":
+  {"targetPercent": 98,
+   "targetMet": true,
+   "partialNames": ["tracked-input-language"],
+   "missing": [],
+   "eligible": 7,
+   "delivered": 7,
+   "absent": []},
+  "arm": "candidate",
+  "answeringModelCalls": 0,
+  "adopted": false},
+ "queueAfterShutdown":
+ {"tools": 0,
+  "modelFreeStopNotInvoked": true,
+  "inFlight": 0,
+  "entries": [["deferred", 0], ["checkpoints", 0]],
+  "closed": false},
+ "bodyReference":
+ "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/fixed-frame-price/actual/topic-2/body.txt",
+ "bodyChars": 497859,
+ "bodyBytes": 499717,
+ "beforeGold":
+ {"sourceFiles":
+  [["d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812.pages",
+    "83a365c2c7a33b30ec4f1e0d0a327eb5bd26153091ca2075faaf3be95dfa9a1b"],
+   ["head", "c9f76191cb46224f00c93e9196eab9a005e11b0cd98fc9746534dd73bb57b141"],
+   ["publisher.guard",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"],
+   ["writer",
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]],
+  "runtime":
+  {"sha256": "a109b39d9911fbfcc03ba8ea3133b81958595373998857b593dac713d147dadc",
+   "generation":
+   "72778bba78f4bece7d16482e11428eccbff6ffcb0a359ec6ba00fb12b687a8d1",
+   "binary":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/fixed-frame-price-runtime-build/StudyMain"},
+  "questionSha256":
+  "38a1591cc157b89e975f7d2f171c0f2163d3c50154d3adcec928473c58e9b61b",
+  "goldRead": false,
+  "elapsedMs": 20595,
+  "bodySha256":
+  "d747d178ecfb1252d146239533f76f8fdf4caa18c4866b2681728268b35e6094"}}

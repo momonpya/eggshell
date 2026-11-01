@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-10-31更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-02更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -29,42 +29,25 @@
 
 ## 現在地と次の順序
 
-2026-11-02の最新位置は[実フックの転送・選択を分けた監査](docs/transport-and-selection-audit.md)である。通常の実フックは**13,874 ms・必要根拠2/3**。同じpublisherを二つの独立chatで使って13,847/12,451 msだった。全て親と本文が全byte一致し、共有publisherを確認したが、80接続やp99の実証ではない。新seed・新DB・回答モデルは0、変更は未採用。
+2026-11-02。[パケット価格の契約監査](docs/packet-price-contract.md)を実施した。全体goalはactive。現行本体とREADME実績への変更は未採用、回答モデル・新seedは0。
 
-原文bindingのclient request/exchange 1,773 msに対し、JSON復号14 ms、後検査5 ms。socket payload受信自体は各1〜5 msで、大きいJSONの復号や通信だけを主因とする説明は支持されなかった。service内のbinding走査1,465 ms、unit構築245 ms、domain9 ms、選択1,033 ms。render準備339 ms、fetch1,119 ms、materialize142 ms、finish128 ms。包含関係のある時間を独立のCPU時間として足さない。以前の「原文対応4.3秒」「抽出描画5秒」という広い受領時刻の間隔を、特定関数のCPU時間と扱わない。共有PagePoolの1,024×2ページ枠に対し2,161ページの走査があり、反復追い出しの可能性はあるが、hit/miss未計測のため確定扱いしない。新しいquery cacheやfixture件数に合わせた容量増を先にしない。
+前段では、入場済みownerの独立原文basis 8,276行と実候補domainを照合し、題材1の67文字の宣言は候補4件まで存在するが120,000 charsを使い切った実選択で落ちたと確認した。[転送・選択の監査](docs/transport-and-selection-audit.md)。この欠落を保存破損や時間切れに戻さない。凍結した分母3/7/4を維持し、67文字を入力言語の状態全体の保存とは扱わない。
 
-分割observerはnativeで往復・欠損/別ID/長さ不正/重複の拒否・通常writerを検査し、実フックでも20,515 msで同じ本文を配送した。8MiBの1frame上限と32MiBの組立て上限は維持する。診断時間を通常のフック時間に混ぜない。記録から実選択を完全再現し、8,276原文node、15,567 cue piece、11,448 offerの費用・重み・原文応答を照合した。独立basisの入場済みownerに属する8,276行のうち候補domain外は0、全原文nodeに候補と正のbase cueがあった。支払った原文と実応答は一致し、credit済みなのに実本文で確認できない既知原文は0件だった。
+別の隔離実験として500,000 chars/512,000 bytesを一つだけ事前固定した。そこで、同じ原文の表示方式による結合拒否、JSON位置を欠く価格cacheのalias、価格付け後の再分割、空テンプレートによる外枠の過少計上が露出した。raw原文の重なり一致・scope/envelopeを保ち、whole priced fragmentの組立てと全入場WorkGraphからの一度の外枠計上へ修正した。外枠の不足は26,366→27,614 charsの1,248 charsで、6所有者の断片価格は全て一致した。上限へ不足分を足す修正はしていない。
 
-残る題材1の67文字の宣言はnode3533、base最良順位1・全cue最良順位0、候補4件まで存在したが、予算配分で未選択だった。4件とも最終時点で未被覆の価値を持ち、残予算には入らない。実選択は120,000 charsの枠を使い切っていた。今回は原文や座標の欠損・候補への入場・選択後の消失・誤った重複creditを原因としない。分母3/7/4は変えず、67文字を入力言語の状態全体の保存へ広げない。現在の代理目的で必要性を見分ける契約が未解決であり、重み・予約・solver等の停止済み案へ戻らない。
+最新隔離候補の実フック結果（同じR40・新session・モデルなし）:
 
-次は、この選択段階の確定結果を基準に、既存の強い支持/消費と現在のWork要求を対応させる公開入力がどこにあるかを確認する。ToolEvent/PendingTurnには各操作の意味的な目的のfieldがなく、現行hookが取得するassistant文はStopの最終回答である。近い時刻やidentifierの一致で目的を捏造しない。必要性を区別する新しい情報が確認できないまま、別の重みへ替える反復を再開しない。速度側は既存PagePoolのhit/missと実working setを測ってから、検証済みsnapshot/leaseの不変条件から直接読出しの等価性を証明する。権限・snapshot・digest・鮮度を証明なしに外さない。
+- 題材1: 3/3、20882 ms。
+- 題材2: 7/7、20595 ms。
+- 題材3: 4/4、20843 ms。
 
-終了した診断build二つ・生ログ・受領断片等314,201,709 logical bytesを削除した。保護対象10件のSHAは前後で不変、archiveはない。98%配送、総token改善、品質維持、80人の継続利用は未達/未検証。採用条件と4GiB未満のメモリ制約は維持する。前回の[平衡木による読出し候補](docs/certified-read-plans.md)も温まった実readerで改善せず未採用であり、積み増さない。
+[実本文とbefore-gold seal](docs/candidates/fixed-frame-price/result.json)、[一つにまとめたproduct差分](docs/candidates/fixed-frame-price/candidate.patch)。実行していない題材・2周目を成功に含めない。原文同一性・価格キー復元・whole fragment保存・外枠価格のテンプレート非依存性・データ価格の加算はLeanで検査した。最大graph描画が全部分選択を上から押さえる接続の完全な証明は未了で、最終実wireのreconcileDeliveryは外していない。
 
-直前の位置は[準備済みの原文を使う前に窓を作らない隔離候補](docs/deferred-evidence-focus.md)の実接続検査終了である。entryと周辺観測で、出版済みrecipe/shell/native原文を使う早期returnの前にも従来の窓を作り質問を照合していた。使われない計算を2か所で分岐の後へ移した。必要なfallbackとFamilyの窓生成、元のメタデータ、[同じbest候補の値を保持する変更](docs/carried-selection-value.md)は維持した。別の窓索引やquery-range cacheは追加していない。
+次はこのruntimeを固定した新seedを作り、現行と候補が同じcheckpointを開いて保存・索引・配送を完了できることを確かめる。モデル比較は初回/履歴あり×題材1/2/3、事前固定した同数複数反復で行う。配送の成功だけで本体へ採用しない。検索中に背景flushがsession state lockを待つ警告は、終了後のqueue/未処理toolが0でも解決済みとはしない。80人の保存並行性の課題として追跡する。
 
-直前のCarriedSelectionValueでは、任意のProblem・初期Selection・候補順について元関数全体との等式をLeanで証明し、呼出し元のVerifiedWinnerCoverageを実際に再コンパイルした。質問依存のbenefitは出版時の固定値にせず、その問い合わせ内で保持する。100合成例で選択列が一致し、2,048 node/8,640 offerの合成例は元2.727〜2.752秒・候補6.89〜7.04 msだった。この倍率を実DB/フックへ外挿しない。
+速度は前段の通常実フック13,874 ms、同一publisherの2chatで13,847/12,451 msだった。socket受信1〜5 ms/JSON復号2〜15 msだけを主因にしない。既存PagePoolは二世代各1,024ページに対し2,161ページを訪問したが、hit/missと物理working set未計測のためcache増量はしていない。出版差分の共有、不変snapshot/lease、scope・鮮度・digestの検査を保ち、別KV層やfixture専用cacheを積まない。80人×8時間の負荷・数秒化・総token改善・品質維持は未達/未検証である。
 
-runtime `a20a4154d826360e956b60732ef4d77908befce32548ef7a1ac9d84a34af2784`の題材1・新規session一回の実フックは**13,370 ms・必要根拠2/3**。全本文SHA `098a283d…`は保持した親と一致する。親の14,106 msは両側をsampleした別の単発診断であり、今回との速度改善率/p99を主張しない。題材2/3・2周目・総token・品質は今回未測定、新seed・回答モデル0、本体未採用。
-
-窓の変更は分岐単位の等式をLeanで検査した。実際の巨大なprepareAutomatic全体を直接比較する試行は、メモリ・再帰深度・heartbeatの制限に当たり、最後は集計3.5 GiBのguardで止めた。全関数の証明は未成功であり、上限を上げたり同じ直接比較を再試行したりしない。複製した参照関数は候補から除去した。以前のCarriedSelectionValueの任意Problemに対する全関数証明とは区別する。
-
-今回の診断はraw R40から派生物を作り、シナプス28,616 Factの準備65,841 ms、warm 72,388 msだった。既存の数値準備を再利用し、元窓の新規埋め込みは0。これは初期の診断準備であり、日常の追加保存時間ではない。親で準備済みDBをcloneした再確認warm 336 msとも区別する。元の[出版メタデータの接続](docs/prepared-source-view.md)、[bindingのbinary化と共有走査](docs/project-metadata.md)は維持したが、広いbinding要求や初期出版のwrite amplificationは未解決である。
-
-native依存はruntime203/helper212 objectが整合し、終了ACK・process終了・endpoint削除を確認した。終了した試行DB/cache/helper/full logs等519,590,934 logical bytesを削除し、archiveは作っていない。保護原典/runtimeのSHAは削除前後で不変、利用中native入力758件を保持した。今回の数値discovery/focusは707/446 msでcompleted。受領時刻のnominations→canonical-source-inputは4,800 ms、delivery-domain→selection-planは3,658 msであり、検索後の費用も未解決。特定関数のCPU時間とは扱わない。
-
-比較基準はidentity `d6ff6dad444913158edfc86f2a3bd24212835619ec78e5d4da0e3afe1789a812`、revision 40。配送前に凍結した分母は題材1/2/3の**3/7/4**を維持する。3097行は67文字の関数宣言の部分保存であり、変数や入力言語の状態全体がDBにあるとは扱わない。未配送のまま分母に残す。最後の全3題材の実配送は**2/3・5/7・3/4（10/14）**で、今回が題材2/3を改善したとは言わない。独立に復元したcanonical basisと全元出力は14/14を表現できる。これは実入場した候補の全keyとの一致を監査した結果ではない。今回のservice domainは8,276行で独立basisと件数は等しいが、件数だけで同一性は断定しない。欠落をDB不在や意味検索の時間切れと決めつけない。
-
-全共有Factを新たに監査する前に既存の[全辺監査](docs/candidates/query-cache-llvm/support-summary.json)を照合した。共有28,616 Factでは、残る欠落3種類（tracked-input-languageは2題材で欠落）にsupportsは0件だった。同じ監査を繰り返して選択信号を増やしたことにしない。消費Fact 1,262件の強い依存0件も、共有索引のsupports全体が0件という意味へ広げない。identifier等の弱い辺を必要依存へ格上げしない。
-
-次の順序は次に限定する。
-
-1. 今回除いた早期return前の窓生成を再実装しない。Familyとrefocus側の残る窓処理は別であり、必要なfallbackを消さない。新しい窓索引やquery-range cacheを足さず、現在の呼出し元と既存の窓/owner索引を確認して、共通の質問依存計算を一度にする。全候補の文字列が現在も必須であるかを先に確かめる。数値discovery/focusが完了していた親の746/455 msを、検索全体の時間へ広げない。
-2. publisherのbinding読出し・検証、冷えたページのdigest、問題構築/選択の責任を分ける。digestの標本だけで同じページを再検証したとは言わず、既存PagePoolの共有・lifetime・hit/missを確認する。別KV層を盲目的に足さない。変更差分だけ準備すること、原文ACKと派生処理の分離、旧pin、read-only、複数DB、権限、サービス全体のメモリ上限を保つ。
-3. 必要な仕事と根拠の対応を使う選択契約は未解決のまま保持する。到達、候補の和集合、代理点数、実選択を区別する。3辺のidentifier一致を強い必要依存へ昇格させず、元Allにない各操作の目的を捏造しない。[境界の監査](docs/selection-contract-reset.md)、[Work依存の実データ](docs/work-evidence-requirements.md)、保存済みの全共有Factの支持と欠落の分類を先に参照する。新しい選択変更には、既存の停止済み案と異なる観測可能な信号を先に定義する。停止した重み・予約・max-min・MIP・構文/record閉包・call→definition・群512・位置gap・RecordIncidenceの再調整へ戻らない。
-4. 回答モデルは停止を維持する。意味のある一連の変更の配送監査後、同じruntimeの新seedから題材1/2/3と2周目を実行する。採用には同じsnapshot/source/質問/model/effort/harness、事前固定した同数複数反復、cached inputと失敗を含む入力+出力総token改善、品質維持、期限を要する。本文一致・証明・cache hit・配送増だけで本体やREADME実績へ入れない。
-
-80人×8時間の継続利用・必要根拠98%・30秒のgoalはactive。数秒化・総token改善・品質維持も未達/未検証。過去の成功/失敗はdocs/candidatesとGit履歴へ残すが、終了したDB/cache/build/logを実験記録のために保持したり圧縮archiveへ移したりしない。元source・利用中の記憶・必要なモデル/対照runtimeは保持する。
+終了した診断のDB/cache/生ログ/旧実行体を削除し、圧縮archiveは作っていない。原典2 snapshotと保護runtime計10件のSHAは削除前後不変。[削除記録](docs/candidates/fixed-frame-price/cleanup.json)。現在の対照DBと必要なnative object/interfaceは保持する。以下の共有実用化契約と最新AGENTSの採用条件は変更しない。
 
 ## 共有実用化までの契約
 

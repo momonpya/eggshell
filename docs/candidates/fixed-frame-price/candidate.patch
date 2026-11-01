@@ -1,0 +1,285 @@
+diff --git a/Eggshell/Config.lean b/Eggshell/Config.lean
+index 636fc98..d06629c 100644
+--- a/Eggshell/Config.lean
++++ b/Eggshell/Config.lean
+@@ -9,7 +9,7 @@ namespace Eggshell.Config
+ 
+ /-- Configured native transport ceiling. The source-driven packet target may
+ be smaller; this is not a quota or an immutable platform restriction. -/
+-def nativeHandoffBytes : Nat := 128000
++def nativeHandoffBytes : Nat := 512000
+ 
+ structure Egg where
+   name : String
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 130f6cb..85a7c6e 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -3995,7 +3995,7 @@ never rewritten; an alternative may add previously omitted ranges. -/
+ def DeliveryFragment.agrees (next prior : DeliveryFragment) : Prop :=
+   let first := max next.first prior.first
+   let last := min (next.first + next.original.length) (prior.first + prior.original.length)
+-  first < last → next.decoded = prior.decoded ∧
++  first < last →
+     ((next.original.drop (first - next.first)).take (last - first)).copy =
+       ((prior.original.drop (first - prior.first)).take (last - first)).copy
+ 
+@@ -4013,6 +4013,73 @@ instance (next prior : ContextDelivery) : Decidable (next.sameEnvelope prior) :=
+   unfold ContextDelivery.sameEnvelope
+   infer_instance
+ 
++/-- Source identity and the identity of a priced presentation are different.
++Every field used by fragment rendering belongs to this price key. -/
++structure RenderFragmentKey where
++  first : Nat
++  original : String
++  decoded : Bool
++  path : Option (List JsonScalars.Segment)
++  compact : Bool
++  deriving DecidableEq
++
++instance : BEq RenderFragmentKey := ⟨fun a b => decide (a = b)⟩
++instance : LawfulBEq RenderFragmentKey where
++  rfl := by intro value; change decide (value = value) = true; simp
++  eq_of_beq := by intro a b same; change decide (a = b) = true at same; exact of_decide_eq_true same
++-- Path equality is checked by BEq. Omitting it from the hash changes only
++-- collision work, and avoids serializing a JSON path to build a cache key.
++instance : Hashable RenderFragmentKey := ⟨fun key => hash (key.first,key.original,key.decoded,key.compact)⟩
++
++def DeliveryFragment.renderKey (fragment : DeliveryFragment) (compact : Bool) : RenderFragmentKey :=
++  ⟨fragment.first,fragment.original,fragment.decoded,fragment.path,compact⟩
++def RenderFragmentKey.fragment (key : RenderFragmentKey) : DeliveryFragment :=
++  ⟨key.first,key.original,key.decoded,key.path⟩
++def RenderFragmentKey.text (key : RenderFragmentKey) : String := key.fragment.render key.compact
++
++theorem fragment_render_key_exact (fragment : DeliveryFragment) (compact : Bool) :
++    (fragment.renderKey compact).fragment = fragment ∧
++    (fragment.renderKey compact).text = fragment.render compact := by
++  cases fragment
++  exact ⟨rfl,rfl⟩
++
++/-- Deduplicate whole, already-priced pieces. Assembly must not cut them and
++manufacture new captions after their prices have been used by the selector. -/
++def pricedFragments (compact : Bool) (fragments : List DeliveryFragment) : List DeliveryFragment :=
++  ((hashDistinct (fragments.map (·.renderKey compact))).map (·.fragment)).mergeSort (fun a b => a.first ≤ b.first)
++
++theorem priced_fragments_mem (compact : Bool) (fragments : List DeliveryFragment) (fragment : DeliveryFragment) :
++    fragment ∈ pricedFragments compact fragments ↔ fragment ∈ fragments := by
++  unfold pricedFragments
++  rw [List.mem_mergeSort]
++  constructor
++  · intro present
++    obtain ⟨key,known,same⟩ := List.mem_map.mp present
++    obtain ⟨original,present,produced⟩ := List.mem_map.mp ((HashDistinct.mem key _).mp known)
++    rw [← produced] at same
++    have restored := (fragment_render_key_exact original compact).1
++    rw [restored] at same
++    exact same ▸ present
++  · intro present
++    apply List.mem_map.mpr
++    refine ⟨fragment.renderKey compact,(HashDistinct.mem _ _).mpr (List.mem_map.mpr ⟨fragment,present,rfl⟩),?_⟩
++    exact (fragment_render_key_exact fragment compact).1
++
++def checkedPricedContextAssembly (prior offered : ContextDelivery) : Option
++    {result : ContextDelivery // result.sameEnvelope prior ∧
++      ∀ fragment ∈ prior.fragments, fragment ∈ result.fragments} :=
++  if offered.sameEnvelope prior && prior.compactCaptions == offered.compactCaptions &&
++      prior.fragments.all (fun fragment => offered.fragments.all (fun next => decide (next.agrees fragment))) then
++    let result := {prior with
++      planKey := offered.planKey
++      cues := prior.cues ++ offered.cues
++      fragments := pricedFragments prior.compactCaptions (prior.fragments ++ offered.fragments)}
++    some ⟨result,by simp [result,ContextDelivery.sameEnvelope],by
++      intro fragment present
++      exact (priced_fragments_mem _ _ _).mpr (List.mem_append_left _ present)⟩
++  else none
++
++
+ /-- Existing fragments stay intact. Only original prepared ranges absent
+ from them are added; a different chunk layout cannot prevent enrichment.
+ Overlapping bytes and source envelopes must agree before any addition. -/
+@@ -5274,7 +5341,7 @@ def prepare (familyIndex : Nat) (family : Family) : List UnitPlan × List (Nat 
+ def join (prior next : TransportSlice) : Option TransportSlice := do
+   match prior.context,next.context with
+   | some left,some right =>
+-    let checked ← checkedContextExtension left right
++    let checked ← checkedPricedContextAssembly left right
+     pure {prior with context := some checked.val,keys := checked.val.keys,text := checked.val.render}
+   | none,none => if prior.text == next.text then some prior else none
+   | _,_ => none
+@@ -5542,7 +5609,7 @@ def problem (families : List Family) (units : List UnitPlan) (pieces : List CueP
+       let text := context.leading ++ context.sourceNotice ++ context.trailing
+       (text.length,text.utf8ByteSize)
+   let mut costs := frames.toArray
+-  let mut payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
++  let mut payloads : Std.HashMap (Nat × Option RenderFragmentKey × String) Nat := {}
+   let allRows ← (Synapses.CanonicalSource.Delivery.merge
+     (families.toArray.flatMap (·.cached))).toOption
+   let mut sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat := {}
+@@ -5570,11 +5637,11 @@ def problem (families : List Family) (units : List UnitPlan) (pieces : List CueP
+     let parts := match unit.slice.context with
+       | none => [(none,unit.slice.text)]
+       | some context => context.fragments.map fun (fragment : DeliveryFragment) =>
+-          (some (fragment.first,fragment.original,fragment.decoded),
++          (some (fragment.renderKey context.compactCaptions),
+             fragment.render context.compactCaptions)
+     let mut closure := [unit.family]
+     for (fragment,text) in parts do
+-      let key := (unit.family,fragment)
++      let key := (unit.family,fragment,text)
+       let index := payloads[key]?.getD costs.size
+       if index == costs.size then
+         costs := costs.push (text.length+1,text.utf8ByteSize+1)
+@@ -5597,7 +5664,7 @@ def problem (families : List Family) (units : List UnitPlan) (pieces : List CueP
+ namespace LinearNodes
+ 
+ abbrev Costs := Array (Nat × Nat)
+-abbrev Payloads := Std.HashMap (Nat × Option (Nat × String × Bool)) Nat
++abbrev Payloads := Std.HashMap (Nat × Option RenderFragmentKey × String) Nat
+ 
+ def step (fileIds : Std.HashMap Synapses.File Nat) (sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat)
+     (state : Costs × Payloads) (unit : UnitPlan) : Option ((Costs × Payloads) × List Nat) := do
+@@ -5613,10 +5680,10 @@ def step (fileIds : Std.HashMap Synapses.File Nat) (sourceIds : Std.HashMap Syna
+   let parts := match unit.slice.context with
+     | none => [(none,unit.slice.text)]
+     | some context => context.fragments.map fun (fragment : DeliveryFragment) =>
+-        (some (fragment.first,fragment.original,fragment.decoded),fragment.render context.compactCaptions)
++        (some (fragment.renderKey context.compactCaptions),fragment.render context.compactCaptions)
+   let mut closure := [unit.family]
+   for (fragment,text) in parts do
+-    let key := (unit.family,fragment)
++    let key := (unit.family,fragment,text)
+     let index := payloads[key]?.getD costs.size
+     if index == costs.size then
+       costs := costs.push (text.length+1,text.utf8ByteSize+1)
+@@ -5644,10 +5711,10 @@ def reference (fileIds : Std.HashMap Synapses.File Nat) (sourceIds : Std.HashMap
+     let parts := match unit.slice.context with
+       | none => [(none,unit.slice.text)]
+       | some context => context.fragments.map fun (fragment : DeliveryFragment) =>
+-          (some (fragment.first,fragment.original,fragment.decoded),fragment.render context.compactCaptions)
++          (some (fragment.renderKey context.compactCaptions),fragment.render context.compactCaptions)
+     let mut closure := [unit.family]
+     for (fragment,text) in parts do
+-      let key := (unit.family,fragment)
++      let key := (unit.family,fragment,text)
+       let index := payloads[key]?.getD costs.size
+       if index == costs.size then
+         costs := costs.push (text.length+1,text.utf8ByteSize+1)
+@@ -5682,7 +5749,7 @@ def problemPrepared (families : List Family) (units : List UnitPlan) (pieces : L
+       let text := context.leading ++ context.sourceNotice ++ context.trailing
+       (text.length,text.utf8ByteSize)
+   let mut costs := frames.toArray
+-  let payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
++  let payloads : Std.HashMap (Nat × Option RenderFragmentKey × String) Nat := {}
+   let allRows ← (Synapses.CanonicalSource.Delivery.merge
+     (families.toArray.flatMap (·.cached))).toOption
+   let mut sourceIds : Std.HashMap Synapses.CanonicalSource.Key Nat := {}
+@@ -5727,7 +5794,7 @@ def problemUsingSource (source : Eggshell.Research.PreparedSourceCosts.Data)
+     (units : List UnitPlan) (pieces : List CuePiece) (fixed ceiling : Nat × Nat) :
+     Option SharedCoverage.Problem := do
+   let mut costs := source.costs
+-  let payloads : Std.HashMap (Nat × Option (Nat × String × Bool)) Nat := {}
++  let payloads : Std.HashMap (Nat × Option RenderFragmentKey × String) Nat := {}
+   let fileIds := source.fileIds
+   let sourceIds := source.rowIds
+   let preparedRows ← LinearOutput.pairLoop (LinearNodes.step fileIds sourceIds) units costs payloads []
+@@ -6543,6 +6610,29 @@ end RangeLocators
+ 
+ end SharedRangeAdapter
+ 
++/-- Charge immutable outer framing once, and only the whole priced data for
++each proposal. An empty presentation template cannot stand in for the graph
++and source-status rows that appear when its evidence is selected. -/
++def packetDataCharge (slices : List TransportSlice) : Nat × Nat :=
++  ((slices.map (fun slice => slice.text.length+1)).sum,
++   (slices.map (fun slice => slice.text.utf8ByteSize+1)).sum)
++
++def packetFrameCharge (frame : Nat × Nat) (slices : List TransportSlice) : Nat × Nat :=
++  let data := packetDataCharge slices
++  (frame.1+data.1,frame.2+data.2)
++
++theorem packet_frame_charge_independent (frame : Nat × Nat) (slices : List TransportSlice) :
++    ((packetFrameCharge frame slices).1-(packetDataCharge slices).1,
++     (packetFrameCharge frame slices).2-(packetDataCharge slices).2) = frame := by
++  simp [packetFrameCharge]
++
++theorem packet_data_charge_append (left right : List TransportSlice) :
++    packetDataCharge (left ++ right) =
++      ((packetDataCharge left).1+(packetDataCharge right).1,
++       (packetDataCharge left).2+(packetDataCharge right).2) := by
++  simp [packetDataCharge,List.sum_append]
++
++
+ structure PendingRendering where
+   families : List SharedRangeAdapter.Family
+   mandatory : List TransportSlice
+@@ -6656,6 +6746,22 @@ def PendingRendering.materialize? (pending : PendingRendering) (choice : SharedR
+   unless (pending.cost result).1 ≤ pending.ceiling.1 && (pending.cost result).2 ≤ pending.ceiling.2 do none
+   return {slices := result,receipt := choice.receipt,selectorInput := choice.selectorInput}
+ 
++/-- Report reconstruction failure without conflating incompatible units with
++an actual two-dimensional price violation. The price is evaluated once. -/
++def PendingRendering.materializeReport (pending : PendingRendering) (choice : SharedRangeAdapter.ServiceChoice)
++    (generic : Array SharedRangeAdapter.UnitPlan) (rows : Array Synapses.CanonicalSource.StoredRow) :
++    Except String SharedRangeAdapter.RenderChoice := do
++  let some slices := SharedRangeAdapter.materialize generic choice.generic.toList rows |
++    throw ("selected original units cannot be combined; generic=" ++
++      (toJson (choice.generic.filterMap fun index => generic[index]?.map fun unit =>
++        (index,unit.family,unit.slice.context.isSome,unit.slice.shared.isSome))).compress)
++  let result := pending.mandatory ++ slices
++  let price := pending.cost result
++  unless price.1 ≤ pending.ceiling.1 && price.2 ≤ pending.ceiling.2 do
++    throw s!"materialized packet price chars={price.1},bytes={price.2} exceeds ceiling chars={pending.ceiling.1},bytes={pending.ceiling.2}"
++  return {slices := result,receipt := choice.receipt,selectorInput := choice.selectorInput}
++
++
+ def PreparedRendering.usingService (rendering : PreparedRendering)
+     (batch : Option Publication.Client.SourceBatch) (deadline : Nat) : IO (Option Handoff) := do
+   match rendering with
+@@ -6692,8 +6798,7 @@ def PreparedRendering.usingService (rendering : PreparedRendering)
+     let profileFetched ← IO.monoMsNow
+     let profileSourceKeys := choice.sourceKeys.size
+     unless rows.map (·.key) == choice.sourceKeys do throw (IO.userError "selected original payload domain changed")
+-    let some choice := pending.materialize? choice generic rows |
+-      throw (IO.userError "selected original packet does not fit its checked local budget")
++    let choice ← IO.ofExcept (pending.materializeReport choice generic rows)
+     let profileMaterialized ← IO.monoMsNow
+     let finished ← (← IO.mkRef (pending.finish (some choice))).get
+     let profileFinished ← IO.monoMsNow
+@@ -6990,7 +7095,7 @@ def prepareAutomatic (staged : List Value) (budget : Nat) (current : String)
+         text := sourceText }
+       let sourceFrames := if !meaningSelected || owners.isEmpty then [] else [sourceFrame]
+       policyFrame :: (sourceFrames ++ if locationText.isEmpty then [] else [locationFrame])
+-    let packetCost := fun (fitted : List TransportSlice) =>
++    let exactPacketCost := fun (fitted : List TransportSlice) =>
+       let visible := visibleFor fitted
+       let support := supportFor fitted
+       let frames := framesFor fitted
+@@ -7016,6 +7121,13 @@ def prepareAutomatic (staged : List Value) (budget : Nat) (current : String)
+     let reserved := fixedHeader.length + maximalTree.length + maximalSource.length + footer.length + statusReserve.1
+     let reservedBytes := fixedHeader.utf8ByteSize + maximalTree.utf8ByteSize +
+       maximalSource.utf8ByteSize + footer.utf8ByteSize + statusReserve.2
++    -- These graph/status bounds range over the complete admitted domain,
++    -- not empty templates whose future evidence keys are absent. Reserve
++    -- both UTF-8 dimensions, policy, guidance, locators and separators.
++    let frameCharge := policyPacketCost policy
++      (reserved + evidenceGapGuidance.length + locationText.length + 3,
++       reservedBytes + evidenceGapGuidance.utf8ByteSize + locationText.utf8ByteSize + 3)
++    let packetCost := if meaningSelected && !enforce then packetFrameCharge frameCharge else exactPacketCost
+     let finish (selectionPlan : Option SharedRangeAdapter.RenderChoice) : Option Handoff :=
+       let fittedSlices := if meaningSelected && !enforce then
+         (selectionPlan.map (·.slices)).getD []
+@@ -8539,8 +8651,11 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+     let rendering ← (← IO.mkRef rendering).get
+     let profileAutomaticReady ← IO.monoMsNow
+     let rendered ← try rendering.usingService synaptic.batch advisoryDeadline
+-      catch _ =>
+-        Receipt.observe source.receipt "prepared-selection-failure" (toJson true)
++      catch error =>
++        let details ← if (← IO.getEnv "EGGSHELL_TRACE_SERVICE_PROFILE") == some "1" then
++          pure (Json.mkObj [("message",toJson (error.toString.take 512).copy)])
++          else pure (toJson true)
++        Receipt.observe source.receipt "prepared-selection-failure" details
+         return some pendingSearch
+     let profileRendered ← IO.monoMsNow
+     Publication.Stream.profile "render-automatic-profile" [("startedMs",toJson profileAutomaticStarted),
