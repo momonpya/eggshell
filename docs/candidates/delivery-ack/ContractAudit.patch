@@ -1,0 +1,21 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -429 +429 @@
+-        #[``Eggshell.Synapses.Journal.indexAt?, ``Eggshell.Synapses.Journal.presentation,
++        #[``Eggshell.Synapses.Journal.presentation,
+@@ -432 +432,7 @@
+-        #[``Eggshell.Synapses.Journal.originalAt?, ``Eggshell.Synapses.ObservationContext.recorded], #[]),
++        #[``Eggshell.Synapses.DeliveryLedger.lookup],
++        #[``Eggshell.Synapses.Journal.originalAt?, ``Eggshell.Synapses.Build.document,
++          ``Eggshell.Synapses.ObservationContext.recorded, ``Eggshell.ContentMetadata.addFileCoordinates,
++          ``Eggshell.Synapses.Journal.indexAt?]),
++      (``Eggshell.Plugin.acknowledge, #[``Eggshell.Synapses.DeliveryLedger.confirm], #[]),
++      (``Eggshell.Synapses.Live.start, #[``Eggshell.Synapses.Journal.knowledge], #[]),
++      (``Eggshell.Synapses.Live.answer, #[``Eggshell.Synapses.Journal.knowledge], #[]),
+@@ -462 +468,5 @@
+-        #[``Eggshell.Plugin.Handoff.reconcileDelivery, ``Eggshell.Plugin.ThreadState.deliveryClaims], #[]),
++        #[``Eggshell.Plugin.Handoff.reconcileDelivery, ``Eggshell.Plugin.ThreadState.deliveryClaims,
++          ``Eggshell.Plugin.Handoff.acknowledgmentProjection], #[]),
++      (``Eggshell.Plugin.Handoff.prepareDelivery,
++        #[``Eggshell.Synapses.PacketReceipt.Source.piece?, ``Eggshell.Synapses.PacketReceipt.shared?],
++        #[``Eggshell.Synapses.Build.document, ``Eggshell.ContentMetadata.addFileCoordinates]),

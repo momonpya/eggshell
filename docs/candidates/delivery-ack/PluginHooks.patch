@@ -1,0 +1,28 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -110,0 +111 @@
++      confirmedDelivery := none
+@@ -120,0 +122,3 @@
++theorem compaction_forgets_delivery_projection (state : ThreadState) :
++    (compactState state).confirmedDelivery = none := rfl
++
+@@ -374 +378,2 @@
+-  if !(state.enabled && offer.stamp.accepts pending.turnId state.epoch now) then
++  let accepted := state.enabled && offer.stamp.accepts pending.turnId state.epoch now
++  if !accepted || !offer.projection.complete then
+@@ -375,0 +381,6 @@
++  let confirmed ← if accepted && offer.projection.complete then do
++      try Synapses.DeliveryLedger.confirm session state.epoch state.confirmedDelivery offer.projection
++      catch error =>
++        Synapses.Live.unconfirmed files
++        throw error
++    else pure state.confirmedDelivery
+@@ -377,2 +388,2 @@
+-  writeJson files.state (acceptOffer state pending.turnId now offer)
+-  pure (state.enabled && offer.stamp.accepts pending.turnId state.epoch now)
++  writeJson files.state {(acceptOffer state pending.turnId now offer) with confirmedDelivery := confirmed}
++  pure accepted
+@@ -531 +542,2 @@
+-          reason := handoff.reason, search := handoff.search }
++          reason := handoff.reason, search := handoff.search
++          projection := handoff.acknowledgmentProjection }

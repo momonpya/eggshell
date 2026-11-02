@@ -1,0 +1,126 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -161,0 +162,5 @@
++  /-- Selected native rows checked once while their original plan is live.
++  Late reconciliation can only subtract from this evidence. -/
++  evidence : Array Synapses.Read := #[]
++  nativeOwners : Array Synapses.DeliveryLedger.Owner := #[]
++  projected : Bool := false
+@@ -306,0 +312,26 @@
++
++/-- Final reconciliation may split or remove fragments. Project only the
++native rows still wholly represented by its actual returned packet. -/
++def DeliveryPart.projectionComplete (part : DeliveryPart) : Bool :=
++  part.projected && match part.context with
++    | some context => part.text == context.render && part.keys == context.keys && !part.nativeOwners.isEmpty &&
++      context.fragments.all (fun fragment => 0 < fragment.original.length &&
++        fragment.first+fragment.original.length ≤ context.sourceChars)
++    | none => part.shared.any fun shared => part.text == shared.render && part.keys == shared.keys
++
++def DeliveryPart.acknowledgmentPolicy (part : DeliveryPart) : Synapses.Read → Bool :=
++  if !part.projectionComplete then fun _ => false else
++  match part.context with
++  | some context => fun read => read.binding.owner == context.owner &&
++    context.fragments.any (fun fragment =>
++      fragment.first ≤ read.binding.first && read.binding.limit ≤ fragment.first+fragment.original.length)
++  | none =>
++    let keys := part.shared.toArray.foldl (fun keys shared => shared.rows.foldl (fun keys row =>
++      row.origins.foldl (fun keys origin => keys.insert (origin.binding,origin.occurrence,
++        (⟨row.key.file,row.key.line,row.key.line⟩ : Synapses.Range))) keys) keys)
++      ({} : Std.HashSet (Synapses.Binding × Synapses.Occurrence × Synapses.Range))
++    fun read => keys.contains (read.binding,read.occurrence,read.source)
++
++def DeliveryPart.acknowledgedReads (part : DeliveryPart) : Array Synapses.Read :=
++  let accepts := part.acknowledgmentPolicy
++  part.evidence.filter fun read => read.valid && accepts read
+@@ -307,0 +339,18 @@
++theorem acknowledged_read_was_selected (part : DeliveryPart) (read : Synapses.Read)
++    (member : read ∈ part.acknowledgedReads) : read ∈ part.evidence ∧ read.valid = true := by
++  have selected := Array.mem_filter.mp member
++  exact ⟨selected.1,(Bool.and_eq_true_iff.mp selected.2).1⟩
++
++def Handoff.acknowledgmentProjection (handoff : Handoff) : Synapses.DeliveryLedger.Projection :=
++  match handoff.capturedPacket? with
++  | none => {complete := handoff.text.isEmpty}
++  | some captured => {
++      rows := captured.packet.parts.toArray.flatMap fun part =>
++        part.acknowledgedReads.map fun read => ⟨read.binding.database,read.source⟩
++      bindings := captured.packet.parts.toArray.flatMap fun part =>
++        if !part.projectionComplete then #[] else
++        part.context.toArray.flatMap fun context => context.fragments.toArray.flatMap fun fragment =>
++          part.nativeOwners.map fun owner =>
++            ⟨owner.database,owner.owner,owner.work,fragment.first,fragment.first+fragment.original.length⟩
++      complete := captured.packet.parts.all (·.projectionComplete)}
++
+@@ -310 +359,3 @@
+-def Handoff.deliveryReceipt (handoff : Handoff) (plan : Synapses.Transport.Plan) : Json := Id.run do
++def Handoff.prepareDelivery (handoff : Handoff) (plan : Synapses.Transport.Plan) :
++    {ready : Handoff // ready.text = handoff.text ∧ ready.deliveredGraphs = handoff.deliveredGraphs ∧
++      ready.blocksCurrent = handoff.blocksCurrent} × Json := Id.run do
+@@ -319,0 +371,2 @@
++  let byOwner := KeyPostings.prepare (fun saved : {read : Synapses.Read // read ∈ savedReads} =>
++    saved.val.binding.owner) (savedReads.attach.filter fun saved => owners.contains saved.val.binding.owner)
+@@ -322,0 +376 @@
++  let mut parts := []
+@@ -324,0 +379,3 @@
++      let part := {part with evidence := #[],nativeOwners := #[],projected := false}
++      let mut evidence := #[]
++      let mut nativeOwners := #[]
+@@ -326,2 +383,2 @@
+-        if part.text != context.render then unverified := unverified.push partIndex; continue
+-        let some source := native[context.owner]? | unverified := unverified.push partIndex; continue
++        if part.text != context.render then unverified := unverified.push partIndex; parts := parts ++ [part]; continue
++        let some source := native[context.owner]? | unverified := unverified.push partIndex; parts := parts ++ [part]; continue
+@@ -329 +386 @@
+-          unverified := unverified.push partIndex; continue
++          unverified := unverified.push partIndex; parts := parts ++ [part]; continue
+@@ -335,0 +393,13 @@
++        let identity := Synapses.ObservationContext.originalSubject source.document.work source.source.raw
++        for saved in byOwner.lookup context.owner do
++          let read := saved.val
++          if read.valid && read.binding.work == source.document.work &&
++              source.document.occurrences.contains read.occurrence then
++            let bound := match read.source.subject with
++              | .file file => source.document.files.contains file
++              | .original original => original == identity
++            if bound then
++              nativeOwners := nativeOwners.push (⟨read.binding.database,read.binding.owner,read.binding.work⟩ : Synapses.DeliveryLedger.Owner)
++              if context.fragments.any (fun fragment =>
++                  fragment.first ≤ read.binding.first && read.binding.limit ≤ fragment.first+fragment.original.length) then
++                evidence := evidence.push read
+@@ -337 +407 @@
+-        if part.text != body.render then unverified := unverified.push partIndex; continue
++        if part.text != body.render then unverified := unverified.push partIndex; parts := parts ++ [part]; continue
+@@ -347,0 +418 @@
++                evidence := evidence.push witness.read
+@@ -351 +422,6 @@
+-  return Json.mkObj [
++      parts := parts ++ [{part with evidence,nativeOwners := nativeOwners.toList.eraseDups.toArray,projected := !(unverified.contains partIndex)}]
++  let ready : {ready : Handoff // ready.text = handoff.text ∧ ready.deliveredGraphs = handoff.deliveredGraphs ∧
++      ready.blocksCurrent = handoff.blocksCurrent} := match captured with
++    | none => ⟨handoff,⟨rfl,rfl,rfl⟩⟩
++    | some captured => ⟨{handoff with packet := some {captured.packet with parts}},⟨rfl,rfl,rfl⟩⟩
++  return (ready, Json.mkObj [
+@@ -367 +443 @@
+-    ("fullCandidateAudit",toJson false)]
++    ("fullCandidateAudit",toJson false)])
+@@ -3678 +3754,3 @@
+-        some {keys := remaining.keys,text := remaining.render,shared := some remaining}
++        some {
++          keys := remaining.keys,text := remaining.render,shared := some remaining
++          evidence := part.evidence,nativeOwners := part.nativeOwners,projected := part.projected}
+@@ -3688 +3766,3 @@
+-          some {keys := context.keys, text := context.render, context := some context}
++          some {
++            keys := context.keys,text := context.render,context := some context
++            evidence := part.evidence,nativeOwners := part.nativeOwners,projected := part.projected}
+@@ -8664 +8744,4 @@
+-    let rendered := rendered.map fun handoff => {handoff with synapticComplete := synaptic.complete}
++    let preparedDelivery := rendered.map fun handoff =>
++      let checked := handoff.prepareDelivery synaptic
++      (checked.1.val,checked.2)
++    let rendered := preparedDelivery.map fun prepared => {prepared.1 with synapticComplete := synaptic.complete}
+@@ -8667,2 +8750 @@
+-      Receipt.observe (some id) "synaptic-delivery" ((rendered.map fun handoff =>
+-        handoff.deliveryReceipt synaptic).getD (Json.mkObj [("bodyChars",toJson (0 : Nat)),
++      Receipt.observe (some id) "synaptic-delivery" ((preparedDelivery.map Prod.snd).getD (Json.mkObj [("bodyChars",toJson (0 : Nat)),

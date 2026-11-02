@@ -1,0 +1,189 @@
+--- a/Eggshell/DeliveryLedger.lean
++++ b/Eggshell/DeliveryLedger.lean
+@@ -0,0 +1,186 @@
++module
++public import Eggshell.Synapses
++public import Eggshell.DB.PageMap
++public import Eggshell.Paths
++public import Eggshell.Blake3
++public import tools.RangeReach
++@[expose] public section
++
++namespace Eggshell.Synapses.DeliveryLedger
++open Lean DB
++
++def implementation : String := Blake3.hex (Blake3.digest "eggshell.delivery-projection".toUTF8 [
++  (include_str "DeliveryLedger.lean").toUTF8,(include_str "Handoff.lean").toUTF8,
++  (include_str "PacketReceipt.lean").toUTF8,(include_str "PluginHooks.lean").toUTF8])
++
++/-- A confirmed original range belongs to the project that supplied it.
++It is context evidence, never equality or completion authority. -/
++structure Row where
++  database : String
++  source : Range
++  deriving Repr,BEq,ToJson,FromJson
++
++def Row.valid (row : Row) : Bool := !row.database.isEmpty && row.source.valid
++
++structure Projection where
++  rows : Array Row := #[]
++  bindings : Array Binding := #[]
++  complete : Bool := false
++  deriving Repr,BEq,ToJson,FromJson
++
++structure Owner where
++  database : String
++  owner : String
++  work : String
++  deriving BEq,ToJson,FromJson
++
++structure Reference where
++  session : String
++  epoch : Nat
++  head : PageMap.Head
++  producer : String := ""
++  deriving BEq,ToJson,FromJson
++
++instance : Repr Reference where
++  reprPrec reference _ := Std.Format.text ((toJson reference).compress)
++
++def key [ToJson α] (value : α) : String :=
++  Blake3.hex (Blake3.digest "eggshell.confirmed-delivery".toUTF8 [(toJson value).compress.toUTF8])
++
++def context (session : String) (epoch : Nat) : String := key (session,epoch,implementation)
++def Reference.context (reference : Reference) : String := key (reference.session,reference.epoch,reference.producer)
++def databaseBase (database : String) : String := "range:" ++ key database ++ ":"
++def subjectBase (database : String) (subject : Subject) : String := databaseBase database ++ key subject ++ ":"
++def rowKey (row : Row) : String := subjectBase row.database row.source.subject ++ key row.source
++def bindingBase (database owner work : String) := "binding:" ++ key database ++ ":" ++ key (owner,work) ++ ":"
++def bindingKey (binding : Binding) := bindingBase binding.database binding.owner binding.work ++ key (binding.first,binding.limit)
++
++def directory (context : String) : IO System.FilePath := do
++  unless context.length == 64 && context.toList.all (fun c =>
++      ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f')) do
++    throw (IO.userError "invalid delivery context")
++  return (← Paths.dataRoot) / "confirmed-delivery" / context
++
++def opened? (context : String) : IO (Option PageMap.Snapshot) := do
++  let path ← directory context
++  FileSystem.rejectSymlinkAncestors path
++  let some source ← PageMap.open? path | return none
++  unless source.head.authority == "confirmed-delivery:" ++ context do
++    throw (IO.userError "foreign delivery ledger")
++  return some source
++
++/-- Capture the immutable ACK head before a native operation starts. -/
++def capture (session : String) (epoch : Nat) : IO (Option Reference) := do
++  let name := context session epoch
++  return (← opened? name).map fun source => ⟨session,epoch,source.head,implementation⟩
++
++/-- Called only after the native client confirms insertion of the offered
++body. Session serialization covers creation and this short metadata commit.
++A crash after this commit still records a genuinely acknowledged body. -/
++def confirm (session : String) (epoch : Nat) (previous : Option Reference)
++    (projection : Projection) : IO (Option Reference) := do
++  unless projection.complete && projection.rows.all Row.valid && projection.bindings.all Binding.valid do
++    throw (IO.userError "invalid or unconfirmed original projection")
++  unless previous.all (fun reference => reference.session == session && reference.producer == implementation) do
++    throw (IO.userError "foreign or unvalidated delivery context owner")
++  if projection.rows.isEmpty && projection.bindings.isEmpty then return previous
++  let generation := (previous.map (·.epoch)).getD epoch
++  let name := context session generation
++  FileSystem.privateDirectory (← directory name).parent.get!
++  let source ← match ← opened? name with
++    | some source => pure source
++    | none => PageMap.create (← directory name) ("confirmed-delivery:" ++ name)
++  if let some previous := previous then
++    unless (← PageMap.HistoryReader.make? source previous.head).isSome do
++      throw (IO.userError "confirmed context lost its earlier ACK head")
++  let (_,head,_) ← PageMap.withWriter source fun writer => do
++    for row in projection.rows do
++      let bytes := (toJson row).compress.toUTF8
++      let previous ← writer.get (rowKey row)
++      if previous == some bytes then continue
++      if previous.isSome then throw (IO.userError "confirmed range digest collision")
++      writer.put (rowKey row) (some bytes)
++    for binding in projection.bindings do
++      let bytes := (toJson binding).compress.toUTF8
++      let previous ← writer.get (bindingKey binding)
++      if previous == some bytes then continue
++      if previous.isSome then throw (IO.userError "confirmed binding digest collision")
++      writer.put (bindingKey binding) (some bytes)
++  return some ⟨session,generation,head,implementation⟩
++
++/-- Read a historical context, restricted to the requested project and,
++when supplied, the subjects actually consumed. No source body is loaded. -/
++def lookup (reference : Reference) (database : String)
++    (subjects : Option (Std.HashSet Subject) := none) : IO (Array Range) := do
++  unless reference.producer == implementation do throw (IO.userError "unvalidated delivery projection compiler")
++  let some current ← opened? reference.context | throw (IO.userError "confirmed delivery ledger disappeared")
++  let some retained ← PageMap.HistoryReader.make? current reference.head |
++    throw (IO.userError "confirmed delivery history is unavailable")
++  let source := retained.snapshot
++  let bases := match subjects with
++    | none => #[databaseBase database]
++    | some subjects => subjects.toArray.map (subjectBase database)
++  let mut ranges := #[]
++  for base in bases do
++    ranges ← source.foldRange ⟨base,base ++ "~"⟩ (fun ranges row => do
++      let some bytes := row.2 | throw (IO.userError "missing confirmed range payload")
++      let some raw := String.fromUTF8? bytes | throw (IO.userError "confirmed range is not UTF-8")
++      let value ← IO.ofExcept (Json.parse raw >>= fromJson? (α := Row))
++      unless value.valid && value.database == database && row.1 == rowKey value &&
++          (toJson value).compress == raw && subjects.all (·.contains value.source.subject) do
++        throw (IO.userError "confirmed range crossed its pinned project or subject")
++      return ranges.push value.source) ranges
++  return ranges
++
++def lookupBindings (reference : Reference) (database : String)
++    (owners : Std.HashSet (String × String)) : IO (Array Binding) := do
++  unless reference.producer == implementation do throw (IO.userError "unvalidated delivery projection compiler")
++  let some current ← opened? reference.context | throw (IO.userError "confirmed delivery ledger disappeared")
++  let some retained ← PageMap.HistoryReader.make? current reference.head |
++    throw (IO.userError "confirmed delivery history is unavailable")
++  let mut found := #[]
++  for (owner,work) in owners do
++    let base := bindingBase database owner work
++    found ← retained.snapshot.foldRange ⟨base,base ++ "~"⟩ (fun found row => do
++      let some bytes := row.2 | throw (IO.userError "missing confirmed binding")
++      let some raw := String.fromUTF8? bytes | throw (IO.userError "confirmed binding is not UTF-8")
++      let binding ← IO.ofExcept (Json.parse raw >>= fromJson? (α := Binding))
++      unless binding.valid && binding.database == database && binding.owner == owner && binding.work == work &&
++          row.1 == bindingKey binding && (toJson binding).compress == raw do
++        throw (IO.userError "confirmed binding crossed its exact native owner")
++      return found.push binding) found
++  return found
++
++/-- Merge once per exact owner, then test each already stored native Read
++by interval lookup. Separate ACKs can jointly cover a row; source text is
++never reconstructed to discover that coverage. -/
++def coverage (database : String) (bindings : Array Binding) : Read → Bool := Id.run do
++  let mut grouped : Std.HashMap (String × String) (Array Binding) := {}
++  for binding in bindings do
++    if binding.valid && binding.database == database then
++      let owner := (binding.owner,binding.work)
++      grouped := grouped.insert owner (grouped[owner]?.getD #[] |>.push binding)
++  let mut directories : Std.HashMap (String × String) (RangeReach.Prepared Unit) := {}
++  for (owner,spans) in grouped do
++    let mut merged : Array (Nat × Nat) := #[]
++    for span in spans.qsort (fun a b => a.first < b.first) do
++      match merged.back? with
++      | some (first,limit) =>
++        if span.first ≤ limit then merged := merged.pop.push (first,max limit span.limit)
++        else merged := merged.push (span.first,span.limit)
++      | none => merged := merged.push (span.first,span.limit)
++    directories := directories.insert owner (RangeReach.prepare (merged.map fun (first,limit) => ⟨first,limit,()⟩))
++  return fun read => read.valid && read.binding.database == database &&
++    (directories[(read.binding.owner,read.binding.work)]?.bind fun directory =>
++      directory.lookup? read.binding.first).any (fun span => read.binding.limit ≤ span.limit)
++
++def coveredReads (database : String) (bindings : Array Binding) (reads : Array Read) : Array Read :=
++  let accepts := coverage database bindings
++  reads.filter accepts
++
++theorem covered_read_was_stored (database : String) (bindings : Array Binding) (reads : Array Read)
++    (read : Read) (member : read ∈ coveredReads database bindings reads) : read ∈ reads := by
++  unfold coveredReads at member
++  exact (Array.mem_filter.mp member).1
++
++end Eggshell.Synapses.DeliveryLedger

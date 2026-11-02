@@ -1,0 +1,12 @@
+--- a/Eggshell/SynapseLive.lean
++++ b/Eggshell/SynapseLive.lean
+@@ -58,0 +59 @@
++  let confirmed := state.confirmedDelivery
+@@ -60 +61 @@
+-    let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write
++    let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write confirmed
+@@ -81,0 +83 @@
++  let confirmed := state.confirmedDelivery
+@@ -83 +85 @@
+-    let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write
++    let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write confirmed

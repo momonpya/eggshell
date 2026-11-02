@@ -1,0 +1,170 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -9 +9 @@
+-public import Eggshell.ReadCatalog
++public import Eggshell.DeliveryLedger
+@@ -36,0 +37 @@
++  delivery : Option DeliveryLedger.Reference := none
+@@ -44 +45,2 @@
+-    known.archived.toList.map (fun head => ("archived",toJson head)))
++    known.archived.toList.map (fun head => ("archived",toJson head)) ++
++    known.delivery.toList.map (fun reference => ("delivery",toJson reference)))
+@@ -71 +73 @@
+-    digest query && known.source.identity == database
++    digest query && known.source.identity == database && known.delivery.all (·.session == payload.occurrence.session)
+@@ -113,0 +116,4 @@
++def projectedKnowledge (known : Knowledge) : Bool :=
++  known.delivery.any (·.producer == DeliveryLedger.implementation) || !known.acknowledged.any (fun key =>
++    ["h:","g:","e:","c:"].any (fun tag => key.startsWith tag))
++
+@@ -115 +121 @@
+-  !known.uncertain && checked && (known.archive.isNone || known.archived.isSome)
++  !known.uncertain && checked && (known.archive.isNone || known.archived.isSome) && projectedKnowledge known
+@@ -127 +133 @@
+-  (include_str "ReadCatalog.lean").toUTF8])
++  (include_str "DeliveryLedger.lean").toUTF8])
+@@ -229 +235 @@
+-    (archive : Option String := none) : IO Knowledge := do
++    (archive : Option String := none) (delivery : Option DeliveryLedger.Reference := none) : IO Knowledge := do
+@@ -238 +244 @@
+-  return ⟨source.head, indexed, known, uncertain, archive, archived⟩
++  return ⟨source.head, indexed, known, uncertain, archive, archived,delivery⟩
+@@ -295,21 +300,0 @@
+-
+-def ownerKeys (known : List String) : Array String :=
+-  (known.filterMap fun value => match value.splitOn ":" with
+-    | ["h", owner] | ["g", owner, _] | ["e", owner, _, _, _] => some owner
+-    | _ => none).eraseDups.toArray
+-
+-def acknowledged (keys : List String) (doc : Document) (row : Read) : Bool :=
+-  let whole := keys.any fun value => match value.splitOn ":" with
+-    | ["h", owner] => owner == doc.owner
+-    | ["g", owner, result] => owner == doc.owner &&
+-        doc.source.any (fun text => Persistence.selectionKey (.text text) == result)
+-    | _ => false
+-  let spans := keys.filterMap fun value => match value.splitOn ":" with
+-    | ["e", owner, result, first, limit] =>
+-        if owner == doc.owner && doc.source.any (fun text => Persistence.selectionKey (.text text) == result) then do
+-          let a ← first.toNat?
+-          let b ← limit.toNat?
+-          if a < b then some (owner,a,b) else none
+-        else none
+-    | _ => none
+-  whole || ({bindings := spans.toArray} : Presentation).coversBinding row.binding
+@@ -317,3 +301,0 @@
+-theorem compiled_acknowledgment_exact (keys : List String) (doc : Document) (row : Read) :
+-    (ReadCatalog.acknowledgment keys doc).accepts row = acknowledged keys doc row := rfl
+-
+@@ -321,31 +303,8 @@
+-    (prepared : Option PageMap.Snapshot := none)
+-    (catalogs : Option ReadCatalog.Pool := none) : IO Presentation := do
+-  let some original ← originalAt? source known.source | return {}
+-  let archive ← known.archive.bindM fun path => do
+-    let some head := known.archived | return none
+-    let some current ← PageMap.open? (.mk path) | return none
+-    originalAt? current head
+-  let sources := #[original] ++ archive.toArray
+-  let mut ranges := #[]
+-  for snapshot in sources do
+-    let reader ← NodeReader.new snapshot
+-    for owner in ownerKeys known.acknowledged do
+-      let some id ← Build.ownerId? snapshot owner | continue
+-      let index := if snapshot.head.identity == source.head.identity then prepared else none
+-      let projected ← if snapshot.directory == source.directory then
+-          catalogs.bindM (fun pool => pool.acknowledged? snapshot.head (index.map (·.head)) id known.acknowledged)
+-        else pure none
+-      if let some projected := projected then ranges := ranges ++ projected; continue
+-      let doc ← Build.document reader id
+-      let some original := ObservationContext.recorded snapshot.head.identity doc | continue
+-      let catalog ← ContentMetadata.addFileCoordinates snapshot id doc original index
+-      let ack := ReadCatalog.acknowledgment known.acknowledged doc
+-      ranges := ranges ++ (catalog.located.flatMap (·.originalRows) |>.filter ack.accepts |>.map (·.source))
+-  return {ranges := compactRanges ranges}
+-
+-/-- Shared file rows acknowledge just those original lines, not an entire
+-owner or raw result. The caller supplies facts from its checked pre-read index.
+-No new original is inferred from an ACK, a plan key or a file locator. -/
+-def presentationWithShared (known : Knowledge) (stored : Array Read) (shown : Presentation) : Presentation :=
+-  if known.uncertain then shown else
+-    {shown with ranges := shown.ranges ++ (SharedReadReceipt.collect known.acknowledged stored).map (·.range)}
++    (subjects : Option (Std.HashSet Subject) := none) (reads : Array Read := #[]) : IO Presentation := do
++  if known.uncertain then return {}
++  let some reference := known.delivery.filter (·.producer == DeliveryLedger.implementation) | return {}
++  let owners := reads.foldl (fun owners read => owners.insert (read.binding.owner,read.binding.work))
++    ({} : Std.HashSet (String × String))
++  let bindings ← DeliveryLedger.lookupBindings reference source.head.identity owners
++  let covered := DeliveryLedger.coveredReads source.head.identity bindings reads
++  return {ranges := compactRanges ((← DeliveryLedger.lookup reference source.head.identity subjects) ++ covered.map (·.source))}
+@@ -353,13 +311,0 @@
+-theorem shared_presentation_keeps_raw_bindings (known : Knowledge) (stored : Array Read) (shown : Presentation) :
+-    (presentationWithShared known stored shown).bindings = shown.bindings := by
+-  cases state : known.uncertain <;> simp [presentationWithShared,state]
+-
+-theorem shared_presentation_keeps_uncertainty (known : Knowledge) (stored : Array Read) (shown : Presentation) :
+-    (presentationWithShared known stored shown).uncertain = shown.uncertain ∧
+-    (presentationWithShared known stored shown).uncertainOwners = shown.uncertainOwners := by
+-  cases state : known.uncertain <;> simp [presentationWithShared,state]
+-
+-theorem unconfirmed_shared_presentation (known : Knowledge) (stored : Array Read) (shown : Presentation)
+-    (unconfirmed : known.uncertain = true) : presentationWithShared known stored shown = shown := by
+-  simp [presentationWithShared,unconfirmed]
+-
+@@ -421,2 +367 @@
+-    (cache : Option StoredReadLookup.Cache)
+-    (catalogs : Option ReadCatalog.Pool) (budget : Option StoredReadLookup.Budget) : IO NativeFeedback := do
++    (cache : Option StoredReadLookup.Cache) (budget : Option StoredReadLookup.Budget) : IO NativeFeedback := do
+@@ -431,2 +376 @@
+-  let captured ← indexAt? source known
+-  let shown := presentationWithShared known storedReads (← presentation source known (captured.map (·.index)) catalogs)
++  let shown ← presentation source known (some subjects) storedReads
+@@ -446 +390 @@
+-    (cache : Option StoredReadLookup.Cache := none) (catalogs : Option ReadCatalog.Pool := none)
++    (cache : Option StoredReadLookup.Cache := none)
+@@ -460 +404 @@
+-    let result ← feedbackGroup source starts producer uses progress.result deadline cache catalogs budget
++    let result ← feedbackGroup source starts producer uses progress.result deadline cache budget
+@@ -506 +449,0 @@
+-  catalogs : ReadCatalog.Pool
+@@ -515,2 +458 @@
+-    (acknowledgmentIndex : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none)
+-    (catalogPool : Option ReadCatalog.Pool := none) : IO ReplayCursor := do
++    (readCache : Option StoredReadLookup.Cache := none) : IO ReplayCursor := do
+@@ -520,11 +462 @@
+-  let index ← match acknowledgmentIndex with
+-    | some reader => pure (some reader)
+-    | none => preparedHint? source
+-  let catalogs ← match catalogPool with
+-    | some pool => do
+-      unless pool.source.directory == source.directory && pool.source.head.identity == source.head.identity &&
+-          pool.source.head.authority == source.head.authority do
+-        throw (IO.userError "foreign project read catalog pool")
+-      pure pool
+-    | none => ReadCatalog.create source (index.map (·.index))
+-  return {source,values,cache,catalogs,state := ← IO.mkRef {position := ⟨0,by omega⟩},feedback := ← IO.mkRef none}
++  return {source,values,cache,state := ← IO.mkRef {position := ⟨0,by omega⟩},feedback := ← IO.mkRef none}
+@@ -536 +467,0 @@
+-  let catalogs := cursor.catalogs
+@@ -554 +485 @@
+-      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some catalogs) (some budget) (some cursor.feedback)
++      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some budget) (some cursor.feedback)
+@@ -639,2 +570 @@
+-          let captured ← indexAt? source known
+-          let shown := presentationWithShared known storedReads (← presentation source known (captured.map (·.index)) (some catalogs))
++          let shown ← presentation source known (some files) storedReads
+@@ -651,2 +581,2 @@
+-      if known.uncertain then result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+-      let shown ← presentation source known none (some catalogs)
++      if known.uncertain || !projectedKnowledge known then result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
++      let shown ← presentation source known
+@@ -658 +588 @@
+-  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some catalogs) (some budget) (some cursor.feedback)
++  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some budget) (some cursor.feedback)
+@@ -678,3 +608,2 @@
+-    (preparedHint : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none)
+-    (catalogPool : Option ReadCatalog.Pool := none) : IO Replay := do
+-  let cursor ← beginReplay source values preparedHint readCache catalogPool
++    (readCache : Option StoredReadLookup.Cache := none) : IO Replay := do
++  let cursor ← beginReplay source values readCache
+@@ -785 +714 @@
+-        let cursor ← beginReplay source entries (some reader) (some cache)
++        let cursor ← beginReplay source entries (some cache)

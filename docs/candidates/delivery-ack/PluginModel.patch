@@ -1,0 +1,14 @@
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -9,0 +10 @@
++public import Eggshell.DeliveryLedger
+@@ -48,0 +50 @@
++  projection : Synapses.DeliveryLedger.Projection := {}
+@@ -67,0 +70,3 @@
++  /-- A model context spans turns. Request epoch changes do not discard its
++  confirmed originals; compaction clears this immutable head explicitly. -/
++  confirmedDelivery : Option Synapses.DeliveryLedger.Reference := none
+@@ -194 +199,2 @@
+-  [("searchStarted", toJson false), ("epoch", toJson (0 : Nat)), ("offers", toJson ([] : List DeliveryOffer))]
++  [("searchStarted", toJson false), ("epoch", toJson (0 : Nat)), ("offers", toJson ([] : List DeliveryOffer)),
++    ("confirmedDelivery",Json.null)]
