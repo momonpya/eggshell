@@ -25,13 +25,24 @@ private partial def retire (path : System.FilePath) : IO Nat := do
   return metadata.byteSize.toNat
 
 def main (args : List String) : IO Unit := do
-  check (args.isEmpty || args == ["cleanup"]) "expected capture or cleanup"
+  let work := args.contains "work"
+  let args := args.filter (· != "work")
+  check (args.isEmpty || args == ["cleanup"]) "expected optional work and capture or cleanup"
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
-  let output := project / "docs/candidates/turn-replay"
-  let build := root / "turn-replay-build"
-  let parent := root / "delivery-ack-core"
-  let core := root / "turn-replay-core"
+  let stem := if work then "replay-work" else "turn-replay"
+  let entryPoint := if work then "ReplayWorkChecks" else "TurnReplayChecks"
+  let output := project / "docs/candidates" / stem
+  let build := root / (stem ++ "-build")
+  let parent := root / (if work then "turn-replay-core" else "delivery-ack-core")
+  let core := root / (stem ++ "-core")
+  let mut native := root / (stem ++ "-native")
+  let mut lastChecks := root / (stem ++ "-checks.guard.json")
+  let mut attempt := 2
+  while ← (root / (stem ++ "-checks" ++ toString attempt ++ ".guard.json")).pathExists do
+    lastChecks := root / (stem ++ "-checks" ++ toString attempt ++ ".guard.json")
+    native := root / (stem ++ "-native" ++ toString attempt)
+    attempt := attempt+1
   let protectedRecord ← read (project / "docs/candidates/delivery-ack/manifest.json")
   let protectedInputs : Array (String × String) ← IO.ofExcept (protectedRecord.getObjValAs? _ "currentProtectedInputs")
   let sealedInputs : Array Json ← IO.ofExcept (protectedRecord.getObjValAs? _ "sealedInputs")
@@ -41,6 +52,17 @@ def main (args : List String) : IO Unit := do
       let path ← IO.ofExcept (entry.getObjValAs? String "path")
       check (toJson (← sha (.mk path)) == entry.getObjValD "sha256") "sealed model input changed"
   verify
+  if work && args.isEmpty then
+    let retirement := project / "docs/candidates/delivery-ack/current-replay-build-retirement.json"
+    let record ← read retirement
+    if let .arr removed := record.getObjValD "removed" then
+      let detailSha ← sha retirement
+      let logicalBytes ← IO.ofExcept (record.getObjValAs? Nat "logicalBytesRemoved")
+      IO.FS.writeFile retirement (Json.mkObj [("removedFiles",toJson removed.size),
+        ("logicalBytesRemoved",toJson logicalBytes),("removedDetailSha256",toJson detailSha),
+        ("currentLinkObjectsInterfacesAndStampsRetained",toJson true),
+        ("sourceAndDbFilesExcluded",toJson true),("protectedInputsUnchanged",toJson true),
+        ("archiveCreated",toJson false),("physicalBytesRecoveredMeasured",toJson false)]).pretty
   if args == ["cleanup"] then
     check (← (output / "manifest.json").pathExists) "capture evidence before cleanup"
     check (!(← (output / "cleanup.json").pathExists)) "preserve the cleanup record"
@@ -49,10 +71,12 @@ def main (args : List String) : IO Unit := do
       row.startsWith (build / "StudyMain").toString || (row.splitOn "StudyBuildMain.lean").length > 1))
       "wait for native work to finish"
     let mut removed := #[]
-    for path in [root / "turn-replay-native",root / "turn-replay-native2",build / "StudyMain"] do
-      removed := removed.push (path.toString,← retire path)
     for entry in ← root.readDir do
-      if entry.fileName.startsWith "turn-replay-" &&
+      if entry.fileName.startsWith (stem ++ "-native") && (← entry.path.isDir) then
+        removed := removed.push (entry.path.toString,← retire entry.path)
+    removed := removed.push ((build / "StudyMain").toString,← retire (build / "StudyMain"))
+    for entry in ← root.readDir do
+      if entry.fileName.startsWith (stem ++ "-") &&
           (entry.fileName.endsWith ".stdout" || entry.fileName.endsWith ".stderr") then
         removed := removed.push (entry.path.toString,← retire entry.path)
     for entry in ← build.readDir do
@@ -66,29 +90,37 @@ def main (args : List String) : IO Unit := do
     return
   check (!(← (output / "manifest.json").pathExists)) "preserve native evidence"
   IO.FS.createDirAll output
-  let guard ← read (root / "turn-replay-checks2.guard.json")
+  let guard ← read lastChecks
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
     guard.getObjValD "guardTriggered" == toJson false) "native run was not successful and terminal"
   let mut modules := #[]
-  for name in ["TurnReplay","SynapseIndex","UsageCache","SynapseJournal","ContractAudit"] do
+  let names := if work then ["DB/PageMap","GraphStore","TurnReplay","ReplayWork","UsageCache","SynapseJournal","ContractAudit"]
+    else ["TurnReplay","SynapseIndex","UsageCache","SynapseJournal","ContractAudit"]
+  for name in names do
     let relative := "Eggshell/" ++ name ++ ".lean"
     let old := parent / relative
     let old := if ← old.pathExists then old.toString else "/dev/null"
     let result ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/" ++ relative,
       "--label","b/" ++ relative,old,(core / relative).toString]}
     check (result.exitCode == 1) "expected an isolated candidate change"
-    IO.FS.writeFile (output / (name ++ ".patch")) result.stdout
+    IO.FS.writeFile (output / (name.replace "/" "_" ++ ".patch")) result.stdout
     modules := modules.push (← artifact (core / relative))
   let mut resources := #[]
-  let mut negatives := #[]
-  for name in ["compile","compile2","compile3","compile4","compile5","checks","checks2"] do
-    resources := resources.push (← read (root / ("turn-replay-" ++ name ++ ".guard.json")))
-    let path := root / ("turn-replay-" ++ name ++ ".stderr")
-    let error ← IO.FS.readFile path
-    if !error.isEmpty then negatives := negatives.push (Json.mkObj [("attempt",toJson name),("stderr",toJson error)])
+  let mut negatives : Array Json := #[]
+  let savedNegatives := root / (stem ++ "-negative-builds.json")
+  if ← savedNegatives.pathExists then negatives ← IO.ofExcept (fromJson? (← read savedNegatives))
+  for entry in ← root.readDir do
+    if !entry.fileName.startsWith (stem ++ "-") || !entry.fileName.endsWith ".guard.json" then continue
+    let record ← read entry.path
+    check (record.getObjValD "state" == toJson "finished") "a native attempt is still running"
+    resources := resources.push record
+    let stderr := root / (entry.fileName.replace ".guard.json" ".stderr")
+    if ← stderr.pathExists then
+      let error ← IO.FS.readFile stderr
+      if !error.isEmpty then negatives := negatives.push (Json.mkObj [("attempt",toJson entry.fileName),("stderr",toJson error)])
   IO.FS.writeFile (output / "resources.json") (toJson resources).pretty
   IO.FS.writeFile (output / "negative-builds.json") (toJson negatives).pretty
-  IO.FS.writeFile (output / "checks.json") (← IO.FS.readFile (root / "turn-replay-native2/result.json"))
+  IO.FS.writeFile (output / "checks.json") (← IO.FS.readFile (native / "result.json"))
   let mut objects := #[]
   for line in (← IO.FS.readFile (build / "runtime.rsp")).splitOn "\n" do
     if line.trimAscii.isEmpty then continue
@@ -101,14 +133,14 @@ def main (args : List String) : IO Unit := do
       if ← stamp.pathExists then stamps := stamps.push (← artifact stamp)
     objects := objects.push ((← artifact path).setObjVal! "inputStamps" (toJson stamps))
   IO.FS.writeFile (output / "native-inputs.json") (Json.mkObj [("objects",toJson objects),
-    ("entryPointDependencies",← read (build / "tools_research_TurnReplayChecks.dependencies")),
+    ("entryPointDependencies",← read (build / ("tools_research_" ++ entryPoint ++ ".dependencies"))),
     ("build",← read (build / "build.json")),("response",toJson (← IO.FS.readFile (build / "runtime.rsp")))]).pretty
   IO.FS.writeFile (output / "audit.json") (Json.mkObj [
     ("contractAudit",toJson (← IO.FS.readFile (build / "Eggshell_ContractAudit-lean.stdout"))),
-    ("bucketProofAxioms",toJson (← IO.FS.readFile (build / "tools_research_TurnReplayChecks-lean.stdout"))),
+    ("proofAxioms",toJson (← IO.FS.readFile (build / ("tools_research_" ++ entryPoint ++ "-lean.stdout")))),
     ("wholeIoCorrectnessProven",toJson false)]).pretty
   IO.FS.writeFile (output / "manifest.json") (Json.mkObj [("candidateModules",toJson modules),
-    ("entryPoint",← artifact (core / "tools/research/TurnReplayChecks.lean")),
+    ("entryPoint",← artifact (core / "tools/research" / (entryPoint ++ ".lean"))),
     ("nativeExecutable",← artifact (build / "StudyMain")),("currentProtectedInputs",toJson protectedInputs),
     ("sealedInputs",toJson sealedInputs),("protectedInputsUnchanged",toJson true),
     ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).pretty

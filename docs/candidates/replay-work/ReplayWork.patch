@@ -1,0 +1,309 @@
+--- a/Eggshell/ReplayWork.lean
++++ b/Eggshell/ReplayWork.lean
+@@ -0,0 +1,306 @@
++module
++public import Eggshell.TurnReplay
++@[expose] public section
++
++namespace Eggshell.Synapses.ReplayWork
++open Lean DB Persistence.Store
++
++structure Ticket where
++  name : String
++  stamp : String
++  deriving BEq,DecidableEq,ToJson,FromJson
++
++def canFinish (expected actual : Ticket) (complete : Bool) : Bool :=
++  complete && decide (expected = actual)
++
++theorem changed_ticket_cannot_finish (expected actual : Ticket) (different : expected ≠ actual)
++    (complete : Bool) : canFinish expected actual complete = false := by
++  simp [canFinish,different]
++
++def ticketBytes (ticket : Ticket) : ByteArray := (toJson ticket).compress.toUTF8
++def queueKey (base : String) (ordinal : Nat) := key (base ++ ":queue") ordinal
++def jobKey (base name : String) := base ++ ":job:" ++ name
++
++def enqueue (writer : PageMap.Writer) (base name : String) : IO Unit := do
++  unless digest name do throw (IO.userError "invalid private replay task")
++  let head ← getNat writer.get (base ++ ":head")
++  let tail ← getNat writer.get (base ++ ":tail")
++  unless head ≤ tail do throw (IO.userError "invalid replay queue extent")
++  let ordinal ← match ← writer.get (jobKey base name) with
++    | some raw => do
++      let ordinal ← IO.ofExcept (payloadSize (some raw))
++      unless head ≤ ordinal && ordinal < tail do throw (IO.userError "replay job points outside its live queue")
++      let some raw ← writer.get (queueKey base ordinal) | throw (IO.userError "replay job lost its ticket")
++      let current ← Index.decode (α := Ticket) raw
++      unless current.name == name do throw (IO.userError "foreign replay queue ticket")
++      pure ordinal
++    | none => do
++      putNat writer (base ++ ":tail") (tail+1)
++      putNat writer (jobKey base name) tail
++      pure tail
++  let ticket : Ticket := ⟨name,Index.contentKey (writer.base.head,name)⟩
++  writer.put (queueKey base ordinal) (some (ticketBytes ticket))
++
++def pending (journal : PageMap.Snapshot) (base : String) : IO Bool := do
++  let head ← getNat journal.get (base ++ ":head")
++  let tail ← getNat journal.get (base ++ ":tail")
++  unless head ≤ tail do throw (IO.userError "invalid replay queue extent")
++  return head < tail
++
++def first? (journal : PageMap.Snapshot) (base : String) : IO (Option (Nat × Ticket)) := do
++  if !(← pending journal base) then return none
++  let ordinal ← getNat journal.get (base ++ ":head")
++  let some raw ← journal.get (queueKey base ordinal) | throw (IO.userError "dense replay queue has a hole")
++  let ticket ← Index.decode (α := Ticket) raw
++  unless digest ticket.name && digest ticket.stamp &&
++      (← journal.get (jobKey base ticket.name)) == some (Wire.natural.encode ordinal).toByteArray do
++    throw (IO.userError "replay queue and live job disagree")
++  return some (ordinal,ticket)
++
++/-- Only the current head can be acknowledged. A changed ticket or an
++unfinished job moves to the tail, so stale completion loses no new event
++and a waiting archive does not permanently occupy the front. -/
++def acknowledge (writer : PageMap.Writer) (base : String) (ordinal : Nat)
++    (expected : Ticket) (complete : Bool) : IO Bool := do
++  unless (← getNat writer.get (base ++ ":head")) == ordinal do
++    throw (IO.userError "replay queue head changed without its worker lease")
++  let some raw ← writer.get (queueKey base ordinal) | throw (IO.userError "replay queue head disappeared")
++  let current ← Index.decode (α := Ticket) raw
++  unless current.name == expected.name &&
++      (← writer.get (jobKey base current.name)) == some (Wire.natural.encode ordinal).toByteArray do
++    throw (IO.userError "replay completion has another job owner")
++  writer.put (queueKey base ordinal) none
++  putNat writer (base ++ ":head") (ordinal+1)
++  let finished := canFinish expected current complete
++  if finished then writer.put (jobKey base current.name) none
++  else
++    let tail ← getNat writer.get (base ++ ":tail")
++    writer.put (queueKey base tail) (some raw)
++    putNat writer (jobKey base current.name) tail
++    putNat writer (base ++ ":tail") (tail+1)
++  return finished
++
++structure SourceCursor where
++  path : String
++  head : Option PageMap.Head
++  block : Nat := 0
++  resetAfter : String := ""
++  sequence : Nat := 0
++  deriving BEq,ToJson,FromJson
++
++def sourceKey (base path : String) := base ++ ":source:" ++ Index.contentKey path
++def sourceUsersKey (base path : String) := base ++ ":source-users:" ++ Index.contentKey path
++def sourceWatchBase (base path : String) := base ++ ":source-watch:" ++ Index.contentKey path ++ ":"
++def keyWatchBase (base path field : String) :=
++  base ++ ":key-watch:" ++ Index.contentKey (path,field) ++ ":"
++
++def inputFields (inputs : TurnReplay.Inputs) : Array (String × PageMap.Head × String) :=
++  inputs.sources.flatMap fun source => source.buckets.flatMap fun bucket =>
++    #[(source.path,source.head,bucket.key)] ++ bucket.ids.map fun id =>
++      (source.path,source.head,key "member" id)
++
++/-- Reverse postings contain only private task identities. Registration and
++the success certificate must be committed by the same journal writer. -/
++def register (writer : PageMap.Writer) (base name : String) (inputs : TurnReplay.Inputs) : IO Unit := do
++  let reverse := base ++ ":watch-job:" ++ name
++  let old ← match ← writer.get reverse with
++    | none => pure #[]
++    | some _ => do
++      let snapshot ← writer.snapshot
++      Index.decode (α := Array (String × String)) (← snapshot.readPayloadUsing writer.get reverse)
++  let fields := inputFields inputs
++  let wanted := fields.map (fun (path,_,field) => (path,field)) |>.toList.eraseDups.toArray
++  for (path,field) in old do
++    if !wanted.contains (path,field) then writer.put (keyWatchBase base path field ++ name) none
++  for (path,field) in wanted do
++    writer.put (keyWatchBase base path field ++ name) (some (toJson name).compress.toUTF8)
++  let paths := (fields.map fun (path,_,_) => path).toList.eraseDups
++  let oldPaths := (old.map Prod.fst).toList.eraseDups
++  for path in oldPaths do
++    if !paths.contains path then
++      writer.put (sourceWatchBase base path ++ name) none
++      let count ← getNat writer.get (sourceUsersKey base path)
++      unless count > 0 do throw (IO.userError "source watcher count underflow")
++      putNat writer (sourceUsersKey base path) (count-1)
++      if count == 1 then writer.put (sourceKey base path) none
++  for path in paths do
++    if !oldPaths.contains path then
++      putNat writer (sourceUsersKey base path) ((← getNat writer.get (sourceUsersKey base path))+1)
++    writer.put (sourceWatchBase base path ++ name) (some (toJson name).compress.toUTF8)
++    let heads := fields.filterMap fun (p,head,_) => if p == path then some head else none
++    let some first := heads[0]? | throw (IO.userError "source watcher has no captured head")
++    let oldest := heads.foldl (fun found head => if head.revision < found.revision then head else found) first
++    let some captured := inputs.sources.find? (fun source => source.path == path && source.head == oldest) |
++      throw (IO.userError "source watcher lost its captured feed sequence")
++    let previous ← (← writer.get (sourceKey base path)).mapM (Index.decode (α := SourceCursor))
++    let next : SourceCursor := match previous with
++      | none => {path,head := some oldest,sequence := captured.sequence}
++      | some previous =>
++        if previous.head.any (fun head => head.identity == oldest.identity && oldest.revision < head.revision) then
++          {path,head := some oldest,sequence := captured.sequence}
++        else previous
++    writer.put (sourceKey base path) (some (toJson next).compress.toUTF8)
++  putPayload writer reverse (toJson wanted).compress.toUTF8
++
++def enqueueWatchers (journal : PageMap.Snapshot) (writer : PageMap.Writer) (base directoryPrefix : String) : IO Nat :=
++  journal.foldRange ⟨directoryPrefix,directoryPrefix ++ "~"⟩ (fun count row => do
++    let some raw := row.2 | return count
++    let name ← Index.decode (α := String) raw
++    unless row.1 == directoryPrefix ++ name do throw (IO.userError "foreign replay dependency posting")
++    enqueue writer base name
++    return count+1) 0
++
++def hasExternal (journal : PageMap.Snapshot) (base primary : String) : IO Bool := do
++  let directoryPrefix := base ++ ":source:"
++  journal.foldRange ⟨directoryPrefix,directoryPrefix ++ "~"⟩ (fun found row => do
++    let some raw := row.2 | return found
++    let cursor ← Index.decode (α := SourceCursor) raw
++    unless row.1 == sourceKey base cursor.path do throw (IO.userError "foreign source dependency cursor")
++    return found || cursor.path != primary) false
++
++structure Window where
++  rows : Array PageMap.Row := #[]
++  complete : Bool := true
++
++def windowAt (source : PageMap.Snapshot) (ref : PageMap.Ref) (range : PageMap.KeyRange)
++    (limit : Nat) (state : Window) : IO Window := do
++  if !state.complete then return state
++  let loaded ← source.load ref
++  unless range.overlaps ref do return state
++  match loaded.page with
++  | .leaf rows =>
++    let mut state := state
++    for row in range.select rows do
++      if state.rows.size ≥ limit then return {state with complete := false}
++      state := {state with rows := state.rows.push row}
++    return state
++  | .branch children =>
++    let mut state := state
++    for child in children do
++      if range.overlaps child then
++        if _smaller : child.height < ref.height then state ← windowAt source child range limit state
++        else throw (IO.userError "replay work directory height did not decrease")
++        if !state.complete then return state
++    return state
++termination_by ref.height
++
++def window (source : PageMap.Snapshot) (lower upper : String) (limit : Nat) : IO Window :=
++  match source.head.root with
++  | none => pure {}
++  | some ref => windowAt source ref ⟨lower,upper⟩ limit {}
++
++structure Bootstrap where
++  stamp : String
++  after : String := ""
++  done : Bool := false
++  deriving ToJson,FromJson
++
++/-- Only a backend reset enumerates the turn catalog. It advances in bounded
++windows atomically with enqueue; new events enqueue independently of order. -/
++def bootstrap (journal : PageMap.Snapshot) (writer : PageMap.Writer) (base stamp : String)
++    (limit : Nat := 64) : IO Bool := do
++  let previous ← (← writer.get (base ++ ":bootstrap")).mapM (Index.decode (α := Bootstrap))
++  let state := previous.filter (·.stamp == stamp) |>.getD {stamp}
++  if state.done then return true
++  let lower := if state.after.isEmpty then "turn:" else state.after ++ "\x00"
++  let found ← window journal lower "turn;" limit
++  for row in found.rows do
++    if row.2.isSome then enqueue writer base (row.1.drop 5).copy
++  let next : Bootstrap := {state with
++    after := (found.rows.back?.map Prod.fst).getD state.after,done := found.complete}
++  writer.put (base ++ ":bootstrap") (some (toJson next).compress.toUTF8)
++  return next.done
++
++structure Sync where
++  complete : Bool := true
++  external : Bool := false
++  blocks : Nat := 0
++  postings : Nat := 0
++  sources : Nat := 0
++
++/-- One block's enqueues and source cursor are staged on this one private
++writer. A crash cannot leave the cursor past work which was never queued. -/
++def sync (journal : PageMap.Snapshot) (writer : PageMap.Writer) (base : String)
++    (primary : PageMap.Snapshot) (deadline : Nat) (limit : Nat := 32) : IO Sync := do
++  let directoryPrefix := base ++ ":source:"
++  let cursors ← journal.foldRange ⟨directoryPrefix,directoryPrefix ++ "~"⟩ (fun found row => do
++    let some raw := row.2 | return found
++    let cursor ← Index.decode (α := SourceCursor) raw
++    unless row.1 == sourceKey base cursor.path do throw (IO.userError "foreign source dependency cursor")
++    return found.push cursor) (#[] : Array SourceCursor)
++  let anyExternal := cursors.any (fun cursor => cursor.path != primary.directory.normalize.toString)
++  let mut result : Sync := {sources := cursors.size,external := anyExternal}
++  let start ← getNat writer.get (base ++ ":source-round")
++  for offset in [:cursors.size] do
++    let some captured := cursors[(start+offset)%cursors.size]? |
++      throw (IO.userError "source dependency round lost its cursor")
++    let external := captured.path != primary.directory.normalize.toString
++    if (← IO.monoMsNow) ≥ deadline || result.blocks ≥ limit then
++      result := {result with complete := false}; break
++    let current ← if external then PageMap.open? (.mk captured.path) else pure (some primary)
++    let now := current.map (·.head)
++    let mut cursor := captured
++    for _ in [:limit] do
++      if cursor.head == now then break
++      if (← IO.monoMsNow) ≥ deadline || result.blocks ≥ limit then break
++      if let some current := current then
++        unless current.head.revision == 0 || (← getNat current.get replayFeedCoveredKey) == current.head.revision do
++          throw (IO.userError "source replay feed does not cover its current publication")
++      let continuous ← match current,cursor.head with
++        | some current,some old => do pure (← TurnReplay.retained? current old).isSome
++        | _,_ => pure false
++      if !continuous then
++        let watchPrefix := sourceWatchBase base cursor.path
++        let lower := if cursor.resetAfter.isEmpty then watchPrefix else cursor.resetAfter ++ "\x00"
++        let found ← window journal lower (watchPrefix ++ "~") 64
++        for row in found.rows do
++          let some raw := row.2 | continue
++          let name ← Index.decode (α := String) raw
++          unless row.1 == watchPrefix ++ name do throw (IO.userError "foreign source reset watcher")
++          enqueue writer base name
++          result := {result with postings := result.postings+1}
++        let sequence ← match current with
++          | some current => getNat current.get replayFeedSequenceKey
++          | none => pure 0
++        cursor := if found.complete then {path := cursor.path,head := now,sequence} else
++          {cursor with resetAfter := (found.rows.back?.map Prod.fst).getD cursor.resetAfter}
++      else
++        let some current := current | throw (IO.userError "continuous replay source disappeared")
++        let some old := cursor.head | throw (IO.userError "continuous replay source lost its basis")
++        let sequence ← getNat current.get replayFeedSequenceKey
++        unless cursor.sequence ≤ sequence do throw (IO.userError "source replay sequence regressed")
++        if cursor.sequence == sequence then
++          cursor := {path := cursor.path,head := some current.head,sequence}
++          break
++        let nextSequence := cursor.sequence+1
++        let some revisionRaw ← current.get (replayFeedRevisionKey nextSequence) |
++          throw (IO.userError "source replay sequence lost a publication")
++        let revision ← IO.ofExcept (payloadSize (some revisionRaw))
++        let publication ← readPublication current revision
++        let some parent ← PageMap.HistoryReader.make? current publication.parent |
++          throw (IO.userError "source replay publication lost its parent")
++        unless old.revision < revision && (← getNat parent.snapshot.get replayFeedSequenceKey) == cursor.sequence do
++          throw (IO.userError "replay source sequence does not follow its captured cursor")
++        let count ← replayFeedCount current revision
++        let blocks := (count+replayFeedBlockSize-1)/replayFeedBlockSize
++        if cursor.block < blocks then
++          for field in ← replayFeedBlock current revision cursor.block do
++            let queued ← enqueueWatchers journal writer base (keyWatchBase base cursor.path field)
++            result := {result with postings := result.postings+queued}
++          cursor := {cursor with block := cursor.block+1}
++        if cursor.block == blocks then
++          let next ← if revision == current.head.revision then pure current.head
++            else do pure (← readPublication current (revision+1)).parent
++          unless next.revision == revision do throw (IO.userError "replay feed does not identify its next source root")
++          cursor := {path := cursor.path,head := some next,sequence := nextSequence}
++      result := {result with blocks := result.blocks+1}
++    if cursor.head != now then result := {result with complete := false}
++    if cursor != captured then writer.put (sourceKey base cursor.path) (some (toJson cursor).compress.toUTF8)
++  if !result.complete && cursors.size > 1 then
++    putNat writer (base ++ ":source-round") ((start+1)%cursors.size)
++  return result
++
++def implementation : String := Blake3.hex (Blake3.digest "eggshell.replay-work".toUTF8 [
++  (include_str "ReplayWork.lean").toUTF8,TurnReplay.implementation.toUTF8,replayFeedImplementation.toUTF8])
++
++end Eggshell.Synapses.ReplayWork

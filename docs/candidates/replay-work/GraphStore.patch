@@ -1,0 +1,53 @@
+--- a/Eggshell/GraphStore.lean
++++ b/Eggshell/GraphStore.lean
+@@ -1532,0 +1533,28 @@
++
++def replayFeedImplementation : String := Blake3.hex (Blake3.digest "eggshell.publication-replay-keys".toUTF8 [
++  (include_str "GraphStore.lean").toUTF8,(include_str "DB/PageMap.lean").toUTF8])
++
++def replayFeedBase (revision : Nat) := "memo:replay-keys:" ++ toString revision
++def replayFeedBlockSize : Nat := 64
++def replayFeedSequenceKey : String := "memo:replay-feed-sequence"
++def replayFeedCoveredKey : String := "memo:replay-feed-covered"
++def replayFeedRevisionKey (sequence : Nat) := key "memo:replay-feed-revision" sequence
++
++/-- The writer's complete monotone set includes edits flushed before the
++publication is sealed. Original and feed share the same durable root. -/
++def stageReplayFeed (writer : Writer) : IO Unit := do
++  if let some raw ← writer.base.get replayFeedCoveredKey then
++    unless (← IO.ofExcept (payloadSize (some raw))) == writer.base.head.revision do
++      throw (IO.userError "source publication bypassed its replay-feed producer")
++  let base := replayFeedBase (writer.base.head.revision+1)
++  let keys := ((← writer.replayKeys.get).keys.toArray).qsort (· < ·)
++  if !keys.isEmpty then
++    let sequence := (← getNat writer.get replayFeedSequenceKey)+1
++    putNat writer replayFeedSequenceKey sequence
++    putNat writer (replayFeedRevisionKey sequence) (writer.base.head.revision+1)
++  writer.put (base ++ ":producer") (some replayFeedImplementation.toUTF8)
++  putNat writer replayFeedCoveredKey (writer.base.head.revision+1)
++  putNat writer (base ++ ":count") keys.size
++  for block in [:(keys.size+replayFeedBlockSize-1)/replayFeedBlockSize] do
++    putChunks writer base block ((Wire.list Wire.text).encode
++      (keys.extract (block*replayFeedBlockSize) ((block+1)*replayFeedBlockSize)).toList).toByteArray
+@@ -1533,0 +1562,19 @@
++def replayFeedCount (source : Snapshot) (revision : Nat) : IO Nat := do
++  let base := replayFeedBase revision
++  unless (← source.get (base ++ ":producer")) == some replayFeedImplementation.toUTF8 do
++    throw (IO.userError "publication replay feed is missing or has an unsupported producer")
++  let some raw ← source.get (base ++ ":count") | throw (IO.userError "publication replay feed has no complete extent")
++  IO.ofExcept (payloadSize (some raw))
++
++def replayFeedBlock (source : Snapshot) (revision block : Nat) : IO (Array String) := do
++  let count ← replayFeedCount source revision
++  unless block < (count+replayFeedBlockSize-1)/replayFeedBlockSize do
++    throw (IO.userError "publication replay feed block exceeds its complete extent")
++  let raw ← readChunks source source.get (replayFeedBase revision) block
++  let (keys,tail) ← IO.ofExcept ((Wire.list Wire.text).decode raw.toList)
++  unless tail.isEmpty && (Wire.list Wire.text).encode keys == raw.toList &&
++      keys.length == min replayFeedBlockSize (count-block*replayFeedBlockSize) &&
++      keys.all PageMap.replayRelevant do
++    throw (IO.userError "invalid publication replay feed block")
++  return keys.toArray
++
+@@ -1542,0 +1590 @@
++  stageReplayFeed writer

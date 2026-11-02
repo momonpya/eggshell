@@ -44,18 +44,23 @@ private partial def retireCopy (path : System.FilePath) : IO Nat := do
 
 def main (args : List String) : IO Unit := do
   check (args.isEmpty || args == ["duplicate-snapshots"] || args == ["ended-cache"] ||
-    args == ["ended-source"] || args == ["ended-recommendations"]) "unexpected retirement mode"
+    args == ["ended-source"] || args == ["ended-recommendations"] || args == ["current-replay"] ||
+    args == ["ended-seed2-index"]) "unexpected retirement mode"
   let duplicates := args == ["duplicate-snapshots"]
   let endedCache := args == ["ended-cache"]
   let endedSource := args == ["ended-source"]
   let endedRecommendations := args == ["ended-recommendations"]
+  let currentReplay := args == ["current-replay"]
+  let seed2Index := args == ["ended-seed2-index"]
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028"
   let root := base / "fixed-frame-study"
   let output := project / "docs/candidates/delivery-ack" /
     (if duplicates then "duplicate-snapshot-retirement.json" else if endedCache then
       "ended-cache-retirement.json" else if endedSource then "ended-source-retirement.json" else
-      if endedRecommendations then "ended-recommendations-retirement.json" else "unreachable-build-retirement.json")
+      if endedRecommendations then "ended-recommendations-retirement.json" else if currentReplay then
+      "current-replay-build-retirement.json" else if seed2Index then "ended-seed2-index-retirement.json" else
+      "unreachable-build-retirement.json")
   check (!(← output.pathExists)) "preserve the retirement record"
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
   check (processes.exitCode == 0 && (processes.stdout.splitOn "StudyBuildMain.lean").length == 1)
@@ -69,8 +74,8 @@ def main (args : List String) : IO Unit := do
       let path ← IO.ofExcept (artifact.getObjValAs? String "path")
       check (toJson (← sha path) == artifact.getObjValD "sha256") "sealed input changed"
   verify
-  if endedRecommendations then
-    let original := root / "study/seed-1/work.egg"
+  if endedRecommendations || seed2Index then
+    let original := root / "study" / (if seed2Index then "seed-2-isolated" else "seed-1") / "work.egg"
     let identity ← IO.ofExcept ((← read (original / "head")).getObjValAs? String "identity")
     let page := original / (identity ++ ".pages")
     let digest ← sha page.toString
@@ -80,10 +85,10 @@ def main (args : List String) : IO Unit := do
     check ((← sha page.toString) == digest) "seed1 source changed during ended-cache retirement"
     verify
     IO.FS.writeFile output (Json.mkObj [("retired",toJson (target.toString,bytes,headDigest)),
-      ("seed1HistoricalIndexNoLongerAvailable",toJson true),
-      ("retainedOriginal",toJson (page.toString,digest)),("seed2ReplayInputsExcluded",toJson true),
+      ("historicalIndexNoLongerAvailable",toJson true),
+      ("retainedOriginal",toJson (page.toString,digest)),("privateJournalExcluded",toJson true),
       ("protectedInputsUnchanged",toJson true),("archiveCreated",toJson false)]).pretty
-    IO.println "Retired ended seed1 recommendation cache; original, private journal and seed2 replay inputs retained."
+    IO.println "Retired ended runtime's recommendation cache; original and private journal retained. Historical index-head replay is no longer available."
     return
   if endedSource then
     let target := base / "study/seed-2/work.egg"
@@ -134,9 +139,10 @@ def main (args : List String) : IO Unit := do
       ("archiveCreated",toJson false)]).pretty
     IO.println "Retired two ended snapshot copies; the byte-identical original remains."
     return
-  let settings ← read (root / "delivery-ack-shared-build.settings.json")
+  let settings ← read (root / (if currentReplay then "turn-replay-build.settings.json" else "delivery-ack-shared-build.settings.json"))
   let parents : Array String ← IO.ofExcept (settings.getObjValAs? _ "parents")
-  let active := parents.push (root / "delivery-ack-build").toString
+  let active := if currentReplay then #[(root / "turn-replay-build").toString,(root / "controller").toString]
+    else parents.push (root / "delivery-ack-build").toString
   let seen ← IO.mkRef ({} : Std.HashSet String)
   for directory in active do
     mark (.mk directory) seen

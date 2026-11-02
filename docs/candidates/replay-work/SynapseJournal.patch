@@ -1,0 +1,123 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -134,0 +135,3 @@
++def lane (storage : Sidecar.Storage) : String := if storage == .database then "database" else "user"
++def workBase (storage : Sidecar.Storage) := "replay-work:" ++ lane storage ++ ":" ++ implementation
++
+@@ -209,0 +213,3 @@
++      for storage in [Sidecar.Storage.database,.user] do
++        let base := workBase storage
++        if (← writer.get (base ++ ":bootstrap")).isSome then ReplayWork.enqueue writer base turn.name
+@@ -624,2 +629,0 @@
+-
+-def lane (storage : Sidecar.Storage) : String := if storage == .database then "database" else "user"
+@@ -649,6 +652,0 @@
+-def markTurn (source : PageMap.Snapshot) (name : String) (checkpoint : TurnReplay.Checkpoint) : IO Unit := do
+-  let bytes := (toJson checkpoint).compress.toUTF8
+-  unless bytes.size ≤ maxBytes do throw (IO.userError "turn checkpoint exceeds its metadata bound")
+-  withPublication source fun journal => do
+-    let _ ← PageMap.withWriter journal fun writer => putPayload writer ("scoped:" ++ name) bytes
+-
+@@ -665,0 +664 @@
++  if ← ReplayWork.pending journal (workBase storage) then return true
+@@ -674,0 +674,3 @@
++  checked : Nat := 0
++  changeBlocks : Nat := 0
++  dependencyPostings : Nat := 0
+@@ -702 +704 @@
+-def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline : Nat)
++def refreshQueued (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline : Nat)
+@@ -714,0 +717 @@
++  let base := workBase storage
+@@ -716 +719,2 @@
+-    if ← previous.sameInput source expected.index count (source.head.revision-previous.source.revision+1) then
++    if !(← ReplayWork.pending journal base) &&
++        (← previous.sameInput source expected.index count (source.head.revision-previous.source.revision+1)) then
+@@ -719,6 +723,10 @@
+-  let turns ← journal.foldRange ⟨"turn:", "turn;"⟩ (fun turns row => do
+-    let some bytes := row.2 | return turns
+-    let turn ← Index.decode (α := Turn) bytes
+-    unless row.1 == "turn:" ++ turn.name do throw (IO.userError "foreign event turn directory")
+-    return turns.push turn) #[]
+-  let mut result : Result := {}
++  let stamp := Index.contentKey (journal.head.identity,sharedBackend,usageBackend,implementation)
++  let (bootstrap,synced) ← withPublication source fun current => do
++    let (state,_,_) ← PageMap.withWriter current fun writer => do
++      let bootstrap ← ReplayWork.bootstrap current writer base stamp
++      let synced ← ReplayWork.sync current writer base source deadline
++      return (bootstrap,synced)
++    return state
++  let mut result : Result := {
++    complete := bootstrap && synced.complete,external := synced.external,
++    changeBlocks := synced.blocks,dependencyPostings := synced.postings}
+@@ -726 +734,9 @@
+-  for turn in turns do
++  let some queued ← open? source | throw (IO.userError "private replay queue disappeared")
++  let roundEnd ← getNat queued.get (base ++ ":tail")
++  for _ in [:limit] do
++    let some journal ← open? source | throw (IO.userError "private replay queue disappeared")
++    let some (ordinal,ticket) ← ReplayWork.first? journal base | break
++    if ordinal ≥ roundEnd then result := {result with complete := false}; break
++    let some encoded ← journal.get ("turn:" ++ ticket.name) | throw (IO.userError "queued turn has no native event catalog")
++    let turn ← Index.decode (α := Turn) encoded
++    unless ticket.name == turn.name do throw (IO.userError "replay ticket belongs to another turn")
+@@ -728,0 +745 @@
++    result := {result with checked := result.checked+1}
+@@ -733,2 +750,4 @@
+-        let external := previous.inputs.sources.any (fun saved => saved.path != source.directory.normalize.toString)
+-        result := {result with external := result.external || external}
++        let _ ← withPublication source fun current => do
++          let (_,_,_) ← PageMap.withWriter current fun writer =>
++            ReplayWork.acknowledge writer base ordinal ticket true
++          pure ()
+@@ -736 +755 @@
+-    if result.turns ≥ limit || (← IO.monoMsNow) ≥ deadline then
++    if (← IO.monoMsNow) ≥ deadline then
+@@ -746 +765,7 @@
+-    let some replayed := replayed | result := {result with complete := false}; break
++    let some replayed := replayed | do
++      let _ ← withPublication source fun current => do
++        let (_,_,_) ← PageMap.withWriter current fun writer =>
++          ReplayWork.acknowledge writer base ordinal ticket false
++        pure ()
++      result := {result with complete := false}
++      break
+@@ -754,2 +779,11 @@
+-    if replayed.pending == 0 && (← checkpoint.inputs.agree source deadline) then markTurn source turnKey checkpoint
+-    else result := {result with complete := false}
++    let ready := replayed.pending == 0 && (← checkpoint.inputs.agree source deadline)
++    let bytes := (toJson checkpoint).compress.toUTF8
++    unless bytes.size ≤ maxBytes do throw (IO.userError "turn checkpoint exceeds its metadata bound")
++    let finished ← withPublication source fun current => do
++      let (finished,_,_) ← PageMap.withWriter current fun writer => do
++        if ready then
++          putPayload writer ("scoped:" ++ turnKey) bytes
++          ReplayWork.register writer base ticket.name checkpoint.inputs
++        ReplayWork.acknowledge writer base ordinal ticket ready
++      return finished
++    if !finished then result := {result with complete := false}
+@@ -759,0 +794,9 @@
++  let some currentJournal ← open? source | throw (IO.userError "private replay queue disappeared")
++  result := {result with external := ← ReplayWork.hasExternal currentJournal base source.directory.normalize.toString}
++  if ← ReplayWork.pending currentJournal base then result := {result with complete := false}
++  let currentShared ← Index.open? source storage .shared
++  let currentUsage ← UsageCache.open? source
++  if let (some currentShared,some currentUsage) := (currentShared,currentUsage) then
++    unless (← TurnReplay.backend currentShared.index) == sharedBackend &&
++        (← TurnReplay.backend currentUsage.index) == usageBackend do result := {result with complete := false}
++  else result := {result with complete := false}
+@@ -762,0 +806,14 @@
++/-- One private project worker publishes replay output at a time. This lease
++does not occupy the short event/ACK journal publication claim. -/
++def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline : Nat)
++    (limit : Nat := 8) (readCache : Option StoredReadLookup.Cache := none)
++    (runner : Option ReplayRunner := none) : IO Result := do
++  if !(← Build.required source storage) && !(← required source storage) then return {}
++  let journal ← prepare source
++  let path := journal.directory.parent.get! / "replay.guard"
++  FileSystem.immutableExistingBytes path ByteArray.empty
++  let lease ← FileSystem.openRead path.toString
++  unless ← FileSystem.tryReadLock lease true do return {complete := false}
++  try refreshQueued source storage deadline limit readCache runner
++  finally FileSystem.unlockRead lease
++

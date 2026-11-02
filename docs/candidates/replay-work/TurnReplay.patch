@@ -1,0 +1,13 @@
+--- a/Eggshell/TurnReplay.lean
++++ b/Eggshell/TurnReplay.lean
+@@ -34,0 +35 @@
++  sequence : Nat := 0
+@@ -55 +56,7 @@
+-  | none => return {inputs with sources := inputs.sources.push ⟨path,source.head,#[captured]⟩}
++  | none =>
++    let saved : Source := {
++      path
++      head := source.head
++      buckets := #[captured]
++      sequence := ← getNat source.get replayFeedSequenceKey}
++    return {inputs with sources := inputs.sources.push saved}

@@ -1,0 +1,24 @@
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -1103,0 +1104,5 @@
++
++def replayRelevant (key : String) : Bool := key.startsWith "hash:" || key.startsWith "member:"
++
++def watchReplay (seen : Std.HashMap String Unit) (key : String) : Std.HashMap String Unit :=
++  if replayRelevant key then seen.insert key () else seen
+@@ -1104,0 +1110,8 @@
++theorem irrelevant_replay_write_preserves (seen : Std.HashMap String Unit) (key : String)
++    (irrelevant : replayRelevant key = false) : watchReplay seen key = seen := by
++  simp [watchReplay,irrelevant]
++
++theorem relevant_replay_write_present (seen : Std.HashMap String Unit) (key : String)
++    (relevant : replayRelevant key = true) : (watchReplay seen key).contains key = true := by
++  simp [watchReplay,relevant]
++
+@@ -1157,0 +1171 @@
++  replayKeys : IO.Ref (Std.HashMap String Unit)
+@@ -1349,0 +1364 @@
++  writer.replayKeys.modify (watchReplay · key)
+@@ -1371 +1386 @@
+-      ← IO.mkRef true, ← IO.mkRef false⟩
++      ← IO.mkRef true, ← IO.mkRef false, ← IO.mkRef {}⟩

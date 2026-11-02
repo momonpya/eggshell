@@ -1,0 +1,17 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -39,0 +40,2 @@
++      ``Eggshell.DB.PageMap.relevant_replay_write_present,
++      ``Eggshell.Synapses.ReplayWork.changed_ticket_cannot_finish,
+@@ -416 +418,2 @@
+-      (``Eggshell.Persistence.Store.writeChange, #[``Eggshell.Persistence.Store.Change.sourceMarker], #[]),
++      (``Eggshell.Persistence.Store.writeChange,
++        #[``Eggshell.Persistence.Store.Change.sourceMarker, ``Eggshell.Persistence.Store.stageReplayFeed], #[]),
+@@ -421 +424,6 @@
+-          ``Eggshell.Synapses.TurnReplay.backend], #[]),
++          ``Eggshell.Synapses.TurnReplay.backend, ``Eggshell.Synapses.ReplayWork.bootstrap,
++          ``Eggshell.Synapses.ReplayWork.sync, ``Eggshell.Synapses.ReplayWork.acknowledge], #[]),
++      (``Eggshell.Synapses.ReplayWork.sync,
++        #[``Eggshell.Persistence.Store.replayFeedBlock, ``Eggshell.Synapses.ReplayWork.enqueueWatchers],
++        #[``Eggshell.Synapses.Journal.turnEntries, ``Eggshell.Synapses.Build.document,
++          ``Eggshell.Synapses.Index.allFacts]),
