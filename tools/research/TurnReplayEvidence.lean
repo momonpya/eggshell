@@ -25,16 +25,17 @@ private partial def retire (path : System.FilePath) : IO Nat := do
   return metadata.byteSize.toNat
 
 def main (args : List String) : IO Unit := do
-  let work := args.contains "work"
-  let args := args.filter (· != "work")
+  let bounds := args.contains "bounds"
+  let work := args.contains "work" || bounds
+  let args := args.filter (fun arg => arg != "work" && arg != "bounds")
   check (args.isEmpty || args == ["cleanup"]) "expected optional work and capture or cleanup"
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
-  let stem := if work then "replay-work" else "turn-replay"
+  let stem := if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
   let entryPoint := if work then "ReplayWorkChecks" else "TurnReplayChecks"
   let output := project / "docs/candidates" / stem
   let build := root / (stem ++ "-build")
-  let parent := root / (if work then "turn-replay-core" else "delivery-ack-core")
+  let parent := root / (if bounds then "replay-work-core" else if work then "turn-replay-core" else "delivery-ack-core")
   let core := root / (stem ++ "-core")
   let mut native := root / (stem ++ "-native")
   let mut lastChecks := root / (stem ++ "-checks.guard.json")
@@ -83,7 +84,11 @@ def main (args : List String) : IO Unit := do
       if entry.fileName.endsWith ".stdout" || entry.fileName.endsWith ".stderr" then
         removed := removed.push (entry.path.toString,← retire entry.path)
     verify
-    IO.FS.writeFile (output / "cleanup.json") (Json.mkObj [("removed",toJson removed),
+    let generatedLogs := removed.filter fun (path,_) => path.endsWith ".stdout" || path.endsWith ".stderr"
+    let retainedDetails := removed.filter fun (path,_) => !path.endsWith ".stdout" && !path.endsWith ".stderr"
+    IO.FS.writeFile (output / "cleanup.json") (Json.mkObj [("removed",toJson retainedDetails),
+      ("removedCompilerAndRunLogs",toJson generatedLogs.size),
+      ("removedLogBytes",toJson (generatedLogs.foldl (fun bytes row => bytes+row.2) 0)),
       ("protectedInputsUnchanged",toJson true),("objectsInterfacesAndInputStampsRetained",toJson true),
       ("archiveCreated",toJson false)]).pretty
     IO.println "Retired ended native fixtures, executable and compiler logs; current inputs retained."
@@ -94,7 +99,8 @@ def main (args : List String) : IO Unit := do
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
     guard.getObjValD "guardTriggered" == toJson false) "native run was not successful and terminal"
   let mut modules := #[]
-  let names := if work then ["DB/PageMap","GraphStore","TurnReplay","ReplayWork","UsageCache","SynapseJournal","ContractAudit"]
+  let names := if bounds then ["ReplayWork","SynapseJournal","ContractAudit"] else
+    if work then ["DB/PageMap","GraphStore","TurnReplay","ReplayWork","UsageCache","SynapseJournal","ContractAudit"]
     else ["TurnReplay","SynapseIndex","UsageCache","SynapseJournal","ContractAudit"]
   for name in names do
     let relative := "Eggshell/" ++ name ++ ".lean"

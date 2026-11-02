@@ -22,17 +22,18 @@ private partial def modules (root path : System.FilePath)
   return found
 
 def main (args : List String) : IO Unit := do
-  check (args.isEmpty || args == ["retire-native"] || args == ["work"] || args == ["work-checks"])
-    "expected prepare, work, work-checks or retire-native"
-  let work := args == ["work"] || args == ["work-checks"]
+  let bounds := args == ["bounds"] || args == ["bounds-checks"]
+  check (args.isEmpty || args == ["retire-native"] || args == ["work"] || args == ["work-checks"] || bounds)
+    "expected prepare, work/bounds with optional -checks, or retire-native"
+  let work := args == ["work"] || args == ["work-checks"] || bounds
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
-  let stem := if work then "replay-work" else "turn-replay"
+  let stem := if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
   let core := root / (stem ++ "-core")
   let output := root / (stem ++ "-build")
   let entryPoint := if work then "ReplayWorkChecks" else "TurnReplayChecks"
-  let parentName := if work then "turn-replay" else "delivery-ack"
-  if args == ["work-checks"] then
+  let parentName := if bounds then "replay-work" else if work then "turn-replay" else "delivery-ack"
+  if args == ["work-checks"] || args == ["bounds-checks"] then
     check (← (output / "StudyMain").pathExists) "compile the candidate before its native checks"
     let mut attempt := 1
     let runName := fun n => stem ++ "-checks" ++ (if n == 1 then "" else toString n)
@@ -82,7 +83,7 @@ def main (args : List String) : IO Unit := do
     if let some name := known[path.fileStem.get!]? then objectMap := (path.toString,toJson name) :: objectMap
   let mapping := root / (stem ++ "-objects.json")
   IO.FS.writeFile mapping (Json.mkObj objectMap).pretty
-  let old ← read (root / (if work then "turn-replay-build.settings.json" else "delivery-ack-build.settings.json"))
+  let old ← read (root / (parentName ++ "-build.settings.json"))
   let parents : Array String ← IO.ofExcept (old.getObjValAs? _ "parents")
   let settings := old.setObjVal! "project" (toJson core.toString)
     |>.setObjVal! "core" (toJson core.toString)
@@ -91,7 +92,8 @@ def main (args : List String) : IO Unit := do
     |>.setObjVal! "objectModules" (toJson mapping.toString)
     |>.setObjVal! "baselineResponse" (toJson response.toString)
     |>.setObjVal! "baselineMain" (toJson (root / (parentName ++ "-build") /
-      (if work then "tools_research_TurnReplayChecks.o" else "tools_research_DeliveryAckChecks.o")).toString)
+      (if bounds then "tools_research_ReplayWorkChecks.o" else if work then
+        "tools_research_TurnReplayChecks.o" else "tools_research_DeliveryAckChecks.o")).toString)
     |>.setObjVal! "baselineCore" (toJson (root / (parentName ++ "-core")).toString)
     |>.setObjVal! "mainModule" (toJson ("tools.research." ++ entryPoint))
   IO.FS.writeFile (root / (stem ++ "-build.settings.json")) settings.pretty

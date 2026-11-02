@@ -1,0 +1,137 @@
+--- a/Eggshell/ReplayWork.lean
++++ b/Eggshell/ReplayWork.lean
+@@ -86,0 +87,2 @@
++  field : Nat := 0
++  watchAfter : String := ""
+@@ -135,0 +138,9 @@
++    if let some previous := previous then
++      let inFlight := previous.block > 0 || previous.field > 0 ||
++        !previous.watchAfter.isEmpty || !previous.resetAfter.isEmpty
++      if inFlight && previous.head.any (fun head => head.identity == oldest.identity && oldest.revision ≤ head.revision) &&
++          wanted.any (fun field => field.1 == path && !old.contains field) then
++        -- A newly registered key can sort behind an in-flight posting
++        -- cursor. Recheck that job rather than silently skipping it or
++        -- restarting the entire source's fan-out.
++        enqueue writer base name
+@@ -145,8 +155,0 @@
+-def enqueueWatchers (journal : PageMap.Snapshot) (writer : PageMap.Writer) (base directoryPrefix : String) : IO Nat :=
+-  journal.foldRange ⟨directoryPrefix,directoryPrefix ++ "~"⟩ (fun count row => do
+-    let some raw := row.2 | return count
+-    let name ← Index.decode (α := String) raw
+-    unless row.1 == directoryPrefix ++ name do throw (IO.userError "foreign replay dependency posting")
+-    enqueue writer base name
+-    return count+1) 0
+-
+@@ -161 +164 @@
+-structure Window where
++structure Window (limit : Nat) where
+@@ -163,0 +167 @@
++  bounded : rows.size ≤ limit := by simp
+@@ -164,0 +169,2 @@
++theorem Window.rows_bounded (found : Window limit) : found.rows.size ≤ limit := found.bounded
++
+@@ -166 +172 @@
+-    (limit : Nat) (state : Window) : IO Window := do
++    (limit : Nat) (state : Window limit) : IO (Window limit) := do
+@@ -174,2 +180,3 @@
+-      if state.rows.size ≥ limit then return {state with complete := false}
+-      state := {state with rows := state.rows.push row}
++      if within : state.rows.size < limit then
++        state := {state with rows := state.rows.push row,bounded := by simp; omega}
++      else return {state with complete := false}
+@@ -187 +194 @@
+-def window (source : PageMap.Snapshot) (lower upper : String) (limit : Nat) : IO Window :=
++def window (source : PageMap.Snapshot) (lower upper : String) (limit : Nat) : IO (Window limit) :=
+@@ -190,0 +198,31 @@
++
++structure WatchProgress (limit : Nat) where
++  after : String := ""
++  rows : Nat := 0
++  postings : Nat := 0
++  complete : Bool := true
++  bounded : rows ≤ limit := by omega
++
++theorem WatchProgress.rows_bounded (progress : WatchProgress limit) : progress.rows ≤ limit := progress.bounded
++
++/-- Tombstones consume the same bounded row budget as live postings. The
++last visited key resumes this exact dependency; an empty live set is not a
++reason to rescan its entire dead history. -/
++def enqueueWatchers (journal : PageMap.Snapshot) (writer : PageMap.Writer)
++    (base directoryPrefix after : String) (deadline limit : Nat) : IO (WatchProgress limit) := do
++  unless after.isEmpty || after.startsWith directoryPrefix do
++    throw (IO.userError "foreign replay posting continuation")
++  let lower := if after.isEmpty then directoryPrefix else after ++ "\x00"
++  let found ← window journal lower (directoryPrefix ++ "~") limit
++  let mut result : WatchProgress limit := {after,complete := found.complete}
++  for row in found.rows do
++    if (← IO.monoMsNow) ≥ deadline then return {result with complete := false}
++    if within : result.rows < limit then
++      result := {result with after := row.1,rows := result.rows+1,bounded := by omega}
++    else throw (IO.userError "replay posting reader exceeded its bounded window")
++    let some raw := row.2 | continue
++    let name ← Index.decode (α := String) raw
++    unless row.1 == directoryPrefix ++ name do throw (IO.userError "foreign replay dependency posting")
++    enqueue writer base name
++    result := {result with postings := result.postings+1}
++  return result
+@@ -214 +252 @@
+-structure Sync where
++structure Sync (rowLimit : Nat) where
+@@ -218,0 +257 @@
++  rows : Nat := 0
+@@ -219,0 +259 @@
++  bounded : rows ≤ rowLimit := by omega
+@@ -220,0 +261,2 @@
++theorem Sync.rows_bounded (result : Sync rowLimit) : result.rows ≤ rowLimit := result.bounded
++
+@@ -224 +266,2 @@
+-    (primary : PageMap.Snapshot) (deadline : Nat) (limit : Nat := 32) : IO Sync := do
++    (primary : PageMap.Snapshot) (deadline : Nat) (limit : Nat := 32)
++    (rowLimit : Nat := 256) : IO (Sync rowLimit) := do
+@@ -232 +275 @@
+-  let mut result : Sync := {sources := cursors.size,external := anyExternal}
++  let mut result : Sync rowLimit := {sources := cursors.size,external := anyExternal}
+@@ -238 +281 @@
+-    if (← IO.monoMsNow) ≥ deadline || result.blocks ≥ limit then
++    if (← IO.monoMsNow) ≥ deadline || result.blocks ≥ limit || result.rows ≥ rowLimit then
+@@ -245 +288 @@
+-      if (← IO.monoMsNow) ≥ deadline || result.blocks ≥ limit then break
++      if (← IO.monoMsNow) ≥ deadline || result.blocks ≥ limit || result.rows ≥ rowLimit then break
+@@ -254,8 +297,5 @@
+-        let lower := if cursor.resetAfter.isEmpty then watchPrefix else cursor.resetAfter ++ "\x00"
+-        let found ← window journal lower (watchPrefix ++ "~") 64
+-        for row in found.rows do
+-          let some raw := row.2 | continue
+-          let name ← Index.decode (α := String) raw
+-          unless row.1 == watchPrefix ++ name do throw (IO.userError "foreign source reset watcher")
+-          enqueue writer base name
+-          result := {result with postings := result.postings+1}
++        let found ← enqueueWatchers journal writer base watchPrefix cursor.resetAfter deadline (rowLimit-result.rows)
++        result := {result with
++          postings := result.postings+found.postings
++          rows := result.rows+found.rows
++          bounded := by have := result.bounded; have := found.bounded; omega}
+@@ -266 +306 @@
+-          {cursor with resetAfter := (found.rows.back?.map Prod.fst).getD cursor.resetAfter}
++          {cursor with resetAfter := found.after}
+@@ -287,4 +327,16 @@
+-          for field in ← replayFeedBlock current revision cursor.block do
+-            let queued ← enqueueWatchers journal writer base (keyWatchBase base cursor.path field)
+-            result := {result with postings := result.postings+queued}
+-          cursor := {cursor with block := cursor.block+1}
++          let fields ← replayFeedBlock current revision cursor.block
++          unless cursor.field < fields.size do throw (IO.userError "replay field continuation exceeds its block")
++          for ordinal in [cursor.field:fields.size] do
++            if (← IO.monoMsNow) ≥ deadline || result.rows ≥ rowLimit then break
++            let some field := fields[ordinal]? | throw (IO.userError "replay block lost its continuation field")
++            let found ← enqueueWatchers journal writer base (keyWatchBase base cursor.path field)
++              cursor.watchAfter deadline (rowLimit-result.rows)
++            result := {result with
++              postings := result.postings+found.postings
++              rows := result.rows+found.rows
++              bounded := by have := result.bounded; have := found.bounded; omega}
++            cursor := {cursor with watchAfter := found.after}
++            if !found.complete then break
++            cursor := {cursor with field := ordinal+1,watchAfter := ""}
++          if cursor.field == fields.size then
++            cursor := {cursor with block := cursor.block+1,field := 0,watchAfter := ""}

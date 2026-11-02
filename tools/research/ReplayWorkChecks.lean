@@ -7,6 +7,9 @@ open Lean Eggshell Eggshell.Plugin Eggshell.Synapses Eggshell.Synapses.Extractio
 #print axioms TurnReplay.changed_bucket_rejected
 #print axioms ReplayWork.changed_ticket_cannot_finish
 #print axioms DB.PageMap.relevant_replay_write_present
+#print axioms ReplayWork.Window.rows_bounded
+#print axioms ReplayWork.WatchProgress.rows_bounded
+#print axioms ReplayWork.Sync.rows_bounded
 
 private def check (ok : Bool) (message : String) : IO Unit :=
   unless ok do throw (IO.userError message)
@@ -193,6 +196,141 @@ private def bootstrapChecks (root : System.FilePath) : IO Json := do
   return Json.mkObj [("windowBoundRespected",toJson true),("restartVisitsEachTurnOnce",toJson true),
     ("storageLanesIsolated",toJson true)]
 
+private def publishAtom (source : DB.PageMap.Snapshot) (value : Value) : IO DB.PageMap.Snapshot := do
+  let (_,head,_) ← DB.PageMap.withWriter source fun writer => do
+    let intern : Persistence.Store.Intern := ⟨writer,← IO.mkRef {}⟩
+    let id ← intern.value value
+    Persistence.Store.writeChange writer {added := [],removed := [],unionsChanged := false,affected := [id]}
+  return {source with head}
+
+private def queueTickets (journal : DB.PageMap.Snapshot) (base : String) : IO (Array (Nat × ReplayWork.Ticket)) := do
+  let head ← Persistence.Store.getNat journal.get (base ++ ":head")
+  let tail ← Persistence.Store.getNat journal.get (base ++ ":tail")
+  let mut found := #[]
+  for ordinal in [head:tail] do
+    let some raw ← journal.get (ReplayWork.queueKey base ordinal) | throw (IO.userError "queue has a hole")
+    found := found.push (ordinal,← Index.decode raw)
+  return found
+
+private def highFanoutChecks (root : System.FilePath) : IO Json := do
+  let started ← IO.monoMsNow
+  let source ← Persistence.ensureSnapshot (root / "fanout-source.egg")
+  let foreign ← Persistence.ensureSnapshot (root / "fanout-foreign.egg")
+  let journal ← Persistence.ensureSnapshot (root / "fanout-private.egg")
+  let value := Value.text "many jobs watch this exact structural bucket"
+  let otherValue := Value.text "independent archive must make progress too"
+  let inputs ← TurnReplay.Inputs.observe {} source value
+  let otherInputs ← TurnReplay.Inputs.observe {} foreign otherValue
+  let base := "private-fanout"
+  let count := 4096
+  let names := (List.range count).toArray.map fun i => Index.contentKey ("fanout",i)
+  let foreignName := Index.contentKey "fanout-foreign-job"
+  let lateName := String.ofList (List.replicate 64 '0')
+  check (!names.contains lateName && !names.contains foreignName) "fixture task identities collide"
+  let (_,head,_) ← DB.PageMap.withWriter journal fun writer => do
+    for ordinal in [:names.size] do
+      let some name := names[ordinal]? | throw (IO.userError "missing fan-out fixture task")
+      ReplayWork.register writer base name inputs
+      if ordinal % 128 == 127 then writer.flush
+    for ordinal in [:names.size] do
+      if ordinal % 4 != 0 then continue
+      let some name := names[ordinal]? | throw (IO.userError "missing retired fan-out fixture task")
+      ReplayWork.register writer base name {}
+    ReplayWork.register writer base foreignName otherInputs
+  let mut journal := {journal with head}
+  check (!(← ReplayWork.pending journal base)) "registration of idle dependencies unexpectedly enqueued every job"
+  let published ← publishAtom source value
+  let _ ← publishAtom foreign otherValue
+  let batch := 37
+  let sourceCursor := ReplayWork.sourceKey base source.directory.normalize.toString
+  let originalCursor ← journal.get sourceCursor
+  let (expired,head,_) ← DB.PageMap.withWriter journal fun writer =>
+    ReplayWork.sync journal writer base published 0 32 batch
+  journal := {journal with head}
+  check (!expired.complete && expired.rows == 0 && (← journal.get sourceCursor) == originalCursor &&
+    !(← ReplayWork.pending journal base)) "expired sync advanced a dependency continuation"
+  let mut complete := false
+  let mut slices := 0
+  let mut rows := 0
+  let mut postings := 0
+  let mut maxRows := 0
+  let mut maxSliceMs := 0
+  while !complete do
+    check (slices < count) "bounded fan-out sync made no eventual progress"
+    journal ← DB.PageMap.pin journal.directory
+    let sliceStarted ← IO.monoMsNow
+    let (result,head,_) ← DB.PageMap.withWriter journal fun writer => do
+      ReplayWork.sync journal writer base published ((← IO.monoMsNow)+30000) 32 batch
+    let elapsed := (← IO.monoMsNow)-sliceStarted
+    maxSliceMs := max maxSliceMs elapsed
+    check (result.rows ≤ batch && result.postings ≤ result.rows) "fan-out escaped its complete row bound"
+    journal := {journal with head}
+    complete := result.complete
+    rows := rows+result.rows
+    postings := postings+result.postings
+    maxRows := max maxRows result.rows
+    slices := slices+1
+    if slices == 1 then
+      check (!complete) "large dependency set ignored its bounded quantum"
+      let cursorBefore ← journal.get sourceCursor
+      let queueBefore ← queueTickets journal base
+      let aborted ← try
+        let _ ← DB.PageMap.withWriter (α := Unit) journal fun writer => do
+          let _ ← ReplayWork.sync journal writer base published ((← IO.monoMsNow)+30000) 32 batch
+          writer.flush
+          throw (IO.userError "intentional partial posting transaction abort")
+        pure false
+        catch _ => pure true
+      let reopened ← DB.PageMap.pin journal.directory
+      check (aborted && reopened.head == journal.head && (← reopened.get sourceCursor) == cursorBefore &&
+        (← queueTickets reopened base) == queueBefore) "partial posting abort lost the cursor/queue atomicity"
+      let (_,head,_) ← DB.PageMap.withWriter reopened fun writer => ReplayWork.register writer base lateName inputs
+      journal := {reopened with head}
+      check ((← journal.get (ReplayWork.jobKey base lateName)).isSome)
+        "a dependency inserted behind an active posting cursor was lost"
+    if slices == 2 then
+      check ((← journal.get (ReplayWork.jobKey base foreignName)).isSome)
+        "high fan-out in one archive starved the independent archive"
+  let tickets ← queueTickets journal base
+  let expected := ((names.zipIdx.filterMap fun (name,i) => if i % 4 == 0 then none else some name)
+    ++ #[lateName,foreignName]).qsort (· < ·)
+  let actual := (tickets.map (·.2.name)).qsort (· < ·)
+  check (actual == expected && rows == count+1 && postings == expected.size-1)
+    "bounded continuation differs from the full live-dependency set or rescans tombstones"
+  let (_,head,_) ← DB.PageMap.withWriter journal fun writer => do
+    for (ordinal,ticket) in tickets do
+      check (← ReplayWork.acknowledge writer base ordinal ticket true) "current queued job could not finish"
+  journal := {journal with head}
+  check (!(← ReplayWork.pending journal base)) "completed fan-out left duplicate queue entries"
+  -- The same bounded mechanism must cover a missing/replaced source, not
+  -- just ordinary publication deltas.
+  IO.FS.rename source.directory (root / "retired-fanout-source.egg")
+  let replacement ← Persistence.ensureSnapshot source.directory
+  let mut resetComplete := false
+  let mut resetRows := 0
+  let mut resetSlices := 0
+  while !resetComplete do
+    check (resetSlices < count) "source reset made no eventual progress"
+    journal ← DB.PageMap.pin journal.directory
+    let (result,head,_) ← DB.PageMap.withWriter journal fun writer => do
+      ReplayWork.sync journal writer base replacement ((← IO.monoMsNow)+30000) 32 batch
+    check (result.rows ≤ batch) "source reset bypassed the posting bound"
+    resetRows := resetRows+result.rows
+    resetSlices := resetSlices+1
+    resetComplete := result.complete
+    journal := {journal with head}
+  let resetTickets ← queueTickets journal base
+  check ((resetTickets.map (·.2.name)).qsort (· < ·) == expected.filter (· != foreignName) &&
+    resetRows == count+1) "bounded reset differs from all live primary-source subscribers"
+  return Json.mkObj [("registeredDependencies",toJson count),("retiredDependencies",toJson (count/4)),
+    ("liveTasksQueued",toJson actual.size),("visitedRowsIncludingTombstones",toJson rows),
+    ("rowLimit",toJson batch),("maximumRowsPerSlice",toJson maxRows),("slices",toJson slices),
+    ("maximumSliceMs",toJson maxSliceMs),("wholeCheckMs",toJson ((← IO.monoMsNow)-started)),
+    ("lateRegistrationBehindCursorPreserved",toJson true),("unrelatedArchiveNotStarved",toJson true),
+    ("partialPostingAbortReopensExactly",toJson true),("fullLiveSubscriberSetEqual",toJson true),
+    ("replacementSourceRows",toJson resetRows),("replacementSourceSlices",toJson resetSlices),
+    ("replacementSourceSubscriberSetEqual",toJson true),("expiredSyncDoesNotAdvance",toJson true)]
+
 def main (args : List String) : IO Unit := do
   let [directory] := args | throw (IO.userError "NEW-PRIVATE-FIXTURE")
   let root := System.FilePath.mk directory
@@ -202,6 +340,7 @@ def main (args : List String) : IO Unit := do
   let queue ← queueChecks root
   let feed ← feedChecks root
   let bootstrap ← bootstrapChecks root
+  let fanout ← highFanoutChecks root
   IO.FS.writeFile (root / "specimen.c") "int alpha = 1;\nint beta = 2;\n"
   let input := Json.mkObj [("command",toJson "nl -ba specimen.c | sed -n '1,2p'")]
   let capture ← SourceEvidence.capture root input ((← IO.monoMsNow)+10000)
@@ -361,7 +500,7 @@ def main (args : List String) : IO Unit := do
   let leaseCompleted ← refresh leasePublished
   check (leaseCompleted.complete && leaseCompleted.pending == 0 && leaseCompleted.turns == 1 &&
     (← calls.get) == beforeBusy+2) "accepted event did not complete after its source publication"
-  let report := Json.mkObj [("queue",queue),("feed",feed),("bootstrap",bootstrap),
+  let report := Json.mkObj [("queue",queue),("feed",feed),("bootstrap",bootstrap),("fanout",fanout),
     ("nativeConsumption",toJson direct.consumed.size),("nativeUsage",toJson direct.usage.size),
     ("unrelatedPublicationHistoricalReplays",toJson (0 : Nat)),("unrelatedPublicationNewTurns",toJson added.turns),
     ("unrelatedPublicationHistoricalCheckpointsRead",toJson (added.checked-added.turns)),

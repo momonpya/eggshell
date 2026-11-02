@@ -1,0 +1,59 @@
+[{"guard":
+  {"userCeilingRssKiB": 4194304,
+   "state": "finished",
+   "settings":
+   {"record":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-bounds-compile.guard.json",
+    "ownedPrefixes":
+    ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+    "minFreeKiB": 2097152,
+    "limitRssKiB": 3670016,
+    "cwd":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+    "command":
+    ["/usr/bin/env",
+     "LEAN_NUM_THREADS=1",
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "-M1024",
+     "--run",
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-bounds-build.settings.json"]},
+   "samples": 85,
+   "sampledPeakRssKiB": 1320240,
+   "reason": null,
+   "peakProcesses":
+   [{"rssKiB": 592368,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 58525,
+     "parent": 58507,
+     "lane": null},
+    {"rssKiB": 679168,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 60066,
+     "parent": 58525,
+     "lane": null},
+    {"rssKiB": 48704,
+     "role": "guard",
+     "program":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+     "pid": 58507,
+     "parent": 60243,
+     "lane": null}],
+   "ownedPids": [],
+   "limitRssKiB": 3670016,
+   "guardTriggered": false,
+   "guardSha256":
+   "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+   "guardPid": 58507,
+   "exitCode": 1,
+   "error": null,
+   "elapsedMs": 14364,
+   "childPid": 58525},
+  "diagnostics":
+  [["Eggshell_ReplayWork-lean.stdout",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-bounds-core/Eggshell/ReplayWork.lean:139:9: error: unexpected token 'partial'; expected '(', ':=', 'rec', '|', identifier or term\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-bounds-core/Eggshell/ReplayWork.lean:139:17: error: unexpected token ':='; expected 'abbrev', 'axiom', 'builtin_initialize', 'class', 'coinductive', 'def', 'example', 'inductive', 'initialize', 'instance', 'opaque', 'register_option', 'structure' or 'theorem'\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-bounds-core/Eggshell/ReplayWork.lean:141:16: error: unexpected token '&&'; expected 'abbrev', 'axiom', 'builtin_initialize', 'class', 'coinductive', 'def', 'example', 'inductive', 'initialize', 'instance', 'opaque', 'register_option', 'structure' or 'theorem'\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-bounds-core/Eggshell/ReplayWork.lean:298:105: error: unexpected identifier; expected '}'\n"]],
+  "attempt": "replay-bounds-compile"}]

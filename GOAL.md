@@ -51,7 +51,9 @@ postの解釈を既存の不変native metadataへ固定し、後から作る共�
 
 publication差分と私有の依存逆引きから、影響するturnだけをFIFOへ投入する隔離候補をnative検査した。無関係な出版では過去原文再生0・過去checkpoint読出し0、新規1ターンのみでrefresh 70 ms。独立した全再生との全fact/status一致、関連membershipと別write DBの取り消し/復元、70キーの途中flushと64+6での同期再開、cursorとqueueの同時abort、古い完了確認から新eventの保持、backend resetを確認した。worker lease中のPre/Post受付は12 ms、未出版Postはpendingに残し、出版後に完了した。80同時metadata要求98 ms、検査全体7922 ms・RSS最大159920 KiBはいずれも小規模fixtureの値であり、利用フック/80人継続負荷の値ではない。[replay-work](docs/candidates/replay-work/README.md)。
 
-次は実行中の長いturnのprefix差分再開と、高fan-out postings自体の有界な継続を進める。キーblock数を制限しただけでpostings数まで一定になるとはしない。既存snapshotの準備、同じfileの全履歴を引かず必要行区間へ絞る索引、回答の引用へ複数ACKの断片を対応させる経路、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用、モデル比較0/18である。
+高fan-out postingsも、publication/block/field/最後のposting keyから再開する隔離候補をnative検査した。通常差分とsource置換に共通の行数上限を適用し、削除済み行も数える。4,096件登録/1,024件取り消しに対し、別DBと途中追加を含む3,074 taskが全件の参照集合と一致した。37行上限を守って111回で完了し、通常差分の一回最大はprivate commit込み33 ms。source置換も同じ上限で全subscriberが一致した。走査済みの位置より前への追加はそのtask自身を再検査へ回し、部分走査のabort/reopenでもcursor/queueの一致を確認した。行数上限の3定理は追加axiomなしでLean kernelを通った。[replay-bounds](docs/candidates/replay-bounds/README.md)。これは同期部品の測定で、フック/大規模payload/80人継続負荷ではない。検査全体26,439 ms・RSS最大199,952 KiB、モデル呼出し0、比較0/18である。原典/sealed入力不変を確認し、未参照生成物807件、終了した診断DB/実行体/188ログを削除した。
+
+次は実行中の長いturnのprefix差分再開を進める。既存snapshotの準備、同じfileの全履歴を引かず必要行区間へ絞る索引、回答の引用へ複数ACKの断片を対応させる経路、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用、モデル比較0/18である。
 
 容量確保で、終了した旧実行体2つ、未参照build生成物、診断DBコピー、fixed-frame以前のseed DB/cache、終了済みseed1/seed2の推薦cacheを削除した。今回さらに未参照生成物2942件/論理621815952 bytesと、seed2の終了済み推薦cache457958907 bytes、replay-work診断DB2つ/実行体/compiler logsを削除した。APFSの論理bytesを実空きの回復量とは扱わない。原文・私有日誌・現在の固定runtimeとsealed入力は保持するが、seed1/seed2の旧index headによる再生はもう再検証できない。過去に保持していたという記録と現在を区別する。[build削除](docs/candidates/delivery-ack/current-replay-build-retirement.json)、[旧seed2 cache削除](docs/candidates/delivery-ack/ended-seed2-index-retirement.json)。削除後の保護対象は[現在の一覧](docs/candidates/delivery-ack/obsolete-runtime-retirement.json)とし、旧manifestの削除済み実行体を現在も保持しているとは主張しない。モデル比較には新runtime固定・新seed・harness再封印・索引完了確認が必要である。
 
