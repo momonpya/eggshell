@@ -1,0 +1,237 @@
+[{"guard":
+  {"userCeilingRssKiB": 4194304,
+   "state": "finished",
+   "settings":
+   {"record":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-compile.guard.json",
+    "ownedPrefixes":
+    ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+    "minFreeKiB": 2097152,
+    "limitRssKiB": 3670016,
+    "cwd":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+    "command":
+    ["/usr/bin/env",
+     "LEAN_NUM_THREADS=1",
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "-M1024",
+     "--run",
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-build.settings.json"]},
+   "samples": 108,
+   "sampledPeakRssKiB": 1416768,
+   "reason": null,
+   "peakProcesses":
+   [{"rssKiB": 591744,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 44103,
+     "parent": 44087,
+     "lane": null},
+    {"rssKiB": 776400,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 45749,
+     "parent": 44103,
+     "lane": null},
+    {"rssKiB": 48624,
+     "role": "guard",
+     "program":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+     "pid": 44087,
+     "parent": 60243,
+     "lane": null}],
+   "ownedPids": [],
+   "limitRssKiB": 3670016,
+   "guardTriggered": false,
+   "guardSha256":
+   "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+   "guardPid": 44087,
+   "exitCode": 1,
+   "error": null,
+   "elapsedMs": 17356,
+   "childPid": 44103},
+  "diagnostics":
+  [["Eggshell_SynapseJournal-lean.stdout",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-core/Eggshell/SynapseJournal.lean:596:105: error: unexpected identifier; expected '}'\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-core/Eggshell/SynapseJournal.lean:602:17: error: Application type mismatch: The argument\n  __do_lift✝\nhas type\n  ReplayState cursor.values.size\nbut is expected to have type\n  ReplayState next.values.size\nin the application\n  ST.Ref.set next.state __do_lift✝\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-core/Eggshell/SynapseJournal.lean:613:17: error: Application type mismatch: The argument\n  state.nextChunk values.size\nhas type\n  ReplayState values.size\nbut is expected to have type\n  ReplayState next.values.size\nin the application\n  ST.Ref.set next.state (state.nextChunk values.size)\n"]],
+  "attempt": "replay-prefix-compile"},
+ {"guard":
+  {"userCeilingRssKiB": 4194304,
+   "state": "finished",
+   "settings":
+   {"record":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-compile2.guard.json",
+    "ownedPrefixes":
+    ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+    "minFreeKiB": 2097152,
+    "limitRssKiB": 3670016,
+    "cwd":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+    "command":
+    ["/usr/bin/env",
+     "LEAN_NUM_THREADS=1",
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "-M1024",
+     "--run",
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-build.settings.json"]},
+   "samples": 74,
+   "sampledPeakRssKiB": 1417088,
+   "reason": null,
+   "peakProcesses":
+   [{"rssKiB": 776352,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 47419,
+     "parent": 45829,
+     "lane": null},
+    {"rssKiB": 592176,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 45829,
+     "parent": 45814,
+     "lane": null},
+    {"rssKiB": 48560,
+     "role": "guard",
+     "program":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+     "pid": 45814,
+     "parent": 60243,
+     "lane": null}],
+   "ownedPids": [],
+   "limitRssKiB": 3670016,
+   "guardTriggered": false,
+   "guardSha256":
+   "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+   "guardPid": 45814,
+   "exitCode": 1,
+   "error": null,
+   "elapsedMs": 12788,
+   "childPid": 45829},
+  "diagnostics":
+  [["Eggshell_SynapseJournal-lean.stdout",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-core/Eggshell/SynapseJournal.lean:614:71: error: Nested action `← cursor.feedback.get` must be nested inside a `do` expression.\n"]],
+  "attempt": "replay-prefix-compile2"},
+ {"guard":
+  {"userCeilingRssKiB": 4194304,
+   "state": "finished",
+   "settings":
+   {"record":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-compile3.guard.json",
+    "ownedPrefixes":
+    ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+    "minFreeKiB": 2097152,
+    "limitRssKiB": 3670016,
+    "cwd":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+    "command":
+    ["/usr/bin/env",
+     "LEAN_NUM_THREADS=1",
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "-M1024",
+     "--run",
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-build.settings.json"]},
+   "samples": 118,
+   "sampledPeakRssKiB": 1450960,
+   "reason": null,
+   "peakProcesses":
+   [{"rssKiB": 591264,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 47477,
+     "parent": 47464,
+     "lane": null},
+    {"rssKiB": 811360,
+     "role": null,
+     "program": "(lean)",
+     "pid": 49064,
+     "parent": 47477,
+     "lane": null},
+    {"rssKiB": 48336,
+     "role": "guard",
+     "program":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+     "pid": 47464,
+     "parent": 60243,
+     "lane": null}],
+   "ownedPids": [],
+   "limitRssKiB": 3670016,
+   "guardTriggered": false,
+   "guardSha256":
+   "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+   "guardPid": 47464,
+   "exitCode": 1,
+   "error": null,
+   "elapsedMs": 18477,
+   "childPid": 47477},
+  "diagnostics":
+  [["Eggshell_ReplayPreparation-lean.stdout",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-core/Eggshell/ReplayPreparation.lean:83:91: error: unexpected identifier; expected '}'\n"]],
+  "attempt": "replay-prefix-compile3"},
+ {"guard":
+  {"userCeilingRssKiB": 4194304,
+   "state": "finished",
+   "settings":
+   {"record":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-compile4.guard.json",
+    "ownedPrefixes":
+    ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+    "minFreeKiB": 2097152,
+    "limitRssKiB": 3670016,
+    "cwd":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+    "command":
+    ["/usr/bin/env",
+     "LEAN_NUM_THREADS=1",
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "-M1024",
+     "--run",
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-build.settings.json"]},
+   "samples": 828,
+   "sampledPeakRssKiB": 2727824,
+   "reason": null,
+   "peakProcesses":
+   [{"rssKiB": 540880,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 49239,
+     "parent": 49215,
+     "lane": null},
+    {"rssKiB": 2144208,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 51687,
+     "parent": 49239,
+     "lane": null},
+    {"rssKiB": 42736,
+     "role": "guard",
+     "program":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+     "pid": 49215,
+     "parent": 60243,
+     "lane": null}],
+   "ownedPids": [],
+   "limitRssKiB": 3670016,
+   "guardTriggered": false,
+   "guardSha256":
+   "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+   "guardPid": 49215,
+   "exitCode": 1,
+   "error": null,
+   "elapsedMs": 111599,
+   "childPid": 49239},
+  "diagnostics":
+  [["tools_research_ReplayWorkChecks-lean.stdout",
+    "'Eggshell.Synapses.TurnReplay.changed_bucket_rejected' depends on axioms: [propext, Quot.sound]\n'Eggshell.Synapses.ReplayWork.changed_ticket_cannot_finish' depends on axioms: [propext]\n'Eggshell.DB.PageMap.relevant_replay_write_present' depends on axioms: [propext, Classical.choice, Quot.sound]\n'Eggshell.Synapses.ReplayWork.Window.rows_bounded' does not depend on any axioms\n'Eggshell.Synapses.ReplayWork.WatchProgress.rows_bounded' does not depend on any axioms\n'Eggshell.Synapses.ReplayWork.Sync.rows_bounded' does not depend on any axioms\n'Eggshell.Synapses.Journal.later_order_violation_rejected' depends on axioms: [propext, Quot.sound]\n'Eggshell.Synapses.Journal.next_chunk_keeps_prefix_result' depends on axioms: [propext, Classical.choice, Quot.sound]\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-core/tools/research/ReplayWorkChecks.lean:367:93: error: unexpected identifier; expected '}'\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-core/tools/research/ReplayWorkChecks.lean:418:13: error: unexpected token '←'; expected 'abbrev', 'axiom', 'builtin_initialize', 'class', 'coinductive', 'def', 'example', 'inductive', 'initialize', 'instance', 'opaque', 'register_option', 'structure' or 'theorem'\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-core/tools/research/ReplayWorkChecks.lean:420:105: error: unexpected token '}'; expected 'abbrev', 'axiom', 'builtin_initialize', 'class', 'coinductive', 'def', 'example', 'inductive', 'initialize', 'instance', 'opaque', 'register_option', 'structure' or 'theorem'\n"]],
+  "attempt": "replay-prefix-compile4"},
+ {"stderr": "uncaught exception: prefix fixture index missing\n",
+  "attempt": "replay-prefix-checks.guard.json"}]

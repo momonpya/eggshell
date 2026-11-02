@@ -12,6 +12,6 @@
 6. backendの再作成/全置換では、必要な全turnをboundedなbootstrapでキューへ戻す。初回だけの全履歴準備と、通常の出版差分を区別する。新eventの投入がbootstrap cursorより前へ並んでも取りこぼさない。
 7. 再生/出力の更新は私有project workerのleaseで直列化する。event受付・ACKのjournal lockとは別にし、重い再生が受付を占有しない。busyは未完了であり成功ではない。
 
-独立した全再生との全fact/status一致、無関係な出版で歴史上のcheckpoint読出し0、関係する変更だけの投入、別DB更新、flushを挟むfeedの完全性、cursor+queueのcommit前後のreopen、追記と古いticket確認の競合、backend reset、storage laneの隔離をnativeで検査した。worker lease中のイベント受付も確認した。[続く候補](candidates/replay-bounds/README.md)では4,096件の高fan-outと削除済み行、走査済み位置への追加、source置換も行数上限付きで検査した。OS crash/電源断や複数PCの試験とは区別する。実行中の長いturnのprefix再開、共有serviceへの接続・継続負荷は残る。
+独立した全再生との全fact/status一致、無関係な出版で歴史上のcheckpoint読出し0、関係する変更だけの投入、別DB更新、flushを挟むfeedの完全性、cursor+queueのcommit前後のreopen、追記と古いticket確認の競合、backend reset、storage laneの隔離をnativeで検査した。worker lease中のイベント受付も確認した。[続く候補](candidates/replay-bounds/README.md)では4,096件の高fan-outと削除済み行、走査済み位置への追加、source置換も行数上限付きで検査した。[prefix候補](candidates/replay-prefix/README.md)では実行中turnの追記で旧イベントを読み直さないことも確認した。OS crash/電源断や複数PCの試験とは区別する。open turnのprocess再起動後の途中状態回復、末尾feedbackの差分化、共有serviceへの接続・継続負荷は残る。
 
 終了した旧runtimeの派生cacheは削除する。原文と私有journalは保持するが、削除したindex headで現在も過去の実験を再実行できるとは主張しない。元の参照結果との差を、未確認ラベルの省略による高速化で埋めない。

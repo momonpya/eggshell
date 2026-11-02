@@ -26,16 +26,17 @@ private partial def retire (path : System.FilePath) : IO Nat := do
 
 def main (args : List String) : IO Unit := do
   let bounds := args.contains "bounds"
-  let work := args.contains "work" || bounds
-  let args := args.filter (fun arg => arg != "work" && arg != "bounds")
+  let prefixMode := args.contains "prefix"
+  let work := args.contains "work" || bounds || prefixMode
+  let args := args.filter (fun arg => arg != "work" && arg != "bounds" && arg != "prefix")
   check (args.isEmpty || args == ["cleanup"]) "expected optional work and capture or cleanup"
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
-  let stem := if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
+  let stem := if prefixMode then "replay-prefix" else if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
   let entryPoint := if work then "ReplayWorkChecks" else "TurnReplayChecks"
   let output := project / "docs/candidates" / stem
   let build := root / (stem ++ "-build")
-  let parent := root / (if bounds then "replay-work-core" else if work then "turn-replay-core" else "delivery-ack-core")
+  let parent := root / (if prefixMode then "replay-bounds-core" else if bounds then "replay-work-core" else if work then "turn-replay-core" else "delivery-ack-core")
   let core := root / (stem ++ "-core")
   let mut native := root / (stem ++ "-native")
   let mut lastChecks := root / (stem ++ "-checks.guard.json")
@@ -99,7 +100,8 @@ def main (args : List String) : IO Unit := do
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
     guard.getObjValD "guardTriggered" == toJson false) "native run was not successful and terminal"
   let mut modules := #[]
-  let names := if bounds then ["ReplayWork","SynapseJournal","ContractAudit"] else
+  let names := if prefixMode then ["SynapseJournal","ReplayPreparation","ContractAudit"] else
+    if bounds then ["ReplayWork","SynapseJournal","ContractAudit"] else
     if work then ["DB/PageMap","GraphStore","TurnReplay","ReplayWork","UsageCache","SynapseJournal","ContractAudit"]
     else ["TurnReplay","SynapseIndex","UsageCache","SynapseJournal","ContractAudit"]
   for name in names do

@@ -1,0 +1,119 @@
+--- a/Eggshell/ReplayPreparation.lean
++++ b/Eggshell/ReplayPreparation.lean
+@@ -9,0 +10,2 @@
++  input : Journal.ReplayInput
++  frontier : Option Journal.Frontier
+@@ -16,0 +19,5 @@
++  extended : Nat := 0
++  decodedEvents : Nat := 0
++  executedEvents : Nat := 0
++  originalReads : Nat := 0
++  chunks : Nat := 0
+@@ -30 +37,19 @@
+-def Pool.run (pool : Pool) : Journal.ReplayRunner := fun source entries index cache deadline =>
++def Slot.reusable (slot : Slot) (source : PageMap.Snapshot) (input : Journal.ReplayInput)
++    (frontier : Option Journal.Frontier) (deadline : Nat) : IO Bool := do
++  unless slot.input.turn == input.turn && slot.input.journal.directory == input.journal.directory &&
++      slot.cursor.source.directory == source.directory &&
++      slot.cursor.source.head.identity == source.head.identity && slot.cursor.source.head.authority == source.head.authority &&
++      (← PageMap.HistoryReader.make? input.journal slot.input.journal.head).isSome do return false
++  let progress ← slot.cursor.state.get
++  if progress.result.pending > 0 then return false
++  match slot.frontier,frontier with
++  | some old,some next =>
++    unless old.accepts next && (← Journal.retainedFrontier input old) do return false
++  | none,none =>
++    unless slot.input.latest == input.latest && slot.cursor.source.head == source.head do return false
++  | _,_ => return false
++  progress.result.inputs.agree source deadline
++
++/-- Cached input is identified by the retained private append frontier, not
++by reconstructing and comparing every old event body. -/
++def Pool.run (pool : Pool) : Journal.ReplayRunner := fun source input index cache deadline =>
+@@ -35 +60,2 @@
+-        index.manifest.source.authority == source.head.authority do
++        index.manifest.source.authority == source.head.authority &&
++        input.journal.head.authority == "private-synaptic-events:" ++ source.head.identity do
+@@ -36,0 +63,2 @@
++    let frontier ← Journal.frontier? input.journal input.turn
++    unless frontier.all (·.latest == input.latest) do throw (IO.userError "private replay request and append frontier disagree")
+@@ -41,6 +69 @@
+-      unless slot.cursor.source.directory == source.directory && slot.cursor.source.head == source.head &&
+-          slot.cursor.values == entries do continue
+-      let progress ← slot.cursor.state.get
+-      -- A foreign archive can be published while this read DB stays still.
+-      -- A completed pending result is debt, never an immutable cache hit.
+-      if progress.done && progress.result.pending > 0 then continue
++      unless ← slot.reusable source input frontier deadline do continue
+@@ -49 +72,3 @@
+-    let cursor ← match existing with
++    let mut decoded := 0
++    let mut extended := false
++    let mut slot ← match existing with
+@@ -52,4 +77,4 @@
+-        pool.state.set {state with
+-          resumed := state.resumed+1
+-          slots := (state.slots.extract 0 ordinal ++ state.slots.extract (ordinal+1) state.slots.size).push slot}
+-        pure slot.cursor
++        extended := slot.frontier.any (fun old => frontier.any (fun next => old.count < next.count))
++        let cursor ← if slot.cursor.source.head == source.head then pure slot.cursor
++          else Journal.rebaseCursor slot.cursor source cache
++        pure {slot with input,cursor}
+@@ -57,9 +82,42 @@
+-        let cursor ← Journal.beginReplay source entries (some cache)
+-        if pool.capacity > 0 then
+-          let slots := if state.slots.size < pool.capacity then state.slots else
+-            state.slots.extract 1 state.slots.size
+-          pool.state.set {state with
+-            slots := slots.push ⟨cursor⟩,created := state.created+1
+-            evicted := state.evicted+(if state.slots.size ≥ pool.capacity then 1 else 0)}
+-        pure cursor
+-    Journal.resumeReplay cursor deadline
++        if frontier.any (·.floor == 0) then
++          pure {
++            input,frontier := some (Journal.Frontier.initial input.journal input.turn)
++            cursor := ← Journal.beginReplay source #[] (some cache)}
++        else
++          let entries ← Journal.completeEntries input frontier
++          decoded := entries.size
++          pure {input,frontier,cursor := ← Journal.beginReplay source entries (some cache)}
++    let before ← slot.cursor.metrics.get
++    let mut chunks := 0
++    let mut reply := none
++    repeat
++      if (← IO.monoMsNow) ≥ deadline then break
++      let more := slot.frontier.any (fun old => frontier.any (fun next => old.count < next.count))
++      if !more then
++        reply ← Journal.resumeReplay slot.cursor deadline
++        break
++      unless ← Journal.advanceReplay slot.cursor deadline do break
++      let some old := slot.frontier | throw (IO.userError "event continuation lost its append frontier")
++      let some target := frontier | throw (IO.userError "event continuation lost its requested frontier")
++      let found ← Journal.eventChunk input old target
++      unless found.frontier.count > old.count && old.accepts found.frontier do
++        throw (IO.userError "private event append changed its certified order")
++      decoded := decoded+found.values.size
++      chunks := chunks+1
++      slot := {slot with
++        frontier := some found.frontier
++        cursor := ← Journal.nextCursor slot.cursor source found.values cache}
++    let after ← slot.cursor.metrics.get
++    let slots := match existing with
++      | some ordinal => state.slots.extract 0 ordinal ++ state.slots.extract (ordinal+1) state.slots.size
++      | none => state.slots
++    let evicted := if pool.capacity > 0 && slots.size ≥ pool.capacity then 1 else 0
++    let slots := if pool.capacity == 0 then #[] else
++      (if evicted > 0 then slots.extract 1 slots.size else slots).push slot
++    pool.state.set {state with
++      slots,created := state.created+(if existing.isNone then 1 else 0),
++      resumed := state.resumed+(if existing.isSome then 1 else 0),evicted := state.evicted+evicted,
++      extended := state.extended+(if extended then 1 else 0),decodedEvents := state.decodedEvents+decoded,
++      executedEvents := state.executedEvents+after.events-before.events,
++      originalReads := state.originalReads+after.originals-before.originals,chunks := state.chunks+chunks}
++    return reply
+@@ -70 +128,4 @@
+-    ("created",toJson state.created),("resumed",toJson state.resumed),("evicted",toJson state.evicted)]
++    ("created",toJson state.created),("resumed",toJson state.resumed),("evicted",toJson state.evicted),
++    ("extended",toJson state.extended),("decodedEvents",toJson state.decodedEvents),
++    ("executedEvents",toJson state.executedEvents),("originalReads",toJson state.originalReads),
++    ("chunks",toJson state.chunks)]

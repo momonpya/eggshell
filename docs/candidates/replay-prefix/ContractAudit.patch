@@ -1,0 +1,17 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -44,0 +45,2 @@
++      ``Eggshell.Synapses.Journal.later_order_violation_rejected,
++      ``Eggshell.Synapses.Journal.next_chunk_keeps_prefix_result,
+@@ -424,0 +427,11 @@
++      (``Eggshell.Synapses.Journal.append, #[``Eggshell.Synapses.Journal.Frontier.step], #[]),
++      (``Eggshell.Synapses.ReplayPreparation.Pool.run,
++        #[``Eggshell.Synapses.ReplayPreparation.Slot.reusable, ``Eggshell.Synapses.Journal.eventChunk,
++          ``Eggshell.Synapses.Journal.advanceReplay, ``Eggshell.Synapses.Journal.nextCursor], #[]),
++      (``Eggshell.Synapses.ReplayPreparation.Slot.reusable,
++        #[``Eggshell.Synapses.TurnReplay.Inputs.agree, ``Eggshell.Synapses.Journal.retainedFrontier],
++        #[``Eggshell.Synapses.Journal.turnEntries, ``Eggshell.Synapses.Journal.completeEntries,
++          ``Eggshell.Synapses.Build.document]),
++      (``Eggshell.Synapses.Journal.eventChunk,
++        #[``Eggshell.Synapses.Journal.receipt, ``Eggshell.Synapses.Journal.entry],
++        #[``Eggshell.Synapses.Journal.turnEntries]),

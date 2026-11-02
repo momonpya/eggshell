@@ -23,17 +23,18 @@ private partial def modules (root path : System.FilePath)
 
 def main (args : List String) : IO Unit := do
   let bounds := args == ["bounds"] || args == ["bounds-checks"]
-  check (args.isEmpty || args == ["retire-native"] || args == ["work"] || args == ["work-checks"] || bounds)
-    "expected prepare, work/bounds with optional -checks, or retire-native"
-  let work := args == ["work"] || args == ["work-checks"] || bounds
+  let prefixMode := args == ["prefix"] || args == ["prefix-checks"]
+  check (args.isEmpty || args == ["retire-native"] || args == ["work"] || args == ["work-checks"] || bounds || prefixMode)
+    "expected prepare, work/bounds/prefix with optional -checks, or retire-native"
+  let work := args == ["work"] || args == ["work-checks"] || bounds || prefixMode
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
-  let stem := if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
+  let stem := if prefixMode then "replay-prefix" else if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
   let core := root / (stem ++ "-core")
   let output := root / (stem ++ "-build")
   let entryPoint := if work then "ReplayWorkChecks" else "TurnReplayChecks"
-  let parentName := if bounds then "replay-work" else if work then "turn-replay" else "delivery-ack"
-  if args == ["work-checks"] || args == ["bounds-checks"] then
+  let parentName := if prefixMode then "replay-bounds" else if bounds then "replay-work" else if work then "turn-replay" else "delivery-ack"
+  if args == ["work-checks"] || args == ["bounds-checks"] || args == ["prefix-checks"] then
     check (← (output / "StudyMain").pathExists) "compile the candidate before its native checks"
     let mut attempt := 1
     let runName := fun n => stem ++ "-checks" ++ (if n == 1 then "" else toString n)
@@ -46,8 +47,8 @@ def main (args : List String) : IO Unit := do
     check (!(← fixture.pathExists)) "use a new private fixture"
     let guard ← read (root / "delivery-ack-compile8.settings.json")
     let guard := guard.setObjVal! "record" (toJson (root / (run ++ ".guard.json")).toString)
-      |>.setObjVal! "command" (toJson #["/usr/bin/env","EGGSHELL_DATA_ROOT=" ++ (fixture / "data").toString,
-        (output / "StudyMain").toString,fixture.toString])
+      |>.setObjVal! "command" (toJson (#["/usr/bin/env","EGGSHELL_DATA_ROOT=" ++ (fixture / "data").toString,
+        (output / "StudyMain").toString,fixture.toString] ++ if prefixMode then #["prefix"] else #[]))
     IO.FS.writeFile (root / (run ++ ".settings.json")) guard.pretty
     IO.println s!"Prepared guarded native checks: {run}.settings.json"
     return
@@ -92,7 +93,7 @@ def main (args : List String) : IO Unit := do
     |>.setObjVal! "objectModules" (toJson mapping.toString)
     |>.setObjVal! "baselineResponse" (toJson response.toString)
     |>.setObjVal! "baselineMain" (toJson (root / (parentName ++ "-build") /
-      (if bounds then "tools_research_ReplayWorkChecks.o" else if work then
+      (if bounds || prefixMode then "tools_research_ReplayWorkChecks.o" else if work then
         "tools_research_TurnReplayChecks.o" else "tools_research_DeliveryAckChecks.o")).toString)
     |>.setObjVal! "baselineCore" (toJson (root / (parentName ++ "-core")).toString)
     |>.setObjVal! "mainModule" (toJson ("tools.research." ++ entryPoint))

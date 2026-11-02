@@ -10,6 +10,8 @@ open Lean Eggshell Eggshell.Plugin Eggshell.Synapses Eggshell.Synapses.Extractio
 #print axioms ReplayWork.Window.rows_bounded
 #print axioms ReplayWork.WatchProgress.rows_bounded
 #print axioms ReplayWork.Sync.rows_bounded
+#print axioms Journal.later_order_violation_rejected
+#print axioms Journal.next_chunk_keeps_prefix_result
 
 private def check (ok : Bool) (message : String) : IO Unit :=
   unless ok do throw (IO.userError message)
@@ -331,8 +333,162 @@ private def highFanoutChecks (root : System.FilePath) : IO Json := do
     ("replacementSourceRows",toJson resetRows),("replacementSourceSlices",toJson resetSlices),
     ("replacementSourceSubscriberSetEqual",toJson true),("expiredSyncDoesNotAdvance",toJson true)]
 
+private def sameReplay (actual expected : Journal.Replay) : Bool :=
+  actual.consumed == expected.consumed && actual.usage == expected.usage &&
+  actual.origins == expected.origins && actual.consumers == expected.consumers &&
+  actual.pending == expected.pending && actual.unknown == expected.unknown &&
+  actual.ambiguousNativeUses == expected.ambiguousNativeUses
+
+private def stat (pool : ReplayPreparation.Pool) (name : String) : IO Nat := do
+  IO.ofExcept ((← pool.stats).getObjValAs? Nat name)
+
+private def publishBatch (source : DB.PageMap.Snapshot) (root : System.FilePath)
+    (tools : Array ToolEvent) (turn : String) (offset : Nat) : IO (DB.PageMap.Snapshot × Array Journal.Entry) := do
+  let mut all := #[]
+  for (tool,ordinal) in tools.zipIdx do
+    let values ← events source tool "prefix" turn (offset+ordinal) source.directory.toString
+    for value in values do let _ ← Journal.append source value
+    all := all ++ values
+  let pending : PendingTurn := {
+    sessionId := "prefix",turnId := turn,cwd := root.toString,prompt := "query",profile := "work",
+    write := some source.directory.toString,read := [],semanticMatcher := none,handoffChars := 500000,
+    projection := .none,tools := tools.toList}
+  let _ ← NativePublication.run pending source.directory true
+  return (← DB.PageMap.pin source.directory,all)
+
+private def prefixChecks (root : System.FilePath) : IO Json := do
+  let project := root / "prefix-fixture"
+  IO.FS.createDirAll project
+  IO.FS.writeFile (project / "specimen.c") "int alpha = 1;\nint beta = 2;\n"
+  let input := Json.mkObj [("command",toJson "nl -ba specimen.c | sed -n '1,2p'")]
+  let capture ← SourceEvidence.capture project input ((← IO.monoMsNow)+30000)
+  let response := (Json.mkObj [("output",toJson "1\tint alpha = 1;\n2\tint beta = 2;\n")]).compress
+  let correspondence ← ContentCapture.finish project capture response ((← IO.monoMsNow)+30000)
+  let read : ToolEvent := {
+    name := "reader",useId := "seed",input := input.compress,response
+    source := some capture,correspondence := some correspondence}
+  let toolsAt := fun (offset count : Nat) => (List.range count).toArray.map fun i =>
+    let ordinal := offset+i
+    if ordinal % 2 == 0 then {read with useId := s!"read-{ordinal}"}
+    else {
+      name := "mcp__fixture__inspect",useId := s!"inspect-{ordinal}"
+      input := "{\"identifier\":\"alpha\"}",response := "{}"}
+  let empty ← Persistence.ensureSnapshot (project / "source.egg")
+  let (seed,_) ← publishBatch empty project #[read] "seed" 0
+  let initialTools := toolsAt 0 32
+  let (initial,_) ← publishBatch seed project initialTools "analysis" 0
+  let pool ← ReplayPreparation.new
+  let refresh := fun source => do
+    Journal.refresh source .database ((← IO.monoMsNow)+30000) (runner := some pool.run)
+  let initialResult ← refresh initial
+  check initialResult.complete "prefix fixture initial preparation did not complete"
+  let turn : Journal.Turn := ⟨"prefix","analysis"⟩
+  let request := fun source => do
+    let some journal ← Journal.open? source | throw (IO.userError "prefix fixture journal missing")
+    let latest ← Persistence.Store.getNat journal.get ("latest:" ++ turn.name)
+    pure ({journal,turn,latest} : Journal.ReplayInput)
+  let run := fun (pool : ReplayPreparation.Pool) source => do
+    let _ ← Build.refresh source .database
+    let some index ← Index.open? source .database .shared | throw (IO.userError "prefix fixture index missing")
+    let cache ← StoredReadLookup.create source
+    let some result ← pool.run source (← request source) index cache ((← IO.monoMsNow)+30000) |
+      throw (IO.userError "prefix fixture exceeded its replay deadline")
+    let input ← request source
+    let expected ← Journal.replay source (← Journal.turnEntries input.journal turn) ((← IO.monoMsNow)+30000)
+    check (sameReplay result expected) "incremental prefix differs from independent complete replay or status"
+    pure result
+  let mut source := initial
+  let mut maxAppendMs := 0
+  for offset in [32,34,36] do
+    let decoded ← stat pool "decodedEvents"
+    let executed ← stat pool "executedEvents"
+    let originals ← stat pool "originalReads"
+    let (next,_) ← publishBatch source project (toolsAt offset 2) "analysis" offset
+    source := next
+    let started ← IO.monoMsNow
+    let result ← refresh source
+    maxAppendMs := max maxAppendMs ((← IO.monoMsNow)-started)
+    check result.complete "appended prefix did not finish its requested frontier"
+    check ((← stat pool "decodedEvents") == decoded+4 && (← stat pool "executedEvents") == executed+4 &&
+      (← stat pool "originalReads") == originals+2) "append reloaded or re-executed historical input"
+    let _ ← run pool source
+  -- Retain a real decoded chunk which has not yet been executed. A later
+  -- request must finish it before moving on to newly appended receipts.
+  let oldInput ← request source
+  let some oldFrontier ← Journal.frontier? oldInput.journal turn | throw (IO.userError "missing prefix frontier")
+  let loaded ← Journal.eventChunk oldInput (Journal.Frontier.initial oldInput.journal turn) oldFrontier
+  let cache ← StoredReadLookup.create source
+  let decodedCursor ← Journal.beginReplay source loaded.values (some cache)
+  let partialPool ← ReplayPreparation.new
+  partialPool.state.set {
+    slots := #[{input := oldInput,frontier := some loaded.frontier,cursor := decodedCursor}]
+    created := 1,decodedEvents := loaded.values.size}
+  let (next,_) ← publishBatch source project (toolsAt 38 2) "analysis" 38
+  source := next
+  let _ ← run partialPool source
+  check ((← stat partialPool "decodedEvents") == 80 && (← stat partialPool "executedEvents") == 80 &&
+    (← stat partialPool "originalReads") == 40 && (← stat partialPool "created") == 1)
+    "an unfinished older chunk was discarded, decoded again, or published as the later frontier"
+  let result ← refresh source
+  check result.complete "regular pool did not catch up after concurrent append test"
+  let _ ← run pool source
+  let decoded ← stat pool "decodedEvents"
+  let originals ← stat pool "originalReads"
+  let (_,head,_) ← DB.PageMap.withWriter source fun writer => do
+    writer.put "memo:unrelated-prefix-check" (some "derived".toUTF8)
+    Persistence.Store.writeChange writer {added := [],removed := [],unionsChanged := false}
+  source := {source with head}
+  let _ ← run pool source
+  check ((← stat pool "decodedEvents") == decoded && (← stat pool "originalReads") == originals)
+    "unrelated source publication invalidated an already checked prefix"
+  let some firstTool := initialTools[0]? | throw (IO.userError "fixture missing its first tool")
+  let relation := (compileOperationOutcomes (.text "prefix") (.text "analysis") firstTool).2
+  let some owner ← Persistence.Store.findNode? source relation | throw (IO.userError "prefix owner missing")
+  let (_,head,_) ← DB.PageMap.withWriter source fun writer => do
+    Persistence.Store.removeRoot writer owner
+    Persistence.Store.writeChange writer {added := [],removed := [owner],unionsChanged := false}
+  source := {source with head}
+  let missing ← run pool source
+  check (missing.pending == 1) "changed prefix dependency was silently reused"
+  let (_,head,_) ← DB.PageMap.withWriter source fun writer => do
+    let intern : Persistence.Store.Intern := ⟨writer,← IO.mkRef {}⟩
+    let _ ← intern.root relation
+    Persistence.Store.writeChange writer {added := [owner],removed := [],unionsChanged := false}
+  source := {source with head}
+  let restored ← run pool source
+  check (restored.pending == 0) "pending prefix result hid restored original evidence"
+  let input ← request source
+  let beforeDuplicate ← Journal.frontier? input.journal turn
+  let all ← Journal.turnEntries input.journal turn
+  let some first := all[0]? | throw (IO.userError "empty prefix fixture")
+  check (!(← Journal.append source first) && (← Journal.frontier? (← request source).journal turn) == beforeDuplicate)
+    "duplicate event advanced its immutable append frontier"
+  let known ← Journal.knowledge source [] false
+  let late : Journal.Entry := ⟨⟨Sha256.hex "prefix:analysis".toUTF8,0⟩,
+    .answer ⟨"prefix","analysis","late-answer"⟩ (Sha256.hex "query".toUTF8) "late answer" known,none⟩
+  let created ← stat pool "created"
+  check (← Journal.append source late) "fixture did not append its out-of-order event"
+  let _ ← run pool source
+  check ((← stat pool "created") == created+1) "out-of-order insertion reused a prefix with changed order"
+  let decoded ← stat pool "decodedEvents"
+  let (next,_) ← publishBatch source project (toolsAt 128 1) "analysis" 128
+  source := next
+  let _ ← run pool source
+  check ((← stat pool "decodedEvents") == decoded+2) "one old order violation permanently disabled safe later appends"
+  return Json.mkObj [("initialAnalysisEvents",toJson (64 : Nat)),("incrementalAppendBatches",toJson (3 : Nat)),
+    ("eventsDecodedPerTwoToolAppend",toJson (4 : Nat)),("oldPostOriginalsReloadedPerAppend",toJson (0 : Nat)),
+    ("maximumWarmAppendMs",toJson maxAppendMs),("allFactsAndAllStatusMatchCompleteReplay",toJson true),
+    ("unfinishedLoadedChunkPreserved",toJson true),("partialPool",← partialPool.stats),
+    ("unrelatedPublicationDoesNotDecodeOldEntries",toJson true),("changedMembershipRejectsPrefix",toJson true),
+    ("pendingResultNotReused",toJson true),("duplicateDoesNotAdvanceFeed",toJson true),
+    ("outOfOrderInsertionRejectsPrefix",toJson true),("laterOrderedAppendWorksAgain",toJson true),
+    ("pool",← pool.stats)]
+
 def main (args : List String) : IO Unit := do
-  let [directory] := args | throw (IO.userError "NEW-PRIVATE-FIXTURE")
+  let (directory,prefixMode) ← match args with
+    | [directory] => pure (directory,false)
+    | [directory,"prefix"] => pure (directory,true)
+    | _ => throw (IO.userError "NEW-PRIVATE-FIXTURE with optional prefix")
   let root := System.FilePath.mk directory
   check (root.isAbsolute && !(← root.pathExists) &&
     (← IO.getEnv "EGGSHELL_DATA_ROOT") == some (root / "data").toString) "new isolated fixture required"
@@ -340,7 +496,9 @@ def main (args : List String) : IO Unit := do
   let queue ← queueChecks root
   let feed ← feedChecks root
   let bootstrap ← bootstrapChecks root
-  let fanout ← highFanoutChecks root
+  let fanout ← if prefixMode then pure (Json.mkObj [("retainedParentCheck",toJson "replay-bounds/checks.json")])
+    else highFanoutChecks root
+  let prefixResult ← if prefixMode then prefixChecks root else pure Json.null
   IO.FS.writeFile (root / "specimen.c") "int alpha = 1;\nint beta = 2;\n"
   let input := Json.mkObj [("command",toJson "nl -ba specimen.c | sed -n '1,2p'")]
   let capture ← SourceEvidence.capture root input ((← IO.monoMsNow)+10000)
@@ -357,8 +515,9 @@ def main (args : List String) : IO Unit := do
   let (source,b) ← publish second root inspect "session" "analysis" 1
   let calls ← IO.mkRef (0 : Nat)
   let replayed ← IO.mkRef ([] : List Journal.Replay)
-  let runner : Journal.ReplayRunner := fun source values _ cache deadline => do
+  let runner : Journal.ReplayRunner := fun source input _ cache deadline => do
     calls.modify (·+1)
+    let values ← Journal.completeEntries input (← Journal.frontier? input.journal input.turn)
     let result ← Journal.replay source values deadline (some cache)
     replayed.modify (result :: ·)
     return some result
@@ -500,7 +659,7 @@ def main (args : List String) : IO Unit := do
   let leaseCompleted ← refresh leasePublished
   check (leaseCompleted.complete && leaseCompleted.pending == 0 && leaseCompleted.turns == 1 &&
     (← calls.get) == beforeBusy+2) "accepted event did not complete after its source publication"
-  let report := Json.mkObj [("queue",queue),("feed",feed),("bootstrap",bootstrap),("fanout",fanout),
+  let report := Json.mkObj [("queue",queue),("feed",feed),("bootstrap",bootstrap),("fanout",fanout),("prefix",prefixResult),
     ("nativeConsumption",toJson direct.consumed.size),("nativeUsage",toJson direct.usage.size),
     ("unrelatedPublicationHistoricalReplays",toJson (0 : Nat)),("unrelatedPublicationNewTurns",toJson added.turns),
     ("unrelatedPublicationHistoricalCheckpointsRead",toJson (added.checked-added.turns)),

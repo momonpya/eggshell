@@ -1,0 +1,244 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -21,0 +22,3 @@
++def Clock.before (a b : Clock) : Bool :=
++  if a.domain == b.domain then a.nanos < b.nanos else a.domain < b.domain
++
+@@ -177,0 +181,54 @@
++
++/-- Canonical private append metadata. The floor records the most recent
++insertion which was not strictly after all preceding clocks. A prefix older
++than that insertion must be sorted and replayed again. -/
++structure Frontier where
++  producer : String
++  count : Nat := 0
++  latest : Nat := 0
++  floor : Nat := 0
++  maximum : Option Clock := none
++  chain : String
++  bytes : Nat := 0
++  deriving BEq,ToJson,FromJson
++
++def frontierKey (turn : Turn) := "turn-input:" ++ turn.name
++def receiptKey (turn : Turn) (ordinal : Nat) := key ("turn-sequence:" ++ turn.name) ordinal
++
++def Frontier.initial (journal : PageMap.Snapshot) (turn : Turn) : Frontier :=
++  {producer := implementation,chain := Index.contentKey (journal.head.identity,turn,"private events")}
++
++def Frontier.accepts (old next : Frontier) : Bool :=
++  old.producer == next.producer && old.count ≤ next.count && next.floor ≤ old.count
++
++theorem later_order_violation_rejected (old next : Frontier) (later : old.count < next.floor) :
++    old.accepts next = false := by
++  simp [Frontier.accepts,show ¬ next.floor ≤ old.count by omega]
++
++def Frontier.step (old : Frontier) (ordinal : Nat) (value : Entry) : Frontier := Id.run do
++  let raw := (toJson value).compress.toUTF8
++  let ordered := old.maximum.all (·.before value.clock)
++  let count := old.count+1
++  let floor := if ordered then old.floor else count
++  let maximum := match old.maximum with
++    | none => value.clock
++    | some previous => if previous.before value.clock then value.clock else previous
++  let bytes := old.bytes+raw.size
++  return {
++    producer := implementation,count,latest := ordinal+1,floor,maximum := some maximum,bytes
++    chain := Index.contentKey (old.chain,ordinal,Sha256.hex raw,count,floor,maximum,bytes)}
++
++structure Receipt where
++  previous : String
++  ordinal : Nat
++  next : Frontier
++  deriving BEq,ToJson,FromJson
++
++def frontier? (journal : PageMap.Snapshot) (turn : Turn) : IO (Option Frontier) := do
++  let some raw ← journal.get (frontierKey turn) | return none
++  let value ← Index.decode (α := Frontier) raw
++  unless (toJson value).compress.toUTF8 == raw && value.producer == implementation &&
++      value.count > 0 && value.latest > 0 && value.floor ≤ value.count && value.maximum.isSome &&
++      value.maximum.all (fun clock => digest clock.domain) && digest value.chain do
++    throw (IO.userError "invalid or unsupported private event frontier")
++  return some value
+@@ -205,0 +263,8 @@
++      let turn := value.turn
++      let previous ← match ← frontier? journal turn with
++        | some previous => pure previous
++        | none => do
++          if (← journal.get ("turn:" ++ turn.name)).isSome then
++            throw (IO.userError "active turn has no canonical append feed")
++          pure (Frontier.initial journal turn)
++      let next := previous.step ordinal value
+@@ -209 +273,0 @@
+-      let turn := value.turn
+@@ -212,0 +277,3 @@
++      writer.put (receiptKey turn previous.count)
++        (some (toJson ({previous := previous.chain,ordinal,next} : Receipt)).compress.toUTF8)
++      writer.put (frontierKey turn) (some (toJson next).compress.toUTF8)
+@@ -237,2 +304,44 @@
+-  return values.qsort fun a b => if a.clock.domain == b.clock.domain then a.clock.nanos < b.clock.nanos
+-    else a.clock.domain < b.clock.domain
++  return values.qsort fun a b => a.clock.before b.clock
++
++structure ReplayInput where
++  journal : PageMap.Snapshot
++  turn : Turn
++  latest : Nat
++
++def receipt (journal : PageMap.Snapshot) (turn : Turn) (ordinal : Nat) : IO Receipt := do
++  let some raw ← journal.get (receiptKey turn ordinal) | throw (IO.userError "private event sequence has a hole")
++  let found ← Index.decode (α := Receipt) raw
++  unless (toJson found).compress.toUTF8 == raw && found.next.count == ordinal+1 &&
++      found.next.producer == implementation do throw (IO.userError "invalid private event receipt")
++  return found
++
++def retainedFrontier (input : ReplayInput) (old : Frontier) : IO Bool := do
++  if old.count == 0 then return old == Frontier.initial input.journal input.turn
++  return (← receipt input.journal input.turn (old.count-1)).next == old
++
++structure EventChunk where
++  values : Array Entry := #[]
++  frontier : Frontier
++
++/-- At most 32 events and 16 MiB of encoded input are decoded at once.
++Already processed event bodies are never read by this delta path. -/
++def eventChunk (input : ReplayInput) (old target : Frontier) : IO EventChunk := do
++  unless old.count ≤ target.count && (← retainedFrontier input old) do
++    throw (IO.userError "private event delta lost its retained prefix")
++  let mut found : EventChunk := {frontier := old}
++  let mut bytes := 0
++  for ordinal in [old.count:min target.count (old.count+32)] do
++    let saved ← receipt input.journal input.turn ordinal
++    let size ← getNat input.journal.get (key "entry" saved.ordinal)
++    unless size ≤ maxBytes do throw (IO.userError "private event delta exceeds its event byte bound")
++    if bytes+size > 16*1024*1024 then break
++    let value ← entry input.journal saved.ordinal
++    let next := found.frontier.step saved.ordinal value
++    unless value.turn == input.turn && saved.previous == found.frontier.chain && saved.next == next &&
++        saved.ordinal < input.latest && found.frontier.latest ≤ saved.ordinal do
++      throw (IO.userError "private event delta changed its original append chain")
++    found := {frontier := next,values := found.values.push value}
++    bytes := bytes+size
++  if found.frontier.count == target.count then
++    unless found.frontier == target do throw (IO.userError "private event frontier does not match its complete receipt chain")
++  return found
+@@ -239,0 +349,11 @@
++def completeEntries (input : ReplayInput) (target : Option Frontier) : IO (Array Entry) := do
++  let some target := target | return ← turnEntries input.journal input.turn
++  let mut frontier := Frontier.initial input.journal input.turn
++  let mut values := #[]
++  while frontier.count < target.count do
++    let found ← eventChunk input frontier target
++    unless found.frontier.count > frontier.count do throw (IO.userError "private event reader made no progress")
++    frontier := found.frontier
++    values := values ++ found.values
++  return values.qsort fun a b => a.clock.before b.clock
++
+@@ -443 +562,0 @@
+-  done : Bool := false
+@@ -444,0 +564,12 @@
++def ReplayState.nextChunk (state : ReplayState previous) (count : Nat) : ReplayState count := {
++  position := ⟨0,by omega⟩,result := state.result,trace := state.trace,domain := state.domain,
++  starts := state.starts,locations := state.locations,observed := state.observed,
++  observedLocations := state.observedLocations,usage := state.usage}
++
++theorem next_chunk_keeps_prefix_result (state : ReplayState previous) (count : Nat) :
++    (state.nextChunk count).result = state.result := rfl
++
++structure ReplayMetrics where
++  events : Nat := 0
++  originals : Nat := 0
++
+@@ -452,0 +584,2 @@
++  finished : IO.Ref (Option Replay)
++  metrics : IO.Ref ReplayMetrics
+@@ -457,0 +591,4 @@
++def checkReplayCache (source : PageMap.Snapshot) (cache : StoredReadLookup.Cache) : IO Unit := do
++  unless cache.source.directory == source.directory && cache.source.head == source.head do
++    throw (IO.userError "private replay source-reader cache changed its pinned input")
++
+@@ -461,3 +598,7 @@
+-  unless cache.source.directory == source.directory && cache.source.head == source.head do
+-    throw (IO.userError "private replay source-reader cache changed its pinned input")
+-  return {source,values,cache,state := ← IO.mkRef {position := ⟨0,by omega⟩},feedback := ← IO.mkRef none}
++  checkReplayCache source cache
++  return {
++    source,values,cache
++    state := ← IO.mkRef {position := ⟨0,by omega⟩}
++    feedback := ← IO.mkRef none
++    finished := ← IO.mkRef none
++    metrics := ← IO.mkRef {}}
+@@ -465 +606,30 @@
+-def runCursor (cursor : ReplayCursor) (deadline : Nat) (budget : StoredReadLookup.Budget) : IO Replay := do
++def rebaseCursor (cursor : ReplayCursor) (source : PageMap.Snapshot)
++    (cache : StoredReadLookup.Cache) : IO ReplayCursor := do
++  checkReplayCache source cache
++  unless cursor.source.directory == source.directory && cursor.source.head.identity == source.head.identity &&
++      cursor.source.head.authority == source.head.authority do throw (IO.userError "private replay continuation crossed its source")
++  let feedback ← if cursor.source.head == source.head then cursor.feedback.get else pure none
++  return {
++    source,values := cursor.values,cache
++    state := ← IO.mkRef (← cursor.state.get)
++    feedback := ← IO.mkRef feedback
++    finished := ← IO.mkRef (← cursor.finished.get)
++    metrics := cursor.metrics}
++
++def nextCursor (cursor : ReplayCursor) (source : PageMap.Snapshot) (values : Array Entry)
++    (cache : StoredReadLookup.Cache) : IO ReplayCursor := do
++  let state ← cursor.state.get
++  unless state.position.val == cursor.values.size do
++    throw (IO.userError "cannot discard an unfinished private event chunk")
++  checkReplayCache source cache
++  unless cursor.source.directory == source.directory && cursor.source.head.identity == source.head.identity &&
++      cursor.source.head.authority == source.head.authority do throw (IO.userError "private replay chunk crossed its source")
++  return {
++    source,values,cache
++    state := ← IO.mkRef (state.nextChunk values.size)
++    feedback := ← IO.mkRef none
++    finished := ← IO.mkRef none
++    metrics := cursor.metrics}
++
++def runCursor (cursor : ReplayCursor) (deadline : Nat) (budget : StoredReadLookup.Budget)
++    (finalize : Bool := true) : IO Replay := do
+@@ -470 +640 @@
+-  if initial.done then return initial.result
++  if let some finished ← cursor.finished.get then return if finalize then finished else initial.result
+@@ -479,2 +649,3 @@
+-  for ordinal in List.finRange values.size do
+-    if ordinal.val < initial.position.val then continue
++  for position in [initial.position.val:values.size] do
++    let ordinal : Fin values.size ← if within : position < values.size then pure ⟨position,within⟩
++      else throw (IO.userError "private event chunk position exceeded its extent")
+@@ -482,0 +654 @@
++    cursor.metrics.modify fun metrics => {metrics with events := metrics.events+1}
+@@ -539,0 +712 @@
++      cursor.metrics.modify fun metrics => {metrics with originals := metrics.originals+1}
+@@ -590,0 +764 @@
++  if !finalize then return result
+@@ -598,3 +772 @@
+-  cursor.state.set {
+-    position := ⟨values.size,by change values.size < values.size+1; omega⟩,result := completed,trace,domain,starts,locations
+-    observed,observedLocations,usage,done := true}
++  cursor.finished.set (some completed)
+@@ -611,0 +784,11 @@
++/-- Advance an unfinished chunk before loading its suffix. This never
++publishes a prefix as the result for a later requested frontier. -/
++def advanceReplay (cursor : ReplayCursor) (deadline : Nat) : IO Bool := do
++  let budget ← StoredReadLookup.Budget.new
++  try
++    let _ ← runCursor cursor deadline budget false
++    return true
++  catch error =>
++    if ← budget.exhausted.get then return false
++    throw error
++
+@@ -620 +803 @@
+-abbrev ReplayRunner := PageMap.Snapshot → Array Entry → Index.Reader →
++abbrev ReplayRunner := PageMap.Snapshot → ReplayInput → Index.Reader →
+@@ -760 +943 @@
+-    let entries ← turnEntries journal turn
++    let input : ReplayInput := ⟨journal,turn,latest⟩
+@@ -762 +945 @@
+-      | some run => run source entries reader cache deadline
++      | some run => run source input reader cache deadline
+@@ -763,0 +947 @@
++        let entries ← completeEntries input (← frontier? journal turn)
