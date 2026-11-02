@@ -1,0 +1,56 @@
+--- a/Eggshell/ReplayPreparation.lean
++++ b/Eggshell/ReplayPreparation.lean
+@@ -23,0 +24,2 @@
++  feedbackGroups : Nat := 0
++  feedbackPreparations : Nat := 0
+@@ -38 +40,2 @@
+-    (frontier : Option Journal.Frontier) (deadline : Nat) : IO Bool := do
++    (frontier : Option Journal.Frontier) (cache : StoredReadLookup.Cache)
++    (deadline : Nat) : IO (Option Journal.ReplayCursor) := do
+@@ -42 +45 @@
+-      (← PageMap.HistoryReader.make? input.journal slot.input.journal.head).isSome do return false
++      (← PageMap.HistoryReader.make? input.journal slot.input.journal.head).isSome do return none
+@@ -44 +47 @@
+-  if progress.result.pending > 0 then return false
++  if progress.result.pending > 0 then return none
+@@ -47 +50 @@
+-    unless old.accepts next && (← Journal.retainedFrontier input old) do return false
++    unless old.accepts next && (← Journal.retainedFrontier input old) do return none
+@@ -49,3 +52,3 @@
+-    unless slot.input.latest == input.latest && slot.cursor.source.head == source.head do return false
+-  | _,_ => return false
+-  progress.result.inputs.agree source deadline
++    unless slot.input.latest == input.latest && slot.cursor.source.head == source.head do return none
++  | _,_ => return none
++  Journal.rebaseCursor? slot.cursor source cache deadline
+@@ -56,0 +60 @@
++    if (← IO.monoMsNow) ≥ deadline then return none
+@@ -69,2 +73,6 @@
+-      unless ← slot.reusable source input frontier deadline do continue
+-      existing := some ordinal
++      let resumed ← slot.reusable source input frontier cache deadline
++      -- Expiration is not evidence that an input changed. Keep the entire
++      -- pool untouched when validation could not finish in this slice.
++      if (← IO.monoMsNow) ≥ deadline then return none
++      let some cursor := resumed | continue
++      existing := some (ordinal,cursor)
+@@ -71,0 +80 @@
++    if (← IO.monoMsNow) ≥ deadline then return none
+@@ -75 +84 @@
+-      | some ordinal => do
++      | some (ordinal,cursor) => do
+@@ -78,2 +86,0 @@
+-        let cursor ← if slot.cursor.source.head == source.head then pure slot.cursor
+-          else Journal.rebaseCursor slot.cursor source cache
+@@ -112 +119 @@
+-      | some ordinal => state.slots.extract 0 ordinal ++ state.slots.extract (ordinal+1) state.slots.size
++      | some (ordinal,_) => state.slots.extract 0 ordinal ++ state.slots.extract (ordinal+1) state.slots.size
+@@ -122 +129,3 @@
+-      originalReads := state.originalReads+after.originals-before.originals,chunks := state.chunks+chunks}
++      originalReads := state.originalReads+after.originals-before.originals,chunks := state.chunks+chunks,
++      feedbackGroups := state.feedbackGroups+after.feedbackGroups-before.feedbackGroups,
++      feedbackPreparations := state.feedbackPreparations+after.feedbackPreparations-before.feedbackPreparations}
+@@ -131 +140,2 @@
+-    ("chunks",toJson state.chunks)]
++    ("chunks",toJson state.chunks),("feedbackGroups",toJson state.feedbackGroups),
++    ("feedbackPreparations",toJson state.feedbackPreparations)]

@@ -28,16 +28,17 @@ def main (args : List String) : IO Unit := do
   let bounds := args.contains "bounds"
   let prefixMode := args.contains "prefix"
   let ranges := args.contains "ranges"
-  let work := args.contains "work" || bounds || prefixMode || ranges
-  let args := args.filter (fun arg => arg != "work" && arg != "bounds" && arg != "prefix" && arg != "ranges")
+  let feedback := args.contains "feedback"
+  let work := args.contains "work" || bounds || prefixMode || ranges || feedback
+  let args := args.filter (fun arg => !["work","bounds","prefix","ranges","feedback"].contains arg)
   check (args.isEmpty || args == ["cleanup"]) "expected optional work and capture or cleanup"
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
-  let stem := if ranges then "read-ranges" else if prefixMode then "replay-prefix" else if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
-  let entryPoint := if ranges then "ReadRangeMain" else if work then "ReplayWorkMain" else "TurnReplayChecks"
+  let stem := if feedback then "feedback-progress" else if ranges then "read-ranges" else if prefixMode then "replay-prefix" else if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
+  let entryPoint := if feedback then "FeedbackProgressChecks" else if ranges then "ReadRangeMain" else if work then "ReplayWorkMain" else "TurnReplayChecks"
   let output := project / "docs/candidates" / stem
   let build := root / (stem ++ "-build")
-  let parent := root / (if ranges then "replay-prefix-core" else if prefixMode then "replay-bounds-core" else if bounds then "replay-work-core" else if work then "turn-replay-core" else "delivery-ack-core")
+  let parent := root / (if feedback then "read-ranges-core" else if ranges then "replay-prefix-core" else if prefixMode then "replay-bounds-core" else if bounds then "replay-work-core" else if work then "turn-replay-core" else "delivery-ack-core")
   let core := root / (stem ++ "-core")
   let mut native := root / (stem ++ "-native")
   let mut lastChecks := root / (stem ++ "-checks.guard.json")
@@ -101,7 +102,8 @@ def main (args : List String) : IO Unit := do
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
     guard.getObjValD "guardTriggered" == toJson false) "native run was not successful and terminal"
   let mut modules := #[]
-  let names := if ranges then ["ReadRangeIndex","SourceReadView","StoredReadLookup","SynapseJournal","ContractAudit"] else
+  let names := if feedback then ["SynapseJournal","ReplayPreparation","ContractAudit"] else
+    if ranges then ["ReadRangeIndex","SourceReadView","StoredReadLookup","SynapseJournal","ContractAudit"] else
     if prefixMode then ["SynapseJournal","ReplayPreparation","ContractAudit"] else
     if bounds then ["ReplayWork","SynapseJournal","ContractAudit"] else
     if work then ["DB/PageMap","GraphStore","TurnReplay","ReplayWork","UsageCache","SynapseJournal","ContractAudit"]
@@ -146,7 +148,7 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (output / "native-inputs.json") (Json.mkObj [("objects",toJson objects),
     ("entryPointDependencies",← read (build / ("tools_research_" ++ entryPoint ++ ".dependencies"))),
     ("build",← read (build / "build.json")),("response",toJson (← IO.FS.readFile (build / "runtime.rsp")))]).pretty
-  let helperAxioms ← if ranges then IO.FS.readFile (build / "tools_research_ReadRangeChecks-lean.stdout") else pure ""
+  let helperAxioms ← if ranges || feedback then IO.FS.readFile (build / "tools_research_ReadRangeChecks-lean.stdout") else pure ""
   let workAxioms ← if work then IO.FS.readFile (build / "tools_research_ReplayWorkChecks-lean.stdout") else pure ""
   IO.FS.writeFile (output / "audit.json") (Json.mkObj [
     ("contractAudit",toJson (← IO.FS.readFile (build / "Eggshell_ContractAudit-lean.stdout"))),
@@ -155,7 +157,7 @@ def main (args : List String) : IO Unit := do
     ("wholeIoCorrectnessProven",toJson false)]).pretty
   IO.FS.writeFile (output / "manifest.json") (Json.mkObj [("candidateModules",toJson modules),
     ("entryPoint",← artifact (core / "tools/research" / (entryPoint ++ ".lean"))),
-    ("additionalCheckModules",toJson (← if ranges then do
+    ("additionalCheckModules",toJson (← if ranges || feedback then do
       pure #[← artifact (core / "tools/research/ReadRangeChecks.lean"),← artifact (core / "tools/research/ReplayWorkChecks.lean")]
       else if work then do pure #[← artifact (core / "tools/research/ReplayWorkChecks.lean")]
       else pure (#[] : Array Json))),

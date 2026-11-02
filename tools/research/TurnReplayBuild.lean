@@ -25,17 +25,18 @@ def main (args : List String) : IO Unit := do
   let bounds := args == ["bounds"] || args == ["bounds-checks"]
   let prefixMode := args == ["prefix"] || args == ["prefix-checks"]
   let ranges := args == ["ranges"] || args == ["ranges-checks"]
-  check (args.isEmpty || args == ["retire-native"] || args == ["work"] || args == ["work-checks"] || bounds || prefixMode || ranges)
-    "expected prepare, work/bounds/prefix/ranges with optional -checks, or retire-native"
-  let work := args == ["work"] || args == ["work-checks"] || bounds || prefixMode || ranges
+  let feedback := args == ["feedback"] || args == ["feedback-checks"]
+  check (args.isEmpty || args == ["retire-native"] || args == ["work"] || args == ["work-checks"] || bounds || prefixMode || ranges || feedback)
+    "expected prepare, work/bounds/prefix/ranges/feedback with optional -checks, or retire-native"
+  let work := args == ["work"] || args == ["work-checks"] || bounds || prefixMode || ranges || feedback
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
-  let stem := if ranges then "read-ranges" else if prefixMode then "replay-prefix" else if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
+  let stem := if feedback then "feedback-progress" else if ranges then "read-ranges" else if prefixMode then "replay-prefix" else if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
   let core := root / (stem ++ "-core")
   let output := root / (stem ++ "-build")
-  let entryPoint := if ranges then "ReadRangeMain" else if work then "ReplayWorkMain" else "TurnReplayChecks"
-  let parentName := if ranges then "replay-prefix" else if prefixMode then "replay-bounds" else if bounds then "replay-work" else if work then "turn-replay" else "delivery-ack"
-  if args == ["work-checks"] || args == ["bounds-checks"] || args == ["prefix-checks"] || args == ["ranges-checks"] then
+  let entryPoint := if feedback then "FeedbackProgressChecks" else if ranges then "ReadRangeMain" else if work then "ReplayWorkMain" else "TurnReplayChecks"
+  let parentName := if feedback then "read-ranges" else if ranges then "replay-prefix" else if prefixMode then "replay-bounds" else if bounds then "replay-work" else if work then "turn-replay" else "delivery-ack"
+  if args == ["work-checks"] || args == ["bounds-checks"] || args == ["prefix-checks"] || args == ["ranges-checks"] || args == ["feedback-checks"] then
     check (← (output / "StudyMain").pathExists) "compile the candidate before its native checks"
     let mut attempt := 1
     let runName := fun n => stem ++ "-checks" ++ (if n == 1 then "" else toString n)
@@ -49,7 +50,7 @@ def main (args : List String) : IO Unit := do
     let guard ← read (root / "delivery-ack-compile8.settings.json")
     let guard := guard.setObjVal! "record" (toJson (root / (run ++ ".guard.json")).toString)
       |>.setObjVal! "command" (toJson (#["/usr/bin/env","EGGSHELL_DATA_ROOT=" ++ (fixture / "data").toString,
-        (output / "StudyMain").toString,fixture.toString] ++ if ranges then #["ranges"] else if prefixMode then #["prefix"] else #[]))
+        (output / "StudyMain").toString,fixture.toString] ++ if feedback then #["feedback"] else if ranges then #["ranges"] else if prefixMode then #["prefix"] else #[]))
     IO.FS.writeFile (root / (run ++ ".settings.json")) guard.pretty
     IO.println s!"Prepared guarded native checks: {run}.settings.json"
     return
@@ -77,7 +78,7 @@ def main (args : List String) : IO Unit := do
   if work then
     IO.FS.writeFile (core / "tools/research/ReplayWorkChecks.lean")
       (← IO.FS.readFile (project / "tools/research/ReplayWorkChecks.lean"))
-  if ranges then
+  if ranges || feedback then
     IO.FS.writeFile (core / "tools/research/ReadRangeChecks.lean")
       (← IO.FS.readFile (project / "tools/research/ReadRangeChecks.lean"))
   let known ← modules core core

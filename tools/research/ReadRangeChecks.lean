@@ -76,7 +76,7 @@ private def compareLabels (requested : Array Range) (full selected : Array Read)
     let exact ← IO.ofExcept (feedback.completedRead occurrence query requested (selected.map (·.source)))
     check (all.graph.snapshot == exact.graph.snapshot) "range restriction changed read/missing-delivery labels"
 
-private def native (source : DB.PageMap.Snapshot) (root : System.FilePath) (tool : ToolEvent)
+def native (source : DB.PageMap.Snapshot) (root : System.FilePath) (tool : ToolEvent)
     (session turn : String) (ordinal : Nat) : IO (DB.PageMap.Snapshot × Array Journal.Entry × Journal.Knowledge) := do
   let known ← Journal.knowledge source [] false
   let occurrence : Occurrence := ⟨session,turn,tool.useId⟩

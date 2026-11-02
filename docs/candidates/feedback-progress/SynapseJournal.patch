@@ -1,0 +1,60 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -434,0 +435,6 @@
++
++structure ReplayMetrics where
++  events : Nat := 0
++  originals : Nat := 0
++  feedbackGroups : Nat := 0
++  feedbackPreparations : Nat := 0
+@@ -464,0 +471,9 @@
++
++def FeedbackProgress.rebase (progress : FeedbackProgress) (source : PageMap.Snapshot) : FeedbackProgress :=
++  {progress with source := source.head,directory := source.directory.toString}
++
++theorem FeedbackProgress.rebase_keeps_next (progress : FeedbackProgress) (source : PageMap.Snapshot) :
++    (progress.rebase source).next = progress.next := rfl
++
++theorem FeedbackProgress.rebase_keeps_result (progress : FeedbackProgress) (source : PageMap.Snapshot) :
++    (progress.rebase source).result = progress.result := rfl
+@@ -514 +529,2 @@
+-    (saved : Option (IO.Ref (Option FeedbackProgress)) := none) : IO NativeFeedback := do
++    (saved : Option (IO.Ref (Option FeedbackProgress)) := none)
++    (metrics : Option (IO.Ref ReplayMetrics) := none) : IO NativeFeedback := do
+@@ -517 +533,3 @@
+-    | none => pure (prepareFeedback source starts facts graph)
++    | none => do
++      if let some metrics := metrics then metrics.modify fun state => {state with feedbackPreparations := state.feedbackPreparations+1}
++      pure (prepareFeedback source starts facts graph)
+@@ -526,0 +545 @@
++    if let some metrics := metrics then metrics.modify fun state => {state with feedbackGroups := state.feedbackGroups+1}
+@@ -574,4 +592,0 @@
+-structure ReplayMetrics where
+-  events : Nat := 0
+-  originals : Nat := 0
+-
+@@ -608,2 +623,2 @@
+-def rebaseCursor (cursor : ReplayCursor) (source : PageMap.Snapshot)
+-    (cache : StoredReadLookup.Cache) : IO ReplayCursor := do
++def rebaseCursor? (cursor : ReplayCursor) (source : PageMap.Snapshot)
++    (cache : StoredReadLookup.Cache) (deadline : Nat) : IO (Option ReplayCursor) := do
+@@ -613,2 +628,8 @@
+-  let feedback ← if cursor.source.head == source.head then cursor.feedback.get else pure none
+-  return {
++  let state ← cursor.state.get
++  unless ← state.result.inputs.agree source deadline do return none
++  if cursor.source.head == source.head then return some cursor
++  let feedback ← (← cursor.feedback.get).mapM fun progress => do
++    unless progress.source == cursor.source.head && progress.directory == cursor.source.directory.toString do
++      throw (IO.userError "private feedback continuation lost its source binding")
++    pure (progress.rebase source)
++  return some {
+@@ -616 +637 @@
+-    state := ← IO.mkRef (← cursor.state.get)
++    state := ← IO.mkRef state
+@@ -660 +681 @@
+-      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some budget) (some cursor.feedback)
++      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some budget) (some cursor.feedback) (some cursor.metrics)
+@@ -770 +791 @@
+-  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some budget) (some cursor.feedback)
++  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some budget) (some cursor.feedback) (some cursor.metrics)

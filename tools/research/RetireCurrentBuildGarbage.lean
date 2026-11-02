@@ -46,7 +46,7 @@ def main (args : List String) : IO Unit := do
   check (args.isEmpty || args == ["duplicate-snapshots"] || args == ["ended-cache"] ||
     args == ["ended-source"] || args == ["ended-recommendations"] || args == ["current-replay"] ||
     args == ["ended-seed2-index"] || args == ["current-bounds"] || args == ["current-prefix"] ||
-    args == ["current-ranges"]) "unexpected retirement mode"
+    args == ["current-ranges"] || args == ["current-feedback"]) "unexpected retirement mode"
   let duplicates := args == ["duplicate-snapshots"]
   let endedCache := args == ["ended-cache"]
   let endedSource := args == ["ended-source"]
@@ -56,10 +56,12 @@ def main (args : List String) : IO Unit := do
   let currentBounds := args == ["current-bounds"]
   let currentPrefix := args == ["current-prefix"]
   let currentRanges := args == ["current-ranges"]
+  let currentFeedback := args == ["current-feedback"]
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028"
   let root := base / "fixed-frame-study"
-  let output := if currentRanges then project / "docs/candidates/read-ranges/build-retirement.json" else
+  let output := if currentFeedback then project / "docs/candidates/feedback-progress/build-retirement.json" else
+    if currentRanges then project / "docs/candidates/read-ranges/build-retirement.json" else
     if currentPrefix then project / "docs/candidates/replay-prefix/build-retirement.json" else
     if currentBounds then project / "docs/candidates/replay-bounds/build-retirement.json" else
     project / "docs/candidates/delivery-ack" /
@@ -147,10 +149,11 @@ def main (args : List String) : IO Unit := do
       ("archiveCreated",toJson false)]).pretty
     IO.println "Retired two ended snapshot copies; the byte-identical original remains."
     return
-  let settings ← read (root / (if currentRanges then "read-ranges-build.settings.json" else if currentPrefix then "replay-prefix-build.settings.json" else if currentBounds then "replay-bounds-build.settings.json" else if currentReplay then
+  let settings ← read (root / (if currentFeedback then "feedback-progress-build.settings.json" else if currentRanges then "read-ranges-build.settings.json" else if currentPrefix then "replay-prefix-build.settings.json" else if currentBounds then "replay-bounds-build.settings.json" else if currentReplay then
     "turn-replay-build.settings.json" else "delivery-ack-shared-build.settings.json"))
   let parents : Array String ← IO.ofExcept (settings.getObjValAs? _ "parents")
-  let active := if currentRanges then #[(root / "read-ranges-build").toString,(root / "controller").toString] else
+  let active := if currentFeedback then #[(root / "feedback-progress-build").toString,(root / "controller").toString] else
+    if currentRanges then #[(root / "read-ranges-build").toString,(root / "controller").toString] else
     if currentPrefix then #[(root / "replay-prefix-build").toString,(root / "controller").toString] else
     if currentBounds then #[(root / "replay-bounds-build").toString,(root / "controller").toString] else
     if currentReplay then #[(root / "turn-replay-build").toString,(root / "controller").toString]
@@ -188,7 +191,7 @@ def main (args : List String) : IO Unit := do
     bytes := bytes+size.toNat
     IO.FS.removeFile path
   verify
-  let details := if currentBounds || currentPrefix || currentRanges then [("removedFiles",toJson removed.size)] else [("removed",toJson removed)]
+  let details := if currentBounds || currentPrefix || currentRanges || currentFeedback then [("removedFiles",toJson removed.size)] else [("removed",toJson removed)]
   IO.FS.writeFile output (Json.mkObj (details ++ [("logicalBytesRemoved",toJson bytes),
     ("currentLinkObjectsInterfacesAndStampsRetained",toJson true),
     ("protectedInputsUnchanged",toJson true),("sourceAndDbFilesExcluded",toJson true),("archiveCreated",toJson false)])).pretty
