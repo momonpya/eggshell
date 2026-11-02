@@ -27,16 +27,17 @@ private partial def retire (path : System.FilePath) : IO Nat := do
 def main (args : List String) : IO Unit := do
   let bounds := args.contains "bounds"
   let prefixMode := args.contains "prefix"
-  let work := args.contains "work" || bounds || prefixMode
-  let args := args.filter (fun arg => arg != "work" && arg != "bounds" && arg != "prefix")
+  let ranges := args.contains "ranges"
+  let work := args.contains "work" || bounds || prefixMode || ranges
+  let args := args.filter (fun arg => arg != "work" && arg != "bounds" && arg != "prefix" && arg != "ranges")
   check (args.isEmpty || args == ["cleanup"]) "expected optional work and capture or cleanup"
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let root : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
-  let stem := if prefixMode then "replay-prefix" else if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
-  let entryPoint := if work then "ReplayWorkChecks" else "TurnReplayChecks"
+  let stem := if ranges then "read-ranges" else if prefixMode then "replay-prefix" else if bounds then "replay-bounds" else if work then "replay-work" else "turn-replay"
+  let entryPoint := if ranges then "ReadRangeMain" else if work then "ReplayWorkMain" else "TurnReplayChecks"
   let output := project / "docs/candidates" / stem
   let build := root / (stem ++ "-build")
-  let parent := root / (if prefixMode then "replay-bounds-core" else if bounds then "replay-work-core" else if work then "turn-replay-core" else "delivery-ack-core")
+  let parent := root / (if ranges then "replay-prefix-core" else if prefixMode then "replay-bounds-core" else if bounds then "replay-work-core" else if work then "turn-replay-core" else "delivery-ack-core")
   let core := root / (stem ++ "-core")
   let mut native := root / (stem ++ "-native")
   let mut lastChecks := root / (stem ++ "-checks.guard.json")
@@ -100,15 +101,17 @@ def main (args : List String) : IO Unit := do
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
     guard.getObjValD "guardTriggered" == toJson false) "native run was not successful and terminal"
   let mut modules := #[]
-  let names := if prefixMode then ["SynapseJournal","ReplayPreparation","ContractAudit"] else
+  let names := if ranges then ["ReadRangeIndex","SourceReadView","StoredReadLookup","SynapseJournal","ContractAudit"] else
+    if prefixMode then ["SynapseJournal","ReplayPreparation","ContractAudit"] else
     if bounds then ["ReplayWork","SynapseJournal","ContractAudit"] else
     if work then ["DB/PageMap","GraphStore","TurnReplay","ReplayWork","UsageCache","SynapseJournal","ContractAudit"]
     else ["TurnReplay","SynapseIndex","UsageCache","SynapseJournal","ContractAudit"]
   for name in names do
     let relative := "Eggshell/" ++ name ++ ".lean"
     let old := parent / relative
-    let old := if ← old.pathExists then old.toString else "/dev/null"
-    let result ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/" ++ relative,
+    let present ← old.pathExists
+    let old := if present then old.toString else "/dev/null"
+    let result ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label",if present then "a/" ++ relative else "/dev/null",
       "--label","b/" ++ relative,old,(core / relative).toString]}
     check (result.exitCode == 1) "expected an isolated candidate change"
     IO.FS.writeFile (output / (name.replace "/" "_" ++ ".patch")) result.stdout
@@ -143,12 +146,19 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (output / "native-inputs.json") (Json.mkObj [("objects",toJson objects),
     ("entryPointDependencies",← read (build / ("tools_research_" ++ entryPoint ++ ".dependencies"))),
     ("build",← read (build / "build.json")),("response",toJson (← IO.FS.readFile (build / "runtime.rsp")))]).pretty
+  let helperAxioms ← if ranges then IO.FS.readFile (build / "tools_research_ReadRangeChecks-lean.stdout") else pure ""
+  let workAxioms ← if work then IO.FS.readFile (build / "tools_research_ReplayWorkChecks-lean.stdout") else pure ""
   IO.FS.writeFile (output / "audit.json") (Json.mkObj [
     ("contractAudit",toJson (← IO.FS.readFile (build / "Eggshell_ContractAudit-lean.stdout"))),
     ("proofAxioms",toJson (← IO.FS.readFile (build / ("tools_research_" ++ entryPoint ++ "-lean.stdout")))),
+    ("rangeProofAxioms",toJson helperAxioms),("replayProofAxioms",toJson workAxioms),
     ("wholeIoCorrectnessProven",toJson false)]).pretty
   IO.FS.writeFile (output / "manifest.json") (Json.mkObj [("candidateModules",toJson modules),
     ("entryPoint",← artifact (core / "tools/research" / (entryPoint ++ ".lean"))),
+    ("additionalCheckModules",toJson (← if ranges then do
+      pure #[← artifact (core / "tools/research/ReadRangeChecks.lean"),← artifact (core / "tools/research/ReplayWorkChecks.lean")]
+      else if work then do pure #[← artifact (core / "tools/research/ReplayWorkChecks.lean")]
+      else pure (#[] : Array Json))),
     ("nativeExecutable",← artifact (build / "StudyMain")),("currentProtectedInputs",toJson protectedInputs),
     ("sealedInputs",toJson sealedInputs),("protectedInputsUnchanged",toJson true),
     ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).pretty

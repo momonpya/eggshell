@@ -2,7 +2,7 @@
 
 2026-11-02。固定frame候補は未採用。新seed2で準備が完走しないため、3本目と題材のモデル投入を保留している。全体goalはactive、題材比較は0/18である。
 
-以下の調査記録に続き、原文ReadViewの出版/日誌接続、最終ACK投影、閉じたturnの依存checkpoint、出版差分と有界postingsの同期、[実行中turnの差分再生](candidates/replay-prefix/README.md)を隔離候補でnative検査した。既存sourceの古いpre-source投影には再読ラベル197件の欠落が残り、旧index cacheは削除済みである。新しいnative例の成功を旧参照usage 228との完全一致や全体goalの達成に代用しない。現在地は[GOAL](../GOAL.md)を参照する。
+以下の調査記録に続き、原文ReadViewの出版/日誌接続、最終ACK投影、閉じたturnの依存checkpoint、出版差分と有界postingsの同期、[実行中turnの差分再生](candidates/replay-prefix/README.md)、[出版時の区間索引と完全な交差取得](candidates/read-ranges/README.md)を隔離候補でnative検査した。区間取得は要求と交差する元Readを保持し、不完全な索引を空と扱わない。既存sourceの古いpre-source投影には再読ラベル197件の欠落が残り、旧index cacheは削除済みである。新しいnative例の成功を旧参照usage 228との完全一致や全体goalの達成に代用しない。現在地は[GOAL](../GOAL.md)を参照する。
 
 ## 分かったこと
 

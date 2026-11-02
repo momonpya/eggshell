@@ -2,6 +2,8 @@ import Eggshell.NativePublication
 import Eggshell.ReplayPreparation
 import Eggshell.ContractAudit
 
+namespace Eggshell.Research.ReplayWorkChecks
+
 open Lean Eggshell Eggshell.Plugin Eggshell.Synapses Eggshell.Synapses.Extraction
 
 #print axioms TurnReplay.changed_bucket_rejected
@@ -484,7 +486,7 @@ private def prefixChecks (root : System.FilePath) : IO Json := do
     ("outOfOrderInsertionRejectsPrefix",toJson true),("laterOrderedAppendWorksAgain",toJson true),
     ("pool",← pool.stats)]
 
-def main (args : List String) : IO Unit := do
+def run (args : List String) : IO Unit := do
   let (directory,prefixMode) ← match args with
     | [directory] => pure (directory,false)
     | [directory,"prefix"] => pure (directory,true)
@@ -678,3 +680,5 @@ def main (args : List String) : IO Unit := do
     ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]
   IO.FS.writeFile (root / "result.json") report.pretty
   IO.println report.compress
+
+end Eggshell.Research.ReplayWorkChecks

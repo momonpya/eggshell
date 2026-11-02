@@ -1,0 +1,177 @@
+[{"guard":
+  {"userCeilingRssKiB": 4194304,
+   "state": "finished",
+   "settings":
+   {"record":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-compile.guard.json",
+    "ownedPrefixes":
+    ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+    "minFreeKiB": 2097152,
+    "limitRssKiB": 3670016,
+    "cwd":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+    "command":
+    ["/usr/bin/env",
+     "LEAN_NUM_THREADS=1",
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "-M1024",
+     "--run",
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-build.settings.json"]},
+   "samples": 80,
+   "sampledPeakRssKiB": 1248784,
+   "reason": null,
+   "peakProcesses":
+   [{"rssKiB": 592416,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 66913,
+     "parent": 66889,
+     "lane": null},
+    {"rssKiB": 607760,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 68346,
+     "parent": 66913,
+     "lane": null},
+    {"rssKiB": 48608,
+     "role": "guard",
+     "program":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+     "pid": 66889,
+     "parent": 60243,
+     "lane": null}],
+   "ownedPids": [],
+   "limitRssKiB": 3670016,
+   "guardTriggered": false,
+   "guardSha256":
+   "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+   "guardPid": 66889,
+   "exitCode": 1,
+   "error": null,
+   "elapsedMs": 13711,
+   "childPid": 66913},
+  "diagnostics":
+  [["Eggshell_ReadRangeIndex-lean.stdout",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/Eggshell/ReadRangeIndex.lean:44:36: error: unsolved goals\nfirst last a b : Nat\ncell : Cell first last\nrow : first ≤ last\nquery : a ≤ b\nleft : first ≤ b\nright : a ≤ last\nposition : Nat := max first a\n⊢ first ≤ max first a\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/Eggshell/ReadRangeIndex.lean:46:28: error: unsolved goals\nfirst last a b : Nat\ncell : Cell first last\nrow : first ≤ last\nquery : a ≤ b\nleft : first ≤ b\nright : a ≤ last\nposition : Nat := max first a\nbefore : first ≤ position\nafter : position ≤ last\n⊢ a ≤ max first a\n"]],
+  "attempt": "read-ranges-compile"},
+ {"guard":
+  {"userCeilingRssKiB": 4194304,
+   "state": "finished",
+   "settings":
+   {"record":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-compile2.guard.json",
+    "ownedPrefixes":
+    ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+    "minFreeKiB": 2097152,
+    "limitRssKiB": 3670016,
+    "cwd":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+    "command":
+    ["/usr/bin/env",
+     "LEAN_NUM_THREADS=1",
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "-M1024",
+     "--run",
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-build.settings.json"]},
+   "samples": 832,
+   "sampledPeakRssKiB": 2798640,
+   "reason": null,
+   "peakProcesses":
+   [{"rssKiB": 2158944,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 80400,
+     "parent": 77677,
+     "lane": null},
+    {"rssKiB": 590928,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 77677,
+     "parent": 77649,
+     "lane": null},
+    {"rssKiB": 48768,
+     "role": "guard",
+     "program":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+     "pid": 77649,
+     "parent": 60243,
+     "lane": null}],
+   "ownedPids": [],
+   "limitRssKiB": 3670016,
+   "guardTriggered": false,
+   "guardSha256":
+   "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+   "guardPid": 77649,
+   "exitCode": 1,
+   "error": null,
+   "elapsedMs": 112652,
+   "childPid": 77677},
+  "diagnostics": [],
+  "attempt": "read-ranges-compile2"},
+ {"guard":
+  {"userCeilingRssKiB": 4194304,
+   "state": "finished",
+   "settings":
+   {"record":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-compile3.guard.json",
+    "ownedPrefixes":
+    ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+    "minFreeKiB": 2097152,
+    "limitRssKiB": 3670016,
+    "cwd":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+    "command":
+    ["/usr/bin/env",
+     "LEAN_NUM_THREADS=1",
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "-M1024",
+     "--run",
+     "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-build.settings.json"]},
+   "samples": 206,
+   "sampledPeakRssKiB": 2054352,
+   "reason": null,
+   "peakProcesses":
+   [{"rssKiB": 1407840,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 2234,
+     "parent": 99826,
+     "lane": null},
+    {"rssKiB": 597552,
+     "role": null,
+     "program":
+     "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+     "pid": 99826,
+     "parent": 99522,
+     "lane": null},
+    {"rssKiB": 48960,
+     "role": "guard",
+     "program":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+     "pid": 99522,
+     "parent": 60243,
+     "lane": null}],
+   "ownedPids": [],
+   "limitRssKiB": 3670016,
+   "guardTriggered": false,
+   "guardSha256":
+   "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+   "guardPid": 99522,
+   "exitCode": 1,
+   "error": null,
+   "elapsedMs": 30435,
+   "childPid": 99826},
+  "diagnostics":
+  [["tools_research_ReadRangeChecks-lean.stdout",
+    "'Eggshell.Synapses.ReadRangeIndex.Cell.middle' depends on axioms: [propext]\n'Eggshell.Synapses.ReadRangeIndex.Cell.overlap_candidates' depends on axioms: [propext, Quot.sound]\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/tools/research/ReadRangeChecks.lean:64:72: error: Application type mismatch: The argument\n  prepared\nhas type\n  SourceReadView.Prepared source.head.identity fixture.document\nbut is expected to have type\n  SourceReadView.Prepared writer.base.head.identity fixture.document\nin the application\n  SourceReadView.stage writer id fixture.document fixture.raw prepared\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/tools/research/ReadRangeChecks.lean:120:31: error: Type mismatch\n  Graph.empty\nhas type\n  Value → Graph\nbut is expected to have type\n  Graph\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/tools/research/ReadRangeChecks.lean:121:27: error: Type mismatch\n  Graph.empty\nhas type\n  Value → Graph\nbut is expected to have type\n  Graph\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/tools/research/ReadRangeChecks.lean:128:46: error: Application type mismatch: The argument\n  reference\nhas type\n  Graph\nbut is expected to have type\n  Synapses.Graph\nin the application\n  recordConsumed reference\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/tools/research/ReadRangeChecks.lean:129:42: error: Application type mismatch: The argument\n  exact\nhas type\n  Graph\nbut is expected to have type\n  Synapses.Graph\nin the application\n  recordConsumed exact\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/tools/research/ReadRangeChecks.lean:130:19: error(lean.invalidField): Invalid field `snapshot`: The environment does not contain `Eggshell.Graph.snapshot`, so it is not possible to project the field `snapshot` from an expression\n  reference\nof type `Graph`\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/tools/research/ReadRangeChecks.lean:130:37: error(lean.invalidField): Invalid field `snapshot`: The environment does not contain `Eggshell.Graph.snapshot`, so it is not possible to project the field `snapshot` from an expression\n  exact\nof type `Graph`\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-core/tools/research/ReadRangeChecks.lean:130:59: error(lean.invalidField): Invalid field `snapshot`: The environment does not contain `Eggshell.Graph.snapshot`, so it is not possible to project the field `snapshot` from an expression\n  reference\nof type `Graph`\n"]],
+  "attempt": "read-ranges-compile3"},
+ {"stderr": "uncaught exception: invalid advisory evidence\n",
+  "attempt": "read-ranges-checks.guard.json"}]

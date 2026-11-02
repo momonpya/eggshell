@@ -1,0 +1,14 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -46,0 +47,2 @@
++      ``Eggshell.Synapses.ReadRangeIndex.Cell.middle,
++      ``Eggshell.Synapses.ReadRangeIndex.Cell.overlap_candidates,
+@@ -458 +460 @@
+-        #[``Eggshell.Synapses.SourceReadView.Reader.lookup, ``Eggshell.Synapses.Journal.originalAt?],
++        #[``Eggshell.Synapses.SourceReadView.Reader.lookupRanges, ``Eggshell.Synapses.Journal.originalAt?],
+@@ -460,0 +463,5 @@
++      (``Eggshell.Synapses.SourceReadView.stage,
++        #[``Eggshell.Synapses.ReadRangeIndex.cell?], #[]),
++      (``Eggshell.Synapses.SourceReadView.Reader.lookupRanges,
++        #[``Eggshell.Synapses.ReadRangeIndex.probes, ``Eggshell.Synapses.SourceReadView.Reader.scan],
++        #[``Eggshell.Synapses.Build.document, ``Eggshell.Synapses.ObservedRecords.prepare]),

@@ -1,0 +1,17 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -410 +410,2 @@
+-    (budget : Option StoredReadLookup.Budget := none) : IO (Option (Array Read)) := do
++    (budget : Option StoredReadLookup.Budget := none)
++    (requested : Option (Array Range) := none) : IO (Option (Array Read)) := do
+@@ -417 +418,2 @@
+-    for read in ← cache.lookup original.head subject deadline budget do
++    let requested := requested.map (·.filter (·.subject == subject))
++    for read in ← cache.lookup original.head subject deadline budget requested do
+@@ -493 +495 @@
+-  let some storedReads ← storedReadsAt? source known subjects producer deadline cache budget |
++  let some storedReads ← storedReadsAt? source known subjects producer deadline cache budget (some (uses.map (·.2))) |
+@@ -744 +746,2 @@
+-          let some storedReads ← storedReadsAt? source known files occurrence deadline (some cache) (some budget) |
++          let some storedReads ← storedReadsAt? source known files occurrence deadline (some cache) (some budget)
++              (some (reads.map (·.read.source))) |

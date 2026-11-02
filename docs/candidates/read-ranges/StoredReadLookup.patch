@@ -1,0 +1,24 @@
+--- a/Eggshell/StoredReadLookup.lean
++++ b/Eggshell/StoredReadLookup.lean
+@@ -29,0 +30,4 @@
++  inspected : Nat := 0
++  pages : Nat := 0
++  probes : Nat := 0
++  indexed : Nat := 0
+@@ -45 +49,2 @@
+-    (deadline : Nat) (budget : Option Budget := none) : IO (Array Read) := do
++    (deadline : Nat) (budget : Option Budget := none)
++    (requested : Option (Array Range) := none) : IO (Array Read) := do
+@@ -75 +80,6 @@
+-    let found ← slot.reader.lookup subject 100000 deadline
++    let found ← match requested with
++      | none => slot.reader.lookup subject 100000 deadline
++      | some ranges => slot.reader.lookupRanges subject ranges 100000 deadline
++    cache.state.modify fun state => {state with
++      inspected := state.inspected+found.inspected,pages := state.pages+found.pages,
++      probes := state.probes+found.probes,indexed := state.indexed+(if found.indexed then 1 else 0)}
+@@ -93,0 +104,4 @@
++    |>.setObjVal! "inspected" (toJson state.inspected)
++    |>.setObjVal! "pages" (toJson state.pages)
++    |>.setObjVal! "probes" (toJson state.probes)
++    |>.setObjVal! "indexed" (toJson state.indexed)

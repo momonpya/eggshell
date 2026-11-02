@@ -1,0 +1,71 @@
+--- /dev/null
++++ b/Eggshell/ReadRangeIndex.lean
+@@ -0,0 +1,68 @@
++module
++public import Eggshell.Synapses
++@[expose] public section
++
++namespace Eggshell.Synapses.ReadRangeIndex
++
++def overlaps (a b : Range) : Bool :=
++  a.subject == b.subject && a.first ≤ b.last && b.first ≤ a.last
++
++def wanted (ranges : Array Range) (source : Range) : Bool := ranges.any (overlaps source)
++
++/-- The least shared dyadic cell is computed without a coordinate ceiling.
++Publication checks both endpoints before accepting its directory key. -/
++def level (first last : Nat) : Nat :=
++  if first == last then 0 else 1+level (first/2) (last/2)
++termination_by first+last
++decreasing_by simp_all only [beq_iff_eq]; omega
++
++structure Cell (first last : Nat) where
++  level : Nat
++  bucket : Nat
++  firstAt : first/(2^level) = bucket
++  lastAt : last/(2^level) = bucket
++
++def cell? (first last : Nat) : Option (Cell first last) :=
++  let power := level first last
++  let bucket := first/(2^power)
++  if same : last/(2^power) = bucket then some ⟨power,bucket,rfl,same⟩ else none
++
++theorem Cell.middle (cell : Cell first last) (before : first ≤ position) (after : position ≤ last) :
++    position/(2^cell.level) = cell.bucket := by
++  have low : first/(2^cell.level) ≤ position/(2^cell.level) := Nat.div_le_div_right before
++  have high : position/(2^cell.level) ≤ last/(2^cell.level) := Nat.div_le_div_right after
++  rw [cell.firstAt] at low
++  rw [cell.lastAt] at high
++  exact Nat.le_antisymm high low
++
++/-- Every interval intersecting a request appears in one of the request's
++enumerated cells at the stored interval's level. No similarity cutoff is used. -/
++theorem Cell.overlap_candidates (cell : Cell first last)
++    (row : first ≤ last) (query : a ≤ b) (left : first ≤ b) (right : a ≤ last) :
++    a/(2^cell.level) ≤ cell.bucket ∧ cell.bucket ≤ b/(2^cell.level) := by
++  let position := max first a
++  have before : first ≤ position := Nat.le_max_left first a
++  have after : position ≤ last := by simp [position]; omega
++  have qa : a ≤ position := Nat.le_max_right first a
++  have qb : position ≤ b := by simp [position]; omega
++  have middle := cell.middle before after
++  have low : a/(2^cell.level) ≤ position/(2^cell.level) := Nat.div_le_div_right qa
++  have high : position/(2^cell.level) ≤ b/(2^cell.level) := Nat.div_le_div_right qb
++  simpa [middle] using And.intro low high
++
++def estimate (ranges : Array Range) (maximum : Nat) : Nat := Id.run do
++  let mut count := 0
++  for power in [:maximum+1] do
++    let width := 2^power
++    for range in ranges do count := count+(range.last/width-range.first/width+1)
++  return count
++
++def probes (ranges : Array Range) (maximum : Nat) : Array (Nat × Nat) := Id.run do
++  let mut seen : Std.HashSet (Nat × Nat) := {}
++  for power in [:maximum+1] do
++    let width := 2^power
++    for range in ranges do
++      for bucket in [range.first/width:range.last/width+1] do seen := seen.insert (power,bucket)
++  return seen.toArray.qsort fun a b => a.1 < b.1 || (a.1 == b.1 && a.2 < b.2)
++
++end Eggshell.Synapses.ReadRangeIndex

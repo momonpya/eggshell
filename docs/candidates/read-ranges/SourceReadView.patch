@@ -1,0 +1,109 @@
+--- a/Eggshell/SourceReadView.lean
++++ b/Eggshell/SourceReadView.lean
+@@ -4,0 +5 @@
++public import Eggshell.ReadRangeIndex
+@@ -48 +49 @@
+-  (include_str "ContentMetadata.lean").toUTF8])
++  (include_str "ContentMetadata.lean").toUTF8,(include_str "ReadRangeIndex.lean").toUTF8])
+@@ -74,0 +76,31 @@
++structure Coordinates where
++  rows : Nat
++  maximum : Nat
++  complete : Bool
++  producer : String
++  deriving ToJson,FromJson
++
++def coordinateBase (subject : Subject) := "memo:source-read-view:coordinates:" ++ Index.contentKey subject
++def coordinateMeta (subject : Subject) := coordinateBase subject ++ ":complete"
++def coordinateCell (subject : Subject) (power bucket : Nat) :=
++  coordinateBase subject ++ ":cell:" ++ toString power ++ ":" ++ toString bucket
++
++def existingRowsAt (source : Snapshot) (range : PageMap.KeyRange) (ref : PageMap.Ref) : IO Bool := do
++  unless range.overlaps ref do return false
++  let loaded ← source.load ref
++  match loaded.page with
++  | .leaf rows => return (range.select rows).any (·.2.isSome)
++  | .branch children =>
++    for child in children do
++      if range.overlaps child then
++        if _smaller : child.height < ref.height then
++          if ← existingRowsAt source range child then return true
++        else throw (IO.userError "source read existence probe did not descend")
++    return false
++termination_by ref.height
++
++def existingSubject (source : Snapshot) (subject : Subject) : IO Bool :=
++  match source.head.root with
++  | none => pure false
++  | some root => existingRowsAt source ⟨subjectBase subject ++ ":",subjectBase subject ++ ";"⟩ root
++
+@@ -104,0 +137,15 @@
++      changed := true
++    let some cell := ReadRangeIndex.cell? row.source.first row.source.last |
++      throw (IO.userError "source read interval did not fit its checked coordinate cell")
++    let name := coordinateCell row.source.subject cell.level cell.bucket ++ ":" ++
++      row.binding.owner ++ ":" ++ Index.contentKey (Fact.read row)
++    if let some previous ← writer.get name then
++      unless previous == bytes do throw (IO.userError "source coordinate posting changed its immutable owner")
++    else
++      let metadata ← match ← writer.get (coordinateMeta row.source.subject) with
++        | some raw => ObservedRecords.decode (α := Coordinates) raw
++        | none => do pure {rows := 0,maximum := 0,complete := !(← existingSubject writer.base row.source.subject),producer := implementation}
++      unless digest metadata.producer do throw (IO.userError "source coordinate directory has no producer")
++      writer.put name (some bytes)
++      writer.put (coordinateMeta row.source.subject) (some (toJson {metadata with
++        rows := metadata.rows+1,maximum := max metadata.maximum cell.level}).compress.toUTF8)
+@@ -187,0 +235,2 @@
++  probes : Nat := 0
++  indexed : Bool := false
+@@ -197 +246 @@
+-    (limit deadline : Nat) (initial : ScanResult) : IO ScanResult := do
++    (limit deadline : Nat) (initial : ScanResult) (cell : Option (Nat × Nat) := none) : IO ScanResult := do
+@@ -206,0 +256 @@
++      result := {result with inspected := result.inspected+1}
+@@ -209 +258,0 @@
+-      result := {result with inspected := result.inspected+1}
+@@ -216,0 +266,3 @@
++      if let some (power,bucket) := cell then
++        unless row.source.first/(2^power) == bucket && row.source.last/(2^power) == bucket do
++          throw (IO.userError "source coordinate posting does not cover both original endpoints")
+@@ -222 +274 @@
+-        if _smaller : child.height < ref.height then result ← reader.scan subject range child limit deadline result
++        if _smaller : child.height < ref.height then result ← reader.scan subject range child limit deadline result cell
+@@ -240,0 +293,36 @@
++/-- Exact overlap lookup. Wide requests use the complete subject walk when
++there are fewer stored rows than coordinate probes. An older partial index
++never hides original rows which have not been compiled into coordinates. -/
++def Reader.lookupRanges (reader : Reader source) (subject : Subject) (requested : Array Range)
++    (limit deadline : Nat) : IO Result := do
++  unless subject.valid && requested.all Range.valid do throw (IO.userError "invalid source read interval request")
++  let requested := requested.filter (·.subject == subject)
++  if requested.isEmpty then return {}
++  let full := do
++    let found ← reader.lookup subject limit deadline
++    pure {found with rows := found.rows.filter (fun row => ReadRangeIndex.wanted requested row.source)}
++  let some raw ← source.get (coordinateMeta subject) | return ← full
++  let metadata ← ObservedRecords.decode (α := Coordinates) raw
++  unless digest metadata.producer && metadata.rows > 0 do throw (IO.userError "invalid source coordinate extent")
++  if !metadata.complete || ReadRangeIndex.estimate requested metadata.maximum ≥ metadata.rows then return ← full
++  let some root := source.head.root | throw (IO.userError "source coordinate directory lost its source root")
++  let mut result : ScanResult := {}
++  let mut probes := 0
++  for (power,bucket) in ReadRangeIndex.probes requested metadata.maximum do
++    if result.inspected ≥ limit || (← IO.monoMsNow) ≥ deadline then
++      result := {result with complete := false}; break
++    let base := coordinateCell subject power bucket
++    result ← reader.scan subject ⟨base ++ ":",base ++ ";"⟩ root limit deadline result (some (power,bucket))
++    probes := probes+1
++    if !result.complete then break
++  let mut seen : Std.HashSet String := {}
++  let ordered := result.rows.qsort (fun a b => a.1 < b.1)
++  let mut rows := #[]
++  for (digest,row) in ordered do
++    if seen.contains digest || !ReadRangeIndex.wanted requested row.source then continue
++    seen := seen.insert digest
++    rows := rows.push row
++  return {
++    rows,pages := result.pages,inspected := result.inspected
++    complete := result.complete,probes,indexed := true}
++
