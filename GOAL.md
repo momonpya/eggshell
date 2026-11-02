@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-02更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-03更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -29,9 +29,11 @@
 
 ## 現在地と次の順序
 
-現在の再開点：[native-study](docs/candidates/native-study/README.md)。容量停止は解消し、runtime `e39c5aa3…`と同じ出版契約のcontroller `604550f9…`のnative構築、空DBの8操作Pre/Post/Stop・source-only回復、実App Serverの8 trusted hooksと`gpt-5.6-luna/xhigh`の確認を終えた。小fixtureの新chat配送は2/2・4268 msで、LLVMや80人利用の成功ではない。独立3 seedをモデル投入前に封印した。seed1は事前上限500万tokenを超えて観測5,153,104総tokenで中断し、完了seedとして不採用。最終usageはunknownであり観測値を最終請求と断定しない。82フックに報告上の失敗0、両service終了、集計RSS最大2,422,320 KiB。自動再試行・上限引上げはしていない。題材比較0/18、98%配送・80人利用は未達/未検証のまま。
+現在の隔離候補は[prepared-progress](docs/candidates/prepared-progress/README.md)、runtime `1ba7fa06…`、同じsourceのcontroller `0ba6cb63…`。字句・窓所有者・数値partitionで、準備用の可変treeと、sourceに結び付く完成rootの参照を分けた。64件＋latestの有界な参照先を持ち、古い完成でlatestを巻き戻さず、後続出版で有効な固定pinを拒否しない。3件の出版と重なる準備、後続sourceが未準備のまま残ること、独立の全走査/元窓censusとの一致、逆順完了、破損/異なるauthorityの拒否、完成記録が失われた場合の回復、別processからの再読をnativeで検査した。実DBのrevision 42も完成し43へ追従でき、元データのSHAは不変だった。native Pre/Post/Stopの8操作とsource-only回復も通り、小fixtureの実配送は2/2・4570 ms。数値providerは従来のMiniLMのままである。これは98%配送・80人利用の達成やtoken改善ではなく、製品未採用。次は字句warmの全候補列挙を完成workspaceからの出版差分更新へ置き換える。その後、通常workerが継続出版中に数値/シナプスの準備を進められるか、各componentの完成境界を一つのchecked viewとして扱えるかを検査する。旧固定cohortを差し替えず、モデル投入は保留する。
 
-背景索引がsource headの更新を理由に準備を拒否する不具合をnativeで再現した。固定したrevision 42の原文は読め、revision 43までの正しい出版来歴も確認できるが、字句warmは`source changed before lexical warm`で拒否する。実取得後も1,977数値窓のうち1,704窓が未準備だった。全43出版の来歴検査は通ったが、全原文の完全監査とは扱わない。固定basisの準備完了を後続出版で破棄せず、sourceと各索引rootを結び付けたprepared viewを公開し、後続差分を未処理として保持する契約へ修正する。古い準備によるreadyの巻戻し、未処理差分の誤ACK、scope/authority/破損の見逃しも禁止する。現在のlive-head一致検査を削除するだけでは修正完了にしない。source更新中の進捗・差分の残存・全構築との一致・逆順完了・再起動をモデルなしで検査してから新runtime/new seedへ進む。現在は原因再現までで、製品修正は未実装。旧取得の総token 6,995,366は新取得費用と分けて保持し、以下の削除済み旧DBによる結果は履歴として扱う。
+凍結済みの旧cohort：[native-study](docs/candidates/native-study/README.md)。容量停止は解消し、runtime `e39c5aa3…`と同じ出版契約のcontroller `604550f9…`のnative構築、空DBの8操作Pre/Post/Stop・source-only回復、実App Serverの8 trusted hooksと`gpt-5.6-luna/xhigh`の確認を終えた。小fixtureの新chat配送は2/2・4268 msで、LLVMや80人利用の成功ではない。独立3 seedをモデル投入前に封印した。seed1は事前上限500万tokenを超えて観測5,153,104総tokenで中断し、完了seedとして不採用。最終usageはunknownであり観測値を最終請求と断定しない。82フックに報告上の失敗0、両service終了、集計RSS最大2,422,320 KiB。自動再試行・上限引上げはしていない。題材比較0/18、98%配送・80人利用は未達/未検証のまま。
+
+背景索引がsource headの更新を理由に準備を拒否する不具合をnativeで再現した。固定したrevision 42の原文は読め、revision 43までの正しい出版来歴も確認できるが、字句warmは`source changed before lexical warm`で拒否する。実取得後も1,977数値窓のうち1,704窓が未準備だった。全43出版の来歴検査は通ったが、全原文の完全監査とは扱わない。固定basisの準備完了を後続出版で破棄せず、sourceと各索引rootを結び付けたprepared viewを公開し、後続差分を未処理として保持する契約へ修正する。古い準備によるreadyの巻戻し、未処理差分の誤ACK、scope/authority/破損の見逃しも禁止する。現在のlive-head一致検査を削除するだけでは修正完了にしない。source更新中の進捗・差分の残存・全構築との一致・逆順完了・再起動をモデルなしで検査してから新runtime/new seedへ進む。これは旧runtimeでの原因再現であり、このruntimeへの製品修正は未適用。旧取得の総token 6,995,366は新取得費用と分けて保持し、以下の削除済み旧DBによる結果は履歴として扱う。
 
 2026-11-02。[固定した配送契約の比較](docs/fixed-frame-token-study.md)で新seedを2本取得した。全体goalはactive、候補は未採用。新seed2は181フック失敗0、Pre/Post/portable origin各89件の欠落0、Post入力・応答89/89がDBとbyte一致した。必要原文は配送前に4/7/6件で凍結済み。一方、利用シナプスの準備が60秒を超え、3本目と題材のモデル投入を保留した。読み取り専用の同じ関数は167717 msでconsumed 1955/usage 228を生成した。これは通常warmや30秒フックの達成ではない。[再生と準備の契約](docs/replay-preparation-contract.md)に従い、不変の原文・ReadView・ACK投影を出版/配送時に確定し、過去turnを無関係な出版で再計算しない経路を先に実装する。題材のモデル比較は各block0/6、全体0/18。
 

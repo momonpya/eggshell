@@ -1,0 +1,119 @@
+diff --git a/tools/RetrievalIndex.lean b/tools/RetrievalIndex.lean
+index a01663e..cffe995 100644
+--- a/tools/RetrievalIndex.lean
++++ b/tools/RetrievalIndex.lean
+@@ -6,0 +7 @@ public import tools.RetrievalGrams
++public import Eggshell.PreparedRoot
+@@ -19 +20 @@ def contract : String := Sha256.hex (
+-  (include_str "RetrievalIndex.lean").toUTF8)
++  (include_str "RetrievalIndex.lean").toUTF8 ++ PreparedRoot.implementation.toUTF8)
+@@ -57,2 +58,3 @@ def open? (source : Snapshot) : IO (Option (Reader source)) := do
+-      let index ← DB.PageMap.pin (← path source storage)
+-      unless index.head.authority == authority source do continue
++      let workspace ← DB.PageMap.pin (← path source storage)
++      unless workspace.head.authority == authority source do continue
++      let some index ← PreparedRoot.select? source workspace | continue
+@@ -167,2 +169,2 @@ structure Result where
+-Removing readiness precedes every delta, so a crash cannot certify a partial
+-tree. Pinned older readers retain their complete immutable page root. -/
++Removing workspace readiness precedes every delta, so a crash cannot certify
++a partial tree. Named complete roots remain available to pinned source readers. -/
+@@ -175,2 +176,0 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
+-    let current ← (DB.Sidecar.Owner.ofSnapshot source).pin
+-    unless (← stamp current) == expected do throw (IO.userError "source changed before lexical warm")
+@@ -215,2 +214,0 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
+-    let current ← (DB.Sidecar.Owner.ofSnapshot source).pin
+-    unless (← stamp current) == expected do throw (IO.userError "source changed during lexical warm")
+@@ -223,0 +222,2 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
++    let completed ← DB.PageMap.pin target
++    PreparedRoot.publish source completed
+diff --git a/VectorPartition.lean b/VectorPartition.lean
+index b41b2f1..29b166b 100644
+--- a/VectorPartition.lean
++++ b/VectorPartition.lean
+@@ -293,2 +293 @@ structure Ready where
+-def load? (path : System.FilePath) : IO (Option Ready) := do
+-  let some snapshot ← PageMap.open? path | return none
++def at? (snapshot : PageMap.Snapshot) : IO (Option Ready) := do
+@@ -305,0 +305,4 @@ def load? (path : System.FilePath) : IO (Option Ready) := do
++def load? (path : System.FilePath) : IO (Option Ready) := do
++  let some snapshot ← PageMap.open? path | return none
++  at? snapshot
++
+diff --git a/PartitionBuild.lean b/PartitionBuild.lean
+index a335be4..19c0588 100644
+--- a/PartitionBuild.lean
++++ b/PartitionBuild.lean
+@@ -7,0 +8 @@ public import Eggshell.SourceDelta
++public import Eggshell.PreparedRoot
+@@ -17 +18,2 @@ def implementation := Sha256.hex ((include_str "PartitionBuild.lean").toUTF8 ++
+-  (include_str "SourceCatalogue.lean").toUTF8 ++ (include_str "BoundedSample.lean").toUTF8)
++  (include_str "SourceCatalogue.lean").toUTF8 ++ (include_str "BoundedSample.lean").toUTF8 ++
++  PreparedRoot.implementation.toUTF8)
+@@ -34 +36,5 @@ def open? (root : System.FilePath) (model encoder : String) (source : PageMap.Sn
+-  let some ready ← VectorPartition.load? (folder root model encoder) | return none
++  let some workspace ← PageMap.open? (folder root model encoder) | return none
++  unless workspace.head.authority == VectorPartition.authority do
++    throw (IO.userError "foreign partition authority")
++  let some snapshot ← PreparedRoot.select? source workspace | return none
++  let some ready ← VectorPartition.at? snapshot | return none
+@@ -110,3 +115,0 @@ def rebuild (root : System.FilePath) (model encoder : String) (source : PageMap.
+-  check ((← PageMap.pin source.directory).head == source.head &&
+-    (← PageMap.pin matrix.snapshot.directory).head == matrix.snapshot.head)
+-    "original basis changed during partition preparation"
+@@ -116,0 +120 @@ def rebuild (root : System.FilePath) (model encoder : String) (source : PageMap.
++  PreparedRoot.publish source prepared
+@@ -192,4 +196 @@ def incremental (root : System.FilePath) (model encoder : String) (source : Page
+-  check ((← PageMap.pin source.directory).head == source.head &&
+-    (← PageMap.pin matrix.snapshot.directory).head == matrix.snapshot.head)
+-    "original basis changed during incremental assignment"
+-  let (_,_,written) ← PageMap.withWriter before.snapshot fun writer => do
++  let (_,published,written) ← PageMap.withWriter before.snapshot fun writer => do
+@@ -204,3 +205,3 @@ def incremental (root : System.FilePath) (model encoder : String) (source : Page
+-    check ((← PageMap.pin source.directory).head == source.head &&
+-      (← PageMap.pin matrix.snapshot.directory).head == matrix.snapshot.head)
+-      "original basis changed before incremental publication"
++  let workspace ← PageMap.pin before.snapshot.directory
++  unless workspace.head == published do throw (IO.userError "partition writer lost its publication")
++  PreparedRoot.publish source workspace
+diff --git a/Eggshell/WindowOwners.lean b/Eggshell/WindowOwners.lean
+index 52acea4..abeabc7 100644
+--- a/Eggshell/WindowOwners.lean
++++ b/Eggshell/WindowOwners.lean
+@@ -4,0 +5 @@ public import Eggshell.VectorMatrix
++public import Eggshell.PreparedRoot
+@@ -52 +53 @@ def implementation : String := Sha256.hex (
+-  (include_str "SearchRank.lean").toUTF8)
++  (include_str "SearchRank.lean").toUTF8 ++ PreparedRoot.implementation.toUTF8)
+@@ -69,2 +70 @@ def folder (source : Snapshot) (storage : Sidecar.Storage) : IO System.FilePath
+-def load? (source : Snapshot) (storage : Sidecar.Storage) : IO (Option Ready) := do
+-  let some index ← PageMap.open? (← folder source storage) | return none
++def at? (source index : Snapshot) : IO (Option Ready) := do
+@@ -82,0 +83,4 @@ def load? (source : Snapshot) (storage : Sidecar.Storage) : IO (Option Ready) :=
++def load? (source : Snapshot) (storage : Sidecar.Storage) : IO (Option Ready) := do
++  let some index ← PageMap.open? (← folder source storage) | return none
++  at? source index
++
+@@ -87 +91,5 @@ def open? (source : Snapshot) (storage : Sidecar.Storage) : IO (Option Ready) :=
+-  let some ready ← load? source storage | return none
++  let some workspace ← PageMap.open? (← folder source storage) | return none
++  unless workspace.head.authority == authority source.head.identity do
++    throw (IO.userError "foreign window-owner index authority")
++  let some index ← PreparedRoot.select? source workspace | return none
++  let some ready ← at? source index | return none
+@@ -229,2 +237,2 @@ def refresh (source : Snapshot) (storage : Sidecar.Storage) : IO Result := do
+-    unless (← (Sidecar.Owner.ofSnapshot source).pin).head == source.head do
+-      throw (IO.userError "source changed before window-owner preparation")
++    if let some ready ← open? source storage then
++      return ⟨"warm",0,0,0,ready.manifest.occurrences,0,(← IO.monoMsNow)-started⟩
+@@ -233,0 +242 @@ def refresh (source : Snapshot) (storage : Sidecar.Storage) : IO Result := do
++        PreparedRoot.publish source previous.snapshot
+@@ -255 +264,3 @@ def refresh (source : Snapshot) (storage : Sidecar.Storage) : IO Result := do
+-      | none => PageMap.create directory (authority source.head.identity)
++      | none => do
++        if let some index ← PageMap.open? directory then pure index
++        else PageMap.create directory (authority source.head.identity)
+@@ -277,2 +288 @@ def refresh (source : Snapshot) (storage : Sidecar.Storage) : IO Result := do
+-      unless (← (Sidecar.Owner.ofSnapshot source).pin).head == source.head do
+-        throw (IO.userError "source changed during window-owner preparation")
++    PreparedRoot.publish source (← PageMap.pin directory)

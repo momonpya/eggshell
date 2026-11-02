@@ -60,6 +60,11 @@ This is an unresolved preparation-progress defect, not a harmless warning.
 No product fix or token improvement is claimed. Do not spend on seeds 2/3
 or topic trials while treating this failed acquisition as accepted.
 
+2026-11-03: an [isolated candidate](../prepared-progress/README.md) now completes
+the same historical preparation and catch-up, retains complete component roots,
+and passes the native lifecycle/source-only recovery fixture. It remains
+unadopted; the runtime and acquisition plans documented here are unchanged.
+
 The correction must retain a coherent prepared view with its exact source
 basis and component roots. New source publications become later debt rather
 than invalidating valid pinned work. Promotion must not move readiness
