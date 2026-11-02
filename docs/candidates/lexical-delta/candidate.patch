@@ -1,0 +1,164 @@
+diff --git a/tools/RetrievalIndex.lean b/tools/RetrievalIndex.lean
+index cffe995..9d72ebb 100644
+--- a/tools/RetrievalIndex.lean
++++ b/tools/RetrievalIndex.lean
+@@ -161,0 +162,5 @@ structure Result where
++  mode : String := "warm"
++  publications : Nat := 0
++  changedOwners : Nat := 0
++  catalogueOwners : Nat := 0
++  reset : Bool := false
+@@ -167,0 +173,80 @@ structure Result where
++structure Plan where
++  mode : String
++  before : Nat
++  removed : List (Nat × Nat)
++  added : List (SearchDocument × Nat)
++  full : Option (Std.HashMap Nat Nat)
++  reset : Bool := false
++  publications : Nat := 0
++  changedOwners : Nat := 0
++
++/-- The saved basis is written atomically with readiness, after all batches.
++An unfinished workspace cannot supply the assumptions of a sparse update. -/
++def basis? (index : Snapshot) (name : String := "basis") : IO (Option DB.PageMap.Head) := do
++  let some bytes ← index.get name | return none
++  unless bytes.size ≤ 16384 do throw (IO.userError "oversized lexical source basis")
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid lexical source basis")
++  some <$> IO.ofExcept (Json.parse text >>= fromJson?)
++
++def checkedOwner (index : Snapshot) (owner : Nat) (expected : Option Nat) : IO Unit := do
++  let actual ← (← index.get (key "owner" owner)).mapM fun bytes =>
++    IO.ofExcept (payloadSize (some bytes))
++  unless actual == expected do throw (IO.userError "complete lexical workspace disagrees with its source membership")
++
++/-- Point reads only. The verified publication delta supplies every possibly
++changed owner; source Values and their token sets are immutable across ordinals. -/
++def deltaPlan (source index : Snapshot) : IO (Option Plan) := do
++  let some previous ← readStamp index | return none
++  let some basis ← basis? index | return none
++  let some delta ← SourceDelta.read? source basis | return none
++  let some history ← DB.PageMap.HistoryReader.make? source basis | return none
++  unless previous == (← stamp history.snapshot) &&
++      (← getNat index.get "documents") == previous.candidates do
++    throw (IO.userError "complete lexical workspace has a different source basis")
++  let old ← (← SourceDelta.documents history.snapshot delta.owners).mapM fun document => do
++    return (document.owner,← getNat history.snapshot.get (key "member" document.owner))
++  let wanted ← (← SourceDelta.documents source delta.owners).mapM fun document => do
++    return (document,← getNat source.get (key "member" document.owner))
++  let before := Std.HashMap.ofList old
++  let after := Std.HashMap.ofList (wanted.map fun (document,ordinal) => (document.owner,ordinal))
++  for owner in delta.owners do checkedOwner index owner before[owner]?
++  return some {
++    mode := "publication-delta",before := previous.candidates
++    removed := old.filter fun (owner,ordinal) => after[owner]? != some ordinal
++    added := wanted.filter fun (document,ordinal) => before[document.owner]? != some ordinal
++    full := none,publications := delta.records,changedOwners := delta.owners.length }
++
++/-- Bootstrap and incomplete/divergent workspace recovery keep the existing
++batch-atomic prefix. Already committed token sets need not be regenerated. -/
++def fullPlan (source index : Snapshot) : IO Plan := do
++  let wanted ← (← searchDocuments source).mapM fun document => do
++    return (document,← getNat source.get (key "member" document.owner))
++  let live := Std.HashMap.ofList (wanted.map fun (document,ordinal) => (document.owner,ordinal))
++  let origin ← if (← readStamp index).isSome then basis? index else basis? index "preparing"
++  let reusable ← match origin with
++    | none => pure false
++    | some origin => do pure (← SourceDelta.read? source origin).isSome
++  let previous ← if reusable then directory index "owner" else pure []
++  let known := Std.HashMap.ofList previous
++  return {
++    mode := "full-reconcile",before := previous.length
++    removed := previous.filter fun (owner,ordinal) => live[owner]? != some ordinal
++    added := wanted.filter fun (document,ordinal) => known[document.owner]? != some ordinal
++    full := some live,reset := !reusable }
++
++structure Population (before removed added : Nat) where
++  after : Nat
++  removedWithin : removed ≤ before
++  exact : after = before-removed+added
++
++def checkedPopulation (before removed added expected : Nat) : Except String (Population before removed added) :=
++  if valid : removed ≤ before ∧ before-removed+added = expected then
++    .ok ⟨expected,valid.1,valid.2.symm⟩
++  else .error "lexical change population differs from its complete source"
++
++theorem Population.exact_balance (population : Population before removed added) :
++    population.after+removed = before+added := by
++  have := population.removedWithin
++  have := population.exact
++  omega
++
+@@ -173 +258,2 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
+-  if expected.candidates == 0 then return {stamp := expected}
++  if expected.candidates == 0 && !(← (← path source storage).pathExists) then
++    return {stamp := expected,mode := "empty"}
+@@ -183,9 +269,9 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
+-    let documents ← searchDocuments source
+-    let wanted ← documents.mapM fun document => do
+-      pure (document, ← getNat source.get (key "member" document.owner))
+-    let live := Std.HashMap.ofList (wanted.map fun (document, ordinal) => (document.owner, ordinal))
+-    let previous ← directory initial "owner"
+-    let known := Std.HashMap.ofList previous
+-    let removed := previous.filter fun (owner, ordinal) => live[owner]? != some ordinal
+-    let added := wanted.filter fun (document, ordinal) => known[document.owner]? != some ordinal
+-    let _ ← DB.PageMap.withWriter initial fun writer => writer.put "ready" none
++    let plan ← match ← deltaPlan source initial with
++      | some plan => pure plan
++      | none => fullPlan source initial
++    let population ← IO.ofExcept (checkedPopulation plan.before plan.removed.length plan.added.length expected.candidates)
++    let _ ← DB.PageMap.withWriter initial fun writer => do
++      if plan.reset then writer.root.set none
++      writer.put "ready" none
++      putNat writer "documents" plan.before
++      writer.put "preparing" (some (toJson source.head).compress.toUTF8)
+@@ -195 +281 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
+-    let mut remainingRemoved := removed
++    let mut remainingRemoved := plan.removed
+@@ -198 +284,3 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
+-      let _ ← DB.PageMap.withWriter index fun writer =>
++      let _ ← DB.PageMap.withWriter index fun writer => do
++        let before ← getNat writer.get "documents"
++        unless batch.length ≤ before do throw (IO.userError "lexical owner population underflow")
+@@ -199,0 +288 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
++        putNat writer "documents" (before-batch.length)
+@@ -203 +292 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
+-    let mut remainingAdded := added
++    let mut remainingAdded := plan.added
+@@ -208,0 +298,2 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
++          unless (← writer.get (key "owner" document.owner)).isNone do
++            throw (IO.userError "duplicate lexical owner insertion")
+@@ -209,0 +301 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
++        putNat writer "documents" ((← getNat writer.get "documents")+batch.length)
+@@ -215,4 +307,11 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
+-    let observed ← directory index "owner"
+-    unless observed.length == expected.candidates &&
+-        observed.all (fun (owner, ordinal) => live[owner]? == some ordinal) do
+-      throw (IO.userError "lexical index does not cover the complete source catalogue")
++    unless (← getNat index.get "documents") == population.after do
++      throw (IO.userError "lexical batch population differs from its checked plan")
++    if let some live := plan.full then
++      let observed ← directory index "owner"
++      unless observed.length == expected.candidates &&
++          observed.all (fun (owner,ordinal) => live[owner]? == some ordinal) do
++        throw (IO.userError "lexical index does not cover the complete source catalogue")
++    else
++      for (owner,_) in plan.removed do
++        checkedOwner index owner ((plan.added.find? fun row => row.1.owner == owner).map Prod.snd)
++      for (document,ordinal) in plan.added do checkedOwner index document.owner (some ordinal)
+@@ -221,0 +321,2 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
++      writer.put "basis" (some (toJson source.head).compress.toUTF8)
++      writer.put "preparing" none
+@@ -224 +325,11 @@ def warm (source : Snapshot) (storage : DB.Sidecar.Storage) : IO Result := do
+-    pure {stamp := expected, added := added.length, removed := removed.length, hydrated, batches}) storage
++    pure {
++      stamp := expected
++      mode := plan.mode
++      publications := plan.publications
++      changedOwners := plan.changedOwners
++      catalogueOwners := (plan.full.map (·.size)).getD 0
++      reset := plan.reset
++      added := plan.added.length
++      removed := plan.removed.length
++      hydrated
++      batches }) storage
