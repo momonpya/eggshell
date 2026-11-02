@@ -29,7 +29,9 @@
 
 ## 現在地と次の順序
 
-現在の再開点：[native-study](docs/candidates/native-study/README.md)。runtime `e39c5aa3…`を固定し、同じコードの研究controllerを構築中。旧controllerには別runtimeの出版契約が組み込まれていたため混用しない。新しい空DBの8操作ゲート、実App Serverのmetadata確認、新seed取得はまだ実施していない。controllerの構文エラーを修正した後の再ビルドは空き2 GiBの保護条件で開始を拒否された。終了済み旧seed/R40 DB・cache・生ログと未参照生成物を削除したが、空きは約1.75 GiBである。旧取得の総token 6,995,366と監査結果は保持し、以下の旧DBを使った結果は履歴として扱う。旧DBからの再生はできない。新しい回答モデル投入0、比較0/18、98%配送・80人利用は未達/未検証のまま。
+現在の再開点：[native-study](docs/candidates/native-study/README.md)。容量停止は解消し、runtime `e39c5aa3…`と同じ出版契約のcontroller `604550f9…`のnative構築、空DBの8操作Pre/Post/Stop・source-only回復、実App Serverの8 trusted hooksと`gpt-5.6-luna/xhigh`の確認を終えた。小fixtureの新chat配送は2/2・4268 msで、LLVMや80人利用の成功ではない。独立3 seedをモデル投入前に封印した。seed1は事前上限500万tokenを超えて観測5,153,104総tokenで中断し、完了seedとして不採用。最終usageはunknownであり観測値を最終請求と断定しない。82フックに報告上の失敗0、両service終了、集計RSS最大2,422,320 KiB。自動再試行・上限引上げはしていない。題材比較0/18、98%配送・80人利用は未達/未検証のまま。
+
+背景索引がsource headの更新を理由に準備を拒否する不具合をnativeで再現した。固定したrevision 42の原文は読め、revision 43までの正しい出版来歴も確認できるが、字句warmは`source changed before lexical warm`で拒否する。実取得後も1,977数値窓のうち1,704窓が未準備だった。全43出版の来歴検査は通ったが、全原文の完全監査とは扱わない。固定basisの準備完了を後続出版で破棄せず、sourceと各索引rootを結び付けたprepared viewを公開し、後続差分を未処理として保持する契約へ修正する。古い準備によるreadyの巻戻し、未処理差分の誤ACK、scope/authority/破損の見逃しも禁止する。現在のlive-head一致検査を削除するだけでは修正完了にしない。source更新中の進捗・差分の残存・全構築との一致・逆順完了・再起動をモデルなしで検査してから新runtime/new seedへ進む。現在は原因再現までで、製品修正は未実装。旧取得の総token 6,995,366は新取得費用と分けて保持し、以下の削除済み旧DBによる結果は履歴として扱う。
 
 2026-11-02。[固定した配送契約の比較](docs/fixed-frame-token-study.md)で新seedを2本取得した。全体goalはactive、候補は未採用。新seed2は181フック失敗0、Pre/Post/portable origin各89件の欠落0、Post入力・応答89/89がDBとbyte一致した。必要原文は配送前に4/7/6件で凍結済み。一方、利用シナプスの準備が60秒を超え、3本目と題材のモデル投入を保留した。読み取り専用の同じ関数は167717 msでconsumed 1955/usage 228を生成した。これは通常warmや30秒フックの達成ではない。[再生と準備の契約](docs/replay-preparation-contract.md)に従い、不変の原文・ReadView・ACK投影を出版/配送時に確定し、過去turnを無関係な出版で再計算しない経路を先に実装する。題材のモデル比較は各block0/6、全体0/18。
 
