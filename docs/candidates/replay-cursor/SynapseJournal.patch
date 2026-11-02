@@ -1,0 +1,345 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -294,15 +294,16 @@
+ def storedReadsAt? (source : PageMap.Snapshot) (known : Knowledge) (index : Index.Reader)
+     (subjects : Std.HashSet Subject) (excluded : Occurrence) (deadline : Nat)
+     (strict : Bool := true) (cache : Option StoredReadLookup.Cache := none)
+-    (catalogs : Option ReadCatalog.Pool := none) : IO (Option (Array Read)) := do
++    (catalogs : Option ReadCatalog.Pool := none)
++    (budget : Option StoredReadLookup.Budget := none) : IO (Option (Array Read)) := do
+   let some original ← originalAt? source known.source | return none
+   let prepared ← StoredReadEvidence.prepare original index.index
+   let mut stored := #[]
+   for subject in subjects do
+     let cache ← match cache with | some value => pure value | none => StoredReadLookup.create
+-    for read in ← cache.lookup index subject deadline do
++    for read in ← cache.lookup index subject deadline budget do
+       if read.occurrence == excluded then continue
+-      if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "historical stored-read validation deadline")
++      StoredReadLookup.checkBudget budget deadline "historical stored-read validation deadline"
+       -- Keep the existing operation-local owner table. The project pool is
+       -- consulted once per owner here, never once for every located row.
+       if read.valid && read.binding.database == original.head.identity &&
+@@ -409,10 +410,19 @@
+       if (consumedSource? edge source).isSome then candidates := candidates.push (edge,source)
+   return candidates
+ 
+-def nativeFeedback (source : PageMap.Snapshot) (starts : Starts) (facts : Array Fact)
+-    (graph : Graph) (deadline : Nat) (hint : Option Index.Reader := none)
+-    (cache : Option StoredReadLookup.Cache := none)
+-    (catalogs : Option ReadCatalog.Pool := none) : IO NativeFeedback := do
++structure FeedbackProgress where
++  source : PageMap.Head
++  directory : String
++  starts : Array (Occurrence × (String × Knowledge × String))
++  input : Array Fact
++  initial : Array Fact
++  index : Option PageMap.Head
++  groups : Array (Occurrence × Array (Consumption × Range))
++  next : Nat := 0
++  result : NativeFeedback
++
++def prepareFeedback (source : PageMap.Snapshot) (starts : Starts) (facts : Array Fact)
++    (graph : Graph) (hint : Option Index.Reader) : FeedbackProgress := Id.run do
+   let candidates := nativeCandidates facts
+   let mut witnesses : Std.HashMap WitnessAt (Std.HashSet (Occurrence × Option Range)) := {}
+   for fact in facts do
+@@ -428,28 +438,56 @@
+       result := {result with ambiguous := result.ambiguous+1}
+       continue
+     groups := groups.insert edge.producer (groups[edge.producer]?.getD #[] |>.push (edge,range))
+-  for (producer,uses) in groups do
+-    if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "native usage deadline")
+-    let some (query,known,_) := starts[producer]? | result := {result with unknown := result.unknown+1}; continue
+-    let indexed ← readIndex? source known hint
+-    unless completeKnowledge known indexed.isSome do
+-      result := {result with unknown := result.unknown+1}; continue
+-    let some indexed := indexed | throw (IO.userError "missing checked pre-read index")
+-    let subjects := uses.foldl (fun subjects (_,range) => subjects.insert range.subject) ({} : Std.HashSet Subject)
+-    let some storedReads ← storedReadsAt? source known indexed.reader subjects producer deadline
+-        (indexed.origin == .captured) cache catalogs |
+-      result := {result with unknown := result.unknown+1}; continue
+-    let stored := storedReads.map (·.source)
+-    let shown := presentationWithShared known storedReads (← presentation source known (some indexed.reader.index) catalogs)
+-    for (edge,requested) in uses do
+-      -- Without a pre-existing original there was no missed memory to label.
+-      unless covered requested stored do continue
+-      let missing := omittedRanges requested stored shown.ranges
+-      for range in if missing.isEmpty then #[requested] else missing do
+-        let some checked := consumedSource? edge range | throw (IO.userError "usage escaped its consumption witness")
+-        result := {result with graph := ← IO.ofExcept (recordConsumed result.graph checked query stored shown.ranges)}
++  return {
++    source := source.head,directory := source.directory.toString,starts := starts.toArray
++    input := facts,initial := graph.snapshot,index := hint.map (·.index.head),groups := groups.toArray,result}
++
++def feedbackGroup (source : PageMap.Snapshot) (starts : Starts) (producer : Occurrence)
++    (uses : Array (Consumption × Range)) (result : NativeFeedback) (deadline : Nat)
++    (hint : Option Index.Reader) (cache : Option StoredReadLookup.Cache)
++    (catalogs : Option ReadCatalog.Pool) (budget : Option StoredReadLookup.Budget) : IO NativeFeedback := do
++  StoredReadLookup.checkBudget budget deadline "native usage deadline"
++  let some (query,known,_) := starts[producer]? | return {result with unknown := result.unknown+1}
++  let indexed ← readIndex? source known hint
++  unless completeKnowledge known indexed.isSome do return {result with unknown := result.unknown+1}
++  let some indexed := indexed | throw (IO.userError "missing checked pre-read index")
++  let subjects := uses.foldl (fun subjects (_,range) => subjects.insert range.subject) ({} : Std.HashSet Subject)
++  let some storedReads ← storedReadsAt? source known indexed.reader subjects producer deadline
++      (indexed.origin == .captured) cache catalogs budget | return {result with unknown := result.unknown+1}
++  let stored := storedReads.map (·.source)
++  let shown := presentationWithShared known storedReads (← presentation source known (some indexed.reader.index) catalogs)
++  let mut result := result
++  for (edge,requested) in uses do
++    unless covered requested stored do continue
++    let missing := omittedRanges requested stored shown.ranges
++    for range in if missing.isEmpty then #[requested] else missing do
++      let some checked := consumedSource? edge range | throw (IO.userError "usage escaped its consumption witness")
++      result := {result with graph := ← IO.ofExcept (recordConsumed result.graph checked query stored shown.ranges)}
+   return result
+ 
++/-- A producer group is committed to the cursor only after its complete
++validation. Budget exhaustion retries that group, not the completed prefix. -/
++def nativeFeedback (source : PageMap.Snapshot) (starts : Starts) (facts : Array Fact)
++    (graph : Graph) (deadline : Nat) (hint : Option Index.Reader := none)
++    (cache : Option StoredReadLookup.Cache := none) (catalogs : Option ReadCatalog.Pool := none)
++    (budget : Option StoredReadLookup.Budget := none)
++    (saved : Option (IO.Ref (Option FeedbackProgress)) := none) : IO NativeFeedback := do
++  let progress ← match ← saved.bindM (·.get) with
++    | some progress => pure progress
++    | none => pure (prepareFeedback source starts facts graph hint)
++  unless progress.source == source.head && progress.directory == source.directory.toString &&
++      progress.starts == starts.toArray && progress.input == facts && progress.initial == graph.snapshot &&
++      progress.index == hint.map (·.index.head) && progress.next ≤ progress.groups.size do
++    throw (IO.userError "native feedback cursor input changed")
++  let mut progress := progress
++  if let some saved := saved then saved.set (some progress)
++  for ordinal in [progress.next:progress.groups.size] do
++    let (producer,uses) := progress.groups[ordinal]!
++    let result ← feedbackGroup source starts producer uses progress.result deadline hint cache catalogs budget
++    progress := {progress with next := ordinal+1,result}
++    if let some saved := saved then saved.set (some progress)
++  return progress.result
++
+ structure Replay where
+   consumed : Array Fact := #[]
+   usage : Array Fact := #[]
+@@ -467,9 +505,36 @@
+ 
+ /-- All original body/row work happens in the background. A finish without
+ an exact published native owner remains pending instead of inventing evidence. -/
+-def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat)
++structure ReplayState (count : Nat) where
++  position : Fin (count+1) := ⟨0,by omega⟩
++  result : Replay := {}
++  trace : Trace := {}
++  domain : String := ""
++  starts : Starts := {}
++  locations : Std.HashMap Occurrence (Array OutputRow) := {}
++  observed : Trace := {}
++  observedLocations : Std.HashMap Occurrence (Array OutputRow) := {}
++  usage : Graph := .empty
++  done : Bool := false
++
++/-- The source, index, events and caches belong to the cursor's immutable
++input. A resume supplies only a new scheduling deadline. -/
++structure ReplayCursor where
++  source : PageMap.Snapshot
++  values : Array Entry
++  hint : Option Index.Reader
++  cache : StoredReadLookup.Cache
++  catalogs : ReadCatalog.Pool
++  state : IO.Ref (ReplayState values.size)
++  feedback : IO.Ref (Option FeedbackProgress)
++
++theorem completed_prefix_within {count : Nat} (state : ReplayState count) : state.position.val ≤ count := by
++  have := state.position.isLt
++  omega
++
++def beginReplay (source : PageMap.Snapshot) (values : Array Entry)
+     (preparedHint : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none)
+-    (catalogPool : Option ReadCatalog.Pool := none) : IO Replay := do
++    (catalogPool : Option ReadCatalog.Pool := none) : IO ReplayCursor := do
+   let cache ← match readCache with | some cache => pure cache | none => StoredReadLookup.create
+   let hint ← match preparedHint with
+     | some reader => pure (some reader)
+@@ -481,20 +546,33 @@
+         throw (IO.userError "foreign project read catalog pool")
+       pure pool
+     | none => ReadCatalog.create source (hint.map (·.index))
+-  let mut result : Replay := {}
+-  let mut trace : Trace := {}
+-  let mut domain := ""
+-  let mut starts : Starts := {}
+-  let mut locations : Std.HashMap Occurrence (Array OutputRow) := {}
+-  let mut observed : Trace := {}
+-  let mut observedLocations : Std.HashMap Occurrence (Array OutputRow) := {}
+-  let mut usage : Graph := .empty
+-  for value in values do
+-    if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "synaptic replay deadline")
++  return {source,values,hint,cache,catalogs,state := ← IO.mkRef {position := ⟨0,by omega⟩},feedback := ← IO.mkRef none}
++
++def runCursor (cursor : ReplayCursor) (deadline : Nat) (budget : StoredReadLookup.Budget) : IO Replay := do
++  let source := cursor.source
++  let values := cursor.values
++  let hint := cursor.hint
++  let cache := cursor.cache
++  let catalogs := cursor.catalogs
++  let initial ← cursor.state.get
++  if initial.done then return initial.result
++  let mut result := initial.result
++  let mut trace := initial.trace
++  let mut domain := initial.domain
++  let mut starts := initial.starts
++  let mut locations := initial.locations
++  let mut observed := initial.observed
++  let mut observedLocations := initial.observedLocations
++  let mut usage := initial.usage
++  for ordinal in List.finRange values.size do
++    if ordinal.val < initial.position.val then continue
++    let value := values[ordinal]
++    StoredReadLookup.checkBudget (some budget) deadline "synaptic replay deadline"
+     if domain != value.clock.domain then
+       let projected ← IO.ofExcept (trace.locate locations)
+       let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+-      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache) (some catalogs)
++      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache) (some catalogs) (some budget) (some cursor.feedback)
++      cursor.feedback.set none
+       usage := feedback.graph
+       result := {result with consumed := result.consumed ++ projected.graph.snapshot}
+       result := {result with
+@@ -502,12 +580,13 @@
+         ambiguousNativeUses := result.ambiguousNativeUses+feedback.ambiguous}
+       trace := {}; starts := {}; locations := {}; domain := value.clock.domain
+       observed := {}; observedLocations := {}
++      cursor.state.set {position := ⟨ordinal.val,by change ordinal.val < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}
+     if trace.lastOrdinal.any (value.clock.nanos < ·) then
+       result := {result with unknown := result.unknown+1}
+-      continue
++      cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+     match value.payload with
+     | .start occurrence work query known =>
+-      let .ok (command,format) := invocationData work | result := {result with unknown := result.unknown+1}; continue
++      let .ok (command,format) := invocationData work | result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+       if let some (_,_,original) := starts[occurrence]? then
+         unless original == work do throw (IO.userError "native start changed its complete invocation")
+       trace ← IO.ofExcept (trace.start occurrence value.clock.nanos command format)
+@@ -515,7 +594,7 @@
+       starts := starts.insert occurrence (query, known, work)
+       result := {result with consumers := result.consumers.push occurrence}
+     | .finish occurrence name input response archive =>
+-      if !trace.starts.contains occurrence then result := {result with unknown := result.unknown+1}; continue
++      if !trace.starts.contains occurrence then result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+       let tool : Plugin.ToolEvent := {name,useId := occurrence.useId,input,response}
+       let some started := trace.starts[occurrence]? | throw (IO.userError "missing observed start")
+       let work := Plugin.canonicalToolWork tool
+@@ -537,7 +616,7 @@
+       let some (recorded, id) := located | do
+         if archive.isSome then result := {result with pending := result.pending+1}
+         else result := {result with unknown := result.unknown+1}
+-        continue
++        cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+       let currentOriginal := localId.isSome
+       if currentOriginal then
+         let origin : Provenance.Origin :=
+@@ -547,7 +626,7 @@
+       let doc ← Build.document originalReader id
+       unless doc.occurrences.contains occurrence && doc.workText == some (Plugin.canonicalToolWork tool) do
+         throw (IO.userError "native synaptic observation changed its exact occurrence")
+-      let some raw := doc.source | result := {result with unknown := result.unknown+1}; continue
++      let some raw := doc.source | result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+       let outputFormat := if (Json.parse raw).isOk then DataFormat.json else .text
+       let completed ← IO.ofExcept (trace.finish occurrence value.clock.nanos raw outputFormat)
+       observed ← IO.ofExcept (observed.finish occurrence value.clock.nanos raw outputFormat)
+@@ -574,12 +653,12 @@
+           -- resulting presentation after the same eligibility decision.
+           unless completeKnowledge known storedIndex.isSome do
+             result := {result with unknown := result.unknown+1}
+-            continue
++            cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+           let some index := storedIndex | throw (IO.userError "missing checked pre-read index")
+           let files := reads.foldl (fun files read => files.insert read.read.source.subject) ({} : Std.HashSet Subject)
+           let some storedReads ← storedReadsAt? source known index.reader files occurrence deadline
+-              (index.origin == .captured) (some cache) (some catalogs) |
+-            result := {result with unknown := result.unknown+1}; continue
++              (index.origin == .captured) (some cache) (some catalogs) (some budget) |
++            result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+           let stored := storedReads.map (·.source)
+           let shown := presentationWithShared known storedReads (← presentation source known (some index.reader.index) (some catalogs))
+           -- A later locator can show positive old evidence, not prove absence.
+@@ -588,22 +667,49 @@
+             reads.flatMap (fun read => omittedRanges read.read.source stored #[])
+           if requested.isEmpty then
+             result := {result with unknown := result.unknown+1}
+-            continue
++            cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+           let feedback : Feedback := ({graph := usage, delivered := shown} : Feedback).start occurrence
+           let feedback ← IO.ofExcept (feedback.completedRead occurrence query requested stored)
+           usage := feedback.graph
+     | .answer occurrence query text known =>
+-      if known.uncertain then result := {result with unknown := result.unknown+1}; continue
++      if known.uncertain then result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+       let shown ← presentation source known none (some catalogs)
+       let feedback ← IO.ofExcept (({graph := usage, delivered := shown} : Feedback).answer occurrence query text)
+       usage := feedback.graph
++    cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}
+   let projected ← IO.ofExcept (trace.locate locations)
+   let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+-  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache) (some catalogs)
+-  return {result with
++  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache) (some catalogs) (some budget) (some cursor.feedback)
++  let completed := {result with
+     consumed := result.consumed ++ projected.graph.snapshot, usage := feedback.graph.snapshot
+     unknown := result.unknown+feedback.unknown,ambiguousNativeUses := result.ambiguousNativeUses+feedback.ambiguous}
++  cursor.feedback.set none
++  cursor.state.set {
++    position := ⟨values.size,by change values.size < values.size+1; omega⟩,result := completed,trace,domain,starts,locations
++    observed,observedLocations,usage,done := true}
++  return completed
+ 
++/-- Only the explicit exhaustion signal suspends. Corruption, changed inputs
++and ordinary IO failures propagate to the caller. No partial result publishes. -/
++def resumeReplay (cursor : ReplayCursor) (deadline : Nat) : IO (Option Replay) := do
++  let budget ← StoredReadLookup.Budget.new
++  try return some (← runCursor cursor deadline budget)
++  catch error =>
++    if ← budget.exhausted.get then return none
++    throw error
++
++def replay (source : PageMap.Snapshot) (values : Array Entry) (deadline : Nat)
++    (preparedHint : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none)
++    (catalogPool : Option ReadCatalog.Pool := none) : IO Replay := do
++  let cursor ← beginReplay source values preparedHint readCache catalogPool
++  let some result ← resumeReplay cursor deadline | throw (IO.userError "synaptic replay deadline")
++  return result
++
++/-- A private worker can retain a cursor across scheduling slices. Shared
++source services receive no journal, ACK, query or usage-classification state. -/
++abbrev ReplayRunner := PageMap.Snapshot → Array Entry → Index.Reader →
++  StoredReadLookup.Cache → Nat → IO (Option Replay)
++
+ structure Checkpoint where
+   source : PageMap.Head
+   index : String
+@@ -666,7 +772,8 @@
+ /-- Background replay is bounded by turns and a deadline. Publication is
+ idempotent; checkpoint failure leaves the same immutable events replayable. -/
+ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline : Nat)
+-    (limit : Nat := 8) (readCache : Option StoredReadLookup.Cache := none) : IO Result := do
++    (limit : Nat := 8) (readCache : Option StoredReadLookup.Cache := none)
++    (runner : Option ReplayRunner := none) : IO Result := do
+   let _ ← Build.refresh source storage
+   let some journal ← open? source | return {}
+   let some reader ← Index.open? source storage .shared | throw (IO.userError "synaptic source index is not warm")
+@@ -695,7 +802,13 @@
+     if result.turns ≥ limit || (← IO.monoMsNow) ≥ deadline then
+       result := {result with complete := false}
+       break
+-    let replayed ← replay source (← turnEntries journal turn) deadline (some reader) (some cache)
++    let entries ← turnEntries journal turn
++    let replayed ← match runner with
++      | some run => run source entries reader cache deadline
++      | none => do
++        let cursor ← beginReplay source entries (some reader) (some cache)
++        resumeReplay cursor deadline
++    let some replayed := replayed | result := {result with complete := false}; break
+     if storage == .database then Provenance.requirePublished source replayed.origins
+     publish source storage replayed deadline {
+       session := turn.session,turn := turn.turn,source := source.head,view := readView,count := checkpoint.count}

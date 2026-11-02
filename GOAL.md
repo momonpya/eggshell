@@ -33,7 +33,9 @@
 
 隔離したReadCatalog/ACK投影の部品をLeanで実装し、同じ89件の再生は88725 msで、consumed 1955/usage 228と全statusが参照結果に完全一致した。原典・日誌・索引の書き込み0。原文検証用の表とACKの小さな投影を分け、操作内の既存owner cacheを使い、ACKの解析/本文hashを所有者ごとに一度にした。無関係な出版/ACKでの旧catalog再生成0、座標metadata追加で旧catalog/ACKを拒否、80同時要求で生成1/再利用79をnative検査した。先行する遅い候補（中止258626 ms、完全一致でも278438 ms）は不採用として記録した。[部品と検証記録](docs/candidates/read-catalog/README.md)。
 
-88725 msは通常準備の60秒をまだ超え、30秒フックや80人8時間の達成ではない。現在の接続先は読み取り専用の再生であり、出版差分からの事前生成、最終配送時のACK保存、DBサービスでの寿命共有、閉じたturnの不変入力によるcheckpoint、Warmの未処理差分の表示は未接続。次はこの接続を進める。メモリ枠や検索/選択の重みは追加で調整しない。新モデル呼び出し0、トークン改善は未測定、製品への採用は保留する。
+続く隔離候補で、私有index workerに完了event/producer groupのcursorを保持し、期限切れ後も先頭から再生しないようにした。同じ89操作の読み取り専用比較は7回の協調slice・合計67864 msで全fact/statusが一致した。通常native workerも実seed2のcloneで60,538 msの未完了応答から次の60,121 msで完了した。cloneは先行試行から再使用しており、合計120,842 msを制御された速度改善とは扱わない。最初のworker失敗はdriverがerror応答を保存せず、元原因は未確定。失敗と容量停止も記録した。Warmはjournalのcomplete/debtを応答に保持し、未完了から完了checkpointを出版しない。[実装・native結果・失敗記録](docs/candidates/replay-cursor/README.md)。
+
+cursorは私有workerのprocess内だけに保持し、private journal/ACK/利用labelを共有publication serviceへ送らない。原文投影は共有可能だが、その接続、出版差分での事前生成、最終配送時のACK保存、閉じたturnの不変入力によるcheckpoint、crash後のcursor回復は未実装。次は無関係な出版で過去turnを再生しない入力依存へ進む。これは30秒フック・98%配送・80人8時間の達成ではない。メモリ枠や検索/選択の重みは追加調整しない。新モデル呼び出し0、比較0/18、トークン改善は未測定、製品への採用は保留する。
 
 前段では、入場済みownerの独立原文basis 8,276行と実候補domainを照合し、題材1の67文字の宣言は候補4件まで存在するが120,000 charsを使い切った実選択で落ちたと確認した。[転送・選択の監査](docs/transport-and-selection-audit.md)。この欠落を保存破損や時間切れに戻さない。凍結した分母3/7/4を維持し、67文字を入力言語の状態全体の保存とは扱わない。
 

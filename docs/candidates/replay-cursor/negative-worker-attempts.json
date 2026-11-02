@@ -1,0 +1,123 @@
+{"successfulRunReusedClone": true,
+ "successfulElapsedIsControlledLatencyComparison": false,
+ "initialStderr":
+ "uncaught exception: native worker returned a preparation failure\n",
+ "initialProgress":
+ [{"response":
+   {"usage": 0,
+    "unknown": 0,
+    "turns": 0,
+    "pending": 0,
+    "consumed": 0,
+    "complete": false,
+    "ambiguousNativeUses": 0},
+   "pass": 0,
+   "elapsedMs": 62266}],
+ "initialFailureRootCauseEstablished": false,
+ "initialFailure":
+ {"userCeilingRssKiB": 4194304,
+  "state": "finished",
+  "settings":
+  {"record":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-worker-resume3.guard.json",
+   "ownedPrefixes":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+   "minFreeKiB": 2097152,
+   "limitRssKiB": 3670016,
+   "cwd":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+   "command":
+   ["/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+    "-j1",
+    "-M1024",
+    "--run",
+    "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/ReplayWorkerResumeAudit.lean"]},
+  "samples": 963,
+  "sampledPeakRssKiB": 716672,
+  "reason": null,
+  "peakProcesses":
+  [{"rssKiB": 462800,
+    "role": null,
+    "program":
+    "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+    "pid": 76014,
+    "parent": 74895,
+    "lane": null},
+   {"rssKiB": 204800,
+    "role": null,
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-preparation-checks-build/StudyMain",
+    "pid": 77402,
+    "parent": 76014,
+    "lane": null},
+   {"rssKiB": 49072,
+    "role": "guard",
+    "program": "controller/StudyMain",
+    "pid": 74895,
+    "parent": 74871,
+    "lane": null}],
+  "ownedPids": [],
+  "limitRssKiB": 3670016,
+  "guardTriggered": false,
+  "guardSha256":
+  "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+  "guardPid": 74895,
+  "exitCode": 1,
+  "error": null,
+  "elapsedMs": 130819,
+  "childPid": 76014},
+ "initialErrorResponseRetained": false,
+ "capacityStop":
+ {"userCeilingRssKiB": 4194304,
+  "state": "finished",
+  "settings":
+  {"record":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-worker-observed.guard.json",
+   "ownedPrefixes":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+   "minFreeKiB": 2097152,
+   "limitRssKiB": 3670016,
+   "cwd":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+   "command":
+   ["/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+    "-j1",
+    "-M1024",
+    "--run",
+    "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/ReplayWorkerResumeAudit.lean",
+    "resume-observed"]},
+  "samples": 257,
+  "sampledPeakRssKiB": 676192,
+  "reason": "disk-space",
+  "peakProcesses":
+  [{"rssKiB": 162848,
+    "role": null,
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-preparation-checks-build/StudyMain",
+    "pid": 64533,
+    "parent": 63395,
+    "lane": null},
+   {"rssKiB": 464112,
+    "role": null,
+    "program":
+    "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+    "pid": 63395,
+    "parent": 62277,
+    "lane": null},
+   {"rssKiB": 49232,
+    "role": "guard",
+    "program": "controller/StudyMain",
+    "pid": 62277,
+    "parent": 62253,
+    "lane": null}],
+  "ownedPids": [],
+  "limitRssKiB": 3670016,
+  "guardTriggered": true,
+  "guardSha256":
+  "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+  "guardPid": 62277,
+  "exitCode": 137,
+  "error": null,
+  "elapsedMs": 37286,
+  "childPid": 63395},
+ "adopted": false}

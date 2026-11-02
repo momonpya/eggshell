@@ -1,0 +1,43 @@
+--- a/Eggshell/StoredReadLookup.lean
++++ b/Eggshell/StoredReadLookup.lean
+@@ -5,6 +5,18 @@
+ namespace Eggshell.Synapses.StoredReadLookup
+ open DB
+ 
++/-- A caller-owned exhaustion signal distinguishes cooperative suspension
++from an ordinary IO/validation failure. It is never inferred from error text. -/
++structure Budget where
++  exhausted : IO.Ref Bool
++
++def Budget.new : IO Budget := return ⟨← IO.mkRef false⟩
++
++def checkBudget (budget : Option Budget) (deadline : Nat) (message : String) : IO Unit := do
++  if (← IO.monoMsNow) ≥ deadline then
++    if let some budget := budget then budget.exhausted.set true
++    throw (IO.userError message)
++
+ structure Entry where
+   head : PageMap.Head
+   subject : Subject
+@@ -27,8 +39,8 @@
+ def create : IO Cache := do return ⟨← IO.mkRef {},16777216,16384⟩
+ 
+ def Cache.lookup (cache : Cache) (index : Index.Reader) (subject : Subject)
+-    (deadline : Nat) : IO (Array Read) := do
+-  if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "historical stored-read lookup deadline")
++    (deadline : Nat) (budget : Option Budget := none) : IO (Array Read) := do
++  checkBudget budget deadline "historical stored-read lookup deadline"
+   let key := Index.contentKey (index.index.head,subject)
+   if let some entry := (← cache.state.get).entries[key]? then
+     unless entry.head == index.index.head && entry.subject == subject do
+@@ -36,7 +48,9 @@
+     cache.state.modify fun state => {state with hits := state.hits+1}
+     return entry.rows
+   let found ← index.lookup (.subject subject) 100000 deadline
+-  unless found.complete do throw (IO.userError "incomplete historical stored-read evidence")
++  unless found.complete do
++    checkBudget budget deadline "historical stored-read lookup deadline"
++    throw (IO.userError "incomplete historical stored-read evidence")
+   let rows := found.facts.filterMap fun fact => match fact with
+     | .read row => some row
+     | _ => none

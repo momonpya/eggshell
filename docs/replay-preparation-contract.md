@@ -56,4 +56,12 @@ ReadViewの再利用はscope・原文入力・実装・依存が一致した場�
 
 小さな実PageMapのpublication検査では、無関係なgraph追加とACK追加による旧catalog再生成0、以前はなかった座標metadataの追加で旧catalogとACKを拒否、旧pinで同じ原文へ回復、別projectを拒否、80同時要求を生成1回/再利用79回に集約、枠超過時のcache保持0を確認した。80人の継続負荷や実フックの検査ではない。
 
-`preparePublication` は差分ownerを受ける部品APIで、現在は製品のpublisherから呼ばれていない。最終reconcile後のACK保存とservice共有、閉じたturnのcheckpoint更新、Warmのdebt表示も未接続である。既存の60秒を増やしていない。新モデル実行0、比較0/18と採用条件を維持する。[コード・negativeを含む検証記録](candidates/read-catalog/README.md)。
+`preparePublication` は差分ownerを受ける部品APIで、現在は製品のpublisherから呼ばれていない。最終reconcile後のACK保存とservice共有、閉じたturnのcheckpoint更新は未接続である。既存の60秒を増やしていない。新モデル実行0、比較0/18と採用条件を維持する。[コード・negativeを含む検証記録](candidates/read-catalog/README.md)。
+
+## 私有workerの再開と準備状態
+
+同じ89操作を、eventとproducer groupの完了位置を持つcursorで再生した。10秒の協調sliceを7回使い、合計67864 msで参照の全fact/statusと一致した。sliceの最大は11789 msで、硬い10秒上限ではない。期限切れだけを明示したBudgetで識別し、破損・入力変更・通常IO失敗を隠さない。未完了から部分factや完了checkpointを出版しない。
+
+Warmの応答には必須のjournal結果を残した。小さい実PageMapと通常native workerで、期限切れcomplete=false、後の完了、80要求の同一cursor再利用、別scope拒否を検査した。実seed2のcloneでも、通常workerが最初の60538 msで未完了を返し、次の60121 msで完了した。consumed 1955、usage 228、pending 0、元のsource/private headは不変。先行失敗のcloneを再使用しており、120842 msを前段との制御された速度比較に使わない。初回失敗の元error内容はdriverの記録順の不備で失われ、原因は未確定である。
+
+private journal、Knowledge、ACK、利用labelはユーザー所有であり、共有publication serviceに再生全体を移さない。今回のcursor poolは同じ私有index worker内でのみ有効で、crash/restart後の回復は未実装。共有可能な原文投影をserviceで再利用する接続と、閉じたturnの入力を無関係なpublicationで無効にしないcheckpointが次の対象である。30秒フック、98%配送、80人継続利用、総token改善は未達/未検証。[隔離差分と検証記録](candidates/replay-cursor/README.md)。

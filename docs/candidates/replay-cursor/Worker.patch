@@ -1,0 +1,28 @@
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -565,6 +565,7 @@
+ def run (role : String) : IO UInt32 := do
+   let input ← IO.getStdin
+   let output ← IO.getStdout
++  let preparation ← Synapses.ReplayPreparation.new
+   repeat
+     let line ← input.getLine
+     if line.isEmpty then break
+@@ -614,7 +615,7 @@
+         if (json.getObjValAs? String "kind").toOption == some "synapses" then
+           let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := Synapses.Journal.Target))
+           let pinned ← target.owner.pin
+-          let (pinned,indexed) ← Warm.refreshSource pinned target.storage ((← IO.monoMsNow)+60000)
++          let (pinned,indexed) ← Warm.refreshSource pinned target.storage ((← IO.monoMsNow)+60000) (some preparation)
+           let _ ← Synapses.CanonicalSource.Cache.refresh pinned target.storage
+           pure (toJson indexed)
+         else
+@@ -622,7 +623,7 @@
+           let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")
+           let count ← indexQueued target (paths.map System.FilePath.mk)
+           if (json.getObjValAs? Bool "warm").toOption.getD false then
+-            let _ ← Warm.runTarget (← target.owner.pin) target
++            let _ ← Warm.runTarget (← target.owner.pin) target (preparation := some preparation)
+             pure ()
+           pure (toJson count)
+       else throw (IO.userError "unknown worker role")

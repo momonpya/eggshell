@@ -12,7 +12,8 @@ def main (args : List String) : IO Unit := do
         ["read-audit-build/StudyMain","storage-audit-build/StudyMain","replay-audit-build/StudyMain"])
     | ["catalog"] => pure ("read-catalog-helper-cleanup.json",
         ["read-catalog-checks-build/StudyMain","read-catalog-collect-build/StudyMain"])
-    | _ => throw (IO.userError "[catalog]")
+    | ["previous-replay"] => pure ("read-catalog-replay-executable-cleanup.json",["read-catalog-build/StudyMain"])
+    | _ => throw (IO.userError "[catalog|previous-replay]")
   let report := root / reportName
   unless !(← report.pathExists) do throw (IO.userError "cleanup already recorded")
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}

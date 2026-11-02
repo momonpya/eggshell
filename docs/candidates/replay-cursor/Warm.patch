@@ -1,0 +1,57 @@
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -8,6 +8,7 @@
+ public import Eggshell.PluginModel
+ public import Eggshell.SearchProvider
+ public import Eggshell.SynapseJournal
++public import Eggshell.ReplayPreparation
+ public import tools.FocusWindows
+ public import tools.RetrievalIndex
+ 
+@@ -298,6 +299,7 @@
+ 
+ 
+ structure Result where
++  journal : Synapses.Journal.Result
+   before : Coverage
+   after : Coverage
+   requested : Nat
+@@ -318,8 +320,8 @@
+ source commit creates later debt; it does not invalidate completed prefix work
+ or let a view claim coverage beyond the bytes it actually consumed. -/
+ def refreshSource (snapshot : DB.PageMap.Snapshot) (storage : DB.Sidecar.Storage)
+-    (deadline : Nat) : IO (DB.PageMap.Snapshot × Synapses.Journal.Result) := do
+-  let result ← Synapses.Journal.refresh snapshot storage deadline
++    (deadline : Nat) (preparation : Option Synapses.ReplayPreparation.Pool := none) : IO (DB.PageMap.Snapshot × Synapses.Journal.Result) := do
++  let result ← Synapses.Journal.refresh snapshot storage deadline (runner := preparation.map (·.run))
+   return (snapshot,result)
+ 
+ /-- Preparation uses verified publication deltas; an explicit verification request
+@@ -327,9 +329,9 @@
+ Hydrate missing original windows in bounded batches and require exact ACKs. A
+ failed batch leaves completed cache writes for a subsequent invocation. -/
+ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
+-    (verify : Bool := false) : IO Result := do
++    (verify : Bool := false) (preparation : Option Synapses.ReplayPreparation.Pool := none) : IO Result := do
+   let started ← IO.monoMsNow
+-  let (snapshot,_) ← refreshSource snapshot target.storage ((← IO.monoMsNow)+60000)
++  let (snapshot,journal) ← refreshSource snapshot target.storage ((← IO.monoMsNow)+60000) preparation
+   let canonical ← Synapses.CanonicalSource.Cache.refresh snapshot target.storage
+   let windowOwners ← WindowOwners.refresh snapshot target.storage
+   let lexical ← RetrievalResearch.Index.warm snapshot target.storage
+@@ -341,6 +343,7 @@
+       encoderContract := SearchProvider.encoderContract, input := {}
+       focusContract := Plugin.focusWindowContract, discovery := {}, focus := {}}
+     return {
++      journal
+       before := empty
+       after := empty
+       requested := 0
+@@ -387,6 +390,7 @@
+     mark target snapshot
+     PreparationDebt.acknowledge target.owner settings.model SearchProvider.encoderContract debt
+     return {
++      journal
+       before := before.coverage
+       after := after.coverage
+       requested := before.needed.length
