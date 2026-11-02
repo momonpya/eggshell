@@ -1,0 +1,130 @@
+--- a/Eggshell/StoredReadLookup.lean
++++ b/Eggshell/StoredReadLookup.lean
+@@ -1,9 +1,10 @@
+ module
+-public import Eggshell.SynapseIndex
++public import Eggshell.SourceReadView
++public import Std.Sync.Mutex
+ @[expose] public section
+ 
+ namespace Eggshell.Synapses.StoredReadLookup
+-open DB
++open Lean DB
+ 
+ /-- A caller-owned exhaustion signal distinguishes cooperative suspension
+ from an ordinary IO/validation failure. It is never inferred from error text. -/
+@@ -17,51 +18,78 @@
+     if let some budget := budget then budget.exhausted.set true
+     throw (IO.userError message)
+ 
+-structure Entry where
+-  head : PageMap.Head
+-  subject : Subject
+-  rows : Array Read
++structure Slot where
++  source : PageMap.Snapshot
++  reader : SourceReadView.Reader source
+ 
+ structure State where
+-  entries : Std.HashMap String Entry := {}
+-  bytes : Nat := 0
+-  rows : Nat := 0
++  slots : Array Slot := #[]
+   hits : Nat := 0
+   misses : Nat := 0
++  evictions : Nat := 0
+ 
+-/-- Per-replay, bounded locator cache. These rows still require validation
+-against each operation's pre-read source publication; they grant no authority. -/
++/-- One pinned project file supplies every historical view. The 16 MiB
++decoded allowance is divided between at most four readers. Whole subject
++results, private delivery state and usage labels are not cached here. -/
+ structure Cache where
++  source : PageMap.Snapshot
++  gate : Std.Mutex Unit
+   state : IO.Ref State
+-  maxBytes : Nat := 16777216
+-  maxRows : Nat := 16384
++  maxBytes : Nat := 16*1024*1024
++  capacity : Nat := 4
+ 
+-def create : IO Cache := do return ⟨← IO.mkRef {},16777216,16384⟩
++def create (source : PageMap.Snapshot) : IO Cache := return {
++  source,gate := ← Std.Mutex.new (),state := ← IO.mkRef {}}
+ 
+-def Cache.lookup (cache : Cache) (index : Index.Reader) (subject : Subject)
++def Cache.lookup (cache : Cache) (head : PageMap.Head) (subject : Subject)
+     (deadline : Nat) (budget : Option Budget := none) : IO (Array Read) := do
+-  checkBudget budget deadline "historical stored-read lookup deadline"
+-  let key := Index.contentKey (index.index.head,subject)
+-  if let some entry := (← cache.state.get).entries[key]? then
+-    unless entry.head == index.index.head && entry.subject == subject do
+-      throw (IO.userError "ambiguous stored-read locator cache key")
+-    cache.state.modify fun state => {state with hits := state.hits+1}
+-    return entry.rows
+-  let found ← index.lookup (.subject subject) 100000 deadline
+-  unless found.complete do
+-    checkBudget budget deadline "historical stored-read lookup deadline"
+-    throw (IO.userError "incomplete historical stored-read evidence")
+-  let rows := found.facts.filterMap fun fact => match fact with
+-    | .read row => some row
+-    | _ => none
+-  cache.state.modify fun state =>
+-    let next := {state with misses := state.misses+1}
+-    if state.bytes+found.payloadBytes ≤ cache.maxBytes && state.rows+rows.size ≤ cache.maxRows &&
+-        state.entries.size < 128 then
+-      {next with
+-        entries := state.entries.insert key ⟨index.index.head,subject,rows⟩,
+-        bytes := state.bytes+found.payloadBytes,rows := state.rows+rows.size}
+-    else next
+-  return rows
++  checkBudget budget deadline "historical source-read lookup deadline"
++  cache.gate.atomically do
++    checkBudget budget deadline "historical source-read lookup deadline"
++    let some pinned ← PageMap.HistoryReader.make? cache.source head |
++      throw (IO.userError "source-read cache crossed its pinned project history")
++    let state ← cache.state.get
++    let found := state.slots.findIdx? (·.source.head == head)
++    let slot ← match found with
++      | some ordinal => do
++        let some slot := state.slots[ordinal]? | throw (IO.userError "historical source reader disappeared")
++        cache.state.set {
++          state with
++          hits := state.hits+1
++          slots := (state.slots.extract 0 ordinal ++ state.slots.extract (ordinal+1) state.slots.size).push slot}
++        pure slot
++      | none => do
++        let value ← SourceReadView.reader pinned.snapshot
++        let value : SourceReadView.Reader pinned.snapshot := {
++          value with maxBytes := if cache.capacity == 0 then 0 else cache.maxBytes/cache.capacity}
++        let slot : Slot := ⟨pinned.snapshot,value⟩
++        if cache.capacity > 0 then
++          let slots := if state.slots.size < cache.capacity then state.slots else state.slots.extract 1 state.slots.size
++          cache.state.set {
++            state with
++            slots := slots.push slot
++            misses := state.misses+1
++            evictions := state.evictions+(if state.slots.size ≥ cache.capacity then 1 else 0)}
++        else cache.state.set {state with misses := state.misses+1}
++        pure slot
++    let found ← slot.reader.lookup subject 100000 deadline
++    unless found.complete do
++      checkBudget budget deadline "historical source-read lookup deadline"
++      throw (IO.userError "incomplete historical source-read projection")
++    return found.rows
+ 
++def Cache.stats (cache : Cache) : IO Json := cache.gate.atomically do
++  let state ← cache.state.get
++  let mut bytes := 0
++  let mut headerLoads := 0
++  let mut blockLoads := 0
++  for slot in state.slots do
++    bytes := bytes+(← slot.reader.charged.get)
++    headerLoads := headerLoads+(← slot.reader.headerLoads.get)
++    blockLoads := blockLoads+(← slot.reader.blockLoads.get)
++  return Json.mkObj [("readers",toJson state.slots.size),("capacity",toJson cache.capacity),
++    ("hits",toJson state.hits),("misses",toJson state.misses),("evictions",toJson state.evictions),
++    ("chargedBytes",toJson bytes),("maxBytes",toJson cache.maxBytes),
++    ("retainedHeaderLoads",toJson headerLoads),("retainedBlockLoads",toJson blockLoads)]
++
+ end Eggshell.Synapses.StoredReadLookup

@@ -1,0 +1,156 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -260,15 +260,7 @@
+   unless ← Index.sameSources original manifest.source do return none
+   unless (← index.get "provenance") == some (toJson (← Provenance.stamp original)).compress.toUTF8 do return none
+   return some ⟨index, manifest⟩
+-
+-inductive ReadIndexOrigin where
+-  | captured | prepared
+-  deriving BEq,ToJson
+ 
+-structure ReadIndex where
+-  reader : Index.Reader
+-  origin : ReadIndexOrigin
+-
+ /-- Current preparation is a locator, not a claim about what was indexed at
+ the start. Its published source/provenance is checked without rebuilding it. -/
+ def preparedHint? (source : PageMap.Snapshot) : IO (Option Index.Reader) := do
+@@ -283,39 +275,22 @@
+     return some ⟨index,manifest⟩
+   return none
+ 
+-def readIndex? (source : PageMap.Snapshot) (known : Knowledge) (hint : Option Index.Reader) :
+-    IO (Option ReadIndex) := do
+-  if let some index ← indexAt? source known then return some ⟨index,.captured⟩
+-  if (← originalAt? source known.source).isNone then return none
+-  return hint.map (fun index => ⟨index,.prepared⟩)
+-
+-/-- Historical index facts are navigation, not evidence by themselves. Every
+-returned Read must equal an original catalog row at the pre-read publication. -/
+-def storedReadsAt? (source : PageMap.Snapshot) (known : Knowledge) (index : Index.Reader)
++/-- Read only the immutable projection published with the pre-read source.
++An absent row is not proof that the source lacked it: callers label only the
++positive stored/requested intersection, never absence or unprepared history. -/
++def storedReadsAt? (source : PageMap.Snapshot) (known : Knowledge)
+     (subjects : Std.HashSet Subject) (excluded : Occurrence) (deadline : Nat)
+-    (strict : Bool := true) (cache : Option StoredReadLookup.Cache := none)
+-    (catalogs : Option ReadCatalog.Pool := none)
++    (cache : Option StoredReadLookup.Cache := none)
+     (budget : Option StoredReadLookup.Budget := none) : IO (Option (Array Read)) := do
+   let some original ← originalAt? source known.source | return none
+-  let prepared ← StoredReadEvidence.prepare original index.index
++  let cache ← match cache with | some value => pure value | none => StoredReadLookup.create source
++  unless cache.source.directory == source.directory && cache.source.head == source.head do
++    throw (IO.userError "historical source reader has another pinned project")
+   let mut stored := #[]
+   for subject in subjects do
+-    let cache ← match cache with | some value => pure value | none => StoredReadLookup.create
+-    for read in ← cache.lookup index subject deadline budget do
++    for read in ← cache.lookup original.head subject deadline budget do
+       if read.occurrence == excluded then continue
+-      StoredReadLookup.checkBudget budget deadline "historical stored-read validation deadline"
+-      -- Keep the existing operation-local owner table. The project pool is
+-      -- consulted once per owner here, never once for every located row.
+-      if read.valid && read.binding.database == original.head.identity &&
+-          (Persistence.SelectionKey.check? read.binding.owner).isSome &&
+-          !(← prepared.owners.get).contains read.binding.owner then
+-        let projected ← catalogs.bindM fun pool => do
+-          let some id ← Build.ownerId? original read.binding.owner | return none
+-          pool.get? known.source (some index.index.head) id
+-        if let some projection := projected then
+-          prepared.owners.modify (·.insert read.binding.owner projection.evidence)
+-      if let some witness ← prepared.check? read then stored := stored.push witness.saved.val
+-      else if strict then return none
++      stored := stored.push read
+   return some stored
+ 
+ def ownerKeys (known : List String) : Array String :=
+@@ -444,18 +419,18 @@
+ 
+ def feedbackGroup (source : PageMap.Snapshot) (starts : Starts) (producer : Occurrence)
+     (uses : Array (Consumption × Range)) (result : NativeFeedback) (deadline : Nat)
+-    (hint : Option Index.Reader) (cache : Option StoredReadLookup.Cache)
++    (cache : Option StoredReadLookup.Cache)
+     (catalogs : Option ReadCatalog.Pool) (budget : Option StoredReadLookup.Budget) : IO NativeFeedback := do
+   StoredReadLookup.checkBudget budget deadline "native usage deadline"
+   let some (query,known,_) := starts[producer]? | return {result with unknown := result.unknown+1}
+-  let indexed ← readIndex? source known hint
+-  unless completeKnowledge known indexed.isSome do return {result with unknown := result.unknown+1}
+-  let some indexed := indexed | throw (IO.userError "missing checked pre-read index")
++  let original ← originalAt? source known.source
++  unless completeKnowledge known original.isSome do return {result with unknown := result.unknown+1}
+   let subjects := uses.foldl (fun subjects (_,range) => subjects.insert range.subject) ({} : Std.HashSet Subject)
+-  let some storedReads ← storedReadsAt? source known indexed.reader subjects producer deadline
+-      (indexed.origin == .captured) cache catalogs budget | return {result with unknown := result.unknown+1}
++  let some storedReads ← storedReadsAt? source known subjects producer deadline cache budget |
++    return {result with unknown := result.unknown+1}
+   let stored := storedReads.map (·.source)
+-  let shown := presentationWithShared known storedReads (← presentation source known (some indexed.reader.index) catalogs)
++  let captured ← indexAt? source known
++  let shown := presentationWithShared known storedReads (← presentation source known (captured.map (·.index)) catalogs)
+   let mut result := result
+   for (edge,requested) in uses do
+     unless covered requested stored do continue
+@@ -483,7 +458,7 @@
+   if let some saved := saved then saved.set (some progress)
+   for ordinal in [progress.next:progress.groups.size] do
+     let (producer,uses) := progress.groups[ordinal]!
+-    let result ← feedbackGroup source starts producer uses progress.result deadline hint cache catalogs budget
++    let result ← feedbackGroup source starts producer uses progress.result deadline cache catalogs budget
+     progress := {progress with next := ordinal+1,result}
+     if let some saved := saved then saved.set (some progress)
+   return progress.result
+@@ -535,7 +510,9 @@
+ def beginReplay (source : PageMap.Snapshot) (values : Array Entry)
+     (preparedHint : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none)
+     (catalogPool : Option ReadCatalog.Pool := none) : IO ReplayCursor := do
+-  let cache ← match readCache with | some cache => pure cache | none => StoredReadLookup.create
++  let cache ← match readCache with | some cache => pure cache | none => StoredReadLookup.create source
++  unless cache.source.directory == source.directory && cache.source.head == source.head do
++    throw (IO.userError "private replay source-reader cache changed its pinned input")
+   let hint ← match preparedHint with
+     | some reader => pure (some reader)
+     | none => preparedHint? source
+@@ -647,24 +624,22 @@
+       let reads := located.requested
+       if !reads.isEmpty then
+         if let some (query, known, _) := starts[occurrence]? then
+-          let storedIndex ← readIndex? source known hint
++          let original ← originalAt? source known.source
+           -- Missing/unverifiable pre-read knowledge cannot earn a read label.
+           -- Do not decode every acknowledged original only to discard the
+           -- resulting presentation after the same eligibility decision.
+-          unless completeKnowledge known storedIndex.isSome do
++          unless completeKnowledge known original.isSome do
+             result := {result with unknown := result.unknown+1}
+             cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+-          let some index := storedIndex | throw (IO.userError "missing checked pre-read index")
+           let files := reads.foldl (fun files read => files.insert read.read.source.subject) ({} : Std.HashSet Subject)
+-          let some storedReads ← storedReadsAt? source known index.reader files occurrence deadline
+-              (index.origin == .captured) (some cache) (some catalogs) (some budget) |
++          let some storedReads ← storedReadsAt? source known files occurrence deadline (some cache) (some budget) |
+             result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+           let stored := storedReads.map (·.source)
+-          let shown := presentationWithShared known storedReads (← presentation source known (some index.reader.index) (some catalogs))
+-          -- A later locator can show positive old evidence, not prove absence.
+-          -- Restrict these labels to the verified old/requested intersection.
+-          let requested := if index.origin == .captured then reads.map (·.read.source) else
+-            reads.flatMap (fun read => omittedRanges read.read.source stored #[])
++          let captured ← indexAt? source known
++          let shown := presentationWithShared known storedReads (← presentation source known (captured.map (·.index)) (some catalogs))
++          -- Only positively stored original ranges earn a read label. A
++          -- missing/unprepared projection never manufactures absence.
++          let requested := reads.flatMap (fun read => omittedRanges read.read.source stored #[])
+           if requested.isEmpty then
+             result := {result with unknown := result.unknown+1}
+             cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+@@ -793,7 +768,7 @@
+     unless row.1 == "turn:" ++ turn.name do throw (IO.userError "foreign event turn directory")
+     return turns.push turn) #[]
+   let mut result : Result := {}
+-  let cache ← match readCache with | some cache => pure cache | none => StoredReadLookup.create
++  let cache ← match readCache with | some cache => pure cache | none => StoredReadLookup.create source
+   for turn in turns do
+     let checkpoint : Checkpoint := ⟨source.head, replayIdentity, ← getNat journal.get ("latest:" ++ turn.name), implementation⟩
+     let turnKey := "processed:" ++ lane storage ++ ":" ++ turn.name

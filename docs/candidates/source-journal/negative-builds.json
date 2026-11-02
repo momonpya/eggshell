@@ -1,0 +1,410 @@
+{"initialRuntimeSha256":
+ "2d48855c92f7af449549b81596b30b377f8d8c1b6118eeb97fda69ddf6faa62b",
+ "initialObjectMapUtilityFailure":
+ "relative parent path did not match absolute manifest output; map absent, initial build failed before source compilation",
+ "initialMainInputStampSha256":
+ "53017d5e17a65c147e9a291d29881a8bb57d0b3bf62a9e85d1120c5248162be7",
+ "attempts":
+ [{"name": "source-journal-compile",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-compile.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-M1024",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-build.settings.json"]},
+    "samples": 30,
+    "sampledPeakRssKiB": 627248,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 1120,
+      "role": null,
+      "program": "(ln)",
+      "pid": 88542,
+      "parent": 87895,
+      "lane": null},
+     {"rssKiB": 577920,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 87895,
+      "parent": 87893,
+      "lane": null},
+     {"rssKiB": 48208,
+      "role": "guard",
+      "program": "./controller/StudyMain",
+      "pid": 87893,
+      "parent": 87881,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+    "guardPid": 87893,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 7245,
+    "childPid": 87895},
+   "diagnostics":
+   ["no such file or directory (error code: 4294967294)",
+    "  file: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-object-mapping.json"]},
+  {"name": "source-journal-compile2",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-compile2.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-M1024",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-build.settings.json"]},
+    "samples": 79,
+    "sampledPeakRssKiB": 1279200,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 638576,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 90494,
+      "parent": 89012,
+      "lane": null},
+     {"rssKiB": 591632,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 89012,
+      "parent": 88996,
+      "lane": null},
+     {"rssKiB": 48992,
+      "role": "guard",
+      "program": "./controller/StudyMain",
+      "pid": 88996,
+      "parent": 88984,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+    "guardPid": 88996,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 13673,
+    "childPid": 89012},
+   "diagnostics":
+   ["Eggshell_StoredReadLookup-lean failed: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/Eggshell/StoredReadLookup.lean:56:57: error: unexpected identifier; expected '}'"]},
+  {"name": "source-journal-compile3",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-compile3.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-M1024",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-build.settings.json"]},
+    "samples": 878,
+    "sampledPeakRssKiB": 2726112,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 2154992,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 94569,
+      "parent": 90789,
+      "lane": null},
+     {"rssKiB": 530352,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 90789,
+      "parent": 90779,
+      "lane": null},
+     {"rssKiB": 40768,
+      "role": "guard",
+      "program": "./controller/StudyMain",
+      "pid": 90779,
+      "parent": 90766,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+    "guardPid": 90779,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 118963,
+    "childPid": 90789},
+   "diagnostics":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/Eggshell/ContractAudit.lean:378:12: error(lean.unknownIdentifier): Unknown constant `Eggshell.SourceLexical.open?`",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/Eggshell/ContractAudit.lean:383:12: error(lean.unknownIdentifier): Unknown constant `Eggshell.SourceLexical.OwnerWitness.check?`",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/Eggshell/ContractAudit.lean:1693:0: error: Delivery no longer consumes its certified extraction: Eggshell.Plugin.renderAutomatic",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/Eggshell/ContractAudit.lean:1895:0: error: Reservation bypasses actual native control: Eggshell.Plugin.renderAutomatic, Eggshell.Plugin.SharedRangeAdapter.mandatorySlices"]},
+  {"name": "source-journal-compile4",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-compile4.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-M1024",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-build.settings.json"]},
+    "samples": 92,
+    "sampledPeakRssKiB": 1530112,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 595840,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 98764,
+      "parent": 98711,
+      "lane": null},
+     {"rssKiB": 885424,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 926,
+      "parent": 98764,
+      "lane": null},
+     {"rssKiB": 48848,
+      "role": "guard",
+      "program": "./controller/StudyMain",
+      "pid": 98711,
+      "parent": 98698,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+    "guardPid": 98711,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 15384,
+    "childPid": 98764},
+   "diagnostics":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/Eggshell/ContractAudit.lean:378:12: error(lean.unknownIdentifier): Unknown constant `Eggshell.SourceLexical.open?`",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/Eggshell/ContractAudit.lean:383:12: error(lean.unknownIdentifier): Unknown constant `Eggshell.SourceLexical.OwnerWitness.check?`"]},
+  {"name": "source-journal-compile5",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-compile5.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-M1024",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-build.settings.json"]},
+    "samples": 102,
+    "sampledPeakRssKiB": 1533936,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 889872,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 26255,
+      "parent": 21430,
+      "lane": null},
+     {"rssKiB": 595424,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 21430,
+      "parent": 20396,
+      "lane": null},
+     {"rssKiB": 48640,
+      "role": "guard",
+      "program": "./controller/StudyMain",
+      "pid": 20396,
+      "parent": 20372,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+    "guardPid": 20396,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 16965,
+    "childPid": 21430},
+   "diagnostics":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/Eggshell/ContractAudit.lean:259:0: error: Source boundary Eggshell.Synapses.CanonicalSource.Cache.refresh does not reach Eggshell.Synapses.CanonicalSource.rebase"]},
+  {"name": "source-journal-compile6",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-compile6.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-M1024",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-build.settings.json"]},
+    "samples": 205,
+    "sampledPeakRssKiB": 2106048,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 1462592,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 31063,
+      "parent": 29093,
+      "lane": null},
+     {"rssKiB": 594864,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 29093,
+      "parent": 29091,
+      "lane": null},
+     {"rssKiB": 48592,
+      "role": "guard",
+      "program": "./controller/StudyMain",
+      "pid": 29091,
+      "parent": 29079,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+    "guardPid": 29091,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 30053,
+    "childPid": 29093},
+   "diagnostics":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/tools/research/SourceJournalChecks.lean:92:60: error: unexpected identifier; expected '}'"]},
+  {"name": "source-journal-compile8",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-compile8.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+     "command":
+     ["/usr/bin/env",
+      "LEAN_NUM_THREADS=1",
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-M1024",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/StudyBuildMain.lean",
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-build.settings.json"]},
+    "samples": 241,
+    "sampledPeakRssKiB": 2070160,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 1449232,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 6527,
+      "parent": 99989,
+      "lane": null},
+     {"rssKiB": 576224,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 99989,
+      "parent": 98887,
+      "lane": null},
+     {"rssKiB": 44704,
+      "role": "guard",
+      "program": "./controller/StudyMain",
+      "pid": 98887,
+      "parent": 98863,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+    "guardPid": 98887,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 35556,
+    "childPid": 99989},
+   "diagnostics":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-core/tools/research/SourceJournalChecks.lean:71:57: error: unexpected token '{'; expected '}'"]}]}

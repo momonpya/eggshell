@@ -1,0 +1,18 @@
+--- a/Eggshell/UsageCache.lean
++++ b/Eggshell/UsageCache.lean
+@@ -2,6 +2,7 @@
+ public import Eggshell.SynapseIndex
+ public import Eggshell.SharedReadReceipt
+ public import Eggshell.StoredReadEvidence
++public import Eggshell.StoredReadLookup
+ @[expose] public section
+ 
+ namespace Eggshell.Synapses.UsageCache
+@@ -11,6 +12,7 @@
+ classifier cannot append to the old classifier's immutable event witnesses. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.usage-classifier".toUTF8 [
+   Index.implementation.toUTF8,SharedReadReceipt.implementation.toUTF8,StoredReadEvidence.implementation.toUTF8,
++  SourceReadView.implementation.toUTF8,
+   (include_str "UsageCache.lean").toUTF8,(include_str "SynapseJournal.lean").toUTF8,
+   (include_str "StoredReadLookup.lean").toUTF8,
+   (include_str "SynapseUsage.lean").toUTF8,(include_str "PluginModel.lean").toUTF8,

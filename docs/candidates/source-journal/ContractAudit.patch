@@ -1,0 +1,96 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -258,9 +258,18 @@
+ This checks declaration reachability, separately from the kernel contracts. -/
+ run_meta do
+   let environment ← getEnv
++  let mut violations : Array String := #[]
+   for (root, required, forbidden) in #[
+       (``Eggshell.Synapses.CanonicalSource.Cache.refresh,
+-        #[``Eggshell.Synapses.CanonicalSource.rebase, ``Eggshell.DB.PageMap.HistoryReader.make?], #[]),
++        #[``Eggshell.Synapses.CanonicalSource.Cache.projectOwner, ``Eggshell.DB.PageMap.HistoryReader.make?,
++          ``Eggshell.SourceDelta.read?, ``Eggshell.Synapses.Build.changes],
++        #[``Eggshell.Synapses.CanonicalSource.build, ``Eggshell.Synapses.CanonicalSource.rebase,
++          ``Eggshell.Persistence.Store.allHeaders]),
++      (``Eggshell.Synapses.CanonicalSource.Cache.projectOwner,
++        #[``Eggshell.Synapses.Build.document, ``Eggshell.Synapses.CanonicalSource.addPublishedDocument,
++          ``Eggshell.Synapses.CanonicalSource.Recipe.compile,
++          ``Eggshell.Synapses.PreparedSourceView.publishOwner],
++        #[``Eggshell.Synapses.CanonicalSource.build, ``Eggshell.Persistence.Store.allHeaders]),
+       (``Eggshell.Synapses.CanonicalSource.rebase,
+         #[``Eggshell.SourceDelta.read?, ``Eggshell.SourceDelta.documents,
+           ``Eggshell.Synapses.Build.changes, ``Eggshell.Synapses.CanonicalSource.Registry.withoutOwners,
+@@ -375,12 +384,12 @@
+       (``Eggshell.KeyedSearchProvider.lexical,
+         #[``Eggshell.LexicalAdvice.query],#[``Eggshell.LexicalReads.coarseQuery]),
+       (``Eggshell.LexicalAdvice.query,
+-        #[``Eggshell.SourceLexical.open?, ``Eggshell.LexicalAdvice.posting,
++        #[``Eggshell.RetrievalResearch.Index.open?, ``Eggshell.LexicalAdvice.posting,
+           ``Eggshell.LexicalAdvice.rankPrepared],
+         #[``Eggshell.LexicalReads.query, ``Eggshell.Persistence.Store.searchDocuments,
+           ``Eggshell.Persistence.Store.locateOutcome]),
+       (``Eggshell.LexicalAdvice.originals,
+-        #[``Eggshell.SourceLexical.OwnerWitness.check?, ``Eggshell.SourceDelta.documents],#[]),
++        #[``Eggshell.LexicalReads.OwnerWitness.check?, ``Eggshell.SourceDelta.documents],#[]),
+       (``Eggshell.Warm.runTarget,
+         #[``Eggshell.WindowOwners.refresh,
+           ``Eggshell.PartitionBuild.prepare], #[]),
+@@ -406,6 +415,10 @@
+         #[``Eggshell.ProjectionCursor.catalogue]),
+       (``Eggshell.Persistence.Store.writeChange, #[``Eggshell.Persistence.Store.Change.sourceMarker], #[]),
+       (``Eggshell.Synapses.Journal.replay, #[``Eggshell.Synapses.Journal.nativeFeedback], #[]),
++      (``Eggshell.Synapses.Journal.storedReadsAt?,
++        #[``Eggshell.Synapses.SourceReadView.Reader.lookup, ``Eggshell.Synapses.Journal.originalAt?],
++        #[``Eggshell.Synapses.StoredReadEvidence.prepare, ``Eggshell.Synapses.Build.document,
++          ``Eggshell.Synapses.ObservationContext.recorded, ``Eggshell.Synapses.Index.Reader.lookup]),
+       (``Eggshell.Synapses.Journal.nativeFeedback,
+         #[``Eggshell.Synapses.Journal.indexAt?, ``Eggshell.Synapses.Journal.presentation,
+           ``Eggshell.Synapses.Extraction.recordConsumed, ``Eggshell.Synapses.Extraction.consumedSource?], #[]),
+@@ -494,10 +507,11 @@
+             for dependency in value.getUsedConstants do
+               if dependency.toString.startsWith "Eggshell." then pending := dependency :: pending
+     for name in required do
+-      unless seen.contains name do throwError "Source boundary {root} does not reach {name}"
++      unless seen.contains name do violations := violations.push s!"Source boundary {root} does not reach {name}"
+     for name in forbidden do
+-      if seen.contains name then throwError "Source metadata changes stable owner through {root}: {name}"
+-    logInfo m!"Audited source boundary {root}"
++      if seen.contains name then violations := violations.push s!"Source metadata changes stable owner through {root}: {name}"
++  unless violations.isEmpty do throwError "Source boundary violations:\n{String.intercalate "\n" violations.toList}"
++  logInfo "Audited all source dependency boundaries"
+ 
+ /- Keep the normal read/write boundary independent of the test-only full
+    oracle and known whole-graph loaders, including indirect helper calls.
+@@ -1709,13 +1723,20 @@
+           if let some body := declaration.value? then pending := body.getUsedConstants.toList ++ pending
+     unless seen.contains required do
+       throwError "Production completed-authority path bypassed: {root}, {required}"
+-  for root in #[``Eggshell.Plugin.renderAutomatic, ``Eggshell.Plugin.auditRenderedSelection] do
++  for (root, consumer) in #[( ``Eggshell.Plugin.renderAutomatic, ``Eggshell.Plugin.prepareAutomatic),
++      (``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.Plugin.auditRenderedSelection)] do
+     let some declaration := environment.find? root | throwError "Missing delivery boundary {root}"
+     unless declaration.type.getUsedConstants.contains ``Eggshell.Matcher.extraction do
+       throwError "Delivery accepts an extraction without the main-theorem binding: {root}"
+     let some body := declaration.value? | throwError "Missing delivery implementation {root}"
++    unless root == consumer || body.getUsedConstants.contains consumer do
++      throwError "Delivery bypasses its certified consumer: {root}, {consumer}"
++    let some declaration := environment.find? consumer | throwError "Missing delivery consumer {consumer}"
++    unless declaration.type.getUsedConstants.contains ``Eggshell.Matcher.extraction do
++      throwError "Delivery consumer lost its main-theorem binding: {consumer}"
++    let some body := declaration.value? | throwError "Missing delivery consumer body {consumer}"
+     unless body.getUsedConstants.contains ``Subtype.val do
+-      throwError "Delivery no longer consumes its certified extraction: {root}"
++      throwError "Delivery consumer no longer uses its certified extraction: {root}, {consumer}"
+   let some receipt := environment.find? ``Eggshell.Plugin.auditRenderedSelection |
+     throwError "Missing equality receipt boundary"
+   let some body := receipt.value? | throwError "Missing equality receipt implementation"
+@@ -1890,7 +1911,8 @@
+ 
+ run_meta do
+   let environment ← getEnv
+-  for (caller, required) in #[( ``Eggshell.Plugin.renderAutomatic,
++  for (caller, required) in #[( ``Eggshell.Plugin.renderAutomatic, ``Eggshell.Plugin.prepareAutomatic),
++      (``Eggshell.Plugin.prepareAutomatic,
+       ``Eggshell.Plugin.SharedRangeAdapter.mandatorySlices),
+       (``Eggshell.Plugin.SharedRangeAdapter.mandatorySlices, ``Eggshell.Plugin.Selected.blocks)] do
+     let some declaration := environment.find? caller | throwError "Missing native-control reservation caller"

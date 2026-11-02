@@ -39,7 +39,9 @@ cursorは私有workerのprocess内だけに保持し、private journal/ACK/利�
 
 原文範囲の事前生成は隔離候補でnative出版のtransactionへ接続した。既に正規化したrecordとcaptured correspondenceから、source snapshotに属するowner header・64行以下の内容アドレスblock・subject/ownerでまとまったpostingsを追加する。private journal/ACK/質問/利用labelは持ち込まない。nativeの2観測・64差分で全範囲一致、重複書込0、古いpinの不変、不正batchから公開root 0を検査した。実seed2の89 owner/119 subject/34,534範囲でも参照catalogと全順序が一致し、元DBのSHAは不変だった。全subjectのlookupは9,851 ms、単一subject最大2,544 ms。初期候補はDriver.cppの11,521範囲を30秒で完走できず、postingsの配置と満杯後に新規blockを保持しないcacheを修正した。失敗・修正・resource guardも保存した。[source-read-view](docs/candidates/source-read-view/README.md)。
 
-この部品を`Journal.storedReadsAt?`はまだ利用していない。次は`Knowledge.source`の不変viewから過去の読み取りを引き、閉じたturnのcheckpointを実event/原文/pre-read/ACKの依存へ結び付け、無関係な出版で過去の再生が0になることを検査する。全subjectのnative照会を実フック時間へ読み替えない。同じfileの全履歴を引かず必要行区間へ絞る索引、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用である。
+この部品を隔離候補の`Journal.storedReadsAt?`へ接続した。当時のsourceに確認できた保存範囲だけを利用ラベルへ渡し、最新の共有索引から古いReadを探してownerごとに原文catalogを再検証する経路を外した。16 MiBの旧locator cacheを、同じproject fileに固定した最大4 readerへ置き換えた。派生索引なしのnative再読でmissing labelが付き、ACK済み・未確認・指紋変更後には誤って付かない。実seed由来の89 owner/119 subject/34,534行も日誌の取得関数で全順序一致、全lookup 9,570 ms・単一subject最大2,449 ms、元DB不変。全体ContractAuditの古い参照も実際の呼出経路へ追従させ、原文取得の全owner復元への逆戻りを禁止した。[source-journal](docs/candidates/source-journal/README.md)。
+
+元seed全89操作の再生と全fact/status照合はまだ未実施。既存pre-sourceの投影債務も残る。次はpostの原文/ACK投影を不変入力へ固定し、閉じたturnのcheckpointを実event/原文/pre-read/ACK依存へ結び付け、無関係な出版で過去の再生が0になることを検査する。最新index identityを比較から落とすだけにはしない。全subjectのnative照会を実フック時間へ読み替えない。同じfileの全履歴を引かず必要行区間へ絞る索引、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用である。
 
 比較用の履歴コピーにも不整合があった。`StudyHistory`は旧名`usage`だけを対象にし、実seed1の共通履歴から`usage-<classifier>`の51件が外れていた。元private dataには残っている。Leanの研究ハーネスを修正し、実UsageCacheと実seed1から、DB・権限・classifier・私有scopeを検証した完全なfact/head/fileを両armへ同一に渡すnative検査を通した。sealed controller/runtime・元seed・旧manifestは変更していない。共有ReadViewの再作成によるreplay無効化は別途残り、この修正だけで準備の遅延を解消したとは扱わない。[コード・実入力・保持中の100%配送版](docs/candidates/history-feedback/README.md)。
 
