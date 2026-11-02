@@ -24,6 +24,17 @@ private def replaceEnv (original updates : Array (String × Option String)) :=
 private def save (path : System.FilePath) (value : Json) : IO Unit :=
   IO.FS.writeFile path (value.compress ++ "\n")
 
+private def checkedWarm (output : StudyCommand.Result) : IO Unit := do
+  check (output.exitCode == 0) "explicit native warm failed"
+  let databases ← IO.ofExcept (Json.parse output.stdout >>= (·.getObjValAs? (Array Json) "databases"))
+  check (databases.size == 1 && databases.all (fun result =>
+    let journal := result.getObjValD "journal"
+    (journal.getObjValAs? Bool "complete").toOption == some true &&
+    (journal.getObjValAs? Nat "pending").toOption == some 0 &&
+    ((result.getObjValD "after").getObjValAs? Nat "missing").toOption == some 0 &&
+    ((result.getObjValD "after").getObjValAs? Nat "invalid").toOption == some 0))
+    "warm exited before every journal and numerical view was complete"
+
 private def config (binary database : String) (chars : Nat) : IO String := do
   return StudyProfile.render binary database (← IO.ofExcept (StudyProfile.checked chars))
 
@@ -128,6 +139,7 @@ def recall (plan : Input) (root source : System.FilePath)
   let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment workspace.toString ""
     (root / "recall-warm") 60000
   check (warm.exitCode == 0) "readonly recall source was not warmed"
+  checkedWarm warm
   let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
   let managed ← try
     StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) session
@@ -164,7 +176,7 @@ def recall (plan : Input) (root source : System.FilePath)
 /-- The fixture writes no relations. Only real hooks, a real shell, the save
 worker and the index worker may create its observations and consumption. -/
 def run (templatePath directory : String) (remote : Bool := false)
-    (literal : Bool := false) (generic : Bool := false) : IO Unit := do
+    (literal : Bool := false) (generic : Bool := false) (additionalCalls : Nat := 0) : IO Unit := do
   let plan ← IO.ofExcept (fromJson? (α := Input) (← StudyAdmission.readJson templatePath))
   StudyAdmission.verifyArtifact plan.runtime
   for artifact in plan.pluginFiles do StudyAdmission.verifyArtifact artifact
@@ -227,7 +239,7 @@ def run (templatePath directory : String) (remote : Bool := false)
         {name := "mcp__catalog__formula",useId := "remote-symbol",input := "{}"
          response := (Json.mkObj [("formula",toJson "lookup(NEEDED_SYMBOL)")]).compress}]
         else #[])
-    let toolCount := commands.size+remoteCalls.size+(if generic then 1 else 0)
+    let toolCount := commands.size+remoteCalls.size+(if generic then 1 else 0)+additionalCalls
     let remoteConsumption := fun all => !remote || all.any (fun fact => match fact with
       | .consumed edge => edge.producer.useId == "remote-lookup" && edge.consumer.useId == "remote-inspect" &&
           edge.kind == .value && edge.term == (toJson "RECORD_42").compress && !edge.rows.isEmpty
@@ -261,7 +273,26 @@ def run (templatePath directory : String) (remote : Bool := false)
       check (actual.exitCode == 0) "generic fixture command failed"
       hook "generic-Post" (fields ++ [("hook_event_name",toJson "PostToolUse"),
         ("tool_response",Json.mkObj [("opaque_result",toJson actual.stdout)])])
-      origins database toolCount
+      origins database (commands.size+remoteCalls.size+1)
+    for index in [:additionalCalls] do
+      let useId := s!"additional-{index}"
+      let shell := index % 3 == 0
+      let name := if shell then "shell" else if index % 3 == 1 then "mcp__cases__lookup" else "mcp__cases__inspect"
+      let command := s!"printf 'CASE_{index}\\n'"
+      let input := if shell then Json.mkObj [("command",toJson command)] else
+        if index % 3 == 1 then Json.mkObj [("case",toJson index)] else
+          Json.mkObj [("record",toJson s!"CASE_{index-1}")]
+      let fields := [("tool_name",toJson name),("tool_use_id",toJson useId),("tool_input",input)]
+      hook (useId ++ "-Pre") (fields ++ [("hook_event_name",toJson "PreToolUse")])
+      let response ← if shell then do
+        let actual ← StudyCommand.run "/bin/sh" #["-c",command] environment root.toString ""
+          (root / (useId ++ "-actual")) 5000
+        check (actual.exitCode == 0) "additional real shell command failed"
+        pure (Json.mkObj [("output",toJson actual.stdout),("exitCode",toJson actual.exitCode)])
+      else pure (if index % 3 == 1 then Json.mkObj [("id",toJson s!"CASE_{index}"),
+        ("uri",toJson s!"smb://customer/case-{index}/log")] else Json.mkObj [("checked",toJson index)])
+      hook (useId ++ "-Post") (fields ++ [("hook_event_name",toJson "PostToolUse"),("tool_response",response)])
+      origins database (commands.size+remoteCalls.size+(if generic then 1 else 0)+index+1)
     let answer := if literal then
         "The symbol `NEEDED_SYMBOL` and remote location `customer/logs` are supported by [first](src/source.cpp:11) and [second](src/source.cpp:14)."
       else "The symbols are supported by [first](src/source.cpp:11) and [second](src/source.cpp:14)."
@@ -296,8 +327,9 @@ def run (templatePath directory : String) (remote : Bool := false)
     save (root / "usage.json") (toJson usage)
     save (root / "result.json") (Json.mkObj [
       ("runtime",toJson plan.runtime),("emptyInitialDatabase",toJson true),
-      ("actualShellCalls",toJson (commands.size+(if generic then 1 else 0))),
-      ("genericContentAliases",toJson capturedAliases),("McpShapedHookPairs",toJson remoteCalls.size),
+      ("actualShellCalls",toJson (commands.size+(if generic then 1 else 0)+(additionalCalls+2)/3)),
+      ("genericContentAliases",toJson capturedAliases),
+      ("McpShapedHookPairs",toJson (remoteCalls.size+additionalCalls-(additionalCalls+2)/3)),
       ("realMcpServerUsed",toJson false),("nativeToolCalls",toJson toolCount),
       ("nativeJournalEvents",toJson entries.size),
       ("portableOrigins",toJson stored.size),("consumptionWitnesses",toJson (all.filter isConsumption).size),
@@ -309,6 +341,9 @@ def run (templatePath directory : String) (remote : Bool := false)
   finally
     try StudyRuntime.stopManaged managed (root / "shutdown.json")
     finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
+  let prepared ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment root.toString ""
+    (root / "final-warm") 60000
+  checkedWarm prepared
   let copied := root / "output.egg"
   let publication ← StudyRuntime.checkpoint database copied
   save (root / "publication-files.json") (toJson publication)
@@ -322,6 +357,7 @@ def run (templatePath directory : String) (remote : Bool := false)
   let warmed ← StudyCommand.run plan.runtime.path #["egg","warm","work"] recoveredEnvironment root.toString ""
     (root / "recover-warm") 60000
   check (warmed.exitCode == 0) "source-only seed could not be warmed without its old private state"
+  checkedWarm warmed
   let recovered ← facts copied fun all => all.any isConsumption && all.any supported && all.any coquoted
   if generic then
     check ((← genericAliases (← DB.PageMap.pin copied)) == 15)

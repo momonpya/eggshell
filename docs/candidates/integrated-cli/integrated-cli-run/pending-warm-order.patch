@@ -1,0 +1,22 @@
+--- a/tools/research/StudySeedChecks.lean
++++ b/tools/research/StudySeedChecks.lean
+@@ -299,9 +299,6 @@
+     hook "Stop" [("hook_event_name",toJson "Stop"),("last_assistant_message",toJson answer)]
+     let _ ← call "keep" #["egg","keep"] ""
+     let all ← facts database fun all => all.any isConsumption && all.any supported && all.any coquoted && remoteConsumption all
+-    let prepared ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment root.toString ""
+-      (root / "final-warm") 60000
+-    checkedWarm prepared
+     let snapshot ← DB.PageMap.pin database
+     if literal then
+       for wanted in ["NEEDED_SYMBOL","customer/logs"] do
+@@ -344,6 +341,9 @@
+   finally
+     try StudyRuntime.stopManaged managed (root / "shutdown.json")
+     finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
++  let prepared ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment root.toString ""
++    (root / "final-warm") 60000
++  checkedWarm prepared
+   let copied := root / "output.egg"
+   let publication ← StudyRuntime.checkpoint database copied
+   save (root / "publication-files.json") (toJson publication)
