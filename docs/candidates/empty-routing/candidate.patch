@@ -1,0 +1,6 @@
+--- a/Eggshell/SynapticTopologyStore.lean
++++ b/Eggshell/SynapticTopologyStore.lean
+@@ -155,0 +156,3 @@
++  -- Zero is a published extent, not an absent/unprepared directory. Seal it
++  -- before the implementation marker in the same writer as the fact manifest.
++  if (← writer.get "route:counts").isNone then put writer "route:counts" total

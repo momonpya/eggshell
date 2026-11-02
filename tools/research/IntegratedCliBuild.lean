@@ -181,7 +181,176 @@ private partial def modules (root path : System.FilePath)
       found := found.insert key name
   return found
 
+private def variant (project root : System.FilePath) (mode family : String) : IO Unit := do
+  check (family == "empty-routing" && ["runtime","driver","checks","run","checks-run","capture","cleanup"].contains mode)
+    "unknown isolated variant action"
+  let output := project / "docs/candidates" / family
+  let report := root / "integrated-cli-run-fixture" / (family ++ "-recall")
+  if mode == "capture" || mode == "cleanup" then
+    let protection ← read (project / "docs/candidates/delivery-ack/manifest.json")
+    let protectedInputs : Array (String × String) ← IO.ofExcept (protection.getObjValAs? _ "currentProtectedInputs")
+    let sealedInputs : Array Json ← IO.ofExcept (protection.getObjValAs? _ "sealedInputs")
+    let verify := do
+      for (path,digest) in protectedInputs do check ((← sha (.mk path)) == digest) "protected source changed"
+      for row in sealedInputs do
+        let path ← IO.ofExcept (row.getObjValAs? String "path")
+        check (toJson (← sha (.mk path)) == row.getObjValD "sha256") "sealed comparison input changed"
+    verify
+    let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+    check (process.exitCode == 0 && !(process.stdout.splitOn "\n").any (fun row =>
+      row.startsWith (root / (family ++ "-runtime-build/StudyMain")).toString ||
+      row.startsWith (root / (family ++ "-prefix/libexec/eggshell")).toString ||
+      row.startsWith (root / (family ++ "-driver-build/StudyMain")).toString ||
+      row.startsWith (root / (family ++ "-checks-build/StudyMain")).toString ||
+      (row.splitOn "StudyBuildMain.lean").length > 1)) "variant work is still active"
+    if mode == "cleanup" then
+      check (← (output / "manifest.json").pathExists) "capture the completed variant first"
+      check (!(← (output / "cleanup.json").pathExists)) "preserve the cleanup record"
+      let mut removed := #[]
+      for relative in [family ++ "-checks-run-data",family ++ "-run-data",
+          "integrated-cli-run-fixture","integrated-cli-prefix","integrated-cli-runtime-build/StudyMain",
+          "integrated-cli-driver-build/StudyMain",family ++ "-driver-build/StudyMain",family ++ "-checks-build/StudyMain"] do
+        let path := root / relative
+        if ← path.pathExists then removed := removed.push (path.toString,← retire path)
+      let mut logs := 0
+      let mut bytes := 0
+      for directory in [root,root / "integrated-cli-runtime-build",root / "integrated-cli-driver-build",
+          root / (family ++ "-runtime-build"),root / (family ++ "-driver-build"),root / (family ++ "-checks-build")] do
+        for entry in ← directory.readDir do
+          if directory == root && !entry.fileName.startsWith "integrated-cli-" && !entry.fileName.startsWith (family ++ "-") then continue
+          if entry.fileName.endsWith ".stdout" || entry.fileName.endsWith ".stderr" then
+            bytes := bytes+(← retire entry.path); logs := logs+1
+      verify
+      IO.FS.writeFile (output / "cleanup.json") (Json.mkObj [("removed",toJson removed),
+        ("removedCompilerAndRunLogs",toJson logs),("removedLogBytes",toJson bytes),
+        ("currentRuntimeAndLinkInputsRetained",toJson true),("protectedInputsUnchanged",toJson true),
+        ("archiveCreated",toJson false)]).pretty
+      IO.println "Retired ended fixtures, old product, driver/check executables and raw logs; current product retained."
+      return
+    check (!(← (output / "manifest.json").pathExists)) "preserve variant evidence"
+    IO.FS.createDirAll output
+    let mut resources := #[]
+    for entry in ← root.readDir do
+      if entry.fileName.startsWith (family ++ "-") && entry.fileName.endsWith ".guard.json" then
+        let value ← read entry.path
+        check (value.getObjValD "state" == toJson "finished") "a variant task is running"
+        resources := resources.push value
+    for name in ["run","checks-run"] do
+      let guard ← read (root / (family ++ "-" ++ name ++ ".guard.json"))
+      check (guard.getObjValD "exitCode" == toJson (0 : Nat) && guard.getObjValD "guardTriggered" == toJson false)
+        "qualify successful guarded routing checks and a real hook"
+    IO.FS.writeFile (output / "resources.json") (toJson resources).pretty
+    IO.FS.writeFile (output / "checks.json") (← IO.FS.readFile (root / (family ++ "-checks-run-data/result.json")))
+    for name in ["mechanism.json","input.json","recall-audit.json","recall-body.txt","recall-required-before-delivery.json",
+        "recall-shutdown.json","recall-publisher-shutdown.json"] do
+      IO.FS.writeFile (output / name) (← IO.FS.readFile (report / name))
+    for stage in ["recall-warm","recall-hook"] do
+      for name in ["stdout","record.json","stderr"] do
+        let path := report / stage / name
+        let raw ← IO.FS.readFile path
+        if !raw.isEmpty then IO.FS.writeFile (output / (stage ++ "-" ++ name)) raw
+    let receipts ← (report / "recall-data/receipts").readDir
+    check (receipts.size == 1) "qualify one actual hook"
+    let some receipt := receipts[0]? | throw (IO.userError "missing variant receipt")
+    IO.FS.createDirAll (output / "receipt")
+    for entry in ← receipt.path.readDir do
+      if ["request.json","search.json","ack.json","keyed-coverage.json","transport.json","synaptic-delivery.json"].contains entry.fileName ||
+          entry.fileName.startsWith "numerical-" then
+        IO.FS.writeFile (output / "receipt" / entry.fileName) (← IO.FS.readFile entry.path)
+    let delta ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/Eggshell/SynapticTopologyStore.lean",
+      "--label","b/Eggshell/SynapticTopologyStore.lean",(root / "feedback-progress-core/Eggshell/SynapticTopologyStore.lean").toString,
+      (root / (family ++ "-core/Eggshell/SynapticTopologyStore.lean")).toString]}
+    check (delta.exitCode == 1) "expected one isolated topology fix"
+    IO.FS.writeFile (output / "candidate.patch") delta.stdout
+    let mut table : Array Json := #[]
+    let mut executables := #[]
+    for name in ["runtime","checks","driver"] do
+      let build := root / (family ++ "-" ++ name ++ "-build")
+      let mut ids : Array Nat := #[]
+      for line in (← IO.FS.readFile (build / "runtime.rsp")).splitOn "\n" do
+        if line.trimAscii.isEmpty then continue
+        let path ← IO.ofExcept (Json.parse line >>= Json.getStr?)
+        let path := System.FilePath.mk path
+        if path.extension != some "o" then continue
+        let mut stamps := #[]
+        for suffix in ["source","dependencies"] do
+          if ← (path.withExtension suffix).pathExists then stamps := stamps.push (← artifact (path.withExtension suffix))
+        let row := (← artifact path).setObjVal! "inputStamps" (toJson stamps)
+        let id := (table.findIdx? (· == row)).getD table.size
+        if id == table.size then table := table.push row
+        ids := ids.push id
+      executables := executables.push (Json.mkObj [("kind",toJson name),("executable",← artifact (build / "StudyMain")),
+        ("objectIds",toJson ids),("build",← read (build / "build.json"))])
+    IO.FS.writeFile (output / "native-inputs.json") (Json.mkObj [("objects",toJson table),("executables",toJson executables)]).pretty
+    IO.FS.writeFile (output / "contract-audit.txt")
+      (← IO.FS.readFile (root / (family ++ "-checks-build/Eggshell_ContractAudit-lean.stdout")))
+    IO.FS.writeFile (output / "manifest.json") (Json.mkObj [("currentProtectedInputs",toJson protectedInputs),
+      ("sealedInputsReference",toJson "../delivery-ack/manifest.json"),("executables",toJson (executables.map (·.getObjValD "executable"))),
+      ("sourceMatchesPreviousSnapshot",toJson true),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).pretty
+    verify
+    IO.println "Captured empty routing persistence checks and actual semantic/synaptic delivery."
+    return
+  let core := root / (family ++ "-core")
+  let stem := family ++ "-" ++ mode
+  let mut attempt := 1
+  let labelAt := fun n => stem ++ (if n == 1 then "" else toString n)
+  while ← (root / (labelAt attempt ++ ".guard.json")).pathExists do
+    let previous ← read (root / (labelAt attempt ++ ".guard.json"))
+    check (previous.getObjValD "state" == toJson "finished") "the variant task is still active"
+    attempt := attempt+1
+  let label := labelAt attempt
+  let command : Array String ← if mode == "run" || mode == "checks-run" then do
+    let checks := mode == "checks-run"
+    let build := root / (family ++ (if checks then "-checks-build" else "-driver-build"))
+    let data := root / (label ++ "-data")
+    check (!(← data.pathExists)) "use a new isolated private root"
+    pure (#["/usr/bin/env","EGGSHELL_DATA_ROOT=" ++ data.toString,"LEAN_NUM_THREADS=1",
+      (build / "StudyMain").toString] ++ if checks then
+        #[(root / "integrated-cli-run-fixture/work.egg").toString,data.toString]
+      else #[root.toString,(root / "integrated-cli-run-fixture").toString,"candidate",family])
+  else do
+    let runtime := mode == "runtime"
+    let parent := if runtime then "integrated-cli-runtime" else family ++ "-runtime"
+    let output := root / (stem ++ "-build")
+    let entry := if runtime then "Main" else if mode == "checks" then "tools.research.EmptyRoutingChecks"
+      else "tools.research.IntegratedCliChecks"
+    if !runtime then copyResearch project core entry (← IO.mkRef {})
+    let inherited ← read (root / (parent ++ "-build.settings.json"))
+    let parents : Array String ← IO.ofExcept (inherited.getObjValAs? _ "parents")
+    let response := root / (parent ++ "-build/runtime.rsp")
+    let known ← modules core core
+    let mut mapping := []
+    for line in (← IO.FS.readFile response).splitOn "\n" do
+      if line.trimAscii.isEmpty then continue
+      let path ← IO.ofExcept (Json.parse line >>= Json.getStr?)
+      let path := System.FilePath.mk path
+      if path.extension == some "o" then
+        if let some name := known[path.fileStem.get!]? then mapping := (path.toString,toJson name) :: mapping
+    let objectMap := root / (stem ++ "-objects.json")
+    IO.FS.writeFile objectMap (Json.mkObj mapping).pretty
+    let plan := inherited.setObjVal! "project" (toJson core.toString)
+      |>.setObjVal! "core" (toJson core.toString) |>.setObjVal! "output" (toJson output.toString)
+      |>.setObjVal! "parents" (toJson (#[ (root / (parent ++ "-build")).toString ] ++ parents))
+      |>.setObjVal! "objectModules" (toJson objectMap.toString) |>.setObjVal! "mainModule" (toJson entry)
+      |>.setObjVal! "baselineResponse" (toJson response.toString)
+      |>.setObjVal! "baselineMain" (toJson (root / (parent ++ "-build/Main.o")).toString)
+      |>.setObjVal! "baselineCore" (toJson (if runtime then root / "feedback-progress-core" else core).toString)
+      |>.setObjVal! "force" (toJson (#[] : Array String))
+    let settings := root / (stem ++ "-build.settings.json")
+    IO.FS.writeFile settings plan.pretty
+    pure #["/usr/bin/env","LEAN_NUM_THREADS=1","/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-M1024","--run",(project / "tools/research/StudyBuildMain.lean").toString,settings.toString]
+  let guard ← read (root / "delivery-ack-compile8.settings.json")
+  let guard := guard.setObjVal! "record" (toJson (root / (label ++ ".guard.json")).toString)
+    |>.setObjVal! "command" (toJson command)
+  IO.FS.writeFile (root / (label ++ ".settings.json")) guard.pretty
+  IO.println s!"Prepared {label}.settings.json"
+
 def main (args : List String) : IO Unit := do
+  if let [mode,family] := args then
+    variant (.mk "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell")
+      (.mk "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study") mode family
+    return
   let [mode] := args | throw (IO.userError "runtime, driver, or run")
   check (["runtime","driver","run","resume","retire-driver","capture","cleanup","doctor","receipt","compact"].contains mode) "unknown integrated mode"
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"

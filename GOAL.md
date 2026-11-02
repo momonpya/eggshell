@@ -61,7 +61,9 @@ source headが変わると部分feedbackを捨て、照合の期限切れを入�
 
 累積候補を通常CLIへ結合し、空DBから実shell 33回/MCP形式59回の92操作を通常Pre/Postと保存/index workerへ通した。Pre/Post各92件の失敗と30秒超過0、Pre p95 2294 ms/最大3643 ms、Post p95 1301 ms/最大1319 ms。最初の明示warmは生きたindex workerと競合してbusyで失敗した。92操作を再実行せず、停止後に同じruntime/DBでwarmが6491 msで完了し、doctorで全187窓のmissing/invalid 0を確認した。92件すべてのPost入力・応答とDB原文/Workの一致、日誌185件を確認し、原文だけのcopyを新しい私有rootでwarmして新規チャットへ配送した。小さな事前指定2項目は2/2、実フック4961 msだった。[integrated-cli](docs/candidates/integrated-cli/README.md)。これは98%/80人/総tokenの達成ではない。
 
-ただし実受領で、意味検索は完了していてもシナプス配送が`private usage routing is unprepared`によりcomplete=falseだった。`UsageCache.ensure`が空の索引を作る際、`Routing.Store.finish`が0件の`route:counts`を永続化せず、読取側が未準備と判定して共有側のwalkまで止めている。本文の2/2をシナプス経路の成功とは数えない。次は、この0件の確定を同じpublicationへ入れ、空/未知/未準備を混同しない隔離候補で、保持した92操作の同一入力と実配送を再検証する。runtimeを固定した新seedと題材1/2/3・2周目のtoken/品質比較はその後に戻す。現在のfixtureはこの再検証に必要なため保持し、終了後に削除する。原典/sealed入力は不変、モデル呼出し0、比較0/18、製品未採用。
+この実受領で見つかった、0件の私有利用索引が共有シナプスまで止める不具合を、保存側3行の隔離修正で解消した。`Routing.Store.finish`で0件の`route:counts`も同じwriterへ確定する。欠けたカウンタを読取時に0件扱いする修正はしていない。空の共有/私有索引、件数不一致/中断/別DBの拒否、380 factの共有ヒント21件の順序付き一致、全fact失効と古いpinをnative検査した。[empty-routing](docs/candidates/empty-routing/README.md)。同じ92操作の原文snapshotで実フックも意味検索/シナプス両方が完了し、シナプスwalkは15 requests/25 facts、必要2項目は2/2、フック4888 ms。stdoutは修正前とbyte一致しており、配送率やtoken改善を示したとは扱わない。4,961→4,888 msの単発差を速度改善にも使わない。全体98%/80人/回答品質は未達/未検証である。
+
+次はruntime `e39c5aa3ee1f8f2e79dc081c33613576145c97a84ee795e9475e61abdd49b6f7`を固定し、新seedから題材1/2/3・2周目の配送/総token/品質比較へ戻す。原典/sealed入力は不変、モデル呼出し0、比較0/18、製品未採用。終了した92操作のDB/copy/cache、検査DB、旧CLI/検査用実行体/rawログは記録抽出後に削除し、圧縮archiveは作っていない。現在のruntimeと必要なlink入力、別の固定比較入力は保持する。
 
 新しい区間索引のない既存snapshot、大きな同一cell/同一範囲のowner群、event追記時の末尾feedbackの再集計も残る。open turnの実行状態はprocess内だけで、再起動時はイベントfeedから再生する。末尾feedbackやTraceの総RSSまで差分/有界になったとはしない。回答の引用へ複数ACKの断片を対応させる経路、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用、モデル比較0/18である。
 
