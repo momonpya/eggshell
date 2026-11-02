@@ -1,0 +1,22 @@
+{
+  "status": "isolated diagnostic and candidate; not product adoption",
+  "parentCommit": "2c163a81",
+  "question": "Does confirming delivery metadata hold the shared session control lock long enough to reject background saving?",
+  "comparison": {
+    "repetitionsPerCasePerArm": 3,
+    "cases": [
+      {"name":"empty", "uniqueRows":0, "repeatedRows":0, "bindings":0, "bodyCharacters":0},
+      {"name":"small", "uniqueRows":64, "repeatedRows":0, "bindings":9, "bodyCharacters":4096},
+      {"name":"real-sized", "uniqueRows":6231, "repeatedRows":5309, "bindings":623, "bodyCharacters":500000}
+    ],
+    "graphsPerOffer": 9,
+    "largeCaseProvenance": "Row/body counts are shaped from the retained real hook packet. Binding count 623 is a synthetic assumption, not the actual projection binding count.",
+    "coordinates": "Eight consecutive lines followed by three absent lines; one immutable subject and one project. Synthetic metadata only.",
+    "measurements": ["state bytes", "state read/write wall time", "native acknowledge wall time", "background 100 ms admission failures", "exact sparse coverage", "unchanged acknowledged text"],
+    "backgroundWork": "Ordinary withSession/readState calls while real acknowledge runs in another native task. No warning suppression and no increased admission timeout."
+  },
+  "safetyChecks": ["compaction", "disable", "new turn", "offer replacement", "expired offer", "changed accepted head", "two simultaneous acknowledgments", "abandoned ledger head never leaks into later acknowledgment"],
+  "limits": {"aggregateRssStopKiB":3670016,"absoluteCeilingKiB":4194304,"minFreeKiB":2097152},
+  "answeringModelCalls": 0,
+  "notClaims": ["full hook performance", "80-user throughput", "delivery recall improvement", "token reduction", "answer quality", "product adoption"]
+}

@@ -1,0 +1,137 @@
+--- a/Eggshell/DeliveryLedger.lean
++++ b/Eggshell/DeliveryLedger.lean
+@@ -75,8 +75,8 @@
+   return (← opened? name).map fun source => ⟨session,epoch,source.head,implementation⟩
+ 
+ /-- Called only after the native client confirms insertion of the offered
+-body. Session serialization covers creation and this short metadata commit.
+-A crash after this commit still records a genuinely acknowledged body. -/
++body. ACK writers are serialized separately from session control. The caller
++publishes this immutable head only if its captured context is still current. -/
+ def confirm (session : String) (epoch : Nat) (previous : Option Reference)
+     (projection : Projection) : IO (Option Reference) := do
+   unless projection.complete && projection.rows.all Row.valid && projection.bindings.all Binding.valid do
+@@ -90,10 +90,17 @@
+   let source ← match ← opened? name with
+     | some source => pure source
+     | none => PageMap.create (← directory name) ("confirmed-delivery:" ++ name)
+-  if let some previous := previous then
+-    unless (← PageMap.HistoryReader.make? source previous.head).isSome do
+-      throw (IO.userError "confirmed context lost its earlier ACK head")
++  let basis ← match previous with
++    | none => pure none
++    | some previous => do
++      let some retained ← PageMap.HistoryReader.make? source previous.head |
++        throw (IO.userError "confirmed context lost its earlier ACK head")
++      pure retained.snapshot.head.root
+   let (_,head,_) ← PageMap.withWriter source fun writer => do
++    -- A prior staged ACK may have lost its session compare-and-publish race.
++    -- Start from the exact accepted head, never from that unreferenced tail.
++    -- Historical pages remain immutable in this authority's current extent.
++    writer.root.set basis
+     for row in projection.rows do
+       let bytes := (toJson row).compress.toUTF8
+       let previous ← writer.get (rowKey row)
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -370,24 +370,85 @@
+     acceptOffer state turn now offer = state := by
+   simp [acceptOffer, disabled]
+ 
+-def acknowledge (session id : String) : IO Bool := withSession session fun files => do
+-  let some state ← readState? files | return false
+-  let some pending ← readPendingBase? files | return false
+-  let now ← IO.monoMsNow
+-  let some offer := state.offers.find? (·.id == id) | return false
++structure AcknowledgmentBasis where
++  offer : DeliveryOffer
++  previous : Option Synapses.DeliveryLedger.Reference
++  epoch : Nat
++
++/-- Native receipt identities are unique, but compare the complete captured
++offer as well: a replacement must not inherit an earlier confirmation. -/
++def sameDeliveryOffer (left right : DeliveryOffer) : Bool :=
++  left.id == right.id && left.stamp.turn == right.stamp.turn &&
++    left.stamp.epoch == right.stamp.epoch && left.stamp.deadline == right.stamp.deadline &&
++    left.graphs == right.graphs && left.text == right.text && left.reason == right.reason &&
++    toJson left.search == toJson right.search && left.projection == right.projection
++
++def AcknowledgmentBasis.accepts (basis : AcknowledgmentBasis) (state : ThreadState)
++    (pending : PendingTurn) (now : Nat) : Bool :=
++  state.enabled && state.epoch == basis.epoch &&
++    basis.offer.stamp.accepts pending.turnId state.epoch now &&
++    state.confirmedDelivery == basis.previous && state.offers.any (sameDeliveryOffer basis.offer)
++
++theorem acknowledgment_rejects_new_context (basis : AcknowledgmentBasis) (state : ThreadState)
++    (pending : PendingTurn) (now : Nat) (changed : state.epoch ≠ basis.epoch) :
++    basis.accepts state pending now = false := by
++  simp [AcknowledgmentBasis.accepts, changed]
++
++theorem acknowledgment_rejects_expired (basis : AcknowledgmentBasis) (state : ThreadState)
++    (pending : PendingTurn) (now : Nat) (expired : basis.offer.stamp.deadline ≤ now) :
++    basis.accepts state pending now = false := by
++  simp [AcknowledgmentBasis.accepts, expired_request_cannot_publish _ _ _ _ expired]
++
++def acknowledgmentBasis? (session id : String) : IO (Option AcknowledgmentBasis) :=
++    withSession session fun files => do
++  let some state ← readState? files | return none
++  let some pending ← readPendingBase? files | return none
++  let now ← IO.monoMsNow
++  let some offer := state.offers.find? (·.id == id) | return none
+   let accepted := state.enabled && offer.stamp.accepts pending.turnId state.epoch now
+-  if !accepted || !offer.projection.complete then
++  if !accepted then
+     Synapses.Live.unconfirmed files
+-  let confirmed ← if accepted && offer.projection.complete then do
+-      try Synapses.DeliveryLedger.confirm session state.epoch state.confirmedDelivery offer.projection
+-      catch error =>
+-        Synapses.Live.unconfirmed files
+-        throw error
+-    else pure state.confirmedDelivery
+-  let state := { state with offers := state.offers.filter (·.id != id) }
+-  writeJson files.state {(acceptOffer state pending.turnId now offer) with confirmedDelivery := confirmed}
+-  pure accepted
++    writeJson files.state {state with offers := state.offers.filter (·.id != id)}
++    return none
++  return some ⟨offer,state.confirmedDelivery,state.epoch⟩
++
++/-- Only this short compare-and-publish section owns the session guard. An
++expired, compacted, disabled, replaced, or concurrently changed context cannot
++receive a staged delivery head. -/
++def finishAcknowledgment (session : String) (basis : AcknowledgmentBasis)
++    (confirmed : Option Synapses.DeliveryLedger.Reference) : IO Bool :=
++    withSession session fun files => do
++  let some state ← readState? files | return false
++  let some pending ← readPendingBase? files | return false
++  let now ← IO.monoMsNow
++  unless basis.accepts state pending now do
++    Synapses.Live.unconfirmed files
++    return false
++  if !basis.offer.projection.complete then Synapses.Live.unconfirmed files
++  let state := {state with offers := state.offers.filter (·.id != basis.offer.id)}
++  writeJson files.state {(acceptOffer state pending.turnId now basis.offer) with confirmedDelivery := confirmed}
++  return true
+ 
++def acknowledge (session id : String) : IO Bool := do
++  -- The offer supplies an existing absolute deadline, not a fresh allowance.
++  let deadline ← withSession session fun files => do
++    let some state ← readState? files | return none
++    return state.offers.find? (·.id == id) |>.map (·.stamp.deadline)
++  let some deadline := deadline | return false
++  if deadline ≤ (← IO.monoMsNow) then
++    let _ ← acknowledgmentBasis? session id
++    return false
++  let files ← sessionFiles session
++  Persistence.withLockUntil (files.directory / "acknowledgment") deadline do
++    let some basis ← acknowledgmentBasis? session id | return false
++    let confirmed ← if basis.offer.projection.complete then do
++        try Synapses.DeliveryLedger.confirm session basis.epoch basis.previous basis.offer.projection
++        catch error =>
++          withSession session fun files => Synapses.Live.unconfirmed files
++          throw error
++      else pure basis.previous
++    finishAcknowledgment session basis confirmed
++
+ /-- Semantic discovery gets the first window; DB delivery retains the rest. -/
+ def semanticSearchBudgetMs : Nat := 15000
+ 
