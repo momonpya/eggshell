@@ -1,0 +1,123 @@
+--- a/Eggshell/TurnReplay.lean
++++ b/Eggshell/TurnReplay.lean
+@@ -0,0 +1,120 @@
++module
++public import Eggshell.SynapseIndex
++public import Eggshell.DeliveryLedger
++@[expose] public section
++
++namespace Eggshell.Synapses.TurnReplay
++open Lean DB Persistence.Store
++
++/-- Structural nodes and native payloads are immutable within a retained
++file incarnation. Root nomination and live membership are the mutable
++decisions that locate a Post's exact native Outcome. Keep the complete
++collision bucket, including negative membership, never a top-k result. -/
++structure Bucket where
++  key : String
++  ids : Array Nat
++  live : Array Bool
++  deriving BEq,DecidableEq,ToJson,FromJson
++
++def bucket (source : PageMap.Snapshot) (key : String) : IO Bucket := do
++  unless key.startsWith "hash:" do throw (IO.userError "turn dependency is not a structural nomination")
++  let ids := (← getIds source.get key).toArray
++  let live ← ids.mapM fun id => return (← source.get (Persistence.Store.key "member" id)).isSome
++  return ⟨key,ids,live⟩
++
++def Bucket.agrees (expected actual : Bucket) : Bool := decide (expected = actual)
++
++theorem changed_bucket_rejected (expected actual : Bucket) (different : expected ≠ actual) :
++    expected.agrees actual = false := by
++  simp [Bucket.agrees,different]
++
++structure Source where
++  path : String
++  head : PageMap.Head
++  buckets : Array Bucket := #[]
++  deriving BEq,ToJson,FromJson
++
++structure Inputs where
++  sources : Array Source := #[]
++  preSources : Array PageMap.Head := #[]
++  deliveries : Array DeliveryLedger.Reference := #[]
++  deriving BEq,ToJson,FromJson
++
++def Inputs.pre (inputs : Inputs) (head : PageMap.Head)
++    (delivery : Option DeliveryLedger.Reference) : Inputs := {
++  inputs with
++  preSources := if inputs.preSources.contains head then inputs.preSources else inputs.preSources.push head
++  deliveries := (delivery.filter (·.producer == DeliveryLedger.implementation)).toArray.foldl
++    (fun found ref => if found.contains ref then found else found.push ref) inputs.deliveries}
++
++def Inputs.observe (inputs : Inputs) (source : PageMap.Snapshot) (value : Value) : IO Inputs := do
++  let captured ← bucket source ("hash:" ++ toString (hash value))
++  let path := source.directory.normalize.toString
++  let index := inputs.sources.findIdx? (fun saved => saved.path == path && saved.head == source.head)
++  match index with
++  | none => return {inputs with sources := inputs.sources.push ⟨path,source.head,#[captured]⟩}
++  | some index =>
++    let some saved := inputs.sources[index]? | throw (IO.userError "turn dependency source disappeared")
++    if let some old := saved.buckets.find? (·.key == captured.key) then
++      unless old == captured do throw (IO.userError "immutable turn nomination changed during replay")
++      return inputs
++    return {inputs with sources := inputs.sources.set! index {saved with buckets := saved.buckets.push captured}}
++
++/-- One exact parent record authenticates an old root. New, unrelated graph
++publications do not require a walk over their entire change history. -/
++def retained? (source : PageMap.Snapshot) (head : PageMap.Head) : IO (Option PageMap.Snapshot) := do
++  let some retained ← PageMap.HistoryReader.make? source head | return none
++  if head == source.head then return some retained.snapshot
++  let publication ← try some <$> readPublication source (head.revision+1) catch _ => pure none
++  unless publication.any (·.parent == head) do return none
++  return some retained.snapshot
++
++def Inputs.agree (inputs : Inputs) (source : PageMap.Snapshot) (deadline : Nat) : IO Bool := do
++  for head in inputs.preSources do
++    if (← IO.monoMsNow) ≥ deadline then return false
++    if (← retained? source head).isNone then return false
++  for ref in inputs.deliveries do
++    if (← IO.monoMsNow) ≥ deadline then return false
++    unless ref.producer == DeliveryLedger.implementation do return false
++    let some now ← DeliveryLedger.opened? ref.context | return false
++    if (← PageMap.HistoryReader.make? now ref.head).isNone then return false
++  for saved in inputs.sources do
++    if (← IO.monoMsNow) ≥ deadline then return false
++    let current ← if saved.path == source.directory.normalize.toString then pure (some source)
++      else PageMap.open? (.mk saved.path)
++    let some current := current | return false
++    if (← retained? current saved.head).isNone then return false
++    if current.head == saved.head then continue
++    for expected in saved.buckets do
++      if (← IO.monoMsNow) ≥ deadline then return false
++      if !(expected.agrees (← bucket current expected.key)) then return false
++  return true
++
++structure Backend where
++  identity : String
++  authority : String
++  replacement : String
++  deriving BEq,ToJson,FromJson
++
++def backend (index : PageMap.Snapshot) : IO Backend := do
++  return ⟨index.head.identity,index.head.authority,
++    Index.contentKey ((← index.get Index.replacementKey).map Sha256.hex)⟩
++
++def implementation : String := Blake3.hex (Blake3.digest "eggshell.turn-replay-inputs".toUTF8 [
++  (include_str "TurnReplay.lean").toUTF8,Index.implementation.toUTF8,DeliveryLedger.implementation.toUTF8])
++
++structure Checkpoint where
++  journal : String
++  count : Nat
++  producer : String
++  shared : Backend
++  usage : Backend
++  inputs : Inputs
++  deriving BEq,ToJson,FromJson
++
++def Checkpoint.matches (checkpoint : Checkpoint) (journal : String) (count : Nat)
++    (shared usage : Backend) : Bool :=
++  checkpoint.journal == journal && checkpoint.count == count && checkpoint.producer == implementation &&
++    checkpoint.shared == shared && checkpoint.usage == usage
++
++end Eggshell.Synapses.TurnReplay

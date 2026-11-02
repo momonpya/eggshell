@@ -1,0 +1,9 @@
+--- a/Eggshell/UsageCache.lean
++++ b/Eggshell/UsageCache.lean
+@@ -6,0 +7 @@
++public import Eggshell.TurnReplay
+@@ -16,0 +18 @@
++  TurnReplay.implementation.toUTF8,
+@@ -156 +158 @@
+-  return Index.contentKey (← readViewIdentity shared,usage.index.head.identity)
++  return Index.contentKey (← readViewIdentity shared,← TurnReplay.backend shared.index,← TurnReplay.backend usage.index)

@@ -1,0 +1,86 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -247,7 +247 @@
+-  let some retained ← PageMap.HistoryReader.make? source head | return none
+-  if head == source.head then return some retained.snapshot
+-  -- The immutable primary publication at r+1 records the exact head at r.
+-  -- Reading that one B-tree entry needs no changed-owner/delta reconstruction.
+-  let publication ← try some <$> readPublication source (head.revision+1) catch _ => pure none
+-  unless publication.any (·.parent == head) do return none
+-  return some retained.snapshot
++  TurnReplay.retained? source head
+@@ -416,0 +411 @@
++  inputs : TurnReplay.Inputs := {}
+@@ -499,0 +495 @@
++      result := {result with inputs := result.inputs.pre known.source known.delivery}
+@@ -519,0 +516 @@
++      result := {result with inputs := ← result.inputs.observe source expected}
+@@ -524,0 +522 @@
++        result := {result with inputs := ← result.inputs.observe archived expected}
+@@ -580,0 +579 @@
++      result := {result with inputs := result.inputs.pre known.source known.delivery}
+@@ -622,0 +622 @@
++  external : Bool := false
+@@ -632 +632 @@
+-  unless previous.index == index && previous.count == count &&
++  unless !previous.external && previous.index == index && previous.count == count &&
+@@ -640,0 +641,21 @@
++
++def turnCheckpoint? (journal : PageMap.Snapshot) (name : String) : IO (Option TurnReplay.Checkpoint) := do
++  let name := "scoped:" ++ name
++  let some framed ← journal.get name | return none
++  unless (← IO.ofExcept (payloadSize (some framed))) ≤ maxBytes do
++    throw (IO.userError "turn checkpoint exceeds its metadata bound")
++  return some (← Index.decode (← journal.readPayload name))
++
++def markTurn (source : PageMap.Snapshot) (name : String) (checkpoint : TurnReplay.Checkpoint) : IO Unit := do
++  let bytes := (toJson checkpoint).compress.toUTF8
++  unless bytes.size ≤ maxBytes do throw (IO.userError "turn checkpoint exceeds its metadata bound")
++  withPublication source fun journal => do
++    let _ ← PageMap.withWriter journal fun writer => putPayload writer ("scoped:" ++ name) bytes
++
++/-- Retire the old success before replacing any of its published facts.
++Restoring earlier inputs cannot resurrect a checkpoint for removed output. -/
++def retireTurn (source : PageMap.Snapshot) (name : String) : IO Unit :=
++  withPublication source fun journal => do
++    let name := "scoped:" ++ name
++    if (← journal.get name).isNone then return
++    let _ ← PageMap.withWriter journal fun writer => writer.put name none
+@@ -651,0 +673,2 @@
++  reused : Nat := 0
++  external : Bool := false
+@@ -687 +710,2 @@
+-  let readView ← UsageCache.readViewIdentity reader
++  let sharedBackend ← TurnReplay.backend reader.index
++  let usageBackend ← TurnReplay.backend usage.index
+@@ -689 +713 @@
+-  let expected : Checkpoint := ⟨source.head, replayIdentity, count, implementation⟩
++  let expected : Checkpoint := {source := source.head,index := replayIdentity,count,implementation}
+@@ -703 +727 @@
+-    let checkpoint : Checkpoint := ⟨source.head, replayIdentity, ← getNat journal.get ("latest:" ++ turn.name), implementation⟩
++    let latest ← getNat journal.get ("latest:" ++ turn.name)
+@@ -705,2 +729,7 @@
+-    if let some previous ← checkpoint? journal turnKey then
+-      if ← previous.sameInput source checkpoint.index checkpoint.count (source.head.revision-previous.source.revision+1) then continue
++    if let some previous ← turnCheckpoint? journal turnKey then
++      if previous.matches journal.head.identity latest sharedBackend usageBackend &&
++          (← previous.inputs.agree source deadline) then
++        result := {result with reused := result.reused+1}
++        let external := previous.inputs.sources.any (fun saved => saved.path != source.directory.normalize.toString)
++        result := {result with external := result.external || external}
++        continue
+@@ -709,0 +739 @@
++    retireTurn source turnKey
+@@ -717,0 +748,4 @@
++    let checkpoint : TurnReplay.Checkpoint :=
++      ⟨journal.head.identity,latest,TurnReplay.implementation,sharedBackend,usageBackend,replayed.inputs⟩
++    let external := replayed.inputs.sources.any (fun saved => saved.path != source.directory.normalize.toString)
++    result := {result with external := result.external || external}
+@@ -719,2 +753,2 @@
+-      session := turn.session,turn := turn.turn,source := source.head,view := readView,count := checkpoint.count}
+-    if replayed.pending == 0 then mark source turnKey checkpoint
++      session := turn.session,turn := turn.turn,source := source.head,view := Index.contentKey checkpoint,count := latest}
++    if replayed.pending == 0 && (← checkpoint.inputs.agree source deadline) then markTurn source turnKey checkpoint
+@@ -726 +760 @@
+-  if result.complete then mark source checkpointKey expected
++  if result.complete then mark source checkpointKey {expected with external := result.external}

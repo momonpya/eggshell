@@ -1,0 +1,9 @@
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -43,0 +44,4 @@
++/-- A full replacement can erase a turn's facts without changing the file
++incarnation. Delta publications leave this root-derived reset stamp alone. -/
++def replacementKey : String := "memo:replacement"
++
+@@ -328,0 +333 @@
++      writer.put replacementKey (some ((contentKey index.head).toUTF8))

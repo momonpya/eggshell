@@ -47,7 +47,9 @@ postの解釈を既存の不変native metadataへ固定し、後から作る共�
 
 最終reconcile後の原文範囲を実ACKで私有PageMapへ確定し、Pre/回答の日誌に不変headを捕捉する隔離候補をnative検査した。本文・配送キー・停止フラグを変えないことをLeanの返却型で要求する。再読時にACKキーから全owner本文を復元する経路を除き、当時のstored Readと確定した区間を引く。別々のACKの断片合成、未配送JSONフィールドの除外、後日のACKからの隔離、通常Stop後の維持、実PostCompactによる切替、期限切れ/未検証producerの拒否を実フックで確認した。全体ContractAuditもコンパイルした。検査process全体4,465 ms・合計RSS最大111,024 KiBは小規模fixtureの値で、利用時フックや80人負荷の値ではない。[delivery-ack](docs/candidates/delivery-ack/README.md)。旧body ACKへ投影を捏造せずunknownとするため、旧参照との完全同値は主張しない。
 
-次は実event/元原文/pre-read/確定ACK依存による閉じたturnのcheckpointを接続し、無関係な出版で過去の再生0を検査する。現在のcheckpointは最新source/read-viewに依存したままである。既存snapshotの準備、同じfileの全履歴を引かず必要行区間へ絞る索引、回答の引用へ複数ACKの断片を対応させる経路、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用、モデル比較0/18である。
+閉じたturnのcheckpointも隔離候補へ接続した。実event境界、保持済みpre-source/ACK head、Postの完全な構造hash bucketと正負のmembership、出力indexのincarnation/reset stampで再利用する。nativeで無関係な出版による過去2ターンの再生0・新規1ターンだけの処理を確認し、独立した全再生と元の全fact/statusが一致した。関連する元観測の取り消し/復元は1ターンだけを処理し、索引全置換/私有cache再作成では出力を復旧した。別DBの保存・取り消しも、読取DBの更新なしで検出した。通常refresh 51 ms、同じ私有状態への80同時メタデータ要求105 ms・元原文再生0、検査process全体6,760 ms・RSS最大131,824 KiBは小規模fixtureの値である。実フック・80人8時間・98%配送・トークン改善の数値ではない。[turn-replay](docs/candidates/turn-replay/README.md)。変更した出力の出版前に旧checkpointを外し、取り消し後の復元が古い完了記録で隠れないことも検査した。
+
+次はpublication差分と依存の逆引き索引から、影響するturnだけを処理する。今はsource変更後に全ターンのcheckpointを検査するO(全ターン数)が残り、別write DBに依存する場合もworkerで依存を照合する。実行中の長いturnもprefixの差分再開には未対応である。既存snapshotの準備、同じfileの全履歴を引かず必要行区間へ絞る索引、回答の引用へ複数ACKの断片を対応させる経路、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用、モデル比較0/18である。
 
 容量確保で、終了した旧実行体2つ、未参照build生成物、診断DBコピー、fixed-frame以前のseed DB/cache、終了済みseed1の推薦cacheを削除した。原文・私有日誌・現在の固定runtimeとseed2の再生入力は保持する。seed1の旧index headはもう再検証できない。削除後の保護対象は[現在の一覧](docs/candidates/delivery-ack/obsolete-runtime-retirement.json)とし、旧manifestの削除済み実行体を現在も保持しているとは主張しない。モデル比較には新runtime固定・新seed・harness再封印・索引完了確認が必要である。
 

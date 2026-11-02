@@ -1,0 +1,10 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -418,0 +419,7 @@
++      (``Eggshell.Synapses.Journal.refresh,
++        #[``Eggshell.Synapses.TurnReplay.Inputs.agree, ``Eggshell.Synapses.Journal.retireTurn,
++          ``Eggshell.Synapses.TurnReplay.backend], #[]),
++      (``Eggshell.Synapses.TurnReplay.Inputs.agree,
++        #[``Eggshell.Synapses.TurnReplay.bucket, ``Eggshell.Synapses.TurnReplay.retained?],
++        #[``Eggshell.Synapses.Build.document, ``Eggshell.Synapses.ObservationContext.recorded,
++          ``Eggshell.ContentMetadata.addFileCoordinates, ``Eggshell.Synapses.Index.allFacts]),
