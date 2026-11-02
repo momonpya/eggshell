@@ -1,0 +1,16 @@
+--- a/Eggshell/ObservedRecords.lean
++++ b/Eggshell/ObservedRecords.lean
+@@ -167,10 +167,10 @@
+   unless (toJson value).compress.toUTF8 == bytes do throw (IO.userError "noncanonical original metadata")
+   return value
+ 
+-def stage (writer : PageMap.Writer) (id : Nat) (doc : Document) : IO Bool := do
++def stage (writer : PageMap.Writer) (id : Nat) (doc : Document) (raw : String)
++    (prepared : Prepared raw) : IO Bool := do
+   unless doc.native do throw (IO.userError "record publication requires its original native owner")
+-  let some raw := doc.source | throw (IO.userError "native record publication lost its original body")
+-  let prepared ← IO.ofExcept (prepare raw)
++  unless doc.source == some raw do throw (IO.userError "native record publication changed its original body")
+   let mut chunks := #[]
+   let mut changed := false
+   for index in [: (prepared.records.size+chunkRecords-1)/chunkRecords] do

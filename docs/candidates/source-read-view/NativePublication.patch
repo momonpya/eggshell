@@ -1,0 +1,32 @@
+--- a/Eggshell/NativePublication.lean
++++ b/Eggshell/NativePublication.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.SynapseJournal
+ public import Eggshell.ObservedRecords
+ public import Eggshell.ContentMetadata
++public import Eggshell.SourceReadView
+ 
+ @[expose] public section
+ 
+@@ -165,14 +166,18 @@
+       source := Persistence.Store.text? edge.outcome
+       native := edge.observations.any (Relation.observesOutcomeWork edge.outcome edge.work)
+       occurrences := Provenance.identities edge
+-      files := #[] }
++      files := ← IO.ofExcept (Extraction.fileMap (item.tool.source.toArray.map fun capture => toJson capture.record)) }
+     unless (← intern.writer.get (key "member" id)).isSome do
+       throw (IO.userError "original record owner was not source-published")
+-    let originalChanged ← ObservedRecords.stage intern.writer id document
++    let some raw := document.source | throw (IO.userError "native publication lost its original body")
++    let records ← IO.ofExcept (ObservedRecords.prepare raw)
++    let originalChanged ← ObservedRecords.stage intern.writer id document raw records
+     let contentChanged ← match item.tool.correspondence with
+       | none => pure false
+       | some captured => ContentMetadata.stage intern.writer id document captured
+-    if originalChanged || contentChanged then
++    let compiled ← IO.ofExcept (SourceReadView.prepare intern.writer.base.head.identity document raw records item.tool.correspondence)
++    let readViewChanged ← SourceReadView.stage intern.writer id document raw compiled
++    if originalChanged || contentChanged || readViewChanged then
+       recordsChanged := true
+       affected := id :: affected
+     let origin : Option Provenance.Origin := match item.evidence with

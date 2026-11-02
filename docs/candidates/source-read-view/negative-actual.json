@@ -1,0 +1,16 @@
+{"sourceSha256":
+ "ab772ec7e325bc87187f8fcbf05e35514747a9381319ded5aad0925fb745735c",
+ "runtimeSha256":
+ "634a45375dd216160d8e02a840fae8ca9561e38427a43b60ca1d37a8f5d650a1",
+ "oneSecondStackSample":
+ {"stack":
+  "Reader.scan > Reader.row > MetadataBytes.get? > readPayloadUsing > readPinnedBlob > Blake3.hashSegments",
+  "samples": 542,
+  "rowBlockPayloadLoadSamples": 342},
+ "fix":
+ "cluster postings by owner and row digest; rotate bounded decoded cache; restore canonical result order using precomputed keys",
+ "error": "actual source-owned rows differ from the complete original catalog",
+ "diagnostic":
+ "Driver.cpp: expected 11521; returned 5803; complete=false; extra=0; every other subject matched",
+ "cause":
+ "30-second lookup of the large shared subject exhausted its deadline; bounded cache stopped admitting blocks and scattered owners revisited them"}

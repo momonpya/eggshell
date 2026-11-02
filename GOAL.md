@@ -35,7 +35,11 @@
 
 続く隔離候補で、私有index workerに完了event/producer groupのcursorを保持し、期限切れ後も先頭から再生しないようにした。同じ89操作の読み取り専用比較は7回の協調slice・合計67864 msで全fact/statusが一致した。通常native workerも実seed2のcloneで60,538 msの未完了応答から次の60,121 msで完了した。cloneは先行試行から再使用しており、合計120,842 msを制御された速度改善とは扱わない。最初のworker失敗はdriverがerror応答を保存せず、元原因は未確定。失敗と容量停止も記録した。Warmはjournalのcomplete/debtを応答に保持し、未完了から完了checkpointを出版しない。[実装・native結果・失敗記録](docs/candidates/replay-cursor/README.md)。
 
-cursorは私有workerのprocess内だけに保持し、private journal/ACK/利用labelを共有publication serviceへ送らない。原文投影は共有可能だが、その接続、出版差分での事前生成、最終配送時のACK保存、閉じたturnの不変入力によるcheckpoint、crash後のcursor回復は未実装。次は無関係な出版で過去turnを再生しない入力依存へ進む。これは30秒フック・98%配送・80人8時間の達成ではない。メモリ枠や検索/選択の重みは追加調整しない。新モデル呼び出し0、比較0/18、トークン改善は未測定、製品への採用は保留する。
+cursorは私有workerのprocess内だけに保持し、private journal/ACK/利用labelを共有publication serviceへ送らない。原文投影は共有可能だが、serviceへの接続、最終配送時のACK保存、閉じたturnの不変入力によるcheckpoint、crash後のcursor回復は未実装。これは30秒フック・98%配送・80人8時間の達成ではない。メモリ枠や検索/選択の重みは追加調整しない。新モデル呼び出し0、比較0/18、トークン改善は未測定、製品への採用は保留する。
+
+原文範囲の事前生成は隔離候補でnative出版のtransactionへ接続した。既に正規化したrecordとcaptured correspondenceから、source snapshotに属するowner header・64行以下の内容アドレスblock・subject/ownerでまとまったpostingsを追加する。private journal/ACK/質問/利用labelは持ち込まない。nativeの2観測・64差分で全範囲一致、重複書込0、古いpinの不変、不正batchから公開root 0を検査した。実seed2の89 owner/119 subject/34,534範囲でも参照catalogと全順序が一致し、元DBのSHAは不変だった。全subjectのlookupは9,851 ms、単一subject最大2,544 ms。初期候補はDriver.cppの11,521範囲を30秒で完走できず、postingsの配置と満杯後に新規blockを保持しないcacheを修正した。失敗・修正・resource guardも保存した。[source-read-view](docs/candidates/source-read-view/README.md)。
+
+この部品を`Journal.storedReadsAt?`はまだ利用していない。次は`Knowledge.source`の不変viewから過去の読み取りを引き、閉じたturnのcheckpointを実event/原文/pre-read/ACKの依存へ結び付け、無関係な出版で過去の再生が0になることを検査する。全subjectのnative照会を実フック時間へ読み替えない。同じfileの全履歴を引かず必要行区間へ絞る索引、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用である。
 
 比較用の履歴コピーにも不整合があった。`StudyHistory`は旧名`usage`だけを対象にし、実seed1の共通履歴から`usage-<classifier>`の51件が外れていた。元private dataには残っている。Leanの研究ハーネスを修正し、実UsageCacheと実seed1から、DB・権限・classifier・私有scopeを検証した完全なfact/head/fileを両armへ同一に渡すnative検査を通した。sealed controller/runtime・元seed・旧manifestは変更していない。共有ReadViewの再作成によるreplay無効化は別途残り、この修正だけで準備の遅延を解消したとは扱わない。[コード・実入力・保持中の100%配送版](docs/candidates/history-feedback/README.md)。
 
