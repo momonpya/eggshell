@@ -8,12 +8,23 @@ namespace Eggshell.Research.ServiceQueryLoad
 private def check (value : Bool) (message : String) : IO Unit :=
   unless value do throw (IO.userError message)
 
-/-- Capabilities stay in memory only. The saved evidence uses access.identity,
-which deliberately excludes capabilities. No diagnostic request is persisted. -/
+/-- Capabilities stay in memory only. Persisted replay examples deliberately
+have no Access, SourceReference or Endpoint field. -/
 structure Captured where
   sources : Array Synapses.SourceViewBatch.Request
   query : Json
   choice : Json
+
+structure Example where
+  heads : Array DB.PageMap.Head
+  owners : Array (Array String)
+  query : Json
+  choice : Json
+  deriving ToJson,FromJson
+
+def Captured.example (capture : Captured) : Example := {
+  heads := capture.sources.map (·.access.source),owners := capture.sources.map (·.owners)
+  query := capture.query,choice := capture.choice }
 
 structure Proxy where
   actual : Daemon.Endpoint
@@ -115,7 +126,7 @@ private def runClient (actual : Daemon.Endpoint) (capture : Captured) (index : N
     ("exactChoice",toJson exact),("completed",toJson outcome.isOk),
     ("error",match outcome with | .ok _ => Json.null | .error e => toJson e)]
 
-private def phase (actual : Daemon.Endpoint) (captures : Array Captured) (count : Nat) : IO Json := do
+def phase (actual : Daemon.Endpoint) (captures : Array Captured) (count : Nat) : IO Json := do
   let ready ← Std.Mutex.new (0 : Nat)
   let release ← IO.mkRef false
   let mut clients := #[]
@@ -140,7 +151,8 @@ private def phase (actual : Daemon.Endpoint) (captures : Array Captured) (count 
     ("p50Ms",toJson (times[count/2]?.getD 0)),("sampleMaximumMs",toJson (times.back?.getD 0)),
     ("serviceStats",statistics)]
 
-def Proxy.load (proxy : Proxy) (root : System.FilePath) (expected : Nat) : IO Unit := do
+def Proxy.load (proxy : Proxy) (root : System.FilePath) (expected : Nat)
+    (counts : Array Nat := #[1,4,16,40,80]) (saveFixture : Bool := false) : IO Unit := do
   let observed ← proxy.captures.atomically get
   check (observed.size == expected && expected == 6) "must capture both ordinary chats for every topic"
   let mut captures : Array Captured := #[]
@@ -153,6 +165,8 @@ def Proxy.load (proxy : Proxy) (root : System.FilePath) (expected : Nat) : IO Un
       captures := captures.push capture
       seen := seen.insert key capture.choice
   check (captures.size == 3) "three repeated topic queries must give exactly three immutable selector inputs"
+  if saveFixture then
+    writeJson (root / "selector-fixture.json") (captures.map Captured.example)
   let identities := captures.map fun capture => Json.mkObj [
     ("sourceIdentities",toJson (capture.sources.map (·.access.identity))),
     ("owners",toJson (capture.sources.map (·.owners))),
@@ -162,7 +176,8 @@ def Proxy.load (proxy : Proxy) (root : System.FilePath) (expected : Nat) : IO Un
     ("choiceBytes",toJson capture.choice.compress.utf8ByteSize)]
   writeJson (root / "captured-queries.json") identities
   let mut results := #[]
-  for count in #[1,4,16,40,80] do
+  for count in counts do
+    check (0 < count && count ≤ 80) "invalid service load client count"
     results := results.push (← phase proxy.actual captures count)
     writeJson (root / "service-load.json") (Json.mkObj [("phases",toJson results),
       ("source",toJson "actual LLVM topic 1/2/3 hook selection requests"),

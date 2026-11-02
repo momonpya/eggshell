@@ -1,0 +1,91 @@
+Total number in stack (recursive counted multiple, when >=5):
+        1641       l_List_foldr___at___00List_sum___at___00SharedCoverage_benefit_spec__1_spec__1  (in eggshell) + 92  [0x10496155c]
+        1295       l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 484  [0x104d74d84]
+        1294       l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 1080  [0x104d74fd8]
+        655       l_StableWinnerIndex_join___redArg  (in eggshell) + 388  [0x104d7462c]
+        648       l_StableWinnerIndex_merge___redArg  (in eggshell) + 176  [0x104d740b0]
+        643       l_SharedCoverage_Rating_better___boxed  (in eggshell) + 40  [0x104680954]
+        642       lean_apply_2  (in eggshell) + 3592  [0x109240ac0]
+        479       __gmp_default_allocate  (in eggshell) + 20  [0x1092716a0]
+        374       lean::mpz::~mpz()  (in eggshell) + 20  [0x109231954]
+        353       __gmpz_realloc  (in eggshell) + 68  [0x10928d948]
+        347       __gmp_default_reallocate  (in eggshell) + 32  [0x1092716d8]
+        329       l_SharedCoverage_Rating_better___redArg  (in eggshell) + 912  [0x1046805cc]
+        322       l_SharedCoverage_Rating_better___redArg  (in eggshell) + 304  [0x10468036c]
+        320       _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 0  [0x18c12cf3c]
+        293       _xzm_free  (in libsystem_malloc.dylib) + 0  [0x18c128118]
+        272       l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 372  [0x104d74d14]
+        262       lean::mpz::mpz(lean::mpz const&)  (in eggshell) + 20  [0x109231abc]
+        251       l_StableWinnerIndex_build___redArg  (in eggshell) + 92  [0x104d755b4]
+        248       l_StableWinnerIndex_build___redArg  (in eggshell) + 156  [0x104d755f4]
+        244       _realloc  (in libsystem_malloc.dylib) + 452  [0x18c137f14]
+        242       __gmpz_init_set  (in eggshell) + 68  [0x10928c884]
+        228       __gmpz_init_set_ui  (in eggshell) + 48  [0x10928c940]
+        226       _malloc_zone_realloc  (in libsystem_malloc.dylib) + 148  [0x18c1376f8]
+        212       lean_nat_big_mul  (in eggshell) + 344  [0x109236490]
+        206       lean_dec_ref_cold  (in eggshell) + 216  [0x109233430]
+        192       lean::mpz::operator*=(lean::mpz const&)  (in eggshell) + 28  [0x109231c68]
+        190       l_Eggshell_Blake3_modifyAt  (in eggshell) + 84  [0x1046ab0e8]
+        185       __gmpz_add  (in eggshell) + 604  [0x109271460]
+        176       lean_nat_big_mul  (in eggshell) + 356  [0x10923649c]
+        174       __gmpz_mul  (in eggshell) + 700  [0x10928d14c]
+        167       lean_dec_ref_cold  (in eggshell) + 0  [0x109233358]
+        166       lean::mpz::mpz(unsigned long long)  (in eggshell) + 76  [0x1092319b4]
+        162       mach_absolute_time  (in libsystem_kernel.dylib) + 0  [0x18c2c80a0]
+        160       lean_nat_pow  (in eggshell) + 108  [0x10923796c]
+        153       <deduplicated_symbol>  (in libsystem_malloc.dylib) + 0  [0x18c12715c]
+        153       _xzm_free  (in libsystem_malloc.dylib) + 1048  [0x18c128530]
+        132       lean::mpz::mpz(unsigned long long)  (in eggshell) + 32  [0x109231988]
+        130       xzm_realloc  (in libsystem_malloc.dylib) + 0  [0x18c127b84]
+        112       _malloc_zone_malloc  (in libsystem_malloc.dylib) + 0  [0x18c1370bc]
+        110       lean_apply_1  (in eggshell) + 5720  [0x10923f3fc]
+        110       xzm_malloc_zone_size  (in libsystem_malloc.dylib) + 0  [0x18c13250c]
+        109       _realloc  (in libsystem_malloc.dylib) + 252  [0x18c137e4c]
+        103       lean_apply_1  (in eggshell) + 3276  [0x10923ea70]
+        101       lean::mpz::mpz(unsigned long long)  (in eggshell) + 44  [0x109231994]
+        99       _pthread_start  (in libsystem_pthread.dylib) + 136  [0x18c30bc58]
+        99       lean::lthread::imp::_main(void*)  (in eggshell) + 52  [0x1092313d0]
+        99       thread_start  (in libsystem_pthread.dylib) + 8  [0x18c306c1c]
+        97       lean::lean_del_core_other(lean_object*, unsigned char, lean_object*&)  (in eggshell) + 0  [0x10923bc08]
+        96       _tlv_get_addr  (in libdyld.dylib) + 0  [0x18bf08388]
+        94       __semwait_signal  (in libsystem_kernel.dylib) + 0  [0x18c2cb300]
+        94       lean::task_manager::run_task(std::unique_lock<std::mutex>&, lean_task*)  (in eggshell) + 164  [0x10923c6e0]
+        94       lean_dbg_sleep  (in eggshell) + 48  [0x10923b138]
+Sort by top of stack, same collapsed (when >= 5):
+        __semwait_signal  (in libsystem_kernel.dylib)        135985
+        __psynch_cvwait  (in libsystem_kernel.dylib)        19220
+        __psynch_mutexwait  (in libsystem_kernel.dylib)        2524
+        __ulock_wait  (in libsystem_kernel.dylib)        1864
+        kevent  (in libsystem_kernel.dylib)        1786
+        lean::lean_del_core_other(lean_object*, unsigned char, lean_object*&)  (in eggshell)        980
+        lean_copy_expand_array  (in eggshell)        885
+        l_List_any___at___00Eggshell_Plugin_SharedRangeAdapter_basePieceAccept_spec__0  (in eggshell)        540
+        l_Std_DHashMap_Internal_Raw_u2080_insert___at___00Eggshell_hashDistinct___at___00SharedCoverage_Deferred_afterBenefitFold_spec__2_spec__3___redArg  (in eggshell)        525
+        _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib)        436
+        l_Std_DHashMap_Internal_AssocList_foldlM___at___00__private_Std_Data_DHashMap_Internal_Defs_0__Std_DHashMap_Internal_Raw_u2080_expand_go___at___00Std_DHashMap_Internal_Raw_u2080_expand___at___00Std_DHashMap_Internal_Raw_u2080_insert___at___00Eggshell_hashDistinct___at___00SharedCoverage_Deferred_afterBenefitFold_spec__2_spec__3_spec__4_spec__5_spec__7___redArg  (in eggshell)        406
+        _xzm_free  (in libsystem_malloc.dylib)        403
+        lean_dec_ref_cold  (in eggshell)        355
+        mach_msg2_trap  (in libsystem_kernel.dylib)        346
+        l_Std_DHashMap_Internal_AssocList_contains___at___00Std_DHashMap_Internal_Raw_u2080_contains___at___00SharedCoverage_Deferred_afterBenefitFold_spec__0_spec__0___redArg  (in eggshell)        301
+        l_List_reverseAux___redArg  (in eggshell)        255
+        l___private_Std_Data_DHashMap_Internal_Defs_0__Std_DHashMap_Internal_Raw_u2080_expand_go___at___00Std_DHashMap_Internal_Raw_u2080_expand___at___00Std_DHashMap_Internal_Raw_u2080_insert___at___00Eggshell_hashDistinct___at___00SharedCoverage_Deferred_afterBenefitFold_spec__2_spec__3_spec__4_spec__5___redArg  (in eggshell)        245
+        mach_absolute_time  (in libsystem_kernel.dylib)        224
+        xzm_realloc  (in libsystem_malloc.dylib)        183
+        xzm_malloc_zone_size  (in libsystem_malloc.dylib)        179
+        lean_apply_1  (in eggshell)        178
+        l_List_foldl___at___00SharedCoverage_Deferred_known_spec__0  (in eggshell)        177
+        <deduplicated_symbol>  (in libsystem_malloc.dylib)        174
+        _malloc_zone_malloc  (in libsystem_malloc.dylib)        131
+        mi_malloc_small  (in eggshell)        125
+        __psynch_mutexdrop  (in libsystem_kernel.dylib)        124
+        _tlv_get_addr  (in libdyld.dylib)        118
+        mi_free  (in eggshell)        114
+        l_List_any___at___00Eggshell_Synapses_PreparedSourceView_groupedUnits_spec__0  (in eggshell)        108
+        l_List_filterTR_loop___at___00Eggshell_PreparedCueIndex_Prepared_one_spec__0___redArg  (in eggshell)        100
+        lean_array_get  (in eggshell)        92
+        l___private_Init_Data_Array_Basic_0__Array_anyMUnsafe_any___at___00Eggshell_Synapses_PreparedSourceView_groupedUnits_spec__1  (in eggshell)        90
+        _platform_memset  (in libsystem_platform.dylib)        87
+        _xzm_xzone_malloc  (in libsystem_malloc.dylib)        84
+        l_Eggshell_Blake3_g  (in eggshell)        83
+        lean_dec_ref_known  (in eggshell)        81
+        mi_free_size  (in eggshell)        80

@@ -27,6 +27,8 @@ structure Input where
   repetitions : Nat
   topics : Array Topic
   serviceLoad : Bool := false
+  serviceLoadCounts : Array Nat := #[1,4,16,40,80]
+  saveSelectorFixture : Bool := false
   deriving ToJson,FromJson
 
 private def check (ok : Bool) (message : String) : IO Unit :=
@@ -222,7 +224,8 @@ private def run (input : Input) (inputPath : System.FilePath) : IO Unit := do
     save (root / "result.json") (Json.mkObj [("cells",toJson results),("source",sealed),
       ("answeringModelCalls",toJson (0 : Nat)),("acceptedSeed",toJson false),
       ("firstCycleAndSecondCycleModelTrials",toJson false)])
-    if let some observer := observer then observer.load root (input.topics.size*input.repetitions)
+    if let some observer := observer then
+      observer.load root (input.topics.size*input.repetitions) input.serviceLoadCounts input.saveSelectorFixture
   finally
     try
       if let some observer := observer then observer.stop

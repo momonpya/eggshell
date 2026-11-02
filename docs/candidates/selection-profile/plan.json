@@ -1,0 +1,23 @@
+{
+  "status":"isolated model-free diagnosis; no adoption",
+  "runtimeSha256":"bd609e528a62a07dc45e745054cdc83ea061f72f820d86b88029af980965a4c0",
+  "purpose":"Locate time spent in palette admission, selection construction, selection algorithm, encoding, transfer and decoding before another product change.",
+  "harvest":{
+    "source":"same protected interrupted LLVM source snapshot as reply-admission",
+    "topics":[1,2,3],"independentInitialChatsPerTopic":2,
+    "sameFrozenRequirements":true,
+    "serviceLoadClients":[1,6],
+    "profiling":"existing EGGSHELL_TRACE_SERVICE_PROFILE=1 receipts; observer overhead included, no speedup claims",
+    "savedReplayInput":"Only original source heads, owner IDs, logical selector JSON and expected choice JSON. No Access, SourceReference, Endpoint or capability is serialized.",
+    "fixtureUse":"Necessary public LLVM test input for subsequent deterministic replay, not a retained DB/cache/archive."
+  },
+  "replay":{
+    "answeringModelCalls":0,"embeddingCalls":0,
+    "oracle":"Exact original hook choice, not a human-required-code selector.",
+    "limits":"Existing 29 s requests and all existing service byte/view limits; no increase.",
+    "profileCounts":[1,6,80],
+    "nativeSampling":"At the 80-client diagnostic only, sample the owned publisher for four seconds using macOS sample. This is observability with overhead, not a performance adoption comparison."
+  },
+  "resources":{"aggregateRssStopKiB":3670016,"absoluteRssCeilingKiB":4194304,"minFreeKiB":2097152},
+  "notClaims":["80-person full hooks", "8-hour workload", "p99", "token improvement", "product adoption"]
+}
