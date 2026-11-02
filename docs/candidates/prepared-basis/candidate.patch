@@ -1,0 +1,138 @@
+diff --git a/Eggshell/CanonicalSourceCache.lean b/Eggshell/CanonicalSourceCache.lean
+index 225e135..2229633 100644
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -101,0 +102,24 @@ structure Ready where
++/-- Original projection and recommendation use the same shared index root.
++The source check remains the normal authenticated original-source check. -/
++structure BoundIndex (source : PageMap.Snapshot) (metadata : Manifest) where
++  reader : Index.Reader
++  exactRoot : metadata.bindings = some reader.index.head
++
++theorem BoundIndex.original_basis (view : BoundIndex source metadata) :
++    some view.reader.index.head = metadata.bindings := view.exactRoot.symm
++
++/-- No latest-root substitution. An absent required extent is unavailable,
++while an explicitly absent binding root is the empty optional input. -/
++def boundIndex? (source : PageMap.Snapshot) (path : System.FilePath) (metadata : Manifest) :
++    IO (Option (BoundIndex source metadata)) := do
++  let some root := metadata.bindings | return none
++  let some current ← PageMap.open? (path.parent.get! / "synapses" / Index.Scope.directory .shared) |
++    throw (IO.userError "canonical binding index is missing")
++  let some retained ← PageMap.HistoryReader.make? current root |
++    throw (IO.userError "canonical binding index extent is unavailable")
++  let some reader ← Index.atSource? source retained.snapshot .shared |
++    throw (IO.userError "canonical binding index has a different source or implementation")
++  if same : metadata.bindings = some reader.index.head then
++    return some ⟨reader,same⟩
++  else throw (IO.userError "canonical binding index changed its exact root")
++
+@@ -110,2 +134,2 @@ def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO (Option R
+-  let prepared ← Index.open? source storage .shared
+-  unless metadata.supplements == (← prepared.bindM fun prepared => ContentMetadata.supplementStamp prepared.index) do return none
++  let prepared ← boundIndex? source path metadata
++  unless metadata.supplements == (← prepared.bindM fun prepared => ContentMetadata.supplementStamp prepared.reader.index) do return none
+@@ -120 +144,4 @@ def ready (source : PageMap.Snapshot) : IO Bool := do
+-    try if (← open? source storage).isSome then return true
++    try
++      if let some prepared ← open? source storage then
++        let current ← Index.open? source storage .shared
++        if prepared.metadata.bindings == current.map (·.index.head) then return true
+@@ -192,2 +218,0 @@ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Result
+-  if let some ready ← open? source storage then
+-    return {mode := "warm",metadata := ready.metadata,elapsedMs := (← IO.monoMsNow)-started}
+@@ -196,0 +222,3 @@ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Result
++  if let some ready ← open? source storage then
++    if ready.metadata.bindings == bindings.map (·.index.head) && ready.metadata.supplements == stamp then
++      return {mode := "warm",metadata := ready.metadata,elapsedMs := (← IO.monoMsNow)-started}
+diff --git a/Eggshell/CanonicalSourcePrepared.lean b/Eggshell/CanonicalSourcePrepared.lean
+index c6f6596..5d17e72 100644
+--- a/Eggshell/CanonicalSourcePrepared.lean
++++ b/Eggshell/CanonicalSourcePrepared.lean
+@@ -42,0 +43,13 @@ structure Loaded where
++/-- The physical read scope and producer remain part of every resident key.
++Publication heads do not: unchanged owner descriptors are identical inputs. -/
++def Loaded.namespace (loaded : Loaded) : String :=
++  (toJson (loaded.recipes.directory.normalize.toString,loaded.metadata.source.identity,
++    loaded.metadata.source.authority,Cache.implementation)).compress
++
++theorem Loaded.namespace_ignores_publication (loaded : Loaded) (revision bytes : Nat)
++    (root : Option PageMap.Ref) (bindings : Option PageMap.Head) :
++    ({loaded with
++      metadata := {loaded.metadata with
++        bindings := bindings
++        source := {loaded.metadata.source with revision,bytes,root}}}).namespace = loaded.namespace := rfl
++
+@@ -50,2 +63,2 @@ def Loaded.withMetadata (loaded : Loaded) (owner : String) (deadline : Nat)
+-  let key := (toJson (loaded.identity,"owner",owner)).compress
+-  loaded.views.withReady key (PreparedOwnerArena.charge bytes) deadline (do
++  let key := (toJson (loaded.namespace,"owner",owner,original.isSome,descriptor.map Blake3.hex)).compress
++  loaded.views.withReady key (PreparedOwnerArena.charge (bytes+key.utf8ByteSize)) deadline (do
+@@ -67,2 +80,2 @@ def Loaded.withFile (loaded : Loaded) (file : File) (deadline : Nat)
+-  let key := (toJson (loaded.identity,"file",file)).compress
+-  loaded.files.withReady key (PreparedOwnerArena.charge bytes) deadline
++  let key := (toJson (loaded.namespace,"file",file,descriptor.map Blake3.hex)).compress
++  loaded.files.withReady key (PreparedOwnerArena.charge (bytes+key.utf8ByteSize)) deadline
+@@ -75,0 +89 @@ def Loaded.withOwner (loaded : Loaded) (owner : String) (deadline : Nat)
++  let plan ← loaded.recipes.get (PreparedSourceView.ownerName owner)
+@@ -77 +91,2 @@ def Loaded.withOwner (loaded : Loaded) (owner : String) (deadline : Nat)
+-  loaded.owners.withReady loaded.identity loaded.metadata.source.identity owner bytes deadline (do
++  let key := (toJson (loaded.namespace,descriptor.map Blake3.hex,plan.map Blake3.hex)).compress
++  loaded.owners.withReady key loaded.metadata.source.identity owner (bytes+key.utf8ByteSize) deadline (do
+@@ -301,12 +316,3 @@ def Pool.acquire (pool : Pool) (source : PageMap.Snapshot) (path : System.FilePa
+-            let original ← metadata.bindings.bindM fun root => do
+-              let some current ← PageMap.open? (path.parent.get! / "synapses" / Index.Scope.directory .shared) |
+-                throw (IO.userError "pinned original binding index is missing")
+-              let some pinned ← PageMap.HistoryReader.make? current root |
+-                throw (IO.userError "pinned original binding index was retired")
+-              let some manifest ← Index.manifest? pinned.snapshot |
+-                throw (IO.userError "pinned original binding manifest is missing")
+-              unless manifest.implementation == Index.implementation && manifest.scope == .shared &&
+-                  (← Index.sameSources source manifest.source) do
+-                throw (IO.userError "original binding index changed its source scope")
+-              let index ← pinned.snapshot.sharePages pool.pages path.normalize.toString
+-              return some (⟨index,manifest⟩ : Index.Reader)
++            let original ← (← Cache.boundIndex? source path metadata).mapM fun bound => do
++              let index ← bound.reader.index.sharePages pool.pages path.normalize.toString
++              return (⟨index,bound.reader.manifest⟩ : Index.Reader)
+diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
+index 3d5fafd..8c987da 100644
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -222,5 +222,12 @@ def prepare (source : PageMap.Snapshot) (deadline : Option Nat := none) : IO Pre
+-    let (canonical,canonicalFailure) ← try
+-      let prepared ← readablePrepared? fun storage => Plugin.Publication.Client.prepareSource source storage
+-        readDeadline
+-      pure (prepared,if prepared.isNone then some "canonical-not-ready" else none)
+-      catch error => pure (none,some s!"canonical-open: {error}")
++    let (canonical,linked,canonicalFailure) ← try
++      let prepared ← readablePrepared? fun storage => do
++        let some reference ← Plugin.Publication.Client.prepareSource source storage readDeadline | return none
++        let path ← CanonicalSource.Cache.directory source storage
++        let bound ← CanonicalSource.Cache.boundIndex? source path reference.metadata
++        return some (reference,bound.map (·.reader))
++      pure (prepared.map Prod.fst,prepared.map Prod.snd,
++        if prepared.isNone then some "canonical-not-ready" else none)
++      catch error => pure (none,none,some s!"canonical-open: {error}")
++    let shared ← match linked with
++      | some bound => pure bound
++      | none => readablePrepared? fun storage => Index.open? source storage .shared
+@@ -228 +235 @@ def prepare (source : PageMap.Snapshot) (deadline : Option Nat := none) : IO Pre
+-      source := source,shared := ← readablePrepared? fun storage => Index.open? source storage .shared
++      source := source,shared
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index 2ee0cd3..3cb9691 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -134,2 +134,2 @@ def prepareRegistered (server : Server) (scope : ReadSource)
+-  let prepared ← Index.open? source scope.storage .shared
+-  let stamp ← prepared.bindM fun prepared => ContentMetadata.supplementStamp prepared.index
++  let prepared ← CanonicalSource.Cache.boundIndex? source cachePath metadata
++  let stamp ← prepared.bindM fun prepared => ContentMetadata.supplementStamp prepared.reader.index
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 1bb2888..12f87a0 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -25,0 +26,2 @@ run_meta do
++      ``Eggshell.Synapses.CanonicalSource.Cache.BoundIndex.original_basis,
++      ``Eggshell.Synapses.CanonicalSource.Shared.Loaded.namespace_ignores_publication,

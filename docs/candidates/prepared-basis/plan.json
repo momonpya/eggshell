@@ -1,0 +1,31 @@
+{
+  "baselineRuntimeSha256": "1b82d622598e76c8c9719076e7309b4fa707c253e327afd012ebebda10d7a6be",
+  "isolatedCandidate": "prepared-basis-core",
+  "purpose": "Keep recommendation/original bindings coherent and share unchanged owner preparation under concurrent project reads and publications",
+  "answeringModelCalls": 0,
+  "nativeServiceTrial": {
+    "projects": 4,
+    "initialOriginalReadsPerProject": 4,
+    "sourceRowsPerProject": 16,
+    "clientsPerPhase": 80,
+    "projectsPerClient": 2,
+    "phases": ["cold", "warm", "overlapping same-source graph publications", "graph basis advanced", "overlapping original publications", "original basis advanced"],
+    "sameSourceGraphPublications": 48,
+    "newOriginalPublications": 4,
+    "transport": "actual native publisher TCP/stream RPC",
+    "checks": [
+      "Every recommendation index equals the original metadata's exact binding root",
+      "Every returned original row and binding stays in its requested project/source/owner domain",
+      "Cold/warm/overlap share four project preparations and sixteen original owners",
+      "Graph-only catch-up hydrates zero original owners",
+      "Graph-only metadata advancement keeps sixteen owner loads",
+      "Four new original owners increase resident owner loads only to twenty",
+      "Each read request completes within its 30 second budget",
+      "Recorded publication spans overlap active client-request spans in the two overlap phases",
+      "The publisher exits normally with no surviving owned processes"
+    ]
+  },
+  "resources": {"aggregateRssStopKiB": 3670016, "diskFloorKiB": 2097152},
+  "notEstablishedByThisTrial": ["eight hour workload", "large project corpus", "hook p99", "98% required-evidence recall", "token savings", "real MCP server/privacy policy"],
+  "adoption": "Requires the prescribed repeated matched first/history topic 1/2/3 token and quality comparison"
+}
