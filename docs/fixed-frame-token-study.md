@@ -2,6 +2,8 @@
 
 2026-11-02。隔離候補は未採用。80人の継続利用、98%配送、総トークン改善、品質維持の全体目標は未達である。
 
+履歴のfreeze/forkが旧名`usage`だけをコピーし、実seed1の共通履歴からclassifier付きの51件の利用記録を外していたことを確認した。元のprivate dataに残っている。Leanでfamilyとscopeの検証・集合の完全性を修正し、同じ実seedから両armへの全fact/head/file一致をnative検査した。[修正と検証](candidates/history-feedback/README.md)。sealed controllerと元の計画は変更していない。題材モデル比較は未実行のままで、修正したharnessを再封印してから進む。ReadView再構築に伴うreplay依存の問題は別途残る。
+
 ## 比較を壊すハーネスの修正
 
 取得・準備・モデル投入で暗黙に `handoff_chars = 120000` を書き直す経路があった。正の配送枠を計画の必須フィールドとし、一つの `StudyProfile` で構成を生成する。1・120000・500000を、読取専用と書込可能の実設定解析に通し、元の値が保たれることを確認した。欠落と0は拒否する。`checked_preserves_value` は公理なし。

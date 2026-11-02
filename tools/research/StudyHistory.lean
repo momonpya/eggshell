@@ -7,15 +7,35 @@ namespace Eggshell.Research.StudyHistory
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
-/-- Carry durable synaptic observations and feedback, rather than session
-delivery state, queries, cache ownership routes or daemon registrations. -/
-def keeps (name : String) : Bool := name == "events" || name == "usage"
+/-- Classifier names bind the complete implementation content address. -/
+structure FeedbackFamily (name : String) where
+  classifier : String
+  bound : name = "usage-" ++ classifier
+  valid : Synapses.digest classifier = true
+
+def feedbackFamily? (name : String) : Option (FeedbackFamily name) :=
+  let classifier := (name.drop 6).toString
+  if checked : name = "usage-" ++ classifier ∧ Synapses.digest classifier = true then
+    some ⟨classifier,checked.1,checked.2⟩
+  else none
+
+/-- Carry events and checked private feedback, not session delivery state,
+question vectors, daemon routes or shared indexes. -/
+def keeps (name : String) : Bool := name == "events" || (feedbackFamily? name).isSome
 
 theorem keeps_events : keeps "events" = true := rfl
-theorem keeps_usage : keeps "usage" = true := rfl
 theorem kept_family (name : String) (h : keeps name = true) :
-    name = "events" ∨ name = "usage" := by
-  simpa [keeps, Bool.or_eq_true, beq_iff_eq] using h
+    name = "events" ∨ Nonempty (FeedbackFamily name) := by
+  simp only [keeps, Bool.or_eq_true, beq_iff_eq] at h
+  rcases h with events | feedback
+  · exact Or.inl events
+  · cases found : feedbackFamily? name with
+    | none => simp [found] at feedback
+    | some family => exact Or.inr ⟨family⟩
+
+theorem feedback_family_is_content_addressed (family : FeedbackFamily name) :
+    name = "usage-" ++ family.classifier ∧ Synapses.digest family.classifier = true :=
+  ⟨family.bound,family.valid⟩
 
 structure Private where
   name : String
@@ -45,12 +65,21 @@ private def requireQuiescent (data : System.FilePath) : IO Unit := do
       check (!(← directory.readDir).any (·.fileName.endsWith ".json"))
         "drain durable source saves before freezing history"
 
-private def validatePrivate (database name : String) (path : System.FilePath) : IO Unit := do
+private def validatePrivate (source : DB.PageMap.Snapshot) (name : String) (path : System.FilePath) : IO Unit := do
   check (keeps name) "only durable events and usage belong to the common history"
   let snapshot ← DB.PageMap.pin path
-  let authority := if name == "events" then "private-synaptic-events:" ++ database
-    else "advisory:" ++ database ++ ":usage"
-  check (snapshot.head.authority == authority) "private history belongs to another database or scope"
+  if name == "events" then
+    check (snapshot.head.authority == "private-synaptic-events:" ++ source.head.identity)
+      "private journal belongs to another database or scope"
+  else
+    let some family := feedbackFamily? name | throw (IO.userError "invalid private classifier family")
+    check (snapshot.head.authority == "advisory-usage:" ++ source.head.identity ++ ":" ++ family.classifier &&
+      (← snapshot.get "classifier") == some family.classifier.toUTF8)
+      "private feedback classifier or authority differs from its family"
+    let some manifest ← Synapses.Index.manifest? snapshot | throw (IO.userError "private feedback has no manifest")
+    check (manifest.scope == .usage && manifest.source.identity == source.head.identity &&
+      manifest.source.authority == source.head.authority && Synapses.digest manifest.implementation)
+      "private feedback belongs to another database, authority or scope"
 
 private def newRoot (source data target : System.FilePath) : IO Unit := do
   check (source.isAbsolute && data.isAbsolute && target.isAbsolute && !(← target.pathExists))
@@ -61,6 +90,10 @@ private def newRoot (source data target : System.FilePath) : IO Unit := do
     "history output overlaps its protected input"
   FileSystem.privateDirectory target
 
+private def familyNames (root : System.FilePath) : IO (Array String) := do
+  if !(← root.pathExists) then return #[]
+  return ((← root.readDir).map (·.fileName)).filter keeps |>.qsort (· < ·)
+
 /-- A common input contains the same source publication and private learning
 for both arms. Derived vectors and session state are prepared separately. -/
 def freeze (source data target : System.FilePath) : IO Snapshot := do
@@ -70,13 +103,14 @@ def freeze (source data target : System.FilePath) : IO Snapshot := do
   let sourceFiles ← StudyRuntime.checkpoint source (target / "source.egg")
   let privateRoot := data / "read-cache" / sourceHead.head.identity / "synapses"
   let mut privateFamilies := #[]
-  for name in #["events", "usage"] do
+  for name in ← familyNames privateRoot do
     let path := privateRoot / name
-    if !(← path.pathExists) then continue
-    validatePrivate sourceHead.head.identity name path
+    validatePrivate sourceHead name path
     let files ← StudyRuntime.checkpoint path (target / "private" / name)
     privateFamilies := privateFamilies.push ⟨name,files⟩
   requireQuiescent data
+  check ((← familyNames privateRoot) == privateFamilies.map (·.name))
+    "private feedback family set changed during history freeze"
   check ((← StudyRuntime.files source) == sourceFiles) "common source changed during history freeze"
   for family in privateFamilies do
     check ((← StudyRuntime.files (privateRoot / family.name)) == family.files)
@@ -95,8 +129,10 @@ def verify (manifest : StudyAdmission.Artifact) : IO (System.FilePath × Snapsho
     (← StudyRuntime.files source.directory) == snapshot.sourceFiles) "common source checkpoint changed"
   check ((snapshot.privateFamilies.map (·.name)).toList.eraseDups.length == snapshot.privateFamilies.size)
     "duplicate private history family"
+  check ((← familyNames (root / "private")) == snapshot.privateFamilies.map (·.name))
+    "common history has unlisted or missing private feedback"
   for family in snapshot.privateFamilies do
-    validatePrivate snapshot.database family.name (root / "private" / family.name)
+    validatePrivate source family.name (root / "private" / family.name)
     check ((← StudyRuntime.files (root / "private" / family.name)) == family.files)
       "common private learning changed"
   return (root, snapshot)
