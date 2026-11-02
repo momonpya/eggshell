@@ -1,5 +1,6 @@
 import tools.research.StudyAcquire
 import tools.research.StudySeedChecks
+import Eggshell.Install
 
 open Lean Eggshell Eggshell.Research
 namespace Eggshell.Research.StudyBootstrap
@@ -10,6 +11,75 @@ private def check (b : Bool) (message : String) : IO Unit :=
 private def save (path : System.FilePath) (value : Json) : IO Unit := do
   check (!(← path.pathExists)) "keep the previous bootstrap evidence"
   IO.FS.writeFile path (value.pretty ++ "\n")
+
+/-- A new cohort owns its account, reviewed plugin and native gate. Its runtime
+and harness use the same compiled publication contract; old sealed arms stay
+unchanged. Credentials are private inputs and never become evidence artifacts. -/
+def prepare (root previous runtime : String) : IO Unit := do
+  let directory := System.FilePath.mk root
+  let previous := System.FilePath.mk previous
+  let runtime := System.FilePath.mk runtime
+  check (directory.isAbsolute && previous.isAbsolute && runtime.isAbsolute &&
+    !(← directory.pathExists)) "new absolute cohort paths required"
+  ResourceGuard.requireGenerationSpace directory.parent.get!
+  let runtime ← IO.FS.realPath runtime
+  let sealedRuntime ← StudyPrepare.artifact runtime
+  let privateDir := fun (path : System.FilePath) => do
+    IO.FS.createDirAll path
+    IO.setAccessRights path {user := {read := true,write := true,execution := true}}
+  let link := fun (source target : System.FilePath) => do
+    let result ← IO.Process.output {cmd := "/bin/ln",args := #["-s",source.toString,target.toString]}
+    check (result.exitCode == 0) "cannot link frozen study input"
+  privateDir directory
+  let installPrefix := directory / "prefix"
+  IO.FS.createDirAll (installPrefix / "libexec")
+  IO.FS.createDirAll (installPrefix / "share/eggshell")
+  link runtime (installPrefix / "libexec/eggshell")
+  link (← IO.FS.realPath (previous / "prefix/share/eggshell/minilm")) (installPrefix / "share/eggshell/minilm")
+  let plugin := installPrefix / "plugins/eggshell"
+  for name in [".codex-plugin","hooks","bin"] do IO.FS.createDirAll (plugin / name)
+  IO.FS.writeFile (plugin / ".codex-plugin/plugin.json") Install.pluginManifest
+  IO.FS.writeFile (plugin / Install.ownerMarkerName) Install.ownerMarkerContents
+  let mut manifest ← IO.ofExcept (Json.parse Install.hooksManifest)
+  let mut hooks ← IO.ofExcept (manifest.getObjVal? "hooks")
+  for event in ["UserPromptSubmit","PreToolUse","PostToolUse"] do
+    let groups ← IO.ofExcept (hooks.getObjValAs? (Array Json) event)
+    let groups ← groups.mapM fun group => do
+      let handlers ← IO.ofExcept (group.getObjValAs? (Array Json) "hooks")
+      return group.setObjVal! "hooks" (toJson (handlers.map (·.setObjVal! "additionalContextLimit" (toJson (0 : Nat)))))
+    hooks := hooks.setObjVal! event (toJson groups)
+  save (plugin / "hooks/hooks.json") (manifest.setObjVal! "hooks" hooks)
+  for name in ["egg","eggshelld"] do Install.writeExecutable (plugin / "bin" / name) (Install.pluginLauncher installPrefix)
+  let _ ← Install.updateMarketplace (installPrefix / ".agents/plugins/marketplace.json") true
+  let account := directory / "account"
+  privateDir account
+  let auth := account / "auth.json"
+  IO.FS.writeBinFile auth (← IO.FS.readBinFile (previous / "account/auth.json"))
+  IO.setAccessRights auth {user := {read := true,write := true}}
+  let config ← IO.FS.readFile (previous / "account/config.toml")
+  let base := ((config.splitOn "[hooks.state.").headD "").replace (previous / "prefix").toString installPrefix.toString
+  let base := if base.contains "[plugins.\"eggshell@openai-curated-remote\"]" then base
+    else base ++ "\n[plugins.\"eggshell@openai-curated-remote\"]\nenabled = false\n"
+  IO.FS.writeFile (account / "config.toml") base
+  privateDir (directory / "tmp")
+  IO.FS.createDirAll (directory / "prompts")
+  for topic in [0,1,2,3] do
+    IO.FS.writeFile (directory / s!"prompts/topic-{topic}.txt") (← IO.FS.readFile (previous / s!"prompts/topic-{topic}.txt"))
+  link (← IO.appPath).parent.get! (directory / "controller")
+  let environment : Array (String × Option String) := #[
+    ("CODEX_HOME",some account.toString),("TMPDIR",some (directory / "tmp").toString),
+    ("EGGSHELL_PREFIX",some installPrefix.toString),("PLUGIN_ROOT",some plugin.toString),
+    ("HF_HUB_OFFLINE",some "1"),("LEAN_NUM_THREADS",some "1"),("OMP_NUM_THREADS",some "1"),
+    ("OPENBLAS_NUM_THREADS",some "1"),("MKL_NUM_THREADS",some "1"),("TOKENIZERS_PARALLELISM",some "false"),
+    ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
+  save (directory / "discovery.input.json") (Json.mkObj [
+    ("command",toJson #["/Users/ovm/.nodebrew/current/bin/codex","--strict-config","-c","features.remote_plugin=false","app-server","--listen","stdio://"]),
+    ("cwd",toJson "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project"),
+    ("environment",toJson environment),("output",toJson (directory / "discovery").toString),
+    ("timeoutMs",toJson (60000 : Nat)),("responseBytes",toJson (33554432 : Nat)),("transcriptBytes",toJson (268435456 : Nat))])
+  save (directory / "prepared.json") (Json.mkObj [("runtime",toJson sealedRuntime),
+    ("controller",toJson (← StudyPrepare.artifact (← IO.appPath))),
+    ("answeringModelCalls",toJson (0 : Nat)),("previousInputsModified",toJson false)])
 
 def trustHooks (root : String) : IO Unit := do
   let directory := System.FilePath.mk root
@@ -121,6 +191,7 @@ def sealSeed (root : String) : IO Unit := do
 def cliMain (args : List String) : IO UInt32 := do
   try
     match args with
+    | ["prepare",root,previous,runtime] => prepare root previous runtime
     | ["trust-hooks",root] => trustHooks root
     | ["seed-input",root,chars] => do
         let some budget := chars.toNat? | throw (IO.userError "positive handoff characters required")

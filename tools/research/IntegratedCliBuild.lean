@@ -182,7 +182,7 @@ private partial def modules (root path : System.FilePath)
   return found
 
 private def variant (project root : System.FilePath) (mode family : String) : IO Unit := do
-  check (family == "empty-routing" && ["runtime","driver","checks","run","checks-run","capture","cleanup"].contains mode)
+  check (family == "empty-routing" && ["runtime","driver","checks","study","run","checks-run","capture","cleanup"].contains mode)
     "unknown isolated variant action"
   let output := project / "docs/candidates" / family
   let report := root / "integrated-cli-run-fixture" / (family ++ "-recall")
@@ -312,7 +312,8 @@ private def variant (project root : System.FilePath) (mode family : String) : IO
     let runtime := mode == "runtime"
     let parent := if runtime then "integrated-cli-runtime" else family ++ "-runtime"
     let output := root / (stem ++ "-build")
-    let entry := if runtime then "Main" else if mode == "checks" then "tools.research.EmptyRoutingChecks"
+    let entry := if runtime then "Main" else if mode == "study" then "tools.research.StudyMain"
+      else if mode == "checks" then "tools.research.EmptyRoutingChecks"
       else "tools.research.IntegratedCliChecks"
     if !runtime then copyResearch project core entry (← IO.mkRef {})
     let inherited ← read (root / (parent ++ "-build.settings.json"))

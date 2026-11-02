@@ -29,6 +29,8 @@
 
 ## 現在地と次の順序
 
+現在の再開点：[native-study](docs/candidates/native-study/README.md)。runtime `e39c5aa3…`を固定し、同じコードの研究controllerを構築中。旧controllerには別runtimeの出版契約が組み込まれていたため混用しない。新しい空DBの8操作ゲート、実App Serverのmetadata確認、新seed取得はまだ実施していない。controllerの構文エラーを修正した後の再ビルドは空き2 GiBの保護条件で開始を拒否された。終了済み旧seed/R40 DB・cache・生ログと未参照生成物を削除したが、空きは約1.75 GiBである。旧取得の総token 6,995,366と監査結果は保持し、以下の旧DBを使った結果は履歴として扱う。旧DBからの再生はできない。新しい回答モデル投入0、比較0/18、98%配送・80人利用は未達/未検証のまま。
+
 2026-11-02。[固定した配送契約の比較](docs/fixed-frame-token-study.md)で新seedを2本取得した。全体goalはactive、候補は未採用。新seed2は181フック失敗0、Pre/Post/portable origin各89件の欠落0、Post入力・応答89/89がDBとbyte一致した。必要原文は配送前に4/7/6件で凍結済み。一方、利用シナプスの準備が60秒を超え、3本目と題材のモデル投入を保留した。読み取り専用の同じ関数は167717 msでconsumed 1955/usage 228を生成した。これは通常warmや30秒フックの達成ではない。[再生と準備の契約](docs/replay-preparation-contract.md)に従い、不変の原文・ReadView・ACK投影を出版/配送時に確定し、過去turnを無関係な出版で再計算しない経路を先に実装する。題材のモデル比較は各block0/6、全体0/18。
 
 隔離したReadCatalog/ACK投影の部品をLeanで実装し、同じ89件の再生は88725 msで、consumed 1955/usage 228と全statusが参照結果に完全一致した。原典・日誌・索引の書き込み0。原文検証用の表とACKの小さな投影を分け、操作内の既存owner cacheを使い、ACKの解析/本文hashを所有者ごとに一度にした。無関係な出版/ACKでの旧catalog再生成0、座標metadata追加で旧catalog/ACKを拒否、80同時要求で生成1/再利用79をnative検査した。先行する遅い候補（中止258626 ms、完全一致でも278438 ms）は不採用として記録した。[部品と検証記録](docs/candidates/read-catalog/README.md)。
@@ -139,6 +141,6 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 検証済みの区切りでhook-ingress-supervisorへpush。author/committerはmomonoya。終了した実験DB/cacheは抽出後に削除し、圧縮/archiveとして残さない。コード・実測・配送記録・digestを残し、削除済み入力で現在も再検証できるとは主張しない。実利用の記憶は勝手に消さない。
 
-過去の容量停止は解消済み。終了した旧DB/cache/build/logの削除履歴は[artifact-cleanup.md](docs/artifact-cleanup.md)と各候補のcleanup記録を参照する。現在の原典2 snapshotと必要な対照runtimeは削除の前後でSHA-256を確認する。
+終了した旧DB/cache/build/logの削除履歴は[artifact-cleanup.md](docs/artifact-cleanup.md)と各候補のcleanup記録を参照する。旧原典snapshotは新runtimeの比較入力として使わないため引退させた。[現在の保護入力](docs/candidates/native-study/ended-study-retirement.json)は保持した対照runtimeと現候補を指す。旧DBの削除前と、保持runtime/固定harnessの削除前後のSHA-256を照合した。空き2 GiB/集計RSS 3.5 GiBの停止条件は維持する。
 
 全体goalはactive。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。

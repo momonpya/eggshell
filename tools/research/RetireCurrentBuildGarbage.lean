@@ -38,16 +38,31 @@ private partial def retireCopy (path : System.FilePath) : IO Nat := do
     for entry in ← path.readDir do bytes := bytes + (← retireCopy entry.path)
     IO.FS.removeDir path
     return bytes
-  check (metadata.type == .file) "ended snapshot contains a non-regular file"
+  check (metadata.type == .file || metadata.type == .symlink) "ended snapshot contains a special file"
   IO.FS.removeFile path
   return metadata.byteSize.toNat
+
+private partial def importClosure (core : System.FilePath) (name : String)
+    (seen : IO.Ref (Std.HashSet String)) : IO Unit := do
+  if (← seen.get).contains name then return
+  seen.modify (·.insert name)
+  let source := core / (name.replace "." "/" ++ ".lean")
+  if !(← source.pathExists) then return
+  for line in (← IO.FS.readFile source).splitOn "\n" do
+    let line := line.trimAscii.toString
+    let introducer := if line.startsWith "public import " then "public import " else "import "
+    if !line.startsWith introducer then continue
+    for dependency in (line.drop introducer.length).toString.splitOn " " do
+      if dependency.isEmpty || dependency.startsWith "--" then break
+      importClosure core dependency seen
 
 def main (args : List String) : IO Unit := do
   check (args.isEmpty || args == ["duplicate-snapshots"] || args == ["ended-cache"] ||
     args == ["ended-source"] || args == ["ended-recommendations"] || args == ["current-replay"] ||
     args == ["ended-seed2-index"] || args == ["current-bounds"] || args == ["current-prefix"] ||
     args == ["current-ranges"] || args == ["current-feedback"] || args == ["current-integrated"] ||
-    args == ["current-empty-routing"]) "unexpected retirement mode"
+    args == ["current-empty-routing"] || args == ["current-study"] ||
+    args == ["ended-study"]) "unexpected retirement mode"
   let duplicates := args == ["duplicate-snapshots"]
   let endedCache := args == ["ended-cache"]
   let endedSource := args == ["ended-source"]
@@ -60,10 +75,14 @@ def main (args : List String) : IO Unit := do
   let currentFeedback := args == ["current-feedback"]
   let currentIntegrated := args == ["current-integrated"]
   let currentEmpty := args == ["current-empty-routing"]
+  let currentStudy := args == ["current-study"]
+  let endedStudy := args == ["ended-study"]
   let project : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
   let base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028"
   let root := base / "fixed-frame-study"
-  let output := if currentEmpty then project / "docs/candidates/empty-routing/build-retirement.json" else
+  let output := if endedStudy then project / "docs/candidates/native-study/ended-study-retirement.json" else
+    if currentStudy then project / "docs/candidates/native-study/build-retirement.json" else
+    if currentEmpty then project / "docs/candidates/empty-routing/build-retirement.json" else
     if currentIntegrated then project / "docs/candidates/integrated-cli/build-retirement.json" else
     if currentFeedback then project / "docs/candidates/feedback-progress/build-retirement.json" else
     if currentRanges then project / "docs/candidates/read-ranges/build-retirement.json" else
@@ -80,7 +99,9 @@ def main (args : List String) : IO Unit := do
   let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
   check (processes.exitCode == 0 && (processes.stdout.splitOn "StudyBuildMain.lean").length == 1)
     "wait for the active native build"
-  let protection ← read (project / "docs/candidates/delivery-ack/obsolete-runtime-retirement.json")
+  let currentProtection := project / "docs/candidates/native-study/ended-study-retirement.json"
+  let protection ← read (if ← currentProtection.pathExists then currentProtection else
+    project / "docs/candidates/delivery-ack/obsolete-runtime-retirement.json")
   let protectedInputs : Array (String × String) ← IO.ofExcept (protection.getObjValAs? _ "currentProtectedInputs")
   let sealedInputs : Array Json ← IO.ofExcept ((← read (project / "docs/candidates/frozen-post/manifest.json")).getObjValAs? _ "sealedInputs")
   let verify := do
@@ -89,6 +110,46 @@ def main (args : List String) : IO Unit := do
       let path ← IO.ofExcept (artifact.getObjValAs? String "path")
       check (toJson (← sha path) == artifact.getObjValD "sha256") "sealed input changed"
   verify
+  if endedStudy then
+    let targets := #[root / "study",base / "r0",root / "native-gate",base / "native-gate"]
+    let inside := fun (path : String) => targets.any fun target =>
+      path == target.toString || path.startsWith (target.toString ++ "/")
+    let retained := protectedInputs.filter (fun row => !inside row.1)
+    for artifact in sealedInputs do
+      check (!(inside (← IO.ofExcept (artifact.getObjValAs? String "path"))))
+        "an ended data tree still contains a sealed harness input"
+    for target in targets do
+      check (← target.pathExists) "the ended cohort was already retired"
+      check (!(processes.stdout.splitOn "\n").any (fun command =>
+        (command.splitOn target.toString).length > 1)) "an ended cohort still has a live process"
+    let oldRuntime := root / "empty-routing-runtime-build/StudyMain"
+    let runtimeHash ← sha oldRuntime.toString
+    let mut summaries := #[]
+    for name in ["seed-1","seed-2-isolated"] do
+      let directory := root / "study" / name
+      let destination := output.parent.get! / ("ended-" ++ name)
+      IO.FS.createDirAll destination
+      for entry in ← directory.readDir do
+        if (← entry.path.symlinkMetadata).type == .file && entry.path.extension == some "json" &&
+            (← entry.path.metadata).byteSize ≤ 2097152 then
+          IO.FS.writeFile (destination / entry.fileName) (← IO.FS.readFile entry.path)
+          summaries := summaries.push (entry.fileName,← sha entry.path.toString)
+    let mut removed := #[]
+    for target in targets do removed := removed.push (target.toString,← retireCopy target)
+    for (path,digest) in retained do check ((← sha path) == digest) "retained runtime changed"
+    check ((← sha oldRuntime.toString) == runtimeHash) "current candidate changed"
+    for artifact in sealedInputs do
+      let path ← IO.ofExcept (artifact.getObjValAs? String "path")
+      check (toJson (← sha path) == artifact.getObjValD "sha256")
+        "sealed harness input changed"
+    IO.FS.writeFile output (Json.mkObj [("removed",toJson removed),
+      ("retiredProtectedInputs",toJson (protectedInputs.filter (fun row => inside row.1))),
+      ("currentProtectedInputs",toJson (retained.push (oldRuntime.toString,runtimeHash))),
+      ("retainedSummaries",toJson summaries),("historicalDbReplayNoLongerAvailable",toJson true),
+      ("reason",toJson "The native-runtime cohort requires new independent seeds. Prior acquisitions and model-free replay are ended, not comparison inputs for the new cohort."),
+      ("sealedHarnessInputsUnchanged",toJson true),("archiveCreated",toJson false)]).pretty
+    IO.println "Retired ended study databases, caches and logs; compact acquisition summaries and frozen runtimes retained."
+    return
   if endedRecommendations || seed2Index then
     let original := root / "study" / (if seed2Index then "seed-2-isolated" else "seed-1") / "work.egg"
     let identity ← IO.ofExcept ((← read (original / "head")).getObjValAs? String "identity")
@@ -154,10 +215,14 @@ def main (args : List String) : IO Unit := do
       ("archiveCreated",toJson false)]).pretty
     IO.println "Retired two ended snapshot copies; the byte-identical original remains."
     return
-  let settings ← read (root / (if currentEmpty then "empty-routing-driver-build.settings.json" else if currentIntegrated then "integrated-cli-driver-build.settings.json" else if currentFeedback then "feedback-progress-build.settings.json" else if currentRanges then "read-ranges-build.settings.json" else if currentPrefix then "replay-prefix-build.settings.json" else if currentBounds then "replay-bounds-build.settings.json" else if currentReplay then
+  let settings ← read (root / (if currentStudy then "empty-routing-study-build.settings.json" else if currentEmpty then "empty-routing-driver-build.settings.json" else if currentIntegrated then "integrated-cli-driver-build.settings.json" else if currentFeedback then "feedback-progress-build.settings.json" else if currentRanges then "read-ranges-build.settings.json" else if currentPrefix then "replay-prefix-build.settings.json" else if currentBounds then "replay-bounds-build.settings.json" else if currentReplay then
     "turn-replay-build.settings.json" else "delivery-ack-shared-build.settings.json"))
   let parents : Array String ← IO.ofExcept (settings.getObjValAs? _ "parents")
-  let active := if currentEmpty then #[(root / "empty-routing-runtime-build").toString,
+  let active := if currentStudy then #[(root / "empty-routing-study-build").toString,
+      (root / "empty-routing-runtime-build").toString,(root / "controller").toString,
+      (base / "shared-snapshot/fixed-frame-price-runtime-build").toString,
+      (base / "shared-snapshot/transport-profile-runtime-build").toString] else
+    if currentEmpty then #[(root / "empty-routing-runtime-build").toString,
       (root / "empty-routing-driver-build").toString,(root / "empty-routing-checks-build").toString,
       (root / "controller").toString] else
     if currentIntegrated then #[(root / "integrated-cli-runtime-build").toString,
@@ -170,7 +235,15 @@ def main (args : List String) : IO Unit := do
     else parents.push (root / "delivery-ack-build").toString
   let seen ← IO.mkRef ({} : Std.HashSet String)
   for directory in active do
-    mark (.mk directory) seen
+    if currentStudy then
+      -- Keep completed link inputs and the partially built controller's own
+      -- objects. A binary does not need every historical interface inherited
+      -- by its library overlay; retain only the live import closure below.
+      if directory == (root / "empty-routing-study-build").toString then
+        for entry in ← (System.FilePath.mk directory).readDir do
+          if entry.fileName.endsWith ".o" then
+            for path in [entry.path,entry.path.withExtension "source",entry.path.withExtension "dependencies"] do mark path seen
+    else mark (.mk directory) seen
     let response := System.FilePath.mk directory / "runtime.rsp"
     if ← response.pathExists then
       for row in (← IO.FS.readFile response).splitOn "\n" do
@@ -181,9 +254,22 @@ def main (args : List String) : IO Unit := do
         mark path seen
         mark (path.withExtension "source") seen
         mark (path.withExtension "dependencies") seen
-  for entry in ← root.readDir do
-    if (← entry.path.symlinkMetadata).type == .dir && (entry.fileName == "core" || entry.fileName.endsWith "-core") then
-      mark (entry.path / ".lake/build/lib") seen
+  if currentStudy then
+    let core := root / "empty-routing-core"
+    let names ← IO.mkRef ({} : Std.HashSet String)
+    importClosure core "Main" names
+    importClosure core "tools.research.StudyMain" names
+    for name in ← names.get do
+      let relative := name.replace "." "/"
+      for library in [root / "empty-routing-study-build/lib",root / "empty-routing-runtime-build/lib",core / ".lake/build/lib/lean"] do
+        if !(← (library / (relative ++ ".olean")).pathExists) then continue
+        for suffix in [".olean",".olean.private",".olean.server",".ir",".ir.sig",".ilean"] do
+          mark (library / (relative ++ suffix)) seen
+        break
+  else
+    for entry in ← root.readDir do
+      if (← entry.path.symlinkMetadata).type == .dir && (entry.fileName == "core" || entry.fileName.endsWith "-core") then
+        mark (entry.path / ".lake/build/lib") seen
   mark (project / ".lake/build/lib") seen
   mark (.mk "/Users/ovm/Code/eggshell/.lake/build/lib") seen
   let kept := ← seen.get
@@ -201,7 +287,7 @@ def main (args : List String) : IO Unit := do
     bytes := bytes+size.toNat
     IO.FS.removeFile path
   verify
-  let details := if currentBounds || currentPrefix || currentRanges || currentFeedback || currentIntegrated || currentEmpty then
+  let details := if currentBounds || currentPrefix || currentRanges || currentFeedback || currentIntegrated || currentEmpty || currentStudy then
       [("removedFiles",toJson removed.size)] else [("removed",toJson removed)]
   IO.FS.writeFile output (Json.mkObj (details ++ [("logicalBytesRemoved",toJson bytes),
     ("currentLinkObjectsInterfacesAndStampsRetained",toJson true),
