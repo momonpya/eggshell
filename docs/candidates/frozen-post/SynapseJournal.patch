@@ -1,0 +1,133 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -391,13 +391,12 @@
+   starts : Array (Occurrence × (String × Knowledge × String))
+   input : Array Fact
+   initial : Array Fact
+-  index : Option PageMap.Head
+   groups : Array (Occurrence × Array (Consumption × Range))
+   next : Nat := 0
+   result : NativeFeedback
+ 
+ def prepareFeedback (source : PageMap.Snapshot) (starts : Starts) (facts : Array Fact)
+-    (graph : Graph) (hint : Option Index.Reader) : FeedbackProgress := Id.run do
++    (graph : Graph) : FeedbackProgress := Id.run do
+   let candidates := nativeCandidates facts
+   let mut witnesses : Std.HashMap WitnessAt (Std.HashSet (Occurrence × Option Range)) := {}
+   for fact in facts do
+@@ -415,7 +414,7 @@
+     groups := groups.insert edge.producer (groups[edge.producer]?.getD #[] |>.push (edge,range))
+   return {
+     source := source.head,directory := source.directory.toString,starts := starts.toArray
+-    input := facts,initial := graph.snapshot,index := hint.map (·.index.head),groups := groups.toArray,result}
++    input := facts,initial := graph.snapshot,groups := groups.toArray,result}
+ 
+ def feedbackGroup (source : PageMap.Snapshot) (starts : Starts) (producer : Occurrence)
+     (uses : Array (Consumption × Range)) (result : NativeFeedback) (deadline : Nat)
+@@ -443,16 +442,16 @@
+ /-- A producer group is committed to the cursor only after its complete
+ validation. Budget exhaustion retries that group, not the completed prefix. -/
+ def nativeFeedback (source : PageMap.Snapshot) (starts : Starts) (facts : Array Fact)
+-    (graph : Graph) (deadline : Nat) (hint : Option Index.Reader := none)
++    (graph : Graph) (deadline : Nat)
+     (cache : Option StoredReadLookup.Cache := none) (catalogs : Option ReadCatalog.Pool := none)
+     (budget : Option StoredReadLookup.Budget := none)
+     (saved : Option (IO.Ref (Option FeedbackProgress)) := none) : IO NativeFeedback := do
+   let progress ← match ← saved.bindM (·.get) with
+     | some progress => pure progress
+-    | none => pure (prepareFeedback source starts facts graph hint)
++    | none => pure (prepareFeedback source starts facts graph)
+   unless progress.source == source.head && progress.directory == source.directory.toString &&
+       progress.starts == starts.toArray && progress.input == facts && progress.initial == graph.snapshot &&
+-      progress.index == hint.map (·.index.head) && progress.next ≤ progress.groups.size do
++      progress.next ≤ progress.groups.size do
+     throw (IO.userError "native feedback cursor input changed")
+   let mut progress := progress
+   if let some saved := saved then saved.set (some progress)
+@@ -478,6 +477,12 @@
+ theorem unowned_output_keeps_public_trace (previous observed : Trace) :
+     acceptPublishedOutput none previous observed = previous := rfl
+ 
++/-- Historical output coordinates are from the original publication only.
++Later shared-index supplements cannot rewrite a past consumption witness. -/
++def observedCatalog (source : PageMap.Snapshot) (id : Nat) (doc : Document) : IO ObservationContext.Catalog := do
++  let original := (ObservationContext.recorded source.head.identity doc).getD {}
++  ContentMetadata.publishedCoordinates source id doc original
++
+ /-- All original body/row work happens in the background. A finish without
+ an exact published native owner remains pending instead of inventing evidence. -/
+ structure ReplayState (count : Nat) where
+@@ -492,12 +497,11 @@
+   usage : Graph := .empty
+   done : Bool := false
+ 
+-/-- The source, index, events and caches belong to the cursor's immutable
++/-- The source, events and bound caches belong to the cursor's immutable
+ input. A resume supplies only a new scheduling deadline. -/
+ structure ReplayCursor where
+   source : PageMap.Snapshot
+   values : Array Entry
+-  hint : Option Index.Reader
+   cache : StoredReadLookup.Cache
+   catalogs : ReadCatalog.Pool
+   state : IO.Ref (ReplayState values.size)
+@@ -508,12 +512,12 @@
+   omega
+ 
+ def beginReplay (source : PageMap.Snapshot) (values : Array Entry)
+-    (preparedHint : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none)
++    (acknowledgmentIndex : Option Index.Reader := none) (readCache : Option StoredReadLookup.Cache := none)
+     (catalogPool : Option ReadCatalog.Pool := none) : IO ReplayCursor := do
+   let cache ← match readCache with | some cache => pure cache | none => StoredReadLookup.create source
+   unless cache.source.directory == source.directory && cache.source.head == source.head do
+     throw (IO.userError "private replay source-reader cache changed its pinned input")
+-  let hint ← match preparedHint with
++  let index ← match acknowledgmentIndex with
+     | some reader => pure (some reader)
+     | none => preparedHint? source
+   let catalogs ← match catalogPool with
+@@ -522,13 +526,12 @@
+           pool.source.head.authority == source.head.authority do
+         throw (IO.userError "foreign project read catalog pool")
+       pure pool
+-    | none => ReadCatalog.create source (hint.map (·.index))
+-  return {source,values,hint,cache,catalogs,state := ← IO.mkRef {position := ⟨0,by omega⟩},feedback := ← IO.mkRef none}
++    | none => ReadCatalog.create source (index.map (·.index))
++  return {source,values,cache,catalogs,state := ← IO.mkRef {position := ⟨0,by omega⟩},feedback := ← IO.mkRef none}
+ 
+ def runCursor (cursor : ReplayCursor) (deadline : Nat) (budget : StoredReadLookup.Budget) : IO Replay := do
+   let source := cursor.source
+   let values := cursor.values
+-  let hint := cursor.hint
+   let cache := cursor.cache
+   let catalogs := cursor.catalogs
+   let initial ← cursor.state.get
+@@ -548,7 +551,7 @@
+     if domain != value.clock.domain then
+       let projected ← IO.ofExcept (trace.locate locations)
+       let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+-      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache) (some catalogs) (some budget) (some cursor.feedback)
++      let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some catalogs) (some budget) (some cursor.feedback)
+       cursor.feedback.set none
+       usage := feedback.graph
+       result := {result with consumed := result.consumed ++ projected.graph.snapshot}
+@@ -610,9 +613,7 @@
+       -- Foreign private work can label usage of this DB's memory, but cannot
+       -- publish its terms or consumption edges into the shared DB lane.
+       trace := acceptPublishedOutput localId trace completed
+-      let prepared := if recorded.head.identity == source.head.identity then hint.map (·.index) else none
+-      let original := (ObservationContext.recorded recorded.head.identity doc).getD {}
+-      let catalog ← ContentMetadata.addFileCoordinates recorded id doc original prepared
++      let catalog ← observedCatalog recorded id doc
+       let located := ObservationContext.locationsUsing recorded.head.identity doc completed catalog
+       observedLocations := observedLocations.insert occurrence
+         ((ObservationContext.locateUsing recorded.head.identity doc observed catalog).flatMap (·.rows))
+@@ -654,7 +655,7 @@
+     cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}
+   let projected ← IO.ofExcept (trace.locate locations)
+   let privateTrace ← IO.ofExcept (observed.locate observedLocations)
+-  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline hint (some cache) (some catalogs) (some budget) (some cursor.feedback)
++  let feedback ← nativeFeedback source starts privateTrace.graph.snapshot usage deadline (some cache) (some catalogs) (some budget) (some cursor.feedback)
+   let completed := {result with
+     consumed := result.consumed ++ projected.graph.snapshot, usage := feedback.graph.snapshot
+     unknown := result.unknown+feedback.unknown,ambiguousNativeUses := result.ambiguousNativeUses+feedback.ambiguous}

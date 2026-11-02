@@ -1,0 +1,28 @@
+--- a/Eggshell/ContentMetadata.lean
++++ b/Eggshell/ContentMetadata.lean
+@@ -224,6 +224,17 @@
+   let some prepared := prepared | return captured
+   let some extra ← loadSupplement? prepared database id doc captured | return captured
+   return {captured with aliases := captured.aliases ++ extra.aliases}
++
++/-- Native correspondence headers/chunks are immutable source records.
++Historical consumers may use them without borrowing any later supplement. -/
++def publishedCoordinates (snapshot : PageMap.Snapshot) (id : Nat) (doc : Document)
++    (original : ObservationContext.Catalog) : IO ObservationContext.Catalog := do
++  let some parent ← load? snapshot id doc | return original
++  let captured ← IO.ofExcept (catalog snapshot.head.identity doc parent)
++  return {
++    original with
++    located := captured.located ++ original.located
++    quotations := captured.quotations ++ original.quotations}
+ 
+ /-- One background source catalog owns both literal records and already
+ validated file correspondences. No command parser or live file matching is
+@@ -232,6 +243,7 @@
+     (original : ObservationContext.Catalog)
+     (prepared : Option PageMap.Snapshot := none) (addition : Option ContentCapture.Supplement := none) :
+     IO ObservationContext.Catalog := do
++  if prepared.isNone && addition.isNone then return ← publishedCoordinates snapshot id doc original
+   let captured ← match ← load? snapshot id doc with
+     | none => pure ({} : ObservationContext.Catalog)
+     | some parent => do

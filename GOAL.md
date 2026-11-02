@@ -41,7 +41,11 @@ cursorは私有workerのprocess内だけに保持し、private journal/ACK/利�
 
 この部品を隔離候補の`Journal.storedReadsAt?`へ接続した。当時のsourceに確認できた保存範囲だけを利用ラベルへ渡し、最新の共有索引から古いReadを探してownerごとに原文catalogを再検証する経路を外した。16 MiBの旧locator cacheを、同じproject fileに固定した最大4 readerへ置き換えた。派生索引なしのnative再読でmissing labelが付き、ACK済み・未確認・指紋変更後には誤って付かない。実seed由来の89 owner/119 subject/34,534行も日誌の取得関数で全順序一致、全lookup 9,570 ms・単一subject最大2,449 ms、元DB不変。全体ContractAuditの古い参照も実際の呼出経路へ追従させ、原文取得の全owner復元への逆戻りを禁止した。[source-journal](docs/candidates/source-journal/README.md)。
 
-元seed全89操作の再生と全fact/status照合はまだ未実施。既存pre-sourceの投影債務も残る。次はpostの原文/ACK投影を不変入力へ固定し、閉じたturnのcheckpointを実event/原文/pre-read/ACK依存へ結び付け、無関係な出版で過去の再生が0になることを検査する。最新index identityを比較から落とすだけにはしない。全subjectのnative照会を実フック時間へ読み替えない。同じfileの全履歴を引かず必要行区間へ絞る索引、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用である。
+postの解釈を既存の不変native metadataへ固定し、後から作る共有indexのsupplementを使わない隔離候補を検査した。この変更後に最新read-view identityをcursorの検索条件から外し、同じsource/eventsで索引だけが更新された場合に生成1・再利用1を確認した。別write DBへの保存待ちを完了済みcursorが永久に隠す欠陥も修正し、読取DB側のauthorityを増やさずpending 1→0をnative検査した。全体ContractAuditは歴史上のPostからsupplement/index loaderへ戻る経路を禁止する。[frozen-post](docs/candidates/frozen-post/README.md)。
+
+同じ元seed全89操作/179 eventsを直前のsource-journal候補と今回の候補で再生し、全consumed/usage/consumers/originsと全statusが一致した。両方ともconsumed 1955、usage 31、unknown 57、pending 0、ambiguousNativeUses 1848で、原典・journal/index headは不変。再生本体は27625/27654 ms、検査process全体は34787/34863 msであり、フックの30秒達成や速度改善ではない。**古い参照のusage 228とは不一致で、再読ラベル197件が欠けている。** consumed全件と引用31ラベルは参照と一致するが、既存pre-sourceの投影債務を解消扱いにしない。
+
+次は最終配送時の不変ACK投影、実event/原文/pre-read/ACK依存による閉じたturnのcheckpointを接続し、無関係な出版で過去の再生0を検査する。現在のcheckpointは最新source/read-viewに依存したままである。既存snapshotの準備、同じfileの全履歴を引かず必要行区間へ絞る索引、writer外での並行準備、共有serviceのbudget/lease、80人の投入追従は残る。候補は製品未採用、モデル比較0/18である。
 
 比較用の履歴コピーにも不整合があった。`StudyHistory`は旧名`usage`だけを対象にし、実seed1の共通履歴から`usage-<classifier>`の51件が外れていた。元private dataには残っている。Leanの研究ハーネスを修正し、実UsageCacheと実seed1から、DB・権限・classifier・私有scopeを検証した完全なfact/head/fileを両armへ同一に渡すnative検査を通した。sealed controller/runtime・元seed・旧manifestは変更していない。共有ReadViewの再作成によるreplay無効化は別途残り、この修正だけで準備の遅延を解消したとは扱わない。[コード・実入力・保持中の100%配送版](docs/candidates/history-feedback/README.md)。
 

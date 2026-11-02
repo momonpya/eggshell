@@ -1,0 +1,15 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -415,6 +415,12 @@
+         #[``Eggshell.ProjectionCursor.catalogue]),
+       (``Eggshell.Persistence.Store.writeChange, #[``Eggshell.Persistence.Store.Change.sourceMarker], #[]),
+       (``Eggshell.Synapses.Journal.replay, #[``Eggshell.Synapses.Journal.nativeFeedback], #[]),
++      (``Eggshell.Synapses.Journal.runCursor, #[``Eggshell.Synapses.Journal.observedCatalog], #[]),
++      (``Eggshell.Synapses.Journal.observedCatalog,
++        #[``Eggshell.Synapses.ObservationContext.recorded, ``Eggshell.ContentMetadata.publishedCoordinates,
++          ``Eggshell.ContentMetadata.load?],
++        #[``Eggshell.ContentMetadata.addFileCoordinates, ``Eggshell.ContentMetadata.loadSupplement?,
++          ``Eggshell.ContentMetadata.catalogSupplement, ``Eggshell.Synapses.Index.open?]),
+       (``Eggshell.Synapses.Journal.storedReadsAt?,
+         #[``Eggshell.Synapses.SourceReadView.Reader.lookup, ``Eggshell.Synapses.Journal.originalAt?],
+         #[``Eggshell.Synapses.StoredReadEvidence.prepare, ``Eggshell.Synapses.Build.document,

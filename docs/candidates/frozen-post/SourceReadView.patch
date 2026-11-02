@@ -1,0 +1,12 @@
+--- a/Eggshell/SourceReadView.lean
++++ b/Eggshell/SourceReadView.lean
+@@ -44,7 +44,8 @@
+ 
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.source-read-view".toUTF8 [
+   (include_str "SourceReadView.lean").toUTF8,ObservedRecords.implementation.toUTF8,
+-  ContentCapture.implementation.toUTF8,(include_str "SynapseSource.lean").toUTF8])
++  ContentCapture.implementation.toUTF8,(include_str "SynapseSource.lean").toUTF8,
++  (include_str "ContentMetadata.lean").toUTF8])
+ 
+ structure Header where
+   database : String

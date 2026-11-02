@@ -1,0 +1,42 @@
+--- a/Eggshell/ReplayPreparation.lean
++++ b/Eggshell/ReplayPreparation.lean
+@@ -7,7 +7,6 @@
+ open Lean DB
+ 
+ structure Slot where
+-  view : String
+   cursor : Journal.ReplayCursor
+ 
+ structure State where
+@@ -35,11 +34,18 @@
+     unless index.manifest.scope == .shared && index.manifest.source.identity == source.head.identity &&
+         index.manifest.source.authority == source.head.authority do
+       throw (IO.userError "private replay locator crossed its source scope")
+-    let view ← UsageCache.readViewIdentity index
+     let state ← pool.state.get
+-    let existing := state.slots.findIdx? fun slot =>
+-      slot.cursor.source.directory == source.directory && slot.cursor.source.head == source.head &&
+-        slot.view == view && slot.cursor.values == entries
++    let mut existing := none
++    for ordinal in [:state.slots.size] do
++      let some slot := state.slots[ordinal]? | throw (IO.userError "private cursor slot disappeared")
++      unless slot.cursor.source.directory == source.directory && slot.cursor.source.head == source.head &&
++          slot.cursor.values == entries do continue
++      let progress ← slot.cursor.state.get
++      -- A foreign archive can be published while this read DB stays still.
++      -- A completed pending result is debt, never an immutable cache hit.
++      if progress.done && progress.result.pending > 0 then continue
++      existing := some ordinal
++      break
+     let cursor ← match existing with
+       | some ordinal => do
+         let some slot := state.slots[ordinal]? | throw (IO.userError "private cursor slot disappeared")
+@@ -53,7 +59,7 @@
+           let slots := if state.slots.size < pool.capacity then state.slots else
+             state.slots.extract 1 state.slots.size
+           pool.state.set {state with
+-            slots := slots.push ⟨view,cursor⟩,created := state.created+1
++            slots := slots.push ⟨cursor⟩,created := state.created+1
+             evicted := state.evicted+(if state.slots.size ≥ pool.capacity then 1 else 0)}
+         pure cursor
+     Journal.resumeReplay cursor deadline
