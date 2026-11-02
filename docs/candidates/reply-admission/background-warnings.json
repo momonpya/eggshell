@@ -1,0 +1,11 @@
+{
+  "source":"native stderr observed in the unified execution tool output",
+  "kind":"Eggshell retained queued work: timed out waiting for session state.guard",
+  "parentObservedCounts":[{"topic":1,"chats":[1,1]},{"topic":2,"chats":[3,1]},{"topic":3,"chats":[2,3]}],
+  "parentObservedTotal":11,
+  "candidateObservedCounts":[{"topic":1,"chats":[2,2]},{"topic":2,"chats":[3,2]},{"topic":3,"chats":[2,2]}],
+  "candidateObservedTotal":13,
+  "classification":"retained-queue background admission retries; remaining full-path lock contention, not evidence that original records were discarded",
+  "resolved":false,
+  "notClaim":"The ACK-only synthetic test did not establish that all full-hook state-lock contention was eliminated."
+}

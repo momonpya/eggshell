@@ -4,6 +4,7 @@ import tools.research.StudyCommand
 import tools.research.StudySource
 import tools.research.StudyProfile
 import tools.research.NativeTrialAudit
+import tools.research.ServiceQueryLoad
 
 open Lean Eggshell Eggshell.Research
 
@@ -25,6 +26,7 @@ structure Input where
   handoffChars : Nat
   repetitions : Nat
   topics : Array Topic
+  serviceLoad : Bool := false
   deriving ToJson,FromJson
 
 private def check (ok : Bool) (message : String) : IO Unit :=
@@ -158,6 +160,11 @@ private def run (input : Input) (inputPath : System.FilePath) : IO Unit := do
       ("EGGSHELL_DATA_ROOT",some (root / "data").toString),("TMPDIR",some (root / "tmp").toString),
       ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
   let publisher ← StudyRuntime.startPublisher (.mk input.runtime.path) (root / "data") environment
+  let observer ← try
+      if input.serviceLoad then some <$> ServiceQueryLoad.start else pure none
+    catch error =>
+      StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
+      throw error
   try
     let warm ← StudyCommand.run input.runtime.path #["egg","warm","work"] environment input.workspace "" (root / "warm") 240000
     check (warm.exitCode == 0) s!"explicit real-source warm failed: {warm.stderr}"
@@ -215,7 +222,11 @@ private def run (input : Input) (inputPath : System.FilePath) : IO Unit := do
     save (root / "result.json") (Json.mkObj [("cells",toJson results),("source",sealed),
       ("answeringModelCalls",toJson (0 : Nat)),("acceptedSeed",toJson false),
       ("firstCycleAndSecondCycleModelTrials",toJson false)])
-  finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
+    if let some observer := observer then observer.load root (input.topics.size*input.repetitions)
+  finally
+    try
+      if let some observer := observer then observer.stop
+    finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
 
 end RealDeliveryProbe
 

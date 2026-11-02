@@ -1,0 +1,20 @@
+{
+  "status":"isolated scheduling candidate; not adopted",
+  "parentRuntimeSha256":"d33a5d3c2ad7bb4c96aac61d111c26260f47835d4233b2a0795697fd561207e3",
+  "trigger":"Actual LLVM selector RPC load: all 40 complete; 61/80 complete at 80 clients, with reply/view admission expiry. Prepared source loads remain 1 and owner loads 30.",
+  "hypothesis":"The output byte reservation is held during selection computation even though that computation already owns a bounded read-view borrower, serializing independent resources.",
+  "change":"Acquire the existing output reservation after constructing the selector result, while still inside the charged read-view borrower; reserve before releasing the borrower and before encoding/sending bytes.",
+  "unchanged":["128 MiB read-view capacity", "8 maximum read views", "48 MiB large-output capacity", "64 MiB total-output capacity", "request bounds", "deadlines", "source/authority checks", "ranking", "selection", "delivery budgets", "vector model", "WorkGraph/e-class/Union/Exact", "synapse rules"],
+  "comparison":{
+    "source":"same original LLVM snapshot and source workspace as parent",
+    "model":"same MiniLM/encoder contract; no answering model",
+    "hooks":"topic 1/2/3, two independent initial chats each, unchanged frozen requirements",
+    "load":"same 1/4/16/40/80 simultaneous-client phases and 29 s request deadlines",
+    "required":"all candidate hook bodies, query hashes and exact choices match parent; record every failed request and every latency; all 80 should complete to pass this scheduling check",
+    "repetitionsPerLoadPhasePerArm":1,
+    "notStatistics":"sample maxima, not a population p99 or an eight-hour guarantee"
+  },
+  "resources":{"aggregateRssStopKiB":3670016,"absoluteRssCeilingKiB":4194304,"minFreeKiB":2097152},
+  "adoption":"Still requires the prescribed matched repeated total-token, quality and deadline comparisons; component throughput cannot adopt this change.",
+  "answeringModelCalls":0
+}

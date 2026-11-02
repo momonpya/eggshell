@@ -1,0 +1,47 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -363,7 +363,8 @@
+   if (← IO.getEnv "EGGSHELL_TRACE_SERVICE_PROFILE") == some "1" then
+     Receipt.observe (some (← Receipt.fresh)) stage (Json.mkObj fields)
+ 
+-def sourcePlan (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
++def sourcePlan (server : Server) (secret : String) (payload : Json) (deadline : Nat)
++    (reservedReply : IO.Ref Nat) : IO Json := do
+   let started ← IO.monoMsNow
+   let requests ← batchRequests server secret payload
+   let lease ← IO.ofExcept (payload.getObjValAs? String "lease")
+@@ -434,8 +435,15 @@
+       ("incomingRows",toJson rows.size),("sourceRows",toJson source.rows.size),
+       ("captureInput",toJson query.captureInput)]
+     unless (← IO.monoMsNow) < deadline do throw (IO.userError "prepared selector expired")
+-    return Json.mkObj [("identities",toJson (requests.map (·.access.identity))),
++    let result := Json.mkObj [("identities",toJson (requests.map (·.access.identity))),
+       ("lease",toJson lease),("choice",toJson choice)]
++    -- Computation already owns a charged, bounded read-view borrower. Acquire
++    -- the output reservation only when a result exists, before releasing
++    -- that borrower or encoding wire bytes. An expired waiter remains charged
++    -- until withView's finalizer releases its immutable source references.
++    reserveReply server Stream.maxBytes deadline
++    reservedReply.set Stream.maxBytes
++    return result
+ 
+ def sourceRecords (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
+   let scope ← scopedSource server secret payload
+@@ -707,7 +715,7 @@
+       else pure deadline
+     replyDeadline.set deadline
+     let replyCharge := if streamedRead then Stream.maxBytes else 65536
+-    if !["source-palette","source-palettes"].contains kind then
++    if !["source-palette","source-palettes","source-plan"].contains kind then
+       reserveReply server replyCharge deadline
+       reservedReply.set replyCharge
+     let profileDispatch ← IO.monoMsNow
+@@ -715,7 +723,7 @@
+       else if kind == "source-rows" then sourceRows server secret payload deadline
+       else if kind == "source-palettes" then sourcePalettes server secret payload deadline
+       else if kind == "source-fetch-many" then sourceFetchMany server secret payload deadline
+-      else if kind == "source-plan" then sourcePlan server secret payload deadline
++      else if kind == "source-plan" then sourcePlan server secret payload deadline reservedReply
+       else if kind == "source-release-many" then releasePalettes server secret payload
+       else if kind == "source-palette" then sourcePalette server secret payload deadline
+       else if kind == "source-fetch" then sourceFetch server secret payload deadline
