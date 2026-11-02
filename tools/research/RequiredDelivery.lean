@@ -54,15 +54,15 @@ def freeze (required : Array Requirement) (available : Array Range) : Except Str
   return ⟨units,absent⟩
 
 def reachesTarget (required delivered : Nat) : Bool :=
-  0 < required && delivered ≤ required && 19*required ≤ 20*delivered
+  0 < required && delivered ≤ required && 49*required ≤ 50*delivered
 
 theorem target_has_nonempty_denominator (required delivered : Nat)
     (met : reachesTarget required delivered = true) : 0 < required ∧ delivered ≤ required := by
   simp only [reachesTarget, Bool.and_eq_true, decide_eq_true_eq] at met
   exact met.1
 
-theorem one_miss_requires_twenty (required : Nat) (positive : 0 < required) :
-    reachesTarget required (required-1) = true ↔ 20 ≤ required := by
+theorem one_miss_requires_fifty (required : Nat) (positive : 0 < required) :
+    reachesTarget required (required-1) = true ↔ 50 ≤ required := by
   simp only [reachesTarget, Bool.and_eq_true, decide_eq_true_eq]
   omega
 
@@ -71,7 +71,7 @@ structure Result where
   delivered : Nat
   missing : Array (Array String)
   initiallyUnavailable : Array String
-  targetPercent : Nat := 95
+  targetPercent : Nat := 98
   targetMet : Bool
   deriving ToJson, FromJson
 

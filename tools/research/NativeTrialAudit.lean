@@ -36,6 +36,27 @@ private def check (condition : Bool) (message : String) : IO Unit :=
 private def readJson (path : String) : IO Json := do
   IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path)))
 
+/-- Independently decode the saved literal interval, using its representation,
+not the content matcher. Empty line intervals can contain only their separator.
+Nonempty lines must have exactly the claimed number of source characters. -/
+def literalFileLine (projection : ObservedRecords.Projection) (chars : Nat)
+    (original expected : String) : Bool :=
+  let decoded := match projection with
+    | .raw | .rawLine => some original
+    | .string =>
+        (Json.parse (if chars == 0 then original else "\"" ++ original ++ "\"") >>= Json.getStr?).toOption
+    | .stringBody | .stringBodyLine =>
+        (Json.parse ("\"" ++ original ++ "\"") >>= Json.getStr?).toOption
+  if chars == 0 then
+    expected.isEmpty && decoded.any (fun text => text == "" ||
+      ((projection == .rawLine || projection == .stringBodyLine) && text == "\n"))
+  else chars == expected.length && decoded == some expected
+
+theorem empty_alias_rejects_nonempty (projection : ObservedRecords.Projection)
+    (original expected : String) (notEmpty : expected.isEmpty = false) :
+    literalFileLine projection 0 original expected = false := by
+  simp [literalFileLine,notEmpty]
+
 private def originals (source : DB.PageMap.Snapshot) (workspace : System.FilePath) :
     IO (Array Extraction.Document × Array Read) := do
   let reader ← Persistence.Store.NodeReader.new source
@@ -52,7 +73,8 @@ private def originals (source : DB.PageMap.Snapshot) (workspace : System.FilePat
       -- The product's saved coordinates are not the oracle. Re-read and hash
       -- the reference image, then compare the actual original slice with its
       -- claimed file line independently of the capture matcher.
-      for located in catalog.located do
+      check (catalog.located.size == captured.aliases.size) "saved alias catalogue changed its extent"
+      for (located,alias) in catalog.located.zip captured.aliases do
         let row := located.read
         let some file := row.source.file? | throw (IO.userError "file alias has no file")
         let image ← match images[file]? with
@@ -64,9 +86,8 @@ private def originals (source : DB.PageMap.Snapshot) (workspace : System.FilePat
         let lines := (image.text.splitOn "\n").toArray
         let some expected := lines[row.source.first-1]? | throw (IO.userError "file alias exceeds reference image")
         let original := String.ofList (characters.extract row.binding.first row.binding.limit).toList
-        let decoded := (Json.parse ("\"" ++ original ++ "\"") >>= Json.getStr?).toOption
-        check (row.source.first == row.source.last && (original == expected || decoded == some expected))
-          "saved file alias differs from independent reference bytes"
+        check (row.source.first == row.source.last && literalFileLine alias.spelling.projection alias.chars original expected)
+          s!"saved file alias differs from independent reference bytes: {file.relative}:{row.source.first}-{row.source.last}; owner={doc.owner}; binding={row.binding.first}-{row.binding.limit}; original={(toJson original).compress}; expected={(toJson expected).compress}"
         rows := rows.push row
       let files := captured.inputs.filterMap fun input => input.content.map fun content =>
         (⟨input.relative,content.root,content.bytes⟩ : File)

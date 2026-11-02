@@ -66,16 +66,16 @@ def freeze (required : Array RequiredDelivery.Requirement) (observed : Array Ran
   return ⟨units,absent⟩
 
 def reachesTarget (required delivered : Nat) : Bool :=
-  0 < required && delivered ≤ required && 98*required ≤ 100*delivered
+  RequiredDelivery.reachesTarget required delivered
 
 theorem target_has_evidence (required delivered : Nat) (met : reachesTarget required delivered = true) :
     0 < required ∧ delivered ≤ required := by
-  simp only [reachesTarget,Bool.and_eq_true,decide_eq_true_eq] at met
+  simp only [reachesTarget,RequiredDelivery.reachesTarget,Bool.and_eq_true,decide_eq_true_eq] at met
   exact met.1
 
 theorem one_miss_requires_fifty (required : Nat) (positive : 0 < required) :
     reachesTarget required (required-1) = true ↔ 50 ≤ required := by
-  simp only [reachesTarget,Bool.and_eq_true,decide_eq_true_eq]
+  simp only [reachesTarget,RequiredDelivery.reachesTarget,Bool.and_eq_true,decide_eq_true_eq]
   omega
 
 structure Result where

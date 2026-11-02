@@ -15,8 +15,10 @@ private def identities : IO Unit := do
   let required := ranges.zipIdx |>.map fun (source,index) => ({name := toString index,alternatives := #[source]} : Requirement)
   let frozen ← IO.ofExcept (freeze required ranges)
   check (frozen.units.size == 20 && frozen.initiallyUnavailable.isEmpty) "mixed required evidence was not frozen"
-  check ((assess frozen (ranges.extract 0 19)).targetMet &&
-    !(assess frozen (ranges.extract 0 18)).targetMet) "95 percent boundary was rounded or treated as 90 percent"
+  check ((assess frozen ranges).targetMet &&
+    !(assess frozen (ranges.extract 0 19)).targetMet) "98 percent boundary accepted 95 percent"
+  for (required,delivered,expected) in [(49,48,false),(50,49,true),(50,48,false),(100,98,true),(100,97,false)] do
+    check (reachesTarget required delivered == expected) "98 percent arithmetic boundary differs"
   let duplicated ← IO.ofExcept (freeze (required.push ⟨"alias",#[ranges[0]!]⟩) ranges)
   check (duplicated.units.size == 20) "duplicate evidence inflated the denominator"
   let overlap := {ranges[0]! with first := 2}
@@ -55,13 +57,30 @@ private def actualBytes : IO Unit := do
     check ((assess frozen shown.ranges).delivered == 0 && !(assess frozen shown.ranges).targetMet)
       "unattributed prose, a locator or altered bytes passed original delivery verification"
 
+private def literalLines : IO Unit := do
+  let cases : Array (ObservedRecords.Projection × Nat × String × String × Bool) := #[
+    (.rawLine,0,"\n","",true),(.stringBodyLine,0,"\\n","",true),
+    (.string,0,"\"\"","",true),(.stringBody,0,"","",true),
+    (.rawLine,0,"x","",false),(.stringBodyLine,0,"x","",false),
+    (.stringBodyLine,0,"\\n","x",false),(.stringBody,0,"\\n","",false),
+    (.raw,0,"\n","",false),(.rawLine,0,"\n\n","",false),
+    (.rawLine,2,"\\n","\\n",true),(.rawLine,2,"\\n","\n",false),
+    (.stringBodyLine,2,"\\\\n","\\n",true),(.stringBodyLine,1,"\\n","\n",true),
+    (.stringBodyLine,2,"\\n","\n",false),(.rawLine,2," x"," x",true),
+    (.rawLine,1," x","x",false),(.string,1,"\\t","\t",true)]
+  for (projection,chars,original,expected,accepted) in cases do
+    check (NativeTrialAudit.literalFileLine projection chars original expected == accepted)
+      "saved original line interpretation erased text, changed representation or confused a separator with source content"
+
 def main : IO UInt32 := do
   try
     identities
     actualBytes
+    literalLines
     IO.println (Json.mkObj [("arithmeticBoundary",toJson true),("mixedImmutableSubjects",toJson true),
       ("duplicateAndOverlapProtection",toJson true),("frozenDenominator",toJson true),
       ("actualJsonEvidenceItems",toJson (20 : Nat)),("unattributedOrAlteredDeliveryRejected",toJson true),
+      ("originalLineRepresentationChecks",toJson (18 : Nat)),
       ("answeringModelCalls",toJson (0 : Nat)),("productionRecallMeasured",toJson false)]).compress
     return 0
   catch error => IO.eprintln error.toString; return 1

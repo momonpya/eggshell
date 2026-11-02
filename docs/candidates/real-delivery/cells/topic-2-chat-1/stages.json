@@ -1,0 +1,526 @@
+{
+  "id": "b898318a3fc32ec7084ebe5c5cb990dba90ab623dcd91ae9a586d2e7e5e82b97",
+  "stdoutSha256": "c894f1435b4442ae19c7f6094e8cebe48f43ede540b2843617a502f483a11944",
+  "bytes": 547831,
+  "stages": [
+    {
+      "name": "request.json",
+      "stage": "request",
+      "observedMs": 3495471842,
+      "data": {
+        "turn": "first",
+        "session": "real-topic-2-chat-1",
+        "inputMs": 2,
+        "inputBytes": 1184,
+        "event": "UserPromptSubmit"
+      }
+    },
+    {
+      "name": "numerical-37938-3495474587781541.json",
+      "stage": "numerical-37938-3495474587781541",
+      "observedMs": 3495475375,
+      "data": {
+        "status": "completed",
+        "elapsedMs": 788,
+        "counters": {
+          "sourceInput": {
+            "windows": 1933,
+            "visibleCharacters": 822153,
+            "vectors": 4329,
+            "tokens": 418788,
+            "tokenizerMappedCharacters": 822153,
+            "embeddedCharacters": 822153,
+            "characters": 975509
+          },
+          "source": {
+            "unusable": 0,
+            "hit": 1933,
+            "absent": 0
+          },
+          "scoringPolicy": "window centroid weighted by newly covered source tokens",
+          "scoredWindows": 1933,
+          "scoreMs": 781,
+          "queryMs": 3,
+          "queryInput": {
+            "windows": 3,
+            "visibleCharacters": 933,
+            "vectors": 4,
+            "tokens": 280,
+            "tokenizerMappedCharacters": 933,
+            "embeddedCharacters": 933,
+            "characters": 1080
+          },
+          "query": {
+            "unusable": 0,
+            "hit": 3,
+            "absent": 0
+          },
+          "projectionRetainedBytes": 5938176,
+          "projectionReadMsWithinScore": 646,
+          "projectionMisses": 1933,
+          "projectionHits": 0,
+          "phase": "encoder-reply",
+          "matrixRows": 1933,
+          "matrixOpens": 0,
+          "matrixOpenMs": 0,
+          "encoder": {
+            "startupUs": 27470,
+            "sourceEncodeUs": 0,
+            "scoreUs": 1999,
+            "requestUs": 5714,
+            "replies": 8,
+            "queryEncodeUs": 0,
+            "modelLoaded": false,
+            "leaseUs": 0,
+            "initializeUs": 0
+          },
+          "cacheMs": 1
+        },
+        "corpus": {
+          "windowReferences": 1933,
+          "purpose": "keyed-discovery",
+          "numerical": true,
+          "durableDocuments": 40,
+          "documents": 40
+        }
+      }
+    },
+    {
+      "name": "ack.json",
+      "stage": "ack",
+      "observedMs": 3495486550,
+      "data": {
+        "rpcCompleted": true,
+        "offerAccepted": true
+      }
+    },
+    {
+      "name": "lexical-consumed-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e.json",
+      "stage": "lexical-consumed-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+      "observedMs": 3495474586,
+      "data": {
+        "source": {
+          "root": {
+            "rows": 195942,
+            "offset": 98194911,
+            "last": "workSurfaces:98:0",
+            "height": 4,
+            "first": "all:0",
+            "checksum": "ca7d96d7f40d5a6cc52151dc9e1f93bbe45a52f004bf87e3207576cae0564eb2",
+            "bytes": 3689
+          },
+          "revision": 43,
+          "identity": "2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+          "bytes": 98198600,
+          "authority": "[\"atom\",[110,101,119,45,110,97,116,105,118,101,45,115,101,101,100,45,49]]"
+        },
+        "originalOwnerChecks": 9,
+        "documents": 9,
+        "advisoryOnly": true
+      }
+    },
+    {
+      "name": "canonical-source-reuse.json",
+      "stage": "canonical-source-reuse",
+      "observedMs": 3495478290,
+      "data": {
+        "items": 2
+      }
+    },
+    {
+      "name": "search.json",
+      "stage": "search",
+      "observedMs": 3495484245,
+      "data": {
+        "turn": "first",
+        "trace": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 12038,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "semanticReadyMs": 3495475408,
+        "semanticFinishDeadlineMs": 3495500233,
+        "semanticDeadlineMs": 3495486039,
+        "searchStartedMs": 3495471846,
+        "reason": "selected=8 visible=8 new-roots=9 completed=0 advisory=38 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=mixed",
+        "localUnions": 0,
+        "initialSearch": true,
+        "finishReadyWithinHook": true,
+        "equalityOrigin": null,
+        "epoch": 1,
+        "disposition": "offered",
+        "deadlineMs": 3495500233,
+        "completed": 0
+      }
+    },
+    {
+      "name": "keyed-request.json",
+      "stage": "keyed-request",
+      "observedMs": 3495472241,
+      "data": {
+        "sources": 1,
+        "requestBytes": 1603,
+        "allDocumentMetadataTransferred": false
+      }
+    },
+    {
+      "name": "discovery-counters-3495475436578791.json",
+      "stage": "discovery-counters-3495475436578791",
+      "observedMs": 3495475436,
+      "data": {
+        "scope": "overlapping counters; do not sum admission with nested frequency IO",
+        "graphOutcomes": 16,
+        "counters": {
+          "work-class-owners": {
+            "nanos": 26250,
+            "calls": 1
+          },
+          "owner": {
+            "nanos": 24341625,
+            "calls": 16
+          },
+          "ordinal": {
+            "nanos": 114916,
+            "calls": 16
+          }
+        },
+        "complete": true
+      }
+    },
+    {
+      "name": "keyed-coverage.json",
+      "stage": "keyed-coverage",
+      "observedMs": 3495475377,
+      "data": {
+        "items": 1
+      }
+    },
+    {
+      "name": "ingress.json",
+      "stage": "ingress",
+      "observedMs": 3495471841,
+      "data": {
+        "deadlineMs": 3495500483
+      }
+    },
+    {
+      "name": "dispatch.json",
+      "stage": "dispatch",
+      "observedMs": 3495484251,
+      "data": {
+        "error": null,
+        "elapsedMs": 12407,
+        "completed": true
+      }
+    },
+    {
+      "name": "synaptic-delivery.json",
+      "stage": "synaptic-delivery",
+      "observedMs": 3495483356,
+      "data": {
+        "unverifiedParts": {
+          "items": 1
+        },
+        "sharedRows": {
+          "items": 11416
+        },
+        "packetVerified": true,
+        "originalPieces": {
+          "items": 647
+        },
+        "observationAges": {
+          "items": 38
+        },
+        "localUnions": 0,
+        "inputs": {
+          "items": 1
+        },
+        "fullCandidateAudit": false,
+        "completed": 0,
+        "complete": true,
+        "bodySha256": "b71e263bdee0648ab376b1af8df1ba7eac8e4348c02de390f23bd7f69966c614",
+        "bodyChars": 494570,
+        "bodyBytes": 494584,
+        "bindingUnresolved": 7,
+        "bindingRequests": 960,
+        "bindingBytes": 514242,
+        "advisory": 38
+      }
+    },
+    {
+      "name": "freshness-3495483618772791.json",
+      "stage": "freshness-3495483618772791",
+      "observedMs": 3495483620,
+      "data": {
+        "workspace": "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project",
+        "verificationDeadlineMs": 3495491871,
+        "sourceUses": {
+          "items": 38
+        },
+        "sourceRecords": {
+          "items": 25
+        },
+        "remainingForDeliveryMs": 16615,
+        "observation": {
+          "startedMs": 3495483509,
+          "records": {
+            "items": 25
+          },
+          "finishedMs": 3495483618,
+          "files": {
+            "items": 31
+          },
+          "elapsedMs": 109,
+          "deadlineMs": 3495491871
+        },
+        "hookDeadlineMs": 3495500233,
+        "completedBefore": 0,
+        "completedAfter": 0
+      }
+    },
+    {
+      "name": "transport.json",
+      "stage": "transport",
+      "observedMs": 3495484257,
+      "data": {
+        "rpcMs": 12413,
+        "managerMs": 1,
+        "captureMs": 0
+      }
+    },
+    {
+      "name": "delivery-domain.json",
+      "stage": "delivery-domain",
+      "observedMs": 3495478307,
+      "data": {
+        "synapticComplete": true,
+        "nominated": {
+          "items": 8
+        },
+        "hydrated": {
+          "items": 40
+        },
+        "focusRanking": {
+          "items": 40
+        },
+        "focusPositions": {
+          "items": 40
+        },
+        "canonicalUsed": {
+          "items": 31
+        }
+      }
+    },
+    {
+      "name": "selection-plan.json",
+      "stage": "selection-plan",
+      "observedMs": 3495483356,
+      "data": {
+        "selected": {
+          "items": 3704
+        },
+        "scale": {
+          "largeNumberOmitted": true
+        },
+        "requiredSourceRows": 6075,
+        "limit": {
+          "items": 2
+        },
+        "jointBindings": {
+          "uncoveredSources": 31,
+          "sources": 1514,
+          "sourceDomainAudit": null,
+          "selectedBundles": 289,
+          "projectedBundles": 2569,
+          "preparedBundles": 2499,
+          "fragmentedAlternatives": 4
+        },
+        "fullCandidateAudit": false,
+        "fixedCost": {
+          "items": 2
+        },
+        "families": 40,
+        "candidateUnits": 9554
+      }
+    },
+    {
+      "name": "keyed-nominations.json",
+      "stage": "keyed-nominations",
+      "observedMs": 3495475393,
+      "data": {
+        "related": 8,
+        "ranked": 40,
+        "coverage": {
+          "items": 1
+        },
+        "authority": "advisory-only"
+      }
+    },
+    {
+      "name": "keyed-partition-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e.json",
+      "stage": "keyed-partition-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+      "observedMs": 3495474548,
+      "data": {
+        "unseenVectorKeys": 0,
+        "totalCells": 64,
+        "storage": "user",
+        "source": {
+          "root": {
+            "rows": 195942,
+            "offset": 98194911,
+            "last": "workSurfaces:98:0",
+            "height": 4,
+            "first": "all:0",
+            "checksum": "ca7d96d7f40d5a6cc52151dc9e1f93bbe45a52f004bf87e3207576cae0564eb2",
+            "bytes": 3689
+          },
+          "revision": 43,
+          "identity": "2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+          "bytes": 98198600,
+          "authority": "[\"atom\",[110,101,119,45,110,97,116,105,118,101,45,115,101,101,100,45,49]]"
+        },
+        "safeFloatPruning": false,
+        "postingRows": 1933,
+        "postingAllowance": 8192,
+        "partialCell": false,
+        "keys": 1933,
+        "keyAllowance": 4096,
+        "elapsedMs": 55,
+        "cells": 64,
+        "basis": {
+          "width": 384,
+          "source": {
+            "root": {
+              "keys": [
+                "bytes",
+                "checksum",
+                "first",
+                "height",
+                "last",
+                "offset",
+                "rows"
+              ]
+            },
+            "revision": 43,
+            "identity": "2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+            "bytes": 98198600,
+            "authority": "[\"atom\",[110,101,119,45,110,97,116,105,118,101,45,115,101,101,100,45,49]]"
+          },
+          "rows": 1933,
+          "matrix": {
+            "root": {
+              "keys": [
+                "bytes",
+                "checksum",
+                "first",
+                "height",
+                "last",
+                "offset",
+                "rows"
+              ]
+            },
+            "revision": 1,
+            "identity": "c52dd39201b8c798354f1c4457ad397387745aaee8237cec9d7f395dc751e7ae",
+            "bytes": 6799868,
+            "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+          },
+          "eligibility": "a89bc038d41f2e6b27b0ae92237500bd0c36224967da54ea06c1e3f72f1a3ab2"
+        }
+      }
+    },
+    {
+      "name": "lexical-advice-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e.json",
+      "stage": "lexical-advice-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+      "observedMs": 3495474492,
+      "data": {
+        "postingRows": 680,
+        "owners": 38,
+        "originalOwnerChecks": 0,
+        "elapsedMs": 79,
+        "completePostingCounts": true,
+        "authority": "advisory-only"
+      }
+    },
+    {
+      "name": "canonical-source-input.json",
+      "stage": "canonical-source-input",
+      "observedMs": 3495478290,
+      "data": {
+        "items": 1
+      }
+    },
+    {
+      "name": "numerical-37971-3495475946024000.json",
+      "stage": "numerical-37971-3495475946024000",
+      "observedMs": 3495476506,
+      "data": {
+        "status": "completed",
+        "elapsedMs": 560,
+        "counters": {
+          "sourceInput": {
+            "windows": 1933,
+            "visibleCharacters": 810793,
+            "vectors": 4275,
+            "tokens": 412757,
+            "tokenizerMappedCharacters": 810793,
+            "embeddedCharacters": 810793,
+            "characters": 963201
+          },
+          "source": {
+            "unusable": 0,
+            "hit": 1933,
+            "absent": 0
+          },
+          "scoringPolicy": "window centroid weighted by newly covered source tokens",
+          "scoredWindows": 1933,
+          "scoreMs": 123,
+          "queryMs": 428,
+          "queryInput": {
+            "windows": 2,
+            "visibleCharacters": 535,
+            "vectors": 3,
+            "tokens": 154,
+            "tokenizerMappedCharacters": 535,
+            "embeddedCharacters": 535,
+            "characters": 620
+          },
+          "query": {
+            "unusable": 0,
+            "hit": 0,
+            "absent": 2
+          },
+          "projectionRetainedBytes": 6073344,
+          "projectionReadMsWithinScore": 38,
+          "projectionMisses": 44,
+          "projectionHits": 1889,
+          "phase": "encoder-reply",
+          "matrixRows": 1933,
+          "matrixOpens": 0,
+          "matrixOpenMs": 0,
+          "encoder": {
+            "startupUs": 0,
+            "sourceEncodeUs": 0,
+            "scoreUs": 1464,
+            "requestUs": 46873,
+            "replies": 9,
+            "queryEncodeUs": 42122,
+            "modelLoaded": true,
+            "leaseUs": 0,
+            "initializeUs": 0
+          },
+          "cacheMs": 0
+        },
+        "corpus": {
+          "windowReferences": 1933,
+          "purpose": "focus",
+          "numerical": true,
+          "durableDocuments": 40,
+          "documents": 40
+        }
+      }
+    }
+  ]
+}

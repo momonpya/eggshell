@@ -1,0 +1,526 @@
+{
+  "id": "705658aeb18bb0a0550d884387bdb1faacb83f06caebecfa08f0b95ba26b0655",
+  "stdoutSha256": "ebf8e18f77b2f5c43693bb6fe52f3a6e52662a163888678a3efb4979211e8dff",
+  "bytes": 547961,
+  "stages": [
+    {
+      "name": "request.json",
+      "stage": "request",
+      "observedMs": 3495408698,
+      "data": {
+        "turn": "first",
+        "session": "real-topic-1-chat-1",
+        "inputMs": 1,
+        "inputBytes": 1225,
+        "event": "UserPromptSubmit"
+      }
+    },
+    {
+      "name": "numerical-34534-3495411498315208.json",
+      "stage": "numerical-34534-3495411498315208",
+      "observedMs": 3495412300,
+      "data": {
+        "status": "completed",
+        "elapsedMs": 802,
+        "counters": {
+          "sourceInput": {
+            "windows": 1933,
+            "visibleCharacters": 822153,
+            "vectors": 4329,
+            "tokens": 418788,
+            "tokenizerMappedCharacters": 822153,
+            "embeddedCharacters": 822153,
+            "characters": 975509
+          },
+          "source": {
+            "unusable": 0,
+            "hit": 1933,
+            "absent": 0
+          },
+          "scoringPolicy": "window centroid weighted by newly covered source tokens",
+          "scoredWindows": 1933,
+          "scoreMs": 796,
+          "queryMs": 3,
+          "queryInput": {
+            "windows": 3,
+            "visibleCharacters": 986,
+            "vectors": 4,
+            "tokens": 279,
+            "tokenizerMappedCharacters": 986,
+            "embeddedCharacters": 986,
+            "characters": 1157
+          },
+          "query": {
+            "unusable": 0,
+            "hit": 3,
+            "absent": 0
+          },
+          "projectionRetainedBytes": 5938176,
+          "projectionReadMsWithinScore": 655,
+          "projectionMisses": 1933,
+          "projectionHits": 0,
+          "phase": "encoder-reply",
+          "matrixRows": 1933,
+          "matrixOpens": 0,
+          "matrixOpenMs": 0,
+          "encoder": {
+            "startupUs": 28181,
+            "sourceEncodeUs": 0,
+            "scoreUs": 2091,
+            "requestUs": 6194,
+            "replies": 8,
+            "queryEncodeUs": 0,
+            "modelLoaded": false,
+            "leaseUs": 0,
+            "initializeUs": 0
+          },
+          "cacheMs": 0
+        },
+        "corpus": {
+          "windowReferences": 1933,
+          "purpose": "keyed-discovery",
+          "numerical": true,
+          "durableDocuments": 40,
+          "documents": 40
+        }
+      }
+    },
+    {
+      "name": "ack.json",
+      "stage": "ack",
+      "observedMs": 3495422697,
+      "data": {
+        "rpcCompleted": true,
+        "offerAccepted": true
+      }
+    },
+    {
+      "name": "lexical-consumed-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e.json",
+      "stage": "lexical-consumed-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+      "observedMs": 3495411496,
+      "data": {
+        "source": {
+          "root": {
+            "rows": 195942,
+            "offset": 98194911,
+            "last": "workSurfaces:98:0",
+            "height": 4,
+            "first": "all:0",
+            "checksum": "ca7d96d7f40d5a6cc52151dc9e1f93bbe45a52f004bf87e3207576cae0564eb2",
+            "bytes": 3689
+          },
+          "revision": 43,
+          "identity": "2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+          "bytes": 98198600,
+          "authority": "[\"atom\",[110,101,119,45,110,97,116,105,118,101,45,115,101,101,100,45,49]]"
+        },
+        "originalOwnerChecks": 8,
+        "documents": 8,
+        "advisoryOnly": true
+      }
+    },
+    {
+      "name": "canonical-source-reuse.json",
+      "stage": "canonical-source-reuse",
+      "observedMs": 3495414773,
+      "data": {
+        "items": 2
+      }
+    },
+    {
+      "name": "search.json",
+      "stage": "search",
+      "observedMs": 3495420481,
+      "data": {
+        "turn": "first",
+        "trace": {
+          "warmRequests": 0,
+          "warmMs": 0,
+          "semanticMs": 11490,
+          "semantic": "completed",
+          "route": "configured",
+          "lexicalMs": 0
+        },
+        "semanticReadyMs": 3495412330,
+        "semanticFinishDeadlineMs": 3495437079,
+        "semanticDeadlineMs": 3495422890,
+        "searchStartedMs": 3495408702,
+        "reason": "selected=8 visible=8 new-roots=9 completed=0 advisory=38 local-unions=0 saturation-passes=0 covered-fragments=0 blocks-current=false sources=mixed",
+        "localUnions": 0,
+        "initialSearch": true,
+        "finishReadyWithinHook": true,
+        "equalityOrigin": null,
+        "epoch": 1,
+        "disposition": "offered",
+        "deadlineMs": 3495437079,
+        "completed": 0
+      }
+    },
+    {
+      "name": "keyed-request.json",
+      "stage": "keyed-request",
+      "observedMs": 3495409099,
+      "data": {
+        "sources": 1,
+        "requestBytes": 1644,
+        "allDocumentMetadataTransferred": false
+      }
+    },
+    {
+      "name": "numerical-35558-3495412878901458.json",
+      "stage": "numerical-35558-3495412878901458",
+      "observedMs": 3495413428,
+      "data": {
+        "status": "completed",
+        "elapsedMs": 550,
+        "counters": {
+          "sourceInput": {
+            "windows": 1933,
+            "visibleCharacters": 810793,
+            "vectors": 4275,
+            "tokens": 412757,
+            "tokenizerMappedCharacters": 810793,
+            "embeddedCharacters": 810793,
+            "characters": 963201
+          },
+          "source": {
+            "unusable": 0,
+            "hit": 1933,
+            "absent": 0
+          },
+          "scoringPolicy": "window centroid weighted by newly covered source tokens",
+          "scoredWindows": 1933,
+          "scoreMs": 126,
+          "queryMs": 415,
+          "queryInput": {
+            "windows": 2,
+            "visibleCharacters": 568,
+            "vectors": 2,
+            "tokens": 151,
+            "tokenizerMappedCharacters": 568,
+            "embeddedCharacters": 568,
+            "characters": 671
+          },
+          "query": {
+            "unusable": 0,
+            "hit": 0,
+            "absent": 2
+          },
+          "projectionRetainedBytes": 6073344,
+          "projectionReadMsWithinScore": 38,
+          "projectionMisses": 44,
+          "projectionHits": 1889,
+          "phase": "encoder-reply",
+          "matrixRows": 1933,
+          "matrixOpens": 0,
+          "matrixOpenMs": 0,
+          "encoder": {
+            "startupUs": 0,
+            "sourceEncodeUs": 0,
+            "scoreUs": 1535,
+            "requestUs": 31420,
+            "replies": 9,
+            "queryEncodeUs": 26008,
+            "modelLoaded": true,
+            "leaseUs": 0,
+            "initializeUs": 0
+          },
+          "cacheMs": 0
+        },
+        "corpus": {
+          "windowReferences": 1933,
+          "purpose": "focus",
+          "numerical": true,
+          "durableDocuments": 40,
+          "documents": 40
+        }
+      }
+    },
+    {
+      "name": "keyed-coverage.json",
+      "stage": "keyed-coverage",
+      "observedMs": 3495412301,
+      "data": {
+        "items": 1
+      }
+    },
+    {
+      "name": "ingress.json",
+      "stage": "ingress",
+      "observedMs": 3495408697,
+      "data": {
+        "deadlineMs": 3495437329
+      }
+    },
+    {
+      "name": "dispatch.json",
+      "stage": "dispatch",
+      "observedMs": 3495420486,
+      "data": {
+        "error": null,
+        "elapsedMs": 11785,
+        "completed": true
+      }
+    },
+    {
+      "name": "discovery-counters-3495412359641666.json",
+      "stage": "discovery-counters-3495412359641666",
+      "observedMs": 3495412359,
+      "data": {
+        "scope": "overlapping counters; do not sum admission with nested frequency IO",
+        "graphOutcomes": 16,
+        "counters": {
+          "work-class-owners": {
+            "nanos": 28167,
+            "calls": 1
+          },
+          "owner": {
+            "nanos": 25812500,
+            "calls": 16
+          },
+          "ordinal": {
+            "nanos": 116003,
+            "calls": 16
+          }
+        },
+        "complete": true
+      }
+    },
+    {
+      "name": "synaptic-delivery.json",
+      "stage": "synaptic-delivery",
+      "observedMs": 3495419662,
+      "data": {
+        "unverifiedParts": {
+          "items": 1
+        },
+        "sharedRows": {
+          "items": 11426
+        },
+        "packetVerified": true,
+        "originalPieces": {
+          "items": 629
+        },
+        "observationAges": {
+          "items": 2
+        },
+        "localUnions": 0,
+        "inputs": {
+          "items": 1
+        },
+        "fullCandidateAudit": false,
+        "completed": 0,
+        "complete": true,
+        "bodySha256": "5f6380d051bf5e737088a1b94127ec4c3f537e0fab6e5bb9908654848bdf73cd",
+        "bodyChars": 494568,
+        "bodyBytes": 494574,
+        "bindingUnresolved": 0,
+        "bindingRequests": 0,
+        "bindingBytes": 0,
+        "advisory": 38
+      }
+    },
+    {
+      "name": "transport.json",
+      "stage": "transport",
+      "observedMs": 3495420493,
+      "data": {
+        "rpcMs": 11794,
+        "managerMs": 1,
+        "captureMs": 0
+      }
+    },
+    {
+      "name": "delivery-domain.json",
+      "stage": "delivery-domain",
+      "observedMs": 3495414775,
+      "data": {
+        "synapticComplete": true,
+        "nominated": {
+          "items": 8
+        },
+        "hydrated": {
+          "items": 40
+        },
+        "focusRanking": {
+          "items": 40
+        },
+        "focusPositions": {
+          "items": 40
+        },
+        "canonicalUsed": {
+          "items": 31
+        }
+      }
+    },
+    {
+      "name": "selection-plan.json",
+      "stage": "selection-plan",
+      "observedMs": 3495419661,
+      "data": {
+        "selected": {
+          "items": 3705
+        },
+        "scale": {
+          "largeNumberOmitted": true
+        },
+        "requiredSourceRows": 6094,
+        "limit": {
+          "items": 2
+        },
+        "jointBindings": {
+          "uncoveredSources": 3,
+          "sources": 12,
+          "sourceDomainAudit": null,
+          "selectedBundles": 4,
+          "projectedBundles": 29,
+          "preparedBundles": 20,
+          "fragmentedAlternatives": 0
+        },
+        "fullCandidateAudit": false,
+        "fixedCost": {
+          "items": 2
+        },
+        "families": 40,
+        "candidateUnits": 8544
+      }
+    },
+    {
+      "name": "keyed-nominations.json",
+      "stage": "keyed-nominations",
+      "observedMs": 3495412316,
+      "data": {
+        "related": 8,
+        "ranked": 40,
+        "coverage": {
+          "items": 1
+        },
+        "authority": "advisory-only"
+      }
+    },
+    {
+      "name": "keyed-partition-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e.json",
+      "stage": "keyed-partition-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+      "observedMs": 3495411457,
+      "data": {
+        "unseenVectorKeys": 0,
+        "totalCells": 64,
+        "storage": "user",
+        "source": {
+          "root": {
+            "rows": 195942,
+            "offset": 98194911,
+            "last": "workSurfaces:98:0",
+            "height": 4,
+            "first": "all:0",
+            "checksum": "ca7d96d7f40d5a6cc52151dc9e1f93bbe45a52f004bf87e3207576cae0564eb2",
+            "bytes": 3689
+          },
+          "revision": 43,
+          "identity": "2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+          "bytes": 98198600,
+          "authority": "[\"atom\",[110,101,119,45,110,97,116,105,118,101,45,115,101,101,100,45,49]]"
+        },
+        "safeFloatPruning": false,
+        "postingRows": 1933,
+        "postingAllowance": 8192,
+        "partialCell": false,
+        "keys": 1933,
+        "keyAllowance": 4096,
+        "elapsedMs": 58,
+        "cells": 64,
+        "basis": {
+          "width": 384,
+          "source": {
+            "root": {
+              "keys": [
+                "bytes",
+                "checksum",
+                "first",
+                "height",
+                "last",
+                "offset",
+                "rows"
+              ]
+            },
+            "revision": 43,
+            "identity": "2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+            "bytes": 98198600,
+            "authority": "[\"atom\",[110,101,119,45,110,97,116,105,118,101,45,115,101,101,100,45,49]]"
+          },
+          "rows": 1933,
+          "matrix": {
+            "root": {
+              "keys": [
+                "bytes",
+                "checksum",
+                "first",
+                "height",
+                "last",
+                "offset",
+                "rows"
+              ]
+            },
+            "revision": 1,
+            "identity": "c52dd39201b8c798354f1c4457ad397387745aaee8237cec9d7f395dc751e7ae",
+            "bytes": 6799868,
+            "authority": "eggshell.projected-matrix:220f3ac2ec89b37ce9c27ccbb9c09d31c534ec225d9ea922dcf329dbefa26ddb"
+          },
+          "eligibility": "a89bc038d41f2e6b27b0ae92237500bd0c36224967da54ea06c1e3f72f1a3ab2"
+        }
+      }
+    },
+    {
+      "name": "lexical-advice-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e.json",
+      "stage": "lexical-advice-2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e",
+      "observedMs": 3495411399,
+      "data": {
+        "postingRows": 749,
+        "owners": 40,
+        "originalOwnerChecks": 0,
+        "elapsedMs": 84,
+        "completePostingCounts": true,
+        "authority": "advisory-only"
+      }
+    },
+    {
+      "name": "canonical-source-input.json",
+      "stage": "canonical-source-input",
+      "observedMs": 3495414773,
+      "data": {
+        "items": 1
+      }
+    },
+    {
+      "name": "freshness-3495419936197166.json",
+      "stage": "freshness-3495419936197166",
+      "observedMs": 3495419938,
+      "data": {
+        "workspace": "/Users/ovm/Code/eggshell-benchmarks/aamas-2027/sources/llvm-project",
+        "verificationDeadlineMs": 3495428452,
+        "sourceUses": {
+          "items": 38
+        },
+        "sourceRecords": {
+          "items": 25
+        },
+        "remainingForDeliveryMs": 17143,
+        "observation": {
+          "startedMs": 3495419825,
+          "records": {
+            "items": 25
+          },
+          "finishedMs": 3495419936,
+          "files": {
+            "items": 31
+          },
+          "elapsedMs": 111,
+          "deadlineMs": 3495428452
+        },
+        "hookDeadlineMs": 3495437079,
+        "completedBefore": 0,
+        "completedAfter": 0
+      }
+    }
+  ]
+}

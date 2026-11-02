@@ -9,6 +9,16 @@ The previous [native reproduction](../native-study/preparation-conflict/result.j
 rejected a readable revision 42 solely because revision 43 was current.
 This candidate completes preparation of the selected immutable source instead.
 
+The old error was `source changed before lexical warm`: a still-readable
+revision 42 was rejected because revision 43 had been published. This was a
+preparation defect, not an unavoidable consequence of concurrent writing.
+Preparation must finish the captured source, publish that complete root, and
+retain later publications as catch-up work. It must neither restart from zero
+on every publication nor label an older completed view as covering new records.
+The subsequent [ordinary-worker overlap check](../lexical-delta/README.md#ordinary-worker-publication-overlap)
+verified completion through 24 / 19 / 17 overlapping publications and final
+catch-up; sustained arrival-rate/backlog bounds remain unmeasured.
+
 ## Implementation
 
 - [PreparedRoot](../../../tools/research/prepared-progress/Eggshell/PreparedRoot.lean)
