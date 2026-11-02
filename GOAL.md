@@ -29,11 +29,13 @@
 
 ## 現在地と次の順序
 
-現在の隔離runtimeは[prepared-basis](docs/candidates/prepared-basis/README.md)の`e100a32c…`。原文とシナプスを同じ完成rootに固定し、出版headが進んでも変更のない所有者の準備を共有する。4 DB/80 clientsの小規模TCP検査と、実MiniLMの8操作/source-only回復は通った。80人8時間、大規模DB、NFS/SMB、多writer保存ACKの実証ではない。
+現在の隔離runtimeは[record-boundary](docs/candidates/record-boundary/README.md)の`05f18108…`。同じ途中終了LLVM DB・質問・MiniLM・500,000文字枠・配送前に凍結した必要範囲で、3題材×独立2 native chatを測った。両回とも4/4・7/7・5/5、計32/32項目を実本文へ配送し、フックは14,612〜15,964 ms。意味検索とシナプス探索は全6件で完了し、題材ごとの本文は2回byte一致した。今回の確認済み16項目では全件だが、他3候補のDB原文は未確認として残している。正規seed、回答モデルの両周、80人負荷、p99、総token改善を実証した結果ではない。
 
-このruntimeを変えず、保持している途中終了LLVM DBを原文だけで複製し、3題材×独立2 native chatで実フック全体を測った。[real-delivery](docs/candidates/real-delivery/README.md)。配送前の凍結は4/7/5項目で、他3候補はDB原文で未確認として別記した。配送は両回とも4/4・6/7・5/5、フック14,746〜16,420 ms。意味検索とシナプス探索は全6件で完了したが、題材2は`dumpmachine`の4行中、閉じ括弧の2573行だけが欠け、98%条件は不合格である。3所有者はすべて復元済みで、欠落は所有者発見より後の候補準備/選択にある。本文は題材ごとに2回byte一致した。初回warmは1,977窓/156,433 ms、再warmは新規埋込0・owner復元0/451 ms。元DBの全ファイル不変、全service正常終了/残存process0、RSS最大2,657,200 KiB。別にsession `state.guard`待ち警告11件が残る。これは回答モデル2周でも正規seedでも80人負荷でもなく、総token比較0/18、製品未採用のまま。監査器の旧95%判定を98%へ統一し、JSON空行の誤判定を表現別の検証とLean証明で修正した。過去結果や凍結後の必要範囲は書き換えていない。
+親候補`e100a32c…`の[監査](docs/candidates/real-delivery/README.md)で欠けた2573行は、DBと候補集合には存在した。必要4行はすべて単独の購入単位で、直前の2569行が座標にないため字下げ範囲も束になっていなかった。候補は、字下げ範囲を観測済みの開始・本文・終端で認め、終端も出版時の単位と費用へ含める。2048文字上限は終端込みで検査し、原文・出典不変、隙間/指紋違いの拒否、catalogue全被覆を保つ。関連度の重み、予算、vector、WorkGraph、3辺、e-class/認定は変えない。Lean証明、nativeの出版/問合せ単位検査、全体ContractAuditが通り、追加証明は標準公理だけに依存した。監査器は検証済みファイルの行配列を一度だけ作り、比較と凍結値を変えていない。
 
-次は欠落区間が候補になったかを確認し、session lockの各区間を計測する。重み/予算の再調整や必要範囲の事後緩和はしない。改善候補は分離し、必要なら新runtime/seedを封印して所定の総token比較へ進む。multi-host、継続出版への追従、実業務量の負荷、容量回収、MCP保存方針も未完了である。
+実DBの初回warmは1,977窓/151,299 ms、再warmは埋込0・owner復元0/430 ms。元DBの全ファイル不変、全service正常終了/残存process0、RSS最大3,070,096 KiBで3.5 GiB停止条件を守った。別のnative検査でも、shell5/MCP形式3操作・8原来歴・17日誌・消費1/支持16/共引用4を保存し、原文だけの回復/新しい私有cache/新chat配送2/2・4505 msを確認した。実MCPサーバーではない。終了したDB/cache/実行体/ログは削除し、圧縮archiveは作っていない。
+
+次は大きなsession状態のlock区間と書出しを計測し、残る`state.guard`待ち警告9件を直す。重み/予算の再調整や必要範囲の事後緩和はしない。共有された検索全体の並行負荷と、固定した新runtime/seed/cohortでLunaの所定の比較を進める。総token比較0/18、製品未採用、目標はactiveのまま。multi-host、継続出版への追従、80人8時間、容量回収、MCP保存方針も未完了である。親の[prepared-basis](docs/candidates/prepared-basis/README.md)の4 DB/80 clients検査は小規模部品の値であり、この実フックと同時の負荷実証には使わない。
 
 検索側の追加候補は[prepared-query](docs/candidates/prepared-query/README.md)、runtime `1b82d622…`。通常のkeyed検索で、原典の固定版に対応するrouterを行列の最新版と組み合わせて拒否し、後段の採点が行列cacheを作り直していた経路を修正した。問い合わせ開始時に字句/窓所有者/routerとその正確な行列rootを保持し、採点では固定したread setを使う。固定した行がなければ最新版やraw cacheで代用しない。行列rootの一致をLeanの`ReadView.sameMatrix`で持つ。native合成試行は旧経路の不一致を再現し、66回の後続出版/索引準備で旧lookup枠が上書きされた後も、保持した候補/順位/窓/ベクトルが一致した。新しい要求は最新版を読み、未準備新版/異なるauthorityを拒否した。scenario 4388 ms/process 10193 ms・RSS最大102560 KiBは部品検査の値である。全体ContractAuditが通り、実MiniLMのshell5/MCP形式3操作、原文だけの回復、新chat実本文2/2・4466 ms、全service終了/残存process0を確認した。実MCPサーバーではなく小fixtureであり、98%/80人/総token改善の実証ではない。回答モデル呼出0、題材比較0/18、製品未採用。保存側の基準は次段の`66c6cf14…`を保持し、回答モデル用の固定controller/cohortを差し替えていない。次はcanonical/共有・私有synapseを含むservice全体の同じsource境界の読取保持と、継続出版・実journalを伴う追従を接続する。
 

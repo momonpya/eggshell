@@ -34,6 +34,62 @@ private def json (path : System.FilePath) : IO Json := do
   IO.ofExcept (Json.parse (← IO.FS.readFile path))
 private def save (path : System.FilePath) (value : Json) : IO Unit := IO.FS.writeFile path value.pretty
 
+structure LayoutInput where
+  source : String
+  sourceFiles : Array (String × String)
+  owners : Array String
+  reference : OriginalEvidence.Reference
+  output : String
+  deriving FromJson
+
+/-- Reproduce publication-time units directly from immutable originals.
+Reference ranges restrict diagnostics only; they never enter recommendation. -/
+private def layout (input : LayoutInput) : IO Unit := do
+  let path : System.FilePath := .mk input.source
+  check (!(← (System.FilePath.mk input.output).pathExists)) "keep the previous layout diagnostic"
+  check ((← StudyRuntime.files path) == input.sourceFiles) "layout source bytes changed"
+  let source ← DB.PageMap.pin path
+  let reader ← Persistence.Store.NodeReader.new source
+  let inReference := fun row : Synapses.CanonicalSource.StoredRow =>
+    row.key.file.relative == input.reference.path && input.reference.first ≤ row.key.line &&
+      row.key.line ≤ input.reference.last
+  let mut owners := #[]
+  let mut wanted := input.owners.toList.eraseDups
+  -- Public Value identities are not physical node addresses. Resolve them
+  -- from this publication's original directory, without trusting an index.
+  for entry in ← Synapses.Build.entries source do
+    let id := entry.id
+    let doc ← Synapses.Build.document reader id
+    if !wanted.contains doc.owner then continue
+    wanted := wanted.erase doc.owner
+    let (registry,statistics) ← Synapses.CanonicalSource.addPublishedDocument source id doc {} {}
+    let stored ← IO.ofExcept (Synapses.CanonicalSource.Recipe.compile registry.store)
+    let checked ← IO.ofExcept (Synapses.CanonicalSource.Recipe.check stored.rows stored.records)
+    let view := Synapses.PreparedSourceView.ownerStored doc.owner stored checked
+    let coordinate := fun index : Nat => (stored.rows[index]?).map fun row =>
+      (row.key.file.relative,row.key.line)
+    let touching := stored.records.filter fun entry =>
+      (entry.indices ++ [entry.after]).any fun index => (stored.rows[index]?).any inReference
+    let units := checked.catalogue.filter fun unit => unit.any (fun index => inReference stored.rows[index])
+    let groups := (view.records.filter fun unit => unit.any fun index =>
+      (stored.rows[index]?).any inReference).map (fun unit => unit.map coordinate)
+    let neighbors := stored.rows.filter fun row => row.key.file.relative == input.reference.path &&
+      input.reference.first-1 ≤ row.key.line && row.key.line ≤ input.reference.last+1
+    owners := owners.push (Json.mkObj [("owner",toJson doc.owner),("statistics",toJson statistics),
+      ("rows",toJson stored.rows.size),("referenceRows",toJson (stored.rows.filter inReference)),
+      ("neighborRows",toJson (neighbors.map fun row => (row.key.line,row.code))),
+      ("records",toJson (touching.map fun entry => Json.mkObj [
+        ("indices",toJson (entry.indices.map coordinate)),("before",toJson (entry.before.bind coordinate)),
+        ("after",toJson (coordinate entry.after))])),
+      ("catalogue",toJson (units.map (fun unit => unit.map (coordinate ∘ Fin.val)))),
+      ("preparedGroups",toJson groups)])
+  check wanted.isEmpty "layout owner is absent from the pinned original directory"
+  check ((← StudyRuntime.files path) == input.sourceFiles) "layout diagnostic modified its original source"
+  save (.mk input.output) (Json.mkObj [("source",toJson source.head),
+    ("reference",toJson input.reference),("owners",toJson owners),
+    ("answeringModelCalls",toJson (0 : Nat)),("embeddingCalls",toJson (0 : Nat)),
+    ("sourceUnchanged",toJson true),("hookMeasured",toJson false)])
+
 private def specification (input : Input) (topic : Topic) : IO Json := do
   let common := System.FilePath.mk input.output / "source.egg"
   return Json.mkObj [("source",toJson common.toString),("workspace",toJson input.workspace),
@@ -165,6 +221,11 @@ end RealDeliveryProbe
 
 def main (args : List String) : IO Unit := do
   let [operation,path] := args | throw (IO.userError "RealDeliveryProbe freeze|run INPUT")
+  if operation == "layout" then
+    let input ← IO.ofExcept (fromJson? (α := RealDeliveryProbe.LayoutInput)
+      (← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path)))))
+    RealDeliveryProbe.layout input
+    return
   let input ← IO.ofExcept (fromJson? (α := RealDeliveryProbe.Input)
     (← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path)))))
   if operation == "freeze" then RealDeliveryProbe.freeze input (.mk path)

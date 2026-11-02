@@ -62,7 +62,7 @@ private def originals (source : DB.PageMap.Snapshot) (workspace : System.FilePat
   let reader ← Persistence.Store.NodeReader.new source
   let mut documents := #[]
   let mut rows := #[]
-  let mut images : Std.HashMap File OriginalEvidence.Image := {}
+  let mut images : Std.HashMap File (OriginalEvidence.Image × Array String) := {}
   -- Discover original owners from this publication, including newly accumulated
   -- observations. Human reference requirements never choose the source owners.
   for entry in ← Build.entries source do
@@ -77,13 +77,13 @@ private def originals (source : DB.PageMap.Snapshot) (workspace : System.FilePat
       for (located,alias) in catalog.located.zip captured.aliases do
         let row := located.read
         let some file := row.source.file? | throw (IO.userError "file alias has no file")
-        let image ← match images[file]? with
-          | some image => pure image
+        let (_,lines) ← match images[file]? with
+          | some cached => pure cached
           | none => do
               let image ← OriginalEvidence.load workspace file
-              images := images.insert file image
-              pure image
-        let lines := (image.text.splitOn "\n").toArray
+              let cached := (image,(image.text.splitOn "\n").toArray)
+              images := images.insert file cached
+              pure cached
         let some expected := lines[row.source.first-1]? | throw (IO.userError "file alias exceeds reference image")
         let original := String.ofList (characters.extract row.binding.first row.binding.limit).toList
         check (row.source.first == row.source.last && literalFileLine alias.spelling.projection alias.chars original expected)

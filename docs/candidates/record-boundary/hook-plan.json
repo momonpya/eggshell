@@ -1,0 +1,20 @@
+{
+  "purpose": "Check all three topics after the publication-time record-boundary repair",
+  "sourceDataSha256": "d05b9a8b1c4833c01c1c8b0c4beeb0e08cb375f3efbfcee041e3ae95091acec4",
+  "referenceSet": "unchanged real-delivery references; freeze source availability before opening a candidate hook body",
+  "topics": [1, 2, 3],
+  "independentNativeChatsPerTopic": 2,
+  "handoffChars": 500000,
+  "targetPercent": 98,
+  "hookLimitMs": 30000,
+  "sourceOnlyCopies": true,
+  "readonlyProfile": true,
+  "answeringModelCalls": 0,
+  "semanticEncoder": "unchanged MiniLM; explicit cold warm and zero-window repeat warm",
+  "modelCyclesMeasured": false,
+  "acceptedSeed": false,
+  "adopted": false,
+  "aggregateRssStopKiB": 3670016,
+  "diskFloorKiB": 2097152,
+  "auditOptimization": "Cache each verified reference image's split lines once; comparisons and frozen requirements unchanged"
+}
