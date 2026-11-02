@@ -1,0 +1,170 @@
+diff --git a/PartitionBuild.lean b/PartitionBuild.lean
+index 19c0588..fda81ec 100644
+--- a/PartitionBuild.lean
++++ b/PartitionBuild.lean
+@@ -46,0 +47,32 @@ def open? (root : System.FilePath) (model encoder : String) (source : PageMap.Sn
++/-- Routing and scoring retain the same authenticated matrix publication.
++The source parameter is the caller's exact input, never a newer ready source. -/
++structure ReadView (source : PageMap.Snapshot) where
++  partition : VectorPartition.Ready
++  matrix : VectorMatrix.Ready
++  sameMatrix : partition.header.basis.matrix = matrix.snapshot.head
++
++theorem ReadView.matrix_is_routing_basis (view : ReadView source) :
++    view.matrix.snapshot.head = view.partition.header.basis.matrix := view.sameMatrix.symm
++
++/-- A later matrix suffix does not invalidate a completed partition. Restore
++its exact matrix root, with extent, authority and statistics validation. -/
++def read? (root : System.FilePath) (model encoder : String) (source : PageMap.Snapshot) :
++    IO (Option (ReadView source)) := do
++  let some workspace ← PageMap.open? (folder root model encoder) | return none
++  unless workspace.head.authority == VectorPartition.authority do
++    throw (IO.userError "foreign partition read authority")
++  let some snapshot ← PreparedRoot.select? source workspace | return none
++  let some partition ← VectorPartition.at? snapshot | return none
++  unless partition.header.basis.eligibility == (← eligibility source) &&
++      (← sourceCompatible source partition.header.basis.source) do return none
++  let some current ← PageMap.open? (VectorMatrix.folder root model encoder) | return none
++  unless current.head.authority == VectorMatrix.authority model encoder do
++    throw (IO.userError "foreign matrix read authority")
++  let some retained ← PageMap.HistoryReader.make? current partition.header.basis.matrix | return none
++  let stats ← VectorMatrix.statistics retained.snapshot
++  let matrix : VectorMatrix.Ready := ⟨⟨stats.rows,stats.bytes⟩,retained.snapshot⟩
++  unless partition.header.basis.width*8 == (← ProjectionCursor.width matrix) do return none
++  if exact : partition.header.basis.matrix = matrix.snapshot.head then
++    return some ⟨partition,matrix,exact⟩
++  else throw (IO.userError "retained matrix changed the routing basis")
++
+diff --git a/Eggshell/LexicalAdvice.lean b/Eggshell/LexicalAdvice.lean
+index 439cd6b..5600b0c 100644
+--- a/Eggshell/LexicalAdvice.lean
++++ b/Eggshell/LexicalAdvice.lean
+@@ -65 +65,2 @@ An unavailable index is never a successful empty query. -/
+-def query (source : Snapshot) (text : String) (receipt : Option String := none) : IO Result := do
++def queryUsing (reader : RetrievalResearch.Index.Reader source) (text : String)
++    (receipt : Option String := none) : IO Result := do
+@@ -67,2 +67,0 @@ def query (source : Snapshot) (text : String) (receipt : Option String := none)
+-  let some reader ← RetrievalResearch.Index.open? source |
+-    throw (IO.userError "advisory lexical index is pending explicit/background warm")
+@@ -99,0 +99,5 @@ def query (source : Snapshot) (text : String) (receipt : Option String := none)
++def query (source : Snapshot) (text : String) (receipt : Option String := none) : IO Result := do
++  let some reader ← RetrievalResearch.Index.open? source |
++    throw (IO.userError "advisory lexical index is pending explicit/background warm")
++  queryUsing reader text receipt
++
+diff --git a/Eggshell/SearchProvider.lean b/Eggshell/SearchProvider.lean
+index 3810a6f..78ec53f 100644
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -118,0 +119,6 @@ def MetricsSink.flush (sink : MetricsSink) (status : String) : IO Unit := do
++/-- Dynamic reads are memoized within a request. A fixed view is a closed
++read set: neither latest roots nor raw cache files may replace its rows. -/
++inductive MatrixReads where
++  | dynamic (rows : IO.Ref (Std.HashMap String (Option VectorMatrix.Ready)))
++  | fixed (rows : Std.HashMap String VectorMatrix.Ready)
++
+@@ -136 +142 @@ structure Options where
+-  matrices : Option (IO.Ref (Std.HashMap String (Option VectorMatrix.Ready))) := none
++  matrices : Option MatrixReads := none
+@@ -504 +510,2 @@ def indexedVectors (options : Options) (windows : List String) : IO Json := do
+-            | some known =>
++            | some (.fixed known) => pure known[root.toString]?
++            | some (.dynamic known) =>
+@@ -519,0 +527,2 @@ def indexedVectors (options : Options) (windows : List String) : IO Json := do
++    if let some (.fixed _) := options.matrices then
++      throw (IO.userError "missing or invalid row in the fixed query matrix")
+@@ -768 +777,4 @@ def handleIndexedUsing (options : Options) (child : Option Encoder) (query : Str
+-  let options := {options with directories := some (← DirectoryReads.new), matrices := some (← IO.mkRef {})}
++  let matrices ← match options.matrices with
++    | some known => pure known
++    | none => MatrixReads.dynamic <$> IO.mkRef {}
++  let options := {options with directories := some (← DirectoryReads.new),matrices := some matrices}
+diff --git a/Eggshell/KeyedSearchProvider.lean b/Eggshell/KeyedSearchProvider.lean
+index 23b987e..8b9f9e6 100644
+--- a/Eggshell/KeyedSearchProvider.lean
++++ b/Eggshell/KeyedSearchProvider.lean
+@@ -15,0 +16,25 @@ structure Lexical where
++/-- These opened roots belong to one exact source. Capture occurs before
++query encoding or nomination, and every later stage consumes these readers. -/
++structure SourceView where
++  source : Snapshot
++  windows : WindowOwners.Ready
++  lexical : RetrievalResearch.Index.Reader source
++  numeric : Option (PartitionBuild.ReadView source × Sidecar.Storage)
++
++def capture (source : Snapshot) (options : SearchProvider.Options) (numeric : Bool) :
++    IO (Option SourceView) := do
++  if (← getNat source.get "candidates") == 0 then return none
++  let some windows ← WindowOwners.openShared? source |
++    throw (IO.userError "original window owners are pending warm")
++  let some lexical ← RetrievalResearch.Index.open? source |
++    throw (IO.userError "original lexical publication is pending warm")
++  let mut prepared := none
++  if numeric then
++    for storage in [.database,.user] do
++      let root := (← Sidecar.locate source storage).semantic
++      if let some view ← try PartitionBuild.read? root options.model encoderContract source catch _ => pure none then
++        prepared := some (view,storage)
++        break
++    unless prepared.isSome do throw (IO.userError "source discovery partition is pending explicit warm")
++  return some ⟨source,windows,lexical,prepared⟩
++
+@@ -31,2 +56,2 @@ candidate catalogue. Only its bounded selected owners are later materialized. -/
+-def lexical (source : Snapshot) (queryText : String) (receipt : Option String) :
+-    IO LexicalAdvice.Result := LexicalAdvice.query source queryText receipt
++def lexical (view : SourceView) (queryText : String) (receipt : Option String) :
++    IO LexicalAdvice.Result := LexicalAdvice.queryUsing view.lexical queryText receipt
+@@ -76 +101 @@ theorem canonical_original_identities (choices : List KeyedProtocol.Choice) :
+-def routed (source : Snapshot) (options : SearchProvider.Options) (queries : Array Json)
++def routed (view : SourceView) (queries : Array Json)
+@@ -78,8 +103,3 @@ def routed (source : Snapshot) (options : SearchProvider.Options) (queries : Arr
+-  let mut available : Option (VectorPartition.Ready × Sidecar.Storage) := none
+-  for storage in [.database,.user] do
+-    let root := (← Sidecar.locate source storage).semantic
+-    if let some matrix ← try VectorMatrix.open? root options.model encoderContract catch _ => pure none then
+-      if let some partition ← try PartitionBuild.open? root options.model encoderContract source matrix catch _ => pure none then
+-        available := some (partition,storage)
+-        break
+-  let some (partition,storage) := available | throw (IO.userError "source discovery partition is pending explicit warm")
++  let some (numeric,storage) := view.numeric | throw (IO.userError "query has no numeric read view")
++  let partition := numeric.partition
++  let source := view.source
+@@ -128,0 +149,11 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  let views ← sources.mapM fun source => capture source options child.isSome
++  let mut matrices : Std.HashMap String VectorMatrix.Ready := {}
++  for entry in views do
++    if let some view := entry then
++      if let some (numeric,storage) := view.numeric then
++        let root := (← Sidecar.locate view.source storage).semantic.toString
++        if let some known := matrices[root]? then
++          unless known.snapshot.head == numeric.matrix.snapshot.head do
++            throw (IO.userError "query scopes disagree about the same matrix root")
++        matrices := matrices.insert root numeric.matrix
++  let options := {options with matrices := some (.fixed matrices)}
+@@ -140,3 +171,2 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
+-    let source := sources[index]
+-    let population ← getNat source.get "candidates"
+-    if population == 0 then
++    let some entry := views[index.val]? | throw (IO.userError "query capture lost its source position")
++    let some view := entry | do
+@@ -145,3 +175,4 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
+-    let some reverse ← WindowOwners.openShared? source |
+-      throw (IO.userError "original window owners are pending warm")
+-    let ranked ← lexical source request.query request.receipt
++    let source := view.source
++    let population := view.lexical.expected.candidates
++    let reverse := view.windows
++    let ranked ← lexical view request.query request.receipt
+@@ -149 +180 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
+-    let nomination ← if child.isSome then routed source options queries index.val sources.size request.keys request.receipt
++    let nomination ← if child.isSome then routed view queries index.val sources.size request.keys request.receipt
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 4af28c1..1bb2888 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -389 +389 @@ run_meta do
+-        #[``Eggshell.KeyedSearchProvider.routed, ``Eggshell.WindowOwners.lookup,
++        #[``Eggshell.KeyedSearchProvider.capture, ``Eggshell.KeyedSearchProvider.routed, ``Eggshell.WindowOwners.lookup,
+@@ -394 +394 @@ run_meta do
+-        #[``Eggshell.LexicalAdvice.query],#[``Eggshell.LexicalReads.coarseQuery]),
++        #[``Eggshell.LexicalAdvice.queryUsing],#[``Eggshell.LexicalReads.coarseQuery]),

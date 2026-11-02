@@ -1,0 +1,180 @@
+{
+  "scope": "earlier shell-only smoke; no MCP-shaped calls or new-chat delivery",
+  "result": {
+    "McpShapedHookPairs": 0,
+    "actualShellCalls": 5,
+    "answeringModelCalls": 0,
+    "conditionalReadRows": 4,
+    "consumptionWitnesses": 1,
+    "coquoted": 4,
+    "directRelationInsertions": 0,
+    "emptyInitialDatabase": true,
+    "genericContentAliases": 15,
+    "literalSubstringChecks": 0,
+    "nativeJournalEvents": 11,
+    "nativeToolCalls": 5,
+    "portableOrigins": 5,
+    "privateUsage": 0,
+    "realMcpServerUsed": false,
+    "runtime": {
+      "path": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+      "sha256": "1b82d622598e76c8c9719076e7309b4fa707c253e327afd012ebebda10d7a6be"
+    },
+    "supports": 10
+  },
+  "resources": {
+    "childPid": 20403,
+    "elapsedMs": 38258,
+    "error": null,
+    "exitCode": 0,
+    "guardPid": 19330,
+    "guardSha256": "604550f9b3b3be9dc572a0e6c5458ac3fb1414bffe7b828c2e94a09d4c1ab304",
+    "guardTriggered": false,
+    "limitRssKiB": 3670016,
+    "ownedPids": [],
+    "peakProcesses": [
+      {
+        "lane": null,
+        "parent": 27585,
+        "pid": 27700,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 47472
+      },
+      {
+        "lane": null,
+        "parent": 20403,
+        "pid": 22598,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": "codex-daemon",
+        "rssKiB": 60016
+      },
+      {
+        "lane": null,
+        "parent": 27611,
+        "pid": 27726,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 44160
+      },
+      {
+        "lane": null,
+        "parent": 1,
+        "pid": 24807,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 53312
+      },
+      {
+        "lane": null,
+        "parent": 24807,
+        "pid": 24920,
+        "program": "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+        "role": null,
+        "rssKiB": 1093664
+      },
+      {
+        "lane": null,
+        "parent": 20403,
+        "pid": 22155,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 58768
+      },
+      {
+        "lane": "save",
+        "parent": 22598,
+        "pid": 24243,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": "codex-worker",
+        "rssKiB": 53856
+      },
+      {
+        "lane": null,
+        "parent": 20403,
+        "pid": 27366,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": "codex-hook",
+        "rssKiB": 50912
+      },
+      {
+        "lane": "search",
+        "parent": 22598,
+        "pid": 23274,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": "codex-worker",
+        "rssKiB": 57776
+      },
+      {
+        "lane": "index",
+        "parent": 22598,
+        "pid": 23313,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": "codex-worker",
+        "rssKiB": 59456
+      },
+      {
+        "lane": null,
+        "parent": 27366,
+        "pid": 27466,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 51376
+      },
+      {
+        "lane": null,
+        "parent": 19330,
+        "pid": 20403,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-gate-build/StudyMain",
+        "role": null,
+        "rssKiB": 51568
+      },
+      {
+        "lane": null,
+        "parent": 23274,
+        "pid": 27585,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 51824
+      },
+      {
+        "lane": null,
+        "parent": 23313,
+        "pid": 27611,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/prefix/libexec/eggshell",
+        "role": "search-provider",
+        "rssKiB": 51232
+      },
+      {
+        "lane": null,
+        "parent": 19317,
+        "pid": 19330,
+        "program": "./empty-routing-study-build/StudyMain",
+        "role": "guard",
+        "rssKiB": 55200
+      }
+    ],
+    "reason": null,
+    "sampledPeakRssKiB": 1840592,
+    "samples": 263,
+    "settings": {
+      "command": [
+        "/usr/bin/env",
+        "LEAN_NUM_THREADS=1",
+        "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/native-gate/data",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-gate-build/StudyMain",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/native-gate-input.json",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/native-gate"
+      ],
+      "cwd": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+      "limitRssKiB": 3670016,
+      "minFreeKiB": 2097152,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
+      ],
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-native/native-gate.guard.json"
+    },
+    "state": "finished",
+    "userCeilingRssKiB": 4194304
+  }
+}

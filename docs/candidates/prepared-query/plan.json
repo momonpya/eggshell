@@ -1,0 +1,23 @@
+{
+  "baselineRuntimeSha256": "66c6cf14dad23b28b41f7e0bec4f91dae4a7de411a894c14c39366a433b89271",
+  "candidate": "prepared-query-core, isolated from the lexical-delta baseline",
+  "change": "Capture exact-source lexical/window-owner/router readers and the router's authenticated matrix before query encoding; reuse the fixed matrix during scoring",
+  "rankingModelAndAuthorityChanges": false,
+  "answeringModelCalls": 0,
+  "nativeChecks": [
+    "Reproduce the old open path rejecting an old complete source with the latest matrix",
+    "Restore the completed partition's exact historical matrix",
+    "Capture all keyed discovery readers before query work",
+    "Publish and prepare more than 64 later sources; evict the original named slot",
+    "The captured routing keys, lexical rankings, window-owner rows and numerical bits remain unchanged",
+    "Replacing a valid latest row cannot replace a captured row",
+    "Fixed reads cannot escape into latest matrices or raw cache files",
+    "A new query captures the latest complete source",
+    "An unprepared newer source cannot silently use an older source",
+    "Reject foreign source authority",
+    "Build full ContractAudit and compile the actual runtime"
+  ],
+  "resources": {"aggregateRssStopKiB": 3670016, "diskFloorKiB": 2097152},
+  "notAcceptanceEvidenceFor": ["98% hook-body recall", "80-user sustained load", "inclusive-token improvement"],
+  "remaining": ["service-wide source/canonical/shared-private synaptic query lifetime", "live publication-service load", "matched topic 1/2/3 first/history token and quality trials"]
+}
