@@ -1,0 +1,17 @@
+tools_research_IndexPublicationProgress-lean failed: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/lexical-delta-core/tools/research/IndexPublicationProgress.lean:72:11: error: Type mismatch
+  (__do_lift✝, child)
+has type
+  IO.Ref
+      (Option
+        { stdin := IO.Process.Stdio.piped, stdout := IO.Process.Stdio.piped, stderr := IO.Process.Stdio.piped,
+              cmd := runtime, args := #["codex-worker", "index"] }.stdin.toHandleType) ×
+    IO.Process.Child
+      { stdin := IO.Process.Stdio.null,
+        stdout :=
+          { stdin := IO.Process.Stdio.piped, stdout := IO.Process.Stdio.piped, stderr := IO.Process.Stdio.piped,
+              cmd := runtime, args := #["codex-worker", "index"] }.stdout,
+        stderr :=
+          { stdin := IO.Process.Stdio.piped, stdout := IO.Process.Stdio.piped, stderr := IO.Process.Stdio.piped,
+              cmd := runtime, args := #["codex-worker", "index"] }.stderr }
+but is expected to have type
+  Unit

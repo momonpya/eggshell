@@ -1,0 +1,24 @@
+{
+  "purpose": "Check ordinary index-worker progress during later source publications, not token or load acceptance",
+  "runtimeSha256": "66c6cf14dad23b28b41f7e0bec4f91dae4a7de411a894c14c39366a433b89271",
+  "answeringModelCalls": 0,
+  "encoder": "existing MiniLM product provider, unchanged",
+  "initialOwners": 16,
+  "rounds": 3,
+  "concurrentPublicationsPerRoundMaximum": 24,
+  "publicationIntervalMs": 25,
+  "driver": "one native index protocol process; direct durable original PageMap publications",
+  "assertions": [
+    "At least one later publication overlaps each index request",
+    "Each request acknowledges successful completion of an older pinned source",
+    "Later publications remain unprepared until catch-up",
+    "An already opened lexical reader remains unchanged",
+    "One final ordinary worker request catches up to the latest source",
+    "Final lexical postings match independent full-source tokenization",
+    "Final window owners match independent full original-window census",
+    "All original and focus numerical windows are valid",
+    "The worker exits cleanly without source-change or matrix-change invalidation errors"
+  ],
+  "resources": {"aggregateRssStopKiB": 3670016, "diskFloorKiB": 2097152},
+  "limitations": ["small synthetic originals", "not publication-service throughput", "not 80-user load", "not hook-body recall", "not inclusive-token improvement"]
+}

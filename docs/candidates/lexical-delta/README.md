@@ -112,3 +112,35 @@ Keep the parent and current cohort unchanged. Adoption still requires the
 prespecified repeated, matched first/history topic 1/2/3 trials with inclusive
 tokens, quality and deadline checks. No paid trial is justified by this update
 microbenchmark alone.
+
+## Ordinary worker publication overlap
+
+[Predeclared plan](worker-progress-plan.json),
+[native result](worker-progress/result.json),
+[resource receipt](worker-progress/native.guard.json),
+[Lean driver](../../../tools/research/IndexPublicationProgress.lean).
+The unchanged `66c6cf14…` runtime ran its ordinary `codex-worker index`
+protocol, with the actual MiniLM provider, while the driver committed original
+PageMap publications. Three requests overlapped 24 / 19 / 17 later commits.
+They completed readable source revisions 26 / 44 / 64 while the latest source
+was already 41 / 61 / 79. Newer publications remained explicitly unprepared;
+an active reader of the initial completed root remained unchanged.
+
+A final ordinary worker request caught up to revision 79. All lexical postings
+matched independent tokenization of the original Values, all window owners
+matched a full original-window census, and all 158 original/focus numerical
+windows were valid. The worker exited with code 0; the outer guard recorded
+no trigger and no surviving owned process. Peak aggregate RSS was 1,420,464 KiB.
+The complete check took 14,844 ms, including initial preparation and independent
+verification; this is not a hook latency measurement.
+
+The [earlier attempt](worker-progress/attempts/input-close.guard.json) was
+terminated because the test driver retained worker stdin while waiting for
+exit. It is not accepted evidence. The corrected driver owns stdin separately
+and drops that handle before waiting. These are small synthetic originals with
+one writer, bounded publication bursts and no native tool journal events.
+They test whole-worker progress across source advancement, including actual
+numerical preparation, but do not establish continuous service throughput,
+synaptic replay under live tool traffic, an 80-user backlog bound, coherent
+query-root acquisition, hook-body recall or token improvement. No product
+code, ranking, authority rule or sealed runtime was changed in this check.
