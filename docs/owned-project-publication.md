@@ -1,21 +1,22 @@
 # Project publication with independently owned streams
 
-Design direction under formal investigation, not an implemented replacement
-of original publication. The first isolated [prepared-index candidate](candidates/owned-ready/README.md)
-now separates independent derived writer regions and removes their mutable
-ready-root catalogue. The isolated [original-stream prototype](candidates/owned-project-streams/README.md)
-also publishes through separate physical owners and pins complete dependency-closed
-views. Ordinary hooks and service routing still use serialized per-project
-publication for configured single-source DBs. The isolated
-[broker connection](candidates/owned-project-broker/README.md) now routes real
-TCP Capsule requests to independent original owners, with complete caller-pinned
-dependencies and idempotent source ACKs. Ordinary hook/config routing and shared
-derived preparation are not connected to that path yet.
-The isolated [retained-image continuation](candidates/owned-project-views/README.md)
-now coalesces exact-cut validation, retains active source pins under bounded
-catalogue admission and shares verified pages within that broker path. It keeps
-per-borrower read diagnostics separate; it does not establish sustained ingest,
-full-hook latency or delivery recall.
+Isolated implementation under validation, not adopted. The latest
+[project-context candidate](candidates/project-context/README.md) connects normal
+hook entry points, journal ingress and the save worker to independent physical
+owners inside one configured logical project. Read-only reference projects keep
+their complete source inventories. Original publication retains exact caller
+read boundaries, durable idempotent ACKs and shared immutable source views.
+The existing product remains unchanged until the matched token, quality and
+deadline adoption gates pass.
+
+The earlier [prepared-index candidate](candidates/owned-ready/README.md) separates
+independent derived writer regions. Source publication and index preparation
+have different owners and readiness contracts: a durable source ACK does not
+claim that lexical, vector, synapse and certification preparation is complete.
+The latest normal-path test still reports `derivedPreparationQueued=false`;
+the new project-cache continuation is connecting that route and sharing canonical
+vectors by project/scope. Its source edits have not yet passed a build or native
+check. It cannot be counted as tested implementation.
 The project remains one logical shared DB. No one-owner-per-user DB layout or
 one global owner for every project is required. The target remains 80 users,
 30-second hooks and 98% of necessary original evidence actually delivered;
@@ -29,28 +30,56 @@ this is neither an 80-owner requirement nor evidence of 80-user sustained capaci
 The latest isolated [source-path comparison](candidates/owned-lexical/README.md)
 reached 35.6–37.9 source observations/s at 50 KB in three short repetitions.
 Derived preparation is excluded; this does not establish stable backlog or
-eight-hour capacity. Ordinary hooks still using the single-source path cannot
-inherit the prototype's concurrency.
+eight-hour capacity. The latest helper verifies 80 original observations and
+their read bindings after restart, across 16 owners with peak 11 simultaneous
+publications. Its normal hook lifecycle test uses four write owners and two
+reference owners. Those two tests do not combine into an 80-user full-system
+capacity result.
 
 The isolated [configuration binding](candidates/project-access/plan.json)
 keeps the user-selected logical write project separate from its physical source
 route. All configured read projects retain their complete owner inventories;
 neither a write route nor a warm index filters certification's read domain.
-This binding must precede ordinary hook integration. It does not authorize
+This binding is used by the isolated ordinary hook integration. It does not authorize
 per-owner copies of the project's canonical vectors or content.
 
 The [read-boundary continuation](candidates/project-inputs/README.md) now requires
 the complete configured read set in the explicit project publisher, including
 read-only foreign projects. It records those exact retained cuts with the source
 ACK and rejects a changed retry boundary. Read scope grants no writer lease.
-Cross-project dependency closure at query time and transporting actual accepted
-views through ordinary journal/save workers remain unconnected. The single-source
+The latest continuation transports the accepted original views through ordinary
+journal/save workers. Cross-project transitive dependency closure at query time
+and retained prepared roots across concurrent re-warm remain unconnected. The single-source
 publisher rejects logical project directories before creating a shadow DB there.
 
-The implementation gap is explicit: parallel owners exist in the native broker
-candidate, but not in the normal hook publication path. Completing that route
-and testing publication, preparation and queries together is required before
-claiming 80-user support. Raising the owner count alone is not that validation.
+The implementation gap is now preparation and combined sustained operation,
+rather than the absence of an ordinary hook publication route. Parallel original
+owners are required, but do not alone establish 80-user support. Test publication,
+preparation and queries together, retaining every acknowledged original and
+measuring queue age and unfinished preparation as well as hook deadlines.
+
+## Capacity gate
+
+One project has several independent append owners; one session selects a stable
+write lane and reads the complete authorized project view. It does not acquire
+its own project DB or vector copy. Different project DBs remain independent.
+The current bounded implementation accepts up to 128 clients, 64 registered write
+projects and 1,024 source owners across the service. These are admission bounds,
+not throughput or latency evidence. A full queue explicitly rejects admission;
+it must not acknowledge a write that was dropped.
+
+Validate 10/40/80 concurrent normal clients across the planned 1/4/16 project
+configurations, with ingress, source publication, all derived preparation and
+queries running together. Keep the same mixed workload and measure both burst
+and eight-hour operation, including later source changes and recovery. Required
+results are no lost acknowledged originals, no growth in preparation backlog
+under the declared input rate, bounded memory, p99 hooks below 30 seconds and
+at least 98% actual required-evidence delivery per declared condition. Retain the
+matched total-token and quality gate separately; capacity success does not adopt
+the candidate.
+
+Multiple-PC authentication/transport, owner handover and SMB/NFS durability need
+their own tests. Local threads or loopback TCP cannot establish those properties.
 
 The current native observation found a 279–348 ms common-session guard hold
 during offer publication, exceeding background save's 100 ms admission. The
