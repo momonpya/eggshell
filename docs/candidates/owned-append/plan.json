@@ -1,0 +1,30 @@
+{
+  "status": "isolated composition of existing proven optimization; not adopted",
+  "baselineCommit": "4cd79ba5",
+  "candidateChange": "Apply the previously proved RegisterMix csimp refinement from b43ff7df to the current configured multi-owner candidate. No new hash algorithm, retrieval policy, graph semantics, budget or deadline change.",
+  "priorEvidence": "docs/register-hash.md and docs/candidates/register-hash: exact total refinement, native complete hash equality, about 2x hash-only speedup, first-topic hook body unchanged. Not previously validated with this multi-owner service.",
+  "profileIsDiagnosticOnly": true,
+  "nativeComparison": {
+    "outputBytesEach": [5000, 50000],
+    "sessions": 80,
+    "physicalOwners": 16,
+    "wavesEach": 4,
+    "repetitionsPerSize": 3,
+    "armOrder": "alternate parent and candidate",
+    "sameInitialManifestHeadsAndPages": true,
+    "sameLogicalAbsoluteDestination": true,
+    "sameGeneratedNativeObservations": true,
+    "fixedBackgroundReadQueriesEachArm": 16,
+    "backgroundOffsetsMsEachWave": [0, 250, 500, 750],
+    "completeOriginalsProvenanceGraphDigestsMustMatch": true,
+    "freshProcessOriginalRecoveryEachArm": true,
+    "reportPerPairAndTailResults": true,
+    "notHookLatencyOrSustainedCapacity": true
+  },
+  "adoption": "Still requires prespecified repeated matched topic 1/2/3, first/history total-token improvement with quality and deadlines. No product adoption on hash, source throughput, proofs or equality alone.",
+  "answeringModelCalls": 0,
+  "memoryStopKiB": 3670016,
+  "absoluteMemoryCeilingKiB": 4194304,
+  "minimumFreeDiskKiB": 2097152,
+  "cleanup": "Seal compact results then delete ended original DBs, caches, native test executables and raw profiles/logs without archives. Preserve current source, necessary interfaces/objects/link inputs and current candidate helper."
+}

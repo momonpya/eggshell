@@ -1,0 +1,11 @@
+--- a/Eggshell/Blake3.lean
++++ b/Eggshell/Blake3.lean
+@@ -3,0 +4 @@
++public import tools.research.RegisterMix
+@@ -39,0 +41,6 @@
++@[csimp] theorem register_mix_compiled : @g = @Eggshell.Research.RegisterMix.optimized := by
++  funext state a b c d mx my
++  change Eggshell.Research.RegisterMix.reference state a b c d mx my =
++    Eggshell.Research.RegisterMix.optimized state a b c d mx my
++  exact (Eggshell.Research.RegisterMix.optimized_exact state a b c d mx my).symm
++

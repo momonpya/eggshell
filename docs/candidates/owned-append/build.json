@@ -1,0 +1,945 @@
+{"settings":
+ {"toolchain": "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0",
+  "project":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core",
+  "parents":
+  ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-project-access-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-view-cache-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-view-observer-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-broker-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-project-routed-audit-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-project-audit-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-audit-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/selection-replay-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/selection-profile-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/reply-admission-audit-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/reply-admission-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/service-query-load-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-ack-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-ack-audit-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-ack-checks-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-ack-probe-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-state-probe-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/record-boundary-native-gate-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/record-boundary-contract-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/record-boundary-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/record-boundary-layout-candidate-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/record-boundary-checks-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/record-boundary-layout-base-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/real-delivery-probe-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/real-delivery-metric2-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/real-delivery-metric-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-basis-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-basis-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-query-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/lexical-delta-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/lexical-delta-probe-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-progress-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-progress-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/empty-routing-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/integrated-cli-runtime-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/feedback-progress-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-ranges-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-prefix-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-bounds-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-work-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/turn-replay-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ack-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/frozen-post-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-journal-actual-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-readview-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-readview-actual-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-preparation-checks-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-cursor-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-catalog-build",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller",
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/shared-snapshot/fixed-frame-price-runtime-build"],
+  "output":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build",
+  "objectModules":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-project-access-build/object-mapping.json",
+  "mainModule": "tools.research.OwnedProjectBrokerAudit",
+  "force": [],
+  "core":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core",
+  "baselineResponse":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-project-access-build/runtime.rsp",
+  "baselineMain":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-project-access-build/tools_research_ProjectAccessChecks.o",
+  "baselineCore":
+  "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/record-boundary-candidate-core"},
+ "newPythonOrRuby": false,
+ "modules":
+ [{"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/RegisterMix.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_RegisterMix.o",
+   "module": "tools.research.RegisterMix",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Blake3.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Blake3.o",
+   "module": "Eggshell.Blake3",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/DB/PageMap.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_DB_PageMap.o",
+   "module": "Eggshell.DB.PageMap",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/DB/Sidecar.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_DB_Sidecar.o",
+   "module": "Eggshell.DB.Sidecar",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Sha256.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Sha256.o",
+   "module": "Eggshell.Sha256",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SourceEvidence.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SourceEvidence.o",
+   "module": "Eggshell.SourceEvidence",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/GraphStore.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_GraphStore.o",
+   "module": "Eggshell.GraphStore",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseSource.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseSource.o",
+   "module": "Eggshell.SynapseSource",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseQuotes.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseQuotes.o",
+   "module": "Eggshell.SynapseQuotes",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/QuotationContext.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_QuotationContext.o",
+   "module": "Eggshell.QuotationContext",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ObservationContext.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ObservationContext.o",
+   "module": "Eggshell.ObservationContext",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/MetadataBytes.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_MetadataBytes.o",
+   "module": "Eggshell.MetadataBytes",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ObservedRecords.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ObservedRecords.o",
+   "module": "Eggshell.ObservedRecords",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ContentRuns.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ContentRuns.o",
+   "module": "Eggshell.ContentRuns",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ContentCapture.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ContentCapture.o",
+   "module": "Eggshell.ContentCapture",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ContentMetadata.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ContentMetadata.o",
+   "module": "Eggshell.ContentMetadata",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseProvenance.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseProvenance.o",
+   "module": "Eggshell.SynapseProvenance",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapticTopology.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapticTopology.o",
+   "module": "Eggshell.SynapticTopology",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapticTopologyStore.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapticTopologyStore.o",
+   "module": "Eggshell.SynapticTopologyStore",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ObservedRecordView.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ObservedRecordView.o",
+   "module": "Eggshell.ObservedRecordView",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/BindingValueCodec.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_BindingValueCodec.o",
+   "module": "tools.research.BindingValueCodec",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseIndex.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseIndex.o",
+   "module": "Eggshell.SynapseIndex",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseTraceCache.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseTraceCache.o",
+   "module": "Eggshell.SynapseTraceCache",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseMaintenance.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseMaintenance.o",
+   "module": "Eggshell.SynapseMaintenance",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseBuild.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseBuild.o",
+   "module": "Eggshell.SynapseBuild",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseUsage.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseUsage.o",
+   "module": "Eggshell.SynapseUsage",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SourceDelta.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SourceDelta.o",
+   "module": "Eggshell.SourceDelta",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/CanonicalSource.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_CanonicalSource.o",
+   "module": "Eggshell.CanonicalSource",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/CanonicalSourcePacket.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_CanonicalSourcePacket.o",
+   "module": "Eggshell.CanonicalSourcePacket",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/PreparedFileIdentities.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_PreparedFileIdentities.o",
+   "module": "tools.research.PreparedFileIdentities",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/CanonicalSourceDelivery.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_CanonicalSourceDelivery.o",
+   "module": "Eggshell.CanonicalSourceDelivery",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SharedReadReceipt.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SharedReadReceipt.o",
+   "module": "Eggshell.SharedReadReceipt",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/StoredReadEvidence.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_StoredReadEvidence.o",
+   "module": "Eggshell.StoredReadEvidence",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SourceReadView.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SourceReadView.o",
+   "module": "Eggshell.SourceReadView",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/StoredReadLookup.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_StoredReadLookup.o",
+   "module": "Eggshell.StoredReadLookup",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/DeliveryLedger.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_DeliveryLedger.o",
+   "module": "Eggshell.DeliveryLedger",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/TurnReplay.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_TurnReplay.o",
+   "module": "Eggshell.TurnReplay",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ReplayWork.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ReplayWork.o",
+   "module": "Eggshell.ReplayWork",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/UsageCache.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_UsageCache.o",
+   "module": "Eggshell.UsageCache",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Persistence.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Persistence.o",
+   "module": "Eggshell.Persistence",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Matcher.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Matcher.o",
+   "module": "Eggshell.Matcher",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Config.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Config.o",
+   "module": "Eggshell.Config",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Receipt.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Receipt.o",
+   "module": "Eggshell.Receipt",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SourceObservation.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SourceObservation.o",
+   "module": "Eggshell.SourceObservation",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PluginModel.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PluginModel.o",
+   "module": "Eggshell.PluginModel",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseJournal.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseJournal.o",
+   "module": "Eggshell.SynapseJournal",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/NativePublication.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_NativePublication.o",
+   "module": "Eggshell.NativePublication",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/DaemonWire.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_DaemonWire.o",
+   "module": "Eggshell.DaemonWire",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PublicationStream.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PublicationStream.o",
+   "module": "Eggshell.PublicationStream",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/CanonicalSourceRecords.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_CanonicalSourceRecords.o",
+   "module": "Eggshell.CanonicalSourceRecords",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/CanonicalSourceRecipe.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_CanonicalSourceRecipe.o",
+   "module": "Eggshell.CanonicalSourceRecipe",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/SourceProjectionDictionary.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_SourceProjectionDictionary.o",
+   "module": "tools.research.SourceProjectionDictionary",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/OwnerPalette.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_OwnerPalette.o",
+   "module": "tools.research.OwnerPalette",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/PreparedFileUnits.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_PreparedFileUnits.o",
+   "module": "tools.research.PreparedFileUnits",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/ReferenceRequirements.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_ReferenceRequirements.o",
+   "module": "tools.research.ReferenceRequirements",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/PreparedSourceCosts.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_PreparedSourceCosts.o",
+   "module": "tools.research.PreparedSourceCosts",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/PublishedPlanMetadata.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_PublishedPlanMetadata.o",
+   "module": "tools.research.PublishedPlanMetadata",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/PreparedRangeCoverage.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_PreparedRangeCoverage.o",
+   "module": "tools.research.PreparedRangeCoverage",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/ScopeAlternatives.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_ScopeAlternatives.o",
+   "module": "tools.research.ScopeAlternatives",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/PreparedSourceView.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_PreparedSourceView.o",
+   "module": "tools.research.PreparedSourceView",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/CanonicalSourceCache.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_CanonicalSourceCache.o",
+   "module": "Eggshell.CanonicalSourceCache",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/PreparedOwnerArena.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_PreparedOwnerArena.o",
+   "module": "tools.research.PreparedOwnerArena",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/SharedMetadataCache.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_SharedMetadataCache.o",
+   "module": "tools.research.SharedMetadataCache",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/CanonicalSourcePrepared.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_CanonicalSourcePrepared.o",
+   "module": "Eggshell.CanonicalSourcePrepared",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PublicationHistory.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PublicationHistory.o",
+   "module": "Eggshell.PublicationHistory",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ProjectSources.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ProjectSources.o",
+   "module": "Eggshell.ProjectSources",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SemanticMatcher.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SemanticMatcher.o",
+   "module": "Eggshell.SemanticMatcher",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PreparedRoot.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PreparedRoot.o",
+   "module": "Eggshell.PreparedRoot",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/RetrievalIndex.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_RetrievalIndex.o",
+   "module": "tools.RetrievalIndex",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/FederatedSearch.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_FederatedSearch.o",
+   "module": "Eggshell.FederatedSearch",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ProjectStore.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ProjectStore.o",
+   "module": "Eggshell.ProjectStore",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PublicationWire.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PublicationWire.o",
+   "module": "Eggshell.PublicationWire",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ProjectViews.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ProjectViews.o",
+   "module": "Eggshell.ProjectViews",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ProjectPublication.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ProjectPublication.o",
+   "module": "Eggshell.ProjectPublication",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/SharedReadViews.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_SharedReadViews.o",
+   "module": "tools.research.SharedReadViews",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapticBindings.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapticBindings.o",
+   "module": "Eggshell.SynapticBindings",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/DiscoveryCounters.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_DiscoveryCounters.o",
+   "module": "Eggshell.DiscoveryCounters",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/WorkInference.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_WorkInference.o",
+   "module": "Eggshell.WorkInference",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/WorkClassLookup.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_WorkClassLookup.o",
+   "module": "Eggshell.WorkClassLookup",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/LexicalReads.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_LexicalReads.o",
+   "module": "Eggshell.LexicalReads",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/SelectionReceipt.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_SelectionReceipt.o",
+   "module": "tools.research.SelectionReceipt",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/CarriedSelectionValue.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_CarriedSelectionValue.o",
+   "module": "tools.research.CarriedSelectionValue",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/CheckedOriginalRecipe.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_CheckedOriginalRecipe.o",
+   "module": "tools.research.CheckedOriginalRecipe",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/OriginalPayloadBasis.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_OriginalPayloadBasis.o",
+   "module": "tools.research.OriginalPayloadBasis",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapticRoutingStore.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapticRoutingStore.o",
+   "module": "Eggshell.SynapticRoutingStore",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ProjectAccess.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ProjectAccess.o",
+   "module": "Eggshell.ProjectAccess",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/MiniLM.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_MiniLM.o",
+   "module": "Eggshell.MiniLM",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/WindowCentroid.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_WindowCentroid.o",
+   "module": "tools.WindowCentroid",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/VectorMatrix.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_VectorMatrix.o",
+   "module": "Eggshell.VectorMatrix",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/ProjectionCursor.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/ProjectionCursor.o",
+   "module": "ProjectionCursor",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/ProjectionCache.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/ProjectionCache.o",
+   "module": "ProjectionCache",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/BlockScore.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_BlockScore.o",
+   "module": "Eggshell.BlockScore",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Numerical.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Numerical.o",
+   "module": "Eggshell.Numerical",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/SourceViewBatch.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_SourceViewBatch.o",
+   "module": "tools.research.SourceViewBatch",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PublicationClient.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PublicationClient.o",
+   "module": "Eggshell.PublicationClient",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseRecommend.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseRecommend.o",
+   "module": "Eggshell.SynapseRecommend",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapticTransport.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapticTransport.o",
+   "module": "Eggshell.SynapticTransport",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/PreparedPlanMetadata.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_PreparedPlanMetadata.o",
+   "module": "tools.research.PreparedPlanMetadata",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseTransport.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseTransport.o",
+   "module": "Eggshell.SynapseTransport",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseBundles.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseBundles.o",
+   "module": "Eggshell.SynapseBundles",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/AdvisoryBundles.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_AdvisoryBundles.o",
+   "module": "tools.research.AdvisoryBundles",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/FocusWindows.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_FocusWindows.o",
+   "module": "tools.FocusWindows",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/AdvisoryFrontier.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_AdvisoryFrontier.o",
+   "module": "Eggshell.AdvisoryFrontier",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/SourceCatalogue.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/SourceCatalogue.o",
+   "module": "SourceCatalogue",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/WindowOwners.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_WindowOwners.o",
+   "module": "Eggshell.WindowOwners",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/KeyedProtocol.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_KeyedProtocol.o",
+   "module": "Eggshell.KeyedProtocol",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/KeyedSearchClient.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_KeyedSearchClient.o",
+   "module": "Eggshell.KeyedSearchClient",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/EvidenceReplay.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_EvidenceReplay.o",
+   "module": "Eggshell.EvidenceReplay",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SurfaceJoin.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SurfaceJoin.o",
+   "module": "Eggshell.SurfaceJoin",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/RankMemo.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_RankMemo.o",
+   "module": "Eggshell.RankMemo",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SelectionReplay.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SelectionReplay.o",
+   "module": "Eggshell.SelectionReplay",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/GeometryMemo.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_GeometryMemo.o",
+   "module": "Eggshell.GeometryMemo",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SaturationMemo.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SaturationMemo.o",
+   "module": "Eggshell.SaturationMemo",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/DiscoveryMemo.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_DiscoveryMemo.o",
+   "module": "Eggshell.DiscoveryMemo",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/DemandMemo.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_DemandMemo.o",
+   "module": "Eggshell.DemandMemo",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/DiscoveryAudit.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_DiscoveryAudit.o",
+   "module": "Eggshell.DiscoveryAudit",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SelectionAudit.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SelectionAudit.o",
+   "module": "Eggshell.SelectionAudit",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/CompletedAuthority.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_CompletedAuthority.o",
+   "module": "Eggshell.CompletedAuthority",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PacketReceipt.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PacketReceipt.o",
+   "module": "Eggshell.PacketReceipt",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Handoff.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Handoff.o",
+   "module": "Eggshell.Handoff",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/BindingPageScan.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_BindingPageScan.o",
+   "module": "tools.research.BindingPageScan",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PublicationService.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PublicationService.o",
+   "module": "Eggshell.PublicationService",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PreparationDebt.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PreparationDebt.o",
+   "module": "Eggshell.PreparationDebt",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SearchProvider.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SearchProvider.o",
+   "module": "Eggshell.SearchProvider",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/PartitionDelta.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/PartitionDelta.o",
+   "module": "PartitionDelta",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/VectorPartition.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/VectorPartition.o",
+   "module": "VectorPartition",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/ProjectionRetention.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/ProjectionRetention.o",
+   "module": "ProjectionRetention",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/PartitionBuild.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/PartitionBuild.o",
+   "module": "PartitionBuild",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/LexicalAdvice.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_LexicalAdvice.o",
+   "module": "Eggshell.LexicalAdvice",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/KeyedSearchProvider.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_KeyedSearchProvider.o",
+   "module": "Eggshell.KeyedSearchProvider",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/SynapseLive.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_SynapseLive.o",
+   "module": "Eggshell.SynapseLive",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/DB/CacheReclaim.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_DB_CacheReclaim.o",
+   "module": "Eggshell.DB.CacheReclaim",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ReplayPreparation.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ReplayPreparation.o",
+   "module": "Eggshell.ReplayPreparation",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Warm.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Warm.o",
+   "module": "Eggshell.Warm",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Worker.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Worker.o",
+   "module": "Eggshell.Worker",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PluginHooks.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PluginHooks.o",
+   "module": "Eggshell.PluginHooks",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/PluginCli.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_PluginCli.o",
+   "module": "Eggshell.PluginCli",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Daemon.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Daemon.o",
+   "module": "Eggshell.Daemon",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Install.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Install.o",
+   "module": "Eggshell.Install",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/Setup.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_Setup.o",
+   "module": "Eggshell.Setup",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tests/CorpusCache.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tests_CorpusCache.o",
+   "module": "tests.CorpusCache",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tests/SearchMemo.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tests_SearchMemo.o",
+   "module": "tests.SearchMemo",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tests/FullSearchOracle.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tests_FullSearchOracle.o",
+   "module": "tests.FullSearchOracle",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/Eggshell/ContractAudit.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/Eggshell_ContractAudit.o",
+   "module": "Eggshell.ContractAudit",
+   "compiled": true},
+  {"source":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-core/tools/research/OwnedProjectBrokerAudit.lean",
+   "object":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-append-build/tools_research_OwnedProjectBrokerAudit.o",
+   "module": "tools.research.OwnedProjectBrokerAudit",
+   "compiled": true}]}
