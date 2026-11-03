@@ -1,0 +1,1159 @@
+--- a/Eggshell/Daemon.lean
++++ b/Eggshell/Daemon.lean
+@@ -106,0 +107,2 @@
++  let indexWake ← IO.mkRef (none : Option String)
++  let indexCursor ← IO.mkRef ""
+@@ -125 +127,5 @@
+-        indexes := [← IO.asTask (flushIndexes session (now + 60000)) .dedicated]
++        indexes := [← IO.asTask (do
++          let observed ← preparationWake session
++          if !PreparationPlan.Wake.needed observed (← indexWake.get) then return
++          let accepted ← flushIndexesResult session (now + 60000) (some indexCursor)
++          indexWake.modify (fun before => PreparationPlan.Wake.record observed before accepted)) .dedicated]
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -250,12 +250,2 @@
+-  let directory ← target.indexes snapshot
+-  let entries ← if ← directory.pathExists then directory.readDir else pure #[]
+-  let entries := (entries.toList.filter (·.fileName.endsWith ".json"))
+-    |>.mergeSort (fun a b => a.fileName ≤ b.fileName)
+-  let warm ← Warm.required target snapshot
+-  let synapses := (← Synapses.Build.required snapshot target.storage) || (← Synapses.Journal.required snapshot target.storage)
+-  if entries.isEmpty && !warm && !synapses then return
+-  let payload := Json.mkObj [("target", toJson target), ("warm", toJson warm),
+-    ("paths", toJson (entries.take 8 |>.map (·.path.toString)))]
+-  if let some result ← Worker.exchange session "index" payload deadline then
+-    if !(fromJson? result : Except String Nat).isOk then
+-      IO.eprintln s!"Eggshell retained unindexed published work: {result.compress}"
++  unless ← Publication.Client.enqueuePreparation "index" target.key deadline do
++    throw (IO.userError "preparation admission is full; published index work remains durable")
+@@ -263,5 +253,9 @@
+-def drainRegisteredIndexes (session : String) (deadline : Nat) : IO Unit := do
+-  for (reference, target) in ← registeredIndexTargets do
+-    if (← IO.monoMsNow) ≥ deadline then return
+-    try drainIndexTarget session deadline reference target
+-    catch error => IO.eprintln s!"Eggshell retained DB index work: {error}"
++def maintenanceSources (session : String) (deadline : Nat) : IO (Option (Array String)) := do
++  let files ← sessionFiles session
++  let some pending ← readPendingBase? files | return none
++  if let some context ← ProjectContext.open? pending deadline then
++    return some (context.reads.sources.map (·.head.identity))
++  let mut sources := #[]
++  for path in (pending.read++pending.write.toList).eraseDups do
++    if let some source ← DB.PageMap.open? (.mk path) then sources := sources.push source.head.identity
++  return some sources
+@@ -269 +263,17 @@
+-def drainSynapticTargets (session : String) (deadline : Nat) : IO Unit := do
++def drainRegisteredIndexes (session : String) (deadline : Nat)
++    (cursor : Option (IO.Ref String) := none) : IO Bool := do
++  for (reference, target) in ← registeredIndexTargets (← maintenanceSources session deadline) do
++    if (← IO.monoMsNow) ≥ deadline then return false
++    let position := "1:"++target.key
++    if let some cursor := cursor then
++      if position ≤ (← cursor.get) then continue
++    try
++      drainIndexTarget session deadline reference target
++      if let some cursor := cursor then cursor.set position
++    catch error =>
++      IO.eprintln s!"Eggshell retained DB index work: {error}"
++      return false
++  return true
++
++def drainSynapticTargets (session : String) (deadline : Nat)
++    (cursor : Option (IO.Ref String) := none) : IO Bool := do
+@@ -276,2 +286,5 @@
+-  for (reference, target) in ← Synapses.Journal.targets do
+-    if (← IO.monoMsNow) ≥ deadline then return
++  for (reference, target) in ← Synapses.Journal.targets (← maintenanceSources session deadline) do
++    if (← IO.monoMsNow) ≥ deadline then return false
++    let position := "0:"++Synapses.Index.contentKey target
++    if let some cursor := cursor then
++      if position ≤ (← cursor.get) then continue
+@@ -289,7 +302,7 @@
+-      let feed ← target.ingress.mapM (Synapses.Journal.feedRequired source)
+-      if !feed.getD false && !(← Synapses.Journal.required source target.storage) then continue
+-      let payload := Json.mkObj [("kind", toJson "synapses"), ("target", toJson target)]
+-      let reply ← Worker.exchange session "index" payload deadline
+-      if reply.any (fun json => !(fromJson? json : Except String Synapses.Journal.Result).isOk) then
+-        IO.eprintln "Eggshell retained native synaptic index work"
+-    catch error => IO.eprintln s!"Eggshell retained native synaptic index work: {error}"
++      unless ← Publication.Client.enqueuePreparation "synapses" (Synapses.Index.contentKey target) deadline do
++        throw (IO.userError "preparation admission is full; native index work remains durable")
++      if let some cursor := cursor then cursor.set position
++    catch error =>
++      IO.eprintln s!"Eggshell retained native synaptic index work: {error}"
++      return false
++  return true
+@@ -297 +310,2 @@
+-def flushIndexWork (session : String) (deadline : Nat) : IO Unit := do
++def flushIndexWork (session : String) (deadline : Nat)
++    (cursor : Option (IO.Ref String) := none) : IO Bool := do
+@@ -317,5 +330,0 @@
+-  let guardPath := root / "index-drain.guard"
+-  Persistence.rejectSymlinkAncestors guardPath
+-  let guard ← IO.FS.Handle.mk guardPath .append
+-  Persistence.privateFile guardPath
+-  if !(← guard.tryLock) then return
+@@ -323,10 +332,19 @@
+-    try
+-      let _ ← DB.Sidecar.collect (min deadline ((← IO.monoMsNow) + 50))
+-      pure ()
+-    catch error => IO.eprintln s!"Eggshell retained private caches: {error}"
+-    drainSynapticTargets session deadline
+-    drainRegisteredIndexes session deadline
+-  finally guard.unlock
+-
+-/-- Installation-wide discovery survives chats. The single drain admission and
+-per-DB worker claim never acquire the graph writer or a session state lock. -/
++    let _ ← DB.Sidecar.collect (min deadline ((← IO.monoMsNow) + 50))
++    pure ()
++  catch error => IO.eprintln s!"Eggshell retained private caches: {error}"
++  unless ← drainSynapticTargets session deadline cursor do return false
++  drainRegisteredIndexes session deadline cursor
++
++/-- Installation-wide discovery survives chats. Only bounded service wakeups
++occur here; source preparation runs outside hooks in independently owned lanes. -/
++def flushIndexesResult (session : String) (deadline : Nat)
++    (cursor : Option (IO.Ref String) := none) : IO Bool := do
++  try
++    let complete ← flushIndexWork session deadline cursor
++    if complete then
++      if let some cursor := cursor then cursor.set ""
++    return complete
++  catch error =>
++    IO.eprintln s!"Eggshell retained index tickets: {error}"
++    return false
++
+@@ -334,2 +352,2 @@
+-  try flushIndexWork session deadline
+-  catch error => IO.eprintln s!"Eggshell retained index tickets: {error}"
++  let _ ← flushIndexesResult session deadline
++  pure ()
+@@ -537,0 +556 @@
++    if count > 0 then markPreparationWake pending.sessionId
+@@ -547,0 +567 @@
++  if count > 0 then markPreparationWake pending.sessionId
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -487,0 +488,31 @@
++
++/-- Private point-addressed discovery metadata. The canonical target record
++remains single; this index contains only checked target identities. -/
++def registerTargetSource (root : System.FilePath) (database key : String) : IO Unit := do
++  unless Receipt.validId database && Receipt.validId key do throw (IO.userError "invalid preparation source reference")
++  let sources ← DB.Sidecar.childDirectory root "sources"
++  let source ← DB.Sidecar.childDirectory sources database
++  FileSystem.immutableExistingBytes (source/(key++".ref")) ByteArray.empty
++
++def targetReferences (root : System.FilePath) (databases : Option (Array String)) : IO (Array System.FilePath) := do
++  if !(← root.pathExists) then return #[]
++  let some databases := databases | do
++    let paths := (← root.readDir).filterMap fun entry =>
++      if entry.fileName.endsWith ".json" then some entry.path else none
++    return (paths.toList.mergeSort (fun a b => a.toString ≤ b.toString)).toArray
++  let mut result := #[]
++  let mut seen : Std.HashSet String := {}
++  for database in databases do
++    unless Receipt.validId database do throw (IO.userError "invalid preparation source inventory")
++    let source := root/"sources"/database
++    if !(← source.pathExists) then continue
++    Persistence.rejectSymlinkAncestors source
++    for entry in ← source.readDir do
++      if !entry.fileName.endsWith ".ref" then continue
++      let key := (entry.fileName.dropEnd 4).toString
++      unless Receipt.validId key do throw (IO.userError "invalid preparation source posting")
++      if seen.contains key then continue
++      if !(← (root/(key++".json")).pathExists) then continue
++      seen := seen.insert key
++      result := result.push (root/(key++".json"))
++  return (result.toList.mergeSort (fun a b => a.toString ≤ b.toString)).toArray
+@@ -503 +534,3 @@
+-    if previous == bytes then return target
++    if previous == bytes then
++      registerTargetSource directory owner.database target.key
++      return target
+@@ -512,0 +546 @@
++  registerTargetSource directory owner.database target.key
+@@ -515 +549 @@
+-def registeredIndexTargets : IO (List (System.FilePath × IndexTarget)) := do
++def registeredIndexTargets (databases : Option (Array String) := none) : IO (List (System.FilePath × IndexTarget)) := do
+@@ -519,2 +553 @@
+-  for entry in ((← directory.readDir).toList.mergeSort (fun a b => a.fileName ≤ b.fileName)) do
+-    if !entry.fileName.endsWith ".json" then continue
++  for path in ((← targetReferences directory databases).toList.mergeSort (fun a b => a.toString ≤ b.toString)) do
+@@ -522,2 +555,3 @@
+-      let target ← (readBoundedJson entry.path 65536 : IO IndexTarget)
+-      unless entry.fileName == target.key ++ ".json" && !target.command.isEmpty do
++      let target ← (readBoundedJson path 65536 : IO IndexTarget)
++      unless path.fileName == some (target.key ++ ".json") && !target.command.isEmpty &&
++          databases.all (·.contains target.owner.database) do
+@@ -525 +559 @@
+-      targets := targets ++ [(entry.path, target)]
++      targets := targets ++ [(path, target)]
+@@ -551,0 +586,18 @@
++
++def preparationWake (session : String) : IO String := do
++  let path := (← sessionFiles session).directory/"preparation-wake"
++  if !(← path.pathExists) then return ""
++  Persistence.rejectSymlinkAncestors path
++  let bytes ← FileSystem.boundedBytes path 64
++  let some value := String.fromUTF8? bytes | throw (IO.userError "invalid preparation wake encoding")
++  unless Receipt.validId value do throw (IO.userError "invalid preparation wake identity")
++  return value
++
++/-- A fresh identity is written after durable ingress/ticket work. A consumer
++remembers the identity it observed before scheduling; it never clears a newer wake. -/
++def markPreparationWake (session : String) : IO Unit := do
++  let files ← sessionFiles session
++  Persistence.privateDirectory files.directory
++  let path := files.directory/"preparation-wake"
++  Persistence.rejectSymlinkAncestors path
++  FileSystem.atomicExistingBytes path (Blake3.hex (← IO.getRandomBytes 32)).toUTF8
+@@ -554 +606 @@
+-    (promotion : CommittedPromotion) : IO Unit := do
++    (promotion : CommittedPromotion) : IO IndexTarget := do
+@@ -565,0 +618 @@
++  return target
+@@ -569 +622,2 @@
+-  queueIndexAt (← DB.PageMap.pin (.mk target)) command promotion
++  let _ ← queueIndexAt (← DB.PageMap.pin (.mk target)) command promotion
++  pure ()
+--- /dev/null
++++ b/Eggshell/PreparationPlan.lean
+@@ -0,0 +1,169 @@
++module
++
++public import Lean.Data.Json.FromToJson
++public import Init.Data.Vector.Basic
++
++@[expose] public section
++namespace Eggshell.PreparationPlan
++open Lean
++
++def workers : Nat := 3
++def maxRequests : Nat := 1024
++def maxBytes : Nat := 8*1024*1024
++abbrev Lane := Fin workers
++
++def Wake.needed (observed : String) (acknowledged : Option String) : Bool := acknowledged != some observed
++def Wake.record (observed : String) (before : Option String) (accepted : Bool) : Option String :=
++  if accepted then some observed else before
++
++theorem Wake.failed_is_pending (observed : String) (before : Option String) :
++    Wake.record observed before false = before := rfl
++
++theorem Wake.newer_is_pending (observed newer : String) (before : Option String)
++    (different : newer ≠ observed) : Wake.needed newer (Wake.record observed before true) = true := by
++  simp [Wake.needed,Wake.record,Ne.symm different]
++
++/-- Registry metadata only. Its worker payload contains no original output. -/
++structure Job where
++  key : String
++  source : String
++  semantic : Option String
++  payload : Json
++  bytes : Nat
++  notBefore : Nat := 0
++  attempts : Nat := 0
++
++def Job.same (left right : Job) : Bool :=
++  left.key == right.key && left.source == right.source && left.semantic == right.semantic &&
++    left.payload == right.payload && left.bytes == right.bytes
++
++def Job.independent (left right : Job) : Bool :=
++  left.source != right.source &&
++    (left.semantic.isNone || right.semantic.isNone || left.semantic != right.semantic)
++
++structure Active where
++  job : Job
++  token : Nat
++
++structure Contents where
++  pending : Array Job := #[]
++  running : Vector (Option Active) workers := Vector.replicate workers none
++  nextToken : Nat := 0
++  closed : Bool := false
++  accepted : Nat := 0
++  coalesced : Nat := 0
++  rejected : Nat := 0
++  finished : Nat := 0
++  retried : Nat := 0
++  peakActive : Nat := 0
++
++def Contents.active (state : Contents) : Array Active := state.running.toArray.filterMap id
++def Contents.count (state : Contents) := state.pending.size+state.active.size
++def Contents.charge (state : Contents) :=
++  state.pending.foldl (fun total job => total+job.bytes) 0+
++    state.active.foldl (fun total running => total+running.job.bytes) 0
++
++/-- These bounds cover resident scheduling metadata, not arbitrary worker IO. -/
++structure State where
++  contents : Contents
++  countBound : contents.count ≤ maxRequests
++  byteBound : contents.charge ≤ maxBytes
++
++@[no_expose] def initial : State := ⟨{},by decide,by decide⟩
++
++private def checkedState (contents : Contents) : Option State :=
++  if countBound : contents.count ≤ maxRequests then
++    if byteBound : contents.charge ≤ maxBytes then some ⟨contents,countBound,byteBound⟩ else none
++  else none
++
++theorem requests_bounded (state : State) : state.contents.count ≤ maxRequests := state.countBound
++theorem metadata_bounded (state : State) : state.contents.charge ≤ maxBytes := state.byteBound
++theorem worker_slots_bounded (state : State) : state.contents.running.size = workers := rfl
++
++theorem active_workers_bounded (state : State) : state.contents.active.size ≤ workers := by
++  simpa [Contents.active] using
++    (Array.size_filterMap_le (f := id) (xs := state.contents.running.toArray))
++
++/-- An active request is not pending: another wake during execution must survive.
++If admission is full, the caller retains its durable registry/ticket work. -/
++@[no_expose] def notify (state : State) (job : Job) : State × Bool := Id.run do
++  let before := state.contents
++  if before.closed then return (state,false)
++  if let some old := before.pending.find? (·.key == job.key) then
++    if !old.same job then return (state,false)
++    let next := {before with coalesced := before.coalesced+1}
++    let some next := checkedState next | return (state,false)
++    return (next,true)
++  let next := {before with pending := before.pending.push job,accepted := before.accepted+1}
++  if let some next := checkedState next then return (next,true)
++  let some next := checkedState {before with rejected := before.rejected+1} | return (state,false)
++  return (next,false)
++
++@[no_expose] def take (state : State) (lane : Lane) (now : Nat) : State × Option Active := Id.run do
++  let before := state.contents
++  if before.closed || before.running[lane].isSome then return (state,none)
++  let active := before.active
++  let some position := before.pending.findIdx? (fun job =>
++      job.notBefore ≤ now && active.all (fun running => job.independent running.job)) |
++    return (state,none)
++  let some job := before.pending[position]? | return (state,none)
++  let running : Active := ⟨job,before.nextToken⟩
++  let next := {
++    before with
++    pending := before.pending.extract 0 position ++ before.pending.extract (position+1) before.pending.size
++    running := before.running.set lane (some running)
++    nextToken := before.nextToken+1
++    peakActive := max before.peakActive (active.size+1)}
++  let some next := checkedState next | return (state,none)
++  return (next,some running)
++
++/-- A matching lane token is the only completion capability. A closed queue
++never retries. Clearing an active slot leaves room to requeue its own charge. -/
++@[no_expose] def finish (state : State) (lane : Lane) (token now : Nat) (complete : Bool) : State := Id.run do
++  let before := state.contents
++  let some active := before.running[lane] | return state
++  if active.token != token then return state
++  let next := {
++    before with
++    running := before.running.set lane none
++    finished := before.finished+(if complete then 1 else 0)
++    retried := before.retried+(if !complete && !before.closed then 1 else 0)}
++  let next := if complete || next.closed || next.pending.any (·.key == active.job.key) then next else
++    let job := {active.job with
++      attempts := active.job.attempts+1
++      notBefore := now+min 5000 (50*2^(min active.job.attempts 7))}
++    {next with pending := next.pending.push job}
++  let some next := checkedState next | return state
++  return next
++
++def close (state : State) : State := by
++  let next := {state.contents with pending := #[],closed := true}
++  refine ⟨next,?_,?_⟩
++  · have small : state.contents.active.size ≤ maxRequests := by
++      have bound := state.countBound
++      change state.contents.pending.size+state.contents.active.size ≤ maxRequests at bound
++      omega
++    simpa [next,Contents.count,Contents.active] using small
++  · have small : state.contents.active.foldl (fun total running => total+running.job.bytes) 0 ≤ maxBytes := by
++      have bound := state.byteBound
++      unfold Contents.charge at bound
++      omega
++    simpa [next,Contents.charge,Contents.active] using small
++
++theorem close_is_terminal (state : State) : (close state).contents.closed = true := rfl
++
++theorem closed_refuses_notification (state : State) (job : Job) (closed : state.contents.closed = true) :
++    (notify state job).2 = false := by simp [notify,closed]
++
++theorem closed_starts_no_work (state : State) (lane : Lane) (now : Nat) :
++    (take (close state) lane now).2 = none := by simp [take,close]
++
++def stats (state : State) : Json :=
++  let value := state.contents
++  Json.mkObj [("pending",toJson value.pending.size),("active",toJson value.active.size),
++    ("residentBytes",toJson value.charge),("maxRequests",toJson maxRequests),("maxBytes",toJson maxBytes),
++    ("workers",toJson workers),("accepted",toJson value.accepted),("coalesced",toJson value.coalesced),
++    ("rejected",toJson value.rejected),("finishedAttempts",toJson value.finished),
++    ("retries",toJson value.retried),("peakActive",toJson value.peakActive),("closed",toJson value.closed)]
++
++end Eggshell.PreparationPlan
+--- /dev/null
++++ b/Eggshell/PreparationRegistry.lean
+@@ -0,0 +1,118 @@
++module
++
++public import Eggshell.PreparationPlan
++public import Eggshell.Warm
++
++@[expose] public section
++namespace Eggshell.Plugin.PreparationRegistry
++open Lean DB Synapses
++
++def indexTarget (job : PreparationPlan.Job) : IO IndexTarget :=
++  IO.ofExcept (job.payload.getObjVal? "target" >>= fromJson? (α := IndexTarget))
++
++def synapticTarget (job : PreparationPlan.Job) : IO Journal.Target :=
++  IO.ofExcept (job.payload.getObjVal? "target" >>= fromJson? (α := Journal.Target))
++
++def synaptic (job : PreparationPlan.Job) : Bool :=
++  (job.payload.getObjValAs? String "kind").toOption == some "synapses"
++
++/-- Only authenticated local administration can request these private registry
++records. No caller-supplied command, original payload or arbitrary path is used. -/
++def request (kind key : String) : IO PreparationPlan.Job := do
++  unless Receipt.validId key do throw (IO.userError "invalid preparation registry key")
++  let (payload,source,storage,numerical) ← if kind == "index" then do
++      let path := (← indexRegistry)/(key++".json")
++      FileSystem.rejectSymlinkAncestors path
++      let target ← (readBoundedJson path 65536 : IO IndexTarget)
++      unless target.key == key do throw (IO.userError "preparation index registry identity changed")
++      let source ← target.owner.pin
++      pure (Json.mkObj [("target",toJson target)],source,target.storage,!Warm.lexicalOnly target.command)
++    else if kind == "synapses" then do
++      let path := (← Journal.registry)/(key++".json")
++      FileSystem.rejectSymlinkAncestors path
++      let target ← (readBoundedJson path 65536 : IO Journal.Target)
++      unless Index.contentKey target == key do throw (IO.userError "preparation synaptic registry identity changed")
++      let source ← target.owner.pin
++      pure (Json.mkObj [("kind",toJson "synapses"),("target",toJson target)],source,target.storage,false)
++    else throw (IO.userError "unknown preparation registry")
++  let sidecar ← Sidecar.locate source storage
++  let semantic := if numerical then some sidecar.semantic.toString else none
++  let identity := kind++":"++key
++  let bytes := (toJson (identity,source.head.identity,semantic,payload)).compress.utf8ByteSize
++  unless bytes ≤ 65536 do throw (IO.userError "preparation metadata exceeds its bound")
++  return ⟨identity,source.head.identity,semantic,payload,bytes,0,0⟩
++
++def indexPaths (target : IndexTarget) (source : PageMap.Snapshot) : IO (List System.FilePath) := do
++  let path ← target.indexes source
++  if !(← path.pathExists) then return []
++  let entries ← path.readDir
++  return ((entries.toList.filter (·.fileName.endsWith ".json")).mergeSort
++    (fun a b => a.fileName ≤ b.fileName)).take 8 |>.map (·.path)
++
++def complete (job : PreparationPlan.Job) : IO Bool := do
++  if synaptic job then
++    let target ← synapticTarget job
++    let source ← target.owner.pin
++    let feed ← target.ingress.mapM (Journal.feedRequired source)
++    return !feed.getD false && !(← Journal.required source target.storage)
++  let target ← indexTarget job
++  let source ← target.owner.pin
++  if !(← indexPaths target source).isEmpty then return false
++  if ← Warm.required target source then return false
++  return !(← Build.required source target.storage) && !(← Journal.required source target.storage)
++
++def explain (job : PreparationPlan.Job) : IO Json := do
++  if synaptic job then
++    let target ← synapticTarget job
++    let source ← target.owner.pin
++    let feed ← target.ingress.mapM (Journal.feedRequired source)
++    let journal ← Journal.open? source
++    let checkpoint ← journal.bindM fun journal => Journal.checkpoint? journal ("checkpoint:"++Journal.lane target.storage)
++    return Json.mkObj [("journal",toJson (← Journal.required source target.storage)),
++      ("checkpointCurrent",toJson (← Journal.checkpointCurrent source target.storage)),
++      ("external",toJson (checkpoint.map (·.external))),
++      ("feed",toJson feed),("source",toJson source.head.identity),("storage",toJson target.storage)]
++  let target ← indexTarget job
++  let source ← target.owner.pin
++  return Json.mkObj [("tickets",toJson (← indexPaths target source).length),
++    ("warm",toJson (← Warm.required target source)),("synapses",toJson (← Build.required source target.storage)),
++    ("journal",toJson (← Journal.required source target.storage)),("source",toJson source.head.identity),
++    ("storage",toJson target.storage)]
++
++/-- Called only after a completed replay attempt, not instead of external
++dependency validation. `complete` remains the conservative scheduling probe. -/
++def drained (job : PreparationPlan.Job) : IO Bool := do
++  if synaptic job then
++    let target ← synapticTarget job
++    let source ← target.owner.pin
++    let feed ← target.ingress.mapM (Journal.feedRequired source)
++    return !feed.getD false && (← Journal.checkpointCurrent source target.storage)
++  let target ← indexTarget job
++  let source ← target.owner.pin
++  if !(← indexPaths target source).isEmpty then return false
++  return !(← Warm.required target source) && !(← Build.required source target.storage) &&
++    (← Journal.checkpointCurrent source target.storage)
++
++/-- Discovery of current debt is service-side. A source change after completion
++does not acknowledge preparation of that new source; it remains durable debt. -/
++def workerPayload (job : PreparationPlan.Job) : IO (Option Json) := do
++  if ← complete job then return none
++  if synaptic job then return some job.payload
++  let target ← indexTarget job
++  let source ← target.owner.pin
++  let paths ← indexPaths target source
++  let warm := (← Warm.required target source) || (← Build.required source target.storage) ||
++    (← Journal.required source target.storage)
++  return some (job.payload.setObjVal! "warm" (toJson warm)
++    |>.setObjVal! "paths" (toJson (paths.map (·.toString))))
++
++def validReply (job : PreparationPlan.Job) (reply : Json) : Bool :=
++  if synaptic job then (fromJson? reply : Except String Journal.Result).toOption.any (·.complete)
++  else (fromJson? reply : Except String Nat).isOk
++
++def invocation (job : PreparationPlan.Job) : Except String Json := do
++  let [kind,key] := job.key.splitOn ":" | throw "invalid preparation invocation"
++  unless ["index","synapses"].contains kind && Receipt.validId key do throw "invalid preparation invocation"
++  return Json.mkObj [("kind",toJson "maintenance"),("registryKind",toJson kind),("key",toJson key)]
++
++end Eggshell.Plugin.PreparationRegistry
+--- /dev/null
++++ b/Eggshell/PreparationService.lean
+@@ -0,0 +1,55 @@
++module
++
++public import Eggshell.PreparationRegistry
++public import Eggshell.Worker
++
++@[expose] public section
++namespace Eggshell.Plugin.PreparationService
++open Lean
++
++structure Pool where
++  state : Std.Mutex PreparationPlan.State
++  lastRetry : Std.Mutex (Option Json)
++
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new PreparationPlan.initial,← Std.Mutex.new none⟩
++
++def Pool.notify (pool : Pool) (kind key : String) : IO Bool := do
++  let job ← PreparationRegistry.request kind key
++  pool.state.atomically do
++    let (next,admitted) := PreparationPlan.notify (← get) job
++    set next
++    return admitted
++
++def Pool.take (pool : Pool) (lane : PreparationPlan.Lane) : IO (Option PreparationPlan.Active) := do
++  let now ← IO.monoMsNow
++  pool.state.atomically do
++    let (next,job) := PreparationPlan.take (← get) lane now
++    set next
++    return job
++
++/-- Long IO is outside the scheduling gate. Three stable lane identities own
++three worker pipes for the service, independent of chat count. -/
++def Pool.run (pool : Pool) (lane : PreparationPlan.Lane) (active : PreparationPlan.Active) : IO Unit := do
++  let complete ← try
++    let payload ← IO.ofExcept (PreparationRegistry.invocation active.job)
++    let response ← Worker.exchange s!"project-preparation-{lane.val}" "index" payload ((← IO.monoMsNow)+60000)
++    let complete := response.any (fun reply => (fromJson? reply : Except String Bool).toOption == some true)
++    if !complete then
++      let reason := response.map (fun reply => (reply.compress.take 512).toString) |>.getD "worker unavailable"
++      pool.lastRetry.atomically (set (some (Json.mkObj [("key",toJson active.job.key),("reason",toJson reason)])))
++    pure complete
++    catch _ =>
++      pool.lastRetry.atomically (set (some (Json.mkObj [("key",toJson active.job.key),("reason",toJson "preparation invocation failed")])) )
++      pure false
++  let now ← IO.monoMsNow
++  pool.state.atomically do
++    modify fun state => PreparationPlan.finish state lane active.token now complete
++
++def Pool.close (pool : Pool) : IO Unit :=
++  pool.state.atomically (modify PreparationPlan.close)
++
++def Pool.stats (pool : Pool) : IO Json := do
++  let state ← pool.state.atomically do return PreparationPlan.stats (← get)
++  return state.setObjVal! "lastRetry" (toJson (← pool.lastRetry.atomically get))
++
++end Eggshell.Plugin.PreparationService
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -15,0 +16,2 @@
++
++initialize ownedServer : Std.Mutex (Option Numerical.Service) ← Std.Mutex.new none
+@@ -312,0 +315 @@
++    ownedServer.atomically (set (some child))
+@@ -326,0 +330,11 @@
++
++/-- A wakeup for checked private registry metadata, never a source ACK or a
++claim that preparation has finished. Full admission leaves durable work intact. -/
++def enqueuePreparation (kind key : String) (deadline : Nat) : IO Bool := do
++  unless ["index","synapses"].contains kind && Receipt.validId key do
++    throw (IO.userError "invalid preparation target reference")
++  let endpoint ← resolve
++  let budget ← liveBudget deadline
++  let response ← Daemon.exchange endpoint "prepare-target" (Json.mkObj [
++    ("registryKind",toJson kind),("key",toJson key),("budgetMs",toJson budget)]) (budget := budget)
++  IO.ofExcept (Json.parse response >>= fromJson? (α := Bool))
+@@ -490 +504,21 @@
+-  Daemon.exchange endpoint kind (budget := 5000)
++  let result ← Daemon.exchange endpoint kind (budget := 5000)
++  if kind == "shutdown" then
++    let deadline := (← IO.monoMsNow)+10000
++    repeat
++      let owned ← ownedServer.atomically do
++        let some child ← get | return none
++        if child.pid.toNat != endpoint.pid then return none
++        return some (← child.tryWait).isSome
++      let exited ← match owned with
++        | some exited => pure exited
++        | none => Bool.not <$> Numerical.alive endpoint.pid
++      if exited then
++        ownedServer.atomically do
++          let current : Option Numerical.Service ← get
++          if current.any (fun child => child.pid.toNat == endpoint.pid) then
++            set (none : Option Numerical.Service)
++        break
++      unless (← IO.monoMsNow) < deadline do
++        throw (IO.userError "publisher acknowledged shutdown but has not exited")
++      IO.sleep 5
++  return result
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -4,0 +5 @@
++public import Eggshell.PreparationService
+@@ -63,0 +65 @@
++  preparation : PreparationService.Pool
+@@ -652 +654 @@
+-    ("ownedProjects",← server.owned.stats)]
++    ("ownedProjects",← server.owned.stats),("preparation",← server.preparation.stats)]
+@@ -715 +717 @@
+-    let deadline ← if ["prepare-source","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
++    let deadline ← if ["prepare-target","prepare-source","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
+@@ -751,0 +754,4 @@
++        | "prepare-target" => do
++          let kind ← IO.ofExcept (payload.getObjValAs? String "registryKind")
++          let key ← IO.ofExcept (payload.getObjValAs? String "key")
++          toJson <$> server.preparation.notify kind key
+@@ -829 +835 @@
+-    ← Std.Mutex.new 0,← Std.Mutex.new #[],← SharedReadViews.Pool.new,← Owned.Pool.new⟩
++    ← Std.Mutex.new 0,← Std.Mutex.new #[],← SharedReadViews.Pool.new,← Owned.Pool.new,← PreparationService.Pool.new⟩
+@@ -833,0 +840 @@
++  let preparations ← IO.mkRef ([] : List (Task (Except IO.Error Unit)))
+@@ -845,0 +853 @@
++      preparations.set (← retain (← preparations.get))
+@@ -855 +863,5 @@
+-      if (← clients.get).isEmpty && (← publications.get).isEmpty && (← IO.monoMsNow) > activity+300000 then
++      for lane in List.finRange PreparationPlan.workers do
++        if let some active ← server.preparation.take lane then
++          let task ← IO.asTask (server.preparation.run lane active) .dedicated
++          preparations.modify (task :: ·)
++      if (← clients.get).isEmpty && (← publications.get).isEmpty && (← preparations.get).isEmpty && (← IO.monoMsNow) > activity+300000 then
+@@ -860,0 +873,2 @@
++    server.preparation.close
++    Worker.shutdown
+@@ -866,0 +881 @@
++    let preparations ← preparations.get
+@@ -869,0 +885 @@
++    for task in preparations do let _ ← IO.wait task; pure ()
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -151,0 +152,2 @@
++  (include_str "PreparationPlan.lean").toUTF8,(include_str "PreparationRegistry.lean").toUTF8,
++  (include_str "PreparationService.lean").toUTF8,(include_str "Worker.lean").toUTF8,
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -1085 +1085 @@
+-def Checkpoint.sameInput (previous : Checkpoint) (source : PageMap.Snapshot)
++def Checkpoint.sameKnownInput (previous : Checkpoint) (source : PageMap.Snapshot)
+@@ -1087 +1087 @@
+-  unless !previous.external && previous.index == index && previous.count == count &&
++  unless previous.index == index && previous.count == count &&
+@@ -1090,0 +1091,5 @@
++def Checkpoint.sameInput (previous : Checkpoint) (source : PageMap.Snapshot)
++    (index : String) (count : Nat) (limit : Nat := 16) : IO Bool := do
++  if previous.external then return false
++  previous.sameKnownInput source index count limit
++
+@@ -1119,0 +1125,11 @@
++
++/-- Post-attempt bookkeeping only: known entries are replayed at this source
++and backend. External inputs still require validation through `required` and
++`refresh`; this predicate grants no freshness or Work completion authority. -/
++def checkpointCurrent (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Bool := do
++  let some journal ← open? source | return true
++  if ← ReplayWork.pending journal (workBase storage) then return false
++  let some reader ← Index.open? source storage .shared | return false
++  let some usage ← UsageCache.open? source | return false
++  let some previous ← checkpoint? journal ("checkpoint:"++lane storage) | return false
++  previous.sameKnownInput source (← UsageCache.replayIdentity reader usage) (← getNat journal.get "count")
+@@ -1290,0 +1307 @@
++  Plugin.registerTargetSource root source.head.identity (Index.contentKey target)
+@@ -1303 +1320 @@
+-def targets : IO (Array (System.FilePath × Target)) := do
++def targets (databases : Option (Array String) := none) : IO (Array (System.FilePath × Target)) := do
+@@ -1307,2 +1324 @@
+-  for entry in ← root.readDir do
+-    if !entry.fileName.endsWith ".json" then continue
++  for path in ← Plugin.targetReferences root databases do
+@@ -1310 +1326 @@
+-      let bytes ← FileSystem.boundedBytes entry.path 65536
++      let bytes ← FileSystem.boundedBytes path 65536
+@@ -1312 +1328 @@
+-      unless entry.fileName == Index.contentKey target ++ ".json" do
++      unless path.fileName == some (Index.contentKey target ++ ".json") && databases.all (·.contains target.owner.database) do
+@@ -1314 +1330 @@
+-      result := result.push (entry.path, target)
++      result := result.push (path, target)
+--- a/Eggshell/SynapseLive.lean
++++ b/Eggshell/SynapseLive.lean
+@@ -73,0 +74 @@
++    Plugin.markPreparationWake pending.sessionId
+@@ -82,0 +84 @@
++  Plugin.markPreparationWake pending.sessionId
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -7,0 +8 @@
++public import Eggshell.PreparationRegistry
+@@ -530,0 +532 @@
++  if paths.isEmpty then return 0
+@@ -535,0 +538 @@
++  if Warm.lexicalOnly target.command then return ← indexOwned pinned directory
+@@ -567,0 +571,33 @@
++def indexActionWithState (preparation : Synapses.ReplayPreparation.Pool) (json : Json) : IO (Json × Bool) := do
++  if (json.getObjValAs? String "kind").toOption == some "synapses" then
++    let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := Synapses.Journal.Target))
++    let pinned ← target.owner.pin
++    let deadline := (← IO.monoMsNow)+60000
++    let imported : Option Synapses.Journal.ImportResult ←
++      target.ingress.mapM fun owner => Synapses.Journal.importFeed pinned owner deadline
++    let (pinned,indexed) ← Warm.refreshSource pinned target.storage deadline (some preparation)
++    let _ ← Synapses.CanonicalSource.Cache.refresh pinned target.storage
++    let complete := indexed.complete && imported.all (fun (result : Synapses.Journal.ImportResult) => result.complete)
++    return (toJson {indexed with complete},complete)
++  let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := IndexTarget))
++  let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")
++  let count ← indexQueued target (paths.map System.FilePath.mk)
++  if (json.getObjValAs? Bool "warm").toOption.getD false then
++    let result ← Warm.runTarget (← target.owner.pin) target (preparation := some preparation)
++    return (toJson count,result.journal.complete)
++  return (toJson count,true)
++
++def indexAction (preparation : Synapses.ReplayPreparation.Pool) (json : Json) : IO Json := do
++  return (← indexActionWithState preparation json).1
++
++def maintenance (preparation : Synapses.ReplayPreparation.Pool) (json : Json) : IO Json := do
++  let kind ← IO.ofExcept (json.getObjValAs? String "registryKind")
++  let key ← IO.ofExcept (json.getObjValAs? String "key")
++  let job ← PreparationRegistry.request kind key
++  if let some payload ← PreparationRegistry.workerPayload job then
++    let (result,finished) ← indexActionWithState preparation payload
++    unless finished && PreparationRegistry.validReply job result do
++      return (← PreparationRegistry.explain job).setObjVal! "attemptComplete" (toJson finished)
++  if ← PreparationRegistry.drained job then return toJson true
++  return ← PreparationRegistry.explain job
++
+@@ -614 +650,6 @@
+-              queueIndexAt source command promotion.promotion
++              let target ← queueIndexAt source command promotion.promotion
++              markPreparationWake pending.sessionId
++              try
++                let _ ← Publication.Client.enqueuePreparation "index" target.key ((← IO.monoMsNow)+1000)
++                pure ()
++              catch _ => pure () -- The durable ticket remains available to registry discovery.
+@@ -627,18 +668,2 @@
+-        if (json.getObjValAs? String "kind").toOption == some "synapses" then
+-          let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := Synapses.Journal.Target))
+-          let pinned ← target.owner.pin
+-          let deadline := (← IO.monoMsNow)+60000
+-          let imported : Option Synapses.Journal.ImportResult ←
+-            target.ingress.mapM fun owner => Synapses.Journal.importFeed pinned owner deadline
+-          let (pinned,indexed) ← Warm.refreshSource pinned target.storage deadline (some preparation)
+-          let _ ← Synapses.CanonicalSource.Cache.refresh pinned target.storage
+-          let complete := indexed.complete && imported.all (fun (result : Synapses.Journal.ImportResult) => result.complete)
+-          pure (toJson {indexed with complete})
+-        else
+-          let target ← IO.ofExcept (json.getObjVal? "target" >>= fromJson? (α := IndexTarget))
+-          let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")
+-          let count ← indexQueued target (paths.map System.FilePath.mk)
+-          if (json.getObjValAs? Bool "warm").toOption.getD false then
+-            let _ ← Warm.runTarget (← target.owner.pin) target (preparation := some preparation)
+-            pure ()
+-          pure (toJson count)
++        if (json.getObjValAs? String "kind").toOption == some "maintenance" then maintenance preparation json
++        else indexAction preparation json
+--- a/tools/research/ProjectCacheChecks.lean
++++ b/tools/research/ProjectCacheChecks.lean
+@@ -226 +226 @@
+-def main (args : List String) : IO UInt32 := do
++def projectCacheCommand (args : List String) : IO UInt32 := do
+--- a/tools/research/ProjectContextChecks.lean
++++ b/tools/research/ProjectContextChecks.lean
+@@ -110,7 +110 @@
+-    check (← Journal.feedRequired other (Sidecar.Owner.ofSnapshot primary)) "new project feed was falsely ready"
+-    let result ← Worker.exchange pending.sessionId "index"
+-      (Json.mkObj [("kind",toJson "synapses"),("target",toJson target)]) ((← IO.monoMsNow)+20000)
+-    let some result := result | throw (IO.userError "background source import did not reply")
+-    let result ← IO.ofExcept (fromJson? (α := Journal.Result) result)
+-    check (result.complete) "background source import did not finish"
+-    check (!(← Journal.feedRequired other (Sidecar.Owner.ofSnapshot primary))) "import cursor retained completed feed debt"
++    check (!(← Journal.feedRequired other (Sidecar.Owner.ofSnapshot primary))) "shared service retained completed feed debt"
+@@ -128 +122 @@
+-    ("oneOriginalBody",toJson true),("backgroundWorkerImports",toJson true)]
++    ("oneOriginalBody",toJson true),("backgroundWorkerImports",toJson true),("sharedServiceImports",toJson true)]
+@@ -191,0 +186,9 @@
++  let preparationDeadline := (← IO.monoMsNow)+28000
++  flushIndexes closed.sessionId preparationDeadline
++  repeat
++    let stats ← IO.ofExcept (Json.parse (← Publication.Client.control "stats"))
++    let preparation ← IO.ofExcept (stats.getObjVal? "preparation")
++    if (preparation.getObjValAs? Nat "pending").toOption == some 0 &&
++        (preparation.getObjValAs? Nat "active").toOption == some 0 then break
++    check ((← IO.monoMsNow) < preparationDeadline) s!"ordinary project preparation did not drain: {preparation.compress}"
++    IO.sleep 5
+--- /dev/null
++++ b/tools/research/ProjectPreparationChecks.lean
+@@ -0,0 +1,272 @@
++import Eggshell.PreparationService
++import Eggshell.PluginCli
++import Eggshell.Daemon
++import tools.research.ProjectCacheChecks
++import tools.research.ProjectPreparationNumerical
++
++open Lean Eggshell Eggshell.Plugin
++
++namespace Eggshell.Research.ProjectPreparationChecks
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def job (name source : String) (semantic : Option String := none) (bytes : Nat := 1) : PreparationPlan.Job :=
++  ⟨name,source,semantic,Json.null,bytes,0,0⟩
++
++private def model : IO Unit := do
++  let lane0 : PreparationPlan.Lane := ⟨0,by decide⟩
++  let lane1 : PreparationPlan.Lane := ⟨1,by decide⟩
++  let initial := PreparationPlan.initial
++  let (queued,_) := PreparationPlan.notify initial (job "a" "source-a")
++  let (queued,_) := PreparationPlan.notify queued (job "a" "source-a")
++  check (queued.contents.pending.size == 1 && queued.contents.coalesced == 1) "pending requests were not coalesced"
++  let (running,active) := PreparationPlan.take queued lane0 0
++  let some active := active | throw (IO.userError "first owner did not start")
++  let (running,_) := PreparationPlan.notify running (job "a" "source-a")
++  let done := PreparationPlan.finish running lane0 active.token 0 true
++  check (done.contents.pending.size == 1) "active completion erased a newer notification"
++  let (next,again) := PreparationPlan.take done lane0 0
++  let some again := again | throw (IO.userError "new notification disappeared")
++  let stale := PreparationPlan.finish next lane0 active.token 0 true
++  check (stale.contents.running[lane0].any (·.token == again.token)) "stale completion consumed another lease"
++  let retry := PreparationPlan.finish next lane0 again.token 0 false
++  check ((PreparationPlan.take retry lane0 49).2.isNone && (PreparationPlan.take retry lane0 50).2.isSome)
++    "retry backoff lost or immediately restarted work"
++  let closed := PreparationPlan.close running
++  check (!(PreparationPlan.notify closed (job "b" "source-b")).2 &&
++    (PreparationPlan.take closed lane1 0).2.isNone &&
++    (PreparationPlan.finish closed lane0 active.token 0 false).contents.pending.isEmpty)
++    "closed preparation restarted or requeued work"
++  let (same,_) := PreparationPlan.notify initial (job "a" "source-a" (some "project"))
++  let (same,_) := PreparationPlan.notify same (job "b" "source-b" (some "project"))
++  let (same,_) := PreparationPlan.take same lane0 0
++  check ((PreparationPlan.take same lane1 0).2.isNone) "two jobs acquired the project's numerical writer"
++  let (other,_) := PreparationPlan.notify same (job "c" "source-c" (some "another-project"))
++  check ((PreparationPlan.take other lane1 0).2.isSome) "independent projects were serialized"
++  let mut full := initial
++  for i in [:PreparationPlan.maxRequests] do
++    let (next,admitted) := PreparationPlan.notify full (job (toString i) (toString i))
++    check admitted "queue rejected work below its request bound"
++    full := next
++  check (!(PreparationPlan.notify full (job "overflow" "overflow")).2) "queue exceeded its request bound"
++  let (bytes,_) := PreparationPlan.notify initial (job "large" "large" none PreparationPlan.maxBytes)
++  check (!(PreparationPlan.notify bytes (job "byte-overflow" "another")).2) "queue exceeded its byte bound"
++  IO.println (Json.mkObj [("pureStateChecks",toJson true),("requestBound",toJson PreparationPlan.maxRequests),
++    ("workers",toJson PreparationPlan.workers),("answeringModelCalls",toJson (0 : Nat))]).compress
++
++private def preparationStats : IO Json := do
++  let all ← IO.ofExcept (Json.parse (← Publication.Client.control "stats"))
++  IO.ofExcept (all.getObjVal? "preparation")
++
++private def idle (deadline : Nat) : IO Json := do
++  repeat
++    let value ← preparationStats
++    if (value.getObjValAs? Nat "pending").toOption == some 0 &&
++        (value.getObjValAs? Nat "active").toOption == some 0 then return value
++    check ((← IO.monoMsNow) < deadline) s!"shared preparation did not drain: {value.compress}"
++    IO.sleep 5
++  throw (IO.userError "unreachable preparation wait")
++
++private def targetsReady (targets : Array IndexTarget) : IO Unit := do
++  for target in targets do
++    let source ← target.owner.pin
++    check (!(← Warm.required target source)) "shared worker left a required source cold"
++    let work ← PreparationRegistry.request "index" target.key
++    check (← PreparationRegistry.drained work) "shared worker lost durable preparation debt"
++
++private def diagnose (root : System.FilePath) : IO Unit := do
++  let original ← IO.ofExcept (Json.parse (← IO.FS.readFile (root/"captured-turn.json")) >>= fromJson? (α := PendingTurn))
++  try
++    let _ ← flushIndexesResult original.sessionId ((← IO.monoMsNow)+10000)
++    for _ in [:5] do
++      IO.println (← preparationStats).compress
++      IO.sleep 200
++    let sources ← maintenanceSources original.sessionId ((← IO.monoMsNow)+10000)
++    for (_,target) in ← registeredIndexTargets sources do
++      let work ← PreparationRegistry.request "index" target.key
++      IO.println (Json.mkObj [("index",toJson work.key),("debt",← PreparationRegistry.explain work)]).compress
++    for (_,target) in ← Synapses.Journal.targets sources do
++      let work ← PreparationRegistry.request "synapses" (Synapses.Index.contentKey target)
++      IO.println (Json.mkObj [("synapses",toJson work.key),("debt",← PreparationRegistry.explain work)]).compress
++  finally
++    Worker.shutdown
++    try let _ ← Publication.Client.control "shutdown" catch _ => pure ()
++
++private def idleManager (root : System.FilePath) : IO Unit := do
++  let original ← IO.ofExcept (Json.parse (← IO.FS.readFile (root/"captured-turn.json")) >>= fromJson? (α := PendingTurn))
++  let pending ← ProjectContext.capture {original with
++    sessionId := "idle-preparation-manager",turnId := "idle",projectInputs := none,
++    tools := [],finalMessage := none,closed := false} ((← IO.monoMsNow)+20000)
++  let files ← sessionFiles pending.sessionId
++  writeJson files.state ({profile := pending.profile} : ThreadState)
++  writeJson files.pending pending
++  markPreparationWake pending.sessionId
++  let _ ← Publication.Client.resolve
++  let baseline ← preparationStats
++  let admitted := fun (value : Json) => (value.getObjValAs? Nat "accepted").toOption.getD 0+
++    (value.getObjValAs? Nat "coalesced").toOption.getD 0
++  let manager ← IO.Process.spawn {
++    cmd := (← IO.appPath).toString,args := #["codex-daemon",pending.sessionId]
++    stdin := .null,stdout := .null,stderr := .null,setsid := true}
++  let endpoint ← Daemon.awaitEndpoint pending.sessionId 500
++  try
++    let deadline := (← IO.monoMsNow)+20000
++    repeat
++      if admitted (← preparationStats) > admitted baseline then break
++      check ((← IO.monoMsNow) < deadline) "daemon did not process its first preparation wake"
++      IO.sleep 5
++    let first ← idle deadline
++    IO.sleep 2200
++    let quiet ← preparationStats
++    check (admitted first == admitted quiet) "idle daemon resubmitted unchanged preparation targets"
++    markPreparationWake pending.sessionId
++    repeat
++      if admitted (← preparationStats) > admitted quiet then break
++      check ((← IO.monoMsNow) < deadline) "daemon lost a newer preparation wake"
++      IO.sleep 5
++    let newer ← idle deadline
++    let report := Json.mkObj [("allPassed",toJson true),("idleMs",toJson (2200 : Nat)),
++      ("before",first),("afterIdle",quiet),("afterWake",newer),
++      ("unchangedTargetsNotResubmitted",toJson true),("newWakeProcessed",toJson true)]
++    IO.FS.writeFile (root/"idle-manager-report.json") (report.pretty++"\n")
++    IO.println report.compress
++  finally
++    try let _ ← Daemon.exchange endpoint "shutdown" (budget := 1000) catch _ => pure ()
++    let _ ← manager.wait
++    try let _ ← Publication.Client.control "shutdown" catch _ => pure ()
++
++private def publishDuring (root : System.FilePath) (pending : PendingTurn) : IO (DB.PageMap.Head × Bool) := do
++  let files ← sessionFiles pending.sessionId
++  let state : ThreadState := {profile := pending.profile}
++  writeJson files.state state
++  let domain := Sha256.hex "project-preparation-native".toUTF8
++  let input := fun nanos => Json.mkObj [("_eggshell_synapse_clock",toJson domain),("_eggshell_synapse_nanos",toJson nanos)]
++  let tools : List ToolEvent := (List.range 4).map fun index => {
++    name := "mcp__fixture__inspect",useId := s!"late-{index}",
++    input := (Json.mkObj [("key",toJson s!"late-{index}")]).compress,
++    response := (Json.mkObj [("evidence",toJson s!"LATE_ORIGINAL_{index}"),
++      ("body",toJson (String.ofList (List.replicate 8000 'x')))]).compress }
++  for (tool,index) in tools.zipIdx do
++    Synapses.Live.start (input (index*2+1)) files pending state tool
++    Synapses.Live.finish (input (index*2+2)) pending tool
++  let active ← preparationStats
++  let overlap := (active.getObjValAs? Nat "active").toOption.any (· > 0)
++  let pending := {pending with tools,finalMessage := some "Recorded `LATE_ORIGINAL_0` through `LATE_ORIGINAL_3`."}
++  let some path := pending.write | throw (IO.userError "native preparation test needs a write project")
++  let saved ← Publication.Client.run pending (.mk path) false
++  check (saved.source.accounted && saved.source.awaiting == 0) "concurrent original publication lost its durable ACK"
++  let selection ← ProjectAccess.resolve pending.sessionId (pendingSelection pending)
++  let some write := selection.write | throw (IO.userError "concurrent source owner disappeared")
++  let source ← write.project.current write.slot.val
++  let target ← queueIndexAt source [(← IO.appPath).toString,"search-provider","--mode","lexical"] saved.promotion
++  check (← Publication.Client.enqueuePreparation "index" target.key ((← IO.monoMsNow)+10000)) "late original could not wake preparation"
++  let _ ← flushIndexesResult pending.sessionId ((← IO.monoMsNow)+10000)
++  IO.FS.writeFile (root/"late-turn.json") ((toJson pending).pretty++"\n")
++  return (source.head,overlap)
++
++private def integration (root : System.FilePath) : IO Unit := do
++  model
++  let original ← IO.ofExcept (Json.parse (← IO.FS.readFile (root/"captured-turn.json")) >>= fromJson? (α := PendingTurn))
++  let pending ← ProjectContext.capture {original with
++    sessionId := "preparation-native",turnId := "new-source",projectInputs := none,
++    tools := [],finalMessage := none,closed := false} ((← IO.monoMsNow)+20000)
++  let some context ← ProjectContext.open? pending ((← IO.monoMsNow)+20000) |
++    throw (IO.userError "complete preparation test scope did not capture")
++  let before := context.reads.sources.map (·.head)
++  let files ← sessionFiles pending.sessionId
++  writeJson files.pending pending
++  let command := [(← IO.appPath).toString,"search-provider","--mode","lexical"]
++  let targets ← context.reads.sources.mapM fun source => do
++    let writable := context.canPrepare (DB.Sidecar.Owner.ofSnapshot source)
++    let target ← registerIndexTarget source command writable
++    let sidecar ← DB.Sidecar.locate source target.storage
++    let lexical := sidecar.directory/"lexical"
++    if ← lexical.pathExists then IO.FS.removeDirAll lexical
++    return target
++  let _ ← Publication.Client.resolve
++  let started ← IO.monoMsNow
++  try
++    let notifications ← (List.range 80).mapM fun index =>
++      IO.asTask (do
++        let some target := targets[index % targets.size]? | throw (IO.userError "no checked target")
++        Publication.Client.enqueuePreparation "index" target.key ((← IO.monoMsNow)+20000)) .dedicated
++    let publication ← IO.asTask (publishDuring root pending) .dedicated
++    for notification in notifications do
++      check (← IO.ofExcept (← IO.wait notification)) "bounded target wake was not admitted"
++    let (published,overlap) ← IO.ofExcept (← IO.wait publication)
++    let complete ← idle ((← IO.monoMsNow)+60000)
++    targetsReady targets
++    check ((complete.getObjValAs? Nat "peakActive").toOption.any (· ≥ 2)) "independent source preparation never overlapped"
++    check ((complete.getObjValAs? Nat "workers").toOption == some 3) "preparation worker bound changed"
++    for source in context.reads.sources do
++      let current ← DB.PageMap.pin source.directory
++      if source.head.identity == published.identity then
++        check (current.head == published) "preparation changed its concurrently published original"
++      else
++        check (current.head == source.head) "preparation wrote into another original source"
++    let firstMs := (← IO.monoMsNow)-started
++    -- Force real cold lexical work, then stop a service with admitted active work.
++    for target in targets do
++      let source ← target.owner.pin
++      let lexical := (← DB.Sidecar.locate source target.storage).directory/"lexical"
++      if ← lexical.pathExists then IO.FS.removeDirAll lexical
++      let _ ← Publication.Client.enqueuePreparation "index" target.key ((← IO.monoMsNow)+10000)
++      pure ()
++    let activeDeadline := (← IO.monoMsNow)+10000
++    let mut activeAtStop := Json.null
++    repeat
++      let current ← preparationStats
++      if (current.getObjValAs? Nat "active").toOption.any (· > 0) then
++        activeAtStop := current
++        break
++      check ((← IO.monoMsNow) < activeDeadline) "no active preparation was available for shutdown test"
++      IO.sleep 1
++    let stopped ← IO.monoMsNow
++    let _ ← Publication.Client.control "shutdown"
++    repeat
++      if (← Publication.Client.endpoint?).isNone then break
++      check ((← IO.monoMsNow)-stopped < 5000) "shutdown waited for derived preparation"
++      IO.sleep 5
++    let shutdownMs := (← IO.monoMsNow)-stopped
++    let _ ← Publication.Client.resolve
++    for target in targets do
++      check (← Publication.Client.enqueuePreparation "index" target.key ((← IO.monoMsNow)+10000))
++        "restart did not recover preparation intent"
++    let recovered ← idle ((← IO.monoMsNow)+60000)
++    targetsReady targets
++    for source in context.reads.sources do
++      let current ← DB.PageMap.pin source.directory
++      check (current.head == (if source.head.identity == published.identity then published else source.head))
++        "preparation recovery changed an acknowledged original"
++    let report := Json.mkObj [("allPassed",toJson true),("notifications",toJson (80 : Nat)),
++      ("completeSourceInventory",toJson targets.size),("initialSourceHeads",toJson before),
++      ("initialPreparation",complete),("sourcePublicationObservedActivePreparation",toJson overlap),
++      ("sourceAckAndOriginalsPreserved",toJson true),("firstPhaseMs",toJson firstMs),
++      ("activeAtShutdown",activeAtStop),("shutdownMs",toJson shutdownMs),("recoveredPreparation",recovered),
++      ("answeringModelCalls",toJson (0 : Nat)),("eightyPersonEightHourCapacity",toJson false),
++      ("requiredEvidenceRecallProven",toJson false),("productionAdoption",toJson false)]
++    IO.FS.writeFile (root/"preparation-service-report.json") (report.pretty++"\n")
++    IO.println report.compress
++  finally
++    Worker.shutdown
++    try let _ ← Publication.Client.control "shutdown" catch _ => pure ()
++
++end Eggshell.Research.ProjectPreparationChecks
++
++def command (args : List String) : IO UInt32 := do
++  match args with
++  | ["model"] => Eggshell.Research.ProjectPreparationChecks.model; return 0
++  | ["integration",root] => Eggshell.Research.ProjectPreparationChecks.integration (.mk root); return 0
++  | ["diagnose",root] => Eggshell.Research.ProjectPreparationChecks.diagnose (.mk root); return 0
++  | ["idle",root] => Eggshell.Research.ProjectPreparationChecks.idleManager (.mk root); return 0
++  | ["numerical",root] => numericalPreparationCommand [(← IO.appPath).toString,root]; return 0
++  | ["codex-daemon",session] => Eggshell.Plugin.Daemon.run session
++  | other => projectCacheCommand other
++
++def main (args : List String) : IO UInt32 := do
++  if ["codex-worker","codex-daemon","search-provider","keyed-search-provider"].contains (args.headD "") ||
++      args.take 2 == ["egg","warm"] then
++    Numerical.withDefaultKeeper (command args)
++      (drainMs := if args.head? == some "codex-daemon" || args.take 2 == ["egg","warm"] then 1000 else 0)
++  else command args
+--- /dev/null
++++ b/tools/research/ProjectPreparationNumerical.lean
+@@ -0,0 +1,75 @@
++import Eggshell.PreparationRegistry
++import Eggshell.PublicationClient
++
++open Lean Eggshell Eggshell.Plugin
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def stats : IO Json := do
++  let value ← IO.ofExcept (Json.parse (← Publication.Client.control "stats"))
++  IO.ofExcept (value.getObjVal? "preparation")
++
++def numericalPreparationCommand (args : List String) : IO Unit := do
++  let [binaryPath,rootPath] := args | throw (IO.userError "native helper and existing fixture required")
++  let binary : System.FilePath := .mk binaryPath
++  let root : System.FilePath := .mk rootPath
++  let pending ← IO.ofExcept (Json.parse (← IO.FS.readFile (root/"captured-turn.json")) >>= fromJson? (α := PendingTurn))
++  let some context ← ProjectContext.open? pending ((← IO.monoMsNow)+20000) |
++    throw (IO.userError "complete numerical fixture scope missing")
++  let some (_ :: providerArgs) ← MiniLM.command (← Paths.installRoot) |
++    throw (IO.userError "installed MiniLM runtime required")
++  let provider := binary.toString :: providerArgs
++  let targets ← context.reads.sources.mapM fun source =>
++    registerIndexTarget source provider (context.canPrepare (DB.Sidecar.Owner.ofSnapshot source))
++  let before ← targets.mapM fun target => do return (← target.owner.pin).head
++  let child ← IO.Process.spawn {
++    cmd := binary.toString,args := #["serve"],stdin := .null,stdout := .null,stderr := .inherit,setsid := true}
++  try
++    let startup := (← IO.monoMsNow)+10000
++    repeat
++      if (← Publication.Client.endpoint?).isSome then break
++      if let some code ← child.tryWait then throw (IO.userError s!"native service exited: {code}")
++      check ((← IO.monoMsNow) < startup) "native numerical service startup expired"
++      IO.sleep 5
++    let started ← IO.monoMsNow
++    for target in targets do
++      check (← Publication.Client.enqueuePreparation "index" target.key ((← IO.monoMsNow)+10000))
++        "numerical target was not admitted"
++    let deadline := (← IO.monoMsNow)+60000
++    let mut prepared := Json.null
++    repeat
++      prepared ← stats
++      if (prepared.getObjValAs? Nat "pending").toOption == some 0 &&
++          (prepared.getObjValAs? Nat "active").toOption == some 0 then break
++      check ((← IO.monoMsNow) < deadline) s!"numerical preparation debt did not drain: {prepared.compress}"
++      IO.sleep 10
++    let elapsedMs := (← IO.monoMsNow)-started
++    let mut repeats := #[]
++    let mut matrices : Array (String × Nat) := #[]
++    for target in targets do
++      let source ← target.owner.pin
++      check (!(← Warm.required target source)) "actual MiniLM source remained cold"
++      let sidecar ← DB.Sidecar.locate source target.storage
++      let matrix ← VectorMatrix.open? sidecar.semantic MiniLM.model SearchProvider.encoderContract
++      if let some matrix := matrix then
++        if !(matrices.any (fun item => item.1 == sidecar.semantic.toString)) then
++          matrices := matrices.push (sidecar.semantic.toString,matrix.metadata.rows)
++      let repeated ← Warm.runTarget source target
++      check (repeated.requested == 0 && repeated.projections.all (·.produced == 0))
++        "unchanged service preparation requested numerical work again"
++      repeats := repeats.push (toJson repeated)
++    check (matrices.any (fun item => item.2 > 0)) "actual MiniLM service produced no projection rows"
++    let after ← targets.mapM fun target => do return (← target.owner.pin).head
++    check (before == after) "numerical preparation changed an acknowledged original"
++    let report := Json.mkObj [("allPassed",toJson true),("actualMiniLM",toJson true),
++      ("sourceCount",toJson targets.size),("servicePreparationMs",toJson elapsedMs),
++      ("service",prepared),("matrices",toJson matrices),("unchangedRepeat",toJson repeats),
++      ("originalHeadsUnchanged",toJson true),("answeringModelCalls",toJson (0 : Nat)),
++      ("eightyPersonCapacity",toJson false),("productionAdoption",toJson false)]
++    IO.FS.writeFile (root/"numerical-service-report.json") (report.pretty++"\n")
++    IO.println report.compress
++  finally
++    try let _ ← Publication.Client.control "shutdown" catch _ => pure ()
++    let _ ← child.wait
++    pure ()

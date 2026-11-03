@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-03更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-04更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -18,7 +18,7 @@
 
 - 論理DBはプロジェクトの共有空間。顧客・権限・案件・版のscopeと物理配置を分ける。個人DBを強制しない。私有観測や利用信号は共有へ自動混入させない。
 - 各利用者の保存先は利用中プロジェクトの設定で選ぶ一つのwrite DB。他プロジェクトは許可されたread DBとしてのみ扱う。キャッシュも各プロジェクトDBのidentity・権限scope・snapshotに結び付け、読取専用DBの派生物はユーザー側のDB別read-cacheへ置く。複数DBを扱うサービスやRAM容量の共用は、この保存先・キャッシュの分離を変更しない。プロジェクトをまたぐシャード分割は導入していない。
-- プロジェクト内の独立した追記領域に複数の所有者を置き、保存・準備を並行処理する。これは必須であり、単一所有者の全体queueを最終構成にしない。所有者数と利用者数は別で、各物理領域には一つの所有者を置き、プロジェクト全体では複数所有者を並行させる。同じ可変位置へ競合書き込みをさせず、照会は完全な所有者一覧と依存を含む不変の境界をpinする。[project-context隔離候補](docs/candidates/project-context/README.md)は通常フック・保存workerまで接続済み。続く[project-cache隔離候補](docs/candidates/project-cache/README.md)は通常の準備ticket処理とproject共有vectorを接続し、80セッション/16所有者の原文試験では最大14出版の並行実行と80原文の再起動後復元を確認した。通常フックと実MiniLM準備は小規模fixtureのみで、背景準備の全体直列入口は残る。製品への採用、全フック・準備を含む80人8時間の持続負荷、準備債務、複数PC/NAS、認定索引の完全性は未達/未検証。一つのEggshellサービスが複数DBを扱える。ローカルも同じ保存契約を使う。[所有モデルと残る実装](docs/owned-project-publication.md)。
+- プロジェクト内の独立した追記領域に複数の所有者を置き、保存・準備を並行処理する。これは必須であり、単一所有者の全体queueを最終構成にしない。所有者数と利用者数は別で、各物理領域には一つの所有者を置き、プロジェクト全体では複数所有者を並行させる。同じ可変位置へ競合書き込みをさせず、照会は完全な所有者一覧と依存を含む不変の境界をpinする。[project-context](docs/candidates/project-context/README.md)は通常フック・保存workerへ、[project-cache](docs/candidates/project-cache/README.md)は準備ticketとproject共有vectorへ接続した隔離候補。[project-preparation](docs/candidates/project-preparation/README.md)は背景準備の全体直列入口を有界なshared serviceへ移し、独立準備最大3並行、80 session/16 ownerの別原文試験で最大13出版並行と全80原文の再起動後復元を確認した。通常フックと実MiniLM準備は小規模fixtureのみ。製品への採用、全hook・準備を含む80人8時間の持続負荷/準備債務、複数PC/NAS、認定索引の完全性は未達/未検証。一つのEggshellサービスが複数DBを扱える。ローカルも同じ保存契約を使う。[所有モデルと残る実装](docs/owned-project-publication.md)。
 - 共有時はデータ側のサービスを通す。SMB/NFS上の同じ可変PageMapを各PCが直接同時更新することを、ローカルlock試験だけで安全と扱わない。不変segmentの保管・転送は実NASで障害試験する。
 - git不要。取得したbytesをscope付き内容アドレスで保持し、観測には取得元・操作・入力依存・時系列・範囲/項目を持たせる。git/commitは任意の補助情報。外部パスやgit objectだけに原文の存続を依存させない。
 - 同じbytes/埋め込み入力は許可scope内で共有し、異なる観測・版・権限の証拠は保持する。巨大入力はstreamingと範囲manifestで扱い、数行の取得のために全体を自動取り込みしない。
@@ -91,7 +91,11 @@
 
 同じ最終helperの通常hook小fixtureは元JSON2項目と完全な捕捉境界を保持し、Prompt333/Pre102/Post70/Stop21ms、全検査7825ms/RSS最大357776KiBだった。背景準備とlogical projectのwarm/doctorは1532msで全4 ownerを処理し、原文head不変。実MiniLMも7窓/1 batch/7投影・source候補5点を2584msで準備し、空の3 ownerはforeign routerを作らない。再warmは全4 ownerで埋込要求/新規投影0、各ownerの準備時間合計95ms。これは小fixtureの準備値で、実LLVM配送/回答モデル/80人継続負荷の値ではない。80接続/16所有者の原文試験も全80原文/境界/graphの別process復元を確認し、同時出版最大14・全検査8162ms/RSS最大373024KiB、guard発火0/残存0。849msの保存区間は反復5KB・入口と準備を含まず速度比較に使わない。通常ContractAuditはsource-key読取を必須、全行列走査を禁止して通った。モデル比較0/18、製品未採用である。
 
-次は全体`index-drain.guard`で背景準備を直列化している入口を、service内の有界なsource/region所有のschedulerへ接続する。単にguardを外してchatごとのworkerを80個起動する方法は採らない。原文ACKと準備完了を分け、共有matrixのwriterを原文出版のgateにせず、同じ準備はまとめ、必要な旧cutを保持する。source cutと各準備済み字句/シナプス/matrix/router rootを保持するread capability、参照feedの継続処理、領域をまたぐ認定完全性、複数projectの推移的読取依存、共有content正本、native contextのepoch/ACKも残る。出版・索引・検索を同時に流す継続負荷で準備債務が増え続けないことを検査する。単一所有者の全体queueへ戻さず、未準備を不存在扱いにしない。選択計算の反復除去も残る。待機枠/成功本文の期限を増やして解消扱いにせず、重み/予算の再調整や必要範囲の事後緩和はしない。固定した新runtime/seed/cohortでLunaの所定比較へ進める。総token比較0/18、目標はactiveのまま。multi-host/NAS、80人8時間/p99、98%配送、容量回収、MCP保存方針も未完了である。これまでの部品試験を合わせても、80同時の全フックの実証にはならない。
+続く[project-preparation](docs/candidates/project-preparation/README.md)は、全体`index-drain.guard`で準備を直列化する入口を、shared serviceの有界な3 workerへ置き換えた隔離候補である。独立sourceの字句/シナプス準備と別projectの数値準備は並行し、project/scope共有matrixのwriterだけを競合させない。原文出版は待たせない。pending+activeは1024件/登録metadata 8 MiB以内で、実行中に来た通知を完了時に消さず、再試行/backoffと閉鎖後の再起動拒否をLeanで検査した。source別の登録参照とwake/cursorにより、変更のない全targetをchatごとに毎秒再投入しない。外部入力の鮮度probeを「未完了」と誤認する無限retryを実nativeで発見し、実replay完了と既知入力checkpointの後処理だけを分離した。外部鮮度確認は維持する。終了応答を実process終了と誤認する経路も直し、派生worker停止後の実終了を待つ。
+
+通常hook小fixtureは元JSON2項目を配送しPrompt342/Pre104/Post75/Stop24ms、3原eventを一度だけ記録して他5sourceへshared workerが参照取り込みした。6 sourceへの80並行準備通知と同時原文保存は、準備最大3並行・1418msで待ちを排出しretry0。active3件での停止は23ms、再起動後も原文head不変で準備を回復した。実daemonの無変更2200msでは再投入0、新wakeは処理した。実MiniLMも同serviceで6 sourceを5404ms、project/scopeの行列は13/22行、再準備は全sourceで埋込要求/新規投影0、RSS最大1687552KiBだった。別の80 session/16 owner原文試験は全80原文/境界/graphを別processで復元、最大13出版並行・全検査8268ms/RSS371456KiB。813msの出版区間は入口と準備を含まず反復5KBのため速度比較に使わない。通常ContractAudit/標準公理だけの追加Lean検査、最終guard発火0/残存0を確認。初期のretry/終了/fixture/compile/検査制御器の失敗も残す。モデル比較0/18、製品未採用。
+
+次はsource cutと各準備済み字句/シナプス/matrix/router rootを保持するread capability、参照feedの継続処理、領域をまたぐ認定完全性、複数projectの推移的読取依存を詰める。今回の80件通知と別の80原文試験を、80同時の全hook・数値準備の持続負荷と同一視しない。出版・索引・検索を同時に流して、queue age/投入追従/飽和後の回復/準備債務が増え続けないことを検査する。単一所有者の全体queueへ戻さず、未準備を不存在扱いにしない。共有content正本、native contextのepoch/ACK、選択計算の反復除去も残る。待機枠/成功本文の期限を増やして解消扱いにせず、重み/予算の再調整や必要範囲の事後緩和はしない。固定した新runtime/seed/cohortでLunaの所定比較へ進める。総token比較0/18、目標はactiveのまま。multi-host/NAS、80人8時間/p99、98%配送、容量回収、MCP保存方針も未完了である。終了した試験DB/cache/生log/旧実行体はcompact記録抽出後に削除し、archiveは作らない。
 
 検索側の追加候補は[prepared-query](docs/candidates/prepared-query/README.md)、runtime `1b82d622…`。通常のkeyed検索で、原典の固定版に対応するrouterを行列の最新版と組み合わせて拒否し、後段の採点が行列cacheを作り直していた経路を修正した。問い合わせ開始時に字句/窓所有者/routerとその正確な行列rootを保持し、採点では固定したread setを使う。固定した行がなければ最新版やraw cacheで代用しない。行列rootの一致をLeanの`ReadView.sameMatrix`で持つ。native合成試行は旧経路の不一致を再現し、66回の後続出版/索引準備で旧lookup枠が上書きされた後も、保持した候補/順位/窓/ベクトルが一致した。新しい要求は最新版を読み、未準備新版/異なるauthorityを拒否した。scenario 4388 ms/process 10193 ms・RSS最大102560 KiBは部品検査の値である。全体ContractAuditが通り、実MiniLMのshell5/MCP形式3操作、原文だけの回復、新chat実本文2/2・4466 ms、全service終了/残存process0を確認した。実MCPサーバーではなく小fixtureであり、98%/80人/総token改善の実証ではない。回答モデル呼出0、題材比較0/18、製品未採用。保存側の基準は次段の`66c6cf14…`を保持し、回答モデル用の固定controller/cohortを差し替えていない。次はcanonical/共有・私有synapseを含むservice全体の同じsource境界の読取保持と、継続出版・実journalを伴う追従を接続する。
 

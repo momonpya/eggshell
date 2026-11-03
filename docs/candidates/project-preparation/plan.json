@@ -1,0 +1,22 @@
+{
+  "status": "isolated component checks passed; sustained 80-user capacity and adoption unverified",
+  "sourceParentCommit": "1ecc4aff",
+  "objective": "Run independently owned project preparation through a bounded data-side service instead of one installation-wide drain or one index process per chat.",
+  "contracts": [
+    "Keep one logical project DB and multiple independently owned original append streams. Original publication never waits for derived preparation.",
+    "At most three index worker processes for the service; pending plus running requests and their metadata bytes are bounded. No raw observations or user query bodies in the queue.",
+    "Coalesce pending identical targets; a notification during an active job remains pending after its completion. Distinct source owners may prepare concurrently; shared canonical numerical writers remain project/scope-owned.",
+    "Queue admission is an advisory scheduling ACK, never an original publication or preparation-complete ACK. Durable source/index/journal records remain recovery authority.",
+    "A failed or incomplete attempt returns to the bounded queue with backoff. Source changes leave readiness debt explicit; no cold source is declared absent.",
+    "Close admission before stopping workers. Shutdown cancels derived jobs without waiting for warm, retains durable recovery records and never respawns a closed worker.",
+    "Read-only profile checks remain before scheduling. The local administration RPC reads only checked target records from the private registry; network multi-host authorization remains a separate gate.",
+    "Keep complete Work certification separate from vector/synapse recommendation. All changes remain isolated until matched total-token, quality and deadline adoption conditions pass."
+  ],
+  "validation": [
+    "Lean checks for slot and metadata bounds, pending coalescing, in-flight notification retention, retry, independent resources and terminal close.",
+    "Native TCP and actual normal save/Pre/Post/Stop paths with concurrent project owners, preparation, publication and queries; deterministic original evidence and complete source inventory checks.",
+    "Actual MiniLM preparation/reuse, active-work shutdown/restart and persisted debt recovery; retain the 3.5GiB stop, 4GiB ceiling and 2GiB free-disk floor.",
+    "Measure successful simultaneous preparation, queue age, retry/busy counts and unfinished debt. This is not yet an 80-user eight-hour or 98% delivery result.",
+    "No subagents, new Python/Ruby implementation, paid model calls or changed seed/cohort in component verification. Matched paid comparison count remains 0/18."
+  ]
+}
