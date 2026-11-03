@@ -1,0 +1,24 @@
+{
+  "status": "isolated candidate; not adopted",
+  "parentCommit": "a1768b14",
+  "objective": "Carry a frozen complete configured project read boundary through ordinary search, private native ingress and publication without replacing it with latest heads.",
+  "requirements": [
+    "One logical project per configured DB, independent physical write owners and stable session route; foreign projects stay read-only.",
+    "Freeze source heads once for the turn before its first search; all later probes and capture use that boundary. Serialize it in PendingTurn so workers/restart do not invent new heads.",
+    "Ordinary Handoff reads all physical owners using the exact captured snapshots; complete Work graph matching is not restricted by recommendation rank.",
+    "Original native event body is written once; private source projections and background feed imports do not copy Post bodies.",
+    "Source ACK binds the exact configured read boundary; no source-only publisher shadows a logical project.",
+    "Keep canonical numerical data project/scope-owned; do not introduce one vector copy per client or owner.",
+    "Distinct checks for source durability, derived readiness and actual delivered context. Do not claim cross-project transitive closure or sustained 80-user capacity from the small integration fixture."
+  ],
+  "validation": [
+    "Lean checks for exact reopening and configured inventory; native normal-path capture/search/save with old retained heads after later publication and process restart.",
+    "Retry, missing owner, wrong project/scope, read-only, expired feed, missing Pre and reference corruption; preservation of original bytes, receipt chain and replay output.",
+    "Ordinary ContractAudit and resource guard remain required. No paid answering calls before the model-free integration passes."
+  ],
+  "stopRssKiB": 3670016,
+  "minimumFreeDiskKiB": 2097152,
+  "answeringModelCalls": 0,
+  "matchedPaidComparisons": 0,
+  "adopted": false
+}

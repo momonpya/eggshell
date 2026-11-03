@@ -1,0 +1,9 @@
+tools_research_ProjectContextChecks-lean failed: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/project-context-core/tools/research/ProjectContextChecks.lean:70:36: error: Application type mismatch: The argument
+  captured
+has type
+  Option (List (List PageMap.ReadObservation)) →
+    (nominations : Option (List Nat)) → DemandMemo.CapturedRecord request (toJson none).compress nominations
+but is expected to have type
+  DemandMemo.CapturedRecord ?m.28 ?m.29 ?m.30
+in the application
+  @DemandMemo.publishCaptured ?m.28 ?m.29 ?m.30 source captured

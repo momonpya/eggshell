@@ -1,0 +1,406 @@
+--- a/Eggshell/ProjectSources.lean
++++ b/Eggshell/ProjectSources.lean
+@@ -106 +106 @@
+-  deriving ToJson, FromJson, BEq
++  deriving ToJson, FromJson, BEq, DecidableEq
+--- a/Eggshell/ProjectInputs.lean
++++ b/Eggshell/ProjectInputs.lean
+@@ -14 +14 @@
+-  deriving ToJson, FromJson, BEq
++  deriving ToJson, FromJson, BEq, DecidableEq
+@@ -15,0 +16,3 @@
++instance : Repr Image where
++  reprPrec image _ := repr (toJson image).compress
++
+--- a/Eggshell/ProjectAccess.lean
++++ b/Eggshell/ProjectAccess.lean
+@@ -141,0 +142,27 @@
++/-- Reopen exactly the boundary retained by a native turn. A newer source or
++changed inventory cannot replace any captured owner. -/
++structure Retained (selection : Selection) (images : Array ProjectInputs.Image) where
++  private mk ::
++  reads : ReadSet selection
++  exact : reads.images = images
++
++@[no_expose] def reopen (selection : Selection) (images : Array ProjectInputs.Image)
++    (deadline : Nat) : IO (Retained selection images) := do
++  unless images.size == selection.reads.size do
++    throw (IO.userError "captured project context omitted a configured project")
++  let views ← (selection.reads.zip images).mapM fun (project,image) => do
++    unless (← IO.monoMsNow) < deadline do throw (IO.userError "captured project context expired")
++    unless image.project == project.manifest.identity &&
++        image.inventory == manifestChecksum project.manifest do
++      throw (IO.userError "captured project context changed its original inventory")
++    ProjectStore.openView project image.cut
++  if complete : views.size = selection.reads.size then
++    if projects : views.map (·.project.directory) = selection.reads.map (·.directory) then
++      if manifests : views.map (·.project.manifest) = selection.reads.map (·.manifest) then
++        let reads : ReadSet selection := ⟨views,complete,projects,manifests⟩
++        if exact : reads.images = images then return ⟨reads,exact⟩
++        else throw (IO.userError "reopened project context changed a captured source head")
++      else throw (IO.userError "captured project context changed its complete manifests")
++    else throw (IO.userError "captured project context changed its configured paths")
++  else throw (IO.userError "captured project context omitted an original owner")
++
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -3,0 +4 @@
++public import Eggshell.ProjectInputs
+@@ -107,0 +109,2 @@
++  /-- Complete project boundary captured before this turn's first lookup. -/
++  projectInputs : Option (Array ProjectInputs.Image) := none
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9183 +9183 @@
+-    (receipt : Option String) : IO (Option (Option Handoff)) := do
++    (receipt : Option String) (memoScope : Option String := none) : IO (Option (Option Handoff)) := do
+@@ -9185 +9185 @@
+-    if let some checked ← DemandMemo.readObserved writable request nominations then
++    if let some checked ← DemandMemo.readObserved writable request nominations memoScope then
+@@ -9205,0 +9206,9 @@
++def retainedSelection (selection : Config.Selection)
++    (captured : Option (List (Option DB.PageMap.Snapshot))) : IO (List (Option DB.PageMap.Snapshot)) := do
++  let some captured := captured | return ← selection.read.mapM fun item => DB.PageMap.open? item.path
++  unless captured.length == selection.read.length &&
++      (selection.read.zip captured).all (fun (item,source) => source.any (fun source =>
++        source.directory.normalize == item.path.normalize)) do
++    throw (IO.userError "captured search omitted or changed a configured source")
++  return captured
++
+@@ -9212 +9221,3 @@
+-    (publishMemo : Bool := true) : IO (Option Handoff) := do
++    (publishMemo : Bool := true)
++    (captured : Option (List (Option DB.PageMap.Snapshot)) := none)
++    (memoScope : Option String := none) : IO (Option Handoff) := do
+@@ -9227 +9238 @@
+-  let snapshots ← paths.mapM DB.PageMap.open?
++  let snapshots ← retainedSelection selection captured
+@@ -9259 +9270 @@
+-        return ← demandResponse? writable request paths snapshots nominations noticeFits (sourceContext.bind (·.receipt))
++        return ← demandResponse? writable request paths snapshots nominations noticeFits (sourceContext.bind (·.receipt)) memoScope
+@@ -9318 +9329 @@
+-        try DemandMemo.publishCaptured writable captured
++        try DemandMemo.publishCaptured writable captured memoScope
+@@ -9347,2 +9358,3 @@
+-def readSelection (selection : Config.Selection) (keys : List String) : IO (List Value) := do
+-  let snapshots ← selection.read.mapM fun source => DB.PageMap.open? source.path
++def readSelection (selection : Config.Selection) (keys : List String)
++    (captured : Option (List (Option DB.PageMap.Snapshot)) := none) : IO (List Value) := do
++  let snapshots ← retainedSelection selection captured
+@@ -9401 +9413 @@
+-    (keys : List String) : IO (Option Handoff) := do
++    (keys : List String) (captured : Option (List (Option DB.PageMap.Snapshot)) := none) : IO (Option Handoff) := do
+@@ -9403 +9415 @@
+-  let roots ← readSelection selection keys
++  let roots ← readSelection selection keys captured
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -4,0 +5 @@
++public import Eggshell.PluginProjectContext
+@@ -471 +472,6 @@
+-    throw (IO.userError "project publication requires its captured configured read boundary")
++    let deadline := (← IO.monoMsNow)+maxBudgetMs
++    let some context ← ProjectContext.open? pending deadline |
++      throw (IO.userError "project publication requires its captured configured read boundary")
++    unless context.selection.write.any (fun write => write.directory == target) do
++      throw (IO.userError "project save changed its configured write destination")
++    return ← publishConfiguredProject (← resolve) context.selection context.reads pending checkpoint deadline
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -480 +480,3 @@
+-  let configured := pendingSelection request.pending
++  let context ← ProjectContext.open? request.pending request.deadline
++  let configured := context.map (·.physicalSelection) |>.getD (pendingSelection request.pending)
++  let captured := context.map (·.snapshots)
+@@ -486 +488 @@
+-  | .roots keys => manualHandoff selection request.work keys
++  | .roots keys => manualHandoff selection request.work keys captured
+@@ -523 +525,2 @@
+-        (request.route != .lexical)
++        (request.route != .lexical) captured
++        (context.bind fun context => context.selection.write.map (·.project.manifest.identity))
+@@ -618 +621,4 @@
+-          let (pinned,indexed) ← Warm.refreshSource pinned target.storage ((← IO.monoMsNow)+60000) (some preparation)
++          let deadline := (← IO.monoMsNow)+60000
++          let imported : Option Synapses.Journal.ImportResult ←
++            target.ingress.mapM fun owner => Synapses.Journal.importFeed pinned owner deadline
++          let (pinned,indexed) ← Warm.refreshSource pinned target.storage deadline (some preparation)
+@@ -620 +626,2 @@
+-          pure (toJson indexed)
++          let complete := indexed.complete && imported.all (fun (result : Synapses.Journal.ImportResult) => result.complete)
++          pure (toJson {indexed with complete})
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -268,0 +269,6 @@
++  let files ← sessionFiles session
++  let pending ← readPendingBase? files
++  let context ← try pending.bindM fun pending => ProjectContext.open? pending deadline
++    catch error =>
++      IO.eprintln s!"Eggshell retained unverified project maintenance scope: {error}"
++      pure none
+@@ -279,5 +285,5 @@
+-        let files ← sessionFiles session
+-        if let some pending ← readPendingBase? files then
+-          unless pending.write.any (fun path => (System.FilePath.mk path).normalize ==
+-              (System.FilePath.mk target.owner.directory).normalize) do continue
+-      if !(← Synapses.Journal.required source target.storage) then continue
++        if let some pending := pending then
++          unless context.any (·.canPrepare target.owner) || pending.write.any (fun path =>
++              (System.FilePath.mk path).normalize == (System.FilePath.mk target.owner.directory).normalize) do continue
++      let feed ← target.ingress.mapM (Synapses.Journal.feedRequired source)
++      if !feed.getD false && !(← Synapses.Journal.required source target.storage) then continue
+@@ -649,0 +656 @@
++    let pending ← ProjectContext.capture pending (← hookDeadline input)
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -1276,0 +1277 @@
++  ingress : Option Sidecar.Owner := none
+@@ -1281 +1282,2 @@
+-def register (source : PageMap.Snapshot) (writable : Bool) : IO Unit := do
++def register (source : PageMap.Snapshot) (writable : Bool)
++    (ingress : Option Sidecar.Owner := none) : IO Unit := do
+@@ -1284 +1286 @@
+-  let target : Target := ⟨owner, storage⟩
++  let target : Target := ⟨owner, storage, ingress⟩
+@@ -1289,0 +1292,11 @@
++def feedRequired (source : PageMap.Snapshot) (owner : Sidecar.Owner) : IO Bool := do
++  let originalSource ← owner.pin
++  let some original ← open? originalSource | return true
++  let count ← getNat original.get "count"
++  let some target ← open? source | return count > 0
++  let some raw ← target.get (importKey owner) | return count > 0
++  let old ← Index.decode (α := ImportCursor) raw
++  unless old.next ≤ count && (← PageMap.HistoryReader.make? original old.journal).isSome do
++    throw (IO.userError "native project feed lost its retained append prefix")
++  return old.next < count
++
+--- a/Eggshell/SynapseLive.lean
++++ b/Eggshell/SynapseLive.lean
+@@ -3,0 +4 @@
++public import Eggshell.PluginProjectContext
+@@ -42 +43,32 @@
+-def observe (pending : Plugin.PendingTurn) (make : DB.PageMap.Snapshot → IO Journal.Entry) : IO Unit := do
++def observe (pending : Plugin.PendingTurn)
++    (make : DB.PageMap.Snapshot → Option String → IO Journal.Entry) : IO Unit := do
++  if let some context ← Plugin.ProjectContext.open? pending ((← IO.monoMsNow)+5000) then
++    let source ← context.source
++    let value ← make source context.archive
++    let projectKnowledge : Journal.Knowledge → IO Journal.Knowledge := fun known => do
++      let mut related : Array Journal.SourceKnowledge := #[]
++      let mut seen : Std.HashMap String DB.PageMap.Head := {}
++      for other in context.reads.sources do
++        if let some prior := seen[other.head.identity]? then
++          unless prior == other.head do throw (IO.userError "captured project knowledge has conflicting original heads")
++          continue
++        seen := seen.insert other.head.identity other.head
++        if other.head.identity == source.head.identity then continue
++        let captured ← Journal.knowledge other known.acknowledged known.uncertain context.archive known.delivery
++        related := related.push ⟨captured.source,captured.indexed⟩
++      return {
++        known with
++        related := related
++        archive := context.archive
++        archived := context.selection.write.map (fun _ => source.head) }
++    let payload ← match value.payload with
++      | .start occurrence work query known => pure (.start occurrence work query (← projectKnowledge known))
++      | .answer occurrence query text known => pure (.answer occurrence query text (← projectKnowledge known))
++      | .finish occurrence name input response _ => pure (.finish occurrence name input response context.archive)
++    let _ ← Journal.append source {value with payload}
++    let owner := DB.Sidecar.Owner.ofSnapshot source
++    Journal.register source (context.selection.write.isSome)
++    for other in context.reads.sources do
++      if other.head.identity == source.head.identity then continue
++      Journal.register other (context.canPrepare (DB.Sidecar.Owner.ofSnapshot other)) (some owner)
++    return
+@@ -46 +78 @@
+-      let _ ← Journal.append source (← make source)
++      let _ ← Journal.append source (← make source pending.write)
+@@ -60,2 +92,2 @@
+-  observe pending fun source => do
+-    let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write confirmed
++  observe pending fun source archive => do
++    let known ← Journal.knowledge source state.deliveredGraphs unknown archive confirmed
+@@ -70,2 +102,2 @@
+-  observe pending fun _ => pure ⟨clock, .finish occurrence tool.name
+-    (Plugin.canonicalJson tool.input) (Plugin.canonicalJson tool.response) pending.write, receivedUnixMs? input⟩
++  observe pending fun _ archive => pure ⟨clock, .finish occurrence tool.name
++    (Plugin.canonicalJson tool.input) (Plugin.canonicalJson tool.response) archive, receivedUnixMs? input⟩
+@@ -84,2 +116,2 @@
+-  observe pending fun source => do
+-    let known ← Journal.knowledge source state.deliveredGraphs unknown pending.write confirmed
++  observe pending fun source archive => do
++    let known ← Journal.knowledge source state.deliveredGraphs unknown archive confirmed
+--- a/Eggshell/DemandMemo.lean
++++ b/Eggshell/DemandMemo.lean
+@@ -3,0 +4 @@
++public import Eggshell.QueryMemoStore
+@@ -236 +237 @@
+-def readChecked (snapshot : Store.Snapshot) (request : String) :
++def readChecked (snapshot : Store.Snapshot) (request : String) (scope : Option String := none) :
+@@ -237,0 +239 @@
++  let some snapshot ← QueryMemoStore.open? snapshot scope | return none
+@@ -251,2 +253,2 @@
+-def read (snapshot : Store.Snapshot) (request : String) : IO (Option Record) := do
+-  pure ((← readChecked snapshot request).map (·.val))
++def read (snapshot : Store.Snapshot) (request : String) (scope : Option String := none) : IO (Option Record) := do
++  pure ((← readChecked snapshot request scope).map (·.val))
+@@ -255,2 +257,2 @@
+-    (nominations : Option (List Nat)) : IO (Option (ObservedRecord request nominations)) := do
+-  pure ((← readChecked snapshot request).bind fun requested => observedRecord? requested nominations)
++    (nominations : Option (List Nat)) (scope : Option String := none) : IO (Option (ObservedRecord request nominations)) := do
++  pure ((← readChecked snapshot request scope).bind fun requested => observedRecord? requested nominations)
+@@ -261 +263 @@
+-def publish (snapshot : Store.Snapshot) (record : Record) : IO Unit := do
++def publish (snapshot : Store.Snapshot) (record : Record) (scope : Option String := none) : IO Unit := do
+@@ -265,5 +267 @@
+-  -- Computing may itself have published graph-neutral rank metadata. Use the
+-  -- current writer capability; the record still names the pinned search heads.
+-  -- A concurrently changed source makes this record a future cache miss.
+-  let current ← PageMap.pin snapshot.directory
+-  let _ ← PageMap.withWriter current fun writer => do
++  let _ ← QueryMemoStore.withWriter snapshot scope fun writer => do
+@@ -284,2 +282,2 @@
+-    (captured : CapturedRecord request payload nominations) : IO Unit :=
+-  publish snapshot captured.observed.record
++    (captured : CapturedRecord request payload nominations) (scope : Option String := none) : IO Unit :=
++  publish snapshot captured.observed.record scope
+--- a/tools/research/ProjectInputsChecks.lean
++++ b/tools/research/ProjectInputsChecks.lean
+@@ -372 +372 @@
+-def main (args : List String) : IO UInt32 := do
++def projectInputsCommand (args : List String) : IO UInt32 := do
+--- /dev/null
++++ b/Eggshell/PluginProjectContext.lean
+@@ -0,0 +1,85 @@
++module
++
++public import Eggshell.PluginModel
++public import Eggshell.ProjectAccess
++
++@[expose] public section
++namespace Eggshell.Plugin.ProjectContext
++open Lean DB
++
++structure Context where
++  private mk ::
++  selection : ProjectAccess.Selection
++  reads : ProjectAccess.ReadSet selection
++  images : Array ProjectInputs.Image
++  retained : reads.images = images
++
++theorem Context.complete (context : Context) : context.images.size = context.selection.config.read.length := by
++  rw [← context.retained]
++  exact context.reads.image_count
++
++theorem Context.complete_sources (context : Context) :
++    (context.images.map fun image => image.cut.heads.size).sum = context.reads.sources.size := by
++  rw [← context.retained]
++  exact context.reads.image_source_count
++
++def projectConfigured (pending : PendingTurn) : IO Bool := do
++  for path in (pending.write.toList ++ pending.read).eraseDups do
++    if ← ((System.FilePath.mk path)/"project").pathExists then return true
++  return false
++
++def Context.requireWriter (context : Context) : IO Unit := do
++  if let some write := context.selection.write then
++    unless context.reads.views.any (fun view => view.project.directory == write.directory) do
++      throw (IO.userError "configured read scope omitted the selected write project")
++
++/-- This runs before lookup; subsequent hooks retain this boundary for the turn. -/
++@[no_expose] def capture (pending : PendingTurn) (deadline : Nat) : IO PendingTurn := do
++  unless pending.projectInputs.isNone do throw (IO.userError "native turn already captured its project context")
++  unless ← projectConfigured pending do return pending
++  let selection ← ProjectAccess.resolve pending.sessionId (pendingSelection pending)
++  let reads ← ProjectAccess.pin selection deadline
++  let context : Context := ⟨selection,reads,reads.images,rfl⟩
++  context.requireWriter
++  return {pending with projectInputs := some reads.images}
++
++@[no_expose] def open? (pending : PendingTurn) (deadline : Nat) : IO (Option Context) := do
++  let some images := pending.projectInputs | do
++    if ← projectConfigured pending then throw (IO.userError "native project turn has no captured read boundary")
++    return none
++  let selection ← ProjectAccess.resolve pending.sessionId (pendingSelection pending)
++  let saved ← ProjectAccess.reopen selection images deadline
++  let context : Context := ⟨selection,saved.reads,images,saved.exact⟩
++  context.requireWriter
++  return some context
++
++def Context.source (context : Context) : IO PageMap.Snapshot := do
++  if let some write := context.selection.write then
++    let some source := context.reads.sources.find? (·.head.identity == write.original.identity) |
++      throw (IO.userError "captured project context omitted its native write route")
++    return source
++  let some source := context.reads.sources[0]? |
++    throw (IO.userError "captured project context has no native ingress source")
++  return source
++
++def Context.archive (context : Context) : Option String :=
++  context.selection.write.map (·.sourceDirectory.toString)
++
++def Context.canPrepare (context : Context) (owner : Sidecar.Owner) : Bool :=
++  context.selection.write.any fun write =>
++    (List.range write.project.manifest.owners.size).any fun slot =>
++      (write.project.manifest.owners[slot]?.map (·.identity) == some owner.database) &&
++      write.project.sourceDirectory slot == (System.FilePath.mk owner.directory).normalize
++
++/-- Physical storage partitioning never changes the configured write project. -/
++def Context.physicalSelection (context : Context) : Config.Selection := {
++  context.selection.config with
++  read := context.reads.sources.toList.map fun source =>
++    {name := source.head.identity,path := source.directory}
++  write := context.selection.write.map fun write =>
++    {name := write.project.manifest.identity,path := write.sourceDirectory} }
++
++def Context.snapshots (context : Context) : List (Option PageMap.Snapshot) :=
++  context.reads.sources.toList.map some
++
++end Eggshell.Plugin.ProjectContext
+--- /dev/null
++++ b/Eggshell/QueryMemoStore.lean
+@@ -0,0 +1,44 @@
++module
++
++public import Eggshell.GraphStore
++public import Eggshell.Paths
++
++@[expose] public section
++namespace Eggshell.QueryMemoStore
++open DB
++
++def key (source : PageMap.Snapshot) (scope : Option String) := scope.getD source.head.identity
++def authority (scope : String) := "private-query-memo:"++scope
++
++def directory (scope : String) : IO System.FilePath := do
++  unless PageMap.validIdentity scope do throw (IO.userError "invalid private query cache scope")
++  return (← Paths.dataRoot)/"query-cache"/scope/"handoff"
++
++def open? (source : PageMap.Snapshot) (scope : Option String := none) : IO (Option PageMap.Snapshot) := do
++  let scope := key source scope
++  let path ← directory scope
++  if !(← (path/"head").pathExists) then return none
++  let snapshot ← PageMap.pin path
++  unless snapshot.head.authority == authority scope do throw (IO.userError "foreign private query cache")
++  return some snapshot
++
++/-- Optional query writes have their own private head and a fail-fast claim.
++They cannot advance the original project's owner frontier. -/
++def withWriter (source : PageMap.Snapshot) (scope : Option String)
++    (action : PageMap.Writer → IO α) : IO α := do
++  let scope := key source scope
++  let path ← directory scope
++  let parent := path.parent.get!
++  FileSystem.privateDirectory parent
++  let claim := parent/"handoff.guard"
++  FileSystem.immutableExistingBytes claim ByteArray.empty
++  let lease ← FileSystem.openRead claim.toString
++  unless ← FileSystem.tryReadLock lease true do throw (IO.userError "private query cache is busy")
++  try
++    let snapshot ← if ← (path/"head").pathExists then PageMap.pin path else PageMap.create path (authority scope)
++    unless snapshot.head.authority == authority scope do throw (IO.userError "foreign private query cache")
++    let (value,_,_) ← PageMap.withWriter snapshot action
++    return value
++  finally FileSystem.unlockRead lease
++
++end Eggshell.QueryMemoStore
