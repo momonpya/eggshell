@@ -39,6 +39,14 @@ neither a write route nor a warm index filters certification's read domain.
 This binding must precede ordinary hook integration. It does not authorize
 per-owner copies of the project's canonical vectors or content.
 
+The [read-boundary continuation](candidates/project-inputs/README.md) now requires
+the complete configured read set in the explicit project publisher, including
+read-only foreign projects. It records those exact retained cuts with the source
+ACK and rejects a changed retry boundary. Read scope grants no writer lease.
+Cross-project dependency closure at query time and transporting actual accepted
+views through ordinary journal/save workers remain unconnected. The single-source
+publisher rejects logical project directories before creating a shadow DB there.
+
 The implementation gap is explicit: parallel owners exist in the native broker
 candidate, but not in the normal hook publication path. Completing that route
 and testing publication, preparation and queries together is required before

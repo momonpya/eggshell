@@ -1,0 +1,582 @@
+diff --git a/Eggshell/ProjectAccess.lean b/Eggshell/ProjectAccess.lean
+index d14d52a..673f7c0 100644
+--- a/Eggshell/ProjectAccess.lean
++++ b/Eggshell/ProjectAccess.lean
+@@ -3,0 +4 @@ public import Eggshell.ProjectSources
++public import Eggshell.ProjectInputs
+@@ -93,0 +95,17 @@ def ReadSet.sources (set : ReadSet selection) : Array PageMap.Snapshot := set.vi
++def ReadSet.images (set : ReadSet selection) : Array ProjectInputs.Image := set.views.map ProjectInputs.ofView
++
++theorem ReadSet.image_count (set : ReadSet selection) :
++    set.images.size = selection.config.read.length := by
++  simpa only [ReadSet.images,Array.size_map] using set.complete.trans selection.complete
++
++/-- The same physical reader can be reused by a session with the same complete
++configuration. The write route is checked separately and is never inherited. -/
++@[no_expose] def ReadSet.forSelection (set : ReadSet selection) (other : Selection) : IO (ReadSet other) := do
++  if complete : set.views.size = other.reads.size then
++    if projects : set.views.map (·.project.directory) = other.reads.map (·.directory) then
++      if manifests : set.views.map (·.project.manifest) = other.reads.map (·.manifest) then
++        return ⟨set.views,complete,projects,manifests⟩
++      else throw (IO.userError "shared project read set changed its complete manifests")
++    else throw (IO.userError "shared project read set changed its configured read projects")
++  else throw (IO.userError "shared project read set omitted a configured project")
++
+@@ -104,0 +123,9 @@ theorem ReadSet.source_count (set : ReadSet selection) :
++theorem ReadSet.image_source_count (set : ReadSet selection) :
++    (set.images.map fun image => image.cut.heads.size).sum = set.sources.size := by
++  rw [set.source_count]
++  congr 1
++  simp only [ReadSet.images,Array.map_map]
++  apply Array.map_congr_left
++  intro view _
++  exact ProjectInputs.ofView_owner_count view
++
+diff --git a/Eggshell/ProjectPublication.lean b/Eggshell/ProjectPublication.lean
+index 5fd6c7b..9cd8e20 100644
+--- a/Eggshell/ProjectPublication.lean
++++ b/Eggshell/ProjectPublication.lean
+@@ -13,0 +14,2 @@ structure Job where
++  reads : Array ProjectViews.Borrow
++  inputs : Array ProjectInputs.Image
+@@ -30,0 +33,4 @@ structure Registration where
++structure ReadRegistration where
++  project : ProjectStore.Project
++  capability : String
++
+@@ -32,0 +39 @@ structure State where
++  readers : Array ReadRegistration := #[]
+@@ -82,0 +90,3 @@ def Pool.register (pool : Pool) (path : System.FilePath) (identity : String) : I
++    if let some reader := state.readers.find? (·.project.manifest.identity == identity) then
++      unless reader.project.directory == project.directory && reader.project.manifest == project.manifest do
++        throw (IO.userError "write project conflicts with its read registration")
+@@ -103,0 +114,28 @@ def Pool.scope (pool : Pool) (identity secret : String) : IO Registration := poo
++/-- Local administration registers immutable read scope, without acquiring a
++publisher lease or making a read capability a project write capability. -/
++def Pool.registerRead (pool : Pool) (path : System.FilePath) (identity : String) : IO ReadGrant := do
++  let project ← openProject path
++  unless project.manifest.identity == identity do throw (IO.userError "read project incarnation changed")
++  pool.state.atomically do
++    let state ← get
++    unless !state.closed do throw (IO.userError "project publisher is closed")
++    if let some registered := state.readers.find? (·.project.manifest.identity == identity) then
++      unless registered.project.directory == project.directory && registered.project.manifest == project.manifest do
++        throw (IO.userError "read project has another location or inventory")
++      return ⟨project.manifest,registered.capability⟩
++    if let some writer := state.projects.find? (·.project.manifest.identity == identity) then
++      unless writer.project.directory == project.directory && writer.project.manifest == project.manifest do
++        throw (IO.userError "read project conflicts with its write registration")
++    unless state.readers.size < 64 do throw (IO.userError "project read registry is full")
++    let capability := Blake3.hex (← IO.getRandomBytes 32)
++    set {state with readers := state.readers.push ⟨project,capability⟩}
++    return ⟨project.manifest,capability⟩
++
++def Pool.readScope (pool : Pool) (request : ReadInput) : IO ReadRegistration := pool.state.atomically do
++  let state ← get
++  unless !state.closed do throw (IO.userError "project publisher is closed")
++  let some registered := state.readers.find? (·.project.manifest.identity == request.database) |
++    throw (IO.userError "unknown project read scope")
++  unless registered.capability == request.capability do throw (IO.userError "unauthorized project read scope")
++  return registered
++
+@@ -112,0 +151 @@ def Pool.submit (pool : Pool) (identity secret : String) (capsule : Capsule) (cu
++    (inputs : Array ReadInput)
+@@ -117 +156,4 @@ def Pool.submit (pool : Pool) (identity secret : String) (capsule : Capsule) (cu
+-  let charge := (toJson capsule).compress.utf8ByteSize+(toJson cut).compress.utf8ByteSize
++  let charge := (toJson capsule).compress.utf8ByteSize+(toJson cut).compress.utf8ByteSize+
++    (toJson inputs).compress.utf8ByteSize
++  unless inputs.size ≤ 64 && (inputs.toList.map (·.database)).Nodup do
++    throw (IO.userError "project read inputs repeat or exceed the complete project inventory bound")
+@@ -120,0 +163 @@ def Pool.submit (pool : Pool) (identity secret : String) (capsule : Capsule) (cu
++  let retained ← IO.mkRef (#[] : Array ProjectViews.Borrow)
+@@ -121,0 +165,10 @@ def Pool.submit (pool : Pool) (identity secret : String) (capsule : Capsule) (cu
++    let initial ← borrow.withReader fun view => pure (ProjectInputs.ofView view)
++    let mut images : Array ProjectInputs.Image := #[initial]
++    for input in inputs do
++      let reader ← pool.readScope input
++      if reader.project.manifest.identity == identity then
++        unless input.cut == cut do throw (IO.userError "project write boundary differs from its retained read boundary")
++      let held ← pool.views.acquire reader.project input.cut deadline
++      retained.modify (·.push held)
++      let image ← held.withReader fun view => pure (ProjectInputs.ofView view)
++      images := images.push image
+@@ -126,2 +179 @@ def Pool.submit (pool : Pool) (identity secret : String) (capsule : Capsule) (cu
+-    let receiptKey ← pool.measured "request-key" fun _ =>
+-      return "project:published:"++Sha256.hex (toJson (capsule,cut)).compress.toUTF8
++    let receiptKey ← pool.measured "request-key" fun _ => return projectRequestKey capsule
+@@ -142 +194 @@ def Pool.submit (pool : Pool) (identity secret : String) (capsule : Capsule) (cu
+-      let job : Job := ⟨prepared,borrow,receiptKey,charge,← IO.monoMsNow,deadline,cancelled,promise⟩
++      let job : Job := ⟨prepared,borrow,← retained.get,images,receiptKey,charge,← IO.monoMsNow,deadline,cancelled,promise⟩
+@@ -149,0 +202 @@ def Pool.submit (pool : Pool) (identity secret : String) (capsule : Capsule) (cu
++    for held in ← retained.get do held.release
+@@ -176,0 +230 @@ def Pool.takeGroup (pool : Pool) : IO (Option Group) := pool.state.atomically do
++          for held in job.reads do held.release
+@@ -212,0 +267,2 @@ def commit (pool : Pool) (owner : Owner) : Nat → Array Job → IO (Nat × Nat)
++          unless (← ProjectInputs.recorded source job.receiptKey) == job.inputs do
++            throw (IO.userError "durable project ACK lost or changed its actual read boundary")
+@@ -224,0 +281 @@ def commit (pool : Pool) (owner : Owner) : Nat → Array Job → IO (Nat × Nat)
++              ProjectInputs.bind intern.writer job.receiptKey job.inputs
+@@ -238 +295,2 @@ def commit (pool : Pool) (owner : Owner) : Nat → Array Job → IO (Nat × Nat)
+-      for (job,receipt) in acknowledged do job.reply.resolve (.ok (toJson receipt))
++      for (job,receipt) in acknowledged do
++        job.reply.resolve (.ok (toJson ({source := receipt,inputs := ProjectInputs.digest job.inputs} : ProjectReceipt)))
+@@ -256 +314,3 @@ def Pool.publish (pool : Pool) (group : Group) : IO Unit := do
+-    for job in group.jobs do job.borrow.release
++    for job in group.jobs do
++      job.borrow.release
++      for held in job.reads do held.release
+@@ -267,0 +328 @@ def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
++    ("readProjects",toJson state.readers.size),
+@@ -281,0 +343 @@ def Pool.stop (pool : Pool) : IO Unit := pool.state.atomically do
++        for held in job.reads do held.release
+@@ -295 +357 @@ def Pool.release (pool : Pool) : IO Unit := do
+-    set {state with projects := #[]}
++    set {state with projects := #[],readers := #[]}
+diff --git a/Eggshell/PublicationClient.lean b/Eggshell/PublicationClient.lean
+index fc4d31b..230635e 100644
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -353,0 +354,21 @@ def pinProject (endpoint : Daemon.Endpoint) (granted : ProjectGrant)
++def registerReadProject (endpoint : Daemon.Endpoint) (path : System.FilePath)
++    (identity : String) : IO ReadGrant := do
++  let response ← Daemon.exchange endpoint "project-read-register" (Json.mkObj [
++    ("directory",toJson path.toString),("database",toJson identity)]) (budget := 5000)
++  let granted ← IO.ofExcept (Json.parse response >>= fromJson? (α := ReadGrant))
++  unless granted.manifest.identity == identity && decide granted.manifest.Valid &&
++      Synapses.digest granted.capability do throw (IO.userError "publisher granted another read project")
++  return granted
++
++def readImage (manifest : ProjectStore.Manifest) (cut : ProjectStore.Cut) : ProjectInputs.Image :=
++  ⟨manifest.identity,ProjectStore.manifestChecksum manifest,cut⟩
++
++/-- Keep the exact caller-retained views. Registration cannot replace them
++with current heads or acquire a writer on a read-only project. -/
++def readInputs (endpoint : Daemon.Endpoint) (reads : ProjectAccess.ReadSet selection) :
++    IO (Array (ReadGrant × ProjectStore.Cut)) :=
++  reads.views.mapM fun view => do
++    let granted ← registerReadProject endpoint view.project.directory view.project.manifest.identity
++    unless granted.manifest == view.project.manifest do throw (IO.userError "registered read project changed its complete inventory")
++    return (granted,view.cut)
++
+@@ -355 +376,2 @@ def submitProject (endpoint : Daemon.Endpoint) (granted : ProjectGrant) (cut : P
+-    (capsule : Capsule) (deadline : Nat) : IO NativePublication.SourceReceipt := do
++    (capsule : Capsule) (inputs : Array (ReadGrant × ProjectStore.Cut))
++    (deadline : Nat) : IO ProjectReceipt := do
+@@ -356,0 +379,4 @@ def submitProject (endpoint : Daemon.Endpoint) (granted : ProjectGrant) (cut : P
++  for (read,cut) in inputs do
++    unless cut.inScope read.manifest do throw (IO.userError "publication read input omitted or mixed original owners")
++  let images := #[readImage granted.manifest cut] ++ inputs.map (fun (read,cut) => readImage read.manifest cut)
++  let readRequests := inputs.map fun (read,cut) => ({database := read.manifest.identity,capability := read.capability,cut} : ReadInput)
+@@ -361,2 +387,4 @@ def submitProject (endpoint : Daemon.Endpoint) (granted : ProjectGrant) (cut : P
+-    ("cut",toJson cut),("budgetMs",toJson budget)]) (budget := budget)
+-  let receipt ← IO.ofExcept (Json.parse response >>= fromJson? (α := NativePublication.SourceReceipt))
++    ("cut",toJson cut),("inputs",toJson readRequests),("budgetMs",toJson budget)]) (budget := budget)
++  let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := ProjectReceipt))
++  unless result.inputs == ProjectInputs.digest images do throw (IO.userError "project ACK changed its actual read boundary")
++  let receipt := result.source
+@@ -370 +398 @@ def submitProject (endpoint : Daemon.Endpoint) (granted : ProjectGrant) (cut : P
+-  return receipt
++  return result
+@@ -426 +454 @@ def publishConfiguredProject (endpoint : Daemon.Endpoint) (selection : ProjectAc
+-    (view : ProjectStore.View) (pending : PendingTurn) (checkpoint : Bool) (deadline : Nat) :
++    (reads : ProjectAccess.ReadSet selection) (pending : PendingTurn) (checkpoint : Bool) (deadline : Nat) :
+@@ -428,0 +457,4 @@ def publishConfiguredProject (endpoint : Daemon.Endpoint) (selection : ProjectAc
++  unless pending.read == selection.config.read.map (·.path.toString) do
++    throw (IO.userError "publication changed its configured read projects")
++  let some view := reads.views.find? (·.project.directory == write.directory) |
++    throw (IO.userError "configured publication omitted the write project from its complete read set")
+@@ -432,2 +464,3 @@ def publishConfiguredProject (endpoint : Daemon.Endpoint) (selection : ProjectAc
+-  let receipt ← submitProject endpoint granted view.cut (Capsule.ofPrepared request) deadline
+-  restoreProject write request receipt
++  let inputs ← readInputs endpoint reads
++  let receipt ← submitProject endpoint granted view.cut (Capsule.ofPrepared request) inputs deadline
++  restoreProject write request receipt.source
+@@ -436,0 +470,2 @@ def run (pending : PendingTurn) (target : System.FilePath) (checkpoint : Bool) :
++  if ← (target / "project").pathExists then
++    throw (IO.userError "project publication requires its captured configured read boundary")
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index 4db7b1c..6f2d013 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -743 +743,2 @@ def serveClient (server : Server) (admin : String) (client : Socket.Client) : IO
+-        let promise ← server.owned.submit identity secret capsule cut deadline cancelled
++        let inputs ← IO.ofExcept (payload.getObjVal? "inputs" >>= fromJson? (α := Array ReadInput))
++        let promise ← server.owned.submit identity secret capsule cut inputs deadline cancelled
+@@ -756,0 +758,4 @@ def serveClient (server : Server) (admin : String) (client : Socket.Client) : IO
++        | "project-read-register" => do
++          let path ← IO.ofExcept (payload.getObjValAs? String "directory")
++          let identity ← IO.ofExcept (payload.getObjValAs? String "database")
++          toJson <$> server.owned.registerRead (.mk path) identity
+diff --git a/Eggshell/PublicationWire.lean b/Eggshell/PublicationWire.lean
+index 2a0fda6..8b963f5 100644
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -8,0 +9 @@ public import Eggshell.ProjectStore
++public import Eggshell.ProjectInputs
+@@ -86,0 +88,20 @@ structure ProjectGrant where
++/-- A read capability has no source writer ownership or publication grant. -/
++structure ReadGrant where
++  manifest : ProjectStore.Manifest
++  capability : String
++  deriving ToJson, FromJson
++
++structure ReadInput where
++  database : String
++  capability : String
++  cut : ProjectStore.Cut
++  deriving ToJson, FromJson
++
++structure ProjectReceipt where
++  source : NativePublication.SourceReceipt
++  inputs : String
++  deriving ToJson, FromJson
++
++def projectRequestKey (capsule : Capsule) : String :=
++  "project:published:"++Sha256.hex (toJson capsule).compress.toUTF8
++
+@@ -123,0 +145 @@ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-servi
++  (include_str "ProjectInputs.lean").toUTF8,
+diff --git a/tools/research/OwnedProjectBrokerAudit.lean b/tools/research/OwnedProjectBrokerAudit.lean
+index 82b21dc..41494ee 100644
+--- a/tools/research/OwnedProjectBrokerAudit.lean
++++ b/tools/research/OwnedProjectBrokerAudit.lean
+@@ -152 +152 @@ def audit (binary root : System.FilePath) (bytes : Nat) (existing : Bool := fals
+-      ("budgetMs",toJson budget)]) (budget := 1000)
++      ("inputs",toJson (#[] : Array ReadInput)),("budgetMs",toJson budget)]) (budget := 1000)
+@@ -183,2 +183,2 @@ def audit (binary root : System.FilePath) (bytes : Nat) (existing : Bool := fals
+-          let receipt ← Client.submitProject peer granted cut (← input.get) ((← IO.monoMsNow)+28000)
+-          check receipt.complete s!"broker returned incomplete original ACK for {client}/{round}"
++          let receipt ← Client.submitProject peer granted cut (← input.get) #[] ((← IO.monoMsNow)+28000)
++          check receipt.source.complete s!"broker returned incomplete original ACK for {client}/{round}"
+@@ -205,2 +205,2 @@ def audit (binary root : System.FilePath) (bytes : Nat) (existing : Bool := fals
+-    let replay ← Client.submitProject peer granted boot (capsule 0 0 bytes) ((← IO.monoMsNow)+28000)
+-    check replay.complete "idempotent broker resend lost source coverage"
++    let replay ← Client.submitProject peer granted boot (capsule 0 0 bytes) #[] ((← IO.monoMsNow)+28000)
++    check replay.source.complete "idempotent broker resend lost source coverage"
+@@ -209 +209 @@ def audit (binary root : System.FilePath) (bytes : Nat) (existing : Bool := fals
+-    check (← rejected (Client.submitProject peer granted before changed ((← IO.monoMsNow)+28000)))
++    check (← rejected (Client.submitProject peer granted before changed #[] ((← IO.monoMsNow)+28000)))
+diff --git a/Eggshell/ProjectInputs.lean b/Eggshell/ProjectInputs.lean
+new file mode 100644
+index 0000000..571ff97
+--- /dev/null
++++ b/Eggshell/ProjectInputs.lean
+@@ -0,0 +1,81 @@
++module
++
++public import Eggshell.ProjectSources
++
++@[expose] public section
++namespace Eggshell.ProjectInputs
++open Lean DB ProjectStore Persistence.Store
++
++/-- Original read boundaries, without locations, credentials or foreign bodies. -/
++structure Image where
++  project : String
++  inventory : String
++  cut : Cut
++  deriving ToJson, FromJson, BEq
++
++def ofView (view : View) : Image :=
++  ⟨view.project.manifest.identity,manifestChecksum view.project.manifest,view.cut⟩
++
++theorem ofView_owner_count (view : View) :
++    (ofView view).cut.heads.size = view.project.manifest.owners.size := by
++  simpa only [ofView, ← view.exact, Array.size_map] using view.complete
++
++def maxBytes : Nat := 1024*1024
++def digest (images : Array Image) :=
++  Blake3.hex (Blake3.digest "eggshell.project.inputs".toUTF8 [(toJson images).compress.toUTF8])
++def base (digest : String) := "project:inputs:"++digest
++
++/-- Repeated observations in the same read boundary share one descriptor.
++The exact descriptor is checked even when a digest is already present. -/
++def store (writer : PageMap.Writer) (images : Array Image) : IO String := do
++  let bytes := (toJson images).compress.toUTF8
++  unless bytes.size ≤ maxBytes do throw (IO.userError "project read boundary exceeds its bound")
++  let stamp := digest images
++  let recordBase := base stamp
++  if let some raw ← writer.get (recordBase++":count") then
++    let (count,tail) ← IO.ofExcept (Wire.natural.decode raw.toList)
++    unless tail.isEmpty && (Wire.natural.encode count).toByteArray == raw &&
++        count == (bytes.size+2047)/2048 do
++      throw (IO.userError "project read boundary count changed")
++    for index in [:count] do
++      unless (← writer.get (recordBase++":"++toString index)) ==
++          some (bytes.extract (index*2048) ((index+1)*2048)) do
++        throw (IO.userError "project read boundary was replaced")
++  else
++    putNat writer (recordBase++":count") ((bytes.size+2047)/2048)
++    for index in [:(bytes.size+2047)/2048] do
++      writer.put (recordBase++":"++toString index) (some (bytes.extract (index*2048) ((index+1)*2048)))
++  return stamp
++
++def load (source : PageMap.Snapshot) (stamp : String) : IO (Array Image) := do
++  unless PageMap.validIdentity stamp do throw (IO.userError "invalid project input digest")
++  let count ← getNat source.get (base stamp++":count")
++  unless 0 < count && count ≤ (maxBytes+2047)/2048 do
++    throw (IO.userError "missing or oversized project input descriptor")
++  let mut bytes := ByteArray.empty
++  for index in [:count] do
++    let some part ← source.get (base stamp++":"++toString index) |
++      throw (IO.userError "incomplete project input descriptor")
++    unless !part.isEmpty && part.size ≤ 2048 do throw (IO.userError "invalid project input block")
++    bytes := bytes++part
++  unless bytes.size ≤ maxBytes do throw (IO.userError "oversized project input descriptor")
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid project input encoding")
++  let images ← IO.ofExcept (Json.parse text >>= fromJson? (α := Array Image))
++  unless (toJson images).compress.toUTF8 == bytes && digest images == stamp do
++    throw (IO.userError "project input digest or canonical encoding changed")
++  return images
++
++def binding (receiptKey : String) := receiptKey++":inputs"
++
++def bind (writer : PageMap.Writer) (receiptKey : String) (images : Array Image) : IO Unit := do
++  let stamp ← store writer images
++  if let some previous ← writer.get (binding receiptKey) then
++    unless previous == stamp.toUTF8 do throw (IO.userError "project ACK changed its read boundary")
++  else writer.put (binding receiptKey) (some stamp.toUTF8)
++
++def recorded (source : PageMap.Snapshot) (receiptKey : String) : IO (Array Image) := do
++  let some bytes ← source.get (binding receiptKey) | throw (IO.userError "project ACK has no read boundary")
++  let some stamp := String.fromUTF8? bytes | throw (IO.userError "invalid project ACK input binding")
++  load source stamp
++
++end Eggshell.ProjectInputs
+diff --git a/tools/research/ProjectAccessChecks.lean b/tools/research/ProjectAccessChecks.lean
+deleted file mode 100644
+index c2594ae..0000000
+--- a/tools/research/ProjectAccessChecks.lean
++++ /dev/null
+@@ -1,231 +0,0 @@
+-import Eggshell.ProjectAccess
+-import Eggshell.PublicationClient
+-import Eggshell.PublicationService
+-import Eggshell.ContractAudit
+-
+-open Lean Eggshell Eggshell.Plugin Eggshell.ProjectStore Eggshell.Plugin.Publication DB Persistence.Store
+-
+-namespace Eggshell.Research.ProjectAccessChecks
+-private def check (condition : Bool) (message : String) : IO Unit :=
+-  unless condition do throw (IO.userError message)
+-
+-private def rejected (action : IO α) : IO Bool := do
+-  try let _ ← action; return false catch _ => return true
+-
+-private def fixture (client : Nat) : Capsule := {
+-  session := s!"broker-client-{client}",turn := "round-0",cwd := "/controlled-source"
+-  work := s!"inspect evidence for case {client}",checkpoint := false
+-  tools := #[{
+-    name := "mcp__fixture__inspect",useId := "inspect"
+-    input := (Json.mkObj [("case",toJson client)]).compress,
+-    response := ((s!"ORIGINAL_EVIDENCE_{client} " ++ String.ofList (List.replicate 5000 'x')).take 5000).copy}]
+-  finalMessage := some s!"case {client}: recorded original evidence"
+-  timing := #[.unavailable] }
+-
+-private def start (binary root : System.FilePath) : IO (IO.Process.Child {stdout := .piped,stderr := .piped}) := do
+-  IO.FS.createDirAll root
+-  IO.Process.spawn {
+-    cmd := binary.toString,args := #["serve"],setsid := true
+-    env := #[("EGGSHELL_DATA_ROOT",some root.toString),("LEAN_NUM_THREADS",some "1")],
+-    stdout := .piped,stderr := .piped}
+-
+-private def endpoint (child : IO.Process.Child cfg) (root : System.FilePath) : IO Daemon.Endpoint := do
+-  let deadline := (← IO.monoMsNow)+10000
+-  repeat
+-    if let some found ← (readJson? (root / "publisher" / "endpoint.json") [] : IO (Option Daemon.Endpoint)) then
+-      check ((← Daemon.exchange found "ping" (budget := 1000)) == "true") "publisher did not answer ping"
+-      return found
+-    if let some code ← child.tryWait then throw (IO.userError s!"publisher exited during startup: {code}")
+-    check ((← IO.monoMsNow) < deadline) "publisher startup expired"
+-    IO.sleep 5
+-  throw (IO.userError "unreachable publisher startup")
+-
+-private def finish (child : IO.Process.Child cfg) (peer : Daemon.Endpoint) : IO Unit := do
+-  let _ ← Daemon.exchange peer "shutdown" (budget := 5000)
+-  let deadline := (← IO.monoMsNow)+15000
+-  repeat
+-    if let some code ← child.tryWait then
+-      check (code == 0) "publisher shutdown failed"
+-      return
+-    check ((← IO.monoMsNow) < deadline) "publisher shutdown expired"
+-    IO.sleep 5
+-
+-private def configured (root : System.FilePath) : IO Config.Selection := do
+-  let text := "default = \"work\"\n[eggs]\nwork = \"work.project\"\nreference = \"reference.project\"\n" ++
+-    "[profiles.work]\nread = [\"reference\"]\nwrite = \"work\"\n"
+-  let config ← Config.parse (root / "eggshell.toml") text
+-  IO.ofExcept (Config.resolve config "work")
+-
+-private def recordIngress (write : ProjectAccess.Write) (pending : PendingTurn) : IO Unit := do
+-  let source ← write.project.current write.slot.val
+-  for tool in pending.tools do
+-    let occurrence : Synapses.Occurrence := ⟨pending.sessionId,pending.turnId,tool.useId⟩
+-    let domain := Sha256.hex "project-access-controlled-ingress".toUTF8
+-    let known : Synapses.Journal.Knowledge := {source := source.head,indexed := none,acknowledged := [],uncertain := true}
+-    let first : Synapses.Journal.Entry := ⟨⟨domain,1⟩,
+-      .start occurrence (canonicalToolWork tool) (Sha256.hex pending.prompt.toUTF8) known,none⟩
+-    let last : Synapses.Journal.Entry := ⟨⟨domain,2⟩,
+-      .finish occurrence tool.name (canonicalJson tool.input) (canonicalJson tool.response) pending.write,none⟩
+-    check (← Synapses.Journal.append source first) "duplicate controlled start"
+-    check (← Synapses.Journal.append source last) "duplicate controlled finish"
+-
+-private def inspect (root : System.FilePath) : IO Json := do
+-  let project ← openProject (root / "work.project")
+-  let view ← pin project ((← IO.monoMsNow)+28000)
+-  let mut sessions : Std.HashSet String := {}
+-  let mut originals := #[]
+-  let mut roots : List Value := []
+-  for source in view.sources do
+-    let reader ← NodeReader.new source
+-    for record in ← Synapses.Provenance.records source do
+-      let session := record.origin.occurrence.session
+-      let ["broker","client",client] := session.splitOn "-" | throw (IO.userError "foreign original session")
+-      let some client := client.toNat? | throw (IO.userError "invalid original session")
+-      check (client < 80 && !sessions.contains session) "duplicate or missing observation"
+-      sessions := sessions.insert session
+-      let document ← Synapses.Provenance.checkedDocument reader record.origin
+-      let some tool := (fixture client).tools[0]? | throw (IO.userError "missing fixture")
+-      check (document.source == some (canonicalJson tool.response) &&
+-        document.workText == some (canonicalToolWork tool)) "configured publication changed original bytes"
+-      originals := originals.push (Sha256.hex (toJson (session,document.source,document.workText)).compress.toUTF8)
+-    let graph ← Persistence.Store.materialize source
+-    for value in graph.values do
+-      if let .apply .receipt refs := value then
+-        check (refs.toList.getLast? == some (.exact,.text project.directory.toString))
+-          "physical source path leaked into stored logical provenance"
+-    roots := roots ++ graph.values
+-  check (sessions.size == 80) "configured publication lost an acknowledged original"
+-  for source in (← pin (← openProject (root / "reference.project")) ((← IO.monoMsNow)+28000)).sources do
+-    check (source.head.revision == 0) "configured read-only project was written"
+-  let rootHashes := roots.eraseDups.toArray.map fun value => Sha256.hex (Persistence.valueToJson value).compress.toUTF8
+-  return Json.mkObj [("originals",toJson sessions.size),
+-    ("originalsSha256",toJson (Sha256.hex (toJson (originals.qsort (· < ·))).compress.toUTF8)),
+-    ("graphSha256",toJson (Sha256.hex (toJson (rootHashes.qsort (· < ·))).compress.toUTF8))]
+-
+-private def run (root : System.FilePath) : IO Unit := do
+-  check (root.isAbsolute && !(← root.pathExists)) "fresh absolute project-access root required"
+-  FileSystem.privateDirectory root
+-  let project ← create (root / "work.project") 16
+-  let reference ← create (root / "reference.project") 4
+-  let config ← configured root
+-  check (config.read.map (·.path) == [reference.directory,project.directory] &&
+-    config.write.map (·.path) == some project.directory) "normal configuration resolved another project"
+-  let selection ← ProjectAccess.resolve (fixture 0).session config
+-  let readers ← ProjectAccess.pin selection ((← IO.monoMsNow)+28000)
+-  check (readers.views.size == 2 && readers.sources.size == 20) "configured read set omitted a project or owner"
+-  let some boot := readers.views.find? (·.project.directory == project.directory) |
+-    throw (IO.userError "configured writable view missing")
+-  let readOnly ← ProjectAccess.resolve "reader" {config with write := none}
+-  check readOnly.write.isNone "read-only configuration gained a writer"
+-  check ((← ProjectAccess.pin readOnly ((← IO.monoMsNow)+28000)).sources.size == 20)
+-    "read-only configuration narrowed the complete source inventory"
+-  check (← rejected (ProjectAccess.resolve "" config)) "empty session gained an owner route"
+-  check (← rejected (ProjectAccess.resolve "invalid" {config with
+-    write := some ⟨"unknown",root / "absent.project"⟩})) "missing project gained a writer"
+-  let alias := root / "alias.project"
+-  FileSystem.privateDirectory alias
+-  IO.FS.writeBinFile (alias / "project") (← IO.FS.readBinFile (project.directory / "project"))
+-  check (← rejected (ProjectAccess.resolve "alias" {config with
+-    read := config.read ++ [⟨"alias",alias⟩]})) "conflicting logical-project alias was accepted"
+-  let inputs ← (List.range 80).toArray.mapM fun client => do
+-    let native := fixture client
+-    let selected ← ProjectAccess.resolve native.session config
+-    let repeated ← ProjectAccess.resolve native.session config
+-    let some write := selected.write | throw (IO.userError "configured writer is missing")
+-    check (repeated.write.map (·.slot.val) == some write.slot.val &&
+-      write.slot.val == ownerSlot native.session project.manifest.owners.size)
+-      "configuration and service disagree about the stable owner route"
+-    let pending := native.pending project.directory
+-    recordIngress write pending
+-    pure (selected,pending)
+-  let slots := (inputs.toList.filterMap fun (selected,_) => selected.write.map (·.slot.val)).eraseDups
+-  check (slots.length > 1) "80 configured sessions were serialized into one physical source"
+-  let child ← start (← IO.appPath) (root / "private")
+-  let out ← IO.asTask child.stdout.readToEnd .dedicated
+-  let err ← IO.asTask child.stderr.readToEnd .dedicated
+-  let stopped ← IO.mkRef false
+-  try
+-    let peer ← endpoint child (root / "private")
+-    let _ ← Client.registerProject peer project.directory project.manifest.identity
+-    check (← rejected (Client.publishConfiguredProject peer readOnly boot ((fixture 0).pending project.directory) false
+-      ((← IO.monoMsNow)+1000))) "read-only binding published an observation"
+-    let some write := selection.write | throw (IO.userError "missing writer")
+-    let pending := (fixture 0).pending project.directory
+-    check (← rejected (Client.prepareProject write boot {pending with sessionId := "different-session"} false))
+-      "write route accepted another native session"
+-    check (← rejected (Client.prepareProject write boot {pending with write := some reference.directory.toString} false))
+-      "write route accepted another configured project"
+-    let foreign ← pin reference ((← IO.monoMsNow)+28000)
+-    check (← rejected (Client.prepareProject write foreign pending false)) "write route accepted a foreign project view"
+-    let started ← IO.monoMsNow
+-    let tasks ← inputs.mapM fun (selected,pending) => IO.asTask (do
+-      Client.publishConfiguredProject peer selected boot pending false ((← IO.monoMsNow)+28000)) .dedicated
+-    let completed ← tasks.mapM fun task => IO.wait task
+-    let results ← completed.mapM IO.ofExcept
+-    let publicationMs := (← IO.monoMsNow)-started
+-    check (results.all (·.source.complete)) "native configured source receipt omitted observation timing"
+-    for result in results do
+-      for value in result.promotion.snapshot.values do
+-        if let .apply .receipt refs := value then
+-          check (refs.toList.getLast? == some (.exact,.text project.directory.toString))
+-            "reconstructed promotion leaked the physical source path"
+-    let current ← Client.pinProject peer (← Client.registerProject peer project.directory project.manifest.identity)
+-      ((← IO.monoMsNow)+28000)
+-    let retry ← Client.publishConfiguredProject peer selection boot pending false ((← IO.monoMsNow)+28000)
+-    check retry.source.complete "configured retry lost its durable ACK"
+-    let afterRetry ← pin project ((← IO.monoMsNow)+28000)
+-    check (afterRetry.cut == current) "identical configured retry advanced a source head"
+-    let request ← Client.prepareProject write boot pending false
+-    let some wrong := results.find? (·.source.head.identity != write.original.identity) |
+-      throw (IO.userError "parallel source routing did not exercise another owner")
+-    check (← rejected (Client.restoreProject write request wrong.source)) "receipt from another owner was restored"
+-    for source in readers.sources do check (source.head.revision == 0) "publication advanced an already retained read cut"
+-    let expected := (results.toList.flatMap (·.promotion.snapshot.values)).eraseDups
+-    let mut actual : List Value := []
+-    for source in afterRetry.sources do actual := actual ++ (← Persistence.Store.materialize source).values
+-    actual := actual.eraseDups
+-    check (actual.length == expected.length && actual.all expected.contains && expected.all actual.contains)
+-      "configured ACK reconstruction differs from the complete committed WorkGraph"
+-    let statsText ← Daemon.exchange peer "stats" (budget := 5000)
+-    let stats ← IO.ofExcept (Json.parse statsText)
+-    let activeOwners : Nat ← IO.ofExcept ((stats.getObjValD "ownedProjects").getObjValAs? _ "peakActive")
+-    check (activeOwners > 1) "configured publication did not execute multiple owners concurrently"
+-    finish child peer
+-    stopped.set true
+-    for slot in [:project.manifest.owners.size] do
+-      withOwner project slot fun _ => pure ()
+-    check (← IO.ofExcept (← IO.wait out)).isEmpty "publisher wrote diagnostics to stdout"
+-    check (← IO.ofExcept (← IO.wait err)).isEmpty "publisher reported a service failure"
+-    let beforeReopen ← inspect root
+-    let reopened ← IO.Process.output {
+-      cmd := (← IO.appPath).toString,args := #["inspect",root.toString]
+-      env := #[("EGGSHELL_DATA_ROOT",some (root / "reopened-private").toString),("LEAN_NUM_THREADS",some "1")]}
+-    check (reopened.exitCode == 0 && reopened.stderr.isEmpty) "fresh-process original recovery failed"
+-    let recovered ← IO.ofExcept (Json.parse reopened.stdout)
+-    check (recovered == beforeReopen) "fresh-process original graph or provenance differs"
+-    let report := Json.mkObj [("allPassed",toJson true),("configuredProjects",toJson (2 : Nat)),
+-      ("completeSources",toJson readers.sources.size),("sessions",toJson (80 : Nat)),
+-      ("routedOwners",toJson slots.length),("publicationMs",toJson publicationMs),
+-      ("serviceStats",stats),("recovered",beforeReopen),("answeringModelCalls",toJson (0 : Nat)),
+-      ("notSustainedCapacityOrTokenEvidence",toJson true)]
+-    IO.FS.writeFile (root / "report.json") (report.pretty ++ "\n")
+-    IO.println report.compress
+-  finally
+-    unless ← stopped.get do
+-      try child.kill catch _ => pure ()
+-      let _ ← child.wait
+-      let _ ← IO.wait out
+-      let _ ← IO.wait err
+-
+-end Eggshell.Research.ProjectAccessChecks
+-
+-def main (args : List String) : IO UInt32 := do
+-  match args with
+-  | ["serve"] => Publication.Service.run
+-  | ["inspect",pathText] =>
+-      IO.println (← Eggshell.Research.ProjectAccessChecks.inspect (.mk pathText)).compress
+-      return 0
+-  | [pathText] =>
+-      Eggshell.Research.ProjectAccessChecks.run (.mk pathText)
+-      return 0
+-  | _ => throw (IO.userError "ProjectAccessChecks ROOT | inspect ROOT | serve")

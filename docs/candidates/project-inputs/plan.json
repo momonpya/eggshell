@@ -1,0 +1,24 @@
+{
+  "status": "isolated candidate; not adopted",
+  "parentCommit": "398752f9",
+  "objective": "Preserve the actual complete configured read boundary in concurrent project publication, including read-only foreign projects, before normal hook integration.",
+  "requirements": [
+    "One logical write project; independent physical source owners remain parallel.",
+    "Use caller-retained complete read views, not newly sampled latest heads.",
+    "Read-only project registration grants no source writer lease or publication authority.",
+    "Validate every original owner, incarnation, dependency closure and read capability before admission.",
+    "Bind original receipt and exact read-input digest in the same durable transaction; no successful ACK before that commit.",
+    "Persist no read capability, private journal, query-vector or foreign original body in the write project.",
+    "Share identical immutable read-input descriptors by content within each source; receipt bindings reference them.",
+    "Reject missing or reordered configured read projects, foreign grants, invalid cuts, changed retry input and corrupt durable bindings.",
+    "Retained old views remain unchanged after later publications, and fresh-process recovery returns the exact recorded boundary.",
+    "Recommendation and read dependency metadata cannot create Union/completed authority."
+  ],
+  "nativeChecks": "Real loopback service, 80 sessions/16 write owners, read-only foreign project, full original/graph/reopen checks, replay idempotence and invalid input rejection.",
+  "notEvidenceOf": ["80 users for eight hours", "whole-hook p99", "98% delivery", "matched total-token improvement"],
+  "memoryStopKiB": 3670016,
+  "minimumFreeDiskKiB": 2097152,
+  "adoptionRequiresMatchedTotalTokenQualityAndDeadlineEvidence": true,
+  "answeringModelCalls": 0,
+  "cleanup": "Delete ended DBs/caches/raw logs/unused executables after sealing compact records; no archives."
+}
