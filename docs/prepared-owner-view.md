@@ -1,6 +1,8 @@
 # Prepare the shared owner domain outside retrieval
 
-Design for the next isolated implementation, not implemented or adopted.
+Design with an [isolated owner-metadata component](candidates/prepared-owners/README.md)
+implemented and natively checked. Ordinary warm/discovery integration and the
+joint topology/recognition adapters remain unimplemented. Not adopted.
 The target remains 80 people, eight hours, complete recognition and at least
 98% actual necessary-original delivery within 30-second hooks. The existing
 token/quality adoption gate is unchanged.
@@ -83,6 +85,15 @@ payloads concurrently and keep only short derived-root publication serialized
 where required; do not wait for a whole-corpus merge before durable ingress ACK.
 Readers of other projects acquire no writer capability. Measure input rate,
 queue age, update bytes, retries and preparation debt under concurrent saves.
+
+The isolated metadata component now retains all original owner witnesses,
+stable structural owner ids, exact distinct Outcome/candidate counts and
+original-unit lexical frequencies/postings. Native checks cover 16 sources at
+256/1,024/4,096 initial Outcomes, removals/reinsertion, structured Work and Exact
+distinctions; all match the existing full catalogue. A two-root publication
+update takes 12/21/31 ms and initial reader admission 0/1/1 ms in those single
+observations. No ordinary hook calls this component yet. Do not infer a hook
+speedup, complete topology, sustained parallel preparation or token improvement.
 
 Require native full-source equivalence over duplicates/removals/branches,
 cross-owner topology and unions, old pins, scope changes and source-only

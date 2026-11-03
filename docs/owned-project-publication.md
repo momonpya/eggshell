@@ -84,10 +84,16 @@ speedup; that candidate is rejected and its executable/data removed. In the
 4,096-row median reference observation, canonical identity, document enumeration
 and topology/Union loading consume about 90% of the 1,644 ms preparation time.
 This is a component profile, not the breakdown of a complete hook.
-The next [prepared owner view](prepared-owner-view.md) must maintain complete
-owner/original/statistical metadata by publication differences while retaining
-the existing complete Work-class reader. It is a design awaiting implementation,
-not evidence that project-sized query preparation has been removed.
+The [prepared owner view](prepared-owner-view.md) now has an isolated
+[metadata component](candidates/prepared-owners/README.md), with complete live
+original witnesses, stable structural owner ids and exact distinct statistics
+maintained from publication differences. At 256/1,024/4,096 original Outcomes
+across 16 sources, every owner/origin/order/original-term posting matches the
+full catalogue. A two-root update takes 12/21/31 ms in those component cases.
+Ordinary warm/discovery and joint topology adapters are still unconnected;
+project-sized query preparation has not yet been removed. This component does
+not replace parallel original owners with one project-wide source writer, and
+does not establish parallel preparation capacity or the 80-user gate.
 
 The [preparation completion and recovery audit](candidates/preparation-drain/README.md)
 uses the same product code. After 80 queries and 80 numerical-configured saves
