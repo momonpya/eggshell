@@ -1,0 +1,329 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -30,0 +31,5 @@
++structure SourceKnowledge where
++  source : PageMap.Head
++  indexed : Option IndexAt
++  deriving BEq, ToJson, FromJson
++
+@@ -40,0 +46,2 @@
++  /-- Other retained source views share this occurrence's one original event. -/
++  related : Array SourceKnowledge := #[]
+@@ -49 +56,2 @@
+-    known.delivery.toList.map (fun reference => ("delivery",toJson reference)))
++    known.delivery.toList.map (fun reference => ("delivery",toJson reference)) ++
++    [("related",toJson known.related)])
+@@ -50,0 +59,37 @@
++def Knowledge.forSource (known : Knowledge) (database : String) : Option Knowledge :=
++  if known.source.identity == database then some {known with related := #[]}
++  else (known.related.find? (·.source.identity == database)).map fun saved =>
++    {known with source := saved.source,indexed := saved.indexed,related := #[]}
++
++theorem Knowledge.forSource_identity (known : Knowledge) (database : String) (selected : Knowledge)
++    (accepted : known.forSource database = some selected) : selected.source.identity = database := by
++  unfold forSource at accepted
++  split at accepted
++  · rename_i present
++    simp only [Option.some.injEq] at accepted
++    rw [← accepted]
++    simpa only [beq_iff_eq] using present
++  · cases found : known.related.find? (·.source.identity == database) with
++    | none => simp [found] at accepted
++    | some saved =>
++      have member := Array.find?_some found
++      simp only [found,Option.map_some,Option.some.injEq] at accepted
++      cases accepted
++      simpa using member
++
++theorem Knowledge.forSource_context (known : Knowledge) (database : String) (selected : Knowledge)
++    (accepted : known.forSource database = some selected) :
++    selected.acknowledged = known.acknowledged ∧ selected.uncertain = known.uncertain ∧
++    selected.archive = known.archive ∧ selected.archived = known.archived ∧ selected.delivery = known.delivery := by
++  unfold forSource at accepted
++  split at accepted
++  · simp only [Option.some.injEq] at accepted
++    rw [← accepted]
++    exact ⟨rfl,rfl,rfl,rfl,rfl⟩
++  · cases found : known.related.find? (·.source.identity == database) with
++    | none => simp [found] at accepted
++    | some saved =>
++      simp only [found,Option.map_some,Option.some.injEq] at accepted
++      rw [← accepted]
++      exact ⟨rfl,rfl,rfl,rfl,rfl⟩
++
+@@ -76 +121,5 @@
+-    digest query && known.source.identity == database && known.delivery.all (·.session == payload.occurrence.session)
++    digest query && known.source.identity == database &&
++    !known.related.any (·.source.identity == database) &&
++    (hashDistinct (known.related.toList.map (·.source.identity))).length == known.related.size &&
++    known.related.all (fun related => digest related.source.identity) &&
++    known.delivery.all (·.session == payload.occurrence.session)
+@@ -100,0 +150,34 @@
++def Entry.forSource (entry : Entry) (database : String) : Option Entry :=
++  match entry.payload with
++  | .start occurrence work query known => (known.forSource database).map fun selected =>
++      {entry with payload := .start occurrence work query selected}
++  | .answer occurrence query text known => (known.forSource database).map fun selected =>
++      {entry with payload := .answer occurrence query text selected}
++  | .finish .. => some entry
++
++theorem Entry.forSource_clock (entry selected : Entry) (database : String)
++    (accepted : entry.forSource database = some selected) :
++    selected.clock = entry.clock ∧ selected.receivedUnixMs = entry.receivedUnixMs := by
++  cases entry with | mk clock payload received =>
++    cases payload with
++    | start occurrence work query known =>
++      simp only [forSource] at accepted
++      cases found : known.forSource database with
++      | none => simp [found] at accepted
++      | some selectedKnown =>
++        simp only [found,Option.map_some,Option.some.injEq] at accepted
++        rw [← accepted]
++        exact ⟨rfl,rfl⟩
++    | answer occurrence query text known =>
++      simp only [forSource] at accepted
++      cases found : known.forSource database with
++      | none => simp [found] at accepted
++      | some selectedKnown =>
++        simp only [found,Option.map_some,Option.some.injEq] at accepted
++        rw [← accepted]
++        exact ⟨rfl,rfl⟩
++    | finish occurrence name input response archive =>
++      simp only [forSource,Option.some.injEq] at accepted
++      rw [← accepted]
++      exact ⟨rfl,rfl⟩
++
+@@ -227,2 +310,2 @@
+-def frontier? (journal : PageMap.Snapshot) (turn : Turn) : IO (Option Frontier) := do
+-  let some raw ← journal.get (frontierKey turn) | return none
++def frontierUsing? (get : String → IO (Option ByteArray)) (turn : Turn) : IO (Option Frontier) := do
++  let some raw ← get (frontierKey turn) | return none
+@@ -236 +319,4 @@
+-def entry (journal : PageMap.Snapshot) (ordinal : Nat) : IO Entry := do
++def frontier? (journal : PageMap.Snapshot) (turn : Turn) : IO (Option Frontier) :=
++  frontierUsing? journal.get turn
++
++def rawEntry (journal : PageMap.Snapshot) (ordinal : Nat) : IO Entry := do
+@@ -244,0 +331,78 @@
++
++/-- Private one-hop references retain the original journal's exact immutable
++head. They are never placed in shared source publication or a model prompt. -/
++structure EntryReference where
++  owner : Sidecar.Owner
++  journal : PageMap.Head
++  ordinal : Nat
++  target : String
++  original : String
++  projected : String
++  deriving BEq, ToJson, FromJson
++
++def referenceKey (ordinal : Nat) := key "entry-reference" ordinal
++
++def loadReference (journal : PageMap.Snapshot) (reference : EntryReference) : IO Entry := do
++  unless journal.head.authority == "private-synaptic-events:"++reference.target &&
++      reference.journal.authority == "private-synaptic-events:"++reference.owner.database &&
++      reference.journal.identity != journal.head.identity && digest reference.original && digest reference.projected do
++    throw (IO.userError "private event reference crossed its original or target scope")
++  let owner ← reference.owner.pin
++  let some current ← open? owner | throw (IO.userError "referenced private ingress is unavailable")
++  let some retained ← PageMap.HistoryReader.make? current reference.journal |
++    throw (IO.userError "referenced private ingress head is unavailable")
++  let original := retained.snapshot
++  unless reference.ordinal < (← getNat original.get "count") &&
++      (← original.get (referenceKey reference.ordinal)).isNone do
++    throw (IO.userError "private event reference is not one original hop")
++  let value ← rawEntry original reference.ordinal
++  unless Index.contentKey value == reference.original do throw (IO.userError "private event original digest changed")
++  let some projected := value.forSource reference.target |
++    throw (IO.userError "private event did not observe the requested source")
++  unless Index.contentKey projected == reference.projected do throw (IO.userError "private event source projection changed")
++  return projected
++
++def entry (journal : PageMap.Snapshot) (ordinal : Nat) : IO Entry := do
++  let some bytes ← journal.get (referenceKey ordinal) | return ← rawEntry journal ordinal
++  unless bytes.size ≤ 16384 do throw (IO.userError "oversized private event reference")
++  let reference ← Index.decode (α := EntryReference) bytes
++  unless (toJson reference).compress.toUTF8 == bytes do throw (IO.userError "noncanonical private event reference")
++  let projected ← loadReference journal reference
++  unless (toJson projected).compress.utf8ByteSize == (← getNat journal.get (key "entry" ordinal)) do
++    throw (IO.userError "private event reference changed its original byte accounting")
++  return projected
++
++/-- A bounded importer may stage several events under the same private commit.
++The receipt chain is computed from the decoded event, never its alias encoding. -/
++def stageEntry (journal : PageMap.Snapshot) (writer : PageMap.Writer) (value : Entry)
++    (store : Nat → IO Unit) : IO Bool := do
++  let name := "event:"++value.name
++  if let some previous ← writer.get name then
++    let ordinal ← IO.ofExcept (payloadSize (some previous))
++    unless ordinal < (← getNat journal.get "count") do
++      throw (IO.userError "one ingress batch repeated a native event identity")
++    let saved ← entry journal ordinal
++    unless saved.name == value.name do throw (IO.userError "ambiguous event digest")
++    let _ ← IO.ofExcept (retainFirst saved value)
++    return false
++  let ordinal ← getNat writer.get "count"
++  let turn := value.turn
++  let previous ← match ← frontierUsing? writer.get turn with
++    | some previous => pure previous
++    | none => do
++        if (← writer.get ("turn:"++turn.name)).isSome then throw (IO.userError "active turn has no canonical append feed")
++        pure (Frontier.initial journal turn)
++  let next := previous.step ordinal value
++  store ordinal
++  putNat writer name ordinal
++  putNat writer "count" (ordinal+1)
++  writer.put ("turn:"++turn.name) (some (toJson turn).compress.toUTF8)
++  putNat writer (key ("posting:"++turn.name) ordinal) ordinal
++  putNat writer ("latest:"++turn.name) (ordinal+1)
++  writer.put (receiptKey turn previous.count) (some (toJson ({previous := previous.chain,ordinal,next} : Receipt)).compress.toUTF8)
++  putNat writer (key "event-sequence" ordinal) previous.count
++  writer.put (frontierKey turn) (some (toJson next).compress.toUTF8)
++  for storage in [Sidecar.Storage.database,.user] do
++    let base := workBase storage
++    if (← writer.get (base++":bootstrap")).isSome then ReplayWork.enqueue writer base turn.name
++  return true
+@@ -254,2 +418 @@
+-    let name := "event:" ++ value.name
+-    if let some previous ← journal.get name then
++    if let some previous ← journal.get ("event:"++value.name) then
+@@ -261,23 +424,3 @@
+-    let (_, _, _) ← PageMap.withWriter journal fun writer => do
+-      let ordinal ← getNat writer.get "count"
+-      let turn := value.turn
+-      let previous ← match ← frontier? journal turn with
+-        | some previous => pure previous
+-        | none => do
+-          if (← journal.get ("turn:" ++ turn.name)).isSome then
+-            throw (IO.userError "active turn has no canonical append feed")
+-          pure (Frontier.initial journal turn)
+-      let next := previous.step ordinal value
+-      putChunks writer "entry" ordinal bytes
+-      putNat writer name ordinal
+-      putNat writer "count" (ordinal+1)
+-      writer.put ("turn:" ++ turn.name) (some ((toJson turn).compress.toUTF8))
+-      putNat writer (key ("posting:" ++ turn.name) ordinal) ordinal
+-      putNat writer ("latest:" ++ turn.name) (ordinal+1)
+-      writer.put (receiptKey turn previous.count)
+-        (some (toJson ({previous := previous.chain,ordinal,next} : Receipt)).compress.toUTF8)
+-      writer.put (frontierKey turn) (some (toJson next).compress.toUTF8)
+-      for storage in [Sidecar.Storage.database,.user] do
+-        let base := workBase storage
+-        if (← writer.get (base ++ ":bootstrap")).isSome then ReplayWork.enqueue writer base turn.name
+-    return true
++    let (added,_,_) ← PageMap.withWriter journal fun writer =>
++      stageEntry journal writer value fun ordinal => putChunks writer "entry" ordinal bytes
++    return added
+@@ -320,0 +464,35 @@
++
++structure ImportCursor where
++  journal : PageMap.Head
++  next : Nat
++  deriving BEq, ToJson, FromJson
++
++structure ImportResult where
++  examined : Nat := 0
++  added : Nat := 0
++  unrelated : Nat := 0
++  indirect : Nat := 0
++  complete : Bool := false
++  deriving ToJson, FromJson
++
++def importKey (owner : Sidecar.Owner) := "ingress:"++Index.contentKey owner
++def importEnd (start count limit : Nat) := min count (start+limit)
++
++theorem importEnd_bounded (start count limit : Nat) : importEnd start count limit ≤ start+limit :=
++  Nat.min_le_right _ _
++
++theorem importEnd_not_backwards (start count limit : Nat) (within : start ≤ count) :
++    start ≤ importEnd start count limit := by simp only [importEnd]; omega
++
++/-- Validate a native event against its committed per-turn append receipt,
++including late insertion floors and the original observation clock. -/
++def checkOriginalEntry (journal : PageMap.Snapshot) (ordinal : Nat) (value : Entry) : IO Unit := do
++  let some raw ← journal.get (key "event-sequence" ordinal) |
++    throw (IO.userError "native ingress has no inverse sequence receipt")
++  let sequence ← IO.ofExcept (payloadSize (some raw))
++  let found ← receipt journal value.turn sequence
++  let before ← if sequence == 0 then pure (Frontier.initial journal value.turn)
++    else pure (← receipt journal value.turn (sequence-1)).next
++  unless found.ordinal == ordinal && found.previous == before.chain &&
++      found.next == before.step ordinal value do
++    throw (IO.userError "native ingress entry changed its committed append chain")
+@@ -321,0 +500,66 @@
++/-- Import only one bounded metadata slice. Original bodies stay in the one
++native journal; aliases and their exact original cursor commit together. -/
++def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : Nat)
++    (limit : Nat := 32) : IO ImportResult := do
++  unless source.head.identity != owner.database do
++    throw (IO.userError "an ingress source cannot alias its own journal")
++  let originalSource ← owner.pin
++  let some original ← open? originalSource | return {complete := false}
++  let count ← getNat original.get "count"
++  withPublication source fun target => do
++    let old ← (← target.get (importKey owner)).mapM (Index.decode (α := ImportCursor))
++    if let some old := old then
++      unless old.next ≤ count && old.journal.identity == original.head.identity &&
++          old.journal.authority == original.head.authority &&
++          (← PageMap.HistoryReader.make? original old.journal).isSome do
++        throw (IO.userError "private ingress import lost its exact original prefix")
++    let start := old.map (·.next) |>.getD 0
++    let finish := importEnd start count (min 256 limit)
++    if start == count then return {complete := true}
++    let mut prepared : Array (Entry × EntryReference) := #[]
++    let mut result : ImportResult := {}
++    let mut next := start
++    let mut bytes := 0
++    for ordinal in [start:finish] do
++      if (← IO.monoMsNow) ≥ deadline then break
++      if (← original.get (referenceKey ordinal)).isSome then
++        result := {result with examined := result.examined+1,indirect := result.indirect+1}
++        next := ordinal+1
++        continue
++      let size ← getNat original.get (key "entry" ordinal)
++      unless size ≤ maxBytes do throw (IO.userError "native ingress entry exceeds its original byte budget")
++      if bytes+size > 16*1024*1024 then break
++      let value ← rawEntry original ordinal
++      checkOriginalEntry original ordinal value
++      let related ← match value.payload with
++        | .finish occurrence .. => do
++          match ← lookup? original "start" occurrence with
++          | some first => pure ((first.forSource source.head.identity).isSome)
++          | none => pure true -- Preserve an early Post as unknown until Pre arrives.
++        | _ => pure true
++      let projected := if related then value.forSource source.head.identity else none
++      if let some projected := projected then
++        unless projected.payload.valid source.head.identity do
++          throw (IO.userError "projected ingress changed its original source knowledge")
++        let reference : EntryReference := ⟨owner,original.head,ordinal,source.head.identity,
++          Index.contentKey value,Index.contentKey projected⟩
++        prepared := prepared.push (projected,reference)
++      else result := {result with unrelated := result.unrelated+1}
++      result := {result with examined := result.examined+1}
++      bytes := bytes+size
++      next := ordinal+1
++    if next == start then return result
++    let cursor : ImportCursor := ⟨original.head,next⟩
++    let (added,_,_) ← PageMap.withWriter target fun writer => do
++      let mut added := 0
++      for (value,reference) in prepared do
++        let referenceBytes := (toJson reference).compress.toUTF8
++        unless referenceBytes.size ≤ 16384 do throw (IO.userError "oversized private ingress alias")
++        let found ← stageEntry target writer value fun ordinal => do
++          putNat writer (key "entry" ordinal) (toJson value).compress.utf8ByteSize
++          writer.put (referenceKey ordinal) (some referenceBytes)
++        if found then added := added+1
++      writer.put (importKey owner) (some (toJson cursor).compress.toUTF8)
++      return added
++    return {result with added,complete := next == count}
++
+@@ -370 +614 @@
+-  return ⟨source.head, indexed, known, uncertain, archive, archived,delivery⟩
++  return ⟨source.head, indexed, known, uncertain, archive, archived,delivery,#[]⟩
+--- a/tools/research/ProjectInputsChecks.lean
++++ b/tools/research/ProjectInputsChecks.lean
+@@ -4,0 +5 @@
++import tools.research.ProjectIngressAudit
+@@ -372,0 +374,2 @@
++  | ["ingress",pathText] => Eggshell.Research.ProjectIngressAudit.run (.mk pathText); return 0
++  | ["inspect-ingress",pathText] => IO.println (← Eggshell.Research.ProjectIngressAudit.inspect (.mk pathText)).compress; return 0
