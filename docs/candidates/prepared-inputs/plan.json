@@ -1,0 +1,28 @@
+{
+  "status": "isolated candidate under validation; not adopted",
+  "parent": "daf1dd7a",
+  "purpose": "Capture completed source/lexical/window/synapse/canonical/matrix/partition roots before execution admission, without retaining per-waiter payloads or full readers.",
+  "ownership": "Multiple independent append owners inside one user-selected logical project; shared project/scope vectors; other projects read-only. This change does not replace that ownership model.",
+  "contracts": [
+    "Every configured source remains in the exact original inventory, including actually empty sources.",
+    "A missing prepared populated source is unavailable, never a completed empty search.",
+    "Queued metadata carries immutable root references. Workers restore those roots without selecting latest or relying on bounded source-name directories.",
+    "Private usage roots are captured per requester and never published in shared input manifests.",
+    "No ranking, selector budget, model, certification domain or original bytes change.",
+    "No claim of physical compaction retention: safe reclamation of old pinned extents remains unfinished."
+  ],
+  "checks": [
+    "Lean native build and existing ContractAudit",
+    "66 subsequent prepared publications evict old names while serialized query roots retain original lexical, windows, vectors and shared/canonical inputs",
+    "Fresh-process reopen, raw DB retained original heads, foreign/missing inventory rejection",
+    "Ordinary prompt/Pre/Post/Stop plus 80 mixed query/save clients using actual MiniLM and several append owners",
+    "Normal preparation drain and fresh/restarted query"
+  ],
+  "aggregateStopRssKiB": 3670016,
+  "hardRssKiB": 4194304,
+  "minimumFreeKiB": 2097152,
+  "answeringModelCalls": 0,
+  "matchedPaidComparisons": 0,
+  "productionAdoption": false,
+  "capacityClaim": "No 80-user sustained-capacity, p99, 98-percent evidence or token-improvement claim from these component checks."
+}

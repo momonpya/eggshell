@@ -1,0 +1,136 @@
+{"serviceRestarted": true,
+ "restartQuery":
+ {"trace":
+  {"warmRequests": 0,
+   "warmMs": 0,
+   "semanticMs": 2459,
+   "semantic": "completed",
+   "route": "configured",
+   "lexicalMs": 0},
+  "semantic": true,
+  "evidence": true,
+  "elapsedMs": 2475,
+  "bodySha256":
+  "7d0e9f09ab4afe9713f037b2c584460bd1987ad1a85ede1bd376cd97d0fefa63"},
+ "productionAdoption": false,
+ "originalResponses": 80,
+ "originalHeadsUnchanged": true,
+ "newQuery":
+ {"trace":
+  {"warmRequests": 0,
+   "warmMs": 0,
+   "semanticMs": 2028,
+   "semantic": "completed",
+   "route": "configured",
+   "lexicalMs": 0},
+  "semantic": true,
+  "evidence": true,
+  "elapsedMs": 2045,
+  "bodySha256":
+  "7d0e9f09ab4afe9713f037b2c584460bd1987ad1a85ede1bd376cd97d0fefa63"},
+ "inspections":
+ [{"source":
+   {"revision": 23,
+    "identity":
+    "c1e6c4cca29082ddf3461831c1569283a1489693b2201ab53ca1a7751fc0f42c"},
+   "needed": 0,
+   "drained": true,
+   "coverage":
+   {"windows": 92,
+    "valid": 92,
+    "revision": 23,
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "missing": 0,
+    "invalid": 0},
+   "conservativeComplete": false},
+  {"source":
+   {"revision": 15,
+    "identity":
+    "e3fff011f022c1fb395a9b33e1ae48fcc2e0ff48f2f651e1e4f2d9a46f80dea5"},
+   "needed": 0,
+   "drained": true,
+   "coverage":
+   {"windows": 68,
+    "valid": 68,
+    "revision": 15,
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "missing": 0,
+    "invalid": 0},
+   "conservativeComplete": false},
+  {"source":
+   {"revision": 22,
+    "identity":
+    "37dfa25c234627c4ca244657962ea9ecae9d5689c0a2f76acca363bbec9edc77"},
+   "needed": 0,
+   "drained": true,
+   "coverage":
+   {"windows": 91,
+    "valid": 91,
+    "revision": 22,
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "missing": 0,
+    "invalid": 0},
+   "conservativeComplete": true},
+  {"source":
+   {"revision": 19,
+    "identity":
+    "d3249913670aa155b8911f47c428d65a3a9ebd6426ed031fa906c43a2355ec9c"},
+   "needed": 0,
+   "drained": true,
+   "coverage":
+   {"windows": 76,
+    "valid": 76,
+    "revision": 19,
+    "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "missing": 0,
+    "invalid": 0},
+   "conservativeComplete": false}],
+ "eightHourCapacity": false,
+ "drain":
+ {"transitions": 8,
+  "last":
+  {"state":
+   {"workers": 3,
+    "retries": 9,
+    "residentBytes": 0,
+    "rejected": 0,
+    "pending": 0,
+    "peakActive": 1,
+    "maxRequests": 1024,
+    "maxBytes": 8388608,
+    "lastRetry":
+    {"reason":
+     "{\"journal\":true,\"source\":\"c1e6c4cca29082ddf3461831c1569283a1489693b2201ab53ca1a7751fc0f42c\",\"storage\":\"database\",\"synapses\":false,\"tickets\":6,\"warm\":false}",
+     "key":
+     "index:212abe794b0a586ab2d68ab6b7209e9544ac82857161fbe0614a64e24f796d10"},
+    "finishedAttempts": 4,
+    "coalesced": 75,
+    "closed": false,
+    "active": 0,
+    "accepted": 5},
+   "elapsedMs": 4119},
+  "foregroundDeadlineChanged": false,
+  "first":
+  {"state":
+   {"workers": 3,
+    "retries": 6,
+    "residentBytes": 4616,
+    "rejected": 0,
+    "pending": 3,
+    "peakActive": 1,
+    "maxRequests": 1024,
+    "maxBytes": 8388608,
+    "lastRetry":
+    {"reason":
+     "{\"journal\":false,\"source\":\"37dfa25c234627c4ca244657962ea9ecae9d5689c0a2f76acca363bbec9edc77\",\"storage\":\"database\",\"synapses\":false,\"tickets\":5,\"warm\":false}",
+     "key":
+     "index:50c7ee6c8b94c4b220c69ca6c0a70438a9fb25de828c711f21f35e59b06dc4da"},
+    "finishedAttempts": 0,
+    "coalesced": 75,
+    "closed": false,
+    "active": 1,
+    "accepted": 5},
+   "elapsedMs": 1},
+  "elapsedMs": 4119,
+  "complete": true},
+ "answeringModelCalls": 0}

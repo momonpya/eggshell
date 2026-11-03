@@ -1,0 +1,591 @@
+--- /dev/null
++++ b/Eggshell/PreparedInputs.lean
+@@ -0,0 +1,230 @@
++module
++public import Eggshell.CanonicalSourceCache
++public import Eggshell.UsageCache
++public import Eggshell.WindowOwners
++public import PartitionBuild
++public import tools.RetrievalIndex
++@[expose] public section
++
++namespace Eggshell.PreparedInputs
++open Lean DB Persistence.Store
++
++def implementation : String := Sha256.hex ((include_str "PreparedInputs.lean").toUTF8 ++
++  RetrievalResearch.Index.contract.toUTF8 ++ WindowOwners.implementation.toUTF8 ++
++  PartitionBuild.implementation.toUTF8 ++ Synapses.CanonicalSource.Cache.implementation.toUTF8 ++
++  Synapses.UsageCache.implementation.toUTF8)
++
++structure Root where
++  storage : Sidecar.Storage
++  head : PageMap.Head
++  deriving BEq,ToJson,FromJson
++
++structure Numeric where
++  storage : Sidecar.Storage
++  partition : PageMap.Head
++  matrix : PageMap.Head
++  deriving BEq,ToJson,FromJson
++
++/-- Publication metadata only: no question, ranking, original body or token. -/
++structure Reference where
++  producer : String
++  source : PageMap.Head
++  model : String
++  encoder : String
++  population : Nat
++  windows : Option Root
++  lexical : Option Root
++  numeric : Option Numeric
++  canonical : Option (Sidecar.Storage × Synapses.CanonicalSource.Cache.Manifest)
++  shared : Option Root
++  usage : Option PageMap.Head := none
++  deriving BEq,ToJson,FromJson
++
++def Reference.accepts (reference : Reference) (source : PageMap.Snapshot) (model encoder : String) : Bool :=
++  reference.producer == implementation && decide (reference.source = source.head) &&
++  reference.model == model && reference.encoder == encoder
++
++theorem Reference.same_source (reference : Reference) (source : PageMap.Snapshot) (model encoder : String)
++    (accepted : reference.accepts source model encoder = true) : reference.source = source.head := by
++  simp only [accepts,Bool.and_eq_true,decide_eq_true_eq] at accepted
++  exact accepted.1.1.2
++
++def empty (source : PageMap.Snapshot) (model encoder : String) : Reference := {
++  producer := implementation,source := source.head,model,encoder,population := 0
++  windows := none,lexical := none,numeric := none,canonical := none,shared := none}
++
++def restore (path : System.FilePath) (head : PageMap.Head) : IO PageMap.Snapshot := do
++  let current ← PageMap.pin path
++  let some retained ← PageMap.HistoryReader.make? current head |
++    throw (IO.userError "captured prepared input extent is unavailable")
++  return retained.snapshot
++
++def capture (source : PageMap.Snapshot) (storage : Sidecar.Storage) (model encoder : String)
++    (numeric : Bool) : IO Reference := do
++  let population ← getNat source.get "candidates"
++  if population == 0 then return empty source model encoder
++  let some windows ← WindowOwners.open? source storage |
++    throw (IO.userError "window-owner input is not prepared")
++  let lexicalPath ← RetrievalResearch.Index.path source storage
++  let workspace ← PageMap.pin lexicalPath
++  let some lexical ← PreparedRoot.select? source workspace |
++    throw (IO.userError "lexical input is not prepared")
++  let expected ← RetrievalResearch.Index.stamp source
++  unless lexical.head.authority == RetrievalResearch.Index.authority source &&
++      (← RetrievalResearch.Index.readStamp lexical) == some expected &&
++      (← getNat lexical.get "documents") == population do
++    throw (IO.userError "prepared lexical input changed its original population")
++  let semantic := (← Sidecar.locate source storage).semantic
++  -- Lexical preparation must not discard an already completed numeric pair.
++  -- This is metadata capture off the hook, never construction of cold vectors.
++  let view ← PartitionBuild.read? semantic model encoder source
++  if numeric && view.isNone then throw (IO.userError "numeric input is not prepared")
++  let numerical := view.map fun view =>
++    ({storage,partition := view.partition.snapshot.head,matrix := view.matrix.snapshot.head} : Numeric)
++  let canonical ← Synapses.CanonicalSource.Cache.open? source storage
++  unless canonical.isSome do throw (IO.userError "canonical input is not prepared")
++  let shared ← match canonical with
++    | some canonical =>
++      let path ← Synapses.CanonicalSource.Cache.directory source storage
++      let bound ← Synapses.CanonicalSource.Cache.boundIndex? source path canonical.metadata
++      pure (bound.map (·.reader))
++    | none => Synapses.Index.open? source storage .shared
++  return {
++    producer := implementation,source := source.head,model,encoder,population
++    windows := some ⟨storage,windows.snapshot.head⟩,lexical := some ⟨storage,lexical.head⟩,numeric := numerical
++    canonical := canonical.map (fun ready => (storage,ready.metadata))
++    shared := shared.map (fun ready => ⟨storage,ready.index.head⟩),usage := none}
++
++def folder (source : PageMap.Snapshot) (storage : Sidecar.Storage) (model encoder : String) : IO System.FilePath := do
++  return (← Sidecar.locate source storage).indexes / "query-inputs" /
++    Sha256.hex (toJson (implementation,model,encoder)).compress.toUTF8
++
++def sourceKey (head : PageMap.Head) : String := "source:"++Synapses.Index.contentKey head
++
++/-- Prepared roots are published once outside hooks. The live source-name
++directory is bounded; an admitted caller carries the full immutable record. -/
++def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (model encoder : String)
++    (numeric : Bool) : IO Reference := do
++  let reference ← capture source storage model encoder numeric
++  let path ← folder source storage model encoder
++  let (_,index) ← Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) .canonical (fun _ => do
++    let index ← match ← PageMap.open? path with
++      | some index => pure index
++      | none => PageMap.create path ("prepared-query-inputs:"++source.head.identity++":"++implementation)
++    return (path,index)) storage
++  let encoded := (toJson reference).compress.toUTF8
++  unless encoded.size ≤ 65536 do throw (IO.userError "prepared input metadata exceeds its byte bound")
++  if (← index.get (sourceKey source.head)) == some encoded then return reference
++  let (_,_,_) ← PageMap.withWriter index fun writer => do
++    if (← writer.get (sourceKey source.head)).isNone then
++      let count ← getNat writer.get "count"
++      let slot := key "slot" (count%64)
++      if let some previous ← writer.get slot then
++        let old ← Synapses.Index.decode (α := PageMap.Head) previous
++        if old != source.head then writer.put (sourceKey old) none
++      writer.put slot (some (toJson source.head).compress.toUTF8)
++      putNat writer "count" (count+1)
++    writer.put (sourceKey source.head) (some encoded)
++    writer.put "latest" (some encoded)
++  return reference
++
++def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Reference) := do
++  -- An actually empty source needs no lexical or numerical publication. Its
++  -- original head still belongs to the complete certification/read inventory.
++  if (← getNat source.get "candidates") == 0 then return some (empty source model encoder)
++  for storage in [Sidecar.Storage.database,.user] do
++    let path ← folder source storage model encoder
++    let found ← try
++      match ← PageMap.open? path with
++      | none => pure none
++      | some index =>
++        let raw ← match ← index.get (sourceKey source.head) with
++          | some raw => pure (some raw)
++          | none => index.get "latest"
++        raw.mapM (Synapses.Index.decode (α := Reference))
++      catch error => match error with
++        | .permissionDenied _ _ _ => pure none
++        | _ => throw error
++    if let some reference := found then
++      unless reference.producer == implementation && reference.source.identity == source.head.identity &&
++          reference.source.authority == source.head.authority && reference.model == model && reference.encoder == encoder do
++        throw (IO.userError "foreign prepared query input record")
++      if reference.source == source.head || (← Synapses.Index.sameSources source reference.source) then
++        -- Usage is private and may advance without a source publication.
++        let usage ← Synapses.UsageCache.open? source
++        return some {reference with source := source.head,usage := usage.map (·.index.head)}
++  return none
++
++def lexical (reference : Reference) (source : PageMap.Snapshot) : IO (RetrievalResearch.Index.Reader source) := do
++  unless reference.source == source.head && reference.producer == implementation do
++    throw (IO.userError "captured lexical input changed its source")
++  let some root := reference.lexical | throw (IO.userError "captured lexical input has no root")
++  let index ← restore (← RetrievalResearch.Index.path source root.storage) root.head
++  let expected ← RetrievalResearch.Index.stamp source
++  unless index.head.authority == RetrievalResearch.Index.authority source &&
++      (← RetrievalResearch.Index.readStamp index) == some expected &&
++      (← getNat index.get "documents") == expected.candidates && reference.population == expected.candidates do
++    throw (IO.userError "captured lexical input changed its population or producer")
++  return ⟨index,expected⟩
++
++def windows (reference : Reference) (source : PageMap.Snapshot) : IO WindowOwners.Ready := do
++  unless reference.source == source.head && reference.producer == implementation do
++    throw (IO.userError "captured window input changed its source")
++  let some root := reference.windows | throw (IO.userError "captured window input has no root")
++  let index ← restore (← WindowOwners.folder source root.storage) root.head
++  let some ready ← WindowOwners.at? source index | throw (IO.userError "captured window input is unavailable")
++  unless ready.manifest.stamp == (← SourceCatalogue.stamp source) &&
++      (← PartitionBuild.sourceCompatible source ready.manifest.source) do
++    throw (IO.userError "captured window input changed its original publication")
++  return ready
++
++def numerical (reference : Reference) (source : PageMap.Snapshot) : IO (PartitionBuild.ReadView source × Sidecar.Storage) := do
++  unless reference.accepts source reference.model reference.encoder do
++    throw (IO.userError "captured numeric input changed its source")
++  let some numeric := reference.numeric | throw (IO.userError "captured numeric input was not prepared")
++  let root := (← Sidecar.locate source numeric.storage).semantic
++  let index ← restore (PartitionBuild.folder root reference.model reference.encoder source) numeric.partition
++  let some partition ← VectorPartition.at? index | throw (IO.userError "captured partition is unavailable")
++  let matrixIndex ← restore (VectorMatrix.folder root reference.model reference.encoder) numeric.matrix
++  unless matrixIndex.head.authority == VectorMatrix.authority reference.model reference.encoder &&
++      partition.header.basis.eligibility == (← PartitionBuild.eligibility source) &&
++      (← PartitionBuild.sourceCompatible source partition.header.basis.source) do
++    throw (IO.userError "captured numeric input changed its authority or eligibility")
++  let stats ← VectorMatrix.statistics matrixIndex
++  let matrix : VectorMatrix.Ready := ⟨⟨stats.rows,stats.bytes⟩,matrixIndex⟩
++  unless partition.header.basis.width*8 == (← ProjectionCursor.width matrix) do
++    throw (IO.userError "captured matrix width changed")
++  if same : partition.header.basis.matrix = matrix.snapshot.head then
++    return (⟨partition,matrix,same⟩,numeric.storage)
++  else throw (IO.userError "captured matrix differs from its routing basis")
++
++def shared (reference : Reference) (source : PageMap.Snapshot) : IO (Option Synapses.Index.Reader) := do
++  unless reference.source == source.head && reference.producer == implementation do
++    throw (IO.userError "captured shared input changed its source")
++  let some root := reference.shared | return none
++  let path ← Synapses.Index.directory source root.storage .shared
++  let index ← restore path root.head
++  let some reader ← Synapses.Index.atSource? source index .shared |
++    throw (IO.userError "captured shared synapse input changed its source or producer")
++  return some reader
++
++def forSources (references : Option (Array Reference)) (sources : Array PageMap.Snapshot) :
++    IO (Option (Array Reference)) := references.mapM fun references =>
++  sources.mapM fun source => do
++    let some reference := references.find? (·.source == source.head) |
++      throw (IO.userError "prepared input record omitted a requested source")
++    unless reference.producer == implementation do throw (IO.userError "prepared input producer changed")
++    return reference
++
++def usage (reference : Reference) (source : PageMap.Snapshot) : IO (Option Synapses.Index.Reader) := do
++  unless reference.source == source.head && reference.producer == implementation do
++    throw (IO.userError "captured usage input changed its source")
++  let some head := reference.usage | return none
++  let index ← restore (← Synapses.UsageCache.directory source) head
++  let some reader ← Synapses.Index.atSource? source index .usage |
++    throw (IO.userError "captured private usage input changed its scope")
++  unless (← index.get "classifier") == some Synapses.UsageCache.implementation.toUTF8 do
++    throw (IO.userError "captured private usage input changed its classifier")
++  return some reader
++
++end Eggshell.PreparedInputs
+--- a/Eggshell/KeyedProtocol.lean
++++ b/Eggshell/KeyedProtocol.lean
+@@ -2,0 +3 @@
++public import Eggshell.PreparedInputs
+@@ -29,0 +31 @@
++  prepared : Option (Array PreparedInputs.Reference) := none
+--- a/Eggshell/KeyedSearchProvider.lean
++++ b/Eggshell/KeyedSearchProvider.lean
+@@ -165 +165,14 @@
+-  let views ← sources.mapM fun source => capture source options child.isSome
++  let views ← match request.prepared with
++    | none => sources.mapM fun source => capture source options child.isSome
++    | some prepared =>
++      unless prepared.size == sources.size do throw (IO.userError "prepared keyed input omitted a source")
++      sources.zip prepared |>.mapM fun (source,reference) => do
++        unless reference.accepts source options.model encoderContract do
++          throw (IO.userError "prepared keyed input changed its source or encoder")
++        unless reference.population == (← getNat source.get "candidates") do
++          throw (IO.userError "prepared keyed input changed its original population")
++        if reference.population == 0 then return none
++        let windows ← PreparedInputs.windows reference source
++        let lexical ← PreparedInputs.lexical reference source
++        let numeric ← if child.isSome then some <$> PreparedInputs.numerical reference source else pure none
++        return some (⟨source,windows,lexical,numeric⟩ : SourceView)
+--- a/Eggshell/KeyedSearchClient.lean
++++ b/Eggshell/KeyedSearchClient.lean
+@@ -18 +18 @@
+-    (receipt : Option String := none) : IO (Option (KeyedProtocol.Checked sources)) := do
++    (receipt : Option String := none) (prepared : Option (Array PreparedInputs.Reference) := none) : IO (Option (KeyedProtocol.Checked sources)) := do
+@@ -31 +31 @@
+-      let request : KeyedProtocol.Request := ⟨query,sources.map KeyedProtocol.Scope.ofSnapshot,4096,8192,receipt⟩
++      let request : KeyedProtocol.Request := ⟨query,sources.map KeyedProtocol.Scope.ofSnapshot,4096,8192,receipt,prepared⟩
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -13,0 +14 @@
++public import Eggshell.PreparedInputs
+@@ -96,0 +98,3 @@
++  let inputModel ← if lexicalOnly target.command then pure MiniLM.model else model target.command
++  let some inputs ← PreparedInputs.load? snapshot inputModel SearchProvider.encoderContract | return true
++  if !(lexicalOnly target.command) && inputs.population > 0 && inputs.numeric.isNone then return true
+@@ -368,0 +373 @@
++    let _ ← PreparedInputs.publish snapshot target.storage MiniLM.model SearchProvider.encoderContract false
+@@ -420,0 +426 @@
++    let _ ← PreparedInputs.publish snapshot target.storage settings.model SearchProvider.encoderContract true
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -132 +132,2 @@
+-    (requested : Option PageMap.Head) (deadline : Nat) (holdUntil : Option Nat := none) : IO Json := do
++    (requested : Option PageMap.Head) (deadline : Nat) (holdUntil : Option Nat := none)
++    (captured : Option CanonicalSource.Cache.Manifest := none) : IO Json := do
+@@ -139 +140,4 @@
+-  let some metadata ← CanonicalSource.Cache.manifestAt? source cachePath | return Json.null
++  let selected ← match captured with
++    | some metadata => pure (some metadata)
++    | none => CanonicalSource.Cache.manifestAt? source cachePath
++  let some metadata := selected | return Json.null
+@@ -167 +171,2 @@
+-  prepareRegistered server scope (some head) deadline holdUntil
++  let captured ← IO.ofExcept (fromJson? (α := Option CanonicalSource.Cache.Manifest) (payload.getObjValD "captured"))
++  prepareRegistered server scope (some head) deadline holdUntil captured
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -44 +44,2 @@
+-    (storage : Sidecar.Storage) (deadline : Nat) (holdUntil : Option Nat := none) : IO (Option SourceReference) := do
++    (storage : Sidecar.Storage) (deadline : Nat) (holdUntil : Option Nat := none)
++    (captured : Option Synapses.CanonicalSource.Cache.Manifest := none) : IO (Option SourceReference) := do
+@@ -48 +49 @@
+-    ("budgetMs",toJson budget),("holdUntil",toJson holdUntil)]) (budget := budget)
++    ("budgetMs",toJson budget),("holdUntil",toJson holdUntil),("captured",toJson captured)]) (budget := budget)
+@@ -59,0 +61 @@
++  unless captured.all (· == access.metadata) do throw (IO.userError "captured source preparation was replaced")
+@@ -414,0 +417,4 @@
++def retainSourceAt (source : PageMap.Snapshot) (storage : Sidecar.Storage)
++    (metadata : Synapses.CanonicalSource.Cache.Manifest) (deadline holdUntil : Nat) : IO (Option SourceReference) := do
++  prepareSourceUsing (← resolve) source storage deadline (some holdUntil) (some metadata)
++
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -9,0 +10 @@
++public import Eggshell.PreparedInputs
+@@ -220 +221 @@
+-    (holdUntil : Option Nat := none) : IO Prepared := do
++    (holdUntil : Option Nat := none) (captured : Option PreparedInputs.Reference := none) : IO Prepared := do
+@@ -227,0 +229,15 @@
++    if let some inputs := captured then
++      unless inputs.source == source.head && inputs.producer == PreparedInputs.implementation do
++        throw (IO.userError "prepared recommendation changed its captured source")
++      unless inputs.population == (← Persistence.Store.getNat source.get "candidates") do
++        throw (IO.userError "prepared recommendation changed its original population")
++      if inputs.population == 0 then return {source,shared := none,usage := none}
++      let shared ← PreparedInputs.shared inputs source
++      let usage ← PreparedInputs.usage inputs source
++      let canonical ← inputs.canonical.bindM fun (storage,metadata) => do
++        let reference ← Plugin.Publication.Client.retainSourceAt source storage metadata readDeadline (holdUntil.getD readDeadline)
++        borrowed.set reference
++        return reference
++      return {
++        source,shared,usage,canonical
++        canonicalFailure := if canonical.isSome then none else some "captured-canonical-unavailable"}
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -123,0 +124,2 @@
++  prepared : Option (Array PreparedInputs.Reference) := none
++  originals : Option (List (Option DB.PageMap.Head)) := none
+@@ -359,0 +362,38 @@
++
++def capturePrepared (request : Search) : IO Search := do
++  if !(decide (request.pending.projection = .automatic)) then return request
++  if request.prepared.isSome then
++    unless request.originals.isSome do throw (IO.userError "prepared query omitted its original boundary")
++    return request
++  let context ← ProjectContext.open? request.pending request.deadline
++  let selection := context.map (·.physicalSelection) |>.getD (pendingSelection request.pending)
++  let snapshots ← retainedSelection selection (context.map (·.snapshots))
++  let model ← match request.pending.semanticMatcher with
++    | some (_ :: _ :: args) =>
++      let settings ← IO.ofExcept (SearchProvider.parse {cache := .mk ".",models := .mk "."} args)
++      pure settings.model
++    | _ => pure MiniLM.model
++  let prepared ← (snapshots.filterMap id).toArray.mapM fun source => do
++    unless (← IO.monoMsNow) < request.deadline do throw (IO.userError "prepared query capture expired")
++    let some inputs ← PreparedInputs.load? source model SearchProvider.encoderContract |
++      throw (IO.userError "source query inputs are pending preparation")
++    return inputs
++  return {request with
++    prepared := some prepared
++    originals := some (snapshots.map (·.map (·.head)))}
++
++/-- Raw DB readers carry the same retained heads as project readers. Waiting
++for an execution slot must not replace the captured boundary with latest. -/
++def originalSnapshots (request : Search) (selection : Config.Selection)
++    (project : Option (List (Option DB.PageMap.Snapshot))) : IO (Option (List (Option DB.PageMap.Snapshot))) := do
++  let some heads := request.originals | return project
++  unless heads.length == selection.read.length do throw (IO.userError "captured original inventory changed")
++  if let some snapshots := project then
++    unless snapshots.map (·.map (·.head)) == heads do throw (IO.userError "captured project boundary changed")
++    return some snapshots
++  return some (← (selection.read.zip heads).mapM fun (path,head) => do
++    let some head := head | return none
++    let current ← DB.PageMap.pin path.path
++    let some retained ← DB.PageMap.HistoryReader.make? current head |
++      throw (IO.userError "captured original extent is unavailable")
++    return some retained.snapshot)
+@@ -366,0 +407,9 @@
++  let captured ← try
++    if operation == .search then do
++      let request ← IO.ofExcept (fromJson? payload : Except String Search)
++      pure (some (toJson (← capturePrepared request)))
++    else pure (some payload)
++    catch error =>
++      IO.eprintln s!"Eggshell query inputs unavailable before admission: {error}"
++      pure none
++  let some payload := captured | return none
+@@ -562 +611 @@
+-  let captured := context.map (·.snapshots)
++  let captured ← originalSnapshots request configured (context.map (·.snapshots))
+@@ -606,0 +656 @@
++        request.prepared
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -48,0 +49,5 @@
++    if decide (query.pending.projection = .automatic) then
++      let some inputs := query.prepared | throw (IO.userError "automatic search omitted its prepared input record")
++      let some originals := query.originals | throw (IO.userError "automatic search omitted its original boundary")
++      unless inputs.map (·.source) == (originals.filterMap id).toArray do
++        throw (IO.userError "prepared input inventory differs from original boundary")
+--- a/Eggshell/SemanticMatcher.lean
++++ b/Eggshell/SemanticMatcher.lean
+@@ -576 +576 @@
+-    (receipt : Option String := none) (purpose : String := "discovery") :
++    (receipt : Option String := none) (purpose : String := "discovery") (preparedInputs : Option Json := none) :
+@@ -591 +591 @@
+-        ("purpose", toJson purpose)]
++        ("purpose", toJson purpose),("preparedInputs",preparedInputs.getD Json.null)]
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -13,0 +14 @@
++public import Eggshell.PreparedInputs
+@@ -782,0 +784,28 @@
++def capturedMatrices (options : Options) (request : Json) :
++    IO (Option (Std.HashMap MatrixScope VectorMatrix.Ready)) := do
++  let raw := request.getObjValD "preparedInputs"
++  if raw == Json.null then return none
++  let references ← IO.ofExcept (fromJson? (α := Array PreparedInputs.Reference) raw)
++  let candidates ← IO.ofExcept (request.getObjValAs? (Array Json) "documents")
++  let mut owners : Std.HashMap String DB.Sidecar.Owner := {}
++  for candidate in candidates do
++    let raw := candidate.getObjValD "cache"
++    if raw == Json.null then continue
++    let owner ← IO.ofExcept (fromJson? (α := DB.Sidecar.Owner) raw)
++    if let some previous := owners[owner.database]? then
++      unless previous == owner do throw (IO.userError "prepared score source has conflicting physical scopes")
++    owners := owners.insert owner.database owner
++  let mut matrices := {}
++  for (identity,owner) in owners.toArray do
++    let some reference := references.find? (·.source.identity == identity) |
++      throw (IO.userError "prepared score omitted an original source")
++    let current ← owner.pin
++    let some retained ← DB.PageMap.HistoryReader.make? current reference.source |
++      throw (IO.userError "prepared score source extent is unavailable")
++    unless reference.accepts retained.snapshot options.model encoderContract do
++      throw (IO.userError "prepared score changed its source or encoder")
++    let (numeric,storage) ← PreparedInputs.numerical reference retained.snapshot
++    let root := (← DB.Sidecar.locate retained.snapshot storage).semantic.toString
++    matrices := matrices.insert (⟨root,identity⟩ : MatrixScope) numeric.matrix
++  return some matrices
++
+@@ -788,3 +817,6 @@
+-  let matrices ← match options.matrices with
+-    | some known => pure known
+-    | none => MatrixReads.dynamic <$> IO.mkRef {}
++  let fixed ← capturedMatrices options request
++  let matrices ← match fixed with
++    | some known => pure (MatrixReads.fixed known)
++    | none => match options.matrices with
++      | some known => pure known
++      | none => MatrixReads.dynamic <$> IO.mkRef {}
+@@ -804,0 +837,3 @@
++      -- Unpublished local hints have no persistent source; their temporary
++      -- vectors cannot substitute for a missing durable captured matrix.
++      let known := if candidate.getObjValD "cache" == Json.null then {known with matrices := none} else known
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -2254 +2254 @@
+-      Fin document.windows.length → IO String) (receipt : Option String := none) :
++      Fin document.windows.length → IO String) (receipt : Option String := none) (queryInputs : Option Json := none) :
+@@ -2279 +2279 @@
+-  let some observed ← SemanticMatcher.nominateIndexed command question requests [] [] repair false receipt "focus" | return none
++  let some observed ← SemanticMatcher.nominateIndexed command question requests [] [] repair false receipt "focus" queryInputs | return none
+@@ -8103,0 +8104,11 @@
++def capturedLexicalQuery (snapshot : DB.PageMap.Snapshot)
++    (inputs : Option (Array PreparedInputs.Reference)) (receipt : Option String) : IO LexicalReads.Query := do
++  let some references ← PreparedInputs.forSources inputs #[snapshot] |
++    return ← LexicalReads.coarseQuery snapshot receipt
++  let some reference := references[0]? | throw (IO.userError "captured lexical source absent")
++  unless reference.population == (← Persistence.Store.getNat snapshot.get "candidates") do
++    throw (IO.userError "captured lexical population changed")
++  if reference.population == 0 then
++    return {posting := fun _ => pure ([],0),ordinal := fun _ => throw (IO.userError "empty lexical domain")}
++  LexicalReads.query (← PreparedInputs.lexical reference snapshot) receipt
++
+@@ -8106,2 +8117,3 @@
+-    (receipt : Option String := none) : IO (Option IndexedSemanticNominations) := do
+-  let some nominated ← KeyedSearchClient.nominate command #[snapshot] current receipt | return none
++    (receipt : Option String := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) : IO (Option IndexedSemanticNominations) := do
++  let prepared ← PreparedInputs.forSources queryInputs #[snapshot]
++  let some nominated ← KeyedSearchClient.nominate command #[snapshot] current receipt prepared | return none
+@@ -8809 +8821 @@
+-    (upstreamDeadline : Option Nat := none) :
++    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) :
+@@ -8822 +8834 @@
+-      selection.semanticMatcher.mapM (fun command => keyedSemanticNominations snapshot command referenceQuery [] receipt)
++      selection.semanticMatcher.mapM (fun command => keyedSemanticNominations snapshot command referenceQuery [] receipt queryInputs)
+@@ -8866 +8878 @@
+-        (fun document index => Persistence.Store.readSearchWindow pulling document index.val) receipt
++        (fun document index => Persistence.Store.readSearchWindow pulling document index.val) receipt (queryInputs.map toJson)
+@@ -8879 +8891 @@
+-      keyedSemanticNominations snapshot command query candidates receipt
++      keyedSemanticNominations snapshot command query candidates receipt queryInputs
+@@ -8881 +8893 @@
+-      let query ← LexicalReads.coarseQuery snapshot receipt
++      let query ← capturedLexicalQuery snapshot queryInputs receipt
+@@ -8912 +8924 @@
+-    (receipt : Option String := none) :
++    (receipt : Option String := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) :
+@@ -8914 +8926,3 @@
+-  let lexicalPosting ← Persistence.Store.Federated.retrievalLookup catalogue true receipt
++  let lookups ← queryInputs.mapM fun _ => sources.mapM fun source => do
++    return (← capturedLexicalQuery source queryInputs receipt).posting
++  let lexicalPosting ← Persistence.Store.Federated.retrievalLookup catalogue true receipt lookups
+@@ -8971 +8985 @@
+-  let some nominated ← SemanticMatcher.nominateIndexed command current requests lexical anchors readWindow false receipt |
++  let some nominated ← SemanticMatcher.nominateIndexed command current requests lexical anchors readWindow false receipt "discovery" (queryInputs.map toJson) |
+@@ -8990 +9004 @@
+-    (upstreamDeadline : Option Nat := none) :
++    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) :
+@@ -9050 +9064 @@
+-          Persistence.Store.readSearchWindow source document.original index.val) receipt
++          Persistence.Store.readSearchWindow source document.original index.val) receipt (queryInputs.map toJson)
+@@ -9073 +9087 @@
+-    semantic := fun all command query staged => federatedSemanticNominations catalogue all command query staged receipt
++    semantic := fun all command query staged => federatedSemanticNominations catalogue all command query staged receipt queryInputs
+@@ -9075 +9089,3 @@
+-      let posting ← Persistence.Store.Federated.retrievalLookup catalogue false receipt
++      let lookups ← queryInputs.mapM fun _ => sources.mapM fun source => do
++        return (← capturedLexicalQuery source queryInputs receipt).posting
++      let posting ← Persistence.Store.Federated.retrievalLookup catalogue false receipt lookups
+@@ -9132 +9148 @@
+-    (upstreamDeadline : Option Nat := none) : IO (Option Handoff) := do
++    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) : IO (Option Handoff) := do
+@@ -9149 +9165 @@
+-        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline then return result
++        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs then return result
+@@ -9151 +9167 @@
+-      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline
++      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs
+@@ -9223 +9239 @@
+-    (memoScope : Option String := none) : IO (Option Handoff) := do
++    (memoScope : Option String := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) : IO (Option Handoff) := do
+@@ -9239 +9255,6 @@
+-  let synaptic ← (snapshots.filterMap id).toArray.mapM fun snapshot => do
++  let sources := (snapshots.filterMap id).toArray
++  if let some references := queryInputs then
++    unless references.size == sources.size && (references.zip sources).all (fun (reference,source) =>
++        reference.source == source.head && reference.producer == PreparedInputs.implementation) do
++      throw (IO.userError "prepared query changed the complete original read boundary")
++  let synaptic ← sources.zipIdx.mapM fun (snapshot,index) => do
+@@ -9243 +9264,3 @@
+-    try Synapses.Recommend.prepare snapshot (some preparationDeadline) (some deadline)
++    try
++      Synapses.Recommend.prepare snapshot (some preparationDeadline) (some deadline)
++        (queryInputs.bind (·[index]?))
+@@ -9299 +9322 @@
+-      (upstreamDeadline := sourceContext.map (·.deadline))
++      (upstreamDeadline := sourceContext.map (·.deadline)) (queryInputs := queryInputs)
+@@ -9310 +9333 @@
+-        (upstreamDeadline := sourceContext.map (·.deadline))
++        (upstreamDeadline := sourceContext.map (·.deadline)) (queryInputs := queryInputs)
+--- a/Eggshell/FederatedSearch.lean
++++ b/Eggshell/FederatedSearch.lean
+@@ -314 +314,4 @@
+-    (receipt : Option String) : IO (String → IO PostingSet) := do
++    (receipt : Option String)
++    (captured : Option (Array (String → IO (List Nat × Nat))) := none) : IO (String → IO PostingSet) := do
++  if let some captured := captured then
++    unless captured.size == sources.size do throw (IO.userError "captured lexical inventory changed")
+@@ -316,2 +319,7 @@
+-    let read ← if strict then RetrievalResearch.Index.strictLookup sources[source]
+-      else RetrievalResearch.Index.coarseLookup sources[source] receipt
++    let read ← match captured with
++      | some captured =>
++        let some read := captured[source.val]? | throw (IO.userError "captured lexical source absent")
++        pure read
++      | none =>
++        if strict then RetrievalResearch.Index.strictLookup sources[source]
++        else RetrievalResearch.Index.coarseLookup sources[source] receipt
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -26,0 +27 @@
++      ``Eggshell.PreparedInputs.Reference.same_source,
+@@ -179,2 +180,15 @@
+-        #[``Eggshell.LexicalReads.coarseQuery, ``Eggshell.Plugin.lexicalNominations],
+-        #[``Eggshell.Persistence.Store.searchDocuments])] do
++        #[``Eggshell.Plugin.capturedLexicalQuery, ``Eggshell.Plugin.lexicalNominations],
++        #[``Eggshell.Persistence.Store.searchDocuments]),
++      (``Eggshell.Plugin.capturedLexicalQuery,
++        #[``Eggshell.PreparedInputs.forSources, ``Eggshell.PreparedInputs.lexical,
++          ``Eggshell.LexicalReads.query, ``Eggshell.LexicalReads.coarseQuery],
++        #[``Eggshell.Persistence.Store.searchDocuments]),
++      (``Eggshell.PreparedInputs.restore,
++        #[``Eggshell.DB.PageMap.HistoryReader.make?],
++        #[``Eggshell.PreparedRoot.select?]),
++      (``Eggshell.Plugin.Worker.capturePrepared,
++        #[``Eggshell.PreparedInputs.load?],
++        #[``Eggshell.PreparedInputs.publish, ``Eggshell.Warm.runTarget]),
++      (``Eggshell.Plugin.Worker.originalSnapshots,
++        #[``Eggshell.DB.PageMap.HistoryReader.make?],
++        #[``Eggshell.PreparedRoot.select?])] do

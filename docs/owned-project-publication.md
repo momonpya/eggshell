@@ -60,9 +60,15 @@ journal/save workers. The [retained original-reader candidate](candidates/retain
 now keeps canonical/shared readers during active query processing, with an
 accounted cache borrow and bounded expiry. Eighty small reader clients reuse
 one original load; the normal 80-query/80-save burst releases all 400 acquired
-handles. This does not hold all lexical/numeric/private-usage roots or cover
-worker queue wait. Cross-project transitive dependency closure and the complete
-held read capability remain unconnected. The single-source
+handles. The [captured-input continuation](candidates/prepared-inputs/README.md)
+now records exact original/lexical/window/synapse/canonical/matrix/router roots
+before worker admission, with requester-private usage kept out of shared
+manifests. Queue entries carry small root references rather than full readers
+or original payloads. Sixty-six later prepared publications evict old directory
+names without changing those captured inputs, including fresh-process restore.
+This is not an extent-reclamation lease or an atomic transaction across all
+components. Cross-project transitive dependency closure and the complete
+held read capability remain unfinished. The single-source
 publisher rejects logical project directories before creating a shadow DB there.
 
 The implementation gap is now preparation and combined sustained operation,
