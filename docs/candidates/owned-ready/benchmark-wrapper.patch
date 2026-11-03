@@ -1,0 +1,7 @@
+--- a/tools/research/OwnedPreparationBenchmark.lean
++++ b/tools/research/OwnedPreparationBenchmark.lean
+@@ -28,3 +28 @@
+-  let windows ← WindowOwners.refresh source .user
+-  let lexical ← RetrievalResearch.Index.warm source .user
+-  return (windows,lexical)
++  Warm.prepareSourceIndexes source .user

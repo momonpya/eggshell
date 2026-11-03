@@ -1,0 +1,170 @@
+{
+  "runtimeSha256": "9ac9acb183c6d1a79b160c9081e7e3ced464b0e5947c32e79767a034788b2bb8",
+  "outcome": "failed; explicit final warm rejected",
+  "error": "offset 0: unexpected end of input",
+  "command": {
+    "elapsedMs": 789,
+    "exitCode": 1,
+    "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "guard": {
+    "childPid": 22653,
+    "elapsedMs": 38402,
+    "error": null,
+    "exitCode": 1,
+    "guardPid": 21592,
+    "guardSha256": "604550f9b3b3be9dc572a0e6c5458ac3fb1414bffe7b828c2e94a09d4c1ab304",
+    "guardTriggered": false,
+    "limitRssKiB": 3670016,
+    "ownedPids": [],
+    "peakProcesses": [
+      {
+        "lane": null,
+        "parent": 29644,
+        "pid": 29757,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 50736
+      },
+      {
+        "lane": null,
+        "parent": 21592,
+        "pid": 22653,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-lifecycle-build/StudyMain",
+        "role": null,
+        "rssKiB": 51440
+      },
+      {
+        "lane": null,
+        "parent": 24988,
+        "pid": 29871,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 47296
+      },
+      {
+        "lane": null,
+        "parent": 25039,
+        "pid": 29946,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "search-provider",
+        "rssKiB": 41200
+      },
+      {
+        "lane": null,
+        "parent": 22653,
+        "pid": 23874,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 58512
+      },
+      {
+        "lane": "save",
+        "parent": 24297,
+        "pid": 25978,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-worker",
+        "rssKiB": 53328
+      },
+      {
+        "lane": "search",
+        "parent": 24297,
+        "pid": 24988,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-worker",
+        "rssKiB": 57856
+      },
+      {
+        "lane": "index",
+        "parent": 24297,
+        "pid": 25039,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-worker",
+        "rssKiB": 59536
+      },
+      {
+        "lane": null,
+        "parent": 22653,
+        "pid": 24297,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-daemon",
+        "rssKiB": 61280
+      },
+      {
+        "lane": null,
+        "parent": 22653,
+        "pid": 29644,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-hook",
+        "rssKiB": 50208
+      },
+      {
+        "lane": null,
+        "parent": 60243,
+        "pid": 21592,
+        "program": "./empty-routing-study-build/StudyMain",
+        "role": "guard",
+        "rssKiB": 50736
+      }
+    ],
+    "reason": null,
+    "sampledPeakRssKiB": 582128,
+    "samples": 272,
+    "settings": {
+      "command": [
+        "/usr/bin/env",
+        "LEAN_NUM_THREADS=1",
+        "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-native/data",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-lifecycle-build/StudyMain",
+        "native",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-native-input.json",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-native"
+      ],
+      "cwd": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+      "limitRssKiB": 3670016,
+      "minFreeKiB": 2097152,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
+      ],
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-native-private-root.guard.json"
+    },
+    "state": "finished",
+    "userCeilingRssKiB": 4194304
+  },
+  "sessionShutdown": {
+    "acknowledged": true,
+    "daemonExitCode": 0,
+    "endpointRemoved": true,
+    "phase": "stopped",
+    "pid": 24297,
+    "processExited": true,
+    "service": "session",
+    "stopElapsedMs": 15
+  },
+  "publisherShutdown": {
+    "acknowledged": true,
+    "daemonExitCode": 0,
+    "endpointRemoved": true,
+    "phase": "stopped",
+    "pid": 23874,
+    "processExited": true,
+    "service": "publication",
+    "stopElapsedMs": 7
+  },
+  "sourceOnlyRecoveryCompleted": false,
+  "answeringModelCalls": 0,
+  "rootCause": "experimental prefix omitted the existing MiniLM share symlink",
+  "stagedProbe": {
+    "journal": "passed",
+    "canonical": "passed",
+    "windows": "passed",
+    "lexical": "passed",
+    "parallel": "passed",
+    "numericRemainder": "failed before support link was restored"
+  },
+  "setupFailureRetained": true,
+  "parallelPreparationStagesPassed": true,
+  "diagnosisValidatedByRerun": true,
+  "rerunRuntimeSha256": "74b7a224ec8765374bbbb5550432b8632a998bf9ca68ce6e4e32c2efc3f36f62",
+  "rerunIncludesSeparateRetirementFix": true
+}

@@ -1,0 +1,286 @@
+--- a/Eggshell/DB/Sidecar.lean
++++ b/Eggshell/DB/Sidecar.lean
+@@ -156,3 +156,29 @@
+-/-- Index and explicit warm share a non-waiting claim; neither takes the DB
+-writer. An exited owner releases the descriptor lock automatically. -/
+-def Sidecar.withIndexClaim (owner : Sidecar.Owner) (action : Sidecar → IO α)
++/-- These regions own disjoint derived workspaces. Semantic Work/window
++writers share one region; synaptic builders and usage caches share another. -/
++inductive Sidecar.IndexRegion where
++  | canonical | lexical | windows | semantic | synaptic
++  deriving DecidableEq
++
++def Sidecar.IndexRegion.name : Sidecar.IndexRegion → String
++  | .canonical => "canonical"
++  | .lexical => "lexical"
++  | .windows => "windows"
++  | .semantic => "semantic"
++  | .synaptic => "synaptic"
++
++def Sidecar.IndexRegion.all : List Sidecar.IndexRegion :=
++  [.canonical,.lexical,.windows,.semantic,.synaptic]
++
++theorem Sidecar.IndexRegion.all_complete (region : Sidecar.IndexRegion) : region ∈ Sidecar.IndexRegion.all := by
++  cases region <;> simp [Sidecar.IndexRegion.all]
++
++def Sidecar.IndexRegion.guardName (region : Sidecar.IndexRegion) : String :=
++  "index-" ++ region.name ++ ".guard"
++
++theorem Sidecar.IndexRegion.name_injective : Function.Injective Sidecar.IndexRegion.name := by
++  intro left right same
++  cases left <;> cases right <;> simp_all [Sidecar.IndexRegion.name]
++
++/-- One non-waiting admission claim per actual writer region, never one
++project-wide gate. Lifecycle/retirement coordination remains separate. -/
++def Sidecar.withIndexClaim (owner : Sidecar.Owner) (region : Sidecar.IndexRegion) (action : Sidecar → IO α)
+@@ -160,5 +186,14 @@
+-  let sidecar ← Sidecar.prepare owner storage
+-  let path := sidecar.directory / "index.guard"
+-  FileSystem.immutableExistingBytes path ByteArray.empty
+-  let guard ← FileSystem.openRead path.toString
+-  unless ← FileSystem.tryReadLock guard true do throw (IO.userError "DB indexer is busy")
++  let acquire : IO (Sidecar × FileSystem.ReadHandle) := do
++    let sidecar ← Sidecar.prepare owner storage
++    let path := sidecar.directory / region.guardName
++    FileSystem.immutableExistingBytes path ByteArray.empty
++    let guard ← FileSystem.openRead path.toString
++    unless ← FileSystem.tryReadLock guard true do throw (IO.userError s!"DB {region.name} index owner is busy")
++    return (sidecar,guard)
++  -- Retirement cannot miss a new region between registration and admission.
++  -- Release this short registry fence before doing any index computation.
++  let (sidecar,guard) ← if storage == .user then do
++      let some admitted ← Sidecar.withCacheClaim false acquire |
++        throw (IO.userError "private cache retirement is busy")
++      pure admitted
++    else acquire
+--- a/Eggshell/DB/CacheReclaim.lean
++++ b/Eggshell/DB/CacheReclaim.lean
+@@ -50,2 +50,19 @@
+-/-- The registry claim fences new copy registrations. An existing index lease
+-also fences retirement, without waiting for or cancelling background work. -/
++/-- Hold every extant region until rename finishes. The registry fence held
++by the caller prevents a previously absent region from being admitted here. -/
++def Sidecar.withRetirementRegions (directory : System.FilePath)
++    (regions : List Sidecar.IndexRegion) (action : IO (Option α)) : IO (Option α) := do
++  match regions with
++  | [] => action
++  | region :: rest =>
++    let path := directory / region.guardName
++    let lease ← if (← FileSystem.symlinkMetadata? path).isSome then
++        some <$> FileSystem.openRead path.toString
++      else pure none
++    if let some lease := lease then
++      unless ← FileSystem.tryReadLock lease true do return none
++    try Sidecar.withRetirementRegions directory rest action
++    finally
++      if let some lease := lease then FileSystem.unlockRead lease
++
++/-- The registry claim fences new copy registrations and region admission.
++Any active region fences retirement without cancelling background work. -/
+@@ -63,7 +80 @@
+-    let path := directory / "index.guard"
+-    let lease ← if (← FileSystem.symlinkMetadata? path).isSome then
+-        some <$> FileSystem.openRead path.toString
+-      else pure none
+-    if let some lease := lease then
+-      unless ← FileSystem.tryReadLock lease true do return none
+-    try
++    Sidecar.withRetirementRegions directory Sidecar.IndexRegion.all do
+@@ -76,2 +86,0 @@
+-    finally
+-      if let some lease := lease then FileSystem.unlockRead lease
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -227 +227 @@
+-  let (path,index) ← Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun sidecar => do
++  let (path,index) ← Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) .canonical (fun sidecar => do
+--- a/Eggshell/PreparedRoot.lean
++++ b/Eggshell/PreparedRoot.lean
+@@ -19,2 +19,2 @@
+-def key (source : PageMap.Head) : String := s!"view:{source.revision % capacity}"
+-def path (index : PageMap.Snapshot) := index.directory / "prepared"
++def key (source : PageMap.Head) : String := s!"view-{source.revision % capacity}"
++def path (index : PageMap.Snapshot) := index.directory / "ready"
+@@ -25 +25,37 @@
+-def decode (raw : ByteArray) : IO View := do
++structure Stored where
++  owner : String
++  view : View
++  checksum : String
++  deriving ToJson, FromJson
++
++def checksumFor (owner : String) (view : View) : String :=
++  Sha256.hex (toJson (owner,view)).compress.toUTF8
++
++def Stored.ofView (source index : PageMap.Head) (view : View) : Stored :=
++  let owner := authority source index
++  ⟨owner,view,checksumFor owner view⟩
++
++def Stored.Valid (source index : PageMap.Head) (record : Stored) : Prop :=
++  record.owner = authority source index ∧ record.checksum = checksumFor record.owner record.view ∧
++  record.view.source.identity = source.identity ∧ record.view.source.authority = source.authority ∧
++  record.view.index.identity = index.identity ∧ record.view.index.authority = index.authority
++
++instance (source index : PageMap.Head) (record : Stored) : Decidable (record.Valid source index) := by
++  unfold Stored.Valid
++  infer_instance
++
++def Stored.check? (source index : PageMap.Head) (record : Stored) : Except String View :=
++  if _valid : record.Valid source index then .ok record.view
++  else .error "invalid prepared-root checksum or ownership"
++
++theorem Stored.foreign_source_rejected (source index : PageMap.Head) (record : Stored)
++    (foreign : record.view.source.identity ≠ source.identity) :
++    record.check? source index = .error "invalid prepared-root checksum or ownership" := by
++  simp [Stored.check?, Stored.Valid, foreign]
++
++theorem Stored.bad_checksum_rejected (source index : PageMap.Head) (record : Stored)
++    (corrupt : record.checksum ≠ checksumFor record.owner record.view) :
++    record.check? source index = .error "invalid prepared-root checksum or ownership" := by
++  simp [Stored.check?, Stored.Valid, corrupt]
++
++def decode (raw : ByteArray) : IO Stored := do
+@@ -28 +64,4 @@
+-  IO.ofExcept (Json.parse text >>= fromJson?)
++  let record ← IO.ofExcept (Json.parse text >>= fromJson? (α := Stored))
++  unless (toJson record).compress.toUTF8 == raw do
++    throw (IO.userError "noncanonical prepared-root record")
++  return record
+@@ -30,3 +69,7 @@
+-def read? (catalogue : PageMap.Snapshot) (name : String) : IO (Option View) := do
+-  let some raw ← catalogue.get name | return none
+-  some <$> decode raw
++/-- A reader owns the opened file object. Atomic replacement cannot mutate
++its bytes; checksum, authority and exact historical index checks stay separate. -/
++def read? (source index : PageMap.Snapshot) (name : String) : IO (Option View) := do
++  let file := path index / name
++  unless ← file.pathExists do return none
++  let record ← decode (← FileSystem.boundedBytes file 16384)
++  some <$> IO.ofExcept (record.check? source.head index.head)
+@@ -33,0 +77,7 @@
++def install (source index : PageMap.Snapshot) (name : String) (view : View) : IO Unit := do
++  let record := Stored.ofView source.head index.head view
++  let _ ← IO.ofExcept (record.check? source.head index.head)
++  let bytes := (toJson record).compress.toUTF8
++  unless bytes.size ≤ 16384 do throw (IO.userError "oversized prepared-root publication")
++  FileSystem.atomicExistingBytes (path index / name) bytes
++
+@@ -54,4 +104 @@
+-  let some catalogue ← PageMap.open? (path index) | return none
+-  unless catalogue.head.authority == authority source.head index.head do
+-    throw (IO.userError "foreign prepared-root catalogue")
+-  let named := (← read? catalogue (key source.head)).filter (·.source == source.head)
++  let named := (← read? source index (key source.head)).filter (·.source == source.head)
+@@ -61 +108 @@
+-      let some view ← read? catalogue "latest" | return none
++      let some view ← read? source index "latest" | return none
+@@ -69 +116 @@
+-/-- Caller holds its DB index claim and has verified complete component coverage.
++/-- Caller owns this component's writer region and verified complete coverage.
+@@ -71,2 +118,3 @@
+-The catalogue has at most 64 named views plus its latest view. Active readers
+-own their opened snapshot independently of this bounded lookup directory. -/
++There is no catalogue B-tree or shared catalogue head. At most 64 owned lookup
++slots plus latest are atomically replaced; active readers retain their opened
++index snapshot. A crash between the two publications cannot forge coverage. -/
+@@ -77,6 +125 @@
+-  let directory := path index
+-  let catalogue ← match ← PageMap.open? directory with
+-    | some value => pure value
+-    | none => PageMap.create directory (authority source.head index.head)
+-  unless catalogue.head.authority == authority source.head index.head do
+-    throw (IO.userError "foreign prepared-root writer")
++  let _ ← Sidecar.childDirectory index.directory "ready"
+@@ -85,2 +128,5 @@
+-  if (← read? catalogue name) == some view then return
+-  let latest ← read? catalogue "latest"
++  if (← read? source index name) != some view then install source index name view
++  -- Named completion may have survived an earlier process before latest was
++  -- published. An identical named slot must not skip recovery of that step.
++  let latest ← read? source index "latest"
++  if latest == some view then return
+@@ -90,4 +136 @@
+-  let _ ← PageMap.withWriter catalogue fun writer => do
+-    writer.put name (some (toJson view).compress.toUTF8)
+-    if promote then writer.put "latest" (some (toJson view).compress.toUTF8)
+-  pure ()
++  if promote then install source index "latest" view
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -287 +287 @@
+-  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun _ => do
++  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) .synaptic (fun _ => do
+@@ -324 +324 @@
+-  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun _ => do
++  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) .synaptic (fun _ => do
+--- a/Eggshell/UsageCache.lean
++++ b/Eggshell/UsageCache.lean
+@@ -44 +44 @@
+-  let _ ← Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun sidecar => do
++  let _ ← Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) .synaptic (fun sidecar => do
+@@ -113 +113 @@
+-  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun _ => do
++  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) .synaptic (fun _ => do
+--- a/Eggshell/WindowOwners.lean
++++ b/Eggshell/WindowOwners.lean
+@@ -236 +236 @@
+-  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) (fun sidecar => do
++  Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) .windows (fun sidecar => do
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -533 +533 @@
+-  DB.Sidecar.withIndexClaim target.owner (fun _ => indexOwned pinned directory) target.storage
++  DB.Sidecar.withIndexClaim target.owner .semantic (fun _ => indexOwned pinned directory) target.storage
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -325,0 +326,8 @@
++
++/-- Parallel owners receive separate readers of the exact original head.
++Neither mutable read traces nor node-cache references are shared by the jobs. -/
++def reopenOriginal (directory : System.FilePath) (head : DB.PageMap.Head) : IO DB.PageMap.Snapshot := do
++  let current ← DB.PageMap.pin directory
++  let some pinned ← DB.PageMap.HistoryReader.make? current head |
++    throw (IO.userError "original warm snapshot is unavailable")
++  return pinned.snapshot
+@@ -326,0 +335,22 @@
++def prepareSourceIndexes (source : DB.PageMap.Snapshot) (storage : DB.Sidecar.Storage) :
++    IO (WindowOwners.Result × RetrievalResearch.Index.Result) := do
++  let directory := source.directory
++  let head := source.head
++  let windows ← IO.asTask (do
++    WindowOwners.refresh (← reopenOriginal directory head) storage) .dedicated
++  try
++    let lexical ← IO.asTask (do
++      RetrievalResearch.Index.warm (← reopenOriginal directory head) storage) .dedicated
++    try
++      let windowResult ← IO.wait windows
++      let lexicalResult ← IO.wait lexical
++      return (← IO.ofExcept windowResult,← IO.ofExcept lexicalResult)
++    finally
++      IO.cancel lexical
++      let _ ← IO.wait lexical
++      pure ()
++  finally
++    IO.cancel windows
++    let _ ← IO.wait windows
++    pure ()
++
+@@ -336,2 +366 @@
+-  let windowOwners ← WindowOwners.refresh snapshot target.storage
+-  let lexical ← RetrievalResearch.Index.warm snapshot target.storage
++  let (windowOwners,lexical) ← prepareSourceIndexes snapshot target.storage
+@@ -357 +386 @@
+-  DB.Sidecar.withIndexClaim (DB.Sidecar.Owner.ofSnapshot snapshot) (fun _ => do
++  DB.Sidecar.withIndexClaim (DB.Sidecar.Owner.ofSnapshot snapshot) .semantic (fun _ => do
+--- a/tools/RetrievalIndex.lean
++++ b/tools/RetrievalIndex.lean
+@@ -262 +262 @@
+-  DB.Sidecar.withIndexClaim (DB.Sidecar.Owner.ofSnapshot source) (fun sidecar => do
++  DB.Sidecar.withIndexClaim (DB.Sidecar.Owner.ofSnapshot source) .lexical (fun sidecar => do
+--- a/tests/ReadOnlyCacheTests.lean
++++ b/tests/ReadOnlyCacheTests.lean
+@@ -223,2 +223,2 @@
+-  FileSystem.immutableExistingBytes (cache.directory / "index.guard") ByteArray.empty
+-  let lease ← FileSystem.openRead (cache.directory / "index.guard").toString
++  FileSystem.immutableExistingBytes (cache.directory / DB.Sidecar.IndexRegion.lexical.guardName) ByteArray.empty
++  let lease ← FileSystem.openRead (cache.directory / DB.Sidecar.IndexRegion.lexical.guardName).toString

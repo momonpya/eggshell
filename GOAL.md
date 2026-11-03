@@ -18,7 +18,7 @@
 
 - 論理DBはプロジェクトの共有空間。顧客・権限・案件・版のscopeと物理配置を分ける。個人DBを強制しない。私有観測や利用信号は共有へ自動混入させない。
 - 各利用者の保存先は利用中プロジェクトの設定で選ぶ一つのwrite DB。他プロジェクトは許可されたread DBとしてのみ扱う。キャッシュも各プロジェクトDBのidentity・権限scope・snapshotに結び付け、読取専用DBの派生物はユーザー側のDB別read-cacheへ置く。複数DBを扱うサービスやRAM容量の共用は、この保存先・キャッシュの分離を変更しない。プロジェクトをまたぐシャード分割は導入していない。
-- DBごとに一つの出版責任者。投入・検索は並行し、短いcommitだけ直列化。一つのEggshellサービスが複数DBを扱える。ローカルも同じ保存契約を使う。
+- プロジェクト内の独立した追記領域に複数の所有者を置き、保存・準備を並行処理する。同じ可変位置へ競合書き込みをさせず、照会は完全な所有者一覧と依存を含む不変の境界をpinする。現行原文DBはまだDB単位の出版を直列化しており、この制約を撤去した実行系・交代時の排他・耐久性・認定索引の完全性は未検証。一つのEggshellサービスが複数DBを扱える。ローカルも同じ保存契約を使う。[所有モデルと残る実装](docs/owned-project-publication.md)。
 - 共有時はデータ側のサービスを通す。SMB/NFS上の同じ可変PageMapを各PCが直接同時更新することを、ローカルlock試験だけで安全と扱わない。不変segmentの保管・転送は実NASで障害試験する。
 - git不要。取得したbytesをscope付き内容アドレスで保持し、観測には取得元・操作・入力依存・時系列・範囲/項目を持たせる。git/commitは任意の補助情報。外部パスやgit objectだけに原文の存続を依存させない。
 - 同じbytes/埋め込み入力は許可scope内で共有し、異なる観測・版・権限の証拠は保持する。巨大入力はstreamingと範囲manifestで扱い、数行の取得のために全体を自動取り込みしない。
@@ -49,7 +49,11 @@
 
 利用者の指示に従い、共通lock/CASを前提とせず[独立所有のproject stream](docs/owned-project-publication.md)を形式化した。一つのlogical project DB内で独立した追記を並行させる設計モデルで、project全体を一所有者へ直列化する計画ではない。実`PageMap.Head`と`RequestStamp`を用い、独立追記の交換則、古い全体headの上書きによる更新消失、依存が閉じたviewの交換/結合/冪等なjoin、完全なstream inventoryの下で依存原文が組立て入力に含まれること、後続追記による旧view不変、期限切れ拒否をLeanで検査した。最終証明は標準公理のみ。モデルはCAS/Mutexを使わないが、実IOの所有権・failover・永続化・e-class索引完全性を証明したものではなく、runtime未接続/製品未採用である。
 
-次はこの所有権モデルを実行系へ詳細化し、不変の原文/準備済みmetadataを共有して、重い配送準備を共有可変状態から分離する。source cutと各準備済み索引rootの対応、領域をまたぐ認定完全性、native contextのepoch/ACKを維持し、出版・索引・検索を同時に流す継続負荷で検査する。選択計算の反復除去も同じ固定入力で比較する。待機枠/期限を増やして解消扱いにせず、重み/予算の再調整や必要範囲の事後緩和はしない。固定した新runtime/seed/cohortでLunaの所定比較へ進める。総token比較0/18、目標はactiveのまま。multi-host、80人8時間、容量回収、MCP保存方針も未完了である。親の[prepared-basis](docs/candidates/prepared-basis/README.md)の小規模4 DB/80 clients試験と、今回の実DB・単一projectの後段RPC試験を合わせても、80同時の全フックの実証にはならない。
+最初の隔離実装は[owned-ready](docs/candidates/owned-ready/README.md)。独立したcanonical/字句/窓/数値/シナプスの書込領域を明示し、DB全体の索引guardを分割した。同じ領域を複数writerへ許可せず、別領域はthread間・process間とも並行できることをnative検査した。完成rootの追加台帳B-tree/headを小さな検証付きレコードへ置き換え、字句と窓索引を同じ原文headの独立readerで並行準備する。原文一致・古いreader・部分公開の回復・逆行拒否・破損/別scope/分岐/過大入力の拒否・65ファイル上限を検査。回収は全5領域を確認し、登録から領域取得までをfenceで保護する。各領域の処理中は回収されず、解放後に回収でき、死んだ所有者から再生成できない検査も通った。修正後に事前固定した64/1024所有者・各3反復をやり直し、全12試行のpostings/窓対応が原文の独立走査と一致し、1024所有者の準備は直列1349〜1356ms/候補1265〜1295msだった。フック/総token/80人の性能値とはしない。原文DBの出版と共通session guardはまだ直列で、製品未採用。
+
+現候補runtimeは`74b7a224…`。通常Pre/Post/Stopによる実shell5回とMCP形式3回を通し、8原観測・17日誌event・原文のみのcopyから新しい私有rootへの回復・新規チャットの小さな凍結2項目の2/2配送を確認した。Pre/Post16件は全成功/最大2044ms、再利用フック4515ms。実MCPサーバーは使っておらず、LLVM題材の再検査や全体98%の達成値ではない。native試行の集計RSS最大1854192KiB、guard発火0/残存0。初回の検査用prefixにMiniLM資源の参照を設定し忘れた失敗も記録し、LeanのfixtureがDB作成前に資源不足を拒否するようにした。終了した検査DB/cache・重複実行体・compiler生ログは削除し、保護原典/対照/現候補のdigest不変を確認した。圧縮archiveは作っていない。[実受領](docs/candidates/owned-ready/native/recall-audit.json)、[削除](docs/candidates/owned-ready/cleanup.json)。
+
+次はこの所有権モデルを原文の並行出版へ詳細化し、不変の原文/準備済みmetadataを共有して、重い配送準備を共有可変状態から分離する。source cutと各準備済み索引rootの対応、領域をまたぐ認定完全性、native contextのepoch/ACKを維持し、出版・索引・検索を同時に流す継続負荷で検査する。選択計算の反復除去も同じ固定入力で比較する。待機枠/期限を増やして解消扱いにせず、重み/予算の再調整や必要範囲の事後緩和はしない。固定した新runtime/seed/cohortでLunaの所定比較へ進める。総token比較0/18、目標はactiveのまま。multi-host、80人8時間、容量回収、MCP保存方針も未完了である。親の[prepared-basis](docs/candidates/prepared-basis/README.md)の小規模4 DB/80 clients試験と、今回の実DB・単一projectの後段RPC試験を合わせても、80同時の全フックの実証にはならない。
 
 検索側の追加候補は[prepared-query](docs/candidates/prepared-query/README.md)、runtime `1b82d622…`。通常のkeyed検索で、原典の固定版に対応するrouterを行列の最新版と組み合わせて拒否し、後段の採点が行列cacheを作り直していた経路を修正した。問い合わせ開始時に字句/窓所有者/routerとその正確な行列rootを保持し、採点では固定したread setを使う。固定した行がなければ最新版やraw cacheで代用しない。行列rootの一致をLeanの`ReadView.sameMatrix`で持つ。native合成試行は旧経路の不一致を再現し、66回の後続出版/索引準備で旧lookup枠が上書きされた後も、保持した候補/順位/窓/ベクトルが一致した。新しい要求は最新版を読み、未準備新版/異なるauthorityを拒否した。scenario 4388 ms/process 10193 ms・RSS最大102560 KiBは部品検査の値である。全体ContractAuditが通り、実MiniLMのshell5/MCP形式3操作、原文だけの回復、新chat実本文2/2・4466 ms、全service終了/残存process0を確認した。実MCPサーバーではなく小fixtureであり、98%/80人/総token改善の実証ではない。回答モデル呼出0、題材比較0/18、製品未採用。保存側の基準は次段の`66c6cf14…`を保持し、回答モデル用の固定controller/cohortを差し替えていない。次はcanonical/共有・私有synapseを含むservice全体の同じsource境界の読取保持と、継続出版・実journalを伴う追従を接続する。
 
@@ -133,7 +137,7 @@ source headが変わると部分feedbackを捨て、照合の期限切れを入�
 
 ### B：チーム共有の原典と出版
 
-一つの実行体の共有入口、DBごとの出版責任者、不変原文、source-change feed、全経路の保存前方針判定を接続。1/4/16プロジェクトDB×10/40/80接続、私有/共有/読取専用、MCP・SMB・gitなしツリー・一般JSON/テキストで保存と復元を確かめる。NASの検証をローカル試行で代用しない。
+一つの実行体の共有入口、プロジェクト内の独立領域ごとの所有者、不変原文、source-change feed、全経路の保存前方針判定を接続。単一の可変headを複数所有者から上書きする方式は採らない。1/4/16プロジェクトDB×10/40/80接続、私有/共有/読取専用、MCP・SMB・gitなしツリー・一般JSON/テキストで保存と復元を確かめる。NASの検証をローカル試行で代用しない。
 
 ローカルの実フック入口まで接続した出版候補を足場に、DB/viewごとの更新責任者、保存前のscope判定、データ側サービスの複数PC transport/認証へ進む。private journalの全Entryや配送済み情報を転送しない。保存対象のWorkには歴史上の依頼文が含まれ得ることと、質問vector/cacheを共有しないことを分ける。loopbackの成功を80人・NASの検証に代用しない。
 

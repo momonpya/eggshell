@@ -18,6 +18,18 @@ structure Input where
 private def check (condition : Bool) (message : String) : IO Unit :=
   unless condition do throw (IO.userError message)
 
+/-- Reject an incomplete experimental installation before creating a DB or
+calling hooks. The native fixture requires the existing numerical support;
+it neither installs a runtime nor substitutes a model. -/
+def requireNumericalSupport (plan : Input) : IO Unit := do
+  let executable := System.FilePath.mk plan.runtime.path
+  let installation := executable.parent.get!.parent.get!
+  check ((plan.environment.find? (·.1 == "EGGSHELL_PREFIX")).bind Prod.snd == some installation.toString)
+    "native fixture must use its sealed runtime's installed prefix"
+  let paths := MiniLM.layout installation
+  check ((← MiniLM.runtimePython? paths).isSome && (← paths.models.isDir))
+    "native fixture lacks installed MiniLM support; no hooks or DB were started"
+
 private def replaceEnv (original updates : Array (String × Option String)) :=
   original.filter (fun row => !updates.any (·.1 == row.1)) ++ updates
 
@@ -180,6 +192,7 @@ def run (templatePath directory : String) (remote : Bool := false)
   let plan ← IO.ofExcept (fromJson? (α := Input) (← StudyAdmission.readJson templatePath))
   StudyAdmission.verifyArtifact plan.runtime
   for artifact in plan.pluginFiles do StudyAdmission.verifyArtifact artifact
+  requireNumericalSupport plan
   let root := System.FilePath.mk directory
   check (root.isAbsolute && !(← root.pathExists)) "a new absolute fixture directory is required"
   check ((← IO.getEnv "EGGSHELL_DATA_ROOT") == some (root / "data").toString)

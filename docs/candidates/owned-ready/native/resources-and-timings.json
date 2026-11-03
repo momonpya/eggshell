@@ -1,0 +1,248 @@
+{
+  "guard": {
+    "childPid": 33022,
+    "elapsedMs": 53809,
+    "error": null,
+    "exitCode": 0,
+    "guardPid": 31938,
+    "guardSha256": "604550f9b3b3be9dc572a0e6c5458ac3fb1414bffe7b828c2e94a09d4c1ab304",
+    "guardTriggered": false,
+    "limitRssKiB": 3670016,
+    "ownedPids": [],
+    "peakProcesses": [
+      {
+        "lane": null,
+        "parent": 35401,
+        "pid": 43058,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 51744
+      },
+      {
+        "lane": null,
+        "parent": 35451,
+        "pid": 43083,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "search-provider",
+        "rssKiB": 51184
+      },
+      {
+        "lane": null,
+        "parent": 1,
+        "pid": 36956,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 53376
+      },
+      {
+        "lane": null,
+        "parent": 43058,
+        "pid": 43171,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 47776
+      },
+      {
+        "lane": null,
+        "parent": 43083,
+        "pid": 43196,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 47248
+      },
+      {
+        "lane": null,
+        "parent": 36956,
+        "pid": 37071,
+        "program": "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python",
+        "role": null,
+        "rssKiB": 1100544
+      },
+      {
+        "lane": null,
+        "parent": 31938,
+        "pid": 33022,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-lifecycle-build/StudyMain",
+        "role": null,
+        "rssKiB": 52288
+      },
+      {
+        "lane": null,
+        "parent": 33022,
+        "pid": 34262,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 59216
+      },
+      {
+        "lane": "save",
+        "parent": 34721,
+        "pid": 36377,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-worker",
+        "rssKiB": 53744
+      },
+      {
+        "lane": "search",
+        "parent": 34721,
+        "pid": 35401,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-worker",
+        "rssKiB": 58560
+      },
+      {
+        "lane": "index",
+        "parent": 34721,
+        "pid": 35451,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-worker",
+        "rssKiB": 63040
+      },
+      {
+        "lane": null,
+        "parent": 33022,
+        "pid": 42817,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-hook",
+        "rssKiB": 50928
+      },
+      {
+        "lane": null,
+        "parent": 33022,
+        "pid": 34721,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": "codex-daemon",
+        "rssKiB": 60864
+      },
+      {
+        "lane": null,
+        "parent": 42817,
+        "pid": 42931,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-prefix/libexec/eggshell",
+        "role": null,
+        "rssKiB": 51376
+      },
+      {
+        "lane": null,
+        "parent": 60243,
+        "pid": 31938,
+        "program": "./empty-routing-study-build/StudyMain",
+        "role": "guard",
+        "rssKiB": 52304
+      }
+    ],
+    "reason": null,
+    "sampledPeakRssKiB": 1854192,
+    "samples": 390,
+    "settings": {
+      "command": [
+        "/usr/bin/env",
+        "LEAN_NUM_THREADS=1",
+        "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-final-native/data",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-lifecycle-build/StudyMain",
+        "native",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-final-native-input.json",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-final-native"
+      ],
+      "cwd": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+      "limitRssKiB": 3670016,
+      "minFreeKiB": 2097152,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
+      ],
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-final-native.guard.json"
+    },
+    "state": "finished",
+    "userCeilingRssKiB": 4194304
+  },
+  "prePost": [
+    {
+      "elapsedMs": 1971,
+      "exitCode": 0,
+      "stdoutSha256": "bfd945a8101a707e93d3196fd6555567a37eb846d4761d84825c629a27443da5"
+    },
+    {
+      "elapsedMs": 2044,
+      "exitCode": 0,
+      "stdoutSha256": "bfd945a8101a707e93d3196fd6555567a37eb846d4761d84825c629a27443da5"
+    },
+    {
+      "elapsedMs": 2018,
+      "exitCode": 0,
+      "stdoutSha256": "bfd945a8101a707e93d3196fd6555567a37eb846d4761d84825c629a27443da5"
+    },
+    {
+      "elapsedMs": 1143,
+      "exitCode": 0,
+      "stdoutSha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "elapsedMs": 2043,
+      "exitCode": 0,
+      "stdoutSha256": "bfd945a8101a707e93d3196fd6555567a37eb846d4761d84825c629a27443da5"
+    },
+    {
+      "elapsedMs": 2032,
+      "exitCode": 0,
+      "stdoutSha256": "bfd945a8101a707e93d3196fd6555567a37eb846d4761d84825c629a27443da5"
+    },
+    {
+      "elapsedMs": 2041,
+      "exitCode": 0,
+      "stdoutSha256": "bfd945a8101a707e93d3196fd6555567a37eb846d4761d84825c629a27443da5"
+    },
+    {
+      "elapsedMs": 2014,
+      "exitCode": 0,
+      "stdoutSha256": "bfd945a8101a707e93d3196fd6555567a37eb846d4761d84825c629a27443da5"
+    },
+    {
+      "elapsedMs": 1190,
+      "exitCode": 0,
+      "stdoutSha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "elapsedMs": 1174,
+      "exitCode": 0,
+      "stdoutSha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "elapsedMs": 1177,
+      "exitCode": 0,
+      "stdoutSha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "elapsedMs": 1151,
+      "exitCode": 0,
+      "stdoutSha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "elapsedMs": 1159,
+      "exitCode": 0,
+      "stdoutSha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "elapsedMs": 1159,
+      "exitCode": 0,
+      "stdoutSha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "elapsedMs": 1174,
+      "exitCode": 0,
+      "stdoutSha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "elapsedMs": 1158,
+      "exitCode": 0,
+      "stdoutSha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    }
+  ],
+  "recall": {
+    "elapsedMs": 4515,
+    "exitCode": 0,
+    "stdoutSha256": "69bc5f1c36910bbe91a0f22fb91b5701a771b25ec23484923cc21f55fa47d1e3"
+  },
+  "allPrePostSucceeded": true,
+  "prePostCount": 16,
+  "maxPrePostMs": 2044
+}

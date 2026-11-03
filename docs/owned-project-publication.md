@@ -1,6 +1,9 @@
 # Project publication with independently owned streams
 
-Design direction under formal investigation, not an implemented replacement.
+Design direction under formal investigation, not an implemented replacement
+of original publication. The first isolated [prepared-index candidate](candidates/owned-ready/README.md)
+now separates independent derived writer regions and removes their mutable
+ready-root catalogue. Original publication remains serialized per project.
 The project remains one logical shared DB. No one-owner-per-user DB layout or
 one global owner for every project is required. The target remains 80 users,
 30-second hooks and 98% of necessary original evidence actually delivered;

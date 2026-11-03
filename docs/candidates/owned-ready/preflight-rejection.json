@@ -1,0 +1,56 @@
+{
+  "expectedRejection": true,
+  "dbAndHooksNeverStarted": true,
+  "guard": {
+    "childPid": 30078,
+    "elapsedMs": 9851,
+    "error": null,
+    "exitCode": 1,
+    "guardPid": 28995,
+    "guardSha256": "604550f9b3b3be9dc572a0e6c5458ac3fb1414bffe7b828c2e94a09d4c1ab304",
+    "guardTriggered": false,
+    "limitRssKiB": 3670016,
+    "ownedPids": [],
+    "peakProcesses": [
+      {
+        "lane": null,
+        "parent": 28995,
+        "pid": 30078,
+        "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-lifecycle-build/StudyMain",
+        "role": null,
+        "rssKiB": 48256
+      },
+      {
+        "lane": null,
+        "parent": 60243,
+        "pid": 28995,
+        "program": "./empty-routing-study-build/StudyMain",
+        "role": "guard",
+        "rssKiB": 50608
+      }
+    ],
+    "reason": null,
+    "sampledPeakRssKiB": 98864,
+    "samples": 49,
+    "settings": {
+      "command": [
+        "/usr/bin/env",
+        "LEAN_NUM_THREADS=1",
+        "EGGSHELL_DATA_ROOT=/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-preflight-rejected/data",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-lifecycle-build/StudyMain",
+        "native",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-no-support-input.json",
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-preflight-rejected"
+      ],
+      "cwd": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study",
+      "limitRssKiB": 3670016,
+      "minFreeKiB": 2097152,
+      "ownedPrefixes": [
+        "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
+      ],
+      "record": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owned-ready-preflight-rejection.guard.json"
+    },
+    "state": "finished",
+    "userCeilingRssKiB": 4194304
+  }
+}
