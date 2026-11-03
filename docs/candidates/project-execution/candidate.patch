@@ -1,0 +1,1040 @@
+--- /dev/null
++++ b/Eggshell/OperationWire.lean
+@@ -0,0 +1,93 @@
++module
++
++public import Eggshell.PublicationStream
++public import Std.Sync.Mutex
++
++@[expose] public section
++namespace Eggshell.Plugin.OperationWire
++open Lean
++
++/-- The existing native hook budget; original source RPCs have their own
++shorter budget. Dispatch validates this limit without extending a request. -/
++def searchBudgetMs : Nat := 29000
++
++inductive Role where
++  | search | save
++  deriving BEq, DecidableEq, ToJson, FromJson
++
++def Role.name : Role → String | .search => "search" | .save => "save"
++def Role.ofName : String → Option Role | "search" => some .search | "save" => some .save | _ => none
++
++structure Identity where
++  turn : String
++  epoch : Nat
++  deadline : Nat
++  receipt : Option String
++  deriving BEq, Repr, ToJson, FromJson
++
++structure Request where
++  id : String
++  session : String
++  role : Role
++  payload : Json
++  cutoff : Nat
++  identity : Option Identity
++  finishReady : Bool
++  deriving ToJson, FromJson
++
++structure Reply where
++  id : String
++  completed : Bool
++  payload : Json
++  busy : Bool := false
++  deriving ToJson, FromJson
++
++def progress (id : String) (identity : Identity) : Json :=
++  Json.mkObj [("progress",toJson id),("identity",toJson identity)]
++
++/-- Poll the native promise directly: no detached blocking task can retain a
++caller after its cutoff. Connect and request writes consume the same window. -/
++def waitNative (promise : IO.Promise (Except IO.Error α)) (window : Std.Mutex Nat)
++    (cancelled : IO.Ref Bool) : IO α := do
++  repeat
++    unless !(← cancelled.get) && !(← IO.checkCanceled) &&
++        (← IO.monoMsNow) < (← window.atomically get) do
++      throw (IO.userError "operation transport cancelled or expired")
++    if ← promise.isResolved then
++      let some result := promise.result?.get | throw (IO.userError "native operation lost its response")
++      return ← IO.ofExcept result
++    IO.sleep 5
++  throw (IO.userError "unreachable native operation wait")
++
++def connect (endpoint : Daemon.Endpoint) (window : Std.Mutex Nat) (cancelled : IO.Ref Bool) :
++    IO Std.Async.TCP.Socket.Client := do
++  unless endpoint.port ≤ 65535 do throw (IO.userError "invalid operation service port")
++  let client ← Std.Async.TCP.Socket.Client.mk
++  waitNative (← client.native.connect (Daemon.loopback endpoint.port.toUInt16)) window cancelled
++  return client
++
++def sendFrame (client : Std.Async.TCP.Socket.Client) (bytes : ByteArray) (window : Std.Mutex Nat)
++    (cancelled : IO.Ref Bool) : IO Unit := do
++  unless bytes.size ≤ Daemon.maxFrameBytes do throw (IO.userError "operation exceeds its frame bound")
++  waitNative (← client.native.send #[Daemon.frameLength bytes,bytes]) window cancelled
++
++/-- Poll cancellation with the original deadline. No detached socket reader
++survives a cancelled caller; dropping this connection cancels that one job. -/
++partial def receiveExactly (client : Std.Async.TCP.Socket.Client) (remaining : Nat)
++    (window : Std.Mutex Nat) (cancelled : IO.Ref Bool) (received : ByteArray := ByteArray.empty) : IO ByteArray := do
++  if remaining == 0 then return received
++  let pending ← client.native.recv? remaining.toUInt64
++  let chunk ← try waitNative pending window cancelled finally client.native.cancelRecv
++  match chunk with
++  | none => throw (IO.userError "operation service closed its response")
++  | some chunk =>
++    unless !chunk.isEmpty do throw (IO.userError "empty operation frame")
++    receiveExactly client (remaining-chunk.size) window cancelled (received++chunk)
++
++def receiveFrame (client : Std.Async.TCP.Socket.Client) (window : Std.Mutex Nat)
++    (cancelled : IO.Ref Bool) : IO ByteArray := do
++  let size := Daemon.decodeLength (← receiveExactly client 4 window cancelled)
++  unless size ≤ Daemon.maxFrameBytes do throw (IO.userError "operation frame exceeds its bound")
++  receiveExactly client size window cancelled
++
++end Eggshell.Plugin.OperationWire
+--- /dev/null
++++ b/Eggshell/OperationPlan.lean
+@@ -0,0 +1,105 @@
++module
++public import Eggshell.OperationWire
++public import Init.Data.Vector.Basic
++
++@[expose] public section
++namespace Eggshell.Plugin.OperationPlan
++open Lean OperationWire
++
++def searchWorkers : Nat := 3
++def saveWorkers : Nat := 2
++def workers : Nat := searchWorkers+saveWorkers
++def maxRequests : Nat := 160
++def maxBytes : Nat := 16*1024*1024
++abbrev Lane := Fin workers
++def Lane.role (lane : Lane) : Role := if lane.val < searchWorkers then .search else .save
++
++theorem Lane.search_bound (lane : Lane) (role : lane.role = .search) : lane.val < searchWorkers := by
++  by_cases bound : lane.val < searchWorkers
++  · exact bound
++  · simp [Lane.role,bound] at role
++
++structure Job where
++  id : String
++  role : Role
++  bytes : Nat
++  cutoff : Nat
++
++structure Active where
++  job : Job
++  token : Nat
++
++structure Contents where
++  pending : Array Job := #[]
++  running : Vector (Option Active) workers := Vector.replicate workers none
++  nextToken : Nat := 0
++  closed : Bool := false
++
++def Contents.active (contents : Contents) := contents.running.toArray.filterMap id
++def Contents.count (contents : Contents) := contents.pending.size+contents.active.size
++def Contents.charge (contents : Contents) :=
++  contents.pending.foldl (fun total job => total+job.bytes) 0+
++  contents.active.foldl (fun total active => total+active.job.bytes) 0
++
++structure State where
++  contents : Contents
++  countBound : contents.count ≤ maxRequests
++  byteBound : contents.charge ≤ maxBytes
++
++@[no_expose] def initial : State := ⟨{},by decide,by decide⟩
++private def checked (contents : Contents) : Option State :=
++  if countBound : contents.count ≤ maxRequests then
++    if byteBound : contents.charge ≤ maxBytes then some ⟨contents,countBound,byteBound⟩ else none
++  else none
++
++@[no_expose] def admit (state : State) (job : Job) : State × Bool :=
++  if state.contents.closed || state.contents.pending.any (·.id == job.id) ||
++      state.contents.active.any (·.job.id == job.id) then (state,false)
++  else match checked {state.contents with pending := state.contents.pending.push job} with
++    | some next => (next,true) | none => (state,false)
++
++@[no_expose] def take (state : State) (lane : Lane) (now : Nat) : State × Option Active := Id.run do
++  let before := state.contents
++  if before.closed || before.running[lane].isSome then return (state,none)
++  let some position := before.pending.findIdx? (fun job => job.role == lane.role && now < job.cutoff) |
++    return (state,none)
++  let some job := before.pending[position]? | return (state,none)
++  let active : Active := ⟨job,before.nextToken⟩
++  let next := {before with
++    pending := before.pending.extract 0 position ++ before.pending.extract (position+1) before.pending.size
++    running := before.running.set lane (some active),nextToken := before.nextToken+1}
++  let some next := checked next | return (state,none)
++  return (next,some active)
++
++@[no_expose] def finish (state : State) (lane : Lane) (token : Nat) : State := Id.run do
++  unless state.contents.running[lane].any (·.token == token) do return state
++  (checked {state.contents with running := state.contents.running.set lane none}).getD state
++
++@[no_expose] def discard (state : State) (ids : Array String) : State :=
++  (checked {state.contents with pending := state.contents.pending.filter (!ids.contains ·.id)}).getD state
++
++def close (state : State) : State := by
++  let next := {state.contents with closed := true,pending := #[]}
++  refine ⟨next,?_,?_⟩
++  · have small : state.contents.active.size ≤ maxRequests := by
++      have bound := state.countBound
++      change state.contents.pending.size+state.contents.active.size ≤ maxRequests at bound
++      omega
++    simpa [next,Contents.count,Contents.active] using small
++  · have small : state.contents.active.foldl (fun total active => total+active.job.bytes) 0 ≤ maxBytes := by
++      have bound := state.byteBound
++      unfold Contents.charge at bound
++      omega
++    simpa [next,Contents.charge,Contents.active] using small
++
++theorem requests_bounded (state : State) : state.contents.count ≤ maxRequests := state.countBound
++theorem bytes_bounded (state : State) : state.contents.charge ≤ maxBytes := state.byteBound
++theorem workers_bounded (state : State) : state.contents.active.size ≤ workers := by
++  simpa [Contents.active] using
++    (Array.size_filterMap_le (f := id) (xs := state.contents.running.toArray))
++
++theorem close_is_terminal (state : State) : (close state).contents.closed = true := rfl
++theorem closed_starts_no_job (state : State) (lane : Lane) (now : Nat) :
++    (take (close state) lane now).2 = none := by simp [take,close]
++
++end Eggshell.Plugin.OperationPlan
+--- /dev/null
++++ b/Eggshell/OperationPool.lean
+@@ -0,0 +1,199 @@
++module
++public import Eggshell.OperationPlan
++public import Eggshell.Worker
++
++@[expose] public section
++namespace Eggshell.Plugin.OperationPool
++open Lean OperationWire DB
++open Synapses.CanonicalSource.Shared (Budget)
++
++def replyBytes : Role → Nat | .search => Daemon.maxFrameBytes | .save => 65536
++def searchReplyCapacity : Nat := OperationPlan.searchWorkers*Daemon.maxFrameBytes
++def saveReplyCapacity : Nat := OperationPlan.saveWorkers*65536
++
++structure Job where
++  request : Request
++  admitted : Nat
++  cancelled : IO.Ref Bool
++  ready : IO.Ref (Option Nat)
++  expires : IO.Ref Nat
++  reply : IO.Promise (Option Json)
++  reservation : Std.Mutex (Worker.Lifetime.Cell Nat)
++
++structure State where
++  plan : OperationPlan.State := OperationPlan.initial
++  jobs : Std.HashMap String Job := {}
++  admitted : Nat := 0
++  started : Nat := 0
++  completed : Nat := 0
++  cancelled : Nat := 0
++  peakActive : Nat := 0
++  peakPending : Nat := 0
++  busy : Nat := 0
++  maxQueueMs : Nat := 0
++
++structure Pool where
++  state : Std.Mutex State
++  searchReplies : Std.Mutex (Budget searchReplyCapacity)
++  saveReplies : Std.Mutex (Budget saveReplyCapacity)
++
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new {},← Std.Mutex.new {}⟩
++
++def validate (request : Request) : IO Unit := do
++  let now ← IO.monoMsNow
++  unless Receipt.validId request.id && !request.session.isEmpty && request.session.utf8ByteSize ≤ 512 &&
++      now < request.cutoff do throw (IO.userError "invalid or expired operation request")
++  match request.role with
++  | .search =>
++    let query ← IO.ofExcept (fromJson? request.payload : Except String Worker.Search)
++    unless query.pending.sessionId == request.session && request.identity == some query.identity &&
++        request.cutoff ≤ query.deadline && query.deadline ≤ now+OperationWire.searchBudgetMs do
++      throw (IO.userError "operation search changed its session or deadline")
++  | .save =>
++    unless request.identity.isNone && !request.finishReady && request.cutoff ≤ now+60000 &&
++        (request.payload.getObjValAs? String "session").toOption == some request.session do
++      throw (IO.userError "operation save changed its private session")
++    let path ← PageMap.absolute (.mk (← IO.ofExcept (request.payload.getObjValAs? String "path")))
++    let files ← sessionFiles request.session
++    unless path.parent == some (files.directory/"deferred") || path.parent == some (files.directory/"checkpoints") do
++      throw (IO.userError "operation save escaped its private durable queue")
++    FileSystem.rejectSymlinkAncestors path
++
++def Pool.submit (pool : Pool) (request : Request) (cancelled : IO.Ref Bool) : IO (Option Job) := do
++  validate request
++  let size := (toJson request).compress.utf8ByteSize
++  unless size ≤ Daemon.maxFrameBytes do throw (IO.userError "operation exceeds its request bound")
++  let job : Job := ⟨request,← IO.monoMsNow,cancelled,← IO.mkRef none,← IO.mkRef request.cutoff,
++    ← IO.Promise.new,← Std.Mutex.new (.open 0)⟩
++  unless !(← cancelled.get) && (← IO.monoMsNow) < request.cutoff do
++    throw (IO.userError "operation admission cancelled or expired")
++  pool.state.atomically do
++    let state ← get
++    if state.plan.contents.closed then throw (IO.userError "operation service is closed")
++    if state.jobs.contains request.id then throw (IO.userError "duplicate operation request identity")
++    let (plan,accepted) := OperationPlan.admit state.plan ⟨request.id,request.role,size,request.cutoff⟩
++    if !accepted then
++      set {state with busy := state.busy+1}
++      return none
++    set {state with
++      plan,jobs := state.jobs.insert request.id job,admitted := state.admitted+1,
++      peakPending := max state.peakPending plan.contents.pending.size}
++    return some job
++
++def Pool.take (pool : Pool) (lane : OperationPlan.Lane) : IO (Option (OperationPlan.Active × Job)) := do
++  let now ← IO.monoMsNow
++  pool.state.atomically do
++    let state ← get
++    let mut retired := #[]
++    let mut jobs := state.jobs
++    for entry in state.plan.contents.pending do
++      if let some job := jobs[entry.id]? then
++        if (← job.cancelled.get) || now ≥ entry.cutoff then
++          job.cancelled.set true
++          unless ← job.reply.isResolved do job.reply.resolve none
++          retired := retired.push entry.id
++          jobs := jobs.erase entry.id
++    let plan := OperationPlan.discard state.plan retired
++    let (plan,active) := OperationPlan.take plan lane now
++    let state := {state with plan,jobs,cancelled := state.cancelled+retired.size}
++    match active with
++    | none => set state; return none
++    | some active =>
++      let some job := jobs[active.job.id]? | throw (IO.userError "operation slot lost its request")
++      set {state with
++        started := state.started+1,
++        peakActive := max state.peakActive plan.contents.active.size,
++        maxQueueMs := max state.maxQueueMs (now-job.admitted)}
++      return some (active,job)
++
++def Pool.reserveReply (pool : Pool) (job : Job) : IO Bool := do
++  repeat
++    unless !(← job.cancelled.get) && (← IO.monoMsNow) < (← job.expires.get) do return false
++    let result ← job.reservation.atomically do
++      match ← get with
++      | .closed => return some false
++      | .open amount =>
++        if amount > 0 then return some true
++        let reserved ← match job.request.role with
++          | .search => pool.searchReplies.atomically do
++            let before : Budget searchReplyCapacity ← get
++            let some next := before.reserve? (replyBytes job.request.role) | return false
++            set next; return true
++          | .save => pool.saveReplies.atomically do
++            let before : Budget saveReplyCapacity ← get
++            let some next := before.reserve? (replyBytes job.request.role) | return false
++            set next; return true
++        if !reserved then return none
++        set (Worker.Lifetime.Cell.open (replyBytes job.request.role))
++        return some true
++    if let some result := result then return result
++    IO.sleep 1
++  return false
++
++def Pool.releaseReply (pool : Pool) (job : Job) : IO Unit := do
++  let amount ← job.reservation.atomically do
++    let (next,owned) := Worker.Lifetime.close (← get)
++    set next
++    return owned.getD 0
++  match job.request.role with
++  | .search => pool.searchReplies.atomically (modify (·.release amount))
++  | .save => pool.saveReplies.atomically (modify (·.release amount))
++
++/-- The slot is service-owned. A disconnected search cancels only its current
++pipe. Saves already in progress retain their durable source-ACK path. -/
++def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.Active) (job : Job) : IO Unit := do
++  let session := s!"shared-operation-{lane.val}"
++  let result ← try
++    unless lane.role == job.request.role do throw (IO.userError "operation role changed its assigned lane")
++    if !(← pool.reserveReply job) || (← job.cancelled.get) then pure none
++    else
++      let policy := job.request.identity.map fun identity => ({
++        identity,finishReady := job.request.finishReady,
++        onReady := fun now => do
++          if job.request.finishReady then job.expires.set identity.deadline
++          job.ready.set (some now)} : Worker.SearchPolicy)
++      let task ← IO.asTask (Worker.exchangeLocal session lane.role.name job.request.payload
++        job.request.cutoff policy) .dedicated
++      repeat
++        if ← IO.hasFinished task then break
++        if (← IO.monoMsNow) ≥ (← job.expires.get) ||
++            (job.request.role == .search && (← job.cancelled.get)) then
++          Worker.cancelLocal session job.request.role.name
++        IO.sleep 5
++      IO.ofExcept (← IO.wait task)
++    catch _ => pure none
++  let result := result.filter (fun value => value.compress.utf8ByteSize+1024 ≤ replyBytes job.request.role)
++  let wasCancelled := (← job.cancelled.get) || (← IO.monoMsNow) ≥ (← job.expires.get)
++  unless ← job.reply.isResolved do job.reply.resolve result
++  pool.state.atomically do
++    modify fun state => {state with
++      plan := OperationPlan.finish state.plan lane active.token
++      jobs := state.jobs.erase active.job.id,completed := state.completed+1,
++      cancelled := state.cancelled+(if wasCancelled then 1 else 0)}
++
++def Pool.close (pool : Pool) : IO Unit := pool.state.atomically do
++  let state ← get
++  for (_,job) in state.jobs do
++    job.cancelled.set true
++    unless ← job.reply.isResolved do job.reply.resolve none
++  set {state with plan := OperationPlan.close state.plan}
++
++def Pool.stats (pool : Pool) : IO Json := do
++  let search ← pool.searchReplies.atomically do return (← get).used
++  let save ← pool.saveReplies.atomically do return (← get).used
++  pool.state.atomically do
++    let state ← get
++    return Json.mkObj [("pending",toJson state.plan.contents.pending.size),
++      ("active",toJson state.plan.contents.active.size),("requestBytes",toJson state.plan.contents.charge),
++      ("maxRequests",toJson OperationPlan.maxRequests),("maxRequestBytes",toJson OperationPlan.maxBytes),
++      ("searchWorkers",toJson OperationPlan.searchWorkers),("saveWorkers",toJson OperationPlan.saveWorkers),
++      ("admitted",toJson state.admitted),("started",toJson state.started),("completed",toJson state.completed),
++      ("cancelled",toJson state.cancelled),("peakActive",toJson state.peakActive),("maxQueueMs",toJson state.maxQueueMs),
++      ("peakPending",toJson state.peakPending),("busyBeforeAdmission",toJson state.busy),
++      ("running",toJson (state.plan.contents.running.toArray.zipIdx |>.filterMap fun (slot,lane) =>
++        slot.map fun active => Json.mkObj [("lane",toJson lane),("id",toJson active.job.id),
++          ("role",toJson active.job.role)])),
++      ("searchReplyBytes",toJson search),("saveReplyBytes",toJson save),
++      ("closed",toJson state.plan.contents.closed)]
++
++end Eggshell.Plugin.OperationPool
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -10,0 +11 @@
++public import Eggshell.OperationWire
+@@ -325,0 +327,65 @@
++
++/-- Long-lived execution waits have a different listener from the source RPCs
++they depend on. Its private address must belong to this exact service owner. -/
++def operationEndpoint : IO Daemon.Endpoint := do
++  let expected ← match ← endpoint? with
++    | some endpoint => pure endpoint
++    | none => resolve
++  unless expected.session == "publisher" && expected.compatible (← generation) do
++    throw (IO.userError "shared data service uses another implementation; explicitly stop its owner before replacement")
++  let some endpoint ← (readJson? ((← directory)/"operations.json") [] : IO (Option Daemon.Endpoint)) |
++    throw (IO.userError "shared data service has no operation listener")
++  unless endpoint.session == "publisher-operations" && endpoint.pid == expected.pid &&
++      endpoint.secret == expected.secret && endpoint.generation == expected.generation do
++    throw (IO.userError "operation listener changed its service owner")
++  return endpoint
++
++/-- Private local execution only. Progress and final data retain the same
++request identity; the caller owns cancellation and its absolute deadline. -/
++partial def operationExchange (request : OperationWire.Request) (window : Std.Mutex Nat)
++    (cancelled : IO.Ref Bool) (onReady : OperationWire.Identity → Nat → IO Unit) : IO (Option Json) := do
++  unless (← IO.monoMsNow) < request.cutoff && !(← cancelled.get) do return none
++  -- The authenticated operation is itself the liveness check. A preflight ping
++  -- for every waiting caller competes with the source RPCs that active work
++  -- needs, and a busy server is not a crashed server. Recovery is permitted
++  -- only when connection establishment failed, before any request was sent.
++  let endpoint ← operationEndpoint
++  let bytes := (Daemon.request endpoint.secret "worker-exchange" (toJson request)).compress.toUTF8
++  unless bytes.size ≤ Daemon.maxFrameBytes do throw (IO.userError "operation request exceeds its frame bound")
++  let (endpoint,client) ← try
++      pure (endpoint,← OperationWire.connect endpoint window cancelled)
++    catch _ =>
++      unless !(← cancelled.get) && (← IO.monoMsNow) < request.cutoff do
++        throw (IO.userError "operation connection cancelled or expired")
++      let _ ← resolve
++      let endpoint ← operationEndpoint
++      pure (endpoint,← OperationWire.connect endpoint window cancelled)
++  -- A recovered service has a fresh secret; no uncertain send is retried.
++  let bytes := (Daemon.request endpoint.secret "worker-exchange" (toJson request)).compress.toUTF8
++  OperationWire.sendFrame client bytes window cancelled
++  let frame := OperationWire.receiveFrame client window cancelled
++  let first ← frame
++  let some text := String.fromUTF8? first | throw (IO.userError "invalid operation response")
++  let header ← IO.ofExcept (Json.parse text)
++  let first ← if (header.getObjVal? "progress").isOk then do
++      unless (header.getObjValAs? String "progress").toOption == some request.id do
++        throw (IO.userError "foreign operation progress")
++      let identity ← IO.ofExcept (header.getObjVal? "identity" >>= fromJson? (α := OperationWire.Identity))
++      onReady identity (← IO.monoMsNow)
++      frame
++    else pure first
++  let initial ← IO.mkRef (some first)
++  let receive := do
++    match ← initial.get with
++    | some first => initial.set none; pure first
++    | none => frame
++  let response ← Stream.receiveWith receive "worker-exchange"
++  let reply ← IO.ofExcept (Json.parse response >>= fromJson? (α := OperationWire.Reply))
++  unless reply.id == request.id && (← IO.monoMsNow) < (← window.atomically get) && !(← cancelled.get) do
++    throw (IO.userError "foreign, cancelled or expired operation reply")
++  if reply.busy then
++    unless !reply.completed && !(header.getObjVal? "progress").isOk do
++      throw (IO.userError "operation became busy after starting")
++    IO.sleep 100
++    return ← operationExchange request window cancelled onReady
++  return if reply.completed then some reply.payload else none
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -5,0 +6 @@
++public import Eggshell.OperationPool
+@@ -65,0 +67 @@
++  operations : OperationPool.Pool
+@@ -654 +656,7 @@
+-    ("ownedProjects",← server.owned.stats),("preparation",← server.preparation.stats)]
++    ("ownedProjects",← server.owned.stats),("preparation",← server.preparation.stats),
++    ("operations",← server.operations.stats),("workerPipes",← Worker.localStats)]
++
++def peerWaiting (client : Socket.Client) : IO Bool := (do
++  let timer ← Selector.sleep (.ofNat 5)
++  Selectable.one #[.case (client.recvSelector 1) (fun _ => pure false),
++    .case timer (fun _ => pure true)]).block
+@@ -655,0 +664,35 @@
++/-- Only the authenticated per-user local service reads private session paths.
++This is not a remotely delegated project capability or a storage authority. -/
++def executeOperation (server : Server) (client : Socket.Client) (payload : Json)
++    (cancelled : IO.Ref Bool) (deadline : IO.Ref Nat) (reserved : IO.Ref Nat)
++    (owned : IO.Ref (Option OperationPool.Job)) : IO Json := do
++  let request ← IO.ofExcept (fromJson? payload : Except String OperationWire.Request)
++  let some job ← server.operations.submit request cancelled |
++    return toJson ({id := request.id,completed := false,payload := Json.null,busy := true} : OperationWire.Reply)
++  owned.set (some job)
++  -- One native read watches this peer for the whole wait. Re-registering two
++  -- selectors and a timer every five milliseconds per queued client floods the
++  -- shared async scheduler even though almost every request is idle.
++  let peer ← client.native.recv? 1
++  try
++    let mut announced := false
++    repeat
++      if !announced && (← job.ready.get).isSome then
++        let some identity := request.identity | throw (IO.userError "save operation emitted search progress")
++        let expires ← job.expires.get
++        sendReply server client (OperationWire.progress request.id identity).compress.toUTF8 expires reserved
++        announced := true
++      deadline.set (← job.expires.get)
++      if ← job.reply.isResolved then
++        let some result := job.reply.result?.get | throw (IO.userError "operation lost its response")
++        return toJson ({id := request.id,completed := result.isSome,payload := result.getD Json.null} : OperationWire.Reply)
++      unless !(← server.stopping.get) && (← IO.monoMsNow) < (← job.expires.get) &&
++          !(← peer.isResolved) do
++        cancelled.set true
++        throw (IO.userError "operation requester left or expired")
++      IO.sleep 5
++    throw (IO.userError "unreachable operation response")
++  finally
++    cancelled.set true
++    client.native.cancelRecv
++
+@@ -672,5 +714,0 @@
+-def peerWaiting (client : Socket.Client) : IO Bool := (do
+-  let timer ← Selector.sleep (.ofNat 5)
+-  Selectable.one #[.case (client.recvSelector 1) (fun _ => pure false),
+-    .case timer (fun _ => pure true)]).block
+-
+@@ -688 +726,2 @@
+-def serveClient (server : Server) (admin : String) (client : Socket.Client) : IO Unit := do
++def serveClient (server : Server) (admin : String) (client : Socket.Client)
++    (operationsOnly : Bool := false) : IO Unit := do
+@@ -692,0 +732 @@
++  let operation ← IO.mkRef (none : Option OperationPool.Job)
+@@ -712,0 +753,2 @@
++    unless (kind == "worker-exchange") == operationsOnly do
++      throw (IO.userError "operation used the wrong service listener")
+@@ -714 +756 @@
+-    let streamedRead := ["source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan"].contains kind
++    let streamedRead := ["source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange"].contains kind
+@@ -722 +764 @@
+-    let replyCharge := if streamedRead then Stream.maxBytes else 65536
++    let replyCharge := if streamedRead && kind != "worker-exchange" then Stream.maxBytes else 65536
+@@ -753,0 +796 @@
++        | "worker-exchange" => executeOperation server client payload cancelled replyDeadline reservedReply operation
+@@ -775,0 +819,6 @@
++    if kind == "worker-exchange" then
++      let charge ← reservedReply.get
++      let needed := min Stream.chunkBytes encoded.utf8ByteSize
++      if needed > charge then
++        reserveReply server (needed-charge) (← replyDeadline.get)
++        reservedReply.set needed
+@@ -798,0 +848 @@
++    if let some job ← operation.get then server.operations.releaseReply job
+@@ -827,0 +878,4 @@
++  let operationSocket ← Socket.Server.mk
++  operationSocket.bind (Daemon.loopback 0)
++  operationSocket.listen OperationPlan.maxRequests.toUInt32
++  operationSocket.noDelay
+@@ -832,0 +887,3 @@
++  let operationAddress ← operationSocket.getSockName
++  writeJson (root/"operations.json") ({endpoint with
++    session := "publisher-operations",port := operationAddress.port.toNat} : Daemon.Endpoint)
+@@ -835 +892,2 @@
+-    ← Std.Mutex.new 0,← Std.Mutex.new #[],← SharedReadViews.Pool.new,← Owned.Pool.new,← PreparationService.Pool.new⟩
++    ← Std.Mutex.new 0,← Std.Mutex.new #[],← SharedReadViews.Pool.new,← Owned.Pool.new,← PreparationService.Pool.new,
++    ← OperationPool.Pool.new⟩
+@@ -838,0 +897 @@
++  let operationClients ← IO.mkRef ([] : List (Task (Except IO.Error Unit)))
+@@ -840,0 +900 @@
++  let operations ← IO.mkRef ([] : List (Task (Except IO.Error Unit)))
+@@ -844,5 +904,8 @@
+-      match ← socket.tryAccept with
+-      | none => pure ()
+-      | some client =>
+-          activity ← IO.monoMsNow
+-          if (← clients.get).length < maxClients then
++      -- Backpressure belongs before accept. Accepting and dropping a socket
++      -- when handlers are full turns a bounded queue into random RPC loss.
++      clients.set (← retain (← clients.get))
++      if (← clients.get).length < maxClients then
++        match ← socket.tryAccept with
++        | none => pure ()
++        | some client =>
++            activity ← IO.monoMsNow
+@@ -851 +914,8 @@
+-      clients.set (← retain (← clients.get))
++      operationClients.set (← retain (← operationClients.get))
++      if (← operationClients.get).length < OperationPlan.maxRequests then
++        match ← operationSocket.tryAccept with
++        | none => pure ()
++        | some client =>
++            activity ← IO.monoMsNow
++            let task ← IO.asTask (serveClient server endpoint.secret client true) .dedicated
++            operationClients.modify (task :: ·)
+@@ -853,0 +924 @@
++      operations.set (← retain (← operations.get))
+@@ -867 +938,7 @@
+-      if (← clients.get).isEmpty && (← publications.get).isEmpty && (← preparations.get).isEmpty && (← IO.monoMsNow) > activity+300000 then
++      for lane in List.finRange OperationPlan.workers do
++        if let some (active,job) ← server.operations.take lane then
++          let task ← IO.asTask (server.operations.run lane active job) .dedicated
++          operations.modify (task :: ·)
++      if (← clients.get).isEmpty && (← operationClients.get).isEmpty &&
++          (← publications.get).isEmpty && (← preparations.get).isEmpty &&
++          (← operations.get).isEmpty && (← IO.monoMsNow) > activity+300000 then
+@@ -873,0 +951 @@
++    server.operations.close
+@@ -880,0 +959 @@
++    let operationClients ← operationClients.get
+@@ -881,0 +961 @@
++    let operations ← operations.get
+@@ -885,0 +966 @@
++    for task in operations do let _ ← IO.wait task; pure ()
+@@ -889,0 +971 @@
++    for task in operationClients do let _ ← IO.wait task; pure ()
+@@ -893,0 +976,2 @@
++    if let some current ← (readJson? (root/"operations.json") [] : IO (Option Daemon.Endpoint)) then
++      if current.secret == endpoint.secret then removeIfExists (root/"operations.json")
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -153,0 +154,2 @@
++  (include_str "OperationWire.lean").toUTF8,(include_str "OperationPlan.lean").toUTF8,
++  (include_str "OperationPool.lean").toUTF8,
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -23,0 +24,8 @@
++structure Remote where
++  session : String
++  role : String
++  id : String
++  cancelled : IO.Ref Bool
++
++initialize remote : Std.Mutex (Lifetime.Cell (Array Remote)) ← Std.Mutex.new (.open #[])
++
+@@ -72 +80 @@
+-def cancel (session role : String) : IO Unit := do
++def cancelLocal (session role : String) : IO Unit := do
+@@ -77,0 +86,9 @@
++def cancel (session role : String) : IO Unit := do
++  remote.atomically do
++    match ← get with
++    | .closed => pure ()
++    | .open current =>
++      for request in current do
++        if request.session == session && request.role == role then request.cancelled.set true
++  cancelLocal session role
++
+@@ -111,6 +128 @@
+-structure SearchIdentity where
+-  turn : String
+-  epoch : Nat
+-  deadline : Nat
+-  receipt : Option String
+-  deriving BEq, Repr, ToJson, FromJson
++abbrev SearchIdentity := OperationWire.Identity
+@@ -284 +296 @@
+-def exchange (session role : String) (payload : Json) (deadline : Nat)
++def exchangeLocal (session role : String) (payload : Json) (deadline : Nat)
+@@ -295,0 +308 @@
++      let some _window := OpenWindow.check deadline (← IO.monoMsNow) | return none
+@@ -347,0 +361,46 @@
++/-- Managers own only bounded request/cancellation metadata. Only the service
++calls `exchangeLocal` for search/save; no private worker fallback is spawned. -/
++def exchange (session role : String) (payload : Json) (deadline : Nat)
++    (searchPolicy : Option SearchPolicy := none) : IO (Option Json) := do
++  let some operation := OperationWire.Role.ofName role |
++    return ← exchangeLocal session role payload deadline searchPolicy
++  let policy ← if operation == .search then
++      match searchPolicy with
++      | some policy => pure (some policy)
++      | none => do
++        let request ← IO.ofExcept (fromJson? payload : Except String Search)
++        pure (some {identity := request.identity})
++    else pure none
++  let cutoff := policy.map (fun policy => min deadline policy.identity.deadline) |>.getD deadline
++  let request : OperationWire.Request := {
++    id := ← Receipt.fresh,session,role := operation,payload,cutoff,
++    identity := policy.map (·.identity),finishReady := policy.any (·.finishReady)}
++  let cancelled ← IO.mkRef false
++  let admitted ← remote.atomically do
++    match ← get with
++    | .closed => pure false
++    | .open current =>
++      unless current.size < 256 do return false
++      set (Lifetime.Cell.open (current.push ⟨session,role,request.id,cancelled⟩))
++      return true
++  unless admitted do return none
++  try
++    let window ← Std.Mutex.new cutoff
++    let ready := fun identity arrived => do
++      let some policy := policy | throw (IO.userError "unexpected operation progress")
++      window.atomically do
++        let cutoff ← get
++        unless identity == policy.identity && arrived < cutoff do
++          throw (IO.userError "foreign or expired operation progress")
++        set (readyDeadline policy.identity identity policy.finishReady cutoff arrived)
++      policy.onReady arrived
++    Publication.Client.operationExchange request window cancelled ready
++  catch error =>
++    unless ← cancelled.get do IO.eprintln s!"Eggshell shared {role} operation: {error}"
++    return none
++  finally
++    remote.atomically do
++      match ← get with
++      | .closed => pure ()
++      | .open current => set (Lifetime.Cell.open (current.filter (·.id != request.id)))
++
+@@ -432,0 +492,5 @@
++  remote.atomically do
++    let (next,owned) := Lifetime.close (← get)
++    set next
++    if let some current := owned then
++      for request in current do request.cancelled.set true
+@@ -446,0 +511,15 @@
++/-- Local administration can inspect bounded worker ownership without reading
++any request, query, original body or session control file. -/
++def localStats : IO Json := slots.atomically do
++  let mut workers := #[]
++  match ← get with
++  | .closed => pure ()
++  | .open current =>
++    for (key,slot) in current do
++      let found ← slot.child.tryAtomically do
++        match ← get with
++        | .open (some child) => pure (some (Json.mkObj [("key",toJson key),("pid",toJson child.pid.toNat)]))
++        | _ => pure none
++      if let some (some value) := found then workers := workers.push value
++  return toJson workers
++
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -140 +140 @@
+-def hookDeadline (input : Json) (budget : Nat := 29000) : IO Nat := do
++def hookDeadline (input : Json) (budget : Nat := OperationWire.searchBudgetMs) : IO Nat := do
+--- a/tools/research/ProjectContextChecks.lean
++++ b/tools/research/ProjectContextChecks.lean
+@@ -173 +173,2 @@
+-  let savePath := root/"save-context.json"
++  let savePath := files.directory/"deferred"/"controlled-context.json"
++  FileSystem.privateDirectory savePath.parent.get!
+@@ -215,3 +216 @@
+-private def run (root : System.FilePath) : IO Unit := do
+-  check (root.isAbsolute && !(← root.pathExists)) "fresh absolute context root required"
+-  FileSystem.privateDirectory root
++private def runCreated (root : System.FilePath) (numerical : Bool) : IO Unit := do
+@@ -227,0 +227,2 @@
++    let command ← if numerical then MiniLM.command (← Paths.installRoot) else pure none
++    if numerical then check command.isSome "actual MiniLM runtime required"
+@@ -231,0 +233,3 @@
++      if let some command := command then
++        let _ ← Warm.run source command false
++        pure ()
+@@ -243,0 +248,8 @@
++private def run (root : System.FilePath) (numerical : Bool := false) : IO Unit := do
++  check (root.isAbsolute && !(← root.pathExists)) "fresh absolute context root required"
++  FileSystem.privateDirectory root
++  if numerical then
++    let _ ← Numerical.withDefaultKeeper (do runCreated root true; return 0) (drainMs := 1000)
++    pure ()
++  else runCreated root false
++
+@@ -268,0 +281 @@
++  | ["context-prepared-numeric",root] => Eggshell.Research.ProjectContextChecks.run (.mk root) true; return 0
+--- a/tools/research/ProjectMatrixScopes.lean
++++ b/tools/research/ProjectMatrixScopes.lean
+@@ -154 +154 @@
+-def main (args : List String) : IO UInt32 := do
++def matrixScopesMain (args : List String) : IO UInt32 := do
+--- /dev/null
++++ b/tools/research/ProjectExecutionChecks.lean
+@@ -0,0 +1,263 @@
++import tools.research.ProjectMatrixScopes
++import Eggshell.OperationPool
++
++open Lean Eggshell Eggshell.Plugin
++
++namespace Eggshell.Research.ProjectExecutionChecks
++
++private def check (value : Bool) (message : String) : IO Unit :=
++  unless value do throw (IO.userError message)
++
++private def model : IO Unit := do
++  let lane0 : OperationPlan.Lane := ⟨0,by decide⟩
++  let lane3 : OperationPlan.Lane := ⟨3,by decide⟩
++  let job := fun name role bytes cutoff => ({id := name,role,bytes,cutoff} : OperationPlan.Job)
++  let (queued,_) := OperationPlan.admit OperationPlan.initial (job "a" .search 1 100)
++  check (!(OperationPlan.admit queued (job "a" .search 1 100)).2) "duplicate request was admitted"
++  check ((OperationPlan.take queued lane3 0).2.isNone) "save lane consumed a search"
++  check ((OperationPlan.take queued lane0 100).2.isNone) "expired queue entry began execution"
++  let (running,some first) := OperationPlan.take queued lane0 0 | throw (IO.userError "search slot did not start")
++  let done := OperationPlan.finish running lane0 first.token
++  let (again,_) := OperationPlan.admit done (job "b" .search 1 100)
++  let (again,some second) := OperationPlan.take again lane0 0 | throw (IO.userError "reused slot did not start")
++  check ((OperationPlan.finish again lane0 first.token).contents.running[lane0].any (·.token == second.token))
++    "stale completion consumed another request"
++  let stopped := OperationPlan.close again
++  check (!(OperationPlan.admit stopped (job "closed" .save 1 100)).2 &&
++    (OperationPlan.take stopped lane3 0).2.isNone) "closed scheduler admitted or started work"
++  let mut full := OperationPlan.initial
++  for i in [:OperationPlan.maxRequests] do
++    let (next,accepted) := OperationPlan.admit full (job (toString i) .search 1 100)
++    check accepted "request bound rejected a valid slot"
++    full := next
++  check (!(OperationPlan.admit full (job "overflow" .save 1 100)).2) "request bound overflowed"
++  let (large,_) := OperationPlan.admit OperationPlan.initial (job "large" .search OperationPlan.maxBytes 100)
++  check (!(OperationPlan.admit large (job "bytes" .save 1 100)).2) "byte bound overflowed"
++  IO.println (Json.mkObj [("modelChecks",toJson true),("searchWorkers",toJson OperationPlan.searchWorkers),
++    ("saveWorkers",toJson OperationPlan.saveWorkers),("requestBound",toJson OperationPlan.maxRequests)]).compress
++
++private def serverStats : IO Json := do IO.ofExcept (Json.parse (← Publication.Client.control "stats"))
++private def operations (value : Json) : Json := value.getObjValD "operations"
++private def natural (value : Json) (key : String) : Nat := (value.getObjValAs? Nat key).toOption.getD 0
++
++private def idle (deadline : Nat) : IO Json := do
++  repeat
++    let value ← serverStats
++    let state := operations value
++    if natural state "pending" == 0 && natural state "active" == 0 &&
++        natural state "searchReplyBytes" == 0 && natural state "saveReplyBytes" == 0 then return value
++    check ((← IO.monoMsNow) < deadline) s!"operation service did not drain: {state.compress}"
++    IO.sleep 5
++  throw (IO.userError "unreachable idle wait")
++
++private def prepareSession (original : PendingTurn) (name : String) (command : Option (List String)) : IO PendingTurn := do
++  let pending := {original with
++    sessionId := name,turnId := "controlled-turn",semanticMatcher := command,
++    tools := [],inFlight := [],finalMessage := none,closed := false}
++  let some _ ← ProjectContext.open? pending ((← IO.monoMsNow)+20000) |
++    throw (IO.userError "logical client lost its captured project scope")
++  let files ← sessionFiles name
++  writeJson files.state ({profile := pending.profile} : ThreadState)
++  writeJson files.pending pending
++  return pending
++
++private def query (pending : PendingTurn) (allowance : Nat := 28000) (empty : Bool := false) : IO (Option Json × Nat × Bool) := do
++  let started ← IO.monoMsNow
++  let pending := if empty then {pending with projection := .none} else pending
++  let request : Worker.Search := {
++    pending,state := {profile := pending.profile},work := pending.prompt,enforce := false,
++    deadline := started+allowance}
++  let ready ← IO.mkRef false
++  let semantic := pending.semanticMatcher.isSome
++  let policy : Worker.SearchPolicy := {
++    identity := request.identity,finishReady := semantic,onReady := fun _ => ready.set true}
++  let cutoff := if semantic then semanticSearchDeadline started request.deadline else request.deadline
++  let result ← Worker.exchange pending.sessionId "search" (toJson request) cutoff (some policy)
++  return (result,(← IO.monoMsNow)-started,← ready.get)
++
++private def checkBody (result : Option Json) : IO Unit := do
++  let some value := result | throw (IO.userError "logical client got no search response")
++  let some handoff ← IO.ofExcept (fromJson? value : Except String (Option Handoff)) |
++    throw (IO.userError "logical client got an empty handoff")
++  check (handoff.reason != "search-incomplete" && handoff.text.contains "\"OLD_ID_ALPHA\"" &&
++    handoff.text.contains "\"OLD_ID_ALPHA_TAIL\"" && !handoff.text.contains "NEW_ID_BETA")
++    "shared worker lost original evidence or read a newer foreign snapshot"
++
++/-- Exercise the product's semantic-first, lexical-fallback and final offer
++path. A transport-only semantic phase is not the full hook outcome. -/
++private def hookQuery (pending : PendingTurn) : IO (Option Json × Nat × Bool) := do
++  let started ← IO.monoMsNow
++  let input := Json.mkObj [("_eggshell_deadline",toJson (started+28000)),
++    ("_eggshell_receipt",toJson (← Receipt.fresh))]
++  let result ← deliverForWork input pending pending.prompt false
++  let semantic := result.any fun handoff => handoff.search.any fun trace =>
++    match trace.semantic with | .completed => true | _ => false
++  return (result.map toJson,(← IO.monoMsNow)-started,semantic)
++
++private def saveDuring (pending : PendingTurn) (index : Nat) : IO Unit := do
++  let files ← sessionFiles pending.sessionId
++  let domain := Sha256.hex "shared-execution-fixture".toUTF8
++  let clock := fun time => Json.mkObj [("_eggshell_synapse_clock",toJson domain),("_eggshell_synapse_nanos",toJson time)]
++  let tool : ToolEvent := {
++    name := "mcp__fixture__inspect",useId := s!"saved-{index}",input := "{}",
++    response := (Json.mkObj [("evidence",toJson s!"CONCURRENT_ORIGINAL_{index}")]).compress}
++  Synapses.Live.start (clock (index*2+1)) files pending {profile := pending.profile} tool
++  Synapses.Live.finish (clock (index*2+2)) pending tool
++  let closed := {pending with tools := [tool],finalMessage := some s!"Recorded `CONCURRENT_ORIGINAL_{index}`.",closed := true}
++  let path := files.directory/"deferred"/"controlled-save.json"
++  FileSystem.privateDirectory path.parent.get!
++  writeJson path closed
++  let some reply ← Worker.exchange pending.sessionId "save"
++      (Json.mkObj [("session",toJson pending.sessionId),("path",toJson path.toString)]) ((← IO.monoMsNow)+60000) |
++    throw (IO.userError "shared save did not reply")
++  let .published saved ← IO.ofExcept (NativePublication.SaveReply.check? reply) |
++    throw (IO.userError "shared save did not publish")
++  check (saved.publication.accounted && saved.publication.awaiting == 0) "shared save lost its durable source ACK"
++
++private def searchPids (value : Json) : IO (Array Nat) := do
++  let pipes ← IO.ofExcept (value.getObjValAs? (Array Json) "workerPipes")
++  return pipes.filterMap fun entry => do
++    let key ← (entry.getObjValAs? String "key").toOption
++    if !key.startsWith "shared-operation-" || !key.contains ":search-" then none
++    else (entry.getObjValAs? Nat "pid").toOption
++
++private def signal (pids : Array Nat) (kind : String) : IO Unit := do
++  for pid in pids do
++    let _ ← IO.Process.output {cmd := "/bin/kill",args := #[kind,toString pid]}
++    pure ()
++
++private def cancellation (original : PendingTurn) : IO Json := do
++  let sessions ← (List.range 4).toArray.mapM fun index => prepareSession original s!"queue-client-{index}" none
++  let pids ← searchPids (← serverStats)
++  check (pids.size == OperationPlan.searchWorkers) "load did not establish all bounded search workers"
++  signal pids "-STOP"
++  try
++    let held ← (sessions.extract 0 pids.size).mapM fun pending => IO.asTask (query pending 10000) .dedicated
++    let deadline := (← IO.monoMsNow)+5000
++    repeat
++      if natural (operations (← serverStats)) "active" ≥ pids.size then break
++      check ((← IO.monoMsNow) < deadline) "paused workers did not hold their global slots"
++      IO.sleep 5
++    let some last := sessions[pids.size]? | throw (IO.userError "no client for queued expiry")
++    let expired ← IO.asTask (query last 1000) .dedicated
++    repeat
++      if natural (operations (← serverStats)) "pending" > 0 then break
++      check ((← IO.monoMsNow) < deadline) "short request did not enter the actual queue"
++      IO.sleep 5
++    let (reply,_,_) ← IO.ofExcept (← IO.wait expired)
++    check reply.isNone "queued request executed after its cutoff"
++    let some first := sessions[0]? | throw (IO.userError "missing cancelled client")
++    Worker.cancel first.sessionId "search"
++    let some firstTask := held[0]? | throw (IO.userError "missing cancelled request task")
++    let (cancelled,_,_) ← IO.ofExcept (← IO.wait firstTask)
++    check cancelled.isNone "cancelled client received a result"
++    signal pids "-CONT"
++    for task in held.extract 1 held.size do
++      let (reply,_,_) ← IO.ofExcept (← IO.wait task)
++      checkBody reply
++    let _ ← idle ((← IO.monoMsNow)+15000)
++    let next ← prepareSession original "after-cancel-client" none
++    let (reply,_,_) ← query next
++    checkBody reply
++    return Json.mkObj [("queuedExpiry",toJson true),("cancelledOnlyItsClient",toJson true),
++      ("otherClientsCompleted",toJson true),("reusedServiceAfterCancellation",toJson true)]
++  finally signal pids "-CONT"
++
++private def exercise (root : System.FilePath) (numerical : Bool) : IO Unit := do
++  model
++  let original ← IO.ofExcept (Json.parse (← IO.FS.readFile (root/"captured-turn.json")) >>= fromJson? (α := PendingTurn))
++  let command ← if numerical then MiniLM.command (← Paths.installRoot) else pure none
++  if numerical then check command.isSome "actual MiniLM runtime required"
++  let some _context ← ProjectContext.open? original ((← IO.monoMsNow)+20000) |
++    throw (IO.userError "complete original project scope missing")
++  let clients ← (List.range 80).toArray.mapM fun index =>
++    prepareSession original s!"load-{if numerical then "numeric" else "lexical"}-{index}" command
++  let saves ← (List.range 80).toArray.mapM fun index => prepareSession original s!"save-client-{index}" command
++  let mut writers : Std.HashMap String Nat := {}
++  for pending in saves do
++    let selected ← ProjectAccess.resolve pending.sessionId (pendingSelection pending)
++    let some write := selected.write | throw (IO.userError "mixed save client has no configured project writer")
++    writers := writers.insert write.original.identity (writers[write.original.identity]?.getD 0+1)
++  check (writers.size > 1) "load did not exercise independently owned original streams"
++  let _ ← Publication.Client.resolve
++  try
++    let started ← IO.monoMsNow
++    let requests ← clients.mapM fun pending =>
++      IO.asTask (if numerical then hookQuery pending else query pending) .dedicated
++    let publications ← saves.zipIdx |>.mapM fun (pending,index) => IO.asTask (saveDuring pending index) .dedicated
++    let mut times := #[]
++    let mut ready := 0
++    let mut queries := #[]
++    let mut failures := #[]
++    for task in requests do
++      match ← IO.wait task with
++      | .error error => failures := failures.push error.toString
++      | .ok (reply,elapsed,announced) =>
++        let passed ← try checkBody reply; pure true catch error =>
++          failures := failures.push error.toString
++          pure false
++        queries := queries.push (Json.mkObj [("evidencePassed",toJson passed),
++          ("elapsedMs",toJson elapsed),("ready",toJson announced),("replyPresent",toJson reply.isSome)])
++        times := times.push elapsed
++        if announced then ready := ready+1
++    let mut durableSaves := 0
++    for task in publications do
++      match ← IO.wait task with
++      | .error error => failures := failures.push error.toString
++      | .ok _ => durableSaves := durableSaves+1
++    let loadState ← serverStats
++    let outcomes := Json.mkObj [("queries",toJson queries),("durableSaves",toJson durableSaves),
++      ("writerClients",toJson writers.toArray),("errors",toJson failures),("server",loadState)]
++    IO.FS.writeFile (root/"load-outcomes.json") (outcomes.pretty++"\n")
++    check failures.isEmpty s!"mixed load failed: {failures.size}; see load-outcomes.json"
++    if numerical then check (ready > 0) "no numeric query completed its semantic path"
++    let drained ← idle ((← IO.monoMsNow)+60000)
++    let pids ← searchPids drained
++    check (pids.size ≤ OperationPlan.searchWorkers) "global search process bound overflowed"
++    let some firstClient := clients[0]? | throw (IO.userError "missing empty-result client")
++    let (empty,_,_) ← query firstClient 5000 true
++    check (empty == some Json.null) "completed empty search became unavailable"
++    let rejected ← Worker.exchange "foreign-save" "save" (Json.mkObj [
++      ("session",toJson "foreign-save"),("path",toJson (root/"captured-turn.json").toString)]) ((← IO.monoMsNow)+2000)
++    check rejected.isNone "foreign private save path was accepted"
++    let cancelled ← cancellation original
++    let final ← idle ((← IO.monoMsNow)+15000)
++    let ordered := times.qsort (· < ·)
++    let report := Json.mkObj [("allPassed",toJson true),("logicalSessionClients",toJson clients.size),
++      ("concurrentSaves",toJson saves.size),("actualMiniLM",toJson numerical),("semanticReadyReplies",toJson ready),
++      ("normalDeliveryFunction",toJson numerical),
++      ("numericPreparationOnSaves",toJson numerical),
++      ("lexicalFallbackReplies",toJson (if numerical then clients.size-ready else 0)),
++      ("writerClients",toJson writers.toArray),("independentOriginalStreams",toJson writers.size),
++      ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("p50Ms",toJson (ordered[39]?)),
++      ("p95Ms",toJson (ordered[75]?)),("maxMs",toJson (ordered[79]?)),("queryMs",toJson times),
++      ("afterLoad",drained),("afterCancellation",final),("cancellation",cancelled),
++      ("twoOriginalEvidenceItemsPerQuery",toJson true),("newerForeignOriginalAbsent",toJson true),
++      ("completedEmptyPreserved",toJson true),("foreignSavePathRejected",toJson true),
++      ("answeringModelCalls",toJson (0 : Nat)),("eightyPeopleEightHours",toJson false),
++      ("requiredEvidence98Percent",toJson false),("productionAdoption",toJson false)]
++    let name := if numerical then "numeric-execution-report.json" else "execution-report.json"
++    IO.FS.writeFile (root/name) (report.pretty++"\n")
++    IO.println report.compress
++  finally
++    Worker.shutdown
++    try let _ ← Publication.Client.control "shutdown" catch _ => pure ()
++
++end Eggshell.Research.ProjectExecutionChecks
++
++#print axioms Eggshell.Plugin.OperationPlan.requests_bounded
++#print axioms Eggshell.Plugin.OperationPlan.bytes_bounded
++#print axioms Eggshell.Plugin.OperationPlan.workers_bounded
++#print axioms Eggshell.Plugin.OperationPlan.close_is_terminal
++#print axioms Eggshell.Plugin.OperationPlan.closed_starts_no_job
++
++def main (args : List String) : IO UInt32 := do
++  match args with
++  | ["execution-model"] => Eggshell.Research.ProjectExecutionChecks.model; return 0
++  | ["execution-load",root] => Eggshell.Research.ProjectExecutionChecks.exercise (.mk root) false; return 0
++  | ["execution-load-numeric",root] =>
++    Numerical.withDefaultKeeper (do
++      Eggshell.Research.ProjectExecutionChecks.exercise (.mk root) true
++      return 0) (drainMs := 1000)
++  | ["context-prepared-numeric",root] => projectContextCommand ["context-prepared-numeric",root]
++  | other => matrixScopesMain other

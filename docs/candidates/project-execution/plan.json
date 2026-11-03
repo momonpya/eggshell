@@ -1,0 +1,20 @@
+{
+  "sourceParentCommit": "4f3eca00",
+  "status": "isolated implementation; not adopted",
+  "objective": "Bound search and save execution across sessions in the existing authenticated per-user local service, while retaining project-owned original streams and shared preparation.",
+  "contracts": [
+    "Three service-owned search workers and two independent save workers, plus the existing three preparation workers. Managers submit private in-memory requests and never spawn a per-chat search/save fallback.",
+    "Bound pending plus running requests to 160 and their encoded input bytes to 16 MiB. Long-lived operation requests use a separate authenticated local listener, so their waiting handlers cannot consume the source/control RPC slots they depend on. Saturation retries only before admission and within the original cutoff. Never reinterpret a completed empty search as unavailable.",
+    "Relay at most one checked semantic-ready event. Preserve turn/epoch/receipt identity, the semantic cutoff and the original upstream hook deadline; queue wait consumes the same deadline.",
+    "Closing one connection or cancelling one session cancels that job, not another session using the same worker later. Closed admission cannot spawn a replacement.",
+    "Keep private filesystem paths and query state local to the authenticated OS-user service. This endpoint is not a remotely granted project capability. MCP policy, remote transport/authentication and multi-host use remain separate work.",
+    "Save only from the session's actual durable deferred/checkpoint queue. ACKs still come from durable original publication, never queue admission. Cancelled or interrupted saves retain recovery authority.",
+    "Reserve held response memory independently from nested source RPCs, so search work cannot reserve all capacity needed for its own source reads. Preserve aggregate 3670016 KiB stop, 4194304 KiB ceiling and 2097152 KiB free-disk floor."
+  ],
+  "validation": [
+    "Lean request/byte/slot/closure checks and native cancellation, stale completion, empty result, progress identity/deadline and retry checks.",
+    "Ordinary Pre/Post/Stop and durable source recovery through the new worker path; reject a foreign private save path.",
+    "Eighty logical session clients, mixed shared project owners and actual publication/preparation/query overlap. Record queue age, outstanding debt, worker/process peaks and aggregate RSS. This is not an eight-hour or multiple-PC result.",
+    "Actual unchanged MiniLM through the bounded workers, preserving multiple retained matrix roots. No answering-model calls, new Python/Ruby implementation or production adoption without the existing 18 matched token comparisons."
+  ]
+}
