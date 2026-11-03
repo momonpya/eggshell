@@ -13,10 +13,15 @@ The earlier [prepared-index candidate](candidates/owned-ready/README.md) separat
 independent derived writer regions. Source publication and index preparation
 have different owners and readiness contracts: a durable source ACK does not
 claim that lexical, vector, synapse and certification preparation is complete.
-The latest normal-path test still reports `derivedPreparationQueued=false`;
-the new project-cache continuation is connecting that route and sharing canonical
-vectors by project/scope. Its source edits have not yet passed a build or native
-check. It cannot be counted as tested implementation.
+The [project-cache continuation](candidates/project-cache/README.md) connects that
+route: the normal-path test now reports `derivedPreparationQueued=true`, and a
+fresh ordinary background worker consumes its ticket. Canonical vectors are
+shared by project/scope while source metadata and routers remain separate.
+The native checks include actual MiniLM preparation and an unchanged re-warm
+with zero new embeddings/projections. These small checks do not establish
+sustained preparation capacity. The installation-wide drain admission still
+serializes background work and is the next scheduling bottleneck to remove
+under a bounded shared-service ownership contract.
 The project remains one logical shared DB. No one-owner-per-user DB layout or
 one global owner for every project is required. The target remains 80 users,
 30-second hooks and 98% of necessary original evidence actually delivered;

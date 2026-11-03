@@ -1,0 +1,366 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -422,2 +422,2 @@
+-        #[``Eggshell.SourceCatalogue.references, ``Eggshell.ProjectionCursor.fold, ``Eggshell.PartitionBuild.selectSample],
+-        #[``Eggshell.ProjectionCursor.catalogue, ``Eggshell.Persistence.Store.searchDocuments]),
++        #[``Eggshell.SourceCatalogue.references, ``Eggshell.ProjectionCursor.foldKeys, ``Eggshell.PartitionBuild.selectSample],
++        #[``Eggshell.ProjectionCursor.fold, ``Eggshell.ProjectionCursor.catalogue, ``Eggshell.Persistence.Store.searchDocuments]),
+@@ -425,2 +425,5 @@
+-        #[``Eggshell.ProjectionCursor.fold, ``Eggshell.BoundedSample.State.insert],
+-        #[``Eggshell.ProjectionCursor.catalogue]),
++        #[``Eggshell.ProjectionCursor.foldKeys, ``Eggshell.BoundedSample.State.insert],
++        #[``Eggshell.ProjectionCursor.fold, ``Eggshell.ProjectionCursor.catalogue]),
++      (``Eggshell.ProjectionCursor.foldKeys,
++        #[``Eggshell.DB.PageMap.Snapshot.get, ``Eggshell.ProjectionCursor.checked],
++        #[``Eggshell.DB.PageMap.Snapshot.foldRange, ``Eggshell.ProjectionCursor.fold, ``Eggshell.ProjectionCursor.catalogue]),
+--- a/Eggshell/DB/CacheReclaim.lean
++++ b/Eggshell/DB/CacheReclaim.lean
+@@ -29 +29 @@
+-  unless owner.database == database && entry.fileName == owner.routeKey ++ ".json" &&
++  unless owner.project.getD owner.database == database && entry.fileName == owner.routeKey ++ ".json" &&
+@@ -33 +33,4 @@
+-    return snapshot.head.identity == database
++    if snapshot.head.identity != owner.database then return false
++    match owner.project with
++    | none => return true
++    | some expected => return (← ProjectCacheScope.at? snapshot).any (·.scope.identity == expected)
+@@ -66,0 +70,19 @@
++def Sidecar.cacheDirectories (directory : System.FilePath) : IO (List System.FilePath) := do
++  let sources := directory/"sources"
++  if !(← sources.pathExists) then return [directory]
++  FileSystem.rejectSymlinkAncestors sources
++  let entries ← sources.readDir
++  unless entries.size ≤ ProjectCacheScope.maxOwners do throw (IO.userError "private project cache has an unbounded source inventory")
++  let mut result := [directory]
++  for entry in entries do
++    unless PageMap.validIdentity entry.fileName && (← entry.path.symlinkMetadata).type == .dir do
++      throw (IO.userError "private project cache contains a foreign source directory")
++    result := entry.path :: result
++  return result
++
++def Sidecar.withCacheDirectories (directories : List System.FilePath)
++    (action : IO (Option α)) : IO (Option α) := do
++  match directories with
++  | [] => action
++  | directory :: rest => Sidecar.withRetirementRegions directory Sidecar.IndexRegion.all (Sidecar.withCacheDirectories rest action)
++
+@@ -80 +102 @@
+-    Sidecar.withRetirementRegions directory Sidecar.IndexRegion.all do
++    Sidecar.withCacheDirectories (← Sidecar.cacheDirectories directory) do
+--- /dev/null
++++ b/Eggshell/DB/ProjectCacheScope.lean
+@@ -0,0 +1,53 @@
++module
++
++public import Eggshell.DB.PageMap
++public import Eggshell.GraphCodec
++
++@[expose] public section
++namespace Eggshell.DB
++open Lean
++
++/-- Immutable cache placement metadata, not execution or equality authority. -/
++structure ProjectCacheScope where
++  identity : String
++  inventory : String
++  authority : String
++  deriving Repr, BEq, ToJson, FromJson
++
++def ProjectCacheScope.maxOwners : Nat := 128
++
++def ProjectCacheScope.valid (scope : ProjectCacheScope) : Bool :=
++  PageMap.validIdentity scope.identity && PageMap.validIdentity scope.inventory &&
++    scope.authority == (Persistence.valueToJson (.text ("egg project "++scope.identity))).compress
++
++def ProjectCacheScope.read (root : System.FilePath) : IO ProjectCacheScope := do
++  let bytes ← FileSystem.boundedBytes (root/"cache-scope") 4096
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid project cache descriptor encoding")
++  let scope ← IO.ofExcept (Json.parse text >>= fromJson? (α := ProjectCacheScope))
++  unless scope.valid && (toJson scope).compress.toUTF8 == bytes do
++    throw (IO.userError "invalid project cache descriptor")
++  return scope
++
++structure ProjectCacheScope.Location where
++  root : System.FilePath
++  scope : ProjectCacheScope
++
++/-- Layout and the immutable source authority bind this small descriptor.
++The complete owner inventory is checked by the project read/write boundary. -/
++def ProjectCacheScope.at? (source : PageMap.Snapshot) : IO (Option ProjectCacheScope.Location) := do
++  if source.directory.fileName != some "source.egg" then return none
++  let some owner := source.directory.parent | return none
++  let some owners := owner.parent | return none
++  if owners.fileName != some "owners" then return none
++  let some root := owners.parent | return none
++  if !(← (root/"project").pathExists) then return none
++  let some slot := owner.fileName.bind String.toNat? |
++    throw (IO.userError "invalid project cache owner slot")
++  unless slot < ProjectCacheScope.maxOwners && owner.fileName == some (toString slot) do
++    throw (IO.userError "noncanonical project cache owner slot")
++  let scope ← read root
++  unless source.head.authority == scope.authority && source.head.identity != scope.identity do
++    throw (IO.userError "source crossed its project cache authority")
++  return some ⟨root,scope⟩
++
++end Eggshell.DB
+--- a/Eggshell/DB/Sidecar.lean
++++ b/Eggshell/DB/Sidecar.lean
+@@ -4,0 +5 @@
++public import Eggshell.DB.ProjectCacheScope
+@@ -17,0 +19 @@
++  project : Option String := none
+@@ -21 +23 @@
+-  ⟨snapshot.directory.toString, snapshot.head.identity⟩
++  ⟨snapshot.directory.toString, snapshot.head.identity,none⟩
+@@ -28,0 +31,4 @@
++  if let some expected := owner.project then
++    let some actual ← ProjectCacheScope.at? snapshot |
++      throw (IO.userError "private cache owner lost its project scope")
++    unless actual.scope.identity == expected do throw (IO.userError "private cache owner changed its project scope")
+@@ -34,0 +41 @@
++  root : System.FilePath
+@@ -41 +48 @@
+-  { database := snapshot.head.identity, directory,
++  { database := snapshot.head.identity, root := directory, directory,
+@@ -45,5 +52,9 @@
+-  if storage == .database then return Sidecar.ofSnapshot snapshot
+-  let directory := (← Paths.dataRoot) / "read-cache" / snapshot.head.identity
+-  pure {
+-    database := snapshot.head.identity, directory
+-    semantic := directory / "semantic", indexes := directory / "indexes"}
++  let project ← ProjectCacheScope.at? snapshot
++  let identity := project.map (·.scope.identity) |>.getD snapshot.head.identity
++  let root ← if storage == .database then
++      pure ((project.map (·.root) |>.getD snapshot.directory)/"derived"/identity)
++    else pure ((← Paths.dataRoot)/"read-cache"/identity)
++  let directory := if project.isSome then root/"sources"/snapshot.head.identity else root
++  return {
++    database := snapshot.head.identity,root,directory
++    semantic := root/"semantic",indexes := directory/"indexes"}
+@@ -111 +122,2 @@
+-  let owner := Sidecar.Owner.ofSnapshot snapshot
++  let project ← ProjectCacheScope.at? snapshot
++  let owner := {Sidecar.Owner.ofSnapshot snapshot with project := project.map (·.scope.identity)}
+@@ -114 +126 @@
+-    Sidecar.recordOwner sidecar.directory owner
++    Sidecar.recordOwner sidecar.root owner
+@@ -119,0 +132,3 @@
++  let project ← ProjectCacheScope.at? snapshot
++  let sidecar ← Sidecar.locate snapshot storage
++  let identity := project.map (·.scope.identity) |>.getD snapshot.head.identity
+@@ -121,2 +136,7 @@
+-      let derived ← Sidecar.childDirectory snapshot.directory "derived"
+-      Sidecar.childDirectory derived snapshot.head.identity
++      let base := project.map (·.root) |>.getD snapshot.directory
++      let derived ← Sidecar.childDirectory base "derived"
++      let root ← Sidecar.childDirectory derived identity
++      if project.isSome then
++        let sources ← Sidecar.childDirectory root "sources"
++        Sidecar.childDirectory sources snapshot.head.identity
++      else pure root
+@@ -129,3 +149,6 @@
+-        let directory ← Sidecar.childDirectory root snapshot.head.identity
+-        Sidecar.recordOwner directory owner
+-        pure directory
++        let directory ← Sidecar.childDirectory root identity
++        Sidecar.recordOwner directory {owner with project := project.map (·.scope.identity)}
++        if project.isSome then
++          let sources ← Sidecar.childDirectory directory "sources"
++          Sidecar.childDirectory sources snapshot.head.identity
++        else pure directory
+@@ -134 +157 @@
+-  let semantic ← Sidecar.childDirectory directory "semantic"
++  let semantic ← Sidecar.childDirectory sidecar.root "semantic"
+@@ -137 +160 @@
+-  pure {database := snapshot.head.identity, directory, semantic, indexes}
++  pure {database := snapshot.head.identity, root := sidecar.root, directory, semantic, indexes}
+@@ -188 +211 @@
+-    let path := sidecar.directory / region.guardName
++    let path := (if region == .semantic then sidecar.root else sidecar.directory) / region.guardName
+--- a/Eggshell/PluginCli.lean
++++ b/Eggshell/PluginCli.lean
+@@ -22,2 +22,8 @@
+-def databaseCacheStatus (egg : Config.Egg) (command : Option (List String)) : IO Json := do
+-  let fields := [("name", toJson egg.name), ("path", toJson egg.path.toString)]
++def cacheSources (egg : Config.Egg) : IO (Array DB.PageMap.Snapshot) := do
++  if ← (egg.path/"project").pathExists then
++    let project ← ProjectStore.openProject egg.path
++    return (← ProjectStore.pin project ((← IO.monoMsNow)+29000)).sources
++  return (← DB.PageMap.open? egg.path).toArray
++
++def sourceCacheStatus (snapshot : DB.PageMap.Snapshot) (command : Option (List String)) : IO Json := do
++  let fields := [("source",toJson snapshot.head.identity)]
+@@ -25,4 +31,6 @@
+-    let some snapshot ← DB.PageMap.open? egg.path |
+-      return Json.mkObj (fields ++ [("state", toJson "absent")])
+-    let some command := command |
+-      return Json.mkObj (fields ++ [("state", toJson "provider-unavailable")])
++    let some command := command | do
++      let lexical ← RetrievalResearch.Index.ready snapshot
++      let windows := (← WindowOwners.openShared? snapshot).isSome
++      let canonical ← Synapses.CanonicalSource.Cache.ready snapshot
++      return Json.mkObj (fields++[("state",toJson (if lexical && windows && canonical then "warm" else "cold")),
++        ("mode",toJson "lexical-only")])
+@@ -34,0 +43,11 @@
++
++def databaseCacheStatus (egg : Config.Egg) (command : Option (List String)) : IO Json := do
++  let fields := [("name",toJson egg.name),("path",toJson egg.path.toString)]
++  try
++    let sources ← cacheSources egg
++    let statuses ← sources.mapM (sourceCacheStatus · command)
++    let state := if sources.isEmpty then "absent"
++      else if statuses.all (fun status => (status.getObjValAs? String "state").toOption == some "warm") then "warm"
++      else "pending"
++    return Json.mkObj (fields++[("state",toJson state),("sources",toJson statuses)])
++  catch error => return Json.mkObj (fields++[("state",toJson "error"),("reason",toJson error.toString)])
+@@ -80,2 +99 @@
+-  let some command := command |
+-    throw (IO.userError "numerical provider is disabled or not installed")
++  let command := command.getD [(← IO.appPath).toString,"search-provider","--mode","lexical"]
+@@ -85 +103,3 @@
+-    Warm.run (← DB.PageMap.pin egg.path) command writable
++    let sources ← cacheSources egg
++    let results ← sources.mapM fun source => Warm.run source command writable
++    return Json.mkObj [("name",toJson egg.name),("path",toJson egg.path.toString),("sources",toJson results)]
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -246 +246,2 @@
+-      unless pending.write.any (fun path =>
++      let context ← ProjectContext.open? pending deadline
++      unless context.any (·.canPrepare target.owner) || pending.write.any (fun path =>
+@@ -303,3 +304,3 @@
+-        for path in (pending.read ++ pending.write.toList).eraseDups do
+-          if let some snapshot ← DB.PageMap.open? (.mk path) then
+-            let _ ← registerIndexTarget snapshot command (pending.write == some path)
++        if let some context ← ProjectContext.open? pending deadline then
++          for source in context.reads.sources do
++            let _ ← registerIndexTarget source command (context.canPrepare (DB.Sidecar.Owner.ofSnapshot source))
+@@ -306,0 +308,5 @@
++        else
++          for path in (pending.read ++ pending.write.toList).eraseDups do
++            if let some snapshot ← DB.PageMap.open? (.mk path) then
++              let _ ← registerIndexTarget snapshot command (pending.write == some path)
++              pure ()
+@@ -526,0 +533,6 @@
++  if let some context ← ProjectContext.open? pending deadline then
++    for source in context.reads.sources do
++      if (← IO.monoMsNow) ≥ deadline then break
++      let _ ← registerIndexTarget source command (context.canPrepare (DB.Sidecar.Owner.ofSnapshot source))
++      count := count+1
++    return count
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -553 +553 @@
+-def queueIndex (target : String) (command : List String)
++def queueIndexAt (snapshot : DB.PageMap.Snapshot) (command : List String)
+@@ -555 +554,0 @@
+-  let snapshot ← DB.PageMap.pin (.mk target)
+@@ -567,0 +567,4 @@
++def queueIndex (target : String) (command : List String)
++    (promotion : CommittedPromotion) : IO Unit := do
++  queueIndexAt (← DB.PageMap.pin (.mk target)) command promotion
++
+--- a/Eggshell/PluginProjectContext.lean
++++ b/Eggshell/PluginProjectContext.lean
+@@ -28,0 +29,3 @@
++    if let some source ← PageMap.open? (.mk path) then
++      if (← ProjectCacheScope.at? source).isSome then
++        throw (IO.userError "configure the logical project, not one physical source partition")
+--- a/Eggshell/ProjectSources.lean
++++ b/Eggshell/ProjectSources.lean
+@@ -10 +10 @@
+-def maxOwners : Nat := 128
++def maxOwners : Nat := ProjectCacheScope.maxOwners
+@@ -66,0 +67,3 @@
++  let scope ← ProjectCacheScope.read directory
++  unless scope == ⟨record.manifest.identity,record.checksum,record.manifest.authority⟩ do
++    throw (IO.userError "project cache descriptor disagrees with its complete inventory")
+@@ -91,0 +95,3 @@
++  let scope : ProjectCacheScope := ⟨identity,manifestChecksum manifest,authority⟩
++  unless scope.valid do throw (IO.userError "project creation produced an invalid cache descriptor")
++  FileSystem.immutableExistingBytes (staging/"cache-scope") (toJson scope).compress.toUTF8
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -194 +194 @@
+-      let primary := DB.Sidecar.ofSnapshot snapshot
++      let primary ← DB.Sidecar.locate snapshot .database
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -111,2 +111,3 @@
+-    let some matrix ← VectorMatrix.open? sidecar.semantic current.model SearchProvider.encoderContract | return true
+-    return (← PartitionBuild.open? sidecar.semantic current.model SearchProvider.encoderContract snapshot matrix).isNone
++    -- A different original owner's append may advance the shared matrix.
++    -- Reuse this source's exact retained pair, not the unrelated latest suffix.
++    return (← PartitionBuild.read? sidecar.semantic current.model SearchProvider.encoderContract snapshot).isNone
+@@ -410 +411,2 @@
+-    let partition ← match ← VectorMatrix.open? settings.cache settings.model SearchProvider.encoderContract with
++    let partition ← if (← Persistence.Store.getNat snapshot.get "candidates") == 0 then pure none else
++      match ← VectorMatrix.open? settings.cache settings.model SearchProvider.encoderContract with
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -605 +605,10 @@
+-              queueIndex target command promotion.promotion
++              let source ← if pending.projectInputs.isSome then do
++                  let selection ← ProjectAccess.resolve pending.sessionId (pendingSelection pending)
++                  let some write := selection.write | throw (IO.userError "project index has no selected write owner")
++                  let source ← write.project.current write.slot.val
++                  unless source.head.identity == promotion.source.head.identity &&
++                      (← ProjectStore.sourceContains source promotion.source.head) do
++                    throw (IO.userError "project index target lost its durable source ACK")
++                  pure source
++                else DB.PageMap.pin (.mk target)
++              queueIndexAt source command promotion.promotion
+--- a/PartitionBuild.lean
++++ b/PartitionBuild.lean
+@@ -24 +24,2 @@
+-def folder (root : System.FilePath) (model encoder : String) := root / "partition" / contract model encoder
++def folder (root : System.FilePath) (model encoder : String) (source : PageMap.Snapshot) :=
++  root / "partition" / contract model encoder / source.head.identity
+@@ -36 +37 @@
+-  let some workspace ← PageMap.open? (folder root model encoder) | return none
++  let some workspace ← PageMap.open? (folder root model encoder source) | return none
+@@ -61 +62 @@
+-  let some workspace ← PageMap.open? (folder root model encoder) | return none
++  let some workspace ← PageMap.open? (folder root model encoder source) | return none
+@@ -99,2 +100 @@
+-  ProjectionCursor.fold matrix (fun (sample,count) row => do
+-    if !references.contains row.key then return (sample,count)
++  ProjectionCursor.foldKeys matrix (references.toList.map Prod.fst) (fun (sample,count) row => do
+@@ -132,2 +132 @@
+-  let assigned ← ProjectionCursor.fold matrix (fun count row => do
+-    if !references.contains row.key then return count
++  let assigned ← ProjectionCursor.foldKeys matrix (references.toList.map Prod.fst) (fun count row => do
+@@ -148 +147 @@
+-  let path := folder root model encoder
++  let path := folder root model encoder source
+@@ -258 +257 @@
+-  if let some previous ← VectorPartition.load? (folder root model encoder) then
++  if let some previous ← VectorPartition.load? (folder root model encoder source) then
+--- a/ProjectionCursor.lean
++++ b/ProjectionCursor.lean
+@@ -104,0 +105,18 @@
++/-- A source sharing a project matrix streams only its own requested keys.
++Other sources' rows are not enumerated or hydrated. -/
++def foldKeys (matrix : VectorMatrix.Ready) (keys : List String)
++    (consume : α → Row → IO α) (initial : α) : IO α := do
++  let rowBytes ← width matrix
++  let mut previous : Option String := none
++  let mut state := initial
++  for key in keys.mergeSort (· ≤ ·) do
++    unless previous.all (· < key) do throw (IO.userError "duplicate source projection request")
++    let some bytes ← matrix.snapshot.get ("row:"++key) |
++      throw (IO.userError "source projection is absent from its shared matrix")
++    let row ← checked key bytes
++    unless row.value.bytes == rowBytes do throw (IO.userError "source projection dimensions vary")
++    state ← consume state row
++    previous := some key
++  checkExtent matrix.snapshot
++  return state
++
+--- a/tools/research/ProjectContextChecks.lean
++++ b/tools/research/ProjectContextChecks.lean
+@@ -186,0 +187 @@
++  check saved.preparationQueued "ordinary project save did not queue derived preparation"
+@@ -254 +255 @@
+-def main (args : List String) : IO UInt32 := do
++def projectContextCommand (args : List String) : IO UInt32 := do
