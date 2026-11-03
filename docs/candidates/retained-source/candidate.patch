@@ -1,0 +1,539 @@
+--- /dev/null
++++ b/Eggshell/CanonicalSourceLease.lean
+@@ -0,0 +1,170 @@
++module
++public import Eggshell.CanonicalSourcePrepared
++@[expose] public section
++
++namespace Eggshell.Synapses.CanonicalSource.Leases
++open Lean DB Shared
++
++def capacity : Nat := 8*1024*1024
++def maxHandles : Nat := 512
++
++structure Held where
++  scope : String
++  source : PageMap.Head
++  loaded : Loaded
++  serial : Nat
++  deadline : Nat
++  charge : Nat
++  readers : Nat := 0
++  released : Bool := false
++
++def Held.accepts (held : Held) (scope : String) (source : PageMap.Head) (metadata : Cache.Manifest) : Bool :=
++  held.scope == scope && decide (held.source = source) && held.loaded.metadata == metadata
++
++theorem Held.same_source (held : Held) (scope : String) (source : PageMap.Head) (metadata : Cache.Manifest)
++    (accepted : held.accepts scope source metadata = true) : held.source = source := by
++  simp only [accepts,Bool.and_eq_true,decide_eq_true_eq] at accepted
++  exact accepted.1.2
++
++structure State where
++  entries : Std.HashMap String Held := {}
++  budget : Budget capacity := {}
++  nextExpiry : Option Nat := none
++  closed : Bool := false
++  acquired : Nat := 0
++  released : Nat := 0
++  expired : Nat := 0
++
++def expiry (entries : Std.HashMap String Held) : Option Nat :=
++  entries.fold (fun found _ held => if held.readers > 0 then found else
++    some (found.map (min held.deadline) |>.getD held.deadline)) none
++
++theorem State.within_capacity (state : State) : state.budget.used ≤ capacity := state.budget.within
++
++structure Pool where
++  originals : Shared.Pool
++  state : Std.Mutex State
++
++def Pool.new (originals : Shared.Pool) : IO Pool := return ⟨originals,← Std.Mutex.new {}⟩
++
++/-- Release the original cache borrow outside this pool's short metadata lock. -/
++def Pool.dispose (pool : Pool) (held : Array Held) : IO Unit :=
++  held.forM fun entry => pool.originals.release entry.loaded.identity entry.serial
++
++def Pool.reap (pool : Pool) : IO Unit := do
++  let now ← IO.monoMsNow
++  let retired ← pool.state.atomically do
++    let state ← get
++    unless state.nextExpiry.any (· ≤ now) do return #[]
++    let retired := state.entries.toArray.filterMap fun (_,held) =>
++      if held.readers == 0 && (held.released || held.deadline ≤ now) then some held else none
++    let entries := state.entries.filter fun _ held =>
++      held.readers > 0 || (!held.released && now < held.deadline)
++    let amount := retired.foldl (fun total held => total+held.charge) 0
++    set {state with
++      entries,budget := state.budget.release amount,nextExpiry := expiry entries,
++      expired := state.expired+retired.size}
++    return retired
++  pool.dispose retired
++
++def Pool.retain (pool : Pool) (scope : String) (source : PageMap.Snapshot) (path : System.FilePath)
++    (metadata : Cache.Manifest) (deadline holdUntil : Nat) : IO (String × Loaded × Reuse) := do
++  pool.reap
++  let now ← IO.monoMsNow
++  unless now < deadline && deadline ≤ holdUntil && holdUntil ≤ now+29000 do
++    throw (IO.userError "invalid retained source lifetime")
++  let identityBytes := (toJson (scope,source.head,metadata)).compress.utf8ByteSize
++  unless identityBytes ≤ 32768 do throw (IO.userError "retained source identity exceeds its bound")
++  let charge := 65536+8*identityBytes
++  let (entry,reuse) ← pool.originals.acquire source path metadata deadline
++  let transferred ← IO.mkRef false
++  try
++    repeat
++      unless (← IO.monoMsNow) < deadline do throw (IO.userError "retained source acquisition expired")
++      if ← entry.promise.isResolved then break
++      IO.sleep 1
++    let some result := entry.promise.result?.get | throw (IO.userError "retained source acquisition disappeared")
++    let loaded ← IO.ofExcept result
++    let token ← pool.state.atomically do
++      let state ← get
++      unless !state.closed && state.entries.size < maxHandles do throw (IO.userError "retained source admission is full or stopped")
++      let some budget := state.budget.reserve? charge | throw (IO.userError "retained source byte admission is full")
++      let token := Blake3.hex (← IO.getRandomBytes 32)
++      unless !state.entries.contains token do throw (IO.userError "retained source token collision")
++      let held : Held := ⟨scope,source.head,loaded,entry.serial,holdUntil,charge,0,false⟩
++      let entries := state.entries.insert token held
++      set {state with entries,budget,nextExpiry := expiry entries,acquired := state.acquired+1}
++      return token
++    transferred.set true
++    return (token,loaded,reuse)
++  finally
++    unless ← transferred.get do pool.originals.release (Shared.key path metadata) entry.serial
++
++def Pool.finishRead (pool : Pool) (token : String) : IO Unit := do
++  let now ← IO.monoMsNow
++  let retired ← pool.state.atomically do
++    let state ← get
++    let some held := state.entries[token]? | return #[]
++    let held := {held with readers := held.readers-1}
++    if held.readers == 0 && (held.released || held.deadline ≤ now) then
++      let entries := state.entries.erase token
++      set {state with entries,budget := state.budget.release held.charge,nextExpiry := expiry entries}
++      return #[held]
++    let entries := state.entries.insert token held
++    set {state with entries,nextExpiry := expiry entries}
++    return #[]
++  pool.dispose retired
++
++/-- An active read keeps its original cache charge even after release/expiry. -/
++def Pool.withHeld (pool : Pool) (token scope : String) (source : PageMap.Head) (metadata : Cache.Manifest)
++    (deadline : Nat) (use : Loaded → Reuse → IO α) : IO α := do
++  pool.reap
++  let now ← IO.monoMsNow
++  let held ← pool.state.atomically do
++    let state ← get
++    let some held := state.entries[token]? | throw (IO.userError "retained source expired or released")
++    unless !state.closed && !held.released && now < held.deadline && now < deadline &&
++        held.accepts scope source metadata do throw (IO.userError "retained source changed its scope, root or lifetime")
++    let entries := state.entries.insert token {held with readers := held.readers+1}
++    set {state with entries,nextExpiry := expiry entries}
++    return held
++  try use held.loaded .hit
++  finally pool.finishRead token
++
++def Pool.release (pool : Pool) (token scope : String) : IO Unit := do
++  let retired ← pool.state.atomically do
++    let state ← get
++    let some held := state.entries[token]? | return #[]
++    unless held.scope == scope do throw (IO.userError "retained source release crossed its scope")
++    if held.released then return #[]
++    if held.readers > 0 then
++      let entries := state.entries.insert token {held with released := true}
++      set {state with entries,nextExpiry := expiry entries,released := state.released+1}
++      return #[]
++    let entries := state.entries.erase token
++    set {state with
++      entries,budget := state.budget.release held.charge,nextExpiry := expiry entries,
++      released := state.released+1}
++    return #[held]
++  pool.dispose retired
++
++def Pool.close (pool : Pool) : IO Unit := do
++  let retired ← pool.state.atomically do
++    let state ← get
++    let retired := state.entries.toArray.filterMap fun (_,held) => if held.readers == 0 then some held else none
++    let entries := state.entries.filterMap fun _ held =>
++      if held.readers == 0 then none else some {held with released := true}
++    let amount := retired.foldl (fun total held => total+held.charge) 0
++    set {state with closed := true,entries,budget := state.budget.release amount,nextExpiry := none}
++    return retired
++  pool.dispose retired
++
++def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
++  let state ← get
++  return Json.mkObj [("active",toJson state.entries.size),("chargedBytes",toJson state.budget.used),
++    ("capacity",toJson capacity),("acquired",toJson state.acquired),("released",toJson state.released),
++    ("expired",toJson state.expired),("closed",toJson state.closed),
++    ("readers",toJson (state.entries.fold (fun total _ held => total+held.readers) 0)),
++    ("accountedExact",toJson (state.budget.used == state.entries.fold (fun total _ held => total+held.charge) 0))]
++
++end Eggshell.Synapses.CanonicalSource.Leases
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -8,0 +9 @@
++public import Eggshell.CanonicalSourceLease
+@@ -60,0 +62 @@
++  retained : CanonicalSource.Leases.Pool
+@@ -130 +132 @@
+-    (requested : Option PageMap.Head) (deadline : Nat) : IO Json := do
++    (requested : Option PageMap.Head) (deadline : Nat) (holdUntil : Option Nat := none) : IO Json := do
+@@ -142,0 +145,4 @@
++  if let some holdUntil := holdUntil then
++    let (token,loaded,reuse) ← server.retained.retain scope.scope source cachePath metadata deadline holdUntil
++    let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,scope.capability,source.head,loaded.metadata,reuse⟩
++    return (toJson access).setObjVal! "retained" (toJson token)
+@@ -160 +166,2 @@
+-  prepareRegistered server scope (some head) deadline
++  let holdUntil ← IO.ofExcept (fromJson? (α := Option Nat) (payload.getObjValD "holdUntil"))
++  prepareRegistered server scope (some head) deadline holdUntil
+@@ -175,0 +183,20 @@
++def retainedToken (payload : Json) : IO (Option String) :=
++  IO.ofExcept (fromJson? (payload.getObjValD "retained"))
++
++def withPreparedSource (server : Server) (scope : ReadSource) (head : PageMap.Head)
++    (metadata : CanonicalSource.Cache.Manifest) (retained : Option String) (deadline : Nat)
++    (use : CanonicalSource.Shared.Loaded → CanonicalSource.Shared.Reuse → IO α) : IO α := do
++  if let some token := retained then
++    return ← server.retained.withHeld token scope.scope head metadata deadline use
++  let current ← PageMap.pin scope.directory
++  let some pinned ← PageMap.HistoryReader.make? current head |
++    throw (IO.userError "prepared source snapshot retired")
++  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
++  server.prepared.withReady pinned.snapshot path metadata deadline use
++
++def releaseRetainedSource (server : Server) (secret : String) (payload : Json) : IO Json := do
++  let scope ← scopedSource server secret payload
++  let token ← IO.ofExcept (payload.getObjValAs? String "retained")
++  server.retained.release token scope.scope
++  return toJson true
++
+@@ -187,5 +214 @@
+-  let current ← PageMap.pin scope.directory
+-  let some pinned ← PageMap.HistoryReader.make? current head |
+-    throw (IO.userError "prepared source snapshot retired")
+-  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+-  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded reuse => do
++  withPreparedSource server scope head metadata (← retainedToken payload) deadline fun loaded reuse => do
+@@ -210,4 +233 @@
+-  let current ← PageMap.pin scope.directory
+-  let some pinned ← PageMap.HistoryReader.make? current head | throw (IO.userError "original palette snapshot retired")
+-  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+-  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded reuse => do
++  withPreparedSource server scope head metadata (← retainedToken payload) deadline fun loaded reuse => do
+@@ -284,5 +304 @@
+-  let current ← PageMap.pin scope.directory
+-  let some pinned ← PageMap.HistoryReader.make? current access.source |
+-    throw (IO.userError "original batch publication was retired")
+-  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+-  server.prepared.withReady pinned.snapshot path access.metadata deadline use
++  withPreparedSource server scope access.source access.metadata request.retained deadline use
+@@ -463,5 +479 @@
+-  let current ← PageMap.pin scope.directory
+-  let some pinned ← PageMap.HistoryReader.make? current head |
+-    throw (IO.userError "original source snapshot retired")
+-  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+-  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded _ => do
++  withPreparedSource server scope head metadata (← retainedToken payload) deadline fun loaded _ => do
+@@ -496,5 +508 @@
+-  let current ← PageMap.pin scope.directory
+-  let some pinned ← PageMap.HistoryReader.make? current head |
+-    throw (IO.userError "original binding source snapshot retired")
+-  let path ← CanonicalSource.Cache.directory pinned.snapshot scope.storage
+-  server.prepared.withReady pinned.snapshot path metadata deadline fun loaded _ => do
++  withPreparedSource server scope head metadata (← retainedToken payload) deadline fun loaded _ => do
+@@ -653 +661 @@
+-    ("preparedSources",← server.prepared.stats),("paletteQueries",← server.palettes.stats),
++    ("preparedSources",← server.prepared.stats),("retainedSources",← server.retained.stats),("paletteQueries",← server.palettes.stats),
+@@ -779,0 +788 @@
++      else if kind == "release-retained-source" then releaseRetainedSource server secret payload
+@@ -889,0 +899 @@
++  let originals ← CanonicalSource.Shared.Pool.new
+@@ -891 +901 @@
+-    ← Std.Mutex.new #[],← CanonicalSource.Shared.Pool.new,← ObservedRecordView.Cache.new,
++    ← Std.Mutex.new #[],originals,← CanonicalSource.Leases.Pool.new originals,← ObservedRecordView.Cache.new,
+@@ -925,0 +936 @@
++      server.retained.reap
+@@ -953,0 +965 @@
++    server.retained.close
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -29,0 +30 @@
++  retained : Option String := none
+@@ -43 +44 @@
+-    (storage : Sidecar.Storage) (deadline : Nat) : IO (Option SourceReference) := do
++    (storage : Sidecar.Storage) (deadline : Nat) (holdUntil : Option Nat := none) : IO (Option SourceReference) := do
+@@ -47 +48 @@
+-    ("budgetMs",toJson budget)]) (budget := budget)
++    ("budgetMs",toJson budget),("holdUntil",toJson holdUntil)]) (budget := budget)
+@@ -56 +57,14 @@
+-  return some ⟨{endpoint with secret := access.capability},access⟩
++  let retained ← IO.ofExcept (fromJson? (α := Option String) (value.getObjValD "retained"))
++  unless retained.isSome == holdUntil.isSome && retained.all Synapses.digest do
++    throw (IO.userError "prepared source reply changed its retention contract")
++  return some ⟨{endpoint with secret := access.capability},access,retained⟩
++
++def SourceReference.release (reference : SourceReference) (deadline : Nat) : IO Unit := do
++  let some retained := reference.retained | return
++  let now ← IO.monoMsNow
++  unless now < deadline do return
++  let budget := min 250 (deadline-now)
++  let response ← Daemon.exchange reference.endpoint "release-retained-source" (Json.mkObj [
++    ("database",toJson reference.access.database),("scope",toJson reference.access.scope),
++    ("retained",toJson retained),("budgetMs",toJson budget)]) (budget := budget)
++  unless response == "true" do throw (IO.userError "retained source release was not acknowledged")
+@@ -73 +87 @@
+-  return some ⟨reference.endpoint,access⟩
++  return some ⟨reference.endpoint,access,none⟩
+@@ -82 +96 @@
+-    ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) budget
++    ("metadata",toJson access.metadata),("retained",toJson reference.retained),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+@@ -96 +110 @@
+-    ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) budget
++    ("metadata",toJson access.metadata),("retained",toJson reference.retained),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+@@ -155 +169 @@
+-    ({access := source.access,owners := (hashDistinct owners.toList).toArray} : Synapses.SourceViewBatch.Request)
++    ({access := source.access,owners := (hashDistinct owners.toList).toArray,retained := source.retained} : Synapses.SourceViewBatch.Request)
+@@ -244 +258 @@
+-    ("metadata",toJson access.metadata),("wanted",toJson wanted),("allowed",toJson allowed.toArray),
++    ("metadata",toJson access.metadata),("retained",toJson reference.retained),("wanted",toJson wanted),("allowed",toJson allowed.toArray),
+@@ -278 +292 @@
+-    ("metadata",toJson access.metadata),("owners",toJson owners),("budgetMs",toJson budget)]) budget
++    ("metadata",toJson access.metadata),("retained",toJson reference.retained),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+@@ -396,0 +411,4 @@
++def retainSource (source : PageMap.Snapshot) (storage : Sidecar.Storage)
++    (deadline holdUntil : Nat) : IO (Option SourceReference) := do
++  prepareSourceUsing (← resolve) source storage deadline (some holdUntil)
++
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -219 +219,8 @@
+-def prepare (source : PageMap.Snapshot) (deadline : Option Nat := none) : IO Prepared := do
++def prepare (source : PageMap.Snapshot) (deadline : Option Nat := none)
++    (holdUntil : Option Nat := none) : IO Prepared := do
++  let borrowed ← IO.mkRef (none : Option Plugin.Publication.Client.SourceReference)
++  let readDeadline := deadline.getD ((← IO.monoMsNow)+5000)
++  let release := do
++    if let some reference ← borrowed.get then
++      try reference.release readDeadline catch _ => pure ()
++      borrowed.set none
+@@ -221 +227,0 @@
+-    let readDeadline := deadline.getD ((← IO.monoMsNow)+5000)
+@@ -224 +230,5 @@
+-        let some reference ← Plugin.Publication.Client.prepareSource source storage readDeadline | return none
++        let reference? ← match holdUntil with
++          | some hold => Plugin.Publication.Client.retainSource source storage readDeadline hold
++          | none => Plugin.Publication.Client.prepareSource source storage readDeadline
++        let some reference := reference? | return none
++        borrowed.set (some reference)
+@@ -230 +240 @@
+-      catch error => pure (none,none,some s!"canonical-open: {error}")
++      catch error => release; pure (none,none,some s!"canonical-open: {error}")
+@@ -237,2 +247,3 @@
+-  catch error => return {
+-    source := source,shared := none,usage := none,failure := some s!"index-open: {error}"}
++  catch error =>
++    release
++    return {source := source,shared := none,usage := none,failure := some s!"index-open: {error}"}
+@@ -239,0 +251,4 @@
++def Prepared.release (prepared : Prepared) (deadline : Nat) : IO Unit := do
++  if let some reference := prepared.canonical then
++    try reference.release deadline catch _ => pure ()
++
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9243 +9243 @@
+-    try Synapses.Recommend.prepare snapshot (some preparationDeadline)
++    try Synapses.Recommend.prepare snapshot (some preparationDeadline) (some deadline)
+@@ -9245,63 +9245,53 @@
+-  let synapticIdentity := (toJson (synaptic.map Synapses.Recommend.Prepared.identity)).compress
+-  let cacheable := demandCacheable staged
+-  let externalSemantic := evidenceText.isNone && selection.semanticMatcher.isSome
+-  -- The human request defines advisory relevance. A proposed probe is not a
+-  -- new task that may keep widening the old graph. Native Work matching still
+-  -- uses `current` independently, including its completion certificates.
+-  let usesHumanQuestion := enforce || evidenceText.isSome ||
+-    sourceContext.any (fun context => context.question == current)
+-  let meaningQuery := if usesHumanQuestion then requestMeaningQuery sourceContext else none
+-  let writable ← match selection.write with
+-    | none => pure none
+-    | some writable => do
+-        match (paths.zip snapshots).find? (fun (path, _) => path.normalize == writable.path.normalize) with
+-        | some (_, snapshot) => pure snapshot
+-        | none => DB.PageMap.open? writable.path
+-  let request ← if cacheable && writable.isSome then do
+-    try
+-      let engine ← FileSystem.readVersion (← FileSystem.openRead (← IO.appPath).toString)
+-      pure (some (demandRequest engine selection current deliveredGraphs enforce evidenceText
+-        staged stagedVisible enableLocalUnion sourceContext.isSome meaningQuery ++ "\nsynaptic-input=" ++ synapticIdentity))
+-    catch _ => pure none
+-    else pure none
+-  let lookup := fun (nominations : Option (List Nat)) => do
+-    if let some request := request then
+-      if let some writable := writable then
+-        return ← demandResponse? writable request paths snapshots nominations noticeFits (sourceContext.bind (·.receipt)) memoScope
+-    pure none
+-  if !externalSemantic then
+-    if let some found ← lookup none then
+-      return ← found.mapM fun handoff => match sourceContext with
+-        | some context => handoff.checkSources context
+-        | none => pure handoff
+-  let observed ← IO.mkRef (none : Option (List Nat))
+-  -- A deadline fallback may reuse a valid memo, but must not publish a new
+-  -- derived DB revision after cancelling the configured search.
+-  let publishable ← IO.mkRef publishMemo
+-  let reused ← IO.mkRef false
+-  let reuseSemantic : SemanticReuse := fun nominations => do
+-    -- Run-local nominations cannot be shared. This is also checked at the
+-    -- provider boundary rather than assuming every adapter filters them.
+-    if !nominations.staged.isEmpty || !nominations.stagedRanking.isEmpty then
+-      publishable.set false
+-      return none
+-    observed.set (some nominations.memoIdentity)
+-    let found ← lookup (some nominations.memoIdentity)
+-    if found.isSome then reused.set true
+-    pure found
+-  if request.isSome then
+-    for snapshot in snapshots.filterMap id do snapshot.trace.set (some {})
+-  let result ← computeAutomaticHandoff selection snapshots current deliveredGraphs enforce
+-    evidenceText staged stagedVisible enableLocalUnion [] [] none sourceContext.isSome reuseSemantic meaningQuery
+-    (sourceContext.bind (·.receipt))
+-    (sourceContext.map (·.onSemanticReady) |>.getD (pure ())) (synaptic := synaptic)
+-    (upstreamDeadline := sourceContext.map (·.deadline))
+-  -- Only a genuinely overflowing complete rendering needs a reduced graph
+-  -- budget. Both passes retain the same immutable source capabilities; the
+-  -- dependency trace conservatively includes every read from either pass.
+-  let result ← if noticeFits result then pure result else
+-    computeAutomaticHandoff {selection with
+-      handoffChars := selection.handoffChars - sourceStatusReserve
+-      handoffBytes := selection.handoffBytes.map (· - sourceStatusByteReserve)}
+-      snapshots current deliveredGraphs enforce evidenceText staged stagedVisible enableLocalUnion
+-      [] [] none sourceContext.isSome reuseSemantic meaningQuery (sourceContext.bind (·.receipt))
++  try
++    let synapticIdentity := (toJson (synaptic.map Synapses.Recommend.Prepared.identity)).compress
++    let cacheable := demandCacheable staged
++    let externalSemantic := evidenceText.isNone && selection.semanticMatcher.isSome
++    -- The human request defines advisory relevance. A proposed probe is not a
++    -- new task that may keep widening the old graph. Native Work matching still
++    -- uses `current` independently, including its completion certificates.
++    let usesHumanQuestion := enforce || evidenceText.isSome ||
++      sourceContext.any (fun context => context.question == current)
++    let meaningQuery := if usesHumanQuestion then requestMeaningQuery sourceContext else none
++    let writable ← match selection.write with
++      | none => pure none
++      | some writable => do
++          match (paths.zip snapshots).find? (fun (path, _) => path.normalize == writable.path.normalize) with
++          | some (_, snapshot) => pure snapshot
++          | none => DB.PageMap.open? writable.path
++    let request ← if cacheable && writable.isSome then do
++      try
++        let engine ← FileSystem.readVersion (← FileSystem.openRead (← IO.appPath).toString)
++        pure (some (demandRequest engine selection current deliveredGraphs enforce evidenceText
++          staged stagedVisible enableLocalUnion sourceContext.isSome meaningQuery ++ "\nsynaptic-input=" ++ synapticIdentity))
++      catch _ => pure none
++      else pure none
++    let lookup := fun (nominations : Option (List Nat)) => do
++      if let some request := request then
++        if let some writable := writable then
++          return ← demandResponse? writable request paths snapshots nominations noticeFits (sourceContext.bind (·.receipt)) memoScope
++      pure none
++    if !externalSemantic then
++      if let some found ← lookup none then
++        return ← found.mapM fun handoff => match sourceContext with
++          | some context => handoff.checkSources context
++          | none => pure handoff
++    let observed ← IO.mkRef (none : Option (List Nat))
++    -- A deadline fallback may reuse a valid memo, but must not publish a new
++    -- derived DB revision after cancelling the configured search.
++    let publishable ← IO.mkRef publishMemo
++    let reused ← IO.mkRef false
++    let reuseSemantic : SemanticReuse := fun nominations => do
++      -- Run-local nominations cannot be shared. This is also checked at the
++      -- provider boundary rather than assuming every adapter filters them.
++      if !nominations.staged.isEmpty || !nominations.stagedRanking.isEmpty then
++        publishable.set false
++        return none
++      observed.set (some nominations.memoIdentity)
++      let found ← lookup (some nominations.memoIdentity)
++      if found.isSome then reused.set true
++      pure found
++    if request.isSome then
++      for snapshot in snapshots.filterMap id do snapshot.trace.set (some {})
++    let result ← computeAutomaticHandoff selection snapshots current deliveredGraphs enforce
++      evidenceText staged stagedVisible enableLocalUnion [] [] none sourceContext.isSome reuseSemantic meaningQuery
++      (sourceContext.bind (·.receipt))
+@@ -9310,26 +9300,37 @@
+-  if let some request := request then
+-    if let some writable := writable then
+-      if !(← reused.get) && (← publishable.get) &&
+-          result.all (fun h => h.reason != "search-incomplete" && h.synapticComplete) then
+-        let sources := paths.zip snapshots |>.map fun (path, snapshot) =>
+-          (path.normalize.toString, snapshot.map (·.head))
+-        let mut observations := []
+-        let mut complete := true
+-        for snapshot in snapshots do
+-          match snapshot with
+-          | none => observations := observations ++ [[]]
+-          | some snapshot =>
+-              match ← snapshot.trace.get with
+-              | some trace =>
+-                  complete := complete && trace.complete
+-                  observations := observations ++ [trace.operations.reverse]
+-              | none => complete := false
+-        let captured := DemandMemo.capture request sources (toJson result).compress
+-          (if complete then some observations else none) (← observed.get)
+-        try DemandMemo.publishCaptured writable captured memoScope
+-        catch _ => pure () -- No waiting behind saving, and no retry loop.
+-  -- Cache only the graph-derived result. External files are rechecked on
+-  -- every delivery, including a durable demand-memo hit.
+-  result.mapM fun handoff => match sourceContext with
+-    | some context => if handoff.reason == "search-incomplete" then pure handoff else handoff.checkSources context
+-    | none => pure handoff
++    -- Only a genuinely overflowing complete rendering needs a reduced graph
++    -- budget. Both passes retain the same immutable source capabilities; the
++    -- dependency trace conservatively includes every read from either pass.
++    let result ← if noticeFits result then pure result else
++      computeAutomaticHandoff {selection with
++        handoffChars := selection.handoffChars - sourceStatusReserve
++        handoffBytes := selection.handoffBytes.map (· - sourceStatusByteReserve)}
++        snapshots current deliveredGraphs enforce evidenceText staged stagedVisible enableLocalUnion
++        [] [] none sourceContext.isSome reuseSemantic meaningQuery (sourceContext.bind (·.receipt))
++        (sourceContext.map (·.onSemanticReady) |>.getD (pure ())) (synaptic := synaptic)
++        (upstreamDeadline := sourceContext.map (·.deadline))
++    if let some request := request then
++      if let some writable := writable then
++        if !(← reused.get) && (← publishable.get) &&
++            result.all (fun h => h.reason != "search-incomplete" && h.synapticComplete) then
++          let sources := paths.zip snapshots |>.map fun (path, snapshot) =>
++            (path.normalize.toString, snapshot.map (·.head))
++          let mut observations := []
++          let mut complete := true
++          for snapshot in snapshots do
++            match snapshot with
++            | none => observations := observations ++ [[]]
++            | some snapshot =>
++                match ← snapshot.trace.get with
++                | some trace =>
++                    complete := complete && trace.complete
++                    observations := observations ++ [trace.operations.reverse]
++                | none => complete := false
++          let captured := DemandMemo.capture request sources (toJson result).compress
++            (if complete then some observations else none) (← observed.get)
++          try DemandMemo.publishCaptured writable captured memoScope
++          catch _ => pure () -- No waiting behind saving, and no retry loop.
++    -- Cache only the graph-derived result. External files are rechecked on
++    -- every delivery, including a durable demand-memo hit.
++    result.mapM fun handoff => match sourceContext with
++      | some context => if handoff.reason == "search-incomplete" then pure handoff else handoff.checkSources context
++      | none => pure handoff
+@@ -9336,0 +9338,4 @@
++  finally
++    let releaseDeadline := sourceContext.map (·.deadline) |>.getD ((← IO.monoMsNow)+500)
++    synaptic.forM (fun prepared => prepared.release releaseDeadline)
++
+--- a/tools/research/SourceViewBatch.lean
++++ b/tools/research/SourceViewBatch.lean
+@@ -13,0 +14 @@
++  retained : Option String := none

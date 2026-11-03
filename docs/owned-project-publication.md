@@ -56,8 +56,13 @@ the complete configured read set in the explicit project publisher, including
 read-only foreign projects. It records those exact retained cuts with the source
 ACK and rejects a changed retry boundary. Read scope grants no writer lease.
 The latest continuation transports the accepted original views through ordinary
-journal/save workers. Cross-project transitive dependency closure at query time
-and retained prepared roots across concurrent re-warm remain unconnected. The single-source
+journal/save workers. The [retained original-reader candidate](candidates/retained-source/README.md)
+now keeps canonical/shared readers during active query processing, with an
+accounted cache borrow and bounded expiry. Eighty small reader clients reuse
+one original load; the normal 80-query/80-save burst releases all 400 acquired
+handles. This does not hold all lexical/numeric/private-usage roots or cover
+worker queue wait. Cross-project transitive dependency closure and the complete
+held read capability remain unconnected. The single-source
 publisher rejects logical project directories before creating a shadow DB there.
 
 The implementation gap is now preparation and combined sustained operation,

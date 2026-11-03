@@ -1,0 +1,23 @@
+{
+  "parent": "092b2d4c original-feed isolated candidate",
+  "status": "isolated candidate, not adopted",
+  "change": "Retain original canonical readers and their exact shared-synapse root during active normal query processing, with a charged borrow of the existing shared cache.",
+  "contracts": [
+    "Preserve source scope, original snapshot, preparation metadata, original hook deadline, source ACK, recommendation/certification separation and all ranking/selection rules.",
+    "An opaque retention token is transient and excluded from memo identities and receipts. Invalid/released/expired/foreign retention cannot fall back to reopening latest roots.",
+    "Account retained roots in the existing original cache. Release/expiry during an active read retains its borrow until that reader finishes. Close forbids new retention; abandoned handles expire.",
+    "Bound handle metadata to 8 MiB and 512 handles. Do not increase cache/RSS limits. Retention is local to the authenticated OS-user service, not a multi-host authentication mechanism."
+  ],
+  "checks": [
+    "Lean source-identity and byte-budget properties; native cache eviction, release during read, duplicate release, expiry and closed admission.",
+    "Retained native RPC delivers the same original rows while this ended fixture's mutable source head is temporarily unavailable; stateless reconstruction fails, and the head is always restored.",
+    "80 logical clients reuse one prepared original without additional loads, then release their handles. This is not 80 people for eight hours.",
+    "Normal Pre/Post/Stop, actual MiniLM mixed queries/saves and original-feed drain/recovery remain within unchanged resource/deadline contracts."
+  ],
+  "notClaimed": ["Retention before worker admission", "Atomic cross-component publication", "held lexical/numeric/private-usage service views", "80-person sustained capacity", "98% required-evidence delivery", "total-token improvement", "production adoption"],
+  "answeringModelCalls": 0,
+  "matchedPaidComparisons": 0,
+  "aggregateStopRssKiB": 3670016,
+  "hardRssCeilingKiB": 4194304,
+  "minimumFreeDiskKiB": 2097152
+}
