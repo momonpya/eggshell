@@ -6,7 +6,11 @@ now separates independent derived writer regions and removes their mutable
 ready-root catalogue. The isolated [original-stream prototype](candidates/owned-project-streams/README.md)
 also publishes through separate physical owners and pins complete dependency-closed
 views. Ordinary hooks and service routing still use serialized per-project
-publication; the prototype is not their replacement yet.
+publication for configured single-source DBs. The isolated
+[broker connection](candidates/owned-project-broker/README.md) now routes real
+TCP Capsule requests to independent original owners, with complete caller-pinned
+dependencies and idempotent source ACKs. Ordinary hook/config routing and shared
+derived preparation are not connected to that path yet.
 The project remains one logical shared DB. No one-owner-per-user DB layout or
 one global owner for every project is required. The target remains 80 users,
 30-second hooks and 98% of necessary original evidence actually delivered;

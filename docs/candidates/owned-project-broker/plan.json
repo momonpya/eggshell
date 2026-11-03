@@ -1,0 +1,12 @@
+{
+  "status": "isolated project-service connection; unadopted",
+  "baselineCommit": "00917ce34ee5df4688651748ceb1b5f381ce2638",
+  "intent": "Bind existing Capsule and loopback publication transport to independent owners within a logical project, retaining complete caller-pinned dependencies and physical/logical identity separation.",
+  "profiles": {"clients":80,"owners":16,"rounds":4,"outputBytes":[5000,50000],"repetitions":1},
+  "checks": ["every real TCP submit returns a complete source ACK", "concurrent original cuts contain all registered owners", "all original bytes, occurrence identity, logical provenance and federated graph roots survive", "missing/foreign/expired/dependency-omitting requests are rejected", "stable session routing across scheduler rotation and duplicate retry", "immutable occurrence mutation is refused", "a project capability cannot register paths or use another project's sources", "owner leases last through service shutdown", "fresh-process reopen"],
+  "unchanged": ["WorkGraph/Exact and certification authority", "delivery recall target 98% and 30-second hooks", "MiniLM model and numerical contract", "matched repeated inclusive-total-token, quality and deadline adoption gate"],
+  "notEstablished": ["ordinary Pre/Post/Stop project selection and private policy/journal ingress", "shared per-project derived preparation", "real MCP/NAS/remote authentication/failover", "sustained 80-user eight-hour capacity", "p99 and 98% actual delivery", "token improvement"],
+  "resources": {"aggregateRssStopKiB":3670016,"absoluteCeilingKiB":4194304,"minFreeKiB":2097152},
+  "answeringModelCalls":0,"tokenComparisons": "0/18",
+  "cleanup": "Delete ended DB/cache/raw logs without archives; retain current source, build dependencies and compact measured evidence."
+}

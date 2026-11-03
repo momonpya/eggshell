@@ -1,0 +1,414 @@
+--- a/Eggshell/ProjectStore.lean
++++ b/Eggshell/ProjectStore.lean
+@@ -251 +251 @@
+-@[no_expose] def withOwner (project : Project) (slot : Nat) (action : Owner → IO α) : IO α := do
++@[no_expose] def acquireOwner (project : Project) (slot : Nat) : IO Owner := do
+@@ -260,5 +260 @@
+-  try action ⟨project,slot,source.head,lease,lifecycle⟩
+-  finally
+-    lifecycle.atomically (modify fun state => {state with live := false})
+-    while (← lifecycle.atomically do return (← get).busy) do IO.sleep 1
+-    FileSystem.unlockRead lease
++  return ⟨project,slot,source.head,lease,lifecycle⟩
+@@ -265,0 +262,13 @@
++/-- A service retains its source-owner capability for its entire lifetime.
++Closing drains admitted IO before releasing the lease. The closed lifecycle
++also rejects an escaped capability after another service acquires the slot. -/
++@[no_expose] def Owner.close (owner : Owner) : IO Unit := do
++  owner.lifecycle.atomically (modify fun state => {state with live := false})
++  while (← owner.lifecycle.atomically do return (← get).busy) do IO.sleep 1
++  FileSystem.unlockRead owner.lease
++
++@[no_expose] def withOwner (project : Project) (slot : Nat) (action : Owner → IO α) : IO α := do
++  let owner ← acquireOwner project slot
++  try action owner
++  finally owner.close
++
+@@ -276 +285,2 @@
+-def Owner.publish (owner : Owner) (view : View) (requests : Array NativePublication.Prepared) :
++def Owner.publish (owner : Owner) (view : View) (requests : Array NativePublication.Prepared)
++    (metadata : Persistence.Store.Intern → IO Persistence.Store.MetadataChange := fun _ => pure {}) :
+@@ -301 +311,2 @@
+-    return {changed := true}
++    let extra ← metadata intern
++    return {changed := true,affected := extra.affected}
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -7,0 +8 @@
++public import Eggshell.ProjectStore
+@@ -78,0 +80,14 @@
++/-- Local administration grants a complete logical project inventory. Physical
++paths and private journals are not delegated to publication clients. -/
++structure ProjectGrant where
++  manifest : ProjectStore.Manifest
++  capability : String
++  deriving ToJson, FromJson
++
++/-- A session always reaches the same source owner in this immutable inventory.
++The service derives the route; clients cannot choose a different owner on retry. -/
++def ownerSlot (session : String) (owners : Nat) : Nat := (hash session).toNat % owners
++
++theorem ownerSlot_bounded (session : String) (owners : Nat) (nonempty : 0 < owners) :
++    ownerSlot session owners < owners := Nat.mod_lt _ nonempty
++
+@@ -107,0 +123 @@
++  (include_str "ProjectStore.lean").toUTF8,(include_str "ProjectPublication.lean").toUTF8,
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -332,0 +333,9 @@
++
++def registerProject (endpoint : Daemon.Endpoint) (path : System.FilePath)
++    (identity : String) : IO ProjectGrant := do
++  let response ← Daemon.exchange endpoint "project-register" (Json.mkObj [
++    ("directory",toJson path.toString),("database",toJson identity)]) (budget := 5000)
++  let granted ← IO.ofExcept (Json.parse response >>= fromJson? (α := ProjectGrant))
++  unless granted.manifest.identity == identity && decide granted.manifest.Valid &&
++      Synapses.digest granted.capability do throw (IO.userError "publisher granted another logical project")
++  return granted
+@@ -333,0 +343,28 @@
++def pinProject (endpoint : Daemon.Endpoint) (granted : ProjectGrant)
++    (deadline : Nat) : IO ProjectStore.Cut := do
++  let budget ← liveBudget deadline
++  let peer := {endpoint with secret := granted.capability}
++  let response ← Daemon.exchange peer "project-pin" (Json.mkObj [
++    ("database",toJson granted.manifest.identity),("budgetMs",toJson budget)]) (budget := budget)
++  let cut ← IO.ofExcept (Json.parse response >>= fromJson? (α := ProjectStore.Cut))
++  unless cut.inScope granted.manifest do throw (IO.userError "publisher pin omitted or mixed original owners")
++  return cut
++
++def submitProject (endpoint : Daemon.Endpoint) (granted : ProjectGrant) (cut : ProjectStore.Cut)
++    (capsule : Capsule) (deadline : Nat) : IO NativePublication.SourceReceipt := do
++  unless cut.inScope granted.manifest do throw (IO.userError "publication cut omitted or mixed original owners")
++  let budget ← liveBudget deadline
++  let peer := {endpoint with secret := granted.capability}
++  let response ← Daemon.exchange peer "project-publish" (Json.mkObj [
++    ("database",toJson granted.manifest.identity),("capsule",toJson capsule),
++    ("cut",toJson cut),("budgetMs",toJson budget)]) (budget := budget)
++  let receipt ← IO.ofExcept (Json.parse response >>= fromJson? (α := NativePublication.SourceReceipt))
++  let slot := ownerSlot capsule.session granted.manifest.owners.size
++  let some original := granted.manifest.owners[slot]? | throw (IO.userError "publisher original route is missing")
++  unless receipt.accounted && receipt.head.identity == original.identity &&
++      receipt.head.authority == original.authority do throw (IO.userError "publisher returned another original ACK")
++  let request ← IO.ofExcept (capsule.prepare (.mk ".") original.identity)
++  let expected := NativePublication.receipt request.items receipt.head
++  unless toJson expected == toJson receipt do throw (IO.userError "project source ACK changed observation coverage")
++  return receipt
++
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -3,0 +4 @@
++public import Eggshell.ProjectPublication
+@@ -61,0 +63 @@
++  owned : Owned.Pool
+@@ -649 +651,2 @@
+-    ("deferredReplies",toJson (← server.deferredReplies.atomically get).size)]
++    ("deferredReplies",toJson (← server.deferredReplies.atomically get).size),
++    ("ownedProjects",← server.owned.stats)]
+@@ -712 +715 @@
+-    let deadline ← if ["prepare-source","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many"].contains kind then do
++    let deadline ← if ["prepare-source","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
+@@ -732,0 +736,9 @@
++      else if kind == "project-pin" then do
++        let identity ← IO.ofExcept (payload.getObjValAs? String "database")
++        toJson <$> server.owned.pin identity secret deadline
++      else if kind == "project-publish" then do
++        let identity ← IO.ofExcept (payload.getObjValAs? String "database")
++        let capsule ← IO.ofExcept (payload.getObjVal? "capsule" >>= fromJson? (α := Capsule))
++        let cut ← IO.ofExcept (payload.getObjVal? "cut" >>= fromJson? (α := ProjectStore.Cut))
++        let promise ← server.owned.submit identity secret capsule cut deadline cancelled
++        awaitReply server client cancelled promise deadline
+@@ -740,0 +753,4 @@
++        | "project-register" => do
++          let path ← IO.ofExcept (payload.getObjValAs? String "directory")
++          let identity ← IO.ofExcept (payload.getObjValAs? String "database")
++          toJson <$> server.owned.register (.mk path) identity
+@@ -761 +777,7 @@
+-    let send := fun bytes => do sendReply server client bytes (← replyDeadline.get) reservedReply
++    -- Refusing an already expired request carries no original payload or ACK.
++    -- Give that small control error its own bounded send window; successful
++    -- source replies still retain the caller's original absolute deadline.
++    let sendDeadline ← match reply with
++      | .error _ => pure (min deadline ((← IO.monoMsNow)+100))
++      | .ok _ => replyDeadline.get
++    let send := fun bytes => do sendReply server client bytes sendDeadline reservedReply
+@@ -802 +824 @@
+-    ← Std.Mutex.new 0,← Std.Mutex.new #[],← SharedReadViews.Pool.new⟩
++    ← Std.Mutex.new 0,← Std.Mutex.new #[],← SharedReadViews.Pool.new,← Owned.Pool.new⟩
+@@ -820,4 +842,8 @@
+-      while (← publications.get).length < 2 do
+-        let some (path,identity,jobs) ← takeGroup server | break
+-        let task ← IO.asTask (publish server path identity jobs) .dedicated
+-        publications.modify (task :: ·)
++      while (← publications.get).length < 16 do
++        if let some group ← server.owned.takeGroup then
++          let task ← IO.asTask (server.owned.publish group) .dedicated
++          publications.modify (task :: ·)
++        else
++          let some (path,identity,jobs) ← takeGroup server | break
++          let task ← IO.asTask (publish server path identity jobs) .dedicated
++          publications.modify (task :: ·)
+@@ -831,0 +858 @@
++    server.owned.stop
+@@ -841,0 +869 @@
++    server.owned.release
+--- /dev/null
++++ b/Eggshell/ProjectPublication.lean
+@@ -0,0 +1,258 @@
++module
++
++public import Eggshell.PublicationWire
++public import Std.Sync.Mutex
++
++@[expose] public section
++namespace Eggshell.Plugin.Publication.Owned
++open Lean DB ProjectStore
++
++structure Job where
++  request : NativePublication.Prepared
++  view : View
++  receiptKey : String
++  bytes : Nat
++  admitted : Nat
++  deadline : Nat
++  cancelled : IO.Ref Bool
++  reply : IO.Promise (Except String Json)
++
++structure Lane where
++  owner : Owner
++  queue : Array Job := #[]
++  active : Bool := false
++
++structure Registration where
++  project : ProjectStore.Project
++  capability : String
++  lanes : Array Lane
++
++structure State where
++  projects : Array Registration := #[]
++  closed : Bool := false
++  admittedBytes : Nat := 0
++  groups : Nat := 0
++  replies : Nat := 0
++  active : Nat := 0
++  peakActive : Nat := 0
++
++structure Pool where
++  state : Std.Mutex State
++
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new ({} : State)⟩
++
++/-- Registration is administration, never a path supplied by a publication
++capability. Owner leases are retained until the service has drained its jobs. -/
++def Pool.register (pool : Pool) (path : System.FilePath) (identity : String) : IO ProjectGrant := do
++  let project ← openProject path
++  unless project.manifest.identity == identity do throw (IO.userError "logical project incarnation changed")
++  pool.state.atomically do
++    let state ← get
++    unless !state.closed do throw (IO.userError "project publisher is closed")
++    if let some registered := state.projects.find? (·.project.manifest.identity == identity) then
++      unless registered.project.directory == project.directory && registered.project.manifest == project.manifest do
++        throw (IO.userError "logical project already has another location or inventory")
++      return ⟨project.manifest,registered.capability⟩
++    unless state.projects.size < 64 &&
++        state.projects.foldl (fun n r => n+r.lanes.size) 0+project.manifest.owners.size ≤ 1024 do
++      throw (IO.userError "project owner registry is full")
++    let acquired ← IO.mkRef (#[] : Array Lane)
++    try
++      for slot in [:project.manifest.owners.size] do
++        let owner ← acquireOwner project slot
++        acquired.modify (·.push {owner})
++      let capability := Blake3.hex (← IO.getRandomBytes 32)
++      let registration : Registration := ⟨project,capability,← acquired.get⟩
++      set {state with projects := state.projects.push registration}
++      return ⟨project.manifest,capability⟩
++    catch error =>
++      for lane in ← acquired.get do lane.owner.close
++      throw error
++
++def Pool.scope (pool : Pool) (identity secret : String) : IO Registration := pool.state.atomically do
++  let state ← get
++  unless !state.closed do throw (IO.userError "project publisher is closed")
++  let some registered := state.projects.find? (·.project.manifest.identity == identity) |
++    throw (IO.userError "unknown logical project")
++  unless secret == registered.capability do throw (IO.userError "unauthorized logical project")
++  return registered
++
++def Pool.pin (pool : Pool) (identity secret : String) (deadline : Nat) : IO Cut := do
++  let registered ← pool.scope identity secret
++  let view ← ProjectStore.pin registered.project deadline
++  return view.cut
++
++/-- Open the complete caller-pinned cut before admission. Neither an owner
++route nor an index's ready frontier may replace the original dependencies. -/
++def Pool.submit (pool : Pool) (identity secret : String) (capsule : Capsule) (cut : Cut)
++    (deadline : Nat) (cancelled : IO.Ref Bool) : IO (IO.Promise (Except String Json)) := do
++  let registered ← pool.scope identity secret
++  let slot := ownerSlot capsule.session registered.lanes.size
++  let some lane := registered.lanes.find? (·.owner.slot == slot) | throw (IO.userError "project owner inventory is empty")
++  let charge := (toJson capsule).compress.utf8ByteSize+(toJson cut).compress.utf8ByteSize
++  unless charge ≤ NativePublication.maxBatchBytes && (← IO.monoMsNow) < deadline do
++    throw (IO.userError "project publication exceeds its live bounds")
++  let view ← openView registered.project cut
++  let prepared ← IO.ofExcept (capsule.prepare registered.project.directory lane.owner.source.identity)
++  let prepared := {prepared with target := registered.project.sourceDirectory slot}
++  let promise ← IO.Promise.new
++  pool.state.atomically do
++    let state ← get
++    unless !state.closed && !(← cancelled.get) && (← IO.monoMsNow) < deadline do
++      throw (IO.userError "project publication expired before queue admission")
++    let some index := state.projects.findIdx? (·.project.manifest.identity == identity) |
++      throw (IO.userError "project registration disappeared")
++    let some current := state.projects[index]? | throw (IO.userError "project registration disappeared")
++    unless current.capability == secret && current.project.manifest == registered.project.manifest do
++      throw (IO.userError "project publication authority changed")
++    let some laneIndex := current.lanes.findIdx? (·.owner.slot == slot) |
++      throw (IO.userError "project owner registration disappeared")
++    let queued := state.projects.foldl (fun n r => n+r.lanes.foldl (fun n l => n+l.queue.size) 0) 0
++    unless queued < maxClients && state.admittedBytes+charge ≤ maxResidentBytes do
++      throw (IO.userError "project publication admission is full")
++    let receiptKey := "project:published:"++Sha256.hex (toJson (capsule,cut)).compress.toUTF8
++    let job : Job := ⟨prepared,view,receiptKey,charge,← IO.monoMsNow,deadline,cancelled,promise⟩
++    set {state with
++      admittedBytes := state.admittedBytes+charge
++      projects := state.projects.modify index fun r => {r with
++        lanes := r.lanes.modify laneIndex fun l => {l with queue := l.queue.push job}}}
++    return promise
++
++structure Group where
++  owner : Owner
++  jobs : Array Job
++
++/-- Only queue metadata is shared. Source publication runs outside this gate,
++once per independently owned physical region. Rotate projects and lanes. -/
++def Pool.takeGroup (pool : Pool) : IO (Option Group) := pool.state.atomically do
++  let state ← get
++  if state.closed then return none
++  let now ← IO.monoMsNow
++  for ri in [:state.projects.size] do
++    let some registered := state.projects[ri]? | continue
++    for li in [:registered.lanes.size] do
++      let some lane := registered.lanes[li]? | continue
++      if lane.active || lane.queue.isEmpty then continue
++      let some oldest := lane.queue[0]? | continue
++      if now < oldest.admitted+2 then continue
++      let mut jobs := #[]
++      let mut remaining := #[]
++      let mut bytes := 0
++      let mut dropped := 0
++      for job in lane.queue do
++        if (← job.cancelled.get) || now ≥ job.deadline then
++          job.reply.resolve (.error "project publication expired before commit admission")
++          dropped := dropped+job.bytes
++        else if jobs.size < NativePublication.maxBatchRequests && bytes+job.bytes ≤ NativePublication.maxBatchBytes then
++          jobs := jobs.push job
++          bytes := bytes+job.bytes
++        else remaining := remaining.push job
++      -- Slot numbers are stable even though scheduling order rotates.
++      let updated := {lane with queue := remaining,active := !jobs.isEmpty}
++      let lanes := (registered.lanes.extract 0 li ++ registered.lanes.extract (li+1) registered.lanes.size).push updated
++      let next := {registered with lanes}
++      let projects := (state.projects.extract 0 ri ++ state.projects.extract (ri+1) state.projects.size).push next
++      let active := state.active+(if jobs.isEmpty then 0 else 1)
++      set {state with
++        projects,active,peakActive := max state.peakActive active
++        admittedBytes := state.admittedBytes-dropped}
++      if jobs.isEmpty then return none
++      return some ⟨lane.owner,jobs⟩
++  return none
++
++def commit (owner : Owner) : Nat → Array Job → IO (Nat × Nat)
++  | 0,jobs => do
++    for job in jobs do job.reply.resolve (.error "project publication isolation bound reached")
++    return (0,0)
++  | fuel+1,jobs => do
++    let live ← jobs.filterM fun job => do
++      if (← job.cancelled.get) || (← IO.monoMsNow) ≥ job.deadline then
++        job.reply.resolve (.error "project publication left before commit admission")
++        return false
++      return true
++    if live.isEmpty then return (0,0)
++    let result ← try
++      let source ← owner.project.current owner.slot
++      let mut fresh := #[]
++      let mut acknowledged : Array (Job × NativePublication.SourceReceipt) := #[]
++      for job in live do
++        if let some marker ← source.get job.receiptKey then
++          unless marker == job.receiptKey.toUTF8 do throw (IO.userError "invalid durable project request binding")
++          acknowledged := acknowledged.push (job,NativePublication.receipt job.request.items source.head)
++        else fresh := fresh.push job
++      let mut groups := 0
++      if let some first := fresh[0]? then
++        let mut cut := first.view.cut
++        for job in fresh do cut ← IO.ofExcept (cut.join job.view.cut)
++        let view ← openView owner.project cut
++        let publications ← owner.publish view (fresh.map (·.request)) fun intern => do
++          for job in fresh do
++            if let some marker ← intern.writer.get job.receiptKey then
++              unless marker == job.receiptKey.toUTF8 do throw (IO.userError "project request binding was replaced")
++            intern.writer.put job.receiptKey (some job.receiptKey.toUTF8)
++          return {changed := true}
++        unless publications.size == fresh.size do throw (IO.userError "project publication changed its group")
++        acknowledged := acknowledged ++ (fresh.zip publications).map (fun (job,published) => (job,published.source))
++        groups := 1
++      pure (.ok (groups,acknowledged) : Except String (Nat × Array (Job × NativePublication.SourceReceipt)))
++    catch error => pure (.error error.toString)
++    match result with
++    | .ok (groups,acknowledged) =>
++      for (job,receipt) in acknowledged do job.reply.resolve (.ok (toJson receipt))
++      return (groups,acknowledged.size)
++    | .error error =>
++      if live.size == 1 then
++        for job in live do job.reply.resolve (.error error)
++        return (0,0)
++      let middle := live.size/2
++      let left ← commit owner fuel (live.extract 0 middle)
++      let right ← commit owner fuel (live.extract middle live.size)
++      return (left.1+right.1,left.2+right.2)
++
++def Pool.publish (pool : Pool) (group : Group) : IO Unit := do
++  let committed ← IO.mkRef (0,0)
++  try
++    committed.set (← commit group.owner (group.jobs.size+1) group.jobs)
++  catch error =>
++    for job in group.jobs do job.reply.resolve (.error error.toString)
++  finally
++    let counts ← committed.get
++    pool.state.atomically do
++      modify fun state => {state with
++        active := state.active-1,groups := state.groups+counts.1,replies := state.replies+counts.2
++        admittedBytes := state.admittedBytes-group.jobs.foldl (fun n j => n+j.bytes) 0
++        projects := state.projects.map fun r => {r with lanes := r.lanes.map fun lane =>
++          if lane.owner.source.identity == group.owner.source.identity then {lane with active := false} else lane}}
++
++def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
++  let state ← get
++  return Json.mkObj [("projects",toJson state.projects.size),
++    ("owners",toJson (state.projects.foldl (fun n r => n+r.lanes.size) 0)),
++    ("queued",toJson (state.projects.foldl (fun n r => n+r.lanes.foldl (fun n l => n+l.queue.size) 0) 0)),
++    ("active",toJson state.active),("peakActive",toJson state.peakActive),
++    ("admittedBytes",toJson state.admittedBytes),("groups",toJson state.groups),
++    ("replies",toJson state.replies),("closed",toJson state.closed)]
++
++def Pool.stop (pool : Pool) : IO Unit := pool.state.atomically do
++  let state : State ← get
++  for registered in state.projects do
++    for lane in registered.lanes do
++      for job in lane.queue do job.reply.resolve (.error "project publisher closed before commit admission")
++  let queuedBytes := state.projects.foldl (fun n r => n+r.lanes.foldl
++    (fun n l => n+l.queue.foldl (fun n j => n+j.bytes) 0) 0) 0
++  set {state with
++    closed := true,admittedBytes := state.admittedBytes-queuedBytes
++    projects := state.projects.map fun (r : Registration) => {r with
++      lanes := r.lanes.map fun (l : Lane) => {l with queue := #[]}}}
++
++/-- Called only after the service has joined admitted publication tasks. -/
++def Pool.release (pool : Pool) : IO Unit := do
++  let registrations ← pool.state.atomically do
++    let state ← get
++    unless state.closed && state.active == 0 do throw (IO.userError "project owners still have admitted work")
++    set {state with projects := #[]}
++    return state.projects
++  for registered in registrations do
++    for lane in registered.lanes do lane.owner.close
++
++end Eggshell.Plugin.Publication.Owned
