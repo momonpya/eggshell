@@ -90,10 +90,15 @@ original witnesses, stable structural owner ids and exact distinct statistics
 maintained from publication differences. At 256/1,024/4,096 original Outcomes
 across 16 sources, every owner/origin/order/original-term posting matches the
 full catalogue. A two-root update takes 12/21/31 ms in those component cases.
-Ordinary warm/discovery and joint topology adapters are still unconnected;
-project-sized query preparation has not yet been removed. This component does
-not replace parallel original owners with one project-wide source writer, and
-does not establish parallel preparation capacity or the 80-user gate.
+The attempted [normal-route continuation](candidates/owner-route/README.md)
+reveals a readiness design error: individually prepared A0/B1 is valid but was
+never a completed composite after A0/B0 → A1/B0 → A1/B1. The complete reference
+delivers both original bodies; the attempted candidate returns incomplete.
+That continuation is rejected, not deployed. Project-sized query preparation
+has not yet been removed. The replacement separates stable identity from
+per-source membership roots, and composes the exact captured inputs. A composite
+cache cannot become an availability gate. Original owners remain parallel;
+neither component establishes sustained preparation capacity or the 80-user gate.
 
 The [preparation completion and recovery audit](candidates/preparation-drain/README.md)
 uses the same product code. After 80 queries and 80 numerical-configured saves

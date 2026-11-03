@@ -1,0 +1,483 @@
+--- /dev/null
++++ b/Eggshell/OwnerViews.lean
+@@ -0,0 +1,142 @@
++module
++public import Eggshell.PreparedOwners
++public import Eggshell.PluginModel
++
++@[expose] public section
++namespace Eggshell.OwnerViews
++open Lean DB Persistence.Store
++
++def implementation : String := Sha256.hex ((include_str "OwnerViews.lean").toUTF8 ++ PreparedOwners.implementation.toUTF8)
++
++structure Location where
++  directory : String
++  identity : String
++  deriving ToJson, FromJson, BEq
++
++structure Group where
++  sources : Array Location
++  deriving ToJson, FromJson, BEq
++
++def Group.key (group : Group) : String := Sha256.hex ((toJson group).compress.toUTF8 ++ implementation.toUTF8)
++def Group.ofSources (sources : Array Snapshot) : Group :=
++  ⟨sources.map fun source => ⟨source.directory.normalize.toString,source.head.identity⟩⟩
++
++def root : IO System.FilePath := return (← Plugin.dataRoot)/"owner-views"/implementation
++def folder (group : Group) : IO System.FilePath := return (← root)/group.key
++def cutKey (sources : Array Snapshot) : String := Sha256.hex (toJson (sources.map (·.head))).compress.toUTF8
++
++structure Reference where
++  producer : String
++  group : Group
++  head : PageMap.Head
++  sources : Array PageMap.Head
++  deriving ToJson, FromJson, BEq
++
++def Group.pin (group : Group) : IO (Array Snapshot) := group.sources.mapM fun location => do
++  let source ← PageMap.pin (.mk location.directory)
++  unless source.head.identity == location.identity do throw (IO.userError "owner-view source incarnation changed")
++  return source
++
++/-- Read-only admission. A configured cut without a completed view remains
++unavailable; it cannot select latest or trigger bootstrap from a hook. -/
++def load? (sources : Array Snapshot) : IO (Option Reference) := do
++  let group := Group.ofSources sources
++  let path ← folder group
++  let some book ← PageMap.open? (path/"ready.egg") | return none
++  let record ← PreparedOwners.readJson (α := Reference) book book.get ("cut-"++cutKey sources)
++  let some record := record | return none
++  unless record.producer == implementation && record.group == group &&
++      record.sources == sources.map (·.head) do
++    throw (IO.userError "owner-view completion directory changed its exact source cut")
++  return some record
++
++def restore (reference : Reference) (sources : Array Snapshot) : IO PreparedOwners.Reader := do
++  unless reference.producer == implementation && reference.group == Group.ofSources sources &&
++      reference.sources == sources.map (·.head) do
++    throw (IO.userError "captured owner view omitted or substituted a source")
++  let path ← folder reference.group
++  let current ← PageMap.pin (path/"view.egg")
++  let some history ← PageMap.HistoryReader.make? current reference.head |
++    throw (IO.userError "captured owner-view extent is unavailable")
++  let some reader ← PreparedOwners.open? history.snapshot sources reference.group.key PreparedOwners.implementation |
++    throw (IO.userError "captured owner view disagrees with its original boundary")
++  return reader
++
++def register (sources : Array Snapshot) : IO Group := do
++  let group := Group.ofSources sources
++  let directory ← root
++  FileSystem.privateDirectory directory
++  let bytes := (toJson group).compress.toUTF8
++  unless bytes.size ≤ 1024*1024 do throw (IO.userError "owner-view source inventory exceeds its registry budget")
++  let path := directory/(group.key++".json")
++  FileSystem.immutableExistingBytes path bytes
++  for source in sources do Plugin.registerTargetSource directory source.head.identity group.key
++  return group
++
++def openIndex (path : System.FilePath) (authority : String) : IO Snapshot := do
++  if let some source ← PageMap.open? path then return source
++  try PageMap.create path authority
++  catch error =>
++    if let some source ← PageMap.open? path then return source
++    throw error
++
++/-- Outside retrieval only. Every descriptor is published after the entire
++declared cut has been compiled. Original writers own different physical files.
++Busy/stale derived writers fail the attempt and leave normal preparation debt. -/
++def prepare (sources : Array Snapshot) : IO Reference := do
++  if let some reference ← load? sources then return reference
++  let group ← register sources
++  let directory ← folder group
++  FileSystem.privateDirectory directory
++  let index ← openIndex (directory/"view.egg") group.key
++  let (head,_) ← PreparedOwners.prepare index sources group.key PreparedOwners.implementation
++  let reference : Reference := ⟨implementation,group,head,sources.map (·.head)⟩
++  let book ← openIndex (directory/"ready.egg") group.key
++  let _ ← PageMap.withWriter book fun writer => do
++    let name := "cut-"++cutKey sources
++    if (← writer.get (key name 0)).isSome then return
++    let count ← getNat writer.get "count"
++    let slot := key "slot" (count%64)
++    if let some old ← writer.get slot then
++      let some old := String.fromUTF8? old | throw (IO.userError "invalid owner-view retirement slot")
++      writer.put (key old 0) none
++    PreparedOwners.writeJson writer name reference
++    writer.put slot (some name.toUTF8)
++    putNat writer "count" (count+1)
++  return reference
++
++def groups (source : Snapshot) : IO (Array Group) := do
++  let directory ← root
++  let paths ← Plugin.targetReferences directory (some #[source.head.identity])
++  paths.mapM fun path => do
++    let group ← (Plugin.readBoundedJson path (1024*1024) : IO Group)
++    unless path.fileName == some (group.key++".json") &&
++        group.sources.any (·.identity == source.head.identity) do
++      throw (IO.userError "owner-view registry source binding changed")
++    return group
++
++def requiredFor (source : Snapshot) : IO Bool := do
++  for group in ← groups source do
++    if (← load? (← group.pin)).isNone then return true
++  return false
++
++def refreshFor (source : Snapshot) : IO Unit := do
++  for group in ← groups source do
++    let _ ← prepare (← group.pin)
++
++def canonical (reader : PreparedOwners.Reader) (source node : Nat) : IO Nat := do
++  let some bytes ← reader.index.get (PreparedOwners.alias source node) |
++    throw (IO.userError "nominated original is absent from the prepared complete owner view")
++  IO.ofExcept (payloadSize (some bytes))
++
++def entry (reader : PreparedOwners.Reader) (id : Nat) : IO PreparedOwners.Entry := do
++  let entry ← PreparedOwners.readEntry reader.index reader.index.get id
++  if entry.originals.isEmpty then throw (IO.userError "prepared owner has no live original in this cut")
++  return entry
++
++def ordinal (reader : PreparedOwners.Reader) (id : Nat) : IO Nat := do
++  let entry ← entry reader id
++  let some original := entry.originals.head? | throw (IO.userError "prepared owner lost its original order")
++  return original.rank reader.manifest.stride
++
++end Eggshell.OwnerViews
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -14,0 +15 @@
++public import Eggshell.OwnerViews
+@@ -99,0 +101 @@
++  if ← OwnerViews.requiredFor snapshot then return true
+@@ -373,0 +376 @@
++    OwnerViews.refreshFor snapshot
+@@ -426,0 +430 @@
++    OwnerViews.refreshFor snapshot
+--- a/Eggshell/PluginCli.lean
++++ b/Eggshell/PluginCli.lean
+@@ -100 +100,3 @@
+-  let results ← eggs.mapM fun egg => do
++  let sourceGroups ← eggs.mapM cacheSources
++  let _ ← OwnerViews.register (sourceGroups.toArray.flatMap id)
++  let results ← (eggs.zip sourceGroups).mapM fun (egg,sources) => do
+@@ -103 +104,0 @@
+-    let sources ← cacheSources egg
+@@ -106 +107,6 @@
+-  pure (Json.mkObj [("databases", toJson results)]).compress
++  let current ← (sourceGroups.toArray.flatMap id).mapM fun source => do
++    let current ← DB.PageMap.pin source.directory
++    unless current.head.identity == source.head.identity do throw (IO.userError "warm source incarnation changed")
++    return current
++  let owners ← OwnerViews.prepare current
++  pure (Json.mkObj [("databases", toJson results),("ownerView",toJson owners)]).compress
+--- a/Eggshell/KeyedProtocol.lean
++++ b/Eggshell/KeyedProtocol.lean
+@@ -3,0 +4 @@
++public import Eggshell.OwnerViews
+@@ -31,0 +33 @@
++  owners : Option OwnerViews.Reference := none
+--- a/Eggshell/KeyedSearchClient.lean
++++ b/Eggshell/KeyedSearchClient.lean
+@@ -18 +18,2 @@
+-    (receipt : Option String := none) (prepared : Option (Array PreparedInputs.Reference) := none) : IO (Option (KeyedProtocol.Checked sources)) := do
++    (receipt : Option String := none) (prepared : Option (Array PreparedInputs.Reference) := none)
++    (owners : Option OwnerViews.Reference := none) : IO (Option (KeyedProtocol.Checked sources)) := do
+@@ -31 +32 @@
+-      let request : KeyedProtocol.Request := ⟨query,sources.map KeyedProtocol.Scope.ofSnapshot,4096,8192,receipt,prepared⟩
++      let request : KeyedProtocol.Request := ⟨query,sources.map KeyedProtocol.Scope.ofSnapshot,4096,8192,receipt,prepared,owners⟩
+--- a/Eggshell/KeyedSearchProvider.lean
++++ b/Eggshell/KeyedSearchProvider.lean
+@@ -229,2 +229,21 @@
+-  for (choice,index) in choices.toList.zipIdx do
+-    table := table.insert (choice.source,choice.owner) index
++  if let some reference := request.owners then
++    let ownerView ← OwnerViews.restore reference sources
++    let mut distinct : Array KeyedProtocol.Choice := #[]
++    let mut canonicalPositions : Std.HashMap Nat Nat := {}
++    for choice in choices do
++      let owner ← OwnerViews.canonical ownerView choice.source choice.owner
++      if let some position := canonicalPositions[owner]? then
++        let some previous := distinct[position]? | throw (IO.userError "canonical keyed owner directory disappeared")
++        let windows := (previous.windows++choice.windows).eraseDups
++        unless (Std.HashSet.ofList (windows.map (·.position))).size == windows.length do
++          throw (IO.userError "equal original owners disagree about source window identity")
++        distinct := distinct.set! position {previous with windows}
++        table := table.insert (choice.source,choice.owner) position
++      else
++        canonicalPositions := canonicalPositions.insert owner distinct.size
++        table := table.insert (choice.source,choice.owner) distinct.size
++        distinct := distinct.push choice
++    choices := distinct
++  else
++    for (choice,index) in choices.toList.zipIdx do
++      table := table.insert (choice.source,choice.owner) index
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -38,0 +39 @@
++public import Eggshell.FederatedDemand
+@@ -8166 +8167 @@
+-  semanticPopulation : Nat
++  semanticPopulationBound : Nat
+@@ -8372 +8373 @@
+-  let semanticPopulation := source.semanticPopulation
++  let semanticPopulation := source.semanticPopulationBound
+@@ -8880 +8881 @@
+-    semanticPopulation := ← Persistence.Store.getNat snapshot.get "semanticPopulation"
++    semanticPopulationBound := ← Persistence.Store.getNat snapshot.get "semanticPopulation"
+@@ -8995 +8996 @@
+-def federatedDiscovery (selection : Config.Selection)
++def federatedDiscoveryReference (selection : Config.Selection)
+@@ -9084 +9085 @@
+-    semanticPopulation := catalogue.semanticPopulation
++    semanticPopulationBound := catalogue.semanticPopulation
+@@ -9135,0 +9137,173 @@
++      savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery lexical)
++
++def federatedDiscovery (selection : Config.Selection)
++    (snapshots : List (Option Persistence.Store.Snapshot)) (current : String)
++    (delivered : List String) (enforce : Bool) (evidence : Option String)
++    (enableLocalUnion : Bool) (savedRanks : Matcher.RankMemo.Saved := [])
++    (staged : List Value := []) (stagedVisible : Bool := true)
++    (savedSaturation : SaturationMemo.Saved := [])
++    (rankReader : Option Matcher.RankMemo.Reader := none) (refreshSources : Bool := false)
++    (reuseSemantic : SemanticReuse := fun _ => pure none) (meaningQuery : Option String := none)
++    (receipt : Option String := none) (onSemanticReady : IO Unit := pure ()) (synaptic : Array Synapses.Recommend.Prepared := #[])
++    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none)
++    (queryOwners : Option OwnerViews.Reference := none) : IO (Option Handoff) := do
++  let sources := (snapshots.filterMap id).toArray
++  let mut actuallyEmpty := true
++  for source in sources do
++    if (← Persistence.Store.getNat source.get "nodes") > 0 || (← Persistence.Store.getNat source.get "roots") > 0 then
++      actuallyEmpty := false
++  if actuallyEmpty then return none
++  let reference ← match queryOwners with
++    | some reference => pure reference
++    | none => do
++      let some reference ← OwnerViews.load? sources | throw (IO.userError "complete owner view is pending explicit/background warm")
++      pure reference
++  let ownerView ← OwnerViews.restore reference sources
++  let readers ← Persistence.Store.NodeReaders.new sources
++  let topology ← Persistence.Store.FederatedDemand.new readers
++  let ordinal := OwnerViews.ordinal ownerView
++  let node := fun id => do
++    let entry ← OwnerViews.entry ownerView id
++    let some original := entry.originals.head? | throw (IO.userError "prepared owner lost its representative")
++    if bounded : original.source < sources.size then
++      return (⟨⟨original.source,bounded⟩,original.node⟩ : Persistence.Store.Federated.Node sources)
++    else throw (IO.userError "prepared original is outside the complete source inventory")
++  let canonical := fun (source : Fin sources.size) id => OwnerViews.canonical ownerView source.val id
++  let mut persistent := []
++  let mut allCount := 0
++  let mut semanticBound := 0
++  let mut frontiers := []
++  for source in List.finRange sources.size do
++    let snapshot := sources[source]
++    persistent := persistent++((← (readers.at source).unions (← Persistence.Store.authority snapshot)).map (·.edge))
++    allCount := allCount+(← Persistence.Store.getNat snapshot.get "alls")
++    -- Allocated original nodes bound the distinct semantic union. This is
++    -- termination fuel only; scoring still uses exact prepared populations.
++    semanticBound := semanticBound+(← Persistence.Store.getNat snapshot.get "nodes")
++    frontiers := frontiers++[({identity := snapshot.head.identity,nextRoot := ← Persistence.Store.getNat snapshot.get "roots"} : AdvisoryFrontier)]
++  let (outcomeCount,population) ← ownerView.counts
++  let capturedFrontiers := frontiers
++  let lexicalReads ← (List.finRange sources.size).mapM fun source => do
++    return (source,← capturedLexicalQuery sources[source] queryInputs receipt)
++  let lexicalLookup := fun unit => do
++    let mut owners : Persistence.Store.Federated.PostingSet := {}
++    for (source,query) in lexicalReads do
++      let (ids,_) ← query.posting unit
++      for id in ids do owners := owners.add (← canonical source id)
++    return (owners.toList,owners.size)
++  let context : IndexedContext := {
++    upstreamDeadline,synaptic,receipt,onSemanticReady
++    all := [],persistent,outcomeCount,population,semanticPopulationBound := semanticBound
++    allCount := some allCount
++    prepareTopology := some topology.read
++    neighborhood := some topology.neighborhood
++    childMembership := some fun view observe => topology.childLookup view observe
++    identityOwners := some fun _ prepared query => do
++      let mut found := []
++      for source in List.finRange sources.size do
++        for original in ← (readers.at source).classOwners prepared query do
++          let some id ← Persistence.Store.findNode? sources[source] original.edge.relation |
++            throw (IO.userError "class owner lost its original identity")
++          found := {original with ordinal := ← ordinal (← canonical source id)}::found
++      return found.mergeSort (fun a b => a.ordinal ≤ b.ordinal)
++    advisoryFrontiers := capturedFrontiers
++    advisoryPositions := fun owner => do
++      let mut positions := []
++      for source in List.finRange sources.size do
++        let some (position,_) ← Persistence.Store.liveRoot? sources[source] owner | continue
++        let some frontier := capturedFrontiers[source.val]? | throw (IO.userError "missing complete source frontier")
++        if bounded : position < frontier.nextRoot then positions := positions++[⟨frontier,position,bounded⟩]
++        else throw (IO.userError "original advisory position exceeds its captured frontier")
++      return positions
++    semantic := fun _ command query candidates => do
++      let some nominated ← KeyedSearchClient.nominate command sources query receipt queryInputs (some reference) | return none
++      let related ← nominated.related.mapM fun row => canonical row.source row.choice.owner
++      let ranked ← nominated.ranked.mapM fun row => canonical row.source row.choice.owner
++      let windows ← nominated.ranked.mapM fun row => do
++        return (← canonical row.source row.choice.owner,row.choice.windows.map (·.position))
++      let stored : IndexedSemanticNominations := {
++        durable := hashDistinct related,durableRanking := hashDistinct ranked
++        durableWindows := windows.filter (!·.2.isEmpty)
++        presentationOrder := (hashDistinct ranked).map Sum.inl }
++      if candidates.isEmpty then return some stored
++      let some snapshot := sources[0]? | throw (IO.userError "staged federation has no original scope")
++      let some unpublished ← indexedSemanticNominationsUsing snapshot [] {} {} command query candidates receipt | return none
++      return some {stored with
++        staged := unpublished.staged,stagedRanking := unpublished.stagedRanking,
++        stagedWindows := unpublished.stagedWindows,presentationOrder := stored.presentationOrder++unpublished.presentationOrder}
++    lexical := fun query candidates => lexicalNominations population lexicalLookup ordinal query candidates
++    ordinal
++    readWork := fun id => do
++      let original ← node id
++      (readers.at original.source).workOrigin (← Persistence.Store.locateOutcome original.snapshot original.id)
++    readOwner := fun id => do
++      let original ← node id
++      (readers.at original.source).outcome (← Persistence.Store.locateOutcome original.snapshot original.id)
++    readSources := fun id => do
++      let entry ← OwnerViews.entry ownerView id
++      let mut records := []
++      for original in entry.originals do
++        if bounded : original.source < sources.size then
++          records := records++(← (readers.at ⟨original.source,bounded⟩).sources original.node)
++        else throw (IO.userError "prepared source evidence omitted an original")
++      return records.eraseDups
++    live := Persistence.Store.Federated.live? sources
++    semanticPresent := Persistence.Store.Federated.semanticPresent sources
++    surfaces := fun units => do
++      let mut owners := []
++      for source in List.finRange sources.size do
++        for id in ← Persistence.Store.workSurfaceCandidates sources[source] units do
++          owners := (← canonical source id)::owners
++      return hashDistinct owners.reverse
++    frequencies := fun units => do
++      let mut frequencies := {}
++      for unit in units do frequencies := frequencies.insert unit (← ownerView.frequency unit)
++      return frequencies
++    liveOwner := fun value => do
++      for source in List.finRange sources.size do
++        if let some (_,id) ← Persistence.Store.liveRoot? sources[source] value then return some (← canonical source id)
++      return none
++    supportOwners := some fun works excluded allowance ranking families => do
++      let mut result := []
++      let mut remaining := allowance
++      let mut localRanks : Std.HashMap Nat (List Nat) := {}
++      for id in ranking do
++        let original ← node id
++        localRanks := localRanks.insert original.source.val (localRanks.getD original.source.val []++[original.id])
++      for source in List.finRange sources.size do
++        let rows ← (readers.at source).supportOwners works (excluded++result.map (·.relation))
++          remaining (localRanks.getD source.val []) families
++        for row in rows do
++          remaining := remaining-(readable row.work).utf8ByteSize-(readable row.outcome).utf8ByteSize
++          result := result++[row]
++      return result
++    focusSupport := some fun works command question => do
++      let mut documents : List (Persistence.Store.Federated.Node sources × Persistence.Store.SearchDocument) := []
++      let mut known : Std.HashSet Nat := {}
++      let mut families : Std.HashMap Value Nat := {}
++      for source in List.finRange sources.size do
++        for document in ← Persistence.Store.supportWindowDocuments sources[source] works do
++          let owner ← canonical source document.owner
++          unless known.contains owner do
++            let work ← (readers.at source).read document.work
++            let family := families.getD work families.size
++            families := families.insert work family
++            known := known.insert owner
++            documents := documents++[(⟨source,document.owner⟩,{document with owner,work := family})]
++      let table := Std.HashMap.ofList (documents.map fun row => (row.2.owner,row))
++      focusIndexedEvidence command question (documents.map Prod.snd)
++        (fun document => do
++          let some (original,_) := table[document.owner]? | throw (IO.userError "foreign prepared focus owner")
++          let located ← Persistence.Store.locateOutcome original.snapshot original.id
++          let work ← (readers.at original.source).read located.header.work
++          match Matcher.atomText? work with
++          | some text => return text
++          | none => throw (IO.userError "prepared focus Work is not textual"))
++        (fun document index => do
++          let some (original,_) := table[document.owner]? | throw (IO.userError "foreign prepared focus window")
++          let rows ← SourceDelta.documents original.snapshot [original.id]
++          let some document := rows.head? | throw (IO.userError "prepared focus candidate disappeared")
++          Persistence.Store.readSearchWindow original.snapshot document index.val) receipt (queryInputs.map toJson) }
++  knownThenLexical
++    (selection.semanticMatcher.isNone && evidence.isNone && lexicalInquiryAllowed current enforce meaningQuery)
++    (fun lexical => indexedDiscoveryUsing context selection current delivered enforce evidence enableLocalUnion
+@@ -9148 +9322,2 @@
+-    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) : IO (Option Handoff) := do
++    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none)
++    (queryOwners : Option OwnerViews.Reference := none) : IO (Option Handoff) := do
+@@ -9167 +9342 @@
+-      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs
++      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs queryOwners
+@@ -9239 +9414,2 @@
+-    (memoScope : Option String := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) : IO (Option Handoff) := do
++    (memoScope : Option String := none) (queryInputs : Option (Array PreparedInputs.Reference) := none)
++    (queryOwners : Option OwnerViews.Reference := none) : IO (Option Handoff) := do
+@@ -9322 +9498 @@
+-      (upstreamDeadline := sourceContext.map (·.deadline)) (queryInputs := queryInputs)
++      (upstreamDeadline := sourceContext.map (·.deadline)) (queryInputs := queryInputs) (queryOwners := queryOwners)
+@@ -9333 +9509 @@
+-        (upstreamDeadline := sourceContext.map (·.deadline)) (queryInputs := queryInputs)
++        (upstreamDeadline := sourceContext.map (·.deadline)) (queryInputs := queryInputs) (queryOwners := queryOwners)
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -125,0 +126 @@
++  owners : Option OwnerViews.Reference := none
+@@ -366,0 +368,2 @@
++    if request.prepared.any (fun inputs => inputs.size > 1 && inputs.any (·.population > 0)) && request.owners.isNone then
++      throw (IO.userError "prepared federation omitted its owner-view root")
+@@ -380,0 +384,6 @@
++  let owners ← if prepared.size > 1 then do
++      let reference ← OwnerViews.load? (snapshots.filterMap id).toArray
++      if reference.isNone && prepared.any (·.population > 0) then
++        throw (IO.userError "complete source owner view is pending explicit/background warm")
++      pure reference
++    else pure none
+@@ -382,0 +392 @@
++    owners
+@@ -656 +666 @@
+-        request.prepared
++        request.prepared request.owners
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -53,0 +54,4 @@
++      if inputs.size > 1 && inputs.any (·.population > 0) then
++        let some owners := query.owners | throw (IO.userError "automatic federation omitted its owner-view root")
++        unless owners.producer == OwnerViews.implementation && owners.sources == inputs.map (·.source) do
++          throw (IO.userError "owner-view inventory differs from captured original boundary")
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -908,4 +908,9 @@
+-  unless body.getUsedConstants.contains ``Eggshell.Persistence.Store.Federated.Catalogue.readers do
+-    throwError "Federated owners do not reuse the topology reader family"
+-  if body.getUsedConstants.contains ``Eggshell.Persistence.Store.NodeReaders.new then
+-    throwError "Federated discovery allocates a second source reader family"
++  for required in #[``Eggshell.Persistence.Store.NodeReaders.new,
++      ``Eggshell.Persistence.Store.FederatedDemand.new,``Eggshell.OwnerViews.restore] do
++    unless body.getUsedConstants.contains required do
++      throwError "Prepared federated discovery lost its checked owner/topology reader: {required}"
++  for forbidden in #[``Eggshell.Persistence.Store.Federated.prepare,
++      ``Eggshell.Persistence.Store.searchDocuments,
++      ``Eggshell.Plugin.federatedDiscoveryReference] do
++    if body.getUsedConstants.contains forbidden then
++      throwError "Prepared federation rebuilt the complete catalogue: {forbidden}"
+--- a/tools/research/DeferredWorkAudit.lean
++++ b/tools/research/DeferredWorkAudit.lean
+@@ -49 +49 @@
+-    semanticPopulation := ← getNat snapshot.get "semanticPopulation"
++    semanticPopulationBound := ← getNat snapshot.get "semanticPopulation"
+--- a/tools/research/PolicyProfile.lean
++++ b/tools/research/PolicyProfile.lean
+@@ -48 +48 @@
+-    semanticPopulation := ← getNat snapshot.get "semanticPopulation"
++    semanticPopulationBound := ← getNat snapshot.get "semanticPopulation"
+--- a/tools/research/KeyedSearchAudit.lean
++++ b/tools/research/KeyedSearchAudit.lean
+@@ -78 +78 @@
+-  let request : KeyedProtocol.Request := ⟨"timer scheduling",sources.map KeyedProtocol.Scope.ofSnapshot,128,8192,none⟩
++  let request : KeyedProtocol.Request := ⟨"timer scheduling",sources.map KeyedProtocol.Scope.ofSnapshot,128,8192,none,none,none⟩
+@@ -123 +123 @@
+-  let coldRequest : KeyedProtocol.Request := ⟨"timer",#[KeyedProtocol.Scope.ofSnapshot cold],128,8192,none⟩
++  let coldRequest : KeyedProtocol.Request := ⟨"timer",#[KeyedProtocol.Scope.ofSnapshot cold],128,8192,none,none,none⟩
