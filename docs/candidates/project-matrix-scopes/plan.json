@@ -1,0 +1,17 @@
+{
+  "sourceParentCommit": "71687d94",
+  "status": "isolated implementation and component validation; not adopted",
+  "problem": "A project-shared canonical matrix may legitimately have different retained roots for independently prepared original owners. The keyed provider rejects these because its fixed read table is keyed by directory alone.",
+  "change": "Key fixed numerical reads by canonical directory and original source identity; preserve each captured source's exact matrix root. Keep the physical canonical matrix shared. Duplicate conflicting views of the same source remain errors.",
+  "checks": [
+    "Synthetic two-owner project with distinct retained roots in one physical matrix: preserve both read capabilities, reject a missing/foreign scope and duplicate conflicting roots, retain exact vectors after a later replacement.",
+    "Same actual MiniLM source snapshots, query and harness: parent must fail for the specific cross-owner matrix-conflict error; candidate must complete ordinary keyed discovery and rank both source domains. This is an availability regression check, not an answering-model token comparison.",
+    "Retain the existing 66-publication prepared-query regression, ordinary ContractAudit, normal source/hook lifecycle and the resource limits. Do not change routing quotas, weights, model, encoder, equality, certification, or delivery budgets.",
+    "Keep aggregate stop 3670016 KiB, hard ceiling 4194304 KiB, free disk floor 2097152 KiB. No subagents, paid answering model or new Python/Ruby implementation.",
+    "Record all failures and immutable original hashes. Remove ended DBs/cache/raw logs after compact evidence is sealed, with no archives."
+  ],
+  "unfinished": [
+    "The full query lifetime still needs transport/retention of all prepared component roots and cross-project dependency capabilities.",
+    "80-user eight-hour publication/preparation/query throughput, p99, 98% necessary-evidence delivery and the 18 matched paid token comparisons remain open."
+  ]
+}
