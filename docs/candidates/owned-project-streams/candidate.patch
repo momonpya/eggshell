@@ -1,0 +1,430 @@
+--- a/Eggshell/NativePublication.lean
++++ b/Eggshell/NativePublication.lean
+@@ -122,6 +122,2 @@
+-def plan (pending : PendingTurn) (target : System.FilePath) : IO (Array Item) := do
+-  let published ← PageMap.open? target
+-  let canonical := System.FilePath.mk (pending.write.getD target.toString)
+-  let journal ← match ← PageMap.open? canonical with
+-    | none => pure none
+-    | some source => Journal.open? source
++def planUsing (pending : PendingTurn) (published : Option PageMap.Snapshot)
++    (journal : Option PageMap.Snapshot) : IO (Array Item) := do
+@@ -149,0 +146,8 @@
++def plan (pending : PendingTurn) (target : System.FilePath) : IO (Array Item) := do
++  let published ← PageMap.open? target
++  let canonical := System.FilePath.mk (pending.write.getD target.toString)
++  let journal ← match ← PageMap.open? canonical with
++    | none => pure none
++    | some source => Journal.open? source
++  planUsing pending published journal
++
+@@ -272 +276,3 @@
+-def runPrepared (target : System.FilePath) (requests : Array Prepared) : IO (Array Published) := do
++def runPreparedAt (target logical : System.FilePath) (requests : Array Prepared)
++    (metadata : Persistence.Store.Intern → IO Persistence.Store.MetadataChange := fun _ => pure {}) :
++    IO (Array Published) := do
+@@ -283 +289 @@
+-    let prepared ← requests.mapM (compilePrepared graph target)
++    let prepared ← requests.mapM (compilePrepared graph logical)
+@@ -292 +298,5 @@
+-      stage (requests.flatMap (·.items)) intern)
++      let original ← stage (requests.flatMap (·.items)) intern
++      let extra ← metadata intern
++      return {
++        changed := original.changed || extra.changed
++        affected := hashDistinct (original.affected ++ extra.affected)})
+@@ -299,0 +310,5 @@
++/-- Ordinary single-source publication retains its exact existing destination
++and metadata path. A project owner supplies an explicit logical destination. -/
++def runPrepared (target : System.FilePath) (requests : Array Prepared) : IO (Array Published) :=
++  runPreparedAt target target requests
++
+--- /dev/null
++++ b/Eggshell/ProjectStore.lean
+@@ -0,0 +1,303 @@
++module
++
++public import Eggshell.NativePublication
++public import Eggshell.SourceDelta
++public import Eggshell.FederatedSearch
++public import Eggshell.PublicationHistory
++
++@[expose] public section
++namespace Eggshell.ProjectStore
++open Lean DB Persistence.Store Plugin
++
++def maxOwners : Nat := 128
++def maxMetadataBytes : Nat := 65536
++
++/-- This is the complete, immutable owner inventory, not a list of whichever
++indexes happen to be warm. Every physical incarnation is distinct. -/
++structure Manifest where
++  identity : String
++  authority : String
++  owners : Array PageMap.Head
++  deriving ToJson, FromJson, BEq
++
++def Manifest.Valid (m : Manifest) : Prop :=
++  PageMap.validIdentity m.identity = true ∧ 0 < m.owners.size ∧ m.owners.size ≤ maxOwners ∧
++  (m.owners.toList.map (·.identity)).Nodup ∧
++  ∀ head ∈ m.owners.toList, PageMap.validIdentity head.identity = true ∧
++    head.identity ≠ m.identity ∧ head.authority = m.authority ∧
++    head.revision = 0 ∧ head.root = none ∧ head.bytes = PageMap.magic.size
++
++instance (m : Manifest) : Decidable m.Valid := by unfold Manifest.Valid; infer_instance
++
++structure Project where
++  directory : System.FilePath
++  manifest : Manifest
++  checked : manifest.Valid
++
++theorem Project.inventory_bounded (project : Project) :
++    0 < project.manifest.owners.size ∧ project.manifest.owners.size ≤ maxOwners :=
++  ⟨project.checked.2.1,project.checked.2.2.1⟩
++
++structure StoredManifest where
++  manifest : Manifest
++  checksum : String
++  deriving ToJson, FromJson
++
++def manifestChecksum (m : Manifest) := Sha256.hex (toJson m).compress.toUTF8
++
++def Project.ownerDirectory (project : Project) (owner : Nat) :=
++  project.directory / "owners" / toString owner
++
++def Project.sourceDirectory (project : Project) (owner : Nat) :=
++  project.ownerDirectory owner / "source.egg"
++
++def openProject (directory : System.FilePath) : IO Project := do
++  let directory ← PageMap.absolute directory
++  FileSystem.rejectSymlinkAncestors directory
++  let bytes ← FileSystem.boundedBytes (directory / "project") maxMetadataBytes
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid project manifest encoding")
++  let record ← IO.ofExcept (Json.parse text >>= fromJson? (α := StoredManifest))
++  unless bytes == (toJson record).compress.toUTF8 && record.checksum == manifestChecksum record.manifest do
++    throw (IO.userError "invalid project manifest checksum or encoding")
++  if checked : record.manifest.Valid then return ⟨directory,record.manifest,checked⟩
++  else throw (IO.userError "invalid or incomplete project owner inventory")
++
++/-- Only project creation publishes the inventory. No mutable global source
++head is replaced by an owner. Slots are service work regions, not personal DBs. -/
++def create (directory : System.FilePath) (owners : Nat) : IO Project := do
++  unless 0 < owners && owners ≤ maxOwners do throw (IO.userError "invalid project owner count")
++  let directory ← PageMap.absolute directory
++  unless !(← directory.pathExists) do throw (IO.userError "project already exists")
++  FileSystem.rejectSymlinkAncestors directory
++  let identity := Blake3.hex (← IO.getRandomBytes 32)
++  let staging := directory.withFileName (".project-" ++ identity)
++  FileSystem.privateDirectory staging
++  let parent ← Sidecar.childDirectory staging "owners"
++  let authority := (Persistence.valueToJson (.text ("egg project " ++ identity))).compress
++  let mut heads := #[]
++  for owner in [:owners] do
++    let folder ← Sidecar.childDirectory parent (toString owner)
++    let source ← PageMap.create (folder / "source.egg") authority
++    heads := heads.push source.head
++  let manifest : Manifest := ⟨identity,authority,heads⟩
++  unless decide manifest.Valid do throw (IO.userError "project creation produced invalid owner inventory")
++  let bytes := (toJson (StoredManifest.mk manifest (manifestChecksum manifest))).compress.toUTF8
++  unless bytes.size ≤ maxMetadataBytes do throw (IO.userError "project owner inventory exceeds metadata bound")
++  FileSystem.immutableExistingBytes (staging / "project") bytes
++  FileSystem.publishDirectory staging.toString directory.toString
++  openProject directory
++
++def Project.current (project : Project) (owner : Nat) : IO PageMap.Snapshot := do
++  let some registered := project.manifest.owners[owner]? |
++    throw (IO.userError "unknown original owner")
++  let source ← PageMap.pin (project.sourceDirectory owner)
++  unless source.head.identity == registered.identity && source.head.authority == registered.authority do
++    throw (IO.userError "project original owner incarnation changed")
++  return source
++
++structure Cut where
++  project : String
++  heads : Array PageMap.Head
++  deriving ToJson, FromJson, BEq
++
++def headAt (heads : Array PageMap.Head) (owner : Nat) : IO PageMap.Head := do
++  let some head := heads[owner]? | throw (IO.userError "missing registered original head")
++  return head
++
++def Cut.inScope (cut : Cut) (m : Manifest) : Bool :=
++  cut.project == m.identity && cut.heads.size == m.owners.size &&
++    (cut.heads.zip m.owners).all (fun (head,original) =>
++      head.identity == original.identity && head.authority == original.authority)
++
++theorem Cut.missing_owner_rejected (cut : Cut) (m : Manifest)
++    (missing : cut.heads.size ≠ m.owners.size) : cut.inScope m = false := by
++  simp [Cut.inScope,missing]
++
++theorem Cut.foreign_project_rejected (cut : Cut) (m : Manifest)
++    (foreign : cut.project ≠ m.identity) : cut.inScope m = false := by
++  simp [Cut.inScope,foreign]
++
++/-- Same-revision forks cannot be made equivalent by a maximum on integers. -/
++def newer (left right : PageMap.Head) : Except String PageMap.Head := do
++  unless left.identity == right.identity && left.authority == right.authority do
++    throw "project frontier mixed original owners"
++  if left.revision == right.revision then
++    unless left == right do throw "project frontier contains a same-revision fork"
++    return left
++  return if left.revision < right.revision then right else left
++
++def Cut.join (left right : Cut) : Except String Cut := do
++  unless left.project == right.project && left.heads.size == right.heads.size do
++    throw "project frontier changed its complete owner inventory"
++  let heads ← (left.heads.zip right.heads).mapM fun (a,b) => newer a b
++  return ⟨left.project,heads⟩
++
++structure View where
++  private mk ::
++  project : Project
++  cut : Cut
++  sources : Array PageMap.Snapshot
++  complete : sources.size = project.manifest.owners.size
++  exact : sources.map (·.head) = cut.heads
++
++theorem View.no_owner_omitted (view : View) :
++    view.sources.size = view.project.manifest.owners.size := view.complete
++
++def headKey (revision : Nat) := s!"project:head:{revision}"
++
++def decodeHead (bytes : ByteArray) : IO PageMap.Head := do
++  unless bytes.size ≤ 4096 do throw (IO.userError "oversized project source head")
++  let (head,tail) ← IO.ofExcept (PageMap.headCodec.decode bytes.toList)
++  unless tail.isEmpty && (PageMap.headCodec.encode head).toByteArray == bytes do
++    throw (IO.userError "noncanonical project source head")
++  return head
++
++/-- Every owner append records its exact previous head at a fresh immutable
++revision key, in the same transaction as the originals. This lookup does not
++walk thousands of old publications. Exact equality includes the root digest. -/
++def sourceContains (source : PageMap.Snapshot) (head : PageMap.Head) : IO Bool := do
++  if head == source.head then return true
++  unless head.identity == source.head.identity && head.authority == source.head.authority &&
++      head.revision < source.head.revision && head.bytes < source.head.bytes do return false
++  let some bytes ← source.get (headKey head.revision) | return false
++  return (← decodeHead bytes) == head
++
++def readCut (m : Manifest) (source : PageMap.Snapshot) : IO Cut := do
++  if source.head.revision == 0 then return ⟨m.identity,m.owners⟩
++  let count ← getNat source.get "project:cut-count"
++  unless 0 < count && count ≤ 32 do throw (IO.userError "missing or oversized original dependency frontier")
++  let mut bytes := ByteArray.empty
++  for index in [:count] do
++    let some part ← source.get s!"project:cut:{index}" |
++      throw (IO.userError "incomplete original dependency frontier")
++    unless !part.isEmpty && part.size ≤ 2048 do throw (IO.userError "invalid dependency frontier block")
++    bytes := bytes ++ part
++  unless bytes.size ≤ maxMetadataBytes do throw (IO.userError "oversized original dependency frontier")
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid dependency frontier encoding")
++  let cut ← IO.ofExcept (Json.parse text >>= fromJson? (α := Cut))
++  unless bytes == (toJson cut).compress.toUTF8 && cut.inScope m do
++    throw (IO.userError "foreign or noncanonical dependency frontier")
++  return cut
++
++def historical (project : Project) (owner : Nat) (head : PageMap.Head) : IO PageMap.Snapshot := do
++  let current ← project.current owner
++  unless ← sourceContains current head do throw (IO.userError "original head is not in the owner's publication history")
++  let some retained ← PageMap.HistoryReader.make? current head |
++    throw (IO.userError "project original extent is unavailable")
++  return retained.snapshot
++
++/-- An independently requested cut is accepted in full or rejected. Warm
++status is not an input, and an older closed cut is never substituted. -/
++@[no_expose] def openView (project : Project) (cut : Cut) : IO View := do
++  unless cut.inScope project.manifest do throw (IO.userError "requested project cut has a foreign or missing owner")
++  let sources ← (List.range cut.heads.size).toArray.mapM fun owner => do
++    historical project owner (← headAt cut.heads owner)
++  for source in sources do
++    let required ← readCut project.manifest source
++    for owner in [:sources.size] do
++      let some selected := sources[owner]? | throw (IO.userError "missing pinned original owner")
++      unless ← sourceContains selected (← headAt required.heads owner) do
++        throw (IO.userError "requested project cut omits a source dependency")
++  if complete : sources.size = project.manifest.owners.size then
++    if exact : sources.map (·.head) = cut.heads then return ⟨project,cut,sources,complete,exact⟩
++    else throw (IO.userError "project historical pin changed its requested head")
++  else throw (IO.userError "project historical pin omitted an original owner")
++
++/-- Freeze originals first, then close only their recorded dependencies.
++Lifting reads the named historical head, not the newest derived or source root.
++The deadline rejects unfinished closure; it never returns a reduced inventory. -/
++def closeCut (project : Project) (initial : Cut) (deadline : Nat) : IO View := do
++  unless initial.inScope project.manifest do throw (IO.userError "initial project frontier omitted or mixed owners")
++  let mut cut := initial
++  repeat
++    unless (← IO.monoMsNow) < deadline do throw (IO.userError "project original cut closure expired")
++    let mut closed := cut
++    for owner in [:cut.heads.size] do
++      let source ← historical project owner (← headAt cut.heads owner)
++      closed ← IO.ofExcept (closed.join (← readCut project.manifest source))
++    if closed == cut then return ← openView project cut
++    cut := closed
++
++def pin (project : Project) (deadline : Nat) : IO View := do
++  let initial ← (List.range project.manifest.owners.size).toArray.mapM (project.current ·)
++  closeCut project ⟨project.manifest.identity,initial.map (·.head)⟩ deadline
++
++structure OwnerState where
++  live : Bool := true
++  busy : Bool := false
++
++structure Owner where
++  private mk ::
++  project : Project
++  slot : Nat
++  source : PageMap.Head
++  private lease : FileSystem.ReadHandle
++  private lifecycle : Std.Mutex OwnerState
++
++/-- The local lifecycle gate admits at most one operation, and no operation
++after scope exit. Source IO occurs outside this short owner-local gate. -/
++@[no_expose] def Owner.withOperation (owner : Owner) (action : IO α) : IO α := do
++  let admitted ← owner.lifecycle.atomically do
++    let state ← get
++    if !state.live || state.busy then return false
++    set {state with busy := true}
++    return true
++  unless admitted do throw (IO.userError "project original owner is closed or already executing")
++  try action
++  finally owner.lifecycle.atomically (modify fun state => {state with busy := false})
++
++/-- A lease lives for the owner's entire loop. Different slots never contend
++for one source head. This does not prove linear ownership of arbitrary IO. -/
++@[no_expose] def withOwner (project : Project) (slot : Nat) (action : Owner → IO α) : IO α := do
++  let current ← openProject project.directory
++  unless current.manifest == project.manifest do throw (IO.userError "project inventory changed")
++  let source ← project.current slot
++  let path := project.ownerDirectory slot / "owner.guard"
++  FileSystem.immutableExistingBytes path ByteArray.empty
++  let lease ← FileSystem.openRead path.toString
++  unless ← FileSystem.tryReadLock lease true do throw (IO.userError "project original owner is busy")
++  let lifecycle ← Std.Mutex.new ({} : OwnerState)
++  try action ⟨project,slot,source.head,lease,lifecycle⟩
++  finally
++    lifecycle.atomically (modify fun state => {state with live := false})
++    while (← lifecycle.atomically do return (← get).busy) do IO.sleep 1
++    FileSystem.unlockRead lease
++
++def Owner.prepare (owner : Owner) (pending : Plugin.PendingTurn) (checkpoint : Bool := false) :
++    IO NativePublication.Prepared := owner.withOperation do
++  unless pending.write == some owner.project.directory.toString do
++    throw (IO.userError "project publication changed its logical write destination")
++  let source ← owner.project.current owner.slot
++  let items ← NativePublication.planUsing pending (some source) (← Synapses.Journal.open? source)
++  if matching : NativePublication.matchesPending pending items = true then
++    return ⟨pending,source.directory,some source.head.identity,checkpoint,items,matching⟩
++  else throw (IO.userError "project publication changed its native observations")
++
++def Owner.publish (owner : Owner) (view : View) (requests : Array NativePublication.Prepared) :
++    IO (Array NativePublication.Published) := owner.withOperation do
++  unless view.project.manifest == owner.project.manifest && view.project.directory == owner.project.directory do
++    throw (IO.userError "project owner received a foreign dependency cut")
++  unless requests.all (·.pending.write == some owner.project.directory.toString) do
++    throw (IO.userError "project batch mixed logical write destinations")
++  NativePublication.runPreparedAt (owner.project.sourceDirectory owner.slot) owner.project.directory requests fun intern => do
++    let source := intern.writer.base
++    unless source.head.identity == owner.source.identity && source.head.authority == owner.source.authority do
++      throw (IO.userError "original owner changed before project commit")
++    let previous ← readCut owner.project.manifest source
++    let cut ← IO.ofExcept (previous.join view.cut)
++    unless ← sourceContains source (← headAt cut.heads owner.slot) do
++      throw (IO.userError "project write depends on an unpublished local original")
++    let encoded := (PageMap.headCodec.encode source.head).toByteArray
++    unless encoded.size ≤ 4096 do throw (IO.userError "project history head exceeds its bound")
++    if let some retained ← intern.writer.get (headKey source.head.revision) then
++      unless retained == encoded do throw (IO.userError "project original history was rewritten")
++    intern.writer.put (headKey source.head.revision) (some encoded)
++    let bytes := (toJson cut).compress.toUTF8
++    unless bytes.size ≤ maxMetadataBytes do throw (IO.userError "project dependencies exceed metadata bound")
++    let count := (bytes.size+2047)/2048
++    putNat intern.writer "project:cut-count" count
++    for index in [:count] do
++      intern.writer.put s!"project:cut:{index}" (some (bytes.extract (index*2048) ((index+1)*2048)))
++    return {changed := true}
++
++end Eggshell.ProjectStore
+--- /dev/null
++++ b/Eggshell/PublicationHistory.lean
+@@ -0,0 +1,80 @@
++module
++
++public import Eggshell.SourceDelta
++
++@[expose] public section
++namespace Eggshell.PublicationHistory
++open DB
++
++/-- The specification of the owner-local append-only head index. The live
++head is not stored inside itself. An append adds exactly its previous head. -/
++inductive Trace : PageMap.Head → Type where
++  | boot (head : PageMap.Head) : Trace head
++  | append {before after} : Trace before → SourceDelta.linked before after = true → Trace after
++
++def Trace.previous : Trace current → List PageMap.Head
++  | .boot _ => []
++  | @Trace.append before _ history _ => before :: history.previous
++
++def Trace.lookup : Trace current → Nat → Option PageMap.Head
++  | .boot _, _ => none
++  | @Trace.append before _ history _, revision =>
++      if revision = before.revision then some before else history.lookup revision
++
++theorem Trace.previous_older (history : Trace current) (head : PageMap.Head)
++    (present : head ∈ history.previous) : head.revision < current.revision := by
++  induction history with
++  | boot => simp [previous] at present
++  | @append before after history link ih =>
++    simp only [previous,List.mem_cons] at present
++    have advance := link
++    simp only [SourceDelta.linked,Bool.and_eq_true,beq_iff_eq,decide_eq_true_eq] at advance
++    rcases present with same | present
++    · subst head; omega
++    · have earlier := ih present; omega
++
++theorem Trace.previous_canonical (history : Trace current) (head : PageMap.Head)
++    (present : head ∈ history.previous) : SourceDelta.Lineage head current := by
++  induction history with
++  | boot => simp [previous] at present
++  | @append before after history link ih =>
++    simp only [previous,List.mem_cons] at present
++    rcases present with same | present
++    · subst head; exact .step (.same before) link
++    · exact .step (ih present) link
++
++theorem Trace.lookup_complete (history : Trace current) (head : PageMap.Head)
++    (present : head ∈ history.previous) : history.lookup head.revision = some head := by
++  induction history with
++  | boot => simp [previous] at present
++  | @append before after history link ih =>
++    simp only [previous,List.mem_cons] at present
++    rcases present with same | present
++    · subst head; simp [lookup]
++    · have earlier := history.previous_older head present
++      have different : head.revision ≠ before.revision := by omega
++      simp only [lookup,if_neg different]
++      exact ih present
++
++theorem Trace.lookup_previous (history : Trace current) (revision : Nat) (head : PageMap.Head)
++    (found : history.lookup revision = some head) : head ∈ history.previous := by
++  induction history with
++  | boot => simp [lookup] at found
++  | @append before after history link ih =>
++    simp only [lookup] at found
++    split at found
++    · cases found; simp [previous]
++    · exact List.mem_cons_of_mem before (ih found)
++
++theorem Trace.lookup_canonical (history : Trace current) (revision : Nat) (head : PageMap.Head)
++    (found : history.lookup revision = some head) : SourceDelta.Lineage head current :=
++  history.previous_canonical head (history.lookup_previous revision head found)
++
++/-- A point table produced by the append rule loses no earlier publication
++and nominates no head outside the canonical trace. Decoding and the atomic
++PageMap writer still have their separate runtime refinement obligations. -/
++theorem Trace.index_exact (history : Trace current) (head : PageMap.Head) :
++    head ∈ history.previous ↔ history.lookup head.revision = some head :=
++  ⟨history.lookup_complete head,history.lookup_previous head.revision head⟩
++
++end Eggshell.PublicationHistory

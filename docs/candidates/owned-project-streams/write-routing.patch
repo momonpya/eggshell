@@ -1,0 +1,62 @@
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -621,0 +622,33 @@
++
++def routesTo (refs : List Ref) (index : Nat) (edit : Row) : Bool :=
++  (route refs edit.1).map Prod.fst == some index
++
++def routeEdit (refs : List Ref) (buckets : Std.HashMap Nat (List Row)) (edit : Row) :
++    Std.HashMap Nat (List Row) :=
++  match route refs edit.1 with
++  | none => buckets
++  | some (index,_) => buckets.insert index (edit :: buckets.getD index [])
++
++theorem routeEdit_lookup (refs : List Ref) (buckets : Std.HashMap Nat (List Row))
++    (edit : Row) (index : Nat) :
++    (routeEdit refs buckets edit).getD index [] =
++      if routesTo refs index edit then edit :: buckets.getD index [] else buckets.getD index [] := by
++  cases chosen : route refs edit.1 with
++  | none => simp [routeEdit,routesTo,chosen]
++  | some selected =>
++    obtain ⟨selected,ref⟩ := selected
++    by_cases same : selected = index
++    · subst selected; simp [routeEdit,routesTo,chosen]
++    · simp [routeEdit,routesTo,chosen,Std.HashMap.getD_insert,same]
++
++theorem routeEdits_lookup (refs : List Ref) (edits : List Row)
++    (buckets : Std.HashMap Nat (List Row)) (index : Nat) :
++    (edits.foldl (routeEdit refs) buckets).getD index [] =
++      (edits.filter (routesTo refs index)).reverse ++ buckets.getD index [] := by
++  induction edits generalizing buckets with
++  | nil => simp
++  | cons edit rest ih =>
++    simp only [List.foldl_cons]
++    rw [ih,routeEdit_lookup]
++    cases chosen : routesTo refs index edit <;>
++      simp [chosen,List.reverse_cons,List.append_assoc]
+@@ -622,0 +656,20 @@
++/-- Each edit is routed once. Buckets retain the exact reference filter order,
++including empty buckets and malformed/unsorted directory inputs. No extra
++ordering assumption or recommended-candidate bound enters storage writes. -/
++structure EditRouting (refs : List Ref) (edits : List Row) where
++  buckets : Std.HashMap Nat (List Row)
++  exact : ∀ index, (buckets.getD index []).reverse = edits.filter (routesTo refs index)
++
++def routeEdits (refs : List Ref) (edits : List Row) : EditRouting refs edits :=
++  ⟨edits.foldl (routeEdit refs) {},by
++    intro index
++    have exact := routeEdits_lookup refs edits {} index
++    simpa using congrArg List.reverse exact⟩
++
++def EditRouting.selected (routing : EditRouting refs edits) (index : Nat) : List Row :=
++  (routing.buckets.getD index []).reverse
++
++theorem EditRouting.selected_exact (routing : EditRouting refs edits) (index : Nat) :
++    routing.selected index = edits.filter (fun edit => (route refs edit.1).map Prod.fst == some index) :=
++  routing.exact index
++
+@@ -1327,0 +1381 @@
++      let routing := routeEdits children edits
+@@ -1330 +1384 @@
+-        let selected := edits.filter fun edit => (route children edit.1).map (·.1) == some index
++        let selected := routing.selected index

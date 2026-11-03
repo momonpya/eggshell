@@ -1,0 +1,67 @@
+{
+  "status": "isolated original-publication and closed-view candidate; not adopted",
+  "parentRuntimeSha256": "74b7a224ec8765374bbbb5550432b8632a998bf9ca68ce6e4e32c2efc3f36f62",
+  "purpose": "One logical project, a fixed complete inventory of independently owned original PageMap streams, and immutable dependency-closed source views. No shared original head and no reused physical DB identities.",
+  "invariants": [
+    "physical identities are unique and registered under one logical project",
+    "only the assigned stream changes during an owner append",
+    "logical provenance retains the project destination",
+    "dependency metadata commits atomically with the originals and receipt",
+    "queries never omit owners or substitute derived readiness for requested sources",
+    "source history bindings are append-only and reject same-revision forks",
+    "all authorized owner sources reach the existing complete federated graph, without recommendation top-K certification"
+  ],
+  "checks": [
+    "distinct original owners overlap, same owner is refused",
+    "durable native publication receipts match saved original graphs",
+    "cross-owner dependency advances the pinned view",
+    "exact requested boundaries reject missing dependencies",
+    "same-revision forks and foreign scopes rejected",
+    "historical views and complete owner inventory retained",
+    "indexed ancestry compared with original publication-chain traversal",
+    "graph canonicalization and original observation census agree with an independently materialized union",
+    "reopen after process exit"
+  ],
+  "load": {
+    "clients": [
+      10,
+      40,
+      80
+    ],
+    "owners": 16,
+    "publicationsPerClient": 4,
+    "mode": "native original publication and concurrent complete snapshot readers; not full hooks or eight-hour workload",
+    "outputBytesPerObservation": [
+      5000,
+      50000
+    ],
+    "sizedProfileClients": 80,
+    "sizedProfileTrials": 1,
+    "sizedProfilePurpose": "directly test the user-specified output-byte range; no extrapolation from tiny synthetic outputs or p99 claim"
+  },
+  "unchanged": [
+    "WorkGraph and Exact semantics",
+    "recommendation cannot certify",
+    "MiniLM numerical contracts",
+    "delivery budgets and deadlines",
+    "project write versus authorized other-project reads",
+    "token/quality/deadline adoption gate"
+  ],
+  "resources": {
+    "aggregateRssStopKiB": 3670016,
+    "absoluteCeilingKiB": 4194304,
+    "minFreeKiB": 2097152
+  },
+  "remaining": [
+    "ordinary CLI/hook and service routing integration",
+    "ready-index preparation across the complete original cut",
+    "cross-region certification-index refinement proof",
+    "80-user sustained mixed workload",
+    "LLVM six-stage delivery and matched repeated token/quality comparison",
+    "multi-host authenticated transport and NAS failures",
+    "project-owned canonical vector/content cache shared across original owners",
+    "policy-approved physical journal routing",
+    "copy/failover and physical compaction with old-cut retention"
+  ],
+  "answeringModelCalls": 0
+}

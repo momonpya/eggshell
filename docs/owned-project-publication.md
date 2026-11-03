@@ -3,7 +3,10 @@
 Design direction under formal investigation, not an implemented replacement
 of original publication. The first isolated [prepared-index candidate](candidates/owned-ready/README.md)
 now separates independent derived writer regions and removes their mutable
-ready-root catalogue. Original publication remains serialized per project.
+ready-root catalogue. The isolated [original-stream prototype](candidates/owned-project-streams/README.md)
+also publishes through separate physical owners and pins complete dependency-closed
+views. Ordinary hooks and service routing still use serialized per-project
+publication; the prototype is not their replacement yet.
 The project remains one logical shared DB. No one-owner-per-user DB layout or
 one global owner for every project is required. The target remains 80 users,
 30-second hooks and 98% of necessary original evidence actually delivered;
@@ -31,7 +34,8 @@ logical stream IDs differ. The executable storage representation must preserve
 this distinction; a shared `IO.Ref` of the whole map would not implement it.
 
 The [Lean model](../tools/research/OwnedPublicationModel.lean) uses actual
-`PageMap.Head` values and actual native `RequestStamp` freshness checks. It
+`PageMap.Head` values, registered physical identities distinct from the logical
+project, and actual native `RequestStamp` freshness checks. It
 proves independent append commutation, per-owner ordering, retained old views,
 and commutative/associative/idempotent joining of dependency-closed views.
 With a complete stream inventory, every referenced original enters the

@@ -1,0 +1,10 @@
+{
+  "status":"isolated follow-on write-routing candidate; not adopted",
+  "cause":"Native sample identified PageMap.route among hot frames. Writer.putManyAt filters the full edit list for each child and reruns the complete route for each child/edit pair.",
+  "change":"Route each edit once into stable buckets; prove each bucket is exactly the former per-child reference filter, including row order.",
+  "unchanged":["PageMap storage format and guards", "physical and logical project identities", "native observations and receipts", "source/history/dependency metadata", "ranking, extraction, delivery budgets, deadlines and models"],
+  "comparison":{"outputBytes":[5000,50000],"clients":80,"owners":16,"observationsPerClient":4,"repetitions":3,"order":"parent/candidate, candidate/parent, parent/candidate", "startingState":"same project manifest, original head/page bytes and logical destination paths before every arm", "fixtureGeneration":"forced before publication timer", "correctness":"all expected original inputs/outputs and logical provenance, history-chain checks and complete federated graph union in every arm"},
+  "notEvidenceFor":["full hook p99", "sustained 80-user workload", "98% actual delivery", "token adoption"],
+  "answeringModelCalls":0,
+  "resources":{"aggregateRssStopKiB":3670016,"absoluteCeilingKiB":4194304,"minFreeKiB":2097152}
+}

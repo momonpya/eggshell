@@ -24,11 +24,24 @@ structure EventRef where
   producer : Nat
   offset : Nat
 
+/-- A logical project's registration names a distinct physical incarnation.
+Its identity must not be replaced with the logical project identity. Runtime
+inventory validation and ownership remain separate refinement obligations. -/
+structure OriginalRegistration (domain : Domain) where
+  producer : Nat
+  identity : String
+  notLogical : identity ≠ domain.identity
+
 structure Entry (domain : Domain) where
+  registration : OriginalRegistration domain
   source : DB.PageMap.Head
-  sameProject : source.identity = domain.identity
+  sameOriginal : source.identity = registration.identity
   sameAuthority : source.authority = domain.authority
   dependencies : List EventRef := []
+
+theorem Entry.physical_not_logical (entry : Entry domain) : entry.source.identity ≠ domain.identity := by
+  rw [entry.sameOriginal]
+  exact entry.registration.notLogical
 
 abbrev Streams (domain : Domain) := Nat → List (Entry domain)
 
