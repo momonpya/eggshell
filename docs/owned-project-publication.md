@@ -21,6 +21,22 @@ one global owner for every project is required. The target remains 80 users,
 30-second hooks and 98% of necessary original evidence actually delivered;
 the existing matched total-token/quality/deadline adoption gate still applies.
 
+Multiple source owners **within the same project are required**, not an optional
+later optimization. Each mutable physical source has one live owner, while
+different physical sources publish concurrently. User count and owner count
+are independent: the native checks currently route 80 sessions across 16 owners;
+this is neither an 80-owner requirement nor evidence of 80-user sustained capacity.
+The 50 KB retained-image write-only measurements reached 16.6–17.7 observations/s,
+below the maximum assumed 22.2/s even before derived preparation. Ordinary hooks
+still using the single-source path cannot inherit the prototype's concurrency.
+
+The next isolated [configuration binding](candidates/project-access/plan.json)
+keeps the user-selected logical write project separate from its physical source
+route. All configured read projects retain their complete owner inventories;
+neither a write route nor a warm index filters certification's read domain.
+This binding must precede ordinary hook integration. It does not authorize
+per-owner copies of the project's canonical vectors or content.
+
 The current native observation found a 279–348 ms common-session guard hold
 during offer publication, exceeding background save's 100 ms admission. The
 [observation](candidates/session-lock-profile/README.md) preserves six identical

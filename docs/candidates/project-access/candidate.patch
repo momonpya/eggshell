@@ -1,0 +1,722 @@
+--- /dev/null
++++ b/Eggshell/ProjectSources.lean
+@@ -0,0 +1,274 @@
++module
++
++public import Eggshell.GraphStore
++public import Eggshell.SourceDelta
++public import Eggshell.PublicationHistory
++
++@[expose] public section
++namespace Eggshell.ProjectStore
++open Lean DB Persistence.Store
++def maxOwners : Nat := 128
++def maxMetadataBytes : Nat := 65536
++
++/-- This is the complete, immutable owner inventory, not a list of whichever
++indexes happen to be warm. Every physical incarnation is distinct. -/
++structure Manifest where
++  identity : String
++  authority : String
++  owners : Array PageMap.Head
++  deriving ToJson, FromJson, BEq, DecidableEq
++
++def Manifest.Valid (m : Manifest) : Prop :=
++  PageMap.validIdentity m.identity = true ∧ 0 < m.owners.size ∧ m.owners.size ≤ maxOwners ∧
++  (m.owners.toList.map (·.identity)).Nodup ∧
++  ∀ head ∈ m.owners.toList, PageMap.validIdentity head.identity = true ∧
++    head.identity ≠ m.identity ∧ head.authority = m.authority ∧
++    head.revision = 0 ∧ head.root = none ∧ head.bytes = PageMap.magic.size
++
++instance (m : Manifest) : Decidable m.Valid := by unfold Manifest.Valid; infer_instance
++
++structure Project where
++  directory : System.FilePath
++  manifest : Manifest
++  checked : manifest.Valid
++
++theorem Project.inventory_bounded (project : Project) :
++    0 < project.manifest.owners.size ∧ project.manifest.owners.size ≤ maxOwners :=
++  ⟨project.checked.2.1,project.checked.2.2.1⟩
++
++/-- Routing is shared by configuration, ingress and the service. An owner is
++a physical work region, not a user or a separate logical database. -/
++def routeSlot (session : String) (owners : Nat) : Nat := (hash session).toNat % owners
++
++theorem routeSlot_bounded (session : String) (owners : Nat) (nonempty : 0 < owners) :
++    routeSlot session owners < owners := Nat.mod_lt _ nonempty
++
++structure StoredManifest where
++  manifest : Manifest
++  checksum : String
++  deriving ToJson, FromJson
++
++def manifestChecksum (m : Manifest) := Sha256.hex (toJson m).compress.toUTF8
++
++def Project.ownerDirectory (project : Project) (owner : Nat) :=
++  project.directory / "owners" / toString owner
++
++def Project.sourceDirectory (project : Project) (owner : Nat) :=
++  project.ownerDirectory owner / "source.egg"
++
++def openProject (directory : System.FilePath) : IO Project := do
++  let directory ← PageMap.absolute directory
++  FileSystem.rejectSymlinkAncestors directory
++  let bytes ← FileSystem.boundedBytes (directory / "project") maxMetadataBytes
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid project manifest encoding")
++  let record ← IO.ofExcept (Json.parse text >>= fromJson? (α := StoredManifest))
++  unless bytes == (toJson record).compress.toUTF8 && record.checksum == manifestChecksum record.manifest do
++    throw (IO.userError "invalid project manifest checksum or encoding")
++  if checked : record.manifest.Valid then return ⟨directory,record.manifest,checked⟩
++  else throw (IO.userError "invalid or incomplete project owner inventory")
++
++/-- Only project creation publishes the inventory. No mutable global source
++head is replaced by an owner. Slots are service work regions, not personal DBs. -/
++def create (directory : System.FilePath) (owners : Nat) : IO Project := do
++  unless 0 < owners && owners ≤ maxOwners do throw (IO.userError "invalid project owner count")
++  let directory ← PageMap.absolute directory
++  unless !(← directory.pathExists) do throw (IO.userError "project already exists")
++  FileSystem.rejectSymlinkAncestors directory
++  let identity := Blake3.hex (← IO.getRandomBytes 32)
++  let staging := directory.withFileName (".project-" ++ identity)
++  FileSystem.privateDirectory staging
++  let parent ← Sidecar.childDirectory staging "owners"
++  let authority := (Persistence.valueToJson (.text ("egg project " ++ identity))).compress
++  let mut heads := #[]
++  for owner in [:owners] do
++    let folder ← Sidecar.childDirectory parent (toString owner)
++    let source ← PageMap.create (folder / "source.egg") authority
++    heads := heads.push source.head
++  let manifest : Manifest := ⟨identity,authority,heads⟩
++  unless decide manifest.Valid do throw (IO.userError "project creation produced invalid owner inventory")
++  let bytes := (toJson (StoredManifest.mk manifest (manifestChecksum manifest))).compress.toUTF8
++  unless bytes.size ≤ maxMetadataBytes do throw (IO.userError "project owner inventory exceeds metadata bound")
++  FileSystem.immutableExistingBytes (staging / "project") bytes
++  FileSystem.publishDirectory staging.toString directory.toString
++  openProject directory
++
++def Project.current (project : Project) (owner : Nat) : IO PageMap.Snapshot := do
++  let some registered := project.manifest.owners[owner]? |
++    throw (IO.userError "unknown original owner")
++  let source ← PageMap.pin (project.sourceDirectory owner)
++  unless source.head.identity == registered.identity && source.head.authority == registered.authority do
++    throw (IO.userError "project original owner incarnation changed")
++  return source
++
++structure Cut where
++  project : String
++  heads : Array PageMap.Head
++  deriving ToJson, FromJson, BEq
++
++def headAt (heads : Array PageMap.Head) (owner : Nat) : IO PageMap.Head := do
++  let some head := heads[owner]? | throw (IO.userError "missing registered original head")
++  return head
++
++def Cut.inScope (cut : Cut) (m : Manifest) : Bool :=
++  cut.project == m.identity && cut.heads.size == m.owners.size &&
++    (cut.heads.zip m.owners).all (fun (head,original) =>
++      head.identity == original.identity && head.authority == original.authority)
++
++theorem Cut.missing_owner_rejected (cut : Cut) (m : Manifest)
++    (missing : cut.heads.size ≠ m.owners.size) : cut.inScope m = false := by
++  simp [Cut.inScope,missing]
++
++theorem Cut.foreign_project_rejected (cut : Cut) (m : Manifest)
++    (foreign : cut.project ≠ m.identity) : cut.inScope m = false := by
++  simp [Cut.inScope,foreign]
++
++/-- Same-revision forks cannot be made equivalent by a maximum on integers. -/
++def newer (left right : PageMap.Head) : Except String PageMap.Head := do
++  unless left.identity == right.identity && left.authority == right.authority do
++    throw "project frontier mixed original owners"
++  if left.revision == right.revision then
++    unless left == right do throw "project frontier contains a same-revision fork"
++    return left
++  return if left.revision < right.revision then right else left
++
++def Cut.join (left right : Cut) : Except String Cut := do
++  unless left.project == right.project && left.heads.size == right.heads.size do
++    throw "project frontier changed its complete owner inventory"
++  let heads ← (left.heads.zip right.heads).mapM fun (a,b) => newer a b
++  return ⟨left.project,heads⟩
++
++structure View where
++  private mk ::
++  project : Project
++  cut : Cut
++  sources : Array PageMap.Snapshot
++  complete : sources.size = project.manifest.owners.size
++  exact : sources.map (·.head) = cut.heads
++
++theorem View.no_owner_omitted (view : View) :
++    view.sources.size = view.project.manifest.owners.size := view.complete
++
++def headKey (revision : Nat) := s!"project:head:{revision}"
++
++def decodeHead (bytes : ByteArray) : IO PageMap.Head := do
++  unless bytes.size ≤ 4096 do throw (IO.userError "oversized project source head")
++  let (head,tail) ← IO.ofExcept (PageMap.headCodec.decode bytes.toList)
++  unless tail.isEmpty && (PageMap.headCodec.encode head).toByteArray == bytes do
++    throw (IO.userError "noncanonical project source head")
++  return head
++
++/-- Every owner append records its exact previous head at a fresh immutable
++revision key, in the same transaction as the originals. This lookup does not
++walk thousands of old publications. Exact equality includes the root digest. -/
++def sourceContains (source : PageMap.Snapshot) (head : PageMap.Head) : IO Bool := do
++  if head == source.head then return true
++  unless head.identity == source.head.identity && head.authority == source.head.authority &&
++      head.revision < source.head.revision && head.bytes < source.head.bytes do return false
++  let some bytes ← source.get (headKey head.revision) | return false
++  return (← decodeHead bytes) == head
++
++def readCut (m : Manifest) (source : PageMap.Snapshot) : IO Cut := do
++  if source.head.revision == 0 then return ⟨m.identity,m.owners⟩
++  let count ← getNat source.get "project:cut-count"
++  unless 0 < count && count ≤ 32 do throw (IO.userError "missing or oversized original dependency frontier")
++  let mut bytes := ByteArray.empty
++  for index in [:count] do
++    let some part ← source.get s!"project:cut:{index}" |
++      throw (IO.userError "incomplete original dependency frontier")
++    unless !part.isEmpty && part.size ≤ 2048 do throw (IO.userError "invalid dependency frontier block")
++    bytes := bytes ++ part
++  unless bytes.size ≤ maxMetadataBytes do throw (IO.userError "oversized original dependency frontier")
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid dependency frontier encoding")
++  let cut ← IO.ofExcept (Json.parse text >>= fromJson? (α := Cut))
++  unless bytes == (toJson cut).compress.toUTF8 && cut.inScope m do
++    throw (IO.userError "foreign or noncanonical dependency frontier")
++  return cut
++
++def historical (project : Project) (owner : Nat) (head : PageMap.Head)
++    (shared : Option PageMap.SharedReader := none) : IO PageMap.Snapshot := do
++  let original ← project.current owner
++  let current ← match shared with
++    | none => pure original
++    | some shared => original.sharePages shared.pool shared.scope
++  unless ← sourceContains current head do throw (IO.userError "original head is not in the owner's publication history")
++  let some retained ← PageMap.HistoryReader.make? current head |
++    throw (IO.userError "project original extent is unavailable")
++  return retained.snapshot
++
++private def checkedSources (project : Project) (cut : Cut) (sources : Array PageMap.Snapshot) : IO View := do
++  unless cut.inScope project.manifest do throw (IO.userError "requested project cut has a foreign or missing owner")
++  for source in sources do
++    let required ← readCut project.manifest source
++    for owner in [:sources.size] do
++      let some selected := sources[owner]? | throw (IO.userError "missing pinned original owner")
++      unless ← sourceContains selected (← headAt required.heads owner) do
++        throw (IO.userError "requested project cut omits a source dependency")
++  if complete : sources.size = project.manifest.owners.size then
++    if exact : sources.map (·.head) = cut.heads then return ⟨project,cut,sources,complete,exact⟩
++    else throw (IO.userError "project historical pin changed its requested head")
++  else throw (IO.userError "project historical pin omitted an original owner")
++
++/-- An independently requested cut is accepted in full or rejected. Warm
++status is not an input, and an older closed cut is never substituted. -/
++@[no_expose] def openView (project : Project) (cut : Cut)
++    (shared : Option PageMap.SharedReader := none) : IO View := do
++  unless cut.inScope project.manifest do throw (IO.userError "requested project cut has a foreign or missing owner")
++  let sources ← (List.range cut.heads.size).toArray.mapM fun owner => do
++    historical project owner (← headAt cut.heads owner) shared
++  checkedSources project cut sources
++
++/-- Readers retain the same immutable heads and handles. Mutable read counts,
++trace capture and private caches belong to the borrower, not the shared image. -/
++@[no_expose] def View.fork (view : View) : IO View := do
++  let sources ← view.sources.mapM fun source => do
++    return {source with
++      reads := ← IO.mkRef 0,readBytes := ← IO.mkRef 0
++      trace := ← IO.mkRef none,cache := ← IO.mkRef {}}
++  if complete : sources.size = view.project.manifest.owners.size then
++    if exact : sources.map (·.head) = view.cut.heads then
++      return ⟨view.project,view.cut,sources,complete,exact⟩
++    else throw (IO.userError "borrow changed a pinned original head")
++  else throw (IO.userError "borrow changed the complete owner inventory")
++
++/-- Join already retained images without opening another set of source files.
++Every input head must be an ancestor of the selected head, not merely have a
++smaller revision. Dependencies are checked on the complete selected inventory. -/
++@[no_expose] def View.joinMany (first : View) (others : Array View) : IO View := do
++  unless others.all (fun v => v.project.directory == first.project.directory &&
++      v.project.manifest == first.project.manifest) do throw (IO.userError "joined images mixed project scopes")
++  if others.all (·.cut == first.cut) then return first
++  let views := #[first]++others
++  let mut cut := first.cut
++  for view in others do cut ← IO.ofExcept (cut.join view.cut)
++  let sources ← (List.range cut.heads.size).toArray.mapM fun owner => do
++    let head ← headAt cut.heads owner
++    let some source := views.findSome? (fun view => view.sources[owner]?.filter (·.head == head)) |
++      throw (IO.userError "joined original head has no retained reader")
++    for view in views do
++      unless ← sourceContains source (← headAt view.cut.heads owner) do
++        throw (IO.userError "joined original images have divergent ancestry")
++    return source
++  checkedSources first.project cut sources
++
++/-- Freeze originals first, then close only their recorded dependencies.
++Lifting reads the named historical head, not the newest derived or source root.
++The deadline rejects unfinished closure; it never returns a reduced inventory. -/
++def closeCut (project : Project) (initial : Cut) (deadline : Nat)
++    (shared : Option PageMap.SharedReader := none) : IO View := do
++  unless initial.inScope project.manifest do throw (IO.userError "initial project frontier omitted or mixed owners")
++  let mut cut := initial
++  repeat
++    unless (← IO.monoMsNow) < deadline do throw (IO.userError "project original cut closure expired")
++    let mut closed := cut
++    for owner in [:cut.heads.size] do
++      let source ← historical project owner (← headAt cut.heads owner) shared
++      closed ← IO.ofExcept (closed.join (← readCut project.manifest source))
++    if closed == cut then return ← openView project cut shared
++    cut := closed
++
++def pin (project : Project) (deadline : Nat) (shared : Option PageMap.SharedReader := none) : IO View := do
++  let initial ← (List.range project.manifest.owners.size).toArray.mapM (project.current ·)
++  closeCut project ⟨project.manifest.identity,initial.map (·.head)⟩ deadline shared
++
++
++end Eggshell.ProjectStore
+--- /dev/null
++++ b/Eggshell/ProjectAccess.lean
+@@ -0,0 +1,115 @@
++module
++
++public import Eggshell.ProjectSources
++public import Eggshell.Config
++
++@[expose] public section
++namespace Eggshell.ProjectAccess
++open Lean DB ProjectStore
++
++structure Write where
++  private mk ::
++  session : String
++  project : Project
++  slot : Fin project.manifest.owners.size
++  routed : slot.val = routeSlot session project.manifest.owners.size
++
++def Write.directory (write : Write) := write.project.directory
++def Write.sourceDirectory (write : Write) := write.project.sourceDirectory write.slot.val
++def Write.original (write : Write) := write.project.manifest.owners[write.slot]
++
++theorem Write.registered (write : Write) :
++    write.original ∈ write.project.manifest.owners.toList := by
++  simp [Write.original]
++
++theorem Write.physical_not_logical (write : Write) :
++    write.original.identity ≠ write.project.manifest.identity := by
++  exact (write.project.checked.2.2.2.2 _ write.registered).2.1
++
++/-- Configured logical projects remain separate from physical source regions.
++Only the explicitly configured write project grants a route. -/
++structure Selection where
++  private mk ::
++  config : Config.Selection
++  reads : Array Project
++  write : Option Write
++  complete : reads.size = config.read.length
++  readDirectories : reads.toList.map (·.directory) = config.read.map (·.path.normalize)
++  writeDirectory : write.map (·.directory) = config.write.map (·.path.normalize)
++
++theorem Selection.only_configured_write (selection : Selection) (route : Write)
++    (selected : selection.write = some route) :
++    ∃ configured, selection.config.write = some configured ∧ route.directory = configured.path.normalize := by
++  have same := selection.writeDirectory
++  rw [selected] at same
++  cases configured : selection.config.write with
++  | none => simp [configured] at same
++  | some target =>
++    refine ⟨target,rfl,?_⟩
++    simpa [configured] using same
++
++theorem Selection.read_only (selection : Selection) (readOnly : selection.config.write = none) :
++    selection.write = none := by
++  have same := selection.writeDirectory
++  rw [readOnly] at same
++  cases selected : selection.write <;> simp_all
++
++private def rejectAliases (projects : Array Project) : IO Unit := do
++  let mut locations : Std.HashMap String (System.FilePath × Manifest) := {}
++  for project in projects do
++    if let some (path,manifest) := locations[project.manifest.identity]? then
++      unless path == project.directory && manifest == project.manifest do
++        throw (IO.userError "one logical project was configured at conflicting locations or inventories")
++    else locations := locations.insert project.manifest.identity (project.directory,project.manifest)
++
++@[no_expose] def resolve (session : String) (config : Config.Selection) : IO Selection := do
++  unless !session.isEmpty && (config.read ++ config.write.toList).all (·.path.isAbsolute) do
++    throw (IO.userError "project selection requires a native session and absolute configured paths")
++  let reads ← config.read.toArray.mapM fun egg => openProject egg.path
++  let write ← config.write.mapM fun egg => do
++    let project ← openProject egg.path
++    let slot := routeSlot session project.manifest.owners.size
++    let bounded := routeSlot_bounded session _ project.inventory_bounded.1
++    return (⟨session,project,⟨slot,bounded⟩,rfl⟩ : Write)
++  rejectAliases (reads ++ write.toArray.map (·.project))
++  if complete : reads.size = config.read.length then
++    if readDirectories : reads.toList.map (·.directory) = config.read.map (·.path.normalize) then
++      if writeDirectory : write.map (·.directory) = config.write.map (·.path.normalize) then
++        return ⟨config,reads,write,complete,readDirectories,writeDirectory⟩
++      else throw (IO.userError "resolved project changed the configured write destination")
++    else throw (IO.userError "resolved projects changed the configured read inventory")
++  else throw (IO.userError "resolved project omitted a configured read database")
++
++/-- The caller retains these views throughout its operation. No warm-state,
++recommendation rank or writable-route filter can remove a read project. -/
++structure ReadSet (selection : Selection) where
++  private mk ::
++  views : Array View
++  complete : views.size = selection.reads.size
++  projects : views.map (·.project.directory) = selection.reads.map (·.directory)
++  manifests : views.map (·.project.manifest) = selection.reads.map (·.manifest)
++
++def ReadSet.sources (set : ReadSet selection) : Array PageMap.Snapshot := set.views.flatMap (·.sources)
++
++theorem ReadSet.no_project_omitted (set : ReadSet selection) :
++    set.views.size = selection.config.read.length := set.complete.trans selection.complete
++
++theorem ReadSet.source_count (set : ReadSet selection) :
++    set.sources.size = (set.views.map fun view => view.project.manifest.owners.size).sum := by
++  simp only [ReadSet.sources,Array.size_flatMap]
++  congr 1
++  apply Array.map_congr_left
++  intro view _
++  exact view.complete
++
++@[no_expose] def pin (selection : Selection) (deadline : Nat) : IO (ReadSet selection) := do
++  let views ← selection.reads.mapM fun project => ProjectStore.pin project deadline
++  if complete : views.size = selection.reads.size then
++    if projects : views.map (·.project.directory) = selection.reads.map (·.directory) then
++      if manifests : views.map (·.project.manifest) = selection.reads.map (·.manifest) then
++        return ⟨views,complete,projects,manifests⟩
++      else throw (IO.userError "project read view changed its configured inventory")
++    else throw (IO.userError "project read view changed its configured location")
++  else throw (IO.userError "project read view omitted a configured database")
++
++end Eggshell.ProjectAccess
+--- a/Eggshell/ProjectStore.lean
++++ b/Eggshell/ProjectStore.lean
+@@ -2,0 +3 @@
++public import Eggshell.ProjectSources
+@@ -4 +4,0 @@
+-public import Eggshell.SourceDelta
+@@ -6 +5,0 @@
+-public import Eggshell.PublicationHistory
+@@ -11,257 +9,0 @@
+-
+-def maxOwners : Nat := 128
+-def maxMetadataBytes : Nat := 65536
+-
+-/-- This is the complete, immutable owner inventory, not a list of whichever
+-indexes happen to be warm. Every physical incarnation is distinct. -/
+-structure Manifest where
+-  identity : String
+-  authority : String
+-  owners : Array PageMap.Head
+-  deriving ToJson, FromJson, BEq
+-
+-def Manifest.Valid (m : Manifest) : Prop :=
+-  PageMap.validIdentity m.identity = true ∧ 0 < m.owners.size ∧ m.owners.size ≤ maxOwners ∧
+-  (m.owners.toList.map (·.identity)).Nodup ∧
+-  ∀ head ∈ m.owners.toList, PageMap.validIdentity head.identity = true ∧
+-    head.identity ≠ m.identity ∧ head.authority = m.authority ∧
+-    head.revision = 0 ∧ head.root = none ∧ head.bytes = PageMap.magic.size
+-
+-instance (m : Manifest) : Decidable m.Valid := by unfold Manifest.Valid; infer_instance
+-
+-structure Project where
+-  directory : System.FilePath
+-  manifest : Manifest
+-  checked : manifest.Valid
+-
+-theorem Project.inventory_bounded (project : Project) :
+-    0 < project.manifest.owners.size ∧ project.manifest.owners.size ≤ maxOwners :=
+-  ⟨project.checked.2.1,project.checked.2.2.1⟩
+-
+-structure StoredManifest where
+-  manifest : Manifest
+-  checksum : String
+-  deriving ToJson, FromJson
+-
+-def manifestChecksum (m : Manifest) := Sha256.hex (toJson m).compress.toUTF8
+-
+-def Project.ownerDirectory (project : Project) (owner : Nat) :=
+-  project.directory / "owners" / toString owner
+-
+-def Project.sourceDirectory (project : Project) (owner : Nat) :=
+-  project.ownerDirectory owner / "source.egg"
+-
+-def openProject (directory : System.FilePath) : IO Project := do
+-  let directory ← PageMap.absolute directory
+-  FileSystem.rejectSymlinkAncestors directory
+-  let bytes ← FileSystem.boundedBytes (directory / "project") maxMetadataBytes
+-  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid project manifest encoding")
+-  let record ← IO.ofExcept (Json.parse text >>= fromJson? (α := StoredManifest))
+-  unless bytes == (toJson record).compress.toUTF8 && record.checksum == manifestChecksum record.manifest do
+-    throw (IO.userError "invalid project manifest checksum or encoding")
+-  if checked : record.manifest.Valid then return ⟨directory,record.manifest,checked⟩
+-  else throw (IO.userError "invalid or incomplete project owner inventory")
+-
+-/-- Only project creation publishes the inventory. No mutable global source
+-head is replaced by an owner. Slots are service work regions, not personal DBs. -/
+-def create (directory : System.FilePath) (owners : Nat) : IO Project := do
+-  unless 0 < owners && owners ≤ maxOwners do throw (IO.userError "invalid project owner count")
+-  let directory ← PageMap.absolute directory
+-  unless !(← directory.pathExists) do throw (IO.userError "project already exists")
+-  FileSystem.rejectSymlinkAncestors directory
+-  let identity := Blake3.hex (← IO.getRandomBytes 32)
+-  let staging := directory.withFileName (".project-" ++ identity)
+-  FileSystem.privateDirectory staging
+-  let parent ← Sidecar.childDirectory staging "owners"
+-  let authority := (Persistence.valueToJson (.text ("egg project " ++ identity))).compress
+-  let mut heads := #[]
+-  for owner in [:owners] do
+-    let folder ← Sidecar.childDirectory parent (toString owner)
+-    let source ← PageMap.create (folder / "source.egg") authority
+-    heads := heads.push source.head
+-  let manifest : Manifest := ⟨identity,authority,heads⟩
+-  unless decide manifest.Valid do throw (IO.userError "project creation produced invalid owner inventory")
+-  let bytes := (toJson (StoredManifest.mk manifest (manifestChecksum manifest))).compress.toUTF8
+-  unless bytes.size ≤ maxMetadataBytes do throw (IO.userError "project owner inventory exceeds metadata bound")
+-  FileSystem.immutableExistingBytes (staging / "project") bytes
+-  FileSystem.publishDirectory staging.toString directory.toString
+-  openProject directory
+-
+-def Project.current (project : Project) (owner : Nat) : IO PageMap.Snapshot := do
+-  let some registered := project.manifest.owners[owner]? |
+-    throw (IO.userError "unknown original owner")
+-  let source ← PageMap.pin (project.sourceDirectory owner)
+-  unless source.head.identity == registered.identity && source.head.authority == registered.authority do
+-    throw (IO.userError "project original owner incarnation changed")
+-  return source
+-
+-structure Cut where
+-  project : String
+-  heads : Array PageMap.Head
+-  deriving ToJson, FromJson, BEq
+-
+-def headAt (heads : Array PageMap.Head) (owner : Nat) : IO PageMap.Head := do
+-  let some head := heads[owner]? | throw (IO.userError "missing registered original head")
+-  return head
+-
+-def Cut.inScope (cut : Cut) (m : Manifest) : Bool :=
+-  cut.project == m.identity && cut.heads.size == m.owners.size &&
+-    (cut.heads.zip m.owners).all (fun (head,original) =>
+-      head.identity == original.identity && head.authority == original.authority)
+-
+-theorem Cut.missing_owner_rejected (cut : Cut) (m : Manifest)
+-    (missing : cut.heads.size ≠ m.owners.size) : cut.inScope m = false := by
+-  simp [Cut.inScope,missing]
+-
+-theorem Cut.foreign_project_rejected (cut : Cut) (m : Manifest)
+-    (foreign : cut.project ≠ m.identity) : cut.inScope m = false := by
+-  simp [Cut.inScope,foreign]
+-
+-/-- Same-revision forks cannot be made equivalent by a maximum on integers. -/
+-def newer (left right : PageMap.Head) : Except String PageMap.Head := do
+-  unless left.identity == right.identity && left.authority == right.authority do
+-    throw "project frontier mixed original owners"
+-  if left.revision == right.revision then
+-    unless left == right do throw "project frontier contains a same-revision fork"
+-    return left
+-  return if left.revision < right.revision then right else left
+-
+-def Cut.join (left right : Cut) : Except String Cut := do
+-  unless left.project == right.project && left.heads.size == right.heads.size do
+-    throw "project frontier changed its complete owner inventory"
+-  let heads ← (left.heads.zip right.heads).mapM fun (a,b) => newer a b
+-  return ⟨left.project,heads⟩
+-
+-structure View where
+-  private mk ::
+-  project : Project
+-  cut : Cut
+-  sources : Array PageMap.Snapshot
+-  complete : sources.size = project.manifest.owners.size
+-  exact : sources.map (·.head) = cut.heads
+-
+-theorem View.no_owner_omitted (view : View) :
+-    view.sources.size = view.project.manifest.owners.size := view.complete
+-
+-def headKey (revision : Nat) := s!"project:head:{revision}"
+-
+-def decodeHead (bytes : ByteArray) : IO PageMap.Head := do
+-  unless bytes.size ≤ 4096 do throw (IO.userError "oversized project source head")
+-  let (head,tail) ← IO.ofExcept (PageMap.headCodec.decode bytes.toList)
+-  unless tail.isEmpty && (PageMap.headCodec.encode head).toByteArray == bytes do
+-    throw (IO.userError "noncanonical project source head")
+-  return head
+-
+-/-- Every owner append records its exact previous head at a fresh immutable
+-revision key, in the same transaction as the originals. This lookup does not
+-walk thousands of old publications. Exact equality includes the root digest. -/
+-def sourceContains (source : PageMap.Snapshot) (head : PageMap.Head) : IO Bool := do
+-  if head == source.head then return true
+-  unless head.identity == source.head.identity && head.authority == source.head.authority &&
+-      head.revision < source.head.revision && head.bytes < source.head.bytes do return false
+-  let some bytes ← source.get (headKey head.revision) | return false
+-  return (← decodeHead bytes) == head
+-
+-def readCut (m : Manifest) (source : PageMap.Snapshot) : IO Cut := do
+-  if source.head.revision == 0 then return ⟨m.identity,m.owners⟩
+-  let count ← getNat source.get "project:cut-count"
+-  unless 0 < count && count ≤ 32 do throw (IO.userError "missing or oversized original dependency frontier")
+-  let mut bytes := ByteArray.empty
+-  for index in [:count] do
+-    let some part ← source.get s!"project:cut:{index}" |
+-      throw (IO.userError "incomplete original dependency frontier")
+-    unless !part.isEmpty && part.size ≤ 2048 do throw (IO.userError "invalid dependency frontier block")
+-    bytes := bytes ++ part
+-  unless bytes.size ≤ maxMetadataBytes do throw (IO.userError "oversized original dependency frontier")
+-  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid dependency frontier encoding")
+-  let cut ← IO.ofExcept (Json.parse text >>= fromJson? (α := Cut))
+-  unless bytes == (toJson cut).compress.toUTF8 && cut.inScope m do
+-    throw (IO.userError "foreign or noncanonical dependency frontier")
+-  return cut
+-
+-def historical (project : Project) (owner : Nat) (head : PageMap.Head)
+-    (shared : Option PageMap.SharedReader := none) : IO PageMap.Snapshot := do
+-  let original ← project.current owner
+-  let current ← match shared with
+-    | none => pure original
+-    | some shared => original.sharePages shared.pool shared.scope
+-  unless ← sourceContains current head do throw (IO.userError "original head is not in the owner's publication history")
+-  let some retained ← PageMap.HistoryReader.make? current head |
+-    throw (IO.userError "project original extent is unavailable")
+-  return retained.snapshot
+-
+-private def checkedSources (project : Project) (cut : Cut) (sources : Array PageMap.Snapshot) : IO View := do
+-  unless cut.inScope project.manifest do throw (IO.userError "requested project cut has a foreign or missing owner")
+-  for source in sources do
+-    let required ← readCut project.manifest source
+-    for owner in [:sources.size] do
+-      let some selected := sources[owner]? | throw (IO.userError "missing pinned original owner")
+-      unless ← sourceContains selected (← headAt required.heads owner) do
+-        throw (IO.userError "requested project cut omits a source dependency")
+-  if complete : sources.size = project.manifest.owners.size then
+-    if exact : sources.map (·.head) = cut.heads then return ⟨project,cut,sources,complete,exact⟩
+-    else throw (IO.userError "project historical pin changed its requested head")
+-  else throw (IO.userError "project historical pin omitted an original owner")
+-
+-/-- An independently requested cut is accepted in full or rejected. Warm
+-status is not an input, and an older closed cut is never substituted. -/
+-@[no_expose] def openView (project : Project) (cut : Cut)
+-    (shared : Option PageMap.SharedReader := none) : IO View := do
+-  unless cut.inScope project.manifest do throw (IO.userError "requested project cut has a foreign or missing owner")
+-  let sources ← (List.range cut.heads.size).toArray.mapM fun owner => do
+-    historical project owner (← headAt cut.heads owner) shared
+-  checkedSources project cut sources
+-
+-/-- Readers retain the same immutable heads and handles. Mutable read counts,
+-trace capture and private caches belong to the borrower, not the shared image. -/
+-@[no_expose] def View.fork (view : View) : IO View := do
+-  let sources ← view.sources.mapM fun source => do
+-    return {source with
+-      reads := ← IO.mkRef 0,readBytes := ← IO.mkRef 0
+-      trace := ← IO.mkRef none,cache := ← IO.mkRef {}}
+-  if complete : sources.size = view.project.manifest.owners.size then
+-    if exact : sources.map (·.head) = view.cut.heads then
+-      return ⟨view.project,view.cut,sources,complete,exact⟩
+-    else throw (IO.userError "borrow changed a pinned original head")
+-  else throw (IO.userError "borrow changed the complete owner inventory")
+-
+-/-- Join already retained images without opening another set of source files.
+-Every input head must be an ancestor of the selected head, not merely have a
+-smaller revision. Dependencies are checked on the complete selected inventory. -/
+-@[no_expose] def View.joinMany (first : View) (others : Array View) : IO View := do
+-  unless others.all (fun v => v.project.directory == first.project.directory &&
+-      v.project.manifest == first.project.manifest) do throw (IO.userError "joined images mixed project scopes")
+-  if others.all (·.cut == first.cut) then return first
+-  let views := #[first]++others
+-  let mut cut := first.cut
+-  for view in others do cut ← IO.ofExcept (cut.join view.cut)
+-  let sources ← (List.range cut.heads.size).toArray.mapM fun owner => do
+-    let head ← headAt cut.heads owner
+-    let some source := views.findSome? (fun view => view.sources[owner]?.filter (·.head == head)) |
+-      throw (IO.userError "joined original head has no retained reader")
+-    for view in views do
+-      unless ← sourceContains source (← headAt view.cut.heads owner) do
+-        throw (IO.userError "joined original images have divergent ancestry")
+-    return source
+-  checkedSources first.project cut sources
+-
+-/-- Freeze originals first, then close only their recorded dependencies.
+-Lifting reads the named historical head, not the newest derived or source root.
+-The deadline rejects unfinished closure; it never returns a reduced inventory. -/
+-def closeCut (project : Project) (initial : Cut) (deadline : Nat)
+-    (shared : Option PageMap.SharedReader := none) : IO View := do
+-  unless initial.inScope project.manifest do throw (IO.userError "initial project frontier omitted or mixed owners")
+-  let mut cut := initial
+-  repeat
+-    unless (← IO.monoMsNow) < deadline do throw (IO.userError "project original cut closure expired")
+-    let mut closed := cut
+-    for owner in [:cut.heads.size] do
+-      let source ← historical project owner (← headAt cut.heads owner) shared
+-      closed ← IO.ofExcept (closed.join (← readCut project.manifest source))
+-    if closed == cut then return ← openView project cut shared
+-    cut := closed
+-
+-def pin (project : Project) (deadline : Nat) (shared : Option PageMap.SharedReader := none) : IO View := do
+-  let initial ← (List.range project.manifest.owners.size).toArray.mapM (project.current ·)
+-  closeCut project ⟨project.manifest.identity,initial.map (·.head)⟩ deadline shared
+-
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -89 +89 @@
+-def ownerSlot (session : String) (owners : Nat) : Nat := (hash session).toNat % owners
++def ownerSlot (session : String) (owners : Nat) : Nat := ProjectStore.routeSlot session owners
+@@ -92 +92 @@
+-    ownerSlot session owners < owners := Nat.mod_lt _ nonempty
++    ownerSlot session owners < owners := ProjectStore.routeSlot_bounded session owners nonempty
+@@ -122,0 +123 @@
++  (include_str "ProjectSources.lean").toUTF8,(include_str "ProjectAccess.lean").toUTF8,
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -3,0 +4 @@
++public import Eggshell.ProjectAccess
+@@ -382 +383,2 @@
+-def restore (request : NativePublication.Prepared) (receipt : NativePublication.SourceReceipt) : IO NativePublication.Published := do
++private def restoreAt (logical : System.FilePath) (request : NativePublication.Prepared)
++    (receipt : NativePublication.SourceReceipt) : IO NativePublication.Published := do
+@@ -389 +391 @@
+-  let (transaction,promotion) ← IO.ofExcept (NativePublication.compilePrepared header request.target request)
++  let (transaction,promotion) ← IO.ofExcept (NativePublication.compilePrepared header logical request)
+@@ -393,0 +396,18 @@
++
++@[no_expose] def restore (request : NativePublication.Prepared) (receipt : NativePublication.SourceReceipt) : IO NativePublication.Published :=
++  restoreAt request.target request receipt
++
++/-- The selected logical project authorizes one physical ingress route. The
++caller supplies the actual retained read boundary, never a later current cut. -/
++def prepareProject (write : ProjectAccess.Write) (view : ProjectStore.View)
++    (pending : PendingTurn) (checkpoint : Bool) : IO NativePublication.Prepared := do
++  unless pending.sessionId == write.session && pending.write == some write.directory.toString &&
++      view.project.directory == write.directory && view.project.manifest == write.project.manifest do
++    throw (IO.userError "project publication changed its configured session, destination or read inventory")
++  let some source := view.sources[write.slot.val]? | throw (IO.userError "project write route is missing from its read view")
++  unless source.head.identity == write.original.identity && source.head.authority == write.original.authority do
++    throw (IO.userError "project write route changed original source incarnation")
++  let items ← NativePublication.planUsing pending (some source) (← Synapses.Journal.open? source)
++  if matching : NativePublication.matchesPending pending items = true then
++    return ⟨pending,write.sourceDirectory,some write.original.identity,checkpoint,items,matching⟩
++  else throw (IO.userError "project publication changed its original observations")
+@@ -394,0 +415,20 @@
++/-- Durable receipts name a physical source; reconstructed graph provenance
++continues to name the configured logical project. -/
++@[no_expose] def restoreProject (write : ProjectAccess.Write) (request : NativePublication.Prepared)
++    (receipt : NativePublication.SourceReceipt) : IO NativePublication.Published := do
++  unless request.pending.sessionId == write.session && request.pending.write == some write.directory.toString &&
++      request.target.normalize == write.sourceDirectory && request.identity == some write.original.identity &&
++      receipt.head.identity == write.original.identity && receipt.head.authority == write.original.authority do
++    throw (IO.userError "project receipt changed its configured route or original incarnation")
++  restoreAt write.directory request receipt
++
++def publishConfiguredProject (endpoint : Daemon.Endpoint) (selection : ProjectAccess.Selection)
++    (view : ProjectStore.View) (pending : PendingTurn) (checkpoint : Bool) (deadline : Nat) :
++    IO NativePublication.Published := do
++  let some write := selection.write | throw (IO.userError "configured project is read-only")
++  let request ← prepareProject write view pending checkpoint
++  let granted ← registerProject endpoint write.directory write.project.manifest.identity
++  unless granted.manifest == write.project.manifest do throw (IO.userError "registered project changed its owner inventory")
++  let receipt ← submitProject endpoint granted view.cut (Capsule.ofPrepared request) deadline
++  restoreProject write request receipt
++
