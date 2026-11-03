@@ -76,10 +76,16 @@ takes 22,064 ms with 142 retries: this remains a scaling concern, rather than a
 passed sustained-capacity gate.
 
 A read-only census identifies redundant feed work: 3,165 of 4,220 eligible rows
-are indirect references, which the current import scan visits and skips. An
-original-only feed index is the next isolated change. It must preserve the full
-original event order, scope and retained-head checks and be proved equivalent to
-filtering the existing scan. It is not implemented or timed by this audit.
+are indirect references, which the parent's import scan visits and skips. The
+[original-only feed candidate](candidates/original-feed/README.md) now atomically
+indexes native appends while aliases leave that frontier unchanged. Pure Lean
+append/filter equivalence and an independent native mixed-journal scan agree;
+a 152-row interleaved journal imports exactly its 24 originals. Cursor basis,
+retained head, scope, order and original receipt checks remain in force. The
+actual MiniLM mixed burst retains every original and numerical window. Forced
+interruption recovers in 16,831 ms with 75 retries; journal/checkpoint work and
+source-projection metadata fan-out remain. These are isolated small-fixture
+results, not adoption, controlled speedup or sustained 80-person capacity.
 
 ## Capacity gate
 

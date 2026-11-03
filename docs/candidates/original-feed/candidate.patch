@@ -1,0 +1,187 @@
+--- /dev/null
++++ b/Eggshell/OriginalEventIndex.lean
+@@ -0,0 +1,47 @@
++module
++
++public import Std
++
++@[expose] public section
++
++namespace Eggshell.OriginalEventIndex
++
++/-- The ordinal written to the sparse feed, if this append is original. -/
++def posting (position ordinal : Nat) (original : Bool) : Option (Nat × Nat) :=
++  if original then some (position,ordinal) else none
++
++def next (position : Nat) (original : Bool) : Nat :=
++  position + if original then 1 else 0
++
++/-- Full mixed-journal oracle. `true` denotes an original, `false` an alias. -/
++def enumerate (start : Nat) : List Bool → List Nat
++  | [] => []
++  | original :: rest => (if original then [start] else []) ++ enumerate (start+1) rest
++
++theorem enumerate_append (left right : List Bool) (start : Nat) :
++    enumerate start (left ++ right) = enumerate start left ++ enumerate (start+left.length) right := by
++  induction left generalizing start with
++  | nil => simp [enumerate]
++  | cons original rest ih =>
++    simp [enumerate,ih,List.append_assoc,Nat.add_comm,Nat.add_left_comm]
++
++/-- Appending one posting agrees with filtering the complete mixed journal. -/
++theorem append_matches_full_scan (events : List Bool) (original : Bool) :
++    enumerate 0 (events ++ [original]) =
++      enumerate 0 events ++ (posting (enumerate 0 events).length events.length original).toList.map Prod.snd := by
++  rw [enumerate_append]
++  cases original <;> simp [enumerate,posting]
++
++theorem alias_preserves_originals (events : List Bool) :
++    enumerate 0 (events ++ [false]) = enumerate 0 events := by
++  simp [append_matches_full_scan,posting]
++
++theorem next_matches_full_scan (events : List Bool) (original : Bool) :
++    next (enumerate 0 events).length original = (enumerate 0 (events ++ [original])).length := by
++  rw [append_matches_full_scan]
++  cases original <;> simp [next,posting]
++
++theorem posting_position (position ordinal : Nat) :
++    posting position ordinal true = some (position,ordinal) := rfl
++
++end Eggshell.OriginalEventIndex
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -10,0 +11 @@
++public import Eggshell.OriginalEventIndex
+@@ -219 +220 @@
+-  (include_str "DeliveryLedger.lean").toUTF8])
++  (include_str "DeliveryLedger.lean").toUTF8,(include_str "OriginalEventIndex.lean").toUTF8])
+@@ -373,0 +375,15 @@
++
++/-- Only native appends advance this feed. Aliases retain their one original
++location and cannot create further upstream work. -/
++structure OriginalFeed where
++  producer : String
++  count : Nat
++  latest : Nat
++  chain : String
++  deriving BEq, ToJson, FromJson
++
++def OriginalFeed.empty (journal : PageMap.Snapshot) : OriginalFeed :=
++  ⟨implementation,0,0,Index.contentKey (journal.head.identity,"original events")⟩
++
++def originalKey (position : Nat) := key "original-event" position
++def originalPositionKey (ordinal : Nat) := key "original-position" ordinal
+@@ -374,0 +391,33 @@
++def originalFeedUsing (journal : PageMap.Snapshot)
++    (get : String → IO (Option ByteArray)) : IO OriginalFeed := do
++  let some raw ← get "original-feed" | do
++    unless (← getNat get "count") == 0 do
++      throw (IO.userError "private journal has no original-only append feed")
++    return OriginalFeed.empty journal
++  let feed ← Index.decode (α := OriginalFeed) raw
++  let count ← getNat get "count"
++  unless (toJson feed).compress.toUTF8 == raw && feed.producer == implementation &&
++      feed.count ≤ count && feed.latest ≤ count && digest feed.chain &&
++      ((feed.count == 0 && feed == OriginalFeed.empty journal) ||
++        (feed.count > 0 && feed.latest > 0)) do
++    throw (IO.userError "invalid original-only append feed")
++  return feed
++
++def originalFeed (journal : PageMap.Snapshot) : IO OriginalFeed :=
++  originalFeedUsing journal journal.get
++
++def originalOrdinal (journal : PageMap.Snapshot) (position : Nat) : IO Nat := do
++  let some raw ← journal.get (originalKey position) |
++    throw (IO.userError "original-only append feed has a hole")
++  let ordinal ← IO.ofExcept (payloadSize (some raw))
++  let inverse ← journal.get (originalPositionKey ordinal)
++  unless ordinal < (← getNat journal.get "count") &&
++      (← journal.get (referenceKey ordinal)).isNone &&
++      inverse == some (Wire.natural.encode position).toByteArray do
++    throw (IO.userError "original-only append feed changed its original location")
++  return ordinal
++
++inductive EntryStorage where
++  | original
++  | reference (value : EntryReference)
++
+@@ -378 +427 @@
+-    (store : Nat → IO Unit) : IO Bool := do
++    (storage : EntryStorage) : IO Bool := do
+@@ -396 +445,20 @@
+-  store ordinal
++  let original ← originalFeedUsing journal writer.get
++  let bytes := (toJson value).compress.toUTF8
++  let isOriginal := match storage with | .original => true | .reference _ => false
++  match storage with
++  | .original => putChunks writer "entry" ordinal bytes
++  | .reference reference =>
++    let encoded := (toJson reference).compress.toUTF8
++    unless encoded.size ≤ 16384 do throw (IO.userError "oversized private ingress alias")
++    putNat writer (key "entry" ordinal) bytes.size
++    writer.put (referenceKey ordinal) (some encoded)
++  let original ← match OriginalEventIndex.posting original.count ordinal isOriginal with
++    | none => pure original
++    | some (position,location) => do
++      putNat writer (originalKey position) location
++      putNat writer (originalPositionKey location) position
++      pure {original with
++        count := OriginalEventIndex.next position true,latest := location+1,
++        chain := Index.contentKey (original.chain,position,location,Index.contentKey value)}
++  if isOriginal || (← writer.get "original-feed").isNone then
++    writer.put "original-feed" (some (toJson original).compress.toUTF8)
+@@ -425 +493 @@
+-      stageEntry journal writer value fun ordinal => putChunks writer "entry" ordinal bytes
++      stageEntry journal writer value .original
+@@ -466,0 +535 @@
++  basis : OriginalFeed
+@@ -508 +577,2 @@
+-  let count ← getNat original.get "count"
++  let basis ← originalFeed original
++  let count := basis.count
+@@ -512,3 +582,5 @@
+-      unless old.next ≤ count && old.journal.identity == original.head.identity &&
+-          old.journal.authority == original.head.authority &&
+-          (← PageMap.HistoryReader.make? original old.journal).isSome do
++      let retained ← PageMap.HistoryReader.make? original old.journal
++      unless old.next ≤ old.basis.count && old.basis.count ≤ count &&
++          old.journal.identity == original.head.identity &&
++          old.journal.authority == original.head.authority && retained.isSome &&
++          (← retained.mapM (fun saved => originalFeed saved.snapshot)) == some old.basis do
+@@ -523 +595,2 @@
+-    for ordinal in [start:finish] do
++    let mut previous ← if start == 0 then pure none else some <$> originalOrdinal original (start-1)
++    for position in [start:finish] do
+@@ -525,4 +598,4 @@
+-      if (← original.get (referenceKey ordinal)).isSome then
+-        result := {result with examined := result.examined+1,indirect := result.indirect+1}
+-        next := ordinal+1
+-        continue
++      let ordinal ← originalOrdinal original position
++      unless previous.all (· < ordinal) &&
++          (position+1 != count || ordinal+1 == basis.latest) do
++        throw (IO.userError "original-only append feed changed its order")
+@@ -550 +623,2 @@
+-      next := ordinal+1
++      previous := some ordinal
++      next := position+1
+@@ -552 +626 @@
+-    let cursor : ImportCursor := ⟨original.head,next⟩
++    let cursor : ImportCursor := ⟨original.head,basis,next⟩
+@@ -556,5 +630 @@
+-        let referenceBytes := (toJson reference).compress.toUTF8
+-        unless referenceBytes.size ≤ 16384 do throw (IO.userError "oversized private ingress alias")
+-        let found ← stageEntry target writer value fun ordinal => do
+-          putNat writer (key "entry" ordinal) (toJson value).compress.utf8ByteSize
+-          writer.put (referenceKey ordinal) (some referenceBytes)
++        let found ← stageEntry target writer value (.reference reference)
+@@ -1312 +1382,2 @@
+-  let count ← getNat original.get "count"
++  let basis ← originalFeed original
++  let count := basis.count
+@@ -1316 +1387,4 @@
+-  unless old.next ≤ count && (← PageMap.HistoryReader.make? original old.journal).isSome do
++  let retained ← PageMap.HistoryReader.make? original old.journal
++  unless old.next ≤ old.basis.count && old.basis.count ≤ count &&
++      old.journal.identity == original.head.identity && old.journal.authority == original.head.authority &&
++      retained.isSome && (← retained.mapM (fun saved => originalFeed saved.snapshot)) == some old.basis do

@@ -1,0 +1,23 @@
+{
+  "parent": "cc1569b7; unchanged preparation-drain product",
+  "status": "isolated candidate, not adopted",
+  "change": "Atomically index original event ordinals; reference appends preserve the original frontier. Import cursors advance over originals, never aliases.",
+  "invariants": [
+    "Retain original raw bytes, private scope, one-hop aliases, immutable original heads, per-turn append receipts and original order.",
+    "Commit original body, sparse posting, inverse posting and frontier in the same private transaction. Duplicate saves and failed transactions cannot advance any of them.",
+    "Validate cursor against the exact retained original head and its original-feed basis. Reject holes, incorrect inverse locations, aliases, unsupported old journals and changed scope rather than scanning a compatibility fallback.",
+    "Keep existing row, input-byte, deadline and aggregate resource limits. Do not change ranking, certification, WorkGraph completion, source ACK or model."
+  ],
+  "validation": [
+    "Lean sparse append agrees with filtering the full mixed event sequence; aliases leave the original sequence unchanged.",
+    "Native independent mixed-journal scan matches every sparse ordinal and original body, including interleaved originals/aliases, duplicates, aborted transactions, bounded imports and fresh-process resume.",
+    "Reject expired advancement, cursor holes, wrong inverse postings and foreign/unretained cursors; retained immutable pins remain unchanged.",
+    "Ordinary native lifecycle, actual MiniLM mixed search/save drain and interrupted preparation recovery. This is not 80 people for eight hours or a token-adoption result."
+  ],
+  "answeringModelCalls": 0,
+  "matchedPaidComparisons": 0,
+  "productionAdoption": false,
+  "aggregateStopRssKiB": 3670016,
+  "hardRssCeilingKiB": 4194304,
+  "minimumFreeDiskKiB": 2097152
+}
