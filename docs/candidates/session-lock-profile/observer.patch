@@ -1,0 +1,91 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -147,2 +147,13 @@
+-def withHookSession (input : Json) (session : String)
+-    (action : SessionFiles → IO α) : IO α := do
++def measuredSessionStep (timings : Option (IO.Ref (Array Json)))
++    (name : String) (action : IO α) : IO α := do
++  let some timings := timings | return ← action
++  let started ← IO.monoMsNow
++  try action finally
++    let finished ← IO.monoMsNow
++    timings.modify (·.push (Json.mkObj [("step",toJson name),
++      ("startedMs",toJson started),("finishedMs",toJson finished)]))
++
++/-- An isolated observer: all diagnostic writes happen after releasing the
++session guard. No body, tool input or source capability enters the trace. -/
++def withMeasuredHookSession (phase : String) (input : Json) (session : String)
++    (action : SessionFiles → Option (IO.Ref (Array Json)) → IO α) : IO α := do
+@@ -151 +162,26 @@
+-  Persistence.withLockUntil files.lock (← hookDeadline input) (action files)
++  let deadline ← hookDeadline input
++  if (← IO.getEnv "EGGSHELL_TRACE_SESSION_LOCK") != some "1" then
++    return ← Persistence.withLockUntil files.lock deadline (action files none)
++  let waiting ← IO.monoMsNow
++  let acquired ← IO.mkRef (none : Option Nat)
++  let released ← IO.mkRef (none : Option Nat)
++  let success ← IO.mkRef false
++  let timings ← IO.mkRef (#[] : Array Json)
++  try
++    Persistence.withLockUntil files.lock deadline do
++      acquired.set (some (← IO.monoMsNow))
++      try
++        let result ← action files (some timings)
++        success.set true
++        return result
++      finally released.set (some (← IO.monoMsNow))
++  finally
++    let finished ← IO.monoMsNow
++    let id ← Receipt.fresh
++    Receipt.observe (some id) "session-lock-profile" (Json.mkObj [
++      ("session",toJson (Blake3.hex session.toUTF8)),("phase",toJson phase),
++      ("hook",toJson (optionalString input "hook_event_name")),
++      ("hookReceipt",toJson (optionalString input "_eggshell_receipt")),
++      ("waitingMs",toJson waiting),("acquiredMs",toJson (← acquired.get)),
++      ("releasedMs",toJson (← released.get)),("finishedMs",toJson finished),
++      ("succeeded",toJson (← success.get)),("steps",toJson (← timings.get))])
+@@ -152,0 +189,4 @@
++def withHookSession (input : Json) (session : String)
++    (action : SessionFiles → IO α) : IO α :=
++  withMeasuredHookSession "hook" input session fun files _ => action files
++
+@@ -538 +578 @@
+-  let snapshot ← withHookSession input session fun files => do
++  let snapshot ← withMeasuredHookSession "delivery-basis" input session fun files _ => do
+@@ -581 +621 @@
+-  let (handoff, disposition) ← withHookSession input session fun files => do
++  let (handoff, disposition) ← withMeasuredHookSession "delivery-offer" input session fun files timings => do
+@@ -587,2 +627,4 @@
+-    match Worker.SearchDelivery.ofReply stamp current.turnId state.epoch now
+-        pending.handoffChars result with
++    let delivery ← measuredSessionStep timings "reply-decode" do
++      pure (Worker.SearchDelivery.ofReply stamp current.turnId state.epoch now
++        pending.handoffChars result)
++    match delivery with
+@@ -595,2 +637,4 @@
+-        let some reconciled := handoff.reconcileDelivery
+-            (state.deliveryClaims current.turnId now) pending.handoffChars Config.nativeHandoffBytes |
++        let prepared ← measuredSessionStep timings "reconcile" do
++          pure (handoff.reconcileDelivery (state.deliveryClaims current.turnId now)
++            pending.handoffChars Config.nativeHandoffBytes)
++        let some reconciled := prepared |
+@@ -601,4 +645,5 @@
+-        let offer : DeliveryOffer := {
+-          id, stamp, graphs := handoff.deliveredGraphs, text := handoff.text
+-          reason := handoff.reason, search := handoff.search
+-          projection := handoff.acknowledgmentProjection }
++        let offer : DeliveryOffer ← measuredSessionStep timings "projection" do
++          pure {
++            id, stamp, graphs := handoff.deliveredGraphs, text := handoff.text
++            reason := handoff.reason, search := handoff.search
++            projection := handoff.acknowledgmentProjection }
+@@ -608,4 +653,5 @@
+-        writeJson files.state {
+-          (addDeliveredGraphs state checkpoints) with
+-          offers := offer :: (state.offers.filter fun (offer : DeliveryOffer) =>
+-            offer.id != id && offer.stamp.accepts current.turnId state.epoch now).take 15 }
++        measuredSessionStep timings "state-write" do
++          writeJson files.state {
++            (addDeliveredGraphs state checkpoints) with
++            offers := offer :: (state.offers.filter fun (offer : DeliveryOffer) =>
++              offer.id != id && offer.stamp.accepts current.turnId state.epoch now).take 15 }

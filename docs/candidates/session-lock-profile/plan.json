@@ -1,0 +1,11 @@
+{
+  "status":"isolated observer; no adoption",
+  "parentRuntimeSha256":"bd609e528a62a07dc45e745054cdc83ea061f72f820d86b88029af980965a4c0",
+  "purpose":"Measure the actual native hook session-lock wait/hold and decode/reconcile/projection/state-write steps before changing lock scope.",
+  "observer":"EGGSHELL_TRACE_SESSION_LOCK=1; monotonic timestamps collected in memory under lock, diagnostic receipts written after unlock. No body, tool input or capability in these added receipts.",
+  "unchanged":["absolute deadlines","100ms background admission","queue behavior","all delivery and authority rules","body and byte budgets","MiniLM contracts","source snapshot","questions","frozen required ranges"],
+  "nativeCheck":{"topics":[1,2,3],"independentInitialChatsPerTopic":2,"exactParentBodyHashes":true,"sameSourceFilesAfterRun":true,"serviceLoad":false,"answeringModelCalls":0},
+  "build":"Ordinary ContractAudit and observer product runtime; helper built against the same core.",
+  "resources":{"aggregateRssStopKiB":3670016,"absoluteRssCeilingKiB":4194304,"minFreeKiB":2097152},
+  "notClaims":["fix","speedup","80-user sustained capacity","p99","token improvement","adoption"]
+}
