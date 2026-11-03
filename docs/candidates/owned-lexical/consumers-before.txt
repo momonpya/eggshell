@@ -1,0 +1,15 @@
+owned-append-core/tools/RebuildLexicalSnapshot.lean:39:    let (owners, count) ← Persistence.Store.searchPosting rebuilt term
+owned-append-core/tests/PageDBTests.lean:2257:        let (ids, count) ← Store.searchPosting measured unit
+owned-append-core/tools/LexicalProbe.lean:33:    ("legacyKoreanPosting", toJson (← searchPosting snapshot "한국어").1)])
+owned-append-core/Eggshell/SourceLexicalPolicy.lean:7:namespace Eggshell.SourceLexicalPolicy
+owned-append-core/Eggshell/SourceLexicalPolicy.lean:12:  (include_str "SourceLexicalPolicy.lean").toUTF8 ++
+owned-append-core/Eggshell/SourceLexicalPolicy.lean:39:end Eggshell.SourceLexicalPolicy
+owned-append-core/Eggshell/SourceLexical.lean:5:namespace Eggshell.SourceLexical
+owned-append-core/Eggshell/SourceLexical.lean:14:  unless SourceLexicalPolicy.ready (← source.get SourceLexicalPolicy.name) population do return none
+owned-append-core/Eggshell/SourceLexical.lean:27:  return ⟨SourceLexicalPolicy.contract, reader.roots, reader.population⟩
+owned-append-core/Eggshell/SourceLexical.lean:40:  let rows ← directory source (key "searchPosting" found.id)
+owned-append-core/Eggshell/SourceLexical.lean:84:end Eggshell.SourceLexical
+owned-append-core/Eggshell/GraphStore.lean:1348:        putNat intern.writer (key (key "searchPosting" term) ordinal) id
+owned-append-core/Eggshell/GraphStore.lean:1419:      writer.put (key (key "searchPosting" term) ordinal) none
+owned-append-core/Eggshell/GraphStore.lean:1871:def searchPosting (snapshot : Snapshot) (unit : String) : IO (List Nat × Nat) := do
+owned-append-core/Eggshell/GraphStore.lean:1873:  let entries ← directory snapshot (key "searchPosting" term.id)

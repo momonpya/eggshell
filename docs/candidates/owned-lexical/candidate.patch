@@ -1,0 +1,304 @@
+diff --git a/Eggshell/AppendUnique.lean b/Eggshell/AppendUnique.lean
+index 2fa253a..daa6329 100644
+--- a/Eggshell/AppendUnique.lean
++++ b/Eggshell/AppendUnique.lean
+@@ -63,0 +64,61 @@ theorem merge_exact (key : α → β) (base added : List α) :
++omit [Hashable β] in
++theorem reference_key_membership (key : α → β) (base added : List α) (value : β) :
++    value ∈ (reference key base added).map key ↔ value ∈ base.map key ∨ value ∈ added.map key := by
++  induction added generalizing base with
++  | nil => simp [reference]
++  | cons item rest ih =>
++    simp only [reference, List.foldl_cons]
++    change value ∈ (reference key (if base.any (fun old => key old == key item)
++      then base else base ++ [item]) rest).map key ↔ _
++    rw [ih]
++    by_cases present : key item ∈ base.map key
++    · have found : base.any (fun old => key old == key item) = true := by
++        simpa only [List.mem_map, List.any_eq_true, beq_iff_eq] using present
++      simp only [found, ↓reduceIte, List.map_cons, List.mem_cons]
++      constructor
++      · intro h; exact h.elim Or.inl (fun h => Or.inr (Or.inr h))
++      · intro h
++        rcases h with h | same | h
++        · exact Or.inl h
++        · exact Or.inl (by simpa only [same] using present)
++        · exact Or.inr h
++    · have found : base.any (fun old => key old == key item) = false := by
++        apply Bool.eq_false_iff.mpr
++        intro found
++        apply present
++        obtain ⟨old,member,equal⟩ := List.any_eq_true.mp found
++        exact List.mem_map.mpr ⟨old,member,by simpa only [beq_iff_eq] using equal⟩
++      simp [found, List.map_append, or_assoc, or_left_comm, or_comm]
++
++omit [Hashable β] in
++theorem reference_keys_nodup (key : α → β) (base added : List α)
++    (unique : (base.map key).Nodup) : ((reference key base added).map key).Nodup := by
++  induction added generalizing base with
++  | nil => simpa [reference] using unique
++  | cons item rest ih =>
++      simp only [reference, List.foldl_cons]
++      change ((reference key (if base.any (fun old => key old == key item)
++        then base else base ++ [item]) rest).map key).Nodup
++      split
++      · exact ih _ unique
++      · apply ih
++        simp only [List.map_append, List.map_cons, List.map_nil]
++        apply List.nodup_append.mpr
++        refine ⟨unique, by simp, ?_⟩
++        intro value member other itemMember same
++        have itemEqual : other = key item := by simpa using itemMember
++        have member : key item ∈ base.map key := by simpa only [same,itemEqual] using member
++        have found : base.any (fun old => key old == key item) = true := by
++          simpa only [List.mem_map, List.any_eq_true, beq_iff_eq] using member
++        contradiction
++
++theorem merge_empty_membership (key : α → β) (added : List α) (value : β) :
++    value ∈ (merge key [] added).map key ↔ value ∈ added.map key := by
++  rw [merge_exact, reference_key_membership]
++  simp
++
++theorem merge_empty_nodup (key : α → β) (added : List α) :
++    ((merge key [] added).map key).Nodup := by
++  rw [merge_exact]
++  exact reference_keys_nodup key [] added (by simp)
++
+diff --git a/Eggshell/GraphStore.lean b/Eggshell/GraphStore.lean
+index 2ae71d2..9cad9b2 100644
+--- a/Eggshell/GraphStore.lean
++++ b/Eggshell/GraphStore.lean
+@@ -1342,7 +1341,0 @@ def Intern.root (intern : Intern) (value : Value) : IO Nat := do
+-      let lexical ← (SearchRank.terms (searchText owner)).mapM intern.term
+-      putChunks intern.writer "searchTerms" id
+-        ((Wire.list Wire.natural).encode lexical).toByteArray
+-      for term in lexical do
+-        putNat intern.writer (key "searchFrequency" term)
+-          ((← getNat intern.writer.get (key "searchFrequency" term)) + 1)
+-        putNat intern.writer (key (key "searchPosting" term) ordinal) id
+@@ -1411,9 +1403,0 @@ def removeRoot (writer : Writer) (id : Nat) : IO Unit := do
+-    let lexicalBytes ← readChunks (← writer.snapshot) writer.get "searchTerms" id
+-    let (lexical, tail) ← IO.ofExcept ((Wire.list Wire.natural).decode lexicalBytes.toList)
+-    unless tail.isEmpty && lexical.eraseDups == lexical do
+-      throw (IO.userError "invalid search term reverse directory")
+-    for term in lexical do
+-      let count ← getNat writer.get (key "searchFrequency" term)
+-      if count == 0 then throw (IO.userError "search frequency underflow")
+-      putNat writer (key "searchFrequency" term) (count - 1)
+-      writer.put (key (key "searchPosting" term) ordinal) none
+@@ -1871,10 +1854,0 @@ def NodeReader.supportOwners (reader : NodeReader snapshot) (works : List Value)
+-def searchPosting (snapshot : Snapshot) (unit : String) : IO (List Nat × Nat) := do
+-  let some term ← findTerm? snapshot snapshot.get unit | return ([], 0)
+-  let entries ← directory snapshot (key "searchPosting" term.id)
+-  let count ← getNat snapshot.get (key "searchFrequency" term.id)
+-  unless entries.length == count do throw (IO.userError "search posting frequency disagrees")
+-  for (ordinal, id) in entries do
+-    unless (← IO.ofExcept (payloadSize (← snapshot.get (key "searchCandidate" ordinal)))) == id do
+-      throw (IO.userError "search posting names a retired candidate")
+-  pure (entries.map Prod.snd, count)
+-
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index a84154c..00e2ae8 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -7603,0 +7604,17 @@ def indexedTerminalRoot (selection : Config.Selection)
++/-- Canonical Outcome relations define the Work graph; physical source copies
++remain separate original admissions and provenance, not repeated graph facts. -/
++def identifiedGraph (hits : List Matcher.Match) : WorkGraph :=
++  {outcomes := AppendUnique.merge (·.relation) [] (hits.map (·.edge))}
++
++theorem identifiedGraph_membership (hits : List Matcher.Match) (relation : Value) :
++    relation ∈ (identifiedGraph hits).outcomes.map (·.relation) ↔
++      relation ∈ hits.map (·.edge.relation) := by
++  simpa [identifiedGraph, List.map_map] using
++    AppendUnique.merge_empty_membership (fun edge : OutcomeEdge => edge.relation) (hits.map (·.edge)) relation
++
++theorem identifiedGraph_nodup (hits : List Matcher.Match) :
++    ((identifiedGraph hits).outcomes.map (·.relation)).Nodup := by
++  simpa only [identifiedGraph] using
++    AppendUnique.merge_empty_nodup (fun edge : OutcomeEdge => edge.relation)
++      (hits.map fun matched : Matcher.Match => matched.edge)
++
+@@ -7661 +7678 @@ def indexedIdentifiedRoot (selection : Config.Selection)
+-  let graph : WorkGraph := {outcomes := hits.map (·.edge)}
++  let graph := identifiedGraph hits
+diff --git a/tests/PageDBTests.lean b/tests/PageDBTests.lean
+index 4d205e3..ba4ef37 100644
+--- a/tests/PageDBTests.lean
++++ b/tests/PageDBTests.lean
+@@ -2240,0 +2241 @@ def semanticCatalogue : IO Unit := do
++    let _ ← RetrievalResearch.Index.warm (← PageMap.pin path) .database
+@@ -2257 +2258 @@ def semanticCatalogue : IO Unit := do
+-        let (ids, count) ← Store.searchPosting measured unit
++        let (ids, count) ← RetrievalResearch.Index.strictPosting measured unit
+@@ -2330 +2331,5 @@ def semanticCatalogue : IO Unit := do
+-  let some term ← Store.findTerm? healthy healthy.get "retry_controller42" |
++  let some lexical ← RetrievalResearch.Index.open? healthy |
++    throw (IO.userError "missing prepared corruption fixture")
++  let some unit := (SearchRank.terms "retry_controller42").head? |
++    throw (IO.userError "missing corruption fixture query")
++  let some term ← Store.findTerm? lexical.index lexical.index.get unit |
+@@ -2332,2 +2337,3 @@ def semanticCatalogue : IO Unit := do
+-  let _ ← PageMap.withWriter healthy fun writer =>
+-    Store.putNat writer (Store.key "searchFrequency" term.id) 999
++  let _ ← PageMap.withWriter lexical.index fun writer =>
++    Store.putNat writer (Store.key "frequency" term.id) 999
++  PreparedRoot.publish healthy (← PageMap.pin lexical.index.directory)
+@@ -2337 +2343 @@ def semanticCatalogue : IO Unit := do
+-    "a corrupt semantic posting silently fell back to full reconstruction or empty success"
++    "a corrupt prepared lexical posting silently fell back to full reconstruction or empty success"
+diff --git a/tools/LexicalProbe.lean b/tools/LexicalProbe.lean
+index d777622..a9834a4 100644
+--- a/tools/LexicalProbe.lean
++++ b/tools/LexicalProbe.lean
+@@ -32,2 +32 @@ private def prepare (directory : System.FilePath) : IO Json := do
+-    ("documents", toJson (← searchDocuments snapshot).length),
+-    ("legacyKoreanPosting", toJson (← searchPosting snapshot "한국어").1)])
++    ("documents", toJson (← searchDocuments snapshot).length)])
+diff --git a/tools/RebuildLexicalSnapshot.lean b/tools/RebuildLexicalSnapshot.lean
+index 8e925c8..0020d6d 100644
+--- a/tools/RebuildLexicalSnapshot.lean
++++ b/tools/RebuildLexicalSnapshot.lean
+@@ -1,0 +2 @@ import Eggshell.Install
++import tools.RetrievalIndex
+@@ -38,2 +39,3 @@ def main (arguments : List String) : IO Unit := do
+-  let postings ← ["driver", "Pdriver", "target", "Ptarget"].mapM fun term => do
+-    let (owners, count) ← Persistence.Store.searchPosting rebuilt term
++  let _ ← RetrievalResearch.Index.warm rebuilt .user
++  let postings ← (SearchRank.terms "driver target").mapM fun term => do
++    let (owners, count) ← RetrievalResearch.Index.strictPosting rebuilt term
+diff --git a/Eggshell/SourceLexical.lean b/Eggshell/SourceLexical.lean
+deleted file mode 100644
+index 1620e40..0000000
+--- a/Eggshell/SourceLexical.lean
++++ /dev/null
+@@ -1,84 +0,0 @@
+-module
+-public import Eggshell.GraphStore
+-@[expose] public section
+-
+-namespace Eggshell.SourceLexical
+-open Lean DB Persistence.Store
+-
+-structure Reader (source : Snapshot) where
+-  roots : Nat
+-  population : Nat
+-
+-def open? (source : Snapshot) : IO (Option (Reader source)) := do
+-  let population ← getNat source.get "candidates"
+-  unless SourceLexicalPolicy.ready (← source.get SourceLexicalPolicy.name) population do return none
+-  return some ⟨← getNat source.get "roots", population⟩
+-
+-structure Status where
+-  contract : String
+-  roots : Nat
+-  candidates : Nat
+-  deriving ToJson
+-
+-/-- This probes one immutable source publication. It creates no sidecar and
+-never scans, tokenizes or hydrates existing candidates. -/
+-def status (source : Snapshot) : IO Status := do
+-  let some reader ← open? source | throw (IO.userError "atomic source lexical index is unavailable")
+-  return ⟨SourceLexicalPolicy.contract, reader.roots, reader.population⟩
+-
+-def ready (source : Snapshot) : IO Bool := return (← open? source).isSome
+-
+-structure Posting where
+-  rows : List (Nat × Nat)
+-  frequency : Nat
+-  complete : rows.length = frequency
+-
+-/-- Authoritative postings already share the source commit. Nomination reads
+-only the requested term directory; consumed owners are checked separately. -/
+-def posting (reader : Reader source) (term : String) : IO Posting := do
+-  let some found ← findTerm? source source.get term | return ⟨[],0,rfl⟩
+-  let rows ← directory source (key "searchPosting" found.id)
+-  let frequency ← getNat source.get (key "searchFrequency" found.id)
+-  if complete : rows.length = frequency then
+-    unless frequency ≤ reader.population && rows.all (fun row => row.1 < reader.roots) &&
+-        (Std.HashSet.ofList (rows.map Prod.snd)).size == rows.length do
+-      throw (IO.userError "invalid source lexical population or owner order")
+-    return ⟨rows,frequency,complete⟩
+-  else throw (IO.userError "source lexical posting frequency disagrees")
+-
+-structure OwnerWitness (owner ordinal : Nat) where
+-  indexed : Option ByteArray
+-  member : Option ByteArray
+-  candidate : Option ByteArray
+-  indexExact : payloadSize indexed = .ok owner
+-  memberExact : payloadSize member = .ok ordinal
+-  candidateExact : payloadSize candidate = .ok 1
+-
+-def OwnerWitness.check? (owner ordinal : Nat) (indexed member candidate : Option ByteArray) :
+-    Option (OwnerWitness owner ordinal) := do
+-  match a : payloadSize indexed, b : payloadSize member, c : payloadSize candidate with
+-  | .ok found, .ok sourceOrdinal, .ok live =>
+-    if sameOwner : found = owner then
+-      if sameOrdinal : sourceOrdinal = ordinal then
+-        if candidateLive : live = 1 then
+-          some ⟨indexed,member,candidate,by simpa only [sameOwner] using a,
+-            by simpa only [sameOrdinal] using b,by simpa only [candidateLive] using c⟩
+-        else none
+-      else none
+-    else none
+-  | _,_,_ => none
+-
+-theorem OwnerWitness.source_checks (witness : OwnerWitness owner ordinal) :
+-    payloadSize witness.indexed = .ok owner ∧ payloadSize witness.member = .ok ordinal ∧
+-      payloadSize witness.candidate = .ok 1 :=
+-  ⟨witness.indexExact,witness.memberExact,witness.candidateExact⟩
+-
+-def original (source : Snapshot) (owner ordinal : Nat) : IO (OwnerWitness owner ordinal) := do
+-  let indexed ← source.get (key "searchCandidate" ordinal)
+-  let member ← source.get (key "member" owner)
+-  let candidate ← source.get (key "candidate" owner)
+-  let some checked := OwnerWitness.check? owner ordinal indexed member candidate |
+-    throw (IO.userError "source lexical owner disagrees with its original publication")
+-  return checked
+-
+-end Eggshell.SourceLexical
+diff --git a/Eggshell/SourceLexicalPolicy.lean b/Eggshell/SourceLexicalPolicy.lean
+deleted file mode 100644
+index 9d151f5..0000000
+--- a/Eggshell/SourceLexicalPolicy.lean
++++ /dev/null
+@@ -1,39 +0,0 @@
+-module
+-public import Eggshell.SearchRank
+-public import Eggshell.Sha256
+-public import Eggshell.DB.PageMap
+-@[expose] public section
+-
+-namespace Eggshell.SourceLexicalPolicy
+-
+-/-- The publication producer and reader share actual policy bytes. A primary
+-index made by an unrecorded grammar is not silently treated as complete. -/
+-def contract : String := Sha256.hex (
+-  (include_str "SourceLexicalPolicy.lean").toUTF8 ++
+-  (include_str "SearchRank.lean").toUTF8 ++
+-  (include_str "SearchUnicode.lean").toUTF8 ++
+-  (include_str "../tools/RetrievalGrams.lean").toUTF8 ++
+-  (include_str "../tools/RetrievalCategories.lean").toUTF8)
+-
+-def name : String := "searchPolicy"
+-
+-def ready (stored : Option ByteArray) (population : Nat) : Bool :=
+-  stored == some contract.toUTF8 || (stored.isNone && population == 0)
+-
+-theorem unrecorded_nonempty_rejected (population : Nat) (nonempty : population ≠ 0) :
+-    ready none population = false := by
+-  simp [ready, nonempty]
+-
+-def require (read : String → IO (Option ByteArray)) (population : Nat) : IO Unit := do
+-  unless ready (← read name) population do
+-    throw (IO.userError "source lexical policy is absent or differs from its publication producer")
+-
+-/-- Called inside the same source transaction as membership, postings and
+-frequencies. Existing mixed-policy candidates cannot acquire a ready stamp. -/
+-def record (writer : DB.PageMap.Writer) (population : Nat) : IO Unit := do
+-  let stored ← writer.get name
+-  unless ready stored population do
+-    throw (IO.userError "cannot append to an unverified or different source lexical policy")
+-  if stored.isNone then writer.put name (some contract.toUTF8)
+-
+-end Eggshell.SourceLexicalPolicy

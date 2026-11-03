@@ -26,16 +26,23 @@ later optimization. Each mutable physical source has one live owner, while
 different physical sources publish concurrently. User count and owner count
 are independent: the native checks currently route 80 sessions across 16 owners;
 this is neither an 80-owner requirement nor evidence of 80-user sustained capacity.
-The 50 KB retained-image write-only measurements reached 16.6–17.7 observations/s,
-below the maximum assumed 22.2/s even before derived preparation. Ordinary hooks
-still using the single-source path cannot inherit the prototype's concurrency.
+The latest isolated [source-path comparison](candidates/owned-lexical/README.md)
+reached 35.6–37.9 source observations/s at 50 KB in three short repetitions.
+Derived preparation is excluded; this does not establish stable backlog or
+eight-hour capacity. Ordinary hooks still using the single-source path cannot
+inherit the prototype's concurrency.
 
-The next isolated [configuration binding](candidates/project-access/plan.json)
+The isolated [configuration binding](candidates/project-access/plan.json)
 keeps the user-selected logical write project separate from its physical source
 route. All configured read projects retain their complete owner inventories;
 neither a write route nor a warm index filters certification's read domain.
 This binding must precede ordinary hook integration. It does not authorize
 per-owner copies of the project's canonical vectors or content.
+
+The implementation gap is explicit: parallel owners exist in the native broker
+candidate, but not in the normal hook publication path. Completing that route
+and testing publication, preparation and queries together is required before
+claiming 80-user support. Raising the owner count alone is not that validation.
 
 The current native observation found a 279–348 ms common-session guard hold
 during offer publication, exceeding background save's 100 ms admission. The

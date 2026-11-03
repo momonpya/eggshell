@@ -1,0 +1,34 @@
+{
+  "status": "isolated candidate; not adopted",
+  "baselineCommit": "4aea2f70",
+  "finding": "Intern.root synchronously writes searchTerms/searchPosting/searchFrequency. Runtime retrieval uses the separate RetrievalResearch.Index; source searchPosting is referenced only by diagnostics and PageDB tests. SourceLexical and SourceLexicalPolicy are unconnected prototype modules.",
+  "change": "Remove the unused synchronous recommendation-posting copy and its reverse index/read API. Keep original graph, RootReach, node membership, Work owner/surface indexes, ownerTerms/frequency/postings used by Work discovery and cold coarse advice, and all source window locators. Keep the existing prepared lexical producer and readiness checks.",
+  "additionalVerifiedFinding": "The unchanged baseline duplicates an identical Outcome in the native identified Work graph when it appears in two read DBs. Canonicalize full relation Values before extraction, with membership and uniqueness proofs; retain all original admissions/provenance. Do not patch rendered strings. Normalize only the diagnostic producer suffix when comparing the reference Handoff reason.",
+  "validation": [
+    "complete call-site inventory before deletion",
+    "same original values, root order, unions and Exact references",
+    "same source owner/work/window identities",
+    "same logical source term frequency/postings used by Work discovery",
+    "prepared lexical postings equal independent tokenization after add/delete/readd",
+    "missing or partial prepared index is rejected by strict lookup",
+    "old pinned prepared view remains old after source/index advancement",
+    "corrupt prepared posting count is rejected",
+    "existing complete federated WorkGraph oracle and ContractAudit",
+    "fixed 80-session source comparison with complete original/provenance/graph/reopen checks"
+  ],
+  "nativeComparison": {
+    "outputBytesEach": [5000, 50000],
+    "owners": 16,
+    "sessions": 80,
+    "wavesEach": 4,
+    "repetitionsPerSize": 3,
+    "armOrder": "alternate parent/candidate",
+    "sameFrozenBootAndLogicalPath": true,
+    "fixedBackgroundPinsEachArm": 16
+  },
+  "adoptionRequiresMatchedTotalTokenQualityAndDeadlineEvidence": true,
+  "answeringModelCalls": 0,
+  "memoryStopKiB": 3670016,
+  "minimumFreeDiskKiB": 2097152,
+  "cleanup": "Delete ended DBs, caches, raw logs and unused executables; no archives. Retain compact negative and positive evidence plus necessary current build inputs."
+}
