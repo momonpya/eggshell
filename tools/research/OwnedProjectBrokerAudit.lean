@@ -36,6 +36,7 @@ def census (project : ProjectStore.Project) (cut : Cut) (bytes : Nat) : IO Json 
   let view ← openView project cut
   let mut seen : Std.HashSet (Nat × Nat) := {}
   let mut expected : List Value := []
+  let mut observations : Array String := #[]
   for source in view.sources do
     let original ← NodeReader.new source
     for record in ← Synapses.Provenance.records source do
@@ -53,6 +54,8 @@ def census (project : ProjectStore.Project) (cut : Cut) (bytes : Nat) : IO Json 
       let some tool := (capsule client round bytes).tools[0]? | throw (IO.userError "missing fixture input")
       check (document.source == some (canonicalJson tool.response) && document.workText == some (canonicalToolWork tool))
         "native broker changed stored original bytes"
+      observations := observations.push (Sha256.hex (toJson (occurrence,document.workText,document.source,
+        record.origin.domain,record.origin.started,record.origin.finished,record.origin.receivedUnixMs)).compress.toUTF8)
     let graph ← materialize source
     for value in graph.values do
       if let .apply .receipt refs := value then
@@ -73,9 +76,12 @@ def census (project : ProjectStore.Project) (cut : Cut) (bytes : Nat) : IO Json 
     actual := (← readNode node.original.snapshot node.original.snapshot.get node.original.id)::actual
   check (actual.length == expected.length && actual.all expected.contains && expected.all actual.contains)
     "native broker assembled an incomplete work graph"
+  let roots := expected.toArray.map fun value => Sha256.hex (Persistence.valueToJson value).compress.toUTF8
   return Json.mkObj [("observations",toJson seen.size),("originalBytesEqual",toJson true),
     ("logicalProvenance",toJson true),("graphUnionEqual",toJson true),
-    ("uniqueRoots",toJson expected.length),("owners",toJson view.sources.size)]
+    ("uniqueRoots",toJson expected.length),("owners",toJson view.sources.size),
+    ("canonicalGraphSha256",toJson (Sha256.hex (toJson (roots.qsort (· < ·))).compress.toUTF8)),
+    ("canonicalObservationsSha256",toJson (Sha256.hex (toJson (observations.qsort (· < ·))).compress.toUTF8))]
 
 def start (binary root : System.FilePath) : IO (IO.Process.Child {stdout := .piped,stderr := .piped}) := do
   IO.FS.createDirAll root
@@ -106,11 +112,23 @@ def finish (child : IO.Process.Child cfg) (peer : Daemon.Endpoint) : IO Unit := 
     check ((← IO.monoMsNow) < deadline) "broker shutdown exceeded its bound"
     IO.sleep 5
 
-def audit (binary root : System.FilePath) (bytes : Nat) : IO Unit := do
-  check (root.isAbsolute && !(← root.pathExists) && [5000,50000].contains bytes) "fresh absolute broker root and fixed output size required"
-  FileSystem.privateDirectory root
-  let project ← create (root / "work.project") 16
-  let other ← create (root / "other.project") 4
+def audit (binary root : System.FilePath) (bytes : Nat) (existing : Bool := false) : IO Unit := do
+  check (root.isAbsolute && [5000,50000].contains bytes) "absolute broker root and fixed output size required"
+  let (project,other) ← if existing then do
+      check (!(← (root / "private").pathExists)) "comparison requires a fresh private service root"
+      let a ← openProject (root / "work.project")
+      let b ← openProject (root / "other.project")
+      check (a.manifest.owners.size == 16 && b.manifest.owners.size == 4) "comparison owner inventory changed"
+      for p in [a,b] do
+        for slot in [:p.manifest.owners.size] do
+          check ((← p.current slot).head.revision == 0) "comparison original source is not the frozen boot"
+      pure (a,b)
+    else do
+      check (!(← root.pathExists)) "fresh absolute broker root required"
+      FileSystem.privateDirectory root
+      let a ← create (root / "work.project") 16
+      let b ← create (root / "other.project") 4
+      pure (a,b)
   let child ← start binary (root / "private")
   let out ← IO.asTask child.stdout.readToEnd .dedicated
   let err ← IO.asTask child.stderr.readToEnd .dedicated
@@ -138,38 +156,49 @@ def audit (binary root : System.FilePath) (bytes : Nat) : IO Unit := do
       "broker accepted a foreign source cut"
     check (← rejected (rawPublish boot foreignGrant.capability (1000 : Nat))) "broker accepted another project's writer"
     check (← rejected (rawPublish boot granted.capability (0 : Nat))) "broker accepted an expired request"
-    let running ← IO.mkRef true
-    let queryCount ← IO.mkRef (0 : Nat)
-    let reader ← IO.asTask (do
-      while ← running.get do
-        let cut ← Client.pinProject peer granted ((← IO.monoMsNow)+28000)
-        check (cut.inScope granted.manifest) "concurrent query omitted an original owner"
-        queryCount.modify (·+1)
-        IO.sleep 10) .dedicated
+    let mut queryCount := 0
     let mut rounds := #[]
     let mut cut := boot
-    try
-      for round in [:4] do
+    for round in [:4] do
         let jobs ← (List.range 80).toArray.mapM fun client => do
           let input := capsule client round bytes
           let forced ← IO.mkRef input
           pure (client,forced)
         let begun ← IO.monoMsNow
+        -- Fix the offered background work independently of completion speed.
+        -- A faster pin implementation must not create extra read requests.
+        let reader ← IO.asTask (do
+          let mut samples := #[]
+          for ordinal in [:4] do
+            let planned := ordinal*250
+            while (← IO.monoMsNow) < begun+planned do IO.sleep 1
+            let started ← IO.monoMsNow
+            let result ← Client.pinProject peer granted ((← IO.monoMsNow)+28000)
+            check (result.inScope granted.manifest) "concurrent query omitted an original owner"
+            samples := samples.push (Json.mkObj [("plannedOffsetMs",toJson planned),
+              ("startedOffsetMs",toJson (started-begun)),("elapsedMs",toJson ((← IO.monoMsNow)-started))])
+          return samples) .dedicated
         let tasks ← jobs.mapM fun (client,input) => IO.asTask (do
           let requested ← IO.monoMsNow
           let receipt ← Client.submitProject peer granted cut (← input.get) ((← IO.monoMsNow)+28000)
           check receipt.complete s!"broker returned incomplete original ACK for {client}/{round}"
           return ((← IO.monoMsNow)-requested,Sha256.hex (toJson receipt).compress.toUTF8)) .dedicated
-        let samples ← tasks.mapM fun task => do IO.ofExcept (← IO.wait task)
+        let samples ← try
+            tasks.mapM fun task => do IO.ofExcept (← IO.wait task)
+          catch error =>
+            let _ ← IO.wait reader
+            throw error
+        let writeElapsed := (← IO.monoMsNow)-begun
+        let queries ← IO.ofExcept (← IO.wait reader)
+        queryCount := queryCount+queries.size
         rounds := rounds.push (Json.mkObj [("round",toJson round),("acks",toJson tasks.size),
-          ("elapsedMs",toJson ((← IO.monoMsNow)-begun)),("latenciesMs",toJson (samples.map Prod.fst)),
+          ("elapsedMs",toJson writeElapsed),("loadWindowMs",toJson ((← IO.monoMsNow)-begun)),
+          ("querySamples",toJson queries),("latenciesMs",toJson (samples.map Prod.fst)),
           ("receiptSha256",toJson (samples.map Prod.snd))])
         IO.FS.writeFile (root / "progress.json") ((Json.mkObj [("rounds",toJson rounds),
           ("complete",toJson false)]).pretty ++ "\n")
         cut ← Client.pinProject peer granted ((← IO.monoMsNow)+28000)
-    finally
-      running.set false
-      IO.ofExcept (← IO.wait reader)
+    check (queryCount == 16) "background query workload changed"
     -- Same session and occurrence must remain on the same owner even after
     -- the scheduler rotated its queues. Changed immutable bytes are refused.
     let before ← Client.pinProject peer granted ((← IO.monoMsNow)+28000)
@@ -205,8 +234,10 @@ def audit (binary root : System.FilePath) (bytes : Nat) : IO Unit := do
       env := #[("EGGSHELL_DATA_ROOT",some (root / "reopen-private").toString),("LEAN_NUM_THREADS",some "1")]}
     check (fresh.exitCode == 0) s!"fresh-process original reopen failed: {fresh.stderr}"
     let reopened ← IO.ofExcept (Json.parse fresh.stdout)
+    check (reopened == original) "fresh-process semantic original census changed"
     let result := Json.mkObj [("transport",toJson "real loopback project service"),("outputBytes",toJson bytes),
-      ("rounds",toJson rounds),("concurrentQueries",toJson (← queryCount.get)),("stats",owned),
+      ("rounds",toJson rounds),("concurrentQueries",toJson queryCount),("stats",owned),
+      ("backgroundQueryOffsetsMs",toJson (#[0,250,500,750] : Array Nat)),
       ("originals",original),("freshProcess",reopened),("sourceBoundaryRejections",toJson true),
       ("fullHooksUsed",toJson false),("realMcpServerUsed",toJson false),("answeringModelCalls",toJson (0 : Nat)),
       ("tokenAdoptionEvidence",toJson false)]
@@ -223,6 +254,13 @@ end Eggshell.Research.OwnedProjectBrokerAudit
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["serve"] => Publication.Service.run
+  | ["create-load",pathText] =>
+    let root := System.FilePath.mk pathText
+    unless root.isAbsolute && !(← root.pathExists) do throw (IO.userError "fresh absolute broker root required")
+    FileSystem.privateDirectory root
+    let _ ← create (root / "work.project") 16
+    let _ ← create (root / "other.project") 4
+    return 0
   | ["inspect",pathText,size] =>
     let some bytes := size.toNat? | throw (IO.userError "invalid original size")
     let project ← openProject (.mk pathText)
@@ -233,5 +271,9 @@ def main (args : List String) : IO UInt32 := do
   | ["audit",binary,pathText,size] =>
     let some bytes := size.toNat? | throw (IO.userError "invalid original size")
     Eggshell.Research.OwnedProjectBrokerAudit.audit (.mk binary) (.mk pathText) bytes
+    return 0
+  | ["existing",binary,pathText,size] =>
+    let some bytes := size.toNat? | throw (IO.userError "invalid original size")
+    Eggshell.Research.OwnedProjectBrokerAudit.audit (.mk binary) (.mk pathText) bytes true
     return 0
   | _ => throw (IO.userError "OwnedProjectBrokerAudit serve | audit BINARY NEW_ROOT {5000|50000} | inspect PROJECT SIZE")

@@ -11,6 +11,11 @@ publication for configured single-source DBs. The isolated
 TCP Capsule requests to independent original owners, with complete caller-pinned
 dependencies and idempotent source ACKs. Ordinary hook/config routing and shared
 derived preparation are not connected to that path yet.
+The isolated [retained-image continuation](candidates/owned-project-views/README.md)
+now coalesces exact-cut validation, retains active source pins under bounded
+catalogue admission and shares verified pages within that broker path. It keeps
+per-borrower read diagnostics separate; it does not establish sustained ingest,
+full-hook latency or delivery recall.
 The project remains one logical shared DB. No one-owner-per-user DB layout or
 one global owner for every project is required. The target remains 80 users,
 30-second hooks and 98% of necessary original evidence actually delivered;

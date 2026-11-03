@@ -1,0 +1,448 @@
+--- a/Eggshell/ProjectStore.lean
++++ b/Eggshell/ProjectStore.lean
+@@ -182,2 +182,6 @@
+-def historical (project : Project) (owner : Nat) (head : PageMap.Head) : IO PageMap.Snapshot := do
+-  let current ← project.current owner
++def historical (project : Project) (owner : Nat) (head : PageMap.Head)
++    (shared : Option PageMap.SharedReader := none) : IO PageMap.Snapshot := do
++  let original ← project.current owner
++  let current ← match shared with
++    | none => pure original
++    | some shared => original.sharePages shared.pool shared.scope
+@@ -189,3 +193 @@
+-/-- An independently requested cut is accepted in full or rejected. Warm
+-status is not an input, and an older closed cut is never substituted. -/
+-@[no_expose] def openView (project : Project) (cut : Cut) : IO View := do
++private def checkedSources (project : Project) (cut : Cut) (sources : Array PageMap.Snapshot) : IO View := do
+@@ -193,2 +194,0 @@
+-  let sources ← (List.range cut.heads.size).toArray.mapM fun owner => do
+-    historical project owner (← headAt cut.heads owner)
+@@ -205,0 +206,42 @@
++/-- An independently requested cut is accepted in full or rejected. Warm
++status is not an input, and an older closed cut is never substituted. -/
++@[no_expose] def openView (project : Project) (cut : Cut)
++    (shared : Option PageMap.SharedReader := none) : IO View := do
++  unless cut.inScope project.manifest do throw (IO.userError "requested project cut has a foreign or missing owner")
++  let sources ← (List.range cut.heads.size).toArray.mapM fun owner => do
++    historical project owner (← headAt cut.heads owner) shared
++  checkedSources project cut sources
++
++/-- Readers retain the same immutable heads and handles. Mutable read counts,
++trace capture and private caches belong to the borrower, not the shared image. -/
++@[no_expose] def View.fork (view : View) : IO View := do
++  let sources ← view.sources.mapM fun source => do
++    return {source with
++      reads := ← IO.mkRef 0,readBytes := ← IO.mkRef 0
++      trace := ← IO.mkRef none,cache := ← IO.mkRef {}}
++  if complete : sources.size = view.project.manifest.owners.size then
++    if exact : sources.map (·.head) = view.cut.heads then
++      return ⟨view.project,view.cut,sources,complete,exact⟩
++    else throw (IO.userError "borrow changed a pinned original head")
++  else throw (IO.userError "borrow changed the complete owner inventory")
++
++/-- Join already retained images without opening another set of source files.
++Every input head must be an ancestor of the selected head, not merely have a
++smaller revision. Dependencies are checked on the complete selected inventory. -/
++@[no_expose] def View.joinMany (first : View) (others : Array View) : IO View := do
++  unless others.all (fun v => v.project.directory == first.project.directory &&
++      v.project.manifest == first.project.manifest) do throw (IO.userError "joined images mixed project scopes")
++  if others.all (·.cut == first.cut) then return first
++  let views := #[first]++others
++  let mut cut := first.cut
++  for view in others do cut ← IO.ofExcept (cut.join view.cut)
++  let sources ← (List.range cut.heads.size).toArray.mapM fun owner => do
++    let head ← headAt cut.heads owner
++    let some source := views.findSome? (fun view => view.sources[owner]?.filter (·.head == head)) |
++      throw (IO.userError "joined original head has no retained reader")
++    for view in views do
++      unless ← sourceContains source (← headAt view.cut.heads owner) do
++        throw (IO.userError "joined original images have divergent ancestry")
++    return source
++  checkedSources first.project cut sources
++
+@@ -209 +251,2 @@
+-def closeCut (project : Project) (initial : Cut) (deadline : Nat) : IO View := do
++def closeCut (project : Project) (initial : Cut) (deadline : Nat)
++    (shared : Option PageMap.SharedReader := none) : IO View := do
+@@ -216 +259 @@
+-      let source ← historical project owner (← headAt cut.heads owner)
++      let source ← historical project owner (← headAt cut.heads owner) shared
+@@ -218 +261 @@
+-    if closed == cut then return ← openView project cut
++    if closed == cut then return ← openView project cut shared
+@@ -221 +264 @@
+-def pin (project : Project) (deadline : Nat) : IO View := do
++def pin (project : Project) (deadline : Nat) (shared : Option PageMap.SharedReader := none) : IO View := do
+@@ -223 +266 @@
+-  closeCut project ⟨project.manifest.identity,initial.map (·.head)⟩ deadline
++  closeCut project ⟨project.manifest.identity,initial.map (·.head)⟩ deadline shared
+--- a/Eggshell/ProjectPublication.lean
++++ b/Eggshell/ProjectPublication.lean
+@@ -3,0 +4 @@
++public import Eggshell.ProjectViews
+@@ -12 +13 @@
+-  view : View
++  borrow : ProjectViews.Borrow
+@@ -38,0 +40,6 @@
++structure StageTime where
++  count : Nat := 0
++  totalMs : Nat := 0
++  maxMs : Nat := 0
++  deriving ToJson
++
+@@ -40,0 +48,2 @@
++  timings : Std.Mutex (Std.HashMap String StageTime)
++  views : ProjectViews.Pool
+@@ -42 +51 @@
+-def Pool.new : IO Pool := return ⟨← Std.Mutex.new ({} : State)⟩
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new ({} : State),← Std.Mutex.new {},← ProjectViews.Pool.new⟩
+@@ -43,0 +53,15 @@
++def Pool.recordTime (pool : Pool) (label : String) (elapsed : Nat) : IO Unit :=
++  pool.timings.atomically do
++    let stages ← get
++    let before := stages[label]?.getD {}
++    set (stages.insert label ⟨before.count+1,before.totalMs+elapsed,max before.maxMs elapsed⟩)
++
++/-- The thunk starts after the clock read. No source bytes or capabilities
++enter these aggregate timings; overlapping worker sums are not wall time. -/
++@[noinline] def Pool.measured (pool : Pool) (label : String) (action : Unit → IO α) : IO α := do
++  let started ← IO.monoMsNow
++  try action ()
++  finally
++    let elapsed := (← IO.monoMsNow)-started
++    pool.recordTime label elapsed
++
+@@ -82 +106,2 @@
+-  let view ← ProjectStore.pin registered.project deadline
++  let view ← pool.measured "pin-all" fun _ => ProjectStore.pin registered.project deadline
++    (some ⟨pool.views.pages,ProjectViews.scope registered.project⟩)
+@@ -95,25 +120,31 @@
+-  let view ← openView registered.project cut
+-  let prepared ← IO.ofExcept (capsule.prepare registered.project.directory lane.owner.source.identity)
+-  let prepared := {prepared with target := registered.project.sourceDirectory slot}
+-  let promise ← IO.Promise.new
+-  pool.state.atomically do
+-    let state ← get
+-    unless !state.closed && !(← cancelled.get) && (← IO.monoMsNow) < deadline do
+-      throw (IO.userError "project publication expired before queue admission")
+-    let some index := state.projects.findIdx? (·.project.manifest.identity == identity) |
+-      throw (IO.userError "project registration disappeared")
+-    let some current := state.projects[index]? | throw (IO.userError "project registration disappeared")
+-    unless current.capability == secret && current.project.manifest == registered.project.manifest do
+-      throw (IO.userError "project publication authority changed")
+-    let some laneIndex := current.lanes.findIdx? (·.owner.slot == slot) |
+-      throw (IO.userError "project owner registration disappeared")
+-    let queued := state.projects.foldl (fun n r => n+r.lanes.foldl (fun n l => n+l.queue.size) 0) 0
+-    unless queued < maxClients && state.admittedBytes+charge ≤ maxResidentBytes do
+-      throw (IO.userError "project publication admission is full")
+-    let receiptKey := "project:published:"++Sha256.hex (toJson (capsule,cut)).compress.toUTF8
+-    let job : Job := ⟨prepared,view,receiptKey,charge,← IO.monoMsNow,deadline,cancelled,promise⟩
+-    set {state with
+-      admittedBytes := state.admittedBytes+charge
+-      projects := state.projects.modify index fun r => {r with
+-        lanes := r.lanes.modify laneIndex fun l => {l with queue := l.queue.push job}}}
+-    return promise
++  let borrow ← pool.measured "submit-view" fun _ => pool.views.acquire registered.project cut deadline
++  try
++    let prepared ← pool.measured "submit-prepare" fun _ =>
++      IO.ofExcept (capsule.prepare registered.project.directory lane.owner.source.identity)
++    let prepared := {prepared with target := registered.project.sourceDirectory slot}
++    let promise ← IO.Promise.new
++    let receiptKey ← pool.measured "request-key" fun _ =>
++      return "project:published:"++Sha256.hex (toJson (capsule,cut)).compress.toUTF8
++    pool.measured "submit-queue" fun _ => pool.state.atomically do
++      let state ← get
++      unless !state.closed && !(← cancelled.get) && (← IO.monoMsNow) < deadline do
++        throw (IO.userError "project publication expired before queue admission")
++      let some index := state.projects.findIdx? (·.project.manifest.identity == identity) |
++        throw (IO.userError "project registration disappeared")
++      let some current := state.projects[index]? | throw (IO.userError "project registration disappeared")
++      unless current.capability == secret && current.project.manifest == registered.project.manifest do
++        throw (IO.userError "project publication authority changed")
++      let some laneIndex := current.lanes.findIdx? (·.owner.slot == slot) |
++        throw (IO.userError "project owner registration disappeared")
++      let queued := state.projects.foldl (fun n r => n+r.lanes.foldl (fun n l => n+l.queue.size) 0) 0
++      unless queued < maxClients && state.admittedBytes+charge ≤ maxResidentBytes do
++        throw (IO.userError "project publication admission is full")
++      let job : Job := ⟨prepared,borrow,receiptKey,charge,← IO.monoMsNow,deadline,cancelled,promise⟩
++      set {state with
++        admittedBytes := state.admittedBytes+charge
++        projects := state.projects.modify index fun r => {r with
++          lanes := r.lanes.modify laneIndex fun l => {l with queue := l.queue.push job}}}
++      return promise
++  catch error =>
++    borrow.release
++    throw error
+@@ -144,0 +176 @@
++          job.borrow.release
+@@ -163 +195 @@
+-def commit (owner : Owner) : Nat → Array Job → IO (Nat × Nat)
++def commit (pool : Pool) (owner : Owner) : Nat → Array Job → IO (Nat × Nat)
+@@ -175 +207 @@
+-      let source ← owner.project.current owner.slot
++      let source ← pool.measured "commit-source-pin" fun _ => owner.project.current owner.slot
+@@ -179 +211 @@
+-        if let some marker ← source.get job.receiptKey then
++        if let some marker ← pool.measured "commit-receipt-lookup" fun _ => source.get job.receiptKey then
+@@ -185,9 +217,14 @@
+-        let mut cut := first.view.cut
+-        for job in fresh do cut ← IO.ofExcept (cut.join job.view.cut)
+-        let view ← openView owner.project cut
+-        let publications ← owner.publish view (fresh.map (·.request)) fun intern => do
+-          for job in fresh do
+-            if let some marker ← intern.writer.get job.receiptKey then
+-              unless marker == job.receiptKey.toUTF8 do throw (IO.userError "project request binding was replaced")
+-            intern.writer.put job.receiptKey (some job.receiptKey.toUTF8)
+-          return {changed := true}
++        let begun ← IO.monoMsNow
++        let append := fun view => do
++          pool.recordTime "commit-view" ((← IO.monoMsNow)-begun)
++          pool.measured "source-append" fun _ => owner.publish view (fresh.map (·.request)) fun intern => do
++            for job in fresh do
++              if let some marker ← intern.writer.get job.receiptKey then
++                unless marker == job.receiptKey.toUTF8 do throw (IO.userError "project request binding was replaced")
++              intern.writer.put job.receiptKey (some job.receiptKey.toUTF8)
++            return {changed := true}
++        let publications ← if fresh.all (·.borrow.cut == first.borrow.cut) then
++            first.borrow.withReader append
++          else ProjectViews.withReaders (fresh.map (·.borrow)).toList fun views => do
++            let some firstView := views[0]? | throw (IO.userError "publication lost its retained image")
++            append (← firstView.joinMany (views.extract 1 views.size))
+@@ -208,2 +245,2 @@
+-      let left ← commit owner fuel (live.extract 0 middle)
+-      let right ← commit owner fuel (live.extract middle live.size)
++      let left ← commit pool owner fuel (live.extract 0 middle)
++      let right ← commit pool owner fuel (live.extract middle live.size)
+@@ -215 +252 @@
+-    committed.set (← commit group.owner (group.jobs.size+1) group.jobs)
++    committed.set (← commit pool group.owner (group.jobs.size+1) group.jobs)
+@@ -218,0 +256 @@
++    for job in group.jobs do job.borrow.release
+@@ -234 +272,2 @@
+-    ("replies",toJson state.replies),("closed",toJson state.closed)]
++    ("replies",toJson state.replies),("closed",toJson state.closed),
++    ("stageTimes",toJson ((← pool.timings.atomically get).toArray)),("sourceViews",← pool.views.stats)]
+@@ -240 +279,3 @@
+-      for job in lane.queue do job.reply.resolve (.error "project publisher closed before commit admission")
++      for job in lane.queue do
++        job.reply.resolve (.error "project publisher closed before commit admission")
++        job.borrow.release
+@@ -246,0 +288 @@
++  pool.views.stop
+@@ -256,0 +299 @@
++  pool.views.drain
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -123,0 +124 @@
++  (include_str "ProjectViews.lean").toUTF8,
+--- /dev/null
++++ b/Eggshell/ProjectViews.lean
+@@ -0,0 +1,208 @@
++module
++
++public import Eggshell.ProjectStore
++public import Init.System.Promise
++
++@[expose] public section
++namespace Eggshell.ProjectViews
++open Lean DB ProjectStore
++
++def maxImages : Nat := 32
++def maxHandles : Nat := 512
++
++def scope (project : Project) : String := project.directory.toString++"#"++project.manifest.identity
++
++structure Image where
++  id : Nat
++  project : Project
++  cut : Cut
++  done : IO.Promise (Except String View)
++  borrowers : Std.HashSet Nat
++  touched : Nat
++
++def handleCount (images : Array Image) : Nat := images.foldl (fun n image => n+image.cut.heads.size) 0
++
++/-- These bounds describe the actual resident image catalogue, including
++builders and images retained by borrowers. They do not claim a total RSS bound. -/
++structure Catalogue where
++  private mk ::
++  images : Array Image
++  boundedImages : images.size ≤ maxImages
++  boundedHandles : handleCount images ≤ maxHandles
++
++@[no_expose] def Catalogue.empty : Catalogue := ⟨#[],by decide,by decide⟩
++
++@[no_expose] def Catalogue.check (images : Array Image) : Except String Catalogue :=
++  if boundedImages : images.size ≤ maxImages then
++    if boundedHandles : handleCount images ≤ maxHandles then return ⟨images,boundedImages,boundedHandles⟩
++    else throw "project image source-handle budget exceeded"
++  else throw "project image catalogue budget exceeded"
++
++theorem Catalogue.image_bound (catalogue : Catalogue) : catalogue.images.size ≤ 32 := catalogue.boundedImages
++theorem Catalogue.handle_bound (catalogue : Catalogue) : handleCount catalogue.images ≤ 512 := catalogue.boundedHandles
++
++structure State where
++  catalogue : Catalogue := .empty
++  next : Nat := 0
++  closed : Bool := false
++  builds : Nat := 0
++  completed : Nat := 0
++  failed : Nat := 0
++  reused : Nat := 0
++  evicted : Nat := 0
++  expired : Nat := 0
++  peakImages : Nat := 0
++  peakHandles : Nat := 0
++
++structure Pool where
++  private state : Std.Mutex State
++  pages : PageMap.PagePool
++
++@[no_expose] def Pool.new : IO Pool := return ⟨← Std.Mutex.new ({} : State),← PageMap.PagePool.new⟩
++
++structure Claim where
++  private mk ::
++  image : Nat
++  ticket : Nat
++  done : IO.Promise (Except String View)
++  build : Bool
++
++structure Borrow where
++  private mk ::
++  private pool : Pool
++  private image : Nat
++  private ticket : Nat
++  cut : Cut
++
++@[no_expose] def Pool.releaseTicket (pool : Pool) (image ticket : Nat) : IO Unit := pool.state.atomically do
++  let state ← get
++  let images := state.catalogue.images.map fun before =>
++    if before.id == image then {before with borrowers := before.borrowers.erase ticket} else before
++  let catalogue ← IO.ofExcept (Catalogue.check images)
++  set {state with catalogue}
++
++@[no_expose] def Borrow.release (borrow : Borrow) : IO Unit := borrow.pool.releaseTicket borrow.image borrow.ticket
++
++/-- Only resolved idle images can be evicted. An active builder and every
++live borrower remain charged against both catalogue bounds. -/
++@[no_expose] def Pool.reserve (pool : Pool) (project : Project) (cut : Cut) : IO (Option Claim) := pool.state.atomically do
++  let state : State ← get
++  unless !state.closed do throw (IO.userError "project image admission is closed")
++  if let some index := state.catalogue.images.findIdx? (fun image =>
++      image.project.directory == project.directory && image.project.manifest == project.manifest && image.cut == cut) then
++    let some image := state.catalogue.images[index]? | throw (IO.userError "project image disappeared")
++    let images := state.catalogue.images.modify index fun before =>
++      {before with borrowers := before.borrowers.insert state.next,touched := state.next}
++    let catalogue ← IO.ofExcept (Catalogue.check images)
++    set {state with catalogue,next := state.next+1,reused := state.reused+1}
++    return some ⟨image.id,state.next,image.done,false⟩
++  let mut images := state.catalogue.images
++  let mut evicted := 0
++  while images.size ≥ maxImages || handleCount images+cut.heads.size > maxHandles do
++    let mut oldest : Option (Nat × Nat) := none
++    for index in [:images.size] do
++      let some image := images[index]? | continue
++      if image.borrowers.isEmpty && (← image.done.isResolved) then
++        if oldest.isNone || image.touched < oldest.get!.2 then oldest := some (index,image.touched)
++    let some (index,_) := oldest | return none
++    images := images.extract 0 index ++ images.extract (index+1) images.size
++    evicted := evicted+1
++  let done ← IO.Promise.new
++  let image : Image := ⟨state.next,project,cut,done,({} : Std.HashSet Nat).insert state.next,state.next⟩
++  let catalogue ← IO.ofExcept (Catalogue.check (images.push image))
++  set {state with
++    catalogue,next := state.next+1,builds := state.builds+1,evicted := state.evicted+evicted
++    peakImages := max state.peakImages catalogue.images.size
++    peakHandles := max state.peakHandles (handleCount catalogue.images)}
++  return some ⟨image.id,state.next,done,true⟩
++
++@[no_expose] def Pool.acquire (pool : Pool) (project : Project) (cut : Cut) (deadline : Nat) : IO Borrow := do
++  unless cut.inScope project.manifest && (toJson cut).compress.utf8ByteSize ≤ maxMetadataBytes do
++    throw (IO.userError "project image has a foreign, missing or oversized original inventory")
++  let mut reserved : Option Claim := none
++  repeat
++    unless (← IO.monoMsNow) < deadline do throw (IO.userError "project image admission expired")
++    if let some claim ← pool.reserve project cut then
++      reserved := some claim
++      break
++    IO.sleep 2
++  let some claim := reserved | throw (IO.userError "project image reservation disappeared")
++  try
++    if claim.build then
++      let result ← try
++        pure (.ok (← openView project cut (some ⟨pool.pages,scope project⟩)) : Except String View)
++      catch error => pure (.error error.toString)
++      pool.state.atomically do
++        let state ← get
++        match result with
++        | .ok _ => set {state with completed := state.completed+1}
++        | .error _ =>
++          let catalogue ← IO.ofExcept (Catalogue.check (state.catalogue.images.filter (·.id != claim.image)))
++          set {state with catalogue,failed := state.failed+1}
++      claim.done.resolve result
++    repeat
++      unless (← IO.monoMsNow) < deadline do
++        pool.state.atomically (modify fun state => {state with expired := state.expired+1})
++        throw (IO.userError "project image borrower expired")
++      if ← claim.done.isResolved then
++        let some result := claim.done.result?.get | throw (IO.userError "project image result disappeared")
++        let _ ← IO.ofExcept result
++        return ⟨pool,claim.image,claim.ticket,cut⟩
++      IO.sleep 1
++  catch error =>
++    pool.releaseTicket claim.image claim.ticket
++    throw error
++
++/-- An operation has its own borrower ticket. Releasing the outer borrow in
++another task cannot evict its image while this callback still uses a reader. -/
++@[no_expose] def Borrow.withReader (borrow : Borrow) (use : View → IO α) : IO α := do
++  let (ticket,done) ← borrow.pool.state.atomically do
++    let state ← get
++    let some index := state.catalogue.images.findIdx? (·.id == borrow.image) |
++      throw (IO.userError "project image borrow has been released")
++    let some image := state.catalogue.images[index]? | throw (IO.userError "project image disappeared")
++    unless image.cut == borrow.cut && image.borrowers.contains borrow.ticket do
++      throw (IO.userError "project image borrow has expired or changed")
++    let images := state.catalogue.images.modify index fun before =>
++      {before with borrowers := before.borrowers.insert state.next,touched := state.next}
++    let catalogue ← IO.ofExcept (Catalogue.check images)
++    set {state with catalogue,next := state.next+1}
++    return (state.next,image.done)
++  try
++    unless ← done.isResolved do throw (IO.userError "project image is not validated")
++    let some result := done.result?.get | throw (IO.userError "project image result disappeared")
++    let view ← IO.ofExcept result
++    use (← view.fork)
++  finally borrow.pool.releaseTicket borrow.image ticket
++
++@[no_expose] def withReaders (borrows : List Borrow) (use : Array View → IO α)
++    (views : Array View := #[]) : IO α :=
++  match borrows with
++  | [] => use views
++  | borrow::rest => borrow.withReader fun view => withReaders rest use (views.push view)
++
++@[no_expose] def Pool.stop (pool : Pool) : IO Unit := pool.state.atomically do
++  modify fun state => {state with closed := true}
++
++@[no_expose] def Pool.drain (pool : Pool) : IO Unit := do
++  pool.state.atomically do
++    let state : State ← get
++    unless state.closed && state.catalogue.images.all (·.borrowers.isEmpty) do
++      throw (IO.userError "project images still have live borrowers")
++    for image in state.catalogue.images do
++      unless ← image.done.isResolved do throw (IO.userError "project image builder has not drained")
++    set {state with catalogue := .empty}
++  pool.pages.state.atomically (set ({} : PageMap.SharedPages))
++
++@[no_expose] def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
++  let state ← get
++  return Json.mkObj [("images",toJson state.catalogue.images.size),
++    ("handles",toJson (handleCount state.catalogue.images)),
++    ("borrowers",toJson (state.catalogue.images.foldl (fun n image => n+image.borrowers.size) 0)),
++    ("builds",toJson state.builds),("completed",toJson state.completed),("failed",toJson state.failed),
++    ("reused",toJson state.reused),("evicted",toJson state.evicted),("expired",toJson state.expired),
++    ("peakImages",toJson state.peakImages),("peakHandles",toJson state.peakHandles),
++    ("maxImages",toJson maxImages),("maxHandles",toJson maxHandles),("closed",toJson state.closed),
++    ("pages",← pool.pages.stats)]
++
++end Eggshell.ProjectViews

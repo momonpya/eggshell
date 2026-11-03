@@ -1,0 +1,69 @@
+--- a/Eggshell/ProjectPublication.lean
++++ b/Eggshell/ProjectPublication.lean
+@@ -38,0 +39,6 @@
++structure StageTime where
++  count : Nat := 0
++  totalMs : Nat := 0
++  maxMs : Nat := 0
++  deriving ToJson
++
+@@ -40,0 +47 @@
++  timings : Std.Mutex (Std.HashMap String StageTime)
+@@ -42 +49 @@
+-def Pool.new : IO Pool := return ⟨← Std.Mutex.new ({} : State)⟩
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new ({} : State),← Std.Mutex.new {}⟩
+@@ -43,0 +51,12 @@
++/-- The thunk starts after the clock read. No source bytes or capabilities
++enter these aggregate timings; overlapping worker sums are not wall time. -/
++@[noinline] def Pool.measured (pool : Pool) (label : String) (action : Unit → IO α) : IO α := do
++  let started ← IO.monoMsNow
++  try action ()
++  finally
++    let elapsed := (← IO.monoMsNow)-started
++    pool.timings.atomically do
++      let stages ← get
++      let before := stages[label]?.getD {}
++      set (stages.insert label ⟨before.count+1,before.totalMs+elapsed,max before.maxMs elapsed⟩)
++
+@@ -82 +101 @@
+-  let view ← ProjectStore.pin registered.project deadline
++  let view ← pool.measured "pin-all" fun _ => ProjectStore.pin registered.project deadline
+@@ -95,2 +114,3 @@
+-  let view ← openView registered.project cut
+-  let prepared ← IO.ofExcept (capsule.prepare registered.project.directory lane.owner.source.identity)
++  let view ← pool.measured "submit-view" fun _ => openView registered.project cut
++  let prepared ← pool.measured "submit-prepare" fun _ =>
++    IO.ofExcept (capsule.prepare registered.project.directory lane.owner.source.identity)
+@@ -99 +119 @@
+-  pool.state.atomically do
++  pool.measured "submit-queue" fun _ => pool.state.atomically do
+@@ -113 +133,2 @@
+-    let receiptKey := "project:published:"++Sha256.hex (toJson (capsule,cut)).compress.toUTF8
++    let receiptKey ← pool.measured "request-key-in-gate" fun _ =>
++      return "project:published:"++Sha256.hex (toJson (capsule,cut)).compress.toUTF8
+@@ -163 +184 @@
+-def commit (owner : Owner) : Nat → Array Job → IO (Nat × Nat)
++def commit (pool : Pool) (owner : Owner) : Nat → Array Job → IO (Nat × Nat)
+@@ -175 +196 @@
+-      let source ← owner.project.current owner.slot
++      let source ← pool.measured "commit-source-pin" fun _ => owner.project.current owner.slot
+@@ -179 +200 @@
+-        if let some marker ← source.get job.receiptKey then
++        if let some marker ← pool.measured "commit-receipt-lookup" fun _ => source.get job.receiptKey then
+@@ -187,2 +208,2 @@
+-        let view ← openView owner.project cut
+-        let publications ← owner.publish view (fresh.map (·.request)) fun intern => do
++        let view ← pool.measured "commit-view" fun _ => openView owner.project cut
++        let publications ← pool.measured "source-append" fun _ => owner.publish view (fresh.map (·.request)) fun intern => do
+@@ -208,2 +229,2 @@
+-      let left ← commit owner fuel (live.extract 0 middle)
+-      let right ← commit owner fuel (live.extract middle live.size)
++      let left ← commit pool owner fuel (live.extract 0 middle)
++      let right ← commit pool owner fuel (live.extract middle live.size)
+@@ -215 +236 @@
+-    committed.set (← commit group.owner (group.jobs.size+1) group.jobs)
++    committed.set (← commit pool group.owner (group.jobs.size+1) group.jobs)
+@@ -234 +255,2 @@
+-    ("replies",toJson state.replies),("closed",toJson state.closed)]
++    ("replies",toJson state.replies),("closed",toJson state.closed),
++    ("stageTimes",toJson ((← pool.timings.atomically get).toArray))]

@@ -1,0 +1,75 @@
+{
+  "status": "isolated investigation; not adopted",
+  "baselineCommit": "953d9de89212cbb053ffa20e0b08e771fb01deb8",
+  "purpose": "Measure repeated complete-source validation and common queue work before changing the immutable view representation. Preserve full project inventory, canonical source ancestry, cross-owner dependencies and all original bytes.",
+  "diagnostic": {
+    "outputBytes": 50000,
+    "clients": 80,
+    "owners": 16,
+    "waves": 4,
+    "repetitions": 1,
+    "interpretation": "aggregate overlapping stage timings, not a matched latency improvement"
+  },
+  "plannedCandidate": {
+    "exactCutReuse": true,
+    "coalesceConcurrentBuilds": true,
+    "sourceViewsMax": 32,
+    "sourceHandlesMax": 512,
+    "sharedPageWireCapacityBytes": 134217728,
+    "activeBorrowersRetainPins": true,
+    "sameCutGroupDoesNotReopenOriginals": true,
+    "requestDigestOutsideQueueGate": true
+  },
+  "nativeComparison": {
+    "outputBytes": [
+      5000,
+      50000
+    ],
+    "clients": 80,
+    "owners": 16,
+    "waves": 4,
+    "repetitions": 3,
+    "armOrder": "alternate parent/candidate by repetition",
+    "sameStartingManifestHeadsAndPages": true,
+    "sameLogicalAbsolutePath": true,
+    "sameGeneratedObservations": true,
+    "bothArmsObserved": true,
+    "canonicalGraphAndOriginalDigestsMustMatch": true,
+    "notATokenAdoptionGate": true,
+    "backgroundQueryOffsetsMs": [
+      0,
+      250,
+      500,
+      750
+    ],
+    "backgroundQueriesPerWave": 4,
+    "backgroundQueriesPerArm": 16,
+    "readWorkload": "fixed count and planned offsets; record actual starts and latency; no closed-loop rate feedback"
+  },
+  "checks": [
+    "all original native broker checks",
+    "80 concurrent identical cuts build once",
+    "independent per-borrower mutable read diagnostics",
+    "no active image eviction",
+    "bounded image/handle/page accounting",
+    "expired admission releases no unrelated borrower",
+    "old pinned source remains old after subsequent publications",
+    "missing owners, foreign manifests, same-revision forks and absent dependencies rejected",
+    "closed service drains existing borrowers"
+  ],
+  "unchanged": [
+    "80-user eight-hour, 98% actual evidence delivery, 30-second objective",
+    "WorkGraph, Exact and complete certification",
+    "recommendation weights and delivery budgets",
+    "MiniLM and numerical boundaries",
+    "matched total-token, quality and deadline product-adoption gate"
+  ],
+  "resources": {
+    "aggregateRssStopKiB": 3670016,
+    "absoluteCeilingKiB": 4194304,
+    "minFreeKiB": 2097152
+  },
+  "answeringModelCalls": 0,
+  "tokenComparisons": "0/18",
+  "cleanup": "Delete ended DB/cache and raw logs without archives; retain current source, native build dependencies and compact results."
+}

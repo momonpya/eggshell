@@ -1,0 +1,779 @@
+{
+  "cells": [
+    {
+      "arm": "parent",
+      "repetition": 0,
+      "outputBytes": 5000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key-in-gate": {
+          "totalMs": 1033,
+          "maxMs": 88,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 108,
+          "maxMs": 4,
+          "count": 131
+        },
+        "submit-prepare": {
+          "totalMs": 1,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 5105,
+          "maxMs": 784,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 109621,
+          "maxMs": 742,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 47152,
+          "maxMs": 824,
+          "count": 130
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 177,
+          "maxMs": 3,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 14684,
+          "maxMs": 204,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 18548,
+          "maxMs": 607,
+          "count": 130
+        }
+      },
+      "sourceViews": null
+    },
+    {
+      "arm": "candidate",
+      "repetition": 0,
+      "outputBytes": 5000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key": {
+          "totalMs": 309,
+          "maxMs": 6,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 125,
+          "maxMs": 3,
+          "count": 156
+        },
+        "submit-prepare": {
+          "totalMs": 4,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 1161,
+          "maxMs": 185,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 279,
+          "maxMs": 16,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 38260,
+          "maxMs": 789,
+          "count": 155
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 234,
+          "maxMs": 4,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 6,
+          "maxMs": 1,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 5,
+          "maxMs": 1,
+          "count": 155
+        }
+      },
+      "sourceViews": {
+        "reused": 317,
+        "peakImages": 6,
+        "peakHandles": 96,
+        "pages": {
+          "pages": 672,
+          "misses": 672,
+          "hits": 30992,
+          "capacityBytes": 134217728
+        },
+        "maxImages": 32,
+        "maxHandles": 512,
+        "images": 5,
+        "handles": 80,
+        "failed": 1,
+        "expired": 0,
+        "evicted": 0,
+        "completed": 5,
+        "closed": false,
+        "builds": 6,
+        "borrowers": 0
+      }
+    },
+    {
+      "arm": "candidate",
+      "repetition": 1,
+      "outputBytes": 5000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key": {
+          "totalMs": 321,
+          "maxMs": 5,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 146,
+          "maxMs": 9,
+          "count": 150
+        },
+        "submit-prepare": {
+          "totalMs": 1,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 1262,
+          "maxMs": 172,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 251,
+          "maxMs": 15,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 34751,
+          "maxMs": 701,
+          "count": 149
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 227,
+          "maxMs": 9,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 4,
+          "maxMs": 1,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 0,
+          "maxMs": 0,
+          "count": 149
+        }
+      },
+      "sourceViews": {
+        "reused": 317,
+        "peakImages": 6,
+        "peakHandles": 96,
+        "pages": {
+          "pages": 637,
+          "misses": 637,
+          "hits": 30269,
+          "capacityBytes": 134217728
+        },
+        "maxImages": 32,
+        "maxHandles": 512,
+        "images": 5,
+        "handles": 80,
+        "failed": 1,
+        "expired": 0,
+        "evicted": 0,
+        "completed": 5,
+        "closed": false,
+        "builds": 6,
+        "borrowers": 0
+      }
+    },
+    {
+      "arm": "parent",
+      "repetition": 1,
+      "outputBytes": 5000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key-in-gate": {
+          "totalMs": 855,
+          "maxMs": 88,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 118,
+          "maxMs": 3,
+          "count": 138
+        },
+        "submit-prepare": {
+          "totalMs": 0,
+          "maxMs": 0,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 5071,
+          "maxMs": 782,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 110730,
+          "maxMs": 719,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 45900,
+          "maxMs": 840,
+          "count": 137
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 182,
+          "maxMs": 3,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 7077,
+          "maxMs": 148,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 19343,
+          "maxMs": 565,
+          "count": 137
+        }
+      },
+      "sourceViews": null
+    },
+    {
+      "arm": "parent",
+      "repetition": 2,
+      "outputBytes": 5000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key-in-gate": {
+          "totalMs": 852,
+          "maxMs": 116,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 145,
+          "maxMs": 15,
+          "count": 122
+        },
+        "submit-prepare": {
+          "totalMs": 1,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 4956,
+          "maxMs": 806,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 114087,
+          "maxMs": 697,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 38941,
+          "maxMs": 809,
+          "count": 121
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 185,
+          "maxMs": 3,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 15340,
+          "maxMs": 155,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 14532,
+          "maxMs": 629,
+          "count": 121
+        }
+      },
+      "sourceViews": null
+    },
+    {
+      "arm": "candidate",
+      "repetition": 2,
+      "outputBytes": 5000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key": {
+          "totalMs": 283,
+          "maxMs": 3,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 133,
+          "maxMs": 4,
+          "count": 151
+        },
+        "submit-prepare": {
+          "totalMs": 2,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 1358,
+          "maxMs": 173,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 609,
+          "maxMs": 19,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 37629,
+          "maxMs": 755,
+          "count": 150
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 266,
+          "maxMs": 7,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 7,
+          "maxMs": 3,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 2,
+          "maxMs": 1,
+          "count": 150
+        }
+      },
+      "sourceViews": {
+        "reused": 317,
+        "peakImages": 6,
+        "peakHandles": 96,
+        "pages": {
+          "pages": 641,
+          "misses": 641,
+          "hits": 31369,
+          "capacityBytes": 134217728
+        },
+        "maxImages": 32,
+        "maxHandles": 512,
+        "images": 5,
+        "handles": 80,
+        "failed": 1,
+        "expired": 0,
+        "evicted": 0,
+        "completed": 5,
+        "closed": false,
+        "builds": 6,
+        "borrowers": 0
+      }
+    },
+    {
+      "arm": "parent",
+      "repetition": 0,
+      "outputBytes": 50000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key-in-gate": {
+          "totalMs": 1898,
+          "maxMs": 118,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 100,
+          "maxMs": 9,
+          "count": 114
+        },
+        "submit-prepare": {
+          "totalMs": 0,
+          "maxMs": 0,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 4710,
+          "maxMs": 883,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 110906,
+          "maxMs": 734,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 205800,
+          "maxMs": 4716,
+          "count": 113
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 246,
+          "maxMs": 4,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 28596,
+          "maxMs": 273,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 15371,
+          "maxMs": 632,
+          "count": 113
+        }
+      },
+      "sourceViews": null
+    },
+    {
+      "arm": "candidate",
+      "repetition": 0,
+      "outputBytes": 50000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key": {
+          "totalMs": 1085,
+          "maxMs": 14,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 99,
+          "maxMs": 2,
+          "count": 126
+        },
+        "submit-prepare": {
+          "totalMs": 1,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 806,
+          "maxMs": 67,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 403,
+          "maxMs": 19,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 212309,
+          "maxMs": 3872,
+          "count": 125
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 275,
+          "maxMs": 7,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 4,
+          "maxMs": 4,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 14,
+          "maxMs": 6,
+          "count": 125
+        }
+      },
+      "sourceViews": {
+        "reused": 317,
+        "peakImages": 6,
+        "peakHandles": 96,
+        "pages": {
+          "pages": 347,
+          "misses": 347,
+          "hits": 33235,
+          "capacityBytes": 134217728
+        },
+        "maxImages": 32,
+        "maxHandles": 512,
+        "images": 5,
+        "handles": 80,
+        "failed": 1,
+        "expired": 0,
+        "evicted": 0,
+        "completed": 5,
+        "closed": false,
+        "builds": 6,
+        "borrowers": 0
+      }
+    },
+    {
+      "arm": "candidate",
+      "repetition": 1,
+      "outputBytes": 50000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key": {
+          "totalMs": 1176,
+          "maxMs": 136,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 115,
+          "maxMs": 9,
+          "count": 125
+        },
+        "submit-prepare": {
+          "totalMs": 2,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 921,
+          "maxMs": 77,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 2076,
+          "maxMs": 70,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 210926,
+          "maxMs": 4441,
+          "count": 124
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 300,
+          "maxMs": 9,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 2,
+          "maxMs": 1,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 7,
+          "maxMs": 2,
+          "count": 124
+        }
+      },
+      "sourceViews": {
+        "reused": 317,
+        "peakImages": 6,
+        "peakHandles": 96,
+        "pages": {
+          "pages": 357,
+          "misses": 357,
+          "hits": 34020,
+          "capacityBytes": 134217728
+        },
+        "maxImages": 32,
+        "maxHandles": 512,
+        "images": 5,
+        "handles": 80,
+        "failed": 1,
+        "expired": 0,
+        "evicted": 0,
+        "completed": 5,
+        "closed": false,
+        "builds": 6,
+        "borrowers": 0
+      }
+    },
+    {
+      "arm": "parent",
+      "repetition": 1,
+      "outputBytes": 50000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key-in-gate": {
+          "totalMs": 1703,
+          "maxMs": 110,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 91,
+          "maxMs": 7,
+          "count": 103
+        },
+        "submit-prepare": {
+          "totalMs": 3,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 4608,
+          "maxMs": 661,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 128374,
+          "maxMs": 776,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 192470,
+          "maxMs": 4669,
+          "count": 102
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 217,
+          "maxMs": 5,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 29237,
+          "maxMs": 260,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 11752,
+          "maxMs": 526,
+          "count": 102
+        }
+      },
+      "sourceViews": null
+    },
+    {
+      "arm": "parent",
+      "repetition": 2,
+      "outputBytes": 50000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key-in-gate": {
+          "totalMs": 2141,
+          "maxMs": 173,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 80,
+          "maxMs": 2,
+          "count": 110
+        },
+        "submit-prepare": {
+          "totalMs": 4,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 5141,
+          "maxMs": 834,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 107212,
+          "maxMs": 776,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 220233,
+          "maxMs": 5361,
+          "count": 109
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 253,
+          "maxMs": 12,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 28304,
+          "maxMs": 228,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 11017,
+          "maxMs": 565,
+          "count": 109
+        }
+      },
+      "sourceViews": null
+    },
+    {
+      "arm": "candidate",
+      "repetition": 2,
+      "outputBytes": 50000,
+      "concurrentQueries": 16,
+      "stageTimes": {
+        "request-key": {
+          "totalMs": 1058,
+          "maxMs": 15,
+          "count": 322
+        },
+        "commit-source-pin": {
+          "totalMs": 108,
+          "maxMs": 5,
+          "count": 126
+        },
+        "submit-prepare": {
+          "totalMs": 3,
+          "maxMs": 1,
+          "count": 322
+        },
+        "pin-all": {
+          "totalMs": 878,
+          "maxMs": 82,
+          "count": 24
+        },
+        "submit-view": {
+          "totalMs": 503,
+          "maxMs": 41,
+          "count": 325
+        },
+        "source-append": {
+          "totalMs": 231797,
+          "maxMs": 4459,
+          "count": 125
+        },
+        "commit-receipt-lookup": {
+          "totalMs": 277,
+          "maxMs": 8,
+          "count": 322
+        },
+        "submit-queue": {
+          "totalMs": 8,
+          "maxMs": 2,
+          "count": 322
+        },
+        "commit-view": {
+          "totalMs": 5,
+          "maxMs": 1,
+          "count": 125
+        }
+      },
+      "sourceViews": {
+        "reused": 317,
+        "peakImages": 6,
+        "peakHandles": 96,
+        "pages": {
+          "pages": 361,
+          "misses": 361,
+          "hits": 33917,
+          "capacityBytes": 134217728
+        },
+        "maxImages": 32,
+        "maxHandles": 512,
+        "images": 5,
+        "handles": 80,
+        "failed": 1,
+        "expired": 0,
+        "evicted": 0,
+        "completed": 5,
+        "closed": false,
+        "builds": 6,
+        "borrowers": 0
+      }
+    }
+  ],
+  "overlappingAggregateMsNotWallTime": true
+}
