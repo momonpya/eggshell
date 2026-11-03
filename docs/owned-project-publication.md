@@ -77,6 +77,18 @@ owners are required, but do not alone establish 80-user support. Test publicatio
 preparation and queries together, retaining every acknowledged original and
 measuring queue age and unfinished preparation as well as hook deadlines.
 
+The [complete federation profile](candidates/federation-order/README.md) compares
+the same original source tuple at 256/1,024/4,096 Outcomes. Replacing repeated
+prefix-copying appends preserves all metadata but has no consistent practical
+speedup; that candidate is rejected and its executable/data removed. In the
+4,096-row median reference observation, canonical identity, document enumeration
+and topology/Union loading consume about 90% of the 1,644 ms preparation time.
+This is a component profile, not the breakdown of a complete hook.
+The next [prepared owner view](prepared-owner-view.md) must maintain complete
+owner/original/statistical metadata by publication differences while retaining
+the existing complete Work-class reader. It is a design awaiting implementation,
+not evidence that project-sized query preparation has been removed.
+
 The [preparation completion and recovery audit](candidates/preparation-drain/README.md)
 uses the same product code. After 80 queries and 80 numerical-configured saves
 across four write streams, normal preparation drains in 2,011 ms; all 80 original

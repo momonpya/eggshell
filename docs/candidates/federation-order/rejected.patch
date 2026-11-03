@@ -1,0 +1,40 @@
+--- a/Eggshell/FederatedSearch.lean
++++ b/Eggshell/FederatedSearch.lean
+@@ -232,0 +233,9 @@
++
++/-- The construction buffer has constant-time insertion; reversing once
++retains exactly the previous source, root and provenance order. -/
++theorem reversed_push_order (reversed : List α) (item : α) :
++    (item :: reversed).reverse = reversed.reverse ++ [item] := List.reverse_cons
++
++theorem reversed_batch_order (reversed added : List α) :
++    (added.reverseAux reversed).reverse = reversed.reverse ++ added := by
++  rw [List.reverseAux_eq, List.reverse_append, List.reverse_reverse]
+@@ -247 +256 @@
+-    topology := topology ++ edges
++    topology := edges.reverseAux topology
+@@ -249 +258 @@
+-    unions := unions ++ edges.map (·.edge)
++    unions := (edges.map (·.edge)).reverseAux unions
+@@ -266 +275 @@
+-      roots := roots ++ [← identity.lookup source id]
++      roots := (← identity.lookup source id) :: roots
+@@ -273 +282 @@
+-      ownerOrigins := ownerOrigins.insert canonical (ownerOrigins.getD canonical [] ++ [⟨source, id⟩])
++      ownerOrigins := ownerOrigins.insert canonical (⟨source, id⟩ :: ownerOrigins.getD canonical [])
+@@ -280,3 +289,4 @@
+-        documents := documents ++ [⟨⟨source, document.owner⟩, document, owner,
+-          ← identity.lookup source document.work, 0⟩]
+-  roots := hashDistinct roots
++        documents := ⟨⟨source, document.owner⟩, document, owner,
++          ← identity.lookup source document.work, 0⟩ :: documents
++  roots := hashDistinct roots.reverse
++  ownerOrigins := Std.HashMap.ofList (ownerOrigins.toList.map fun (owner,reversed) => (owner,reversed.reverse))
+@@ -284 +294 @@
+-  documents ← documents.mapM fun document => do
++  documents ← documents.reverse.mapM fun document => do
+@@ -291,2 +301,2 @@
+-    all := topology.eraseDups
+-    unions, semanticPopulation := semantic.size }
++    all := topology.reverse.eraseDups
++    unions := unions.reverse, semanticPopulation := semantic.size }
