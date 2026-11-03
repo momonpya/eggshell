@@ -19,9 +19,12 @@ fresh ordinary background worker consumes its ticket. Canonical vectors are
 shared by project/scope while source metadata and routers remain separate.
 The native checks include actual MiniLM preparation and an unchanged re-warm
 with zero new embeddings/projections. These small checks do not establish
-sustained preparation capacity. The installation-wide drain admission still
-serializes background work and is the next scheduling bottleneck to remove
-under a bounded shared-service ownership contract.
+sustained preparation capacity. The [shared preparation
+service](candidates/project-preparation/README.md) has replaced the
+installation-wide serial drain with three bounded preparation workers. The
+[execution continuation](candidates/project-execution/README.md) also separates
+bounded search/save admission from source/control requests. These fixed worker
+counts are resource limits, not demonstrated capacity for 80 people.
 The project remains one logical shared DB. No one-owner-per-user DB layout or
 one global owner for every project is required. The target remains 80 users,
 30-second hooks and 98% of necessary original evidence actually delivered;
@@ -62,6 +65,21 @@ rather than the absence of an ordinary hook publication route. Parallel original
 owners are required, but do not alone establish 80-user support. Test publication,
 preparation and queries together, retaining every acknowledged original and
 measuring queue age and unfinished preparation as well as hook deadlines.
+
+The [preparation completion and recovery audit](candidates/preparation-drain/README.md)
+uses the same product code. After 80 queries and 80 numerical-configured saves
+across four write streams, normal preparation drains in 2,011 ms; all 80 original
+responses and 327 current numerical windows are present. Pausing an idle index
+worker does not prevent 24 new durable source ACKs. After verified service exit,
+normal recovery preserves every original and prepares all 423 windows. Recovery
+takes 22,064 ms with 142 retries: this remains a scaling concern, rather than a
+passed sustained-capacity gate.
+
+A read-only census identifies redundant feed work: 3,165 of 4,220 eligible rows
+are indirect references, which the current import scan visits and skips. An
+original-only feed index is the next isolated change. It must preserve the full
+original event order, scope and retained-head checks and be proved equivalent to
+filtering the existing scan. It is not implemented or timed by this audit.
 
 ## Capacity gate
 

@@ -163,7 +163,8 @@ private def cancellation (original : PendingTurn) : IO Json := do
       ("otherClientsCompleted",toJson true),("reusedServiceAfterCancellation",toJson true)]
   finally signal pids "-CONT"
 
-private def exercise (root : System.FilePath) (numerical : Bool) : IO Unit := do
+def exercise (root : System.FilePath) (numerical : Bool)
+    (inspectPreparation : PendingTurn → IO Json := fun _ => pure Json.null) : IO Unit := do
   model
   let original ← IO.ofExcept (Json.parse (← IO.FS.readFile (root/"captured-turn.json")) >>= fromJson? (α := PendingTurn))
   let command ← if numerical then MiniLM.command (← Paths.installRoot) else pure none
@@ -221,6 +222,7 @@ private def exercise (root : System.FilePath) (numerical : Bool) : IO Unit := do
       ("session",toJson "foreign-save"),("path",toJson (root/"captured-turn.json").toString)]) ((← IO.monoMsNow)+2000)
     check rejected.isNone "foreign private save path was accepted"
     let cancelled ← cancellation original
+    let preparationAudit ← inspectPreparation original
     let final ← idle ((← IO.monoMsNow)+15000)
     let ordered := times.qsort (· < ·)
     let report := Json.mkObj [("allPassed",toJson true),("logicalSessionClients",toJson clients.size),
@@ -232,6 +234,7 @@ private def exercise (root : System.FilePath) (numerical : Bool) : IO Unit := do
       ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("p50Ms",toJson (ordered[39]?)),
       ("p95Ms",toJson (ordered[75]?)),("maxMs",toJson (ordered[79]?)),("queryMs",toJson times),
       ("afterLoad",drained),("afterCancellation",final),("cancellation",cancelled),
+      ("preparationAudit",preparationAudit),
       ("twoOriginalEvidenceItemsPerQuery",toJson true),("newerForeignOriginalAbsent",toJson true),
       ("completedEmptyPreserved",toJson true),("foreignSavePathRejected",toJson true),
       ("answeringModelCalls",toJson (0 : Nat)),("eightyPeopleEightHours",toJson false),

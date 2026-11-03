@@ -1,0 +1,17 @@
+{
+  "sourceParentCommit": "1a6630a0",
+  "status": "native investigation without answering-model calls; no product change or adoption",
+  "question": "After 80 concurrent numeric queries and 80 numeric-configured original saves stop, does normal shared preparation finish, with all original responses and current numeric windows independently intact?",
+  "fixedLimits": {"stopRssKiB": 3670016, "hardRssKiB": 4194304, "minFreeKiB": 2097152, "drainObservationMs": 120000},
+  "checks": [
+    "Keep product code identical to project-execution for the baseline; do not treat an observation timeout as a stopped process.",
+    "Observe preparation to idle without issuing extra work or warming the DB in the observer. Persist timeout/failure evidence before teardown.",
+    "Check all 80 exact original JSON responses in independently materialized current original streams, and preserve those original heads throughout derived preparation.",
+    "Check current MiniLM targets, durable ticket exhaustion, journal checkpoints, lexical/synaptic readiness, and independently inspect every current numeric window.",
+    "Open a new native query on current heads and verify newly saved original evidence is delivered through the product function. Record semantic/fallback route and deadline.",
+    "After baseline completion, pause only known idle preparation workers, save 24 additional original observations with real durable tickets, stop the service while debt is confirmed, and recover using normal manager discovery. Verify actual exit, original head/byte preservation, numeric coverage and a fresh query for an interrupted observation.",
+    "Repeat those exact 24 saves as idempotent retries with preparation paused; require original heads unchanged and recover the recreated durable ticket debt. Clear retired worker IDs before later cleanup can signal them.",
+    "Only change scheduling if measured progress is being delayed or lost. Preserve external freshness, complete certification, original ACKs, byte/request limits, closure and cancellation.",
+    "No answering-model calls or token adoption. Keep final records compact, delete ended DB/cache/log/obsolete executable without archive, and push with momonoya."
+  ]
+}
