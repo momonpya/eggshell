@@ -1,0 +1,423 @@
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index 1970388a..29d6aa8c 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -136,6 +136,8 @@ structure Search where
+   evidence : Option String := none
+   staged : Bool := false
+   deadline : Nat := 0
++  startedAt : Nat := 0
++  semanticCutoff : Option Nat := none
+   route : SearchRoute := .configured
+   receipt : Option String := none
+   prepared : Option (Array PreparedInputs.Reference) := none
+@@ -143,6 +145,18 @@ structure Search where
+   owners : Option OwnerViews.Reference := none
+   deriving ToJson, FromJson
+ 
++/-- Valid empty memory and an unavailable operation remain distinct on the wire.
++Search status is scheduling metadata and grants no completion authority. -/
++structure SearchReply where
++  handoff : Option Handoff
++  trace : SearchTrace
++  deriving ToJson, FromJson
++
++def SearchReply.decode (response : Option Json) : Option SearchReply :=
++  response.bind fun value => (fromJson? value : Except String SearchReply).toOption
++
++theorem absent_transport_is_not_reply : SearchReply.decode none = none := rfl
++
+ /-- Every search frame belongs to one native invocation, including its original
+ deadline. Progress changes scheduling only; it has no Handoff payload. -/
+ abbrev SearchIdentity := OperationWire.Identity
+@@ -161,6 +175,13 @@ def Search.identity (request : Search) : SearchIdentity :=
+   { turn := request.pending.turnId, epoch := request.state.epoch,
+     deadline := request.deadline, receipt := request.receipt }
+ 
++def Search.asLexical (request : Search) : Search := {request with route := .lexical}
++
++theorem lexical_preserves_frozen_inputs (request : Search) :
++    request.asLexical.pending = request.pending ∧ request.asLexical.prepared = request.prepared ∧
++    request.asLexical.originals = request.originals ∧ request.asLexical.owners = request.owners ∧
++    request.asLexical.identity = request.identity := ⟨rfl,rfl,rfl,rfl,rfl⟩
++
+ def readyDeadline (expected actual : SearchIdentity) (finishReady : Bool)
+     (cutoff arrived : Nat) : Nat :=
+   min expected.deadline (if finishReady && expected == actual && arrived < cutoff then
+@@ -185,6 +206,20 @@ theorem foreign_ready_preserves_cutoff (expected actual : SearchIdentity) (finis
+     readyDeadline expected actual finishReady cutoff arrived ≤ cutoff := by
+   simpa [readyDeadline, foreign] using (Nat.min_le_right expected.deadline cutoff)
+ 
++def Search.phaseDeadline (request : Search) (cutoff : Nat) (ready : Option Nat) : Nat :=
++  match ready with
++  | none => min request.deadline cutoff
++  | some arrived => readyDeadline request.identity request.identity true cutoff arrived
++
++theorem phase_preserves_upstream (request : Search) (cutoff : Nat) (ready : Option Nat) :
++    request.phaseDeadline cutoff ready ≤ request.deadline := by
++  cases ready with
++  | none => exact Nat.min_le_left _ _
++  | some arrived => exact ready_preserves_upstream _ _ _ _ _
++
++theorem no_ready_preserves_phase (request : Search) (cutoff : Nat) :
++    request.phaseDeadline cutoff none ≤ cutoff := Nat.min_le_right _ _
++
+ /-- One optional ready frame followed by one final reply. Repeated, foreign or
+ late progress cannot restart or extend the upstream deadline. -/
+ def readSearchReply (input : IO.FS.Handle) (policy : SearchPolicy)
+@@ -217,7 +252,7 @@ partial def awaitSearch (task : Task (Except IO.Error α)) (window : Std.Mutex N
+     match ← IO.wait task with
+     | .ok value => return some value
+     | .error error => throw error
+-  if (← IO.monoMsNow) ≥ (← window.atomically get) then return none
++  if (← IO.checkCanceled) || (← IO.monoMsNow) ≥ (← window.atomically get) then return none
+   IO.sleep 5
+   awaitSearch task window
+ 
+@@ -749,6 +784,82 @@ def search (request : Search) (onSemanticReady : IO Unit := pure ()) : IO (Optio
+         (context.bind fun context => context.selection.write.map (·.project.manifest.identity))
+         request.prepared request.owners request.originals
+ 
++def incompleteHandoff (result : Option Handoff) : Bool :=
++  result.any (·.reason == "search-incomplete")
++
++theorem empty_handoff_is_complete : incompleteHandoff none = false := rfl
++
++def phaseObservation (request : Search) (route : SearchRoute) (started finished : Nat)
++    (status : String) (result : Option Handoff) : IO Unit := do
++  Receipt.observe request.receipt ("search-phase-"++if route == .lexical then "lexical" else "semantic")
++    (Json.mkObj [("id",toJson (← Receipt.fresh)),("identity",toJson request.identity),
++      ("route",toJson route),("startedAt",toJson started),("finishedAt",toJson finished),
++      ("elapsedMs",toJson (finished-started)),("semanticCutoff",toJson request.semanticCutoff),
++      ("status",toJson status),("hasHandoff",toJson result.isSome),
++      ("reason",toJson (result.map (·.reason)))])
++
++/-- One admitted job runs owned phases sequentially. The phase action retires
++its actual worker IO before returning an unavailable result; the next phase
++never enters another queue. Readiness timestamps come from its checked pipe. -/
++def executeUsing (request : Search)
++    (action : Search → (Nat → IO Unit) → IO (Option Handoff))
++    (onSemanticReady : Nat → IO Unit := fun _ => pure ()) : IO SearchReply := do
++  TaskDeadline.ensureLive request.deadline
++  let began ← IO.monoMsNow
++  let origin := if request.startedAt == 0 then began else min request.startedAt began
++  let semantic := request.pending.projection == .automatic && request.pending.semanticMatcher.isSome &&
++    request.evidence.isNone && request.route == .configured
++  let some proposed := request.semanticCutoff | do
++    let result ← action request onSemanticReady
++    TaskDeadline.ensureLive request.deadline
++    let finished ← IO.monoMsNow
++    let status := if semantic then
++      (if incompleteHandoff result then SemanticSearchStatus.pending else .completed) else .notRequested
++    phaseObservation request request.route began finished "direct" result
++    let trace : SearchTrace := {
++      semantic := status,route := request.route
++      semanticMs := if semantic then finished-origin else 0,
++      lexicalMs := if semantic then 0 else finished-origin }
++    return ⟨result,trace⟩
++  unless semantic do throw (IO.userError "semantic window requires a configured automatic search")
++  let cutoff := min proposed request.deadline
++  let readyAt ← IO.mkRef (none : Option Nat)
++  let signal := fun arrived => do
++    if arrived < cutoff && (← readyAt.get).isNone then
++      readyAt.set (some arrived)
++      onSemanticReady arrived
++  let first : Option (Option Handoff) ← if began < cutoff then do
++      try
++        some <$> action request signal
++      catch error =>
++        if ← IO.checkCanceled then throw error
++        pure none
++    else pure none
++  let observed ← IO.monoMsNow
++  if let some result := first then
++    if !incompleteHandoff result then
++      TaskDeadline.ensureLive request.deadline
++      phaseObservation request .configured began observed "completed" result
++      let trace : SearchTrace := {
++        semantic := .completed,route := .configured
++        semanticMs := observed-origin,lexicalMs := 0 }
++      return ⟨result,trace⟩
++  let finalCutoff := request.phaseDeadline cutoff (← readyAt.get)
++  let status : SemanticSearchStatus := if observed ≥ finalCutoff then .timedOut
++    else if first.isSome then .pending else .failed
++  phaseObservation request .configured began observed
++    (if began ≥ cutoff then "skipped-expired-window" else "incomplete") first.join
++  TaskDeadline.ensureLive request.deadline
++  let lexicalStarted ← IO.monoMsNow
++  let result ← action request.asLexical (fun _ => pure ())
++  TaskDeadline.ensureLive request.deadline
++  let finished ← IO.monoMsNow
++  phaseObservation request .lexical lexicalStarted finished "finished" result
++  let trace : SearchTrace := {
++    semantic := status,route := .lexical
++    semanticMs := observed-origin,lexicalMs := finished-lexicalStarted }
++  return ⟨result,trace⟩
++
+ /-- Batch compatible metadata tickets on one read snapshot. Index failure
+     retains every ticket; indexing never republishes or locks the graph writer. -/
+ def indexQueued (target : IndexTarget) (paths : List System.FilePath) : IO Nat := do
+diff --git a/Eggshell/PluginHooks.lean b/Eggshell/PluginHooks.lean
+index 2d240890..662cc056 100644
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -506,22 +506,6 @@ theorem configured_deadline_preserves_upstream (finishReady ready : Bool)
+   · exact Nat.le_refl _
+   · exact Nat.min_le_right _ _
+ 
+-def searchIncomplete (reply : Option Json) : Bool :=
+-  match reply with
+-  | none => true
+-  | some json => match (fromJson? json : Except String (Option Handoff)) with
+-    | .error _ => true
+-    | .ok none => false
+-    | .ok (some handoff) => handoff.reason == "search-incomplete"
+-
+-def incompleteSemanticStatus (reply : Option Json) (now deadline : Nat) : SemanticSearchStatus :=
+-  if now ≥ deadline then .timedOut else
+-    match reply with
+-    | none => .failed
+-    | some json => match (fromJson? json : Except String (Option Handoff)) with
+-      | .ok (some handoff) => if handoff.reason == "search-incomplete" then .pending else .failed
+-      | _ => .failed
+-
+ /-- A valid empty worker reply adds no memory or completion authority. Retain
+ the observed search status even when its fallback has no new body to publish. -/
+ def emptySearchResult (trace : SearchTrace) : Handoff := {
+@@ -541,32 +525,6 @@ theorem empty_search_has_no_authority (trace : SearchTrace) :
+ theorem empty_search_preserves_status (trace : SearchTrace) :
+     (emptySearchResult trace).search = some trace := rfl
+ 
+-/-- Constant metadata per DB, never a scan or embedding job in the hook.
+-The registry retains unavailable indexes. Actual numerical cache observations
+-persist typed private repair debt; a deadline never invalidates a checkpoint. -/
+-def requestBackgroundWarm (pending : PendingTurn) (deadline : Nat) : IO Nat := do
+-  let some command := pending.semanticMatcher | return 0
+-  let _ :: "search-provider" :: _ := command | return 0
+-  let mut count := 0
+-  if let some context ← ProjectContext.open? pending deadline then
+-    for source in context.reads.sources do
+-      if (← IO.monoMsNow) ≥ deadline then break
+-      let _ ← registerIndexTarget source command (context.canPrepare (DB.Sidecar.Owner.ofSnapshot source))
+-      count := count+1
+-    if count > 0 then markPreparationWake pending.sessionId
+-    return count
+-  for path in pending.read.eraseDups do
+-    if (← IO.monoMsNow) ≥ deadline then break
+-    try
+-      if let some snapshot ← DB.PageMap.open? (.mk path) then
+-        let _ ← registerIndexTarget snapshot command (pending.write == some path)
+-        -- Retain a background re-evaluation request. Do not inspect complete
+-        -- prepared domains or invalidate a checkpoint on the foreground path.
+-        count := count + 1
+-    catch error => IO.eprintln s!"Eggshell retained an unavailable warm target: {error}"
+-  if count > 0 then markPreparationWake pending.sessionId
+-  pure count
+-
+ /-- Search results become offers only after checking the current turn and epoch. -/
+ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
+     (enforce : Bool) (evidenceText : Option String := none) (staged : Bool := false) :
+@@ -583,39 +541,28 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
+     pure (some state)
+   let some initial := snapshot | return none
+   let stamp : RequestStamp := { turn := pending.turnId, epoch := initial.epoch, deadline }
+-  let query : Worker.Search := {
+-    pending, state := initial, work, enforce, evidence := evidenceText, staged, deadline
+-    receipt := optionalString input "_eggshell_receipt" }
+   let semantic := pending.projection == .automatic && pending.semanticMatcher.isSome && evidenceText.isNone
+   let started ← IO.monoMsNow
+   let firstDeadline := if semantic then semanticSearchDeadline started deadline else deadline
++  let query : Worker.Search := {
++    pending, state := initial, work, enforce, evidence := evidenceText, staged, deadline
++    startedAt := started,semanticCutoff := if semantic then some firstDeadline else none
++    receipt := optionalString input "_eggshell_receipt" }
+   let readyAt ← IO.mkRef (none : Option Nat)
+   let policy : Worker.SearchPolicy := {
+     identity := query.identity
+-    finishReady := semantic
++    finishReady := false
+     onReady := fun now => do
+       if (← readyAt.get).isNone then readyAt.set (some now) }
+-  let first ← Worker.exchange session "search" (toJson query) firstDeadline (some policy)
++  let response ← Worker.exchange session "search" (toJson query) deadline (some policy)
+   let observed ← IO.monoMsNow
+-  let finishDeadline := configuredSearchDeadline policy.finishReady (← readyAt.get).isSome firstDeadline deadline
+-  let (result, trace) ← if semantic && searchIncomplete first then do
+-      let warmRequests ← requestBackgroundWarm pending
+-        (min deadline (observed + (deadline - observed) / 4))
+-      let lexical := {query with route := .lexical}
+-      let lexicalStarted ← IO.monoMsNow
+-      let result ← Worker.exchange session "search" (toJson lexical) deadline
+-        (some {identity := lexical.identity})
+-      let trace : SearchTrace := {
+-        semantic := incompleteSemanticStatus first observed finishDeadline, route := .lexical
+-        semanticMs := observed - started, lexicalMs := (← IO.monoMsNow) - lexicalStarted
+-        warmMs := lexicalStarted - observed, warmRequests }
+-      pure (result, trace)
+-    else do
+-      let trace : SearchTrace := {
+-        semantic := if semantic then .completed else .notRequested, route := .configured
+-        semanticMs := if semantic then observed - started else 0
+-        lexicalMs := if semantic then 0 else observed - started }
+-      pure (first, trace)
++  let finishDeadline := configuredSearchDeadline semantic (← readyAt.get).isSome firstDeadline deadline
++  let decoded := Worker.SearchReply.decode response
++  let result := decoded.map fun reply => toJson reply.handoff
++  let trace := decoded.map (·.trace) |>.getD {
++    semantic := if semantic then (if observed ≥ deadline then .timedOut else .failed) else .notRequested
++    route := .configured,semanticMs := if semantic then observed-started else 0
++    lexicalMs := if semantic then 0 else observed-started }
+   let (handoff, disposition) ← withHookSession input session fun files => do
+     let some state ← readState? files | return (none, "missing-state")
+     let some current ← readPendingBase? files | return (none, "missing-turn")
+@@ -654,7 +601,7 @@ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
+     ("semanticDeadlineMs", toJson firstDeadline), ("searchStartedMs", toJson started),
+     ("semanticReadyMs", toJson (← readyAt.get)),
+     ("semanticFinishDeadlineMs", toJson finishDeadline),
+-    ("finishReadyWithinHook", toJson policy.finishReady),
++    ("finishReadyWithinHook", toJson semantic),
+     ("trace", toJson trace), ("disposition", toJson disposition),
+     ("reason", toJson (handoff.map (·.reason))),
+     ("completed", toJson (handoff.map (·.completed))),
+diff --git a/Eggshell/OperationPool.lean b/Eggshell/OperationPool.lean
+index 5f5241cb..b5cb6954 100644
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -68,6 +68,10 @@ def validate (request : Request) : IO Unit := do
+     unless query.pending.sessionId == request.session && request.identity == some query.identity &&
+         request.cutoff ≤ query.deadline && query.deadline ≤ now+OperationWire.searchBudgetMs do
+       throw (IO.userError "operation search changed its session or deadline")
++    if let some cutoff := query.semanticCutoff then
++      unless !request.finishReady && request.cutoff == query.deadline &&
++          query.route == .configured && query.startedAt ≤ cutoff && cutoff ≤ query.deadline do
++        throw (IO.userError "single search changed its phase or original deadline")
+   | .save =>
+     unless request.identity.isNone && !request.finishReady && request.cutoff ≤ now+60000 &&
+         (request.payload.getObjValAs? String "session").toOption == some request.session do
+@@ -78,6 +82,13 @@ def validate (request : Request) : IO Unit := do
+       throw (IO.userError "operation save escaped its private durable queue")
+     FileSystem.rejectSymlinkAncestors path
+ 
++def observeJob (job : Job) (phase : String) (data : List (String × Json) := []) : IO Unit := do
++  if let some identity := job.request.identity then
++    Receipt.observe identity.receipt ("operation-"++job.request.id++"-"++phase)
++      (Json.mkObj ([("id",toJson job.request.id),("phase",toJson phase),
++        ("route",job.request.payload.getObjValD "route"),("cutoff",toJson job.request.cutoff),
++        ("admittedAt",toJson job.admitted)]++data))
++
+ def Pool.submit (pool : Pool) (request : Request) (cancelled : IO.Ref Bool) : IO (Option Job) := do
+   validate request
+   let size := (toJson request).compress.utf8ByteSize
+@@ -86,7 +97,7 @@ def Pool.submit (pool : Pool) (request : Request) (cancelled : IO.Ref Bool) : IO
+     ← IO.Promise.new,← Std.Mutex.new (.open 0)⟩
+   unless !(← cancelled.get) && (← IO.monoMsNow) < request.cutoff do
+     throw (IO.userError "operation admission cancelled or expired")
+-  pool.state.atomically do
++  let accepted ← pool.state.atomically do
+     let state ← get
+     if state.plan.contents.closed then throw (IO.userError "operation service is closed")
+     if state.jobs.contains request.id then throw (IO.userError "duplicate operation request identity")
+@@ -98,12 +109,15 @@ def Pool.submit (pool : Pool) (request : Request) (cancelled : IO.Ref Bool) : IO
+       plan,jobs := state.jobs.insert request.id job,admitted := state.admitted+1,
+       peakPending := max state.peakPending plan.contents.pending.size}
+     return some job
++  if accepted.isSome then observeJob job "admitted"
++  return accepted
+ 
+ def Pool.take (pool : Pool) (lane : OperationPlan.Lane) : IO (Option (OperationPlan.Active × Job)) := do
+   let now ← IO.monoMsNow
+-  pool.state.atomically do
++  let (retiredJobs,taken) ← pool.state.atomically do
+     let state ← get
+     let mut retired := #[]
++    let mut retiredJobs := #[]
+     let mut jobs := state.jobs
+     for entry in state.plan.contents.pending do
+       if let some job := jobs[entry.id]? then
+@@ -111,19 +125,22 @@ def Pool.take (pool : Pool) (lane : OperationPlan.Lane) : IO (Option (OperationP
+           job.cancelled.set true
+           unless ← job.reply.isResolved do job.reply.resolve none
+           retired := retired.push entry.id
++          retiredJobs := retiredJobs.push job
+           jobs := jobs.erase entry.id
+     let plan := OperationPlan.discard state.plan retired
+     let (plan,active) := OperationPlan.take plan lane now
+     let state := {state with plan,jobs,cancelled := state.cancelled+retired.size}
+     match active with
+-    | none => set state; return none
++    | none => set state; pure (retiredJobs,none)
+     | some active =>
+       let some job := jobs[active.job.id]? | throw (IO.userError "operation slot lost its request")
+       set {state with
+         started := state.started+1,
+         peakActive := max state.peakActive plan.contents.active.size,
+         maxQueueMs := max state.maxQueueMs (now-job.admitted)}
+-      return some (active,job)
++      pure (retiredJobs,some (active,job))
++  for job in retiredJobs do observeJob job "retired-before-start" [("finishedAt",toJson now)]
++  return taken
+ 
+ def Pool.reserveReply (pool : Pool) (job : Job) : IO Bool := do
+   repeat
+@@ -160,6 +177,17 @@ def Pool.releaseReply (pool : Pool) (job : Job) : IO Unit := do
+ 
+ /-- The slot is service-owned. A disconnected search cancels only its current
+ pipe. Saves already in progress retain their durable source-ACK path. -/
++def searchOperation (session : String) (request : Worker.Search)
++    (ready : Nat → IO Unit := fun _ => pure ()) : IO Worker.SearchReply :=
++  Worker.executeUsing request (fun phase signal => do
++    let semantic := phase.route == .configured && phase.semanticCutoff.isSome
++    let cutoff := if semantic then min phase.deadline (phase.semanticCutoff.getD phase.deadline) else phase.deadline
++    let policy : Worker.SearchPolicy := {
++      identity := phase.identity,finishReady := semantic,onReady := signal }
++    let some response ← Worker.exchangeLocal session "search" (toJson phase) cutoff (some policy) |
++      throw (IO.userError "owned search phase did not return a reply")
++    IO.ofExcept (fromJson? response : Except String (Option Handoff))) ready
++
+ def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.Active) (job : Job) : IO Unit := do
+   let started ← IO.monoMsNow
+   let session := s!"shared-operation-{lane.val}"
+@@ -167,17 +195,16 @@ def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.A
+     unless lane.role == job.request.role do throw (IO.userError "operation role changed its assigned lane")
+     if !(← pool.reserveReply job) || (← job.cancelled.get) then pure none
+     else
+-      let policy := job.request.identity.map fun identity => ({
+-        identity,finishReady := job.request.finishReady,
+-        onReady := fun now => do
+-          if job.request.finishReady then job.expires.set identity.deadline
+-          job.ready.set (some now)} : Worker.SearchPolicy)
+-      let task ← IO.asTask (Worker.exchangeLocal session lane.role.name job.request.payload
+-        job.request.cutoff policy) .dedicated
++      let task ← IO.asTask (if job.request.role == .search then do
++          let request ← IO.ofExcept (fromJson? job.request.payload : Except String Worker.Search)
++          let reply ← searchOperation session request (fun now => job.ready.set (some now))
++          pure (some (toJson reply))
++        else Worker.exchangeLocal session lane.role.name job.request.payload job.request.cutoff none) .dedicated
+       repeat
+         if ← IO.hasFinished task then break
+         if (← IO.monoMsNow) ≥ (← job.expires.get) ||
+             (job.request.role == .search && (← job.cancelled.get)) then
++          if job.request.role == .search then IO.cancel task
+           Worker.cancelLocal session job.request.role.name
+         IO.sleep 5
+       IO.ofExcept (← IO.wait task)
+@@ -192,11 +219,16 @@ def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.A
+       jobs := state.jobs.erase active.job.id,completed := state.completed+1,
+       cancelled := state.cancelled+(if wasCancelled then 1 else 0)}
+   if let some identity := job.request.identity then
+-    Receipt.observe identity.receipt "operation-service" (Json.mkObj [
++    let ready ← job.ready.get
++    let fields := [
+       ("id",toJson job.request.id),("lane",toJson lane.val),
+       ("queueMs",toJson (started-job.admitted)),("workMs",toJson (finished-started)),
+-      ("readyMs",toJson ((← job.ready.get).map (·-started))),
+-      ("cancelled",toJson wasCancelled),("reply",toJson result.isSome)])
++      ("route",job.request.payload.getObjValD "route"),
++      ("startedAt",toJson started),("finishedAt",toJson finished),
++      ("readyMs",toJson (ready.map (·-started))),
++      ("cancelled",toJson wasCancelled),("reply",toJson result.isSome)]
++    observeJob job "finished" fields
++    Receipt.observe identity.receipt "operation-service" (Json.mkObj fields)
+ 
+ def Pool.close (pool : Pool) : IO Unit := pool.state.atomically do
+   let state ← get

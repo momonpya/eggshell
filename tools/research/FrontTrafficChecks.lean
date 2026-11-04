@@ -2,6 +2,7 @@ import Main
 import tools.research.TaskDeadlineChecks
 import tools.research.FrontInputAudit
 import tools.research.DirectNumericalChecks
+import tools.research.SingleSearchChecks
 
 open Lean Eggshell Eggshell.Plugin
 namespace Eggshell.Research.FrontTrafficChecks
@@ -291,6 +292,10 @@ end Eggshell.Research.FrontTrafficChecks
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["single-search-blocking"] => Eggshell.Research.SingleSearchChecks.blocking
+  | ["single-search-policy",root] =>
+      Eggshell.Research.SingleSearchChecks.policy (.mk root)
+      return 0
   | ["direct-numerical-components",root,parent,_] =>
       Eggshell.Research.DirectNumericalChecks.components (.mk root) parent
       return 0

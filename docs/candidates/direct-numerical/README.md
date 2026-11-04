@@ -104,3 +104,10 @@ Ended component/replay/reader fixtures and raw logs are [deleted](cleanup.json),
 without archives. Only the failed small1 fixture remains an active input for
 the admission/fallback investigation, along with current build/control inputs
 and protected originals.
+
+Subsequent status: the [single-search continuation](../single-search/README.md)
+sealed this failure, then replaced the active diagnostic with its post-write
+readback fixture. The old small1 DB/cache and remaining raw log were
+[deleted](../single-search/cleanup.json), without an archive. Current comparison
+runtimes and required build inputs remain; this document's 44/80 result is the
+historical parent result, not the latest candidate's complete gate.

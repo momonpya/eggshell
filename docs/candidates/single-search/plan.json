@@ -1,0 +1,24 @@
+{
+  "parent": "72025d95",
+  "purpose": "Keep configured search and lexical fallback inside one admitted search lifecycle instead of re-enqueuing after the semantic cutoff",
+  "contract": [
+    "Preserve the original absolute hook deadline, full captured original/prepared/private input boundary, complete certification domain and the existing half-window semantic cutoff",
+    "A queued request already past the semantic cutoff runs lexical directly. An active semantic attempt is cancelled and joined before lexical fallback; checked nominations ready before the cutoff may finish within the original deadline",
+    "Return one structured search reply carrying optional Handoff and actual trace. Keep valid empty replies distinct from transport failure or incomplete search",
+    "Queue expiry is not cache-miss evidence. Remove the unconditional warm notification on semantic timeout; actual missing-cache debt and exact-input preparation remain authoritative",
+    "Retain operation-id observations and semantic/lexical phase records separately; no overwrite may hide the earlier attempt"
+  ],
+  "checks": [
+    "Lean deadline, phase and frozen-boundary laws plus native declaration connection audit and unchanged ContractAudit",
+    "Native controlled actions: completed body, accepted empty, failed/pending meaning result, expired semantic window, early-ready completion, upstream expiry, cancellation and real blocked-provider retirement before fallback",
+    "Corrected eight-reader ordinary hooks, followed by the fixed 80-writer and 80-fresh-reader protocol at 5 KB then 50 KB, stopping on failure",
+    "Do not enlarge worker counts, queue bounds, reply capacity or timeouts; record actual outputs and all terminal resource guards"
+  ],
+  "adoption": "Isolated candidate; no total-token/quality improvement or product adoption is claimed. Paid matched comparisons remain 0/18.",
+  "hookDeadlineMs": 30000,
+  "semanticBudgetMs": 15000,
+  "aggregateStopRssKiB": 3670016,
+  "aggregateHardCeilingKiB": 4194304,
+  "diskFloorKiB": 2097152,
+  "answeringModelCalls": 0
+}

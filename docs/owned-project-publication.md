@@ -100,6 +100,20 @@ does not close this failed capacity gate. Per-attempt observation and one
 admitted search/fallback lifetime are the next investigation; worker-count or
 deadline inflation is not a passed result.
 
+The [single admitted search/fallback continuation](candidates/single-search/README.md)
+now completes all eighty initial deliveries and all eighty ordinary writer loops
+on the 5 KB fixture. Ordinary background preparation drains and an independent
+audit verifies all 82 original input/output observations across sixteen parallel
+original owners. However, new readback clients deliver both required fields in
+only 7/80 cases: 33 requests never reach operation admission because old sessions
+fill the frontend registry, and another forty admitted requests fail under load.
+A new solo frontend over the same original heads delivers both fields without
+changing those heads. Thus parallel original owners are already connected, while
+frontend lifecycle and query throughput still fail the capacity gate. The 50 KB
+trial was not started; neither sustained eighty-user support nor product adoption
+is claimed. Do not increase owner count or registry/worker bounds as a substitute
+for resolving those independently observed failures.
+
 The [frontend continuation](candidates/front-managers/README.md) found another
 missing layer: the old normal entry still allocated one resident daemon per
 chat and hit the aggregate memory stop before reaching 80. Its isolated
