@@ -105,7 +105,13 @@ composes A0/B1 from individually captured references. Its tiny 80-source case
 preserves the full owner/original ordering and both lexical contracts, including
 duplicates, retraction, reinsertion and a fresh-process historical cut. Eighty
 native original appends retain every acknowledged head while an old cut remains
-readable. This is still separate from ordinary warm/discovery. The shared
+readable. The [normal-route continuation](candidates/source-route/README.md)
+now connects per-source roots to ordinary warm, turn capture and discovery in
+an isolated candidate. All four old/new combinations match the full catalogue;
+66 later preparations cannot replace a queued turn's captured roots. Its small
+MCP fixture also exposes an unresolved delivery failure: both the candidate and
+complete reference return notebook answers but omit both required originals.
+Root composition is not evidence-delivery success. The shared
 dictionary/immutable-node writer remains serialized and its sustained capacity
 is not established; independent original appends do not wait for it. Parallel
 original owners are mandatory, but are not by themselves the 80-person gate.

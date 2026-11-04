@@ -1,0 +1,20 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -8535,7 +8535,7 @@
+     | .inr relation => some relation
+   let evidenceRoots := (rankEvidenceChoices nominationRanking
+     (entries.map fun owner => (owner.relation, owner.work))).map Prod.snd
+-  let neighborhood ← if evidence.isNone && selection.semanticMatcher.isSome then do
++  let neighborhood ← if evidence.isNone && recommendation then do
+       let requested := (topologyDemand
+         (entries.map (·.work) ++ selected.map (·.matched.edge.work)) stagedGraph.all).works
+       match source.neighborhood with
+@@ -8557,7 +8557,7 @@
+       | _, _ => pure none
+     else pure none
+   let mut support : List (SourceSupport entryWorks sourceAll persistent) := []
+-  if evidence.isNone && selection.semanticMatcher.isSome then
++  if evidence.isNone && recommendation then
+     if let some read := source.supportOwners then
+       -- Extract can prefer an All's grounded children over its parent answer.
+       -- A nominated parent absent from the selected renderer still carries
