@@ -222,6 +222,63 @@ def diagnose (root : System.FilePath) : IO Unit := do
   IO.FS.writeFile (root/"read-only-diagnosis.json") ((toJson rows).pretty++"\n")
   IO.println (toJson rows).compress
 
+/-- Read the failed load's authoritative originals and private ingress without
+starting a service, replaying events or retrying the failed publication. -/
+def diagnoseSaves (root : System.FilePath) : IO Unit := do
+  let original ← IO.ofExcept (Json.parse (← IO.FS.readFile (root/"captured-turn.json")) >>= fromJson? (α := PendingTurn))
+  let some context ← ProjectContext.open? original ((← IO.monoMsNow)+20000) |
+    throw (IO.userError "save diagnosis lost its captured original scope")
+  let some write := context.selection.write | throw (IO.userError "save diagnosis has no write project")
+  let current ← ProjectStore.pin write.project ((← IO.monoMsNow)+20000)
+  let mut values := []
+  let mut journals := #[]
+  let mut events : Array Synapses.Journal.Entry := #[]
+  for source in current.sources do
+    values := values++(← Persistence.Store.materialize source).values
+    if let some journal ← Synapses.Journal.open? source then
+      journals := journals.push journal
+      let count ← Persistence.Store.getNat journal.get "count"
+      for ordinal in [:count] do events := events.push (← Synapses.Journal.entry journal ordinal)
+  let mut rows := #[]
+  for index in [:80] do
+    let session := s!"save-client-{index}"
+    let related := events.filter (fun entry => entry.payload.occurrence.session == session)
+    let expected := (Json.mkObj [("evidence",toJson s!"CONCURRENT_ORIGINAL_{index}")]).compress.toUTF8
+    let files ← sessionFiles session
+    rows := rows.push (Json.mkObj [("index",toJson index),("session",toJson session),
+      ("start",toJson (related.any (fun entry => entry.payload.kind == "start"))),
+      ("finish",toJson (related.any (fun entry => entry.payload.kind == "finish"))),
+      ("originalPresent",toJson (values.any (hasAtom · expected))),
+      ("deferredPresent",toJson (← (files.directory/"deferred/controlled-save.json").pathExists))])
+  for source in current.sources do
+    check ((← DB.PageMap.pin source.directory).head == source.head) "read-only diagnosis changed an original"
+  for journal in journals do
+    check ((← DB.PageMap.pin journal.directory).head == journal.head) "read-only diagnosis changed a journal"
+  let result := Json.mkObj [("rows",toJson rows),("sourceHeadsUnchanged",toJson true),
+    ("journalHeadsUnchanged",toJson true),("publicationRetried",toJson false)]
+  IO.FS.writeFile (root/"save-stage-diagnosis.json") (result.pretty++"\n")
+  IO.println result.compress
+
+def clockSample (count : Nat) : IO (Array Nat) := do
+  let mut stamps : Array Nat := #[]
+  for _ in [:count] do
+    let now ← IO.monoNanosNow
+    stamps := stamps.push now
+  return stamps
+
+def clockProbe (root : System.FilePath) : IO Unit := do
+  let tasks ← (List.range 80).toArray.mapM fun _ => IO.asTask (clockSample 4096) .dedicated
+  let mut seen : Std.HashSet Nat := {}
+  let mut repeated := 0
+  for task in tasks do
+    for stamp in ← IO.ofExcept (← IO.wait task) do
+      if seen.contains stamp then repeated := repeated+1
+      seen := seen.insert stamp
+  let result := Json.mkObj [("clockReads",toJson (327680 : Nat)),("repeated",toJson repeated),
+    ("unique",toJson seen.size),("publicationCalls",toJson (0 : Nat))]
+  IO.FS.writeFile (root/"clock-probe.json") (result.pretty++"\n")
+  IO.println result.compress
+
 end Eggshell.Research.SharedInterestLoadChecks
 
 def main (args : List String) : IO UInt32 := do
@@ -233,6 +290,15 @@ def main (args : List String) : IO UInt32 := do
   | ["inspect-context",root] => projectContextCommand ["inspect-context",root]
   | ["traffic-diagnose",root] =>
     Eggshell.Research.SharedInterestLoadChecks.diagnose (.mk root)
+    return 0
+  | ["traffic-save-diagnose",root] =>
+    Eggshell.Research.SharedInterestLoadChecks.diagnoseSaves (.mk root)
+    return 0
+  | ["traffic-clock-probe",root] =>
+    Eggshell.Research.SharedInterestLoadChecks.clockProbe (.mk root)
+    return 0
+  | ["traffic-allocation",root] =>
+    Eggshell.Research.ImmutablePublicationChecks.allocation (.mk root)
     return 0
   | ["traffic-source-only",root] =>
     Numerical.withDefaultKeeper (do

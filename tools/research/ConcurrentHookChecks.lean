@@ -102,14 +102,21 @@ private def saveDuring (pending : PendingTurn) (index : Nat) : IO Nat := do
   let tool : ToolEvent := {
     name := "mcp__fixture__inspect",useId := s!"saved-{index}",input := "{}",
     response := (Json.mkObj [("evidence",toJson s!"CONCURRENT_ORIGINAL_{index}")]).compress}
-  Synapses.Live.start (clock (index*2+1)) files pending {profile := pending.profile} tool
-  Synapses.Live.finish (clock (index*2+2)) pending tool
+  try Synapses.Live.start (clock (index*2+1)) files pending {profile := pending.profile} tool
+  catch error => throw (IO.userError s!"save {index}, start ingress: {error}")
+  try Synapses.Live.finish (clock (index*2+2)) pending tool
+  catch error => throw (IO.userError s!"save {index}, finish ingress: {error}")
   let closed := {pending with tools := [tool],finalMessage := some s!"Recorded `CONCURRENT_ORIGINAL_{index}`.",closed := true}
   let path := files.directory/"deferred"/"controlled-save.json"
-  FileSystem.privateDirectory path.parent.get!
-  writeJson path closed
-  let some reply ← Worker.exchange pending.sessionId "save"
-      (Json.mkObj [("session",toJson pending.sessionId),("path",toJson path.toString)]) ((← IO.monoMsNow)+60000) |
+  try FileSystem.privateDirectory path.parent.get!
+  catch error => throw (IO.userError s!"save {index}, deferred directory {path}: {error}")
+  try writeJson path closed
+  catch error => throw (IO.userError s!"save {index}, deferred body {path}: {error}")
+  let exchange := Worker.exchange pending.sessionId "save"
+    (Json.mkObj [("session",toJson pending.sessionId),("path",toJson path.toString)]) ((← IO.monoMsNow)+60000)
+  let reply ← try exchange
+    catch error => throw (IO.userError s!"save {index}, publisher exchange {path}: {error}")
+  let some reply := reply |
     throw (IO.userError "shared save did not reply")
   let .published saved ← IO.ofExcept (NativePublication.SaveReply.check? reply) |
     throw (IO.userError "shared save did not publish")

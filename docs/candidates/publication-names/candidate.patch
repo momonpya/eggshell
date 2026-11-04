@@ -1,0 +1,61 @@
+--- a/Eggshell/FileSystem.lean
++++ b/Eggshell/FileSystem.lean
+@@ -162,6 +162,13 @@
+ def publicationTemporary (kind : PublicationKind) (suffix : String) : String :=
+   (match kind with | .replace => ".egg-tmp-" | .immutable => ".egg-object-") ++ suffix
+ 
++/-- Time is not an allocation identity, including between threads in one
++process. Exclusive filesystem creation remains the uniqueness authority. -/
++def freshSuffix : IO String := do
++  let random ← IO.getRandomBytes 16
++  return s!"{← IO.Process.getPID}-" ++
++    String.intercalate "-" (random.toList.map fun byte => toString byte.toNat)
++
+ def isPublicationTemporary (name : String) : Bool :=
+   name.startsWith ".egg-tmp-" || name.startsWith ".egg-object-"
+ 
+@@ -272,8 +279,10 @@
+ 
+ private def publishExistingBytes (kind : PublicationKind) (path : System.FilePath)
+     (bytes : ByteArray) (observe : PublicationBoundary → IO Unit) : IO Unit := do
+-  let temporary := publicationTemporary kind s!"{← IO.Process.getPID}-{← IO.monoNanosNow}"
+-  let initial : Publication path bytes .opened := ⟨← openPublication path.toString temporary⟩
++  let temporary := publicationTemporary kind (← freshSuffix)
++  let handle ← try openPublication path.toString temporary
++    catch error => throw (IO.userError s!"cannot exclusively create publication temporary for {path}: {error}")
++  let initial : Publication path bytes .opened := ⟨handle⟩
+   try
+     let written ← initial.write
+     observe .written
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -1491,17 +1491,25 @@
+     throw (IO.userError "memory DB already exists")
+   let parent := directory.parent.getD "/"
+   FileSystem.durableDirectory parent
+-  let temporary := parent / s!".eggshell-create-{← IO.Process.getPID}-{← IO.monoNanosNow}"
+-  if (← FileSystem.symlinkMetadata? temporary).isSome then throw (IO.userError "DB creation temporary exists")
+-  FileSystem.durableDirectory temporary
++  let temporary := parent / (".eggshell-create-" ++ (← FileSystem.freshSuffix))
++  FileSystem.rejectSymlinkAncestors temporary
++  -- Claim a new directory atomically; never merge two builders into an
++  -- existing temporary after an absence probe.
++  IO.FS.createDir temporary
+   try
++    FileSystem.privateDirectory temporary
++    FileSystem.syncPath temporary.toString true
++    FileSystem.syncPath parent.toString true
+     let head : Head := ⟨Blake3.hex (← IO.getRandomBytes 32), authority, 0, magic.size, none⟩
+     FileSystem.immutableBytes (dataPath temporary head) magic
+     FileSystem.immutableBytes (temporary / "writer") ByteArray.empty
+     let header := (toJson head).compress.toUTF8
+     unless header.size ≤ 16384 do throw (IO.userError "DB head exceeds metadata budget")
+     FileSystem.immutableBytes (temporary / "head") header
+-    FileSystem.publishDirectory temporary.toString directory.toString
++    let publish : IO Unit := do
++      try FileSystem.publishDirectory temporary.toString directory.toString
++      catch error => throw (IO.userError s!"cannot exclusively publish database {directory}: {error}")
++    publish
+   finally
+     if (← FileSystem.symlinkMetadata? temporary).isSome then IO.FS.removeDirAll temporary
+   pin directory

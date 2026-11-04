@@ -68,4 +68,46 @@ def audit (root : System.FilePath) : IO Unit := do
     let _ ← IO.wait writer
     pure ()
 
+def createResult (path : System.FilePath) (authority : String) : IO Json := do
+  try
+    let source ← DB.PageMap.create path authority
+    check (source.head.authority == authority && source.head.revision == 0) "fresh DB changed its authority"
+    return Json.mkObj [("created",toJson true),("identity",toJson source.head.identity)]
+  catch error => return Json.mkObj [("created",toJson false),("error",toJson error.toString)]
+
+/-- Exercise actual exclusive creation, rather than assuming distinct clock
+values or inferring ownership from an earlier absence probe. -/
+def allocation (root : System.FilePath) : IO Unit := do
+  check (root.isAbsolute && !(← root.pathExists)) "fresh allocation fixture required"
+  FileSystem.privateDirectory root
+  let shared := root/"same-target"
+  let tasks ← (List.range 80).toArray.mapM fun _ =>
+    IO.asTask (createResult shared "same-authority") .dedicated
+  let results ← tasks.mapM fun task => do IO.ofExcept (← IO.wait task)
+  check ((results.filter (fun row => row.getObjValD "created" == toJson true)).size == 1)
+    "concurrent DB creation did not have exactly one winner"
+  let rejected := results.filter (fun row => row.getObjValD "created" != toJson true)
+  check (rejected.all fun row =>
+    let error := (row.getObjValAs? String "error").toOption.getD ""
+    error == "memory DB already exists" ||
+      (error.contains "cannot exclusively publish database" && error.contains "File exists"))
+    "same-target creation failed for an unexpected reason"
+  let winner ← DB.PageMap.pin shared
+  check (winner.head.authority == "same-authority" && winner.head.revision == 0)
+    "losing creator changed the winning DB"
+  let independent ← (List.range 80).toArray.mapM fun index => IO.asTask
+    (createResult (root/s!"independent-{index}") s!"authority-{index}") .dedicated
+  for task in independent do
+    let result ← IO.ofExcept (← IO.wait task)
+    check (result.getObjValD "created" == toJson true) "independent creator failed"
+  let entries ← root.readDir
+  check (!(entries.any fun entry => entry.fileName.startsWith ".eggshell-create-" ||
+    FileSystem.isPublicationTemporary entry.fileName)) "finished creator left a staging directory"
+  let result := Json.mkObj [("sameTargetRequests",toJson (80 : Nat)),("winners",toJson (1 : Nat)),
+    ("explicitRejections",toJson rejected.size),("independentCreations",toJson (80 : Nat)),
+    ("winnerUnchanged",toJson true),("stagingDirectoriesLeft",toJson (0 : Nat)),
+    ("extraGlobalLockOrCAS",toJson false),("adopted",toJson false)]
+  IO.FS.writeFile (root/"allocation.json") (result.pretty++"\n")
+  IO.println result.compress
+
 end Eggshell.Research.ImmutablePublicationChecks

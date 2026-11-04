@@ -171,6 +171,22 @@ Frequent lexical fallback and 5.5–11.5 second maximum save ACKs in the passed
 bursts remain limitations. Current maintenance still waits for private replay;
 only explicit historical source preparation is separated in this candidate.
 
+The [allocation continuation](candidates/publication-names/README.md) read the
+failed fixture without replay or publication: all 80 start/finish pairs were
+present, but one shared original was absent. An actual exclusive-allocation
+ablation reproduced `File exists` with PID/clock names in all three repetitions
+(2/3/2 collisions), versus zero with OS-random suffixes. The candidate preserves
+exclusive allocation and claims DB staging directories with exclusive mkdir.
+It passed all six predeclared mixed bursts: 480 ordinary queries, 480 durable
+saves and full restoration, with numerical preparation drained and new evidence
+delivered before/after service restart. Max hook latency was 19.36 seconds;
+max save ACK was 12.10 seconds. This closes that small repeated-burst gate, not
+the sustained capacity gate below. Semantic completion remained 21/80 in
+prepared bursts and 6/80 in skipped-cut bursts; the remaining requests used
+lexical fallback. These 327/344-window fixtures cannot establish large-domain
+98% delivery or eighty-person all-day throughput. The old save path is not
+retroactively identified from the allocator counterexample alone.
+
 One project has several independent append owners; one session selects a stable
 write lane and reads the complete authorized project view. It does not acquire
 its own project DB or vector copy. Different project DBs remain independent.

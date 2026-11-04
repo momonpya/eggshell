@@ -120,6 +120,11 @@ private caches and raw logs are removed after compact evidence extraction,
 without archives; the current failed prepared fixture is retained for diagnosis.
 Protected originals and necessary build inputs remain. [Cleanup](cleanup.json).
 
+At the subsequent [publication-names milestone](../publication-names/README.md),
+the failed fixture was inspected without replay or publication. Its compact
+diagnosis was retained and the finished DB/cache was then deleted; it is no
+longer a currently retained input. See the later [deletion record](../publication-names/cleanup.json).
+
 Answering-model calls and matched paid comparisons remain zero (0/18).
 Capacity checks, Lean proofs and evidence delivery cannot satisfy the separate
 matched total-token, quality and deadline adoption gate. No product source,

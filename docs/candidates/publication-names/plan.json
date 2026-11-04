@@ -1,0 +1,43 @@
+{
+  "parent": "31433fb2",
+  "status": "isolated-not-adopted",
+  "reason": "Read-only diagnosis found all 80 start/finish events but only 79 shared original responses. The failed save's path was not recorded. A separate actual 80-thread clock probe found 287117 repeated timestamps in 327680 reads; PID plus timestamp cannot guarantee distinct temporary names.",
+  "changes": [
+    "use OS random bytes rather than clock uniqueness for temporary suffixes, retaining exclusive file creation as the allocation authority",
+    "claim a fresh DB staging directory with atomic exclusive mkdir rather than absence-check followed by recursive create-or-reuse",
+    "include target paths in temporary-open and directory-publication errors",
+    "label native save ingress, deferred storage and publisher-exchange failure stages"
+  ],
+  "predeclaredRepetitionsPerCondition": 3,
+  "conditions": [
+    {"name": "prepared", "writeOwners": 4, "readOnlyOwners": 2},
+    {"name": "skipped-cut", "writeOwners": 16, "readOnlyOwners": 0}
+  ],
+  "perRepetition": {
+    "ordinaryQueries": 80,
+    "concurrentSaves": 80,
+    "originalEvidenceItemsPerQuery": 2,
+    "hookCutoffMs": 28000,
+    "preparationDrainObservationMs": 120000
+  },
+  "mustPass": [
+    "all queries contain both frozen original values and exclude later originals",
+    "all saves have checked durable ACKs and exact original restoration",
+    "ordinary background preparation drains without retaining waiter charge and has no missing or invalid current numerical windows",
+    "fresh chat and actual service restart preserve newly stored evidence",
+    "immutable equal-byte publication and namespace replacement checks",
+    "independent DB creation and simultaneous same-target creation do not merge staging directories or replace the winner"
+  ],
+  "stopRssKiB": 3670016,
+  "hardRssKiB": 4194304,
+  "diskFloorKiB": 2097152,
+  "failureRule": "Retain the first failure and stop that series. A runtime change restarts the series; no unchanged blind retry.",
+  "notEstablishedByThisPlan": [
+    "causal identification of the old save error from the clock result alone",
+    "80 humans working for eight hours with growing large databases",
+    "multiple-PC authentication, SMB or NFS durability",
+    "practical 98 percent necessary-evidence recall, p99 latency or matched total-token improvement"
+  ],
+  "answeringModelCalls": 0,
+  "adopted": false
+}
