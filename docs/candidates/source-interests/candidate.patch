@@ -1,0 +1,711 @@
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -117,6 +117,9 @@
+   write : Option String
+   /-- Complete project boundary captured before this turn's first lookup. -/
+   projectInputs : Option (Array ProjectInputs.Image) := none
++  /-- Complete original and private-usage boundary, captured even while shared
++  preparation is pending. This is private request metadata, not a certificate. -/
++  inputBoundary : Option PreparedInputEnvelope := none
+   /-- Private transport of the checked prepared-input frame. The downstream
+   reader decodes and validates it against this turn's exact original boundary. -/
+   preparedInputs : Option PreparedInputEnvelope := none
+@@ -488,11 +491,22 @@
+   owner : DB.Sidecar.Owner
+   command : List String
+   storage : DB.Sidecar.Storage := .database
+-  deriving Repr, BEq, ToJson, FromJson
++  /-- A job-local interest. The static private registry always stores none. -/
++  sourceHead : Option DB.PageMap.Head := none
++  deriving BEq, ToJson, FromJson
++
++instance : Repr IndexTarget where reprPrec value _ := repr (toJson value).compress
+ 
+ def IndexTarget.key (target : IndexTarget) : String :=
+   Blake3.hex (Blake3.digest "eggshell.index-target".toUTF8 [(toJson target).compress.toUTF8])
+ 
++def IndexTarget.pin (target : IndexTarget) : IO DB.PageMap.Snapshot := do
++  let current ← target.owner.pin
++  let some head := target.sourceHead | return current
++  let some retained ← DB.PageMap.HistoryReader.make? current head |
++    throw (IO.userError "requested preparation source is unavailable or foreign")
++  return retained.snapshot
++
+ def IndexTarget.indexes (target : IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO System.FilePath := do
+   pure ((← DB.Sidecar.locate snapshot target.storage).indexes / indexProviderKey target.command)
+ 
+@@ -565,7 +579,7 @@
+   for path in ((← targetReferences directory databases).toList.mergeSort (fun a b => a.toString ≤ b.toString)) do
+     try
+       let target ← (readBoundedJson path 65536 : IO IndexTarget)
+-      unless path.fileName == some (target.key ++ ".json") && !target.command.isEmpty &&
++      unless target.sourceHead.isNone && path.fileName == some (target.key ++ ".json") && !target.command.isEmpty &&
+           databases.all (·.contains target.owner.database) do
+         throw (IO.userError "index registry entry disagrees with its identity")
+       targets := targets ++ [(path, target)]
+--- /dev/null
++++ b/Eggshell/InputBoundary.lean
+@@ -0,0 +1,87 @@
++module
++public import Eggshell.DB.PageMap
++
++@[expose] public section
++namespace Eggshell.InputBoundary
++open Lean DB
++
++/-- Private request metadata, independent of shared-index readiness. -/
++structure Boundary where
++  producer : String
++  originals : List (Option PageMap.Head)
++  model : String
++  encoder : String
++  usage : Array (Option PageMap.Head)
++  deriving ToJson, FromJson
++
++def Boundary.boundTo (boundary : Boundary) (producer : String)
++    (heads : List (Option PageMap.Head)) (model encoder : String) : Bool :=
++  boundary.producer == producer && decide (boundary.originals = heads) &&
++    boundary.model == model && boundary.encoder == encoder &&
++    boundary.usage.size == (heads.filterMap id).length
++
++/-- The same predicate serves concrete rooted inputs without importing their
++payload/index implementations into the structural contract or its proofs. -/
++def frameBoundTo (producer actual : String) (originals heads : List (Option PageMap.Head))
++    (inputs : Array α) (source : α → PageMap.Head) (contract : α → Bool) : Bool :=
++  actual == producer && decide (originals = heads) &&
++    decide (inputs.map source = (heads.filterMap id).toArray) && inputs.all contract
++
++def Boundary.accepts (boundary : Boundary) (producer actual : String)
++    (originals : List (Option PageMap.Head)) (inputs : Array α)
++    (source : α → PageMap.Head) (contract : α → Bool) (usage : α → Option PageMap.Head) : Bool :=
++  boundary.boundTo producer originals boundary.model boundary.encoder &&
++    frameBoundTo producer actual originals boundary.originals inputs source contract &&
++    decide (inputs.map usage = boundary.usage)
++
++theorem boundary_original_inventory (boundary : Boundary) (producer : String)
++    (heads : List (Option PageMap.Head)) (model encoder : String)
++    (accepted : boundary.boundTo producer heads model encoder = true) : boundary.originals = heads := by
++  simp only [Boundary.boundTo,Bool.and_eq_true,decide_eq_true_eq] at accepted
++  exact accepted.1.1.1.2
++
++theorem frame_original_inventory (producer actual : String) (originals heads : List (Option PageMap.Head))
++    (inputs : Array α) (source : α → PageMap.Head) (contract : α → Bool)
++    (accepted : frameBoundTo producer actual originals heads inputs source contract = true) : originals = heads := by
++  simp only [frameBoundTo,Bool.and_eq_true,decide_eq_true_eq] at accepted
++  exact accepted.1.1.2
++
++theorem frame_input_inventory (producer actual : String) (originals heads : List (Option PageMap.Head))
++    (inputs : Array α) (source : α → PageMap.Head) (contract : α → Bool)
++    (accepted : frameBoundTo producer actual originals heads inputs source contract = true) :
++    inputs.map source = (heads.filterMap id).toArray := by
++  simp only [frameBoundTo,Bool.and_eq_true,decide_eq_true_eq] at accepted
++  exact accepted.1.2
++
++theorem accepted_originals (boundary : Boundary) (producer actual : String)
++    (originals : List (Option PageMap.Head)) (inputs : Array α)
++    (source : α → PageMap.Head) (contract : α → Bool) (usage : α → Option PageMap.Head)
++    (accepted : boundary.accepts producer actual originals inputs source contract usage = true) :
++    originals = boundary.originals := by
++  simp only [Boundary.accepts,Bool.and_eq_true,decide_eq_true_eq] at accepted
++  exact frame_original_inventory _ _ _ _ _ _ _ accepted.1.2
++
++theorem accepted_private_roots (boundary : Boundary) (producer actual : String)
++    (originals : List (Option PageMap.Head)) (inputs : Array α)
++    (source : α → PageMap.Head) (contract : α → Bool) (usage : α → Option PageMap.Head)
++    (accepted : boundary.accepts producer actual originals inputs source contract usage = true) :
++    inputs.map usage = boundary.usage := by
++  simp only [Boundary.accepts,Bool.and_eq_true,decide_eq_true_eq] at accepted
++  exact accepted.2
++
++theorem accepted_complete_inputs (boundary : Boundary) (producer actual : String)
++    (originals : List (Option PageMap.Head)) (inputs : Array α)
++    (source : α → PageMap.Head) (contract : α → Bool) (usage : α → Option PageMap.Head)
++    (accepted : boundary.accepts producer actual originals inputs source contract usage = true) :
++    inputs.map source = (boundary.originals.filterMap id).toArray := by
++  simp only [Boundary.accepts,Bool.and_eq_true,decide_eq_true_eq] at accepted
++  exact frame_input_inventory _ _ _ _ _ _ _ accepted.1.2
++
++theorem changed_private_roots_rejected (boundary : Boundary) (producer actual : String)
++    (originals : List (Option PageMap.Head)) (inputs : Array α)
++    (source : α → PageMap.Head) (contract : α → Bool) (usage : α → Option PageMap.Head)
++    (changed : inputs.map usage ≠ boundary.usage) :
++    boundary.accepts producer actual originals inputs source contract usage = false := by
++  simp [Boundary.accepts,changed]
++
++end Eggshell.InputBoundary
+--- a/Eggshell/PreparedInputs.lean
++++ b/Eggshell/PreparedInputs.lean
+@@ -5,12 +5,14 @@
+ public import PartitionBuild
+ public import tools.RetrievalIndex
+ public import Eggshell.OwnerViews
++public import Eggshell.InputBoundary
+ @[expose] public section
+ 
+ namespace Eggshell.PreparedInputs
+ open Lean DB Persistence.Store
+ 
+ def implementation : String := Sha256.hex ((include_str "PreparedInputs.lean").toUTF8 ++
++  (include_str "InputBoundary.lean").toUTF8 ++
+   RetrievalResearch.Index.contract.toUTF8 ++ WindowOwners.implementation.toUTF8 ++
+   PartitionBuild.implementation.toUTF8 ++ Synapses.CanonicalSource.Cache.implementation.toUTF8 ++
+   Synapses.UsageCache.implementation.toUTF8 ++ OwnerViews.implementation.toUTF8)
+@@ -50,6 +52,16 @@
+   owners : Option OwnerViews.Reference
+   deriving ToJson, FromJson
+ 
++def boundary (snapshots : List (Option PageMap.Snapshot)) (model encoder : String) : IO InputBoundary.Boundary := do
++  let usage ← (snapshots.filterMap id).toArray.mapM fun source => do
++    return (← Synapses.UsageCache.open? source).map (·.index.head)
++  return ⟨implementation,snapshots.map (·.map (·.head)),model,encoder,usage⟩
++
++def attachBoundary (boundary : InputBoundary.Boundary) (inputs : Array Reference) : Except String (Array Reference) := do
++  unless decide (inputs.map (·.source) = (boundary.originals.filterMap id).toArray) &&
++      inputs.size == boundary.usage.size do throw "private usage boundary omitted or changed an original source"
++  return (inputs.zip boundary.usage).map fun (reference,usage) => {reference with usage}
++
+ def Reference.accepts (reference : Reference) (source : PageMap.Snapshot) (model encoder : String) : Bool :=
+   reference.producer == implementation && decide (reference.source = source.head) &&
+   reference.model == model && reference.encoder == encoder
+@@ -60,26 +72,27 @@
+   exact accepted.1.1.2
+ 
+ def Frame.boundTo (frame : Frame) (heads : List (Option PageMap.Head)) (model encoder : String) : Bool :=
+-  frame.producer == implementation && decide (frame.originals = heads) &&
+-  decide (frame.inputs.map (·.source) = (heads.filterMap id).toArray) &&
+-  frame.inputs.all (fun reference => reference.producer == implementation &&
+-    reference.model == model && reference.encoder == encoder)
++  InputBoundary.frameBoundTo implementation frame.producer frame.originals heads frame.inputs (·.source)
++    (fun reference => reference.producer == implementation && reference.model == model && reference.encoder == encoder)
+ 
+ theorem Frame.original_inventory (frame : Frame) (heads : List (Option PageMap.Head)) (model encoder : String)
+     (accepted : frame.boundTo heads model encoder = true) : frame.originals = heads := by
+-  simp only [boundTo,Bool.and_eq_true,decide_eq_true_eq] at accepted
+-  exact accepted.1.1.2
++  exact InputBoundary.frame_original_inventory _ _ _ _ _ _ _ accepted
+ 
+ theorem Frame.input_inventory (frame : Frame) (heads : List (Option PageMap.Head)) (model encoder : String)
+     (accepted : frame.boundTo heads model encoder = true) :
+     frame.inputs.map (·.source) = (heads.filterMap id).toArray := by
+-  simp only [boundTo,Bool.and_eq_true,decide_eq_true_eq] at accepted
+-  exact accepted.1.2
++  exact InputBoundary.frame_input_inventory _ _ _ _ _ _ _ accepted
+ 
+ def Frame.matches (frame : Frame) (heads : List (Option PageMap.Head)) (inputs : Array Reference)
+     (owners : Option OwnerViews.Reference) : Bool :=
+   decide (frame.originals = heads) && toJson frame.inputs == toJson inputs && toJson frame.owners == toJson owners
+ 
++def acceptsBoundary (boundary : InputBoundary.Boundary) (frame : Frame) : Bool :=
++  boundary.accepts implementation frame.producer frame.originals frame.inputs (·.source)
++    (fun reference => reference.producer == implementation && reference.model == boundary.model &&
++      reference.encoder == boundary.encoder) (·.usage)
++
+ def empty (source : PageMap.Snapshot) (model encoder : String) : Reference := {
+   producer := implementation,source := source.head,model,encoder,population := 0
+   windows := none,lexical := none,numeric := none,canonical := none,shared := none}
+--- a/Eggshell/PluginProjectContext.lean
++++ b/Eggshell/PluginProjectContext.lean
+@@ -39,34 +39,52 @@
+       throw (IO.userError "configured read scope omitted the selected write project")
+ 
+ /-- This runs before lookup; subsequent hooks retain this boundary for the turn. -/
+-def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snapshot)) : IO (Option PreparedInputEnvelope) := do
+-  let model ← match pending.semanticMatcher with
++def inputModel (pending : PendingTurn) : IO String :=
++  match pending.semanticMatcher with
+     | some (_ :: _ :: args) => do
+       let settings ← IO.ofExcept (SearchProvider.parse {cache := .mk ".",models := .mk "."} args)
+       pure settings.model
+     | _ => pure MiniLM.model
++def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snapshot))
++    (captured : Option InputBoundary.Boundary := none)
++    (numericRequired : Bool := pending.semanticMatcher.isSome) : IO (Option PreparedInputEnvelope) := do
++  let model ← inputModel pending
++  let captured ← match captured with
++    | some captured => pure captured
++    | none => PreparedInputs.boundary snapshots model SearchProvider.encoderContract
++  unless captured.boundTo PreparedInputs.implementation (snapshots.map (·.map (·.head))) model SearchProvider.encoderContract do
++    throw (IO.userError "input capture changed its original or model boundary")
+   let sources := (snapshots.filterMap id).toArray
+   let mut inputs := #[]
+   for source in sources do
+     let some reference ← PreparedInputs.load? source model SearchProvider.encoderContract | return none
++    if numericRequired && reference.population > 0 && reference.numeric.isNone then return none
+     inputs := inputs.push reference
+   let owners ← OwnerViews.load? sources
+   if sources.size > 1 && inputs.any (·.population > 0) && owners.isNone then return none
+-  let frame : PreparedInputs.Frame := ⟨PreparedInputs.implementation,snapshots.map (·.map (·.head)),inputs,owners⟩
++  let checkedInputs ← IO.ofExcept (PreparedInputs.attachBoundary captured inputs)
++  let frame : PreparedInputs.Frame := ⟨PreparedInputs.implementation,captured.originals,checkedInputs,owners⟩
+   return some ⟨toJson frame⟩
+ 
+ @[no_expose] def capture (pending : PendingTurn) (deadline : Nat) : IO PendingTurn := do
+   unless pending.projectInputs.isNone do throw (IO.userError "native turn already captured its project context")
++  unless pending.inputBoundary.isNone do throw (IO.userError "native turn already captured its input boundary")
+   unless ← projectConfigured pending do
+     let snapshots ← (pendingSelection pending).read.mapM fun egg => PageMap.open? egg.path
+-    return {pending with preparedInputs := ← captureInputs pending snapshots}
++    let boundary ← PreparedInputs.boundary snapshots (← inputModel pending) SearchProvider.encoderContract
++    return {pending with
++      inputBoundary := some ⟨toJson boundary⟩,
++      preparedInputs := ← captureInputs pending snapshots (some boundary)}
+   let selection ← ProjectAccess.resolve pending.sessionId (pendingSelection pending)
+   let reads ← ProjectAccess.pin selection deadline
+   let context : Context := ⟨selection,reads,reads.images,rfl⟩
+   context.requireWriter
++  let snapshots := reads.sources.toList.map some
++  let boundary ← PreparedInputs.boundary snapshots (← inputModel pending) SearchProvider.encoderContract
+   return {pending with
+     projectInputs := some reads.images,
+-    preparedInputs := ← captureInputs pending (reads.sources.toList.map some)}
++    inputBoundary := some ⟨toJson boundary⟩,
++    preparedInputs := ← captureInputs pending snapshots (some boundary)}
+ 
+ @[no_expose] def open? (pending : PendingTurn) (deadline : Nat) : IO (Option Context) := do
+   let some images := pending.projectInputs | do
+--- a/Eggshell/PreparationRegistry.lean
++++ b/Eggshell/PreparationRegistry.lean
+@@ -18,31 +18,39 @@
+ 
+ /-- Only authenticated local administration can request these private registry
+ records. No caller-supplied command, original payload or arbitrary path is used. -/
+-def request (kind key : String) : IO PreparationPlan.Job := do
++def request (kind key : String) (sourceHead : Option PageMap.Head := none) : IO PreparationPlan.Job := do
+   unless Receipt.validId key do throw (IO.userError "invalid preparation registry key")
+-  let (payload,source,storage,numerical) ← if kind == "index" then do
++  unless kind == "index" || sourceHead.isNone do throw (IO.userError "source interests require an index target")
++  let (payload,source,storage,numerical,jobKey) ← if kind == "index" then do
+       let path := (← indexRegistry)/(key++".json")
+       FileSystem.rejectSymlinkAncestors path
+       let target ← (readBoundedJson path 65536 : IO IndexTarget)
+-      unless target.key == key do throw (IO.userError "preparation index registry identity changed")
+-      let source ← target.owner.pin
+-      pure (Json.mkObj [("target",toJson target)],source,target.storage,!Warm.lexicalOnly target.command)
++      unless target.sourceHead.isNone && target.key == key do throw (IO.userError "preparation index registry identity changed")
++      if let some head := sourceHead then
++        let latest ← target.owner.pin
++        unless (← SourceDelta.read? latest head).isSome do
++          throw (IO.userError "preparation interest is not an actual retained source publication")
++      let target := {target with sourceHead}
++      let source ← target.pin
++      pure (Json.mkObj [("target",toJson target),("registryKey",toJson key)],
++        source,target.storage,!Warm.lexicalOnly target.command,target.key)
+     else if kind == "synapses" then do
+       let path := (← Journal.registry)/(key++".json")
+       FileSystem.rejectSymlinkAncestors path
+       let target ← (readBoundedJson path 65536 : IO Journal.Target)
+       unless Index.contentKey target == key do throw (IO.userError "preparation synaptic registry identity changed")
+       let source ← target.owner.pin
+-      pure (Json.mkObj [("kind",toJson "synapses"),("target",toJson target)],source,target.storage,false)
++      pure (Json.mkObj [("kind",toJson "synapses"),("target",toJson target)],source,target.storage,false,key)
+     else throw (IO.userError "unknown preparation registry")
+   let sidecar ← Sidecar.locate source storage
+   let semantic := if numerical then some sidecar.semantic.toString else none
+-  let identity := kind++":"++key
++  let identity := kind++":"++jobKey
+   let bytes := (toJson (identity,source.head.identity,semantic,payload)).compress.utf8ByteSize
+   unless bytes ≤ 65536 do throw (IO.userError "preparation metadata exceeds its bound")
+   return ⟨identity,source.head.identity,semantic,payload,bytes,0,0⟩
+ 
+ def indexPaths (target : IndexTarget) (source : PageMap.Snapshot) : IO (List System.FilePath) := do
++  if target.sourceHead.isSome then return []
+   let path ← target.indexes source
+   if !(← path.pathExists) then return []
+   let entries ← path.readDir
+@@ -56,10 +64,11 @@
+     let feed ← target.ingress.mapM (Journal.feedRequired source)
+     return !feed.getD false && !(← Journal.required source target.storage)
+   let target ← indexTarget job
+-  let source ← target.owner.pin
++  let source ← target.pin
+   if !(← indexPaths target source).isEmpty then return false
+   if ← Warm.required target source then return false
+-  return !(← Build.required source target.storage) && !(← Journal.required source target.storage)
++  return !(← Build.required source target.storage) &&
++    (target.sourceHead.isSome || !(← Journal.required source target.storage))
+ 
+ def explain (job : PreparationPlan.Job) : IO Json := do
+   if synaptic job then
+@@ -73,11 +82,11 @@
+       ("external",toJson (checkpoint.map (·.external))),
+       ("feed",toJson feed),("source",toJson source.head.identity),("storage",toJson target.storage)]
+   let target ← indexTarget job
+-  let source ← target.owner.pin
++  let source ← target.pin
+   return Json.mkObj [("tickets",toJson (← indexPaths target source).length),
+     ("warm",toJson (← Warm.required target source)),("synapses",toJson (← Build.required source target.storage)),
+     ("journal",toJson (← Journal.required source target.storage)),("source",toJson source.head.identity),
+-    ("storage",toJson target.storage)]
++    ("storage",toJson target.storage),("requestedSource",toJson target.sourceHead)]
+ 
+ /-- Called only after a completed replay attempt, not instead of external
+ dependency validation. `complete` remains the conservative scheduling probe. -/
+@@ -88,10 +97,10 @@
+     let feed ← target.ingress.mapM (Journal.feedRequired source)
+     return !feed.getD false && (← Journal.checkpointCurrent source target.storage)
+   let target ← indexTarget job
+-  let source ← target.owner.pin
++  let source ← target.pin
+   if !(← indexPaths target source).isEmpty then return false
+   return !(← Warm.required target source) && !(← Build.required source target.storage) &&
+-    (← Journal.checkpointCurrent source target.storage)
++    (target.sourceHead.isSome || (← Journal.checkpointCurrent source target.storage))
+ 
+ /-- Discovery of current debt is service-side. A source change after completion
+ does not acknowledge preparation of that new source; it remains durable debt. -/
+@@ -99,10 +108,10 @@
+   if ← complete job then return none
+   if synaptic job then return some job.payload
+   let target ← indexTarget job
+-  let source ← target.owner.pin
++  let source ← target.pin
+   let paths ← indexPaths target source
+   let warm := (← Warm.required target source) || (← Build.required source target.storage) ||
+-    (← Journal.required source target.storage)
++    (target.sourceHead.isNone && (← Journal.required source target.storage))
+   return some (job.payload.setObjVal! "warm" (toJson warm)
+     |>.setObjVal! "paths" (toJson (paths.map (·.toString))))
+ 
+@@ -111,8 +120,15 @@
+   else (fromJson? reply : Except String Nat).isOk
+ 
+ def invocation (job : PreparationPlan.Job) : Except String Json := do
++  if !synaptic job then
++    let target ← job.payload.getObjVal? "target" >>= fromJson? (α := IndexTarget)
++    let key ← job.payload.getObjValAs? String "registryKey"
++    unless Receipt.validId key && job.key == "index:"++target.key do throw "invalid exact preparation invocation"
++    return Json.mkObj [("kind",toJson "maintenance"),("registryKind",toJson "index"),
++      ("key",toJson key),("sourceHead",toJson target.sourceHead)]
+   let [kind,key] := job.key.splitOn ":" | throw "invalid preparation invocation"
+   unless ["index","synapses"].contains kind && Receipt.validId key do throw "invalid preparation invocation"
+-  return Json.mkObj [("kind",toJson "maintenance"),("registryKind",toJson kind),("key",toJson key)]
++  return Json.mkObj [("kind",toJson "maintenance"),("registryKind",toJson kind),("key",toJson key),
++    ("sourceHead",toJson (none : Option PageMap.Head))]
+ 
+ end Eggshell.Plugin.PreparationRegistry
+--- a/Eggshell/PreparationService.lean
++++ b/Eggshell/PreparationService.lean
+@@ -13,8 +13,8 @@
+ 
+ def Pool.new : IO Pool := return ⟨← Std.Mutex.new PreparationPlan.initial,← Std.Mutex.new none⟩
+ 
+-def Pool.notify (pool : Pool) (kind key : String) : IO Bool := do
+-  let job ← PreparationRegistry.request kind key
++def Pool.notify (pool : Pool) (kind key : String) (sourceHead : Option DB.PageMap.Head := none) : IO Bool := do
++  let job ← PreparationRegistry.request kind key sourceHead
+   pool.state.atomically do
+     let (next,admitted) := PreparationPlan.notify (← get) job
+     set next
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -420,13 +420,14 @@
+ 
+ /-- A wakeup for checked private registry metadata, never a source ACK or a
+ claim that preparation has finished. Full admission leaves durable work intact. -/
+-def enqueuePreparation (kind key : String) (deadline : Nat) : IO Bool := do
++def enqueuePreparation (kind key : String) (deadline : Nat) (sourceHead : Option PageMap.Head := none) : IO Bool := do
+   unless ["index","synapses"].contains kind && Receipt.validId key do
+     throw (IO.userError "invalid preparation target reference")
+   let endpoint ← resolve
+   let budget ← liveBudget deadline
+   let response ← Daemon.exchange endpoint "prepare-target" (Json.mkObj [
+-    ("registryKind",toJson kind),("key",toJson key),("budgetMs",toJson budget)]) (budget := budget)
++    ("registryKind",toJson kind),("key",toJson key),("sourceHead",toJson sourceHead),
++    ("budgetMs",toJson budget)]) (budget := budget)
+   IO.ofExcept (Json.parse response >>= fromJson? (α := Bool))
+ 
+ def register (endpoint : Daemon.Endpoint) (path : System.FilePath) (identity : String) : IO Project := do
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -811,7 +811,8 @@
+         | "prepare-target" => do
+           let kind ← IO.ofExcept (payload.getObjValAs? String "registryKind")
+           let key ← IO.ofExcept (payload.getObjValAs? String "key")
+-          toJson <$> server.preparation.notify kind key
++          let sourceHead ← IO.ofExcept (payload.getObjValAs? (Option PageMap.Head) "sourceHead")
++          toJson <$> server.preparation.notify kind key sourceHead
+         | "prepare-source" => prepareSource server payload deadline
+         | "register" => toJson <$> register server payload
+         | "project-register" => do
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -101,6 +101,9 @@
+   if ← OwnerViews.requiredFor snapshot then return true
+   if !(lexicalOnly target.command) && inputs.population > 0 && inputs.numeric.isNone then return true
+   if lexicalOnly target.command then return false
++  -- Exact interests are completed by a source-bound prepared frame. The
++  -- installation's latest replay/checkpoint is not an old-cut readiness key.
++  if target.sourceHead.isSome then return false
+   let _ :: "search-provider" :: _ := target.command | return false
+   try
+     let previous ← (Plugin.readBoundedJson (← checkpointPath target snapshot) 65536 : IO Checkpoint)
+@@ -373,7 +376,9 @@
+   let (windowOwners,lexical) ← prepareSourceIndexes snapshot target.storage
+   if lexicalOnly target.command then
+     let _ ← OwnerViews.prepareSource snapshot target.storage
+-    let _ ← PreparedInputs.publish snapshot target.storage MiniLM.model SearchProvider.encoderContract false
++    if journal.complete then
++      let _ ← PreparedInputs.publish snapshot target.storage MiniLM.model SearchProvider.encoderContract false
++      pure ()
+     let empty : Coverage := {
+       database := DB.Sidecar.Owner.ofSnapshot snapshot
+       revision := snapshot.head.revision, model := "lexical-only", windows := 0
+@@ -427,7 +432,9 @@
+           throw (IO.userError "warm did not publish its assignment model")
+         pure (some prepared)
+     let _ ← OwnerViews.prepareSource snapshot target.storage
+-    let _ ← PreparedInputs.publish snapshot target.storage settings.model SearchProvider.encoderContract true
++    if journal.complete then
++      let _ ← PreparedInputs.publish snapshot target.storage settings.model SearchProvider.encoderContract true
++      pure ()
+     mark target snapshot
+     PreparationDebt.acknowledge target.owner settings.model SearchProvider.encoderContract debt
+     return {
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -376,10 +376,55 @@
+       throw (IO.userError "captured original extent is unavailable")
+     return some retained.snapshot)
+ 
+-def capturePrepared (request : Search) : IO Search := do
++/-- No corpus work runs here. Metadata interests coalesce in the shared bounded
++preparation service, while this waiter keeps its original absolute cutoff. -/
++def awaitInputs (request : Search) (snapshots : List (Option DB.PageMap.Snapshot))
++    (boundary : InputBoundary.Boundary) (context : Option ProjectContext.Context)
++    (selection : Config.Selection) (cutoff : Nat) : IO PreparedInputs.Frame := do
++  let numeric := request.route != .lexical && request.pending.semanticMatcher.isSome
++  let capture := ProjectContext.captureInputs request.pending snapshots (some boundary) numeric
++  if let some encoded ← capture then
++    return ← IO.ofExcept (fromJson? (α := PreparedInputs.Frame) encoded.payload)
++  let command ← if numeric then
++      match request.pending.semanticMatcher with
++      | some command => pure command
++      | none => throw (IO.userError "numeric interest omitted its registered provider")
++    else pure [(← IO.appPath).toString,"search-provider","--mode","lexical"]
++  let targets ← (snapshots.filterMap id).toArray.mapM fun source => do
++    let writable := match context with
++      | some context => context.canPrepare (DB.Sidecar.Owner.ofSnapshot source)
++      | none => selection.write.any (fun target => target.path.normalize == source.directory.normalize)
++    let target ← registerIndexTarget source command writable
++    return (target,source.head)
++  let mut accepted := Array.replicate targets.size false
++  let mut delay := 20
++  while (← IO.monoMsNow) < cutoff do
++    for index in [:targets.size] do
++      if accepted[index]?.getD false then continue
++      let some (target,head) := targets[index]? | throw (IO.userError "source interest inventory changed")
++      let admitted ← Publication.Client.enqueuePreparation "index" target.key cutoff (some head)
++      accepted := accepted.set! index admitted
++    if let some encoded ← capture then
++      return ← IO.ofExcept (fromJson? (α := PreparedInputs.Frame) encoded.payload)
++    let now ← IO.monoMsNow
++    unless now < cutoff do throw (IO.userError "captured source preparation exceeded its original cutoff")
++    IO.sleep (min delay (cutoff-now)).toUInt32
++    delay := min 200 (delay*2)
++  throw (IO.userError "captured source preparation exceeded its original cutoff")
++
++def capturePrepared (request : Search) (waitDeadline : Option Nat := none) : IO Search := do
+   if !(decide (request.pending.projection = .automatic)) then return request
++  let cutoff := min request.deadline (waitDeadline.getD request.deadline)
++  let some encodedBoundary := request.pending.inputBoundary |
++    throw (IO.userError "automatic query omitted its captured original boundary")
++  let boundary ← IO.ofExcept (fromJson? (α := InputBoundary.Boundary) encodedBoundary.payload)
++  let model ← ProjectContext.inputModel request.pending
++  unless boundary.boundTo PreparedInputs.implementation boundary.originals model SearchProvider.encoderContract do
++    throw (IO.userError "query changed its captured source/model/private inventory")
+   if let some inputs := request.prepared then
+-    unless request.originals.isSome do throw (IO.userError "prepared query omitted its original boundary")
++    unless request.originals == some boundary.originals do throw (IO.userError "prepared query changed its original boundary")
++    let candidate : PreparedInputs.Frame := ⟨PreparedInputs.implementation,boundary.originals,inputs,request.owners⟩
++    unless PreparedInputs.acceptsBoundary boundary candidate do throw (IO.userError "prepared query changed its private input boundary")
+     if request.prepared.any (fun inputs => inputs.size > 1 && inputs.any (·.population > 0)) && request.owners.isNone then
+       throw (IO.userError "prepared federation omitted its owner-view root")
+     if let some encoded := request.pending.preparedInputs then
+@@ -387,40 +432,26 @@
+       unless frame.matches (request.originals.getD []) inputs request.owners do
+         throw (IO.userError "prepared operation changed its frozen turn input roots")
+     return request
+-  let context ← ProjectContext.open? request.pending request.deadline
++  let context ← ProjectContext.open? request.pending cutoff
+   let selection := context.map (·.physicalSelection) |>.getD (pendingSelection request.pending)
+   let frame ← request.pending.preparedInputs.mapM fun raw => IO.ofExcept (fromJson? (α := PreparedInputs.Frame) raw.payload)
+-  let retained ← match frame with
+-    | none => pure (context.map (·.snapshots))
+-    | some frame => originalSnapshots {request with originals := some frame.originals} selection (context.map (·.snapshots))
+-  let snapshots ← retainedSelection selection retained
+-  let model ← match request.pending.semanticMatcher with
+-    | some (_ :: _ :: args) =>
+-      let settings ← IO.ofExcept (SearchProvider.parse {cache := .mk ".",models := .mk "."} args)
+-      pure settings.model
+-    | _ => pure MiniLM.model
++  let retained ← originalSnapshots {request with originals := some boundary.originals} selection (context.map (·.snapshots))
++  let snapshots ← retainedSelection selection retained (some boundary.originals)
++  unless boundary.boundTo PreparedInputs.implementation (snapshots.map (·.map (·.head))) model SearchProvider.encoderContract do
++    throw (IO.userError "query reopened a different original inventory")
+   if let some frame := frame then
+-    unless frame.boundTo (snapshots.map (·.map (·.head))) model SearchProvider.encoderContract do
++    unless PreparedInputs.acceptsBoundary boundary frame do
+       throw (IO.userError "frozen turn input frame changed its exact original cut or producer")
+     if frame.inputs.size > 1 && frame.inputs.any (·.population > 0) && frame.owners.isNone then
+       throw (IO.userError "frozen turn input frame omitted individual owner roots")
+     return {request with prepared := some frame.inputs,owners := frame.owners,originals := some frame.originals}
+-  let prepared ← (snapshots.filterMap id).toArray.mapM fun source => do
+-    unless (← IO.monoMsNow) < request.deadline do throw (IO.userError "prepared query capture expired")
+-    let some inputs ← PreparedInputs.load? source model SearchProvider.encoderContract |
+-      throw (IO.userError "source query inputs are pending preparation")
+-    return inputs
+-  let owners ← if prepared.size > 1 then do
+-      let sources := (snapshots.filterMap id).toArray
+-      let reference ← OwnerViews.load? sources
+-      if reference.isNone && prepared.any (·.population > 0) then
+-        throw (IO.userError "individual source owner inputs are pending explicit/background warm")
+-      pure reference
+-    else pure none
++  let frame ← awaitInputs request snapshots boundary context selection cutoff
++  unless PreparedInputs.acceptsBoundary boundary frame do throw (IO.userError "completed source preparation changed its private input boundary")
+   return {request with
+-    prepared := some prepared
+-    owners
+-    originals := some (snapshots.map (·.map (·.head)))}
++    pending := {request.pending with preparedInputs := some ⟨toJson frame⟩}
++    prepared := some frame.inputs
++    owners := frame.owners
++    originals := some boundary.originals}
+ 
+ /-- Managers own only bounded request/cancellation metadata. Only the service
+ calls `exchangeLocal` for search/save; no private worker fallback is spawned. -/
+@@ -431,7 +462,7 @@
+   let captured ← try
+     if operation == .search then do
+       let request ← IO.ofExcept (fromJson? payload : Except String Search)
+-      pure (some (toJson (← capturePrepared request)))
++      pure (some (toJson (← capturePrepared request (some deadline))))
+     else pure (some payload)
+     catch error =>
+       IO.eprintln s!"Eggshell query inputs unavailable before admission: {error}"
+@@ -677,7 +708,7 @@
+             queueCheckpoint files {request.pending with tools := [], sources := sources, inFlight := [], finalMessage := none, closed := false} })
+         (request.route != .lexical) captured
+         (context.bind fun context => context.selection.write.map (·.project.manifest.identity))
+-        request.prepared request.owners
++        request.prepared request.owners request.originals
+ 
+ /-- Batch compatible metadata tickets on one read snapshot. Index failure
+     retains every ticket; indexing never republishes or locks the graph writer. -/
+@@ -736,7 +767,7 @@
+   let paths ← IO.ofExcept (json.getObjValAs? (List String) "paths")
+   let count ← indexQueued target (paths.map System.FilePath.mk)
+   if (json.getObjValAs? Bool "warm").toOption.getD false then
+-    let result ← Warm.runTarget (← target.owner.pin) target (preparation := some preparation)
++    let result ← Warm.runTarget (← target.pin) target (preparation := some preparation)
+     return (toJson count,result.journal.complete)
+   return (toJson count,true)
+ 
+@@ -746,7 +777,8 @@
+ def maintenance (preparation : Synapses.ReplayPreparation.Pool) (json : Json) : IO Json := do
+   let kind ← IO.ofExcept (json.getObjValAs? String "registryKind")
+   let key ← IO.ofExcept (json.getObjValAs? String "key")
+-  let job ← PreparationRegistry.request kind key
++  let sourceHead ← IO.ofExcept (json.getObjValAs? (Option DB.PageMap.Head) "sourceHead")
++  let job ← PreparationRegistry.request kind key sourceHead
+   if let some payload ← PreparationRegistry.workerPayload job then
+     let (result,finished) ← indexActionWithState preparation payload
+     unless finished && PreparationRegistry.validReply job result do
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -49,6 +49,10 @@
+     if decide (query.pending.projection = .automatic) then
+       let some inputs := query.prepared | throw (IO.userError "automatic search omitted its prepared input record")
+       let some originals := query.originals | throw (IO.userError "automatic search omitted its original boundary")
++      let some captured := query.pending.inputBoundary | throw (IO.userError "automatic search omitted its private capture boundary")
++      let boundary ← IO.ofExcept (fromJson? (α := InputBoundary.Boundary) captured.payload)
++      let candidate : PreparedInputs.Frame := ⟨PreparedInputs.implementation,originals,inputs,query.owners⟩
++      unless PreparedInputs.acceptsBoundary boundary candidate do throw (IO.userError "queued operation changed its original/private boundary")
+       unless inputs.map (·.source) == (originals.filterMap id).toArray do
+         throw (IO.userError "prepared input inventory differs from original boundary")
+       if let some encoded := query.pending.preparedInputs then
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9417,11 +9417,16 @@
+   rfl
+ 
+ def retainedSelection (selection : Config.Selection)
+-    (captured : Option (List (Option DB.PageMap.Snapshot))) : IO (List (Option DB.PageMap.Snapshot)) := do
++    (captured : Option (List (Option DB.PageMap.Snapshot)))
++    (heads : Option (List (Option DB.PageMap.Head)) := none) : IO (List (Option DB.PageMap.Snapshot)) := do
+   let some captured := captured | return ← selection.read.mapM fun item => DB.PageMap.open? item.path
++  if let some heads := heads then
++    unless captured.map (·.map (·.head)) == heads do
++      throw (IO.userError "captured search changed its complete original boundary")
+   unless captured.length == selection.read.length &&
+-      (selection.read.zip captured).all (fun (item,source) => source.any (fun source =>
+-        source.directory.normalize == item.path.normalize)) do
++      (selection.read.zip captured).all (fun (item,source) => match source with
++        | none => heads.isSome
++        | some source => source.directory.normalize == item.path.normalize) do
+     throw (IO.userError "captured search omitted or changed a configured source")
+   return captured
+ 
+@@ -9434,7 +9439,8 @@
+     (publishMemo : Bool := true)
+     (captured : Option (List (Option DB.PageMap.Snapshot)) := none)
+     (memoScope : Option String := none) (queryInputs : Option (Array PreparedInputs.Reference) := none)
+-    (queryOwners : Option OwnerViews.Reference := none) : IO (Option Handoff) := do
++    (queryOwners : Option OwnerViews.Reference := none)
++    (capturedHeads : Option (List (Option DB.PageMap.Head)) := none) : IO (Option Handoff) := do
+   -- First retain the original complete graph selection. Its conservative
+   -- tree reserve can exceed the final rendered shell: subtracting a notice
+   -- up front would discard owners even when the actual complete text fits.
+@@ -9449,7 +9455,7 @@
+       selection.handoffBytes.all (fun bytes => handoff.text.utf8ByteSize + sourceStatusByteReserve ≤ bytes))
+   if selection.read.isEmpty then return none
+   let paths := selection.read.map (·.path)
+-  let snapshots ← retainedSelection selection captured
++  let snapshots ← retainedSelection selection captured capturedHeads
+   let sources := (snapshots.filterMap id).toArray
+   if let some references := queryInputs then
+     unless references.size == sources.size && (references.zip sources).all (fun (reference,source) =>
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -25,6 +25,13 @@
+       ``Eggshell.KeyedProtocol.scoped_choice_in_original_array,
+       ``Eggshell.Synapses.CanonicalSource.Cache.BoundIndex.original_basis,
+       ``Eggshell.PreparedInputs.Reference.same_source,
++      ``Eggshell.InputBoundary.boundary_original_inventory,
++      ``Eggshell.InputBoundary.frame_original_inventory,
++      ``Eggshell.InputBoundary.frame_input_inventory,
++      ``Eggshell.InputBoundary.accepted_originals,
++      ``Eggshell.InputBoundary.accepted_private_roots,
++      ``Eggshell.InputBoundary.accepted_complete_inputs,
++      ``Eggshell.InputBoundary.changed_private_roots_rejected,
+       ``Eggshell.Synapses.CanonicalSource.Shared.Loaded.namespace_ignores_publication,
+       ``Eggshell.KeyedSearchProvider.originalOwners_compiled,
+       ``Eggshell.LexicalAdvice.rank_prepared_exact,
+@@ -187,8 +194,26 @@
+         #[``Eggshell.DB.PageMap.HistoryReader.make?],
+         #[``Eggshell.PreparedRoot.select?]),
+       (``Eggshell.Plugin.Worker.capturePrepared,
+-        #[``Eggshell.PreparedInputs.load?],
++        #[``Eggshell.Plugin.Worker.awaitInputs, ``Eggshell.PreparedInputs.acceptsBoundary,
++          ``Eggshell.Plugin.Worker.originalSnapshots],
+         #[``Eggshell.PreparedInputs.publish, ``Eggshell.Warm.runTarget]),
++      (``Eggshell.Plugin.ProjectContext.captureInputs,
++        #[``Eggshell.PreparedInputs.load?, ``Eggshell.PreparedInputs.attachBoundary,
++          ``Eggshell.OwnerViews.load?],
++        #[``Eggshell.PreparedInputs.publish, ``Eggshell.Warm.runTarget]),
++      (``Eggshell.Plugin.Worker.awaitInputs,
++        #[``Eggshell.Plugin.ProjectContext.captureInputs, ``Eggshell.Plugin.registerIndexTarget],
++        #[``Eggshell.PreparedInputs.publish, ``Eggshell.Warm.runTarget,
++          ``Eggshell.Persistence.Store.searchDocuments]),
++      (``Eggshell.PreparedInputs.acceptsBoundary,
++        #[``Eggshell.InputBoundary.Boundary.accepts], #[]),
++      (``Eggshell.PreparedInputs.Frame.boundTo,
++        #[``Eggshell.InputBoundary.frameBoundTo], #[]),
++      (``Eggshell.Plugin.PreparationRegistry.request,
++        #[``Eggshell.Plugin.IndexTarget.pin, ``Eggshell.SourceDelta.read?],
++        #[``Eggshell.PreparedInputs.publish]),
++      (``Eggshell.Plugin.Worker.indexActionWithState,
++        #[``Eggshell.Plugin.IndexTarget.pin, ``Eggshell.Warm.runTarget], #[]),
+       (``Eggshell.Plugin.Worker.originalSnapshots,
+         #[``Eggshell.DB.PageMap.HistoryReader.make?],
+         #[``Eggshell.PreparedRoot.select?])] do

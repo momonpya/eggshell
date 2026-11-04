@@ -1,0 +1,9 @@
+import Eggshell.InputBoundary
+
+#print axioms Eggshell.InputBoundary.boundary_original_inventory
+#print axioms Eggshell.InputBoundary.frame_original_inventory
+#print axioms Eggshell.InputBoundary.frame_input_inventory
+#print axioms Eggshell.InputBoundary.accepted_originals
+#print axioms Eggshell.InputBoundary.accepted_private_roots
+#print axioms Eggshell.InputBoundary.accepted_complete_inputs
+#print axioms Eggshell.InputBoundary.changed_private_roots_rejected

@@ -143,9 +143,12 @@ The [captured-cut preparation integration](candidates/prepared-cuts/README.md)
 now materializes skipped A1/B1 roots after A2/B2 without replacing later ready
 inputs. Explicit historical warm plus ordinary worker/extraction delivers both
 required original responses; a fresh process restores the identical body.
-Automatic exact-cut service interests remain unfinished. The original project
-publication and bounded scheduler code are unchanged. This fixes one isolated
-preparation component, not the sustained eighty-person capacity gate below.
+The [exact service interests](candidates/source-interests/README.md) now fulfil
+both skipped sources through the ordinary hook and shared background workers,
+in write/read-only fixtures with frozen private usage and fresh-process restore.
+The original project publication and bounded scheduler code are unchanged.
+Cancellation/expiry and sustained eighty-person capacity remain open; these
+small lexical checks do not establish the capacity gate below.
 
 One project has several independent append owners; one session selects a stable
 write lane and reads the complete authorized project view. It does not acquire

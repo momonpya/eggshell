@@ -9,9 +9,12 @@ forward-only shared synapse index; the original records are intact.
 
 The [component integration](candidates/prepared-cuts/README.md) now prepares
 skipped A1/B1 after A2/B2 without replacing either later completed input.
-Explicit warm plus ordinary worker/extraction delivers both original responses,
-including fresh-process restore. Exact-cut service interests and automatic
-fulfilment are still unfinished; this is not the complete repair or capacity gate.
+Explicit warm plus ordinary worker/extraction delivered both original responses.
+The [service-interest continuation](candidates/source-interests/README.md) now
+captures originals/private usage while unready and fulfils exact A1/B1 through
+normal shared workers and the complete hook delivery path. Write/read-only
+fixtures and fresh-process restore pass. Cancellation/expiry, numerical and
+sustained-capacity gates remain unfinished.
 
 This replaces the idea that another notification of the ordinary latest-head
 job would be enough. Increasing waits or the number of ready-name slots does
