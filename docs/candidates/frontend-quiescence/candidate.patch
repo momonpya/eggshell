@@ -1,0 +1,201 @@
+diff --git a/Eggshell/HookFrontend.lean b/Eggshell/HookFrontend.lean
+index 9c60cb24..7e0314b8 100644
+--- a/Eggshell/HookFrontend.lean
++++ b/Eggshell/HookFrontend.lean
+@@ -13,20 +13,62 @@ structure Session where
+   saveCursor : IO.Ref (String × List String)
+   indexCursor : IO.Ref String
+   indexWake : IO.Ref (Option String)
++  revision : Nat := 0
++  quiet : Bool := false
+ 
+ def Session.create (name : String) (now : Nat) : IO Session := do
+   let _ ← IO.ofExcept (safeSession name)
+-  return ⟨name,now,← IO.mkRef ("",[]),← IO.mkRef "",← IO.mkRef none⟩
++  return {
++    name := name
++    touched := now
++    saveCursor := ← IO.mkRef ("",[])
++    indexCursor := ← IO.mkRef ""
++    indexWake := ← IO.mkRef none }
+ 
+-def Session.refresh (entry : Session) : IO Unit := do
+-  if ← IO.checkCanceled then return
++def Session.touch (entry : Session) (now : Nat) : Session :=
++  {entry with touched := now,revision := entry.revision+1,quiet := false}
++
++def Session.finish (entry : Session) (revision : Nat) (quiet : Bool) : Session :=
++  if entry.revision == revision then {entry with quiet} else entry
++
++theorem Session.stale_result_ignored (entry : Session) (revision : Nat) (quiet : Bool)
++    (changed : entry.revision ≠ revision) : entry.finish revision quiet = entry := by
++  simp [finish,changed]
++
++theorem Session.touch_invalidates_quiet (entry : Session) (now : Nat) :
++    (entry.touch now).quiet = false := by rfl
++
++/-- Only disposable cursor state may be retired. Closed turns have already
++queued their final checkpoint; durable work must be empty after the ACK path.
++Malformed pending state is not evidence that the turn is absent. -/
++def Session.closedAndDrained (files : SessionFiles) : IO Bool := do
++  for name in ["deferred","checkpoints"] do
++    let directory := files.directory/name
++    if ← directory.pathExists then
++      Persistence.rejectSymlinkAncestors directory
++      if (← directory.readDir).any (·.fileName.endsWith ".json") then return false
++  if ← files.directory.pathExists then
++    if (← files.directory.readDir).any (·.fileName.startsWith "pending.json.corrupt-") then return false
++  if !(← files.pending.pathExists) then return true
++  try
++    let some pending ← (readJson? files.pending pendingJsonDefaults : IO (Option PendingTurn)) | return false
++    return pending.closed
++  catch _ => return false
++
++def Session.refresh (entry : Session) : IO Bool := do
++  if ← IO.checkCanceled then return false
+   let deadline := (← IO.monoMsNow)+60000
+   flushDeferred entry.name deadline (some entry.saveCursor)
+-  if ← IO.checkCanceled then return
++  if ← IO.checkCanceled then return false
+   let observed ← preparationWake entry.name
+   if PreparationPlan.Wake.needed observed (← entry.indexWake.get) then
+     let accepted ← flushIndexesResult entry.name deadline (some entry.indexCursor)
+     entry.indexWake.modify (fun before => PreparationPlan.Wake.record observed before accepted)
++    unless accepted do return false
++  if ← IO.checkCanceled then return false
++  withSession entry.name fun files => do
++    unless (← preparationWake entry.name) == observed do return false
++    Session.closedAndDrained files
+ 
+ structure Reading where
+   socket : Socket.Client
+@@ -40,7 +82,33 @@ structure Client where
+ 
+ structure Maintenance where
+   session : String
+-  task : Task (Except IO.Error Unit)
++  revision : Nat
++  task : Task (Except IO.Error Bool)
++
++def Session.canRetire (entry : Session) (pending running clients : List String) : Bool :=
++  entry.quiet && !pending.contains entry.name && !running.contains entry.name && !clients.contains entry.name
++
++theorem Session.active_not_retired (entry : Session) (pending running clients : List String)
++    (active : entry.name ∈ clients) : entry.canRetire pending running clients = false := by
++  simp [canRetire,active]
++
++theorem Session.pending_not_retired (entry : Session) (pending running clients : List String)
++    (waiting : entry.name ∈ pending) : entry.canRetire pending running clients = false := by
++  simp [canRetire,waiting]
++
++theorem Session.maintenance_not_retired (entry : Session) (pending running clients : List String)
++    (working : entry.name ∈ running) : entry.canRetire pending running clients = false := by
++  simp [canRetire,working]
++
++def retirementIndex? (sessions : Array Session) (pending running clients : List String) : Option (Fin sessions.size) := Id.run do
++  let mut selected : Option (Fin sessions.size × Nat) := none
++  for index in List.finRange sessions.size do
++    let entry := sessions[index]
++    if entry.canRetire pending running clients then
++      if let some prior := selected then
++        if entry.touched < prior.2 then selected := some (index,entry.touched)
++      else selected := some (index,entry.touched)
++  return selected.map (·.1)
+ 
+ def requestSession (json : Json) : Except String (Option String) := do
+   let kind ← requiredString json "kind"
+@@ -70,6 +138,8 @@ def run (server : Socket.Server) (secret initial : String)
+   let mut lastActivity ← IO.monoMsNow
+   let mut closing := false
+   let mut stopped := false
++  let mut retiredSessions := 0
++  let mut maintenanceRuns := 0
+   try
+     while !stopped do
+       let mut active := #[]
+@@ -79,14 +149,21 @@ def run (server : Socket.Server) (secret initial : String)
+           | .ok stop => if stop then stopped := true
+           | .error _ => pure ()
+           if client.wake then
+-            if let some session := client.session then pending := notify pending session
++            if let some session := client.session then
++              if let some index := sessions.findIdx? (·.name == session) then
++                let touched ← IO.monoMsNow
++                sessions := sessions.modify index (·.touch touched)
++              pending := notify pending session
+         else active := active.push client
+       clients := active
+       let mut working := #[]
+       for work in maintenance do
+         if ← IO.hasFinished work.task then
+-          if let .error _ ← IO.wait work.task then
+-            IO.eprintln "Eggshell retained unfinished session maintenance"
++          match ← IO.wait work.task with
++          | .ok quiet =>
++            if let some index := sessions.findIdx? (·.name == work.session) then
++              sessions := sessions.modify index (·.finish work.revision quiet)
++          | .error _ => IO.eprintln "Eggshell retained unfinished session maintenance"
+         else working := working.push work
+       maintenance := working
+       if stopped then break
+@@ -115,11 +192,17 @@ def run (server : Socket.Server) (secret initial : String)
+                 if let some name := selected then
+                   if let some index := sessions.findIdx? (·.name == name) then
+                     let touched ← IO.monoMsNow
+-                    sessions := sessions.modify index (fun entry => {entry with touched})
+-                  else if sessions.size < HookBudget.sessions then
+-                    sessions := sessions.push (← Session.create name (← IO.monoMsNow))
+-                    pending := notify pending name
+-                  else error := some "frontend session admission is full"
++                    sessions := sessions.modify index (·.touch touched)
++                  else
++                    if sessions.size ≥ HookBudget.sessions then
++                      if let some index := retirementIndex? sessions pending.toList
++                          (maintenance.toList.map (·.session)) (clients.toList.filterMap (·.session)) then
++                        sessions := sessions.eraseIdx index.val index.isLt
++                        retiredSessions := retiredSessions+1
++                    if sessions.size < HookBudget.sessions then
++                      sessions := sessions.push (← Session.create name (← IO.monoMsNow))
++                      pending := notify pending name
++                    else error := some "frontend session admission is full"
+               let stop := error.isNone && optionalString request "kind" == some "shutdown"
+               if stop then
+                 closing := true
+@@ -127,7 +210,8 @@ def run (server : Socket.Server) (secret initial : String)
+               let status := Json.mkObj [("registeredSessions",toJson sessions.size),
+                 ("requestBytes",toJson (heldBytes clients)),("activeRequests",toJson clients.size),
+                 ("readers",toJson readers.size),("activeMaintenance",toJson maintenance.size),
+-                ("pendingMaintenance",toJson pending.size)]
++                ("pendingMaintenance",toJson pending.size),("retiredSessions",toJson retiredSessions),
++                ("quiescentSessions",toJson (sessions.filter (·.quiet)).size),("maintenanceRuns",toJson maintenanceRuns)]
+               let task ← IO.asTask (do
+                 let (reply,stop) ← match error with
+                   | some error => pure (Daemon.response (.error error),false)
+@@ -154,19 +238,22 @@ def run (server : Socket.Server) (secret initial : String)
+             readers := readers.push ⟨socket,← IO.asTask
+               (Daemon.receiveFrameBefore socket (now+24000) (some stopReaders)) .dedicated⟩
+         if now ≥ nextMaintenance then
+-          for entry in sessions do pending := notify pending entry.name
++          for entry in sessions do
++            unless entry.quiet do pending := notify pending entry.name
+           nextMaintenance := now+1000
+         let mut waiting := #[]
+         for name in pending do
+           if maintenance.size < HookBudget.maintenance &&
+               HookBudget.canStart (maintenance.toList.map (·.session)) name then
+             if let some entry := sessions.find? (·.name == name) then
+-              maintenance := maintenance.push ⟨name,← IO.asTask entry.refresh .dedicated⟩
++              maintenance := maintenance.push ⟨name,entry.revision,← IO.asTask entry.refresh .dedicated⟩
++              maintenanceRuns := maintenanceRuns+1
+           else waiting := waiting.push name
+         pending := waiting
+-        sessions := sessions.filter fun entry => now < entry.touched+300000 ||
+-          pending.contains entry.name || maintenance.any (·.session == entry.name) ||
+-          clients.any (·.session == some entry.name)
++        let retained := sessions.filter fun entry => now < entry.touched+300000 ||
++          !entry.canRetire pending.toList (maintenance.toList.map (·.session)) (clients.toList.filterMap (·.session))
++        retiredSessions := retiredSessions+sessions.size-retained.size
++        sessions := retained
+         if clients.isEmpty && readers.isEmpty && maintenance.isEmpty && now > lastActivity+300000 then
+           closing := true
+           stopped := true

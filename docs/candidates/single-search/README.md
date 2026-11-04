@@ -103,3 +103,10 @@ failure DB/cache, together with raw logs and ended guard settings, are
 fixture is retained for the next lifecycle/query diagnosis, plus current control,
 build inputs and protected originals. Do not rerun the destructive cleanup or
 record extractor against already deleted inputs.
+
+Subsequent status: the [frontend-quiescence candidate](../frontend-quiescence/README.md)
+replaces the active diagnostic with its own failed readback fixture. This
+candidate's old small1 DB/cache is [deleted](../frontend-quiescence/cleanup.json)
+after sealing its complete evidence. The 7/80 result here remains historical;
+the continuation passes cache retirement but still fails query delivery and
+active-request shutdown.

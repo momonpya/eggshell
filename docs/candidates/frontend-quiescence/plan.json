@@ -1,0 +1,22 @@
+{
+  "parent": "16f3576a",
+  "purpose": "Retire reconstructable closed frontend cursor entries under registry pressure without losing durable work or active task ownership",
+  "contract": [
+    "Keep existing registry, worker, byte and deadline bounds; no per-chat DB/vector copies",
+    "Only a successful maintenance result with closed-or-absent turn, no durable save entries, accepted preparation and unchanged wake may mark an entry quiescent",
+    "The single frontend loop owns each entry revision; request arrival/completion invalidates quiescence, and stale maintenance results cannot restore it",
+    "Do not retire pending or actively borrowed entries. Do not periodically schedule confirmed quiescent entries. Retirement discards only in-memory cursors",
+    "Original multi-owner publication, full read/certification domains, search/ranking and final delivery gates remain unchanged"
+  ],
+  "checks": [
+    "Lean stale-result and pinned-entry retirement laws, actual declaration connections and standard ContractAudit",
+    "Native durable-file quiescence checks and authenticated frontend churn beyond its existing registry bound, with re-registration and unchanged private state",
+    "Then ordinary eight readers and eighty writers followed by eighty fresh readers, 5 KB then 50 KB; stop on failure"
+  ],
+  "adopted": false,
+  "answeringModelCalls": 0,
+  "matchedComparisons": "0/18",
+  "aggregateStopRssKiB": 3670016,
+  "aggregateHardCeilingKiB": 4194304,
+  "diskFloorKiB": 2097152
+}

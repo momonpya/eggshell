@@ -114,6 +114,19 @@ trial was not started; neither sustained eighty-user support nor product adoptio
 is claimed. Do not increase owner count or registry/worker bounds as a substitute
 for resolving those independently observed failures.
 
+The [quiescent frontend continuation](candidates/frontend-quiescence/README.md)
+now retires closed, drained cursor entries under the unchanged 128-entry bound.
+Native churn admits 240 historical sessions, and the next ordinary wave emits no
+registry-full rejection. Original publication still retains all 82 exact
+observations across sixteen owners. Nevertheless readback is only 6/80, with
+fifteen valid lexical bodies missing both required fields and fifty-nine
+incomplete/deadline failures. Shutdown requires outer-guard cleanup. Complete
+turn frames exist for all eighty, while only seventy-one reach operation
+admission. This fixes one lifecycle defect without establishing full-system
+capacity. An unchanged-grammar diagnostic finds that sentence-final punctuation
+prevents the literal case key from matching its stored tool Work; nomination
+quality, query work/queueing and active-request shutdown remain separate work.
+
 The [frontend continuation](candidates/front-managers/README.md) found another
 missing layer: the old normal entry still allocated one resident daemon per
 chat and hit the aggregate memory stop before reaching 80. Its isolated
