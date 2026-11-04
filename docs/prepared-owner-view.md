@@ -1,7 +1,8 @@
 # Compose prepared source owners without whole-tuple readiness
 
 Design following the [independent-cut counterexample](candidates/owner-route/README.md).
-The replacement representation is **not implemented or adopted**. The target
+The replacement representation has an [isolated Lean component](candidates/source-owners/README.md),
+but is **not integrated or adopted**. The target
 remains 80 people, eight hours, complete recognition and 98% actual necessary
 original delivery within 30-second hooks. Token/quality adoption gates remain.
 

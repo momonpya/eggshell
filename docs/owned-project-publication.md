@@ -100,6 +100,16 @@ per-source membership roots, and composes the exact captured inputs. A composite
 cache cannot become an availability gate. Original owners remain parallel;
 neither component establishes sustained preparation capacity or the 80-user gate.
 
+The [factorized source-owner component](candidates/source-owners/README.md) now
+composes A0/B1 from individually captured references. Its tiny 80-source case
+preserves the full owner/original ordering and both lexical contracts, including
+duplicates, retraction, reinsertion and a fresh-process historical cut. Eighty
+native original appends retain every acknowledged head while an old cut remains
+readable. This is still separate from ordinary warm/discovery. The shared
+dictionary/immutable-node writer remains serialized and its sustained capacity
+is not established; independent original appends do not wait for it. Parallel
+original owners are mandatory, but are not by themselves the 80-person gate.
+
 The [preparation completion and recovery audit](candidates/preparation-drain/README.md)
 uses the same product code. After 80 queries and 80 numerical-configured saves
 across four write streams, normal preparation drains in 2,011 ms; all 80 original

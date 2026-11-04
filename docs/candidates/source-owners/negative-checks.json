@@ -1,0 +1,35 @@
+{"failedBuildsAreNotValidation": true,
+ "failedBuilds":
+ [{"log":
+   "{\"compiling\":\"Eggshell.SourceBitmap\"}\n{\"compiling\":\"Eggshell.SourceOwners\"}\n{\"compiling\":\"tools.research.SourceOwnerChecks\"}\ntools_research_SourceOwnerChecks-lean failed: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:55:3: error: unexpected token 'open'; expected identifier\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:62:15: error: unexpected token at 'do' element\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:62:6: error: don't know how to synthesize placeholder\ncontext:\ncaptured : Array SourceOwners.Captured\nstarted : Nat\n⊢ Type\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:62:20: error: unknown namespace `captured`\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:63:2: error: unexpected token 'let'; expected command\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:130:43: error: Application type mismatch: The argument\n  fun x => [0, 65535, 1000000].contains x\nhas type\n  ?m.187 → Bool\nbut is expected to have type\n  Bool\nin the application\n  !fun x => [0, 65535, 1000000].contains x\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:159:14: error: unexpected token at 'do' element\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:159:6: error: don't know how to synthesize placeholder\ncontext:\nroot : System.FilePath\nsourceCount : Nat\nbitmapReport : Json\na b : System.FilePath\na0 : SourceOwners.Captured\na0Report : Json\nb0 : SourceOwners.Captured\nb0Report initial : Json\na1 : SourceOwners.Captured\na1Report : Json\nb1 : SourceOwners.Captured\nb1Report : Json\ncuts✝ : Array Json := ⋯\n__s✝ : Array Json\ncuts : Array Json := __s✝\n⊢ Type\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:159:18: error: unexpected token '#['; expected 'scoped' or identifier\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:184:21: error: unknown namespace `captured`\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:185:2: error: unexpected token 'let'; expected command\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:193:24: error: unknown namespace `captured`\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:194:6: error: unexpected identifier; expected command\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:196:20: error: unknown namespace `captured`\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:196:28: error: unexpected token ')'; expected command\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:200:22: error: unknown namespace `captured`\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:201:2: error: unexpected token 'let'; expected command\n'Eggshell.SourceBitmap.unite_member' depends on axioms: [propext, Quot.sound]\n'Eggshell.SourceBitmap.unite_idempotent' depends on axioms: [propext, Quot.sound]\n'Eggshell.SourceBitmap.unite_associative' depends on axioms: [propext, Quot.sound]\n\n\n",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "tag": "source-owner-build-3.guard.json",
+    "sampledPeakRssKiB": 1361344,
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "exitCode": 1,
+    "elapsedMs": 9932}},
+  {"log":
+   "{\"compiling\":\"tools.research.SourceOwnerChecks\"}\ntools_research_SourceOwnerChecks-lean failed: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/tools/research/SourceOwnerChecks.lean:86:13: error: mutable variable `identity` cannot be shadowed\n'Eggshell.SourceBitmap.unite_member' depends on axioms: [propext, Quot.sound]\n'Eggshell.SourceBitmap.unite_idempotent' depends on axioms: [propext, Quot.sound]\n'Eggshell.SourceBitmap.unite_associative' depends on axioms: [propext, Quot.sound]\n\n\n",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "tag": "source-owner-build-4.guard.json",
+    "sampledPeakRssKiB": 1367296,
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "exitCode": 1,
+    "elapsedMs": 6902}},
+  {"log":
+   "{\"compiling\":\"Eggshell.SourceOwners\"}\nEggshell_SourceOwners-lean failed: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/Eggshell/SourceOwners.lean:244:11: error: mutable variable `latest` cannot be shadowed\n/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-owner-core/Eggshell/SourceOwners.lean:238:26: error: Invalid `⟨...⟩` notation: The expected type of this term could not be determined\n\n\n",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "tag": "source-owner-build-2.guard.json",
+    "sampledPeakRssKiB": 1079168,
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "exitCode": 1,
+    "elapsedMs": 7355}}]}
