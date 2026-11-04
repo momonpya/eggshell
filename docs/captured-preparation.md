@@ -3,9 +3,15 @@
 The 80-person goal needs independently publishing source owners and complete
 original cuts. It cannot substitute the latest or a ready subset for a turn's
 accepted original inputs. The [native counterexample](candidates/captured-preparation/counterexample.json)
-now demonstrates a missing contract: A1 is captured, the background worker
-prepares A2, and A1 remains unavailable. Warming A1 later is rejected by the
-forward-only shared synapse index. The original records are intact.
+demonstrated a missing contract: A1 is captured, the background worker prepares
+A2, and A1 remains unavailable. The parent rejects historical warm through its
+forward-only shared synapse index; the original records are intact.
+
+The [component integration](candidates/prepared-cuts/README.md) now prepares
+skipped A1/B1 after A2/B2 without replacing either later completed input.
+Explicit warm plus ordinary worker/extraction delivers both original responses,
+including fresh-process restore. Exact-cut service interests and automatic
+fulfilment are still unfinished; this is not the complete repair or capacity gate.
 
 This replaces the idea that another notification of the ordinary latest-head
 job would be enough. Increasing waits or the number of ready-name slots does

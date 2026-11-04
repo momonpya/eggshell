@@ -1,0 +1,7 @@
+Eggshell.PreparedRoot.workspace (source index : PageMap.Snapshot) (completed : Option PageMap.Head) :
+  IO (PreparedRoot.Workspace source index)
+Eggshell.PreparedRoot.Workspace.write {source index : PageMap.Snapshot} {α : Type}
+  (workspace : PreparedRoot.Workspace source index) (action : PageMap.Writer → IO α) : IO (α × PageMap.Head × Nat)
+'Eggshell.Research.PreparedCutLaws.lineage_authority' depends on axioms: [propext, Quot.sound]
+'Eggshell.Research.PreparedCutLaws.checked_ancestor_same_source' depends on axioms: [propext, Quot.sound]
+'Eggshell.Research.PreparedCutLaws.ready_promotion_same_source' depends on axioms: [propext, Quot.sound]

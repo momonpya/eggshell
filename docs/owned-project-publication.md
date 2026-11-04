@@ -139,6 +139,14 @@ results, not adoption, controlled speedup or sustained 80-person capacity.
 
 ## Capacity gate
 
+The [captured-cut preparation integration](candidates/prepared-cuts/README.md)
+now materializes skipped A1/B1 roots after A2/B2 without replacing later ready
+inputs. Explicit historical warm plus ordinary worker/extraction delivers both
+required original responses; a fresh process restores the identical body.
+Automatic exact-cut service interests remain unfinished. The original project
+publication and bounded scheduler code are unchanged. This fixes one isolated
+preparation component, not the sustained eighty-person capacity gate below.
+
 One project has several independent append owners; one session selects a stable
 write lane and reads the complete authorized project view. It does not acquire
 its own project DB or vector copy. Different project DBs remain independent.
