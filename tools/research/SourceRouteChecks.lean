@@ -66,20 +66,40 @@ def replay (root : System.FilePath) : IO Unit := do
   let some snapshots ← Worker.originalSnapshots request selection (projectContext.map (·.snapshots)) |
     throw (IO.userError "replay original cut missing")
   let before ← (snapshots.filterMap id).mapM fun source => do return (← PageMap.pin source.directory).head
+  let receipt ← Receipt.fresh
   let context : SourceContext := {
-    workspace := root,deadline := request.deadline,question := pending.prompt,handoffChars := selection.handoffChars}
+    workspace := root,deadline := request.deadline,question := pending.prompt,handoffChars := selection.handoffChars
+    receipt := some receipt}
   let started ← IO.monoMsNow
   let result ← automaticHandoff selection pending.prompt [] false (sourceContext := some context)
     (publishMemo := false) (captured := some snapshots) (queryInputs := request.prepared) (queryOwners := request.owners)
+  let elapsed := (← IO.monoMsNow)-started
   let needed := ["original A0_MARKER","original B1_MARKER"]
   let delivered := needed.countP (fun marker => result.any (fun body => body.text.contains marker))
   check ((← (snapshots.filterMap id).mapM fun source => do return (← PageMap.pin source.directory).head) == before)
     "replay mutated original sources"
   IO.FS.writeFile (root/"replay-output.json") ((toJson result).pretty++"\n")
+  let full ← Federated.prepare (snapshots.filterMap id).toArray
+  let allWorks := full.all.flatMap fun edge => edge.parent::edge.children
+  let mut directSupport := #[]
+  for (source,index) in (snapshots.filterMap id).toArray.zipIdx do
+    let reader ← NodeReader.new source
+    let some input := currentInputs[index]? | throw (IO.userError "diagnostic lost an original input")
+    let shared ← PreparedInputs.shared input source
+    for owner in ← reader.supportOwners allWorks [] (16*1024*1024) do
+      let geometry ← shared.mapM fun shared => do
+        Synapses.ObservedRecordView.geometry? shared.index source.head.identity (relationKey owner.relation)
+          ((← IO.monoMsNow)+5000)
+      directSupport := directSupport.push (Json.mkObj [("work",toJson (readable owner.work)),
+        ("outcome",toJson (readable owner.outcome)),("native",toJson (Matcher.nativeOutcome owner)),
+        ("occurrences",toJson (Synapses.Provenance.identities owner)),
+        ("preparedGeometry",toJson geometry.join),
+        ("relation",toJson (relationKey owner.relation))])
   let report := Json.mkObj [("originals",toJson request.originals),("required",toJson needed),
+    ("receipt",toJson receipt),("allTopologySupportWithoutPruning",toJson directSupport),
     ("deliveredOriginals",toJson delivered),("originalEvidenceGatePassed",toJson (delivered == needed.length)),
     ("bodySha256",toJson (result.map fun body => Sha256.hex body.text.toUTF8)),
-    ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("reason",toJson (result.map (·.reason))),
+    ("elapsedMs",toJson elapsed),("reason",toJson (result.map (·.reason))),
     ("retainedSharedRootsValidated",toJson true),("privateUsageExcluded",toJson true),
     ("originalSourcesUnchanged",toJson true),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]
   IO.FS.writeFile (root/"replay-report.json") (report.pretty++"\n")

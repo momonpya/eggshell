@@ -1,0 +1,60 @@
+--- a/Eggshell/LexicalEvidence.lean
++++ b/Eggshell/LexicalEvidence.lean
+@@ -0,0 +1,20 @@
++module
++
++public import Eggshell.SearchRank
++
++@[expose] public section
++namespace Eggshell.LexicalEvidence
++
++/-- Match the existing query terms against already hydrated original windows.
++All positive positions are retained; this reads no additional owner. -/
++def positions (wanted : List String) (windows : List String) : List Nat :=
++  (List.range windows.length).filter fun position =>
++    windows[position]?.any fun text => wanted.any ((SearchRank.terms text).contains)
++
++theorem positions_exact (wanted : List String) (windows : List String)
++    (position : Nat) : position ∈ positions wanted windows ↔
++      position < windows.length ∧
++        windows[position]?.any (fun text => wanted.any ((SearchRank.terms text).contains)) = true := by
++  simp [positions]
++
++end Eggshell.LexicalEvidence
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -6,6 +6,7 @@
+ public import Eggshell.WorkInference
+ public import Eggshell.WorkClassLookup
+ public import Eggshell.LexicalReads
++public import Eggshell.LexicalEvidence
+ public import Eggshell.Receipt
+ public import tools.research.SelectionReceipt
+ 
+@@ -2429,6 +2430,15 @@
+     | none => row
+     | some refined => (row.1, refineSourcePositions row.2 refined.2)) ++
+   focused.filter (fun row => !original.any (fun item => item.1 == row.1))
++
++/-- Lexical nomination supplies owners, not vector positions. Match the
++question's existing lexical terms against the already hydrated original
++windows once; otherwise a contextual native observation receives no cue at
++all while a whole answer keeps its nomination value. No new owner is read. -/
++def lexicalSourceEvidence (question : String) (owners : List OutcomeEdge) : List (Value × List Nat) :=
++  let wanted := SearchRank.terms question
++  owners.map fun owner =>
++    (owner.relation,LexicalEvidence.positions wanted (evidenceSearchWindows owner))
+ 
+ theorem primary_evidence_positions_preserved (original focused : List (Value × List Nat))
+     (relation : Value) (positions : List Nat) (entry : (relation, positions) ∈ original)
+@@ -8723,6 +8733,10 @@
+     let semanticEvidence := semanticOwners.durableWindows.filterMap fun (id, windows) =>
+       rankedOwners[id]?.map fun relation => (relation, windows)
+     let originalEvidence := semanticEvidence ++ semanticOwners.stagedWindows
++    let originalEvidence := if recommendation && selection.semanticMatcher.isNone then
++      prioritizedEvidence originalEvidence
++        (lexicalSourceEvidence referenceQuery (focusDomain.map (·.owner)))
++      else originalEvidence
+     let advisoryExcluded ← if recommendation then
+         (entries.map (·.relation) ++ selected.map (·.matched.edge.relation) ++
+           support.map (·.owner.relation)).eraseDups.filterM fun owner => do

@@ -91,3 +91,11 @@ an obsolete build symlink, so those earlier bytes are not included. Protected
 originals and retained runtimes match their original hashes. Only the active
 `source-route-fixture-fixed` case remains for the next same-cut diagnostic;
 it is not retained as historical experimental data.
+
+The subsequent [lexical cue diagnosis](../source-cues/README.md) completes that
+same-cut investigation: originals and prepared geometries were present, but
+lexical nominations supplied no positions for their contextual evidence units.
+The isolated correction delivers 2/2. That finished fixture and this turn's
+replacement diagnostic executable are now retired; only required build inputs
+remain. The original `8d7f7d0c…` helper result above is historical, not a claim
+that its executable still exists. The ordinary product remains unchanged.
