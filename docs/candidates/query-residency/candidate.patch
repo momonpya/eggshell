@@ -1,0 +1,240 @@
+diff --git a/Eggshell/PublicationWire.lean b/Eggshell/PublicationWire.lean
+index f90e74cb..0e81d70b 100644
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -165,0 +166,3 @@ def maxBudgetMs : Nat := 28000
++/-- Transport grouping only, never a bound on a project's owner inventory. -/
++def sourcePinBatchSize : Nat := 16
++
+diff --git a/Eggshell/PublicationClient.lean b/Eggshell/PublicationClient.lean
+index b5e1ad09..7a67c1e2 100644
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -44,8 +44,3 @@ does not require a writer registration for a read-only source. -/
+-def prepareSourceUsing (endpoint : Daemon.Endpoint) (source : PageMap.Snapshot)
+-    (storage : Sidecar.Storage) (deadline : Nat) (holdUntil : Option Nat := none)
+-    (captured : Option Synapses.CanonicalSource.Cache.Manifest := none) : IO (Option SourceReference) := do
+-  let budget ← liveBudget deadline
+-  let response ← Daemon.exchange endpoint "prepare-source" (Json.mkObj [
+-    ("directory",toJson source.directory.toString),("source",toJson source.head),("storage",toJson storage),
+-    ("budgetMs",toJson budget),("holdUntil",toJson holdUntil),("captured",toJson captured)]) (budget := budget)
+-  let value ← IO.ofExcept (Json.parse response)
++def checkedSourceReference (endpoint : Daemon.Endpoint) (source : PageMap.Snapshot)
++    (holdUntil : Option Nat) (captured : Option Synapses.CanonicalSource.Cache.Manifest)
++    (value : Json) : IO (Option SourceReference) := do
+@@ -64,0 +60,38 @@ def prepareSourceUsing (endpoint : Daemon.Endpoint) (source : PageMap.Snapshot)
++def prepareSourceUsing (endpoint : Daemon.Endpoint) (source : PageMap.Snapshot)
++    (storage : Sidecar.Storage) (deadline : Nat) (holdUntil : Option Nat := none)
++    (captured : Option Synapses.CanonicalSource.Cache.Manifest := none) : IO (Option SourceReference) := do
++  let budget ← liveBudget deadline
++  let response ← Daemon.exchange endpoint "prepare-source" (Json.mkObj [
++    ("directory",toJson source.directory.toString),("source",toJson source.head),("storage",toJson storage),
++    ("budgetMs",toJson budget),("holdUntil",toJson holdUntil),("captured",toJson captured)]) (budget := budget)
++  checkedSourceReference endpoint source holdUntil captured (← IO.ofExcept (Json.parse response))
++
++structure SourcePin where
++  source : PageMap.Snapshot
++  storage : Sidecar.Storage
++  captured : Synapses.CanonicalSource.Cache.Manifest
++
++/-- Every item goes through the scalar scope/head/manifest checker. A failed
++item keeps its position and cannot shift another source's capability. -/
++def checkedSourceBatch (endpoint : Daemon.Endpoint) (requests : Array SourcePin)
++    (holdUntil : Nat) (values : Array Json) : IO (Array (Except String (Option SourceReference))) := do
++  unless values.size == requests.size do throw (IO.userError "source pin reply changed its complete inventory")
++  (requests.zip values).mapM fun (request,value) => do
++    try
++      if let .ok error := value.getObjValAs? String "error" then return .error error
++      let value ← IO.ofExcept (value.getObjVal? "value")
++      return .ok (← checkedSourceReference endpoint request.source (some holdUntil) (some request.captured) value)
++    catch error => return .error error.toString
++
++def prepareSourcesUsing (endpoint : Daemon.Endpoint) (requests : Array SourcePin)
++    (deadline holdUntil : Nat) : IO (Array (Except String (Option SourceReference))) := do
++  if requests.isEmpty then return #[]
++  unless requests.size ≤ sourcePinBatchSize do throw (IO.userError "source pin batch exceeds its bound")
++  let budget ← liveBudget deadline
++  let payload := Json.mkObj [("budgetMs",toJson budget),("requests",toJson (requests.map fun request =>
++    Json.mkObj [("directory",toJson request.source.directory.toString),("source",toJson request.source.head),
++      ("storage",toJson request.storage),("holdUntil",toJson (some holdUntil)),("captured",toJson (some request.captured))]))]
++  let response ← Daemon.exchangeBefore endpoint "prepare-source-batch" payload deadline
++  let values ← IO.ofExcept (Json.parse response >>= fromJson? (α := Array Json))
++  checkedSourceBatch endpoint requests holdUntil values
++
+@@ -425,0 +459,41 @@ def retainSourceAt (source : PageMap.Snapshot) (storage : Sidecar.Storage)
++/-- One resolution per bounded sequence, preserving the complete source order.
++A transport failure stays explicit for each item, never empty success. -/
++def retainSources (requests : Array SourcePin) (deadline holdUntil : Nat) :
++    IO (Array (Except String (Option SourceReference))) := do
++  if requests.isEmpty then return #[]
++  let endpoint ← resolve
++  let mut found := #[]
++  for batch in [:(requests.size+sourcePinBatchSize-1)/sourcePinBatchSize] do
++    let part := requests.extract (batch*sourcePinBatchSize) (min requests.size ((batch+1)*sourcePinBatchSize))
++    let results ← try prepareSourcesUsing endpoint part deadline holdUntil
++      catch error => pure (part.map fun _ => Except.error error.toString)
++    found := found++results
++  return found
++
++/-- Release only leases issued by this exact local service. Each item still
++proves possession of its own scope capability; foreign owners use their scalar endpoint. -/
++def releaseSources (references : Array SourceReference) (deadline : Nat) : IO Unit := do
++  let wanted := references.filter (·.retained.isSome)
++  if wanted.isEmpty then return
++  let some endpoint ← endpoint? | do
++    for reference in wanted do try reference.release deadline catch _ => pure ()
++    return
++  let belongs := fun (reference : SourceReference) => reference.endpoint.pid == endpoint.pid &&
++    reference.endpoint.port == endpoint.port && reference.endpoint.generation == endpoint.generation
++  let sameOwner := wanted.filter belongs
++  for reference in wanted do
++    unless belongs reference do
++      try reference.release deadline catch _ => pure ()
++  for batch in [:(sameOwner.size+sourcePinBatchSize-1)/sourcePinBatchSize] do
++    let part := sameOwner.extract (batch*sourcePinBatchSize) (min sameOwner.size ((batch+1)*sourcePinBatchSize))
++    if (← IO.monoMsNow) ≥ deadline then return
++    try
++      let budget ← liveBudget deadline
++      let payload := Json.mkObj [("budgetMs",toJson budget),("requests",toJson (part.map fun reference =>
++        Json.mkObj [("secret",toJson reference.endpoint.secret),("database",toJson reference.access.database),
++          ("scope",toJson reference.access.scope),("retained",toJson reference.retained)]))]
++      let response ← Daemon.exchangeBefore endpoint "release-retained-source-batch" payload deadline
++      let values ← IO.ofExcept (Json.parse response >>= fromJson? (α := Array Bool))
++      unless values.size == part.size && values.all id do throw (IO.userError "source pin release was not acknowledged")
++    catch _ => pure () -- Leases retain their original hard expiry.
++
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index 475f7ada..92f762f9 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -173,0 +174,12 @@ def prepareSource (server : Server) (payload : Json) (deadline : Nat) : IO Json
++/-- Batching retains the scalar authentication and retained-view path. One
++invalid source has an explicit result at its original position. -/
++def prepareSourceBatch (server : Server) (payload : Json) (deadline : Nat) : IO Json := do
++  let requests ← IO.ofExcept (payload.getObjValAs? (Array Json) "requests")
++  unless requests.size ≤ sourcePinBatchSize do throw (IO.userError "source pin batch exceeds its bound")
++  let replies ← requests.mapM fun request => do
++    try
++      TaskDeadline.ensureLive deadline
++      return Json.mkObj [("value",← prepareSource server request deadline)]
++    catch error => return Json.mkObj [("error",toJson error.toString)]
++  return toJson replies
++
+@@ -207,0 +220,11 @@ def releaseRetainedSource (server : Server) (secret : String) (payload : Json) :
++def releaseRetainedSourceBatch (server : Server) (payload : Json) : IO Json := do
++  let requests ← IO.ofExcept (payload.getObjValAs? (Array Json) "requests")
++  unless requests.size ≤ sourcePinBatchSize do throw (IO.userError "source pin release batch exceeds its bound")
++  let replies ← requests.mapM fun request => do
++    try
++      let secret ← IO.ofExcept (request.getObjValAs? String "secret")
++      let _ ← releaseRetainedSource server secret request
++      return true
++    catch _ => return false
++  return toJson replies
++
+@@ -772 +795 @@ def serveClient (server : Server) (admin : String) (client : Socket.Client)
+-    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
++    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
+@@ -829,0 +853,2 @@ def serveClient (server : Server) (admin : String) (client : Socket.Client)
++        | "prepare-source-batch" => prepareSourceBatch server payload deadline
++        | "release-retained-source-batch" => releaseRetainedSourceBatch server payload
+diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
+index 0d05e1d5..68fe1c09 100644
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -219,0 +220,22 @@
++def capturedLocal (source : PageMap.Snapshot) (inputs : PreparedInputs.Reference) : IO Prepared := do
++  unless inputs.source == source.head && inputs.producer == PreparedInputs.implementation do
++    throw (IO.userError "prepared recommendation changed its captured source")
++  unless inputs.population == (← Persistence.Store.getNat source.get "candidates") do
++    throw (IO.userError "prepared recommendation changed its original population")
++  if inputs.population == 0 then return {source,shared := none,usage := none}
++  return {source,shared := ← PreparedInputs.shared inputs source,usage := ← PreparedInputs.usage inputs source}
++
++def attachCanonical (prepared : Prepared)
++    (result : Except String (Option Plugin.Publication.Client.SourceReference)) : Prepared :=
++  match result with
++  | .ok canonical => {prepared with
++      canonical := canonical
++      canonicalFailure := if canonical.isSome then none else some "captured-canonical-unavailable"}
++  | .error error => {source := prepared.source,shared := none,usage := none,failure := some s!"index-open: {error}"}
++
++theorem attach_source (prepared : Prepared) (result) :
++    (attachCanonical prepared result).source = prepared.source := by cases result <;> rfl
++
++theorem attach_private_usage (prepared : Prepared) (canonical) :
++    (attachCanonical prepared (.ok canonical)).usage = prepared.usage := rfl
++
+@@ -230,7 +252,2 @@ def prepare (source : PageMap.Snapshot) (deadline : Option Nat := none)
+-      unless inputs.source == source.head && inputs.producer == PreparedInputs.implementation do
+-        throw (IO.userError "prepared recommendation changed its captured source")
+-      unless inputs.population == (← Persistence.Store.getNat source.get "candidates") do
+-        throw (IO.userError "prepared recommendation changed its original population")
+-      if inputs.population == 0 then return {source,shared := none,usage := none}
+-      let shared ← PreparedInputs.shared inputs source
+-      let usage ← PreparedInputs.usage inputs source
++      let readers ← capturedLocal source inputs
++      if inputs.population == 0 then return readers
+@@ -241,3 +258 @@ def prepare (source : PageMap.Snapshot) (deadline : Option Nat := none)
+-      return {
+-        source,shared,usage,canonical
+-        canonicalFailure := if canonical.isSome then none else some "captured-canonical-unavailable"}
++      return attachCanonical readers (.ok canonical)
+@@ -270,0 +286,38 @@ def Prepared.release (prepared : Prepared) (deadline : Nat) : IO Unit := do
++/-- Open source-local shared/private readers as before, then retain completed
++canonical inputs through bounded transport groups. The array remains complete
++and in original source order, including empty and explicitly failed sources. -/
++def prepareMany (sources : Array PageMap.Snapshot) (captured : Option (Array PreparedInputs.Reference))
++    (deadline : Nat) : IO (Array Prepared) := do
++  let some inputs := captured | do
++    return ← sources.mapM fun source => do
++      let now ← IO.monoMsNow
++      try prepare source (some (min deadline (now+(deadline-now)/4))) (some deadline)
++      catch _ => pure {source,shared := none,usage := none}
++  unless inputs.size == sources.size do throw (IO.userError "recommendation input inventory changed")
++  let mut prepared ← (sources.zip inputs).mapM fun (source,input) => do
++    try capturedLocal source input
++    catch error => pure {source,shared := none,usage := none,failure := some s!"index-open: {error}"}
++  let mut requests : Array Plugin.Publication.Client.SourcePin := #[]
++  let mut slots : Array Nat := #[]
++  for i in [:sources.size] do
++    let some item := prepared[i]? | throw (IO.userError "recommendation source disappeared")
++    let some input := inputs[i]? | throw (IO.userError "recommendation input disappeared")
++    if item.failure.isSome || input.population == 0 then continue
++    match input.canonical with
++    | none => prepared := prepared.set! i (attachCanonical item (.ok none))
++    | some (storage,metadata) =>
++      requests := requests.push ⟨item.source,storage,metadata⟩
++      slots := slots.push i
++  let now ← IO.monoMsNow
++  let readDeadline := min deadline (now+(deadline-now)/4)
++  let replies ← try Plugin.Publication.Client.retainSources requests readDeadline deadline
++    catch error => pure (requests.map fun _ => Except.error error.toString)
++  unless replies.size == slots.size do throw (IO.userError "recommendation retained-source inventory changed")
++  for (slot,reply) in slots.zip replies do
++    let some item := prepared[slot]? | throw (IO.userError "recommendation retained source disappeared")
++    prepared := prepared.set! slot (attachCanonical item reply)
++  return prepared
++
++def releaseMany (prepared : Array Prepared) (deadline : Nat) : IO Unit :=
++  Plugin.Publication.Client.releaseSources (prepared.filterMap (·.canonical)) deadline
++
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index d02c4e5a..4082ff76 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9468,8 +9468,3 @@ def automaticHandoff (selection : Config.Selection) (current : String)
+-  let synaptic ← sources.zipIdx.mapM fun (snapshot,index) => do
+-    let now ← IO.monoMsNow
+-    let deadline := sourceContext.map (·.deadline) |>.getD (now+20000)
+-    let preparationDeadline := min deadline (now+(deadline-now)/4)
+-    try
+-      Synapses.Recommend.prepare snapshot (some preparationDeadline) (some deadline)
+-        (queryInputs.bind (·[index]?))
+-    catch _ => pure ({source := snapshot, shared := none, usage := none} : Synapses.Recommend.Prepared)
++  let now ← IO.monoMsNow
++  let synaptic ← Synapses.Recommend.prepareMany sources queryInputs
++    (sourceContext.map (·.deadline) |>.getD (now+20000))
+@@ -9571 +9566 @@ def automaticHandoff (selection : Config.Selection) (current : String)
+-    synaptic.forM (fun prepared => prepared.release releaseDeadline)
++    Synapses.Recommend.releaseMany synaptic releaseDeadline

@@ -35,10 +35,11 @@ later optimization. Each mutable physical source has one live owner, while
 different physical sources publish concurrently. User count and owner count
 are independent: the native checks currently route 80 sessions across 16 owners;
 this is neither an 80-owner requirement nor evidence of 80-user sustained capacity.
-The latest [input-frame comparison](candidates/input-frame/README.md) leaves those
-owners unchanged. It reduces duplicate transport metadata, but a matched native
-eighty-reader burst still delivers both required fields to only 49/80 clients
-(parent 42/80); both admit all eighty requests. Parallel source ownership is
+The latest [source-pin grouping](candidates/query-residency/README.md) leaves those
+owners unchanged. A contemporaneous native eighty-reader burst delivers both
+required fields to 64/80 clients (parent 25/80); both admit all eighty requests.
+Whole-hook sequential timing is mixed and the capacity gate still fails.
+Parallel source ownership is
 already present, while full query throughput and combined sustained operation
 remain unproven.
 The latest isolated [source-path comparison](candidates/owned-lexical/README.md)

@@ -8,6 +8,7 @@ import tools.research.LiteralRankChecks
 import tools.research.StartupChecks
 import tools.research.PreparedLexicalChecks
 import tools.research.InputFrameChecks
+import tools.research.SourcePinBatchChecks
 
 open Lean Eggshell Eggshell.Plugin
 namespace Eggshell.Research.FrontTrafficChecks
@@ -343,6 +344,9 @@ end Eggshell.Research.FrontTrafficChecks
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["source-pin-batch",source,root] =>
+      Eggshell.Research.SourcePinBatchChecks.run (.mk source) (.mk root)
+      return 0
   | ["input-frame-audit",source,root] =>
       Eggshell.Research.InputFrameChecks.run (.mk source) (.mk root)
       return 0
