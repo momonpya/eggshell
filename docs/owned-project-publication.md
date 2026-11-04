@@ -155,6 +155,22 @@ checks pass; they are not an 80-client workload. Original owner/publication code
 is unchanged. Unstable transport/restart recovery and sustained eighty-person
 capacity remain open; these small lexical checks do not establish the gate below.
 
+The [mixed-traffic continuation](candidates/interest-traffic/README.md) adds
+actual MiniLM and 80 ordinary queries together with 80 saves. It keeps every
+original owner, batches preparation requests and separates an exact historical
+source's readiness from unrelated future private replay. One prepared fixture
+(four write/two read owners) and two skipped-cut fixtures (16 write owners)
+fully passed, retaining all 80 originals and valid current numerical windows
+through ordinary preparation drain and service restart. However, the next
+prepared repetition delivered all 80 query bodies but saved only 79 of 80
+requests, with an unresolved `File exists` error. The prespecified three-trial
+series stopped at this failure. This is evidence that parallel owners are wired
+into actual query/save paths, and also evidence that their capacity gate has
+not passed. The error needs a path and save-stage trace before more load.
+Frequent lexical fallback and 5.5–11.5 second maximum save ACKs in the passed
+bursts remain limitations. Current maintenance still waits for private replay;
+only explicit historical source preparation is separated in this candidate.
+
 One project has several independent append owners; one session selects a stable
 write lane and reads the complete authorized project view. It does not acquire
 its own project DB or vector copy. Different project DBs remain independent.

@@ -1,0 +1,423 @@
+--- a/Eggshell/FileSystem.lean
++++ b/Eggshell/FileSystem.lean
+@@ -240,22 +240,35 @@
+   syncPublicationParent publication.handle
+   pure ⟨publication.handle⟩
+ 
++/-- The winner's temporary hard-link cleanup can change this inode's ctime.
++Retry only exact expected-byte verification, always through the same held
++descriptor. Namespace replacement cannot become a new accepted target. -/
++def verifyImmutable (path : System.FilePath) (target : ReadHandle) (first : ReadVersion)
++    (bytes : ByteArray) (currentVersion : IO ReadVersion) : IO Unit := do
++  let mut before := first
++  for attempt in [:3] do
++    unless before.bytes == bytes.size do
++      throw (IO.userError s!"immutable object has different size: {path}")
++    let mut existing := ByteArray.empty
++    while existing.size < bytes.size do
++      let count := min 4096 (bytes.size - existing.size)
++      let part ← readPage target existing.size.toUInt64 ⟨count, Nat.min_le_left _ _⟩
++      unless part.size == count do
++        throw (IO.userError s!"immutable object changed during verification: {path}")
++      existing := existing ++ part
++    let after ← readVersion target
++    let current ← currentVersion
++    unless existing == bytes do throw (IO.userError s!"immutable object has different bytes: {path}")
++    if publicationAgreement before after current existing bytes then return
++    if attempt+1 < 3 then
++      IO.sleep 1
++      before ← readVersion target
++  throw (IO.userError s!"immutable object did not stabilize: {path}")
++
+ private def Publication.agree (publication : Publication path bytes .installed) : IO Unit := do
+   let target ← readPublicationTarget publication.handle
+   let before ← readVersion target
+-  unless before.bytes == bytes.size do
+-    throw (IO.userError "immutable object collision or concurrent replacement")
+-  let mut existing := ByteArray.empty
+-  while existing.size < bytes.size do
+-    let count := min 4096 (bytes.size - existing.size)
+-    let part ← readPage target existing.size.toUInt64 ⟨count, Nat.min_le_left _ _⟩
+-    unless part.size == count do
+-      throw (IO.userError "immutable object collision or concurrent replacement")
+-    existing := existing ++ part
+-  let after ← readVersion target
+-  let current ← readVersion (← readPublicationTarget publication.handle)
+-  unless publicationAgreement before after current existing bytes do
+-    throw (IO.userError "immutable object collision or concurrent replacement")
++  verifyImmutable path target before bytes (do readVersion (← readPublicationTarget publication.handle))
+ 
+ private def publishExistingBytes (kind : PublicationKind) (path : System.FilePath)
+     (bytes : ByteArray) (observe : PublicationBoundary → IO Unit) : IO Unit := do
+--- /dev/null
++++ b/Eggshell/PreparationCompletion.lean
+@@ -0,0 +1,32 @@
++module
++
++@[expose] public section
++namespace Eggshell.PreparationCompletion
++
++def requestsReplay (sourceCut : Option α) : Bool := sourceCut.isNone
++
++theorem explicit_cut_excludes_private_replay (source : α) :
++    requestsReplay (some source) = false := rfl
++
++theorem current_maintenance_requests_private_replay :
++    requestsReplay (none : Option α) = true := rfl
++
++/-- A completed source frame is mandatory. Private replay is required only
++when that work was requested; absence is not a fabricated successful replay. -/
++def completed (prepared : Option α) (replay : Option Bool) : Bool :=
++  prepared.isSome && replay.all id
++
++theorem missing_source_never_completes (replay : Option Bool) :
++    completed (none : Option α) replay = false := rfl
++
++theorem source_only_completes (prepared : α) :
++    completed (some prepared) none = true := rfl
++
++theorem pending_requested_replay_never_completes (prepared : Option α) :
++    completed prepared (some false) = false := by simp [completed]
++
++theorem completed_has_source (prepared : Option α) (replay : Option Bool)
++    (accepted : completed prepared replay = true) : prepared.isSome = true := by
++  cases prepared <;> simp_all [completed]
++
++end Eggshell.PreparationCompletion
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -13,6 +13,7 @@
+ public import tools.RetrievalIndex
+ public import Eggshell.PreparedInputs
+ public import Eggshell.OwnerViews
++public import Eggshell.PreparationCompletion
+ 
+ @[expose] public section
+ 
+@@ -20,6 +21,7 @@
+ open Lean
+ 
+ def planningContract := Sha256.hex ((include_str "Warm.lean").toUTF8 ++
++  (include_str "PreparationCompletion.lean").toUTF8 ++
+   (include_str "SourceDelta.lean").toUTF8 ++ PartitionBuild.implementation.toUTF8 ++
+   VectorPartition.implementation.toUTF8 ++ ProjectionCursor.implementation.toUTF8)
+ 
+@@ -309,7 +311,8 @@
+ 
+ 
+ structure Result where
+-  journal : Synapses.Journal.Result
++  journal : Option Synapses.Journal.Result
++  prepared : Option PreparedInputs.Reference
+   before : Coverage
+   after : Coverage
+   requested : Nat
+@@ -326,6 +329,9 @@
+   partition : Option PartitionBuild.Preparation := none
+   deriving ToJson
+ 
++def Result.complete (result : Result) : Bool :=
++  PreparationCompletion.completed result.prepared (result.journal.map (·.complete))
++
+ /-- Preparation consumes exactly the captured source publication. A concurrent
+ source commit creates later debt; it does not invalidate completed prefix work
+ or let a view claim coverage beyond the bytes it actually consumed. -/
+@@ -371,14 +377,21 @@
+ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
+     (verify : Bool := false) (preparation : Option Synapses.ReplayPreparation.Pool := none) : IO Result := do
+   let started ← IO.monoMsNow
+-  let (snapshot,journal) ← refreshSource snapshot target.storage ((← IO.monoMsNow)+60000) preparation
++  let journal ← if PreparationCompletion.requestsReplay target.sourceHead then do
++      let (_,replayed) ← refreshSource snapshot target.storage ((← IO.monoMsNow)+60000) preparation
++      pure (some replayed)
++    else do
++      -- Shared source facts are reconstructed from this exact publication.
++      -- A later private event is not part of an old source-cut request.
++      let _ ← Synapses.Build.refresh snapshot target.storage
++      pure none
+   let canonical ← Synapses.CanonicalSource.Cache.refresh snapshot target.storage
+   let (windowOwners,lexical) ← prepareSourceIndexes snapshot target.storage
+   if lexicalOnly target.command then
+     let _ ← OwnerViews.prepareSource snapshot target.storage
+-    if journal.complete then
+-      let _ ← PreparedInputs.publish snapshot target.storage MiniLM.model SearchProvider.encoderContract false
+-      pure ()
++    let prepared ← if journal.all (·.complete) then
++        some <$> PreparedInputs.publish snapshot target.storage MiniLM.model SearchProvider.encoderContract false
++      else pure none
+     let empty : Coverage := {
+       database := DB.Sidecar.Owner.ofSnapshot snapshot
+       revision := snapshot.head.revision, model := "lexical-only", windows := 0
+@@ -387,6 +400,7 @@
+       focusContract := Plugin.focusWindowContract, discovery := {}, focus := {}}
+     return {
+       journal
++      prepared
+       before := empty
+       after := empty
+       requested := 0
+@@ -432,13 +446,14 @@
+           throw (IO.userError "warm did not publish its assignment model")
+         pure (some prepared)
+     let _ ← OwnerViews.prepareSource snapshot target.storage
+-    if journal.complete then
+-      let _ ← PreparedInputs.publish snapshot target.storage settings.model SearchProvider.encoderContract true
+-      pure ()
++    let prepared ← if journal.all (·.complete) then
++        some <$> PreparedInputs.publish snapshot target.storage settings.model SearchProvider.encoderContract true
++      else pure none
+     mark target snapshot
+     PreparationDebt.acknowledge target.owner settings.model SearchProvider.encoderContract debt
+     return {
+       journal
++      prepared
+       before := before.coverage
+       after := after.coverage
+       requested := before.needed.length
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -429,12 +429,22 @@
+         IO.sleep (min delay (cutoff-(← IO.monoMsNow))).toUInt32
+         delay := min 200 (delay*2)
+         continue
+-      for index in [:targets.size] do
+-        if accepted[index]?.getD false then continue
++      for batch in [:(targets.size+PreparationPlan.claimBatchSize-1)/PreparationPlan.claimBatchSize] do
++        let first := batch*PreparationPlan.claimBatchSize
++        let mut indices := #[]
++        let mut claims := #[]
++        for index in [first:min targets.size (first+PreparationPlan.claimBatchSize)] do
++          if accepted[index]?.getD false then continue
++          let some (target,head) := targets[index]? | throw (IO.userError "source interest inventory changed")
++          indices := indices.push index
++          claims := claims.push (target.key,head)
++        if claims.isEmpty then continue
+         unless !(← cancelled) do throw (IO.userError "captured source wait was cancelled")
+-        let some (target,head) := targets[index]? | throw (IO.userError "source interest inventory changed")
+-        let admitted ← Publication.Client.claimPreparation "index" target.key head token cutoff
+-        accepted := accepted.set! index admitted
++        let replies ← Publication.Client.claimPreparations claims token cutoff
++        for offset in [:indices.size] do
++          let some index := indices[offset]? | throw (IO.userError "source claim position changed")
++          let some admitted := replies[offset]? | throw (IO.userError "source claim reply omitted an input")
++          accepted := accepted.set! index admitted
+       if let some encoded ← capture then
+         return ← IO.ofExcept (fromJson? (α := PreparedInputs.Frame) encoded.payload)
+       unless ← Publication.Client.preparationLive token cutoff do
+@@ -796,7 +806,7 @@
+   let count ← indexQueued target (paths.map System.FilePath.mk)
+   if (json.getObjValAs? Bool "warm").toOption.getD false then
+     let result ← Warm.runTarget (← target.pin) target (preparation := some preparation)
+-    return (toJson count,result.journal.complete)
++    return (toJson count,result.complete)
+   return (toJson count,true)
+ 
+ def indexAction (preparation : Synapses.ReplayPreparation.Pool) (json : Json) : IO Json := do
+--- a/Eggshell/PreparationPlan.lean
++++ b/Eggshell/PreparationPlan.lean
+@@ -11,6 +11,7 @@
+ def workers : Nat := 3
+ def maxRequests : Nat := 1024
+ def maxBytes : Nat := 8*1024*1024
++def claimBatchSize : Nat := 32
+ abbrev Lane := Fin workers
+ 
+ /-- A charged token/deadline slot, never a query or original payload. -/
+@@ -114,6 +115,9 @@
+   retirements : Nat := 0
+   waiters : Array Claim := #[]
+   nextWaiter : Nat := 0
++  descriptorReuses : Nat := 0
++  descriptorResolutions : Nat := 0
++  claimBatches : Nat := 0
+ 
+ def Contents.active (state : Contents) : Array Active := state.running.toArray.filterMap id
+ def Contents.count (state : Contents) := state.pending.size+state.active.size
+@@ -134,6 +138,16 @@
+ 
+ @[no_expose] def initial : State := ⟨{},by decide,by decide,by decide⟩
+ 
++def noteDescriptor (state : State) (reused : Bool) : State :=
++  ⟨{state.contents with
++    descriptorReuses := state.contents.descriptorReuses+(if reused then 1 else 0)
++    descriptorResolutions := state.contents.descriptorResolutions+(if reused then 0 else 1)},
++    state.countBound,state.byteBound,state.waiterBound⟩
++
++def noteBatch (state : State) : State :=
++  ⟨{state.contents with claimBatches := state.contents.claimBatches+1},
++    state.countBound,state.byteBound,state.waiterBound⟩
++
+ private def checkedState (contents : Contents) : Option State :=
+   if countBound : contents.count ≤ maxRequests then
+     if byteBound : contents.charge ≤ maxBytes then
+@@ -330,5 +344,8 @@
+     |>.setObjVal! "expiredReferences" (toJson value.expiredReferences)
+     |>.setObjVal! "retirements" (toJson value.retirements)
+     |>.setObjVal! "waiters" (toJson value.waiters.size)
++    |>.setObjVal! "descriptorReuses" (toJson value.descriptorReuses)
++    |>.setObjVal! "descriptorResolutions" (toJson value.descriptorResolutions)
++    |>.setObjVal! "claimBatches" (toJson value.claimBatches)
+ 
+ end Eggshell.PreparationPlan
+--- a/Eggshell/PreparationRegistry.lean
++++ b/Eggshell/PreparationRegistry.lean
+@@ -16,6 +16,12 @@
+ def synaptic (job : PreparationPlan.Job) : Bool :=
+   (job.payload.getObjValAs? String "kind").toOption == some "synapses"
+ 
++/-- Reuse only a descriptor already validated for this exact private registry
++key and full original head. No new cache, latest-head substitution or query data. -/
++def matchesSourceRequest (job : PreparationPlan.Job) (key : String) (head : PageMap.Head) : Bool :=
++  job.source == head.identity && job.payload.getObjValD "registryKey" == toJson key &&
++    (job.payload.getObjValD "target").getObjValD "sourceHead" == toJson (some head)
++
+ /-- Only authenticated local administration can request these private registry
+ records. No caller-supplied command, original payload or arbitrary path is used. -/
+ def request (kind key : String) (sourceHead : Option PageMap.Head := none) : IO PreparationPlan.Job := do
+--- a/Eggshell/PreparationService.lean
++++ b/Eggshell/PreparationService.lean
+@@ -34,20 +34,37 @@
+ 
+ def Pool.demand (pool : Pool) (kind key : String) (head : DB.PageMap.Head)
+     (token : PreparationPlan.Ticket) : IO Bool := do
+-  unless token.valid do throw (IO.userError "invalid preparation claim")
++  unless kind == "index" && Receipt.validId key && token.valid do
++    throw (IO.userError "invalid preparation claim")
+   let now ← IO.monoMsNow
+-  let live ← pool.state.atomically do
++  let (live,cached) ← pool.state.atomically do
+     let state := PreparationPlan.reap (← get) now
+-    set state
+-    return state.contents.waiters.any (fun claim => decide (claim.token = token))
++    let live := state.contents.waiters.any (fun claim => decide (claim.token = token))
++    let sameRequest := fun job => PreparationRegistry.matchesSourceRequest job key head
++    let cached : Option PreparationPlan.Job := match state.contents.pending.find? sameRequest with
++      | some job => some job
++      | none => (state.contents.active.find? (fun (active : PreparationPlan.Active) => sameRequest active.job)).map PreparationPlan.Active.job
++    set (if live then PreparationPlan.noteDescriptor state cached.isSome else state)
++    return (live,cached)
+   unless live do return false
+-  let job ← PreparationRegistry.request kind key (some head)
++  let job ← match cached with
++    | some job => pure {job with claims := #[],notBefore := 0,attempts := 0}
++    | none => PreparationRegistry.request kind key (some head)
+   let now ← IO.monoMsNow
+   pool.state.atomically do
+     let (next,admitted) := PreparationPlan.demand (← get) job token now
+     set next
+     return admitted
+ 
++def Pool.demandMany (pool : Pool) (requests : Array (String × DB.PageMap.Head))
++    (token : PreparationPlan.Ticket) (deadline : Nat) : IO (Array Bool) := do
++  unless requests.size ≤ PreparationPlan.claimBatchSize && token.valid do
++    throw (IO.userError "invalid preparation claim batch")
++  pool.state.atomically (modify PreparationPlan.noteBatch)
++  requests.mapM fun (key,head) => do
++    if (← IO.monoMsNow) ≥ deadline then return false
++    pool.demand "index" key head token
++
+ def Pool.release (pool : Pool) (token : PreparationPlan.Ticket) : IO Unit := do
+   unless token.valid do throw (IO.userError "invalid preparation release")
+   let now ← IO.monoMsNow
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -441,16 +441,19 @@
+   unless ticket.all (·.valid) do throw (IO.userError "service returned an invalid preparation capability")
+   return ticket
+ 
+-def claimPreparation (kind key : String) (head : PageMap.Head)
+-    (token : PreparationPlan.Ticket) (deadline : Nat) : IO Bool := do
+-  unless kind == "index" && Receipt.validId key && token.valid do
+-    throw (IO.userError "invalid captured preparation claim")
++def claimPreparations (requests : Array (String × PageMap.Head))
++    (token : PreparationPlan.Ticket) (deadline : Nat) : IO (Array Bool) := do
++  unless requests.size ≤ PreparationPlan.claimBatchSize &&
++      requests.all (fun (key,_) => Receipt.validId key) && token.valid do
++    throw (IO.userError "invalid captured preparation claim batch")
+   let endpoint ← resolve
+   let budget ← liveBudget deadline
+-  let response ← Daemon.exchange endpoint "prepare-interest" (Json.mkObj [
+-    ("registryKind",toJson kind),("key",toJson key),("sourceHead",toJson head),
++  let response ← Daemon.exchange endpoint "prepare-interests" (Json.mkObj [
++    ("requests",toJson requests),
+     ("token",toJson token),("budgetMs",toJson budget)]) (budget := budget)
+-  IO.ofExcept (Json.parse response >>= fromJson? (α := Bool))
++  let replies ← IO.ofExcept (Json.parse response >>= fromJson? (α := Array Bool))
++  unless replies.size == requests.size do throw (IO.userError "preparation batch lost its request inventory")
++  return replies
+ 
+ /-- Best-effort early release cannot start a service or spend a new deadline.
+ Lost releases are bounded by the already admitted service-side expiry. -/
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -769,7 +769,7 @@
+     let streamedRead := ["source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange"].contains kind
+     streamed.set streamedRead
+     let payload := json.getObjValD "payload"
+-    let deadline ← if ["prepare-target","open-preparation","prepare-interest","release-preparation","preparation-status","prepare-source","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
++    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
+         let budget ← IO.ofExcept (payload.getObjValAs? Nat "budgetMs")
+         pure (min deadline (deadline-maxBudgetMs+min budget maxBudgetMs))
+       else pure deadline
+@@ -814,12 +814,10 @@
+           unless (payload.getObjVal? "sourceHead").toOption.isNone do
+             throw (IO.userError "captured source preparation requires a waiter claim")
+           toJson <$> server.preparation.notify kind key
+-        | "prepare-interest" => do
+-          let kind ← IO.ofExcept (payload.getObjValAs? String "registryKind")
+-          let key ← IO.ofExcept (payload.getObjValAs? String "key")
+-          let sourceHead ← IO.ofExcept (payload.getObjValAs? PageMap.Head "sourceHead")
++        | "prepare-interests" => do
++          let requests ← IO.ofExcept (payload.getObjValAs? (Array (String × PageMap.Head)) "requests")
+           let token ← IO.ofExcept (payload.getObjValAs? PreparationPlan.Ticket "token")
+-          toJson <$> server.preparation.demand kind key sourceHead token
++          toJson <$> server.preparation.demandMany requests token deadline
+         | "open-preparation" => toJson <$> server.preparation.openWaiter deadline
+         | "release-preparation" => do
+           let token ← IO.ofExcept (payload.getObjValAs? PreparationPlan.Ticket "token")
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -15,14 +15,42 @@
+ import Eggshell.WorkInference
+ 
+ open Lean
++
++run_meta do
++  let environment ← getEnv
++  let some declaration := environment.find? ``Eggshell.FileSystem.verifyImmutable |
++    throwError "Missing immutable collision verification"
++  let some body := declaration.value? | throwError "Missing immutable verifier body"
++  for required in #[``Eggshell.FileSystem.publicationAgreement, ``Eggshell.FileSystem.readVersion,
++      ``Eggshell.FileSystem.readPage] do
++    unless body.getUsedConstants.contains required do
++      throwError "Immutable verification bypasses exact stable reads: {required}"
++  if body.getUsedConstants.contains ``Eggshell.FileSystem.openRead then
++    throwError "Immutable retry reopens its held target"
++
++run_meta do
++  let environment ← getEnv
++  for (caller,required) in #[
++      (``Eggshell.Warm.runTarget, ``Eggshell.PreparationCompletion.requestsReplay),
++      (``Eggshell.Warm.runTarget, ``Eggshell.Synapses.Build.refresh),
++      (``Eggshell.Warm.runTarget, ``Eggshell.Warm.refreshSource),
++      (``Eggshell.Warm.runTarget, ``Eggshell.PreparedInputs.publish),
++      (``Eggshell.Warm.Result.complete, ``Eggshell.PreparationCompletion.completed),
++      (``Eggshell.Plugin.Worker.indexActionWithState, ``Eggshell.Warm.Result.complete)] do
++    let some declaration := environment.find? caller | throwError "Missing preparation completion caller: {caller}"
++    let some body := declaration.value? | throwError "Missing preparation completion body: {caller}"
++    unless body.getUsedConstants.contains required do
++      throwError "Preparation bypasses its requested source/replay contract: {caller}, {required}"
+ 
+ run_meta do
+   let environment ← getEnv
+   for (caller,required) in #[
+       (``Eggshell.Plugin.Worker.awaitInputs, ``Eggshell.Plugin.Publication.Client.openPreparation),
+-      (``Eggshell.Plugin.Worker.awaitInputs, ``Eggshell.Plugin.Publication.Client.claimPreparation),
++      (``Eggshell.Plugin.Worker.awaitInputs, ``Eggshell.Plugin.Publication.Client.claimPreparations),
+       (``Eggshell.Plugin.Worker.awaitInputs, ``Eggshell.Plugin.Publication.Client.releasePreparation),
+       (``Eggshell.Plugin.PreparationService.Pool.demand, ``Eggshell.PreparationPlan.demand),
++      (``Eggshell.Plugin.PreparationService.Pool.demand, ``Eggshell.Plugin.PreparationRegistry.matchesSourceRequest),
++      (``Eggshell.Plugin.PreparationService.Pool.demandMany, ``Eggshell.Plugin.PreparationService.Pool.demand),
+       (``Eggshell.Plugin.PreparationService.Pool.run, ``Eggshell.Plugin.Worker.exchangeOwnedIndex),
+       (``Eggshell.Plugin.PreparationService.Pool.run, ``Eggshell.PreparationPlan.claimRetirement),
+       (``Eggshell.Plugin.PreparationService.Pool.run, ``Eggshell.Plugin.Worker.closeSlot),

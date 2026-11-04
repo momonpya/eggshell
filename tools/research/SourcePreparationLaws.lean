@@ -1,0 +1,11 @@
+import Eggshell.PreparationCompletion
+import Eggshell.FileSystem
+
+#print axioms Eggshell.PreparationCompletion.explicit_cut_excludes_private_replay
+#print axioms Eggshell.PreparationCompletion.current_maintenance_requests_private_replay
+#print axioms Eggshell.PreparationCompletion.missing_source_never_completes
+#print axioms Eggshell.PreparationCompletion.source_only_completes
+#print axioms Eggshell.PreparationCompletion.pending_requested_replay_never_completes
+#print axioms Eggshell.PreparationCompletion.completed_has_source
+#print axioms Eggshell.FileSystem.publication_agreement_exact
+#print axioms Eggshell.FileSystem.publication_replacement_rejected

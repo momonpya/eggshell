@@ -1,0 +1,44 @@
+{
+  "parent": "beeab0f0",
+  "status": "isolated-not-adopted",
+  "purpose": "Combine registered preparation interests with ordinary parallel original saves, actual MiniLM hooks, preparation drain and restart",
+  "predeclaredRepetitions": 3,
+  "conditions": [
+    {"name": "prepared", "writeOriginalOwners": 4, "readOnlyOriginalOwners": 2, "preparation": "ready before query capture"},
+    {"name": "skipped-cut", "writeOriginalOwners": 16, "readOnlyOriginalOwners": 0, "preparation": "A1/B1 captured unprepared, A2/B2 prepared first; 80 hooks must obtain their captured cuts through ordinary shared preparation"}
+  ],
+  "perRepetition": {
+    "concurrentNormalQueries": 80,
+    "concurrentOriginalSaves": 80,
+    "requiredOriginalItemsPerQuery": 2,
+    "hookCutoffMs": 28000,
+    "backgroundDrainObservationMs": 120000
+  },
+  "checks": [
+    "real Pre/Post/Stop fixture creates captured original boundary and original JSON evidence",
+    "80 ordinary deliverForWork requests preserve both original values and exclude a later foreign publication",
+    "80 parallel saves retain checked durable ACKs across independent project original owners",
+    "queued expiry, isolated cancellation, completed empty response, worker reuse and invalid save rejection remain correct",
+    "all 80 ACKed original response atoms materialize exactly",
+    "all current write-source MiniLM windows are prepared and valid after ordinary background drain",
+    "fresh capture clears all prior original/prepared/private boundary fields before establishing a new turn",
+    "newly stored original is delivered to a new chat before and after actual service shutdown/restart",
+    "no waiter grants, references or charged preparation metadata remain after completion",
+    "skipped-cut fixtures freeze their two required original values before any hook delivery and exclude NEW_ID_BETA later originals"
+  ],
+  "resourceLimits": {
+    "aggregateStopRssKiB": 3670016,
+    "hardRssKiB": 4194304,
+    "minFreeKiB": 2097152
+  },
+  "classification": {
+    "answeringModelCalls": 0,
+    "matchedPaidComparisons": "0/18",
+    "sustainedEightyPeopleEightHours": false,
+    "practical98PercentDelivery": "unproven",
+    "p99Latency": "unproven",
+    "adopted": false
+  },
+  "failureRule": "Retain a failed attempt and its first failing stage. Do not rerun it unchanged or relabel it as a success. A runtime change restarts the three-trial series.",
+  "cleanup": "Delete ended fixture DB/cache/raw logs after extracting compact evidence, without archives. Keep protected originals and required build inputs."
+}
