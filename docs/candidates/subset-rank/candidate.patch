@@ -1,0 +1,132 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index d02c4e5a..675f31ac 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9,0 +10 @@ public import Eggshell.LexicalEvidence
++public import Eggshell.SubsetLexical
+@@ -2403 +2404,2 @@ def refocusObservedNeighborhood (question : String)
+-    (meaning : List Value) (positions : List (Value × List Nat)) :
++    (meaning : List Value) (positions : List (Value × List Nat))
++    (preparedLexical : Option (List Nat) := none) :
+@@ -2408 +2410,3 @@ def refocusObservedNeighborhood (question : String)
+-    let lexical := SearchRank.lexical question (support.map fun item => Persistence.Store.searchText item.owner)
++    let lexical := match preparedLexical with
++      | some ranked => ranked
++      | none => SearchRank.lexical question (support.map fun item => Persistence.Store.searchText item.owner)
+@@ -2418,0 +2423,8 @@ def refocusObservedNeighborhood (question : String)
++theorem refocus_prepared_lexical_exact (question : String)
++    (support : List (SourceSupport roots all unions))
++    (meaning : List Value) (positions : List (Value × List Nat)) :
++    refocusObservedNeighborhood question support meaning positions
++      (some (SearchRank.lexical question (support.map fun item => Persistence.Store.searchText item.owner))) =
++    refocusObservedNeighborhood question support meaning positions := by
++  simp only [refocusObservedNeighborhood]
++
+@@ -8186,0 +8199 @@ structure IndexedContext where
++  lexicalSubset : Option (String → List Nat → IO (Option (List Nat))) := none
+@@ -8617,3 +8630,17 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-  let observedNeighborhood := indexedFocus.bind fun (ranking, windows) =>
+-    refocusObservedNeighborhood focusQuestion focusDomain (ranking.filterMap (rankedOwners[·]?))
+-      (windows.filterMap fun (id, positions) => (rankedOwners[id]?).map (·, positions))
++  let mappedFocus := indexedFocus.map fun (ranking, windows) =>
++    (ranking.filterMap (rankedOwners[·]?),
++      windows.filterMap fun (id, positions) => (rankedOwners[id]?).map (·, positions))
++  let subsetStarted ← IO.monoMsNow
++  let preparedLexical ← match source.lexicalSubset, mappedFocus with
++    | some rank, some (_,positions) => do
++      if !(focusDomain.all fun item => positions.any (·.1 == item.owner.relation)) then pure none
++      else
++        let identities := Std.HashMap.ofList (rankedOwners.toList.map fun (id,relation) => (relation,id))
++        match focusDomain.mapM (fun item => identities[item.owner.relation]?) with
++        | none => pure none
++        | some ids => rank focusQuestion ids
++    | _, _ => pure none
++  Publication.Stream.profile "subset-lexical-profile" [("rows",toJson focusDomain.length),
++    ("prepared",toJson preparedLexical.isSome),("elapsedMs",toJson ((← IO.monoMsNow)-subsetStarted))]
++  let observedNeighborhood := mappedFocus.bind fun (ranking, windows) =>
++    refocusObservedNeighborhood focusQuestion focusDomain ranking windows preparedLexical
+@@ -9260,0 +9288 @@ def federatedDiscovery (selection : Config.Selection)
++    lexicalSubset := some (SubsetLexical.read? ownerView.base)
+diff --git a/Eggshell/SubsetLexical.lean b/Eggshell/SubsetLexical.lean
+new file mode 100644
+index 00000000..84667953
+--- /dev/null
++++ b/Eggshell/SubsetLexical.lean
+@@ -0,0 +1,77 @@
++module
++public import Eggshell.SourceOwners
++public import Eggshell.SearchRank
++
++@[expose] public section
++namespace Eggshell.SubsetLexical
++open Lean DB
++
++/-- Read only the path to a requested canonical owner. An out-of-domain id
++must be rejected before taking a radix digit, rather than wrapping to a leaf. -/
++def point (reader : SourceBitmap.Reader) (height : Nat) (root : SourceBitmap.Ref) (id : Nat) : IO Bool := do
++  unless root.height == height do throw (IO.userError "point bitmap height mismatch")
++  if id ≥ 256*16^height then return false
++  let node ← reader.read root
++  match height with
++  | 0 => return SourceBitmap.contains (BitVec.ofNat 256 node.bits) id
++  | depth+1 =>
++    let width := 256*16^depth
++    match node.children.find? (fun row => row.1 == id/width) with
++    | none => return false
++    | some (_,child) => point reader depth child (id%width)
++
++/-- Retain the original row sequence, local document frequency, query-term
++order and Float additions. Repeated ids count as repeated rows. -/
++def rank (query : String) (ids : List Nat) (contains : Nat → String → Bool) : List Nat :=
++  SearchRank.rankRows query ids contains (fun term => (ids.filter (fun id => contains id term)).length) false
++
++theorem rank_exact (query : String) (ids : List Nat) (text : Nat → String)
++    (contains : Nat → String → Bool)
++    (same : ∀ id term, contains id term = (SearchRank.terms (text id)).contains term) :
++    rank query ids contains = SearchRank.lexical query (ids.map text) := by
++  have functions : contains = fun id term => (SearchRank.terms (text id)).contains term := by
++    funext id term
++    exact same id term
++  subst contains
++  rw [SearchRank.lexical_exact]
++  unfold SearchRank.referenceLexical
++  have documents : (ids.map text).map SearchRank.terms = ids.map (fun id => SearchRank.terms (text id)) := by
++    simp only [List.map_map,Function.comp_def]
++  rw [documents]
++  unfold SearchRank.rankDocuments
++  rw [SearchRank.rankRows_map]
++  unfold rank
++  congr 1
++  funext term
++  simp only [List.filter_map,List.length_map,Function.comp_def]
++
++/-- Capture query-term membership from the prepared lexical contract.
++No full common-term posting is enumerated. -/
++def project (reader : SourceOwners.Reader) (query : String) (ids : List Nat) :
++    IO (Std.HashMap String (Std.HashSet Nat)) := do
++  let unique := hashDistinct ids
++  let mut terms := {}
++  for term in SearchRank.terms query do
++    let mut present : Std.HashSet Nat := {}
++    if let some termId ← Persistence.Store.findTerm? reader.dictionary reader.dictionary.get ("lexical/"++term) then
++      let mut roots := #[]
++      for input in reader.inputs do
++        if let some root ← SourceOwners.root input.index input.index.get (Persistence.Store.key "postingRoot" termId.id) then
++          roots := roots.push root
++      for id in unique do
++        for root in roots do
++          if ← point reader.bitmap root.height root id then
++            present := present.insert id
++            break
++    terms := terms.insert term present
++  return terms
++
++def read? (reader : SourceOwners.Reader) (query : String) (ids : List Nat) : IO (Option (List Nat)) := do
++  if !ids.isEmpty then
++    let some candidates := reader.candidates | return none
++    for id in hashDistinct ids do
++      unless ← point reader.bitmap candidates.height candidates id do return none
++  let terms ← project reader query ids
++  return some (rank query ids (fun id term => (terms.getD term {}).contains id))
++
++end Eggshell.SubsetLexical

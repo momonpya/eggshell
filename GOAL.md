@@ -251,6 +251,12 @@ source headが変わると部分feedbackを捨て、照合の期限切れを入�
 
 同じcold 80 readerは全80受付・両項目配送57/80（意味6/字句51）で、23件はowned-task期限切れ。親35/80との単発差だけで因果効果や合格とは扱わない。入力全80 complete、82原文の入出力一致と全16 head不変を確認した。warm1914ms、失敗込み測定10588〜29769ms、最終operation観測60件はqueue中央値18397/最大25215ms・処理中央値780/最大7785msで、p99ではない。RSS最大2948320KiB、guard発火0/残存0、終了非ゼロを記録した。並行する原文所有者の欠如が原因ではなく、検索の処理量とqueueの排出が未達である。次は同じ準備済み構造の再構成・metadata転送を調べ、通常保存/準備と合わせた持続負荷へ進む。worker/owner数や期限を広げて成功扱いにしない。回答モデル0/比較0/18、製品未採用。終了した試験DB/cache/raw logはcompact記録後に削除し、archiveは作らない。
 
+最新の[subset-rank検査と不採用候補](docs/candidates/subset-rank/README.md)では、選択済み原文を字句順位のために再解析する処理を、出版済みsource別bitmapへの点参照へ置き換えた。全体IDFへ変えず、候補列の頻度・順序・Float演算を保つ。全語のunionを先に作る試作は規模対策とせず、各sourceへ直接点参照する形にした。8質問×7候補列の56全順位・6216点参照が一致し、高さ8/id 10^12/範囲外と未入場ownerの拒否も検査した。Leanの条件付き順位一致とrefocus一致、宣言接続と全件列挙/union呼出禁止、標準ContractAuditが通った。原文解析182.2〜199.9msに対し実readerは9.4〜20.8msだったが、部品の値をフック全体の改善に置き換えない。
+
+同一snapshot/MiniLM/質問/設定で順序を交互にした実フック3組は全12本文88578 bytesが一致した。初回は親9151/8563/8631ms、候補8603/8635/8654msで2組悪化、稼働済みは親5748/6038/5693ms、候補5644/5826/5648msと45〜212msの短縮だった。過去の57/80を今回の比較元とせず、同じ時期に80同時検索も1組測った。本文への両項目配送は親21/80・候補22/80、候補の1件は29815msで本文が届いたがACK拒否のため、client全体成功は双方21/80だった。受付73/75、最終operation観測24/25件のqueue中央値21420/20741ms・処理中央値1549/1552ms。全160入力complete、各82原文の入出力一致と全16 head不変、各guard発火0/残存0、最大RSS2855200KiB。原因未確認の実行条件差を候補だけへ帰属させない。容量改善が立たないため隔離sourceを`b9eac443`へ戻し、不採用build/試験DB/cache/raw logを削除する。回答モデル0/比較0/18、製品未採用。次はfallbackも含む実worker境界で、準備済みviewの復元とmetadata転送を測る。meaning側の局所修正や重み調整を繰り返さず、共有構造を照会ごとに作り直す経路を対象にする。80人8時間/98%/p99/総token・品質は未達・未検証のままである。
+
+次の具体的な調査入口は[prepared frameの重複](docs/candidates/subset-rank/next-input-frame.md)。今回のprofileには約311KBの大きなworker要求が12件あり、queueはserialized requestをactive込み16MiBまで保持する。80件相当はこの枠を超え得るが、envelopeと実chargeの差とbusy理由が未確認のため原因確定とはしない。`Worker.Search`の明示prepared/originals/ownersと、pending内の同じ`PreparedInputs.Frame`の二重表現を監査し、通常capture後のfield別byte数を測る。私有journalは保ち、照合済みのwire frameだけ一度の表現にできるか検証する。未実装・未検証であり、完全なsource inventory・認定・private usage境界を削って枠へ収めない。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約
