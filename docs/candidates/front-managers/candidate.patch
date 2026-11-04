@@ -1,0 +1,671 @@
+--- a/Eggshell/Daemon.lean
++++ b/Eggshell/Daemon.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.PluginCli
+ public import Eggshell.DaemonWire
+ public import Eggshell.ObservationAge
++public import Eggshell.HookFrontend
+ 
+ @[expose] public section
+ 
+@@ -10,7 +11,19 @@
+ 
+ open Lean Std Async TCP
+ 
++abbrev FrontendChild := IO.Process.Child {stdin := .null,stdout := .null,stderr := .null}
+ 
++/-- Accessed only while holding this data root's existing startup guard.
++The process handle, rather than a possibly reused PID, owns child retirement. -/
++initialize spawnedFrontend : IO.Ref (Option FrontendChild) ← IO.mkRef none
++
++def running (endpoint : Endpoint) : IO Bool := do
++  let status ← IO.Process.output {cmd := "/bin/ps",args := #["-o","stat=","-p",toString endpoint.pid]}
++  if status.exitCode == 0 then
++    let state := status.stdout.trimAscii.toString
++    if !state.isEmpty then return !state.startsWith "Z" && !state.startsWith "X"
++  Numerical.alive endpoint.pid
++
+ def serveRequest (session secret : String) (json : Json) : IO (Json × Bool) := do
+   if optionalString json "secret" != some secret then
+     pure (response (.error "unauthorized daemon request"), false)
+@@ -28,8 +41,14 @@
+           ("completed", toJson dispatched.isOk),
+           ("error", match dispatched with | .error error => toJson error | .ok _ => Json.null)])
+         pure (response dispatched, false)
++    | some "register" =>
++        if optionalString (json.getObjValD "payload") "session_id" != some session then
++          pure (response (.error "wrong frontend registration"),false)
++        else pure (response (.ok ""),false)
+     | some "ack" =>
+         try
++          unless optionalString (json.getObjValD "payload") "session_id" == some session do
++            throw (IO.userError "wrong acknowledgment chat")
+           let id ← IO.ofExcept (requiredString (json.getObjValD "payload") "receipt")
+           let accepted ← acknowledge session id
+           pure (response (.ok (toJson accepted).compress), false)
+@@ -38,50 +57,20 @@
+     | some "shutdown" => pure (response (.ok ""), true)
+     | _ => pure (response (.error "unknown daemon request"), false)
+ 
+-/--
+-Serve one occurrence for this chat. Search and saving have independent worker
+-processes; the state lock covers only short metadata transitions.
+--/
+-def serveClient (session secret : String) (stopping : IO.Ref Bool)
+-    (client : Socket.Client) : IO Unit := do
+-  let (reply, stop) ← try
+-      let bytes ← receiveFrame client
+-      let text ← match String.fromUTF8? bytes with
+-        | some text => pure text
+-        | none => throw (IO.userError "daemon request is not UTF-8")
+-      let json ← match Json.parse text with
+-        | .ok json => pure json
+-        | .error message => throw (IO.userError message)
+-      serveRequest session secret json
+-    catch error => pure (response (.error error.toString), false)
+-  sendFrame client reply.compress.toUTF8
+-  if stop then stopping.set true
+-
+-def retainRunning (tasks : List (Task (Except IO.Error Unit))) :
+-    IO (List (Task (Except IO.Error Unit))) := do
+-  let mut running := []
+-  for task in tasks do
+-    if ← IO.hasFinished task then
+-      if let .error error ← IO.wait task then
+-        IO.eprintln s!"eggshelld client: {error}"
+-    else
+-      running := task :: running
+-  pure running
+-
+ def removeEndpointIfOwned (endpoint : Endpoint) : IO Unit := do
+-  let path ← endpointPath endpoint.session
++  let path ← endpointPath
+   try
+     if let some current ← (readJson? path endpointJsonDefaults : IO (Option Endpoint)) then
+       if current.secret = endpoint.secret then removeIfExists path
+   catch _ => pure ()
+ 
+ def run (session : String) : IO UInt32 := do
+-  let files ← sessionFiles session
+-  Persistence.withLockWithin (files.directory / "manager") 0 do
++  let _ ← IO.ofExcept (safeSession session)
++  Persistence.withLockWithin ((← dataRoot)/"manager") 0 do
+     runOwned session
+ where
+  runOwned (session : String) : IO UInt32 := do
+-  let path ← endpointPath session
++  let path ← endpointPath
+   if let some parent := path.parent then IO.FS.createDirAll parent
+   let server ← Socket.Server.mk
+   server.bind (loopback 0)
+@@ -90,7 +79,7 @@
+   let address ← server.getSockName
+   let secret := Blake3.hex (← IO.getRandomBytes 32)
+   let endpoint : Endpoint := {
+-    session
++    session := ""
+     pid := (← IO.Process.getPID).toNat
+     port := address.port.toNat
+     secret
+@@ -98,58 +87,29 @@
+   }
+   writeJson path endpoint
+   Persistence.privateFile path
+-  let stopping ← IO.mkRef false
+-  let mut clients : List (Task (Except IO.Error Unit)) := []
+-  let mut lastActivity ← IO.monoMsNow
+-  let mut saves : List (Task (Except IO.Error Unit)) := []
+-  let mut indexes : List (Task (Except IO.Error Unit)) := []
+-  let saveCursor ← IO.mkRef ("", ([] : List String))
+-  let indexWake ← IO.mkRef (none : Option String)
+-  let indexCursor ← IO.mkRef ""
+-  let mut nextSave : Nat := 0
+-  let mut nextIndex : Nat := 0
+   try
+-    while !(← stopping.get) do
+-      match ← server.tryAccept with
+-      | none => IO.sleep 1
+-      | some client =>
+-          lastActivity ← IO.monoMsNow
+-          if clients.length < 32 then
+-            clients := (← IO.asTask (serveClient session secret stopping client) .dedicated) :: clients
+-      clients ← retainRunning clients
+-      saves ← retainRunning saves
+-      indexes ← retainRunning indexes
+-      let now ← IO.monoMsNow
+-      if saves.isEmpty && now ≥ nextSave then
+-        saves := [← IO.asTask (flushDeferred session (now + 60000) (some saveCursor)) .dedicated]
+-        nextSave := now + 1000
+-      if indexes.isEmpty && now ≥ nextIndex then
+-        indexes := [← IO.asTask (do
+-          let observed ← preparationWake session
+-          if !PreparationPlan.Wake.needed observed (← indexWake.get) then return
+-          let accepted ← flushIndexesResult session (now + 60000) (some indexCursor)
+-          indexWake.modify (fun before => PreparationPlan.Wake.record observed before accepted)) .dedicated]
+-        nextIndex := now + 1000
+-      if saves.isEmpty && indexes.isEmpty && now > lastActivity + 300000 then stopping.set true
++    HookFrontend.run server secret session (fun selected json => serveRequest selected secret json)
+     pure 0
+   catch error =>
+     IO.eprintln s!"eggshelld: {error}"
+     pure 1
+   finally
+-    for task in clients ++ saves ++ indexes do IO.cancel task
+-    Worker.shutdown
+     removeEndpointIfOwned endpoint
+ 
+ 
+ def loadEndpoint (session : String) : IO Endpoint := do
+-  let path ← endpointPath session
++  let _ ← IO.ofExcept (safeSession session)
++  let path ← endpointPath
+   let some endpoint ← (readJson? path endpointJsonDefaults : IO (Option Endpoint)) |
+     throw (IO.userError "eggshelld is not running")
+   pure endpoint
+ 
+ def spawn (session : String) : IO Unit := do
++  if let some previous ← spawnedFrontend.get then
++    unless (← previous.tryWait).isSome do throw (IO.userError "previous hook frontend is still stopping")
++    spawnedFrontend.set none
+   let executable ← daemonExecutable
+-  let _ ← IO.Process.spawn {
++  let child ← IO.Process.spawn {
+     cmd := executable.toString
+     args := #["codex-daemon", session]
+     stdin := .null
+@@ -157,15 +117,16 @@
+     stderr := .null
+     setsid := true
+   }
++  spawnedFrontend.set (some child)
+   pure ()
+ 
+ def readyEndpoint (session : String) : IO Endpoint := do
+   let endpoint ← loadEndpoint session
+-  if endpoint.session != session then throw (IO.userError "wrong chat endpoint")
++  if endpoint.session != "" then throw (IO.userError "not a shared hook frontend")
+   let expected ← desiredGeneration
+   if !endpoint.compatible expected then
+     throw (IO.userError "eggshelld executable generation is stale")
+-  let _ ← exchange endpoint "ping" (budget := 250)
++  let _ ← exchange endpoint "register" (Json.mkObj [("session_id",toJson session)]) (budget := 250)
+   pure endpoint
+ 
+ partial def awaitEndpoint (session : String) : Nat → IO Endpoint
+@@ -179,17 +140,27 @@
+ 
+ def ensure (session : String) : IO Endpoint := do
+   try readyEndpoint session
+-  catch _ => Persistence.withLockWithin (← startupLock session) 200 do
++  catch error =>
++   let existing ← try some <$> loadEndpoint session catch _ => pure none
++   if let some existing := existing then
++     if existing.compatible (← desiredGeneration) && (← running existing) then throw error
++   Persistence.withLockWithin (← startupLock) 200 do
+     try readyEndpoint session
+-    catch _ =>
++    catch error =>
++      let existing ← try some <$> loadEndpoint session catch _ => pure none
++      if let some existing := existing then
++        if existing.compatible (← desiredGeneration) && (← running existing) then throw error
+       try
+         let stale ← loadEndpoint session
+         let _ ← exchange stale "shutdown" (budget := 250)
+       catch _ => pure ()
+-      removeIfExists (← endpointPath session)
++      removeIfExists (← endpointPath)
+       spawn session
+       awaitEndpoint session startupAttempts
+ 
++def chatClock (secret session : String) : String :=
++  Sha256.hex (secret ++ ":" ++ session).toUTF8
++
+ def attachClientConfig (input : Json) (config : Option String) : Json :=
+   match config with
+   | some path => input.setObjVal! "_eggshell_config" path
+@@ -319,7 +290,7 @@
+     let session ← IO.ofExcept (requiredString input "session_id")
+     let ensureStarted ← IO.monoMsNow
+     let endpoint ← ensure session
+-    let input := (input.setObjVal! "_eggshell_synapse_clock" (toJson (Sha256.hex endpoint.secret.toUTF8)))
++    let input := (input.setObjVal! "_eggshell_synapse_clock" (toJson (chatClock endpoint.secret session)))
+       |>.setObjVal! "_eggshell_synapse_nanos" (toJson observedNanos)
+     let ready ← IO.monoMsNow
+     let output ← exchangeBefore endpoint "hook" input (deadline - 250)
+@@ -404,27 +375,26 @@
+ def awaitStopped (endpoint : Endpoint) : IO Unit := do
+   let deadline := (← IO.monoMsNow) + 3000
+   repeat
+-    let status ← IO.Process.output {
+-      cmd := "/bin/kill", args := #["-0", toString endpoint.pid]
+-      stdin := .null }
+-    if status.exitCode != 0 then return
++    let owned ← spawnedFrontend.get
++    if let some child := owned.filter (fun child => child.pid.toNat == endpoint.pid) then
++      if (← child.tryWait).isSome then
++        spawnedFrontend.set none
++        return
++    else if !(← running endpoint) then return
+     if (← IO.monoMsNow) ≥ deadline then
+       throw (IO.userError "eggshelld acknowledged shutdown but has not exited")
+     IO.sleep 5
+ 
+ def shutdown : IO Unit := do
+-  let root ← dataRoot
+-  let directory := root / "sessions"
+-  let paths ← if ← directory.pathExists then do
+-      (← directory.readDir).toList.mapM fun entry => pure (entry.path / "daemon.json")
+-    else pure []
+-  for path in root / "daemon.json" :: paths do
++  Persistence.withLockWithin (← startupLock) 200 do
++    let path ← endpointPath
+     if let some endpoint ← (readJson? path endpointJsonDefaults : IO (Option Endpoint)) then
+       try
+         let _ ← exchange endpoint "shutdown" (budget := 500)
+       catch _ => pure ()
+-      -- Receipt of the RPC reply is not proof that its workers have exited.
+-      -- Do not report successful teardown until the manager really exits.
+       awaitStopped endpoint
++    else if let some child ← spawnedFrontend.get then
++      if (← child.tryWait).isSome then spawnedFrontend.set none
++      else throw (IO.userError "hook frontend lost its endpoint before exiting")
+ 
+ end Eggshell.Plugin.Daemon
+--- a/Eggshell/DaemonWire.lean
++++ b/Eggshell/DaemonWire.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.PluginModel
+ public import Std.Async.TCP
+ public import Std.Async.Timer
++public import Std.Sync.CancellationToken
+ 
+ @[expose] public section
+ 
+@@ -37,11 +38,11 @@
+ 
+ end Endpoint
+ 
+-def endpointPath (session : String) : IO System.FilePath := do
+-  pure ((← sessionFiles session).directory / "daemon.json")
++def endpointPath : IO System.FilePath := do
++  pure ((← dataRoot)/"daemon.json")
+ 
+-def startupLock (session : String) : IO System.FilePath := do
+-  pure ((← sessionFiles session).directory / "daemon-start")
++def startupLock : IO System.FilePath := do
++  pure ((← dataRoot)/"daemon-start")
+ 
+ def daemonExecutable : IO System.FilePath := do
+   match ← IO.getEnv "PLUGIN_ROOT" with
+@@ -78,37 +79,70 @@
+     ((bytes.get! 1).toNat <<< 16) |||
+     ((bytes.get! 2).toNat <<< 8) ||| (bytes.get! 3).toNat
+ 
++-- Waiting does not introduce a second blocking dedicated task. A caller
++-- owns its absolute deadline and can cooperatively stop its in-flight IO.
++def awaitTaskBefore (task : AsyncTask α) (deadline : Nat) : IO α := do
++  repeat
++    if ← IO.checkCanceled then throw (IO.userError "daemon IO cancelled")
++    if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "daemon IO deadline expired")
++    if ← IO.hasFinished task then return ← task.block
++    IO.sleep 1
++  throw (IO.userError "unreachable daemon IO wait")
++
++def awaitBefore (action : Async α) (deadline : Nat) : IO α := do
++  if ← IO.checkCanceled then throw (IO.userError "daemon IO cancelled")
++  if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "daemon IO deadline expired")
++  awaitTaskBefore (← action.toIO) deadline
++
+ partial def receiveExactly (client : Socket.Client) (remaining : Nat)
+-    (deadline : Nat) (received : ByteArray := ByteArray.empty) : IO ByteArray := do
++    (deadline : Nat) (received : ByteArray := ByteArray.empty)
++    (stop : Option Std.CancellationToken := none) : IO ByteArray := do
+   if remaining = 0 then return received
+   let now ← IO.monoMsNow
+   if now ≥ deadline then throw (IO.userError "daemon receive deadline expired")
+-  let chunk ← (do
++  let cancel ← Std.CancellationToken.new
++  let waiting ← (do
+     let timer ← Selector.sleep (.ofNat (deadline - now))
+-    Selectable.one #[
++    let cases : Array (Selectable (Option ByteArray)) := #[
+       .case (client.recvSelector remaining.toUInt64) pure,
+-      .case timer (fun _ => throw (IO.userError "daemon receive deadline expired"))]).block
++      .case timer (fun _ => throw (IO.userError "daemon receive deadline expired")),
++      .case cancel.selector (fun _ => throw (IO.userError "daemon receive cancelled"))]
++    let cases := match stop with
++      | none => cases
++      | some token => cases.push (.case token.selector (fun _ =>
++          throw (IO.userError "daemon receive cancelled")))
++    Selectable.one cases).toIO
++  let chunk ← try awaitTaskBefore waiting deadline
++    finally
++      -- Cancellation unregisters the native read. Do not leave an async
++      -- receive alive after its owning IO task has returned.
++      cancel.cancel
++      discard <| IO.wait waiting
+   let some chunk := chunk |
+     throw (IO.userError "eggshelld closed an incomplete frame")
+   if chunk.isEmpty then
+     throw (IO.userError "eggshelld returned an empty frame")
+-  receiveExactly client (remaining - chunk.size) deadline (received.append chunk)
++  receiveExactly client (remaining - chunk.size) deadline (received.append chunk) stop
+ 
+-def receiveFrameBefore (client : Socket.Client) (deadline : Nat) : IO ByteArray := do
+-  let header ← receiveExactly client 4 deadline
++def receiveFrameBefore (client : Socket.Client) (deadline : Nat)
++    (stop : Option Std.CancellationToken := none) : IO ByteArray := do
++  let header ← receiveExactly client 4 deadline (stop := stop)
+   let length := decodeLength header
+   if length > maxFrameBytes then
+     throw (IO.userError "eggshelld frame exceeds the transport bound")
+-  receiveExactly client length deadline
++  receiveExactly client length deadline (stop := stop)
+ 
+ def receiveFrame (client : Socket.Client) (budget : Nat := 24000) : IO ByteArray := do
+   receiveFrameBefore client ((← IO.monoMsNow) + budget)
+ 
+-def sendFrame (client : Socket.Client) (payload : ByteArray) : IO Unit := do
++def sendFrameBefore (client : Socket.Client) (payload : ByteArray) (deadline : Nat) : IO Unit := do
+   if payload.size > maxFrameBytes then
+     throw (IO.userError "eggshelld frame exceeds the transport bound")
+-  (client.sendAll #[frameLength payload, payload]).block
++  awaitBefore (client.sendAll #[frameLength payload, payload]) deadline
+ 
++def sendFrame (client : Socket.Client) (payload : ByteArray) : IO Unit := do
++  sendFrameBefore client payload ((← IO.monoMsNow)+24000)
++
+ def response (output : Except String String) : Json :=
+   match output with
+   | .ok value => Json.mkObj [("ok", true), ("output", value)]
+@@ -117,17 +151,20 @@
+ def request (secret kind : String) (payload : Json := Json.null) : Json :=
+   Json.mkObj [("secret", secret), ("kind", kind), ("payload", payload)]
+ 
+-def connect (endpoint : Endpoint) : IO Socket.Client := do
++def connectBefore (endpoint : Endpoint) (deadline : Nat) : IO Socket.Client := do
+   if endpoint.port > 65535 then
+     throw (IO.userError "invalid eggshelld port")
+   let client ← Socket.Client.mk
+-  (client.connect (loopback endpoint.port.toUInt16)).block
++  awaitBefore (client.connect (loopback endpoint.port.toUInt16)) deadline
+   pure client
+ 
++def connect (endpoint : Endpoint) : IO Socket.Client := do
++  connectBefore endpoint ((← IO.monoMsNow)+24000)
++
+ def exchangeBefore (endpoint : Endpoint) (kind : String)
+     (payload : Json) (deadline : Nat) : IO String := do
+-  let client ← connect endpoint
+-  sendFrame client (request endpoint.secret kind payload |>.compress |>.toUTF8)
++  let client ← connectBefore endpoint deadline
++  sendFrameBefore client (request endpoint.secret kind payload |>.compress |>.toUTF8) deadline
+   let bytes ← receiveFrameBefore client deadline
+   let text ← match String.fromUTF8? bytes with
+     | some text => pure text
+--- /dev/null
++++ b/Eggshell/HookBudget.lean
+@@ -0,0 +1,29 @@
++module
++public import Std
++@[expose] public section
++namespace Eggshell.HookBudget
++
++def clients : Nat := 128
++def readers : Nat := 4
++def bytes : Nat := 16*1024*1024
++def sessions : Nat := 128
++def maintenance : Nat := 2
++
++def admit (count held incoming : Nat) : Bool :=
++  decide (count < clients ∧ held+incoming ≤ bytes)
++
++theorem admitted_bounds (count held incoming : Nat) (accepted : admit count held incoming = true) :
++    count < clients ∧ held+incoming ≤ bytes := by simpa [admit] using accepted
++
++theorem full_refused (held incoming : Nat) : admit clients held incoming = false := by
++  simp [admit]
++
++theorem overflow_refused (count held incoming : Nat) (large : bytes < held+incoming) :
++    admit count held incoming = false := by simp [admit,Nat.not_le_of_gt large]
++
++def canStart (running : List String) (session : String) : Bool := !running.contains session
++
++theorem active_session_refused (running : List String) (session : String) :
++    canStart (session::running) session = false := by simp [canStart]
++
++end Eggshell.HookBudget
+--- /dev/null
++++ b/Eggshell/HookFrontend.lean
+@@ -0,0 +1,187 @@
++module
++public import Eggshell.PluginHooks
++public import Eggshell.DaemonWire
++public import Eggshell.HookBudget
++
++@[expose] public section
++namespace Eggshell.Plugin.HookFrontend
++open Lean Std Async TCP
++
++structure Session where
++  name : String
++  touched : Nat
++  saveCursor : IO.Ref (String × List String)
++  indexCursor : IO.Ref String
++  indexWake : IO.Ref (Option String)
++
++def Session.create (name : String) (now : Nat) : IO Session := do
++  let _ ← IO.ofExcept (safeSession name)
++  return ⟨name,now,← IO.mkRef ("",[]),← IO.mkRef "",← IO.mkRef none⟩
++
++def Session.refresh (entry : Session) : IO Unit := do
++  if ← IO.checkCanceled then return
++  let deadline := (← IO.monoMsNow)+60000
++  flushDeferred entry.name deadline (some entry.saveCursor)
++  if ← IO.checkCanceled then return
++  let observed ← preparationWake entry.name
++  if PreparationPlan.Wake.needed observed (← entry.indexWake.get) then
++    let accepted ← flushIndexesResult entry.name deadline (some entry.indexCursor)
++    entry.indexWake.modify (fun before => PreparationPlan.Wake.record observed before accepted)
++
++structure Reading where
++  socket : Socket.Client
++  task : Task (Except IO.Error ByteArray)
++
++structure Client where
++  bytes : Nat
++  session : Option String
++  wake : Bool
++  task : Task (Except IO.Error Bool)
++
++structure Maintenance where
++  session : String
++  task : Task (Except IO.Error Unit)
++
++def requestSession (json : Json) : Except String (Option String) := do
++  let kind ← requiredString json "kind"
++  if ["hook","ack","register"].contains kind then
++    let session ← requiredString (json.getObjValD "payload") "session_id"
++    let _ ← safeSession session
++    return some session
++  return none
++
++def heldBytes (clients : Array Client) : Nat := clients.foldl (fun n client => n+client.bytes) 0
++
++def notify (pending : Array String) (session : String) : Array String :=
++  if pending.contains session then pending else pending.push session
++
++/-- The loop alone owns session registration, admission, queues and task phases.
++IO tasks return results; they never mutate this registry or replace its map.
++Cursor references belong to one maintenance task per session at a time. -/
++def run (server : Socket.Server) (secret initial : String)
++    (handle : String → Json → IO (Json × Bool)) : IO Unit := do
++  let stopReaders ← Std.CancellationToken.new
++  let mut sessions := #[← Session.create initial (← IO.monoMsNow)]
++  let mut readers : Array Reading := #[]
++  let mut clients : Array Client := #[]
++  let mut maintenance : Array Maintenance := #[]
++  let mut pending := #[initial]
++  let mut nextMaintenance := 0
++  let mut lastActivity ← IO.monoMsNow
++  let mut closing := false
++  let mut stopped := false
++  try
++    while !stopped do
++      let mut active := #[]
++      for client in clients do
++        if ← IO.hasFinished client.task then
++          match ← IO.wait client.task with
++          | .ok stop => if stop then stopped := true
++          | .error _ => pure ()
++          if client.wake then
++            if let some session := client.session then pending := notify pending session
++        else active := active.push client
++      clients := active
++      let mut working := #[]
++      for work in maintenance do
++        if ← IO.hasFinished work.task then
++          if let .error _ ← IO.wait work.task then
++            IO.eprintln "Eggshell retained unfinished session maintenance"
++        else working := working.push work
++      maintenance := working
++      if stopped then break
++      let mut receiving := #[]
++      for reader in readers do
++        if ← IO.hasFinished reader.task then
++          match ← IO.wait reader.task with
++          | .error _ => pure ()
++          | .ok bytes =>
++            if !closing && HookBudget.admit clients.size (heldBytes clients) bytes.size then
++              let parsed := match String.fromUTF8? bytes with
++                | some text => Json.parse text
++                | none => .error "invalid frontend UTF-8"
++              let mut selected : Option String := none
++              let mut error : Option String := none
++              let mut request := Json.null
++              match parsed with
++              | .error _ => error := some "invalid frontend frame"
++              | .ok json =>
++                request := json
++                if optionalString json "secret" != some secret then error := some "unauthorized daemon request"
++                else match requestSession json with
++                  | .error message => error := some message
++                  | .ok session => selected := session
++              if error.isNone then
++                if let some name := selected then
++                  if let some index := sessions.findIdx? (·.name == name) then
++                    let touched ← IO.monoMsNow
++                    sessions := sessions.modify index (fun entry => {entry with touched})
++                  else if sessions.size < HookBudget.sessions then
++                    sessions := sessions.push (← Session.create name (← IO.monoMsNow))
++                    pending := notify pending name
++                  else error := some "frontend session admission is full"
++              let stop := error.isNone && optionalString request "kind" == some "shutdown"
++              if stop then
++                closing := true
++                Worker.shutdown
++              let status := Json.mkObj [("registeredSessions",toJson sessions.size),
++                ("requestBytes",toJson (heldBytes clients)),("activeRequests",toJson clients.size),
++                ("readers",toJson readers.size),("activeMaintenance",toJson maintenance.size),
++                ("pendingMaintenance",toJson pending.size)]
++              let task ← IO.asTask (do
++                let (reply,stop) ← match error with
++                  | some error => pure (Daemon.response (.error error),false)
++                  | none =>
++                    if optionalString request "kind" == some "stats" then
++                      pure (Daemon.response (.ok status.compress),false)
++                    else handle (selected.getD "") request
++                Daemon.sendFrame reader.socket reply.compress.toUTF8
++                return stop) .dedicated
++              clients := clients.push {
++                bytes := bytes.size
++                session := selected
++                wake := [some "hook",some "ack"].contains (optionalString request "kind")
++                task := task }
++            -- No payload/authority is admitted when full. Dropping the socket
++            -- makes the caller fail explicitly under its existing deadline.
++        else receiving := receiving.push reader
++      readers := receiving
++      let now ← IO.monoMsNow
++      if !closing then
++        if readers.size < HookBudget.readers && readers.size+clients.size < HookBudget.clients then
++          if let some socket ← server.tryAccept then
++            lastActivity := now
++            readers := readers.push ⟨socket,← IO.asTask
++              (Daemon.receiveFrameBefore socket (now+24000) (some stopReaders)) .dedicated⟩
++        if now ≥ nextMaintenance then
++          for entry in sessions do pending := notify pending entry.name
++          nextMaintenance := now+1000
++        let mut waiting := #[]
++        for name in pending do
++          if maintenance.size < HookBudget.maintenance &&
++              HookBudget.canStart (maintenance.toList.map (·.session)) name then
++            if let some entry := sessions.find? (·.name == name) then
++              maintenance := maintenance.push ⟨name,← IO.asTask entry.refresh .dedicated⟩
++          else waiting := waiting.push name
++        pending := waiting
++        sessions := sessions.filter fun entry => now < entry.touched+300000 ||
++          pending.contains entry.name || maintenance.any (·.session == entry.name) ||
++          clients.any (·.session == some entry.name)
++        if clients.isEmpty && readers.isEmpty && maintenance.isEmpty && now > lastActivity+300000 then
++          closing := true
++          stopped := true
++      IO.sleep 1
++  finally
++    -- IO.cancel alone cannot interrupt a task blocked on a socket selector.
++    -- Unregister the actual receive and await its owned task before exit.
++    stopReaders.cancel
++    for reader in readers do discard <| IO.wait reader.task
++    for client in clients do IO.cancel client.task
++    for work in maintenance do IO.cancel work.task
++    Worker.shutdown
++    -- Main must not enter Lean's task-manager finalization with owned IO
++    -- still running; that can prevent its async continuations from finishing.
++    for client in clients do discard <| IO.wait client.task
++    for work in maintenance do discard <| IO.wait work.task
++
++end Eggshell.Plugin.HookFrontend
+--- a/Eggshell/Persistence.lean
++++ b/Eggshell/Persistence.lean
+@@ -72,6 +72,7 @@
+   | 0 => throw (IO.userError s!"timed out waiting for {lockPath path}")
+   | retries + 1 =>
+       do
++        if ← IO.checkCanceled then throw (IO.userError "lock acquisition cancelled")
+         if ← handle.tryLock then return
+         IO.sleep 5
+         acquireLock handle path retries
+@@ -101,6 +102,7 @@
+ ingress. An expired request cannot start its protected action. -/
+ partial def acquireLockUntil (handle : IO.FS.Handle) (path : System.FilePath)
+     (deadline : Nat) : IO Unit := do
++  if ← IO.checkCanceled then throw (IO.userError "lock acquisition cancelled")
+   let now ← IO.monoMsNow
+   unless now < deadline do throw (IO.userError s!"timed out waiting for {lockPath path}")
+   if ← handle.tryLock then return
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -313,12 +313,15 @@
+   pure ()
+ 
+ def resolve : IO Daemon.Endpoint := do
++  if ← IO.checkCanceled then throw (IO.userError "publisher resolution cancelled")
+   let root ← directory
+   if let some endpoint ← endpoint? then
+     if endpoint.compatible (← generation) then
+       let reachable ← try ready endpoint; pure true catch _ => pure false
++      if ← IO.checkCanceled then throw (IO.userError "publisher resolution cancelled")
+       if reachable then return endpoint
+   Persistence.withLockWithin (root / "starting") 10000 do
++    if ← IO.checkCanceled then throw (IO.userError "publisher startup cancelled")
+     if let some endpoint ← endpoint? then
+       let live ← Numerical.alive endpoint.pid
+       if live then
+@@ -333,6 +336,7 @@
+     ownedServer.atomically (set (some child))
+     let deadline := (← IO.monoMsNow)+10000
+     repeat
++      if ← IO.checkCanceled then throw (IO.userError "publisher startup cancelled")
+       unless (← child.tryWait).isNone do throw (IO.userError "publisher exited during startup")
+       if let some endpoint ← endpoint? then
+         unless endpoint.pid == child.pid.toNat do throw (IO.userError "publisher startup returned another owner")

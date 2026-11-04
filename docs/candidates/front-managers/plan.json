@@ -1,0 +1,31 @@
+{
+  "parent": "cb4fabdd",
+  "status": "diagnostic-only",
+  "purpose": "Measure the normal per-chat manager layer omitted by direct operation-service load tests before starting large-payload sustained load",
+  "originalOwners": 16,
+  "logicalWriteProjects": 1,
+  "clients": 80,
+  "setup": "Reuse the actual product-capsule fixture, explicitly warm all current sources with local MiniLM, then capture 80 fresh current chat boundaries with prepared input references",
+  "managerStages": [10, 40, 80],
+  "startup": "sequential admission; this is not a simultaneous cold-start test",
+  "perStage": {"observations": 3, "sampleSpacingMs": 5000},
+  "measure": [
+    "fresh-chat input capture latency",
+    "actual manager PID inventory and its aggregate RSS",
+    "all relevant processes' aggregate RSS under the existing external guard",
+    "shared preparation and operation counters while the managers are idle",
+    "original head stability and actual exit of all managers"
+  ],
+  "failureRule": "Stop on the first failure or resource guard. Preserve partial stage samples; do not raise the bound or repeat unchanged.",
+  "stopRssKiB": 3670016,
+  "hardRssKiB": 4194304,
+  "diskFloorKiB": 2097152,
+  "doesNotEstablish": [
+    "normal hook output or 98 percent evidence delivery",
+    "5 to 50 KB output ingestion capacity or eight-hour operation",
+    "multiple-PC or NAS semantics",
+    "p99 hooks or matched total-token improvement"
+  ],
+  "answeringModelCalls": 0,
+  "adopted": false
+}

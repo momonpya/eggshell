@@ -77,6 +77,16 @@ owners are required, but do not alone establish 80-user support. Test publicatio
 preparation and queries together, retaining every acknowledged original and
 measuring queue age and unfinished preparation as well as hook deadlines.
 
+The [frontend continuation](candidates/front-managers/README.md) found another
+missing layer: the old normal entry still allocated one resident daemon per
+chat and hit the aggregate memory stop before reaching 80. Its isolated
+replacement registered 80 chats with one private local frontend, 69,264 KiB
+manager RSS and 288,416 KiB peak aggregate RSS, and passed actual process
+retirement with a partial-header peer. The project still has sixteen parallel
+original owners; sharing this entry does not put their publication into one
+global queue. This is an idle ownership/resource test, not full ordinary-hook
+traffic, sustained publication capacity or the 98% delivery gate.
+
 The [complete federation profile](candidates/federation-order/README.md) compares
 the same original source tuple at 256/1,024/4,096 Outcomes. Replacing repeated
 prefix-copying appends preserves all metadata but has no consistent practical
