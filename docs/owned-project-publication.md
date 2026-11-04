@@ -139,6 +139,15 @@ Keep multiple append owners within each project. Cold startup, running query
 throughput and combined sustained publication/preparation still require distinct
 capacity checks; increasing owner count does not by itself fix these failures.
 
+The [shared startup continuation](candidates/shared-startup/README.md) removes
+the short startup-guard waiter cutoff without changing parallel original owners
+or recommendation/certification. Eighty native cold callers and eight separate
+processes each share a frontend. The same cold retained-snapshot hook protocol
+now admits all eighty operations and delivers both original fields in 35/80
+cases, with no startup-guard failures. The other 45 still exceed later task
+deadlines. Queueing and repeated query work remain the next bottleneck; neither
+parallel ownership nor startup admission is full-system capacity evidence.
+
 The [frontend continuation](candidates/front-managers/README.md) found another
 missing layer: the old normal entry still allocated one resident daemon per
 chat and hit the aggregate memory stop before reaching 80. Its isolated

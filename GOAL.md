@@ -237,6 +237,11 @@ source headが変わると部分feedbackを捨て、照合の期限切れを入�
 
 終了した診断のDB/cache/生ログ/旧実行体を削除し、圧縮archiveは作っていない。原典2 snapshotと保護runtime計10件のSHAは削除前後不変。[削除記録](docs/candidates/fixed-frame-price/cleanup.json)。現在の対照DBと必要なnative object/interfaceは保持する。以下の共有実用化契約と最新AGENTSの採用条件は変更しない。
 
+
+直近の[shared-startup](docs/candidates/shared-startup/README.md)は`9a512e8c`のcold入口を修正した隔離候補。起動する要求だけが既存のOS guardを持ち、他は接続先の公開を元の絶対deadlineまで観測する。200msのguard待ちで切り捨てず、期限切れ/取消後は起動しない。新mutex/CAS/workerや時間枠は加えない。Leanの実述語2定理・宣言接続・標準ContractAuditが通った。実guardを350ms保持した80 native clientは80/80・776〜946ms、稼働済み80 clientも80/80・305〜419ms、独立8 processも8/8で各wave同じfrontendへ接続した。期限切れ71ms/取消/稼働中の異常endpoint拒否も確認し、部品guard発火0/残存0だった。これは全体lock-freeやNASの証明ではない。
+
+親と同じ16 owner/82原文snapshot・質問・MiniLM・120000 chars・native helperのcold 80 reader再検査では、全80がoperation受付へ到達し、実本文に両項目を含む配送は4/80→35/80、起動guard待ち失敗は76→0だった。しかし残る45はowned-task期限切れで、全体は依然不合格。成功内訳は意味6/字句29で、字句でも必要な原文2項目を確認した。全80入力はcomplete、原典head全16不変、明示warm2083ms。全測定12106〜29803msには失敗を含む。最終operation観測38件のqueue中央値20185/最大26191ms、処理中央値1220/最大9280msであり全要求p99ではない。数値観測12件は215〜639msで、意味経路全体6〜9秒の原因と混同しない。終了は45失敗による非ゼロだがguard発火0/残存0、集計RSS最大2758384KiB。並行原典所有者・検索/認定/数値/選択は不変。次は準備済みWorkGraph/検索の反復処理を実測で絞り込み、queueの排出と通常保存込み80接続へ進む。80人8時間/98%/p99/品質/総token改善は未達・未検証、回答モデル0/比較0/18、本体未採用。終了DB/cache/生logはcompact記録後に削除し、原典と必要なbuild/controlは保持する。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約

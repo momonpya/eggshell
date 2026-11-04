@@ -1,0 +1,154 @@
+diff --git a/Eggshell/Daemon.lean b/Eggshell/Daemon.lean
+index 350c6fb2..86610308 100644
+--- a/Eggshell/Daemon.lean
++++ b/Eggshell/Daemon.lean
+@@ -132,34 +132,81 @@ def readyEndpoint (session : String) : IO Endpoint := do
+   unless ← running endpoint do throw (IO.userError "eggshelld has exited")
+   pure endpoint
+ 
+-partial def awaitEndpoint (session : String) : Nat → IO Endpoint
+-  | 0 => throw (IO.userError "eggshelld did not become ready")
+-  | attempts + 1 =>
+-      try
+-        readyEndpoint session
+-      catch _ =>
+-        IO.sleep 10
+-        awaitEndpoint session attempts
++namespace Startup
+ 
+-def ensure (session : String) : IO Endpoint := do
+-  try readyEndpoint session
++def allowed (now deadline : Nat) (cancelled : Bool) : Bool :=
++  !cancelled && now < deadline
++
++theorem expired (now deadline : Nat) (elapsed : deadline ≤ now) (cancelled : Bool) :
++    allowed now deadline cancelled = false := by
++  simp [allowed,Nat.not_lt.mpr elapsed]
++
++theorem cancelled (now deadline : Nat) : allowed now deadline true = false := by
++  simp [allowed]
++
++def check (deadline : Nat) : IO Unit := do
++  unless allowed (← IO.monoMsNow) deadline (← IO.checkCanceled) do
++    throw (IO.userError "hook frontend startup cancelled or deadline expired")
++
++/-- A live, compatible but invalid endpoint is an error, never permission to
++replace its owner. Only absence, exit or another executable permits startup. -/
++def ready? (session : String) : IO (Option Endpoint) := do
++  try return some (← readyEndpoint session)
+   catch error =>
+-   let existing ← try some <$> loadEndpoint session catch _ => pure none
+-   if let some existing := existing then
+-     if existing.compatible (← desiredGeneration) && (← running existing) then throw error
+-   Persistence.withLockWithin (← startupLock) 200 do
+-    try readyEndpoint session
+-    catch error =>
+-      let existing ← try some <$> loadEndpoint session catch _ => pure none
+-      if let some existing := existing then
+-        if existing.compatible (← desiredGeneration) && (← running existing) then throw error
+-      try
+-        let stale ← loadEndpoint session
+-        let _ ← exchange stale "shutdown" (budget := 250)
+-      catch _ => pure ()
+-      removeIfExists (← endpointPath)
+-      spawn session
+-      awaitEndpoint session startupAttempts
++    let existing ← try some <$> loadEndpoint session catch _ => pure none
++    if let some existing := existing then
++      if existing.compatible (← desiredGeneration) && (← running existing) then throw error
++    return none
++
++partial def awaitReady (session : String) (deadline : Nat) : IO Endpoint := do
++  check deadline
++  if let some endpoint ← ready? session then return endpoint
++  IO.sleep (UInt32.ofNat (min 10 (deadline-(← IO.monoMsNow))))
++  awaitReady session deadline
++
++/-- Called only by the winner of the existing OS startup guard. Waiters never
++need this guard once that winner has published its ready endpoint. -/
++def startOwned (session : String) (deadline : Nat) : IO Endpoint := do
++  check deadline
++  if let some endpoint ← ready? session then return endpoint
++  try
++    let stale ← loadEndpoint session
++    let _ ← exchangeBefore stale "shutdown" Json.null (min deadline ((← IO.monoMsNow)+250))
++  catch _ => pure ()
++  check deadline
++  removeIfExists (← endpointPath)
++  spawn session
++  awaitReady session deadline
++
++partial def observeOrStart (session : String) (deadline : Nat) (guard : IO.FS.Handle) : IO Endpoint := do
++  check deadline
++  if let some endpoint ← ready? session then return endpoint
++  if ← guard.tryLock then
++    try startOwned session deadline finally guard.unlock
++  else
++    IO.sleep (UInt32.ofNat (min 10 (deadline-(← IO.monoMsNow))))
++    observeOrStart session deadline guard
++
++end Startup
++
++/-- All cold-start contenders observe the same endpoint without queueing for
++the winner's lock. Only a starter owns that existing guard. No short secondary
++admission budget can discard a request before its original deadline. -/
++def ensureBefore (session : String) (deadline : Nat) : IO Endpoint := do
++  Startup.check deadline
++  if let some endpoint ← Startup.ready? session then return endpoint
++  let path ← startupLock
++  Persistence.rejectSymlinkAncestors path
++  let lock := Persistence.lockPath path
++  Persistence.rejectSymlinkAncestors lock
++  if let some parent := lock.parent then
++    if !(← parent.pathExists) then Persistence.privateDirectory parent
++  let guard ← IO.FS.Handle.mk lock .append
++  Persistence.privateFile lock
++  Startup.observeOrStart session deadline guard
++
++def ensure (session : String) : IO Endpoint := do
++  ensureBefore session ((← IO.monoMsNow)+24000)
+ 
+ def chatClock (secret session : String) : String :=
+   Sha256.hex (secret ++ ":" ++ session).toUTF8
+@@ -186,8 +233,8 @@ def rpcClient (kind : String) : IO UInt32 := do
+       if ack != Json.null then
+         let acknowledged ← try
+           let session ← IO.ofExcept (requiredString ack "session_id")
+-          let endpoint ← ensure session
+           let deadline ← IO.ofExcept (input.getObjValAs? Nat "_eggshell_rpc_deadline")
++          let endpoint ← ensureBefore session deadline
+           let accepted ← exchangeBefore endpoint "ack" ack deadline
+           pure (Json.mkObj [("rpcCompleted", toJson true),
+             ("offerAccepted", (Json.parse accepted).toOption.getD Json.null)])
+@@ -196,9 +243,9 @@ def rpcClient (kind : String) : IO UInt32 := do
+       pure (Json.mkObj [("output", toJson "")])
+     else do
+       let session ← IO.ofExcept (requiredString input "session_id")
+-      let endpoint ← ensure session
+       let deadline := rpcDeadline (← IO.monoMsNow)
+         (input.getObjValAs? Nat "_eggshell_rpc_deadline").toOption
++      let endpoint ← ensureBefore session deadline
+       let output ← exchangeBefore endpoint kind input deadline
+       pure (Json.mkObj [("output", output)])
+     catch error => pure (Json.mkObj [("error", error.toString)])
+@@ -292,7 +339,7 @@ def hookRequest (input : Json) (deadline : Nat) (receipt : String) : IO Json :=
+       |>.setObjVal! "_eggshell_receipt" receipt
+     let session ← IO.ofExcept (requiredString input "session_id")
+     let ensureStarted ← IO.monoMsNow
+-    let endpoint ← ensure session
++    let endpoint ← ensureBefore session (deadline - 250)
+     let input := (input.setObjVal! "_eggshell_synapse_clock" (toJson (chatClock endpoint.secret session)))
+       |>.setObjVal! "_eggshell_synapse_nanos" (toJson observedNanos)
+     let ready ← IO.monoMsNow
+diff --git a/Eggshell/DaemonWire.lean b/Eggshell/DaemonWire.lean
+index 7cb0042a..953d7193 100644
+--- a/Eggshell/DaemonWire.lean
++++ b/Eggshell/DaemonWire.lean
+@@ -13,7 +13,6 @@ namespace Eggshell.Plugin.Daemon
+ open Lean Std Async TCP
+ 
+ def maxFrameBytes : Nat := 8 * 1024 * 1024
+-def startupAttempts : Nat := 80
+ 
+ structure Endpoint where
+   session : String := ""

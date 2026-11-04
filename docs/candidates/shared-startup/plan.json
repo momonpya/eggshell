@@ -1,0 +1,11 @@
+{
+  "parent": "9a512e8c512cc9572cbadeebeb869c9980731b83",
+  "defect": "Cold frontend 80-reader burst loses 76 callers at the 200ms startup-guard wait, before operation admission; all original inputs and outputs are intact.",
+  "change": "Contenders observe a shared ready endpoint without waiting to own the startup guard. Only a winner starts or replaces a process, using the existing OS guard and the caller's original absolute deadline. Preserve live-endpoint errors, generation, child ownership, cancellation and shutdown constraints.",
+  "tests": ["Hold the actual startup guard beyond 200ms; expired and cancelled callers cannot spawn", "80 native cold clients and 80 running clients share one authenticated frontend", "Eight independent client processes share one cold frontend", "Reject a live invalid endpoint without replacing its owner", "Retained 16-owner/82-original snapshot, normal 80-reader hook burst, actual frozen fields, original head integrity"],
+  "limits": {"hookSeconds":30,"stopRssKiB":3670016,"hardCeilingRssKiB":4194304,"minFreeKiB":2097152},
+  "scope": "One native startup and retained-readback diagnostic, not sustained 80-user/eight-hour capacity, p99, real-evidence 98%, quality or total-token improvement",
+  "adopted": false,
+  "answeringModelCalls": 0,
+  "matchedComparisons": "0/18"
+}
