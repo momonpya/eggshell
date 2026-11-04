@@ -1,0 +1,104 @@
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index 29d6aa8c..13d39a50 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -145,0 +146,3 @@ structure Search where
++  /-- Transport reference to a canonical pending frame whose remaining fields
++  are already explicit above. Materialize it before execution or callbacks. -/
++  preparedInputProducer : Option String := none
+@@ -147,0 +151,50 @@ structure Search where
++def Search.referenceWellFormed (request : Search) : Bool :=
++  request.preparedInputProducer.isNone ||
++    (request.pending.projection == .automatic && request.pending.preparedInputs.isNone &&
++      request.prepared.isSome && request.originals.isSome)
++
++def Search.referPrepared (request : Search) (producer : String) : Search :=
++  {request with pending := {request.pending with preparedInputs := none},preparedInputProducer := some producer}
++
++def Search.restorePrepared (request : Search) : Except String Search := do
++  let some producer := request.preparedInputProducer | return request
++  unless request.referenceWellFormed do throw "invalid prepared-input reference"
++  let some inputs := request.prepared | throw "prepared-input reference omitted inputs"
++  let some originals := request.originals | throw "prepared-input reference omitted originals"
++  let frame : PreparedInputs.Frame := ⟨producer,originals,inputs,request.owners⟩
++  return {request with
++    pending := {request.pending with preparedInputs := some ⟨toJson frame⟩}
++    preparedInputProducer := none}
++
++theorem Search.restore_direct (request : Search) (direct : request.preparedInputProducer = none) :
++    request.restorePrepared = .ok request := by
++  simp [Search.restorePrepared,direct,pure,Except.pure]
++
++/-- Invoke only after capturePrepared has checked the original/private boundary
++and any duplicate frame. Canonical equality also preserves the private envelope
++byte-for-byte on restoration; unknown extra fields are not silently dropped. -/
++def Search.compactPrepared (request : Search) : Except String Search := do
++  unless request.referenceWellFormed do throw "ambiguous prepared-input reference"
++  if request.pending.projection != .automatic || request.preparedInputProducer.isSome then return request
++  let some envelope := request.pending.preparedInputs | return request
++  let some inputs := request.prepared | throw "prepared-input compaction preceded capture"
++  let some originals := request.originals | throw "prepared-input compaction omitted originals"
++  let producer ← envelope.payload.getObjValAs? String "producer"
++  let frame : PreparedInputs.Frame := ⟨producer,originals,inputs,request.owners⟩
++  unless toJson frame == envelope.payload do throw "prepared-input envelope is not its checked canonical frame"
++  return request.referPrepared producer
++
++theorem Search.restore_refer (request : Search) (frame : PreparedInputs.Frame)
++    (automatic : request.pending.projection = .automatic)
++    (inputs : request.prepared = some frame.inputs)
++    (originals : request.originals = some frame.originals)
++    (owners : request.owners = frame.owners)
++    (pending : request.pending.preparedInputs = some ⟨toJson frame⟩)
++    (direct : request.preparedInputProducer = none) :
++    (request.referPrepared frame.producer).restorePrepared = .ok request := by
++  rcases request with ⟨saved,state,work,enforce,evidence,staged,deadline,startedAt,semanticCutoff,
++    route,receipt,prepared,sources,ownerViews,reference⟩
++  cases saved
++  cases frame
++  simp_all [Search.restorePrepared,Search.referPrepared,Search.referenceWellFormed,pure,Except.pure]
++
+@@ -179,0 +233,6 @@ def Search.asLexical (request : Search) : Search := {request with route := .lexi
++theorem Search.refer_identity (request : Search) (producer : String) :
++    (request.referPrepared producer).identity = request.identity := rfl
++
++theorem Search.refer_asLexical (request : Search) (producer : String) :
++    (request.referPrepared producer).asLexical = request.asLexical.referPrepared producer := rfl
++
+@@ -559 +618,2 @@ def exchange (session role : String) (payload : Json) (deadline : Nat)
+-        pure (toJson (← capturePrepared request (some deadline) cancelled.get))
++        let captured ← capturePrepared request (some deadline) cancelled.get
++        pure (toJson (← IO.ofExcept captured.compactPrepared))
+@@ -729 +789 @@ theorem changed_waiter_context_cannot_start (request : Search) (state : ThreadSt
+-def search (request : Search) (onSemanticReady : IO Unit := pure ()) : IO (Option Handoff) := do
++def searchRestored (request : Search) (onSemanticReady : IO Unit := pure ()) : IO (Option Handoff) := do
+@@ -786,0 +847,12 @@ def search (request : Search) (onSemanticReady : IO Unit := pure ()) : IO (Optio
++/-- Restore the original request before every semantic operation and dependency
++callback. The durable private pending value is never replaced by a wire reference. -/
++def search (request : Search) (onSemanticReady : IO Unit := pure ()) : IO (Option Handoff) := do
++  let restored ← IO.ofExcept request.restorePrepared
++  searchRestored restored onSemanticReady
++
++theorem search_restoration_exact (wire original : Search) (onSemanticReady : IO Unit)
++    (restored : wire.restorePrepared = .ok original)
++    (direct : original.preparedInputProducer = none) :
++    search wire onSemanticReady = search original onSemanticReady := by
++  simp only [search,restored,Search.restore_direct original direct]
++
+diff --git a/Eggshell/OperationPool.lean b/Eggshell/OperationPool.lean
+index b5cb6954..4e55e04a 100644
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -48,0 +49 @@ def validate (request : Request) : IO Unit := do
++    unless query.referenceWellFormed do throw (IO.userError "operation has an invalid prepared-input reference")
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 6f46063a..d274aae1 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2048 +2048,6 @@ run_meta do
+-      (``Eggshell.Plugin.Worker.search, ``Eggshell.Plugin.automaticHandoff),
++      (``Eggshell.Plugin.Worker.run, ``Eggshell.Plugin.Worker.search),
++      (``Eggshell.Plugin.Worker.search, ``Eggshell.Plugin.Worker.Search.restorePrepared),
++      (``Eggshell.Plugin.Worker.search, ``Eggshell.Plugin.Worker.searchRestored),
++      (``Eggshell.Plugin.Worker.searchRestored, ``Eggshell.Plugin.automaticHandoff),
++      (``Eggshell.Plugin.Worker.exchange, ``Eggshell.Plugin.Worker.capturePrepared),
++      (``Eggshell.Plugin.Worker.exchange, ``Eggshell.Plugin.Worker.Search.compactPrepared),
