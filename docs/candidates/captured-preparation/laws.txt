@@ -1,0 +1,6 @@
+Eggshell.DB.PageMap.withWriterFrom {α : Type} (snapshot : Snapshot) (basis : Head) (action : Writer → IO α) :
+  IO (α × Head × Nat)
+'Eggshell.Research.CapturedPreparationLaws.recovery_append_keeps_blob' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'Eggshell.Research.CapturedPreparationLaws.branch_keeps_both' depends on axioms: [propext, Classical.choice, Quot.sound]

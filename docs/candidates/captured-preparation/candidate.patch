@@ -1,0 +1,55 @@
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -1427,22 +1427,29 @@
+ 
+ /-- Caller holds the authority's writer guard. Recovery discards only bytes
+ beyond the currently published extent, never any pinned-reader interval. -/
+-private def withWriterLocked (snapshot : Snapshot) (action : Writer → IO α) : IO (α × Head × Nat) := do
++private def withWriterLocked (snapshot : Snapshot) (action : Writer → IO α)
++    (basis : Option Head := none) : IO (α × Head × Nat) := do
+   let current ← pin snapshot.directory
+   unless current.head == snapshot.head do throw (IO.userError "stale DB writer snapshot")
++  let base ← match basis with
++    | none => pure snapshot
++    | some head => do
++      let some retained ← HistoryReader.make? snapshot head |
++        throw (IO.userError "derived writer basis is outside the published extent")
++      pure retained.snapshot
+   let handle ← FileSystem.openAppend (dataPath snapshot.directory snapshot.head).toString
+   try
+     let actual ← FileSystem.readVersion snapshot.handle
+     if actual.bytes > snapshot.head.bytes then
+       FileSystem.truncateAppend handle actual.bytes.toUInt64 snapshot.head.bytes.toUInt64
+-    let writer : Writer := ⟨snapshot, handle, ← IO.mkRef snapshot.head.bytes,
+-      ← IO.mkRef 0, ← IO.mkRef snapshot.head.root, ← IO.mkRef false, ← IO.mkRef {},
++    let writer : Writer := ⟨base, handle, ← IO.mkRef snapshot.head.bytes,
++      ← IO.mkRef 0, ← IO.mkRef base.head.root, ← IO.mkRef false, ← IO.mkRef {},
+       ← IO.mkRef true, ← IO.mkRef false, ← IO.mkRef {}⟩
+     let result ← action writer
+     writer.flush
+     if ← writer.failed.get then throw (IO.userError "failed DB update cannot publish")
+     let root ← writer.root.get
+-    if root == snapshot.head.root then return (result, snapshot.head, 0)
++    if root == base.head.root then return (result, base.head, 0)
+     let bytes ← writer.extent.get
+     let head : Head := { snapshot.head with
+       root := root
+@@ -1464,6 +1471,18 @@
+   try withWriterLocked snapshot action
+   finally FileSystem.unlockRead guard
+ 
++/-- Derive an immutable cache root from a retained tree while appending after
++the current physical publication. Recovery uses the current published extent,
++never the older logical basis. Existing current-root writers stay strict.
++The cache caller must check source ancestry/coverage separately; a retained
++PageMap head by itself is not a certificate of original Work provenance. -/
++opaque withWriterFrom (snapshot : Snapshot) (basis : Head) (action : Writer → IO α) :
++    IO (α × Head × Nat) := do
++  let guard ← FileSystem.openRead (snapshot.directory / "writer").toString
++  unless ← FileSystem.tryReadLock guard true do throw (IO.userError "DB writer is busy")
++  try withWriterLocked snapshot action (some basis)
++  finally FileSystem.unlockRead guard
++
+ /-- Creation uses stable random authority identity, independent of placement.
+ There is no regular-file compatibility fallback. -/
+ def create (directory : System.FilePath) (authority : String) : IO Snapshot := do
