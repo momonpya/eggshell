@@ -148,6 +148,15 @@ cases, with no startup-guard failures. The other 45 still exceed later task
 deadlines. Queueing and repeated query work remain the next bottleneck; neither
 parallel ownership nor startup admission is full-system capacity evidence.
 
+The [query-work investigation](candidates/query-work/README.md) finds a repeated
+citation graph walk and removes it in a proven-equivalent isolated candidate.
+Actual single-query bodies remain identical, but whole-hook timings do not
+improve and the next retained-cut burst delivers only 21/80 versus the parent's
+35/80. That candidate is rejected and the parent's isolated source is restored.
+Parallel original ownership is unchanged. Next audit publication-prepared
+canonical lexical postings and owner ordering against the complete reference;
+do not infer full-system capacity from a cheaper individual computation.
+
 The [frontend continuation](candidates/front-managers/README.md) found another
 missing layer: the old normal entry still allocated one resident daemon per
 chat and hit the aggregate memory stop before reaching 80. Its isolated

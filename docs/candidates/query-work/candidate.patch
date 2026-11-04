@@ -1,0 +1,53 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index d02c4e5a..da915627 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -1791,6 +1791,35 @@ def sourceNeighborhood (roots : List Value) (all : List AllEdge) (unions : List
+   walk (roots.length + (all.flatMap (fun edge => edge.parent :: edge.children)).length +
+     unions.length * 2 + 1) initial initial
+ 
++/-- Compile each cited parent's reach once for this exact graph and persistent
++Union boundary. Membership is all the citation filter observes; no route or
++authority is synthesized by this advisory lookup. -/
++def citationReach (parents : List (Nat × Value × String))
++    (all : List AllEdge) (unions : List UnionEdge) : List (Nat × Std.HashSet Value × String) :=
++  parents.map fun (rank,work,text) =>
++    (rank,Std.HashSet.ofList ((sourceNeighborhood [work] all unions).map (·.work)),text)
++
++def citedParents (compiled : List (Nat × Std.HashSet Value × String))
++    (work : Value) : List (Nat × String) :=
++  compiled.filterMap fun (rank,reached,text) =>
++    if reached.contains work then some (rank,text) else none
++
++theorem citedParents_exact (parents : List (Nat × Value × String))
++    (all : List AllEdge) (unions : List UnionEdge) (work : Value) :
++    citedParents (citationReach parents all unions) work =
++      parents.filterMap (fun (rank,parent,text) =>
++        if (sourceNeighborhood [parent] all unions).any (fun row => row.work == work) then
++          some (rank,text) else none) := by
++  simp only [citedParents,citationReach,List.filterMap_map]
++  apply congrArg (fun choose => parents.filterMap choose)
++  funext parent
++  rcases parent with ⟨rank,parent,text⟩
++  simp only [Function.comp_apply,Std.HashSet.contains_ofList,List.contains_map]
++  have same : (sourceNeighborhood [parent] all unions).any (fun row => work == row.work) =
++      (sourceNeighborhood [parent] all unions).any (fun row => row.work == work) :=
++    List.any_congr rfl (fun _ => BEq.comm)
++  rw [same]
++
+ /-- Meaning search supplies entry points. A selected surrounding owner must
+ have a saved All/Union path to an entry, rather than another lexical hit. -/
+ structure NeighborhoodTransport (roots : List Value) (all : List AllEdge) (unions : List UnionEdge) where
+@@ -8654,10 +8683,9 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+     let owner ← nominatedOwners.find? (·.relation == relation)
+     let text ← Matcher.atomText? owner.outcome
+     if sourceAll.any (·.parent == owner.work) then some (rank,owner.work,text) else none
++  let parentReach := if evidence.isNone then citationReach parents sourceAll persistent else []
+   let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
+-    let admitted := parents.filterMap fun (rank,work,text) =>
+-      if (sourceNeighborhood [work] sourceAll persistent).any (·.work == item.owner.work) then
+-        some (rank,text) else none
++    let admitted := citedParents parentReach item.owner.work
+     (rankedCitedObservationCoordinates admitted item.owner item.provenance).map
+       (fun (priority,positions,ranks,ranges) => (item.owner.relation,priority,positions,ranks,ranges))
+   let referencedEvidence := referenced.map fun (owner,_,positions,_,_) => (owner,positions)

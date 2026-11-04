@@ -242,6 +242,11 @@ source headが変わると部分feedbackを捨て、照合の期限切れを入�
 
 親と同じ16 owner/82原文snapshot・質問・MiniLM・120000 chars・native helperのcold 80 reader再検査では、全80がoperation受付へ到達し、実本文に両項目を含む配送は4/80→35/80、起動guard待ち失敗は76→0だった。しかし残る45はowned-task期限切れで、全体は依然不合格。成功内訳は意味6/字句29で、字句でも必要な原文2項目を確認した。全80入力はcomplete、原典head全16不変、明示warm2083ms。全測定12106〜29803msには失敗を含む。最終operation観測38件のqueue中央値20185/最大26191ms、処理中央値1220/最大9280msであり全要求p99ではない。数値観測12件は215〜639msで、意味経路全体6〜9秒の原因と混同しない。終了は45失敗による非ゼロだがguard発火0/残存0、集計RSS最大2758384KiB。並行原典所有者・検索/認定/数値/選択は不変。次は準備済みWorkGraph/検索の反復処理を実測で絞り込み、queueの排出と通常保存込み80接続へ進む。80人8時間/98%/p99/品質/総token改善は未達・未検証、回答モデル0/比較0/18、本体未採用。終了DB/cache/生logはcompact記録後に削除し、原典と必要なbuild/controlは保持する。
 
+
+直近の[query-work診断と不採用候補](docs/candidates/query-work/README.md)は、製品変更前の同じ16 owner/82原文・質問・MiniLMで通常2フックを計測した。実選択は160 owner/320 unitで3ms、稼働済みindexed queryは3102msだった。昔のLLVM selector stackを今の主因にはしない。実workerの2秒sampleとコードから、160候補の内側で引用元の`sourceNeighborhood`を再計算すると確認した。引用元ごとに一度だけmembership集合を作る隔離候補は、任意入力に対する引用元順序/内容の一致をLeanで証明し、実宣言接続と標準ContractAuditが通った。通常2フックの88172-byte本文は親2フックと全てbyte一致したが、whole hookは親6859/4421ms、候補8143/5117msで改善せず。候補sampleで反復walkは消えたが、それだけで全体高速化とはしない。
+
+同じcold 80 reader検査でも候補は21/80（意味3/字句18）、受付74/80、59失敗で、親35/80・受付80/80より良くなかった。単発差の原因を候補だけへ断定はしないが、改善未確認なので採用せず、隔離sourceを`e6e9e2e5`へ戻す。全80入力はcomplete、原典head全16不変、測定18356〜29816ms。最終operation観測24件のqueue中央値20156/最大25670ms、処理中央値1793/最大15247ms。RSS最大2843088KiB、guard発火0/残存0、終了非ゼロを成功としない。回答モデル0/比較0/18、98%・80人継続・p99・総token/品質は未達。終了DB/cache/raw sample/log/不採用buildと一時source copyを削除する。次は出版済みcanonical字句postingsと各sourceのpostings/原順序の一致を実測/証明し、照会ごとのowner再構成を外せるか検査する。入力の候補性が元Outcomeのtext Workから決まることも含め、missing termを黙って0件扱いしない。選択器や重みの変更へ戻らない。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約
