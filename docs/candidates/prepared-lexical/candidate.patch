@@ -1,0 +1,38 @@
+diff --git a/Eggshell/SynapseTransport.lean b/Eggshell/SynapseTransport.lean
+index 3560c264..67e8b5ac 100644
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -128,0 +129,26 @@ def Plan.outputRanges (plan : Plan) : List (Value × List OutputRange) := Id.run
++/-- A prepared empty file-range demand has no binding rows to retrieve.
++Missing preparation and every nonempty demand retain the original checked RPC. -/
++def bindingProjection (reference : Option Plugin.Publication.Client.SourceReference)
++    (wanted : Array Range) (allowed : Std.HashSet String) (deadline : Nat) : IO IndexedBindings.Resolved := do
++  match reference with
++  | none => pure {complete := false}
++  | some reference =>
++      if wanted.isEmpty && reference.access.metadata.bindings.isSome then pure {}
++      else Plugin.Publication.Client.sourceBindings reference wanted allowed deadline
++
++theorem empty_binding_projection (reference : Plugin.Publication.Client.SourceReference)
++    (allowed : Std.HashSet String) (deadline : Nat)
++    (prepared : reference.access.metadata.bindings.isSome = true) :
++    bindingProjection (some reference) #[] allowed deadline = pure ({} : IndexedBindings.Resolved) := by
++  simp [bindingProjection,prepared]
++
++theorem nonempty_binding_projection (reference : Plugin.Publication.Client.SourceReference)
++    (wanted : Array Range) (allowed : Std.HashSet String) (deadline : Nat)
++    (nonempty : wanted.isEmpty = false) :
++    bindingProjection (some reference) wanted allowed deadline =
++      Plugin.Publication.Client.sourceBindings reference wanted allowed deadline := by
++  simp [bindingProjection,nonempty]
++
++theorem unprepared_binding_projection (wanted : Array Range) (allowed : Std.HashSet String) (deadline : Nat) :
++    bindingProjection none wanted allowed deadline = pure ({complete := false} : IndexedBindings.Resolved) := rfl
++
+@@ -175,3 +201 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+-        match source.canonical with
+-        | some reference => Plugin.Publication.Client.sourceBindings reference wanted allowed deadline
+-        | none => pure ({complete := false} : IndexedBindings.Resolved)
++        bindingProjection source.canonical wanted allowed deadline
+@@ -211,0 +236 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
++        if ids.isEmpty then continue

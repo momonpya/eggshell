@@ -6,6 +6,7 @@ import tools.research.SingleSearchChecks
 import tools.research.FrontSessionChecks
 import tools.research.LiteralRankChecks
 import tools.research.StartupChecks
+import tools.research.PreparedLexicalChecks
 
 open Lean Eggshell Eggshell.Plugin
 namespace Eggshell.Research.FrontTrafficChecks
@@ -341,6 +342,9 @@ end Eggshell.Research.FrontTrafficChecks
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["prepared-lexical-audit",source,root] =>
+      Eggshell.Research.PreparedLexicalChecks.run (.mk source) (.mk root)
+      return 0
   | ["shared-startup",root] =>
       Eggshell.Research.StartupChecks.run (.mk root)
       return 0

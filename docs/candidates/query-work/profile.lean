@@ -21,9 +21,10 @@ def sampleWorker (runtime : String) (root : System.FilePath) : IO Json := do
   return Json.mkObj [("pid",toJson pid),("parent",toJson server),("exitCode",toJson sampled.exitCode.toNat),
     ("stdout",toJson sampled.stdout),("stderr",toJson sampled.stderr),("seconds",toJson (2 : Nat))]
 def main (args : List String) : IO Unit := do
-  let (runtime,sourceName,rootName,sampling) ← match args with
-    | [runtime,sourceName,rootName] => pure (runtime,sourceName,rootName,false)
-    | [runtime,sourceName,rootName,"sample"] => pure (runtime,sourceName,rootName,true)
+  let (runtime,sourceName,rootName,sampling,lexical) ← match args with
+    | [runtime,sourceName,rootName] => pure (runtime,sourceName,rootName,false,false)
+    | [runtime,sourceName,rootName,"sample"] => pure (runtime,sourceName,rootName,true,false)
+    | [runtime,sourceName,rootName,"lexical"] => pure (runtime,sourceName,rootName,false,true)
     | _ => throw (IO.userError "runtime, retained source, fresh output and optional sample required")
   let source : System.FilePath := .mk sourceName
   let root : System.FilePath := .mk rootName
@@ -35,7 +36,7 @@ def main (args : List String) : IO Unit := do
   unless identity.exitCode == 0 do throw (IO.userError "cannot freeze runtime")
   IO.FS.writeFile (root/"runtime.sha256") identity.stdout
   let config := root/"eggshell.toml"
-  IO.FS.writeFile config ("default = \"work\"\n[eggs]\nwork = \""++(source/"work.project").toString++
+  IO.FS.writeFile config ("default = \"work\"\n"++(if lexical then "semantic_matcher = false\n" else "")++"[eggs]\nwork = \""++(source/"work.project").toString++
     "\"\n[profiles.work]\nread = [\"work\"]\nwrite = \"work\"\nhandoff_chars = 120000\n")
   let env := #[("EGGSHELL_DATA_ROOT",some (root/"private").toString),("EGGSHELL_CONFIG",some config.toString),
     ("PLUGIN_ROOT",some (root/"no-plugin-bundle").toString),("LEAN_NUM_THREADS",some "1"),
@@ -112,6 +113,6 @@ def main (args : List String) : IO Unit := do
     if !records.isEmpty then stages := stages.push (receipt.fileName,records)
   IO.FS.writeFile (root/"stages.json") (toJson stages).compress
   IO.FS.writeFile (root/"report.json") (Json.mkObj [("allOriginalHeadsUnchanged",toJson true),
-    ("rows",toJson rows),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false),
+    ("rows",toJson rows),("lexicalOnly",toJson lexical),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false),
     ("scope",toJson "Two sequential actual hooks with existing tracing enabled, not a speedup comparison or p99.")]).compress
   IO.println (toJson rows).compress

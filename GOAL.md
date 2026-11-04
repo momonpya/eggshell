@@ -247,6 +247,10 @@ source headが変わると部分feedbackを捨て、照合の期限切れを入�
 
 同じcold 80 reader検査でも候補は21/80（意味3/字句18）、受付74/80、59失敗で、親35/80・受付80/80より良くなかった。単発差の原因を候補だけへ断定はしないが、改善未確認なので採用せず、隔離sourceを`e6e9e2e5`へ戻す。全80入力はcomplete、原典head全16不変、測定18356〜29816ms。最終operation観測24件のqueue中央値20156/最大25670ms、処理中央値1793/最大15247ms。RSS最大2843088KiB、guard発火0/残存0、終了非ゼロを成功としない。回答モデル0/比較0/18、98%・80人継続・p99・総token/品質は未達。終了DB/cache/raw sample/log/不採用buildと一時source copyを削除する。次は出版済みcanonical字句postingsと各sourceのpostings/原順序の一致を実測/証明し、照会ごとのowner再構成を外せるか検査する。入力の候補性が元Outcomeのtext Workから決まることも含め、missing termを黙って0件扱いしない。選択器や重みの変更へ戻らない。
 
+最新の[prepared-lexical監査と空projection省略候補](docs/candidates/prepared-lexical/README.md)は、16 sourceの全545語/17073 posting/8質問の完全順位が出版済みcanonical postingsと一致することを確認した。ただし通常nominationは既存16.7〜17.6ms/準備済み7.7〜9.0msと小さく、この置換は製品候補へ接続しない。実字句フックで、対象0件のbinding RPCが2回合計32件、ownerのないsourceへのstructure RPCも発生していることを確認した。準備済みの空bindingと空ownerの構造取得だけを省く隔離候補は、全16 sourceのシナプス探索・完全な認定・非空の検証を維持する。Lean実分岐3定理/宣言接続/標準ContractAuditが通り、実字句本文13566 bytesと意味本文88578 bytesはそれぞれ親とbyte一致した。字句の単独実フックは親2342/1565ms、候補2241/1442ms、意味は親6859/4421ms、候補6798/4221ms。単発差を反復速度改善や総token改善としない。
+
+同じcold 80 readerは全80受付・両項目配送57/80（意味6/字句51）で、23件はowned-task期限切れ。親35/80との単発差だけで因果効果や合格とは扱わない。入力全80 complete、82原文の入出力一致と全16 head不変を確認した。warm1914ms、失敗込み測定10588〜29769ms、最終operation観測60件はqueue中央値18397/最大25215ms・処理中央値780/最大7785msで、p99ではない。RSS最大2948320KiB、guard発火0/残存0、終了非ゼロを記録した。並行する原文所有者の欠如が原因ではなく、検索の処理量とqueueの排出が未達である。次は同じ準備済み構造の再構成・metadata転送を調べ、通常保存/準備と合わせた持続負荷へ進む。worker/owner数や期限を広げて成功扱いにしない。回答モデル0/比較0/18、製品未採用。終了した試験DB/cache/raw logはcompact記録後に削除し、archiveは作らない。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約
