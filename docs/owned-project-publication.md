@@ -127,6 +127,18 @@ capacity. An unchanged-grammar diagnostic finds that sentence-final punctuation
 prevents the literal case key from matching its stored tool Work; nomination
 quality, query work/queueing and active-request shutdown remain separate work.
 
+The [literal nomination continuation](candidates/literal-boundaries/README.md)
+audits the same 82 originals and shows why a specific original falls outside
+eight lexical nominations. Its isolated literal-first rule repairs the original
+single-client question, but the next cold-frontend eighty-reader burst delivers
+both fields in only 4/80 cases. All other 76 fail on the short startup-guard wait
+before operation admission; original heads remain unchanged. This is a separate
+startup defect, not evidence that parallel original owners lost data or that the
+parent's different, already-running lifecycle was a matched capacity control.
+Keep multiple append owners within each project. Cold startup, running query
+throughput and combined sustained publication/preparation still require distinct
+capacity checks; increasing owner count does not by itself fix these failures.
+
 The [frontend continuation](candidates/front-managers/README.md) found another
 missing layer: the old normal entry still allocated one resident daemon per
 chat and hit the aggregate memory stop before reaching 80. Its isolated

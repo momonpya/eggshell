@@ -1,0 +1,142 @@
+diff --git a/tools/RetrievalGrams.lean b/tools/RetrievalGrams.lean
+index 3d7ca1f3..1a17020d 100644
+--- a/tools/RetrievalGrams.lean
++++ b/tools/RetrievalGrams.lean
+@@ -59,6 +59,60 @@ def StableTerms.add (state : StableTerms) (term : String) : StableTerms :=
+   if state.seen.contains term then state
+   else {entries := state.entries.push term, seen := state.seen.insert term}
+ 
++def sentenceEnd (c : Char) : Bool := c == '.' || c == ':'
++
++def boundaryWord (characters : List Char) : List Char :=
++  (characters.reverse.dropWhile sentenceEnd).reverse
++
++private theorem dropWhile_stable (predicate : Char → Bool) (characters : List Char) :
++    (characters.dropWhile predicate).dropWhile predicate = characters.dropWhile predicate := by
++  induction characters with
++  | nil => rfl
++  | cons head tail ih =>
++    cases h : predicate head <;> simp [h,ih]
++
++theorem boundaryWord_idempotent (characters : List Char) :
++    boundaryWord (boundaryWord characters) = boundaryWord characters := by
++  simp [boundaryWord,dropWhile_stable]
++
++theorem boundaryWord_period (characters : List Char) :
++    boundaryWord (characters++['.']) = boundaryWord characters := by
++  simp [boundaryWord,sentenceEnd,List.reverse_append]
++
++theorem boundaryWord_colon (characters : List Char) :
++    boundaryWord (characters++[':']) = boundaryWord characters := by
++  simp [boundaryWord,sentenceEnd,List.reverse_append]
++
++/-- Preserve each literal path/identifier and add a punctuation-boundary alias.
++The fast suffix check avoids reversing ordinary words. A meaningful trailing
++dot/colon remains searchable by its original form; no identity uses this alias. -/
++def wordForms (characters : List Char) : List String :=
++  if characters.isEmpty then [] else
++  let literal := String.ofList characters
++  if literal.endsWith "." || literal.endsWith ":" then
++    let boundary := boundaryWord characters
++    if boundary.isEmpty then [literal] else [literal,String.ofList boundary]
++  else [literal]
++
++theorem wordForms_literal (characters : List Char) (nonempty : characters.isEmpty = false) :
++    String.ofList characters ∈ wordForms characters := by
++  simp only [wordForms,nonempty,Bool.false_eq_true,↓reduceIte]
++  split
++  · split <;> simp
++  · simp
++
++theorem wordForms_bounded (characters : List Char) : (wordForms characters).length ≤ 2 := by
++  unfold wordForms
++  split
++  · simp
++  · dsimp only
++    split
++    · split <;> simp
++    · simp
++
++def StableTerms.addWord (state : StableTerms) (characters : List Char) : StableTerms :=
++  (wordForms characters).foldl StableTerms.add state
++
+ /-- Pure retrieval experiment. Words/paths retain their ordinary boundaries;
+ Kana/Han/Hangul runs supply overlapping pairs with single-scalar auxiliaries.
+ Unicode letters, numbers and combining marks are retained. Width folding is
+@@ -76,7 +130,7 @@ def terms (text : String) : Terms := Id.run do
+       if Unicode.letterNumber c || asciiTerm c || attached then
+         if script c || (attached && previous.isSome) then
+           if !word.isEmpty then
+-            primary := primary.add (String.ofList word.toList)
++            primary := primary.addWord word.toList
+             word := #[]
+           if let some before := previous then
+             for pair in pairs [before, c] do primary := primary.add pair
+@@ -87,10 +141,10 @@ def terms (text : String) : Terms := Id.run do
+           word := word.push c
+       else
+         if !word.isEmpty then
+-          primary := primary.add (String.ofList word.toList)
++          primary := primary.addWord word.toList
+           word := #[]
+         previous := none
+-  if !word.isEmpty then primary := primary.add (String.ofList word.toList)
++  if !word.isEmpty then primary := primary.addWord word.toList
+   return {primary := primary.entries.toList, auxiliary := auxiliary.entries.toList}
+ 
+ /-- Lane tags contain no punctuation/digits, so anchor detection still sees
+diff --git a/tools/RetrievalGramsTests.lean b/tools/RetrievalGramsTests.lean
+index 8bdecc96..75e7fab1 100644
+--- a/tools/RetrievalGramsTests.lean
++++ b/tools/RetrievalGramsTests.lean
+@@ -6,6 +6,11 @@ open Eggshell RetrievalResearch
+ private def require (ok : Bool) (message : String) : IO Unit :=
+   unless ok do throw (IO.userError message)
+ 
++/-- Deliberately simple bounded-test oracle, independent of the streaming
++word emitter and the reverse/drop implementation of boundaryWord. -/
++private partial def referenceBoundary (word : String) : String :=
++  if word.endsWith "." || word.endsWith ":" then referenceBoundary (word.dropEnd 1).toString else word
++
+ /-- The list/run oracle from commit 8114a17, independent of the streaming
+ emitter and its incremental seen sets. Used only on bounded test inputs. -/
+ private def referenceTerms (text : String) : Terms := Id.run do
+@@ -30,9 +35,22 @@ private def referenceTerms (text : String) : Terms := Id.run do
+       result := addRun result run.toList isScript
+       run := #[]
+   result := addRun result run.toList isScript
+-  return {primary := result.primary.reverse.eraseDups, auxiliary := result.auxiliary.reverse.eraseDups}
++  let primary := result.primary.reverse.flatMap fun word =>
++    let boundary := referenceBoundary word
++    if boundary.isEmpty || boundary == word then [word] else [word,boundary]
++  return {primary := primary.eraseDups, auxiliary := result.auxiliary.reverse.eraseDups}
+ 
+ def main : IO Unit := do
++  require ((terms "case-79.").primary == ["case-79.","case-79"]) "sentence period hid an identifier"
++  require ((terms "archive.tar.gz.").primary == ["archive.tar.gz.","archive.tar.gz"]) "file extension was split"
++  require ((terms ".config:").primary == [".config:",".config"]) "leading dot was removed"
++  require ((terms "mcp://host/item-12.").primary == ["mcp://host/item-12.","mcp://host/item-12"])
++    "resource URI lost its literal form or boundary alias"
++  require ((terms "std::").primary == ["std::","std"]) "qualified-name literal disappeared"
++  require ((terms ".. : -x ./").primary == ["..",":","-x","./"]) "literal punctuation/flag/path forms disappeared"
++  require ((terms "café. Поиск:").primary == ["café.","café","поиск:","поиск"]) "non-ASCII word alias was lost"
++  require ((terms "case-79").primary == ["case-79"]) "ordinary word was expanded unnecessarily"
++  require ((tokens "case-79.").any (tokens "{\"case\":\"case-79\"}").contains) "natural text and structured identifier cannot meet"
+   require ((terms "保存した本文").primary == ["保存", "存し", "した", "た本", "本文"])
+     "Japanese pairs must overlap"
+   require ((terms "한국어 검색").primary == ["한국", "국어", "검색"])
+@@ -78,7 +96,7 @@ def main : IO Unit := do
+       let actual := terms text
+       let expected := referenceTerms text
+       require (actual.primary == expected.primary && actual.auxiliary == expected.auxiliary)
+-        "Streaming tokenization differs from the previous normalized-run oracle"
++        "Streaming tokenization differs from the independent run/boundary oracle"
+       differential := differential + 1
+   let large := String.ofList ((List.range 200000).map fun i => Char.ofNat (0x4e00 + i % 20000))
+   let parsed := terms large
+@@ -93,4 +111,4 @@ def main : IO Unit := do
+         require (Unicode.contains ranges c == expected)
+           "Binary category lookup differs at an interval boundary"
+         boundaries := boundaries + 1
+-  IO.println s!"retrieval grammar: 15 checks, 4 multilingual probes, {differential} streaming/oracle comparisons, 200000 scalars and {boundaries} category boundaries passed"
++  IO.println s!"retrieval grammar: 24 checks, 4 multilingual probes, {differential} streaming/oracle comparisons, 200000 scalars and {boundaries} category boundaries passed"

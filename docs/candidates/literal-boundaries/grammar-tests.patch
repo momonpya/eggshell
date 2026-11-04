@@ -1,0 +1,69 @@
+diff --git a/tools/RetrievalGramsTests.lean b/tools/RetrievalGramsTests.lean
+index 8bdecc96..2e08f4d4 100644
+--- a/tools/RetrievalGramsTests.lean
++++ b/tools/RetrievalGramsTests.lean
+@@ -1,11 +1,17 @@
+ import tools.RetrievalGrams
+ import Eggshell.LogicalText
++import Eggshell.SearchRank
+ 
+ open Eggshell RetrievalResearch
+ 
+ private def require (ok : Bool) (message : String) : IO Unit :=
+   unless ok do throw (IO.userError message)
+ 
++/-- Deliberately simple bounded-test oracle, independent of the streaming
++word emitter and the reverse/drop implementation of boundaryWord. -/
++private partial def referenceBoundary (word : String) : String :=
++  if word.endsWith "." || word.endsWith ":" then referenceBoundary (word.dropEnd 1).toString else word
++
+ /-- The list/run oracle from commit 8114a17, independent of the streaming
+ emitter and its incremental seen sets. Used only on bounded test inputs. -/
+ private def referenceTerms (text : String) : Terms := Id.run do
+@@ -30,9 +36,30 @@ private def referenceTerms (text : String) : Terms := Id.run do
+       result := addRun result run.toList isScript
+       run := #[]
+   result := addRun result run.toList isScript
+-  return {primary := result.primary.reverse.eraseDups, auxiliary := result.auxiliary.reverse.eraseDups}
++  let primary := result.primary.reverse.flatMap fun word =>
++    let boundary := referenceBoundary word
++    if boundary.isEmpty || boundary == word then [word] else [word,boundary]
++  return {primary := primary.eraseDups, auxiliary := result.auxiliary.reverse.eraseDups}
+ 
+ def main : IO Unit := do
++  for unit in ["Pcase-79.","Psrc/main.cpp:","P.config","Pmcp://host/id","P0x1234:","Pvalue_name"] do
++    require (SearchRank.literalTerm unit) "structured spelling was not a literal locator"
++  for unit in ["Pfacts.","Pwork:","Pplain","P:","P..."] do
++    require (!SearchRank.literalTerm unit) "sentence punctuation became a literal locator"
++  require (SearchRank.preferLiteralMatches [3,0,2,1] (fun i => i%2 == 0) == [0,2,3,1])
++    "literal routing changed within-lane order"
++  require (SearchRank.preferLiteralMatches [3,0,2,1] (fun _ => false) == [3,0,2,1])
++    "ordinary ranking changed without literal evidence"
++  require ((terms "case-79.").primary == ["case-79.","case-79"]) "sentence period hid an identifier"
++  require ((terms "archive.tar.gz.").primary == ["archive.tar.gz.","archive.tar.gz"]) "file extension was split"
++  require ((terms ".config:").primary == [".config:",".config"]) "leading dot was removed"
++  require ((terms "mcp://host/item-12.").primary == ["mcp://host/item-12.","mcp://host/item-12"])
++    "resource URI lost its literal form or boundary alias"
++  require ((terms "std::").primary == ["std::","std"]) "qualified-name literal disappeared"
++  require ((terms ".. : -x ./").primary == ["..",":","-x","./"]) "literal punctuation/flag/path forms disappeared"
++  require ((terms "café. Поиск:").primary == ["café.","café","поиск:","поиск"]) "non-ASCII word alias was lost"
++  require ((terms "case-79").primary == ["case-79"]) "ordinary word was expanded unnecessarily"
++  require ((tokens "case-79.").any (tokens "{\"case\":\"case-79\"}").contains) "natural text and structured identifier cannot meet"
+   require ((terms "保存した本文").primary == ["保存", "存し", "した", "た本", "本文"])
+     "Japanese pairs must overlap"
+   require ((terms "한국어 검색").primary == ["한국", "국어", "검색"])
+@@ -78,7 +105,7 @@ def main : IO Unit := do
+       let actual := terms text
+       let expected := referenceTerms text
+       require (actual.primary == expected.primary && actual.auxiliary == expected.auxiliary)
+-        "Streaming tokenization differs from the previous normalized-run oracle"
++        "Streaming tokenization differs from the independent run/boundary oracle"
+       differential := differential + 1
+   let large := String.ofList ((List.range 200000).map fun i => Char.ofNat (0x4e00 + i % 20000))
+   let parsed := terms large
+@@ -93,4 +120,4 @@ def main : IO Unit := do
+         require (Unicode.contains ranges c == expected)
+           "Binary category lookup differs at an interval boundary"
+         boundaries := boundaries + 1
+-  IO.println s!"retrieval grammar: 15 checks, 4 multilingual probes, {differential} streaming/oracle comparisons, 200000 scalars and {boundaries} category boundaries passed"
++  IO.println s!"retrieval grammar: 24 checks, 11 literal classifications, stable routing, 4 multilingual probes, {differential} streaming/oracle comparisons, 200000 scalars and {boundaries} category boundaries passed"

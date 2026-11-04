@@ -4,6 +4,7 @@ import tools.research.FrontInputAudit
 import tools.research.DirectNumericalChecks
 import tools.research.SingleSearchChecks
 import tools.research.FrontSessionChecks
+import tools.research.LiteralRankChecks
 
 open Lean Eggshell Eggshell.Plugin
 namespace Eggshell.Research.FrontTrafficChecks
@@ -289,10 +290,66 @@ def inputDiagnostic (root : System.FilePath) (count : Nat) : IO Unit := do
       let _ ← Publication.Client.control "shutdown"
       pure ()
 
+def retainedReadback (source root : System.FilePath) : IO Unit := do
+  let project ← ProjectStore.openProject (source/"work.project")
+  let view ← ProjectStore.pin project ((← IO.monoMsNow)+30000)
+  let frozen ← IO.ofExcept (Json.parse (← IO.FS.readFile (source/"frozen-readback.json")))
+  check (toJson (view.sources.map (·.head)) == frozen.getObjValD "sourceHeads") "retained readback changed the frozen cut"
+  let config := root/"eggshell.toml"
+  IO.FS.writeFile config ("default = \"work\"\n[eggs]\nwork = \""++(source/"work.project").toString++
+    "\"\n[profiles.work]\nread = [\"work\"]\nwrite = \"work\"\nhandoff_chars = 120000\n")
+  try
+    let identity ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",(← IO.appPath).toString]}
+    check (identity.exitCode == 0) "cannot freeze readback runtime"
+    IO.FS.writeFile (root/"runtime.sha256") identity.stdout
+    let began ← IO.monoMsNow
+    let warmed ← IO.Process.output {
+      cmd := (← IO.appPath).toString
+      args := #["egg","warm",(source/"work.project").toString]
+      env := #[("EGGSHELL_CONFIG",some config.toString)] }
+    IO.FS.writeFile (root/"warm-stdout.json") warmed.stdout
+    IO.FS.writeFile (root/"warm-stderr.txt") warmed.stderr
+    save (root/"warm-result.json") (Json.mkObj [("elapsedMs",toJson ((← IO.monoMsNow)-began)),
+      ("exitCode",toJson warmed.exitCode.toNat)])
+    check (warmed.exitCode == 0) "retained numeric preparation failed"
+    for original in view.sources do
+      check ((← DB.PageMap.pin original.directory).head == original.head) "warm changed frozen original heads"
+      let some ready ← PreparedInputs.load? original MiniLM.model SearchProvider.encoderContract |
+        throw (IO.userError "retained source input is not prepared")
+      check (ready.population == 0 || ready.numeric.isSome) "retained numeric source is cold"
+    check ((← OwnerViews.load? view.sources).isSome) "retained owner inputs are incomplete"
+    let labels := #["seed-alpha","seed-tail"]++(List.range 80).toArray.map (fun i => s!"case-{i}")
+    auditOriginals root view labels 5000 "before"
+    save (root/"frozen-readback.json") frozen
+    let rows ← parallel root "readers" 80 fun i => do
+      let row ← query root s!"retained-reader-{i}" "Return the recorded head and tail facts for support case-79." "readback"
+      check (containsEvidence row #["case-79"]) "retained reader omitted a frozen original field"
+      return row
+    for original in view.sources do
+      check ((← DB.PageMap.pin original.directory).head == original.head) "readback changed frozen original heads"
+    save (root/"report.json") (Json.mkObj [("allPassed",toJson true),("clients",toJson rows.size),
+      ("administrativeWarmCalls",toJson (1 : Nat)),("answeringModelCalls",toJson (0 : Nat)),
+      ("originalHeadsUnchanged",toJson true),("adopted",toJson false)])
+  finally
+    try Daemon.shutdown finally
+      Worker.shutdown
+      let _ ← Publication.Client.control "shutdown"
+      pure ()
+
 end Eggshell.Research.FrontTrafficChecks
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["literal-readback",source,root] => do
+      let root : System.FilePath := .mk root
+      Eggshell.Research.FrontTrafficChecks.check (!(← root.pathExists)) "preserve earlier readback trial"
+      IO.FS.createDirAll root
+      Numerical.withDefaultKeeper (do
+        Eggshell.Research.FrontTrafficChecks.retainedReadback (.mk source) root
+        pure 0) 1000
+  | ["literal-rank-audit",source,root] =>
+      Eggshell.Research.LiteralRankChecks.audit (.mk source) (.mk root)
+      return 0
   | ["front-session-policy",root] =>
       Eggshell.Research.FrontSessionChecks.policy (.mk root)
       return 0

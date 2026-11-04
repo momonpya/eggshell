@@ -1,0 +1,143 @@
+diff --git a/tools/RetrievalGrams.lean b/tools/RetrievalGrams.lean
+index 3d7ca1f3..1a17020d 100644
+--- a/tools/RetrievalGrams.lean
++++ b/tools/RetrievalGrams.lean
+@@ -59,6 +59,60 @@ def StableTerms.add (state : StableTerms) (term : String) : StableTerms :=
+   if state.seen.contains term then state
+   else {entries := state.entries.push term, seen := state.seen.insert term}
+ 
++def sentenceEnd (c : Char) : Bool := c == '.' || c == ':'
++
++def boundaryWord (characters : List Char) : List Char :=
++  (characters.reverse.dropWhile sentenceEnd).reverse
++
++private theorem dropWhile_stable (predicate : Char → Bool) (characters : List Char) :
++    (characters.dropWhile predicate).dropWhile predicate = characters.dropWhile predicate := by
++  induction characters with
++  | nil => rfl
++  | cons head tail ih =>
++    cases h : predicate head <;> simp [h,ih]
++
++theorem boundaryWord_idempotent (characters : List Char) :
++    boundaryWord (boundaryWord characters) = boundaryWord characters := by
++  simp [boundaryWord,dropWhile_stable]
++
++theorem boundaryWord_period (characters : List Char) :
++    boundaryWord (characters++['.']) = boundaryWord characters := by
++  simp [boundaryWord,sentenceEnd,List.reverse_append]
++
++theorem boundaryWord_colon (characters : List Char) :
++    boundaryWord (characters++[':']) = boundaryWord characters := by
++  simp [boundaryWord,sentenceEnd,List.reverse_append]
++
++/-- Preserve each literal path/identifier and add a punctuation-boundary alias.
++The fast suffix check avoids reversing ordinary words. A meaningful trailing
++dot/colon remains searchable by its original form; no identity uses this alias. -/
++def wordForms (characters : List Char) : List String :=
++  if characters.isEmpty then [] else
++  let literal := String.ofList characters
++  if literal.endsWith "." || literal.endsWith ":" then
++    let boundary := boundaryWord characters
++    if boundary.isEmpty then [literal] else [literal,String.ofList boundary]
++  else [literal]
++
++theorem wordForms_literal (characters : List Char) (nonempty : characters.isEmpty = false) :
++    String.ofList characters ∈ wordForms characters := by
++  simp only [wordForms,nonempty,Bool.false_eq_true,↓reduceIte]
++  split
++  · split <;> simp
++  · simp
++
++theorem wordForms_bounded (characters : List Char) : (wordForms characters).length ≤ 2 := by
++  unfold wordForms
++  split
++  · simp
++  · dsimp only
++    split
++    · split <;> simp
++    · simp
++
++def StableTerms.addWord (state : StableTerms) (characters : List Char) : StableTerms :=
++  (wordForms characters).foldl StableTerms.add state
++
+ /-- Pure retrieval experiment. Words/paths retain their ordinary boundaries;
+ Kana/Han/Hangul runs supply overlapping pairs with single-scalar auxiliaries.
+ Unicode letters, numbers and combining marks are retained. Width folding is
+@@ -76,7 +130,7 @@ def terms (text : String) : Terms := Id.run do
+       if Unicode.letterNumber c || asciiTerm c || attached then
+         if script c || (attached && previous.isSome) then
+           if !word.isEmpty then
+-            primary := primary.add (String.ofList word.toList)
++            primary := primary.addWord word.toList
+             word := #[]
+           if let some before := previous then
+             for pair in pairs [before, c] do primary := primary.add pair
+@@ -87,10 +141,10 @@ def terms (text : String) : Terms := Id.run do
+           word := word.push c
+       else
+         if !word.isEmpty then
+-          primary := primary.add (String.ofList word.toList)
++          primary := primary.addWord word.toList
+           word := #[]
+         previous := none
+-  if !word.isEmpty then primary := primary.add (String.ofList word.toList)
++  if !word.isEmpty then primary := primary.addWord word.toList
+   return {primary := primary.entries.toList, auxiliary := auxiliary.entries.toList}
+ 
+ /-- Lane tags contain no punctuation/digits, so anchor detection still sees
+diff --git a/Eggshell/SearchRank.lean b/Eggshell/SearchRank.lean
+index 243ec728..098287b9 100644
+--- a/Eggshell/SearchRank.lean
++++ b/Eggshell/SearchRank.lean
+@@ -38,6 +38,36 @@ theorem terms_nodup (text : String) : (terms text).Nodup :=
+ 
+ def anchor (term : String) : Bool := RetrievalResearch.anchor term
+ 
++/-- Explicit identifier/path spellings are advisory locators. A sentence-final
++dot/colon alone does not turn an ordinary word into a structured locator. -/
++def literalUnits (characters : List Char) : Bool :=
++  (RetrievalResearch.boundaryWord characters).any fun c =>
++    "_/:.".contains c || SearchUnicode.isDigit c
++
++def literalTerm (term : String) : Bool := literalUnits term.toList
++
++theorem literalUnits_period (characters : List Char) :
++    literalUnits (characters++['.']) = literalUnits characters := by
++  simp only [literalUnits,RetrievalResearch.boundaryWord_period]
++
++theorem literalUnits_colon (characters : List Char) :
++    literalUnits (characters++[':']) = literalUnits characters := by
++  simp only [literalUnits,RetrievalResearch.boundaryWord_colon]
++
++/-- Stable routing within the existing nomination domain. Scores and relative
++order inside each lane are unchanged; this grants no reuse authority. -/
++def preferLiteralMatches (ranked : List Nat) (named : Nat → Bool) : List Nat :=
++  ranked.filter named ++ ranked.filter (fun index => !named index)
++
++theorem preferLiteralMatches_members (ranked : List Nat) (named : Nat → Bool) (id : Nat) :
++    id ∈ preferLiteralMatches ranked named ↔ id ∈ ranked := by
++  cases h : named id <;> simp [preferLiteralMatches,h]
++
++theorem preferLiteralMatches_order (ranked : List Nat) (named : Nat → Bool) :
++    (preferLiteralMatches ranked named).filter named = ranked.filter named := by
++  simp only [preferLiteralMatches,List.filter_append,List.filter_filter]
++  simp
++
+ def scoreOrder (a b : Float × Nat) : Bool :=
+   a.1 > b.1 || (a.1 == b.1 && a.2 ≤ b.2)
+ 
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 71869243..d02c4e5a 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -7906,6 +7906,10 @@ def lexicalNominations (population : Nat) (posting : String → IO (List Nat ×
+     | .inr (_, terms) => terms.contains unit
+   let ranked := SearchRank.rankRows current rows contains (frequencies.getD · 0) false
+     (population + staged.length)
++  let named := wanted.filter SearchRank.literalTerm
++  let ranked := if named.isEmpty then ranked else
++    SearchRank.preferLiteralMatches ranked fun index =>
++      (rows[index]?).any fun row => named.any (contains row)
+   let ordered := ranked.filterMap (rows[·]?)
+   let nominated := ordered.take 8
+   pure {
