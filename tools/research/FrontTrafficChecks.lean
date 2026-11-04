@@ -1,5 +1,6 @@
 import Main
 import tools.research.TaskDeadlineChecks
+import tools.research.FrontInputAudit
 
 open Lean Eggshell Eggshell.Plugin
 namespace Eggshell.Research.FrontTrafficChecks
@@ -98,15 +99,19 @@ def waitReady (root : System.FilePath) (project : ProjectStore.Project) (session
     let empty ← queuesEmpty sessions
     let mut prepared := 0
     for source in view.sources do
-      if source.head.root.isNone || (← PreparedInputs.load? source MiniLM.model SearchProvider.encoderContract).isSome then
-        prepared := prepared+1
+      if let some reference ← PreparedInputs.load? source MiniLM.model SearchProvider.encoderContract then
+        if reference.population == 0 || reference.numeric.isSome then
+          prepared := prepared+1
+    let owners ← OwnerViews.load? view.sources
+    let ownerReferenceReady := owners.isSome
     let state ← IO.ofExcept (Json.parse (← Publication.Client.control "stats"))
     samples := samples.push (Json.mkObj [("elapsedMs",toJson ((← IO.monoMsNow)-started)),
       ("queuesEmpty",toJson empty),("preparedSources",toJson prepared),
+      ("ownerReferenceReady",toJson ownerReferenceReady),
       ("sourceHeads",toJson (view.sources.map (·.head))),
       ("preparation",state.getObjValD "preparation"),("operations",state.getObjValD "operations")])
     save (root/(label++"-drain.json")) (toJson samples)
-    if empty && prepared == view.sources.size then return view
+    if empty && prepared == view.sources.size && ownerReferenceReady then return view
     check ((← IO.monoMsNow) < started+180000) "original publication/background preparation did not drain"
     IO.sleep 500
   throw (IO.userError "unreachable background wait")
@@ -250,6 +255,37 @@ def run (root : System.FilePath) (count size : Nat) (profile : Bool := false) : 
       let _ ← Publication.Client.control "shutdown"
       pure ()
 
+def inputDiagnostic (root : System.FilePath) (count : Nat) : IO Unit := do
+  check (count == 8) "diagnostic cohort is fixed at eight readers"
+  let project ← ProjectStore.create (root/"work.project") 16
+  IO.FS.writeFile (root/"eggshell.toml")
+    "default = \"work\"\n[eggs]\nwork = \"work.project\"\n[profiles.work]\nread = [\"work\"]\nwrite = \"work\"\nhandoff_chars = 120000\n"
+  try
+    let _ ← query root "seed-chat" "Record the support seed alpha and tail observations." "seed"
+    let _ ← tool root "seed-chat" "seed-alpha" 512
+    let _ ← tool root "seed-chat" "seed-tail" 512
+    let _ ← finish root "seed-chat" "seed" s!"References [{uri "seed-alpha"}]({uri "seed-alpha"}) and [{uri "seed-tail"}]({uri "seed-tail"})."
+    let view ← waitReady root project #["seed-chat"] "seed"
+    auditOriginals root view #["seed-alpha","seed-tail"] 512 "seed"
+    let owners ← OwnerViews.load? view.sources
+    save (root/"frozen-inputs.json") (Json.mkObj [("sourceHeads",toJson (view.sources.map (·.head))),
+      ("ownerReferenceReady",toJson owners.isSome),("fields",toJson #["head","tail"]),
+      ("labels",toJson #["seed-alpha","seed-tail"])])
+    let rows ← parallel root "input-readers" count fun i => do
+      let row ← query root s!"input-reader-{i}" "Return the recorded support seed alpha and tail facts." "initial"
+      check (containsEvidence row #["seed-alpha","seed-tail"]) "diagnostic reader omitted a frozen field"
+      return row
+    for source in view.sources do
+      check ((← DB.PageMap.pin source.directory).head == source.head) "read-only diagnostic changed original heads"
+    save (root/"input-report.json") (Json.mkObj [("allPassed",toJson true),("readers",toJson rows.size),
+      ("sourceHeadsUnchanged",toJson true),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false),
+      ("serviceStats",← IO.ofExcept (Json.parse (← Publication.Client.control "stats")))])
+  finally
+    try Daemon.shutdown finally
+      Worker.shutdown
+      let _ ← Publication.Client.control "shutdown"
+      pure ()
+
 end Eggshell.Research.FrontTrafficChecks
 
 def main (args : List String) : IO UInt32 := do
@@ -257,9 +293,29 @@ def main (args : List String) : IO UInt32 := do
   | ["front-traffic-audit",root] => do
       Eggshell.Research.FrontTrafficChecks.auditRetained (.mk root)
       return 0
+  | ["front-input-audit",root] => do
+      Eggshell.Research.FrontInputAudit.run [root]
+      return 0
+  | ["front-input-retry",root] => do
+      Eggshell.Research.FrontInputAudit.run [root,"retry"]
+      return 0
+  | ["front-input-recovery-checks",root] => do
+      Eggshell.Research.FrontInputAudit.recoveryChecks (.mk root)
+      return 0
+  | ["front-input-key-checks",root] => do
+      Eggshell.Research.FrontInputAudit.serviceKeyChecks (.mk root)
+      return 0
   | ["front-deadline-checks",root] => do
       Eggshell.Research.TaskDeadlineChecks.run (.mk root)
       return 0
+  | ["front-input-diagnostic",root,count] => do
+      let some count := count.toNat? | throw (IO.userError "reader count required")
+      let root := System.FilePath.mk root
+      unless !(← root.pathExists) do throw (IO.userError "preserve earlier diagnostic evidence")
+      IO.FS.createDir root
+      Numerical.withDefaultKeeper (do
+        Eggshell.Research.FrontTrafficChecks.inputDiagnostic root count
+        pure 0) 1000
   | [mode,root,count,size] => do
       unless ["front-traffic","front-traffic-profile"].contains mode do return ← sourceRouteEngine args
       let some clients := count.toNat? | throw (IO.userError "client count required")

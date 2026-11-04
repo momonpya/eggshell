@@ -1,0 +1,10 @@
+{
+  "purpose": "Attribute numeric fixed cost without touching ranking or invoking a model",
+  "basis": "Eight-reader diagnostic completed all deliveries, but service work remained 1.25-1.74 seconds; previous numeric traces had sub-millisecond inner scoring and hundreds of milliseconds outside it",
+  "experiment": "In the native binary, read the same configuration through an IO.Ref for each of sixteen key computations, force every result into a retained array, measure monotonic microseconds, and check all digests are identical",
+  "interpretation": "A slow configuration key would justify factoring its immutable implementation digest; a fast result rejects that hypothesis. This is not an end-to-end speed or token comparison.",
+  "aggregateStopRssKiB": 3670016,
+  "aggregateHardCeilingKiB": 4194304,
+  "diskFloorKiB": 2097152,
+  "answeringModelCalls": 0
+}

@@ -77,6 +77,19 @@ owners are required, but do not alone establish 80-user support. Test publicatio
 preparation and queries together, retaining every acknowledged original and
 measuring queue age and unfinished preparation as well as hook deadlines.
 
+The current isolated service runs at most sixteen original publication groups
+in parallel, with only one active group for each physical owner. That source
+limit is separate from three search workers, two save-operation workers and
+three preparation workers. A save-operation worker submits to the original
+publisher; these counts must not be confused with source-owner count or user
+capacity. The latest [ordinary traffic check](candidates/front-traffic/README.md)
+delivered the initial evidence to 65 of 80 clients and timed out on fifteen;
+it failed. The [publication recovery and input-stage diagnostic](candidates/front-input/README.md)
+fixes a repeated-checkpoint metadata error and separates preparation, queue and
+service time. Its small eight-reader check does not replace the failed 80-client
+gate. Source-only parallelism is implemented, but sustained all-path capacity,
+multi-host ownership and NAS durability remain unverified.
+
 The [frontend continuation](candidates/front-managers/README.md) found another
 missing layer: the old normal entry still allocated one resident daemon per
 chat and hit the aggregate memory stop before reaching 80. Its isolated

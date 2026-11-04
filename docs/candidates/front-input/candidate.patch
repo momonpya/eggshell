@@ -1,0 +1,194 @@
+diff --git a/Eggshell/NativePublication.lean b/Eggshell/NativePublication.lean
+index 1f8e8c53..be6b2310 100644
+--- a/Eggshell/NativePublication.lean
++++ b/Eggshell/NativePublication.lean
+@@ -270,6 +270,39 @@ def compilePrepared (source : Graph) (target : System.FilePath) (request : Prepa
+ def maxBatchRequests : Nat := 128
+ def maxBatchBytes : Nat := 8*1024*1024
+ 
++/-- A durable input/receipt binding is metadata of the Outcomes it publishes,
++even when those graph roots already exist. Report these exact owners rather
++than disguising an authoritative binding as a neutral memo-only commit. -/
++def bindMetadata (original extra : Persistence.Store.MetadataChange) (owners : List Nat) :
++    Persistence.Store.MetadataChange := {
++  changed := original.changed || extra.changed
++  affected := hashDistinct (original.affected ++ extra.affected ++ if extra.changed then owners else []) }
++
++theorem bound_affected_exact (original extra : Persistence.Store.MetadataChange)
++    (owners : List Nat) (owner : Nat) :
++    owner ∈ (bindMetadata original extra owners).affected ↔
++      owner ∈ original.affected ∨ owner ∈ extra.affected ∨
++        (extra.changed = true ∧ owner ∈ owners) := by
++  cases changed : extra.changed <;>
++    simp [bindMetadata,HashDistinct.mem,changed,List.mem_append]
++
++theorem bound_owner_has_delta (original extra : Persistence.Store.MetadataChange)
++    (owners : List Nat) (owner : Nat) (changed : extra.changed = true) (member : owner ∈ owners) :
++    (Persistence.Store.Change.mk [] [] false (bindMetadata original extra owners).affected).neutral = false := by
++  have present := (bound_affected_exact original extra owners owner).mpr (Or.inr (Or.inr ⟨changed,member⟩))
++  cases found : (bindMetadata original extra owners).affected with
++  | nil => simp [found] at present
++  | cons first rest => simp [Persistence.Store.Change.neutral]
++
++def promotedOwners (intern : Persistence.Store.Intern) (promotions : Array Promotion) : IO (List Nat) := do
++  let mut owners := []
++  for owner in hashDistinct (promotions.toList.flatMap (·.outcomeRelations)) do
++    let id ← intern.value owner
++    unless (← intern.writer.get (Persistence.Store.key "member" id)).isSome do
++      throw (IO.userError "publication metadata refers to an unpublished Outcome")
++    owners := id :: owners
++  return owners.reverse
++
+ /-- One DB publisher commits a bounded group under one writer/root/fsync.
+ Every reply refers to that one durable head. A failed group acknowledges none.
+ No queue, model, derived work or remote-policy promise is hidden here. -/
+@@ -291,15 +324,14 @@ def runPreparedAt (target logical : System.FilePath) (requests : Array Prepared)
+     let some transaction := (Transaction.begin graph).stageValues? roots |
+       throw "publication group contains an invalid Value"
+     return (transaction,prepared.map (·.2)))
+-    (fun intern _ => do
++    (fun intern promotions => do
+       let pinned ← intern.writer.snapshot
+       unless requests.all (fun request => request.identity.all (· == pinned.head.identity)) do
+         throw (IO.userError "publication group database was replaced before commit")
+       let original ← stage (requests.flatMap (·.items)) intern
+       let extra ← metadata intern
+-      return {
+-        changed := original.changed || extra.changed
+-        affected := hashDistinct (original.affected ++ extra.affected)})
++      let owners ← if extra.changed then promotedOwners intern promotions else pure []
++      return bindMetadata original extra owners)
+   unless committed.value.size == requests.size do throw (IO.userError "publication group changed its request count")
+   (requests.zip committed.value).mapM fun (request,value) => do
+     let promotion ← prepareCommitted committed.graph value
+diff --git a/Eggshell/OperationPool.lean b/Eggshell/OperationPool.lean
+index 136dd5fe..5f5241cb 100644
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -161,6 +161,7 @@ def Pool.releaseReply (pool : Pool) (job : Job) : IO Unit := do
+ /-- The slot is service-owned. A disconnected search cancels only its current
+ pipe. Saves already in progress retain their durable source-ACK path. -/
+ def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.Active) (job : Job) : IO Unit := do
++  let started ← IO.monoMsNow
+   let session := s!"shared-operation-{lane.val}"
+   let result ← try
+     unless lane.role == job.request.role do throw (IO.userError "operation role changed its assigned lane")
+@@ -183,12 +184,19 @@ def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.A
+     catch _ => pure none
+   let result := result.filter (fun value => value.compress.utf8ByteSize+1024 ≤ replyBytes job.request.role)
+   let wasCancelled := (← job.cancelled.get) || (← IO.monoMsNow) ≥ (← job.expires.get)
++  let finished ← IO.monoMsNow
+   unless ← job.reply.isResolved do job.reply.resolve result
+   pool.state.atomically do
+     modify fun state => {state with
+       plan := OperationPlan.finish state.plan lane active.token
+       jobs := state.jobs.erase active.job.id,completed := state.completed+1,
+       cancelled := state.cancelled+(if wasCancelled then 1 else 0)}
++  if let some identity := job.request.identity then
++    Receipt.observe identity.receipt "operation-service" (Json.mkObj [
++      ("id",toJson job.request.id),("lane",toJson lane.val),
++      ("queueMs",toJson (started-job.admitted)),("workMs",toJson (finished-started)),
++      ("readyMs",toJson ((← job.ready.get).map (·-started))),
++      ("cancelled",toJson wasCancelled),("reply",toJson result.isSome)])
+ 
+ def Pool.close (pool : Pool) : IO Unit := pool.state.atomically do
+   let state ← get
+diff --git a/Eggshell/PluginHooks.lean b/Eggshell/PluginHooks.lean
+index 1b63b474..2d240890 100644
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -685,7 +685,7 @@ def userPromptSubmit (input : Json) : IO String := do
+       read := selection.read.map (·.path.toString), write := selection.write.map (·.path.toString),
+       handoffChars := selection.handoffChars, localUnion := selection.localUnion,
+       projection := state.nextProjection.getD .automatic }
+-    let pending ← ProjectContext.capture pending (← hookDeadline input)
++    let pending ← ProjectContext.capture pending (← hookDeadline input) (optionalString input "_eggshell_receipt")
+     state := { state with
+       epoch := state.epoch + 1
+       offers := []
+diff --git a/Eggshell/PluginProjectContext.lean b/Eggshell/PluginProjectContext.lean
+index 17fc9eb3..1f53849b 100644
+--- a/Eggshell/PluginProjectContext.lean
++++ b/Eggshell/PluginProjectContext.lean
+@@ -47,7 +47,9 @@ def inputModel (pending : PendingTurn) : IO String :=
+     | _ => pure MiniLM.model
+ def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snapshot))
+     (captured : Option InputBoundary.Boundary := none)
+-    (numericRequired : Bool := pending.semanticMatcher.isSome) : IO (Option PreparedInputEnvelope) := do
++    (numericRequired : Bool := pending.semanticMatcher.isSome)
++    (receipt : Option String := none) (phase : String := "prepared-inputs") : IO (Option PreparedInputEnvelope) := do
++  let started ← IO.monoMsNow
+   let model ← inputModel pending
+   let captured ← match captured with
+     | some captured => pure captured
+@@ -55,18 +57,35 @@ def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snap
+   unless captured.boundTo PreparedInputs.implementation (snapshots.map (·.map (·.head))) model SearchProvider.encoderContract do
+     throw (IO.userError "input capture changed its original or model boundary")
+   let sources := (snapshots.filterMap id).toArray
++  let validated ← IO.monoMsNow
+   let mut inputs := #[]
+   for source in sources do
+-    let some reference ← PreparedInputs.load? source model SearchProvider.encoderContract | return none
+-    if numericRequired && reference.population > 0 && reference.numeric.isNone then return none
++    let some reference ← PreparedInputs.load? source model SearchProvider.encoderContract | do
++      Receipt.observe receipt phase (Json.mkObj [("status",toJson "missing-reference"),
++        ("source",toJson source.head.identity),("elapsedMs",toJson ((← IO.monoMsNow)-started))])
++      return none
++    if numericRequired && reference.population > 0 && reference.numeric.isNone then
++      Receipt.observe receipt phase (Json.mkObj [("status",toJson "missing-numeric"),
++        ("source",toJson source.head.identity),("elapsedMs",toJson ((← IO.monoMsNow)-started))])
++      return none
+     inputs := inputs.push reference
++  let references ← IO.monoMsNow
+   let owners ← OwnerViews.load? sources
+-  if sources.size > 1 && inputs.any (·.population > 0) && owners.isNone then return none
++  let owned ← IO.monoMsNow
++  if sources.size > 1 && inputs.any (·.population > 0) && owners.isNone then
++    Receipt.observe receipt phase (Json.mkObj [("status",toJson "missing-owners"),
++      ("sources",toJson sources.size),("referenceMs",toJson (references-validated)),
++      ("ownerMs",toJson (owned-references)),("elapsedMs",toJson ((← IO.monoMsNow)-started))])
++    return none
+   let checkedInputs ← IO.ofExcept (PreparedInputs.attachBoundary captured inputs)
+   let frame : PreparedInputs.Frame := ⟨PreparedInputs.implementation,captured.originals,checkedInputs,owners⟩
+-  return some ⟨toJson frame⟩
++  let output := some (PreparedInputEnvelope.mk (toJson frame))
++  Receipt.observe receipt phase (Json.mkObj [("status",toJson "complete"),("sources",toJson sources.size),
++    ("boundaryMs",toJson (validated-started)),("referenceMs",toJson (references-validated)),
++    ("ownerMs",toJson (owned-references)),("attachMs",toJson ((← IO.monoMsNow)-owned))])
++  return output
+ 
+-@[no_expose] def capture (pending : PendingTurn) (deadline : Nat) : IO PendingTurn := do
++@[no_expose] def capture (pending : PendingTurn) (deadline : Nat) (receipt : Option String := none) : IO PendingTurn := do
+   unless pending.projectInputs.isNone do throw (IO.userError "native turn already captured its project context")
+   unless pending.inputBoundary.isNone do throw (IO.userError "native turn already captured its input boundary")
+   unless ← projectConfigured pending do
+@@ -74,7 +93,7 @@ def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snap
+     let boundary ← PreparedInputs.boundary snapshots (← inputModel pending) SearchProvider.encoderContract
+     return {pending with
+       inputBoundary := some ⟨toJson boundary⟩,
+-      preparedInputs := ← captureInputs pending snapshots (some boundary)}
++      preparedInputs := ← captureInputs pending snapshots (some boundary) (receipt := receipt) (phase := "prepared-inputs-turn")}
+   let selection ← ProjectAccess.resolve pending.sessionId (pendingSelection pending)
+   let reads ← ProjectAccess.pin selection deadline
+   let context : Context := ⟨selection,reads,reads.images,rfl⟩
+@@ -84,7 +103,7 @@ def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snap
+   return {pending with
+     projectInputs := some reads.images,
+     inputBoundary := some ⟨toJson boundary⟩,
+-    preparedInputs := ← captureInputs pending snapshots (some boundary)}
++    preparedInputs := ← captureInputs pending snapshots (some boundary) (receipt := receipt) (phase := "prepared-inputs-turn")}
+ 
+ @[no_expose] def open? (pending : PendingTurn) (deadline : Nat) : IO (Option Context) := do
+   let some images := pending.projectInputs | do
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index feef0913..1970388a 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -405,6 +405,7 @@ def awaitInputs (request : Search) (snapshots : List (Option DB.PageMap.Snapshot
+     (selection : Config.Selection) (cutoff : Nat) (cancelled : IO Bool) : IO PreparedInputs.Frame := do
+   let numeric := request.route != .lexical && request.pending.semanticMatcher.isSome
+   let capture := ProjectContext.captureInputs request.pending snapshots (some boundary) numeric
++    request.receipt "prepared-inputs-operation"
+   if let some encoded ← capture then
+     return ← IO.ofExcept (fromJson? (α := PreparedInputs.Frame) encoded.payload)
+   let command ← if numeric then
