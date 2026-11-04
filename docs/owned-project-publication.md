@@ -82,13 +82,23 @@ in parallel, with only one active group for each physical owner. That source
 limit is separate from three search workers, two save-operation workers and
 three preparation workers. A save-operation worker submits to the original
 publisher; these counts must not be confused with source-owner count or user
-capacity. The latest [ordinary traffic check](candidates/front-traffic/README.md)
+capacity. The earlier [ordinary traffic check](candidates/front-traffic/README.md)
 delivered the initial evidence to 65 of 80 clients and timed out on fifteen;
 it failed. The [publication recovery and input-stage diagnostic](candidates/front-input/README.md)
 fixes a repeated-checkpoint metadata error and separates preparation, queue and
 service time. Its small eight-reader check does not replace the failed 80-client
 gate. Source-only parallelism is implemented, but sustained all-path capacity,
 multi-host ownership and NAS durability remain unverified.
+
+The [direct numerical client](candidates/direct-numerical/README.md) removes a
+native adapter process without changing numerical values or source-scoped
+responses. Its eight-reader protocol passes, but the next ordinary eighty-writer
+trial completes only 44 of 80 initial deliveries and writer loops. All eighty
+captured input probes are complete; the three search slots accumulate queue
+delay and fallback is separately resubmitted. Numerical component speed alone
+does not close this failed capacity gate. Per-attempt observation and one
+admitted search/fallback lifetime are the next investigation; worker-count or
+deadline inflation is not a passed result.
 
 The [frontend continuation](candidates/front-managers/README.md) found another
 missing layer: the old normal entry still allocated one resident daemon per

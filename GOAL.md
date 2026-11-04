@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-04更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-05更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -147,7 +147,11 @@
 
 ownerを含む完全な準備gateへ検査を修正した。通常背景処理で5839ms後に全source/numeric/owner参照が揃い、8新chatの初回本文は4項目全件・意味検索完了、2230〜5366ms、原典head不変だった。全turn入力はcompleteでhook内warm要求0、service queue 1〜3832ms/worker通信等を含む処理1276〜2283ms、終了後残存0、集計RSS最大2224016KiB。最初の実行体は隔離treeの古い検査を使っていたため修正後の結果から除外し、build設定を修正して実検査の接続を確認した。準備gateの修正を製品の速度改善や80人達成とはしない。一つのproject内で16原典所有者を並行させる構成は必須で既に接続済みだが、通常operationは検索3/保存2、準備3の別枠であり、原典出版の最大16並行を通常経路で使い切れるとは未実証である。
 
-次は短命のprovider/数値adapterの反復起動を、応答と順位・私有境界・全認定領域を保って減らす。根拠なくcache層や重みを加えず、固定sourceの診断fixtureだけを次の対照に保持する。checked metadataは固定project/source境界で共有し、私有の利用履歴は要求ごとに接続する。保存operationと独立した原典出版の待ちも分けて測り、lock待機枠や受付上限を増やして隠さない。修正後の固定runtimeから通常入口5〜50KB/80新readerを再開し、増え続けるDB、1/4/16 project・10/40/80接続へ広げる。大きなDBで出版・準備・検索を同時に流し、80人8時間の投入追従・queue age・飽和回復・準備債務、p99 30秒未満と98%実配送を検査する。独立した原典所有者を全体queueへ戻さず、共有writer競合を全体warmの直列化で隠さない。不安定なtransport/利用不能source/再起動時ticket、有界共有cache、compaction時の旧extent保持、read-only/跨projectの権限と推移的依存、遠隔認証/NAS、共有content正本、epoch/ACK、反復選択、MCP保存方針も残る。新runtime/seed/cohortで所定のtoken/品質比較へ進める。回答モデル0・比較0/18・製品未採用、目標はactiveのまま。
+[direct-numerical](docs/candidates/direct-numerical/README.md)で、providerから常駐数値serviceへ渡すためだけのnative中継processをLeanの同一clientへ置換した。MiniLM/採点/順位/Handoff/認定/原典出版は変更していない。交互順の3組でvector・被覆・全採点値が一致し、RPC上限を超える9229675-byteのlocal採点も1500件すべて一致した。別ownerの存続と最後の解放、close後の拒否を確認。同じ原典境界・16 owner・準備root・質問の全keyed JSON応答も6回一致し、単発providerは親1699/1681/1671ms、候補1427/1439/1420msだった。4定理/実宣言接続/標準ContractAuditが通った。最初のnative試行で直接呼出しの改行欠落を検出して修正した失敗も残した。
+
+通常8新chatは全4項目・意味検索完了、1395〜3432msだったが、続く80 writer/5KBは44/80初回配送・writer loop完了、36件初回期限切れで不合格。50KB/新reader段階は未実施。集計RSS最大2831152KiB・guard停止0・残存process0。全80件のturn入力はcompleteであり、この失敗をowner索引のcold待ちとはしない。成功44件のservice queue中央値8337ms/最大12816ms、処理中央値1174ms/最大2076ms。意味検索33件・字句fallback11件。失敗36件は最終service観測8件だけでqueue12817〜13086ms、残り28件は観測なしである。意味検索が期限切れになった後に同じ3 workerへ字句を再投入し、準備済み入力にもwarm通知を行う経路が残る。受領単位の計測は再試行で上書きされるため、その全費用や単独原因までは確定していない。小さな部品比較を80人達成やtoken改善に読み替えず、候補は未採用のままにする。
+
+次はattemptごとのroute/id/開始・待ち・終了を保持し、元の絶対deadlineと完全な入力境界のまま、意味検索と字句fallbackを一つの受付・実行寿命で処理する。queue期限切れをcache欠落と混同せず、修復は実際の型付きdebtから起こす。失敗した80試行を変更せず繰り返さず、worker数・受付数・時間枠を増やして隠さない。終了した数値/固定source/8 reader用DB・cache・生logは削除し、現在の80失敗fixtureだけを次の診断入力へ保持する。独立した原典所有者を全体queueへ戻さない。修正後の通常入口5〜50KB/80新readerから、増え続けるDB、1/4/16 project・10/40/80接続、80人8時間の投入追従・queue age・飽和回復・準備債務、p99 30秒未満と98%実配送へ進む。checked metadataの共有と私有境界、保存operationと原典出版、cold source/ticket回復、有界cacheと旧extent、跨projectの権限・推移的依存、遠隔認証/NAS、共有content正本、epoch/ACK、反復選択、MCP保存方針も残る。新runtime/seed/cohortで所定のtoken/品質比較を行う。回答モデル0・比較0/18・製品未採用、目標はactiveのまま。
 
 検索側の追加候補は[prepared-query](docs/candidates/prepared-query/README.md)、runtime `1b82d622…`。通常のkeyed検索で、原典の固定版に対応するrouterを行列の最新版と組み合わせて拒否し、後段の採点が行列cacheを作り直していた経路を修正した。問い合わせ開始時に字句/窓所有者/routerとその正確な行列rootを保持し、採点では固定したread setを使う。固定した行がなければ最新版やraw cacheで代用しない。行列rootの一致をLeanの`ReadView.sameMatrix`で持つ。native合成試行は旧経路の不一致を再現し、66回の後続出版/索引準備で旧lookup枠が上書きされた後も、保持した候補/順位/窓/ベクトルが一致した。新しい要求は最新版を読み、未準備新版/異なるauthorityを拒否した。scenario 4388 ms/process 10193 ms・RSS最大102560 KiBは部品検査の値である。全体ContractAuditが通り、実MiniLMのshell5/MCP形式3操作、原文だけの回復、新chat実本文2/2・4466 ms、全service終了/残存process0を確認した。実MCPサーバーではなく小fixtureであり、98%/80人/総token改善の実証ではない。回答モデル呼出0、題材比較0/18、製品未採用。保存側の基準は次段の`66c6cf14…`を保持し、回答モデル用の固定controller/cohortを差し替えていない。次はcanonical/共有・私有synapseを含むservice全体の同じsource境界の読取保持と、継続出版・実journalを伴う追従を接続する。
 

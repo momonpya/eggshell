@@ -1,6 +1,7 @@
 import Main
 import tools.research.TaskDeadlineChecks
 import tools.research.FrontInputAudit
+import tools.research.DirectNumericalChecks
 
 open Lean Eggshell Eggshell.Plugin
 namespace Eggshell.Research.FrontTrafficChecks
@@ -290,6 +291,12 @@ end Eggshell.Research.FrontTrafficChecks
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["direct-numerical-components",root,parent,_] =>
+      Eggshell.Research.DirectNumericalChecks.components (.mk root) parent
+      return 0
+  | ["direct-numerical-replay",root,parent,retained] =>
+      Eggshell.Research.DirectNumericalChecks.replay (.mk root) parent (.mk retained)
+      return 0
   | ["front-traffic-audit",root] => do
       Eggshell.Research.FrontTrafficChecks.auditRetained (.mk root)
       return 0

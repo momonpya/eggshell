@@ -1,0 +1,180 @@
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index bd0c0fae..1f7d910f 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -371,11 +371,76 @@ def serve (config : Config) : IO UInt32 := do
+       if current.pid == endpoint.pid && current.secret == endpoint.secret then IO.FS.removeFile (root / "endpoint.json")
+     if ← exclusive.get then FileSystem.unlockRead owners
+ 
+-/-- Embedding batches use the shared model. Large cache-only scoring frames
+-stay on a local NumPy process and never enter the bounded RPC transport. -/
+-def proxy (config : Config) : IO UInt32 := withKeeper config do
+-  let scores ← IO.mkRef (none : Option Kernel)
+-  let shared ← IO.mkRef (none : Option Endpoint)
++/-- A provider owns one sequential numerical client. Its keeper outlives all
++requests and is released only after the optional local score process exits.
++No query, source corpus or current response is retained in this handle. -/
++structure Client where
++  keeper : Keeper
++  scores : IO.Ref (Option Kernel)
++  shared : IO.Ref (Option Endpoint)
++  closed : IO.Ref Bool
++
++def openClient (config : Config) : IO Client := do
++  return ⟨← keep config,← IO.mkRef none,← IO.mkRef none,← IO.mkRef false⟩
++
++def sharedKind (marker : UInt8) : Option String :=
++  if marker = 69 then some "encode" else if marker = 66 then some "blocks" else none
++
++theorem shared_kind_requires_encode_or_blocks (marker : UInt8) (kind : String)
++    (shared : sharedKind marker = some kind) : marker = 69 ∨ marker = 66 := by
++  by_cases encode : marker = 69
++  · exact Or.inl encode
++  · by_cases blocks : marker = 66
++    · exact Or.inr blocks
++    · simp [sharedKind,encode,blocks] at shared
++
++theorem cache_only_is_not_shared : sharedKind 83 = none := rfl
++theorem close_is_not_a_shared_request : sharedKind 67 = none := rfl
++
++/-- Pipe reads already include their final newline; direct callers do not.
++The numerical kernels consume the same single terminated JSON frame. -/
++def requestBody (body : String) : String :=
++  if body.endsWith "\n" then body else body++"\n"
++
++theorem terminated_request_unchanged (body : String) (terminated : body.endsWith "\n" = true) :
++    requestBody body = body := by simp [requestBody,terminated]
++
++/-- The same bounded shared service handles encode and projected-block work.
++Legacy large cache-only frames remain local and never become large RPCs. -/
++def Client.request (client : Client) (marker : UInt8) (body : String) : IO String := do
++  if ← client.closed.get then throw (IO.userError "numerical client is closed")
++  let body := requestBody body
++  if let some kind := sharedKind marker then
++    let endpoint ← match ← client.shared.get with
++      | some endpoint => pure endpoint
++      | none => do
++          let endpoint ← resolve client.keeper.config
++          client.shared.set (some endpoint)
++          pure endpoint
++    exchange endpoint kind (toJson body)
++  else if marker == 83 then
++    let child ← match ← client.scores.get with
++      | some child => pure child
++      | none => do
++          let child ← spawnKernel client.keeper.config ((← directory client.keeper.config) / "score-unused.guard")
++          client.scores.set (some child)
++          pure child
++    child.stdin.putStr body
++    child.stdin.flush
++    awaitLine child ((← IO.monoMsNow)+24000)
++  else throw (IO.userError "invalid numerical pipe operation")
++
++def Client.close (client : Client) : IO Unit := do
++  if ← client.closed.get then return
++  client.closed.set true
++  try
++    if let some child ← client.scores.get then stopKernel child
++  finally release client.keeper
++
++/-- The CLI is an adapter over the same client used directly by Lean providers.
++It adds no numerical implementation or second resource-ownership policy. -/
++def proxy (config : Config) : IO UInt32 := do
++  let client ← openClient config
+   try
+     let input ← IO.getStdin
+     let output ← IO.getStdout
+@@ -384,31 +449,11 @@ def proxy (config : Config) : IO UInt32 := withKeeper config do
+       if marker.isEmpty then break
+       let body ← input.getLine
+       if marker[0]! == 67 then break
+-      let reply ← try
+-        if marker[0]! == 69 || marker[0]! == 66 then
+-          let endpoint ← match ← shared.get with
+-            | some endpoint => pure endpoint
+-            | none => do
+-                let endpoint ← resolve config
+-                shared.set (some endpoint)
+-                pure endpoint
+-          exchange endpoint (if marker[0]! == 69 then "encode" else "blocks") (toJson body)
+-        else if marker[0]! == 83 then
+-          let child ← match ← scores.get with
+-            | some child => pure child
+-            | none => do
+-                let child ← spawnKernel config ((← directory config) / "score-unused.guard")
+-                scores.set (some child)
+-                pure child
+-          child.stdin.putStr body
+-          child.stdin.flush
+-          awaitLine child ((← IO.monoMsNow)+24000)
+-        else throw (IO.userError "invalid numerical pipe operation")
++      let reply ← try client.request marker[0]! body
+       catch error => pure ((Json.mkObj [("error",toJson error.toString)]).compress ++ "\n")
+       output.putStr reply
+       output.flush
+     return 0
+-  finally
+-    if let some child ← scores.get then stopKernel child
++  finally client.close
+ 
+ end Eggshell.Numerical
+diff --git a/Eggshell/SearchProvider.lean b/Eggshell/SearchProvider.lean
+index 0b9045b8..da4f2bc9 100644
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -12,6 +12,7 @@ public import tools.WindowCentroid
+ public import Eggshell.VectorMatrix
+ public import Eggshell.BlockScore
+ public import Eggshell.PreparedInputs
++public import Eggshell.Numerical
+ public import Lean.Data.Json.FromToJson
+ 
+ @[expose] public section
+@@ -230,40 +231,22 @@ def queryOptions (options : Options) : IO Options := do
+     cache
+     owner := none, fallback := none, privateWrite := none}
+ 
+-abbrev Encoder := IO.Process.Child { stdin := .piped, stdout := .piped, stderr := .inherit }
++abbrev Encoder := Numerical.Client
+ 
+ def encoder (options : Options) : IO Encoder := do
+   let layout := MiniLM.layout (← Paths.installRoot)
+   let python ← (MiniLM.runtimePython? layout) >>= fun
+     | some python => pure python
+     | none => throw (IO.userError "MiniLM runtime is not installed")
+-  let binary ← IO.appPath
+-  IO.Process.spawn {
+-    cmd := binary.toString
+-    args := #["codex-numerical-client",options.model,options.models.toString,python.toString]
+-    stdin := .piped,stdout := .piped,stderr := .inherit }
+-
+-def stopEncoder (child : Encoder) : IO Unit := do
+-  child.stdin.putStr "C\n"
+-  child.stdin.flush
+-  let deadline := (← IO.monoMsNow)+10000
+-  repeat
+-    if let some code ← child.tryWait then
+-      unless code == 0 do throw (IO.userError "numerical client exited unsuccessfully")
+-      return
+-    unless (← IO.monoMsNow) < deadline do
+-      child.kill
+-      let _ ← child.wait
+-      throw (IO.userError "numerical client did not close")
+-    IO.sleep 5
++  Numerical.openClient ⟨options.model,options.models,python⟩
++
++def stopEncoder (child : Encoder) : IO Unit := child.close
+ 
+ def exchange (child : Encoder) (input : Json)
+     (observe : Json → IO Unit := fun _ => pure ()) : IO Json := do
+-  child.stdin.putStr (if (input.getObjVal? "texts").isOk then "E"
+-    else if (input.getObjVal? "blockRows").isOk then "B" else "S")
+-  child.stdin.putStrLn input.compress
+-  child.stdin.flush
+-  let result ← IO.ofExcept (Json.parse (← child.stdout.getLine))
++  let marker : UInt8 := if (input.getObjVal? "texts").isOk then 69
++    else if (input.getObjVal? "blockRows").isOk then 66 else 83
++  let result ← IO.ofExcept (Json.parse (← child.request marker input.compress))
+   observe result
+   if let .ok error := result.getObjValAs? String "error" then throw (IO.userError error)
+   pure result

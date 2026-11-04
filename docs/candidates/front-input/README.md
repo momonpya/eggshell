@@ -129,6 +129,7 @@ capacity measurement; a source-only burst does not establish that the normal
 save path uses sixteen publications concurrently.
 
 Ended diagnostic fixtures and raw logs are [deleted](cleanup.json) after the
-compact records are sealed. The small retained diagnostic2 fixture remains an
-active fixed-source control for the next provider investigation; no archive is
-created.
+compact records are sealed. The diagnostic2 fixture was retained for the next
+fixed-source provider investigation, then retired after that comparison in
+[direct-numerical](../direct-numerical/README.md). Its cleanup record describes
+the retained inputs at this checkpoint; no archive is created.

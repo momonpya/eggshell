@@ -1,0 +1,19 @@
+{
+  "parent": "c96b875e",
+  "purpose": "Remove the per-provider native numerical proxy process while preserving the existing shared-model and local-large-score contracts",
+  "change": "Factor the existing numerical proxy body into a sole-owner Lean client. SearchProvider owns that client directly; the pipe CLI uses the same client. Do not pool query state across users or change search, embedding, block scoring or certification algorithms.",
+  "checks": [
+    "Compare actual parent pipe and candidate direct client with identical frozen encode, block-score and local-score inputs. Compare vectors, coverage and scores excluding timing fields; retain every repetition.",
+    "Alternate arm order in three matched repetitions. Separate open/first response/steady response/close time; do not present a component result as full hook capacity.",
+    "Close is idempotent, requests after close and invalid markers are rejected, cache-only scoring does not start an embedding service, and another live owner survives a client close.",
+    "Compare complete source-scoped provider responses on one retained original source boundary, with the same prepared roots and query for both runtimes.",
+    "Run the corrected ordinary eight-reader protocol. If native correctness passes, resume the fixed 80-writer/fresh-reader protocol at 5 KB, then 50 KB; stop on failure.",
+    "Keep source hashes, all actual responses and complete terminal guard receipts. No answering model or paid seed is used."
+  ],
+  "adoption": "Isolated candidate only. Matched inclusive-token and quality gate remains 0/18; component equivalence or lower latency does not adopt this candidate.",
+  "hookDeadlineMs": 30000,
+  "aggregateStopRssKiB": 3670016,
+  "aggregateHardCeilingKiB": 4194304,
+  "diskFloorKiB": 2097152,
+  "answeringModelCalls": 0
+}
