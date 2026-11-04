@@ -1,0 +1,40 @@
+{
+  "parent": "726f6747",
+  "status": "predeclared-native-continuation-not-adopted",
+  "scope": "One logical project with sixteen concurrent original append owners and a shared ordinary hook frontend",
+  "runtime": "One native binary per fixed series; no production-source changes between protocol preflight and its load trials",
+  "conditions": [
+    {"purpose":"protocol preflight", "writers":1, "freshReaders":1, "outputBytes":5000},
+    {"purpose":"first ordinary-entry burst", "writers":80, "freshReaders":80, "outputBytes":5000},
+    {"purpose":"large-output ordinary-entry burst", "writers":80, "freshReaders":80, "outputBytes":50000}
+  ],
+  "sequence": [
+    "Create an empty sixteen-owner project and exercise seed Prompt/Pre/Post/Stop through Daemon.hookRequest, ordinary dispatch and background publication",
+    "Verify both seed original responses and prepared source roots, then freeze head and tail in each original (four fields) before observing load delivery",
+    "Concurrent fresh writer chats each request seed evidence, then emit ordinary Pre/Post with one exact-sized deterministic varied JSON response, then Stop",
+    "Record each complete output before its ordinary receipt ACK; retain partial outcomes and stop on the first failing phase",
+    "Wait for original publication and background preparation without calling administrative warm; verify every saved tool input/output and current prepared heads",
+    "Freeze two fields of the last saved observation, then issue queries from new reader chats and record their actual initial delivery",
+    "Retire all controlled services and confirm no owned survivors"
+  ],
+  "controls": {
+    "answeringModelCalls":0,
+    "numericRuntime":"actual installed local MiniLM",
+    "hookDeadlineMs":30000,
+    "backgroundDrainDeadlineMs":180000,
+    "aggregateStopRssKiB":3670016,
+    "aggregateHardCeilingKiB":4194304,
+    "diskFloorKiB":2097152
+  },
+  "required": [
+    "Every native hook completes within its original deadline; no incomplete notification counted as delivery",
+    "All four frozen seed fields are in every writer's initial body; both frozen saved-observation fields are in every fresh-reader initial body",
+    "All writer Post input/output pairs are present as original observations, not just private receipts",
+    "Current nonempty source heads have prepared input references before the fresh-reader wave",
+    "No MCP advisory is allowed to deny the actual tool as completed",
+    "Source data and original observations survive service retirement"
+  ],
+  "failureRule":"Stop the series on a protocol, original, preparation, delivery, deadline or resource failure. Diagnose the first failed stage; no unchanged repetition or guard relaxation.",
+  "doesNotEstablish":["matched total-token improvement","real MCP server behavior","eight-hour sustained throughput","large-DB p99","multiple-PC/NAS behavior","practical 98 percent coverage across real investigations"],
+  "adopted":false
+}

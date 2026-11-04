@@ -1,0 +1,15 @@
+{
+  "purpose": "Diagnose the first ordinary-entry bottleneck; not an unchanged success retry or a performance comparison",
+  "basedOn": "front-traffic-small3: 65/80 initial bodies delivered all frozen seed fields; 14 dispatch failures spent the deadline waiting for state.guard",
+  "productCore": "Unchanged from front-traffic-small3; only the controlled checker gains native stack sampling",
+  "fixture": "Fresh one-project, sixteen-original-owner fixture through the ordinary hook protocol",
+  "clients": 80,
+  "outputBytes": 5000,
+  "instrumentation": "Sample the one owned frontend process for one second at writer-wave offsets 6, 16 and 26 seconds; record its actual PID and sample exit code",
+  "interpretation": "Samples may perturb latency. Do not count this run as a capacity or token result. Locate state-guard holders and their blocking callees before changing critical sections.",
+  "hookDeadlineMs": 30000,
+  "aggregateStopRssKiB": 3670016,
+  "aggregateHardCeilingKiB": 4194304,
+  "diskFloorKiB": 2097152,
+  "answeringModelCalls": 0
+}

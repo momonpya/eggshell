@@ -1,0 +1,359 @@
+diff --git a/Eggshell/Daemon.lean b/Eggshell/Daemon.lean
+index bb20a8e..350c6fb 100644
+--- a/Eggshell/Daemon.lean
++++ b/Eggshell/Daemon.lean
+@@ -126,7 +126,10 @@ def readyEndpoint (session : String) : IO Endpoint := do
+   let expected ← desiredGeneration
+   if !endpoint.compatible expected then
+     throw (IO.userError "eggshelld executable generation is stale")
+-  let _ ← exchange endpoint "register" (Json.mkObj [("session_id",toJson session)]) (budget := 250)
++  -- The authenticated hook/ACK frame admits its session in HookFrontend.
++  -- A separate short-budget registration RPC can reject a live, busy frontend
++  -- before the actual request spends any of its own deadline.
++  unless ← running endpoint do throw (IO.userError "eggshelld has exited")
+   pure endpoint
+ 
+ partial def awaitEndpoint (session : String) : Nat → IO Endpoint
+diff --git a/Eggshell/DaemonWire.lean b/Eggshell/DaemonWire.lean
+index 824ce8d..7cb0042 100644
+--- a/Eggshell/DaemonWire.lean
++++ b/Eggshell/DaemonWire.lean
+@@ -4,6 +4,7 @@ public import Eggshell.PluginModel
+ public import Std.Async.TCP
+ public import Std.Async.Timer
+ public import Std.Sync.CancellationToken
++public import Eggshell.TaskDeadline
+ 
+ @[expose] public section
+ 
+@@ -79,21 +80,6 @@ def decodeLength (bytes : ByteArray) : Nat :=
+     ((bytes.get! 1).toNat <<< 16) |||
+     ((bytes.get! 2).toNat <<< 8) ||| (bytes.get! 3).toNat
+ 
+--- Waiting does not introduce a second blocking dedicated task. A caller
+--- owns its absolute deadline and can cooperatively stop its in-flight IO.
+-def awaitTaskBefore (task : AsyncTask α) (deadline : Nat) : IO α := do
+-  repeat
+-    if ← IO.checkCanceled then throw (IO.userError "daemon IO cancelled")
+-    if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "daemon IO deadline expired")
+-    if ← IO.hasFinished task then return ← task.block
+-    IO.sleep 1
+-  throw (IO.userError "unreachable daemon IO wait")
+-
+-def awaitBefore (action : Async α) (deadline : Nat) : IO α := do
+-  if ← IO.checkCanceled then throw (IO.userError "daemon IO cancelled")
+-  if (← IO.monoMsNow) ≥ deadline then throw (IO.userError "daemon IO deadline expired")
+-  awaitTaskBefore (← action.toIO) deadline
+-
+ partial def receiveExactly (client : Socket.Client) (remaining : Nat)
+     (deadline : Nat) (received : ByteArray := ByteArray.empty)
+     (stop : Option Std.CancellationToken := none) : IO ByteArray := do
+@@ -112,7 +98,7 @@ partial def receiveExactly (client : Socket.Client) (remaining : Nat)
+       | some token => cases.push (.case token.selector (fun _ =>
+           throw (IO.userError "daemon receive cancelled")))
+     Selectable.one cases).toIO
+-  let chunk ← try awaitTaskBefore waiting deadline
++  let chunk ← try TaskDeadline.wait waiting deadline
+     finally
+       -- Cancellation unregisters the native read. Do not leave an async
+       -- receive alive after its owning IO task has returned.
+@@ -138,7 +124,7 @@ def receiveFrame (client : Socket.Client) (budget : Nat := 24000) : IO ByteArray
+ def sendFrameBefore (client : Socket.Client) (payload : ByteArray) (deadline : Nat) : IO Unit := do
+   if payload.size > maxFrameBytes then
+     throw (IO.userError "eggshelld frame exceeds the transport bound")
+-  awaitBefore (client.sendAll #[frameLength payload, payload]) deadline
++  TaskDeadline.run (client.sendAll #[frameLength payload, payload]) deadline
+ 
+ def sendFrame (client : Socket.Client) (payload : ByteArray) : IO Unit := do
+   sendFrameBefore client payload ((← IO.monoMsNow)+24000)
+@@ -155,7 +141,7 @@ def connectBefore (endpoint : Endpoint) (deadline : Nat) : IO Socket.Client := d
+   if endpoint.port > 65535 then
+     throw (IO.userError "invalid eggshelld port")
+   let client ← Socket.Client.mk
+-  awaitBefore (client.connect (loopback endpoint.port.toUInt16)) deadline
++  TaskDeadline.run (client.connect (loopback endpoint.port.toUInt16)) deadline
+   pure client
+ 
+ def connect (endpoint : Endpoint) : IO Socket.Client := do
+diff --git a/Eggshell/KeyedSearchClient.lean b/Eggshell/KeyedSearchClient.lean
+index 516b2d7..a599ff2 100644
+--- a/Eggshell/KeyedSearchClient.lean
++++ b/Eggshell/KeyedSearchClient.lean
+@@ -28,14 +28,13 @@ def nominate (configured : List String) (sources : Array Snapshot) (query : Stri
+         ("status",toJson "empty-source-domain"),("sources",toJson sources.size)])
+       return some empty
+     let command ← IO.ofExcept (command configured)
+-    SemanticMatcher.withProvider command fun running => SemanticMatcher.withResponseDeadline do
++    SemanticMatcher.withProvider command fun running => SemanticMatcher.withResponseDeadline running do
+       let request : KeyedProtocol.Request := ⟨query,sources.map KeyedProtocol.Scope.ofSnapshot,4096,8192,receipt,prepared,owners⟩
+       let bytes := (toJson request).compress
+       Receipt.observe receipt "keyed-request" (Json.mkObj [
+         ("sources",toJson sources.size),("requestBytes",toJson bytes.utf8ByteSize),
+         ("allDocumentMetadataTransferred",toJson false)])
+-      running.child.stdin.putStrLn bytes
+-      running.child.stdin.flush
++      SemanticMatcher.write running (bytes++"\n")
+       let json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
+       if let .ok error := json.getObjValAs? String "error" then throw (IO.userError error)
+       let response ← IO.ofExcept (fromJson? json : Except String KeyedProtocol.Response)
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index 219e41c..bd0c0fa 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -179,7 +179,8 @@ def peerWaiting (client : Socket.Client) : IO Bool :=
+       .case timer (fun _ => pure true)]).block
+ 
+ structure Backend where
+-  gate : Std.Mutex Unit
++  modelGate : Std.Mutex Unit
++  scoreGate : Std.Mutex Unit
+   child : IO.Ref (Option Kernel)
+   rawChild : IO.Ref (Option Kernel)
+   rawStarts : IO.Ref Nat
+@@ -216,7 +217,7 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
+   repeat
+     unless !(← backend.stopping.get) && (← IO.monoMsNow) < deadline do
+       throw (IO.userError "numerical request is no longer live")
+-    let result ← backend.gate.tryAtomically do
++    let result ← backend.modelGate.tryAtomically do
+       unless !(← backend.stopping.get) && (← IO.monoMsNow) < deadline do
+         throw (IO.userError "numerical gate admission expired")
+       let child ← match ← backend.child.get with
+@@ -263,7 +264,7 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
+   repeat
+     unless !(← backend.stopping.get) && (← IO.monoMsNow) < deadline do
+       throw (IO.userError "block-score request is no longer live")
+-    let result ← backend.gate.tryAtomically do
++    let result ← backend.scoreGate.tryAtomically do
+       unless !(← backend.stopping.get) && (← IO.monoMsNow) < deadline do
+         throw (IO.userError "block-score gate admission expired")
+       try
+@@ -335,7 +336,7 @@ def serve (config : Config) : IO UInt32 := do
+   let endpoint : Endpoint := {
+     session := config.key,pid := (← IO.Process.getPID).toNat,port := address.port.toNat
+     secret := Blake3.hex (← IO.getRandomBytes 32),generation := config.key}
+-  let backend : Backend := ⟨← Std.Mutex.new (),← IO.mkRef none,← IO.mkRef none,← IO.mkRef 0,← ProjectionCache.Cache.make,← IO.mkRef {},← IO.mkRef 0,← IO.mkRef false⟩
++  let backend : Backend := ⟨← Std.Mutex.new (),← Std.Mutex.new (),← IO.mkRef none,← IO.mkRef none,← IO.mkRef 0,← ProjectionCache.Cache.make,← IO.mkRef {},← IO.mkRef 0,← IO.mkRef false⟩
+   FileSystem.atomicExistingBytes (root / "endpoint.json") (toJson endpoint).compress.toUTF8
+   FileSystem.privateFile (root / "endpoint.json")
+   -- `finally` captures the pre-try value of a mutable local. Keep ownership
+@@ -361,8 +362,9 @@ def serve (config : Config) : IO UInt32 := do
+     return 0
+   finally
+     backend.stopping.set true
+-    backend.gate.atomically do
++    backend.modelGate.atomically do
+       if let some child ← backend.child.get then stopKernel child
++    backend.scoreGate.atomically do
+       if let some child ← backend.rawChild.get then stopRaw child
+     for task in ← clients.get do let _ ← IO.wait task; pure ()
+     if let some current ← endpoint? config then
+diff --git a/Eggshell/SemanticMatcher.lean b/Eggshell/SemanticMatcher.lean
+index 38e1580..2a2a734 100644
+--- a/Eggshell/SemanticMatcher.lean
++++ b/Eggshell/SemanticMatcher.lean
+@@ -3,6 +3,7 @@ module
+ public import Eggshell.Blake3
+ public import Eggshell.Matcher
+ public import Eggshell.Paths
++public import Eggshell.TaskDeadline
+ public import tools.OwnedRows
+ public import Lean.Data.Json.FromToJson
+ 
+@@ -148,7 +149,13 @@ def processStdio : IO.Process.StdioConfig := {
+ abbrev Child := IO.Process.Child processStdio
+ 
+ structure Running where
+-  child : Child
++  child : IO.Process.Child {stdin := .null,stdout := .piped,stderr := .null}
++  input : IO.Ref (Option IO.FS.Handle)
++
++theorem process_handle_has_no_stdin (running : Running) : running.child.stdin = () :=
++  by
++    cases (running.child.stdin : Unit)
++    rfl
+ 
+ inductive Lane where
+   | index
+@@ -188,12 +195,20 @@ def start : List String → IO Running
+         -- Stay in the worker's owned group so worker cancellation also stops
+         -- this provider and its numerical child.
+       }
+-      pure { child }
++      let (input,reader) ← child.takeStdin
++      pure { child := reader,input := ← IO.mkRef (some input) }
++
++def write (running : Running) (text : String) : IO Unit := do
++  let some input ← running.input.get | throw (IO.userError "provider input is closed")
++  input.putStr text
++  input.flush
+ 
+-def closeInput (running : Running) : IO (IO.Process.Child {
+-    stdin := .null, stdout := .piped, stderr := .null }) := do
+-  let (_, child) ← running.child.takeStdin
+-  pure child
++/-- The process handle carries no stdin reference. Removing the sole owned
++input handle here can actually deliver EOF, even while a reader owns Running. -/
++def closeInput (running : Running) : IO Bool := do
++  let previous ← running.input.get
++  running.input.set none
++  return previous.isSome
+ 
+ def reapProvider (child : IO.Process.Child {
+     stdin := .null, stdout := .piped, stderr := .null }) : Nat → IO Unit
+@@ -208,32 +223,32 @@ def reapProvider (child : IO.Process.Child {
+           IO.sleep 5
+           reapProvider child steps
+ 
+-def stop (running : Running) : IO Unit := do
+-  let child ← closeInput running
++def stop (running : Running) (graceful : Bool := true) : IO Unit := do
++  unless ← closeInput running do return
+   -- EOF lets the provider reap its numerical child in its own finally block.
+   -- A broken provider is terminated; its descendants remain in the worker's
+   -- group and the numerical lease prevents another model from overtaking it.
+-  reapProvider child 200
++  reapProvider running.child (if graceful then 200 else 0)
+ 
+ def withProvider (command : List String) (action : Running → IO α) : IO α := do
+   let running ← start command
+   try action running finally stop running
+ 
+-def withResponseDeadline (action : IO α) : IO α := do
++def withResponseDeadline (running : Running) (action : IO α) (budgetMs : Nat := 15000) : IO α := do
+   let response ← IO.asTask action .dedicated
+-  let timeout ← IO.asTask (do
+-    IO.sleep 15000
+-    throw (IO.userError "semantic matcher timed out")) .dedicated
+-  match ← IO.waitAny [response, timeout] with
+-  | .ok line => pure line
+-  | .error error => throw error
++  try TaskDeadline.wait response ((← IO.monoMsNow)+budgetMs)
++  finally
++    if !(← IO.hasFinished response) then
++      IO.cancel response
++      -- Closing/killing the owned provider releases its actual pipe read.
++      stop running false
++      discard <| IO.wait response
+ 
+ def readLine (running : Running) : IO String :=
+-  withResponseDeadline running.child.stdout.getLine
++  withResponseDeadline running running.child.stdout.getLine
+ 
+ def exchange (running : Running) (request : Request) : IO Response := do
+-  running.child.stdin.putStr ((toJson request).compress ++ "\n")
+-  running.child.stdin.flush
++  write running ((toJson request).compress ++ "\n")
+   let line ← readLine running
+   let json ← match Json.parse line with
+     | .ok json => pure json
+@@ -289,8 +304,7 @@ def withIndexProvider (command : List String) (action : Running → IO α) : IO
+   pure result
+ 
+ def indexReply (running : Running) (items : List Item) (request : Json) : IO (IndexReceipt items) := do
+-  running.child.stdin.putStrLn request.compress
+-  running.child.stdin.flush
++  write running (request.compress++"\n")
+   let json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
+   let response ← IO.ofExcept (fromJson? json : Except String IndexResponse)
+   let some receipt := indexReceipt? items response |
+@@ -582,15 +596,14 @@ def nominateIndexed (command : List String) (queryText : String)
+   let reader := windowRepairReader
+     (allowDurableRepair || documents.any (·.cache.isNone)) readWindow
+   try
+-    withProvider command fun running => withResponseDeadline do
++    withProvider command fun running => withResponseDeadline running do
+       let request := Json.mkObj [("query", toJson (item (.text queryText) queryText)),
+         ("documents", toJson (documents.map fun document => Json.mkObj [
+           ("id", toJson document.owner), ("windows", toJson document.windows),
+           ("cache", toJson document.cache)])),
+         ("lexical", toJson lexical), ("anchors", toJson anchors), ("receipt", toJson receipt),
+         ("purpose", toJson purpose),("preparedInputs",preparedInputs.getD Json.null)]
+-      running.child.stdin.putStrLn request.compress
+-      running.child.stdin.flush
++      write running (request.compress++"\n")
+       let mut json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
+       let mut repaired : Std.HashSet (Nat × Nat) := {}
+       -- One bounded pull per missing batch. The provider supplies no path,
+@@ -613,8 +626,7 @@ def nominateIndexed (command : List String) (queryText : String)
+         let some readWindow := reader |
+           throw (IO.userError "durable numerical windows are pending background warm")
+         let texts ← pull.handles.mapM (readWindow document)
+-        running.child.stdin.putStrLn (Json.mkObj [("windows", toJson texts)]).compress
+-        running.child.stdin.flush
++        write running ((Json.mkObj [("windows", toJson texts)]).compress++"\n")
+         json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
+       if let .ok message := json.getObjValAs? String "error" then
+         throw (IO.userError ("indexed numerical provider: " ++ message))
+diff --git a/Eggshell/TaskDeadline.lean b/Eggshell/TaskDeadline.lean
+new file mode 100644
+index 0000000..5ee05af
+--- /dev/null
++++ b/Eggshell/TaskDeadline.lean
+@@ -0,0 +1,66 @@
++module
++public import Std.Async.Select
++public import Std.Async.Timer
++
++@[expose] public section
++namespace Eggshell.TaskDeadline
++open Std Async
++
++def live (cancelled : Bool) (now deadline : Nat) : Bool :=
++  !cancelled && decide (now < deadline)
++
++theorem expired_refused (cancelled : Bool) (now deadline : Nat) (expired : deadline ≤ now) :
++    live cancelled now deadline = false := by simp [live,Nat.not_lt_of_ge expired]
++
++theorem cancelled_refused (now deadline : Nat) : live true now deadline = false := by simp [live]
++
++def ensureLive (deadline : Nat) : IO Unit := do
++  let cancelled ← IO.checkCanceled
++  unless live cancelled (← IO.monoMsNow) deadline do
++    throw (IO.userError (if cancelled then "owned task cancelled" else "owned task deadline expired"))
++
++/-- One completion observer per task. Re-registering a waiter after a timer
++wake replaces its destination; it does not attach another task continuation. -/
++def event (task : AsyncTask α) : IO (Selector α) := do
++  let waiting ← IO.mkRef (none : Option (Waiter α))
++  let completed ← IO.mkRef (none : Option (Except IO.Error α))
++  let deliver (waiter : Waiter α) (reply : Except IO.Error α) : BaseIO Unit :=
++    waiter.race (pure ()) (fun promise => promise.resolve reply)
++  discard <| IO.mapTask (t := task) (sync := true) fun reply => do
++    completed.set (some reply)
++    if let some waiter ← waiting.get then deliver waiter reply
++  return {
++    tryFn := do
++      match ← completed.get with
++      | none => return none
++      | some (.ok value) => return some value
++      | some (.error error) => throw error
++    registerFn := fun waiter => do
++      waiting.set (some waiter)
++      -- Completion before registration must not lose its wakeup.
++      if let some reply ← completed.get then deliver waiter reply
++    unregisterFn := waiting.set none }
++
++/-- Completion and the absolute deadline are event driven. Cooperative task
++cancellation has a bounded 25ms observation interval, using a native timer and
++no sleeping dedicated thread. The owner must cancel/join the actual IO. -/
++def wait (task : AsyncTask α) (deadline : Nat) : IO α := do
++  let ready ← event task
++  repeat
++    ensureLive deadline
++    let now ← IO.monoMsNow
++    if now ≥ deadline then throw (IO.userError "owned task deadline expired")
++    let result ← (do
++      let timer ← Selector.sleep (.ofNat (min 25 (deadline-now)))
++      Selectable.one #[.case ready (fun value => pure (some value)),
++        .case timer (fun _ => pure none)]).block
++    if let some value := result then
++      ensureLive deadline
++      return value
++  throw (IO.userError "unreachable task wait")
++
++def run (action : Async α) (deadline : Nat) : IO α := do
++  ensureLive deadline
++  wait (← action.toIO) deadline
++
++end Eggshell.TaskDeadline
