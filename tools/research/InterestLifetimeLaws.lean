@@ -1,0 +1,12 @@
+import Eggshell.PreparationPlan
+
+#print axioms Eggshell.PreparationPlan.Claim.retransmit_never_extends
+#print axioms Eggshell.PreparationPlan.requests_bounded
+#print axioms Eggshell.PreparationPlan.metadata_bounded
+#print axioms Eggshell.PreparationPlan.waiters_bounded
+#print axioms Eggshell.PreparationPlan.active_workers_bounded
+#print axioms Eggshell.PreparationPlan.missing_grant_refuses_demand
+#print axioms Eggshell.PreparationPlan.release_preserves_other_claim
+#print axioms Eggshell.PreparationPlan.stale_attempt_cannot_retire
+#print axioms Eggshell.PreparationPlan.closed_refuses_waiter
+#print axioms Eggshell.PreparationPlan.closed_starts_no_work

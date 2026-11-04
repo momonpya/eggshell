@@ -147,8 +147,13 @@ The [exact service interests](candidates/source-interests/README.md) now fulfil
 both skipped sources through the ordinary hook and shared background workers,
 in write/read-only fixtures with frozen private usage and fresh-process restore.
 The original project publication and bounded scheduler code are unchanged.
-Cancellation/expiry and sustained eighty-person capacity remain open; these
-small lexical checks do not establish the capacity gate below.
+The [waiter-lifetime continuation](candidates/interest-lifetime/README.md)
+now bounds exact interests by service-issued waiter expiry, shares active work
+and retires it on last release without stopping another waiter or a successor.
+Its 80-waiter model, two-waiter blocked real worker and four tiny normal-hook
+checks pass; they are not an 80-client workload. Original owner/publication code
+is unchanged. Unstable transport/restart recovery and sustained eighty-person
+capacity remain open; these small lexical checks do not establish the gate below.
 
 One project has several independent append owners; one session selects a stable
 write lane and reads the complete authorized project view. It does not acquire

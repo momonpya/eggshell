@@ -1,0 +1,924 @@
+--- a/Eggshell/PreparationPlan.lean
++++ b/Eggshell/PreparationPlan.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Lean.Data.Json.FromToJson
+ public import Init.Data.Vector.Basic
++public import Eggshell.Receipt
+ 
+ @[expose] public section
+ namespace Eggshell.PreparationPlan
+@@ -12,6 +13,38 @@
+ def maxBytes : Nat := 8*1024*1024
+ abbrev Lane := Fin workers
+ 
++/-- A charged token/deadline slot, never a query or original payload. -/
++def claimBytes : Nat := 160
++
++structure Ticket where
++  id : Nat
++  key : String
++  deriving ToJson, FromJson, BEq, DecidableEq
++
++def Ticket.valid (ticket : Ticket) : Bool := Receipt.validId ticket.key && decide (ticket.id < UInt64.size)
++
++structure Claim where
++  token : Ticket
++  expires : Nat
++  validToken : token.valid = true
++  boundedExpiry : expires < UInt64.size
++
++def Claim.make? (token : Ticket) (expires : Nat) : Option Claim :=
++  if valid : token.valid = true then
++    if bounded : expires < UInt64.size then some ⟨token,expires,valid,bounded⟩ else none
++  else none
++
++def Claim.live (claim : Claim) (now : Nat) : Bool := decide (now < claim.expires)
++
++/-- Retransmitting one capability cannot renew it. A different waiter gets a
++different capability and may independently keep the same immutable work live. -/
++def Claim.earlier (old incoming : Claim) : Claim :=
++  ⟨old.token,min old.expires incoming.expires,old.validToken,
++    Nat.lt_of_le_of_lt (Nat.min_le_left _ _) old.boundedExpiry⟩
++
++theorem Claim.retransmit_never_extends (old incoming : Claim) :
++    (old.earlier incoming).expires ≤ old.expires := Nat.min_le_left _ _
++
+ def Wake.needed (observed : String) (acknowledged : Option String) : Bool := acknowledged != some observed
+ def Wake.record (observed : String) (before : Option String) (accepted : Bool) : Option String :=
+   if accepted then some observed else before
+@@ -32,7 +65,26 @@
+   bytes : Nat
+   notBefore : Nat := 0
+   attempts : Nat := 0
++  durable : Bool := true
++  claims : Array Claim := #[]
+ 
++def Job.charge (job : Job) : Nat := job.bytes+claimBytes*job.claims.size
++def Job.live (job : Job) (now : Nat) : Bool := job.durable || job.claims.any (·.live now)
++def Job.needed (job : Job) : Bool := job.durable || !job.claims.isEmpty
++def Job.prune (job : Job) (now : Nat) : Job := {job with claims := job.claims.filter (·.live now)}
++def Job.without (job : Job) (token : Ticket) : Job := {job with claims := job.claims.filter (fun claim => decide (claim.token ≠ token))}
++
++def Job.merge (old incoming : Job) : Job := Id.run do
++  let mut claims := old.claims
++  for claim in incoming.claims do
++    if let some index := claims.findIdx? (fun old => decide (old.token = claim.token)) then
++      claims := claims.modify index (·.earlier claim)
++    else claims := claims.push claim
++  return {old with durable := old.durable || incoming.durable,claims}
++
++theorem Job.durable_is_live (job : Job) (now : Nat) (durable : job.durable = true) :
++    job.live now = true := by simp [Job.live,durable]
++
+ def Job.same (left right : Job) : Bool :=
+   left.key == right.key && left.source == right.source && left.semantic == right.semantic &&
+     left.payload == right.payload && left.bytes == right.bytes
+@@ -44,6 +96,7 @@
+ structure Active where
+   job : Job
+   token : Nat
++  retiring : Bool := false
+ 
+ structure Contents where
+   pending : Array Job := #[]
+@@ -56,58 +109,140 @@
+   finished : Nat := 0
+   retried : Nat := 0
+   peakActive : Nat := 0
++  releasedReferences : Nat := 0
++  expiredReferences : Nat := 0
++  retirements : Nat := 0
++  waiters : Array Claim := #[]
++  nextWaiter : Nat := 0
+ 
+ def Contents.active (state : Contents) : Array Active := state.running.toArray.filterMap id
+ def Contents.count (state : Contents) := state.pending.size+state.active.size
+ def Contents.charge (state : Contents) :=
+-  state.pending.foldl (fun total job => total+job.bytes) 0+
+-    state.active.foldl (fun total running => total+running.job.bytes) 0
++  state.pending.foldl (fun total job => total+job.charge) 0+
++    state.active.foldl (fun total running => total+running.job.charge) 0+
++    claimBytes*state.waiters.size
++def Contents.claimReferences (state : Contents) :=
++  state.pending.foldl (fun total job => total+job.claims.size) 0+
++    state.active.foldl (fun total running => total+running.job.claims.size) 0
+ 
+ /-- These bounds cover resident scheduling metadata, not arbitrary worker IO. -/
+ structure State where
+   contents : Contents
+   countBound : contents.count ≤ maxRequests
+   byteBound : contents.charge ≤ maxBytes
++  waiterBound : contents.waiters.size ≤ maxRequests
+ 
+-@[no_expose] def initial : State := ⟨{},by decide,by decide⟩
++@[no_expose] def initial : State := ⟨{},by decide,by decide,by decide⟩
+ 
+ private def checkedState (contents : Contents) : Option State :=
+   if countBound : contents.count ≤ maxRequests then
+-    if byteBound : contents.charge ≤ maxBytes then some ⟨contents,countBound,byteBound⟩ else none
++    if byteBound : contents.charge ≤ maxBytes then
++      if waiterBound : contents.waiters.size ≤ maxRequests then some ⟨contents,countBound,byteBound,waiterBound⟩ else none
++    else none
+   else none
+ 
+ theorem requests_bounded (state : State) : state.contents.count ≤ maxRequests := state.countBound
+ theorem metadata_bounded (state : State) : state.contents.charge ≤ maxBytes := state.byteBound
++theorem waiters_bounded (state : State) : state.contents.waiters.size ≤ maxRequests := state.waiterBound
+ theorem worker_slots_bounded (state : State) : state.contents.running.size = workers := rfl
+ 
+ theorem active_workers_bounded (state : State) : state.contents.active.size ≤ workers := by
+   simpa [Contents.active] using
+     (Array.size_filterMap_le (f := id) (xs := state.contents.running.toArray))
+ 
++/-- Expired pending work releases its charged metadata. Active slots remain
++owned until their token's IO has actually stopped; they cannot be recycled here. -/
++@[no_expose] def reap (state : State) (now : Nat) : State := Id.run do
++  let before := state.contents
++  if before.closed then return state
++  let pending := before.pending.filterMap fun job =>
++    let job := job.prune now
++    if job.needed then some job else none
++  let running := before.running.map fun active => active.map fun active => {active with job := active.job.prune now}
++  let next := {before with pending,running,waiters := before.waiters.filter (·.live now)}
++  let next := {next with expiredReferences := next.expiredReferences+before.claimReferences-next.claimReferences}
++  let some next := checkedState next | return state
++  return next
++
++@[no_expose] def release (state : State) (token : Ticket) (now : Nat) : State := Id.run do
++  let state := reap state now
++  let before := state.contents
++  let pending := before.pending.filterMap fun job =>
++    let job := job.without token
++    if job.needed then some job else none
++  let running := before.running.map fun active => active.map fun active => {active with job := active.job.without token}
++  let next := {before with pending,running,waiters := before.waiters.filter (fun claim => decide (claim.token ≠ token))}
++  let next := {next with releasedReferences := next.releasedReferences+before.claimReferences-next.claimReferences}
++  let some next := checkedState next | return state
++  return next
++
++/-- Only registration creates a capability. A late source request cannot
++recreate a released/expired ticket, and serials never repeat in this pool. -/
++@[no_expose] def openWaiter (state : State) (key : String) (expires now : Nat) : State × Option Ticket := Id.run do
++  let state := reap state now
++  let before := state.contents
++  if before.closed || expires ≤ now then return (state,none)
++  let token : Ticket := ⟨before.nextWaiter,key⟩
++  let some claim := Claim.make? token expires | return (state,none)
++  let next := {before with waiters := before.waiters.push claim,nextWaiter := before.nextWaiter+1}
++  let some next := checkedState next | return (state,none)
++  return (next,some token)
++
+ /-- An active request is not pending: another wake during execution must survive.
+ If admission is full, the caller retains its durable registry/ticket work. -/
+ @[no_expose] def notify (state : State) (job : Job) : State × Bool := Id.run do
+   let before := state.contents
+   if before.closed then return (state,false)
+-  if let some old := before.pending.find? (·.key == job.key) then
++  if !job.needed then return (state,false)
++  if let some position := before.pending.findIdx? (·.key == job.key) then
++    let some old := before.pending[position]? | return (state,false)
+     if !old.same job then return (state,false)
+-    let next := {before with coalesced := before.coalesced+1}
++    let next := {before with pending := before.pending.modify position (·.merge job),coalesced := before.coalesced+1}
+     let some next := checkedState next | return (state,false)
+     return (next,true)
++  -- Only immutable exact-cut interests may join a running attempt. A latest
++  -- publication wake must stay pending, and retiring attempts cannot revive.
++  if !job.durable then
++    for lane in List.finRange workers do
++      let some active := before.running[lane] | continue
++      if active.job.key != job.key || active.retiring || active.job.durable then continue
++      if !active.job.same job then return (state,false)
++      let next := {before with
++        running := before.running.set lane (some {active with job := active.job.merge job}),
++        coalesced := before.coalesced+1}
++      let some next := checkedState next | return (state,false)
++      return (next,true)
+   let next := {before with pending := before.pending.push job,accepted := before.accepted+1}
+   if let some next := checkedState next then return (next,true)
+   let some next := checkedState {before with rejected := before.rejected+1} | return (state,false)
+   return (next,false)
+ 
++@[no_expose] def demand (state : State) (job : Job) (token : Ticket) (now : Nat) : State × Bool := Id.run do
++  let state := reap state now
++  if job.durable then return (state,false)
++  let some claim := state.contents.waiters.find? (fun claim => decide (claim.token = token)) | return (state,false)
++  return notify state {job with claims := #[claim]}
++
++theorem missing_grant_refuses_demand (state : State) (job : Job) (token : Ticket) (now : Nat)
++    (missing : (reap state now).contents.waiters.find? (fun claim => decide (claim.token = token)) = none) :
++    (demand state job token now).2 = false := by
++  simp [demand,missing]
++
++theorem release_preserves_other_claim (job : Job) (claim : Claim) (token : Ticket)
++    (present : claim ∈ job.claims) (different : claim.token ≠ token) :
++    claim ∈ (job.without token).claims := by
++  simp [Job.without,Array.mem_filter,present,different]
++
+ @[no_expose] def take (state : State) (lane : Lane) (now : Nat) : State × Option Active := Id.run do
++  let state := reap state now
+   let before := state.contents
+   if before.closed || before.running[lane].isSome then return (state,none)
+   let active := before.active
+   let some position := before.pending.findIdx? (fun job =>
+-      job.notBefore ≤ now && active.all (fun running => job.independent running.job)) |
++      job.live now && job.notBefore ≤ now && active.all (fun running => job.independent running.job)) |
+     return (state,none)
+   let some job := before.pending[position]? | return (state,none)
+-  let running : Active := ⟨job,before.nextToken⟩
++  let running : Active := ⟨job,before.nextToken,false⟩
+   let next := {
+     before with
+     pending := before.pending.extract 0 position ++ before.pending.extract (position+1) before.pending.size
+@@ -117,18 +252,39 @@
+   let some next := checkedState next | return (state,none)
+   return (next,some running)
+ 
++/-- Linearize retirement before closing the IO handle. A late waiter queues
++behind this attempt; it cannot revive the slot that is about to be stopped. -/
++@[no_expose] def claimRetirement (state : State) (lane : Lane) (token now : Nat) : State × Bool := Id.run do
++  let before := state.contents
++  if before.closed then return (state,false)
++  let some active := before.running[lane] | return (state,false)
++  if active.token != token || active.retiring || active.job.live now then return (state,false)
++  let next := {before with
++    running := before.running.set lane (some {active with retiring := true}),
++    retirements := before.retirements+1}
++  let some next := checkedState next | return (state,false)
++  return (next,true)
++
++theorem stale_attempt_cannot_retire (state : State) (lane : Lane) (token now : Nat)
++    (active : Active) (found : state.contents.running[lane] = some active)
++    (different : active.token ≠ token) : (claimRetirement state lane token now).2 = false := by
++  simp [claimRetirement,found,different]
++
+ /-- A matching lane token is the only completion capability. A closed queue
+ never retries. Clearing an active slot leaves room to requeue its own charge. -/
+ @[no_expose] def finish (state : State) (lane : Lane) (token now : Nat) (complete : Bool) : State := Id.run do
++  let state := reap state now
+   let before := state.contents
+   let some active := before.running[lane] | return state
+   if active.token != token then return state
++  let retry := !complete && !before.closed && !active.retiring && active.job.live now &&
++    !before.pending.any (·.key == active.job.key)
+   let next := {
+     before with
+     running := before.running.set lane none
+     finished := before.finished+(if complete then 1 else 0)
+-    retried := before.retried+(if !complete && !before.closed then 1 else 0)}
+-  let next := if complete || next.closed || next.pending.any (·.key == active.job.key) then next else
++    retried := before.retried+(if retry then 1 else 0)}
++  let next := if !retry then next else
+     let job := {active.job with
+       attempts := active.job.attempts+1
+       notBefore := now+min 5000 (50*2^(min active.job.attempts 7))}
+@@ -137,14 +293,14 @@
+   return next
+ 
+ def close (state : State) : State := by
+-  let next := {state.contents with pending := #[],closed := true}
+-  refine ⟨next,?_,?_⟩
++  let next := {state.contents with pending := #[],waiters := #[],closed := true}
++  refine ⟨next,?_,?_,by simp [next]⟩
+   · have small : state.contents.active.size ≤ maxRequests := by
+       have bound := state.countBound
+       change state.contents.pending.size+state.contents.active.size ≤ maxRequests at bound
+       omega
+     simpa [next,Contents.count,Contents.active] using small
+-  · have small : state.contents.active.foldl (fun total running => total+running.job.bytes) 0 ≤ maxBytes := by
++  · have small : state.contents.active.foldl (fun total running => total+running.job.charge) 0 ≤ maxBytes := by
+       have bound := state.byteBound
+       unfold Contents.charge at bound
+       omega
+@@ -156,8 +312,12 @@
+     (notify state job).2 = false := by simp [notify,closed]
+ 
+ theorem closed_starts_no_work (state : State) (lane : Lane) (now : Nat) :
+-    (take (close state) lane now).2 = none := by simp [take,close]
++    (take (close state) lane now).2 = none := by simp [take,reap,close]
+ 
++theorem closed_refuses_waiter (state : State) (key : String) (expires now : Nat) :
++    (openWaiter (close state) key expires now).2 = none := by
++  simp [openWaiter,reap,close]
++
+ def stats (state : State) : Json :=
+   let value := state.contents
+   Json.mkObj [("pending",toJson value.pending.size),("active",toJson value.active.size),
+@@ -165,5 +325,10 @@
+     ("workers",toJson workers),("accepted",toJson value.accepted),("coalesced",toJson value.coalesced),
+     ("rejected",toJson value.rejected),("finishedAttempts",toJson value.finished),
+     ("retries",toJson value.retried),("peakActive",toJson value.peakActive),("closed",toJson value.closed)]
++    |>.setObjVal! "claimReferences" (toJson value.claimReferences)
++    |>.setObjVal! "releasedReferences" (toJson value.releasedReferences)
++    |>.setObjVal! "expiredReferences" (toJson value.expiredReferences)
++    |>.setObjVal! "retirements" (toJson value.retirements)
++    |>.setObjVal! "waiters" (toJson value.waiters.size)
+ 
+ end Eggshell.PreparationPlan
+--- a/Eggshell/PreparationRegistry.lean
++++ b/Eggshell/PreparationRegistry.lean
+@@ -47,7 +47,7 @@
+   let identity := kind++":"++jobKey
+   let bytes := (toJson (identity,source.head.identity,semantic,payload)).compress.utf8ByteSize
+   unless bytes ≤ 65536 do throw (IO.userError "preparation metadata exceeds its bound")
+-  return ⟨identity,source.head.identity,semantic,payload,bytes,0,0⟩
++  return {key := identity,source := source.head.identity,semantic,payload,bytes,durable := sourceHead.isNone}
+ 
+ def indexPaths (target : IndexTarget) (source : PageMap.Snapshot) : IO (List System.FilePath) := do
+   if target.sourceHead.isSome then return []
+--- a/Eggshell/PreparationService.lean
++++ b/Eggshell/PreparationService.lean
+@@ -10,16 +10,68 @@
+ structure Pool where
+   state : Std.Mutex PreparationPlan.State
+   lastRetry : Std.Mutex (Option Json)
++  pipes : Std.Mutex (Worker.Lifetime.Cell (Vector Worker.Slot PreparationPlan.workers))
+ 
+-def Pool.new : IO Pool := return ⟨← Std.Mutex.new PreparationPlan.initial,← Std.Mutex.new none⟩
++def Pool.new : IO Pool := do
++  let pipes ← (Vector.ofFn (fun lane : PreparationPlan.Lane => lane)).mapM fun _ => Worker.Slot.new
++  return ⟨← Std.Mutex.new PreparationPlan.initial,← Std.Mutex.new none,← Std.Mutex.new (.open pipes)⟩
+ 
+-def Pool.notify (pool : Pool) (kind key : String) (sourceHead : Option DB.PageMap.Head := none) : IO Bool := do
+-  let job ← PreparationRegistry.request kind key sourceHead
++def Pool.notify (pool : Pool) (kind key : String) : IO Bool := do
++  let job ← PreparationRegistry.request kind key
++  let now ← IO.monoMsNow
+   pool.state.atomically do
+-    let (next,admitted) := PreparationPlan.notify (← get) job
++    let (next,admitted) := PreparationPlan.notify (PreparationPlan.reap (← get) now) job
+     set next
+     return admitted
+ 
++def Pool.openWaiter (pool : Pool) (expires : Nat) : IO (Option PreparationPlan.Ticket) := do
++  let now ← IO.monoMsNow
++  let key ← Receipt.fresh
++  pool.state.atomically do
++    let (next,ticket) := PreparationPlan.openWaiter (← get) key (min expires (now+OperationWire.searchBudgetMs)) now
++    set next
++    return ticket
++
++def Pool.demand (pool : Pool) (kind key : String) (head : DB.PageMap.Head)
++    (token : PreparationPlan.Ticket) : IO Bool := do
++  unless token.valid do throw (IO.userError "invalid preparation claim")
++  let now ← IO.monoMsNow
++  let live ← pool.state.atomically do
++    let state := PreparationPlan.reap (← get) now
++    set state
++    return state.contents.waiters.any (fun claim => decide (claim.token = token))
++  unless live do return false
++  let job ← PreparationRegistry.request kind key (some head)
++  let now ← IO.monoMsNow
++  pool.state.atomically do
++    let (next,admitted) := PreparationPlan.demand (← get) job token now
++    set next
++    return admitted
++
++def Pool.release (pool : Pool) (token : PreparationPlan.Ticket) : IO Unit := do
++  unless token.valid do throw (IO.userError "invalid preparation release")
++  let now ← IO.monoMsNow
++  pool.state.atomically do modify fun state => PreparationPlan.release state token now
++
++def Pool.live (pool : Pool) (token : PreparationPlan.Ticket) : IO Bool := do
++  unless token.valid do return false
++  let now ← IO.monoMsNow
++  pool.state.atomically do
++    let state := PreparationPlan.reap (← get) now
++    set state
++    return state.contents.waiters.any (fun claim => decide (claim.token = token))
++
++def Pool.pipe (pool : Pool) (lane : PreparationPlan.Lane) : IO (Option Worker.Slot) := pool.pipes.atomically do
++  match ← get with
++  | .closed => return none
++  | .open pipes =>
++    let slot := pipes[lane]
++    if ← slot.closed then
++      let fresh ← Worker.Slot.new
++      set (Worker.Lifetime.Cell.open (pipes.set lane fresh))
++      return some fresh
++    return some slot
++
+ def Pool.take (pool : Pool) (lane : PreparationPlan.Lane) : IO (Option PreparationPlan.Active) := do
+   let now ← IO.monoMsNow
+   pool.state.atomically do
+@@ -30,11 +82,34 @@
+ /-- Long IO is outside the scheduling gate. Three stable lane identities own
+ three worker pipes for the service, independent of chat count. -/
+ def Pool.run (pool : Pool) (lane : PreparationPlan.Lane) (active : PreparationPlan.Active) : IO Unit := do
++  let retired ← IO.mkRef false
+   let complete ← try
++    let some pipe ← pool.pipe lane | pure false
+     let payload ← IO.ofExcept (PreparationRegistry.invocation active.job)
+-    let response ← Worker.exchange s!"project-preparation-{lane.val}" "index" payload ((← IO.monoMsNow)+60000)
++    let task ← IO.asTask (Worker.exchangeOwnedIndex pipe payload ((← IO.monoMsNow)+60000)) .dedicated
++    let await : IO (Option Json) := do
++      repeat
++        if ← IO.hasFinished task then return ← IO.ofExcept (← IO.wait task)
++        let now ← IO.monoMsNow
++        let stop ← pool.state.atomically do
++          let (next,stop) := PreparationPlan.claimRetirement (← get) lane active.token now
++          set next
++          return stop
++        if stop then
++          retired.set true
++          Worker.closeSlot pipe
++          let _ ← IO.wait task
++          return none
++        IO.sleep 5
++      throw (IO.userError "unreachable preparation attempt")
++    let response ← try await
++    finally
++      unless ← IO.hasFinished task do Worker.closeSlot pipe
++      let _ ← IO.wait task
++      pure ()
+     let complete := response.any (fun reply => (fromJson? reply : Except String Bool).toOption == some true)
+-    if !complete then
++    let closed ← pool.state.atomically do return (← get).contents.closed
++    if !complete && !(← retired.get) && !closed then
+       let reason := response.map (fun reply => (reply.compress.take 512).toString) |>.getD "worker unavailable"
+       pool.lastRetry.atomically (set (some (Json.mkObj [("key",toJson active.job.key),("reason",toJson reason)])))
+     pure complete
+@@ -45,8 +120,14 @@
+   pool.state.atomically do
+     modify fun state => PreparationPlan.finish state lane active.token now complete
+ 
+-def Pool.close (pool : Pool) : IO Unit :=
++def Pool.close (pool : Pool) : IO Unit := do
+   pool.state.atomically (modify PreparationPlan.close)
++  let owned ← pool.pipes.atomically do
++    let (next,owned) := Worker.Lifetime.close (← get)
++    set next
++    return owned
++  if let some pipes := owned then
++    for pipe in pipes do Worker.closeSlot pipe
+ 
+ def Pool.stats (pool : Pool) : IO Json := do
+   let state ← pool.state.atomically do return PreparationPlan.stats (← get)
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -9,6 +9,7 @@
+ public import Eggshell.SynapticBindings
+ public import tools.research.SourceViewBatch
+ public import Eggshell.OperationWire
++public import Eggshell.PreparationPlan
+ 
+ @[expose] public section
+ 
+@@ -420,16 +421,60 @@
+ 
+ /-- A wakeup for checked private registry metadata, never a source ACK or a
+ claim that preparation has finished. Full admission leaves durable work intact. -/
+-def enqueuePreparation (kind key : String) (deadline : Nat) (sourceHead : Option PageMap.Head := none) : IO Bool := do
++def enqueuePreparation (kind key : String) (deadline : Nat) : IO Bool := do
+   unless ["index","synapses"].contains kind && Receipt.validId key do
+     throw (IO.userError "invalid preparation target reference")
+   let endpoint ← resolve
+   let budget ← liveBudget deadline
+   let response ← Daemon.exchange endpoint "prepare-target" (Json.mkObj [
+-    ("registryKind",toJson kind),("key",toJson key),("sourceHead",toJson sourceHead),
++    ("registryKind",toJson kind),("key",toJson key),("budgetMs",toJson budget)]) (budget := budget)
++  IO.ofExcept (Json.parse response >>= fromJson? (α := Bool))
++
++/-- Registration fixes the service-clock expiry once. Source submissions cannot
++create, renew or reopen a released capability. -/
++def openPreparation (deadline : Nat) : IO (Option PreparationPlan.Ticket) := do
++  let endpoint ← resolve
++  let budget ← liveBudget deadline
++  let response ← Daemon.exchange endpoint "open-preparation" (Json.mkObj [
+     ("budgetMs",toJson budget)]) (budget := budget)
++  let ticket ← IO.ofExcept (Json.parse response >>= fromJson? (α := Option PreparationPlan.Ticket))
++  unless ticket.all (·.valid) do throw (IO.userError "service returned an invalid preparation capability")
++  return ticket
++
++def claimPreparation (kind key : String) (head : PageMap.Head)
++    (token : PreparationPlan.Ticket) (deadline : Nat) : IO Bool := do
++  unless kind == "index" && Receipt.validId key && token.valid do
++    throw (IO.userError "invalid captured preparation claim")
++  let endpoint ← resolve
++  let budget ← liveBudget deadline
++  let response ← Daemon.exchange endpoint "prepare-interest" (Json.mkObj [
++    ("registryKind",toJson kind),("key",toJson key),("sourceHead",toJson head),
++    ("token",toJson token),("budgetMs",toJson budget)]) (budget := budget)
+   IO.ofExcept (Json.parse response >>= fromJson? (α := Bool))
+ 
++/-- Best-effort early release cannot start a service or spend a new deadline.
++Lost releases are bounded by the already admitted service-side expiry. -/
++def releasePreparation (token : PreparationPlan.Ticket) (deadline : Nat) : IO Unit := do
++  unless token.valid do throw (IO.userError "invalid preparation release")
++  let now ← IO.monoMsNow
++  unless now < deadline do return
++  let some endpoint ← endpoint? | return
++  let budget := min 100 (deadline-now)
++  try
++    let _ ← Daemon.exchange endpoint "release-preparation" (Json.mkObj [
++      ("token",toJson token),("budgetMs",toJson budget)]) (budget := budget)
++    pure ()
++  catch _ => pure ()
++
++def preparationLive (token : PreparationPlan.Ticket) (deadline : Nat) : IO Bool := do
++  let some endpoint ← endpoint? | return false
++  let budget ← liveBudget deadline
++  try
++    let response ← Daemon.exchange endpoint "preparation-status" (Json.mkObj [
++      ("token",toJson token),("budgetMs",toJson budget)]) (budget := budget)
++    IO.ofExcept (Json.parse response >>= fromJson? (α := Bool))
++  catch _ => pure false
++
+ def register (endpoint : Daemon.Endpoint) (path : System.FilePath) (identity : String) : IO Project := do
+   let response ← Daemon.exchange endpoint "register" (Json.mkObj [
+     ("directory",toJson path.toString),("database",toJson identity)]) (budget := 5000)
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -769,7 +769,7 @@
+     let streamedRead := ["source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange"].contains kind
+     streamed.set streamedRead
+     let payload := json.getObjValD "payload"
+-    let deadline ← if ["prepare-target","prepare-source","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
++    let deadline ← if ["prepare-target","open-preparation","prepare-interest","release-preparation","preparation-status","prepare-source","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
+         let budget ← IO.ofExcept (payload.getObjValAs? Nat "budgetMs")
+         pure (min deadline (deadline-maxBudgetMs+min budget maxBudgetMs))
+       else pure deadline
+@@ -811,8 +811,23 @@
+         | "prepare-target" => do
+           let kind ← IO.ofExcept (payload.getObjValAs? String "registryKind")
+           let key ← IO.ofExcept (payload.getObjValAs? String "key")
+-          let sourceHead ← IO.ofExcept (payload.getObjValAs? (Option PageMap.Head) "sourceHead")
+-          toJson <$> server.preparation.notify kind key sourceHead
++          unless (payload.getObjVal? "sourceHead").toOption.isNone do
++            throw (IO.userError "captured source preparation requires a waiter claim")
++          toJson <$> server.preparation.notify kind key
++        | "prepare-interest" => do
++          let kind ← IO.ofExcept (payload.getObjValAs? String "registryKind")
++          let key ← IO.ofExcept (payload.getObjValAs? String "key")
++          let sourceHead ← IO.ofExcept (payload.getObjValAs? PageMap.Head "sourceHead")
++          let token ← IO.ofExcept (payload.getObjValAs? PreparationPlan.Ticket "token")
++          toJson <$> server.preparation.demand kind key sourceHead token
++        | "open-preparation" => toJson <$> server.preparation.openWaiter deadline
++        | "release-preparation" => do
++          let token ← IO.ofExcept (payload.getObjValAs? PreparationPlan.Ticket "token")
++          server.preparation.release token
++          pure (toJson true)
++        | "preparation-status" => do
++          let token ← IO.ofExcept (payload.getObjValAs? PreparationPlan.Ticket "token")
++          toJson <$> server.preparation.live token
+         | "prepare-source" => prepareSource server payload deadline
+         | "register" => toJson <$> register server payload
+         | "project-register" => do
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -19,6 +19,11 @@
+   gate : Std.Mutex Unit
+   child : Std.Mutex (Lifetime.Cell (Option Child))
+ 
++def Slot.new : IO Slot := return ⟨← Std.Mutex.new (),← Std.Mutex.new (.open none)⟩
++
++def Slot.closed (slot : Slot) : IO Bool := slot.child.atomically do
++  match ← get with | .closed => return true | .open _ => return false
++
+ initialize slots : Std.Mutex (Lifetime.Cell (List (String × Slot))) ← Std.Mutex.new (.open [])
+ 
+ structure Remote where
+@@ -46,6 +51,18 @@
+     stdin := .null, stdout := .null, stderr := .null }
+   let _ ← killer.wait
+   try child.kill catch _ => pure ()
++
++/-- Closure wins even before spawn. The caller owns this handle, so a delayed
++close cannot find and kill a replacement attempt through a reused lane name. -/
++def closeSlot (slot : Slot) : IO Unit := do
++  let owned ← slot.child.atomically do
++    let (next,owned) := Lifetime.close (← get)
++    set next
++    return owned.bind id
++  if let some child := owned then
++    killGroup child
++    let _ ← child.wait
++    pure ()
+ 
+ def cancelSlot (slot : Slot) : IO Unit := do
+   let idle ← slot.gate.tryAtomically (pure ())
+@@ -292,7 +309,55 @@
+   | .retry =>
+       IO.sleep (min 5 (deadline - now)).toUInt32
+       withReadPoolWithin pool deadline action
++
++/-- The caller has admitted this exact owned handle. Closing it is terminal;
++the IPC task never looks up another handle after admission. -/
++def exchangeSlot (slot : Slot) (role : String) (payload : Json) (deadline : Nat)
++    (searchPolicy : Option SearchPolicy) (_window : OpenWindow deadline) : IO (Option Json) := do
++  let child ← slot.child.atomically do
++    let some _window := OpenWindow.check deadline (← IO.monoMsNow) | return none
++    match Lifetime.admit (← get) with
++    | .refused => pure none
++    | .reuse child => pure (some child)
++    | .spawn =>
++        let child ← IO.Process.spawn {
++          cmd := (← IO.appPath).toString, args := #["codex-worker", role]
++          stdin := .piped, stdout := .piped, stderr := .null, setsid := true }
++        set (Lifetime.Cell.open (some child))
++        pure (some child)
++  let some child := child | return none
++  try
++    let window ← Std.Mutex.new deadline
++    let task ← IO.asTask (do
++      child.stdin.putStr (payload.compress ++ "\n")
++      child.stdin.flush
++      match searchPolicy with
++      | some policy => readSearchReply child.stdout policy window
++      | none => IO.ofExcept (Json.parse (← child.stdout.getLine))) .dedicated
++    let result ← if role == "save" then do
++      match ← IO.wait task with
++      | .ok json => pure (some json)
++      | .error error => throw error
++      else if searchPolicy.isSome then awaitSearch task window
++      else awaitUntil task deadline
++    match result with
++    | some json => return some json
++    | none =>
++        retire slot child
++        let _ ← IO.wait task
++        return none
++  catch error =>
++    let closed ← slot.closed
++    retire slot child
++    unless closed do IO.eprintln s!"Eggshell {role} worker stopped: {error}"
++    return none
+ 
++def exchangeOwnedIndex (slot : Slot) (payload : Json) (deadline : Nat) : IO (Option Json) := do
++  let result ← slot.gate.tryAtomically do
++    let some window := OpenWindow.check deadline (← IO.monoMsNow) | return none
++    exchangeSlot slot "index" payload deadline none window
++  return result.bind id
++
+ /-- Search contention waits within the hook's own deadline rather than dropping
+ the request. Saving and indexing remain separate, independently scheduled lanes.
+ Pipe writes and reads use the remaining deadline after admission. -/
+@@ -306,59 +371,16 @@
+           pure (some {identity := request.identity})
+     else pure none
+   let deadline := searchPolicy.map (fun policy => min deadline policy.identity.deadline) |>.getD deadline
+-  let execute := fun (slot : Slot) (_window : OpenWindow deadline) => do
+-    let child ← slot.child.atomically do
+-      let some _window := OpenWindow.check deadline (← IO.monoMsNow) | return none
+-      match Lifetime.admit (← get) with
+-      | .refused => pure none
+-      | .reuse child => pure (some child)
+-      | .spawn =>
+-          let child ← IO.Process.spawn {
+-            cmd := (← IO.appPath).toString, args := #["codex-worker", role]
+-            stdin := .piped, stdout := .piped, stderr := .null, setsid := true }
+-          set (Lifetime.Cell.open (some child))
+-          pure (some child)
+-    let some child := child | return none
+-    try
+-      let window ← Std.Mutex.new deadline
+-      let task ← IO.asTask (do
+-        child.stdin.putStr (payload.compress ++ "\n")
+-        child.stdin.flush
+-        match searchPolicy with
+-        | some policy => readSearchReply child.stdout policy window
+-        | none => IO.ofExcept (Json.parse (← child.stdout.getLine))) .dedicated
+-      let result ← if role == "save" then do
+-        match ← IO.wait task with
+-        | .ok json => pure (some json)
+-        | .error error => throw error
+-        else if searchPolicy.isSome then awaitSearch task window
+-        else awaitUntil task deadline
+-      match result with
+-      | some json => return some json
+-      | none =>
+-          retire slot child
+-          let _ ← IO.wait task
+-          return none
+-    catch error =>
+-      let closed ← slot.child.atomically do
+-        match ← get with
+-        | .closed => pure true
+-        | .open _ => pure false
+-      retire slot child
+-      -- Terminal shutdown intentionally closes these pipes. An unexpected
+-      -- EOF in an open lane remains an error and keeps its durable ticket.
+-      unless closed do IO.eprintln s!"Eggshell {role} worker stopped: {error}"
+-      return none
+   let result ← if role == "search" then do
+       let pool ← readPoolFor session
+       withReadPoolWithin pool deadline fun admission =>
+-        execute (pool.slot admission.lane) admission.window
++        exchangeSlot (pool.slot admission.lane) role payload deadline searchPolicy admission.window
+     else do
+       let slot ← slotFor session role
+       slot.gate.tryAtomically do
+       match OpenWindow.check deadline (← IO.monoMsNow) with
+       | none => pure none
+-      | some window => execute slot window
++      | some window => exchangeSlot slot role payload deadline searchPolicy window
+   pure (result.bind id)
+ 
+ /-- Restore exactly the original raw/project boundary, including absence. -/
+@@ -380,7 +402,7 @@
+ preparation service, while this waiter keeps its original absolute cutoff. -/
+ def awaitInputs (request : Search) (snapshots : List (Option DB.PageMap.Snapshot))
+     (boundary : InputBoundary.Boundary) (context : Option ProjectContext.Context)
+-    (selection : Config.Selection) (cutoff : Nat) : IO PreparedInputs.Frame := do
++    (selection : Config.Selection) (cutoff : Nat) (cancelled : IO Bool) : IO PreparedInputs.Frame := do
+   let numeric := request.route != .lexical && request.pending.semanticMatcher.isSome
+   let capture := ProjectContext.captureInputs request.pending snapshots (some boundary) numeric
+   if let some encoded ← capture then
+@@ -390,29 +412,45 @@
+       | some command => pure command
+       | none => throw (IO.userError "numeric interest omitted its registered provider")
+     else pure [(← IO.appPath).toString,"search-provider","--mode","lexical"]
+-  let targets ← (snapshots.filterMap id).toArray.mapM fun source => do
+-    let writable := match context with
+-      | some context => context.canPrepare (DB.Sidecar.Owner.ofSnapshot source)
+-      | none => selection.write.any (fun target => target.path.normalize == source.directory.normalize)
+-    let target ← registerIndexTarget source command writable
+-    return (target,source.head)
+-  let mut accepted := Array.replicate targets.size false
+-  let mut delay := 20
+-  while (← IO.monoMsNow) < cutoff do
+-    for index in [:targets.size] do
+-      if accepted[index]?.getD false then continue
+-      let some (target,head) := targets[index]? | throw (IO.userError "source interest inventory changed")
+-      let admitted ← Publication.Client.enqueuePreparation "index" target.key cutoff (some head)
+-      accepted := accepted.set! index admitted
+-    if let some encoded ← capture then
+-      return ← IO.ofExcept (fromJson? (α := PreparedInputs.Frame) encoded.payload)
+-    let now ← IO.monoMsNow
+-    unless now < cutoff do throw (IO.userError "captured source preparation exceeded its original cutoff")
+-    IO.sleep (min delay (cutoff-now)).toUInt32
+-    delay := min 200 (delay*2)
+-  throw (IO.userError "captured source preparation exceeded its original cutoff")
++  let ticket ← IO.mkRef (none : Option PreparationPlan.Ticket)
++  try
++    let targets ← (snapshots.filterMap id).toArray.mapM fun source => do
++      let writable := match context with
++        | some context => context.canPrepare (DB.Sidecar.Owner.ofSnapshot source)
++        | none => selection.write.any (fun target => target.path.normalize == source.directory.normalize)
++      let target ← registerIndexTarget source command writable
++      return (target,source.head)
++    let mut accepted := Array.replicate targets.size false
++    let mut delay := 20
++    while (← IO.monoMsNow) < cutoff do
++      unless !(← cancelled) && !(← IO.checkCanceled) do throw (IO.userError "captured source wait was cancelled")
++      if (← ticket.get).isNone then ticket.set (← Publication.Client.openPreparation cutoff)
++      let some token ← ticket.get | do
++        IO.sleep (min delay (cutoff-(← IO.monoMsNow))).toUInt32
++        delay := min 200 (delay*2)
++        continue
++      for index in [:targets.size] do
++        if accepted[index]?.getD false then continue
++        unless !(← cancelled) do throw (IO.userError "captured source wait was cancelled")
++        let some (target,head) := targets[index]? | throw (IO.userError "source interest inventory changed")
++        let admitted ← Publication.Client.claimPreparation "index" target.key head token cutoff
++        accepted := accepted.set! index admitted
++      if let some encoded ← capture then
++        return ← IO.ofExcept (fromJson? (α := PreparedInputs.Frame) encoded.payload)
++      unless ← Publication.Client.preparationLive token cutoff do
++        ticket.set none
++        accepted := Array.replicate targets.size false
++      let now ← IO.monoMsNow
++      unless now < cutoff do throw (IO.userError "captured source preparation exceeded its original cutoff")
++      IO.sleep (min delay (cutoff-now)).toUInt32
++      delay := min 200 (delay*2)
++    throw (IO.userError "captured source preparation exceeded its original cutoff")
++  finally
++    if let some token ← ticket.get then Publication.Client.releasePreparation token cutoff
+ 
+-def capturePrepared (request : Search) (waitDeadline : Option Nat := none) : IO Search := do
++def capturePrepared (request : Search) (waitDeadline : Option Nat := none)
++    (cancelled : IO Bool := pure false) : IO Search := do
++  unless !(← cancelled) do throw (IO.userError "query input capture was cancelled")
+   if !(decide (request.pending.projection = .automatic)) then return request
+   let cutoff := min request.deadline (waitDeadline.getD request.deadline)
+   let some encodedBoundary := request.pending.inputBoundary |
+@@ -445,7 +483,7 @@
+     if frame.inputs.size > 1 && frame.inputs.any (·.population > 0) && frame.owners.isNone then
+       throw (IO.userError "frozen turn input frame omitted individual owner roots")
+     return {request with prepared := some frame.inputs,owners := frame.owners,originals := some frame.originals}
+-  let frame ← awaitInputs request snapshots boundary context selection cutoff
++  let frame ← awaitInputs request snapshots boundary context selection cutoff cancelled
+   unless PreparedInputs.acceptsBoundary boundary frame do throw (IO.userError "completed source preparation changed its private input boundary")
+   return {request with
+     pending := {request.pending with preparedInputs := some ⟨toJson frame⟩}
+@@ -459,36 +497,33 @@
+     (searchPolicy : Option SearchPolicy := none) : IO (Option Json) := do
+   let some operation := OperationWire.Role.ofName role |
+     return ← exchangeLocal session role payload deadline searchPolicy
+-  let captured ← try
+-    if operation == .search then do
+-      let request ← IO.ofExcept (fromJson? payload : Except String Search)
+-      pure (some (toJson (← capturePrepared request (some deadline))))
+-    else pure (some payload)
+-    catch error =>
+-      IO.eprintln s!"Eggshell query inputs unavailable before admission: {error}"
+-      pure none
+-  let some payload := captured | return none
+-  let policy ← if operation == .search then
+-      match searchPolicy with
+-      | some policy => pure (some policy)
+-      | none => do
+-        let request ← IO.ofExcept (fromJson? payload : Except String Search)
+-        pure (some {identity := request.identity})
+-    else pure none
+-  let cutoff := policy.map (fun policy => min deadline policy.identity.deadline) |>.getD deadline
+-  let request : OperationWire.Request := {
+-    id := ← Receipt.fresh,session,role := operation,payload,cutoff,
+-    identity := policy.map (·.identity),finishReady := policy.any (·.finishReady)}
++  let id ← Receipt.fresh
+   let cancelled ← IO.mkRef false
+   let admitted ← remote.atomically do
+     match ← get with
+     | .closed => pure false
+     | .open current =>
+       unless current.size < 256 do return false
+-      set (Lifetime.Cell.open (current.push ⟨session,role,request.id,cancelled⟩))
++      set (Lifetime.Cell.open (current.push ⟨session,role,id,cancelled⟩))
+       return true
+   unless admitted do return none
+   try
++    let payload ← if operation == .search then do
++        let request ← IO.ofExcept (fromJson? payload : Except String Search)
++        pure (toJson (← capturePrepared request (some deadline) cancelled.get))
++      else pure payload
++    let policy ← if operation == .search then
++        match searchPolicy with
++        | some policy => pure (some policy)
++        | none => do
++          let request ← IO.ofExcept (fromJson? payload : Except String Search)
++          pure (some {identity := request.identity})
++      else pure none
++    let cutoff := policy.map (fun policy => min deadline policy.identity.deadline) |>.getD deadline
++    let request : OperationWire.Request := {
++      id,session,role := operation,payload,cutoff,
++      identity := policy.map (·.identity),finishReady := policy.any (·.finishReady)}
++    unless !(← cancelled.get) do return none
+     let window ← Std.Mutex.new cutoff
+     let ready := fun identity arrived => do
+       let some policy := policy | throw (IO.userError "unexpected operation progress")
+@@ -506,7 +541,7 @@
+     remote.atomically do
+       match ← get with
+       | .closed => pure ()
+-      | .open current => set (Lifetime.Cell.open (current.filter (·.id != request.id)))
++      | .open current => set (Lifetime.Cell.open (current.filter (·.id != id)))
+ 
+ /-- A finished search is publishable only in its requesting context and before
+     its deadline. An incomplete search can carry only a current-context notice,
+@@ -603,14 +638,7 @@
+     set state
+     pure (owned.getD [])
+   for (_, slot) in owned do
+-    let child ← slot.child.atomically do
+-      let (state, owned) := Lifetime.close (← get)
+-      set state
+-      pure (owned.bind id)
+-    if let some child := child then
+-      killGroup child
+-      let _ ← child.wait
+-      pure ()
++    closeSlot slot
+ 
+ /-- Local administration can inspect bounded worker ownership without reading
+ any request, query, original body or session control file. -/
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -9,12 +9,37 @@
+ import Eggshell.Setup
+ import all Eggshell.GraphStore
+ import all Eggshell.Worker
++import all Eggshell.PreparationService
+ public meta import Lean
+ import tests.FullSearchOracle
+ import Eggshell.WorkInference
+ 
+ open Lean
+ 
++run_meta do
++  let environment ← getEnv
++  for (caller,required) in #[
++      (``Eggshell.Plugin.Worker.awaitInputs, ``Eggshell.Plugin.Publication.Client.openPreparation),
++      (``Eggshell.Plugin.Worker.awaitInputs, ``Eggshell.Plugin.Publication.Client.claimPreparation),
++      (``Eggshell.Plugin.Worker.awaitInputs, ``Eggshell.Plugin.Publication.Client.releasePreparation),
++      (``Eggshell.Plugin.PreparationService.Pool.demand, ``Eggshell.PreparationPlan.demand),
++      (``Eggshell.Plugin.PreparationService.Pool.run, ``Eggshell.Plugin.Worker.exchangeOwnedIndex),
++      (``Eggshell.Plugin.PreparationService.Pool.run, ``Eggshell.PreparationPlan.claimRetirement),
++      (``Eggshell.Plugin.PreparationService.Pool.run, ``Eggshell.Plugin.Worker.closeSlot),
++      (``Eggshell.Plugin.PreparationService.Pool.close, ``Eggshell.Plugin.Worker.Lifetime.close),
++      (``Eggshell.Plugin.Worker.closeSlot, ``Eggshell.Plugin.Worker.Lifetime.close)] do
++    let some declaration := environment.find? caller | throwError "Missing preparation lifecycle caller: {caller}"
++    let some body := declaration.value? | throwError "Missing preparation lifecycle implementation: {caller}"
++    unless body.getUsedConstants.contains required do
++      throwError "Preparation bypasses its waiter or owned worker handle: {caller}, {required}"
++  let some declaration := environment.find? ``Eggshell.Plugin.PreparationService.Pool.run |
++    throwError "Missing preparation execution"
++  let some body := declaration.value? | throwError "Missing preparation execution body"
++  for forbidden in #[``Eggshell.Plugin.Worker.exchange, ``Eggshell.Plugin.Worker.cancelLocal,
++      ``Eggshell.Plugin.Worker.slotFor] do
++    if body.getUsedConstants.contains forbidden then
++      throwError "Preparation execution uses name-based worker ownership: {forbidden}"
++
+ /- The normal pinned DAG reader captures whole payload programs. Writer
+ reads use the same decoding/assembly implementation with their own read
+ capability; no alternate body representation or compatibility lane exists. -/
