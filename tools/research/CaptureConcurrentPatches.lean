@@ -1,4 +1,5 @@
 import Lean.Data.Json.FromToJson
+import Lean.Data.Json.Parser
 open Lean
 def base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
 def workspace : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
@@ -17,8 +18,31 @@ def save (name : String) (rows : Array (System.FilePath × System.FilePath × St
   let mut source := ""
   for (before,after,relative) in rows do source := source++(← patch before after relative)
   IO.FS.writeFile (workspace/"docs/candidates"/name/"candidate.patch") source
-def main : IO Unit := do
+def main (arguments : List String) : IO Unit := do
   let core := base/"interest-traffic-core"
+  if arguments == ["source-protocol"] then
+    check (!(← (workspace/"docs/candidates/source-protocol/candidate.patch").pathExists))
+      "task completion patches already sealed"
+    let files : Array String := #["Eggshell/TaskDeadline.lean","Eggshell/OperationPool.lean",
+      "Eggshell/PublicationService.lean","Eggshell/ContractAudit.lean"]
+    save "source-protocol" (files.map fun (relative : String) =>
+      (base/"task-observer-parent-core"/relative,core/relative,relative))
+    let partialCore := base/"task-observer-sealed-core"
+    IO.FS.createDirAll (partialCore/"Eggshell")
+    let mut partialPatch := ""
+    for relative in files do
+      let cacheName := relative.replace "/" "_" |>.replace ".lean" ".source"
+      let cache ← IO.ofExcept (Json.parse (← IO.FS.readFile (base/"task-observer-build"/cacheName)))
+      let source ← IO.ofExcept ((← IO.ofExcept cache.getArr?)[0]!.getStr?)
+      IO.FS.writeFile (partialCore/relative) source
+      partialPatch := partialPatch++(← patch (base/"task-observer-parent-core"/relative)
+        (partialCore/relative) relative)
+    IO.FS.writeFile (workspace/"docs/candidates/source-protocol/partial-observer.patch") partialPatch
+    let entry ← patch (workspace/"tools/research/SessionDispatchChecks.lean")
+      (core/"tools/research/SessionDispatchChecks.lean") "tools/research/SessionDispatchChecks.lean"
+    IO.FS.writeFile (workspace/"docs/candidates/source-protocol/entry.patch") entry
+    return
+  check arguments.isEmpty "unknown patch capture selection"
   check (!(← (workspace/"docs/candidates/shared-leases/combined.patch").pathExists)) "candidate patch already sealed"
   check ((← IO.FS.readFile (core/"Eggshell/CanonicalSourceLease.lean")).contains "structure Descriptor where")
     "capture requires the isolated candidate source"

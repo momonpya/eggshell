@@ -1,0 +1,129 @@
+diff --git a/Eggshell/TaskDeadline.lean b/Eggshell/TaskDeadline.lean
+index dce647a1..4635e6e6 100644
+--- a/Eggshell/TaskDeadline.lean
++++ b/Eggshell/TaskDeadline.lean
+@@ -43,0 +44,21 @@ def event (task : AsyncTask α) : IO (Selector α) := do
++/-- Observe completion once. Repeated owner bookkeeping reads this task-local
++event instead of taking the runtime's global task-state lock for every live
++task on every service tick. The original task still owns wait/cancellation. -/
++structure Watched (α : Type) where
++  private mk ::
++  task : AsyncTask α
++  complete : IO.Ref Bool
++
++@[no_expose] def watch (task : AsyncTask α) : IO (Watched α) := do
++  let complete ← IO.mkRef false
++  -- One writer, one transition, no read/modify/write race. Registering after
++  -- completion is handled by the runtime's synchronous mapTask contract.
++  discard <| IO.mapTask (t := task) (sync := true) fun _ => complete.set true
++  return ⟨task,complete⟩
++
++def Watched.finished (watched : Watched α) : IO Bool := watched.complete.get
++
++def Watched.wait (watched : Watched α) : IO (Except IO.Error α) := IO.wait watched.task
++
++def Watched.cancel (watched : Watched α) : IO Unit := IO.cancel watched.task
++
+diff --git a/Eggshell/OperationPool.lean b/Eggshell/OperationPool.lean
+index 33828eed..81df280d 100644
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -260 +260 @@ def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job) : I
+-    let task ← IO.asTask (do
++    let task ← TaskDeadline.watch (← IO.asTask (do
+@@ -262 +262 @@ def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job) : I
+-      pool.searchActor request job.cancelled (fun now => job.ready.set (some now))) .dedicated
++      pool.searchActor request job.cancelled (fun now => job.ready.set (some now))) .dedicated)
+@@ -265,2 +265,2 @@ def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job) : I
+-        if ← IO.hasFinished task then break
+-        if (← job.cancelled.get) || (← IO.monoMsNow) ≥ (← job.expires.get) then IO.cancel task
++        if ← task.finished then break
++        if (← job.cancelled.get) || (← IO.monoMsNow) ≥ (← job.expires.get) then task.cancel
+@@ -268 +268 @@ def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job) : I
+-      IO.ofExcept (← IO.wait task)
++      IO.ofExcept (← task.wait)
+@@ -270,2 +270,2 @@ def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job) : I
+-        if !(← IO.hasFinished task) then IO.cancel task
+-        discard <| IO.wait task
++        if !(← task.finished) then task.cancel
++        discard <| task.wait
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index 46ac43a8..81610bb3 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -903 +903 @@ def serveClient (server : Server) (admin : String) (client : Socket.Client)
+-def retain (tasks : List (Task (Except IO.Error Unit))) : IO (List (Task (Except IO.Error Unit))) := do
++def retain (tasks : List (TaskDeadline.Watched Unit)) : IO (List (TaskDeadline.Watched Unit)) := do
+@@ -906,2 +906,2 @@ def retain (tasks : List (Task (Except IO.Error Unit))) : IO (List (Task (Except
+-    if ← IO.hasFinished task then
+-      if let .error error ← IO.wait task then IO.eprintln s!"publisher operation stopped: {error}"
++    if ← task.finished then
++      if let .error error ← task.wait then IO.eprintln s!"publisher operation stopped: {error}"
+@@ -946,5 +946,5 @@ def run : IO UInt32 := do
+-  let clients ← IO.mkRef ([] : List (Task (Except IO.Error Unit)))
+-  let operationClients ← IO.mkRef ([] : List (Task (Except IO.Error Unit)))
+-  let publications ← IO.mkRef ([] : List (Task (Except IO.Error Unit)))
+-  let preparations ← IO.mkRef ([] : List (Task (Except IO.Error Unit)))
+-  let operations ← IO.mkRef ([] : List (Task (Except IO.Error Unit)))
++  let clients ← IO.mkRef ([] : List (TaskDeadline.Watched Unit))
++  let operationClients ← IO.mkRef ([] : List (TaskDeadline.Watched Unit))
++  let publications ← IO.mkRef ([] : List (TaskDeadline.Watched Unit))
++  let preparations ← IO.mkRef ([] : List (TaskDeadline.Watched Unit))
++  let operations ← IO.mkRef ([] : List (TaskDeadline.Watched Unit))
+@@ -963 +963 @@ def run : IO UInt32 := do
+-            let task ← IO.asTask (serveClient server endpoint.secret client) .dedicated
++            let task ← TaskDeadline.watch (← IO.asTask (serveClient server endpoint.secret client) .dedicated)
+@@ -971 +971 @@ def run : IO UInt32 := do
+-            let task ← IO.asTask (serveClient server endpoint.secret client true) .dedicated
++            let task ← TaskDeadline.watch (← IO.asTask (serveClient server endpoint.secret client true) .dedicated)
+@@ -980 +980 @@ def run : IO UInt32 := do
+-          let task ← IO.asTask (server.owned.publish group) .dedicated
++          let task ← TaskDeadline.watch (← IO.asTask (server.owned.publish group) .dedicated)
+@@ -984 +984 @@ def run : IO UInt32 := do
+-          let task ← IO.asTask (publish server path identity jobs) .dedicated
++          let task ← TaskDeadline.watch (← IO.asTask (publish server path identity jobs) .dedicated)
+@@ -988 +988 @@ def run : IO UInt32 := do
+-          let task ← IO.asTask (server.preparation.run lane active) .dedicated
++          let task ← TaskDeadline.watch (← IO.asTask (server.preparation.run lane active) .dedicated)
+@@ -992 +992 @@ def run : IO UInt32 := do
+-          let task ← IO.asTask (server.operations.run lane active job) .dedicated
++          let task ← TaskDeadline.watch (← IO.asTask (server.operations.run lane active job) .dedicated)
+@@ -996 +996 @@ def run : IO UInt32 := do
+-        let task ← IO.asTask (server.operations.runSearch active job) .dedicated
++        let task ← TaskDeadline.watch (← IO.asTask (server.operations.runSearch active job) .dedicated)
+@@ -1021,3 +1021,3 @@ def run : IO UInt32 := do
+-    for task in publications do let _ ← IO.wait task; pure ()
+-    for task in preparations do let _ ← IO.wait task; pure ()
+-    for task in operations do let _ ← IO.wait task; pure ()
++    for task in publications do let _ ← task.wait; pure ()
++    for task in preparations do let _ ← task.wait; pure ()
++    for task in operations do let _ ← task.wait; pure ()
+@@ -1027,2 +1027,2 @@ def run : IO UInt32 := do
+-    for task in clients do let _ ← IO.wait task; pure ()
+-    for task in operationClients do let _ ← IO.wait task; pure ()
++    for task in clients do let _ ← task.wait; pure ()
++    for task in operationClients do let _ ← task.wait; pure ()
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 5340949a..e596b2da 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -12,0 +13 @@ import all Eggshell.PreparationService
++import all Eggshell.PublicationService
+@@ -18,0 +20,17 @@ open Lean
++run_meta do
++  let environment ← getEnv
++  for caller in #[``Eggshell.Plugin.Publication.Service.retain,
++      ``Eggshell.Plugin.OperationPool.Pool.runSearch] do
++    let some body := (environment.find? caller).bind (·.value?) |
++      throwError "Missing owned completion bookkeeping: {caller}"
++    unless body.getUsedConstants.contains ``Eggshell.TaskDeadline.Watched.finished do
++      throwError "Live task bookkeeping bypasses its registered completion: {caller}"
++    for forbidden in #[``IO.hasFinished,``IO.getTaskState] do
++      if body.getUsedConstants.contains forbidden then
++        throwError "Live bookkeeping polls the global task-state table: {caller}"
++  let some body := (environment.find? ``Eggshell.TaskDeadline.Watched.finished).bind (·.value?) |
++    throwError "Missing registered completion observation"
++  for forbidden in #[``IO.hasFinished,``IO.getTaskState] do
++    if body.getUsedConstants.contains forbidden then
++      throwError "Completion observation re-enters the global task-state table"
++

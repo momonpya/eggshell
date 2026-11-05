@@ -1,0 +1,12 @@
+{
+  "beforeRun": true,
+  "parentRuntimeSha256": "58d48c7ce3770bba82ababd044803746387d36a925efb9cee256880d293e4312",
+  "candidateRuntimeSha256": "19d0f1a06dc5908e39a3a95b41aa9b1910e211c75fcbb07ef921e879e11ea893",
+  "basis": "Registry and search-supervisor completion observers alone passed32/32 actual hooks but remained0/80, so that partial change is not a concurrency fix. executeOperation still polled two Promise.isResolved values per pending operation every5ms; the local Lean library implements those polls through global task-state inspection.",
+  "change": "Use the same single-registration completion observer for the reply and peer-disconnect Tasks, preserving distinct valid-empty and dropped-owner replies, original wait/cancel ownership, clock and full source domain.",
+  "sequence": ["native task/promise/cancellation and prior contract checks", "same16-client two-wave actual hooks", "fixed80 only if32/32 original+ACK and semantic handoff with clean shutdown"],
+  "unchanged": ["one lightweight logical actor per active chat", "shared heavy preparations", "16 append owners and frozen original Heads", "MiniLM and ranking", "durable receipts", "original deadline and semantic cutoff", "memory, disk and reply allowances"],
+  "adopted": false,
+  "answeringModelCalls": 0,
+  "paidComparisons": "0/18"
+}

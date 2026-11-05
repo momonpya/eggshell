@@ -58,11 +58,20 @@ Keep these contracts for the next implementation:
    leftover-process failure as a failed gate. Audit service-wide shutdown ordering
    separately: source-cache accounting must remain live until active reads join.
 
-Next isolate the full80×16 retained-source protocol from the eighty whole graph
-queries before changing more code. Measure preparation validation, request/reply
-transport and waiter lifetime separately, with the same cut and original clock;
-the90ms direct component is not a measurement of the RPC path. Retain explicit
-failures and distinguish completed acquisition from server-side token creation.
+The [full80×16 protocol study](candidates/source-protocol/README.md) has now
+completed six fixed waves:480/480 complete cuts received, maximum1,397ms, exact
+scope/full Head/manifest and zero retained charge after release. Both external
+and hosted service modes pass. This isolates actual received RPC replies from
+the90ms direct component; it does not pass eighty whole queries. Overlapping
+queries still fail0/80 with optional profiling on and off. Two completion-observer
+candidates pass32/32 hooks but also fail0/80; neither is adopted. Polling alone
+is not the established cause. Their402 real outputs and failures are retained.
+
+Next attribute environment reopening, checked source binding, shared-reader
+borrowing and preparation acquisition under the actual load before changing
+another core path. Use existing receipt boundaries and measure the observer's
+effect. Keep the same cut, cancellation ownership, original clock and complete
+certification; no weight, cutoff or resource inflation substitutes for evidence.
 
 The intended interface shares a complete checked immutable source cut in the
 project service. Request actors receive small private leases and direct typed

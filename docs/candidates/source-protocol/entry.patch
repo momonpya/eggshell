@@ -1,0 +1,16 @@
+diff --git a/tools/research/SessionDispatchChecks.lean b/tools/research/SessionDispatchChecks.lean
+index bdad8946..0eda9a09 100644
+--- a/tools/research/SessionDispatchChecks.lean
++++ b/tools/research/SessionDispatchChecks.lean
+@@ -1,0 +2,3 @@ import Main
++import tools.research.TaskWatchChecks
++import tools.research.DirectWaitChecks
++import tools.research.PrivatePageChecks
+@@ -102,0 +106,7 @@ def main (args : List String) : IO UInt32 := do
++  | ["task-watch-checks",root] =>
++    Eggshell.Research.TaskWatchChecks.run (.mk root)
++    Eggshell.Research.DirectWaitChecks.run ((.mk root)/"events")
++    Eggshell.Research.PrivatePageChecks.run ((.mk root)/"pages")
++    Eggshell.Research.SessionDispatchChecks.policy
++    Eggshell.Research.SessionDispatchChecks.cancellation
++    return 0

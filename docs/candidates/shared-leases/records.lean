@@ -20,7 +20,7 @@ def distribution (values : Array Nat) : Json := Id.run do
   let sorted := values.qsort (· < ·)
   return Json.mkObj [("count",toJson sorted.size),("min",toJson sorted[0]?),
     ("median",toJson sorted[sorted.size/2]?),("max",toJson sorted.back?)]
-def verify (evidence bodies : Array Json) (expected : Nat) : IO Unit := do
+def verify (destination : System.FilePath) (evidence bodies : Array Json) (expected : Nat) : IO Unit := do
   for entry in bodies do
     let body ← IO.ofExcept (entry.getObjValAs? String "body")
     check (entry.getObjValD "sha256" == toJson (← digest body) &&
@@ -72,7 +72,10 @@ def enrichedReceipt (root : System.FilePath) (value : Json) : IO Json := do
       value := value.setObjVal! stage summary
   return compactReceipt value
 
-def main (tags : List String) : IO Unit := do
+def main (arguments : List String) : IO Unit := do
+  let (destination,tags) := match arguments with
+    | "--source-protocol" :: tags => (destination.parent.getD destination / "source-protocol",tags)
+    | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
   let mut evidence : Array Json := #[]
@@ -81,8 +84,8 @@ def main (tags : List String) : IO Unit := do
   if ← bodiesPath.pathExists then bodies ← IO.ofExcept (← read bodiesPath).getArr?
   if let ["verify",count] := tags then
     let some count := count.toNat? | throw (IO.userError "explicit output count required")
-    return ← verify evidence bodies count
-  if tags == ["verify"] then return ← verify evidence bodies 35
+    return ← verify destination evidence bodies count
+  if tags == ["verify"] then return ← verify destination evidence bodies 35
   if tags == ["enrich"] then
     evidence ← evidence.mapM fun run => do
       let tag ← IO.ofExcept (run.getObjValAs? String "tag")
@@ -93,13 +96,15 @@ def main (tags : List String) : IO Unit := do
       return run.setObjVal! "waves" (toJson waves)
     let previous ← read evidencePath
     IO.FS.writeFile evidencePath (previous.setObjVal! "runs" (toJson evidence)).pretty
-    return ← verify evidence bodies (evidence.foldl (fun count run => count+(arr run "rowsIncludingPrime").size) 0)
+    return ← verify destination evidence bodies (evidence.foldl (fun count run => count+(arr run "rowsIncludingPrime").size) 0)
   let mut indices : Std.HashMap String Nat := {}
   for entry in bodies.zipIdx do
     let body ← IO.ofExcept (entry.1.getObjValAs? String "body")
     indices := indices.insert body entry.2
   for tag in tags do
-    check ((tag.startsWith "shared-leases-" || tag.startsWith "hosted-endpoint-") &&
+    check ((tag.startsWith "shared-leases-" || tag.startsWith "hosted-endpoint-" ||
+      tag.startsWith "source-protocol-overlap" || tag.startsWith "task-observer-" ||
+      tag.startsWith "task-waiter-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"
@@ -136,7 +141,9 @@ def main (tags : List String) : IO Unit := do
     let mut fields := [("tag",toJson tag),("guard",guard),("rowsIncludingPrime",toJson captured),("waves",toJson observations)]
     for key in ["runtimeSha256","caseCount","concurrentClients","requestOwnedActors","originalHeadsUnchanged","independentSearchActors",
       "separateMutableFronts","oneSharedHitPerBorrower","fullDescriptorAndScopeChecked","pressureInsertions","maxEncodedReferencedBytes","maxEntries","left","right","shared","earlyCompletions","parallelNativeTimers","exactPayloadsAndOrder","exceptionsPreserved","validEmptyPreserved","expiredCompletionRefused","elapsedMs","sameChatSequential","metadataAndCountBounds","saveLanesRemainIndependent","staleTokensRejected",
-      "cancelledTaskJoinedPeerCompleted","expiredTaskJoined","actualHookCapacityTested","concurrentCuts","sourcesPerCut","retainedTokens","acquisitionElapsedMs","full","drained","final","oneCachePinPerDescriptor","foreignScopeRootManifestRejected","activeReleaseExpiryCloseAccounted"] do
+      "cancelledTaskJoinedPeerCompleted","expiredTaskJoined","actualHookCapacityTested","concurrentCuts","sourcesPerCut","retainedTokens","acquisitionElapsedMs","full","drained","final","oneCachePinPerDescriptor","foreignScopeRootManifestRejected","activeReleaseExpiryCloseAccounted",
+      "parallelTasks","monotoneChecksPerTask","completedBeforeRegistration","originalErrorPreserved",
+      "unresolvedReplyNotComplete","emptyReplyAndDroppedOwnerDistinct","cancelledTaskFinalizerJoined","peerUnaffected"] do
       if report.getObjValD key != Json.null then fields := fields++[(key,report.getObjValD key)]
     if ← (base/(tag++".log")).pathExists then
       let log ← IO.FS.readFile (base/(tag++".log"))

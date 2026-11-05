@@ -70,11 +70,23 @@ candidate is rejected. Neither increasing actor count nor removing one
 control-path check establishes capacity. No changed ranking, clock or inflated
 resource limit is accepted as a remedy. Product core source remains unchanged.
 
-Next isolate the full80×16 source-acquisition protocol from the whole search
-workload, including actual reply receipt and cancellation, before another core
-change. Reuse a checked immutable read cut directly inside its project service;
-keep remote transport behind the same exact interface and preserve complete
-certification. Do not reconstruct/validate/serialize that full cut per chat.
+The [full protocol isolation](candidates/source-protocol/README.md) now passes
+480/480 complete received cuts across six eighty-client waves, maximum1,397ms,
+with exact full Head/manifest checks and zero retained charge after release.
+The same cut with whole graph queries still fails0/80; disabling optional
+profiling also fails0/80. Task-local completion observers pass32/32 actual hooks
+but remain0/80, even when operation reply/disconnect polling is included. Those
+changes are rejected. Neither source RPC alone nor those polling sites explain
+the full failure. All eighty actors start; the final run queues at most49ms,
+while its service uses96.62 CPU seconds and numerical backend work only40ms.
+
+Next measure environment reopening, checked source binding, shared-reader borrow
+and preparation acquisition separately under the actual load, using existing
+receipt paths and recording observer cost. Then reuse a checked immutable read
+cut directly inside its project service; keep remote transport behind the same
+exact interface and preserve complete certification. Do not reconstruct,
+validate or serialize that full cut per chat. No further weight/cutoff/limit
+changes substitute for this stage attribution.
 Component accounting is not a proof of the wrapper's active-read shutdown order.
 All actual bodies, failures and cleanup are retained as compact evidence, not
 as old DBs or raw run caches. Paid token/quality comparisons remain0/18.

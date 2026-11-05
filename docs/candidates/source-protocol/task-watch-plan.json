@@ -1,0 +1,9 @@
+{
+  "beforeRun": true,
+  "basis": "Six standalone source waves pass480/480 within1.40s; overlapping hook waves fail0/80 with optional profiling both on and off. The sampled service has repeated getTaskState calls at the service task registry and per-search supervisor, and global runtime/event-loop mutex waits; waiting stack counts are not CPU percentages.",
+  "change": "Register a completion observer once per owned task; service bookkeeping and search supervisors inspect its private completion value, and preserve the same underlying task for wait/cancel.",
+  "unchanged": ["80 independently active logical search actors", "16 source append owners", "source/certification domain", "model and ranking", "receipt durability", "original hook clock and semantic cutoff", "memory/disk/reply allowances"],
+  "checks": ["ContractAudit forbids direct global task-state polling in hot bookkeeping", "native80 pending tasks, exact payloads and monotone completion", "completed-before-registration, empty value and original error", "cancellation/finalizer with unaffected peer", "existing actor/deadline/page checks", "same32 actual hooks, then fixed80 only if full original+ACK, semantic handoff and cleanup pass"],
+  "adopted": false,
+  "paidComparisons": "0/18"
+}

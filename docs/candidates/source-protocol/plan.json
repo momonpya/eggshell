@@ -1,0 +1,16 @@
+{
+  "beforeRun": true,
+  "purpose": "Isolate full source-acquisition protocol from whole WorkGraph queries before changing core code.",
+  "runtimeSha256": "f332d24c852a0b52063b07ecb651ff37362ba7c644aa918b09e8e37213feb276",
+  "nativeControllerSha256": "34a54f121fa35f6e8060f57671a13ce4dcef4a3fca7a91f401ac5a5cc4745494",
+  "cut": "same sixteen original owners and full Heads from ../worker-cpu/heads.json; obtain completed manifests from this frozen runtime's warm output before requests",
+  "modes": ["external native controller to existing service binary", "same native controller and service implementation in one process"],
+  "order": ["external1", "hosted1", "hosted2", "external2", "external3", "hosted3"],
+  "stop": "stop on resource/lifecycle/identity failure; retain per-item acquisition failures without retry or clock reset",
+  "wave": "one priming complete16-source cut and release, then eighty concurrent complete16-source requests retained until collection and released",
+  "clock": "28800ms original lifetime;7200ms acquisition (one quarter), unchanged hard source lease expiry; receipt and release checked separately",
+  "scope": "zero WorkGraph searches and zero answering-model calls; this is not eighty-hook capacity or an adoption comparison",
+  "bounds": {"ceilingRssKiB":4194304,"stopRssKiB":3670016,"minFreeKiB":2097152},
+  "coreChanges": false,
+  "adopted": false
+}

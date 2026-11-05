@@ -1,0 +1,84 @@
+{"retainedLinkResponsesUnchanged": true,
+ "retainedLinkResponses":
+ [["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/runtime.rsp",
+   "90bf5bd646ce78a436d2f0ec7bc27490df0540c0cc999e6568dc89d06f2b7421"],
+  ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/focus-locators-build/runtime.rsp",
+   "dc07ce2495a96ffaf5b41b0f8134b8ae91b4355893d74cffed05f52d6066e5b1"],
+  ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/hosted-endpoint-build/runtime.rsp",
+   "ce04048e56893d0ef0cd46c526258b52379482fefedea40bc561706a155be12f"],
+  ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/metadata-ingress-candidate-build/runtime.rsp",
+   "da9777d9a3306aa0e7452368dd545c4903e0ea3c5fec42a13c39e5eade85af91"],
+  ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-dispatch-client-build/runtime.rsp",
+   "4117d046902d0b95e15c7d9d335d5114786662c9ad3eac6d930d17977f04500e"]],
+ "removed":
+ [{"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-protocol-build",
+   "logicalBytes": 24343671,
+   "files": 1318},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/source-observer-build",
+   "logicalBytes": 24565367,
+   "files": 1318},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/task-observer-build",
+   "logicalBytes": 141526049,
+   "files": 1482},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/task-waiter-build",
+   "logicalBytes": 141626769,
+   "files": 1482}],
+ "protectedOriginalsUnchanged": true,
+ "preflights":
+ [{"tag": "task-waiter-compiled-retire1",
+   "guard":
+   {"userCeilingRssKiB": 4194304,
+    "state": "finished",
+    "settings":
+    {"record":
+     "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/task-waiter-compiled-retire1.guard.json",
+     "ownedPrefixes":
+     ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+     "minFreeKiB": 2097152,
+     "limitRssKiB": 3670016,
+     "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+     "command":
+     ["/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "-j1",
+      "-M512",
+      "--run",
+      "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/shared-leases/retire.lean",
+      "--source-protocol-builds"]},
+    "samples": 5,
+    "sampledPeakRssKiB": 520176,
+    "reason": null,
+    "peakProcesses":
+    [{"rssKiB": 472176,
+      "role": null,
+      "program":
+      "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+      "pid": 86092,
+      "parent": 86088,
+      "lane": null},
+     {"rssKiB": 48000,
+      "role": "guard",
+      "program":
+      "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+      "pid": 86088,
+      "parent": 1,
+      "lane": null}],
+    "ownedPids": [],
+    "limitRssKiB": 3670016,
+    "guardTriggered": false,
+    "guardSha256":
+    "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+    "guardPid": 86088,
+    "exitCode": 1,
+    "error": null,
+    "elapsedMs": 4002,
+    "childPid": 86092},
+   "errors":
+   ["/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/shared-leases/retire.lean:40:17: error: Application type mismatch: The argument",
+    "has type",
+    "but is expected to have type"]}],
+ "candidatePatchesAndActualBodiesRetained": true,
+ "archive": false}
