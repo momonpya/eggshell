@@ -1,0 +1,259 @@
+diff --git a/Eggshell/SynapseIndex.lean b/Eggshell/SynapseIndex.lean
+index 6d3daf9a..278a2188 100644
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -49,0 +50,4 @@ def replacementKey : String := "memo:replacement"
++/-- Only the source-fact producer stages this seal in the same transaction
++as its complete delta. Generic shared edits retire it before changing facts. -/
++def sourcePreparationKey : String := "memo:source-preparation"
++
+@@ -282,0 +287 @@ def publishDelta (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope
++      if scope == .shared then writer.put sourcePreparationKey none
+@@ -324,0 +330 @@ def replace (source : PageMap.Snapshot) (storage : Sidecar.Storage) (scope : Sco
++      if scope == .shared then writer.put sourcePreparationKey none
+diff --git a/Eggshell/SynapseBuild.lean b/Eggshell/SynapseBuild.lean
+index 7e8003b4..fef6b5a0 100644
+--- a/Eggshell/SynapseBuild.lean
++++ b/Eggshell/SynapseBuild.lean
+@@ -163 +163,11 @@ def ownerId? (snapshot : PageMap.Snapshot) (owner : String) : IO (Option Nat) :=
+-/-- Scheduling probe only: bounded metadata reads and no directory creation. -/
++def preparationBytes (source : PageMap.Head) : ByteArray :=
++  (toJson (source,Index.implementation)).compress.toUTF8
++
++def preparedFor (index : PageMap.Snapshot) (source : PageMap.Head) : IO Bool := do
++  return (← index.get Index.sourcePreparationKey) == some (preparationBytes source)
++
++def stagePreparation (source : PageMap.Head) (writer : PageMap.Writer) : IO Unit := do
++  writer.put Index.sourcePreparationKey (some (preparationBytes source))
++
++/-- Scheduling probe only: a generic replacement is not a complete source
++derivation, even when its source head and manifest still match. -/
+@@ -165 +175,2 @@ def required (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage) : IO Bool
+-  return (← Index.open? snapshot storage .shared).isNone
++  let some ready ← Index.open? snapshot storage .shared | return true
++  return !(← preparedFor ready.index ready.manifest.source)
+@@ -174,3 +185,4 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage)
+-      return {
+-        mode := "warm", source := snapshot.head, index := ready.index.head
+-        facts := ready.manifest.facts, elapsedMs := (← IO.monoMsNow) - started}
++      if ← preparedFor ready.index ready.manifest.source then
++        return {
++          mode := "warm", source := snapshot.head, index := ready.index.head
++          facts := ready.manifest.facts, elapsedMs := (← IO.monoMsNow) - started}
+@@ -184 +196,4 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage)
+-  let compatible := metadata.filter fun value => value.implementation == Index.implementation && value.scope == .shared
++  let compatible ← metadata.bindM fun value => do
++    if value.implementation == Index.implementation && value.scope == .shared &&
++        (← preparedFor workspace.base value.source) then return some value
++    return none
+@@ -339,0 +355 @@ def refresh (snapshot : PageMap.Snapshot) (storage : Sidecar.Storage)
++    stagePreparation snapshot.head writer
+diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
+index 851968e3..a05b086f 100644
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -1392,15 +1392,16 @@ def Result.advanced (result : Result) : Bool :=
+-def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (result : Replay) (deadline : Nat)
+-    (input : UsageCache.Input) : IO Unit := do
+-  let some shared ← Index.open? source storage .shared | throw (IO.userError "synaptic source index is not warm")
+-  let mut old := #[]
+-  for consumer in result.consumers.toList.eraseDups do
+-    let found ← shared.lookup (.consumer consumer) 100000 deadline
+-    unless found.complete do throw (IO.userError "incomplete consumer retirement evidence")
+-    old := old ++ found.facts
+-  let previous := old.foldl (fun set fact => set.insert fact) ({} : Std.HashSet Fact)
+-  let wanted := result.consumed.foldl (fun set fact => set.insert fact) ({} : Std.HashSet Fact)
+-  let _ ← Index.publishDelta source storage .shared (some shared.manifest.source) {
+-    removed := old.filter (!wanted.contains ·), added := result.consumed.filter (!previous.contains ·) }
+-    (basis := some shared.index.head)
+-  if result.pending == 0 then
+-    let _ ← UsageCache.publish source input result.usage
++/-- Private interpretations can publish labels only. Public consumption is
++derived once from original provenance by Build.refresh, never retired by a
++private prefix, classifier reset or incomplete imported event frontier. -/
++def Replay.privateUsage (result : Replay) : Option (Array Fact) :=
++  if result.pending == 0 then some result.usage else none
++
++theorem Replay.public_fields_do_not_change_private_publication (result : Replay)
++    (consumed : Array Fact) (consumers : Array Occurrence) :
++    ({result with consumed,consumers}).privateUsage = result.privateUsage := rfl
++
++theorem Replay.pending_cannot_publish_usage (result : Replay) (pending : result.pending ≠ 0) :
++    result.privateUsage = none := by simp [privateUsage,pending]
++
++def publish (source : PageMap.Snapshot) (result : Replay) (input : UsageCache.Input) : IO Unit := do
++  if let some labels := result.privateUsage then
++    let _ ← UsageCache.publish source input labels
+@@ -1408 +1408,0 @@ def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (result : Re
+-  pure ()
+@@ -1488 +1488 @@ def refreshQueued (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadl
+-    publish source storage replayed deadline {
++    publish source replayed {
+diff --git a/Eggshell/PreparationCompletion.lean b/Eggshell/PreparationCompletion.lean
+index 48724a64..7efa36c3 100644
+--- a/Eggshell/PreparationCompletion.lean
++++ b/Eggshell/PreparationCompletion.lean
+@@ -6 +6,3 @@ namespace Eggshell.PreparationCompletion
+-def requestsReplay (sourceCut : Option α) : Bool := sourceCut.isNone
++/-- Public readiness names a complete immutable source frame. Private usage
++is independently captured and scheduled, and is not a public prerequisite. -/
++def completed (prepared : Option α) : Bool := prepared.isSome
+@@ -8,13 +10 @@ def requestsReplay (sourceCut : Option α) : Bool := sourceCut.isNone
+-theorem explicit_cut_excludes_private_replay (source : α) :
+-    requestsReplay (some source) = false := rfl
+-
+-theorem current_maintenance_requests_private_replay :
+-    requestsReplay (none : Option α) = true := rfl
+-
+-/-- A completed source frame is mandatory. Private replay is required only
+-when that work was requested; absence is not a fabricated successful replay. -/
+-def completed (prepared : Option α) (replay : Option Bool) : Bool :=
+-  prepared.isSome && replay.all id
+-
+-theorem missing_source_never_completes (replay : Option Bool) :
+-    completed (none : Option α) replay = false := rfl
++theorem missing_source_never_completes : completed (none : Option α) = false := rfl
+@@ -23,4 +13 @@ theorem source_only_completes (prepared : α) :
+-    completed (some prepared) none = true := rfl
+-
+-theorem pending_requested_replay_never_completes (prepared : Option α) :
+-    completed prepared (some false) = false := by simp [completed]
++    completed (some prepared) = true := rfl
+@@ -28,3 +15,2 @@ theorem pending_requested_replay_never_completes (prepared : Option α) :
+-theorem completed_has_source (prepared : Option α) (replay : Option Bool)
+-    (accepted : completed prepared replay = true) : prepared.isSome = true := by
+-  cases prepared <;> simp_all [completed]
++theorem completed_has_source (prepared : Option α)
++    (accepted : completed prepared = true) : prepared.isSome = true := accepted
+diff --git a/Eggshell/Warm.lean b/Eggshell/Warm.lean
+index 8f33027a..5644bc9e 100644
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -97,0 +98 @@ def required (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO
++  if ← Synapses.Build.required snapshot target.storage then return true
+@@ -314 +314,0 @@ structure Result where
+-  journal : Option Synapses.Journal.Result
+@@ -333 +333 @@ def Result.complete (result : Result) : Bool :=
+-  PreparationCompletion.completed result.prepared (result.journal.map (·.complete))
++  PreparationCompletion.completed result.prepared
+@@ -378 +378 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
+-    (verify : Bool := false) (preparation : Option Synapses.ReplayPreparation.Pool := none) : IO Result := do
++    (verify : Bool := false) : IO Result := do
+@@ -380,8 +380 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
+-  let journal ← if PreparationCompletion.requestsReplay target.sourceHead then do
+-      let (_,replayed) ← refreshSource snapshot target.storage ((← IO.monoMsNow)+60000) preparation
+-      pure (some replayed)
+-    else do
+-      -- Shared source facts are reconstructed from this exact publication.
+-      -- A later private event is not part of an old source-cut request.
+-      let _ ← Synapses.Build.refresh snapshot target.storage
+-      pure none
++  let _ ← Synapses.Build.refresh snapshot target.storage
+@@ -392,3 +385 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
+-    let prepared ← if journal.all (·.complete) then
+-        some <$> PreparedInputs.publish snapshot target.storage MiniLM.model SearchProvider.encoderContract false
+-      else pure none
++    let prepared ← some <$> PreparedInputs.publish snapshot target.storage MiniLM.model SearchProvider.encoderContract false
+@@ -402 +392,0 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
+-      journal
+@@ -449,3 +439 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
+-    let prepared ← if journal.all (·.complete) then
+-        some <$> PreparedInputs.publish snapshot target.storage settings.model SearchProvider.encoderContract true
+-      else pure none
++    let prepared ← some <$> PreparedInputs.publish snapshot target.storage settings.model SearchProvider.encoderContract true
+@@ -455 +442,0 @@ def runTarget (snapshot : DB.PageMap.Snapshot) (target : Plugin.IndexTarget)
+-      journal
+diff --git a/Eggshell/PreparedInputs.lean b/Eggshell/PreparedInputs.lean
+index 354f9751..9058012b 100644
+--- a/Eggshell/PreparedInputs.lean
++++ b/Eggshell/PreparedInputs.lean
+@@ -18 +18 @@ def implementation : String := Sha256.hex ((include_str "PreparedInputs.lean").t
+-  Synapses.UsageCache.implementation.toUTF8 ++ OwnerViews.implementation.toUTF8)
++  OwnerViews.implementation.toUTF8)
+diff --git a/Eggshell/PreparationRegistry.lean b/Eggshell/PreparationRegistry.lean
+index 1fee5c97..1ac0fab3 100644
+--- a/Eggshell/PreparationRegistry.lean
++++ b/Eggshell/PreparationRegistry.lean
+@@ -75,2 +75 @@ def complete (job : PreparationPlan.Job) : IO Bool := do
+-  return !(← Build.required source target.storage) &&
+-    (target.sourceHead.isSome || !(← Journal.required source target.storage))
++  return !(← Build.required source target.storage)
+@@ -93 +92 @@ def explain (job : PreparationPlan.Job) : IO Json := do
+-    ("journal",toJson (← Journal.required source target.storage)),("source",toJson source.head.identity),
++    ("source",toJson source.head.identity),
+@@ -106,2 +105 @@ def drained (job : PreparationPlan.Job) : IO Bool := do
+-  return !(← Warm.required target source) && !(← Build.required source target.storage) &&
+-    (target.sourceHead.isSome || (← Journal.checkpointCurrent source target.storage))
++  return !(← Warm.required target source) && !(← Build.required source target.storage)
+@@ -117,2 +115 @@ def workerPayload (job : PreparationPlan.Job) : IO (Option Json) := do
+-  let warm := (← Warm.required target source) || (← Build.required source target.storage) ||
+-    (target.sourceHead.isNone && (← Journal.required source target.storage))
++  let warm ← Warm.required target source
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index 10d0e760..e4f6b09d 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -942 +942 @@ def indexQueued (target : IndexTarget) (paths : List System.FilePath) : IO Nat :
+-  let (pinned,_) ← Warm.refreshSource pinned target.storage ((← IO.monoMsNow)+60000)
++  let _ ← Synapses.Build.refresh pinned target.storage
+@@ -991,2 +991,2 @@ def indexActionWithState (preparation : Synapses.ReplayPreparation.Pool) (json :
+-    let result ← Warm.runTarget (← target.pin) target (preparation := some preparation)
+-    return (toJson count,result.complete,count > 0 || result.journal.any (·.advanced))
++    let result ← Warm.runTarget (← target.pin) target
++    return (toJson count,result.complete,count > 0 || result.batches > 0)
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index efcf30a2..2401d12f 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -34 +33,0 @@ run_meta do
+-      (``Eggshell.Warm.runTarget, ``Eggshell.PreparationCompletion.requestsReplay),
+@@ -36 +34,0 @@ run_meta do
+-      (``Eggshell.Warm.runTarget, ``Eggshell.Warm.refreshSource),
+@@ -44,0 +43,36 @@ run_meta do
++run_meta do
++  let environment ← getEnv
++  for (caller,required) in #[
++      (``Eggshell.Synapses.Build.refresh,``Eggshell.Synapses.Build.stagePreparation),
++      (``Eggshell.Synapses.Build.refresh,``Eggshell.Synapses.Provenance.deriveRecords),
++      (``Eggshell.Synapses.Build.required,``Eggshell.Synapses.Build.preparedFor),
++      (``Eggshell.Synapses.Index.publishDelta,``Eggshell.Synapses.Index.sourcePreparationKey),
++      (``Eggshell.Synapses.Index.replace,``Eggshell.Synapses.Index.sourcePreparationKey),
++      (``Eggshell.Synapses.Journal.publish,``Eggshell.Synapses.Journal.Replay.privateUsage),
++      (``Eggshell.Synapses.Journal.publish,``Eggshell.Synapses.UsageCache.publish)] do
++    let some body := (environment.find? caller).bind (·.value?) | throwError "Missing preparation ownership implementation"
++    unless body.getUsedConstants.contains required do
++      throwError "Preparation ownership is not connected: {caller}, {required}"
++  for (name,declaration) in environment.constants.toList do
++    let domain := name.toString
++    unless domain.startsWith "Eggshell.Synapses." do continue
++    if domain.startsWith "Eggshell.Synapses.Index." || domain.startsWith "Eggshell.Synapses.Build." then continue
++    let some body := declaration.value? | continue
++    for forbidden in #[``Eggshell.Synapses.Index.publishDelta,``Eggshell.Synapses.Index.replace,
++        ``Eggshell.Synapses.Build.stagePreparation] do
++      if body.getUsedConstants.contains forbidden then
++        throwError "Only source derivation can publish the shared graph: {name}, {forbidden}"
++  let some publicKey := (environment.find? ``Eggshell.PreparedInputs.implementation).bind (·.value?) |
++    throwError "Missing public prepared-frame identity"
++  if publicKey.getUsedConstants.contains ``Eggshell.Synapses.UsageCache.implementation then
++    throwError "Private classifier identity invalidates public prepared frames"
++  for (caller,forbidden) in #[
++      (``Eggshell.Warm.runTarget, #[``Eggshell.Warm.refreshSource,``Eggshell.Synapses.Journal.refresh]),
++      (``Eggshell.Plugin.Worker.indexQueued, #[``Eggshell.Warm.refreshSource,``Eggshell.Synapses.Journal.refresh]),
++      (``Eggshell.Synapses.Journal.publish, #[``Eggshell.Synapses.Index.publishDelta,
++        ``Eggshell.Synapses.Index.Reader.lookup,``Eggshell.Synapses.Index.open?])] do
++    let some body := (environment.find? caller).bind (·.value?) | throwError "Missing separated preparation caller"
++    for name in forbidden do
++      if body.getUsedConstants.contains name then
++        throwError "Public/private preparation ownership crossed: {caller}, {name}"
++
+diff --git a/Eggshell/CanonicalSourceCache.lean b/Eggshell/CanonicalSourceCache.lean
+index e7243b2c..75d46d51 100644
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -132,0 +133,3 @@ def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO (Option R
++  -- Reject an obsolete recipe producer before resolving the root it names.
++  -- A current producer still crosses the same strict binding checks below.
++  let some ready ← atSource? source path metadata | return none
+@@ -135 +138 @@ def open? (source : PageMap.Snapshot) (storage : Sidecar.Storage) : IO (Option R
+-  atSource? source path metadata
++  return some ready
