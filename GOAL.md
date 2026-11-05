@@ -343,6 +343,8 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 関連processの集計RSSは4 GiB未満、3.5 GiBで停止。80接続は軽いnative clientで作り、80回答モデル/サブエージェントを起動しない。初期構築、差分、OS cacheが冷たい状態、保守並行を分ける。検証する量・hardware・未検証範囲を明記し、現在のMacへ数年分を生成しない。
 
+[source-incidence候補](docs/candidates/source-incidence/README.md)では、既に不採用の引用元ごとのreach cacheを再試行せず、元All/Unionの入射辺だけを元順序で引く隣接表を実discoveryへ接続した。任意入力でbucket/filter、隣接辺、探索順と実来歴経路が参照と一致する4証明、実宣言接続、通常ContractAudit、hash衝突55ケース・循環/重複/構造化Work等196ケースのnative照合が通った。検査器の初期ビルド/不正fixture/heartbeat失敗も保存し、上限を増やさず分割した。同じ固定DB/質問/MiniLM/設定で交互3組を比べ、親5724/2938・5396/3004・5402/2994msから候補5154/2737・5136/2757・5184/2757msとなり、全12本文はbyte一致、全16原典head不変。実本文は88578 UTF-8 bytesで、render traceの文字数と区別する。続く通常80 mixed/16所有者/5000-byte試験は書込80/80でも背景準備が180155msで失敗した。保存queueは空、準備11/16・pending5/active1・部分進捗135/retry1であり、新readerは未実行（0/80配送の実測とはしない）。別process再読では原入出力82/82一致、80 Post全て出版済み・未保存queue0・head不変だった。以前の別fixtureの74/80や113秒と因果比較しない。全15 guard残存0/資源停止0、RSS最大3197296KiB。隣接表は現在selected topologyから照会ごとに一度作る中間修正であり、出版時project準備の共有を完了したものではない。次は公開の不変構造を完全なproject cutで共有し、所有者間の辺・私有利用状態・全認定domainを保持したうえで差分準備を修正する。同じmixed試行の再実行や上限増加で通さない。回答モデル0/有料比較0/18・製品未採用。80人8時間/成長する複数project/NAS/実98%/総token改善/品質は未達・未検証でgoalはactive。
+
 検証済みの区切りでhook-ingress-supervisorへpush。author/committerはmomonoya。終了した実験DB/cacheは抽出後に削除し、圧縮/archiveとして残さない。コード・実測・配送記録・digestを残し、削除済み入力で現在も再検証できるとは主張しない。実利用の記憶は勝手に消さない。
 
 終了した旧DB/cache/build/logの削除履歴は[artifact-cleanup.md](docs/artifact-cleanup.md)と各候補のcleanup記録を参照する。旧原典snapshotは新runtimeの比較入力として使わないため引退させた。[現在の保護入力](docs/candidates/native-study/ended-study-retirement.json)は保持した対照runtimeと現候補を指す。旧DBの削除前と、保持runtime/固定harnessの削除前後のSHA-256を照合した。空き2 GiB/集計RSS 3.5 GiBの停止条件は維持する。

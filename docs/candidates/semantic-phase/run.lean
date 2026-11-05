@@ -14,6 +14,23 @@ def hash (path : System.FilePath) : IO String := do
   return (reply.stdout.splitOn " ").head!
 def command (args : Array String) (input : Option String := none) : IO IO.Process.Output := do
   IO.Process.output {cmd := (← selectedRuntime).toString,args} input
+def sampleWorker (root : System.FilePath) : IO (Option (Task (Except IO.Error Unit))) := do
+  if (← IO.getEnv "EGGSHELL_PROFILE_SAMPLE") != some "1" then return none
+  let engine := (← selectedRuntime).toString
+  let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axww","-o","pid=,command="]}
+  let pids := processes.stdout.splitOn "\n" |>.filterMap fun line => do
+    let words := line.trimAscii.toString.splitOn " " |>.filter (!·.isEmpty)
+    let first :: rest := words | none
+    if (" ".intercalate rest).startsWith (engine++" codex-worker search") then first.toNat? else none
+  save (root/"sample-targets.json") (toJson pids)
+  let [pid] := pids | return none
+  return some (← IO.asTask (do
+    IO.sleep 1000
+    let started ← IO.monoMsNow
+    let sampled ← IO.Process.output {cmd := "/usr/bin/sample",args := #[toString pid,"2","1","-file",(root/"worker.sample.txt").toString]}
+    save (root/"sample-result.json") (Json.mkObj [("pid",toJson pid),("exitCode",toJson sampled.exitCode.toNat),
+      ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("stdout",toJson sampled.stdout),("stderr",toJson sampled.stderr)])
+    pure ()) .dedicated)
 def main (args : List String) : IO Unit := do
   let [raw] := args | throw (IO.userError "fresh absolute phase-profile root required")
   let root : System.FilePath := .mk raw
@@ -42,7 +59,9 @@ def main (args : List String) : IO Unit := do
         ("_eggshell_config",toJson (root/"eggshell.toml").toString),
         ("prompt",toJson "Return the recorded head and tail facts for support case-79.")]
       let began ← IO.monoMsNow
-      let reply ← command #["codex-hook"] (some input.compress)
+      let sampler ← if i == 1 then sampleWorker root else pure none
+      let reply ← try command #["codex-hook"] (some input.compress)
+        finally if let some sampler := sampler then IO.ofExcept (← IO.wait sampler)
       let elapsed := (← IO.monoMsNow)-began
       IO.FS.writeFile (root/s!"hook-{i}.json") reply.stdout
       IO.FS.writeFile (root/s!"hook-{i}.stderr") reply.stderr

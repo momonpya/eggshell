@@ -1,0 +1,189 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 49780327..682f88db 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -40,0 +41 @@ public import Eggshell.FederatedDemand
++public import Eggshell.OrderedIncidence
+@@ -1681,0 +1683,14 @@ structure SourceNeighbor (all : List AllEdge) (unions : List UnionEdge) (origin
++def sourceAllNeighbors (all : List AllEdge) (unions : List UnionEdge) (origin : Value)
++    (row : {edge // edge ∈ all}) : List (SourceNeighbor all unions origin) :=
++  let ⟨edge, saved⟩ := row
++  (if parent : origin = edge.parent then edge.children.attach.map fun ⟨work, member⟩ =>
++    ⟨work, parent ▸ SourceLink.child edge saved work member⟩ else []) ++
++  (if child : origin ∈ edge.children then
++    [⟨edge.parent, SourceLink.parent edge saved origin child⟩] else [])
++
++def sourceUnionNeighbors (all : List AllEdge) (unions : List UnionEdge) (origin : Value)
++    (row : {edge // edge ∈ unions}) : List (SourceNeighbor all unions origin) :=
++  let ⟨edge, saved⟩ := row
++  (if left : origin = edge.left then [⟨edge.right, left ▸ SourceLink.forward edge saved⟩] else []) ++
++  (if right : origin = edge.right then [⟨edge.left, right ▸ SourceLink.backward edge saved⟩] else [])
++
+@@ -1684,8 +1699,37 @@ def sourceNeighbors (all : List AllEdge) (unions : List UnionEdge) (origin : Val
+-  (all.attach.flatMap fun ⟨edge, saved⟩ =>
+-    (if parent : origin = edge.parent then edge.children.attach.map fun ⟨work, member⟩ =>
+-      ⟨work, parent ▸ SourceLink.child edge saved work member⟩ else []) ++
+-    (if child : origin ∈ edge.children then
+-      [⟨edge.parent, SourceLink.parent edge saved origin child⟩] else [])) ++
+-  unions.attach.flatMap fun ⟨edge, saved⟩ =>
+-    (if left : origin = edge.left then [⟨edge.right, left ▸ SourceLink.forward edge saved⟩] else []) ++
+-    (if right : origin = edge.right then [⟨edge.left, right ▸ SourceLink.backward edge saved⟩] else [])
++  all.attach.flatMap (sourceAllNeighbors all unions origin) ++
++    unions.attach.flatMap (sourceUnionNeighbors all unions origin)
++
++def sourceAllKeys {all : List AllEdge} (row : {edge // edge ∈ all}) : List Value :=
++  row.val.parent :: row.val.children
++
++def sourceUnionKeys {unions : List UnionEdge} (row : {edge // edge ∈ unions}) : List Value :=
++  [row.val.left,row.val.right]
++
++/-- Prepared metadata for association traversal only. This has no Equality,
++Union generator or completed capability. Each bucket retains original order. -/
++structure SourceIncidence (all : List AllEdge) (unions : List UnionEdge) where
++  decomposition : OrderedIncidence.Index sourceAllKeys all.attach
++  aliases : OrderedIncidence.Index sourceUnionKeys unions.attach
++
++def SourceIncidence.build (all : List AllEdge) (unions : List UnionEdge) : SourceIncidence all unions :=
++  ⟨OrderedIncidence.build sourceAllKeys all.attach,OrderedIncidence.build sourceUnionKeys unions.attach⟩
++
++def SourceIncidence.neighbors (index : SourceIncidence all unions) (origin : Value) :
++    List (SourceNeighbor all unions origin) :=
++  (index.decomposition.lookup origin).flatMap (sourceAllNeighbors all unions origin) ++
++    (index.aliases.lookup origin).flatMap (sourceUnionNeighbors all unions origin)
++
++theorem SourceIncidence.neighbors_exact (index : SourceIncidence all unions) (origin : Value) :
++    index.neighbors origin = sourceNeighbors all unions origin := by
++  unfold neighbors sourceNeighbors
++  congr 1
++  · apply OrderedIncidence.Index.flatMap_exact
++    intro row inactive
++    have parent : origin ≠ row.val.parent := fun same => inactive (by simp [sourceAllKeys, same])
++    have child : origin ∉ row.val.children := fun member => inactive (by simp [sourceAllKeys, member])
++    simp [sourceAllNeighbors, parent, child]
++  · apply OrderedIncidence.Index.flatMap_exact
++    intro row inactive
++    have left : origin ≠ row.val.left := fun same => inactive (by simp [sourceUnionKeys, same])
++    have right : origin ≠ row.val.right := fun same => inactive (by simp [sourceUnionKeys, same])
++    simp [sourceUnionNeighbors, left, right]
+@@ -1778 +1822,2 @@ this graph walk. Every executable queue entry carries its actual source path. -/
+-def sourceNeighborhood (roots : List Value) (all : List AllEdge) (unions : List UnionEdge) :
++def sourceNeighborhoodUsing (roots : List Value) (all : List AllEdge) (unions : List UnionEdge)
++    (neighbors : (origin : Value) → List (SourceNeighbor all unions origin)) :
+@@ -1787 +1832 @@ def sourceNeighborhood (roots : List Value) (all : List AllEdge) (unions : List
+-        let fresh := (sourceNeighbors all unions first.work).foldl (fun fresh neighbor =>
++        let fresh := (neighbors first.work).foldl (fun fresh neighbor =>
+@@ -1793,0 +1839,14 @@ def sourceNeighborhood (roots : List Value) (all : List AllEdge) (unions : List
++def sourceNeighborhood (roots : List Value) (all : List AllEdge) (unions : List UnionEdge) :
++    List (ReachedSource roots all unions) :=
++  sourceNeighborhoodUsing roots all unions (sourceNeighbors all unions)
++
++def SourceIncidence.neighborhood (index : SourceIncidence all unions) (roots : List Value) :
++    List (ReachedSource roots all unions) := sourceNeighborhoodUsing roots all unions index.neighbors
++
++/-- Exact routes and queue order, including duplicate roots and repeated
++edges, are the reference traversal. No reachability or ranking approximation. -/
++theorem SourceIncidence.neighborhood_exact (index : SourceIncidence all unions) (roots : List Value) :
++    index.neighborhood roots = sourceNeighborhood roots all unions := by
++  unfold neighborhood sourceNeighborhood
++  exact congrArg (sourceNeighborhoodUsing roots all unions) (funext index.neighbors_exact)
++
+@@ -8629 +8688,2 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-  let reached := sourceNeighborhood entryWorks sourceAll persistent
++  let sourceIncidence := SourceIncidence.build sourceAll persistent
++  let reached := sourceIncidence.neighborhood entryWorks
+@@ -8726 +8786 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-      if (sourceNeighborhood [work] sourceAll persistent).any (·.work == item.owner.work) then
++      if (sourceIncidence.neighborhood [work]).any (·.work == item.owner.work) then
+diff --git a/Eggshell/OrderedIncidence.lean b/Eggshell/OrderedIncidence.lean
+new file mode 100644
+index 00000000..923fa83f
+--- /dev/null
++++ b/Eggshell/OrderedIncidence.lean
+@@ -0,0 +1,87 @@
++module
++public import Eggshell.HashDistinct
++
++@[expose] public section
++namespace Eggshell.OrderedIncidence
++
++variable {κ α : Type} [BEq κ] [LawfulBEq κ] [Hashable κ]
++
++/-- One original row enters each incident key once. Keys are full Values,
++not display digests; neither collisions nor repeated endpoints duplicate rows. -/
++def addKeys (table : Std.HashMap κ (List α)) (row : α) (keys : List κ) :
++    Std.HashMap κ (List α) :=
++  keys.foldl (fun known key => known.insert key (row :: known.getD key [])) table
++
++theorem addKeys_lookup (table : Std.HashMap κ (List α)) (row : α)
++    (keys : List κ) (unique : keys.Nodup) (query : κ) :
++    (addKeys table row keys).getD query [] =
++      if query ∈ keys then row :: table.getD query [] else table.getD query [] := by
++  induction keys generalizing table with
++  | nil => simp [addKeys]
++  | cons head tail ih =>
++    have distinct := List.nodup_cons.mp unique
++    simp only [addKeys, List.foldl_cons]
++    rw [show (tail.foldl (fun known key => known.insert key (row :: known.getD key []))
++      (table.insert head (row :: table.getD head []))).getD query [] =
++      if query ∈ tail then row :: (table.insert head (row :: table.getD head [])).getD query []
++      else (table.insert head (row :: table.getD head [])).getD query [] from ih _ distinct.2]
++    by_cases same : head = query
++    · subst query
++      simp [distinct.1]
++    · simp [Std.HashMap.getD_insert, same, Ne.symm same, List.mem_cons]
++
++def add (keys : α → List κ) (table : Std.HashMap κ (List α)) (row : α) :
++    Std.HashMap κ (List α) := addKeys table row (hashDistinct (keys row))
++
++theorem add_lookup (keys : α → List κ) (table : Std.HashMap κ (List α))
++    (row : α) (query : κ) :
++    (add keys table row).getD query [] =
++      if query ∈ keys row then row :: table.getD query [] else table.getD query [] := by
++  rw [add, addKeys_lookup _ _ _ (HashDistinct.nodup _) query]
++  simp only [HashDistinct.mem]
++
++theorem fold_lookup (keys : α → List κ) (rows : List α)
++    (table : Std.HashMap κ (List α)) (query : κ) :
++    (rows.foldl (add keys) table).getD query [] =
++      (rows.filter (fun row => decide (query ∈ keys row))).reverse ++ table.getD query [] := by
++  induction rows generalizing table with
++  | nil => simp
++  | cons head tail ih =>
++    simp only [List.foldl_cons, ih, add_lookup]
++    by_cases present : query ∈ keys head <;>
++      simp [present, List.reverse_cons, List.append_assoc]
++
++/-- The certificate includes order and multiplicity of original rows, not
++just reachability. Independent original owners remain independent rows. -/
++structure Index (keys : α → List κ) (rows : List α) where
++  table : Std.HashMap κ (List α)
++  exact : ∀ query, (table.getD query []).reverse = rows.filter (fun row => decide (query ∈ keys row))
++
++def build (keys : α → List κ) (rows : List α) : Index keys rows :=
++  ⟨rows.foldl (add keys) {}, by
++    intro query
++    have same := fold_lookup keys rows {} query
++    simpa using congrArg List.reverse same⟩
++
++def Index.lookup {keys : α → List κ} {rows : List α} (index : Index keys rows) (query : κ) : List α :=
++  (index.table.getD query []).reverse
++
++theorem Index.lookup_exact {keys : α → List κ} {rows : List α} (index : Index keys rows) (query : κ) :
++    index.lookup query = rows.filter (fun row => decide (query ∈ keys row)) := index.exact query
++
++/-- Incident lookup can replace a complete scan when nonincident rows emit
++nothing. This preserves every emitted row, its position and its multiplicity. -/
++theorem Index.flatMap_exact {β : Type} {keys : α → List κ} {rows : List α}
++    (index : Index keys rows) (query : κ) (emit : α → List β)
++    (inactive : ∀ row, query ∉ keys row → emit row = []) :
++    (index.lookup query).flatMap emit = rows.flatMap emit := by
++  rw [index.lookup_exact]
++  clear index
++  induction rows with
++  | nil => rfl
++  | cons head tail ih =>
++    by_cases present : query ∈ keys head
++    · simpa [present] using congrArg (emit head ++ ·) ih
++    · simpa [present, inactive head present] using ih
++
++end Eggshell.OrderedIncidence

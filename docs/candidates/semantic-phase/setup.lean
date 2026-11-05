@@ -7,6 +7,8 @@ def main (args : List String) : IO Unit := do
   let (tag,extra) ← match args with
     | [tag] => pure (tag,#[])
     | [tag,runtime,verify] => pure (tag,#["EGGSHELL_PROFILE_RUNTIME="++runtime,"EGGSHELL_CHECK_LOCAL_SELECTION="++verify])
+    | [tag,runtime,verify,sample] => pure (tag,#["EGGSHELL_PROFILE_RUNTIME="++runtime,
+        "EGGSHELL_CHECK_LOCAL_SELECTION="++verify,"EGGSHELL_PROFILE_SAMPLE="++sample])
     | _ => throw (IO.userError "fresh semantic-phase tag and optional runtime/verification required")
   unless tag.startsWith "semantic-phase-" && !(← (base/(tag++".guard.json")).pathExists) do
     throw (IO.userError "preserve previous profile")
