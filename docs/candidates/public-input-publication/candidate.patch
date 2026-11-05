@@ -1,0 +1,145 @@
+diff --git a/Eggshell/PreparedInputs.lean b/Eggshell/PreparedInputs.lean
+index 354f9751..1d0db94a 100644
+--- a/Eggshell/PreparedInputs.lean
++++ b/Eggshell/PreparedInputs.lean
+@@ -45,0 +46,19 @@ structure Reference where
++/-- Query-independent read projection of one completed publication. Private
++usage is attached only after the caller has captured its original boundary. -/
++structure Public where
++  directory : String
++  storage : Sidecar.Storage
++  input : Reference
++  owner : Option OwnerViews.Item
++  deriving ToJson,FromJson
++
++def Public.validFor (value : Public) (source : PageMap.Snapshot) (model encoder : String) : IO Bool := do
++  let scope ← OwnerViews.scope source
++  return value.directory == source.directory.toString && value.input.producer == implementation &&
++    value.input.source.identity == source.head.identity && value.input.source.authority == source.head.authority &&
++    value.input.model == model && value.input.encoder == encoder && value.input.usage.isNone &&
++    value.owner.all (fun item => item.captured.state.source.head == value.input.source &&
++      item.captured.state.source.directory == value.directory &&
++      item.captured.state.binding.producer == SourceOwners.implementation &&
++      item.captured.state.binding.scope == scope)
++
+@@ -147,0 +167,11 @@ def sourceKey (head : PageMap.Head) : String := "source:"++Synapses.Index.conten
++def publicPath (path : System.FilePath) (head : PageMap.Head) : System.FilePath :=
++  path / "public" / (Sha256.hex (toJson head).compress.toUTF8 ++ ".json")
++
++def readPublic? (path : System.FilePath) : IO (Option Public) := do
++  unless (← FileSystem.symlinkMetadata? path).isSome do return none
++  let bytes ← FileSystem.boundedBytes path 131072
++  let value ← Synapses.Index.decode (α := Public) bytes
++  unless bytes == (toJson value).compress.toUTF8 do
++    throw (IO.userError "noncanonical public input publication")
++  return some value
++
+@@ -161 +191,11 @@ def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (model encod
+-  if (← index.get (sourceKey source.head)) == some encoded then return reference
++  let owner ← OwnerViews.loadOne? source
++  let published : Public := ⟨source.directory.toString,storage,{reference with usage := none},owner⟩
++  unless ← published.validFor source model encoder do throw (IO.userError "invalid public input publication")
++  let bytes := (toJson published).compress.toUTF8
++  unless bytes.size ≤ 131072 do throw (IO.userError "public input publication exceeds its byte bound")
++  let folder ← Sidecar.childDirectory path "public"
++  let exact := publicPath path source.head
++  let latest := folder / "latest.json"
++  if (← index.get (sourceKey source.head)) == some encoded &&
++      (← readPublic? exact).any (fun value => (toJson value).compress.toUTF8 == bytes) &&
++      (← readPublic? latest).any (fun value => (toJson value).compress.toUTF8 == bytes) then return reference
+@@ -168 +208,4 @@ def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (model encod
+-        if old != source.head then writer.put (sourceKey old) none
++        if old != source.head then
++          writer.put (sourceKey old) none
++          let retired := publicPath path old
++          if (← FileSystem.symlinkMetadata? retired).isSome then IO.FS.removeFile retired
+@@ -172,0 +216,5 @@ def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (model encod
++    -- The same source may progress from lexical to numeric readiness without
++    -- changing its original head. Replace the whole checked record atomically;
++    -- already captured Frames retain their old immutable value.
++    FileSystem.atomicExistingBytes exact bytes
++    FileSystem.atomicExistingBytes latest bytes
+@@ -175,4 +223,2 @@ def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (model encod
+-def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Reference) := do
+-  -- An actually empty source needs no lexical or numerical publication. Its
+-  -- original head still belongs to the complete certification/read inventory.
+-  if (← getNat source.get "candidates") == 0 then return some (empty source model encoder)
++def public? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Public) := do
++  let population ← getNat source.get "candidates"
+@@ -182,7 +228,3 @@ def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Refe
+-      match ← PageMap.open? path with
+-      | none => pure none
+-      | some index =>
+-        let raw ← match ← index.get (sourceKey source.head) with
+-          | some raw => pure (some raw)
+-          | none => index.get "latest"
+-        raw.mapM (Synapses.Index.decode (α := Reference))
++      match ← readPublic? (publicPath path source.head) with
++      | some value => pure (some value)
++      | none => readPublic? (path/"public"/"latest.json")
+@@ -192,3 +234,2 @@ def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Refe
+-    if let some reference := found then
+-      unless reference.producer == implementation && reference.source.identity == source.head.identity &&
+-          reference.source.authority == source.head.authority && reference.model == model && reference.encoder == encoder do
++    if let some value := found then
++      unless value.storage == storage && (← value.validFor source model encoder) do
+@@ -195,0 +237 @@ def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Refe
++      let reference := value.input
+@@ -197,3 +239,5 @@ def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Refe
+-        -- Usage is private and may advance without a source publication.
+-        let usage ← Synapses.UsageCache.open? source
+-        return some {reference with source := source.head,usage := usage.map (·.index.head)}
++        let owner ← if reference.source == source.head then pure value.owner else OwnerViews.loadOne? source
++        return some {value with input := {reference with source := source.head},owner}
++  -- Empty originals are still members of the complete captured inventory.
++  if population == 0 then
++    return some ⟨source.directory.toString,.database,empty source model encoder,← OwnerViews.loadOne? source⟩
+@@ -201,0 +246,17 @@ def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Refe
++def publicOwners (sources : Array PageMap.Snapshot) (values : Array Public) : IO (Option OwnerViews.Reference) := do
++  unless sources.size == values.size do throw (IO.userError "public inputs omitted an original source")
++  let mut items := #[]
++  for (source,value) in sources.zip values do
++    unless value.directory == source.directory.toString && value.input.source == source.head do
++      throw (IO.userError "public owner input changed its original source")
++    let some owner := value.owner | return none
++    items := items.push owner
++  let reference : OwnerViews.Reference := ⟨OwnerViews.implementation,sources.map (·.head),items⟩
++  OwnerViews.validate reference sources
++  return some reference
++
++def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Reference) := do
++  let some value ← public? source model encoder | return none
++  let usage ← Synapses.UsageCache.open? source
++  return some {value.input with usage := usage.map (·.index.head)}
++
+diff --git a/Eggshell/PluginProjectContext.lean b/Eggshell/PluginProjectContext.lean
+index 1f53849b..36e4101e 100644
+--- a/Eggshell/PluginProjectContext.lean
++++ b/Eggshell/PluginProjectContext.lean
+@@ -61,0 +62 @@ def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snap
++  let mut publications := #[]
+@@ -63 +64 @@ def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snap
+-    let some reference ← PreparedInputs.load? source model SearchProvider.encoderContract | do
++    let some publication ← PreparedInputs.public? source model SearchProvider.encoderContract | do
+@@ -66,0 +68 @@ def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snap
++    let reference := publication.input
+@@ -71,0 +74 @@ def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snap
++    publications := publications.push publication
+@@ -73 +76 @@ def captureInputs (pending : PendingTurn) (snapshots : List (Option PageMap.Snap
+-  let owners ← OwnerViews.load? sources
++  let owners ← PreparedInputs.publicOwners sources publications
+diff --git a/Eggshell/PublicationWire.lean b/Eggshell/PublicationWire.lean
+index 0e81d70b..a44d54d2 100644
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -145,0 +146 @@ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-servi
++  (include_str "PreparedInputs.lean").toUTF8,(include_str "PluginProjectContext.lean").toUTF8,
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index d274aae1..a185e958 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -254,2 +254,2 @@ run_meta do
+-        #[``Eggshell.PreparedInputs.load?, ``Eggshell.PreparedInputs.attachBoundary,
+-          ``Eggshell.OwnerViews.load?],
++        #[``Eggshell.PreparedInputs.public?, ``Eggshell.PreparedInputs.attachBoundary,
++          ``Eggshell.PreparedInputs.publicOwners],

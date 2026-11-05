@@ -62,6 +62,15 @@ pair is parent72/candidate75, still below the required gate. Every observed work
 builds once; the next target is public input/owner capture before worker admission,
 whose load-time medians remain431/276 ms. This is not sustained capacity evidence
 or total-token adoption.
+The subsequent[public capture experiment](candidates/public-input-publication/README.md)
+keeps the same parallel owners and reduces public input/owner capture. It still
+completes only71/80 ordinary clients (contemporaneous parent66/80), with nearly
+unchanged observed worker time and long query queues. The extra direct-file
+metadata format is not the next implementation base; its isolated source edits
+and ended artifacts are removed. The next measured target is fresh keyed/focus
+provider lifetimes that reopen prepared roots outside the worker-owned cache.
+Parallel source ownership remains implemented; neither result proves sustained
+eighty-person capacity, practical98% evidence, or token/quality adoption.
 The latest isolated [source-path comparison](candidates/owned-lexical/README.md)
 reached 35.6–37.9 source observations/s at 50 KB in three short repetitions.
 Derived preparation is excluded; this does not establish stable backlog or
