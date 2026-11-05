@@ -111,7 +111,11 @@ later client's hash.
 Ended trial DBs, private caches, raw logs, the superseded client build and
 temporary source copies are [deleted](cleanup.json):293684516 apparent bytes,
 without an archive. Active originals, protected controls, parent runtime and
-the isolated candidate's build/link inputs remain for the next comparison.
+the isolated candidate's build/link inputs were retained for the next comparison.
+On2026-11-06 the later [focus-locator experiment](../focus-locators/cleanup.json)
+retires that unused helper:311716642 apparent bytes after identity, process and
+current-link checks. This experiment's patch and evidence remain; its old build
+directory is no longer retained.
 The current source and dispatcher are [restored](restoration.json). Current
 results cannot be rerun from deleted trial directories.
 

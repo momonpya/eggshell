@@ -1,4 +1,4 @@
-import Main
+import Eggshell.Daemon
 open Lean
 namespace Eggshell.Research.WorkerCpuProfile
 open Eggshell Eggshell.Plugin
@@ -171,67 +171,9 @@ def wave (root engine : System.FilePath) (name : String) (first count : Nat)
   save (root/(name++".json")) report
   return report
 
-/-- Diagnose original membership and exact-term retrieval independently of
-the loaded hooks. This does not change nomination or selection policy. -/
-def originalRanks (root : System.FilePath) : IO Unit := do
-  let project ← ProjectStore.openProject (source/"work.project")
-  let view ← ProjectStore.pin project ((← IO.monoMsNow)+30000)
-  let some reference ← OwnerViews.load? view.sources |
-    throw (IO.userError "rank audit needs prepared owner inputs")
-  let owners ← OwnerViews.restore reference view.sources
-  let (_,population) ← owners.counts
-  let inputs ← view.sources.mapM fun original => do
-    let some input ← PreparedInputs.load? original MiniLM.model SearchProvider.encoderContract |
-      throw (IO.userError "rank audit source is not prepared")
-    return input
-  let queries ← (List.finRange view.sources.size).mapM fun i => do
-    return (i,← capturedLexicalQuery view.sources[i] (some inputs) none)
-  let readers ← Persistence.Store.NodeReaders.new view.sources
-  let mut reports := #[]
-  for caseIndex in [0,1,2,79] do
-    let question := s!"Return the recorded head and tail facts for support case-{caseIndex}."
-    let wanted := SearchRank.terms question
-    let mut postings : Std.HashMap String (Std.HashSet Nat) := {}
-    let mut frequencies : Std.HashMap String Nat := {}
-    let mut matched : Std.HashSet Nat := {}
-    for term in wanted do
-      let mut found : Std.HashSet Nat := {}
-      for (i,query) in queries do
-        let (ids,_) ← query.posting term
-        for id in ids do found := found.insert (← OwnerViews.canonical owners i.val id)
-      postings := postings.insert term found
-      frequencies := frequencies.insert term found.size
-      for id in found.toList do matched := matched.insert id
-    let ordered ← matched.toList.mapM fun id => do pure (← OwnerViews.ordinal owners id,id)
-    let durable := (ordered.mergeSort (fun a b => a.1 ≤ b.1)).map Prod.snd
-    let contains := fun id term => (postings.getD term {}).contains id
-    let ranking := SearchRank.rankRows question durable contains (frequencies.getD · 0) false population
-    let named := wanted.filter SearchRank.literalTerm
-    let preferred := SearchRank.preferLiteralMatches ranking fun index =>
-      (durable[index]?).any fun id => named.any (contains id)
-    let mut rows := #[]
-    for (index,position) in ranking.zipIdx do
-      let some id := durable[index]? | throw (IO.userError "rank audit owner disappeared")
-      let entry ← OwnerViews.entry owners id
-      let some original := entry.originals.head? | throw (IO.userError "rank audit original missing")
-      let some i := (List.finRange view.sources.size).find? (·.val == original.source) |
-        throw (IO.userError "rank audit source missing")
-      let reader := readers.at i
-      let outcome ← reader.outcome (← reader.locateOutcome original.node)
-      let text := Persistence.Store.searchText outcome
-      let target := text.contains s!"observed-head-case-{caseIndex}-7b319c" &&
-        text.contains s!"observed-tail-case-{caseIndex}-d82a04"
-      if target || position < 12 then
-        rows := rows.push (Json.mkObj [("id",toJson id),("relation",toJson (relationKey outcome.relation)),
-          ("rank",toJson position),("literalRank",toJson (preferred.idxOf index)),
-          ("targetOriginal",toJson target),("matched",toJson (wanted.filter (contains id))),
-          ("workPrefix",toJson ((Persistence.Store.text? outcome.work).getD "" |>.take 180 |>.toString))])
-    reports := reports.push (Json.mkObj [("case",toJson caseIndex),("population",toJson population),
-      ("wanted",toJson wanted),("frequencies",toJson frequencies.toList),("rows",toJson rows)])
-  save (root/"original-ranks.json") (Json.mkObj [("queries",toJson reports),("productChanged",toJson false)])
-
-def run (root engine : System.FilePath) (expected : String) : IO Unit := do
+def run (root engine : System.FilePath) (expected : String) (caseCount : Nat := 32) (burst : Bool := false) : IO Unit := do
   check (root.isAbsolute && !(← root.pathExists)) "fresh absolute worker profile required"
+  check (caseCount == 32 || caseCount == 80) "fixed profile case count required"
   for (input,expected) in [("0:00.00",0),("1:02.34",62340),("1:02:03.45",3723450)] do
     check ((cpuMs input).toOption == some expected) "CPU clock parser mismatch"
   IO.FS.createDirAll root
@@ -253,36 +195,55 @@ def run (root engine : System.FilePath) (expected : String) : IO Unit := do
     let audit ← read auditPath
     save (root/"original-audit.json") audit
     let saved ← IO.ofExcept (audit.getObjValAs? (Array String) "saved")
-    check (saved.size == 82 && (List.range 32).all (fun i => saved.contains s!"case-{i}")) "needed originals not present"
+    check (saved.size == 82 && (List.range caseCount).all (fun i => saved.contains s!"case-{i}")) "needed originals not present"
   finally
     match previous with
     | some text => IO.FS.writeFile auditPath text
     | none => if ← auditPath.pathExists then IO.FS.removeFile auditPath
   save (root/"frozen-required.json") (Json.mkObj [("sourceHeads",toJson heads),
-    ("cases",toJson (List.range 32)),("fields",toJson #["head","tail"]),("frozenBeforeDelivery",toJson true)])
+    ("cases",toJson (List.range caseCount)),("fields",toJson #["head","tail"]),("frozenBeforeDelivery",toJson true)])
   try
     let warm ← command engine #["egg","warm",(source/"work.project").toString]
     save (root/"warm.json") (Json.mkObj [("exitCode",toJson warm.exitCode.toNat),("stdout",toJson warm.stdout),("stderr",toJson warm.stderr)])
     check (warm.exitCode == 0) "explicit profile warm failed"
-    originalRanks root
+    -- Prepared readers are owned by the selected target, not this lightweight
+    -- caller's compiled producer. Inspect its report without reopening it.
+    let ready ← IO.ofExcept (Json.parse warm.stdout)
+    let databases ← IO.ofExcept (ready.getObjValAs? (Array Json) "databases")
+    check (databases.size == 1) "warm changed the project domain"
+    let some database := databases[0]? | throw (IO.userError "warm project report missing")
+    let sources ← IO.ofExcept (database.getObjValAs? (Array Json) "sources")
+    check (sources.size == 16 && sources.all (fun row =>
+      let prepared := row.getObjValD "prepared"
+      prepared != Json.null && ((prepared.getObjValAs? Nat "population").toOption == some 0 ||
+        prepared.getObjValD "numeric" != Json.null))) "target warm did not prepare every source"
+    let ownerSources ← IO.ofExcept ((ready.getObjValD "ownerView").getObjValAs? (Array Json) "sources")
+    check (ownerSources.size == 16) "target warm omitted original owner sources"
     let prime ← wave root engine "prime" 0 3
     let primed ← IO.ofExcept (prime.getObjValAs? (Array Process) "after")
     check ((primed.filter (·.role == "search-worker")).size == 3) "three ordinary worker processes were not observed"
-    let first ← wave root engine "wave-a" 0 16
-    let cpu ← IO.ofExcept (first.getObjValAs? (Array Json) "persistentCpu")
-    let ranked := cpu.qsort fun a b =>
-      (a.getObjValAs? Nat "cpuMs").toOption.getD 0 > (b.getObjValAs? Nat "cpuMs").toOption.getD 0
-    let some target := ranked.find? (fun row =>
-      let role := (row.getObjValAs? String "role").toOption.getD ""
-      ["search-worker","publication-service","frontend"].contains role) |
-      throw (IO.userError "no persistent CPU sampling target")
-    let pid ← IO.ofExcept (target.getObjValAs? Nat "pid")
-    save (root/"sample-target.json") target
-    let second ← wave root engine "wave-b" 16 16 (some pid)
+    let first ← wave root engine "wave-a" 0 (if burst then caseCount else 16)
+    let second ← if burst then pure Json.null else do
+      let cpu ← IO.ofExcept (first.getObjValAs? (Array Json) "persistentCpu")
+      let ranked := cpu.qsort fun a b =>
+        (a.getObjValAs? Nat "cpuMs").toOption.getD 0 > (b.getObjValAs? Nat "cpuMs").toOption.getD 0
+      let some target := ranked.find? (fun row =>
+        let role := (row.getObjValAs? String "role").toOption.getD ""
+        ["search-worker","publication-service","frontend"].contains role) |
+        throw (IO.userError "no persistent CPU sampling target")
+      let pid ← IO.ofExcept (target.getObjValAs? Nat "pid")
+      save (root/"sample-target.json") target
+      wave root engine "wave-b" 16 16 (some pid)
+    let mut remaining := #[]
+    if caseCount == 80 && !burst then
+      for firstCase in [32,48,64] do
+        remaining := remaining.push (← wave root engine s!"wave-{firstCase/16}" firstCase 16)
     for (path,text,digest) in heads do
       check ((← IO.FS.readFile (.mk path)) == text && (← hash (.mk path)) == digest) "profiling changed an original head"
     save (root/"report.json") (Json.mkObj [("runtimeSha256",toJson runtimeHash),
-      ("prime",prime),("first",first),("second",second),("originalHeadsUnchanged",toJson true),
+      ("prime",prime),("first",first),("second",second),("remaining",toJson remaining),
+      ("caseCount",toJson caseCount),("concurrentClients",toJson (if burst then caseCount else 16)),
+      ("originalHeadsUnchanged",toJson true),
       ("answeringModelCalls",toJson (0 : Nat)),("productChanged",toJson false),("adopted",toJson false)])
   finally
     let frontend ← command engine #["codex-daemon","shutdown"]
@@ -290,5 +251,8 @@ def run (root engine : System.FilePath) (expected : String) : IO Unit := do
     save (root/"shutdown.json") (Json.mkObj [("frontendExit",toJson frontend.exitCode.toNat),("publisherExit",toJson publisher.exitCode.toNat)])
 end Eggshell.Research.WorkerCpuProfile
 def main (args : List String) : IO Unit := do
-  let [root,engine,expected] := args | throw (IO.userError "fresh profile root, target runtime and SHA required")
-  Eggshell.Research.WorkerCpuProfile.run (.mk root) (.mk engine) expected
+  match args with
+  | [root,engine,expected] => Eggshell.Research.WorkerCpuProfile.run (.mk root) (.mk engine) expected
+  | [root,engine,expected,"80"] => Eggshell.Research.WorkerCpuProfile.run (.mk root) (.mk engine) expected 80
+  | [root,engine,expected,"burst80"] => Eggshell.Research.WorkerCpuProfile.run (.mk root) (.mk engine) expected 80 true
+  | _ => throw (IO.userError "fresh profile root, target runtime, SHA and optional 80/burst80 required")

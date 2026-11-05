@@ -1,0 +1,49 @@
+--- a/Eggshell/SearchRank.lean
++++ b/Eggshell/SearchRank.lean
+@@ -59 +59 @@
+-def preferLiteralMatches (ranked : List Nat) (named : Nat → Bool) : List Nat :=
++def preferLiteralMatches (ranked : List α) (named : α → Bool) : List α :=
+@@ -62 +62 @@
+-theorem preferLiteralMatches_members (ranked : List Nat) (named : Nat → Bool) (id : Nat) :
++theorem preferLiteralMatches_members (ranked : List α) (named : α → Bool) (id : α) :
+@@ -66 +66 @@
+-theorem preferLiteralMatches_order (ranked : List Nat) (named : Nat → Bool) :
++theorem preferLiteralMatches_order (ranked : List α) (named : α → Bool) :
+@@ -155,0 +156,25 @@
++/-- Carry explicit current-question locators through a later evidence focus.
++The existing compiled corpus is reused; neither rows nor numerical evidence
++positions are filtered. This supplies advisory order, never Work authority. -/
++def Corpus.orderLocators {candidates : List String} (corpus : Corpus candidates) (query : String)
++    (ordinal : α → Nat) (ranked : List α) : List α :=
++  let wanted := (terms query).filter literalTerm
++  let documents := corpus.documents.toArray
++  preferLiteralMatches ranked fun row =>
++    (documents[ordinal row]?).any fun document => wanted.any document.contains
++
++theorem Corpus.orderLocators_members {candidates : List String} (corpus : Corpus candidates)
++    (query : String) (ordinal : α → Nat) (ranked : List α) (row : α) :
++    row ∈ corpus.orderLocators query ordinal ranked ↔ row ∈ ranked := by
++  simp only [orderLocators,preferLiteralMatches_members]
++
++theorem Corpus.orderLocators_without_locators {candidates : List String} (corpus : Corpus candidates)
++    (query : String) (ordinal : α → Nat) (ranked : List α)
++    (absent : (terms query).filter literalTerm = []) :
++    corpus.orderLocators query ordinal ranked = ranked := by
++  simp [orderLocators,absent,preferLiteralMatches]
++  have empty : ranked.filter (fun _ => false) = [] := by induction ranked <;> simp_all
++  have keep : ranked.filter (fun _ => true) = ranked := by induction ranked <;> simp_all
++  rw [empty,keep]
++  rfl
++
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -2446 +2446,2 @@
+-  let rows := result.ranking.filterMap fun row =>
++  let ranked := corpus.orderLocators current (fun row => row.document.owner) result.ranking
++  let rows := ranked.filterMap fun row =>
+@@ -2467 +2468,2 @@
+-    let lexical := SearchRank.lexical question (support.map fun item => Persistence.Store.searchText item.owner)
++    let corpus := SearchRank.Corpus.build (support.map fun item => Persistence.Store.searchText item.owner)
++    let lexical := corpus.rank question
+@@ -2468,0 +2471 @@
++    let ranking := corpus.orderLocators question id ranking

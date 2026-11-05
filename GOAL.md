@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-05更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-06更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -366,5 +366,7 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 検証済みの区切りでhook-ingress-supervisorへpush。author/committerはmomonoya。終了した実験DB/cacheは抽出後に削除し、圧縮/archiveとして残さない。コード・実測・配送記録・digestを残し、削除済み入力で現在も再検証できるとは主張しない。実利用の記憶は勝手に消さない。
 
 終了した旧DB/cache/build/logの削除履歴は[artifact-cleanup.md](docs/artifact-cleanup.md)と各候補のcleanup記録を参照する。旧原典snapshotは新runtimeの比較入力として使わないため引退させた。[現在の保護入力](docs/candidates/native-study/ended-study-retirement.json)は保持した対照runtimeと現候補を指す。旧DBの削除前と、保持runtime/固定harnessの削除前後のSHA-256を照合した。空き2 GiB/集計RSS 3.5 GiBの停止条件は維持する。
+
+[frame予約の監査](docs/candidates/frame-reserve/README.md)では、元選択の独立再生が実選択と一致し、固定費を全てゼロにした楽観条件でもcase0は選択0だった。予約だけを変える案は進めない。既存のliteral入場を再試行せず、入場済みの明示locatorが後段focusで埋もれる箇所へ[focus-locators候補](docs/candidates/focus-locators/README.md)を隔離実装した。既存Corpusを使う安定partitionを数値/混合focusへ運び、候補membership・窓position・認定・3辺・16並行所有者・worker数・予算・期限を維持する。Lean lawと160 native照合、通常ContractAuditが通った。同じ凍結16所有者DB/82原観測/MiniLM/設定/計測器で、事前固定した交互3組・80種類の質問を16並行ずつ実行し、必要2項目の実本文配送は全組で親76/80→候補80/80。既見33問/未見47問も各組で33/33・47/47。ただし共通templateの合成案件であり、実務98%の実証としない。続く80同時read-onlyは親76/80・候補80/80、候補median22431/max28943ms。意味完了は両arm12/80で、候補の残る68件は字句fallback。30秒まで最大観測余裕1057msしかなく、p99/8時間/保存・背景準備を重ねた容量の合格ではない。664実出力を237本文へ重複除去してdigest付きで保持し、全原典head不変。全13 guard終端/残存0/資源停止0、RSS最大3145536KiB。終了DB/cache/log・旧実行体と不要になった前候補helper合計920579061 bytesをarchiveせず削除し、親製品sourceへ復帰。候補はpatch/実行体として隔離、総token・品質の採用条件をまだ満たさず製品未採用。回答モデル0/有料比較0/18。次はこの候補の通常混在保存・準備・検索と残るqueueを測り、実Inquiryの必要原文を検査する。runtime変更後の有料比較は新seedから固定する。80人8時間/増大project/NAS/実98%/品質/総token改善は未達・未検証でgoalはactive。
 
 全体goalはactive。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。

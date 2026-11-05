@@ -4,6 +4,7 @@ open Lean
 def base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
 def source := base/"frontend-quiescence-fixture-small1"
 def engine := base/"metadata-ingress-candidate-build/StudyMain"
+def workspace : System.FilePath := "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell"
 def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
 def read (path : System.FilePath) : IO Json := do IO.ofExcept (Json.parse (← IO.FS.readFile path))
 def call (args : Array String) (input : Option String := none) := IO.Process.output {cmd := engine.toString,args} input
@@ -13,9 +14,10 @@ def main (args : List String) : IO Unit := do
   check (root.isAbsolute && !(← root.pathExists)) "preserve earlier selection diagnostic"
   IO.FS.createDirAll root
   let heads ← (List.range 16).toArray.mapM fun i => IO.FS.readFile (source/s!"work.project/owners/{i}/source.egg/head")
-  let frozen : Array (String × String × String) ← IO.ofExcept (fromJson? (← read (base/"worker-cpu-native-profile1-result/heads.json")))
+  let frozen : Array (String × String × String) ← IO.ofExcept (fromJson? (← read (workspace/"docs/candidates/worker-cpu/heads.json")))
   check (heads == frozen.map (·.2.1)) "source differs from the frozen original audit"
-  let config ← IO.FS.readFile (base/"worker-cpu-native-profile1-result/eggshell.toml")
+  let config := "default = \"work\"\n[eggs]\nwork = \""++(source/"work.project").toString++
+    "\"\n[profiles.work]\nread = [\"work\"]\nwrite = \"work\"\nhandoff_chars = 120000\n"
   IO.FS.writeFile (root/"eggshell.toml") config
   try
     let warm ← call #["egg","warm",(source/"work.project").toString]
@@ -35,9 +37,8 @@ def main (args : List String) : IO Unit := do
       IO.FS.writeFile (root/(session++".stderr")) output.stderr
       let json ← IO.ofExcept (Json.parse output.stdout)
       let body ← IO.ofExcept ((json.getObjValD "hookSpecificOutput").getObjValAs? String "additionalContext")
-      let baselineName := if index == 0 then "cpu-wave-a-0.stdout" else "cpu-wave-b-28.stdout"
-      let baseline ← read (base/"worker-cpu-native-profile1-result"/baselineName)
-      let expected ← IO.ofExcept ((baseline.getObjValD "hookSpecificOutput").getObjValAs? String "additionalContext")
+      let baseline ← read (workspace/s!"docs/candidates/worker-cpu/actual-case-{index}.json")
+      let expected ← IO.ofExcept (baseline.getObjValAs? String "body")
       check (body == expected) "range/input tracing changed the actual delivery body"
       rows := rows.push (Json.mkObj [("case",toJson index),("session",toJson session),("elapsedMs",toJson elapsed),
         ("head",toJson (body.contains s!"observed-head-case-{index}-7b319c")),

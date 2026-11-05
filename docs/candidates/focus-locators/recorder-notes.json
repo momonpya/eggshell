@@ -1,0 +1,21 @@
+{
+  "nativeTrialsRepeatedForRecorderFixes": false,
+  "notes": [
+    {
+      "stage": "artifact recorder syntax check",
+      "result": "initial overloaded line.contains expression failed; an explicit lambda passes",
+      "productChanged": false
+    },
+    {
+      "stage": "body recorder post-record syntax check",
+      "result": "512 MiB invocation failed to load imports; the recorder's original fixed 1024 MiB invocation is retained",
+      "nativeResourceLimitsChanged": false,
+      "productChanged": false
+    },
+    {
+      "stage": "queue observation aggregation",
+      "result": "future recording omits absent numeric observations instead of replacing them with zero; all recorded trial waves have one operation observation per request",
+      "existingNativeEvidenceChanged": false
+    }
+  ]
+}
