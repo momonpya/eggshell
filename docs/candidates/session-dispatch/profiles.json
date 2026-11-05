@@ -1,0 +1,170 @@
+{
+  "profiles": [
+    {
+      "tag": "session-dispatch-smoke1",
+      "sha256": "05c6a14cb9581319d45abcc7f0d2608a6ffcd0ea065bc700699317f5d358dcfc",
+      "observedThreads": 216,
+      "headerAndTopStackTable": "Analysis of sampling StudyMain (pid 69057) every 1 millisecond\nProcess:         StudyMain [69057]\nPath:            /Users/USER/*/StudyMain\nLoad Address:    0x104508000\nIdentifier:      StudyMain\nVersion:         ???\nCode Type:       ARM64\nPlatform:        macOS\nParent Process:  StudyMain [68981]\nTarget Type:     live task\n\nDate/Time:       2026-11-06 02:04:37.168 +0900\nLaunch Time:     2026-11-06 02:03:58.354 +0900\nOS Version:      macOS 26.6.2 (25G83)\nReport Version:  7\nAnalysis Tool:   /usr/bin/sample\n\nPhysical footprint:         626.6M\nPhysical footprint (peak):  626.6M\nIdle exit:                  untracked\n----\n\nCall graph:\nSort by top of stack, same collapsed (when >= 5):\n        __psynch_cvwait  (in libsystem_kernel.dylib)        33051\n        __semwait_signal  (in libsystem_kernel.dylib)        24295\n        __psynch_mutexwait  (in libsystem_kernel.dylib)        6931\n        __openat  (in libsystem_kernel.dylib)        1339\n        __ulock_wait  (in libsystem_kernel.dylib)        672\n        __read_nocancel  (in libsystem_kernel.dylib)        564\n        _tlv_get_addr  (in libdyld.dylib)        360\n        __ulock_wait2  (in libsystem_kernel.dylib)        309\n        l_Eggshell_Blake3_Source_byteAt  (in StudyMain)        260\n        l_List_reverseAux___redArg  (in StudyMain)        249\n        kevent  (in libsystem_kernel.dylib)        224\n        lean_dec_ref_cold  (in StudyMain)        207\n        l_Eggshell_Blake3_round  (in StudyMain)        206\n        lean_array_get_borrowed  (in StudyMain)        179\n        mi_malloc_small  (in StudyMain)        172\n        lean_inc_heartbeat  (in StudyMain)        166\n        l_Eggshell_Research_RegisterMix_instDecidableValid  (in StudyMain)        163\n        l___private_Init_Data_Range_Basic_0__Std_Legacy_Range_forIn_x27_loop___at___00Eggshell_Sha256_compress_spec__2___redArg  (in StudyMain)        162\n        lean::lean_del_core_other(lean_object*, unsigned char, lean_object*&)  (in StudyMain)        161\n        lean_byte_array_push  (in StudyMain)        136\n        l___private_Init_Data_Array_Basic_0__Array_mapMUnsafe_map___at___00Eggshell_Blake3_permute_spec__0  (in StudyMain)        131\n        l_ByteArray_toList_loop  (in StudyMain)        130\n        thread_start  (in libsystem_pthread.dylib)        129\n        __psynch_mutexdrop  (in libsystem_kernel.dylib)        97\n        __psynch_cvbroad  (in libsystem_kernel.dylib)        95\n        lean_array_push  (in StudyMain)        93\n        pread  (in libsystem_kernel.dylib)        92\n        flock  (in libsystem_kernel.dylib)        84\n        l_Array_extract_loop___redArg  (in StudyMain)        82\n        lstat  (in libsystem_kernel.dylib)        82\n        _platform_memmove  (in libsystem_platform.dylib)        81\n        mi_free_size  (in StudyMain)        81\n        lean_dec_ref_known  (in StudyMain)        77\n        lean_alloc_object  (in StudyMain)        76\n        l_Lean_Json_Parser_strCore  (in StudyMain)        64\n        l_Array_append___redArg  (in StudyMain)        62\n        l_Eggshell_DB_Wire_takeBytes  (in StudyMain)        59\n        __open  (in libsystem_kernel.dylib)        56\n        close  (in libsystem_kernel.dylib)        56\n        lean_array_to_list_impl  (in StudyMain)        56\n        mi_malloc  (in StudyMain)        52\n        mi_free  (in StudyMain)        49\n        l_List_toByteArray  (in StudyMain)        46\n        __renameat  (in libsystem_kernel.dylib)        45\n        l_List_lengthTR___redArg  (in StudyMain)        41\n        mi_page_free_list_extend(mi_page_s*, unsigned long, unsigned long, mi_stats_s*)  (in StudyMain)        40\n        madvise  (in libsystem_kernel.dylib)        37\n        DYLD-STUB$$mi_malloc_small  (in StudyMain)        36\n        lean_copy_expand_array  (in StudyMain)        36\n        mach_msg2_trap  (in libsystem_kernel.dylib)        34\n        OUTLINED_FUNCTION_18  (in StudyMain)        33\n        _mi_malloc_generic(mi_heap_s*, unsigned long, bool, unsigned long)  (in StudyMain)        32\n        l_Eggshell_Blake3_Source_getD  (in StudyMain)        31\n        OUTLINED_FUNCTION_0  (in StudyMain)        30\n        lean_free_object  (in StudyMain)        30\n        <deduplicated_symbol>  (in libsystem_malloc.dylib)        27\n        pwrite  (in libsystem_kernel.dylib)        27\n        l___private_Lean_Data_Json_Printer_0__Lean_Json_compress_go  (in StudyMain)        26\n        lean_apply_1  (in StudyMain)        26\n        l_Eggshell_DB_Wire_takeByteArray  (in StudyMain)        25\n        lean_array_get  (in StudyMain)        25\n        l___private_Init_Data_Range_Basic_0__Std_Legacy_Range_forIn_x27_loop___at___00Eggshell_Sha256_compress_spec__0___redArg  (in StudyMain)        24\n        l___private_Init_Data_Range_Basic_0__Std_Legacy_Range_forIn_x27_loop___at___00Eggshell_VectorPartition_decode_spec__0___redArg  (in StudyMain)        24\n        __psynch_cvsignal  (in libsystem_kernel.dylib)        23\n        l___private_Init_Data_Range_Basic_0__Std_Legacy_Range_forIn_x27_loop___at___00Eggshell_Sha256_compress_spec__1___redArg  (in StudyMain)        22\n        fsync  (in libsystem_kernel.dylib)        21\n        lean::validate_utf8_one(unsigned char const*, unsigned long, unsigned long&)  (in StudyMain)        21\n        lean_string_push  (in StudyMain)        21\n        lean_copy_sarray  (in StudyMain)        19\n        __ulock_wake  (in libsystem_kernel.dylib)        18\n        l___private_Init_Data_Array_Basic_0__Array_mapMUnsafe_map___at___00Eggshell_Blake3_blockWords_spec__0  (in StudyMain)        17\n        std::basic_string<char>::push_back(char)  (in libc++.1.dylib)        17\n        OUTLINED_FUNCTION_10  (in StudyMain)        16\n        mi_find_page(mi_heap_s*, unsigned long, unsigned long)  (in StudyMain)        16\n        __chmod  (in libsystem_kernel.dylib)        15\n        __fork  (in libsystem_kernel.dylib)        15\n        __open_nocancel  (in libsystem_kernel.dylib)        15\n        _platform_memcmp  (in libsystem_platform.dylib)        15\n        _pthread_cond_wait  (in libsystem_pthread.dylib)        15\n        DYLD-STUB$$memcpy  (in StudyMain)        14\n        fstatat  (in libsystem_kernel.dylib)        14\n        _pthread_mutex_droplock  (in libsystem_pthread.dylib)        13\n        _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib)        13\n        l_Eggshell_DB_PageMap_Snapshot_getAt  (in StudyMain)        13\n        read  (in libsystem_kernel.dylib)        13\n        eggshell_publication_open  (in StudyMain)        12\n        fstat  (in libsystem_kernel.dylib)        12\n        l___private_Init_Data_Array_Basic_0__Array_mapMUnsafe_map___at___00Eggshell_Blake3_compress_spec__0  (in StudyMain)        12\n        lean_string_append  (in StudyMain)        12\n        DYLD-STUB$$std::basic_string<char>::push_back(char)  (in StudyMain)        11\n        lean_byte_array_data  (in StudyMain)        11\n        lean_st_ref_get  (in StudyMain)        11\n        stat  (in libsystem_kernel.dylib)        11\n        _xzm_fork_lock_wait  (in libsystem_malloc.dylib)        10\n        l_Eggshell_DB_PageMap_Snapshot_get  (in StudyMain)        10\n        l_List_foldl___at___00Eggshell_DB_PageMap_route_spec__0  (in StudyMain)        10\n        l_String_Pos_Raw_isValidForSlice  (in StudyMain)        10\n        socket  (in libsystem_kernel.dylib)        10\n        l___private_Init_Data_Array_Basic_0__Array_mapMUnsafe_map___at___00Eggshell_Blake3_compress_spec__1  (in StudyMain)        9\n        l___private_Init_While_0__repeatM_erased___at___00Eggshell_Plugin_Publication_Service_executeOperation_spec__0___redArg___lam__0  (in StudyMain)        9\n",
+      "targetAndSamplingResult": "{\"userMs\": 48620,\n \"systemMs\": 44700,\n \"role\": \"publication-service\",\n \"pid\": 69057,\n \"cpuMs\": 93310}{\"stdout\": \"\",\n \"stderr\":\n \"Sampling process 69057 for 2 seconds with 1 millisecond of run time between samples\\nSampling completed, processing symbols...\\nSample analysis of process 69057 written to file /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-dispatch-smoke1-result/worker.sample.txt\\n\",\n \"pid\": 69057,\n \"exitCode\": 0}",
+      "interpretation": "Stack counts include parked threads and are not CPU percentages."
+    },
+    {
+      "tag": "session-dispatch-control2",
+      "sha256": "3b67d17a5f9854e9f834ccde4d0d12f81037563bf46199cf05ff580617d445db",
+      "observedThreads": 11,
+      "headerAndTopStackTable": "Analysis of sampling StudyMain (pid 47683) every 1 millisecond\nProcess:         StudyMain [47683]\nPath:            /Users/USER/*/StudyMain\nLoad Address:    0x102d4c000\nIdentifier:      StudyMain\nVersion:         ???\nCode Type:       ARM64\nPlatform:        macOS\nParent Process:  StudyMain [47589]\nTarget Type:     live task\n\nDate/Time:       2026-11-06 02:08:54.957 +0900\nLaunch Time:     2026-11-06 02:08:34.562 +0900\nOS Version:      macOS 26.6.2 (25G83)\nReport Version:  7\nAnalysis Tool:   /usr/bin/sample\n\nPhysical footprint:         53.0M\nPhysical footprint (peak):  53.1M\nIdle exit:                  untracked\n----\n\nCall graph:\nSort by top of stack, same collapsed (when >= 5):\n        __psynch_cvwait  (in libsystem_kernel.dylib)        3806\n        __ulock_wait  (in libsystem_kernel.dylib)        1258\n        kevent  (in libsystem_kernel.dylib)        1245\n        __openat  (in libsystem_kernel.dylib)        71\n        l_Array_binSearchAux___at___00Eggshell_RetrievalResearch_Unicode_contains_spec__0___redArg  (in StudyMain)        47\n        l_List_reverseAux___redArg  (in StudyMain)        46\n        lean_dec_ref_cold  (in StudyMain)        46\n        _tlv_get_addr  (in libdyld.dylib)        44\n        l_Array_binSearchAux___at___00Eggshell_RetrievalResearch_Unicode_contains_spec__0___redArg___lam__0  (in StudyMain)        39\n        lean::lean_del_core_other(lean_object*, unsigned char, lean_object*&)  (in StudyMain)        38\n        l_Eggshell_Blake3_Source_byteAt  (in StudyMain)        36\n        mi_malloc_small  (in StudyMain)        36\n        lean_copy_expand_array  (in StudyMain)        23\n        l_Eggshell_Blake3_round  (in StudyMain)        22\n        lean_array_get_borrowed  (in StudyMain)        20\n        lean_inc_heartbeat  (in StudyMain)        20\n        mi_free  (in StudyMain)        20\n        l_List_find_x3f___at___00Eggshell_DB_PageMap_Snapshot_getAt_spec__0  (in StudyMain)        18\n        l_WellFounded_opaqueFix_u2083___at___00Eggshell_RetrievalResearch_terms_spec__1___redArg  (in StudyMain)        18\n        lean_array_push  (in StudyMain)        18\n        l_Eggshell_Research_RegisterMix_instDecidableValid  (in StudyMain)        17\n        l___private_Init_Data_Array_Basic_0__Array_mapMUnsafe_map___at___00Eggshell_Blake3_permute_spec__0  (in StudyMain)        17\n        lean_dec_ref_known  (in StudyMain)        17\n        lean_mark_mt  (in StudyMain)        14\n        _platform_memcmp  (in libsystem_platform.dylib)        13\n        lean_free_object  (in StudyMain)        13\n        l_Array_extract_loop___redArg  (in StudyMain)        12\n        l___private_Init_Data_Range_Basic_0__Std_Legacy_Range_forIn_x27_loop___at___00Eggshell_Sha256_compress_spec__2___redArg  (in StudyMain)        12\n        mi_free_size  (in StudyMain)        12\n        mi_malloc  (in StudyMain)        12\n        l_List_lengthTR___redArg  (in StudyMain)        11\n        l_WellFounded_opaqueFix_u2083___at___00Eggshell_RetrievalResearch_terms_spec__2___redArg  (in StudyMain)        11\n        pread  (in libsystem_kernel.dylib)        10\n        l_List_foldl___at___00Eggshell_DB_PageMap_route_spec__0  (in StudyMain)        9\n        DYLD-STUB$$mi_malloc_small  (in StudyMain)        8\n        OUTLINED_FUNCTION_0  (in StudyMain)        8\n        _platform_memmove  (in libsystem_platform.dylib)        7\n        lean::hash_str(unsigned long, unsigned char const*, unsigned long long)  (in StudyMain)        7\n        lean_dec_ref_cold.cold.1  (in StudyMain)        7\n        OUTLINED_FUNCTION_18  (in StudyMain)        6\n        __psynch_mutexwait  (in libsystem_kernel.dylib)        6\n        lean_array_to_list_impl  (in StudyMain)        6\n        lean_byte_array_push  (in StudyMain)        6\n        lean_string_push  (in StudyMain)        6\n        _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib)        5\n        l_List_toByteArray  (in StudyMain)        5\n        l_WellFounded_opaqueFix_u2083___at___00Eggshell_RetrievalResearch_Unicode_widthFold_spec__1___redArg  (in StudyMain)        5\n        lean::lean_del_core_other(lean_object*, unsigned char, lean_object*&) (.cold.4)  (in StudyMain)        5\n        lean::validate_utf8(unsigned char const*, unsigned long, unsigned long&, unsigned long&)  (in StudyMain)        5\n        std::basic_string<char>::push_back(char)  (in libc++.1.dylib)        5\n\n",
+      "targetAndSamplingResult": "{\"userMs\": 9170,\n \"systemMs\": 1670,\n \"role\": \"search-worker\",\n \"pid\": 47683,\n \"cpuMs\": 10840}{\"stdout\": \"\",\n \"stderr\":\n \"Sampling process 47683 for 2 seconds with 1 millisecond of run time between samples\\nSampling completed, processing symbols...\\nSample analysis of process 47683 written to file /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-dispatch-control2-result/worker.sample.txt\\n\",\n \"pid\": 47683,\n \"exitCode\": 0}",
+      "interpretation": "Stack counts include parked threads and are not CPU percentages."
+    }
+  ],
+  "guards": [
+    {
+      "tag": "session-dispatch-records3",
+      "record": {
+        "childPid": 5262,
+        "elapsedMs": 5748,
+        "error": null,
+        "exitCode": 0,
+        "guardPid": 4249,
+        "guardSha256": "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+        "guardTriggered": false,
+        "limitRssKiB": 3670016,
+        "ownedPids": [],
+        "peakProcesses": [
+          {
+            "lane": null,
+            "parent": 4249,
+            "pid": 5262,
+            "program": "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+            "role": null,
+            "rssKiB": 553968
+          },
+          {
+            "lane": null,
+            "parent": 5262,
+            "pid": 5954,
+            "program": "(perl)",
+            "role": null,
+            "rssKiB": 5744
+          },
+          {
+            "lane": null,
+            "parent": 1,
+            "pid": 4249,
+            "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+            "role": "guard",
+            "rssKiB": 48000
+          }
+        ],
+        "reason": null,
+        "sampledPeakRssKiB": 607712,
+        "samples": 17,
+        "settings": {
+          "command": [
+            "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+            "-j1",
+            "-M1536",
+            "--run",
+            "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/session-dispatch/records.lean",
+            "session-dispatch-builder-check",
+            "session-dispatch-builder-check2",
+            "session-dispatch-builder-check3",
+            "session-dispatch-build1",
+            "session-dispatch-build2",
+            "session-dispatch-build3",
+            "session-dispatch-build4",
+            "session-dispatch-build5",
+            "session-dispatch-build6",
+            "session-dispatch-build7",
+            "session-dispatch-build8",
+            "session-dispatch-policy1",
+            "session-dispatch-policy2",
+            "session-dispatch-client-build1",
+            "session-dispatch-smoke1",
+            "session-dispatch-control2",
+            "session-dispatch-records1",
+            "session-dispatch-records2"
+          ],
+          "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+          "limitRssKiB": 3670016,
+          "minFreeKiB": 2097152,
+          "ownedPrefixes": [
+            "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
+          ],
+          "record": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-dispatch-records3.guard.json"
+        },
+        "state": "finished",
+        "userCeilingRssKiB": 4194304
+      }
+    },
+    {
+      "tag": "session-dispatch-verify1",
+      "record": {
+        "childPid": 35822,
+        "elapsedMs": 4683,
+        "error": null,
+        "exitCode": 0,
+        "guardPid": 34808,
+        "guardSha256": "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+        "guardTriggered": false,
+        "limitRssKiB": 3670016,
+        "ownedPids": [],
+        "peakProcesses": [
+          {
+            "lane": null,
+            "parent": 35822,
+            "pid": 35984,
+            "program": "(perl)",
+            "role": null,
+            "rssKiB": 6640
+          },
+          {
+            "lane": null,
+            "parent": 34808,
+            "pid": 35822,
+            "program": "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+            "role": null,
+            "rssKiB": 553136
+          },
+          {
+            "lane": null,
+            "parent": 1,
+            "pid": 34808,
+            "program": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+            "role": "guard",
+            "rssKiB": 47952
+          }
+        ],
+        "reason": null,
+        "sampledPeakRssKiB": 607728,
+        "samples": 9,
+        "settings": {
+          "command": [
+            "/Users/ovm/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean",
+            "-j1",
+            "-M1536",
+            "--run",
+            "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/docs/candidates/session-dispatch/records.lean",
+            "verify"
+          ],
+          "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+          "limitRssKiB": 3670016,
+          "minFreeKiB": 2097152,
+          "ownedPrefixes": [
+            "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
+          ],
+          "record": "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/session-dispatch-verify1.guard.json"
+        },
+        "state": "finished",
+        "userCeilingRssKiB": 4194304
+      }
+    }
+  ],
+  "controllerLaunchFailure": {
+    "guardPid": 40392,
+    "settingsNotYetCreated": true,
+    "workloadStarted": false,
+    "guardProcessAbsent": true
+  },
+  "newPythonOrRuby": false
+}

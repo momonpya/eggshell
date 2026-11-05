@@ -1,0 +1,18 @@
+{"runs":
+ [{"tag": "session-dispatch-smoke1",
+   "semanticCompletedWithHandoff": 3,
+   "requiredOriginalAndAck": 3,
+   "queueMs": {"min": 0, "median": 1, "max": 2, "count": 28},
+   "queries": 32,
+   "latencyMs": {"min": 25685, "median": 29357, "max": 29570, "count": 32},
+   "emptySemanticCompletions": 11},
+  {"tag": "session-dispatch-control2",
+   "semanticCompletedWithHandoff": 32,
+   "requiredOriginalAndAck": 32,
+   "queueMs": {"min": 0, "median": 5351, "max": 11593, "count": 32},
+   "queries": 32,
+   "latencyMs": {"min": 2952, "median": 8502, "max": 14187, "count": 32},
+   "emptySemanticCompletions": 0}],
+ "distinctBodyDigests": 34,
+ "adopted": false,
+ "actualOutputs": 70}

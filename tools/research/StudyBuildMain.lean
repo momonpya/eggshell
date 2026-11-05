@@ -303,6 +303,9 @@ def build (input : String) : IO Unit := do
     let path ← IO.ofExcept (Json.parse row >>= Json.getStr?)
     if path == settings.baselineMain then continue
     if let some name := modules[path]? then
+      -- An ancestor's unrelated test/entry object can call a removed ABI even
+      -- when the new entry never imports it. Link exactly the visited closure.
+      if !state.done.contains name then continue
       if let some replacement := state.objects[name]? then
         if !used.contains name then arguments := arguments.push replacement
         used := used.insert name
@@ -396,10 +399,12 @@ private def resumeAudit (directory : String) : IO Unit := do
   let middle := "module\npublic import Box\n@[expose] public section\ndef answer (box : Box) : Nat := box.x+1\n"
   IO.FS.writeFile (core / "Middle.lean") middle
   IO.FS.writeFile (core / "Broken.lean") "module\n"
-  IO.FS.writeFile (core / "Main.lean") "import Box\nimport Broken\nimport Middle\ndef main : IO Unit := IO.println (toString (answer ⟨2⟩))\n"
+  IO.FS.writeFile (core / "Unused.lean") "module\n@[expose] public section\ndef unused : Nat := 42\n"
+  IO.FS.writeFile (core / "Main.lean") "import Box\nimport Broken\nimport Middle\nimport Unused\ndef main : IO Unit := IO.println (toString (answer ⟨2⟩))\n"
   build plan.toString
   let before ← IO.Process.output {cmd := (root / "build/StudyMain").toString}
   check (before.exitCode == 0 && before.stdout.trimAscii == "3") "invalid initial layout fixture"
+  let ancestorResponse ← IO.FS.readFile (root / "build/runtime.rsp")
   let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-R",(root / "build/lib").toString,(root / "old-interfaces").toString]}
   check (copied.exitCode == 0) "cannot freeze old fixture interfaces"
   IO.FS.writeFile (core / "Box.lean") "module\n@[expose] public section\nstructure Box where\n  y : Nat\n  x : Nat\n"
@@ -423,12 +428,18 @@ private def resumeAudit (directory : String) : IO Unit := do
     baselineResponse := (root / "build/runtime.rsp").toString
     baselineMain := (root / "build/Main.o").toString
     baselineCore := some core.toString}
+  IO.FS.writeFile (root / "build/runtime.rsp") ancestorResponse
+  IO.FS.writeFile (root / "objects.json") (Json.mkObj [
+    ((root / "build/Unused.o").toString,toJson "Unused")]).pretty
   inheritLibrary (root / "old-interfaces") (core / ".lake/build/lib/lean")
   IO.FS.writeFile (root / "derived-plan.json") (toJson derived).pretty
   build (root / "derived-plan.json").toString
   let derivedResult ← IO.Process.output {cmd := (root / "derived/StudyMain").toString}
   check (derivedResult.exitCode == 0 && derivedResult.stdout.trimAscii == "3")
     "derived build duplicated an object omitted by the caller's empty map"
+  let derivedResponse ← IO.FS.readFile (root / "derived/runtime.rsp")
+  check (!(derivedResponse.splitOn "\n").contains ((toJson (root / "build/Unused.o").toString).compress))
+    "unreachable ancestor module leaked into the native closure"
   check ((← IO.FS.realPath (root / "derived/lib/Box.olean")) == (← IO.FS.realPath (root / "build/lib/Box.olean")))
     "derived build kept the old package interface instead of its native producer"
   let conflict := Json.mkObj [((root / "build/Box.o").toString,toJson "WrongModule")]
@@ -442,6 +453,7 @@ private def resumeAudit (directory : String) : IO Unit := do
   IO.FS.writeFile (root / "results.json") (Json.mkObj [
     ("dependencyCachedOnRetry",toJson true),("unchangedParentRecompiled",toJson true),
     ("omittedDerivedNativeObjectsRecovered",toJson true),("contradictoryNativeMappingRejected",toJson true),
+    ("unreachableAncestorModuleOmitted",toJson true),
     ("selectedNativeInterfaceBound",toJson true),("stalePackageInterfaceRejected",toJson true),
     ("runtimeValueBefore",toJson before.stdout.trimAscii.copy),("runtimeValueAfter",toJson after.stdout.trimAscii.copy),
     ("staleLayoutWouldReturn",toJson (10 : Nat)),("answeringModelCalls",toJson (0 : Nat))]).pretty

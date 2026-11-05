@@ -133,6 +133,11 @@ def receipts (root : System.FilePath) (hooks : Array Json) : IO (Array Json) := 
     if ← (directory/"published.json").pathExists then
       let published := (← read (directory/"published.json")).getObjValD "data"
       fields := fields++[("published",published.setObjVal! "output" Json.null)]
+    let mut failures := #[]
+    if ← directory.pathExists then
+      for entry in ← directory.readDir do
+        if entry.fileName.endsWith "-actor-failed.json" then failures := failures.push (← read entry.path)
+    fields := fields++[("actorFailures",toJson failures)]
     rows := rows.push (Json.mkObj fields)
   return rows
 
@@ -221,7 +226,12 @@ def run (root engine : System.FilePath) (expected : String) (caseCount : Nat := 
     check (ownerSources.size == 16) "target warm omitted original owner sources"
     let prime ← wave root engine "prime" 0 3
     let primed ← IO.ofExcept (prime.getObjValAs? (Array Process) "after")
-    check ((primed.filter (·.role == "search-worker")).size == 3) "three ordinary worker processes were not observed"
+    let workers := (primed.filter (·.role == "search-worker")).size
+    let operations := (prime.getObjValD "serviceStats").getObjValD "operations"
+    let actors := (operations.getObjValAs? String "searchExecution").toOption == some "request-owned"
+    check (if actors then workers == 0 &&
+      (operations.getObjValAs? Nat "peakSearchActors").toOption.getD 0 ≥ 3
+      else workers == 3) "selected runtime did not execute its declared search architecture"
     let first ← wave root engine "wave-a" 0 (if burst then caseCount else 16)
     let second ← if burst then pure Json.null else do
       let cpu ← IO.ofExcept (first.getObjValAs? (Array Json) "persistentCpu")
@@ -229,8 +239,8 @@ def run (root engine : System.FilePath) (expected : String) (caseCount : Nat := 
         (a.getObjValAs? Nat "cpuMs").toOption.getD 0 > (b.getObjValAs? Nat "cpuMs").toOption.getD 0
       let some target := ranked.find? (fun row =>
         let role := (row.getObjValAs? String "role").toOption.getD ""
-        role == "search-worker") |
-        throw (IO.userError "no persistent search-worker CPU sampling target")
+        role == (if actors then "publication-service" else "search-worker")) |
+        throw (IO.userError "no persistent search host CPU sampling target")
       let pid ← IO.ofExcept (target.getObjValAs? Nat "pid")
       save (root/"sample-target.json") target
       wave root engine "wave-b" 16 16 (some pid)
@@ -243,6 +253,7 @@ def run (root engine : System.FilePath) (expected : String) (caseCount : Nat := 
     save (root/"report.json") (Json.mkObj [("runtimeSha256",toJson runtimeHash),
       ("prime",prime),("first",first),("second",second),("remaining",toJson remaining),
       ("caseCount",toJson caseCount),("concurrentClients",toJson (if burst then caseCount else 16)),
+      ("requestOwnedActors",toJson actors),
       ("originalHeadsUnchanged",toJson true),
       ("answeringModelCalls",toJson (0 : Nat)),("productChanged",toJson false),("adopted",toJson false)])
   finally

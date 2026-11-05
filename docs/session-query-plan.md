@@ -44,6 +44,16 @@ prepared producer or owner namespace is rejected and requires another checked
 freeze. This API is not itself dynamic hook dispatch or shared base e-graph
 compilation; those integrations remain explicit work.
 
+The first [ordinary-hook connection](candidates/session-dispatch/README.md) is
+now isolated and tested. It starts16 actors with at most2ms admission wait,
+one public reader build and no search subprocess copies, but only3/32 known
+originals reach actual body+ACK, against32/32 in the same-client parent control.
+It is not adopted and the eighty-client gate was not run. The service sample
+has216 threads: logical request independence must not multiply nested dedicated
+supervisors and polling waiters. Reuse immutable router/page preparation and
+make waits event driven before another capacity trial; attribution among runtime
+scheduling, cache contention and repeated decoding still needs stage evidence.
+
 ## Dispatch and resource contract
 
 Replace the fixed three whole-search lanes with request-owned tasks. Admission
