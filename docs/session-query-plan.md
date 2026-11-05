@@ -7,19 +7,30 @@ certification, and the matched total-token/quality adoption gates.
 
 ## Observed failure
 
-The current isolated service admits independent requests but runs complete
-searches through three fixed worker pipes. A lane remains occupied while the
-query waits for source or numerical services and while it restores, extracts
-and renders evidence. In the last eighty-request burst,68 configured searches
-do not even start their semantic phase: the ingress-time semantic cutoff has
-expired while they are queued. Their lexical delivery is a rescue result,
-not evidence that eighty concurrent semantic searches are supported.
+The initial isolated service admitted independent requests but ran complete
+searches through three fixed worker pipes. A lane remained occupied while the
+query waited for source or numerical services and while it restored, extracted
+and rendered evidence. In that eighty-request burst,68 configured searches
+did not even start their semantic phase: the ingress-time semantic cutoff had
+expired while they were queued. Their lexical delivery was a rescue result,
+not evidence that eighty concurrent semantic searches were supported.
 
 The candidate's queue median is18,935 ms and operation-work median570 ms in
 that burst. Most of those operations are lexical;570 ms is **not** the cost
 of eighty complete semantic searches. The previously reported semantic phase
 also includes WorkGraph and delivery processing, not just vector similarity.
 Do not attribute either number to an inherent vector-search limit.
+
+The subsequent [numerical wait study](candidates/numerical-waits/README.md)
+does start independent actors and passes32 simultaneous semantic deliveries,
+but80 still delivers only2. Prompt actor admission alone does not provide
+throughput. Returned numerical replies spend a median1,105ms from output-ready
+to client receipt at80, while score-kernel median is5ms. The next boundary to
+isolate is the same numerical protocol without whole-host graph load; source
+option resolution is already memoized per exact source within each call.
+Preserve independent chat actors and shared project data; avoid multiplying
+dedicated blocking supervisors for every suspended phase. This candidate is
+unadopted and does not meet the80-person or inclusive-token gates.
 
 ## Execution ownership
 

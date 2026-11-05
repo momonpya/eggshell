@@ -1,0 +1,17 @@
+diff --git a/tools/research/WorkerCpuProfile.lean b/tools/research/WorkerCpuProfile.lean
+index f01f6592..922768cd 100644
+--- a/tools/research/WorkerCpuProfile.lean
++++ b/tools/research/WorkerCpuProfile.lean
+@@ -167,0 +168,7 @@ def wave (root engine : System.FilePath) (name : String) (first count : Nat)
++  -- Preserve the actual client rows before an optional stats query or later
++  -- cleanup can fail. Service time cannot reconstruct a lost client receipt.
++  let capturedReceipts ← receipts root rows
++  save (root/(name++"-checkpoint.json")) (Json.mkObj [("name",toJson name),
++    ("before",toJson before),("after",toJson after),("persistentCpu",toJson (cpuChanges before after)),
++    ("cpuIntervalMs",toJson cpuInterval),("timeline",toJson timeline),("rows",toJson rows),
++    ("receipts",toJson capturedReceipts),("serviceStatsUnavailable",toJson true)])
+@@ -174 +181 @@ def wave (root engine : System.FilePath) (name : String) (first count : Nat)
+-    ("timeline",toJson timeline),("rows",toJson rows),("receipts",toJson (← receipts root rows)),
++    ("timeline",toJson timeline),("rows",toJson rows),("receipts",toJson capturedReceipts),
+@@ -268,0 +276 @@ def main (args : List String) : IO Unit := do
++  | [root,engine,expected,"burst32"] => Eggshell.Research.WorkerCpuProfile.run (.mk root) (.mk engine) expected 32 true

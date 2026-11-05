@@ -1,0 +1,11 @@
+{
+  "beforeBuildAndRun":true,
+  "basis":"Measured32-client RPC roundtrip median711ms: score admission355ms,frame read83ms,ready-to-client152ms; raw line read1ms and poll-after-read6ms. Zero trace drops. Body controls at16 clients are32/32 byte-identical.32 concurrent baseline delivers21/32,peak3040416KiB;80 is not claimed.",
+  "parentRuntimeSha256":"7b254a3349e01ae8cff3429ea0adb36b44704147b7ab759e15c185009c60d93e",
+  "controllerSha256":"a80cad2a80fb084842d22e3ead44358762fbdea3e175601b1d407d82c67b308e",
+  "change":"Use one owned native disconnect read for each numerical request instead of repeated socket/timer re-registration while waiting for a gate. Check peer/deadline/stopping before and at admission. Await one raw-pipe completion observer with the same absolute deadline and five-ms shutdown checks; kill/reap/join on failure. Model,gates,source domain,ranking and all budgets remain unchanged.",
+  "order":["compile Lean admission laws and existing contracts","candidate OFF16 then ON16/two waves;compare actual bytes with each other and retained parent","one ON32 same-controller comparison with retained21/32 parent","one ON80 only if32 delivers32/32 with semantic completion,clean lifecycle and peakRSS below3145728KiB;otherwise stop"],
+  "interpretation":"An optional80 trial is a capacity check,not80-person/eight-hour/growing-project/NAS completion. Retain every failed case. A lower RPC wait does not establish token reduction. No unchanged retry after capacity/resource/lifecycle failure.",
+  "limits":{"rssCeilingKiB":4194304,"rssStopKiB":3670016,"minFreeKiB":2097152},
+  "answeringModelCalls":0,"paidComparisons":"0/18","adopted":false
+}

@@ -78,6 +78,8 @@ def main (arguments : List String) : IO Unit := do
     | "--query-stages" :: tags => (destination.parent.getD destination / "query-stages",tags)
     | "--provider-stages" :: tags => (destination.parent.getD destination / "provider-stages",tags)
     | "--numerical-ready" :: tags => (destination.parent.getD destination / "numerical-ready",tags)
+    | "--numerical-stages" :: tags => (destination.parent.getD destination / "numerical-stages",tags)
+    | "--numerical-waits" :: tags => (destination.parent.getD destination / "numerical-waits",tags)
     | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
@@ -108,7 +110,7 @@ def main (arguments : List String) : IO Unit := do
     check ((tag.startsWith "shared-leases-" || tag.startsWith "hosted-endpoint-" ||
       tag.startsWith "source-protocol-overlap" || tag.startsWith "task-observer-" ||
       tag.startsWith "task-waiter-" || tag.startsWith "query-stages-" || tag.startsWith "provider-stages-" ||
-      tag.startsWith "numerical-ready-") &&
+      tag.startsWith "numerical-ready-" || tag.startsWith "numerical-stages-" || tag.startsWith "numerical-waits-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"

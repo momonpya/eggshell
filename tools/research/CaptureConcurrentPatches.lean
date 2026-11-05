@@ -20,6 +20,25 @@ def save (name : String) (rows : Array (System.FilePath × System.FilePath × St
   IO.FS.writeFile (workspace/"docs/candidates"/name/"candidate.patch") source
 def main (arguments : List String) : IO Unit := do
   let core := base/"interest-traffic-core"
+  if arguments == ["numerical-waits"] then
+    check (!(← (workspace/"docs/candidates/numerical-waits/candidate.patch").pathExists)) "numerical wait patch already sealed"
+    save "numerical-waits" ((#["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>
+      (base/"numerical-waits-parent-core"/relative,core/relative,relative))
+    let mut initial := ""
+    for relative in (["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean"] : List String) do
+      initial := initial++(← patch (base/"numerical-waits-parent-core"/relative)
+        (base/"numerical-waits-initial-core"/relative) relative)
+    IO.FS.writeFile (workspace/"docs/candidates/numerical-waits/initial-waits.patch") initial
+    return
+  if arguments == ["numerical-stages"] then
+    check (!(← (workspace/"docs/candidates/numerical-stages/candidate.patch").pathExists)) "numerical stage patch already sealed"
+    save "numerical-stages" ((#["Eggshell/Numerical.lean","Eggshell/SearchProvider.lean",
+      "Eggshell/KeyedSearchProvider.lean","Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>
+      (base/"numerical-stages-parent-core"/relative,core/relative,relative))
+    let entry ← patch (base/"numerical-stages-parent-core/tools/research/WorkerCpuProfile.lean")
+      (core/"tools/research/WorkerCpuProfile.lean") "tools/research/WorkerCpuProfile.lean"
+    IO.FS.writeFile (workspace/"docs/candidates/numerical-stages/controller.patch") entry
+    return
   if arguments == ["numerical-ready"] then
     check (!(← (workspace/"docs/candidates/numerical-ready/candidate.patch").pathExists)) "numerical readiness patch already sealed"
     save "numerical-ready" ((#["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>

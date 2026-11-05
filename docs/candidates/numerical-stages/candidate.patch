@@ -1,0 +1,150 @@
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index 628afe78..abbcdfab 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -292 +292 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
+-    (body : String) (deadline : Nat) : IO String := do
++    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := do
+@@ -295,0 +296 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
++  mark "encode-admission:start"
+@@ -299,0 +301 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
++      mark "encode-admission:end"
+@@ -301,0 +304 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
++      mark "encode-child:start"
+@@ -308,0 +312 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
++      mark "encode-child:end"
+@@ -309,0 +314 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
++        mark "encode-kernel:start"
+@@ -312 +317,3 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
+-        awaitLine child deadline backend.stopping.get
++        let result ← awaitLine child deadline backend.stopping.get
++        mark "encode-kernel:end"
++        return result
+@@ -323 +330 @@ def exchangeRaw (child : Kernel) (frame : BlockScore.Frame) (deadline : Nat)
+-    (cancelled : IO Bool) : IO String := do
++    (cancelled : IO Bool) (mark : String → IO Unit := fun _ => pure ()) : IO String := do
+@@ -325,0 +333 @@ def exchangeRaw (child : Kernel) (frame : BlockScore.Frame) (deadline : Nat)
++    mark "raw-pipe-write:start"
+@@ -329 +337,5 @@ def exchangeRaw (child : Kernel) (frame : BlockScore.Frame) (deadline : Nat)
+-    child.stdout.getLine) .dedicated
++    mark "raw-pipe-write:end"
++    mark "raw-line-read:start"
++    let result ← child.stdout.getLine
++    mark "raw-line-read:end"
++    return result) .dedicated
+@@ -335,0 +348 @@ def exchangeRaw (child : Kernel) (frame : BlockScore.Frame) (deadline : Nat)
++      mark "raw-pipe-task-ready"
+@@ -342 +355,2 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
+-    (body : String) (deadline : Nat) : IO String := do
++    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := do
++  mark "score-admission:start"
+@@ -346,0 +361 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
++      mark "score-admission:end"
+@@ -349,0 +365 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
++        mark "score-prepare:start"
+@@ -350,0 +367,2 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
++        mark "score-prepare:end"
++        mark "score-child:start"
+@@ -361 +379,4 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
+-        let result ← IO.ofExcept (Json.parse (← exchangeRaw child frame deadline backend.stopping.get))
++        mark "score-child:end"
++        mark "score-kernel:start"
++        let result ← IO.ofExcept (Json.parse (← exchangeRaw child frame deadline backend.stopping.get mark))
++        mark "score-kernel:end"
+@@ -378 +399,21 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
+-def serveClient (backend : Backend) (config : Config) (secret : String) (client : Socket.Client) : IO Unit := do
++/-- Optional metadata never changes an unobserved reply, and does not replace
++the numerical fields consumed by ranking. Real hooks check observed erasure. -/
++def observedOutput (enabled : Bool) (output : String) (metadata : Json) : String :=
++  if enabled then match Json.parse output with
++    | .ok json => (json.setObjVal! "numericalTrace" metadata).compress++"\n"
++    | .error _ => output
++  else output
++
++theorem unobserved_output_unchanged (output : String) (metadata : Json) :
++    observedOutput false output metadata = output := by simp [observedOutput]
++
++def serveClient (backend : Backend) (config : Config) (secret : String) (client : Socket.Client)
++    (acceptedAt : Nat := 0) : IO Unit := do
++  let enabled := (← IO.getEnv "EGGSHELL_TRACE_NUMERICAL_STAGES") == some "1"
++  let started ← IO.monoMsNow
++  let events ← IO.mkRef (#[ ("accepted",if acceptedAt == 0 then started else acceptedAt) ] : Array (String × Nat))
++  let mark := fun label => do
++    if enabled then
++      let now ← IO.monoMsNow
++      events.modify (·.push (label,now))
++  mark "handler:start"
+@@ -380,0 +422 @@ def serveClient (backend : Backend) (config : Config) (secret : String) (client
++    mark "request-read:start"
+@@ -384,0 +427,2 @@ def serveClient (backend : Backend) (config : Config) (secret : String) (client
++    mark "request-read:end"
++    mark "request-parse:start"
+@@ -389,0 +434 @@ def serveClient (backend : Backend) (config : Config) (secret : String) (client
++    mark "request-parse:end"
+@@ -399 +444 @@ def serveClient (backend : Backend) (config : Config) (secret : String) (client
+-          backend.scoreBlocks config client (← IO.ofExcept (request.getObjValAs? String "payload")) deadline
++          backend.scoreBlocks config client (← IO.ofExcept (request.getObjValAs? String "payload")) deadline mark
+@@ -401 +446 @@ def serveClient (backend : Backend) (config : Config) (secret : String) (client
+-          backend.encode config client (← IO.ofExcept (request.getObjValAs? String "payload")) deadline
++          backend.encode config client (← IO.ofExcept (request.getObjValAs? String "payload")) deadline mark
+@@ -403 +448,4 @@ def serveClient (backend : Backend) (config : Config) (secret : String) (client
+-    pure (response (.ok output))
++    mark "output-ready"
++    let metadata := Json.mkObj [("events",toJson (← events.get)),("kind",toJson kind),
++      ("requestFramePayloadBytes",toJson length)]
++    pure (response (.ok (observedOutput enabled output metadata)))
+@@ -433 +481,2 @@ def serve (config : Config) : IO UInt32 := do
+-          let task ← IO.asTask (serveClient backend config endpoint.secret client) .dedicated
++          let acceptedAt ← IO.monoMsNow
++          let task ← IO.asTask (serveClient backend config endpoint.secret client acceptedAt) .dedicated
+@@ -461,0 +511 @@ structure Client where
++  profile : IO.Ref (Array Json)
+@@ -464 +514 @@ def openClient (config : Config) (onStage : String → IO Unit := fun _ => pure
+-  return ⟨← keep config,← IO.mkRef none,← IO.mkRef none,← IO.mkRef false,onStage⟩
++  return ⟨← keep config,← IO.mkRef none,← IO.mkRef none,← IO.mkRef false,onStage,← IO.mkRef #[]⟩
+@@ -500,0 +551 @@ def Client.request (client : Client) (marker : UInt8) (body : String) : IO Strin
++    let began ← IO.monoMsNow
+@@ -502,0 +554 @@ def Client.request (client : Client) (marker : UInt8) (body : String) : IO Strin
++      let received ← IO.monoMsNow
+@@ -503,0 +556,7 @@ def Client.request (client : Client) (marker : UInt8) (body : String) : IO Strin
++      if (← IO.getEnv "EGGSHELL_TRACE_NUMERICAL_STAGES") == some "1" then
++        if let .ok json := Json.parse result then
++          if let .ok metadata := json.getObjVal? "numericalTrace" then
++            let metadata := metadata.setObjVal! "clientStartedAt" (toJson began)
++              |>.setObjVal! "clientReceivedAt" (toJson received)
++            client.profile.modify fun previous => if previous.size < 128 then previous.push metadata else previous
++            return (json.setObjVal! "numericalTrace" metadata).compress++"\n"
+@@ -526,0 +586 @@ def Client.close (client : Client) : IO Unit := do
++  client.profile.set #[]
+diff --git a/Eggshell/SearchProvider.lean b/Eggshell/SearchProvider.lean
+index 8b5464b5..5dcebeb4 100644
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -88,0 +89,2 @@ structure IndexedMetrics where
++  numericalReplies : Array Json := #[]
++  numericalReplyDrops : Nat := 0
+@@ -260,0 +263,5 @@ def measuredExchange (options : Options) (child : Encoder) (input : Json)
++    if let .ok metadata := result.getObjVal? "numericalTrace" then
++      sink.state.modify fun state =>
++        if state.numericalReplies.size < 128 then
++          {state with numericalReplies := state.numericalReplies.push metadata}
++        else {state with numericalReplyDrops := state.numericalReplyDrops+1}
+@@ -885,0 +893,3 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
++  let numericalReplies ← if (request.getObjValAs? String "purpose").toOption == some "keyed-discovery" then do
++      pure ((← child.mapM (fun child => child.profile.get)).getD #[])
++    else pure #[]
+@@ -888 +898 @@ def handleIndexed (options : Options) (child : Option Encoder) (query : String)
+-    started := ← IO.monoMsNow, state := ← IO.mkRef {}
++    started := ← IO.monoMsNow, state := ← IO.mkRef {numericalReplies}
+diff --git a/Eggshell/KeyedSearchProvider.lean b/Eggshell/KeyedSearchProvider.lean
+index 91435d5a..1ae1858e 100644
+--- a/Eggshell/KeyedSearchProvider.lean
++++ b/Eggshell/KeyedSearchProvider.lean
+@@ -162,0 +163 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  if let some child := child then child.profile.set #[]
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 754b6b25..9b5a8fa0 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -19,0 +20 @@ open Lean
++#check Eggshell.Numerical.unobserved_output_unchanged

@@ -1,0 +1,1752 @@
+{"sealedClientRetained":
+ "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/StudyMain",
+ "samples":
+ [{"waitStacksAreNotCpuPercentages": true,
+   "tag": "numerical-stages-off16-1",
+   "sha256": "ffb503f1b4589d93a973f0bab6dcd9981ea58bb0d203648a37319f2046d69710",
+   "selectedStacks":
+   ["    +       !     33 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       !       33 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       !         33 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! : | +   !   108 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! : | +   !     108 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! : | +   !       108 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! : | + ! :   7 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! : | + ! :     7 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! : | + ! :       7 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! : | + ! :   7 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       ! : | + ! :     7 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +       ! : | +             1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! : | +               1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! : | +                 1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! : | +   !   3 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! : | +   !     3 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! : | +   !       3 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! : | +       1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       ! : | +         1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +       ! : |     +   15 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! : |     +     15 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! : |     +       15 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! : |     +   7 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       ! : |     +     7 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +       !           |   5 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       !           |     5 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       !           |       5 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       !   7 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       !     7 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +           1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +             1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : |     29 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! : |       29 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! : |         29 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : |   2 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               ! : |     2 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! :             1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :               1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :                 1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : 30 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x1011e0d28]",
+    "    +               ! :   26 lean_io_get_task_state_core  (in StudyMain) + 40  [0x1053393d4]",
+    "    +               ! :   |   26 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :   |     26 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :   |       26 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :   4 lean_io_get_task_state_core  (in StudyMain) + 68  [0x1053393f0]",
+    "    +               ! :       3 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               ! :       + 3 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! :       1 pthread_mutex_unlock  (in libsystem_pthread.dylib) + 32  [0x18c306964]",
+    "    +               ! : |       1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               ! : |         1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! : 17 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x1011e0d28]",
+    "    +               ! :   16 lean_io_get_task_state_core  (in StudyMain) + 40  [0x1053393d4]",
+    "    +               ! :   |   16 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :   |     16 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :   |       16 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8,4  [0x18c2ca9dc,0x18c2ca9d8]",
+    "    +               ! :   1 lean_io_get_task_state_core  (in StudyMain) + 68  [0x1053393f0]",
+    "    +               ! :       1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               ! :         1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! : 9 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x1011e0d28]",
+    "    +               ! :   8 lean_io_get_task_state_core  (in StudyMain) + 40  [0x1053393d4]",
+    "    +               ! :   |   8 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :   |     8 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :   |       8 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :   1 lean_io_get_task_state_core  (in StudyMain) + 68  [0x1053393f0]",
+    "    +               ! :       1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               ! :         1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! :   +     1 pthread_mutex_lock  (in libsystem_pthread.dylib) + 32  [0x18c30641c]",
+    "    +               !       111 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               !         111 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               !           111 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :   108 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :     108 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :       108 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               !     1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               !       1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! 37 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x1011e0d28]",
+    "    +               !   37 lean_io_get_task_state_core  (in StudyMain) + 40  [0x1053393d4]",
+    "    +               !       37 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               !         37 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               !           37 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +                                   246 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +                                     246 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +                                       246 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       !     55 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       !       55 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       !         55 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8,4  [0x18c2ca9dc,0x18c2ca9d8]",
+    "    +         : | +   !               19 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +   !                 19 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +   !                   19 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +         :   1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +         :     1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +         :       1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +     !     : |   + !         2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +     !     : |   + !           2 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +     !     : |   + !             2 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +     !     : |   +           1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +     !     : |   +             1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +     !     : |   +               1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +     !     :               2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]"],
+   "sampledThreadLines": 216,
+   "header":
+   "Analysis of sampling StudyMain (pid 66077) every 1 millisecond\nProcess:         StudyMain [66077]\nPath:            /Users/USER/*/StudyMain\nLoad Address:    0x1001c8000\nIdentifier:      StudyMain\nVersion:         ???\nCode Type:       ARM64\nPlatform:        macOS\nParent Process:  StudyMain [65990]\nTarget Type:     live task\n\nDate/Time:       2026-11-06 07:31:16.915 +0900\nLaunch Time:     2026-11-06 07:31:01.459 +0900\nOS Version:      macOS 26.6.2 (25G83)\nReport Version:  7\nAnalysis Tool:   /usr/bin/sample\n\nPhysical footprint:         681.8M\nPhysical footprint (peak):  681.9M\nIdle exit:                  untracked\n----\n"},
+  {"waitStacksAreNotCpuPercentages": true,
+   "tag": "numerical-stages-parent16-1",
+   "sha256": "a9ce410d4aad4e1ebffd8dbff6a9d46641d0647c9dd7376b2e496620411cb2a3",
+   "selectedStacks":
+   ["    +       !     32 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       !       32 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       !         32 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! : | +   !   13 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! : | +   !     13 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! : | +   !       13 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! : | +   !   3 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! : | +   !     3 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! : | +   !       3 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! : | +       1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       ! : | +         1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +       ! :       |   40 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! :       |     40 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! :       |       40 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! :           2 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       ! :             2 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +       !   9 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       !     9 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +           1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +             1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : 49 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x105c374c0]",
+    "    +               ! :   47 lean_io_get_task_state_core  (in StudyMain) + 40  [0x109d90a20]",
+    "    +               ! :   |   46 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :   |   + 46 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :   |   +   46 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :   |   1 DYLD-STUB$$pthread_mutex_lock  (in libc++.1.dylib) + 8  [0x18c280900]",
+    "    +               ! :   2 lean_io_get_task_state_core  (in StudyMain) + 20,72  [0x109d90a0c,0x109d90a40]",
+    "    +               ! : 29 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x105c374c0]",
+    "    +               ! : | 29 lean_io_get_task_state_core  (in StudyMain) + 40  [0x109d90a20]",
+    "    +               ! : |     29 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! : |       29 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! : |         29 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : 1 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 472  [0x105c375d8]",
+    "    +               ! : 24 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x105c374c0]",
+    "    +               ! : | 24 lean_io_get_task_state_core  (in StudyMain) + 40  [0x109d90a20]",
+    "    +               ! : |     24 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! : |       24 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! : |         24 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : 1 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 508  [0x105c375fc]",
+    "    +               ! : 1 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 108  [0x105c3746c]",
+    "    +               ! : |     21 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! : |       21 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! : |         21 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : | +     2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! : | +       2 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! : | +         2 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : | +     1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               ! : | +       1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! :       1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :         1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :           1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :       1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :         1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :           1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :     65 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :     | 65 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :     |   65 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :     1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :   |       3 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :   |         3 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :   |           3 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! 14 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x105c374c0]",
+    "    +               !   14 lean_io_get_task_state_core  (in StudyMain) + 40  [0x109d90a20]",
+    "    +               !       14 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               !         14 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               !           14 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               !     1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               !       1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               !         1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +                                   110 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +                                     110 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +                                       110 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8,4  [0x18c2ca9dc,0x18c2ca9d8]",
+    "    +       !     55 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       !       55 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       !         55 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +   !     :         4 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +   !     :           4 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +   !     :             4 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +           ! : |           4 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +           ! : |             4 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +           ! : |               4 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +           !                   1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +           !                     1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +           !                       1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +                         1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +         : | +                           1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +         : |         2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : |           2 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : |             2 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : |               4 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : |                 4 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : |                   4 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         :     +   2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         :     +     2 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         :     +       2 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         :         1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +         :           1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +         : |   1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : |     1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]"],
+   "sampledThreadLines": 222,
+   "header":
+   "Analysis of sampling StudyMain (pid 36341) every 1 millisecond\nProcess:         StudyMain [36341]\nPath:            /Users/USER/*/StudyMain\nLoad Address:    0x104c28000\nIdentifier:      StudyMain\nVersion:         ???\nCode Type:       ARM64\nPlatform:        macOS\nParent Process:  StudyMain [36265]\nTarget Type:     live task\n\nDate/Time:       2026-11-06 07:29:25.860 +0900\nLaunch Time:     2026-11-06 07:29:10.424 +0900\nOS Version:      macOS 26.6.2 (25G83)\nReport Version:  7\nAnalysis Tool:   /usr/bin/sample\n\nPhysical footprint:         704.7M\nPhysical footprint (peak):  704.7M\nIdle exit:                  untracked\n----\n"},
+  {"waitStacksAreNotCpuPercentages": true,
+   "tag": "numerical-stages-on16-1",
+   "sha256": "fc5c75f61a6c0f3411068184447144b80bee9c426be91864971a4a14fbcf4149",
+   "selectedStacks":
+   ["    +       !     44 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       !       44 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       !         44 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! :   +   !   9 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! :   +   !     9 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! :   +   !       9 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! :   +       1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       ! :   +         1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +       ! :   +       2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! :   +         2 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! :   +           2 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! :   +       3 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! :   +         3 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! :   +           3 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! :       |   19 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! :       |     19 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! :       |       19 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       ! :           3 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       ! :             3 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +       ! :     |   +   15 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       ! :     |   +     15 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       ! :     |   +       15 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       !   3 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +       !     3 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +           2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +             2 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               2 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : |     53 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! : |       53 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! : |         53 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :     1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               ! :       1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! : 49 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x1037e0d28]",
+    "    +               ! :   46 lean_io_get_task_state_core  (in StudyMain) + 40  [0x1079393d4]",
+    "    +               ! :   |   46 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :   |     46 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :   |       46 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :   3 lean_io_get_task_state_core  (in StudyMain) + 68  [0x1079393f0]",
+    "    +               ! :       3 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               ! :         3 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! : 24 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x1037e0d28]",
+    "    +               ! :   24 lean_io_get_task_state_core  (in StudyMain) + 40  [0x1079393d4]",
+    "    +               ! :       24 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :         24 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :           24 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : 16 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x1037e0d28]",
+    "    +               ! : | 16 lean_io_get_task_state_core  (in StudyMain) + 40  [0x1079393d4]",
+    "    +               ! : |     16 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! : |       16 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! : |         16 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : 1 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 108  [0x1037e0cd4]",
+    "    +               ! : | +   1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! : | +     1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! : | +       1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :         1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :           1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :             1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! : |   101 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! : |     101 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! : |       101 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               ! :     |     3 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               ! :     |       3 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               ! :     |         3 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +               !     2 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +               !       2 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +               ! 27 l_List_forIn_x27_loop___at___00Eggshell_Plugin_Publication_Service_retain_spec__1___redArg  (in StudyMain) + 192  [0x1037e0d28]",
+    "    +               !   27 lean_io_get_task_state_core  (in StudyMain) + 40  [0x1079393d4]",
+    "    +               !       27 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +               !         27 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +               !           27 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +                                   141 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +                                     141 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +                                       141 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +       !   : 64 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +       !   :   64 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +       !   :     64 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +   !     :         15 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +   !     :           15 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +   !     :             15 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +   !             1 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +   !               1 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +   !                 1 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +         :   3 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | +         :     3 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | +         :       3 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | +         :   2 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +         : | +         :     2 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +         : | + !   :     | + ! : |         2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | + !   :     | + ! : |           2 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | + !   :     | + ! : |             2 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | + !   :     | + ! :           2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | + !   :     | + ! :             2 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | + !   :     | + ! :               2 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | + !   :     | + !                 1 _pthread_mutex_firstfit_unlock_slow  (in libsystem_pthread.dylib) + 220  [0x18c306b94]",
+    "    +         : | + !   :     | + !                   1 _pthread_mutex_firstfit_wake  (in libsystem_pthread.dylib) + 28  [0x18c308f0c]",
+    "    +         : | + !   :     | +                     2 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | + !   :     | +                       2 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]",
+    "    +         : | + !   :     | +                         2 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x18c2ca9dc]",
+    "    +         : | + !   :     |         ! :   3 _pthread_mutex_firstfit_lock_slow  (in libsystem_pthread.dylib) + 216  [0x18c3068e0]",
+    "    +         : | + !   :     |         ! :     3 _pthread_mutex_firstfit_lock_wait  (in libsystem_pthread.dylib) + 84  [0x18c308e9c]"],
+   "sampledThreadLines": 240,
+   "header":
+   "Analysis of sampling StudyMain (pid 89477) every 1 millisecond\nProcess:         StudyMain [89477]\nPath:            /Users/USER/*/StudyMain\nLoad Address:    0x1027c8000\nIdentifier:      StudyMain\nVersion:         ???\nCode Type:       ARM64\nPlatform:        macOS\nParent Process:  StudyMain [89402]\nTarget Type:     live task\n\nDate/Time:       2026-11-06 07:32:43.710 +0900\nLaunch Time:     2026-11-06 07:32:28.828 +0900\nOS Version:      macOS 26.6.2 (25G83)\nReport Version:  7\nAnalysis Tool:   /usr/bin/sample\n\nPhysical footprint:         667.2M\nPhysical footprint (peak):  667.2M\nIdle exit:                  untracked\n----\n"}],
+ "removed":
+ [{"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build1.log",
+   "files": 1,
+   "bytes": 1281},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-off16-1-result",
+   "files": 5471,
+   "bytes": 32791354},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-off16-1.log",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build1.log",
+   "files": 1,
+   "bytes": 1107},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build4.log",
+   "files": 1,
+   "bytes": 1431},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build3.log",
+   "files": 1,
+   "bytes": 417},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-records1.log",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-analyze1.log",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-parent16-1-result",
+   "files": 5472,
+   "bytes": 32627632},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-parent16-1.log",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-on16-1-result",
+   "files": 5471,
+   "bytes": 33803752},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-on16-1.log",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-on32-1-result",
+   "files": 4544,
+   "bytes": 20415312},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-on32-1.log",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build2.log",
+   "files": 1,
+   "bytes": 187},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_ScopeAlternatives-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseBundles-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedOwnerArena-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_BindingValueCodec-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SearchProvider-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginHooks-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedOwnerArena-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_OriginalPayloadBasis-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/link.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_KeyedSearchClient-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SelectionReceipt-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_OwnerPalette-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_CarriedSelectionValue-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_FullSearchOracle-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SharedMetadataCache-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SharedReadViews-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_OriginalPayloadBasis-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Setup-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseLive-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SourceViewBatch-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PacketReceipt-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_OwnerPalette-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_AdvisoryBundles-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_CorpusCache-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseRecommend-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Daemon-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedFileUnits-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_BindingPageScan-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Numerical-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_BuiltinSearch-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PreparationService-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SourceProjectionDictionary-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_HookFrontend-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_RegisterMix-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PreparationRegistry-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Warm-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginHooks-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Install-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SharedMetadataCache-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PublicationClient-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_ContractAudit-lean.stdout",
+   "files": 1,
+   "bytes": 78694},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Daemon-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginCli-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedSourceCosts-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PreparationRegistry-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_AdvisoryBundles-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Numerical-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SearchProvider-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Install-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_BuiltinSearch-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_KeyedSearchProvider-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_RegisterMix-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedSourceView-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Main-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapticTransport-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_ReferenceRequirements-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_CorpusCache-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_SearchMemo-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SearchProvider-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Numerical-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PreparationRegistry-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_AdvisoryBundles-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_KeyedSearchProvider-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Install-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_BuiltinSearch-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginCli-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Daemon-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedSourceCosts-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_SearchMemo-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_CorpusCache-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedSourceView-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_RegisterMix-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_ReferenceRequirements-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapticTransport-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Main-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PreparationService-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_RegisterMix-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SourceProjectionDictionary-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_HookFrontend-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Numerical-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_BindingPageScan-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_BuiltinSearch-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_ContractAudit-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PublicationClient-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Install-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Warm-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginHooks-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PreparationRegistry-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SharedMetadataCache-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Setup-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_OriginalPayloadBasis-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SharedReadViews-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseLive-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_FullSearchOracle-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_CarriedSelectionValue-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_OwnerPalette-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SharedMetadataCache-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_CorpusCache-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedFileUnits-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseRecommend-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Daemon-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SourceViewBatch-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_AdvisoryBundles-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_OwnerPalette-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PacketReceipt-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_ScopeAlternatives-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_BindingValueCodec-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedOwnerArena-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseBundles-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/link.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_OriginalPayloadBasis-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SelectionReceipt-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_KeyedSearchClient-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SearchProvider-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedOwnerArena-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginHooks-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapticTransport-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PublicationService-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PublishedPlanMetadata-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SourceProjectionDictionary-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SourceViewBatch-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PublicationService-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_FullSearchOracle-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_OperationPool-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PublicationClient-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginProjectContext-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseTransport-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_ReferenceRequirements-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedSourceView-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SessionDispatchChecks-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PublishedPlanMetadata-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedFileUnits-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_CarriedSelectionValue-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_CheckedOriginalRecipe-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedFileIdentities-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedSourceCosts-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Worker-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseTransport-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_SearchMemo-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedFileIdentities-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_HookFrontend-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PreparationService-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedPlanMetadata-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_BindingPageScan-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PacketReceipt-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SharedReadViews-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseRecommend-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_KeyedSearchProvider-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SessionDispatchChecks-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseLive-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedRangeCoverage-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginProjectContext-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseBundles-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedPlanMetadata-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Handoff-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_OperationPool-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_ScopeAlternatives-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Worker-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_ContractAudit-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginCli-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SelectionReceipt-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Main-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_BindingValueCodec-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_CheckedOriginalRecipe-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_KeyedSearchClient-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Warm-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Setup-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Handoff-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedRangeCoverage-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SelectionReceipt-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginCli-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Worker-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_ContractAudit-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Warm-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_CheckedOriginalRecipe-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_KeyedSearchClient-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedRangeCoverage-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Handoff-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Setup-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Main-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_BindingValueCodec-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SharedReadViews-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PreparationService-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedFileIdentities-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_HookFrontend-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PacketReceipt-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_BindingPageScan-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedPlanMetadata-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Handoff-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_ScopeAlternatives-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_OperationPool-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedRangeCoverage-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseLive-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SessionDispatchChecks-lean.stdout",
+   "files": 1,
+   "bytes": 471},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_KeyedSearchProvider-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseRecommend-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginProjectContext-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseBundles-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedPlanMetadata-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PublishedPlanMetadata-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SessionDispatchChecks-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_Worker-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_SearchMemo-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseTransport-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_CarriedSelectionValue-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedFileUnits-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedSourceCosts-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedFileIdentities-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_CheckedOriginalRecipe-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SourceViewBatch-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_OperationPool-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tests_FullSearchOracle-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PublicationService-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PublishedPlanMetadata-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PublicationService-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapticTransport-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_SourceProjectionDictionary-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_SynapseTransport-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_ReferenceRequirements-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/tools_research_PreparedSourceView-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PluginProjectContext-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build/Eggshell_PublicationClient-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_ScopeAlternatives-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedOwnerArena-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_BindingValueCodec-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedOwnerArena-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_OriginalPayloadBasis-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/link.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SelectionReceipt-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_OwnerPalette-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_CarriedSelectionValue-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SharedMetadataCache-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_OriginalPayloadBasis-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SourceViewBatch-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_OwnerPalette-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_AdvisoryBundles-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedFileUnits-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SourceProjectionDictionary-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_RegisterMix-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SharedMetadataCache-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedSourceCosts-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_AdvisoryBundles-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_RegisterMix-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedSourceView-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_ReferenceRequirements-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_AdvisoryBundles-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedSourceCosts-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedSourceView-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_RegisterMix-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_ReferenceRequirements-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_RegisterMix-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SourceProjectionDictionary-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SharedMetadataCache-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_OriginalPayloadBasis-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_CarriedSelectionValue-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_OwnerPalette-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SharedMetadataCache-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedFileUnits-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SourceViewBatch-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_AdvisoryBundles-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_OwnerPalette-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_ScopeAlternatives-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_BindingValueCodec-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedOwnerArena-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/link.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_OriginalPayloadBasis-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SelectionReceipt-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedOwnerArena-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PublishedPlanMetadata-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SourceProjectionDictionary-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SourceViewBatch-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_ReferenceRequirements-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_WorkerCpuProfile-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedSourceView-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PublishedPlanMetadata-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_WorkerCpuProfile-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedFileUnits-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_CarriedSelectionValue-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_CheckedOriginalRecipe-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedFileIdentities-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedSourceCosts-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedFileIdentities-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedPlanMetadata-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedRangeCoverage-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedPlanMetadata-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_ScopeAlternatives-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SelectionReceipt-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_BindingValueCodec-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_CheckedOriginalRecipe-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedRangeCoverage-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SelectionReceipt-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_CheckedOriginalRecipe-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedRangeCoverage-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_BindingValueCodec-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedFileIdentities-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedPlanMetadata-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_ScopeAlternatives-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedRangeCoverage-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedPlanMetadata-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_WorkerCpuProfile-lean.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PublishedPlanMetadata-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_CarriedSelectionValue-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedFileUnits-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedSourceCosts-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedFileIdentities-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_CheckedOriginalRecipe-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SourceViewBatch-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PublishedPlanMetadata-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_SourceProjectionDictionary-lean.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_WorkerCpuProfile-c.stderr",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_ReferenceRequirements-c.stdout",
+   "files": 1,
+   "bytes": 0},
+  {"path":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-client-build/tools_research_PreparedSourceView-lean.stderr",
+   "files": 1,
+   "bytes": 0}],
+ "protectedOriginalsUnchanged": true,
+ "positiveControlRetained":
+ "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/focus-locators-build/StudyMain",
+ "nativeObjectsAndInterfacesRetained": true,
+ "logicalBytes": 119721638,
+ "guards":
+ [{"tag": "numerical-stages-build1",
+   "state": "finished",
+   "recordSha256":
+   "7d8724607f92618c4d2edd50f4365ace50569fd3ecf2b32c8b3f65e3d7e73f00",
+   "reason": null,
+   "peakRssKiB": 1387328,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 1,
+   "errors":
+   ["Eggshell_SearchProvider-lean failed: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/interest-traffic-core/Eggshell/SearchProvider.lean:897:9: error: Nested action `← child.mapM (fun child => child.profile.get)` must be nested inside a `do` expression."]},
+  {"tag": "numerical-stages-off16-1",
+   "state": "finished",
+   "recordSha256":
+   "781da75e484e477afe1e0da16d96138cc23fa8dd7544eb5bea41e7d3ee2e30a3",
+   "reason": null,
+   "peakRssKiB": 2520384,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 0,
+   "errors": []},
+  {"tag": "numerical-stages-client-build1",
+   "state": "finished",
+   "recordSha256":
+   "89e90c146cd05ad9ccf492f5c1c768097d07634bf9d79021e9231822230dfd5f",
+   "reason": null,
+   "peakRssKiB": 2150496,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 0,
+   "errors": []},
+  {"tag": "numerical-stages-build4",
+   "state": "finished",
+   "recordSha256":
+   "3d5badc082aaa0bdaed86b1125075c63337f7d5c9ba1b6fdb464980c6c50c6cb",
+   "reason": null,
+   "peakRssKiB": 2754992,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 0,
+   "errors": []},
+  {"tag": "numerical-stages-build3",
+   "state": "finished",
+   "recordSha256":
+   "b2b70f93b4e4bdcfb55991018dd5c80ccac7bd6cf2fc3d43f5e865482d372366",
+   "reason": null,
+   "peakRssKiB": 1392576,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 1,
+   "errors":
+   ["Eggshell_SearchProvider-lean failed: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/interest-traffic-core/Eggshell/SearchProvider.lean:894:6: error: Function expected at"]},
+  {"tag": "numerical-stages-records1",
+   "state": "finished",
+   "recordSha256":
+   "35cbadbdd994efb8f11ecaceb78ba70cf22536128ed6762733fc5bd6c62b3789",
+   "reason": null,
+   "peakRssKiB": 1088336,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 0,
+   "errors": []},
+  {"tag": "numerical-stages-analyze1",
+   "state": "finished",
+   "recordSha256":
+   "59a4bc0d2a97dd4025406812c2af902a32255544d51c67dd5545016ebc200c1d",
+   "reason": null,
+   "peakRssKiB": 534272,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 0,
+   "errors": []},
+  {"tag": "numerical-stages-parent16-1",
+   "state": "finished",
+   "recordSha256":
+   "860fb504eb1da26865a338f8d2e51778f2cba00d6d411045d3f4592b9116a8fe",
+   "reason": null,
+   "peakRssKiB": 2699472,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 0,
+   "errors": []},
+  {"tag": "numerical-stages-on16-1",
+   "state": "finished",
+   "recordSha256":
+   "7f857642a36cfda13f1250fa03edfb0c3febce8935c8f28340792a7fcf0f9bbe",
+   "reason": null,
+   "peakRssKiB": 2664416,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 0,
+   "errors": []},
+  {"tag": "numerical-stages-on32-1",
+   "state": "finished",
+   "recordSha256":
+   "667aded7a52cf6e74d90cdadd4e76fcfc0bd872a6849497c2804529189bc8a18",
+   "reason": null,
+   "peakRssKiB": 3040416,
+   "ownedPids": [],
+   "guardTriggered": false,
+   "exitCode": 0,
+   "errors": []},
+  {"workloadStarted": false,
+   "tag": "numerical-stages-build2",
+   "logSha256":
+   "f2f390fcff4c9aad9354fb1a0befb0ce0a93ca55ef0882d78a91340e25336298",
+   "failure":
+   "no such file or directory (error code: 4294967294)\n  file: /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-stages-build2.guard-settings.json\n"}],
+ "files": 21281,
+ "executables": [],
+ "archive": false,
+ "activeCandidate":
+ "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-build/StudyMain"}

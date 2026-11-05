@@ -1,0 +1,120 @@
+{"waits":
+ {"rawDeadlineKillsReapsJoins": true,
+  "rawCompletionExact": true,
+  "rawCancellationKillsReapsJoins": true,
+  "peerEofObserved": true,
+  "livePeerAccepted": true,
+  "fixtureKernelImplementedInLean": true,
+  "callbackFailureReleasesRead": true,
+  "backendFailurePreservesErrorAndRetiresOnce": true,
+  "answeringModelCalls": 0,
+  "adopted": false},
+ "readiness":
+ {"syntheticMetadataNotAuthenticationTest": true,
+  "scopeRetirementPreservesPeer": true,
+  "remoteRetirementInvalidatesHint": true,
+  "oldFailurePreservesReplacement": true,
+  "metadataBound": 32,
+  "foreignScopeRejected": true,
+  "foreignGenerationRejected": true,
+  "exactPublishedIdentityRequired": true,
+  "answeringModelCalls": 0,
+  "adopted": false},
+ "initialFailedGuard":
+ {"userCeilingRssKiB": 4194304,
+  "state": "finished",
+  "settings":
+  {"record":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks1.guard.json",
+   "ownedPrefixes":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+   "minFreeKiB": 2097152,
+   "limitRssKiB": 3670016,
+   "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+   "command":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks-build/StudyMain",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks1-result"]},
+  "samples": 18,
+  "sampledPeakRssKiB": 140032,
+  "reason": null,
+  "peakProcesses":
+  [{"rssKiB": 49280,
+    "role": null,
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks-build/StudyMain",
+    "pid": 2634,
+    "parent": 2630,
+    "lane": null},
+   {"rssKiB": 42688,
+    "role": null,
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks-build/StudyMain",
+    "pid": 2653,
+    "parent": 2634,
+    "lane": null},
+   {"rssKiB": 48064,
+    "role": "guard",
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+    "pid": 2630,
+    "parent": 1,
+    "lane": null}],
+  "ownedPids": [],
+  "limitRssKiB": 3670016,
+  "guardTriggered": false,
+  "guardSha256":
+  "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+  "guardPid": 2630,
+  "exitCode": 1,
+  "error": null,
+  "elapsedMs": 5947,
+  "childPid": 2634},
+ "finalGuard":
+ {"userCeilingRssKiB": 4194304,
+  "state": "finished",
+  "settings":
+  {"record":
+   "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks2.guard.json",
+   "ownedPrefixes":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"],
+   "minFreeKiB": 2097152,
+   "limitRssKiB": 3670016,
+   "cwd": "/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell",
+   "command":
+   ["/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks-build/StudyMain",
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks2-result"]},
+  "samples": 19,
+  "sampledPeakRssKiB": 144144,
+  "reason": null,
+  "peakProcesses":
+  [{"rssKiB": 46304,
+    "role": null,
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks-build/StudyMain",
+    "pid": 16501,
+    "parent": 15953,
+    "lane": null},
+   {"rssKiB": 49840,
+    "role": null,
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/numerical-waits-checks-build/StudyMain",
+    "pid": 15953,
+    "parent": 14946,
+    "lane": null},
+   {"rssKiB": 48000,
+    "role": "guard",
+    "program":
+    "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/controller/StudyMain",
+    "pid": 14946,
+    "parent": 1,
+    "lane": null}],
+  "ownedPids": [],
+  "limitRssKiB": 3670016,
+  "guardTriggered": false,
+  "guardSha256":
+  "7d5cd64136b93e6dac153b0f134e21bdc94526c33e1ebc16387e710c530beb15",
+  "guardPid": 14946,
+  "exitCode": 0,
+  "error": null,
+  "elapsedMs": 6075,
+  "childPid": 15953}}

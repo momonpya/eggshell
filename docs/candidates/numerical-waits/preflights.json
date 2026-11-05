@@ -1,0 +1,8 @@
+{
+  "setup":"Parenthesized the complete pure array concatenation in shared setup before any wait-candidate workload or guard was launched.",
+  "checksBuild1":"Controlled Lean kernel fixture needed an explicit Nat count and conversion to IO.Handle.read's USize. No component check or capacity workload ran before the correction; failed compiler guard/log are retained.",
+  "checks1":"Controlled cancellation failed with ECHILD/no child processes. The raw wait reaped its child, then the checker and backend failure path could tryWait again. Make retirement an explicit owner callback, clear the backend reference after reaping,join the IO even if retirement throws,and test process absence without a second wait. Assert the intended cancellation/deadline error as well.",
+  "initialRuntimeSha256":"c966b01cd09627fa6c1150f1ef787608780929f0dac82162b881d86cc5632fa8",
+  "checks2":"Live peer,callback-error cleanup,EOF,raw success,cancellation,deadline and backend error-preserving single retirement all pass with Lean fixture processes; all owned processes drain.",
+  "adopted":false
+}

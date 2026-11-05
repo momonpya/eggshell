@@ -1,0 +1,93 @@
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index abbcdfab..b15e89a7 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -252,7 +252,18 @@ def awaitLine (child : Kernel) (deadline : Nat) (cancelled : IO Bool := pure fal
+-/-- A disconnected request waiting for the numerical gate cannot start work.
+-No mutex action is queued for later execution after this check returns. -/
+-def peerWaiting (client : Socket.Client) : IO Bool :=
+-  TaskDeadline.awaitEvent (do
+-    let timer ← Selector.sleep (.ofNat 5)
+-    Selectable.one #[.case (client.recvSelector 1) (fun _ => pure false),
+-      .case timer (fun _ => pure true)])
++/-- One pending native read owns disconnect observation for this numerical
++request. Gate retries never cancel and re-register socket/timer selectors. -/
++def withPeerWaiting (client : Socket.Client) (action : IO Bool → IO α) : IO α := do
++  let peer ← client.native.recv? 1
++  try action (do return !(← peer.isResolved))
++  finally client.native.cancelRecv
++
++def admissionLive (stopping waiting : Bool) (now deadline : Nat) : Bool :=
++  !stopping && waiting && decide (now < deadline)
++
++theorem disconnected_admission_refused (stopping : Bool) (now deadline : Nat) :
++    admissionLive stopping false now deadline = false := by simp [admissionLive]
++
++theorem stopped_admission_refused (waiting : Bool) (now deadline : Nat) :
++    admissionLive true waiting now deadline = false := by simp [admissionLive]
++
++theorem expired_admission_refused (stopping waiting : Bool) (now deadline : Nat) (expired : deadline ≤ now) :
++    admissionLive stopping waiting now deadline = false := by simp [admissionLive,Nat.not_lt_of_ge expired]
+@@ -292 +303 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
+-    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := do
++    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := withPeerWaiting client fun waiting => do
+@@ -298 +309 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
+-    unless !(← backend.stopping.get) && (← IO.monoMsNow) < deadline do
++    unless admissionLive (← backend.stopping.get) (← waiting) (← IO.monoMsNow) deadline do
+@@ -302 +313 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
+-      unless !(← backend.stopping.get) && (← IO.monoMsNow) < deadline do
++      unless admissionLive (← backend.stopping.get) (← waiting) (← IO.monoMsNow) deadline do
+@@ -324 +335 @@ def Backend.encode (backend : Backend) (config : Config) (client : Socket.Client
+-    unless ← peerWaiting client do throw (IO.userError "numerical requester disconnected before admission")
++    IO.sleep 5
+@@ -342,11 +353,19 @@ def exchangeRaw (child : Kernel) (frame : BlockScore.Frame) (deadline : Nat)
+-  repeat
+-    if (← cancelled) || (← IO.monoMsNow) ≥ deadline then
+-      stopRaw child
+-      let _ ← IO.wait running
+-      throw (IO.userError "raw numerical frame expired or was cancelled")
+-    if ← IO.hasFinished running then
+-      mark "raw-pipe-task-ready"
+-      let result ← IO.ofExcept ((← IO.wait running).mapError IO.Error.toString)
+-      unless !result.isEmpty do throw (IO.userError "raw numerical kernel closed its response")
+-      return result
+-    IO.sleep 5
++  let ready ← TaskDeadline.event running
++  try
++    repeat
++      let now ← IO.monoMsNow
++      if (← cancelled) || now ≥ deadline then
++        throw (IO.userError "raw numerical frame expired or was cancelled")
++      let result ← TaskDeadline.awaitEvent (do
++        let timer ← Selector.sleep (.ofNat (min 5 (deadline-now)))
++        Selectable.one #[.case ready (fun value => pure (some value)),.case timer (fun _ => pure none)])
++      if let some value := result then
++        discard <| IO.wait running
++        mark "raw-pipe-task-ready"
++        unless !value.isEmpty do throw (IO.userError "raw numerical kernel closed its response")
++        return value
++    throw (IO.userError "unreachable raw numerical wait")
++  catch error =>
++    stopRaw child
++    discard <| IO.wait running
++    throw error
+@@ -355 +374 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
+-    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := do
++    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := withPeerWaiting client fun waiting => do
+@@ -358 +377 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
+-    unless !(← backend.stopping.get) && (← IO.monoMsNow) < deadline do
++    unless admissionLive (← backend.stopping.get) (← waiting) (← IO.monoMsNow) deadline do
+@@ -362 +381 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
+-      unless !(← backend.stopping.get) && (← IO.monoMsNow) < deadline do
++      unless admissionLive (← backend.stopping.get) (← waiting) (← IO.monoMsNow) deadline do
+@@ -397 +416 @@ def Backend.scoreBlocks (backend : Backend) (config : Config) (client : Socket.C
+-    unless ← peerWaiting client do throw (IO.userError "block-score requester disconnected before admission")
++    IO.sleep 5
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 9b5a8fa0..73f5c2e1 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -20,0 +21,3 @@ open Lean
++#check Eggshell.Numerical.disconnected_admission_refused
++#check Eggshell.Numerical.stopped_admission_refused
++#check Eggshell.Numerical.expired_admission_refused
