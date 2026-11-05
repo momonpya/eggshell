@@ -1,0 +1,63 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 682f88db..a8692c22 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9356,0 +9357,32 @@ theorem original_positions_complete (frontiers : List AdvisoryFrontier)
++/-- Retain the checked source directory separately from its query-local
++owner/family names. Numerical repair reads this same immutable directory;
++it does not rediscover it for every window of the same original. -/
++structure FocusDocument (sources : Array Persistence.Store.Snapshot) where
++  source : Fin sources.size
++  original : Persistence.Store.SearchDocument
++  owner : Nat
++  family : Nat
++
++def FocusDocument.request (document : FocusDocument sources) : Persistence.Store.SearchDocument :=
++  {document.original with owner := document.owner, work := document.family}
++
++theorem FocusDocument.windows_exact (document : FocusDocument sources) :
++    document.request.windows = document.original.windows := rfl
++
++theorem FocusDocument.cache_exact (document : FocusDocument sources) :
++    document.request.cache = document.original.cache := rfl
++
++def FocusDocument.work (document : FocusDocument sources)
++    (readers : Persistence.Store.NodeReaders sources) : IO String := do
++  let work ← (readers.at document.source).read document.original.work
++  match Matcher.atomText? work with
++  | some text => pure text
++  | none => throw (IO.userError "prepared focus Work is not textual")
++
++def FocusDocument.window (document : FocusDocument sources) (index : Nat) : IO String :=
++  Persistence.Store.readSearchWindow sources[document.source] document.original index
++
++theorem FocusDocument.window_original (document : FocusDocument sources) (index : Nat) :
++    document.window index =
++      Persistence.Store.readSearchWindow sources[document.source] document.original index := rfl
++
+@@ -9534 +9566 @@ def federatedDiscovery (selection : Config.Selection)
+-      let mut documents : List (Persistence.Store.Federated.Node sources × Persistence.Store.SearchDocument) := []
++      let mut documents : List (FocusDocument sources) := []
+@@ -9545,3 +9577,3 @@ def federatedDiscovery (selection : Config.Selection)
+-            documents := documents++[(⟨source,document.owner⟩,{document with owner,work := family})]
+-      let table := Std.HashMap.ofList (documents.map fun row => (row.2.owner,row))
+-      focusIndexedEvidence command question (documents.map Prod.snd)
++            documents := documents++[⟨source,document,owner,family⟩]
++      let table := Std.HashMap.ofList (documents.map fun row => (row.owner,row))
++      focusIndexedEvidence command question (documents.map FocusDocument.request)
+@@ -9549,6 +9581,2 @@ def federatedDiscovery (selection : Config.Selection)
+-          let some (original,_) := table[document.owner]? | throw (IO.userError "foreign prepared focus owner")
+-          let located ← Persistence.Store.locateOutcome original.snapshot original.id
+-          let work ← (readers.at original.source).read located.header.work
+-          match Matcher.atomText? work with
+-          | some text => return text
+-          | none => throw (IO.userError "prepared focus Work is not textual"))
++          let some original := table[document.owner]? | throw (IO.userError "foreign prepared focus owner")
++          original.work readers)
+@@ -9556,4 +9584,2 @@ def federatedDiscovery (selection : Config.Selection)
+-          let some (original,_) := table[document.owner]? | throw (IO.userError "foreign prepared focus window")
+-          let rows ← SourceDelta.documents original.snapshot [original.id]
+-          let some document := rows.head? | throw (IO.userError "prepared focus candidate disappeared")
+-          Persistence.Store.readSearchWindow original.snapshot document index.val) receipt (queryInputs.map toJson) }
++          let some original := table[document.owner]? | throw (IO.userError "foreign prepared focus window")
++          original.window index.val) receipt (queryInputs.map toJson) }
