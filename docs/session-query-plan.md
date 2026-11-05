@@ -80,13 +80,24 @@ changes are rejected. Neither source RPC alone nor those polling sites explain
 the full failure. All eighty actors start; the final run queues at most49ms,
 while its service uses96.62 CPU seconds and numerical backend work only40ms.
 
-Next measure environment reopening, checked source binding, shared-reader borrow
-and preparation acquisition separately under the actual load, using existing
-receipt paths and recording observer cost. Then reuse a checked immutable read
-cut directly inside its project service; keep remote transport behind the same
-exact interface and preserve complete certification. Do not reconstruct,
-validate or serialize that full cut per chat. No further weight/cutoff/limit
-changes substitute for this stage attribution.
+The [whole-query stage study](candidates/query-stages/README.md) now measures
+those boundaries. At80 actors, project reopening is median325ms, frame5ms,
+reader borrow92ms and prepared-reader acquisition9ms. All80 ON and OFF queries
+enter the typed provider, whose entry-to-result interval is median9,990/9,948ms.
+Recorded numerical backend CPU is100ms in the ON wave. Both modes still deliver
+0/80. The corrected32-query control is31/32 OFF versus32/32 ON; the failed case
+is retained and neither observer equivalence nor capacity is claimed.
+
+All69 ON and71 OFF final source-error files occur after the semantic phase;
+they belong to lexical fallback. The older unavailable-cut counts are final
+stage-file observations, not proof of first-phase acquisition failure. Do not
+optimize the source protocol or task cancellation again on that inference.
+Next pass the existing request-local callback inside typed runtime/encoder
+setup, scope pinning, prepared input restoration, routing, scoring/wait and
+response validation. Determine the dominant provider substage before another
+cache or ownership change, and review the rejected search-inputs candidate
+before reusing it. Complete certification, immutable-cut sharing, observer-cost
+reporting and original weight/cutoff/resource limits remain requirements.
 Component accounting is not a proof of the wrapper's active-read shutdown order.
 All actual bodies, failures and cleanup are retained as compact evidence, not
 as old DBs or raw run caches. Paid token/quality comparisons remain0/18.

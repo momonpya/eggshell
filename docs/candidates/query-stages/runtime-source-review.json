@@ -1,0 +1,8 @@
+{
+  "installedLean": "4.33.0 d8b18978322de05a8f3dba51ef03cf5461676c17 arm64-apple-darwin24.6.0 Release",
+  "primarySource": "https://github.com/leanprover/lean4/blob/d8b18978322de05a8f3dba51ef03cf5461676c17/src/runtime/object.cpp",
+  "reviewedLines": ["905-917: cancellation propagates to dependent continuations when a task finishes", "1041-1045: explicit cancellation sets the selected task flag", "1251-1263: current-task cancellation and explicit cancel entry points"],
+  "localDocumentation": "Init/System/IO.lean:499-513 describes explicit cancellation and dropped task references",
+  "limit": "This explains runtime API semantics, not the cause of the observed hook failures. The saved source-acquisition error can belong to the later lexical phase; do not diagnose early task cancellation from that final stage file alone.",
+  "runtimeChanged": false
+}

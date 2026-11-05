@@ -91,6 +91,14 @@ source-lease variants are retained and independently verified, including all
 failures. Source acquisition/transport must be isolated from graph computation
 before another implementation or capacity run.
 
+Later [query-stage evidence](../query-stages/README.md) distinguishes phases:
+all80 requests in each new diagnostic enter the typed provider, and the final
+69/71 source-error files are written after the semantic phase. The earlier
+sixty-one/seventy unavailable-cut counts above describe last stored error
+records, whose original phase timestamps were not retained by that collector.
+They do not establish first-phase acquisition failure. Keep the measured
+delivery failures, but do not repeat a source/cancellation fix on that inference.
+
 The [cleanup record](cleanup.json) deletes27,869 generated files/references,
 810,872,003 logical bytes, including ended private DBs/caches/raw logs, five
 superseded executables and regenerated C/compiler output. No archive is made.

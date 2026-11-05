@@ -1,0 +1,11 @@
+{
+  "beforeFurtherNativeWorkload": true,
+  "initialRuntimeSha256": "6fa001f6d372ae677b555c6a08a4df9dbef9191ba3128a6b5a3619d4959172c8",
+  "initialResults": {"off16x2OriginalAck": "32/32", "on16x2OriginalAck": "32/32", "actualStdoutByteIdenticalForAll32": true},
+  "fault": "The finally closure captured the initial none value of the mutable finalReaders binding. Trace-off emitted zero request-pages receipts; trace-on retained timestamps but lost the pre-existing page statistics.",
+  "correction": "Use one request-owned IO.Ref for the final reader value, set after borrowing and read only after computation/cancellation joins. Preserve the original page statistics with the stage field appended.",
+  "newGate": "Repeat off16x2 and on16x2 with the corrected sealed binary; require35 request-pages receipts including priming in each, original page-stat fields present, off has no queryStages and on has monotone timestamps, plus32/32 original+ACK and semantic handoffs, byte-identical actual output and clean shutdown. Only then execute the planned on80/off80 observer control.",
+  "oldRuntimeEightyAttempted": false,
+  "adopted": false,
+  "answeringModelCalls": 0
+}

@@ -75,6 +75,7 @@ def enrichedReceipt (root : System.FilePath) (value : Json) : IO Json := do
 def main (arguments : List String) : IO Unit := do
   let (destination,tags) := match arguments with
     | "--source-protocol" :: tags => (destination.parent.getD destination / "source-protocol",tags)
+    | "--query-stages" :: tags => (destination.parent.getD destination / "query-stages",tags)
     | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
@@ -104,7 +105,7 @@ def main (arguments : List String) : IO Unit := do
   for tag in tags do
     check ((tag.startsWith "shared-leases-" || tag.startsWith "hosted-endpoint-" ||
       tag.startsWith "source-protocol-overlap" || tag.startsWith "task-observer-" ||
-      tag.startsWith "task-waiter-") &&
+      tag.startsWith "task-waiter-" || tag.startsWith "query-stages-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"

@@ -1,0 +1,103 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index a3b81403..85297c9f 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -999,0 +1000,2 @@ structure SourceContext where
++  /-- Request-local diagnostic only; it grants no reuse or scheduling authority. -/
++  onStage : String → IO Unit := fun _ => pure ()
+@@ -9700,0 +9703,2 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++  let mark := sourceContext.map (·.onStage) |>.getD (fun _ => pure ())
++  mark "retained-selection:start"
+@@ -9701,0 +9706 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++  mark "retained-selection:end"
+@@ -9706,0 +9712 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++  mark "prepared-reader-acquire:start"
+@@ -9714,0 +9721 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++  mark "prepared-reader-acquire:end"
+@@ -9715,0 +9723 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++  mark "synaptic-acquire:start"
+@@ -9717,0 +9726 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++  mark "synaptic-acquire:end"
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index 50fe6df0..681985be 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -795,0 +796 @@ structure SearchEnvironment where
++  onStage : String → IO Unit := fun _ => pure ()
+@@ -801 +802,3 @@ def SearchEnvironment.accepts (environment : SearchEnvironment) (request : Searc
+-@[no_expose] def openSearchEnvironment (request : Search) : IO SearchEnvironment := do
++@[no_expose] def openSearchEnvironment (request : Search)
++    (onStage : String → IO Unit := fun _ => pure ()) : IO SearchEnvironment := do
++  onStage "project-context-open:start"
+@@ -802,0 +806 @@ def SearchEnvironment.accepts (environment : SearchEnvironment) (request : Searc
++  onStage "project-context-open:end"
+@@ -803,0 +808 @@ def SearchEnvironment.accepts (environment : SearchEnvironment) (request : Searc
++  onStage "original-snapshots:start"
+@@ -805 +810,2 @@ def SearchEnvironment.accepts (environment : SearchEnvironment) (request : Searc
+-  return ⟨request.pending.sessionId,request.identity,context,configured,snapshots⟩
++  onStage "original-snapshots:end"
++  return ⟨request.pending.sessionId,request.identity,context,configured,snapshots,onStage⟩
+@@ -829,0 +836,3 @@ def searchRestored (request : Search) (onSemanticReady : IO Unit := pure ())
++  let phase := if request.route == .lexical then "lexical:" else "configured:"
++  let mark := environment.map (·.onStage) |>.getD (fun _ => pure ())
++  mark (phase++"private-control:start")
+@@ -836,0 +846 @@ def searchRestored (request : Search) (onSemanticReady : IO Unit := pure ())
++  mark (phase++"private-control:end")
+@@ -884,0 +895 @@ def searchRestored (request : Search) (onSemanticReady : IO Unit := pure ())
++          onStage := fun label => mark (phase++label)
+diff --git a/Eggshell/OperationPool.lean b/Eggshell/OperationPool.lean
+index 33828eed..bb77b013 100644
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -228,9 +228,28 @@ def Pool.searchActor (pool : Pool) (request : Worker.Search) (cancelled : IO.Ref
+-  let request ← IO.ofExcept request.restorePrepared
+-  let initial ← Worker.openSearchEnvironment request
+-  let (environment,readers) ← match request.prepared,initial.snapshots with
+-    | some inputs,some originals => do
+-      let frame ← PreparedReaders.Frame.capture (originals.filterMap id).toArray inputs request.owners
+-      let session ← pool.readers.borrow frame request.deadline cancelled
+-      pure (← IO.ofExcept (initial.withSources session.sources),some session.pool)
+-    | _,_ => pure (initial,none)
+-  try Worker.executeUsing request (fun phase signal => searchPhase phase environment readers signal) ready
++  let times ← if (← IO.getEnv "EGGSHELL_TRACE_QUERY_STAGES") == some "1" then
++      some <$> IO.mkRef (#[] : Array (String × Nat))
++    else pure none
++  let mark := fun label => do
++    if let some times := times then
++      let now ← IO.monoMsNow
++      times.modify (·.push (label,now))
++  let finalReaders ← IO.mkRef (none : Option PreparedReaders.Pool)
++  try
++    mark "restore-request:start"
++    let request ← IO.ofExcept request.restorePrepared
++    mark "restore-request:end"
++    let initial ← Worker.openSearchEnvironment request mark
++    let (environment,readers) ← match request.prepared,initial.snapshots with
++      | some inputs,some originals => do
++        mark "frame-capture:start"
++        let frame ← PreparedReaders.Frame.capture (originals.filterMap id).toArray inputs request.owners
++        mark "frame-capture:end"
++        mark "reader-borrow:start"
++        let session ← pool.readers.borrow frame request.deadline cancelled
++        mark "reader-borrow:end"
++        pure (← IO.ofExcept (initial.withSources session.sources),some session.pool)
++      | _,_ => pure (initial,none)
++    finalReaders.set readers
++    mark "execute:start"
++    let result ← Worker.executeUsing request (fun phase signal => searchPhase phase environment readers signal) ready
++    mark "execute:end"
++    return result
+@@ -238,2 +257,11 @@ def Pool.searchActor (pool : Pool) (request : Worker.Search) (cancelled : IO.Ref
+-    if let some readers := readers then
+-      Receipt.observe request.receipt "request-pages" (← readers.pages.stats)
++    let finalReaders ← finalReaders.get
++    let stats ← match finalReaders with
++      | some readers => readers.pages.stats
++      | none => pure Json.null
++    if finalReaders.isSome || times.isSome then
++      let stats ← match times with
++        | none => pure stats
++        | some times => do
++          mark "actor-finalized"
++          pure ((if stats == Json.null then Json.mkObj [] else stats).setObjVal! "queryStages" (toJson (← times.get)))
++      Receipt.observe request.receipt "request-pages" stats

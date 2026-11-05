@@ -67,11 +67,20 @@ queries still fail0/80 with optional profiling on and off. Two completion-observ
 candidates pass32/32 hooks but also fail0/80; neither is adopted. Polling alone
 is not the established cause. Their402 real outputs and failures are retained.
 
-Next attribute environment reopening, checked source binding, shared-reader
-borrowing and preparation acquisition under the actual load before changing
-another core path. Use existing receipt boundaries and measure the observer's
-effect. Keep the same cut, cancellation ownership, original clock and complete
-certification; no weight, cutoff or resource inflation substitutes for evidence.
+The [subsequent stage attribution](candidates/query-stages/README.md) shows all80
+ON and OFF requests reaching the typed provider. Reopening/frame/reader spans
+are short; the provider entry-to-result interval is median9.99/9.95s, while the
+ON numerical backend CPU is100ms. Delivery remains0/80 in both modes. All69/71
+last source-error files were recorded after the semantic phase ended and belong to
+lexical fallback. Earlier unavailable-cut counts have no preserved phase
+attribution and must not be treated as initial acquisition failures.
+
+Next separate typed runtime/encoder setup, scope pinning, prepared input
+restoration, routing, scoring/wait and response validation using the existing
+request-local callback. Preserve the same full cut, cancellation ownership,
+original clock and complete certification. No weight, cutoff or resource
+inflation substitutes for that evidence; the failed32-query control remains
+a failed adoption gate.
 
 The intended interface shares a complete checked immutable source cut in the
 project service. Request actors receive small private leases and direct typed

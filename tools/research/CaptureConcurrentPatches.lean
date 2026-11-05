@@ -20,6 +20,15 @@ def save (name : String) (rows : Array (System.FilePath × System.FilePath × St
   IO.FS.writeFile (workspace/"docs/candidates"/name/"candidate.patch") source
 def main (arguments : List String) : IO Unit := do
   let core := base/"interest-traffic-core"
+  if arguments == ["query-stages"] then
+    check (!(← (workspace/"docs/candidates/query-stages/candidate.patch").pathExists)) "query-stage patch already sealed"
+    save "query-stages" ((#["Eggshell/Handoff.lean","Eggshell/Worker.lean","Eggshell/OperationPool.lean"] : Array String).map fun (relative : String) =>
+      (base/"query-stages-parent-core"/relative,core/relative,relative))
+    let mut initial := ""
+    for relative in (["Eggshell/Handoff.lean","Eggshell/Worker.lean","Eggshell/OperationPool.lean"] : List String) do
+      initial := initial++(← patch (base/"query-stages-parent-core"/relative) (base/"query-stages-initial-core"/relative) relative)
+    IO.FS.writeFile (workspace/"docs/candidates/query-stages/initial-observer.patch") initial
+    return
   if arguments == ["source-protocol"] then
     check (!(← (workspace/"docs/candidates/source-protocol/candidate.patch").pathExists))
       "task completion patches already sealed"
