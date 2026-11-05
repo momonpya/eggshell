@@ -1,0 +1,17 @@
+{
+  "status": "diagnostic; not adopted",
+  "targetRuntimeSha256": "b887fdbfe6e62db2f9da961a8b903c91bdd262030cf02c13105cafe91453a1ea",
+  "source": "frontend-quiescence-fixture-small1/work.project",
+  "sourceOwners": 16,
+  "questions": "cases 0 through 31; original head and tail fields frozen before delivery",
+  "nativeCalls": {"prime": 3,"waves": [16,16]},
+  "sample": "highest-CPU persistent search worker during second sixteen-query wave",
+  "motivation": "80-way candidate burst completes semantic search for 12 requests and skips 68 before execution because the ingress-time semantic window expires while queued",
+  "policy": "do not increase deadlines, phase budgets, owner counts, worker counts or memory limits; do not rebase away queue time to claim capacity",
+  "beforeNextCapacityRun": "identify repeated work in actual semantic worker, using native stack sampling and already-present stage profiles",
+  "ceilingRssKiB": 4194304,
+  "stopRssKiB": 3670016,
+  "minFreeKiB": 2097152,
+  "answeringModelCalls": 0,
+  "paidMatchedComparisons": "0/18"
+}

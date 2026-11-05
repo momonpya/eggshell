@@ -229,8 +229,8 @@ def run (root engine : System.FilePath) (expected : String) (caseCount : Nat := 
         (a.getObjValAs? Nat "cpuMs").toOption.getD 0 > (b.getObjValAs? Nat "cpuMs").toOption.getD 0
       let some target := ranked.find? (fun row =>
         let role := (row.getObjValAs? String "role").toOption.getD ""
-        ["search-worker","publication-service","frontend"].contains role) |
-        throw (IO.userError "no persistent CPU sampling target")
+        role == "search-worker") |
+        throw (IO.userError "no persistent search-worker CPU sampling target")
       let pid ← IO.ofExcept (target.getObjValAs? Nat "pid")
       save (root/"sample-target.json") target
       wave root engine "wave-b" 16 16 (some pid)

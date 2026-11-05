@@ -1,0 +1,15 @@
+{
+  "status": "isolated prerequisite for request-owned search actors; not adopted",
+  "userDirection": "each chat progresses independently; replace the fixed three whole-query lanes, keep heavy public data shared and memory below 4 GiB",
+  "change": "freeze one checked public reader image and fork independently mutable source/counter/bitmap/catalogue state for each request",
+  "shared": ["immutable original and index images", "existing bounded page pool"],
+  "private": ["query text", "usage roots", "trace and read counters", "bitmap overlays", "reader catalogue state", "current turn and epoch"],
+  "componentChecks": {"parallelBorrowers": 80,"originalOwners": 16,"exactOriginalBindings": true,"exactDependencyTraces": true,"coordinatorBuilds": 1,"newWorkerBuilds": 0,"rejectedBoundaryCases": 4},
+  "actualDynamicHookDispatch": "remaining; component checks are not a substitute for end-to-end semantic and evidence delivery",
+  "deadline": "original 30-second end-to-end hook window, without rebasing queue time away",
+  "ceilingRssKiB": 4194304,
+  "stopRssKiB": 3670016,
+  "minFreeKiB": 2097152,
+  "answeringModelCalls": 0,
+  "paidMatchedComparisons": "0/18"
+}

@@ -1,0 +1,50 @@
+--- a/Eggshell/PreparedReaders.lean
++++ b/Eggshell/PreparedReaders.lean
+@@ -284,0 +285,24 @@
++
++/-- A coordinator freezes a checked public image once for a complete read cut.
++It contains no query, usage root or borrower-owned mutable counters/bitmaps. -/
++structure Frozen where
++  private mk ::
++  image : Image
++  private pages : PageMap.PagePool
++
++def Frozen.matches (frozen : Frozen) (sources : Array PageMap.Snapshot) (scopes : Array String)
++    (inputs : Array PreparedInputs.Reference) (reference : Option OwnerViews.Reference) : Bool :=
++  acceptsKey frozen.image.key (frameKey sources scopes inputs reference)
++
++theorem Frozen.matches_exact (frozen : Frozen) (sources scopes inputs reference) :
++    frozen.matches sources scopes inputs reference = true ↔
++      frozen.image.key = frameKey sources scopes inputs reference :=
++  acceptsKey_exact _ _
++
++/-- Called by the public-view owner before dispatching request-local workers.
++The shared image has the existing catalogue's metadata and handle bounds. -/
++@[no_expose] def Pool.freeze (pool : Pool) (sources : Array PageMap.Snapshot)
++    (inputs : Array PreparedInputs.Reference) (reference : Option OwnerViews.Reference) : IO Frozen := do
++  let borrow ← pool.acquire sources inputs reference
++  let _ ← IO.ofExcept (Catalogue.check #[borrow.image])
++  return ⟨borrow.image,pool.pages⟩
+@@ -285,0 +310,22 @@
++structure Session where
++  sources : Array PageMap.Snapshot
++  pool : Pool
++
++/-- Each worker gets its own reader catalogue, mutable bitmap overlays and
++source trace/counters. Only immutable images and the existing bounded page pool
++are shared. A changed scope, root, producer or owner order needs a new freeze. -/
++@[no_expose] def Frozen.fork (frozen : Frozen) (sources : Array PageMap.Snapshot)
++    (inputs : Array PreparedInputs.Reference) (reference : Option OwnerViews.Reference) : IO Session := do
++  unless inputs.size == sources.size && (inputs.zip sources).all (fun (input,source) =>
++      input.producer == PreparedInputs.implementation && input.source == source.head) do
++    throw (IO.userError "session reader changed its complete original boundary")
++  let scopes ← sources.mapM OwnerViews.scope
++  unless frozen.matches sources scopes inputs reference do
++    throw (IO.userError "session reader needs a different checked public image")
++  let catalogue ← IO.ofExcept (Catalogue.check #[frozen.image])
++  let originals ← (sources.zip scopes).mapM fun (source,scope) => do
++    let image ← SnapshotImage.capture frozen.pages scope source
++    image.borrow frozen.pages scope
++  let pool : Pool := ⟨← IO.mkRef {catalogue},frozen.pages⟩
++  return ⟨originals,pool⟩
++
