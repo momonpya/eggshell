@@ -1,0 +1,8 @@
+import Eggshell.ReplayWork
+
+#print axioms Eggshell.Synapses.ReplayWork.existing_registration_preserves_cursor
+#print axioms Eggshell.Synapses.ReplayWork.unchanged_registration_never_requeues
+#print axioms Eggshell.Synapses.ReplayWork.changed_head_rechecks_new_dependency
+#print axioms Eggshell.Synapses.ReplayWork.partial_scan_rechecks_new_dependency
+#print axioms Eggshell.Synapses.ReplayWork.settled_registration_needs_no_recheck
+#print axioms Eggshell.Synapses.TurnReplay.validated_source_preserves_dependency

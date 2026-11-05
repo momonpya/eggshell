@@ -1,0 +1,61 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-registration-baseline-core/Eggshell/ReplayWork.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/interest-traffic-core/Eggshell/ReplayWork.lean
+index 9c7a7d2c..912ec00c 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-registration-baseline-core/Eggshell/ReplayWork.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/interest-traffic-core/Eggshell/ReplayWork.lean
+@@ -92,0 +93,39 @@ structure SourceCursor where
++def SourceCursor.inFlight (cursor : SourceCursor) : Bool :=
++  cursor.block > 0 || cursor.field > 0 ||
++    !cursor.watchAfter.isEmpty || !cursor.resetAfter.isEmpty
++
++/-- A new dependency may arrive after its source change or posting has been
++consumed. Revalidate that task alone; existing dependencies never rewind the
++shared cursor. A different captured head is conservatively rechecked, including
++source replacement and disappearance. This grants no completion authority. -/
++def SourceCursor.recheckRegistration (cursor : SourceCursor) (captured : PageMap.Head)
++    (newFields : Bool) : Bool :=
++  newFields && (cursor.inFlight || decide (cursor.head ≠ some captured))
++
++def registrationCursor (previous : Option SourceCursor) (path : String)
++    (captured : PageMap.Head) (sequence : Nat) : SourceCursor :=
++  previous.getD {path,head := some captured,sequence}
++
++theorem existing_registration_preserves_cursor (cursor : SourceCursor) (path : String)
++    (captured : PageMap.Head) (sequence : Nat) :
++    registrationCursor (some cursor) path captured sequence = cursor := rfl
++
++theorem unchanged_registration_never_requeues (cursor : SourceCursor) (captured : PageMap.Head) :
++    cursor.recheckRegistration captured false = false := by
++  simp [SourceCursor.recheckRegistration]
++
++theorem changed_head_rechecks_new_dependency (cursor : SourceCursor) (captured : PageMap.Head)
++    (different : cursor.head ≠ some captured) :
++    cursor.recheckRegistration captured true = true := by
++  simp [SourceCursor.recheckRegistration,different]
++
++theorem partial_scan_rechecks_new_dependency (cursor : SourceCursor) (captured : PageMap.Head)
++    (partialScan : cursor.inFlight = true) :
++    cursor.recheckRegistration captured true = true := by
++  simp [SourceCursor.recheckRegistration,partialScan]
++
++theorem settled_registration_needs_no_recheck (cursor : SourceCursor) (captured : PageMap.Head)
++    (sameHead : cursor.head = some captured) (settled : cursor.inFlight = false) :
++    cursor.recheckRegistration captured true = false := by
++  simp [SourceCursor.recheckRegistration,sameHead,settled]
++
+@@ -139,7 +178 @@ def register (writer : PageMap.Writer) (base name : String) (inputs : TurnReplay
+-      let inFlight := previous.block > 0 || previous.field > 0 ||
+-        !previous.watchAfter.isEmpty || !previous.resetAfter.isEmpty
+-      if inFlight && previous.head.any (fun head => head.identity == oldest.identity && oldest.revision ≤ head.revision) &&
+-          wanted.any (fun field => field.1 == path && !old.contains field) then
+-        -- A newly registered key can sort behind an in-flight posting
+-        -- cursor. Recheck that job rather than silently skipping it or
+-        -- restarting the entire source's fan-out.
++      if previous.recheckRegistration oldest (wanted.any (fun field => field.1 == path && !old.contains field)) then
+@@ -147,6 +180 @@ def register (writer : PageMap.Writer) (base name : String) (inputs : TurnReplay
+-    let next : SourceCursor := match previous with
+-      | none => {path,head := some oldest,sequence := captured.sequence}
+-      | some previous =>
+-        if previous.head.any (fun head => head.identity == oldest.identity && oldest.revision < head.revision) then
+-          {path,head := some oldest,sequence := captured.sequence}
+-        else previous
++    let next := registrationCursor previous path oldest captured.sequence

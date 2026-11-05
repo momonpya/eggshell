@@ -287,6 +287,8 @@ source headが変わると部分feedbackを捨て、照合の期限切れを入�
 
 続く通常混在試験（80 query/Pre/Post/Stop loop、出力5000 bytes、16 original owner、背景準備、80新reader）では全80書込loopと全82保存原入出力の一致を確認した。一方、参照/ownerが揃うまで145514msかかり、gate時点でも準備pending3/active1、retry270/coalesced23041、最後のretryはjournalだけを要求していた。実index worker3個の稼働を確認。新readerは67/80で13期限切れ、意味9/字句58、80捕捉/受付completeだった。独立した合成fixtureの機能試験であり、固定読取pairとの因果比較とは扱わない。準備済み参照の存在を全maintenance排出と混同しない。これで混在利用の未達が明確になったため、[次は準備のprefix進捗/反復とforeground競合](docs/candidates/provider-lifetime/next-mixed-preparation.md)を既存receipt/sourceから追う。待ち期限拡大や出版ごとの有用な準備中断で隠さない。全guard発火0/残存0、最大RSS3091424KiB、全固定16head/保護原典不変。終了DB/cache/logは記録後削除し、候補は隔離保持、回答モデル0/比較0/18・製品未採用。80人8時間/成長する複数project/NAS/実98%/総token/品質は未達・未検証でgoalはactive。
 
+[replay-registration候補](docs/candidates/replay-registration/README.md)では、準備の反復について汎用的な不具合を修正した。有効な過去の依存を再登録するだけで、共有source feedのcursorが古いheadへ巻き戻り、処理済みblockを再走査することを親runtimeで再現した。既存cursorを保持し、新規依存だけを再確認する。初案は追記prefix試験で不要な再queueを起こしたため却下し、そのpatch/SHA/失敗を残した。最終案は依存の値・Pre原来歴・配送参照を維持したまま、実際に検証したsource head/sequenceをcheckpoint登録へ渡す。変更した依存・失効した期限・原典置換は拒否する。6定理は標準公理のみ、通常ContractAudit、全再生とのfact/status一致、4096依存/37行上限/原典置換、追記prefixの各native検査を通過した。追記3回はいずれも新規4eventだけをdecode/実行し、過去Post原文の再読0だった。これは準備の局所的な修正の検証であり、145秒の全原因特定や80人/実98%の達成ではない。次は同じcoreを固定して実service runtimeを構築し、通常の80 query/Pre/Post/Stop混在負荷と新readerで、原入出力、準備債務/再試行、待ち時間と期限内配送を親と比較する。上限を広げず、原典境界・複数所有者・完全な認定を維持する。製品未採用、回答モデル0/有料比較0/18、goalはactive。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約

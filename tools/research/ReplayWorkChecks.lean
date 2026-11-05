@@ -216,6 +216,47 @@ private def queueTickets (journal : DB.PageMap.Snapshot) (base : String) : IO (A
     found := found.push (ordinal,← Index.decode raw)
   return found
 
+private def validationChecks (root : System.FilePath) : IO Json := do
+  let source ← Persistence.ensureSnapshot (root/"validation-source.egg")
+  let journal ← Persistence.ensureSnapshot (root/"validation-private.egg")
+  let value := Value.text "validation keeps this negative structural dependency"
+  let other := Value.text "unrelated validation publication"
+  let inputs ← TurnReplay.Inputs.observe {} source value
+  let otherInputs ← TurnReplay.Inputs.observe {} source other
+  check (!(inputs.sources.flatMap (·.buckets.map (·.key))).any
+    (otherInputs.sources.flatMap (·.buckets.map (·.key))).contains) "validation fixture bucket collision"
+  let later ← publishAtom source other
+  let some checked ← inputs.checked later ((← IO.monoMsNow)+30000) |
+    throw (IO.userError "unchanged historical inputs failed validation")
+  let some saved := inputs.sources[0]? | throw (IO.userError "missing captured dependency")
+  let some validated := checked.sources[0]? | throw (IO.userError "validation dropped a dependency")
+  check (validated.head == later.head && validated.path == saved.path && validated.buckets == saved.buckets &&
+    checked.preSources == inputs.preSources && checked.deliveries == inputs.deliveries &&
+    validated.sequence == (← Persistence.Store.getNat later.get Persistence.Store.replayFeedSequenceKey))
+    "validation changed dependency values or lost its checked source frontier"
+  let base := "validated-registration"
+  let (_,head,_) ← DB.PageMap.withWriter journal fun writer =>
+    ReplayWork.register writer base (Index.contentKey "initial validated dependency") checked
+  let journal := {journal with head}
+  let cursorKey := ReplayWork.sourceKey base later.directory.normalize.toString
+  let cursor ← journal.get cursorKey
+  let name := Index.contentKey "new already validated dependency"
+  let (_,head,_) ← DB.PageMap.withWriter journal fun writer => ReplayWork.register writer base name checked
+  let journal := {journal with head}
+  check ((← journal.get cursorKey) == cursor && !(← ReplayWork.pending journal base))
+    "new validated dependency was redundantly requeued or rewound shared progress"
+  let changed ← publishAtom later value
+  check ((← inputs.checked changed ((← IO.monoMsNow)+30000)).isNone)
+    "changed negative membership passed checked validation"
+  check ((← checked.checked later 0).isNone) "expired checked validation advanced a frontier"
+  IO.FS.rename source.directory (root/"retired-validation-source.egg")
+  let replaced ← Persistence.ensureSnapshot source.directory
+  check ((← checked.checked replaced ((← IO.monoMsNow)+30000)).isNone)
+    "replacement source passed the old retained dependency validation"
+  return Json.mkObj [("checkedFrontierRecorded",toJson true),("dependencyValuesPreserved",toJson true),
+    ("alreadyValidatedNewDependencyNotRequeued",toJson true),("changedMembershipRejected",toJson true),
+    ("expiredValidationRejected",toJson true),("replacementRejected",toJson true)]
+
 private def highFanoutChecks (root : System.FilePath) : IO Json := do
   let started ← IO.monoMsNow
   let source ← Persistence.ensureSnapshot (root / "fanout-source.egg")
@@ -498,6 +539,7 @@ def run (args : List String) : IO Unit := do
   let queue ← queueChecks root
   let feed ← feedChecks root
   let bootstrap ← bootstrapChecks root
+  let validation ← validationChecks root
   let fanout ← if prefixMode then pure (Json.mkObj [("retainedParentCheck",toJson "replay-bounds/checks.json")])
     else highFanoutChecks root
   let prefixResult ← if prefixMode then prefixChecks root else pure Json.null
@@ -661,7 +703,7 @@ def run (args : List String) : IO Unit := do
   let leaseCompleted ← refresh leasePublished
   check (leaseCompleted.complete && leaseCompleted.pending == 0 && leaseCompleted.turns == 1 &&
     (← calls.get) == beforeBusy+2) "accepted event did not complete after its source publication"
-  let report := Json.mkObj [("queue",queue),("feed",feed),("bootstrap",bootstrap),("fanout",fanout),("prefix",prefixResult),
+  let report := Json.mkObj [("queue",queue),("feed",feed),("bootstrap",bootstrap),("validation",validation),("fanout",fanout),("prefix",prefixResult),
     ("nativeConsumption",toJson direct.consumed.size),("nativeUsage",toJson direct.usage.size),
     ("unrelatedPublicationHistoricalReplays",toJson (0 : Nat)),("unrelatedPublicationNewTurns",toJson added.turns),
     ("unrelatedPublicationHistoricalCheckpointsRead",toJson (added.checked-added.turns)),
