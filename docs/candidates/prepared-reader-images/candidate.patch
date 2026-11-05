@@ -1,0 +1,380 @@
+diff --git a/Eggshell/PreparedReaders.lean b/Eggshell/PreparedReaders.lean
+new file mode 100644
+index 00000000..32ef4b4f
+--- /dev/null
++++ b/Eggshell/PreparedReaders.lean
+@@ -0,0 +1,286 @@
++module
++public import Eggshell.PreparedInputs
++public import Eggshell.ProjectViews
++
++@[expose] public section
++namespace Eggshell.PreparedReaders
++open Lean DB Persistence.Store
++
++/-- No borrower-owned counter, trace, arena or canonical capability is stored. -/
++structure SnapshotImage where
++  directory : System.FilePath
++  head : PageMap.Head
++  handle : FileSystem.ReadHandle
++
++def SnapshotImage.instantiate (image : SnapshotImage) (pages : PageMap.PagePool) (scope : String)
++    (reads bytes : IO.Ref Nat) (cache : IO.Ref PageMap.PageCache)
++    (trace : IO.Ref (Option PageMap.ReadTrace)) : PageMap.Snapshot :=
++  ⟨image.directory,image.head,image.handle,reads,bytes,cache,trace,some ⟨pages,scope⟩⟩
++
++theorem SnapshotImage.original_head (image : SnapshotImage) (pages scope reads bytes cache trace) :
++    (image.instantiate pages scope reads bytes cache trace).head = image.head := rfl
++
++theorem SnapshotImage.borrower_trace (image : SnapshotImage) (pages scope reads bytes cache trace) :
++    (image.instantiate pages scope reads bytes cache trace).trace = trace := rfl
++
++def SnapshotImage.capture (pages : PageMap.PagePool) (scope : String)
++    (source : PageMap.Snapshot) : IO SnapshotImage := do
++  let cached ← source.cache.get
++  for (_,page) in cached.previous.toArray ++ cached.recent.toArray do
++    pages.insert (source.pageKey scope page.ref) page
++  return ⟨source.directory,source.head,source.handle⟩
++
++def SnapshotImage.borrow (image : SnapshotImage) (pages : PageMap.PagePool)
++    (scope : String) : IO PageMap.Snapshot := do
++  return image.instantiate pages scope (← IO.mkRef 0) (← IO.mkRef 0)
++    (← IO.mkRef {}) (← IO.mkRef none)
++
++structure Reads where
++  operations : List PageMap.ReadObservation
++  bytes : Nat
++  complete : Bool
++
++def Reads.capture (source : PageMap.Snapshot) : IO Reads := do
++  let some trace ← source.trace.get | throw (IO.userError "prepared image lost its original read trace")
++  source.trace.set (some {})
++  return ⟨trace.operations.reverse,trace.encodedBytes,trace.complete⟩
++
++/-- Replay at the original activation phase, after memo tracing starts for
++owner inputs. A hit never silently omits its original read dependencies. -/
++def Reads.replay (reads : Reads) (source : PageMap.Snapshot) : IO Unit := do
++  if reads.complete then
++    for operation in reads.operations do source.observe operation
++  else source.trace.modify (·.map fun _ => {complete := false})
++
++structure BitmapImage where
++  boundary : Nat
++  next : Nat
++  nodes : Std.HashMap Nat (SourceBitmap.Ref × SourceBitmap.Node)
++  joins : Std.HashMap (Nat × Nat) SourceBitmap.Ref
++
++def BitmapImage.capture (reader : SourceBitmap.Reader) : IO BitmapImage :=
++  return ⟨reader.boundary,← reader.next.get,← reader.nodes.get,← reader.joins.get⟩
++
++def BitmapImage.borrow (image : BitmapImage) (snapshot : PageMap.Snapshot) : IO SourceBitmap.Reader :=
++  return ⟨snapshot,image.boundary,← IO.mkRef image.next,← IO.mkRef image.nodes,
++    ← IO.mkRef image.joins,← IO.mkRef 0⟩
++
++structure OwnerInput where
++  index : SnapshotImage
++  captured : SourceOwners.Captured
++
++structure Owners where
++  binding : SourceOwners.Binding
++  dictionary : SnapshotImage
++  inputs : Array OwnerInput
++  bitmap : BitmapImage
++  allOwners : Option SourceBitmap.Ref
++  candidates : Option SourceBitmap.Ref
++  stride : Nat
++  reads : Array Reads
++
++def Owners.capture (pages : PageMap.PagePool) (reader : OwnerViews.Reader)
++    (observations : Array Reads) : IO Owners := do
++  let scope := reader.base.binding.scope
++  let dictionary ← SnapshotImage.capture pages scope reader.base.dictionary
++  let inputs ← reader.base.inputs.mapM fun input => do
++    return (⟨← SnapshotImage.capture pages scope input.index,input.captured⟩ : OwnerInput)
++  return ⟨reader.base.binding,dictionary,inputs,← BitmapImage.capture reader.base.bitmap,
++    reader.base.allOwners,reader.base.candidates,reader.stride,observations⟩
++
++def Owners.borrow (image : Owners) (pages : PageMap.PagePool)
++    (sources : Array PageMap.Snapshot) : IO OwnerViews.Reader := do
++  unless sources.size == image.inputs.size && sources.size == image.reads.size do
++    throw (IO.userError "prepared owner image omitted an original source")
++  let inputs ← (image.inputs.zip sources).mapM fun (input,original) => do
++    unless original.head == input.captured.state.source.head &&
++        original.directory.toString == input.captured.state.source.directory do
++      throw (IO.userError "prepared owner image changed an original source")
++    return (⟨original,← input.index.borrow pages image.binding.scope,input.captured⟩ : SourceOwners.Input)
++  let dictionary ← image.dictionary.borrow pages image.binding.scope
++  let bitmap ← image.bitmap.borrow dictionary
++  return ⟨⟨image.binding,dictionary,inputs,bitmap,image.allOwners,image.candidates⟩,image.stride⟩
++
++structure Shared where
++  index : SnapshotImage
++  manifest : Synapses.Index.Manifest
++
++def publicInputs (inputs : Array PreparedInputs.Reference) : Array PreparedInputs.Reference :=
++  inputs.map fun reference => {reference with usage := none}
++
++theorem publicInputs_ignore_private_usage (reference : PreparedInputs.Reference)
++    (left right : Option PageMap.Head) :
++    publicInputs #[{reference with usage := left}] = publicInputs #[{reference with usage := right}] := by
++  simp [publicInputs]
++
++def frameKey (sources : Array PageMap.Snapshot) (scopes : Array String)
++    (inputs : Array PreparedInputs.Reference) (owners : Option OwnerViews.Reference) : String :=
++  (toJson (sources.map SourceOwners.refOf,scopes,publicInputs inputs,owners)).compress
++
++def acceptsKey (wanted actual : String) : Bool := decide (wanted = actual)
++
++theorem acceptsKey_exact (wanted actual : String) : acceptsKey wanted actual = true ↔ wanted = actual := by
++  simp [acceptsKey]
++
++structure Image where
++  private mk ::
++  key : String
++  scopes : Array String
++  inputs : Array PreparedInputs.Reference
++  ownerReference : Option OwnerViews.Reference
++  shared : Array (Option Shared)
++  sharedReads : Array Reads
++  owners : Option Owners
++  bytes : Nat
++  handles : Nat
++
++def maxBytes : Nat := 8*1024*1024
++def charged (images : Array Image) : Nat := images.foldl (fun total image => total+image.bytes) 0
++def handles (images : Array Image) : Nat := images.foldl (fun total image => total+image.handles) 0
++
++structure Catalogue where
++  private mk ::
++  images : Array Image
++  imageBound : images.size ≤ ProjectViews.maxImages
++  byteBound : charged images ≤ maxBytes
++  handleBound : handles images ≤ ProjectViews.maxHandles
++
++@[no_expose] def Catalogue.empty : Catalogue := ⟨#[],by decide,by decide,by decide⟩
++
++@[no_expose] def Catalogue.check (images : Array Image) : Except String Catalogue :=
++  if a : images.size ≤ ProjectViews.maxImages then
++    if b : charged images ≤ maxBytes then
++      if c : handles images ≤ ProjectViews.maxHandles then .ok ⟨images,a,b,c⟩
++      else .error "prepared reader handle budget"
++    else .error "prepared reader metadata budget"
++  else .error "prepared reader image budget"
++
++theorem Catalogue.bounded (catalogue : Catalogue) :
++    catalogue.images.size ≤ 32 ∧ charged catalogue.images ≤ 8*1024*1024 ∧
++      handles catalogue.images ≤ 512 :=
++  ⟨catalogue.imageBound,catalogue.byteBound,catalogue.handleBound⟩
++
++structure State where
++  catalogue : Catalogue := .empty
++  builds : Nat := 0
++  hits : Nat := 0
++  evicted : Nat := 0
++  bypassed : Nat := 0
++
++/-- Owned exclusively by the serialized query-worker loop, not shared by
++simultaneous writers. Borrowed images contain only immutable persistent data;
++each borrower receives new mutable state. No new lock/CAS protects this state. -/
++structure Pool where
++  private state : IO.Ref State
++  pages : PageMap.PagePool
++
++@[no_expose] def Pool.new : IO Pool := return ⟨← IO.mkRef {},← PageMap.PagePool.new⟩
++
++@[no_expose] def Pool.admit (pool : Pool) (image : Image) : IO Unit := do
++  let state ← pool.state.get
++  if image.bytes > maxBytes || image.handles > ProjectViews.maxHandles then
++    pool.state.set {state with builds := state.builds+1,bypassed := state.bypassed+1}
++    return
++  let mut images := state.catalogue.images.filter (!acceptsKey image.key ·.key)
++  let mut retired := 0
++  while images.size+1 > ProjectViews.maxImages || charged images+image.bytes > maxBytes ||
++      handles images+image.handles > ProjectViews.maxHandles do
++    images := images.extract 1 images.size
++    retired := retired+1
++  let catalogue ← IO.ofExcept (Catalogue.check (images.push image))
++  pool.state.set {state with catalogue,builds := state.builds+1,evicted := state.evicted+retired}
++
++@[no_expose] def Pool.find (pool : Pool) (key : String) : IO (Option Image) := do
++  let state ← pool.state.get
++  let some image := state.catalogue.images.find? (acceptsKey key ·.key) | return none
++  let images := (state.catalogue.images.filter (!acceptsKey key ·.key)).push image
++  let catalogue ← IO.ofExcept (Catalogue.check images)
++  pool.state.set {state with catalogue,hits := state.hits+1}
++  return some image
++
++@[no_expose] def Pool.stats (pool : Pool) : IO Json := do
++  let state ← pool.state.get
++  return Json.mkObj [("builds",toJson state.builds),("hits",toJson state.hits),
++    ("evicted",toJson state.evicted),("bypassed",toJson state.bypassed),
++    ("images",toJson state.catalogue.images.size),("chargedBytes",toJson (charged state.catalogue.images)),
++    ("handles",toJson (handles state.catalogue.images)),("pages",← pool.pages.stats)]
++
++@[no_expose] def build (pool : Pool) (key : String) (sources : Array PageMap.Snapshot)
++    (scopes : Array String) (inputs : Array PreparedInputs.Reference)
++    (reference : Option OwnerViews.Reference) : IO Image := do
++  let clones ← (sources.zip scopes).mapM fun (source,scope) => do
++    let clone ← (← SnapshotImage.capture pool.pages scope source).borrow pool.pages scope
++    clone.trace.set (some {})
++    return clone
++  let shared ← (inputs.zip clones).mapM fun (input,source) => PreparedInputs.shared input source
++  let sharedReads ← clones.mapM Reads.capture
++  let owners ← match reference with
++    | some reference => if OwnerViews.common reference then some <$> OwnerViews.restore reference clones else pure none
++    | none => pure none
++  let ownerReads ← clones.mapM Reads.capture
++  for (clone,source) in clones.zip sources do
++    let reads ← clone.reads.get
++    let bytes ← clone.readBytes.get
++    source.reads.modify (·+reads)
++    source.readBytes.modify (·+bytes)
++  let shared ← (shared.zip scopes).mapM fun (reader,scope) => reader.mapM fun reader => do
++    return (⟨← SnapshotImage.capture pool.pages scope reader.index,reader.manifest⟩ : Shared)
++  let owners ← owners.mapM fun reader => Owners.capture pool.pages reader ownerReads
++  let bitmapBytes := owners.map (fun image =>
++    (toJson (image.bitmap.next,image.bitmap.nodes.toArray,image.bitmap.joins.toArray)).compress.utf8ByteSize) |>.getD 0
++  let traceBytes := (sharedReads++ownerReads).foldl (fun total reads => total+reads.bytes) 0
++  let descriptorBytes := key.utf8ByteSize
++  let count := shared.foldl (fun n reader => n+reader.toArray.size) 0+
++    (owners.map (fun image => image.inputs.size+1) |>.getD 0)
++  return ⟨key,scopes,publicInputs inputs,reference,shared,sharedReads,owners,
++    descriptorBytes+bitmapBytes+traceBytes,count⟩
++
++structure Borrow where
++  private mk ::
++  image : Image
++  private pages : PageMap.PagePool
++  private sources : Array PageMap.Snapshot
++
++@[no_expose] def Pool.acquire (pool : Pool) (sources : Array PageMap.Snapshot)
++    (inputs : Array PreparedInputs.Reference) (reference : Option OwnerViews.Reference) : IO Borrow := do
++  unless inputs.size == sources.size && (inputs.zip sources).all (fun (input,source) =>
++      input.producer == PreparedInputs.implementation && input.source == source.head) do
++    throw (IO.userError "prepared image changed its complete original input boundary")
++  if let some reference := reference then
++    if OwnerViews.common reference then OwnerViews.validate reference sources
++  let scopes ← sources.mapM OwnerViews.scope
++  let key := frameKey sources scopes inputs reference
++  let image ← match ← pool.find key with
++    | some image => pure image
++    | none => do
++      let image ← build pool key sources scopes inputs reference
++      pool.admit image
++      pure image
++  return ⟨image,pool.pages,sources⟩
++
++/-- Usage roots are intentionally absent from the key, and remain opened by
++capturedLocal for each operation. This returns public shared readers only. -/
++@[no_expose] def Borrow.shared (borrow : Borrow) (source : PageMap.Snapshot)
++    (input : PreparedInputs.Reference) : IO (Option Synapses.Index.Reader) := do
++  let some slot := borrow.sources.findIdx? (fun original =>
++      SourceOwners.refOf original == SourceOwners.refOf source) |
++    throw (IO.userError "prepared shared image changed its original source")
++  let some saved := borrow.image.inputs[slot]? | throw (IO.userError "prepared shared image omitted an input")
++  unless toJson ({input with usage := none}) == toJson saved do
++    throw (IO.userError "prepared shared image changed its public input boundary")
++  let some reads := borrow.image.sharedReads[slot]? | throw (IO.userError "prepared shared image omitted observations")
++  let some scope := borrow.image.scopes[slot]? | throw (IO.userError "prepared shared image omitted scope")
++  let some reader := borrow.image.shared[slot]? | throw (IO.userError "prepared shared image omitted a reader")
++  reads.replay source
++  reader.mapM fun reader => do return ⟨← reader.index.borrow borrow.pages scope,reader.manifest⟩
++
++@[no_expose] def Borrow.owners (borrow : Borrow) (sources : Array PageMap.Snapshot)
++    (reference : OwnerViews.Reference) : IO OwnerViews.Reader := do
++  unless (sources.map SourceOwners.refOf) == borrow.sources.map SourceOwners.refOf &&
++      toJson (some reference) == toJson borrow.image.ownerReference do
++    throw (IO.userError "prepared owner image changed its complete original input boundary")
++  let some image := borrow.image.owners | throw (IO.userError "prepared image has no common owner namespace")
++  for (reads,source) in image.reads.zip sources do reads.replay source
++  image.borrow borrow.pages sources
++
++end Eggshell.PreparedReaders
+diff --git a/Eggshell/SynapseRecommend.lean b/Eggshell/SynapseRecommend.lean
+index 68fe1c09..0e28b0ab 100644
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -10,0 +11 @@
++public import Eggshell.PreparedReaders
+@@ -220 +221,2 @@
+-def capturedLocal (source : PageMap.Snapshot) (inputs : PreparedInputs.Reference) : IO Prepared := do
++def capturedLocal (source : PageMap.Snapshot) (inputs : PreparedInputs.Reference)
++    (shared : Option (IO (Option Index.Reader)) := none) : IO Prepared := do
+@@ -226 +228,4 @@
+-  return {source,shared := ← PreparedInputs.shared inputs source,usage := ← PreparedInputs.usage inputs source}
++  let shared ← match shared with
++    | some read => read
++    | none => PreparedInputs.shared inputs source
++  return {source,shared,usage := ← PreparedInputs.usage inputs source}
+@@ -290 +295 @@
+-    (deadline : Nat) : IO (Array Prepared) := do
++    (deadline : Nat) (shared : Option PreparedReaders.Borrow := none) : IO (Array Prepared) := do
+@@ -298 +303 @@
+-    try capturedLocal source input
++    try capturedLocal source input (shared.map fun image => image.shared source input)
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 30ce89c9..60ea1bbd 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9240 +9240,2 @@
+-    (queryOwners : Option OwnerViews.Reference := none) : IO (Option Handoff) := do
++    (queryOwners : Option OwnerViews.Reference := none)
++    (preparedReaders : Option PreparedReaders.Borrow := none) : IO (Option Handoff) := do
+@@ -9260 +9261,3 @@
+-  let ownerView ← OwnerViews.restore reference sources
++  let ownerView ← match preparedReaders with
++    | some prepared => if prepared.image.owners.isSome then prepared.owners sources reference else OwnerViews.restore reference sources
++    | none => OwnerViews.restore reference sources
+@@ -9452 +9455,2 @@
+-    (queryOwners : Option OwnerViews.Reference := none) : IO (Option Handoff) := do
++    (queryOwners : Option OwnerViews.Reference := none)
++    (preparedReaders : Option PreparedReaders.Borrow := none) : IO (Option Handoff) := do
+@@ -9471 +9475 @@
+-      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs queryOwners
++      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs queryOwners preparedReaders
+@@ -9550 +9554,2 @@
+-    (capturedHeads : Option (List (Option DB.PageMap.Head)) := none) : IO (Option Handoff) := do
++    (capturedHeads : Option (List (Option DB.PageMap.Head)) := none)
++    (readerPool : Option PreparedReaders.Pool := none) : IO (Option Handoff) := do
+@@ -9570,0 +9576,8 @@
++  let preparedReaders ← match readerPool,queryInputs with
++    | some pool,some inputs =>
++      try some <$> pool.acquire sources inputs queryOwners
++      catch error =>
++        Receipt.observe (sourceContext.bind (·.receipt)) "prepared-reader-unavailable"
++          (Json.mkObj [("status",toJson "original-restoration"),("reason",toJson error.toString)])
++        pure none
++    | _,_ => pure none
+@@ -9573 +9586 @@
+-    (sourceContext.map (·.deadline) |>.getD (now+20000))
++    (sourceContext.map (·.deadline) |>.getD (now+20000)) preparedReaders
+@@ -9628,0 +9642 @@
++      (preparedReaders := preparedReaders)
+@@ -9639,0 +9654 @@
++        (preparedReaders := preparedReaders)
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index 13d39a50..e9c73ae8 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -789 +789,2 @@
+-def searchRestored (request : Search) (onSemanticReady : IO Unit := pure ()) : IO (Option Handoff) := do
++def searchRestored (request : Search) (onSemanticReady : IO Unit := pure ())
++    (readers : Option PreparedReaders.Pool := none) : IO (Option Handoff) := do
+@@ -845 +846 @@
+-        request.prepared request.owners request.originals
++        request.prepared request.owners request.originals readers
+@@ -849 +850,2 @@
+-def search (request : Search) (onSemanticReady : IO Unit := pure ()) : IO (Option Handoff) := do
++def search (request : Search) (onSemanticReady : IO Unit := pure ())
++    (readers : Option PreparedReaders.Pool := none) : IO (Option Handoff) := do
+@@ -851 +853 @@
+-  searchRestored restored onSemanticReady
++  searchRestored restored onSemanticReady readers
+@@ -1014,0 +1017 @@
++  let readers ← if role == "search" then some <$> PreparedReaders.Pool.new else pure none
+@@ -1028 +1031,4 @@
+-        pure (toJson (SearchFrame.reply request.identity (← search request ready)))
++        let result ← search request ready readers
++        if let some pool := readers then
++          Receipt.observe request.receipt "prepared-reader-images" (← pool.stats)
++        pure (toJson (SearchFrame.reply request.identity result))

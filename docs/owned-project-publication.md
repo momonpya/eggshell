@@ -54,6 +54,14 @@ measured context reopening at 26–36 ms and dependency checkpoint work at about
 Handoff's repeated public owner/shared-synapse preparation is the next measured
 reuse target; private usage and operation capabilities must remain separate.
 No new eighty-reader success or adopted optimization follows from this diagnosis.
+The subsequent [prepared-reader image candidate](candidates/prepared-reader-images/README.md)
+retains only checked public preparation, forks mutable borrower state and keeps
+private usage/canonical capabilities per operation. Native exact observations
+agree and running meaning hooks save21–96 ms. A contemporaneous eighty-reader
+pair is parent72/candidate75, still below the required gate. Every observed worker
+builds once; the next target is public input/owner capture before worker admission,
+whose load-time medians remain431/276 ms. This is not sustained capacity evidence
+or total-token adoption.
 The latest isolated [source-path comparison](candidates/owned-lexical/README.md)
 reached 35.6–37.9 source observations/s at 50 KB in three short repetitions.
 Derived preparation is excluded; this does not establish stable backlog or

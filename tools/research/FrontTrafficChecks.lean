@@ -10,6 +10,7 @@ import tools.research.PreparedLexicalChecks
 import tools.research.InputFrameChecks
 import tools.research.SourcePinBatchChecks
 import tools.research.OwnerBindingChecks
+import tools.research.PreparedReaderChecks
 
 open Lean Eggshell Eggshell.Plugin
 namespace Eggshell.Research.FrontTrafficChecks
@@ -345,6 +346,12 @@ end Eggshell.Research.FrontTrafficChecks
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["prepared-reader-captured",root] =>
+      Eggshell.Research.PreparedReaderChecks.captured (.mk root)
+      return 0
+  | ["prepared-reader-audit",source,root] =>
+      Eggshell.Research.PreparedReaderChecks.run (.mk source) (.mk root)
+      return 0
   | ["owner-binding-synthetic",root] =>
       Eggshell.Research.OwnerBindingChecks.auditCaptured (.mk root)
       return 0
