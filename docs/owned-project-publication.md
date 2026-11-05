@@ -48,6 +48,12 @@ preserves publication-prepared identities and all actual bodies, saving about
 eighty-reader result is 60/80 versus parent64/80, so it supplies no capacity
 improvement and remains unadopted. The next measurement targets fallback/context
 preparation and the original-page pool, not additional owners or ranking changes.
+The [actual reopening diagnostic](candidates/source-page-reuse/README.md) then
+measured context reopening at 26–36 ms and dependency checkpoint work at about
+8 ms. Both run in actual hooks, but neither dominates those observations.
+Handoff's repeated public owner/shared-synapse preparation is the next measured
+reuse target; private usage and operation capabilities must remain separate.
+No new eighty-reader success or adopted optimization follows from this diagnosis.
 The latest isolated [source-path comparison](candidates/owned-lexical/README.md)
 reached 35.6–37.9 source observations/s at 50 KB in three short repetitions.
 Derived preparation is excluded; this does not establish stable backlog or

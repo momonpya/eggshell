@@ -1,0 +1,133 @@
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index 13d39a50..e1b37e95 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -789,0 +790,2 @@
++  let profiled := (← IO.getEnv "EGGSHELL_TRACE_SERVICE_PROFILE") == some "1"
++  let started ← IO.monoNanosNow
+@@ -797,0 +800 @@
++  let stateRead ← IO.monoNanosNow
+@@ -798,0 +802 @@
++  let opened ← IO.monoNanosNow
+@@ -800,0 +805,13 @@
++  let originals ← IO.monoNanosNow
++  let sources := (captured.getD []).filterMap id
++  let counts := do
++    let mut reads := 0
++    let mut bytes := 0
++    for source in sources do
++      reads := reads+(← source.reads.get)
++      bytes := bytes+(← source.readBytes.get)
++    return (reads,bytes)
++  let initial ← if profiled then counts else pure (0,0)
++  let stagedAt ← IO.mkRef originals
++  let checkpoints ← IO.mkRef ((0,0) : Nat × Nat)
++  let success ← IO.mkRef false
+@@ -804,42 +821,65 @@
+-  match request.pending.projection with
+-  | .none => pure none
+-  | .roots keys => manualHandoff selection request.work keys captured
+-  | .automatic =>
+-      let mut staged := []
+-      -- Unsaved observations remain reusable even while a writer is busy or
+-      -- the authority is temporarily unavailable. Read them before the .egg
+-      -- snapshot, so a concurrent completed commit cannot create a gap.
+-      for name in ["deferred", "checkpoints"] do
+-        let directory := files.directory / name
+-        if ← directory.pathExists then
+-          for entry in ← directory.readDir do
+-            if entry.fileName.endsWith ".json" then
+-              try
+-                if let some base ← (readJson? entry.path pendingJsonDefaults : IO (Option PendingTurn)) then
+-                  if base.write.any request.pending.read.contains then
+-                    let pending ← loadToolReceipts files base
+-                    let values ← IO.ofExcept (stagedGraphValues pending)
+-                    staged := staged ++ values
+-              catch _ => pure ()
+-      if request.staged then
+-        let pending ← readPending? files
+-        let snapshot := pending.filter (·.turnId == request.pending.turnId)
+-        staged := staged ++ (← IO.ofExcept (stagedGraphValues (snapshot.getD request.pending)))
+-      staged := staged.eraseDups
+-      automaticHandoff selection request.work
+-        (current.state.deliveryClaims pending.turnId (← IO.monoMsNow))
+-        request.enforce request.evidence staged (!current.state.afterCompaction)
+-        request.pending.localUnion
+-        (some {
+-          workspace := System.FilePath.mk request.pending.cwd
+-          deadline := request.deadline
+-          question := request.pending.prompt
+-          targets := SourceEvidence.workTargets? (System.FilePath.mk request.pending.cwd) request.work
+-          native := request.enforce || request.evidence.isSome
+-          receipt := request.receipt
+-          onSemanticReady
+-          onDependencies := fun sources =>
+-            queueCheckpoint files {request.pending with tools := [], sources := sources, inFlight := [], finalMessage := none, closed := false} })
+-        (request.route != .lexical) captured
+-        (context.bind fun context => context.selection.write.map (·.project.manifest.identity))
+-        request.prepared request.owners request.originals
++  try
++    let result ← match request.pending.projection with
++      | .none => pure none
++      | .roots keys => manualHandoff selection request.work keys captured
++      | .automatic => do
++        let mut staged := []
++        -- Unsaved observations remain reusable even while a writer is busy or
++        -- the authority is temporarily unavailable. Read them before the .egg
++        -- snapshot, so a concurrent completed commit cannot create a gap.
++        for name in ["deferred", "checkpoints"] do
++          let directory := files.directory / name
++          if ← directory.pathExists then
++            for entry in ← directory.readDir do
++              if entry.fileName.endsWith ".json" then
++                try
++                  if let some base ← (readJson? entry.path pendingJsonDefaults : IO (Option PendingTurn)) then
++                    if base.write.any request.pending.read.contains then
++                      let pending ← loadToolReceipts files base
++                      let values ← IO.ofExcept (stagedGraphValues pending)
++                      staged := staged ++ values
++                catch _ => pure ()
++        if request.staged then
++          let pending ← readPending? files
++          let snapshot := pending.filter (·.turnId == request.pending.turnId)
++          staged := staged ++ (← IO.ofExcept (stagedGraphValues (snapshot.getD request.pending)))
++        staged := staged.eraseDups
++        stagedAt.set (← IO.monoNanosNow)
++        automaticHandoff selection request.work
++          (current.state.deliveryClaims pending.turnId (← IO.monoMsNow))
++          request.enforce request.evidence staged (!current.state.afterCompaction)
++          request.pending.localUnion
++          (some {
++            workspace := System.FilePath.mk request.pending.cwd
++            deadline := request.deadline
++            question := request.pending.prompt
++            targets := SourceEvidence.workTargets? (System.FilePath.mk request.pending.cwd) request.work
++            native := request.enforce || request.evidence.isSome
++            receipt := request.receipt
++            onSemanticReady
++            onDependencies := fun sources => do
++              let began ← IO.monoNanosNow
++              queueCheckpoint files {request.pending with tools := [], sources := sources, inFlight := [], finalMessage := none, closed := false}
++              if profiled then
++                let elapsed ← IO.monoNanosNow
++                checkpoints.modify fun (calls,nanos) => (calls+1,nanos+(elapsed-began)) })
++          (request.route != .lexical) captured
++          (context.bind fun context => context.selection.write.map (·.project.manifest.identity))
++          request.prepared request.owners request.originals
++    success.set true
++    return result
++  finally
++    if profiled then
++      let finished ← IO.monoNanosNow
++      let staged ← stagedAt.get
++      let finalCounts ← counts
++      let checkpoint ← checkpoints.get
++      Receipt.observe request.receipt ("worker-restoration-"++if request.route == .lexical then "lexical" else "semantic")
++        (Json.mkObj [("route",toJson request.route),("success",toJson (← success.get)),
++          ("stateNs",toJson (stateRead-started)),("contextNs",toJson (opened-stateRead)),
++          ("originalsNs",toJson (originals-opened)),("stagedNs",toJson (staged-originals)),
++          ("handoffNs",toJson (finished-staged)),("sourceCount",toJson sources.length),
++          ("sharedSources",toJson (sources.filter (·.sharedPages.isSome)).length),
++          ("initialPageReads",toJson initial.1),("initialReadBytes",toJson initial.2),
++          ("finalPageReads",toJson finalCounts.1),("finalReadBytes",toJson finalCounts.2),
++          ("checkpointCalls",toJson checkpoint.1),("checkpointNs",toJson checkpoint.2)])

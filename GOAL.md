@@ -267,6 +267,10 @@ source headが変わると部分feedbackを捨て、照合の期限切れを入�
 
 同一原典/MiniLM/質問/予算の意味フック3組は初回親8115/6994/6915ms・候補6421/6530/6431ms、稼働済み親4377/4485/4394ms・候補3886/3943/3850ms。各意味フックで160 bindingがlive照会480回/位置照会320回を処理し、完全逆引きfallbackは0回だった。未知値のfallback自体は実装と定理に残っている。字句1組は初回2335/2313ms・稼働済み1434/1432msでほぼ不変。全16本文はroute別にbyte一致。しかし同時期のcold80負荷は親64/80・候補60/80が両項目を実本文配送しclient成功し、容量改善は確認できなかった。双方80受付/80入力complete、82原文の入出力一致・全16head不変。最終operation観測67/63件のwork中央値640/621ms・最大8178/7064ms、queue中央値19181/19835ms・最大25429/25608msで、全要求p99ではない。候補の通常意味経路の短縮を80人対応としない。全guard発火0/残存0、最大RSS2835776KiB。候補`613e3ba5…`は未採用の速度候補として隔離保持し、[次は字句前後の準備](docs/candidates/owner-binding/next-fallback.md)を計測する。ProjectSources.openViewには既存共有PagePoolがあるが、検索workerのProjectAccess.reopenは渡しておらず、現在の寄与は未測定。記録/耐久性/認定/完全なread境界を削らず、既存poolの利用と原文読み直し量を確認する。80人8時間/98%/大きな複数project cut/NAS/p99/品質/総token改善は未達・未検証、回答モデル0/比較0/18、製品未採用。終了DB/cache/実行体/生logはcompact記録後に削除する。
 
+[source-page-reuse診断](docs/candidates/source-page-reuse/README.md)で、同じ16原文headの既存共有PagePoolと独立readerをnative比較した。全6回の全graph（authority/roots/Union）と完全なmaterialize依存traceが一致し、requesterのcounter/traceは独立していた。温まった共有poolではopenの64 page/237823 bytesが0となり、全materializeは1748 read/1163526 bytesから1550/477723へ減った。ただしopenは約26→8msで、これだけを秒単位の遅延の説明にしない。原文blobはこのdecoded-page cacheの対象外である。poolの既存allowanceは128MiBであり、RSS上限とは別。製品のcache構成は変更していない。
+
+実workerの計測専用runtime `1ce842dc…`では、字句フック初回2376/稼働済1440ms、意味6679/3907ms。context openは全4件で26〜36ms、dependency checkpointは毎回1回/7.66〜8.07msで、終了後のfile不在から未実行とは言えない。Handoffは字句582/380ms・意味4900/2818msが占めた。別の1秒native sampleと実sourceで、OwnerViews.restore/SourceOwners.open?による16個の準備済み索引と、Recommend.capturedLocal/PreparedInputs.sharedによる共有synapse rootを照会ごとに復元する経路を確認した。sample要約器はidle pipe readをawakeへ分類するため全体分母やCPU比率へ使わない。全6実本文はroute別13566/88578 bytesで親と一致・凍結2項目を配送したが、小fixtureの診断であって98%/80人/速度比較の達成値ではない。次は[公開の準備済みimageの再利用](docs/candidates/source-page-reuse/next-prepared-readers.md)へ進み、private usage/質問/借用token/可変traceは共有しない。計測patchは親の実bytesへ戻し、終了DB/cache/build/raw logは記録後削除する。全guard発火0/残存0、最大RSS2847504KiB、原典と全16head不変。80人8時間/大きな複数project/NAS/p99/実98%/品質/総tokenは未達・未検証、回答モデル0/比較0/18、製品未採用でgoalはactiveを保つ。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約
