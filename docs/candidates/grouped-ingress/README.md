@@ -106,3 +106,6 @@ to the captured parent source tree. It also contains the native helper deltas;
 `evidence.json` binds their actual compiled sources separately from workspace
 entry-point adapters. A portable patch-header repair is recorded without
 changing the native results.
+The ended component executable is later retired with its recorded hash in
+[local-selection/retirement.json](../local-selection/retirement.json). Service
+executables and compilation inputs remain; the deleted checker needs a rebuild.

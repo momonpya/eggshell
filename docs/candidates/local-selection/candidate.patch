@@ -1,0 +1,93 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 4bf884d9..49780327 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -5493,0 +5494,11 @@ structure ServiceChoice where
++/-- The same finite-domain check is used before local selection and before
++admitting a selector request to the source service. -/
++def ServiceQuery.valid (query : ServiceQuery) : Bool :=
++  decide (query.owners.size ≤ 4096) && decide (query.works.size = query.owners.size) &&
++  decide (query.frameCosts.size = query.owners.size) && decide (query.generic.size ≤ 65536) &&
++  decide (query.files.size ≤ query.owners.size) &&
++  query.generic.all (fun unit => decide (unit.family < query.owners.size) &&
++    unit.payloads.all (fun id => decide (id < query.genericCosts.size))) &&
++  query.files.all (fun part => query.owners[part.family]? == some part.owner) &&
++  decide ((hashDistinct (query.files.toList.map (·.family))).length = query.files.size)
++
+@@ -6602,0 +6614,44 @@ def selectView (query : ServiceQuery) (units : Array ServiceUnit)
++/-- A generic-only query needs no service-owned original row. Its choice can
++select local units but carries a proof that no remote payload can be fetched. -/
++structure LocalChoice (query : ServiceQuery) where
++  choice : ServiceChoice
++  valid : query.valid = true
++  noFiles : query.files.isEmpty = true
++  noOriginals : choice.sourceKeys.isEmpty = true
++
++def genericDomain (query : ServiceQuery) : Array ServiceUnit × List CuePiece := Id.run do
++  let index := KeyPostings.prepare (fun entry : GenericUnit × Nat => entry.1.family) query.generic.zipIdx
++  let cueIndex := KeyPostings.prepare (fun piece : CuePiece => piece.family) query.pieces.toArray
++  let mut units := #[]
++  let mut pieces := []
++  for family in [:query.owners.size] do
++    pieces := pieces ++ (cueIndex.lookup family).toList
++    for (unit,ordinal) in index.lookup family do
++      units := units.push {
++        shape := {family,ranges := unit.ranges},generic := some ordinal,contextual := unit.contextual}
++  return (units,pieces)
++
++def selectLocal? (query : ServiceQuery) : Option (LocalChoice query) := do
++  if valid : query.valid = true then
++    if noFiles : query.files.isEmpty = true then do
++      let (units,pieces) := genericDomain query
++      let source ← (Synapses.PreparedSourceView.domain #[] {} query.frameCosts).toOption
++      let choice ← selectView query units pieces source
++      if empty : choice.sourceKeys.isEmpty = true then some ⟨choice,valid,noFiles,empty⟩ else none
++    else none
++  else none
++
++theorem local_choice_has_no_originals (selected : LocalChoice query) :
++    selected.choice.sourceKeys.isEmpty = true := selected.noOriginals
++
++theorem local_choice_validates_query (selected : LocalChoice query) :
++    query.valid = true := selected.valid
++
++theorem invalid_query_cannot_select_locally (query : ServiceQuery)
++    (invalid : query.valid = false) : selectLocal? query = none := by
++  simp [selectLocal?,invalid]
++
++theorem original_query_cannot_select_locally (query : ServiceQuery)
++    (hasFiles : query.files.isEmpty = false) : selectLocal? query = none := by
++  simp [selectLocal?,hasFiles]
++
+@@ -6864 +6919 @@ def PreparedRendering.usingService (rendering : PreparedRendering)
+-    let queryJson ← (← IO.mkRef (toJson query)).get
++    let localChoice ← (← IO.mkRef (SharedRangeAdapter.selectLocal? query)).get
+@@ -6866 +6921,14 @@ def PreparedRendering.usingService (rendering : PreparedRendering)
+-    let selectedJson ← batch.select queryJson deadline
++    let choice ← match localChoice with
++      | some localChoice => do
++        let verify := (← IO.getEnv "EGGSHELL_CHECK_LOCAL_SELECTION") == some "1"
++        if verify then
++          let remote ← batch.select (toJson query) deadline
++          let expected ← IO.ofExcept (fromJson? (α := SharedRangeAdapter.ServiceChoice) remote)
++          unless toJson expected == toJson localChoice.choice do
++            throw (IO.userError "local generic choice differs from the complete service selector")
++        Publication.Stream.profile "render-selector-path" [("route",toJson "local-generic"),
++          ("verifiedAgainstService",toJson verify),("units",toJson query.generic.size)]
++        pure localChoice.choice
++      | none => do
++        let selectedJson ← batch.select (toJson query) deadline
++        IO.ofExcept (fromJson? (α := SharedRangeAdapter.ServiceChoice) selectedJson)
+@@ -6868 +6935,0 @@ def PreparedRendering.usingService (rendering : PreparedRendering)
+-    let choice ← IO.ofExcept (fromJson? (α := SharedRangeAdapter.ServiceChoice) selectedJson)
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index 92f762f9..f2385386 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -422,5 +422 @@ def sourcePlan (server : Server) (secret : String) (payload : Json) (deadline :
+-  unless query.owners.size ≤ 4096 && query.works.size == query.owners.size && query.frameCosts.size == query.owners.size &&
+-      query.generic.size ≤ 65536 && query.files.size ≤ query.owners.size &&
+-      query.generic.all (fun unit => unit.family < query.owners.size && unit.payloads.all (· < query.genericCosts.size)) &&
+-      query.files.all (fun part => query.owners[part.family]? == some part.owner) &&
+-      (hashDistinct (query.files.toList.map (·.family))).length == query.files.size do
++  unless query.valid do
