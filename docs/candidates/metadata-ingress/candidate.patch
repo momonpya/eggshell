@@ -1,0 +1,342 @@
+diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
+index a05b086f..a3450859 100644
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -265,0 +266,62 @@ def maxBytes : Nat := 8 * 1024 * 1024
++/-- A native append seals these small fields beside the one original body.
++No tool argument, query, answer, or output text is copied into this index. -/
++structure EntryDescription where
++  clock : Clock
++  occurrence : Occurrence
++  kind : String
++  bytes : Nat
++  sha256 : String
++  content : String
++  sources : Array String
++  deriving BEq,ToJson,FromJson
++
++def EntryDescription.make (value : Entry) (bytes : ByteArray) : EntryDescription :=
++  ⟨value.clock,value.payload.occurrence,value.payload.kind,bytes.size,Sha256.hex bytes,
++    Blake3.hex (Blake3.digest "eggshell.synaptic-object".toUTF8 [bytes]),
++    match value.payload with
++    | .start _ _ _ known | .answer _ _ _ known => #[known.source.identity]++known.related.map (·.source.identity)
++    | .finish .. => #[]⟩
++
++def Entry.description (value : Entry) : EntryDescription :=
++  EntryDescription.make value (toJson value).compress.toUTF8
++
++def EntryDescription.name (value : EntryDescription) : String :=
++  Index.contentKey (value.kind,value.occurrence)
++
++def EntryDescription.turn (value : EntryDescription) : Turn :=
++  ⟨value.occurrence.session,value.occurrence.turn⟩
++
++def descriptionKey (ordinal : Nat) := key "entry-description" ordinal
++
++theorem description_content_exact (value : Entry) : value.description.content = Index.contentKey value := rfl
++
++theorem description_name_exact (value : Entry) : value.description.name = value.name := rfl
++
++theorem description_turn_exact (value : Entry) : value.description.turn = value.turn := rfl
++
++theorem finish_projection_identical (value : Entry) (database : String)
++    (finished : value.payload.kind = "finish") : value.forSource database = some value := by
++  cases value with | mk clock payload received =>
++    cases payload <;> simp_all [Payload.kind,Entry.forSource]
++
++/-- Once verified, an identity projection carries the same body description.
++The equality witness is erased; projecting does not hash the output again. -/
++structure DescribedEntry where
++  value : Entry
++  description : EntryDescription
++  faithful : description = value.description
++
++def DescribedEntry.ofValue (value : Entry) : DescribedEntry := ⟨value,value.description,rfl⟩
++
++def DescribedEntry.forSource (value : DescribedEntry) (database : String) : Option DescribedEntry :=
++  match value.value.payload with
++  | .finish .. => some value
++  | _ => (value.value.forSource database).map DescribedEntry.ofValue
++
++theorem described_projection_exact (value : DescribedEntry) (database : String) :
++    (value.forSource database).map (·.value) = value.value.forSource database := by
++  cases h : value.value.payload with
++  | finish occurrence name input response archive => simp [DescribedEntry.forSource,h,Entry.forSource]
++  | start occurrence work query known => simp [DescribedEntry.forSource,h,Entry.forSource,Function.comp_def,DescribedEntry.ofValue]
++  | answer occurrence query text known => simp [DescribedEntry.forSource,h,Entry.forSource,Function.comp_def,DescribedEntry.ofValue]
++
+@@ -292,2 +354 @@ theorem later_order_violation_rejected (old next : Frontier) (later : old.count
+-def Frontier.step (old : Frontier) (ordinal : Nat) (value : Entry) : Frontier := Id.run do
+-  let raw := (toJson value).compress.toUTF8
++def Frontier.stepDescription (old : Frontier) (ordinal : Nat) (value : EntryDescription) : Frontier := Id.run do
+@@ -300 +361 @@ def Frontier.step (old : Frontier) (ordinal : Nat) (value : Entry) : Frontier :=
+-  let bytes := old.bytes+raw.size
++  let bytes := old.bytes+value.bytes
+@@ -303 +364,7 @@ def Frontier.step (old : Frontier) (ordinal : Nat) (value : Entry) : Frontier :=
+-    chain := Index.contentKey (old.chain,ordinal,Sha256.hex raw,count,floor,maximum,bytes)}
++    chain := Index.contentKey (old.chain,ordinal,value.sha256,count,floor,maximum,bytes)}
++
++def Frontier.step (old : Frontier) (ordinal : Nat) (value : Entry) : Frontier :=
++  old.stepDescription ordinal value.description
++
++theorem described_step_exact (old : Frontier) (ordinal : Nat) (value : Entry) :
++    old.stepDescription ordinal value.description = old.step ordinal value := rfl
+@@ -332,0 +400,13 @@ def rawEntry (journal : PageMap.Snapshot) (ordinal : Nat) : IO Entry := do
++def entryDescription (journal : PageMap.Snapshot) (ordinal : Nat) : IO EntryDescription := do
++  let descriptor ← journal.get (descriptionKey ordinal)
++  unless (← IO.ofExcept (payloadSize descriptor)) ≤ maxBytes do
++    throw (IO.userError "private event description exceeds its byte bound")
++  let raw ← journal.readPayload (descriptionKey ordinal)
++  let value ← Index.decode (α := EntryDescription) raw
++  unless (toJson value).compress.toUTF8 == raw && value.occurrence.valid && digest value.clock.domain &&
++      ["start","finish","answer"].contains value.kind && digest value.sha256 && digest value.content &&
++      value.sources.all digest && (if value.kind == "finish" then value.sources.isEmpty else !value.sources.isEmpty) &&
++      value.bytes == (← getNat journal.get (key "entry" ordinal)) && value.bytes ≤ maxBytes do
++    throw (IO.userError "invalid private event description")
++  return value
++
+@@ -346 +426 @@ def referenceKey (ordinal : Nat) := key "entry-reference" ordinal
+-def loadReference (journal : PageMap.Snapshot) (reference : EntryReference) : IO Entry := do
++def loadDescribedReference (journal : PageMap.Snapshot) (reference : EntryReference) : IO DescribedEntry := do
+@@ -359,2 +439,4 @@ def loadReference (journal : PageMap.Snapshot) (reference : EntryReference) : IO
+-  let value ← rawEntry original reference.ordinal
+-  unless Index.contentKey value == reference.original do throw (IO.userError "private event original digest changed")
++  let value := DescribedEntry.ofValue (← rawEntry original reference.ordinal)
++  unless value.description == (← entryDescription original reference.ordinal) do
++    throw (IO.userError "private original differs from its committed description")
++  unless value.description.content == reference.original do throw (IO.userError "private event original digest changed")
+@@ -363 +445 @@ def loadReference (journal : PageMap.Snapshot) (reference : EntryReference) : IO
+-  unless Index.contentKey projected == reference.projected do throw (IO.userError "private event source projection changed")
++  unless projected.description.content == reference.projected do throw (IO.userError "private event source projection changed")
+@@ -365,0 +448,3 @@ def loadReference (journal : PageMap.Snapshot) (reference : EntryReference) : IO
++def loadReference (journal : PageMap.Snapshot) (reference : EntryReference) : IO Entry := do
++  return (← loadDescribedReference journal reference).value
++
+@@ -367,8 +452,10 @@ def entry (journal : PageMap.Snapshot) (ordinal : Nat) : IO Entry := do
+-  let some bytes ← journal.get (referenceKey ordinal) | return ← rawEntry journal ordinal
+-  unless bytes.size ≤ 16384 do throw (IO.userError "oversized private event reference")
+-  let reference ← Index.decode (α := EntryReference) bytes
+-  unless (toJson reference).compress.toUTF8 == bytes do throw (IO.userError "noncanonical private event reference")
+-  let projected ← loadReference journal reference
+-  unless (toJson projected).compress.utf8ByteSize == (← getNat journal.get (key "entry" ordinal)) do
+-    throw (IO.userError "private event reference changed its original byte accounting")
+-  return projected
++  let value ← match ← journal.get (referenceKey ordinal) with
++    | none => DescribedEntry.ofValue <$> rawEntry journal ordinal
++    | some bytes => do
++      unless bytes.size ≤ 16384 do throw (IO.userError "oversized private event reference")
++      let reference ← Index.decode (α := EntryReference) bytes
++      unless (toJson reference).compress.toUTF8 == bytes do throw (IO.userError "noncanonical private event reference")
++      loadDescribedReference journal reference
++  unless value.description == (← entryDescription journal ordinal) do
++    throw (IO.userError "private event differs from its committed description")
++  return value.value
+@@ -423,0 +511,24 @@ inductive EntryStorage where
++/-- Payload storage and this receipt/posting update share one private writer.
++An identity projection can stage the same metadata without decoding its body. -/
++def stageDescription (journal : PageMap.Snapshot) (writer : PageMap.Writer)
++    (ordinal : Nat) (value : EntryDescription) : IO Unit := do
++  let turn := value.turn
++  let previous ← match ← frontierUsing? writer.get turn with
++    | some previous => pure previous
++    | none => do
++      if (← writer.get ("turn:"++turn.name)).isSome then throw (IO.userError "active turn has no canonical append feed")
++      pure (Frontier.initial journal turn)
++  let next := previous.stepDescription ordinal value
++  putPayload writer (descriptionKey ordinal) (toJson value).compress.toUTF8
++  putNat writer ("event:"++value.name) ordinal
++  putNat writer "count" (ordinal+1)
++  writer.put ("turn:"++turn.name) (some (toJson turn).compress.toUTF8)
++  putNat writer (key ("posting:"++turn.name) ordinal) ordinal
++  putNat writer ("latest:"++turn.name) (ordinal+1)
++  writer.put (receiptKey turn previous.count) (some (toJson ({previous := previous.chain,ordinal,next} : Receipt)).compress.toUTF8)
++  putNat writer (key "event-sequence" ordinal) previous.count
++  writer.put (frontierKey turn) (some (toJson next).compress.toUTF8)
++  for storage in [Sidecar.Storage.database,.user] do
++    let base := workBase storage
++    if (← writer.get (base++":bootstrap")).isSome then ReplayWork.enqueue writer base turn.name
++
+@@ -438,7 +548,0 @@ def stageEntry (journal : PageMap.Snapshot) (writer : PageMap.Writer) (value : E
+-  let turn := value.turn
+-  let previous ← match ← frontierUsing? writer.get turn with
+-    | some previous => pure previous
+-    | none => do
+-        if (← writer.get ("turn:"++turn.name)).isSome then throw (IO.userError "active turn has no canonical append feed")
+-        pure (Frontier.initial journal turn)
+-  let next := previous.step ordinal value
+@@ -446,0 +551 @@ def stageEntry (journal : PageMap.Snapshot) (writer : PageMap.Writer) (value : E
++  let described := EntryDescription.make value bytes
+@@ -462 +567 @@ def stageEntry (journal : PageMap.Snapshot) (writer : PageMap.Writer) (value : E
+-        chain := Index.contentKey (original.chain,position,location,Index.contentKey value)}
++        chain := Index.contentKey (original.chain,position,location,described.content)}
+@@ -465,11 +570 @@ def stageEntry (journal : PageMap.Snapshot) (writer : PageMap.Writer) (value : E
+-  putNat writer name ordinal
+-  putNat writer "count" (ordinal+1)
+-  writer.put ("turn:"++turn.name) (some (toJson turn).compress.toUTF8)
+-  putNat writer (key ("posting:"++turn.name) ordinal) ordinal
+-  putNat writer ("latest:"++turn.name) (ordinal+1)
+-  writer.put (receiptKey turn previous.count) (some (toJson ({previous := previous.chain,ordinal,next} : Receipt)).compress.toUTF8)
+-  putNat writer (key "event-sequence" ordinal) previous.count
+-  writer.put (frontierKey turn) (some (toJson next).compress.toUTF8)
+-  for storage in [Sidecar.Storage.database,.user] do
+-    let base := workBase storage
+-    if (← writer.get (base++":bootstrap")).isSome then ReplayWork.enqueue writer base turn.name
++  stageDescription journal writer ordinal described
+@@ -477,0 +573,36 @@ def stageEntry (journal : PageMap.Snapshot) (writer : PageMap.Writer) (value : E
++/-- No original payload reader is needed for a new identity projection. -/
++def stageNewFinishReference (journal : PageMap.Snapshot) (writer : PageMap.Writer)
++    (value : EntryDescription) (reference : EntryReference) : IO Bool := do
++  unless value.kind == "finish" && reference.original == value.content && reference.projected == value.content do
++    throw (IO.userError "described reference is not an identity projection")
++  unless (← writer.get ("event:"++value.name)).isNone do
++    throw (IO.userError "new described reference already has an event identity")
++  let ordinal ← getNat writer.get "count"
++  let encoded := (toJson reference).compress.toUTF8
++  unless encoded.size ≤ 16384 do throw (IO.userError "oversized private ingress alias")
++  let original ← originalFeedUsing journal writer.get
++  putNat writer (key "entry" ordinal) value.bytes
++  writer.put (referenceKey ordinal) (some encoded)
++  if (← writer.get "original-feed").isNone then
++    writer.put "original-feed" (some (toJson original).compress.toUTF8)
++  stageDescription journal writer ordinal value
++  return true
++
++/-- Duplicate identities still take the exact original-body comparison path.
++Only a new identity-invariant finish uses the sealed descriptor alone. -/
++def stageFinishReference (journal : PageMap.Snapshot) (writer : PageMap.Writer)
++    (value : EntryDescription) (reference : EntryReference) : IO Bool := do
++  unless value.kind == "finish" && reference.original == value.content && reference.projected == value.content do
++    throw (IO.userError "described reference is not an identity projection")
++  if let some previous ← writer.get ("event:"++value.name) then
++    let ordinal ← IO.ofExcept (payloadSize (some previous))
++    unless ordinal < (← getNat journal.get "count") do
++      throw (IO.userError "one ingress batch repeated a native event identity")
++    let saved ← entry journal ordinal
++    let projected ← loadReference journal reference
++    unless saved.name == value.name && projected.description == value do
++      throw (IO.userError "described duplicate changed its original identity")
++    discard <| IO.ofExcept (retainFirst saved projected)
++    return false
++  stageNewFinishReference journal writer value reference
++
+@@ -541,0 +673 @@ structure ImportResult where
++  /-- Declared event extents charged to the existing slice budget. -/
+@@ -542,0 +675,4 @@ structure ImportResult where
++  /-- Direct non-identity projection inputs decoded during planning.
++  Duplicate guards can additionally materialize their conflicting originals. -/
++  bodyBytes : Nat := 0
++  metadataBytes : Nat := 0
+@@ -570,0 +707,24 @@ def checkOriginalEntry (journal : PageMap.Snapshot) (ordinal : Nat) (value : Ent
++def checkedOriginalDescription (journal : PageMap.Snapshot) (ordinal : Nat) : IO EntryDescription := do
++  let value ← entryDescription journal ordinal
++  let some raw ← journal.get (key "event-sequence" ordinal) |
++    throw (IO.userError "native ingress has no inverse sequence receipt")
++  let sequence ← IO.ofExcept (payloadSize (some raw))
++  let found ← receipt journal value.turn sequence
++  let before ← if sequence == 0 then pure (Frontier.initial journal value.turn)
++    else pure (← receipt journal value.turn (sequence-1)).next
++  unless found.ordinal == ordinal && found.previous == before.chain &&
++      found.next == before.stepDescription ordinal value do
++    throw (IO.userError "native description changed its committed append chain")
++  return value
++
++def lookupDescription? (journal : PageMap.Snapshot) (kind : String)
++    (occurrence : Occurrence) : IO (Option EntryDescription) := do
++  let name := Index.contentKey (kind,occurrence)
++  let some raw ← journal.get ("event:"++name) | return none
++  let ordinal ← IO.ofExcept (payloadSize (some raw))
++  unless ordinal < (← getNat journal.get "count") do throw (IO.userError "private description point exceeds journal")
++  let value ← checkedOriginalDescription journal ordinal
++  unless value.name == name && value.kind == kind && value.occurrence == occurrence do
++    throw (IO.userError "private description point changed its identity")
++  return some value
++
+@@ -602 +762 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
+-    let mut prepared : Array (Entry × EntryReference) := #[]
++    let mut prepared : Array (Sum (Entry × EntryReference) (EntryDescription × EntryReference)) := #[]
+@@ -616,16 +776,21 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
+-      let value ← rawEntry original ordinal
+-      checkOriginalEntry original ordinal value
+-      let related ← match value.payload with
+-        | .finish occurrence .. => do
+-          match ← lookup? original "start" occurrence with
+-          | some first => pure ((first.forSource source.head.identity).isSome)
+-          | none => pure true -- Preserve an early Post as unknown until Pre arrives.
+-        | _ => pure true
+-      let projected := if related then value.forSource source.head.identity else none
+-      if let some projected := projected then
+-        unless projected.payload.valid source.head.identity do
+-          throw (IO.userError "projected ingress changed its original source knowledge")
+-        let reference : EntryReference := ⟨owner,original.head,ordinal,source.head.identity,
+-          Index.contentKey value,Index.contentKey projected⟩
+-        prepared := prepared.push (projected,reference)
+-      else result := {result with unrelated := result.unrelated+1}
++      let described ← checkedOriginalDescription original ordinal
++      result := {result with metadataBytes := result.metadataBytes+(toJson described).compress.utf8ByteSize}
++      if described.kind == "finish" then
++        let first ← lookupDescription? original "start" described.occurrence
++        result := {result with metadataBytes := result.metadataBytes+
++          (first.map (fun value => (toJson value).compress.utf8ByteSize) |>.getD 0)}
++        if first.all (fun value => value.sources.contains source.head.identity) then
++          let reference : EntryReference := ⟨owner,original.head,ordinal,source.head.identity,described.content,described.content⟩
++          prepared := prepared.push (.inr (described,reference))
++        else result := {result with unrelated := result.unrelated+1}
++      else
++        let value ← rawEntry original ordinal
++        result := {result with bodyBytes := result.bodyBytes+size}
++        unless value.description == described do throw (IO.userError "private event differs from its append description")
++        if let some projected := value.forSource source.head.identity then
++          unless projected.payload.valid source.head.identity do
++            throw (IO.userError "projected ingress changed its original source knowledge")
++          let reference : EntryReference := ⟨owner,original.head,ordinal,source.head.identity,
++            described.content,Index.contentKey projected⟩
++          prepared := prepared.push (.inl (projected,reference))
++        else result := {result with unrelated := result.unrelated+1}
+@@ -640,2 +805,4 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
+-      for (value,reference) in prepared do
+-        let found ← stageEntry target writer value (.reference reference)
++      for value in prepared do
++        let found ← match value with
++          | .inl (value,reference) => stageEntry target writer value (.reference reference)
++          | .inr (value,reference) => stageFinishReference target writer value reference
+@@ -689,0 +857,2 @@ structure ImportBatch (limit : Nat) where
++  bodyBytes : Nat := 0
++  metadataBytes : Nat := 0
+@@ -760,0 +930 @@ def importInputs (source : PageMap.Snapshot) (deadline : Nat) (limit : Nat := 32
++          bodyBytes := result.bodyBytes+step.bodyBytes,metadataBytes := result.metadataBytes+step.metadataBytes
+@@ -812 +982 @@ def eventChunk (input : ReplayInput) (old target : Frontier) : IO EventChunk :=
+-    let next := found.frontier.step saved.ordinal value
++    let next := found.frontier.stepDescription saved.ordinal (← entryDescription input.journal saved.ordinal)
+@@ -1377,0 +1548,2 @@ structure Result where
++  importedBodyBytes : Nat := 0
++  importedMetadataBytes : Nat := 0
+@@ -1532 +1704,2 @@ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline :
+-      complete := false,importedEvents := imported.examined,importedAliases := imported.added,importedBytes := imported.decodedBytes}
++      complete := false,importedEvents := imported.examined,importedAliases := imported.added,importedBytes := imported.decodedBytes
++      importedBodyBytes := imported.bodyBytes,importedMetadataBytes := imported.metadataBytes}
+@@ -1534 +1707,4 @@ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline :
+-    return {result with importedEvents := imported.examined,importedAliases := imported.added,importedBytes := imported.decodedBytes}
++    return {
++      result with
++      importedEvents := imported.examined,importedAliases := imported.added,importedBytes := imported.decodedBytes
++      importedBodyBytes := imported.bodyBytes,importedMetadataBytes := imported.metadataBytes}
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 2401d12f..5340949a 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -45,0 +46,8 @@ run_meta do
++      (``Eggshell.Synapses.Journal.stageEntry,``Eggshell.Synapses.Journal.stageDescription),
++      (``Eggshell.Synapses.Journal.stageNewFinishReference,``Eggshell.Synapses.Journal.stageDescription),
++      (``Eggshell.Synapses.Journal.importFeed,``Eggshell.Synapses.Journal.checkedOriginalDescription),
++      (``Eggshell.Synapses.Journal.importFeed,``Eggshell.Synapses.Journal.stageFinishReference),
++      (``Eggshell.Synapses.Journal.entry,``Eggshell.Synapses.Journal.entryDescription),
++      (``Eggshell.Synapses.Journal.loadReference,``Eggshell.Synapses.Journal.loadDescribedReference),
++      (``Eggshell.Synapses.Journal.loadDescribedReference,``Eggshell.Synapses.Journal.entryDescription),
++      (``Eggshell.Synapses.Journal.eventChunk,``Eggshell.Synapses.Journal.entryDescription),
+@@ -69,0 +78,3 @@ run_meta do
++      (``Eggshell.Synapses.Journal.stageNewFinishReference,
++        #[``Eggshell.Synapses.Journal.entry,``Eggshell.Synapses.Journal.rawEntry,
++          ``Eggshell.Synapses.Journal.loadReference,``Eggshell.Synapses.Journal.loadDescribedReference]),
+@@ -577 +588 @@ run_meta do
+-      (``Eggshell.Synapses.Journal.append, #[``Eggshell.Synapses.Journal.Frontier.step], #[]),
++      (``Eggshell.Synapses.Journal.append, #[``Eggshell.Synapses.Journal.Frontier.stepDescription], #[]),
