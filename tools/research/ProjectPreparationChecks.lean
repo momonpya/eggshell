@@ -12,7 +12,7 @@ private def check (value : Bool) (message : String) : IO Unit :=
   unless value do throw (IO.userError message)
 
 private def job (name source : String) (semantic : Option String := none) (bytes : Nat := 1) : PreparationPlan.Job :=
-  ⟨name,source,semantic,Json.null,bytes,0,0⟩
+  {key := name,source,semantic,payload := Json.null,bytes}
 
 private def model : IO Unit := do
   let lane0 : PreparationPlan.Lane := ⟨0,by decide⟩
@@ -109,7 +109,7 @@ private def idleManager (root : System.FilePath) : IO Unit := do
   let manager ← IO.Process.spawn {
     cmd := (← IO.appPath).toString,args := #["codex-daemon",pending.sessionId]
     stdin := .null,stdout := .null,stderr := .null,setsid := true}
-  let endpoint ← Daemon.awaitEndpoint pending.sessionId 500
+  let endpoint ← Daemon.Startup.awaitReady pending.sessionId ((← IO.monoMsNow)+500)
   try
     let deadline := (← IO.monoMsNow)+20000
     repeat
@@ -170,6 +170,7 @@ private def integration (root : System.FilePath) : IO Unit := do
   let original ← IO.ofExcept (Json.parse (← IO.FS.readFile (root/"captured-turn.json")) >>= fromJson? (α := PendingTurn))
   let pending ← ProjectContext.capture {original with
     sessionId := "preparation-native",turnId := "new-source",projectInputs := none,
+    inputBoundary := none,preparedInputs := none,
     tools := [],finalMessage := none,closed := false} ((← IO.monoMsNow)+20000)
   let some context ← ProjectContext.open? pending ((← IO.monoMsNow)+20000) |
     throw (IO.userError "complete preparation test scope did not capture")

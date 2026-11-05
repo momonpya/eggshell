@@ -1,0 +1,435 @@
+diff --git a/Eggshell/SynapseJournal.lean b/Eggshell/SynapseJournal.lean
+index 1862c67b..851968e3 100644
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -541,0 +542 @@ structure ImportResult where
++  decodedBytes : Nat := 0
+@@ -548,0 +550 @@ def importEnd (start count limit : Nat) := min count (start+limit)
++def importByteLimit : Nat := 16*1024*1024
+@@ -572 +574,2 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
+-    (limit : Nat := 32) : IO ImportResult := do
++    (limit : Nat := 32) (through : Option PageMap.Head := none)
++    (byteLimit : Nat := importByteLimit) : IO ImportResult := do
+@@ -576 +579,7 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
+-  let some original ← open? originalSource | return {complete := false}
++  let some latest ← open? originalSource | return {complete := false}
++  let original ← match through with
++    | none => pure latest
++    | some head => do
++      let some retained ← PageMap.HistoryReader.make? latest head |
++        throw (IO.userError "captured ingress prefix is no longer retained")
++      pure retained.snapshot
+@@ -577,0 +587 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
++  let latestBasis ← originalFeed latest
+@@ -582,4 +592,4 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
+-      let retained ← PageMap.HistoryReader.make? original old.journal
+-      unless old.next ≤ old.basis.count && old.basis.count ≤ count &&
+-          old.journal.identity == original.head.identity &&
+-          old.journal.authority == original.head.authority && retained.isSome &&
++      let retained ← PageMap.HistoryReader.make? latest old.journal
++      unless old.next ≤ old.basis.count && old.basis.count ≤ latestBasis.count &&
++          old.journal.identity == latest.head.identity &&
++          old.journal.authority == latest.head.authority && retained.isSome &&
+@@ -588,0 +599 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
++    if start ≥ count then return {complete := true}
+@@ -604 +615 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
+-      if bytes+size > 16*1024*1024 then break
++      if bytes+size > min importByteLimit byteLimit then break
+@@ -621 +632 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
+-      result := {result with examined := result.examined+1}
++      result := {result with examined := result.examined+1,decodedBytes := bytes+size}
+@@ -635,0 +647,148 @@ def importFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) (deadline : N
++def feedOwnerKey (owner : Sidecar.Owner) := "ingress-owner:"++Index.contentKey owner
++def feedRoundKey := "ingress-round:"++implementation
++
++/-- One source's incoming relationships are data, not distinct replay jobs.
++The complete relation is retained, including cross-project private references. -/
++def registerFeed (source : PageMap.Snapshot) (owner : Sidecar.Owner) : IO Unit := do
++  unless owner.database != source.head.identity do throw (IO.userError "self ingress must use its original journal")
++  let bytes := (toJson owner).compress.toUTF8
++  unless bytes.size ≤ 65536 do throw (IO.userError "ingress owner exceeds its metadata bound")
++  if let some journal ← open? source then
++    if (← journal.get (feedOwnerKey owner)) == some bytes then return
++  withPublication source fun journal => do
++    if let some previous ← journal.get (feedOwnerKey owner) then
++      unless previous == bytes do throw (IO.userError "conflicting ingress owner identity")
++      return
++    let _ ← PageMap.withWriter journal fun writer => writer.put (feedOwnerKey owner) (some bytes)
++
++def feedOwners (source : PageMap.Snapshot) : IO (Array Sidecar.Owner) := do
++  let some journal ← open? source | return #[]
++  journal.foldRange ⟨"ingress-owner:","ingress-owner:~"⟩ (fun owners row => do
++    let some raw := row.2 | throw (IO.userError "ingress owner directory has a tombstone")
++    let owner ← Index.decode (α := Sidecar.Owner) raw
++    unless row.1 == feedOwnerKey owner && owner.database != source.head.identity do
++      throw (IO.userError "foreign ingress owner directory entry")
++    return owners.push owner) #[]
++
++structure FeedInput where
++  owner : Sidecar.Owner
++  journal : Option PageMap.Head
++  deriving BEq,ToJson,FromJson
++
++/-- Captured heads are held until this finite prefix has drained. New native
++events and newly registered inputs belong to the next round, never restart it. -/
++structure FeedRound where
++  inputs : Array FeedInput
++  done : Array Bool
++  next : Nat := 0
++  deriving BEq,ToJson,FromJson
++
++structure ImportBatch (limit : Nat) where
++  examined : Nat := 0
++  added : Nat := 0
++  decodedBytes : Nat := 0
++  unrelated : Nat := 0
++  indirect : Nat := 0
++  complete : Bool := false
++  bounded : examined ≤ limit := by omega
++  bytesBounded : decodedBytes ≤ importByteLimit := by unfold importByteLimit; omega
++
++theorem ImportBatch.examined_bounded (batch : ImportBatch limit) : batch.examined ≤ limit := batch.bounded
++theorem ImportBatch.decoded_bytes_bounded (batch : ImportBatch limit) :
++    batch.decodedBytes ≤ importByteLimit := batch.bytesBounded
++
++def FeedRound.advance (round : FeedRound) (index : Nat) : FeedRound := {round with next := index}
++
++theorem advancing_round_preserves_captured_inputs (round : FeedRound) (index : Nat) :
++    (round.advance index).inputs = round.inputs := rfl
++
++def writeFeedRound (source : PageMap.Snapshot) (round : Option FeedRound) : IO Unit :=
++  withPublication source fun journal => do
++    let _ ← PageMap.withWriter journal fun writer => do
++      if let some round := round then
++        unless round.next ≤ round.inputs.size do throw (IO.userError "ingress round exceeds captured inventory")
++        let bytes := (toJson round).compress.toUTF8
++        unless bytes.size ≤ maxBytes do throw (IO.userError "ingress round exceeds its metadata bound")
++        putPayload writer feedRoundKey bytes
++      else writer.put feedRoundKey none
++
++def importInputs (source : PageMap.Snapshot) (deadline : Nat) (limit : Nat := 32) : IO (ImportBatch limit) := do
++  if (← IO.monoMsNow) ≥ deadline then return {}
++  let owners ← feedOwners source
++  let journal ← prepare source
++  let saved ← match ← journal.get feedRoundKey with
++    | none => pure none
++    | some _ => some <$> Index.decode (α := FeedRound) (← journal.readPayload feedRoundKey)
++  if owners.isEmpty && saved.isNone then return {complete := true}
++  let mut round ← match saved with
++    | some round =>
++      unless round.next ≤ round.inputs.size && round.done.size == round.inputs.size &&
++          round.inputs.all (fun input => owners.contains input.owner) do
++        throw (IO.userError "captured ingress inventory is no longer registered")
++      pure round
++    | none => do
++      let inputs ← owners.mapM fun owner => do
++        let original ← owner.pin
++        return ({owner,journal := (← open? original).map (·.head)} : FeedInput)
++      let round : FeedRound := {inputs,done := Array.replicate inputs.size false}
++      writeFeedRound source (some round)
++      pure round
++  let mut result : ImportBatch limit := {}
++  for _ in [:round.inputs.size] do
++    if (← IO.monoMsNow) ≥ deadline then break
++    let position := round.next
++    let some input := round.inputs[position]? | throw (IO.userError "captured ingress input disappeared")
++    round := round.advance ((position+1)%round.inputs.size)
++    if round.done[position]?.getD false then continue
++    let through ← match input.journal with
++      | some head => pure (some head)
++      | none => do
++        let original ← input.owner.pin
++        pure ((← open? original).map (·.head))
++    let some through := through | do
++      writeFeedRound source (some round)
++      continue
++    if input.journal.isNone then
++      round := {round with inputs := round.inputs.set! position {input with journal := some through}}
++      writeFeedRound source (some round)
++    let step ← importFeed source input.owner deadline (limit-result.examined) (some through)
++      (importByteLimit-result.decodedBytes)
++    if bound : result.examined+step.examined ≤ limit then
++      if byteBound : result.decodedBytes+step.decodedBytes ≤ importByteLimit then
++        result := {
++          examined := result.examined+step.examined,added := result.added+step.added
++          decodedBytes := result.decodedBytes+step.decodedBytes
++          unrelated := result.unrelated+step.unrelated,indirect := result.indirect+step.indirect
++          bounded := bound,bytesBounded := byteBound}
++      else throw (IO.userError "ingress import escaped its shared byte bound")
++    else throw (IO.userError "ingress import escaped its shared event bound")
++    if step.complete then round := {round with done := round.done.set! position true}
++    writeFeedRound source (some round)
++    if result.examined == limit || result.decodedBytes == importByteLimit then break
++  if round.done.all id then
++    writeFeedRound source none
++    result := {result with complete := true}
++  return result
++
++def feedRequired (source : PageMap.Snapshot) (owner : Sidecar.Owner) : IO Bool := do
++  let originalSource ← owner.pin
++  let some original ← open? originalSource | return true
++  let basis ← originalFeed original
++  let count := basis.count
++  let some target ← open? source | return count > 0
++  let some raw ← target.get (importKey owner) | return count > 0
++  let old ← Index.decode (α := ImportCursor) raw
++  let retained ← PageMap.HistoryReader.make? original old.journal
++  unless old.next ≤ old.basis.count && old.basis.count ≤ count &&
++      old.journal.identity == original.head.identity && old.journal.authority == original.head.authority &&
++      retained.isSome && (← retained.mapM (fun saved => originalFeed saved.snapshot)) == some old.basis do
++    throw (IO.userError "native project feed lost its retained append prefix")
++  return old.next < count
++
++def inputsRequired (source : PageMap.Snapshot) : IO Bool := do
++  if let some journal ← open? source then
++    if (← journal.get feedRoundKey).isSome then return true
++  for owner in ← feedOwners source do
++    if ← feedRequired source owner then return true
++  return false
++
+@@ -1187 +1346 @@ def retireTurn (source : PageMap.Snapshot) (name : String) : IO Unit :=
+-/-- Constant metadata probe; no journal entries or original bodies are read. -/
++/-- Metadata-only readiness probe; no journal entries or original bodies are read. -/
+@@ -1188,0 +1348 @@ def required (source : PageMap.Snapshot) (storage : Sidecar.Storage := .database
++  if ← inputsRequired source then return true
+@@ -1214,0 +1375,4 @@ structure Result where
++  importedEvents : Nat := 0
++  importedAliases : Nat := 0
++  importedBytes : Nat := 0
++  finishedTurns : Nat := 0
+@@ -1222,0 +1387,5 @@ structure Result where
++/-- Scheduler progress is committed work, never evidence of freshness or reuse
++authority. Pending/unpublished output alone is not progress. -/
++def Result.advanced (result : Result) : Bool :=
++  result.importedEvents > 0 || result.dependencyRows > 0 || result.changeBlocks > 0 || result.finishedTurns > 0
++
+@@ -1289,2 +1458,2 @@ def refreshQueued (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadl
+-        let _ ← withPublication source fun current => do
+-          let (_,_,_) ← PageMap.withWriter current fun writer =>
++        let finished ← withPublication source fun current => do
++          let (finished,_,_) ← PageMap.withWriter current fun writer =>
+@@ -1292 +1461,2 @@ def refreshQueued (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadl
+-          pure ()
++          pure finished
++        if finished then result := {result with finishedTurns := result.finishedTurns+1}
+@@ -1330,0 +1501 @@ def refreshQueued (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadl
++    else result := {result with finishedTurns := result.finishedTurns+1}
+@@ -1358 +1529,6 @@ def refresh (source : PageMap.Snapshot) (storage : Sidecar.Storage) (deadline :
+-  try refreshQueued source storage deadline limit readCache runner
++  try
++    let imported ← importInputs source deadline
++    if !imported.complete then return {
++      complete := false,importedEvents := imported.examined,importedAliases := imported.added,importedBytes := imported.decodedBytes}
++    let result ← refreshQueued source storage deadline limit readCache runner
++    return {result with importedEvents := imported.examined,importedAliases := imported.added,importedBytes := imported.decodedBytes}
+@@ -1365 +1540,0 @@ structure Target where
+-  ingress : Option Sidecar.Owner := none
+@@ -1374 +1549,2 @@ def register (source : PageMap.Snapshot) (writable : Bool)
+-  let target : Target := ⟨owner, storage, ingress⟩
++  if let some ingress := ingress then registerFeed source ingress
++  let target : Target := ⟨owner, storage⟩
+@@ -1381,15 +1556,0 @@ def register (source : PageMap.Snapshot) (writable : Bool)
+-def feedRequired (source : PageMap.Snapshot) (owner : Sidecar.Owner) : IO Bool := do
+-  let originalSource ← owner.pin
+-  let some original ← open? originalSource | return true
+-  let basis ← originalFeed original
+-  let count := basis.count
+-  let some target ← open? source | return count > 0
+-  let some raw ← target.get (importKey owner) | return count > 0
+-  let old ← Index.decode (α := ImportCursor) raw
+-  let retained ← PageMap.HistoryReader.make? original old.journal
+-  unless old.next ≤ old.basis.count && old.basis.count ≤ count &&
+-      old.journal.identity == original.head.identity && old.journal.authority == original.head.authority &&
+-      retained.isSome && (← retained.mapM (fun saved => originalFeed saved.snapshot)) == some old.basis do
+-    throw (IO.userError "native project feed lost its retained append prefix")
+-  return old.next < count
+-
+diff --git a/Eggshell/PreparationRegistry.lean b/Eggshell/PreparationRegistry.lean
+index 52952ee0..1fee5c97 100644
+--- a/Eggshell/PreparationRegistry.lean
++++ b/Eggshell/PreparationRegistry.lean
+@@ -70,2 +70 @@ def complete (job : PreparationPlan.Job) : IO Bool := do
+-    let feed ← target.ingress.mapM (Journal.feedRequired source)
+-    return !feed.getD false && !(← Journal.required source target.storage)
++    return !(← Journal.inputsRequired source) && !(← Journal.required source target.storage)
+@@ -83 +82 @@ def explain (job : PreparationPlan.Job) : IO Json := do
+-    let feed ← target.ingress.mapM (Journal.feedRequired source)
++    let feed ← Journal.inputsRequired source
+@@ -103,2 +102 @@ def drained (job : PreparationPlan.Job) : IO Bool := do
+-    let feed ← target.ingress.mapM (Journal.feedRequired source)
+-    return !feed.getD false && (← Journal.checkpointCurrent source target.storage)
++    return !(← Journal.inputsRequired source) && (← Journal.checkpointCurrent source target.storage)
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index e9c73ae8..10d0e760 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -979 +979 @@ where
+-def indexActionWithState (preparation : Synapses.ReplayPreparation.Pool) (json : Json) : IO (Json × Bool) := do
++def indexActionWithState (preparation : Synapses.ReplayPreparation.Pool) (json : Json) : IO (Json × Bool × Bool) := do
+@@ -984,2 +983,0 @@ def indexActionWithState (preparation : Synapses.ReplayPreparation.Pool) (json :
+-    let imported : Option Synapses.Journal.ImportResult ←
+-      target.ingress.mapM fun owner => Synapses.Journal.importFeed pinned owner deadline
+@@ -988,2 +986 @@ def indexActionWithState (preparation : Synapses.ReplayPreparation.Pool) (json :
+-    let complete := indexed.complete && imported.all (fun (result : Synapses.Journal.ImportResult) => result.complete)
+-    return (toJson {indexed with complete},complete)
++    return (toJson indexed,indexed.complete,indexed.advanced)
+@@ -995,2 +992,2 @@ def indexActionWithState (preparation : Synapses.ReplayPreparation.Pool) (json :
+-    return (toJson count,result.complete)
+-  return (toJson count,true)
++    return (toJson count,result.complete,count > 0 || result.journal.any (·.advanced))
++  return (toJson count,true,count > 0)
+@@ -1005,0 +1003 @@ def maintenance (preparation : Synapses.ReplayPreparation.Pool) (json : Json) :
++  let mut progressed := false
+@@ -1007 +1005,2 @@ def maintenance (preparation : Synapses.ReplayPreparation.Pool) (json : Json) :
+-    let (result,finished) ← indexActionWithState preparation payload
++    let (result,finished,advanced) ← indexActionWithState preparation payload
++    progressed := advanced
+@@ -1009,0 +1009 @@ def maintenance (preparation : Synapses.ReplayPreparation.Pool) (json : Json) :
++        |>.setObjVal! "progress" (toJson progressed)
+@@ -1011 +1011 @@ def maintenance (preparation : Synapses.ReplayPreparation.Pool) (json : Json) :
+-  return ← PreparationRegistry.explain job
++  return (← PreparationRegistry.explain job).setObjVal! "progress" (toJson progressed)
+diff --git a/Eggshell/PreparationPlan.lean b/Eggshell/PreparationPlan.lean
+index 4d69b10f..3750e8a0 100644
+--- a/Eggshell/PreparationPlan.lean
++++ b/Eggshell/PreparationPlan.lean
+@@ -111,0 +112 @@ structure Contents where
++  continued : Nat := 0
+@@ -289 +290,13 @@ never retries. Clearing an active slot leaves room to requeue its own charge. -/
+-@[no_expose] def finish (state : State) (lane : Lane) (token now : Nat) (complete : Bool) : State := Id.run do
++def resumeJob (job : Job) (now : Nat) (progress : Bool) : Job := {
++  job with
++  attempts := if progress then 0 else job.attempts+1
++  notBefore := if progress then now else now+min 5000 (50*2^(min job.attempts 7)) }
++
++theorem committed_progress_has_no_backoff (job : Job) (now : Nat) :
++    (resumeJob job now true).notBefore = now := rfl
++
++theorem progress_preserves_claims (job : Job) (now : Nat) (progress : Bool) :
++    (resumeJob job now progress).claims = job.claims := rfl
++
++@[no_expose] def finish (state : State) (lane : Lane) (token now : Nat) (complete : Bool)
++    (progress : Bool := false) : State := Id.run do
+@@ -300 +313,2 @@ never retries. Clearing an active slot leaves room to requeue its own charge. -/
+-    retried := before.retried+(if retry then 1 else 0)}
++    retried := before.retried+(if retry && !progress then 1 else 0)
++    continued := before.continued+(if retry && progress then 1 else 0)}
+@@ -302,3 +316 @@ never retries. Clearing an active slot leaves room to requeue its own charge. -/
+-    let job := {active.job with
+-      attempts := active.job.attempts+1
+-      notBefore := now+min 5000 (50*2^(min active.job.attempts 7))}
++    let job := resumeJob active.job now progress
+@@ -341 +353,2 @@ def stats (state : State) : Json :=
+-    ("retries",toJson value.retried),("peakActive",toJson value.peakActive),("closed",toJson value.closed)]
++    ("retries",toJson value.retried),("progressedAttempts",toJson value.continued),
++    ("peakActive",toJson value.peakActive),("closed",toJson value.closed)]
+diff --git a/Eggshell/PreparationService.lean b/Eggshell/PreparationService.lean
+index 4b994ddd..20481c34 100644
+--- a/Eggshell/PreparationService.lean
++++ b/Eggshell/PreparationService.lean
+@@ -103,2 +103,2 @@ def Pool.run (pool : Pool) (lane : PreparationPlan.Lane) (active : PreparationPl
+-  let complete ← try
+-    let some pipe ← pool.pipe lane | pure false
++  let (complete,progress) ← try
++    let some pipe ← pool.pipe lane | pure (false,false)
+@@ -127,0 +128 @@ def Pool.run (pool : Pool) (lane : PreparationPlan.Lane) (active : PreparationPl
++    let progress := response.any (fun reply => (reply.getObjValAs? Bool "progress").toOption == some true)
+@@ -129 +130 @@ def Pool.run (pool : Pool) (lane : PreparationPlan.Lane) (active : PreparationPl
+-    if !complete && !(← retired.get) && !closed then
++    if !complete && !progress && !(← retired.get) && !closed then
+@@ -132 +133 @@ def Pool.run (pool : Pool) (lane : PreparationPlan.Lane) (active : PreparationPl
+-    pure complete
++    pure (complete,progress)
+@@ -135 +136 @@ def Pool.run (pool : Pool) (lane : PreparationPlan.Lane) (active : PreparationPl
+-      pure false
++      pure (false,false)
+@@ -138 +139 @@ def Pool.run (pool : Pool) (lane : PreparationPlan.Lane) (active : PreparationPl
+-    modify fun state => PreparationPlan.finish state lane active.token now complete
++    modify fun state => PreparationPlan.finish state lane active.token now complete progress
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 122fa066..efcf30a2 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -556 +556 @@ run_meta do
+-          ``Eggshell.Synapses.Journal.retireTurn,
++          ``Eggshell.Synapses.Journal.importInputs, ``Eggshell.Synapses.Journal.retireTurn,
+@@ -558,0 +559,3 @@ run_meta do
++      (``Eggshell.Synapses.Journal.importInputs,
++        #[``Eggshell.Synapses.Journal.feedOwners, ``Eggshell.Synapses.Journal.importFeed,
++          ``Eggshell.Synapses.Journal.writeFeedRound], #[]),
+diff --git a/tools/research/ProjectContextChecks.lean b/tools/research/ProjectContextChecks.lean
+index 52912778..787e9cd5 100644
+--- a/tools/research/ProjectContextChecks.lean
++++ b/tools/research/ProjectContextChecks.lean
+@@ -101,3 +101,10 @@ private def checkJournal (pending : PendingTurn) : IO Json := do
+-  let targets := (← Journal.targets).filter fun (_,target) =>
+-    (target.owner.database == primary.head.identity && target.ingress.isNone) ||
+-      target.ingress == some (Sidecar.Owner.ofSnapshot primary)
++  let mut targets := #[]
++  for pair in ← Journal.targets do
++    let target := pair.2
++    if !context.reads.sources.any (fun source => source.head.identity == target.owner.database) then continue
++    let (storage,_) ← Sidecar.destination target.owner (context.canPrepare target.owner)
++    if target.storage != storage then continue
++    let other ← target.owner.pin
++    if target.owner.database == primary.head.identity ||
++        (← Journal.feedOwners other).contains (Sidecar.Owner.ofSnapshot primary) then
++      targets := targets.push pair
+@@ -108 +114,0 @@ private def checkJournal (pending : PendingTurn) : IO Json := do
+-    check (target.ingress == some (Sidecar.Owner.ofSnapshot primary)) "native source target lost its original ingress owner"
+@@ -109,0 +116,2 @@ private def checkJournal (pending : PendingTurn) : IO Json := do
++    check ((← Journal.feedOwners other).contains (Sidecar.Owner.ofSnapshot primary))
++      "grouped source target lost its original ingress relationship"
+diff --git a/tools/research/ProjectPreparationChecks.lean b/tools/research/ProjectPreparationChecks.lean
+index b7f4d08f..81996fc6 100644
+--- a/tools/research/ProjectPreparationChecks.lean
++++ b/tools/research/ProjectPreparationChecks.lean
+@@ -15 +15 @@ private def job (name source : String) (semantic : Option String := none) (bytes
+-  ⟨name,source,semantic,Json.null,bytes,0,0⟩
++  {key := name,source,semantic,payload := Json.null,bytes}
+@@ -112 +112 @@ private def idleManager (root : System.FilePath) : IO Unit := do
+-  let endpoint ← Daemon.awaitEndpoint pending.sessionId 500
++  let endpoint ← Daemon.Startup.awaitReady pending.sessionId ((← IO.monoMsNow)+500)
+@@ -172,0 +173 @@ private def integration (root : System.FilePath) : IO Unit := do
++    inputBoundary := none,preparedInputs := none,
+diff --git a/tools/research/FrontTrafficChecks.lean b/tools/research/FrontTrafficChecks.lean
+index 47037bef..e58ab4f4 100644
+--- a/tools/research/FrontTrafficChecks.lean
++++ b/tools/research/FrontTrafficChecks.lean
+@@ -105,31 +104,0 @@ def queuesEmpty (sessions : Array String) : IO Bool := do
+-/-- Fixture-only, read-only metadata observation. Original outputs and questions
+-are not copied; the service's live queue and source-feed positions are sampled. -/
+-def replayProgress (sources : Array DB.PageMap.Snapshot) : IO Json := do
+-  let started ← IO.monoMsNow
+-  let mut rows := #[]
+-  for source in sources do
+-    let some journal ← Synapses.Journal.open? source | continue
+-    let base := Synapses.Journal.workBase .database
+-    let head ← Persistence.Store.getNat journal.get (base++":head")
+-    let tail ← Persistence.Store.getNat journal.get (base++":tail")
+-    let cursorPrefix := base++":source:"
+-    let cursors ← journal.foldRange ⟨cursorPrefix,cursorPrefix++"~"⟩ (fun found row => do
+-      check (found.size < 64) "fixture replay observer source bound exceeded"
+-      let some raw := row.2 | return found
+-      let cursor ← Synapses.Index.decode (α := Synapses.ReplayWork.SourceCursor) raw
+-      return found.push (Json.mkObj [("source",toJson (Synapses.Index.contentKey cursor.path)),
+-        ("identity",toJson (cursor.head.map (·.identity))),("revision",toJson (cursor.head.map (·.revision))),
+-        ("sequence",toJson cursor.sequence),("block",toJson cursor.block),("field",toJson cursor.field),
+-        ("watchAfter",toJson cursor.watchAfter),("resetAfter",toJson cursor.resetAfter)])) (#[] : Array Json)
+-    let first ← match ← Synapses.ReplayWork.first? journal base with
+-      | none => pure Json.null
+-      | some (ordinal,ticket) => do
+-        let latest ← Persistence.Store.getNat journal.get ("latest:"++ticket.name)
+-        let previous ← Synapses.Journal.turnCheckpoint? journal ("processed:database:"++ticket.name)
+-        pure (Json.mkObj [("ordinal",toJson ordinal),("task",toJson ticket.name),("stamp",toJson ticket.stamp),
+-          ("latest",toJson latest),("checkpoint",toJson (previous.map (·.count)))])
+-    rows := rows.push (Json.mkObj [("source",toJson source.head.identity),
+-      ("journal",toJson journal.head.identity),("journalRevision",toJson journal.head.revision),
+-      ("head",toJson head),("tail",toJson tail),("first",first),("cursors",toJson cursors)])
+-  return Json.mkObj [("elapsedMs",toJson ((← IO.monoMsNow)-started)),("sources",toJson rows)]
+-
+@@ -151 +119,0 @@ def waitReady (root : System.FilePath) (project : ProjectStore.Project) (session
+-    let replay ← replayProgress view.sources
+@@ -156 +124 @@ def waitReady (root : System.FilePath) (project : ProjectStore.Project) (session
+-      ("preparation",state.getObjValD "preparation"),("operations",state.getObjValD "operations"),("replay",replay)])
++      ("preparation",state.getObjValD "preparation"),("operations",state.getObjValD "operations")])

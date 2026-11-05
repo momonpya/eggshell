@@ -98,15 +98,23 @@ private def checkJournal (pending : PendingTurn) : IO Json := do
   let some journal ← Journal.open? primary | throw (IO.userError "ordinary hooks did not capture native ingress")
   let entries ← Journal.turnEntries journal ⟨pending.sessionId,pending.turnId⟩
   check (entries.size == 3) "ordinary Pre/Post/Stop did not capture exactly three native events"
-  let targets := (← Journal.targets).filter fun (_,target) =>
-    (target.owner.database == primary.head.identity && target.ingress.isNone) ||
-      target.ingress == some (Sidecar.Owner.ofSnapshot primary)
+  let mut targets := #[]
+  for pair in ← Journal.targets do
+    let target := pair.2
+    if !context.reads.sources.any (fun source => source.head.identity == target.owner.database) then continue
+    let (storage,_) ← Sidecar.destination target.owner (context.canPrepare target.owner)
+    if target.storage != storage then continue
+    let other ← target.owner.pin
+    if target.owner.database == primary.head.identity ||
+        (← Journal.feedOwners other).contains (Sidecar.Owner.ofSnapshot primary) then
+      targets := targets.push pair
   check (targets.size == context.reads.sources.size) "ordinary capture omitted a source feed or copied whole bodies"
   let mut imported := 0
   for (_,target) in targets do
     if target.owner.database == primary.head.identity then continue
-    check (target.ingress == some (Sidecar.Owner.ofSnapshot primary)) "native source target lost its original ingress owner"
     let other ← target.owner.pin
+    check ((← Journal.feedOwners other).contains (Sidecar.Owner.ofSnapshot primary))
+      "grouped source target lost its original ingress relationship"
     check (← Journal.feedRequired other (Sidecar.Owner.ofSnapshot primary)) "new project feed was falsely ready"
     let result ← Worker.exchange pending.sessionId "index"
       (Json.mkObj [("kind",toJson "synapses"),("target",toJson target)]) ((← IO.monoMsNow)+20000)

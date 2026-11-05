@@ -102,37 +102,6 @@ def queuesEmpty (sessions : Array String) : IO Bool := do
         if (← directory.readDir).any (·.fileName.endsWith ".json") then return false
   return true
 
-/-- Fixture-only, read-only metadata observation. Original outputs and questions
-are not copied; the service's live queue and source-feed positions are sampled. -/
-def replayProgress (sources : Array DB.PageMap.Snapshot) : IO Json := do
-  let started ← IO.monoMsNow
-  let mut rows := #[]
-  for source in sources do
-    let some journal ← Synapses.Journal.open? source | continue
-    let base := Synapses.Journal.workBase .database
-    let head ← Persistence.Store.getNat journal.get (base++":head")
-    let tail ← Persistence.Store.getNat journal.get (base++":tail")
-    let cursorPrefix := base++":source:"
-    let cursors ← journal.foldRange ⟨cursorPrefix,cursorPrefix++"~"⟩ (fun found row => do
-      check (found.size < 64) "fixture replay observer source bound exceeded"
-      let some raw := row.2 | return found
-      let cursor ← Synapses.Index.decode (α := Synapses.ReplayWork.SourceCursor) raw
-      return found.push (Json.mkObj [("source",toJson (Synapses.Index.contentKey cursor.path)),
-        ("identity",toJson (cursor.head.map (·.identity))),("revision",toJson (cursor.head.map (·.revision))),
-        ("sequence",toJson cursor.sequence),("block",toJson cursor.block),("field",toJson cursor.field),
-        ("watchAfter",toJson cursor.watchAfter),("resetAfter",toJson cursor.resetAfter)])) (#[] : Array Json)
-    let first ← match ← Synapses.ReplayWork.first? journal base with
-      | none => pure Json.null
-      | some (ordinal,ticket) => do
-        let latest ← Persistence.Store.getNat journal.get ("latest:"++ticket.name)
-        let previous ← Synapses.Journal.turnCheckpoint? journal ("processed:database:"++ticket.name)
-        pure (Json.mkObj [("ordinal",toJson ordinal),("task",toJson ticket.name),("stamp",toJson ticket.stamp),
-          ("latest",toJson latest),("checkpoint",toJson (previous.map (·.count)))])
-    rows := rows.push (Json.mkObj [("source",toJson source.head.identity),
-      ("journal",toJson journal.head.identity),("journalRevision",toJson journal.head.revision),
-      ("head",toJson head),("tail",toJson tail),("first",first),("cursors",toJson cursors)])
-  return Json.mkObj [("elapsedMs",toJson ((← IO.monoMsNow)-started)),("sources",toJson rows)]
-
 def waitReady (root : System.FilePath) (project : ProjectStore.Project) (sessions : Array String)
     (label : String) : IO ProjectStore.View := do
   let started ← IO.monoMsNow
@@ -148,12 +117,11 @@ def waitReady (root : System.FilePath) (project : ProjectStore.Project) (session
     let owners ← OwnerViews.load? view.sources
     let ownerReferenceReady := owners.isSome
     let state ← IO.ofExcept (Json.parse (← Publication.Client.control "stats"))
-    let replay ← replayProgress view.sources
     samples := samples.push (Json.mkObj [("elapsedMs",toJson ((← IO.monoMsNow)-started)),
       ("queuesEmpty",toJson empty),("preparedSources",toJson prepared),
       ("ownerReferenceReady",toJson ownerReferenceReady),
       ("sourceHeads",toJson (view.sources.map (·.head))),
-      ("preparation",state.getObjValD "preparation"),("operations",state.getObjValD "operations"),("replay",replay)])
+      ("preparation",state.getObjValD "preparation"),("operations",state.getObjValD "operations")])
     save (root/(label++"-drain.json")) (toJson samples)
     if empty && prepared == view.sources.size && ownerReferenceReady then return view
     check ((← IO.monoMsNow) < started+180000) "original publication/background preparation did not drain"
