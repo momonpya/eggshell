@@ -75,12 +75,16 @@ last source-error files were recorded after the semantic phase ended and belong 
 lexical fallback. Earlier unavailable-cut counts have no preserved phase
 attribution and must not be treated as initial acquisition failures.
 
-Next separate typed runtime/encoder setup, scope pinning, prepared input
-restoration, routing, scoring/wait and response validation using the existing
-request-local callback. Preserve the same full cut, cancellation ownership,
-original clock and complete certification. No weight, cutoff or resource
-inflation substitutes for that evidence; the failed32-query control remains
-a failed adoption gate.
+The[provider-stage study](candidates/provider-stages/README.md) now separates
+that interval and identifies numerical startup ownership/ping serialization.
+Its16-client controls both pass32/32 with identical outputs, but80 ON/OFF remain
+0/80 and1/80. The isolated[ready-endpoint study](candidates/numerical-ready/README.md)
+then reaches80 ready hits without startup-lock entry and57 completed encodings,
+but no complete scoring/delivery. It hits the unchanged RSS stop and is not
+adopted. No unchanged OFF80 rerun follows the stop. Next attribute backend
+numerical admission/preparation/exchange and memory. Preserve the same full cut,
+cancellation ownership, original clock and complete certification. No weight,
+cutoff or resource inflation substitutes for that evidence.
 
 The intended interface shares a complete checked immutable source cut in the
 project service. Request actors receive small private leases and direct typed

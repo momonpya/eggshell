@@ -29,15 +29,17 @@
 
 ## 現在地と次の順序
 
-直近の[query-stages検査](docs/candidates/query-stages/README.md)で、同じ16原典・MiniLM・質問・sealed native clientに対して、チャット独立actorの実行段階を計測した。記録はprivateな時刻列を既存request-pagesへ最後に一度だけ追加する。最初の計測器はfinallyがmutable変数の初期noneを捕まえて既存page統計を落としたため却下し、request所有IO.Refで保持する形へ修正した。修正前後・失敗を含む306実出力を本文digest/必要原文/ACKで独立照合した。初期OFF/ONは32/32で本文一致。修正後はOFF31/32、ON32/32で、成功31件の本文一致。OFF case15の18973ms/未配送/ACKなしを捨てずに保持した。32/32採用gateは未達で、observerのcapacity/latency同等性は未証明。事前の明示的amendmentにより、採用比較とは分けてON/OFF各一度の80同時負荷診断を行った。
+直近の[provider-stages検査](docs/candidates/provider-stages/README.md)で、同じ16原典・MiniLM・質問・sealed native clientに対して、独立actor内のtyped providerを分解した。request-local時刻列を既存request-pagesへ最後に一度だけ追加し、per-stage file/global traceは増やさない。16同時×2 waveはON/OFFとも実原文+ACKと意味完了32/32、全32 stdoutがbyte一致した。80同時はON0/80、OFF1/80で不合格。236実出力を独立照合した。以前の[query-stages](docs/candidates/query-stages/README.md)の306出力・31/32失敗やobserverの限界も保持し、成功だけを選ばない。
 
-80同時はON/OFFとも原文+ACKと意味完了が0/80、最大17264/17427ms。全80 actorが開始し、計測ONでproject/context再open中央値325ms、frame5ms、reader borrow92ms、prepared-reader取得9ms、synaptic取得2724ms。これらのwall時間はCPU時間ではなく、中央値やnested spanを足さない。終了stampのない区間は未計測とする。現在のfixtureでは再open/frame/readerを主因とする仮説は支持されなかった。
+全80件がencoder open・scope pin・prepared input復元・matrix bindingを終えた。入力復元はwall中央値1046/max1464ms、encoder openは4/15ms。21件だけが数値startup lockを取得し、完了した取得待ちは中央値3007/max9811ms。その21件はpingの終了stampがなく、残り59件はlock取得の終了stampがない。質問encodeは0/80完了だった。再open/frame/readerや設定hashの再計算を今回の主因とする仮説は支持されなかった。wallはCPU時間ではなく、nested spanや中央値を足さず、終端のない区間は未計測とする。
 
-既存のprovider受領記録を追加試行なしで照合すると、ON/OFF全80件がtyped provider入口まで到達した。provider入口〜結果のwall中央値は9990/9948ms、最大11385/11530ms。一方、ONのserviceは102.86 CPU秒（system80.01秒）、数値backendは100ms。provider内部の準備・入力復元・routing・IPC待ち・Lean側処理はまだ分解できていない。最後に残るsource-acquisition error69/71件は全てsemantic phase終了後で、後続lexical経路の記録だった。stageファイルは後のphaseで置換されるため、これを最初の原典取得失敗や取消し発生元の証拠にしない。先行する[source-protocol](docs/candidates/source-protocol/README.md)のAPI単独480/480 cut・最大1397msとも整合する。
+隔離した[numerical-ready候補](docs/candidates/numerical-ready/README.md)は、認証済み接続metadataだけをscope/config世代・現在の出版に結び付けて最大32件共有し、clientのkeeper/pipe/query/responseは独立に保った。初回起動の待ち後にも再確認し、実RPCの認証、終了/置換の失効、送信済みかもしれない要求を再送しない方針を維持した。Leanのscope/世代拒否証明、既存ContractAudit、nativeの失効/置換/上限/peer分離検査が通った。16同時×2は両mode32/32、親との64対照も全stdout/body byte一致、最大9395/9200ms。
 
-次は同じrequest-local callbackをBuiltinSearch.withRuntime/KeyedSearchProvider.handleへ渡し、temp/runtime準備、encoder open/close、scope pin、prepared window/lexical/numeric復元、固定matrix、query encode、routing/nomination、owner重複除去、scoring待ち、応答検査を区切る。一段階ごとのfile writeや新しいglobal traceは作らない。主因が測れるまで別のcache/ownership/重み/件数/期限/上限をいじらない。以前却下したsearch-inputsの記録を読み、同じ案を根拠なく再試行しない。
+同候補の80同時は全80件がready hit、startup lock入口0、57件がencode/routing/dedupを終えて採点へ進んだが、provider採点完了0、必要原文配送0だった。関連RSS3683280KiBで保護停止し、全所有processをdrainした。OFF80は実行せず、同条件の再試行もしない。停止前の80 stdoutとprime3を別記録で保持したが、controllerの最終reportは未保存なのでclient latency/ACK/個別caseとreceiptの対応をservice時刻から復元しない。完走control70と停止wave83、合計153実出力を検査した。全体のcapacity/resource gateは不合格で、候補は未採用。
 
-製品coreは変更していない。計測候補4ee1e57c…はpatch/実行体へ隔離し、隔離sourceは親へ戻す。終了DB/cache/raw log・初期source copyは記録後にarchiveせず削除する。次のprovider計測に必要な現observer実行体とlink object/interface、16原典fixture、対照とsealed clientだけを保持する。全native guardは資源停止/残存0、最大RSS3355968KiB。各active chatの軽いactorは独立、重いDB/model/public準備は共有する。元の30秒、4 GiB ceiling/3.5 GiB stop、空き2 GiB、16の並行原典所有者、完全な認定domain・私有usage分離を維持する。
+保存済みの57採点profileでは、完了返信分のscore wall中央値3335msに対してkernel演算は299µs、projection readは7ms、missは全0、保持projectionは最大4193280 bytesだった。未完了RPCの内訳は未計測。次はbackendのadmission待ち、BlockScore.prepare、raw-kernel交換、応答transportと保持memoryを分ける。cache/重み/worker数/期限を盲目的に変えない。queryごとのprepared input再復元も残るが、以前却下したsearch-inputsを再利用する前に現在のactor負荷で根拠を取る。semantic後のlexical source-errorを最初の取得失敗と誤認しない。
+
+製品coreは変更していない。隔離sourceは全overlayを戻し、終了DB/cache/raw log・初期copy・不要な旧実行体は記録後にarchiveせず削除する。現在の診断に必要な実行体/link object/interface、16原典、対照とsealed clientを保持する。各chatの軽いactorは独立、重いDB/model/public準備は共有する。元の30秒、4 GiB ceiling/3.5 GiB stop、空き2 GiB、16並行原典所有者、完全な認定domain・私有usage分離を維持する。資源停止を成功扱いにしない。
 
 実LLVM配送の既存基準は[record-boundary](docs/candidates/record-boundary/README.md)の隔離runtime05f18108…。同じ途中終了DBの確認済み16項目は3題材×独立2 chatで32/32、14.6〜16.0秒だった。これは正規seed、回答モデル両周、実務98%や総token改善の証拠ではない。runtime固定後の有料比較は新seedから題材1/2/3・両周を同一条件/事前固定同数の複数回で行う。回答モデル0/有料比較0/18。80人8時間・増大project・複数project・NAS・実98%・品質・総token改善は未達で、全体goalはactive。
 

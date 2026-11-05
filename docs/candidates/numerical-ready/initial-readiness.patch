@@ -1,0 +1,93 @@
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index 0a1da0e6..654a8563 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -78,0 +79,39 @@ def alive (pid : Nat) : IO Bool := do
++/-- Only authenticated, already resolved service metadata is shared. Pipes,
++questions, responses and client ownership remain request-local. A keeper
++prevents normal service retirement while any provider is using it. -/
++structure ReadyEndpoint where
++  scope : String
++  generation : String
++  endpoint : Endpoint
++
++def ReadyEndpoint.accepts (ready : ReadyEndpoint) (scope generation : String) : Bool :=
++  ready.scope == scope && ready.generation == generation &&
++    ready.endpoint.session == generation && ready.endpoint.compatible generation
++
++theorem ready_foreign_scope_rejected (ready : ReadyEndpoint) (scope generation : String)
++    (different : ready.scope ≠ scope) : ready.accepts scope generation = false := by
++  simp [ReadyEndpoint.accepts,different]
++
++theorem ready_foreign_generation_rejected (ready : ReadyEndpoint) (scope generation : String)
++    (different : ready.generation ≠ generation) : ready.accepts scope generation = false := by
++  simp [ReadyEndpoint.accepts,different]
++
++initialize readyEndpoints : IO.Ref (Array ReadyEndpoint) ← IO.mkRef #[]
++
++def readyEndpoint? (scope generation : String) : IO (Option Endpoint) := do
++  return ((← readyEndpoints.get).find? (fun ready => ready.accepts scope generation)).map (·.endpoint)
++
++def rememberReady (scope generation : String) (endpoint : Endpoint) : IO Unit :=
++  readyEndpoints.modify fun previous =>
++    (#[(⟨scope,generation,endpoint⟩ : ReadyEndpoint)] ++ previous.filter (fun ready => ready.scope != scope || ready.generation != generation)).extract 0 32
++
++def forgetReadyScope (scope generation : String) : IO Unit :=
++  readyEndpoints.modify (·.filter (fun ready => ready.scope != scope || ready.generation != generation))
++
++def sameEndpoint (left right : Endpoint) : Bool :=
++  left.pid == right.pid && left.port == right.port && left.secret == right.secret &&
++    left.session == right.session && left.generation == right.generation
++
++def forgetReadyEndpoint (endpoint : Endpoint) : IO Unit :=
++  readyEndpoints.modify (·.filter (fun ready => !sameEndpoint ready.endpoint endpoint))
++
+@@ -85,0 +125,5 @@ def resolve (config : Config) (mark : String → IO Unit := fun _ => pure ()) :
++  let generation := config.key
++  if let some endpoint ← readyEndpoint? root.toString generation then
++    mark "numerical-ready:hit"
++    return endpoint
++  mark "numerical-ready:miss"
+@@ -90,0 +135,5 @@ def resolve (config : Config) (mark : String → IO Unit := fun _ => pure ()) :
++    -- A concurrent first borrower may have completed startup while this
++    -- caller waited. Do not repeat ps/ping under the startup lock.
++    if let some endpoint ← readyEndpoint? root.toString generation then
++      mark "numerical-ready:joined"
++      return endpoint
+@@ -92 +140,0 @@ def resolve (config : Config) (mark : String → IO Unit := fun _ => pure ()) :
+-    let generation := config.key
+@@ -100,0 +149 @@ def resolve (config : Config) (mark : String → IO Unit := fun _ => pure ()) :
++        rememberReady root.toString generation endpoint
+@@ -118,0 +168 @@ def resolve (config : Config) (mark : String → IO Unit := fun _ => pure ()) :
++        rememberReady root.toString generation endpoint
+@@ -134,0 +185,3 @@ def release (keeper : Keeper) (drainMs : Nat := 0) : IO Unit := do
++    -- This is the last keeper. The owners lock excludes a new keeper until
++    -- retirement completes; a future borrower must resolve the new service.
++    forgetReadyScope (← directory keeper.config).toString keeper.config.key
+@@ -443,0 +497,4 @@ def Client.request (client : Client) (marker : UInt8) (body : String) : IO Strin
++      -- Never replay a possibly sent request. Invalidate only this exact
++      -- endpoint so the next independent request can perform recovery.
++      forgetReadyEndpoint endpoint
++      client.shared.set none
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 5340949a..6ee69ac6 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -18,0 +19,17 @@ open Lean
++#check Eggshell.Numerical.ready_foreign_scope_rejected
++#check Eggshell.Numerical.ready_foreign_generation_rejected
++
++run_meta do
++  let environment ← getEnv
++  for (caller,required) in #[
++      (``Eggshell.Numerical.resolve, ``Eggshell.Numerical.readyEndpoint?),
++      (``Eggshell.Numerical.resolve, ``Eggshell.Numerical.rememberReady),
++      (``Eggshell.Numerical.resolve, ``Eggshell.Plugin.Daemon.exchange),
++      (``Eggshell.Numerical.Client.request, ``Eggshell.Numerical.forgetReadyEndpoint),
++      (``Eggshell.Numerical.Client.request, ``Eggshell.Plugin.Daemon.exchange),
++      (``Eggshell.Numerical.release, ``Eggshell.Numerical.forgetReadyScope)] do
++    let some declaration := environment.find? caller | throwError "Missing numerical readiness caller: {caller}"
++    let some body := declaration.value? | throwError "Numerical readiness caller has no body: {caller}"
++    unless body.getUsedConstants.contains required do
++      throwError "Numerical readiness bypasses authentication/invalidation: {caller}, {required}"
++

@@ -98,6 +98,27 @@ response validation. Determine the dominant provider substage before another
 cache or ownership change, and review the rejected search-inputs candidate
 before reusing it. Complete certification, immutable-cut sharing, observer-cost
 reporting and original weight/cutoff/resource limits remain requirements.
+
+The subsequent[provider-stage attribution](candidates/provider-stages/README.md)
+finds a concrete startup bottleneck: all80 restore provider inputs, but only21
+finish startup-lock acquisition and none finish query encoding. Repeated
+authenticated ping is inside that lock. The same observer's16-client controls
+both deliver32/32 identical outputs;80 ON delivers0/80 and OFF1/80.
+
+The isolated[ready-endpoint candidate](candidates/numerical-ready/README.md)
+removes that startup path from all80 measured queries. Fifty-seven finish
+encoding and reach scoring;none finish scoring or deliver the original fields.
+The guard stops at3,683,280KiB and drains all owned processes. No OFF80 control
+is run after this resource failure. The candidate remains unadopted; all153
+actual outputs, including the stopped wave, are retained without inventing
+missing client latencies or receipt-to-case associations.
+
+The next measured range is backend numerical admission/preparation/exchange,
+not another whole-query worker-count adjustment. Existing failed-query metrics
+show completed-reply scoring wall median3,335ms against reported arithmetic299µs
+and projection reads7ms,with no projection misses. These do not measure the
+unfinished current RPC. Attribute queue/transport wait and memory before another
+capacity run; keep request actors independent and share immutable preparation.
 Component accounting is not a proof of the wrapper's active-read shutdown order.
 All actual bodies, failures and cleanup are retained as compact evidence, not
 as old DBs or raw run caches. Paid token/quality comparisons remain0/18.

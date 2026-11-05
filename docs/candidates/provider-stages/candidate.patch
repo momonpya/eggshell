@@ -1,0 +1,170 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 85297c9f..f2008327 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9374 +9374,2 @@ def federatedDiscovery (selection : Config.Selection)
+-    (preparedReaders : Option PreparedReaders.Borrow := none) : IO (Option Handoff) := do
++    (preparedReaders : Option PreparedReaders.Borrow := none)
++    (onStage : String → IO Unit := fun _ => pure ()) : IO (Option Handoff) := do
+@@ -9470 +9471 @@ def federatedDiscovery (selection : Config.Selection)
+-      let some nominated ← KeyedSearchClient.nominate command sources query receipt queryInputs (some reference) | return none
++      let some nominated ← KeyedSearchClient.nominate command sources query receipt queryInputs (some reference) onStage | return none
+@@ -9589 +9590,2 @@ def computeAutomaticHandoff (selection : Config.Selection)
+-    (preparedReaders : Option PreparedReaders.Borrow := none) : IO (Option Handoff) := do
++    (preparedReaders : Option PreparedReaders.Borrow := none)
++    (onStage : String → IO Unit := fun _ => pure ()) : IO (Option Handoff) := do
+@@ -9608 +9610 @@ def computeAutomaticHandoff (selection : Config.Selection)
+-      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs queryOwners preparedReaders
++      enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs queryOwners preparedReaders onStage
+@@ -9730,0 +9733 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++      mark "source-cut:unavailable"
+@@ -9733,0 +9737 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++    mark "source-cut:available"
+@@ -9787 +9791 @@ def automaticHandoff (selection : Config.Selection) (current : String)
+-      (preparedReaders := preparedReaders)
++      (preparedReaders := preparedReaders) (onStage := mark)
+@@ -9799 +9803 @@ def automaticHandoff (selection : Config.Selection) (current : String)
+-        (preparedReaders := preparedReaders)
++        (preparedReaders := preparedReaders) (onStage := mark)
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index 881f1e13..0a1da0e6 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -82 +82,2 @@ def endpoint? (config : Config) : IO (Option Endpoint) := do
+-def resolve (config : Config) : IO Endpoint := do
++def resolve (config : Config) (mark : String → IO Unit := fun _ => pure ()) : IO Endpoint := do
++  mark "numerical-directory:start"
+@@ -83,0 +85,2 @@ def resolve (config : Config) : IO Endpoint := do
++  mark "numerical-directory:end"
++  mark "numerical-start-lock:start"
+@@ -85,0 +89 @@ def resolve (config : Config) : IO Endpoint := do
++  mark "numerical-start-lock:end"
+@@ -86,0 +91 @@ def resolve (config : Config) : IO Endpoint := do
++    mark "numerical-endpoint-check:start"
+@@ -91,0 +97,2 @@ def resolve (config : Config) : IO Endpoint := do
++        mark "numerical-endpoint-check:end"
++        mark "numerical-ping:start"
+@@ -92,0 +100 @@ def resolve (config : Config) : IO Endpoint := do
++        mark "numerical-ping:end"
+@@ -94,0 +103,2 @@ def resolve (config : Config) : IO Endpoint := do
++    mark "numerical-endpoint-check:end"
++    mark "numerical-service-start:start"
+@@ -107,0 +118 @@ def resolve (config : Config) : IO Endpoint := do
++        mark "numerical-service-start:end"
+@@ -386,0 +398 @@ structure Client where
++  onStage : String → IO Unit := fun _ => pure ()
+@@ -388,2 +400,2 @@ structure Client where
+-def openClient (config : Config) : IO Client := do
+-  return ⟨← keep config,← IO.mkRef none,← IO.mkRef none,← IO.mkRef false⟩
++def openClient (config : Config) (onStage : String → IO Unit := fun _ => pure ()) : IO Client := do
++  return ⟨← keep config,← IO.mkRef none,← IO.mkRef none,← IO.mkRef false,onStage⟩
+@@ -422 +434 @@ def Client.request (client : Client) (marker : UInt8) (body : String) : IO Strin
+-          let endpoint ← resolve client.keeper.config
++          let endpoint ← resolve client.keeper.config client.onStage
+@@ -425 +437,8 @@ def Client.request (client : Client) (marker : UInt8) (body : String) : IO Strin
+-    exchange endpoint kind (toJson body)
++    client.onStage ("numerical-"++kind++"-exchange:start")
++    try
++      let result ← exchange endpoint kind (toJson body)
++      client.onStage ("numerical-"++kind++"-exchange:end")
++      return result
++    catch error =>
++      client.onStage ("numerical-"++kind++"-exchange:failed")
++      throw error
+diff --git a/Eggshell/SearchProvider.lean b/Eggshell/SearchProvider.lean
+index da4f2bc9..8b5464b5 100644
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -236 +236 @@ abbrev Encoder := Numerical.Client
+-def encoder (options : Options) : IO Encoder := do
++def encoder (options : Options) (onStage : String → IO Unit := fun _ => pure ()) : IO Encoder := do
+@@ -241 +241 @@ def encoder (options : Options) : IO Encoder := do
+-  Numerical.openClient ⟨options.model,options.models,python⟩
++  Numerical.openClient ⟨options.model,options.models,python⟩ onStage
+diff --git a/Eggshell/BuiltinSearch.lean b/Eggshell/BuiltinSearch.lean
+index bb6d6e8a..334d04ed 100644
+--- a/Eggshell/BuiltinSearch.lean
++++ b/Eggshell/BuiltinSearch.lean
+@@ -23 +23,2 @@ def bounded (action : IO α) (budgetMs : Nat := 15000) : IO α :=
+-def withRuntime (arguments : List String) (action : SearchProvider.Options → Option SearchProvider.Encoder → IO α) : IO α :=
++def withRuntime (arguments : List String) (action : SearchProvider.Options → Option SearchProvider.Encoder → IO α)
++    (mark : String → IO Unit := fun _ => pure ()) : IO α :=
+@@ -24,0 +26 @@ def withRuntime (arguments : List String) (action : SearchProvider.Options → O
++    mark "provider-runtime-setup:start"
+@@ -29,3 +31,15 @@ def withRuntime (arguments : List String) (action : SearchProvider.Options → O
+-    let child ← if options.mode == "lexical" then pure none else some <$> SearchProvider.encoder options
+-    try action options child
+-    finally if let some child := child then SearchProvider.stopEncoder child
++    mark "provider-runtime-setup:end"
++    mark "provider-encoder-open:start"
++    let child ← if options.mode == "lexical" then pure none else some <$> SearchProvider.encoder options mark
++    mark "provider-encoder-open:end"
++    try
++      let result ← action options child
++      mark "provider-action:success"
++      return result
++    catch error =>
++      mark "provider-action:failed"
++      throw error
++    finally
++      mark "provider-encoder-close:start"
++      if let some child := child then SearchProvider.stopEncoder child
++      mark "provider-encoder-close:end"
+@@ -33 +47,2 @@ def withRuntime (arguments : List String) (action : SearchProvider.Options → O
+-def keyed (command : List String) (request : KeyedProtocol.Request) : IO Json := do
++def keyed (command : List String) (request : KeyedProtocol.Request)
++    (mark : String → IO Unit := fun _ => pure ()) : IO Json := do
+@@ -37 +52 @@ def keyed (command : List String) (request : KeyedProtocol.Request) : IO Json :=
+-    return ← withRuntime arguments fun options child => KeyedSearchProvider.handle options child request
++    return ← withRuntime arguments (fun options child => KeyedSearchProvider.handle options child request mark) mark
+diff --git a/Eggshell/KeyedSearchClient.lean b/Eggshell/KeyedSearchClient.lean
+index a2c072a9..17b9bbb7 100644
+--- a/Eggshell/KeyedSearchClient.lean
++++ b/Eggshell/KeyedSearchClient.lean
+@@ -20 +20,2 @@ def nominate (configured : List String) (sources : Array Snapshot) (query : Stri
+-    (owners : Option OwnerViews.Reference := none) : IO (Option (KeyedProtocol.Checked sources)) := do
++    (owners : Option OwnerViews.Reference := none)
++    (mark : String → IO Unit := fun _ => pure ()) : IO (Option (KeyedProtocol.Checked sources)) := do
+@@ -38 +39,2 @@ def nominate (configured : List String) (sources : Array Snapshot) (query : Stri
+-      let json ← BuiltinSearch.keyed command request
++      let json ← BuiltinSearch.keyed command request mark
++      mark "provider-response-validation:start"
+@@ -42,0 +45 @@ def nominate (configured : List String) (sources : Array Snapshot) (query : Stri
++      mark "provider-response-validation:end"
+diff --git a/Eggshell/KeyedSearchProvider.lean b/Eggshell/KeyedSearchProvider.lean
+index f075691f..91435d5a 100644
+--- a/Eggshell/KeyedSearchProvider.lean
++++ b/Eggshell/KeyedSearchProvider.lean
+@@ -161 +161,2 @@ selection policy consume only that domain. Coverage remains explicitly advisory.
+-def handle (options : SearchProvider.Options) (child : Option Encoder) (request : KeyedProtocol.Request) : IO Json := do
++def handle (options : SearchProvider.Options) (child : Option Encoder) (request : KeyedProtocol.Request)
++    (mark : String → IO Unit := fun _ => pure ()) : IO Json := do
+@@ -163,0 +165 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-scope-pin:start"
+@@ -164,0 +167,2 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-scope-pin:end"
++  mark "provider-input-restore:start"
+@@ -178,0 +183,2 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-input-restore:end"
++  mark "provider-matrix-bind:start"
+@@ -179,0 +186 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-matrix-bind:end"
+@@ -180,0 +188 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-query-encode:start"
+@@ -186,0 +195,2 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-query-encode:end"
++  mark "provider-route-nominate:start"
+@@ -226,0 +237,2 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-route-nominate:end"
++  mark "provider-owner-dedup:start"
+@@ -249,0 +262,2 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-owner-dedup:end"
++  mark "provider-score-input:start"
+@@ -258,0 +273,2 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-score-input:end"
++  mark "provider-score:start"
+@@ -259,0 +276,2 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-score:end"
++  mark "provider-project-response:start"
+@@ -264,0 +283 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
++  mark "provider-project-response:end"

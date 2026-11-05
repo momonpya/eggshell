@@ -1,0 +1,10 @@
+{
+  "beforeAnyCandidateHook":true,
+  "build1":"Rejected at compile: an array structure literal needed explicit ReadyEndpoint type; preserved compiler log and fixed annotation.",
+  "build2":"Lean laws and ordinary ContractAudit compile. No native hook was run with this intermediate executable.",
+  "build2Sha256":"1e7ae4b61a823d18e112248156d1165c1104ea116e892d14a8ceb1fd8b9d7f07",
+  "review":"A process-local ready hint can outlive retirement performed by another process's final keeper. Before returning a cached hint, compare it with the currently published exact endpoint under the caller's already-held shared keeper. Missing/replaced publication discards the hint and uses ordinary startup resolution. Abnormal death remains an actual RPC failure: invalidate without replay; the next independent query resolves/restarts.",
+  "build3":"Adds publication-identity checking to both cache lookup sites and extends declaration audits. Preserves scope/generation binding,authentication,per-client state and original deadlines.",
+  "lawsBuild1":"Setup failed before checks: isolated project lacked tools.research.NumericalReadyChecks. Copy the exact retained Lean helper into the isolated project; make setup do this explicitly before the corrected laws build.",
+  "noPaidCalls":true,"adopted":false
+}

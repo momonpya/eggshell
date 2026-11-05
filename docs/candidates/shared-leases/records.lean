@@ -76,6 +76,8 @@ def main (arguments : List String) : IO Unit := do
   let (destination,tags) := match arguments with
     | "--source-protocol" :: tags => (destination.parent.getD destination / "source-protocol",tags)
     | "--query-stages" :: tags => (destination.parent.getD destination / "query-stages",tags)
+    | "--provider-stages" :: tags => (destination.parent.getD destination / "provider-stages",tags)
+    | "--numerical-ready" :: tags => (destination.parent.getD destination / "numerical-ready",tags)
     | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
@@ -105,7 +107,8 @@ def main (arguments : List String) : IO Unit := do
   for tag in tags do
     check ((tag.startsWith "shared-leases-" || tag.startsWith "hosted-endpoint-" ||
       tag.startsWith "source-protocol-overlap" || tag.startsWith "task-observer-" ||
-      tag.startsWith "task-waiter-" || tag.startsWith "query-stages-") &&
+      tag.startsWith "task-waiter-" || tag.startsWith "query-stages-" || tag.startsWith "provider-stages-" ||
+      tag.startsWith "numerical-ready-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"
@@ -149,7 +152,7 @@ def main (arguments : List String) : IO Unit := do
     if ← (base/(tag++".log")).pathExists then
       let log ← IO.FS.readFile (base/(tag++".log"))
       fields := fields++[("logSha256",toJson (← digest log))]
-      if guard.getObjValD "exitCode" != toJson (0 : Nat) then fields := fields++[("failureLog",toJson (String.intercalate "\n" ((log.splitOn "\n").filter (fun line => line.contains "error:" || line.contains "failed:") |>.take 20)))]
+      if guard.getObjValD "exitCode" != toJson (0 : Nat) then fields := fields++[("failureLog",toJson (String.intercalate "\n" ((log.splitOn "\n").filter (fun line => line.contains "error:" || line.contains "failed:" || line.contains "missing module:") |>.take 20)))]
     evidence := evidence.push (Json.mkObj fields)
   IO.FS.writeFile bodiesPath (toJson bodies).pretty
   IO.FS.writeFile evidencePath (Json.mkObj [("runs",toJson evidence),("actualBodies",toJson bodies.size),

@@ -72,20 +72,63 @@ def retireCompiled : IO Unit := do
     ("preflights",toJson preflights),
     ("retainedLinkResponsesUnchanged",toJson true),("protectedOriginalsUnchanged",toJson true),
     ("candidatePatchesAndActualBodiesRetained",toJson true),("archive",toJson false)]).pretty
+def retireObservers : IO Unit := do
+  let destination := workspace/"docs/candidates/numerical-ready"
+  let output := destination/"compiled-cleanup.json"
+  check (!(← output.pathExists)) "observer cleanup already recorded"
+  for study in ["provider-stages","numerical-ready"] do
+    let expected := if study == "numerical-ready" then 70 else 236
+    check ((← read (workspace/"docs/candidates"/study/"verification.json")).getObjValD "actualOutputs" == toJson expected)
+      "actual observer bodies not independently retained"
+    check ((← read (workspace/"docs/candidates"/study/"cleanup.json")).getObjValD "archive" == toJson false)
+      "ended study cleanup missing"
+  let targets := #[base/"query-stages-build/StudyMain",base/"provider-stages-build/StudyMain",
+    base/"numerical-ready-laws-build"]
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0) "cannot inspect observer owners"
+  let mut responses := #[]
+  for name in ["controller","focus-locators-build","hosted-endpoint-build","metadata-ingress-candidate-build",
+      "session-dispatch-client-build","numerical-ready-build"] do
+    let path := base/name/"runtime.rsp"
+    let text ← IO.FS.readFile path
+    for target in targets do check (!text.contains target.toString) "retained response needs retired observer"
+    responses := responses.push (path,← digest path)
+  let aliasTarget ← IO.FS.realPath (base/"worker-cpu-target/bin/eggshelld")
+  for target in targets do
+    check (!process.stdout.contains target.toString && aliasTarget != target) "observer still selected or active"
+  verifyProtected
+  let mut removed := #[]
+  for target in targets do
+    let sha ← if (← target.symlinkMetadata).type == .file then digest target else pure "directory"
+    let (files,bytes) ← remove target
+    removed := removed.push (Json.mkObj [("path",toJson target.toString),("sha256",toJson sha),
+      ("files",toJson files),("logicalBytes",toJson bytes)])
+  for (path,sha) in responses do check ((← digest path) == sha) "retained link inputs changed"
+  verifyProtected
+  IO.FS.writeFile output (Json.mkObj [("removed",toJson removed),("retainedLinkResponses",toJson responses),
+    ("protectedOriginalsUnchanged",toJson true),("retainedLinkResponsesUnchanged",toJson true),
+    ("currentCandidateObjectsInterfacesAndExecutableRetained",toJson true),("archive",toJson false)]).pretty
 def main (arguments : List String) : IO Unit := do
+  if arguments == ["--completed-observers"] then return ← retireObservers
   if arguments == ["--source-protocol-builds"] then return ← retireCompiled
-  check (arguments.isEmpty || arguments == ["--source-protocol"] || arguments == ["--query-stages"]) "unknown ended study"
+  check (arguments.isEmpty || arguments == ["--source-protocol"] || arguments == ["--query-stages"] ||
+    arguments == ["--provider-stages"] || arguments == ["--numerical-ready"]) "unknown ended study"
   let sourceProtocol := arguments == ["--source-protocol"]
   let queryStages := arguments == ["--query-stages"]
-  let destination := if queryStages then workspace/"docs/candidates/query-stages" else
+  let providerStages := arguments == ["--provider-stages"]
+  let numericalReady := arguments == ["--numerical-ready"]
+  let destination := if numericalReady then workspace/"docs/candidates/numerical-ready" else if providerStages then workspace/"docs/candidates/provider-stages" else if queryStages then workspace/"docs/candidates/query-stages" else
     if sourceProtocol then workspace/"docs/candidates/source-protocol" else destination
   check (!(← (destination/"cleanup.json").pathExists)) "preserve prior cleanup evidence"
-  for (name,expected) in (if sourceProtocol || queryStages then [] else [("direct-waits",35),("private-pages",35)]) do
+  for (name,expected) in (if sourceProtocol || queryStages || providerStages || numericalReady then [] else [("direct-waits",35),("private-pages",35)]) do
     check ((← read (workspace/"docs/candidates"/name/"verification.json")).getObjValD "actualOutputs" == toJson expected)
       "retain independently checked actual bodies before deletion"
   let verified ← read (destination/"verification.json")
-  check ((verified.getObjValAs? Nat "actualOutputs").toOption.getD 0 == (if queryStages then 306 else if sourceProtocol then 402 else 236))
+  check ((verified.getObjValAs? Nat "actualOutputs").toOption.getD 0 == (if numericalReady then 70 else if queryStages then 306 else if sourceProtocol then 402 else 236))
     "actual body domain not sealed"
+  if numericalReady then
+    check ((← read (destination/"partial-verification.json")).getObjValD "actualOutputs" == toJson (83 : Nat))
+      "stopped eighty-client output domain not sealed"
   if sourceProtocol then
     check ((← read (destination/"acquisition.json")).getObjValD "completeCuts" == toJson (480 : Nat))
       "full source acquisition records not sealed"
@@ -123,7 +166,7 @@ def main (arguments : List String) : IO Unit := do
   let mut samples := #[]
   for entry in ← base.readDir do
     let name := entry.fileName
-    let starts := if queryStages then ["query-stages-"] else if sourceProtocol then ["source-protocol-","task-observer-","task-waiter-"] else
+    let starts := if numericalReady then ["numerical-ready-"] else if providerStages then ["provider-stages-"] else if queryStages then ["query-stages-"] else if sourceProtocol then ["source-protocol-","task-observer-","task-waiter-"] else
       ["direct-waits-","private-pages-","shared-leases-","hosted-endpoint-","page-record-verification","concurrent-milestone"]
     if !name.endsWith ".guard.json" || name.contains "-retire" ||
         !starts.any (fun (startText : String) => name.startsWith startText) then continue
@@ -160,7 +203,7 @@ def main (arguments : List String) : IO Unit := do
            "Service_retain","SourceFrame","OwnerViews","openat"].any (fun (key : String) => line.contains key)) |>.take 100)),
         ("waitStacksAreNotCpuPercentages",toJson true)])
   let mut executables := #[]
-  let builds := if queryStages then [] else if sourceProtocol then ["source-protocol-build","source-observer-build","task-observer-build","task-waiter-build"] else
+  let builds := if queryStages || providerStages || numericalReady then [] else if sourceProtocol then ["source-protocol-build","source-observer-build","task-observer-build","task-waiter-build"] else
     ["session-readers-build","session-dispatch-build","direct-waits-build","private-pages-build","shared-leases-build"]
   for name in builds do
     let path := base/name/"StudyMain"
@@ -169,14 +212,15 @@ def main (arguments : List String) : IO Unit := do
       executables := executables.push (Json.mkObj [("path",toJson path.toString),
         ("sha256",toJson (← digest path)),("bytes",toJson (← path.metadata).byteSize.toNat)])
       paths := paths.push path
-  if sourceProtocol || queryStages then
-    paths := paths.push (base/(if queryStages then "query-stages-initial-core" else "task-observer-sealed-core"))
+  if sourceProtocol || queryStages || providerStages || numericalReady then
+    if numericalReady then paths := paths.push (base/"numerical-ready-initial-core")
+    if !providerStages && !numericalReady then paths := paths.push (base/(if queryStages then "query-stages-initial-core" else "task-observer-sealed-core"))
     let aliasPath := base/"worker-cpu-target/bin/eggshelld"
     check ((← aliasPath.symlinkMetadata).type == .symlink) "isolated runtime alias changed type"
     IO.FS.removeFile aliasPath
     let linked ← IO.Process.output {cmd := "/bin/ln",args := #["-s",(base/"hosted-endpoint-build/StudyMain").toString,aliasPath.toString]}
     check (linked.exitCode == 0) "cannot retain the preceding isolated control"
-  for name in (if queryStages then ["query-stages-build"] else if sourceProtocol then builds else ["direct-waits-build","private-pages-build","shared-leases-build","hosted-endpoint-build"]) do
+  for name in (if numericalReady then ["numerical-ready-build"] else if providerStages then ["provider-stages-build"] else if queryStages then ["query-stages-build"] else if sourceProtocol then builds else ["direct-waits-build","private-pages-build","shared-leases-build","hosted-endpoint-build"]) do
     for entry in ← (base/name).readDir do
       if entry.fileName.endsWith ".c" || entry.fileName.endsWith ".stdout" || entry.fileName.endsWith ".stderr" then
         paths := paths.push entry.path
@@ -193,6 +237,6 @@ def main (arguments : List String) : IO Unit := do
     ("samples",toJson samples),("removed",toJson removed),("executables",toJson executables),
     ("files",toJson totalFiles),("logicalBytes",toJson totalBytes),("archive",toJson false),
     ("protectedOriginalsUnchanged",toJson true),("nativeObjectsAndInterfacesRetained",toJson true),
-    ("activeCandidate",toJson (base/(if queryStages then "query-stages-build/StudyMain" else "hosted-endpoint-build/StudyMain")).toString),
+    ("activeCandidate",toJson (base/(if numericalReady then "numerical-ready-build/StudyMain" else if providerStages then "provider-stages-build/StudyMain" else if queryStages then "query-stages-build/StudyMain" else "hosted-endpoint-build/StudyMain")).toString),
     ("positiveControlRetained",toJson (base/"focus-locators-build/StudyMain").toString),
     ("sealedClientRetained",toJson (base/"session-dispatch-client-build/StudyMain").toString)]).pretty

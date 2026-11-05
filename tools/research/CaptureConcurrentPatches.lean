@@ -20,6 +20,22 @@ def save (name : String) (rows : Array (System.FilePath × System.FilePath × St
   IO.FS.writeFile (workspace/"docs/candidates"/name/"candidate.patch") source
 def main (arguments : List String) : IO Unit := do
   let core := base/"interest-traffic-core"
+  if arguments == ["numerical-ready"] then
+    check (!(← (workspace/"docs/candidates/numerical-ready/candidate.patch").pathExists)) "numerical readiness patch already sealed"
+    save "numerical-ready" ((#["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>
+      (base/"numerical-ready-parent-core"/relative,core/relative,relative))
+    let mut initial := ""
+    for relative in (["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean"] : List String) do
+      initial := initial++(← patch (base/"numerical-ready-parent-core"/relative)
+        (base/"numerical-ready-initial-core"/relative) relative)
+    IO.FS.writeFile (workspace/"docs/candidates/numerical-ready/initial-readiness.patch") initial
+    return
+  if arguments == ["provider-stages"] then
+    check (!(← (workspace/"docs/candidates/provider-stages/candidate.patch").pathExists)) "provider-stage patch already sealed"
+    save "provider-stages" ((#["Eggshell/Handoff.lean","Eggshell/Numerical.lean","Eggshell/SearchProvider.lean",
+      "Eggshell/BuiltinSearch.lean","Eggshell/KeyedSearchClient.lean","Eggshell/KeyedSearchProvider.lean"] : Array String).map fun (relative : String) =>
+      (base/"provider-stages-parent-core"/relative,core/relative,relative))
+    return
   if arguments == ["query-stages"] then
     check (!(← (workspace/"docs/candidates/query-stages/candidate.patch").pathExists)) "query-stage patch already sealed"
     save "query-stages" ((#["Eggshell/Handoff.lean","Eggshell/Worker.lean","Eggshell/OperationPool.lean"] : Array String).map fun (relative : String) =>
