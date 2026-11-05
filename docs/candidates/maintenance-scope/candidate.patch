@@ -1,0 +1,98 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -231 +231,36 @@
+-def drainIndexTarget (session : String) (deadline : Nat)
++/-- One checked configuration/read boundary for one maintenance pass. This is
++not retained across turns and contains no additional writer grant. -/
++structure MaintenanceScope where
++  pending : Option PendingTurn
++  context : Option ProjectContext.Context
++  sources : Option (Array String)
++
++def MaintenanceScope.canPrepare (scope : MaintenanceScope) (owner : DB.Sidecar.Owner) : Bool :=
++  match scope.pending with
++  | none => true
++  | some pending => scope.context.any (·.canPrepare owner) || pending.write.any (fun path =>
++      (System.FilePath.mk path).normalize == (System.FilePath.mk owner.directory).normalize)
++
++theorem MaintenanceScope.current_grant (scope : MaintenanceScope) (pending : PendingTurn)
++    (present : scope.pending = some pending) (owner : DB.Sidecar.Owner) :
++    scope.canPrepare owner = (scope.context.any (·.canPrepare owner) || pending.write.any (fun path =>
++      (System.FilePath.mk path).normalize == (System.FilePath.mk owner.directory).normalize)) := by
++  simp only [canPrepare,present]
++
++theorem MaintenanceScope.standalone_recovery (scope : MaintenanceScope)
++    (absent : scope.pending = none) (owner : DB.Sidecar.Owner) : scope.canPrepare owner = true := by
++  simp only [canPrepare,absent]
++
++def MaintenanceScope.capture (session : String) (deadline : Nat) : IO MaintenanceScope := do
++  let files ← sessionFiles session
++  let pending ← readPendingBase? files
++  let some current := pending | return ⟨none,none,none⟩
++  let context ← ProjectContext.open? current deadline
++  if let some checked := context then
++    return ⟨pending,context,some (checked.reads.sources.map (·.head.identity))⟩
++  let mut sources := #[]
++  for path in (current.read++current.write.toList).eraseDups do
++    if let some source ← DB.PageMap.open? (.mk path) then sources := sources.push source.head.identity
++  return ⟨pending,context,some sources⟩
++
++def drainIndexTarget (scope : MaintenanceScope) (deadline : Nat)
+@@ -244,6 +279 @@
+-    let files ← sessionFiles session
+-    if let some pending ← readPendingBase? files then
+-      let context ← ProjectContext.open? pending deadline
+-      unless context.any (·.canPrepare target.owner) || pending.write.any (fun path =>
+-          (System.FilePath.mk path).normalize == (System.FilePath.mk target.owner.directory).normalize) do
+-        return
++    unless scope.canPrepare target.owner do return
+@@ -254,8 +284 @@
+-  let files ← sessionFiles session
+-  let some pending ← readPendingBase? files | return none
+-  if let some context ← ProjectContext.open? pending deadline then
+-    return some (context.reads.sources.map (·.head.identity))
+-  let mut sources := #[]
+-  for path in (pending.read++pending.write.toList).eraseDups do
+-    if let some source ← DB.PageMap.open? (.mk path) then sources := sources.push source.head.identity
+-  return some sources
++  return (← MaintenanceScope.capture session deadline).sources
+@@ -263 +286 @@
+-def drainRegisteredIndexes (session : String) (deadline : Nat)
++def drainRegisteredIndexes (scope : MaintenanceScope) (deadline : Nat)
+@@ -265 +288 @@
+-  for (reference, target) in ← registeredIndexTargets (← maintenanceSources session deadline) do
++  for (reference, target) in ← registeredIndexTargets scope.sources do
+@@ -271 +294 @@
+-      drainIndexTarget session deadline reference target
++      drainIndexTarget scope deadline reference target
+@@ -278 +301 @@
+-def drainSynapticTargets (session : String) (deadline : Nat)
++def drainSynapticTargets (scope : MaintenanceScope) (deadline : Nat)
+@@ -280,7 +303 @@
+-  let files ← sessionFiles session
+-  let pending ← readPendingBase? files
+-  let context ← try pending.bindM fun pending => ProjectContext.open? pending deadline
+-    catch error =>
+-      IO.eprintln s!"Eggshell retained unverified project maintenance scope: {error}"
+-      pure none
+-  for (reference, target) in ← Synapses.Journal.targets (← maintenanceSources session deadline) do
++  for (reference, target) in ← Synapses.Journal.targets scope.sources do
+@@ -299,3 +316 @@
+-        if let some pending := pending then
+-          unless context.any (·.canPrepare target.owner) || pending.write.any (fun path =>
+-              (System.FilePath.mk path).normalize == (System.FilePath.mk target.owner.directory).normalize) do continue
++        unless scope.canPrepare target.owner do continue
+@@ -314 +329 @@
+-  let files ← sessionFiles session
++  let scope ← MaintenanceScope.capture session deadline
+@@ -316 +331 @@
+-    if let some pending ← (readJson? files.pending pendingJsonDefaults : IO (Option PendingTurn)) then
++    if let some pending := scope.pending then
+@@ -318 +333 @@
+-        if let some context ← ProjectContext.open? pending deadline then
++        if let some context := scope.context then
+@@ -335,2 +350,2 @@
+-  unless ← drainSynapticTargets session deadline cursor do return false
+-  drainRegisteredIndexes session deadline cursor
++  unless ← drainSynapticTargets scope deadline cursor do return false
++  drainRegisteredIndexes scope deadline cursor
