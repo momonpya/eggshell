@@ -1,0 +1,255 @@
+diff --git a/Eggshell/KeyedSearchProvider.lean b/Eggshell/KeyedSearchProvider.lean
+index f075691f..c1ba20ab 100644
+--- a/Eggshell/KeyedSearchProvider.lean
++++ b/Eggshell/KeyedSearchProvider.lean
+@@ -157,0 +158,79 @@ def fixedMatrices (views : Array (Option SourceView)) : IO (Std.HashMap MatrixSc
++/-- Only immutable public preparation participates in reuse. A request's
++query and private usage root never become retained provider inputs. -/
++def publicReferences (inputs : Array PreparedInputs.Reference) : Array PreparedInputs.Reference :=
++  inputs.map fun reference => {reference with usage := none}
++
++def inputKey (sources : Array KeyedProtocol.Scope) (inputs : Option (Array PreparedInputs.Reference))
++    (owners : Option OwnerViews.Reference) : String :=
++  (toJson (sources,inputs.map publicReferences,owners)).compress
++
++/-- These readers are borrowed from one exact checked image. Mutable traces,
++page cursors and bitmap state belong to this operation, not to the image. -/
++structure Captured where
++  private mk ::
++  sources : Array Snapshot
++  inputs : Array PreparedInputs.Reference
++  views : Array (Option SourceView)
++  owners : Option (OwnerViews.Reference × OwnerViews.Reader)
++
++def Captured.key (captured : Captured) : String :=
++  inputKey (captured.sources.map KeyedProtocol.Scope.ofSnapshot) (some captured.inputs)
++    (captured.owners.map Prod.fst)
++
++def Captured.accepts (captured : Captured) (request : KeyedProtocol.Request) : Bool :=
++  decide (captured.key = inputKey request.sources request.prepared request.owners)
++
++theorem Captured.accepts_exact (captured : Captured) (request : KeyedProtocol.Request) :
++    captured.accepts request = true ↔
++      captured.key = inputKey request.sources request.prepared request.owners := by
++  simp [accepts]
++
++theorem Captured.query_not_retained (captured : Captured) (request : KeyedProtocol.Request) (query : String) :
++    captured.accepts {request with query} = captured.accepts request := rfl
++
++theorem Captured.changed_key_rejected (captured : Captured) (request : KeyedProtocol.Request)
++    (different : captured.key ≠ inputKey request.sources request.prepared request.owners) :
++    captured.accepts request = false := by simp [accepts,different]
++
++/-- Check the complete source order and captured derived roots at the typed
++boundary. No latest-root substitution, dropped source or caller-provided wire
++reader is permitted. Construction does not certify any Work equivalence. -/
++@[no_expose] def Captured.borrow (sources : Array Snapshot) (inputs : Array PreparedInputs.Reference)
++    (views : Array (Option SourceView)) (owners : Option (OwnerViews.Reference × OwnerViews.Reader)) :
++    IO Captured := do
++  unless sources.size == inputs.size && views.size == sources.size do
++    throw (IO.userError "borrowed provider omitted an original input")
++  for ((source,input),view) in (sources.zip inputs).zip views do
++    unless input.source == source.head && input.producer == PreparedInputs.implementation do
++      throw (IO.userError "borrowed provider changed an original root")
++    match view with
++    | none => unless input.population == 0 do throw (IO.userError "borrowed provider omitted a populated source")
++    | some view =>
++      unless source.head == view.source.head && source.directory == view.source.directory &&
++          input.windows.any (·.head == view.windows.snapshot.head) &&
++          input.lexical.any (·.head == view.lexical.index.head) &&
++          input.population == view.lexical.expected.candidates do
++        throw (IO.userError "borrowed provider changed a prepared source")
++      match input.numeric,view.numeric with
++      | none,none => pure ()
++      | some saved,some (numeric,storage) =>
++        unless saved.partition == numeric.partition.snapshot.head && saved.matrix == numeric.matrix.snapshot.head &&
++            saved.storage == storage do throw (IO.userError "borrowed provider changed numeric roots")
++      | _,_ => throw (IO.userError "borrowed provider omitted or invented numeric preparation")
++  if let some (reference,reader) := owners then
++    unless reference.sources == sources.map (·.head) &&
++        toJson (reader.base.inputs.map (·.captured)) == toJson (reference.items.map (·.captured)) do
++      throw (IO.userError "borrowed provider changed its owner inventory")
++  return ⟨sources,publicReferences inputs,views,owners⟩
++
++def Captured.use (captured : Captured) (request : KeyedProtocol.Request)
++    (model : String) (numeric : Bool) : IO (Array Snapshot × Array (Option SourceView)) := do
++  unless captured.accepts request do throw (IO.userError "borrowed provider belongs to different captured inputs")
++  for (source,input) in captured.sources.zip captured.inputs do
++    unless input.accepts source model encoderContract do
++      throw (IO.userError "borrowed provider changed its source or encoder")
++  let views ← captured.views.mapM fun entry => entry.mapM fun view => do
++    if numeric && view.numeric.isNone then throw (IO.userError "borrowed numeric input was not prepared")
++    return if numeric then view else {view with numeric := none}
++  return (captured.sources,views)
++
+@@ -161 +240,2 @@ selection policy consume only that domain. Coverage remains explicitly advisory.
+-def handle (options : SearchProvider.Options) (child : Option Encoder) (request : KeyedProtocol.Request) : IO Json := do
++def handle (options : SearchProvider.Options) (child : Option Encoder) (request : KeyedProtocol.Request)
++    (captured : Option Captured := none) : IO Json := do
+@@ -164,15 +244,19 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
+-  let sources ← request.sources.mapM KeyedProtocol.Scope.pin
+-  let views ← match request.prepared with
+-    | none => sources.mapM fun source => capture source options child.isSome
+-    | some prepared =>
+-      unless prepared.size == sources.size do throw (IO.userError "prepared keyed input omitted a source")
+-      sources.zip prepared |>.mapM fun (source,reference) => do
+-        unless reference.accepts source options.model encoderContract do
+-          throw (IO.userError "prepared keyed input changed its source or encoder")
+-        unless reference.population == (← getNat source.get "candidates") do
+-          throw (IO.userError "prepared keyed input changed its original population")
+-        if reference.population == 0 then return none
+-        let windows ← PreparedInputs.windows reference source
+-        let lexical ← PreparedInputs.lexical reference source
+-        let numeric ← if child.isSome then some <$> PreparedInputs.numerical reference source else pure none
+-        return some (⟨source,windows,lexical,numeric⟩ : SourceView)
++  let (sources,views) ← match captured with
++    | some captured => captured.use request options.model child.isSome
++    | none => do
++      let sources ← request.sources.mapM KeyedProtocol.Scope.pin
++      let views ← match request.prepared with
++        | none => sources.mapM fun source => capture source options child.isSome
++        | some prepared =>
++          unless prepared.size == sources.size do throw (IO.userError "prepared keyed input omitted a source")
++          sources.zip prepared |>.mapM fun (source,reference) => do
++            unless reference.accepts source options.model encoderContract do
++              throw (IO.userError "prepared keyed input changed its source or encoder")
++            unless reference.population == (← getNat source.get "candidates") do
++              throw (IO.userError "prepared keyed input changed its original population")
++            if reference.population == 0 then return none
++            let windows ← PreparedInputs.windows reference source
++            let lexical ← PreparedInputs.lexical reference source
++            let numeric ← if child.isSome then some <$> PreparedInputs.numerical reference source else pure none
++            return some (⟨source,windows,lexical,numeric⟩ : SourceView)
++      pure (sources,views)
+@@ -230 +314,3 @@ def handle (options : SearchProvider.Options) (child : Option Encoder) (request
+-    let ownerView ← OwnerViews.restore reference sources
++    let ownerView ← match captured.bind (·.owners) with
++      | some (_,reader) => pure reader
++      | none => OwnerViews.restore reference sources
+diff --git a/Eggshell/PreparedReaders.lean b/Eggshell/PreparedReaders.lean
+index 32ef4b4f..d955af9f 100644
+--- a/Eggshell/PreparedReaders.lean
++++ b/Eggshell/PreparedReaders.lean
+@@ -3,0 +4 @@ public import Eggshell.ProjectViews
++public import Eggshell.KeyedSearchProvider
+@@ -124,0 +126,46 @@ theorem acceptsKey_exact (wanted actual : String) : acceptsKey wanted actual = t
++structure NumericInput where
++  partition : SnapshotImage
++  header : VectorPartition.Header
++  matrix : SnapshotImage
++  metadata : VectorMatrix.Manifest
++  storage : Sidecar.Storage
++
++structure SearchInput where
++  windows : SnapshotImage
++  windowManifest : WindowOwners.Manifest
++  lexical : SnapshotImage
++  lexicalStamp : RetrievalResearch.Index.Stamp
++  numeric : Option NumericInput
++
++def SearchInput.capture (pages : PageMap.PagePool) (scope : String)
++    (source : PageMap.Snapshot) (input : PreparedInputs.Reference) : IO (Option SearchInput) := do
++  if input.population == 0 then
++    unless (← getNat source.get "candidates") == 0 do throw (IO.userError "empty provider input changed its source")
++    return none
++  let windows ← PreparedInputs.windows input source
++  let lexical ← PreparedInputs.lexical input source
++  let numeric ← input.numeric.mapM fun _ => do
++    let (view,storage) ← PreparedInputs.numerical input source
++    return (⟨← SnapshotImage.capture pages scope view.partition.snapshot,view.partition.header,
++      ← SnapshotImage.capture pages scope view.matrix.snapshot,view.matrix.metadata,storage⟩ : NumericInput)
++  return some ⟨← SnapshotImage.capture pages scope windows.snapshot,windows.manifest,
++    ← SnapshotImage.capture pages scope lexical.index,lexical.expected,numeric⟩
++
++def SearchInput.borrow (image : SearchInput) (pages : PageMap.PagePool) (scope : String)
++    (source : PageMap.Snapshot) : IO KeyedSearchProvider.SourceView := do
++  let windows : WindowOwners.Ready := ⟨← image.windows.borrow pages scope,image.windowManifest⟩
++  let lexical : RetrievalResearch.Index.Reader source := ⟨← image.lexical.borrow pages scope,image.lexicalStamp⟩
++  let numeric ← image.numeric.mapM fun image => do
++    let partition : VectorPartition.Ready := ⟨← image.partition.borrow pages scope,image.header⟩
++    let matrix : VectorMatrix.Ready := ⟨image.metadata,← image.matrix.borrow pages scope⟩
++    if same : partition.header.basis.matrix = matrix.snapshot.head then
++      return ((⟨partition,matrix,same⟩ : PartitionBuild.ReadView source),image.storage)
++    else throw (IO.userError "borrowed routing basis changed its matrix")
++  return ⟨source,windows,lexical,numeric⟩
++
++def SearchInput.bytes (image : SearchInput) : Nat :=
++  (toJson (image.windowManifest,image.lexicalStamp,
++    image.numeric.map fun numeric => (numeric.header,numeric.metadata.rows,numeric.metadata.bytes,numeric.storage))).compress.utf8ByteSize
++
++def SearchInput.handles (image : SearchInput) : Nat := 2+image.numeric.toArray.size*2
++
+@@ -133,0 +181,2 @@ structure Image where
++  search : Array (Option SearchInput)
++  searchReads : Array Reads
+@@ -220,0 +270,3 @@ structure Pool where
++  let search ← ((clones.zip inputs).zip scopes).mapM fun ((source,input),scope) =>
++    SearchInput.capture pool.pages scope source input
++  let searchReads ← clones.mapM Reads.capture
+@@ -231 +283,2 @@ structure Pool where
+-  let traceBytes := (sharedReads++ownerReads).foldl (fun total reads => total+reads.bytes) 0
++  let traceBytes := (sharedReads++ownerReads++searchReads).foldl (fun total reads => total+reads.bytes) 0
++  let searchBytes := search.foldl (fun total entry => total+(entry.map SearchInput.bytes).getD 0) 0
+@@ -234,3 +287,4 @@ structure Pool where
+-    (owners.map (fun image => image.inputs.size+1) |>.getD 0)
+-  return ⟨key,scopes,publicInputs inputs,reference,shared,sharedReads,owners,
+-    descriptorBytes+bitmapBytes+traceBytes,count⟩
++    (owners.map (fun image => image.inputs.size+1) |>.getD 0)+
++    search.foldl (fun total entry => total+(entry.map SearchInput.handles).getD 0) 0
++  return ⟨key,scopes,publicInputs inputs,reference,shared,sharedReads,owners,search,searchReads,
++    descriptorBytes+bitmapBytes+traceBytes+searchBytes,count⟩
+@@ -285,0 +340,22 @@ capturedLocal for each operation. This returns public shared readers only. -/
++/-- Fork only operation-owned read state from checked public input images.
++The same captured source/root order and public prepared references are required;
++private usage remains outside this image and no query is retained. -/
++@[no_expose] def Borrow.keyed (borrow : Borrow) (sources : Array PageMap.Snapshot)
++    (inputs : Array PreparedInputs.Reference)
++    (reference : Option OwnerViews.Reference) : IO KeyedSearchProvider.Captured := do
++  unless (sources.map SourceOwners.refOf) == borrow.sources.map SourceOwners.refOf &&
++      toJson (publicInputs inputs) == toJson borrow.image.inputs &&
++      toJson reference == toJson borrow.image.ownerReference &&
++      borrow.image.search.size == sources.size && borrow.image.searchReads.size == sources.size &&
++      borrow.image.scopes.size == sources.size do
++    throw (IO.userError "borrowed provider changed its complete public boundary")
++  for (reads,source) in borrow.image.searchReads.zip sources do reads.replay source
++  -- Numerical work can overlap graph discovery. Its original traces, counters,
++  -- cursors and owner bitmap arena must not share mutable state with discovery.
++  let sources ← (sources.zip borrow.image.scopes).mapM fun (source,scope) => do
++    SnapshotImage.borrow ⟨source.directory,source.head,source.handle⟩ borrow.pages scope
++  let views ← ((borrow.image.search.zip sources).zip borrow.image.scopes).mapM fun ((image,source),scope) =>
++    image.mapM fun image => image.borrow borrow.pages scope source
++  let owners ← reference.mapM fun reference => do return (reference,← borrow.owners sources reference)
++  KeyedSearchProvider.Captured.borrow sources inputs views owners
++
+diff --git a/Eggshell/BuiltinSearch.lean b/Eggshell/BuiltinSearch.lean
+index bb6d6e8a..d0622313 100644
+--- a/Eggshell/BuiltinSearch.lean
++++ b/Eggshell/BuiltinSearch.lean
+@@ -33 +33,2 @@ def withRuntime (arguments : List String) (action : SearchProvider.Options → O
+-def keyed (command : List String) (request : KeyedProtocol.Request) : IO Json := do
++def keyed (command : List String) (request : KeyedProtocol.Request)
++    (captured : Option KeyedSearchProvider.Captured := none) : IO Json := do
+@@ -37 +38 @@ def keyed (command : List String) (request : KeyedProtocol.Request) : IO Json :=
+-    return ← withRuntime arguments fun options child => KeyedSearchProvider.handle options child request
++    return ← withRuntime arguments fun options child => KeyedSearchProvider.handle options child request captured
+diff --git a/Eggshell/KeyedSearchClient.lean b/Eggshell/KeyedSearchClient.lean
+index a2c072a9..2152f9cd 100644
+--- a/Eggshell/KeyedSearchClient.lean
++++ b/Eggshell/KeyedSearchClient.lean
+@@ -20 +20,2 @@ def nominate (configured : List String) (sources : Array Snapshot) (query : Stri
+-    (owners : Option OwnerViews.Reference := none) : IO (Option (KeyedProtocol.Checked sources)) := do
++    (owners : Option OwnerViews.Reference := none)
++    (captured : Option KeyedSearchProvider.Captured := none) : IO (Option (KeyedProtocol.Checked sources)) := do
+@@ -38 +39 @@ def nominate (configured : List String) (sources : Array Snapshot) (query : Stri
+-      let json ← BuiltinSearch.keyed command request
++      let json ← BuiltinSearch.keyed command request captured
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 682f88db..f8c5d108 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9464 +9464,4 @@ def federatedDiscovery (selection : Config.Selection)
+-      let some nominated ← KeyedSearchClient.nominate command sources query receipt queryInputs (some reference) | return none
++      let captured ← match preparedReaders,queryInputs with
++        | some borrowed,some inputs => some <$> borrowed.keyed sources inputs (some reference)
++        | _,_ => pure none
++      let some nominated ← KeyedSearchClient.nominate command sources query receipt queryInputs (some reference) captured | return none
