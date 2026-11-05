@@ -9,6 +9,7 @@ import tools.research.StartupChecks
 import tools.research.PreparedLexicalChecks
 import tools.research.InputFrameChecks
 import tools.research.SourcePinBatchChecks
+import tools.research.OwnerBindingChecks
 
 open Lean Eggshell Eggshell.Plugin
 namespace Eggshell.Research.FrontTrafficChecks
@@ -344,6 +345,12 @@ end Eggshell.Research.FrontTrafficChecks
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["owner-binding-synthetic",root] =>
+      Eggshell.Research.OwnerBindingChecks.auditCaptured (.mk root)
+      return 0
+  | ["owner-binding-audit",source,root] =>
+      Eggshell.Research.OwnerBindingChecks.run (.mk source) (.mk root)
+      return 0
   | ["source-pin-batch",source,root] =>
       Eggshell.Research.SourcePinBatchChecks.run (.mk source) (.mk root)
       return 0

@@ -1,0 +1,31 @@
+diff --git a/tools/research/SourceOwnerChecks.lean b/tools/research/SourceOwnerChecks.lean
+index 9e539d39..57699e7a 100644
+--- a/tools/research/SourceOwnerChecks.lean
++++ b/tools/research/SourceOwnerChecks.lean
+@@ -203,11 +203,13 @@ def run (root : System.FilePath) (sourceCount : Nat) : IO Unit := do
+   check ((← SourceOwners.open? #[a0,b1] "foreign/scope").isNone) "foreign namespace admitted"
+   let forged := {a0 with state := {a0.state with source := a1.state.source}}
+   check ((← SourceOwners.open? #[forged,b1] "project/authorized-scope").isNone) "forged individual readiness admitted"
+-  let mut backwardRejected := false
+-  try
+-    let _ ← SourceOwners.prepare (root/"dictionary.egg") (← PageMap.pin (.mk a1.index.directory)) oldA "project/authorized-scope"
+-  catch _ => backwardRejected := true
+-  check backwardRejected "backward source delta accepted"
++  let physicalBefore := (← PageMap.pin (.mk a1.index.directory)).head
++  let reused ← SourceOwners.prepare (root/"dictionary.egg") (← PageMap.pin (.mk a1.index.directory)) oldA "project/authorized-scope"
++  check (reused.captured.index.head == a0.index.head && reused.captured.state.source.head == a0.state.source.head &&
++    reused.changedOwners == 0 && reused.publications == 0 && reused.mode == "unchanged")
++    "completed historical source was not reused exactly"
++  check ((← PageMap.pin (.mk a1.index.directory)).head == physicalBefore)
++    "historical preparation rolled back the current physical workspace"
+   let (unchanged,unchangedReport) ← prepare root a
+   check (unchanged.index.head == a1.index.head) "unchanged source was republished"
+   let mut paths := #[a,b]
+@@ -286,6 +288,7 @@ def run (root : System.FilePath) (sourceCount : Nat) : IO Unit := do
+     ("allFourIndependentCuts",toJson cuts),("newSources",complete),("reorderedSources",reordered),
+     ("emptySourceAcceptedAndMissingPreparationRejected",toJson true),
+     ("foreignDictionaryRejected",toJson true),("lastCopyRemoved",lastRemoved),
++    ("historicalRootReusedWithoutPhysicalRollback",toJson true),
+     ("divergentOriginalIncarnationRejected",toJson true),
+     ("parallelOriginals",Json.mkObj [("count",toJson sourceCount),("elapsedMs",toJson parallelMs),
+       ("peakAppendIntervalOverlap",toJson peakOverlap),("retainedWhileAppending",retainedWhileAppending),

@@ -42,6 +42,12 @@ Whole-hook sequential timing is mixed and the capacity gate still fails.
 Parallel source ownership is
 already present, while full query throughput and combined sustained operation
 remain unproven.
+The subsequent [hydrated-owner binding candidate](candidates/owner-binding/README.md)
+preserves publication-prepared identities and all actual bodies, saving about
+0.5 seconds in each of three running meaning-hook pairs. Its contemporaneous
+eighty-reader result is 60/80 versus parent64/80, so it supplies no capacity
+improvement and remains unadopted. The next measurement targets fallback/context
+preparation and the original-page pool, not additional owners or ranking changes.
 The latest isolated [source-path comparison](candidates/owned-lexical/README.md)
 reached 35.6–37.9 source observations/s at 50 KB in three short repetitions.
 Derived preparation is excluded; this does not establish stable backlog or

@@ -1,0 +1,133 @@
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 4082ff76..30ce89c9 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9156,0 +9157,73 @@
++structure PreparedOwnerBinding where
++  id : Nat
++  originals : List PreparedOwners.Original
++
++/-- Retain the original membership/root checks while using publication-prepared
++integer coordinates. No structural Value is reverse-resolved here. -/
++def checkPreparedOriginals (sources : Array DB.PageMap.Snapshot)
++    (originals : List PreparedOwners.Original) : IO Unit := do
++  for original in originals do
++    let some source := sources[original.source]? | throw (IO.userError "prepared original escaped captured sources")
++    let some member ← source.get (Persistence.Store.key "member" original.node) |
++      throw (IO.userError "prepared original lost live membership")
++    unless (← IO.ofExcept (Persistence.Store.payloadSize (some member))) == original.ordinal &&
++        original.ordinal < (← Persistence.Store.getNat source.get "roots") &&
++        (← IO.ofExcept (Persistence.Store.payloadSize (← source.get (Persistence.Store.key "root" original.ordinal)))) == original.node do
++      throw (IO.userError "prepared original changed its source root position")
++
++def preparedOwnerBinding (view : OwnerViews.Reader) (id : Nat) : IO PreparedOwnerBinding := do
++  let originals ← view.base.originals id
++  unless !originals.isEmpty do throw (IO.userError "prepared owner lost all live originals")
++  checkPreparedOriginals (view.base.inputs.map (·.original)) originals
++  return ⟨id,originals⟩
++
++def knownOwner (bindings : Std.HashMap Value PreparedOwnerBinding) (value : Value)
++    (fallback : Value → IO (Option Nat)) : IO (Option Nat) :=
++  match bindings[value]? with
++  | some binding => pure (some binding.id)
++  | none => fallback value
++
++theorem known_owner_hit (bindings : Std.HashMap Value PreparedOwnerBinding) (value : Value)
++    (binding : PreparedOwnerBinding) (fallback : Value → IO (Option Nat))
++    (present : bindings[value]? = some binding) :
++    knownOwner bindings value fallback = pure (some binding.id) := by simp [knownOwner,present]
++
++theorem unknown_owner_fallback (bindings : Std.HashMap Value PreparedOwnerBinding) (value : Value)
++    (fallback : Value → IO (Option Nat)) (absent : bindings[value]? = none) :
++    knownOwner bindings value fallback = fallback value := by simp [knownOwner,absent]
++
++def originalPosition (frontiers : List AdvisoryFrontier) (original : PreparedOwners.Original) :
++    Except String AdvisoryPosition := do
++  let some frontier := frontiers[original.source]? | throw "prepared position omitted its captured source"
++  if bounded : original.ordinal < frontier.nextRoot then return ⟨frontier,original.ordinal,bounded⟩
++  else throw "prepared position exceeds its captured frontier"
++
++def originalPositions (frontiers : List AdvisoryFrontier) : List PreparedOwners.Original → Except String (List AdvisoryPosition)
++  | [] => .ok []
++  | original::rest =>
++    match originalPosition frontiers original with
++    | .error error => .error error
++    | .ok first => match originalPositions frontiers rest with
++      | .error error => .error error
++      | .ok tail => .ok (first::tail)
++
++theorem original_positions_complete (frontiers : List AdvisoryFrontier)
++    (originals : List PreparedOwners.Original) (positions : List AdvisoryPosition)
++    (accepted : originalPositions frontiers originals = .ok positions) : positions.length = originals.length := by
++  induction originals generalizing positions with
++  | nil =>
++    simp only [originalPositions,Except.ok.injEq] at accepted
++    subst positions
++    rfl
++  | cons first rest ih =>
++    cases head : originalPosition frontiers first with
++    | error error => simp [originalPositions,head] at accepted
++    | ok position =>
++      cases tail : originalPositions frontiers rest with
++      | error error => simp [originalPositions,head,tail] at accepted
++      | ok remaining =>
++        have same : position::remaining = positions := by
++          simpa [originalPositions,head,tail] using accepted
++        subst positions
++        simp [ih remaining tail]
++
+@@ -9187,0 +9261,10 @@
++  -- Query-owned bindings preserve ids already obtained by original hydration.
++  -- The map is neither a shared answer cache nor a replacement for cold lookups.
++  let bindings ← IO.mkRef ({} : Std.HashMap Value PreparedOwnerBinding)
++  let calls ← IO.mkRef (0,0,0,0)
++  let remember := fun id value => do
++    if let some previous := (← bindings.get)[value]? then
++      unless previous.id == id do throw (IO.userError "hydrated owner changed its prepared identity")
++    else
++      let binding ← preparedOwnerBinding ownerView id
++      bindings.modify (·.insert value binding)
+@@ -9233 +9316,3 @@
+-          found := {original with ordinal := ← ordinal (← canonical source id)}::found
++          let owner ← canonical source id
++          remember owner original.edge.relation
++          found := {original with ordinal := ← ordinal owner}::found
+@@ -9236,0 +9322,4 @@
++      calls.modify fun (live,slowLive,positions,slowPositions) => (live,slowLive,positions+1,slowPositions)
++      if let some binding := (← bindings.get)[owner]? then
++        return ← IO.ofExcept (originalPositions capturedFrontiers binding.originals)
++      calls.modify fun (live,slowLive,positions,slowPositions) => (live,slowLive,positions,slowPositions+1)
+@@ -9267 +9356,3 @@
+-      (readers.at original.source).outcome (← Persistence.Store.locateOutcome original.snapshot original.id)
++      let owner ← (readers.at original.source).outcome (← Persistence.Store.locateOutcome original.snapshot original.id)
++      remember id owner.relation
++      return owner
+@@ -9289,3 +9380,6 @@
+-      for source in List.finRange sources.size do
+-        if let some (_,id) ← Persistence.Store.liveRoot? sources[source] value then return some (← canonical source id)
+-      return none
++      calls.modify fun (live,slowLive,positions,slowPositions) => (live+1,slowLive,positions,slowPositions)
++      knownOwner (← bindings.get) value fun value => do
++        calls.modify fun (live,slowLive,positions,slowPositions) => (live,slowLive+1,positions,slowPositions)
++        for source in List.finRange sources.size do
++          if let some (_,id) ← Persistence.Store.liveRoot? sources[source] value then return some (← canonical source id)
++        return none
+@@ -9302,0 +9397,3 @@
++          let some original ← Persistence.Store.findNode? sources[source] row.relation |
++            throw (IO.userError "hydrated support owner lost its original node")
++          remember (← canonical source original) row.relation
+@@ -9333,4 +9430,10 @@
+-  knownThenLexical
+-    (selection.semanticMatcher.isNone && evidence.isNone && lexicalInquiryAllowed current enforce meaningQuery)
+-    (fun lexical => indexedDiscoveryUsing context selection current delivered enforce evidence enableLocalUnion
+-      savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery lexical)
++  try
++    knownThenLexical
++      (selection.semanticMatcher.isNone && evidence.isNone && lexicalInquiryAllowed current enforce meaningQuery)
++      (fun lexical => indexedDiscoveryUsing context selection current delivered enforce evidence enableLocalUnion
++        savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery lexical)
++  finally
++    let (live,slowLive,positions,slowPositions) ← calls.get
++    Receipt.observe receipt "prepared-owner-bindings" (Json.mkObj [
++      ("owners",toJson (← bindings.get).size),("liveCalls",toJson live),("liveFallbackCalls",toJson slowLive),
++      ("positionCalls",toJson positions),("positionFallbackCalls",toJson slowPositions)])
