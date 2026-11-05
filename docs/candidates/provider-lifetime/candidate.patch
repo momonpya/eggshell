@@ -1,0 +1,210 @@
+diff --git a/Eggshell/BuiltinSearch.lean b/Eggshell/BuiltinSearch.lean
+new file mode 100644
+index 00000000..bb6d6e8a
+--- /dev/null
++++ b/Eggshell/BuiltinSearch.lean
+@@ -0,0 +1,61 @@
++module
++public import Eggshell.KeyedSearchProvider
++@[expose] public section
++namespace Eggshell.BuiltinSearch
++open Lean
++
++/-- A configured external executable is never silently treated as this
++builtin, even if its subcommand happens to have the same spelling. -/
++def arguments? (command : List String) (kind : String) : IO (Option (List String)) := do
++  let executable :: selected :: arguments := command | return none
++  if selected != kind then return none
++  let path := System.FilePath.mk executable
++  unless path.isAbsolute do return none
++  let current ← IO.FS.realPath (← IO.appPath)
++  let supplied ← try some <$> IO.FS.realPath path catch _ => pure none
++  return if supplied == some current then some arguments else none
++
++/-- Join the real operation after cancellation; a returning borrower cannot
++leave a live numerical request or a temporary question store behind. -/
++def bounded (action : IO α) (budgetMs : Nat := 15000) : IO α :=
++  SemanticMatcher.withTaskResponseDeadline action budgetMs
++
++def withRuntime (arguments : List String) (action : SearchProvider.Options → Option SearchProvider.Encoder → IO α) : IO α :=
++  bounded <| IO.FS.withTempDir fun scratch => do
++    let scratch ← IO.FS.realPath scratch
++    let layout := MiniLM.layout (← Paths.installRoot)
++    let options ← IO.ofExcept (SearchProvider.parse {
++      cache := scratch,queryTemporary := some (scratch/"queries"),models := layout.models} arguments)
++    let child ← if options.mode == "lexical" then pure none else some <$> SearchProvider.encoder options
++    try action options child
++    finally if let some child := child then SearchProvider.stopEncoder child
++
++def keyed (command : List String) (request : KeyedProtocol.Request) : IO Json := do
++  if let some arguments ← arguments? command "keyed-search-provider" then
++    Receipt.observe request.receipt "provider-keyed-profile" (Json.mkObj [
++      ("transport",toJson "typed"),("sources",toJson request.sources.size)])
++    return ← withRuntime arguments fun options child => KeyedSearchProvider.handle options child request
++  Receipt.observe request.receipt "provider-keyed-profile" (Json.mkObj [("transport",toJson "process")])
++  SemanticMatcher.withProvider command fun running => SemanticMatcher.withResponseDeadline running do
++    SemanticMatcher.write running ((toJson request).compress++"\n")
++    IO.ofExcept (Json.parse (← running.child.stdout.getLine))
++
++def indexed (command : List String) : SemanticMatcher.IndexedExchange := fun request repair => do
++  let receipt := (request.getObjValAs? String "receipt").toOption.filter Receipt.validId
++  if let some arguments ← arguments? command "search-provider" then
++    Receipt.observe receipt "provider-indexed-profile" (Json.mkObj [("transport",toJson "typed")])
++    return ← withRuntime arguments fun options child => do
++      let query ← IO.ofExcept ((request.getObjValD "query").getObjValAs? String "text")
++      SearchProvider.handleIndexed options child query request (fun document windows => repair document (windows.map Prod.fst))
++  Receipt.observe receipt "provider-indexed-profile" (Json.mkObj [("transport",toJson "process")])
++  SemanticMatcher.indexedProcess command request repair
++
++def nominateIndexed (command : List String) (queryText : String)
++    (documents : List Persistence.Store.SearchDocument) (lexical anchors : List Nat)
++    (readWindow : SemanticMatcher.WindowReader) (allowDurableRepair : Bool := false)
++    (receipt : Option String := none) (purpose : String := "discovery") (preparedInputs : Option Json := none) :
++    IO (Option (SemanticMatcher.IndexedSearch documents)) :=
++  SemanticMatcher.nominateIndexedUsing (indexed command) queryText documents lexical anchors readWindow
++    allowDurableRepair receipt purpose preparedInputs
++
++end Eggshell.BuiltinSearch
+diff --git a/Eggshell/SemanticMatcher.lean b/Eggshell/SemanticMatcher.lean
+index 2a2a7346..24ff3a9d 100644
+--- a/Eggshell/SemanticMatcher.lean
++++ b/Eggshell/SemanticMatcher.lean
+@@ -587 +587,27 @@ Keep this decision outside the async closure, including after inlining. -/
+-def nominateIndexed (command : List String) (queryText : String)
++/-- A transport can request only positions in the caller's current corpus.
++The same repair and response checker serve pipes and built-in typed calls. -/
++def withTaskResponseDeadline (action : IO α) (budgetMs : Nat := 15000) : IO α := do
++  let deadline := (← IO.monoMsNow)+budgetMs
++  TaskDeadline.ensureLive deadline
++  let task ← IO.asTask action .dedicated
++  try TaskDeadline.wait task deadline
++  finally
++    if !(← IO.hasFinished task) then IO.cancel task
++    discard <| IO.wait task
++
++abbrev IndexedRepair := Nat → List Nat → IO (List String)
++abbrev IndexedExchange := Json → IndexedRepair → IO Json
++
++def indexedProcess (command : List String) : IndexedExchange := fun request repair =>
++  withProvider command fun running => withResponseDeadline running do
++    write running (request.compress++"\n")
++    let mut json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
++    while let .ok need := json.getObjVal? "need_windows" do
++      let document ← IO.ofExcept (need.getObjValAs? Nat "document")
++      let indices ← IO.ofExcept (need.getObjValAs? (List Nat) "indices")
++      let texts ← repair document indices
++      write running ((Json.mkObj [("windows",toJson texts)]).compress++"\n")
++      json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
++    return json
++
++def nominateIndexedUsing (exchange : IndexedExchange) (queryText : String)
+@@ -599 +625 @@ def nominateIndexed (command : List String) (queryText : String)
+-    withProvider command fun running => withResponseDeadline running do
++    withTaskResponseDeadline do
+@@ -606,3 +632 @@ def nominateIndexed (command : List String) (queryText : String)
+-      write running (request.compress++"\n")
+-      let mut json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
+-      let mut repaired : Std.HashSet (Nat × Nat) := {}
++      let repaired ← IO.mkRef ({} : Std.HashSet (Nat × Nat))
+@@ -611,3 +635,2 @@ def nominateIndexed (command : List String) (queryText : String)
+-      while let .ok need := json.getObjVal? "need_windows" do
+-        let documentIndex ← IO.ofExcept (need.getObjValAs? Nat "document")
+-        let indices ← IO.ofExcept (need.getObjValAs? (List Nat) "indices")
++      let repair : IndexedRepair := fun documentIndex indices => do
++        let mut seen ← repaired.get
+@@ -620 +643 @@ def nominateIndexed (command : List String) (queryText : String)
+-        unless repaired.size + pull.indices.length ≤ 32 do
++        unless seen.size + pull.indices.length ≤ 32 do
+@@ -623 +646 @@ def nominateIndexed (command : List String) (queryText : String)
+-          unless !repaired.contains (documentIndex, index) do
++          unless !seen.contains (documentIndex, index) do
+@@ -625 +648,2 @@ def nominateIndexed (command : List String) (queryText : String)
+-          repaired := repaired.insert (documentIndex, index)
++          seen := seen.insert (documentIndex, index)
++        repaired.set seen
+@@ -628,3 +652,2 @@ def nominateIndexed (command : List String) (queryText : String)
+-        let texts ← pull.handles.mapM (readWindow document)
+-        write running ((Json.mkObj [("windows", toJson texts)]).compress++"\n")
+-        json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
++        pull.handles.mapM (readWindow document)
++      let json ← exchange request repair
+@@ -646,0 +670,8 @@ def nominateIndexed (command : List String) (queryText : String)
++def nominateIndexed (command : List String) (queryText : String)
++    (documents : List Persistence.Store.SearchDocument) (lexical anchors : List Nat)
++    (readWindow : WindowReader) (allowDurableRepair : Bool := false)
++    (receipt : Option String := none) (purpose : String := "discovery") (preparedInputs : Option Json := none) :
++    IO (Option (IndexedSearch documents)) :=
++  nominateIndexedUsing (indexedProcess command) queryText documents lexical anchors readWindow
++    allowDurableRepair receipt purpose preparedInputs
++
+diff --git a/Eggshell/KeyedSearchClient.lean b/Eggshell/KeyedSearchClient.lean
+index a599ff21..a2c072a9 100644
+--- a/Eggshell/KeyedSearchClient.lean
++++ b/Eggshell/KeyedSearchClient.lean
+@@ -3,0 +4 @@ public import Eggshell.SemanticMatcher
++public import Eggshell.BuiltinSearch
+@@ -31 +32 @@ def nominate (configured : List String) (sources : Array Snapshot) (query : Stri
+-    SemanticMatcher.withProvider command fun running => SemanticMatcher.withResponseDeadline running do
++    SemanticMatcher.withTaskResponseDeadline do
+@@ -37,2 +38 @@ def nominate (configured : List String) (sources : Array Snapshot) (query : Stri
+-      SemanticMatcher.write running (bytes++"\n")
+-      let json ← IO.ofExcept (Json.parse (← running.child.stdout.getLine))
++      let json ← BuiltinSearch.keyed command request
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index 1f7d910f..81a7a719 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -34,0 +35 @@ def claim (handle : FileSystem.ReadHandle) (exclusive : Bool) (deadline : Nat) :
++    TaskDeadline.ensureLive deadline
+@@ -97,0 +99 @@ def resolve (config : Config) : IO Endpoint := do
++      TaskDeadline.ensureLive deadline
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 60ea1bbd..4bf884d9 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -2281 +2281 @@ def focusIndexedEvidence (command : List String) (question : String)
+-  let some observed ← SemanticMatcher.nominateIndexed command question requests [] [] repair false receipt "focus" queryInputs | return none
++  let some observed ← BuiltinSearch.nominateIndexed command question requests [] [] repair false receipt "focus" queryInputs | return none
+@@ -2383 +2383 @@ def focusNeighborhood (command : List String) (current : String)
+-  let some result ← SemanticMatcher.nominateIndexed command current documents
++  let some result ← BuiltinSearch.nominateIndexed command current documents
+@@ -8052 +8052 @@ def indexedSemanticNominationsUsing (snapshot : Persistence.Store.Snapshot)
+-  let some indices ← SemanticMatcher.nominateIndexed command current requestDocuments lexical anchors readWindow false receipt |
++  let some indices ← BuiltinSearch.nominateIndexed command current requestDocuments lexical anchors readWindow false receipt |
+@@ -9004 +9004 @@ def federatedSemanticNominations
+-  let some nominated ← SemanticMatcher.nominateIndexed command current requests lexical anchors readWindow false receipt "discovery" (queryInputs.map toJson) |
++  let some nominated ← BuiltinSearch.nominateIndexed command current requests lexical anchors readWindow false receipt "discovery" (queryInputs.map toJson) |
+diff --git a/Eggshell/PublicationWire.lean b/Eggshell/PublicationWire.lean
+index 0e81d70b..a12f64b8 100644
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -125,0 +126,2 @@ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-servi
++  (include_str "BuiltinSearch.lean").toUTF8,(include_str "KeyedSearchClient.lean").toUTF8,
++  (include_str "SemanticMatcher.lean").toUTF8,
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index d274aae1..50edb31c 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -477 +477,2 @@ run_meta do
+-          ``Eggshell.SemanticMatcher.withResponseDeadline, ``Eggshell.KeyedProtocol.Scope.ofSnapshot],
++          ``Eggshell.BuiltinSearch.keyed, ``Eggshell.SemanticMatcher.withTaskResponseDeadline,
++          ``Eggshell.KeyedProtocol.Scope.ofSnapshot],
+@@ -478,0 +480,15 @@ run_meta do
++      (``Eggshell.BuiltinSearch.keyed,
++        #[``Eggshell.BuiltinSearch.arguments?, ``Eggshell.BuiltinSearch.withRuntime,
++          ``Eggshell.KeyedSearchProvider.handle, ``Eggshell.SemanticMatcher.withResponseDeadline], #[]),
++      (``Eggshell.BuiltinSearch.indexed,
++        #[``Eggshell.BuiltinSearch.arguments?, ``Eggshell.BuiltinSearch.withRuntime,
++          ``Eggshell.SearchProvider.handleIndexed, ``Eggshell.SemanticMatcher.indexedProcess], #[]),
++      (``Eggshell.BuiltinSearch.nominateIndexed,
++        #[``Eggshell.SemanticMatcher.nominateIndexedUsing, ``Eggshell.BuiltinSearch.indexed], #[]),
++      (``Eggshell.SemanticMatcher.nominateIndexedUsing,
++        #[``Eggshell.SemanticMatcher.withTaskResponseDeadline,
++          ``Eggshell.SemanticMatcher.WindowPull.check?, ``Eggshell.SemanticMatcher.WindowOrder.check?,
++          ``Eggshell.SemanticMatcher.IndexedOrder.check?, ``Eggshell.SemanticMatcher.indexedNominations,
++          ``Eggshell.SemanticMatcher.windowRepairReader],
++        #[``Eggshell.Persistence.Store.searchDocuments, ``Eggshell.PreparedInputs.publish,
++          ``Eggshell.Warm.runTarget]),
+@@ -596 +612 @@ run_meta do
+-          ``Eggshell.SemanticMatcher.nominateIndexed], #[]),
++          ``Eggshell.BuiltinSearch.nominateIndexed], #[]),

@@ -11,6 +11,8 @@ import tools.research.InputFrameChecks
 import tools.research.SourcePinBatchChecks
 import tools.research.OwnerBindingChecks
 import tools.research.PreparedReaderChecks
+import tools.research.ProviderLifetimeChecks
+import tools.research.BuiltinSearchChecks
 
 open Lean Eggshell Eggshell.Plugin
 namespace Eggshell.Research.FrontTrafficChecks
@@ -400,6 +402,20 @@ def main (args : List String) : IO UInt32 := do
   | ["front-traffic-audit",root] => do
       Eggshell.Research.FrontTrafficChecks.auditRetained (.mk root)
       return 0
+  | ["builtin-search-checks",root] => do
+      let root : System.FilePath := .mk root
+      Eggshell.Research.FrontTrafficChecks.check (!(← root.pathExists)) "preserve earlier builtin search checks"
+      IO.FS.createDirAll root
+      Numerical.withDefaultKeeper (do
+        Eggshell.Research.BuiltinSearchChecks.run root
+        pure 0) 1000
+  | ["provider-lifetime-audit",source,root] => do
+      let root : System.FilePath := .mk root
+      Eggshell.Research.FrontTrafficChecks.check (!(← root.pathExists)) "preserve earlier provider lifetime audit"
+      IO.FS.createDirAll root
+      Numerical.withDefaultKeeper (do
+        Eggshell.Research.ProviderLifetimeChecks.run (.mk source) root
+        pure 0) 1000
   | ["front-input-audit",root] => do
       Eggshell.Research.FrontInputAudit.run [root]
       return 0

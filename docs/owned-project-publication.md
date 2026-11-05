@@ -71,6 +71,17 @@ and ended artifacts are removed. The next measured target is fresh keyed/focus
 provider lifetimes that reopen prepared roots outside the worker-owned cache.
 Parallel source ownership remains implemented; neither result proves sustained
 eighty-person capacity, practical98% evidence, or token/quality adoption.
+The subsequent[typed-provider candidate](candidates/provider-lifetime/README.md)
+removes fresh builtin search-provider lifetimes while preserving the same
+response checker, private query ownership, parallel source owners and existing
+worker limits. Actual bodies agree; running meaning hooks save448–500 ms.
+A same-period read-only burst is parent73/candidate80 of80, but71 candidate
+requests still use lexical fallback. The subsequent mixed ordinary80-writer
+fixture retains all82 originals exactly; preparation takes145.5 seconds and
+new-reader success is67/80. Source parallelism and a passing small read-only
+burst do not establish mixed daily capacity. Diagnose remaining replay/retry
+work and query interference before claiming sustained support. It remains
+isolated and unadopted under the token/quality gate.
 The latest isolated [source-path comparison](candidates/owned-lexical/README.md)
 reached 35.6–37.9 source observations/s at 50 KB in three short repetitions.
 Derived preparation is excluded; this does not establish stable backlog or

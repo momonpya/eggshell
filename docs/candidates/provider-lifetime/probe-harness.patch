@@ -1,0 +1,14 @@
+diff --git a/tools/research/FrontTrafficChecks.lean b/tools/research/FrontTrafficChecks.lean
+index 97d39591..a5b5386f 100644
+--- a/tools/research/FrontTrafficChecks.lean
++++ b/tools/research/FrontTrafficChecks.lean
+@@ -13,0 +14 @@ import tools.research.PreparedReaderChecks
++import tools.research.ProviderLifetimeChecks
+@@ -402,0 +404,7 @@ def main (args : List String) : IO UInt32 := do
++  | ["provider-lifetime-audit",source,root] => do
++      let root : System.FilePath := .mk root
++      Eggshell.Research.FrontTrafficChecks.check (!(← root.pathExists)) "preserve earlier provider lifetime audit"
++      IO.FS.createDirAll root
++      Numerical.withDefaultKeeper (do
++        Eggshell.Research.ProviderLifetimeChecks.run (.mk source) root
++        pure 0) 1000

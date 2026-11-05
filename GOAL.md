@@ -281,6 +281,12 @@ source headが変わると部分feedbackを捨て、照合の期限切れを入�
 
 次は[実providerの寿命](docs/candidates/public-input-publication/next-provider-lifecycle.md)。同じhot hookではHandoffが2656ms、metadata捕捉は16msだった。数値内部107/168msとは別に、keyed/focusの実providerが別PIDで起動し、source/window/lexical/numeric/owner rootを新規process内で開き直すことをsourceと受領記録で確認した。以前のdirect-numericalは別のadapterを除いた変更であり、同じ試行を再実行しない。同じcaptured requestをprocess経由/同一handlerへの型付き直接callで交互比較し、全checked response/順位/窓/coverageを照合してから、既存worker寿命へ公開準備を保持する。未説明の全時間を起動に帰属させず、hydration714msとfocus後の残余も段階ごとに測る。worker/所有者/queue/期限の上限を増やさず、完全な認定・全project境界・私有状態の分離を守る。80人8時間/成長する複数project/NAS/p99/実98%/品質/総tokenは引き続き未達・未検証、goalはactive。
 
+[provider-lifetime候補](docs/candidates/provider-lifetime/README.md)、runtime `da95d6b6…`で、同じ実行体の組込みkeyed/focus handlerをquery workerへ直接接続した。別に設定した実行体はprocess経由のまま、応答全順位/根拠/修復32件の検査を共通化し、呼出しごとの私有temporary/clientを保つ。取消時は実taskをjoinし、numerical開始claimも取消を確認する。worker/owner/queue/期限を増やさず、新しいshared lock/CAS/metadata形式/Python/Rubyは追加していない。16原文を使う同一handlerの交互probeで全163順位/窓/coverageが全7回一致し、warm process/directは627/348・621/354・622/348ms、cold prime2396msを別記した。過去の数値adapter削除とは別の経路である。実行体選択、staged focusの同じ4原読出し、順位欠落/別窓/重複修復/33件目拒否、取消taskとnumerical claimの実終了、標準ContractAuditが通った。IO全体の形式証明ではない。
+
+意味フック3組はcold親6635/6352/6445ms・候補6021/5906/5885ms、hot親3874/3871/3869ms・候補3374/3423/3369ms。全16意味/字句本文はroute別byte一致し、両凍結項目を配送。字句1組はcold2312/2363ms・hot1391/1393msで高速化を主張しない。実receiptでkeyed/indexedともtyped経路を確認した。同時期80読取burstは親73/80・候補80/80が両項目の完全本文と通常client成功、双方80捕捉/受付complete、候補9694〜29378ms/中央値22895ms。候補の意味完了は9、71件は意味期限切れ後の字句配送であり、vector全80完了やp99/実98%としない。全80候補operationが観測され、work中央値520ms/queue18831ms。provider固有のsource/window/lexical/matrix/owner復元はまだ呼出しごとに残っている。
+
+続く通常混在試験（80 query/Pre/Post/Stop loop、出力5000 bytes、16 original owner、背景準備、80新reader）では全80書込loopと全82保存原入出力の一致を確認した。一方、参照/ownerが揃うまで145514msかかり、gate時点でも準備pending3/active1、retry270/coalesced23041、最後のretryはjournalだけを要求していた。実index worker3個の稼働を確認。新readerは67/80で13期限切れ、意味9/字句58、80捕捉/受付completeだった。独立した合成fixtureの機能試験であり、固定読取pairとの因果比較とは扱わない。準備済み参照の存在を全maintenance排出と混同しない。これで混在利用の未達が明確になったため、[次は準備のprefix進捗/反復とforeground競合](docs/candidates/provider-lifetime/next-mixed-preparation.md)を既存receipt/sourceから追う。待ち期限拡大や出版ごとの有用な準備中断で隠さない。全guard発火0/残存0、最大RSS3091424KiB、全固定16head/保護原典不変。終了DB/cache/logは記録後削除し、候補は隔離保持、回答モデル0/比較0/18・製品未採用。80人8時間/成長する複数project/NAS/実98%/総token/品質は未達・未検証でgoalはactive。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約
